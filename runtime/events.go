@@ -59,10 +59,8 @@ func EmitEventFields(
 		panic(err)
 	}
 
-	errors.WrapPanic(func() {
-		err = emitEvent(exportedEvent)
-	})
+	err = emitEvent(exportedEvent)
 	if err != nil {
-		panic(interpreter.WrappedExternalError(err))
+		panic(err)
 	}
 }

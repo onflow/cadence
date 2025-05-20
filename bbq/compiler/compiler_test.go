@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/compiler"
@@ -1862,11 +1863,11 @@ func TestCompileString(t *testing.T) {
 	)
 }
 
-func TestCompileIntegers(t *testing.T) {
+func TestCompilePositiveIntegers(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(integerType sema.Type) {
+	test := func(integerType sema.Type, expectedData []byte) {
 
 		t.Run(integerType.String(), func(t *testing.T) {
 
@@ -1916,7 +1917,7 @@ func TestCompileIntegers(t *testing.T) {
 			assert.Equal(t,
 				[]constant.Constant{
 					{
-						Data: []byte{0x2},
+						Data: expectedData,
 						Kind: expectedConstantKind,
 					},
 				},
@@ -1925,19 +1926,156 @@ func TestCompileIntegers(t *testing.T) {
 		})
 	}
 
+	tests := map[sema.Type][]byte{
+		sema.IntType:   {0x2},
+		sema.Int8Type:  {0x2},
+		sema.Int16Type: {0x0, 0x2},
+		sema.Int32Type: {0x0, 0x0, 0x0, 0x2},
+		sema.Int64Type: {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+		sema.Int128Type: {
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
+		},
+		sema.Int256Type: {
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
+		},
+		sema.UIntType:   {0x2},
+		sema.UInt8Type:  {0x2},
+		sema.UInt16Type: {0x0, 0x2},
+		sema.UInt32Type: {0x0, 0x0, 0x0, 0x2},
+		sema.UInt64Type: {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+		sema.UInt128Type: {
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
+		},
+		sema.UInt256Type: {
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
+		},
+		sema.Word8Type:  {0x2},
+		sema.Word16Type: {0x0, 0x2},
+		sema.Word32Type: {0x0, 0x0, 0x0, 0x2},
+		sema.Word64Type: {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+		sema.Word128Type: {
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
+		},
+		sema.Word256Type: {
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
+		},
+	}
+
 	for _, integerType := range common.Concat(
 		sema.AllUnsignedIntegerTypes,
 		sema.AllSignedIntegerTypes,
 	) {
-		// TODO:
-		switch integerType {
-		case sema.Int128Type, sema.Int256Type,
-			sema.UInt128Type, sema.UInt256Type,
-			sema.Word128Type, sema.Word256Type:
-			continue
+		if _, ok := tests[integerType]; !ok {
+			panic(fmt.Errorf("missing test for type %s", integerType))
 		}
+	}
 
-		test(integerType)
+	for ty, expectedData := range tests {
+		test(ty, expectedData)
+	}
+}
+
+func TestCompileNegativeIntegers(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(integerType sema.Type, expectedData []byte) {
+
+		t.Run(integerType.String(), func(t *testing.T) {
+
+			t.Parallel()
+
+			checker, err := ParseAndCheck(t,
+				fmt.Sprintf(`
+                        fun test() {
+                            let v: %s = -3
+                        }
+                    `,
+					integerType,
+				),
+			)
+			require.NoError(t, err)
+
+			comp := compiler.NewInstructionCompiler(
+				interpreter.ProgramFromChecker(checker),
+				checker.Location,
+			)
+			program := comp.Compile()
+
+			require.Len(t, program.Functions, 1)
+
+			functions := comp.ExportFunctions()
+			require.Equal(t, len(program.Functions), len(functions))
+
+			const (
+				// vIndex is the index of the local variable `v`, which is the first local variable
+				vIndex = iota
+			)
+
+			assert.Equal(t,
+				[]opcode.Instruction{
+					// let yes = true
+					opcode.InstructionGetConstant{Constant: 0},
+					opcode.InstructionTransfer{Type: 1},
+					opcode.InstructionSetLocal{Local: vIndex},
+
+					opcode.InstructionReturn{},
+				},
+				functions[0].Code,
+			)
+
+			expectedConstantKind := constant.FromSemaType(integerType)
+
+			assert.Equal(t,
+				[]constant.Constant{
+					{
+						Data: expectedData,
+						Kind: expectedConstantKind,
+					},
+				},
+				program.Constants,
+			)
+		})
+	}
+
+	tests := map[sema.Type][]byte{
+		sema.IntType:   {0xfd},
+		sema.Int8Type:  {0xfd},
+		sema.Int16Type: {0xff, 0xfd},
+		sema.Int32Type: {0xff, 0xff, 0xff, 0xfd},
+		sema.Int64Type: {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfd},
+		sema.Int128Type: {
+			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfd,
+		},
+		sema.Int256Type: {
+			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfd,
+		},
+	}
+
+	for _, integerType := range sema.AllSignedIntegerTypes {
+		if _, ok := tests[integerType]; !ok {
+			panic(fmt.Errorf("missing test for type %s", integerType))
+		}
+	}
+
+	for ty, expectedData := range tests {
+		test(ty, expectedData)
 	}
 }
 
@@ -1991,11 +2129,11 @@ func TestCompileAddress(t *testing.T) {
 	)
 }
 
-func TestCompileFixedPoint(t *testing.T) {
+func TestCompilePositiveFixedPoint(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(fixedPointType sema.Type, isSigned bool) {
+	test := func(fixedPointType sema.Type, expectedData []byte) {
 
 		t.Run(fixedPointType.String(), func(t *testing.T) {
 
@@ -2042,12 +2180,87 @@ func TestCompileFixedPoint(t *testing.T) {
 
 			expectedConstantKind := constant.FromSemaType(fixedPointType)
 
-			var expectedData []byte
-			if isSigned {
-				expectedData = []byte{0x80, 0x8b, 0xd6, 0xed, 0x0}
-			} else {
-				expectedData = []byte{0x80, 0x8b, 0xd6, 0x6d}
-			}
+			assert.Equal(t,
+				[]constant.Constant{
+					{
+						Data: expectedData,
+						Kind: expectedConstantKind,
+					},
+				},
+				program.Constants,
+			)
+		})
+	}
+
+	tests := map[sema.Type][]byte{
+		sema.Fix64Type:  {0x0, 0x0, 0x0, 0x0, 0x0d, 0xb5, 0x85, 0x80},
+		sema.UFix64Type: {0x0, 0x0, 0x0, 0x0, 0x0d, 0xb5, 0x85, 0x80},
+	}
+
+	for _, fixedPointType := range common.Concat(
+		sema.AllUnsignedFixedPointTypes,
+		sema.AllSignedFixedPointTypes,
+	) {
+		if _, ok := tests[fixedPointType]; !ok {
+			panic(fmt.Errorf("missing test for type %s", fixedPointType))
+		}
+	}
+
+	for ty, expectedData := range tests {
+		test(ty, expectedData)
+	}
+}
+
+func TestCompileNegativeFixedPoint(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(fixedPointType sema.Type, expectedData []byte) {
+
+		t.Run(fixedPointType.String(), func(t *testing.T) {
+
+			t.Parallel()
+
+			checker, err := ParseAndCheck(t,
+				fmt.Sprintf(`
+                        fun test() {
+                            let v: %s = -2.3
+                        }
+                    `,
+					fixedPointType,
+				),
+			)
+			require.NoError(t, err)
+
+			comp := compiler.NewInstructionCompiler(
+				interpreter.ProgramFromChecker(checker),
+				checker.Location,
+			)
+			program := comp.Compile()
+
+			require.Len(t, program.Functions, 1)
+
+			functions := comp.ExportFunctions()
+			require.Equal(t, len(program.Functions), len(functions))
+
+			const (
+				// vIndex is the index of the local variable `v`, which is the first local variable
+				vIndex = iota
+			)
+
+			assert.Equal(t,
+				[]opcode.Instruction{
+					// let yes = true
+					opcode.InstructionGetConstant{Constant: 0},
+					opcode.InstructionTransfer{Type: 1},
+					opcode.InstructionSetLocal{Local: vIndex},
+
+					opcode.InstructionReturn{},
+				},
+				functions[0].Code,
+			)
+
+			expectedConstantKind := constant.FromSemaType(fixedPointType)
 
 			assert.Equal(t,
 				[]constant.Constant{
@@ -2061,12 +2274,18 @@ func TestCompileFixedPoint(t *testing.T) {
 		})
 	}
 
-	for _, fixedPointType := range sema.AllUnsignedFixedPointTypes {
-		test(fixedPointType, false)
+	tests := map[sema.Type][]byte{
+		sema.Fix64Type: {0xff, 0xff, 0xff, 0xff, 0xf2, 0x4a, 0x7a, 0x80},
 	}
 
 	for _, fixedPointType := range sema.AllSignedFixedPointTypes {
-		test(fixedPointType, true)
+		if _, ok := tests[fixedPointType]; !ok {
+			panic(fmt.Errorf("missing test for type %s", fixedPointType))
+		}
+	}
+
+	for ty, expectedData := range tests {
+		test(ty, expectedData)
 	}
 }
 
@@ -3771,6 +3990,20 @@ func TestForLoop(t *testing.T) {
 				opcode.InstructionReturn{},
 			},
 			program.Functions[0].Code,
+		)
+
+		assert.Equal(t,
+			[]constant.Constant{
+				{
+					Data: []byte{0xff},
+					Kind: constant.Int,
+				},
+				{
+					Data: []byte{0x1},
+					Kind: constant.Int,
+				},
+			},
+			program.Constants,
 		)
 	})
 
@@ -5694,5 +5927,209 @@ func TestCompileArgument(t *testing.T) {
 			interpreter.NewOptionalStaticType(nil, interpreter.PrimitiveStaticTypeInt),
 		},
 		program.Types,
+	)
+}
+
+func TestCompileLineNumberInfo(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun test(array: [Int], index: Int, value: Int) {
+          array[index] = value + value
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	require.Len(t, program.Functions, 1)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
+	testFunction := functions[0]
+
+	const (
+		arrayIndex = iota
+		indexIndex
+		valueIndex
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionGetLocal{Local: arrayIndex},
+			opcode.InstructionGetLocal{Local: indexIndex},
+			opcode.InstructionGetLocal{Local: valueIndex},
+			opcode.InstructionGetLocal{Local: valueIndex},
+			opcode.InstructionAdd{},
+			opcode.InstructionTransfer{Type: 1},
+			opcode.InstructionSetIndex{},
+			opcode.InstructionReturn{},
+		},
+		testFunction.Code,
+	)
+
+	assert.Equal(t,
+		[]bbq.PositionInfo{
+			// Load variable `array`.
+			// Opcodes:
+			//   opcode.InstructionGetLocal{Local: arrayIndex}
+			{
+				InstructionIndex: 0,
+				Position: bbq.Position{
+					StartPos: ast.Position{
+						Offset: 66,
+						Line:   3,
+						Column: 10,
+					},
+					EndPos: ast.Position{
+						Offset: 70,
+						Line:   3,
+						Column: 14,
+					},
+				},
+			},
+
+			// Load variable `index`.
+			// Opcodes:
+			//  opcode.InstructionGetLocal{Local: indexIndex}
+			{
+				InstructionIndex: 1,
+				Position: bbq.Position{
+					StartPos: ast.Position{
+						Offset: 72,
+						Line:   3,
+						Column: 16,
+					},
+					EndPos: ast.Position{
+						Offset: 76,
+						Line:   3,
+						Column: 20,
+					},
+				},
+			},
+
+			// Load variable `value`.
+			// Opcodes:
+			//   opcode.InstructionGetLocal{Local: valueIndex}
+			{
+				InstructionIndex: 2,
+				Position: bbq.Position{
+					StartPos: ast.Position{
+						Offset: 81,
+						Line:   3,
+						Column: 25,
+					},
+					EndPos: ast.Position{
+						Offset: 85,
+						Line:   3,
+						Column: 29,
+					},
+				},
+			},
+
+			// Load variable `value`.
+			// Opcodes:
+			//   opcode.InstructionGetLocal{Local: valueIndex}
+			{
+				InstructionIndex: 3,
+				Position: bbq.Position{
+					StartPos: ast.Position{
+						Offset: 89,
+						Line:   3,
+						Column: 33,
+					},
+					EndPos: ast.Position{
+						Offset: 93,
+						Line:   3,
+						Column: 37,
+					},
+				},
+			},
+
+			// Addition `value + value`.
+			// Opcodes:
+			//   opcode.InstructionAdd{},
+			{
+				InstructionIndex: 4,
+				Position: bbq.Position{
+					StartPos: ast.Position{
+						Offset: 81,
+						Line:   3,
+						Column: 25,
+					},
+					EndPos: ast.Position{
+						Offset: 93,
+						Line:   3,
+						Column: 37,
+					},
+				},
+			},
+
+			// Assignment to array index: `array[index] = value + value`.
+			// Opcodes:
+			//   opcode.InstructionTransfer{Type: 1}
+			//   opcode.InstructionSetIndex{}
+			{
+				InstructionIndex: 5,
+				Position: bbq.Position{
+					StartPos: ast.Position{
+						Offset: 66,
+						Line:   3,
+						Column: 10,
+					},
+					EndPos: ast.Position{
+						Offset: 93,
+						Line:   3,
+						Column: 37,
+					},
+				},
+			},
+
+			// This has a position same as the function declaration,
+			// since this is an injected return.
+			// opcode.InstructionReturn{}
+			{
+				InstructionIndex: 7,
+				Position: bbq.Position{
+					StartPos: ast.Position{
+						Offset: 7,
+						Line:   2,
+						Column: 6,
+					},
+					EndPos: ast.Position{
+						Offset: 101,
+						Line:   4,
+						Column: 6,
+					},
+				},
+			},
+		},
+		testFunction.LineNumbers.Positions,
+	)
+
+	// Get position for `opcode.InstructionSetIndex{}`
+	// Position must start at the start of LHS.
+	pos := testFunction.LineNumbers.GetSourcePosition(6)
+	assert.Equal(
+		t,
+		bbq.Position{
+			StartPos: ast.Position{
+				Offset: 66,
+				Line:   3,
+				Column: 10,
+			},
+			EndPos: ast.Position{
+				Offset: 93,
+				Line:   3,
+				Column: 37,
+			},
+		},
+		pos,
 	)
 }

@@ -47,7 +47,7 @@ func NewInclusiveRangeValue(
 	if startComparable.Greater(context, endComparable, locationRange) {
 		elemSemaTy := MustConvertStaticToSemaType(rangeStaticType.ElementType, context)
 		if elemSemaTy.Tag().BelongsTo(sema.UnsignedIntegerTypeTag) {
-			panic(InclusiveRangeConstructionError{
+			panic(&InclusiveRangeConstructionError{
 				LocationRange: locationRange,
 				Message: fmt.Sprintf(
 					"step value cannot be negative for unsigned integer type %s",
@@ -91,7 +91,7 @@ func NewInclusiveRangeValueWithStep(
 
 	// Validate that the step is non-zero.
 	if step.Equal(context, locationRange, zeroValue) {
-		panic(InclusiveRangeConstructionError{
+		panic(&InclusiveRangeConstructionError{
 			LocationRange: locationRange,
 			Message:       "step value cannot be zero",
 		})
@@ -103,7 +103,7 @@ func NewInclusiveRangeValueWithStep(
 	// If start == end, step doesn't matter.
 	if isSequenceMovingAwayFromEnd(context, locationRange, start, end, step, zeroValue) {
 
-		panic(InclusiveRangeConstructionError{
+		panic(&InclusiveRangeConstructionError{
 			LocationRange: locationRange,
 			Message: fmt.Sprintf(
 				"sequence is moving away from end: %s due to the value of step: %s and start: %s",

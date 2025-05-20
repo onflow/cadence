@@ -88,7 +88,13 @@ func NewArrayValueWithIterator(
 	countOverestimate uint64,
 	values func() Value,
 ) *ArrayValue {
-	context.ReportComputation(common.ComputationKindCreateArrayValue, 1)
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindCreateArrayValue,
+			Intensity: 1,
+		},
+	)
 
 	var v *ArrayValue
 
@@ -341,7 +347,13 @@ func (v *ArrayValue) IsStaleResource(context ValueStaticTypeContext) bool {
 
 func (v *ArrayValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {
 
-	context.ReportComputation(common.ComputationKindDestroyArrayValue, 1)
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindDestroyArrayValue,
+			Intensity: 1,
+		},
+	)
 
 	if context.TracingEnabled() {
 		startTime := time.Now()
@@ -411,7 +423,10 @@ func (v *ArrayValue) Concat(context ValueTransferContext, locationRange Location
 		func() Value {
 
 			// Meter computation for iterating the two arrays.
-			context.ReportComputation(common.ComputationKindLoop, 1)
+			common.UseComputation(
+				context,
+				common.LoopComputationUsage,
+			)
 
 			var value Value
 
@@ -466,7 +481,7 @@ func (v *ArrayValue) GetKey(context ValueComparisonContext, locationRange Locati
 func (v *ArrayValue) handleIndexOutOfBoundsError(err error, index int, locationRange LocationRange) {
 	var indexOutOfBoundsError *atree.IndexOutOfBoundsError
 	if goerrors.As(err, &indexOutOfBoundsError) {
-		panic(ArrayIndexOutOfBoundsError{
+		panic(&ArrayIndexOutOfBoundsError{
 			Index:         index,
 			Size:          v.Count(),
 			LocationRange: locationRange,
@@ -480,7 +495,7 @@ func (v *ArrayValue) Get(gauge common.MemoryGauge, locationRange LocationRange, 
 	// atree's Array.Get function will check the upper bound and report an atree.IndexOutOfBoundsError
 
 	if index < 0 {
-		panic(ArrayIndexOutOfBoundsError{
+		panic(&ArrayIndexOutOfBoundsError{
 			Index:         index,
 			Size:          v.Count(),
 			LocationRange: locationRange,
@@ -510,7 +525,7 @@ func (v *ArrayValue) Set(context ContainerMutationContext, locationRange Locatio
 	// atree's Array.Set function will check the upper bound and report an atree.IndexOutOfBoundsError
 
 	if index < 0 {
-		panic(ArrayIndexOutOfBoundsError{
+		panic(&ArrayIndexOutOfBoundsError{
 			Index:         index,
 			Size:          v.Count(),
 			LocationRange: locationRange,
@@ -651,7 +666,7 @@ func (v *ArrayValue) InsertWithoutTransfer(
 	// atree's Array.Insert function will check the upper bound and report an atree.IndexOutOfBoundsError
 
 	if index < 0 {
-		panic(ArrayIndexOutOfBoundsError{
+		panic(&ArrayIndexOutOfBoundsError{
 			Index:         index,
 			Size:          v.Count(),
 			LocationRange: locationRange,
@@ -723,7 +738,7 @@ func (v *ArrayValue) RemoveWithoutTransfer(
 	// atree's Array.Remove function will check the upper bound and report an atree.IndexOutOfBoundsError
 
 	if index < 0 {
-		panic(ArrayIndexOutOfBoundsError{
+		panic(&ArrayIndexOutOfBoundsError{
 			Index:         index,
 			Size:          v.Count(),
 			LocationRange: locationRange,
@@ -1302,9 +1317,12 @@ func (v *ArrayValue) Transfer(
 	hasNoParentContainer bool,
 ) Value {
 
-	context.ReportComputation(
-		common.ComputationKindTransferArrayValue,
-		uint(v.Count()),
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindTransferArrayValue,
+			Intensity: uint64(v.Count()),
+		},
 	)
 
 	if context.TracingEnabled() {
@@ -1327,7 +1345,7 @@ func (v *ArrayValue) Transfer(
 	if preventTransfer == nil {
 		preventTransfer = map[atree.ValueID]struct{}{}
 	} else if _, ok := preventTransfer[currentValueID]; ok {
-		panic(RecursiveTransferError{
+		panic(&RecursiveTransferError{
 			LocationRange: locationRange,
 		})
 	}
@@ -1562,7 +1580,7 @@ func (v *ArrayValue) Slice(
 	// atree's Array.RangeIterator function will check the upper bound and report an atree.SliceOutOfBoundsError
 
 	if fromIndex < 0 || toIndex < 0 {
-		panic(ArraySliceIndicesError{
+		panic(&ArraySliceIndicesError{
 			FromIndex:     fromIndex,
 			UpToIndex:     toIndex,
 			Size:          v.Count(),
@@ -1576,7 +1594,7 @@ func (v *ArrayValue) Slice(
 
 		var sliceOutOfBoundsError *atree.SliceOutOfBoundsError
 		if goerrors.As(err, &sliceOutOfBoundsError) {
-			panic(ArraySliceIndicesError{
+			panic(&ArraySliceIndicesError{
 				FromIndex:     fromIndex,
 				UpToIndex:     toIndex,
 				Size:          v.Count(),
@@ -1586,7 +1604,7 @@ func (v *ArrayValue) Slice(
 
 		var invalidSliceIndexError *atree.InvalidSliceIndexError
 		if goerrors.As(err, &invalidSliceIndexError) {
-			panic(InvalidSliceIndexError{
+			panic(&InvalidSliceIndexError{
 				FromIndex:     fromIndex,
 				UpToIndex:     toIndex,
 				LocationRange: locationRange,
@@ -1604,7 +1622,7 @@ func (v *ArrayValue) Slice(
 		func() Value {
 
 			// Meter computation for iterating the array.
-			context.ReportComputation(common.ComputationKindLoop, 1)
+			common.UseComputation(context, common.LoopComputationUsage)
 
 			atreeValue, err := iterator.Next()
 			if err != nil {
@@ -1651,7 +1669,10 @@ func (v *ArrayValue) Reverse(
 			}
 
 			// Meter computation for iterating the array.
-			context.ReportComputation(common.ComputationKindLoop, 1)
+			common.UseComputation(
+				context,
+				common.LoopComputationUsage,
+			)
 
 			value := v.Get(context, locationRange, index)
 			index--
@@ -1700,7 +1721,10 @@ func (v *ArrayValue) Filter(
 
 			for {
 				// Meter computation for iterating the array.
-				context.ReportComputation(common.ComputationKindLoop, 1)
+				common.UseComputation(
+					context,
+					common.LoopComputationUsage,
+				)
 
 				atreeValue, err := iterator.Next()
 				if err != nil {
@@ -1800,7 +1824,10 @@ func (v *ArrayValue) Map(
 		func() Value {
 
 			// Meter computation for iterating the array.
-			context.ReportComputation(common.ComputationKindLoop, 1)
+			common.UseComputation(
+				context,
+				common.LoopComputationUsage,
+			)
 
 			atreeValue, err := iterator.Next()
 			if err != nil {
@@ -1881,7 +1908,10 @@ func (v *ArrayValue) ToVariableSized(
 		func() Value {
 
 			// Meter computation for iterating the array.
-			context.ReportComputation(common.ComputationKindLoop, 1)
+			common.UseComputation(
+				context,
+				common.LoopComputationUsage,
+			)
 
 			atreeValue, err := iterator.Next()
 			if err != nil {
@@ -1950,7 +1980,10 @@ func (v *ArrayValue) ToConstantSized(
 		func() Value {
 
 			// Meter computation for iterating the array.
-			context.ReportComputation(common.ComputationKindLoop, 1)
+			common.UseComputation(
+				context,
+				common.LoopComputationUsage,
+			)
 
 			atreeValue, err := iterator.Next()
 			if err != nil {

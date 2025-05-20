@@ -374,7 +374,8 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 			_, err := invoke("testSwap")
 			RequireError(t, err)
 
-			require.ErrorAs(t, err, &interpreter.DereferenceError{})
+			var dereferenceError *interpreter.DereferenceError
+			require.ErrorAs(t, err, &dereferenceError)
 		})
 
 		t.Run("testRI", func(t *testing.T) {
@@ -696,7 +697,8 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 			_, err := invoke("testSwap")
 			RequireError(t, err)
 
-			require.ErrorAs(t, err, &interpreter.DereferenceError{})
+			var dereferenceError *interpreter.DereferenceError
+			require.ErrorAs(t, err, &dereferenceError)
 		})
 
 		t.Run("testSI", func(t *testing.T) {

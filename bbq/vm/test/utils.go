@@ -381,7 +381,7 @@ func CompileAndInvoke(
 	)
 }
 
-func NativeFunctionsWithLogAndPanic(logs *[]string) vm.NativeFunctionsProvider {
+func NativeFunctionsWithLogAndPanic(logs *[]string) vm.BuiltinGlobalsProvider {
 	return func() map[string]*vm.Variable {
 		funcs := vm.NativeFunctions()
 
@@ -427,7 +427,11 @@ func CompileAndInvokeWithLogs(
 	code string,
 	funcName string,
 	arguments ...vm.Value,
-) (result vm.Value, err error, logs []string) {
+) (
+	result vm.Value,
+	logs []string,
+	err error,
+) {
 
 	activation := sema.NewVariableActivation(sema.BaseValueActivation)
 	activation.DeclareValue(stdlib.PanicFunction)
@@ -451,7 +455,7 @@ func CompileAndInvokeWithLogs(
 	storage := interpreter.NewInMemoryStorage(nil)
 	vmConfig := vm.NewConfig(storage)
 
-	vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+	vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 	result, err = CompileAndInvokeWithOptions(
 		t,
@@ -555,13 +559,14 @@ func contractValueHandler(contractName string, arguments ...vm.Value) vm.Contrac
 	}
 }
 
-func typeLoader(
-	tb testing.TB,
+func CompiledProgramsTypeLoader(
 	programs CompiledPrograms,
 ) func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
 	return func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
 		program, ok := programs[location]
-		require.True(tb, ok, "cannot find elaboration for %s", location)
+		if !ok {
+			return nil
+		}
 
 		elaboration := program.DesugaredElaboration
 
@@ -659,7 +664,7 @@ func PrepareVMConfig(
 	}
 
 	if config.TypeLoader == nil {
-		config.TypeLoader = typeLoader(tb, programs)
+		config.TypeLoader = CompiledProgramsTypeLoader(programs)
 	}
 
 	if config.ImportHandler == nil {

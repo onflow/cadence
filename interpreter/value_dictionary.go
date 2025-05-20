@@ -64,7 +64,13 @@ func NewDictionaryValueWithAddress(
 	keysAndValues ...Value,
 ) *DictionaryValue {
 
-	context.ReportComputation(common.ComputationKindCreateDictionaryValue, 1)
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindCreateDictionaryValue,
+			Intensity: 1,
+		},
+	)
 
 	var v *DictionaryValue
 
@@ -119,7 +125,7 @@ func NewDictionaryValueWithAddress(
 		// then we need to prevent a resource loss
 		if _, ok := existingValue.(*SomeValue); ok {
 			if v.IsResourceKinded(context) {
-				panic(DuplicateKeyInResourceDictionaryError{
+				panic(&DuplicateKeyInResourceDictionaryError{
 					LocationRange: locationRange,
 				})
 			}
@@ -147,7 +153,14 @@ func newDictionaryValueWithIterator(
 	address common.Address,
 	values func() (Value, Value),
 ) *DictionaryValue {
-	context.ReportComputation(common.ComputationKindCreateDictionaryValue, 1)
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindCreateDictionaryValue,
+			Intensity: 1,
+		},
+	)
 
 	var v *DictionaryValue
 
@@ -480,7 +493,13 @@ func (v *DictionaryValue) IsStaleResource(context ValueStaticTypeContext) bool {
 
 func (v *DictionaryValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {
 
-	context.ReportComputation(common.ComputationKindDestroyDictionaryValue, 1)
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindDestroyDictionaryValue,
+			Intensity: 1,
+		},
+	)
 
 	if context.TracingEnabled() {
 		startTime := time.Now()
@@ -1281,9 +1300,12 @@ func (v *DictionaryValue) Transfer(
 	hasNoParentContainer bool,
 ) Value {
 
-	context.ReportComputation(
-		common.ComputationKindTransferDictionaryValue,
-		uint(v.Count()),
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindTransferDictionaryValue,
+			Intensity: uint64(v.Count()),
+		},
 	)
 
 	if context.TracingEnabled() {
@@ -1306,7 +1328,7 @@ func (v *DictionaryValue) Transfer(
 	if preventTransfer == nil {
 		preventTransfer = map[atree.ValueID]struct{}{}
 	} else if _, ok := preventTransfer[currentValueID]; ok {
-		panic(RecursiveTransferError{
+		panic(&RecursiveTransferError{
 			LocationRange: locationRange,
 		})
 	}

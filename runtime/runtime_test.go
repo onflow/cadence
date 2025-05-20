@@ -609,7 +609,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 
 				assertRuntimeErrorIsUserError(t, err)
 
-				var argErr interpreter.ContainerMutationError
+				var argErr *interpreter.ContainerMutationError
 				require.ErrorAs(t, err, &argErr)
 			},
 		},
@@ -1000,7 +1000,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 
 				assertRuntimeErrorIsUserError(t, err)
 
-				var argErr interpreter.ContainerMutationError
+				var argErr *interpreter.ContainerMutationError
 				require.ErrorAs(t, err, &argErr)
 			},
 		},
@@ -3113,7 +3113,8 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 		if *compile {
 			require.ErrorContains(t, err, "invalid transfer: expected 'String', found 'Int'")
 		} else {
-			require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
+			var transferTypeError *interpreter.ValueTransferTypeError
+			require.ErrorAs(t, err, &transferTypeError)
 		}
 
 	})
@@ -4594,7 +4595,8 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 
 					assertRuntimeErrorIsUserError(t, err)
 
-					require.ErrorAs(t, err, &interpreter.ConditionError{})
+					var conditionErr *interpreter.ConditionError
+					require.ErrorAs(t, err, &conditionErr)
 				}
 			})
 		}
@@ -7179,7 +7181,7 @@ func TestRuntimeAccountsInDictionary(t *testing.T) {
 
 		assertRuntimeErrorIsUserError(t, err)
 
-		var typeErr interpreter.ContainerMutationError
+		var typeErr *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &typeErr)
 	})
 
@@ -7618,10 +7620,10 @@ func TestRuntimeComputationMetring(t *testing.T) {
 		code      string
 		ok        bool
 		hits      uint
-		intensity uint
+		intensity uint64
 	}
 
-	compLimit := uint(6)
+	hitLimit := uint(6)
 
 	tests := []test{
 		{
@@ -7630,7 +7632,7 @@ func TestRuntimeComputationMetring(t *testing.T) {
               while true {}
             `,
 			ok:        false,
-			hits:      compLimit,
+			hits:      hitLimit,
 			intensity: 6,
 		},
 		{
@@ -7642,7 +7644,7 @@ func TestRuntimeComputationMetring(t *testing.T) {
               }
             `,
 			ok:        false,
-			hits:      compLimit,
+			hits:      hitLimit,
 			intensity: 6,
 		},
 		{
@@ -7651,7 +7653,7 @@ func TestRuntimeComputationMetring(t *testing.T) {
               for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] {}
             `,
 			ok:        false,
-			hits:      compLimit,
+			hits:      hitLimit,
 			intensity: 6,
 		},
 		{
@@ -7693,13 +7695,17 @@ func TestRuntimeComputationMetring(t *testing.T) {
 
 			runtime := NewTestInterpreterRuntime()
 
-			compErr := errors.New("computation exceeded limit")
-			var hits, totalIntensity uint
-			meterComputationFunc := func(kind common.ComputationKind, intensity uint) error {
+			var hits uint
+			var totalIntensity uint64
+
+			meterComputationFunc := func(usage common.ComputationUsage) error {
 				hits++
-				totalIntensity += intensity
-				if hits >= compLimit {
-					return compErr
+				totalIntensity += usage.Intensity
+				if hits >= hitLimit {
+					return computationHitsExceededError{
+						hits:     hits,
+						hitLimit: hitLimit,
+					}
 				}
 				return nil
 			}
@@ -7730,9 +7736,8 @@ func TestRuntimeComputationMetring(t *testing.T) {
 			} else {
 				RequireError(t, err)
 
-				var executionErr Error
-				require.ErrorAs(t, err, &executionErr)
-				require.ErrorAs(t, err.(Error).Unwrap(), &compErr)
+				var compHitsExceededErr computationHitsExceededError
+				require.ErrorAs(t, err, &compHitsExceededErr)
 			}
 
 			assert.Equal(t, testCase.hits, hits)
@@ -7817,7 +7822,8 @@ func assertRuntimeErrorIsExternalError(t *testing.T, err error) {
 	require.ErrorAs(t, err, &runtimeError)
 
 	innerError := runtimeError.Unwrap()
-	require.ErrorAs(t, innerError, &runtimeErrors.ExternalError{})
+	var externalErr runtimeErrors.ExternalError
+	require.ErrorAs(t, innerError, &externalErr)
 }
 
 func BenchmarkRuntimeScriptNoop(b *testing.B) {
@@ -8412,7 +8418,7 @@ func TestRuntimeInvalidatedResourceUse(t *testing.T) {
 	)
 	RequireError(t, err)
 
-	var invalidatedResourceReferenceError interpreter.InvalidatedResourceReferenceError
+	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
 	require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 
 }
@@ -8692,7 +8698,19 @@ func TestRuntimeReturnDestroyedOptional(t *testing.T) {
 	)
 
 	RequireError(t, err)
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+	require.ErrorAs(t, err, &invalidatedResourceReferenceError)
+}
+
+type computationHitsExceededError struct {
+	hits     uint
+	hitLimit uint
+}
+
+var _ error = computationHitsExceededError{}
+
+func (e computationHitsExceededError) Error() string {
+	return fmt.Sprintf("computation hits exceeded limit: %d >= %d", e.hits, e.hitLimit)
 }
 
 func TestRuntimeComputationMeteringError(t *testing.T) {
@@ -8714,7 +8732,7 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
-			OnMeterComputation: func(compKind common.ComputationKind, intensity uint) error {
+			OnMeterComputation: func(_ common.ComputationUsage) error {
 				return fmt.Errorf("computation limit exceeded")
 			},
 		}
@@ -8749,7 +8767,7 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
-			OnMeterComputation: func(compKind common.ComputationKind, intensity uint) error {
+			OnMeterComputation: func(usage common.ComputationUsage) error {
 				panic(fmt.Errorf("computation limit exceeded"))
 			},
 		}
@@ -8784,7 +8802,7 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
-			OnMeterComputation: func(compKind common.ComputationKind, intensity uint) error {
+			OnMeterComputation: func(usage common.ComputationUsage) error {
 				// Cause a runtime error
 				var x any = "hello"
 				_ = x.(int)
@@ -8812,16 +8830,17 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            access(all) fun foo() {}
+            access(all) event Foo()
 
             access(all) fun main() {
-                foo()
+                emit Foo()
             }
         `)
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
-			OnMeterComputation: func(compKind common.ComputationKind, intensity uint) (err error) {
+			OnEmitEvent: func(event cadence.Event) (err error) {
+
 				// Cause a runtime error. Catch it and return.
 				var x any = "hello"
 				defer func() {
@@ -10110,7 +10129,7 @@ func TestRuntimeStorageReferenceStaticTypeSpoofing(t *testing.T) {
 		)
 
 		require.Error(t, err)
-		var dereferenceError interpreter.DereferenceError
+		var dereferenceError *interpreter.DereferenceError
 		require.ErrorAs(t, err, &dereferenceError)
 	})
 
@@ -10263,7 +10282,7 @@ func TestRuntimeStorageReferenceStaticTypeSpoofing(t *testing.T) {
 		)
 
 		require.Error(t, err)
-		var dereferenceError interpreter.DereferenceError
+		var dereferenceError *interpreter.DereferenceError
 		require.ErrorAs(t, err, &dereferenceError)
 	})
 }
@@ -10520,7 +10539,8 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 	)
 	RequireError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+	require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 }
 
 func TestRuntimeValueTransferResourceLoss(t *testing.T) {
@@ -10959,7 +10979,7 @@ func TestRuntimeAccountStorageBorrowEphemeralReferenceValue(t *testing.T) {
 	)
 	RequireError(t, err)
 
-	var nestedReferenceErr interpreter.NestedReferenceError
+	var nestedReferenceErr *interpreter.NestedReferenceError
 	require.ErrorAs(t, err, &nestedReferenceErr)
 }
 
@@ -11202,7 +11222,8 @@ func TestRuntimeForbidPublicEntitlementPublish(t *testing.T) {
 		)
 
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.EntitledCapabilityPublishingError{})
+		var capabilityPublishingError *interpreter.EntitledCapabilityPublishingError
+		require.ErrorAs(t, err, &capabilityPublishingError)
 	})
 
 	t.Run("non entitled capability", func(t *testing.T) {
@@ -11316,7 +11337,8 @@ func TestRuntimeForbidPublicEntitlementPublish(t *testing.T) {
 		)
 
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.EntitledCapabilityPublishingError{})
+		var capabilityPublishingError *interpreter.EntitledCapabilityPublishingError
+		require.ErrorAs(t, err, &capabilityPublishingError)
 	})
 }
 

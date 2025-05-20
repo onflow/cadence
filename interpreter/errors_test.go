@@ -32,7 +32,7 @@ import (
 func TestOverwriteError_Error(t *testing.T) {
 
 	require.EqualError(t,
-		OverwriteError{
+		&OverwriteError{
 			Address: NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 			Path: PathValue{
 				Domain:     common.PathDomainStorage,
@@ -48,7 +48,7 @@ func TestErrorOutputIncludesLocationRage(t *testing.T) {
 	require.Equal(t,
 		Error{
 			Location: TestLocation,
-			Err: DereferenceError{
+			Err: &DereferenceError{
 				Cause: "the value being referenced has been destroyed or moved",
 				LocationRange: LocationRange{
 					Location: TestLocation,

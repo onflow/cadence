@@ -881,7 +881,15 @@ func (d *Desugar) inheritedFunctionsWithConditions(compositeType sema.Conforming
 	}
 
 	compositeType.EffectiveInterfaceConformanceSet().ForEach(func(interfaceType *sema.InterfaceType) {
-		elaboration, err := d.resolveElaboration(interfaceType.Location)
+		location := interfaceType.Location
+
+		// Built-in interface-types (e.g: `StructStringer`) don't have code/elaborations.
+		// Therefore, skip them as they don't have any conditions.
+		if location == nil {
+			return
+		}
+
+		elaboration, err := d.resolveElaboration(location)
 		if err != nil {
 			panic(err)
 		}
@@ -917,8 +925,15 @@ func (d *Desugar) inheritedDefaultFunctions(
 
 	for _, conformance := range compositeType.EffectiveInterfaceConformances() {
 		interfaceType := conformance.InterfaceType
+		location := interfaceType.Location
 
-		elaboration, err := d.resolveElaboration(interfaceType.Location)
+		// Built-in interface-types (e.g: `StructStringer`) don't have code/elaborations.
+		// Therefore, skip them as they don't have any default functions.
+		if location == nil {
+			continue
+		}
+
+		elaboration, err := d.resolveElaboration(location)
 		if err != nil {
 			panic(err)
 		}

@@ -24,7 +24,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
@@ -96,24 +95,15 @@ func newValidateAccountCapabilitiesGetHandler(i *Interface) interpreter.Validate
 		wantedBorrowType *sema.ReferenceType,
 		capabilityBorrowType *sema.ReferenceType,
 	) (bool, error) {
-		var (
-			ok  bool
-			err error
+
+		return (*i).ValidateAccountCapabilitiesGet(
+			context,
+			locationRange,
+			address,
+			path,
+			wantedBorrowType,
+			capabilityBorrowType,
 		)
-		errors.WrapPanic(func() {
-			ok, err = (*i).ValidateAccountCapabilitiesGet(
-				context,
-				locationRange,
-				address,
-				path,
-				wantedBorrowType,
-				capabilityBorrowType,
-			)
-		})
-		if err != nil {
-			err = interpreter.WrappedExternalError(err)
-		}
-		return ok, err
 	}
 }
 
@@ -125,34 +115,19 @@ func newValidateAccountCapabilitiesPublishHandler(i *Interface) interpreter.Vali
 		path interpreter.PathValue,
 		capabilityBorrowType *interpreter.ReferenceStaticType,
 	) (bool, error) {
-		var (
-			ok  bool
-			err error
+
+		return (*i).ValidateAccountCapabilitiesPublish(
+			context,
+			locationRange,
+			address,
+			path,
+			capabilityBorrowType,
 		)
-		errors.WrapPanic(func() {
-			ok, err = (*i).ValidateAccountCapabilitiesPublish(
-				context,
-				locationRange,
-				address,
-				path,
-				capabilityBorrowType,
-			)
-		})
-		if err != nil {
-			err = interpreter.WrappedExternalError(err)
-		}
-		return ok, err
 	}
 }
 
 func configureVersionedFeatures(i Interface) {
-	var (
-		minimumRequiredVersion string
-		err                    error
-	)
-	errors.WrapPanic(func() {
-		minimumRequiredVersion, err = i.MinimumRequiredVersion()
-	})
+	minimumRequiredVersion, err := i.MinimumRequiredVersion()
 	if err != nil {
 		panic(err)
 	}
@@ -168,21 +143,18 @@ func newOnRecordTraceHandler(i *Interface) interpreter.OnRecordTraceFunc {
 		duration time.Duration,
 		attrs []attribute.KeyValue,
 	) {
-		errors.WrapPanic(func() {
-			(*i).RecordTrace(functionName, interpreter.Location, duration, attrs)
-		})
+		(*i).RecordTrace(
+			functionName,
+			interpreter.Location,
+			duration,
+			attrs,
+		)
 	}
 }
 
 func newUUIDHandler(i *Interface) interpreter.UUIDHandlerFunc {
 	return func() (uuid uint64, err error) {
-		errors.WrapPanic(func() {
-			uuid, err = (*i).GenerateUUID()
-		})
-		if err != nil {
-			err = interpreter.WrappedExternalError(err)
-		}
-		return
+		return (*i).GenerateUUID()
 	}
 }
 
@@ -232,26 +204,12 @@ func newResourceOwnerChangedHandler(i *Interface) interpreter.OnResourceOwnerCha
 		oldOwner common.Address,
 		newOwner common.Address,
 	) {
-		errors.WrapPanic(func() {
-			(*i).ResourceOwnerChanged(
-				interpreter,
-				resource,
-				oldOwner,
-				newOwner,
-			)
-		})
-	}
-}
-
-func newOnMeterComputation(i *Interface) interpreter.OnMeterComputationFunc {
-	return func(compKind common.ComputationKind, intensity uint) {
-		var err error
-		errors.WrapPanic(func() {
-			err = (*i).MeterComputation(compKind, intensity)
-		})
-		if err != nil {
-			panic(interpreter.WrappedExternalError(err))
-		}
+		(*i).ResourceOwnerChanged(
+			interpreter,
+			resource,
+			oldOwner,
+			newOwner,
+		)
 	}
 }
 

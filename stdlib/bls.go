@@ -82,11 +82,7 @@ func newBLSAggregatePublicKeysFunction(
 				locationRange,
 			)
 
-			var err error
-			var aggregatedPublicKey *PublicKey
-			errors.WrapPanic(func() {
-				aggregatedPublicKey, err = aggregator.BLSAggregatePublicKeys(publicKeys)
-			})
+			aggregatedPublicKey, err := aggregator.BLSAggregatePublicKeys(publicKeys)
 
 			// If the crypto layer produces an error, we have invalid input, return nil
 			if err != nil {
@@ -160,11 +156,7 @@ func newBLSAggregateSignaturesFunction(
 				locationRange,
 			)
 
-			var err error
-			var aggregatedSignature []byte
-			errors.WrapPanic(func() {
-				aggregatedSignature, err = aggregator.BLSAggregateSignatures(bytesArray)
-			})
+			aggregatedSignature, err := aggregator.BLSAggregateSignatures(bytesArray)
 
 			// If the crypto layer produces an error, we have invalid input, return nil
 			if err != nil {

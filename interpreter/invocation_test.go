@@ -44,7 +44,8 @@ func TestInterpretFunctionInvocationCheckArgumentTypes(t *testing.T) {
 	_, err := inter.Invoke("test", interpreter.TrueValue)
 	RequireError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
+	var transferTypeError *interpreter.ValueTransferTypeError
+	require.ErrorAs(t, err, &transferTypeError)
 }
 
 func TestInterpretSelfDeclaration(t *testing.T) {
@@ -150,7 +151,7 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 
 	value := interpreter.NewUnmeteredUIntValueFromUint64(42)
 
-	test := inter.Globals.Get("test").GetValue(inter).(interpreter.FunctionValue)
+	test := inter.GetGlobal("test").(interpreter.FunctionValue)
 
 	invocation := interpreter.NewInvocation(
 		inter,
@@ -169,5 +170,6 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 	)
 	RequireError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
+	var memberAccessTypeError *interpreter.MemberAccessTypeError
+	require.ErrorAs(t, err, &memberAccessTypeError)
 }

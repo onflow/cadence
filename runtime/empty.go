@@ -54,7 +54,7 @@ func (EmptyRuntimeInterface) GetAccountContractCode(_ common.AddressLocation) (c
 	panic("unexpected call to GetAccountContractCode")
 }
 
-func (EmptyRuntimeInterface) MeterComputation(_ common.ComputationKind, _ uint) error {
+func (EmptyRuntimeInterface) MeterComputation(_ common.ComputationUsage) error {
 	// NO-OP
 	return nil
 }

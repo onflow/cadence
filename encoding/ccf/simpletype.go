@@ -18,7 +18,7 @@
 
 package ccf
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=SimpleType
+//go:generate stringer -type=SimpleType
 
 import (
 	"github.com/onflow/cadence"

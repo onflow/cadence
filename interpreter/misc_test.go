@@ -587,7 +587,7 @@ func TestInterpretInvalidArrayIndexing(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t, `
+			inter := parseCheckAndPrepare(t, `
                fun test(_ index: Int): Int {
                    let z = [0, 3]
                    return z[index]
@@ -598,7 +598,7 @@ func TestInterpretInvalidArrayIndexing(t *testing.T) {
 			_, err := inter.Invoke("test", indexValue)
 			RequireError(t, err)
 
-			var indexErr interpreter.ArrayIndexOutOfBoundsError
+			var indexErr *interpreter.ArrayIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
 
 			assert.Equal(t, index, indexErr.Index)
@@ -662,7 +662,7 @@ func TestInterpretInvalidArrayIndexingAssignment(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t, `
+			inter := parseCheckAndPrepare(t, `
                fun test(_ index: Int) {
                    let z = [0, 3]
                    z[index] = 1
@@ -673,7 +673,7 @@ func TestInterpretInvalidArrayIndexingAssignment(t *testing.T) {
 			_, err := inter.Invoke("test", indexValue)
 			RequireError(t, err)
 
-			var indexErr interpreter.ArrayIndexOutOfBoundsError
+			var indexErr *interpreter.ArrayIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
 
 			assert.Equal(t, index, indexErr.Index)
@@ -682,10 +682,21 @@ func TestInterpretInvalidArrayIndexingAssignment(t *testing.T) {
 				ast.Position{Offset: 94, Line: 4, Column: 19},
 				indexErr.HasPosition.StartPosition(),
 			)
-			assert.Equal(t,
-				ast.Position{Offset: 101, Line: 4, Column: 26},
-				indexErr.HasPosition.EndPosition(nil),
-			)
+
+			if *compile {
+				// In compiler, the range points to the entire assignment `z[index] = 1`,
+				// because the indexing and the assignment happens in a single instruction
+				// `SetIndex`, which is the most-granular level of position information.
+				assert.Equal(t,
+					ast.Position{Offset: 105, Line: 4, Column: 30},
+					indexErr.HasPosition.EndPosition(nil),
+				)
+			} else {
+				assert.Equal(t,
+					ast.Position{Offset: 101, Line: 4, Column: 26},
+					indexErr.HasPosition.EndPosition(nil),
+				)
+			}
 		})
 	}
 }
@@ -732,7 +743,7 @@ func TestInterpretInvalidStringIndexing(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t, `
+			inter := parseCheckAndPrepare(t, `
                fun test(_ index: Int) {
                    let x = "ab"
                    x[index]
@@ -743,7 +754,7 @@ func TestInterpretInvalidStringIndexing(t *testing.T) {
 			_, err := inter.Invoke("test", indexValue)
 			RequireError(t, err)
 
-			var indexErr interpreter.StringIndexOutOfBoundsError
+			var indexErr *interpreter.StringIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
 
 			assert.Equal(t, index, indexErr.Index)
@@ -830,7 +841,7 @@ func TestInterpretStringSlicing(t *testing.T) {
 		{"abcdef", 1, 6, "bcdef", nil},
 		// Invalid indices
 		{"abcdef", -1, 0, "", func(t *testing.T, err error) {
-			var sliceErr interpreter.StringSliceIndicesError
+			var sliceErr *interpreter.StringSliceIndicesError
 			require.ErrorAs(t, err, &sliceErr)
 
 			assert.Equal(t, -1, sliceErr.FromIndex)
@@ -846,7 +857,7 @@ func TestInterpretStringSlicing(t *testing.T) {
 			)
 		}},
 		{"abcdef", 0, -1, "", func(t *testing.T, err error) {
-			var sliceErr interpreter.StringSliceIndicesError
+			var sliceErr *interpreter.StringSliceIndicesError
 			require.ErrorAs(t, err, &sliceErr)
 
 			assert.Equal(t, 0, sliceErr.FromIndex)
@@ -862,7 +873,7 @@ func TestInterpretStringSlicing(t *testing.T) {
 			)
 		}},
 		{"abcdef", 0, 10, "", func(t *testing.T, err error) {
-			var sliceErr interpreter.StringSliceIndicesError
+			var sliceErr *interpreter.StringSliceIndicesError
 			require.ErrorAs(t, err, &sliceErr)
 
 			assert.Equal(t, 0, sliceErr.FromIndex)
@@ -878,7 +889,7 @@ func TestInterpretStringSlicing(t *testing.T) {
 			)
 		}},
 		{"abcdef", 2, 1, "", func(t *testing.T, err error) {
-			var indexErr interpreter.InvalidSliceIndexError
+			var indexErr *interpreter.InvalidSliceIndexError
 			require.ErrorAs(t, err, &indexErr)
 
 			assert.Equal(t, 2, indexErr.FromIndex)
@@ -916,7 +927,7 @@ func TestInterpretStringSlicing(t *testing.T) {
 
 			t.Parallel()
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       fun test(): String {
@@ -941,11 +952,6 @@ func TestInterpretStringSlicing(t *testing.T) {
 					value,
 				)
 			} else {
-				require.IsType(t,
-					interpreter.Error{},
-					err,
-				)
-
 				test.checkError(t, err)
 			}
 		})
@@ -5569,7 +5575,7 @@ func TestInterpretInvalidArrayInsert(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t, `
+			inter := parseCheckAndPrepare(t, `
                let x = [1, 2, 3]
 
                fun test(_ index: Int) {
@@ -5581,7 +5587,7 @@ func TestInterpretInvalidArrayInsert(t *testing.T) {
 			_, err := inter.Invoke("test", indexValue)
 			RequireError(t, err)
 
-			var indexErr interpreter.ArrayIndexOutOfBoundsError
+			var indexErr *interpreter.ArrayIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
 
 			assert.Equal(t, index, indexErr.Index)
@@ -5639,7 +5645,7 @@ func TestInterpretInvalidArrayRemove(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t, `
+			inter := parseCheckAndPrepare(t, `
                let x = [1, 2, 3]
 
                fun test(_ index: Int) {
@@ -5651,7 +5657,7 @@ func TestInterpretInvalidArrayRemove(t *testing.T) {
 			_, err := inter.Invoke("test", indexValue)
 			RequireError(t, err)
 
-			var indexErr interpreter.ArrayIndexOutOfBoundsError
+			var indexErr *interpreter.ArrayIndexOutOfBoundsError
 			require.ErrorAs(t, err, &indexErr)
 
 			assert.Equal(t, index, indexErr.Index)
@@ -5702,7 +5708,7 @@ func TestInterpretInvalidArrayRemoveFirst(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        let x: [Int] = []
 
        fun test() {
@@ -5713,7 +5719,7 @@ func TestInterpretInvalidArrayRemoveFirst(t *testing.T) {
 	_, err := inter.Invoke("test")
 	RequireError(t, err)
 
-	var indexErr interpreter.ArrayIndexOutOfBoundsError
+	var indexErr *interpreter.ArrayIndexOutOfBoundsError
 	require.ErrorAs(t, err, &indexErr)
 
 	assert.Equal(t, 0, indexErr.Index)
@@ -5763,7 +5769,7 @@ func TestInterpretInvalidArrayRemoveLast(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        let x: [Int] = []
 
        fun test() {
@@ -5774,7 +5780,7 @@ func TestInterpretInvalidArrayRemoveLast(t *testing.T) {
 	_, err := inter.Invoke("test")
 	RequireError(t, err)
 
-	var indexErr interpreter.ArrayIndexOutOfBoundsError
+	var indexErr *interpreter.ArrayIndexOutOfBoundsError
 	require.ErrorAs(t, err, &indexErr)
 
 	assert.Equal(t, -1, indexErr.Index)
@@ -5822,7 +5828,7 @@ func TestInterpretArraySlicing(t *testing.T) {
 		{"[1, 2, 3, 4, 5, 6]", 1, 6, "[2, 3, 4, 5, 6]", nil},
 		// Invalid indices
 		{"[1, 2, 3, 4, 5, 6]", -1, 0, "", func(t *testing.T, err error) {
-			var sliceErr interpreter.ArraySliceIndicesError
+			var sliceErr *interpreter.ArraySliceIndicesError
 			require.ErrorAs(t, err, &sliceErr)
 
 			assert.Equal(t, -1, sliceErr.FromIndex)
@@ -5838,7 +5844,7 @@ func TestInterpretArraySlicing(t *testing.T) {
 			)
 		}},
 		{"[1, 2, 3, 4, 5, 6]", 0, -1, "", func(t *testing.T, err error) {
-			var sliceErr interpreter.ArraySliceIndicesError
+			var sliceErr *interpreter.ArraySliceIndicesError
 			require.ErrorAs(t, err, &sliceErr)
 
 			assert.Equal(t, 0, sliceErr.FromIndex)
@@ -5854,7 +5860,7 @@ func TestInterpretArraySlicing(t *testing.T) {
 			)
 		}},
 		{"[1, 2, 3, 4, 5, 6]", 0, 10, "", func(t *testing.T, err error) {
-			var sliceErr interpreter.ArraySliceIndicesError
+			var sliceErr *interpreter.ArraySliceIndicesError
 			require.ErrorAs(t, err, &sliceErr)
 
 			assert.Equal(t, 0, sliceErr.FromIndex)
@@ -5870,7 +5876,7 @@ func TestInterpretArraySlicing(t *testing.T) {
 			)
 		}},
 		{"[1, 2, 3, 4, 5, 6]", 2, 1, "", func(t *testing.T, err error) {
-			var indexErr interpreter.InvalidSliceIndexError
+			var indexErr *interpreter.InvalidSliceIndexError
 			require.ErrorAs(t, err, &indexErr)
 
 			assert.Equal(t, 2, indexErr.FromIndex)
@@ -5891,8 +5897,7 @@ func TestInterpretArraySlicing(t *testing.T) {
 
 			t.Parallel()
 
-			// TODO: Enable test: require location info for assertions.
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       fun test(): [Int] {
@@ -6344,7 +6349,7 @@ func TestInterpretDictionaryKeyTypes(t *testing.T) {
 	for ty, code := range tests {
 		t.Run(ty, func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       let k: %s = %s
@@ -8721,7 +8726,7 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
 	interpreterErr := err.(interpreter.Error)
 
 	require.IsType(t,
-		interpreter.ConditionError{},
+		&interpreter.ConditionError{},
 		interpreterErr.Err,
 	)
 }
@@ -8852,7 +8857,8 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
 		_, err := inter.Invoke("testNil")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ForceNilError{})
+		var forceNilError *interpreter.ForceNilError
+		require.ErrorAs(t, err, &forceNilError)
 	})
 }
 
@@ -9230,7 +9236,8 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ResourceLossError{})
+		var resourceLossError *interpreter.ResourceLossError
+		require.ErrorAs(t, err, &resourceLossError)
 	})
 
 	t.Run("existing to nil", func(t *testing.T) {
@@ -9266,7 +9273,8 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ResourceLossError{})
+		var resourceLossError *interpreter.ResourceLossError
+		require.ErrorAs(t, err, &resourceLossError)
 	})
 
 	t.Run("force-assignment initialization", func(t *testing.T) {
@@ -9358,7 +9366,8 @@ func TestInterpretForce(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ForceNilError{})
+		var forceNilError *interpreter.ForceNilError
+		require.ErrorAs(t, err, &forceNilError)
 	})
 
 	t.Run("nil, AnyStruct", func(t *testing.T) {
@@ -9377,7 +9386,8 @@ func TestInterpretForce(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ForceNilError{})
+		var forceNilError *interpreter.ForceNilError
+		require.ErrorAs(t, err, &forceNilError)
 	})
 
 	t.Run("non-optional", func(t *testing.T) {
@@ -9563,7 +9573,7 @@ func TestInterpretCountDigits256(t *testing.T) {
 
 		t.Run(test.Type.String(), func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       fun countDigits(_ x: %[2]s): UInt8 {
@@ -9967,7 +9977,7 @@ func TestInterpretMissingMember(t *testing.T) {
 	_, err := inter.Invoke("test")
 	RequireError(t, err)
 
-	var missingMemberError interpreter.UseBeforeInitializationError
+	var missingMemberError *interpreter.UseBeforeInitializationError
 	require.ErrorAs(t, err, &missingMemberError)
 
 	require.Equal(t, "y", missingMemberError.Name)
@@ -11972,7 +11982,8 @@ func TestInterpretDictionaryDuplicateKey(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.DuplicateKeyInResourceDictionaryError{})
+		var duplicateKeyError *interpreter.DuplicateKeyInResourceDictionaryError
+		require.ErrorAs(t, err, &duplicateKeyError)
 	})
 
 	t.Run("resource", func(t *testing.T) {
@@ -11996,7 +12007,8 @@ func TestInterpretDictionaryDuplicateKey(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.ResourceLossError{})
+		var resourceLossError *interpreter.ResourceLossError
+		require.ErrorAs(t, err, &resourceLossError)
 	})
 }
 
@@ -12466,7 +12478,8 @@ func TestInterpretSwapDictionaryKeysWithSideEffects(t *testing.T) {
 		_, err = inter.Invoke("test")
 		RequireError(t, err)
 
-		assert.ErrorAs(t, err, &interpreter.UseBeforeInitializationError{})
+		var initializationError *interpreter.UseBeforeInitializationError
+		require.ErrorAs(t, err, &initializationError)
 
 		require.Empty(t, getEvents())
 	})

@@ -68,7 +68,7 @@ jobs:
           cache: true
 
       - name: Lint
-        run: make lint-github-actions
+        run: make lint
 
       - name: Check license headers
         run: make check-headers

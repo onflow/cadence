@@ -1660,9 +1660,9 @@ func NewEntitlementSetAuthorization(
 
 func (*EntitlementSetAuthorization) isAuthorization() {}
 
-func (e *EntitlementSetAuthorization) ID() string {
-	entitlementTypeIDs := make([]string, 0, len(e.Entitlements))
-	for _, typeID := range e.Entitlements {
+func (a *EntitlementSetAuthorization) ID() string {
+	entitlementTypeIDs := make([]string, 0, len(a.Entitlements))
+	for _, typeID := range a.Entitlements {
 		entitlementTypeIDs = append(
 			entitlementTypeIDs,
 			string(typeID),
@@ -1670,41 +1670,41 @@ func (e *EntitlementSetAuthorization) ID() string {
 	}
 
 	// FormatEntitlementSetTypeID sorts
-	return sema.FormatEntitlementSetTypeID(entitlementTypeIDs, e.Kind)
+	return sema.FormatEntitlementSetTypeID(entitlementTypeIDs, a.Kind)
 }
 
-func (e *EntitlementSetAuthorization) Equal(auth Authorization) bool {
+func (a *EntitlementSetAuthorization) Equal(auth Authorization) bool {
 	switch auth := auth.(type) {
 	case *EntitlementSetAuthorization:
-		if len(e.Entitlements) != len(auth.Entitlements) {
+		if len(a.Entitlements) != len(auth.Entitlements) {
 			return false
 		}
 
 		// sets are equivalent if they contain the same elements, regardless of order
 		otherEntitlementSet := auth.getEntitlementSet()
 
-		for _, entitlement := range e.Entitlements {
+		for _, entitlement := range a.Entitlements {
 			if _, exist := otherEntitlementSet[entitlement]; !exist {
 				return false
 			}
 		}
-		return e.Kind == auth.Kind
+		return a.Kind == auth.Kind
 	}
 	return false
 }
 
-func (t *EntitlementSetAuthorization) initializeEntitlementSet() {
-	t.entitlementSetOnce.Do(func() {
-		t.entitlementSet = make(map[common.TypeID]struct{}, len(t.Entitlements))
-		for _, e := range t.Entitlements {
-			t.entitlementSet[e] = struct{}{}
+func (a *EntitlementSetAuthorization) initializeEntitlementSet() {
+	a.entitlementSetOnce.Do(func() {
+		a.entitlementSet = make(map[common.TypeID]struct{}, len(a.Entitlements))
+		for _, e := range a.Entitlements {
+			a.entitlementSet[e] = struct{}{}
 		}
 	})
 }
 
-func (t *EntitlementSetAuthorization) getEntitlementSet() map[common.TypeID]struct{} {
-	t.initializeEntitlementSet()
-	return t.entitlementSet
+func (a *EntitlementSetAuthorization) getEntitlementSet() map[common.TypeID]struct{} {
+	a.initializeEntitlementSet()
+	return a.entitlementSet
 }
 
 type EntitlementMapAuthorization struct {
@@ -1722,16 +1722,16 @@ func NewEntitlementMapAuthorization(gauge common.MemoryGauge, id common.TypeID) 
 
 func (EntitlementMapAuthorization) isAuthorization() {}
 
-func (e EntitlementMapAuthorization) ID() string {
-	return string(e.TypeID)
+func (a EntitlementMapAuthorization) ID() string {
+	return string(a.TypeID)
 }
 
-func (e EntitlementMapAuthorization) Equal(other Authorization) bool {
+func (a EntitlementMapAuthorization) Equal(other Authorization) bool {
 	auth, ok := other.(EntitlementMapAuthorization)
 	if !ok {
 		return false
 	}
-	return e.TypeID == auth.TypeID
+	return a.TypeID == auth.TypeID
 }
 
 // ReferenceType

@@ -156,10 +156,7 @@ func (executor *transactionExecutor) preprocess() (err error) {
 	transactionType := transactions[0]
 	executor.transactionType = transactionType
 
-	var authorizerAddresses []Address
-	errors.WrapPanic(func() {
-		authorizerAddresses, err = runtimeInterface.GetSigningAccounts()
-	})
+	authorizerAddresses, err := runtimeInterface.GetSigningAccounts()
 	if err != nil {
 		return newError(err, location, codesAndPrograms)
 	}
@@ -271,7 +268,7 @@ func (executor *transactionExecutor) transactionExecutionFunction(
 			err = internalErr
 		})
 
-		values, err := importValidatedArguments(
+		arguments, err := importValidatedArguments(
 			inter,
 			executor.environment,
 			interpreter.EmptyLocationRange,
@@ -282,8 +279,10 @@ func (executor *transactionExecutor) transactionExecutionFunction(
 			return nil, err
 		}
 
-		values = append(values, authorizerValues(inter)...)
-		err = inter.InvokeTransaction(0, values...)
+		signers := authorizerValues(inter)
+
+		err = inter.InvokeTransaction(arguments, signers...)
+
 		return nil, err
 	}
 }

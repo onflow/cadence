@@ -114,6 +114,7 @@ var _ stdlib.BLSSignatureAggregator = &interpreterEnvironment{}
 var _ stdlib.Hasher = &interpreterEnvironment{}
 var _ ArgumentDecoder = &interpreterEnvironment{}
 var _ common.MemoryGauge = &interpreterEnvironment{}
+var _ common.ComputationGauge = &interpreterEnvironment{}
 
 func NewInterpreterEnvironment(config Config) *interpreterEnvironment {
 	defaultBaseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
@@ -134,6 +135,7 @@ func NewInterpreterEnvironment(config Config) *interpreterEnvironment {
 func (e *interpreterEnvironment) NewInterpreterConfig() *interpreter.Config {
 	return &interpreter.Config{
 		MemoryGauge:                    e,
+		ComputationGauge:               e,
 		BaseActivationHandler:          e.getBaseActivation,
 		OnEventEmitted:                 newOnEventEmittedHandler(&e.Interface),
 		InjectedCompositeFieldsHandler: newInjectedCompositeFieldsHandler(e),
@@ -154,7 +156,6 @@ func (e *interpreterEnvironment) NewInterpreterConfig() *interpreter.Config {
 		AtreeStorageValidationEnabled:             false,
 		Debugger:                                  e.config.Debugger,
 		OnStatement:                               e.newOnStatementHandler(),
-		OnMeterComputation:                        newOnMeterComputation(&e.Interface),
 		OnFunctionInvocation:                      e.newOnFunctionInvocationHandler(),
 		OnInvokedFunctionReturn:                   e.newOnInvokedFunctionReturnHandler(),
 		CapabilityBorrowHandler:                   newCapabilityBorrowHandler(e),

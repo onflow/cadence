@@ -734,9 +734,9 @@ func TestParseArgumentList(t *testing.T) {
 
 		_, err := ParseArgumentList(gauge, []byte(`(1, b: true)`), Config{})
 		require.Len(t, err, 1)
-		require.IsType(t, errors.MemoryError{}, err[0])
+		require.IsType(t, errors.MemoryMeteringError{}, err[0])
 
-		fatalError, _ := err[0].(errors.MemoryError)
+		fatalError, _ := err[0].(errors.MemoryMeteringError)
 		var expectedError limitingMemoryGaugeError
 		assert.ErrorAs(t, fatalError, &expectedError)
 	})

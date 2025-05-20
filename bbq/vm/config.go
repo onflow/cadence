@@ -31,9 +31,10 @@ import (
 // It does not hold data specific to a single execution. i.e: No state is maintained.
 type Config struct {
 	common.MemoryGauge
+	common.ComputationGauge
 	commons.ImportHandler
 	ContractValueHandler
-	NativeFunctionsProvider
+	BuiltinGlobalsProvider
 	Tracer
 	stdlib.Logger
 
@@ -96,20 +97,15 @@ func (c *Config) GetInterfaceType(
 		}
 	}
 
-	compositeKindedType := c.TypeLoader(location, typeID)
-	if compositeKindedType != nil {
-
-		inter, ok := compositeKindedType.(*sema.InterfaceType)
-		if !ok {
-			panic(errors.NewUnreachableError())
+	ty := c.TypeLoader(location, typeID)
+	interfaceType, ok := ty.(*sema.InterfaceType)
+	if !ok {
+		return nil, interpreter.TypeLoadingError{
+			TypeID: typeID,
 		}
-
-		return inter, nil
 	}
 
-	return nil, interpreter.TypeLoadingError{
-		TypeID: typeID,
-	}
+	return interfaceType, nil
 }
 
 func (c *Config) GetCompositeType(
@@ -125,20 +121,15 @@ func (c *Config) GetCompositeType(
 		}
 	}
 
-	compositeKindedType := c.TypeLoader(location, typeID)
-	if compositeKindedType != nil {
-
-		compositeType, ok := compositeKindedType.(*sema.CompositeType)
-		if !ok {
-			panic(errors.NewUnreachableError())
+	ty := c.TypeLoader(location, typeID)
+	compositeType, ok := ty.(*sema.CompositeType)
+	if !ok {
+		return nil, interpreter.TypeLoadingError{
+			TypeID: typeID,
 		}
-
-		return compositeType, nil
 	}
 
-	return nil, interpreter.TypeLoadingError{
-		TypeID: typeID,
-	}
+	return compositeType, nil
 }
 
 func (c *Config) GetEntitlementType(typeID interpreter.TypeID) (*sema.EntitlementType, error) {
@@ -158,20 +149,15 @@ func (c *Config) GetEntitlementType(typeID interpreter.TypeID) (*sema.Entitlemen
 		return ty, nil
 	}
 
-	typ := c.TypeLoader(location, typeID)
-	if typ != nil {
-
-		entitlementType, ok := typ.(*sema.EntitlementType)
-		if !ok {
-			panic(errors.NewUnreachableError())
+	ty := c.TypeLoader(location, typeID)
+	entitlementType, ok := ty.(*sema.EntitlementType)
+	if !ok {
+		return nil, interpreter.TypeLoadingError{
+			TypeID: typeID,
 		}
-
-		return entitlementType, nil
 	}
 
-	return nil, interpreter.TypeLoadingError{
-		TypeID: typeID,
-	}
+	return entitlementType, nil
 }
 
 func (c *Config) GetEntitlementMapType(typeID interpreter.TypeID) (*sema.EntitlementMapType, error) {
@@ -191,24 +177,23 @@ func (c *Config) GetEntitlementMapType(typeID interpreter.TypeID) (*sema.Entitle
 		return ty, nil
 	}
 
-	typ := c.TypeLoader(location, typeID)
-	if typ != nil {
-
-		entitlementMapType, ok := typ.(*sema.EntitlementMapType)
-		if !ok {
-			panic(errors.NewUnreachableError())
+	ty := c.TypeLoader(location, typeID)
+	entitlementMapType, ok := ty.(*sema.EntitlementMapType)
+	if !ok {
+		return nil, interpreter.TypeLoadingError{
+			TypeID: typeID,
 		}
-
-		return entitlementMapType, nil
 	}
 
-	return nil, interpreter.TypeLoadingError{
-		TypeID: typeID,
-	}
+	return entitlementMapType, nil
 }
 
-func (c *Config) ReportComputation(compKind common.ComputationKind, intensity uint) {
-	//TODO
+func (c *Config) MeterComputation(usage common.ComputationUsage) error {
+	if c.ComputationGauge == nil {
+		return nil
+	}
+
+	return c.ComputationGauge.MeterComputation(usage)
 }
 
 func (c *Config) InjectedCompositeFieldsHandler() interpreter.InjectedCompositeFieldsHandlerFunc {
@@ -255,7 +240,7 @@ func (c *Config) EmitEvent(
 ) {
 	onEventEmitted := c.interpreterConfig.OnEventEmitted
 	if onEventEmitted == nil {
-		panic(interpreter.EventEmissionUnavailableError{
+		panic(&interpreter.EventEmissionUnavailableError{
 			LocationRange: locationRange,
 		})
 	}

@@ -65,13 +65,7 @@ func newPublicKeyValidationHandler(validator PublicKeyValidator) interpreter.Pub
 			return err
 		}
 
-		errors.WrapPanic(func() {
-			err = validator.ValidatePublicKey(publicKey)
-		})
-		if err != nil {
-			err = interpreter.WrappedExternalError(err)
-		}
-		return err
+		return validator.ValidatePublicKey(publicKey)
 	}
 }
 
@@ -270,20 +264,16 @@ func newPublicKeyVerifySignatureFunction(
 				return interpreter.FalseValue
 			}
 
-			var valid bool
-			errors.WrapPanic(func() {
-				valid, err = verifier.VerifySignature(
-					signature,
-					domainSeparationTag,
-					signedData,
-					publicKey.PublicKey,
-					publicKey.SignAlgo,
-					hashAlgorithm,
-				)
-			})
-
+			valid, err := verifier.VerifySignature(
+				signature,
+				domainSeparationTag,
+				signedData,
+				publicKey.PublicKey,
+				publicKey.SignAlgo,
+				hashAlgorithm,
+			)
 			if err != nil {
-				panic(interpreter.WrappedExternalError(err))
+				panic(err)
 			}
 
 			return interpreter.BoolValue(valid)
@@ -332,12 +322,9 @@ func newPublicKeyVerifyPoPFunction(
 				panic(err)
 			}
 
-			var valid bool
-			errors.WrapPanic(func() {
-				valid, err = verifier.BLSVerifyPOP(publicKey, signature)
-			})
+			valid, err := verifier.BLSVerifyPOP(publicKey, signature)
 			if err != nil {
-				panic(interpreter.WrappedExternalError(err))
+				panic(err)
 			}
 			return interpreter.BoolValue(valid)
 		},

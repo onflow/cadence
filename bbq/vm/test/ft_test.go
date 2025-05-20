@@ -282,7 +282,7 @@ func compiledFTTransfer(tb testing.TB) {
 		setupTxVM := vm.NewVM(txLocation, program, vmConfig)
 
 		authorizer := vm.NewAuthAccountReferenceValue(setupTxVM.Context(), accountHandler, address)
-		err := setupTxVM.ExecuteTransaction(nil, authorizer)
+		err := setupTxVM.InvokeTransaction(nil, authorizer)
 		require.NoError(tb, err)
 		require.Equal(tb, 0, setupTxVM.StackSize())
 	}
@@ -315,7 +315,7 @@ func compiledFTTransfer(tb testing.TB) {
 	}
 
 	mintTxAuthorizer := vm.NewAuthAccountReferenceValue(mintTxVM.Context(), accountHandler, contractsAddress)
-	err := mintTxVM.ExecuteTransaction(mintTxArgs, mintTxAuthorizer)
+	err := mintTxVM.InvokeTransaction(mintTxArgs, mintTxAuthorizer)
 	require.NoError(tb, err)
 	require.Equal(tb, 0, mintTxVM.StackSize())
 
@@ -368,7 +368,7 @@ func compiledFTTransfer(tb testing.TB) {
 
 	for loop() {
 
-		err := tokenTransferTxVM.ExecuteTransaction(tokenTransferTxArgs, tokenTransferTxAuthorizer)
+		err := tokenTransferTxVM.InvokeTransaction(tokenTransferTxArgs, tokenTransferTxAuthorizer)
 		require.NoError(tb, err)
 		require.Equal(tb, 0, tokenTransferTxVM.StackSize())
 

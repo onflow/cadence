@@ -31,7 +31,7 @@ func TestStringerBasic(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
 		access(all)
 		struct Example: StructStringer {
 			view fun toString(): String {
@@ -58,7 +58,7 @@ func TestStringerBuiltIn(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
 		access(all)
 		fun test(): String {
 			let v = 1
@@ -81,7 +81,7 @@ func TestStringerCast(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
 		access(all)
 		fun test(): String {
 			var s = 1
@@ -105,7 +105,7 @@ func TestStringerAsValue(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
 		access(all)
 		fun test(): String {
 			var v = Type<{StructStringer}>()

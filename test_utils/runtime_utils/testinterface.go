@@ -73,7 +73,7 @@ type TestRuntimeInterface struct {
 		newAddress common.Address,
 	)
 	OnGenerateUUID       func() (uint64, error)
-	OnMeterComputation   func(compKind common.ComputationKind, intensity uint) error
+	OnMeterComputation   func(usage common.ComputationUsage) error
 	OnDecodeArgument     func(b []byte, t cadence.Type) (cadence.Value, error)
 	OnProgramParsed      func(location runtime.Location, duration time.Duration)
 	OnProgramChecked     func(location runtime.Location, duration time.Duration)
@@ -367,11 +367,11 @@ func (i *TestRuntimeInterface) GenerateUUID() (uint64, error) {
 	return i.OnGenerateUUID()
 }
 
-func (i *TestRuntimeInterface) MeterComputation(compKind common.ComputationKind, intensity uint) error {
+func (i *TestRuntimeInterface) MeterComputation(usage common.ComputationUsage) error {
 	if i.OnMeterComputation == nil {
 		return nil
 	}
-	return i.OnMeterComputation(compKind, intensity)
+	return i.OnMeterComputation(usage)
 }
 
 func (i *TestRuntimeInterface) DecodeArgument(b []byte, t cadence.Type) (cadence.Value, error) {

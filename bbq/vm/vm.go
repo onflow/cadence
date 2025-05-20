@@ -25,7 +25,6 @@ import (
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/constant"
-	"github.com/onflow/cadence/bbq/leb128"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -66,8 +65,8 @@ func NewVM(
 		context.storage = interpreter.NewInMemoryStorage(nil)
 	}
 
-	if context.NativeFunctionsProvider == nil {
-		context.NativeFunctionsProvider = NativeFunctions
+	if context.BuiltinGlobalsProvider == nil {
+		context.BuiltinGlobalsProvider = NativeFunctions
 	}
 
 	if context.referencedResourceKindedValues == nil {
@@ -80,7 +79,7 @@ func NewVM(
 			// It is NOT safe to re-use native functions map here because,
 			// once put into the cache, it will be updated by adding the
 			// globals of the current program.
-			indexedGlobals: context.NativeFunctionsProvider(),
+			indexedGlobals: context.BuiltinGlobalsProvider(),
 		},
 	}
 
@@ -284,7 +283,42 @@ func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err er
 		}
 	}
 
+	defer func() {
+		recovered := recover()
+		if recovered == nil {
+			return
+		}
+
+		// TODO:
+		err, _ = recovered.(error)
+	}()
+
 	function := functionVariable.GetValue(vm.context)
+
+	functionValue, ok := function.(FunctionValue)
+	if !ok {
+		return nil, interpreter.NotInvokableError{
+			Value: function,
+		}
+	}
+
+	return vm.validateAndInvokeExternally(functionValue, arguments)
+}
+
+func (vm *VM) InvokeMethodExternally(
+	name string,
+	receiver interpreter.MemberAccessibleValue,
+	arguments ...Value,
+) (
+	v Value,
+	err error,
+) {
+	functionVariable, ok := vm.globals[name]
+	if !ok {
+		return nil, UnknownFunctionError{
+			name: name,
+		}
+	}
 
 	defer func() {
 		recovered := recover()
@@ -296,28 +330,42 @@ func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err er
 		err, _ = recovered.(error)
 	}()
 
-	return vm.validateAndInvokeExternally(function, arguments)
-}
+	context := vm.context
 
-func (vm *VM) validateAndInvokeExternally(function Value, arguments []Value) (Value, error) {
-	functionValue, ok := function.(CompiledFunctionValue)
+	function := functionVariable.GetValue(context)
+
+	functionValue, ok := function.(FunctionValue)
 	if !ok {
 		return nil, interpreter.NotInvokableError{
 			Value: function,
 		}
 	}
 
-	paramCount := functionValue.Function.ParameterCount
+	boundFunction := NewBoundFunctionPointerValue(context, receiver, functionValue)
 
-	if len(arguments) != int(paramCount) {
-		return nil, errors.NewDefaultUserError(
-			"wrong number of arguments: expected %d, found %d",
-			paramCount,
-			len(arguments),
-		)
+	return vm.validateAndInvokeExternally(boundFunction, arguments)
+}
+
+func (vm *VM) validateAndInvokeExternally(functionValue FunctionValue, arguments []Value) (Value, error) {
+	context := vm.context
+
+	functionType := functionValue.FunctionType(context)
+
+	preparedArguments, err := interpreter.PrepareExternalInvocationArguments(
+		context,
+		functionType,
+		arguments,
+	)
+	if err != nil {
+		return nil, err
 	}
 
-	return vm.invokeExternally(functionValue, arguments)
+	if boundFunction, ok := functionValue.(*BoundFunctionPointerValue); ok {
+		receiver := boundFunction.Receiver(vm.context)
+		preparedArguments = append([]Value{receiver}, preparedArguments...)
+	}
+
+	return vm.invokeExternally(functionValue, preparedArguments)
 }
 
 func (vm *VM) invokeExternally(functionValue Value, arguments []Value) (Value, error) {
@@ -352,7 +400,7 @@ func (vm *VM) InitializeContract(contractName string, arguments ...Value) (*inte
 	return contractValue, nil
 }
 
-func (vm *VM) ExecuteTransaction(transactionArgs []Value, signers ...Value) (err error) {
+func (vm *VM) InvokeTransaction(arguments []Value, signers ...Value) (err error) {
 	defer func() {
 		recovered := recover()
 		if recovered == nil {
@@ -364,39 +412,119 @@ func (vm *VM) ExecuteTransaction(transactionArgs []Value, signers ...Value) (err
 	}()
 
 	// Create transaction value
-	transaction, err := vm.InvokeExternally(commons.TransactionWrapperCompositeName)
+	transaction, err := vm.InvokeTransactionWrapper()
 	if err != nil {
 		return err
 	}
 
-	if initializerVariable, ok := vm.globals[commons.ProgramInitFunctionName]; ok {
-		initializer := initializerVariable.GetValue(vm.context)
-		_, err = vm.validateAndInvokeExternally(initializer, transactionArgs)
-		if err != nil {
-			return err
-		}
+	err = vm.InvokeTransactionInit(arguments)
+	if err != nil {
+		return err
 	}
 
-	prepareArgs := make([]Value, 0, len(signers)+1)
-	prepareArgs = append(prepareArgs, transaction)
-	prepareArgs = append(prepareArgs, signers...)
-
 	// Invoke 'prepare', if exists.
-	if prepareVariable, ok := vm.globals[commons.TransactionPrepareFunctionName]; ok {
-		prepare := prepareVariable.GetValue(vm.context)
-		_, err = vm.validateAndInvokeExternally(prepare, prepareArgs)
-		if err != nil {
-			return err
-		}
+	err = vm.InvokeTransactionPrepare(transaction, signers)
+	if err != nil {
+		return err
 	}
 
 	// TODO: Invoke pre/post conditions
 
 	// Invoke 'execute', if exists.
-	executeArgs := []Value{transaction}
-	if executeVariable, ok := vm.globals[commons.TransactionExecuteFunctionName]; ok {
-		execute := executeVariable.GetValue(vm.context)
-		_, err = vm.validateAndInvokeExternally(execute, executeArgs)
+	err = vm.InvokeTransactionExecute(transaction)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (vm *VM) InvokeTransactionWrapper() (*interpreter.CompositeValue, error) {
+	wrapperResult, err := vm.InvokeExternally(commons.TransactionWrapperCompositeName)
+	if err != nil {
+		return nil, err
+	}
+
+	transaction := wrapperResult.(*interpreter.CompositeValue)
+
+	return transaction, nil
+}
+
+func (vm *VM) InvokeTransactionInit(transactionArgs []Value) error {
+	context := vm.context
+	globals := vm.globals
+
+	initializerVariable, ok := globals[commons.ProgramInitFunctionName]
+	if !ok {
+		if len(transactionArgs) > 0 {
+			return interpreter.ArgumentCountError{
+				ParameterCount: 0,
+				ArgumentCount:  len(transactionArgs),
+			}
+		}
+
+		return nil
+	}
+
+	initializer := initializerVariable.GetValue(context).(FunctionValue)
+
+	_, err := vm.validateAndInvokeExternally(initializer, transactionArgs)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.CompositeValue, signers []Value) error {
+	context := vm.context
+
+	prepareVariable, ok := vm.globals[commons.TransactionPrepareFunctionName]
+	if !ok {
+		if len(signers) > 0 {
+			return interpreter.ArgumentCountError{
+				ParameterCount: 0,
+				ArgumentCount:  len(signers),
+			}
+		}
+
+		return nil
+	}
+
+	prepareValue := prepareVariable.GetValue(context)
+	prepareFunction := prepareValue.(FunctionValue)
+	boundPrepareFunction := NewBoundFunctionPointerValue(
+		context,
+		transaction,
+		prepareFunction,
+	)
+
+	_, err := vm.validateAndInvokeExternally(boundPrepareFunction, signers)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (vm *VM) InvokeTransactionExecute(transaction *interpreter.CompositeValue) error {
+	context := vm.context
+
+	executeVariable, ok := vm.globals[commons.TransactionExecuteFunctionName]
+	if !ok {
+		return nil
+	}
+
+	executeValue := executeVariable.GetValue(context)
+	executeFunction := executeValue.(FunctionValue)
+	boundExecuteFunction := NewBoundFunctionPointerValue(
+		context,
+		transaction,
+		executeFunction,
+	)
+
+	_, err := vm.validateAndInvokeExternally(boundExecuteFunction, nil)
+	if err != nil {
 		return err
 	}
 
@@ -862,7 +990,7 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 
 	fieldValue := memberAccessibleValue.GetMember(vm.context, EmptyLocationRange, fieldName)
 	if fieldValue == nil {
-		panic(interpreter.UseBeforeInitializationError{
+		panic(&interpreter.UseBeforeInitializationError{
 			Name: fieldName,
 		})
 	}
@@ -969,9 +1097,10 @@ func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 		targetSemaType := interpreter.MustConvertStaticToSemaType(targetType, vm.context)
 		valueSemaType := interpreter.MustConvertStaticToSemaType(valueType, vm.context)
 
-		panic(interpreter.ForceCastTypeMismatchError{
-			ExpectedType: targetSemaType,
-			ActualType:   valueSemaType,
+		panic(&interpreter.ForceCastTypeMismatchError{
+			ExpectedType:  targetSemaType,
+			ActualType:    valueSemaType,
+			LocationRange: vm.LocationRange(),
 		})
 	}
 
@@ -1045,7 +1174,7 @@ func opUnwrap(vm *VM) {
 	case *interpreter.SomeValue:
 		vm.replaceTop(value.InnerValue())
 	case interpreter.NilValue:
-		panic(interpreter.ForceNilError{})
+		panic(&interpreter.ForceNilError{})
 	default:
 		// Non-optional. Leave as is.
 	}
@@ -1135,9 +1264,13 @@ func opDeref(vm *VM) {
 
 func (vm *VM) run() {
 
-	if vm.context.debugEnabled {
-		defer func() {
-			if r := recover(); r != nil {
+	defer func() {
+		if r := recover(); r != nil {
+			if locatedError, ok := r.(interpreter.HasLocationRange); ok {
+				locatedError.SetLocationRange(vm.LocationRange())
+			}
+
+			if vm.context.debugEnabled {
 				switch r.(type) {
 				case errors.UserError, errors.ExternalError:
 					// do nothing
@@ -1148,10 +1281,11 @@ func (vm *VM) run() {
 						r,
 					)
 				}
-				panic(r)
 			}
-		}()
-	}
+
+			panic(r)
+		}
+	}()
 
 	entryPointCallStackSize := len(vm.callstack)
 
@@ -1392,178 +1526,70 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 		value = interpreter.NewUnmeteredCharacterValue(string(c.Data))
 
 	case constant.Int:
-		// TODO: support larger integers
-		v, _, err := leb128.ReadInt64(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Int constant: %s", err))
-		}
-		value = interpreter.NewIntValueFromInt64(memoryGauge, v)
+		value = interpreter.NewIntValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.Int8:
-		v, _, err := leb128.ReadInt32(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Int8 constant: %s", err))
-		}
-		value = interpreter.NewInt8Value(
-			memoryGauge,
-			func() int8 {
-				return int8(v)
-			},
-		)
+		value = interpreter.NewInt8ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.Int16:
-		v, _, err := leb128.ReadInt32(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Int16 constant: %s", err))
-		}
-		value = interpreter.NewInt16Value(
-			memoryGauge,
-			func() int16 {
-				return int16(v)
-			},
-		)
+		value = interpreter.NewInt16ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.Int32:
-		v, _, err := leb128.ReadInt32(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Int32 constant: %s", err))
-		}
-		value = interpreter.NewInt32Value(
-			memoryGauge,
-			func() int32 {
-				return v
-			},
-		)
+		value = interpreter.NewInt32ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.Int64:
-		v, _, err := leb128.ReadInt64(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Int64 constant: %s", err))
-		}
-		value = interpreter.NewInt64Value(
-			memoryGauge,
-			func() int64 {
-				return v
-			},
-		)
+		value = interpreter.NewInt64ValueFromBigEndianBytes(memoryGauge, c.Data)
+
+	case constant.Int128:
+		value = interpreter.NewInt128ValueFromBigEndianBytes(memoryGauge, c.Data)
+
+	case constant.Int256:
+		value = interpreter.NewInt256ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.UInt:
-		// TODO: support larger integers
-		v, _, err := leb128.ReadUint64(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read UInt constant: %s", err))
-		}
-		value = interpreter.NewUIntValueFromUint64(memoryGauge, v)
+		value = interpreter.NewUIntValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.UInt8:
-		v, _, err := leb128.ReadUint32(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read UInt8 constant: %s", err))
-		}
-		value = interpreter.NewUInt8Value(
-			memoryGauge,
-			func() uint8 {
-				return uint8(v)
-			},
-		)
+		value = interpreter.NewUInt8ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.UInt16:
-		v, _, err := leb128.ReadUint32(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read UInt16 constant: %s", err))
-		}
-		value = interpreter.NewUInt16Value(
-			memoryGauge,
-			func() uint16 {
-				return uint16(v)
-			},
-		)
+		value = interpreter.NewUInt16ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.UInt32:
-		v, _, err := leb128.ReadUint32(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read UInt32 constant: %s", err))
-		}
-		value = interpreter.NewUInt32Value(
-			memoryGauge,
-			func() uint32 {
-				return v
-			},
-		)
+		value = interpreter.NewUInt32ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.UInt64:
-		v, _, err := leb128.ReadUint64(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read UInt64 constant: %s", err))
-		}
-		value = interpreter.NewUInt64Value(
-			memoryGauge,
-			func() uint64 {
-				return v
-			},
-		)
+		value = interpreter.NewUInt64ValueFromBigEndianBytes(memoryGauge, c.Data)
+
+	case constant.UInt128:
+		value = interpreter.NewUInt128ValueFromBigEndianBytes(memoryGauge, c.Data)
+
+	case constant.UInt256:
+		value = interpreter.NewUInt256ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.Word8:
-		v, _, err := leb128.ReadUint32(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Word8 constant: %s", err))
-		}
-		value = interpreter.NewWord8Value(
-			memoryGauge,
-			func() uint8 {
-				return uint8(v)
-			},
-		)
+		value = interpreter.NewWord8ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.Word16:
-		v, _, err := leb128.ReadUint32(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Word16 constant: %s", err))
-		}
-		value = interpreter.NewWord16Value(
-			memoryGauge,
-			func() uint16 {
-				return uint16(v)
-			},
-		)
+		value = interpreter.NewWord16ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.Word32:
-		v, _, err := leb128.ReadUint32(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Word32 constant: %s", err))
-		}
-		value = interpreter.NewWord32Value(
-			memoryGauge,
-			func() uint32 {
-				return v
-			},
-		)
+		value = interpreter.NewWord32ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.Word64:
-		v, _, err := leb128.ReadUint64(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Word64 constant: %s", err))
-		}
-		value = interpreter.NewWord64Value(
-			memoryGauge,
-			func() uint64 {
-				return v
-			},
-		)
+		value = interpreter.NewWord64ValueFromBigEndianBytes(memoryGauge, c.Data)
+
+	case constant.Word128:
+		value = interpreter.NewWord128ValueFromBigEndianBytes(memoryGauge, c.Data)
+
+	case constant.Word256:
+		value = interpreter.NewWord256ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.Fix64:
-		v, _, err := leb128.ReadInt64(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read Fix64 constant: %s", err))
-		}
-		value = interpreter.NewUnmeteredFix64Value(v)
+		value = interpreter.NewFix64ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.UFix64:
-		v, _, err := leb128.ReadUint64(c.Data)
-		if err != nil {
-			panic(errors.NewUnexpectedError("failed to read UFix64 constant: %s", err))
-		}
-		value = interpreter.NewUnmeteredUFix64Value(v)
+		value = interpreter.NewUFix64ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.Address:
 		value = interpreter.NewAddressValueFromBytes(
@@ -1572,14 +1598,6 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 				return c.Data
 			},
 		)
-
-	// TODO:
-	// case constantkind.Int128:
-	// case constantkind.Int256:
-	// case constantkind.UInt128:
-	// case constantkind.UInt256:
-	// case constantkind.Word128:
-	// case constantkind.Word256:
 
 	default:
 		panic(errors.NewUnexpectedError("unsupported constant kind: %s", c.Kind))
@@ -1662,6 +1680,23 @@ func (vm *VM) initializeGlobalVariables(program *bbq.InstructionProgram) {
 
 func (vm *VM) Global(name string) Value {
 	return vm.globals[name].GetValue(vm.context)
+}
+
+// LocationRange returns the location of the currently executing instruction.
+// This is an expensive operation and must be only used on-demand.
+func (vm *VM) LocationRange() interpreter.LocationRange {
+	currentFunction := vm.callFrame.function
+	lineNumbers := currentFunction.Function.LineNumbers
+
+	// `vm.ip` always points to the next instruction.
+	lastInstructionIndex := vm.ip - 1
+
+	position := lineNumbers.GetSourcePosition(lastInstructionIndex)
+
+	return interpreter.LocationRange{
+		Location:    currentFunction.Executable.Location,
+		HasPosition: position,
+	}
 }
 
 func printInstructionError(

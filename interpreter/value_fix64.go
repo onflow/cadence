@@ -52,13 +52,13 @@ func NewFix64ValueWithInteger(gauge common.MemoryGauge, constructor func() int64
 func NewUnmeteredFix64ValueWithInteger(integer int64, locationRange LocationRange) Fix64Value {
 
 	if integer < sema.Fix64TypeMinInt {
-		panic(UnderflowError{
+		panic(&UnderflowError{
 			LocationRange: locationRange,
 		})
 	}
 
 	if integer > sema.Fix64TypeMaxInt {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	}
@@ -73,6 +73,17 @@ func NewFix64Value(gauge common.MemoryGauge, valueGetter func() int64) Fix64Valu
 
 func NewUnmeteredFix64Value(integer int64) Fix64Value {
 	return Fix64Value(integer)
+}
+
+func NewFix64ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Fix64Value {
+	return NewFix64Value(
+		gauge,
+		func() int64 {
+			bytes := padWithZeroes(b, 8)
+			val := binary.BigEndian.Uint64(bytes)
+			return int64(val)
+		},
+	)
 }
 
 var _ Value = Fix64Value(0)
@@ -127,7 +138,7 @@ func (v Fix64Value) ToInt(_ LocationRange) int {
 func (v Fix64Value) Negate(context NumberValueArithmeticContext, locationRange LocationRange) NumberValue {
 	// INT32-C
 	if v == math.MinInt64 {
-		panic(OverflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	}
@@ -142,7 +153,7 @@ func (v Fix64Value) Negate(context NumberValueArithmeticContext, locationRange L
 func (v Fix64Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationPlus,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -160,7 +171,7 @@ func (v Fix64Value) Plus(context NumberValueArithmeticContext, other NumberValue
 func (v Fix64Value) SaturatingPlus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingAddFunctionName,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -184,7 +195,7 @@ func (v Fix64Value) SaturatingPlus(context NumberValueArithmeticContext, other N
 func (v Fix64Value) Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationMinus,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -195,11 +206,11 @@ func (v Fix64Value) Minus(context NumberValueArithmeticContext, other NumberValu
 	valueGetter := func() int64 {
 		// INT32-C
 		if (o > 0) && (v < (math.MinInt64 + o)) {
-			panic(OverflowError{
+			panic(&OverflowError{
 				LocationRange: locationRange,
 			})
 		} else if (o < 0) && (v > (math.MaxInt64 + o)) {
-			panic(UnderflowError{
+			panic(&UnderflowError{
 				LocationRange: locationRange,
 			})
 		}
@@ -213,7 +224,7 @@ func (v Fix64Value) Minus(context NumberValueArithmeticContext, other NumberValu
 func (v Fix64Value) SaturatingMinus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingSubtractFunctionName,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -240,7 +251,7 @@ var maxInt64Big = big.NewInt(math.MaxInt64)
 func (v Fix64Value) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationMul,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -256,11 +267,11 @@ func (v Fix64Value) Mul(context NumberValueArithmeticContext, other NumberValue,
 		result.Div(result, sema.Fix64FactorBig)
 
 		if result.Cmp(minInt64Big) < 0 {
-			panic(UnderflowError{
+			panic(&UnderflowError{
 				LocationRange: locationRange,
 			})
 		} else if result.Cmp(maxInt64Big) > 0 {
-			panic(OverflowError{
+			panic(&OverflowError{
 				LocationRange: locationRange,
 			})
 		}
@@ -274,7 +285,7 @@ func (v Fix64Value) Mul(context NumberValueArithmeticContext, other NumberValue,
 func (v Fix64Value) SaturatingMul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingMultiplyFunctionName,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -304,7 +315,7 @@ func (v Fix64Value) SaturatingMul(context NumberValueArithmeticContext, other Nu
 func (v Fix64Value) Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationDiv,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -320,11 +331,11 @@ func (v Fix64Value) Div(context NumberValueArithmeticContext, other NumberValue,
 		result.Div(result, b)
 
 		if result.Cmp(minInt64Big) < 0 {
-			panic(UnderflowError{
+			panic(&UnderflowError{
 				LocationRange: locationRange,
 			})
 		} else if result.Cmp(maxInt64Big) > 0 {
-			panic(OverflowError{
+			panic(&OverflowError{
 				LocationRange: locationRange,
 			})
 		}
@@ -338,7 +349,7 @@ func (v Fix64Value) Div(context NumberValueArithmeticContext, other NumberValue,
 func (v Fix64Value) SaturatingDiv(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			FunctionName:  sema.NumericTypeSaturatingDivideFunctionName,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -368,7 +379,7 @@ func (v Fix64Value) SaturatingDiv(context NumberValueArithmeticContext, other Nu
 func (v Fix64Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationMod,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -379,7 +390,7 @@ func (v Fix64Value) Mod(context NumberValueArithmeticContext, other NumberValue,
 	// v - int(v/o) * o
 	quotient, ok := v.Div(context, o, locationRange).(Fix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationMod,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -404,7 +415,7 @@ func (v Fix64Value) Mod(context NumberValueArithmeticContext, other NumberValue,
 func (v Fix64Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationLess,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -418,7 +429,7 @@ func (v Fix64Value) Less(context ValueComparisonContext, other ComparableValue, 
 func (v Fix64Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationLessEqual,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -432,7 +443,7 @@ func (v Fix64Value) LessEqual(context ValueComparisonContext, other ComparableVa
 func (v Fix64Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationGreater,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -446,7 +457,7 @@ func (v Fix64Value) Greater(context ValueComparisonContext, other ComparableValu
 func (v Fix64Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationGreaterEqual,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -481,7 +492,7 @@ func ConvertFix64(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 
 	case UFix64Value:
 		if value.UFix64Value > Fix64MaxValue {
-			panic(OverflowError{
+			panic(&OverflowError{
 				LocationRange: locationRange,
 			})
 		}
@@ -501,7 +512,7 @@ func ConvertFix64(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 			// allows us to call `v.Int64()` safely.
 
 			if !v.IsInt64() {
-				panic(OverflowError{
+				panic(&OverflowError{
 					LocationRange: locationRange,
 				})
 			}

@@ -1115,7 +1115,7 @@ func TestInterpretEntitledResult(t *testing.T) {
 			var panicError stdlib.PanicError
 			require.ErrorAs(t, err, &panicError)
 		} else {
-			var conditionError interpreter.ConditionError
+			var conditionError *interpreter.ConditionError
 			require.ErrorAs(t, err, &conditionError)
 		}
 	})
@@ -2025,7 +2025,7 @@ func TestInterpretEntitledReferenceCollections(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement Y
 
@@ -2055,7 +2055,7 @@ func TestInterpretEntitledReferenceCollections(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement Y
 

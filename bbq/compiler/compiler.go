@@ -26,7 +26,6 @@ import (
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/constant"
-	"github.com/onflow/cadence/bbq/leb128"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -74,6 +73,9 @@ type Compiler[E, T any] struct {
 
 	// postConditionsIndex is the statement-index of the post-conditions for the current function.
 	postConditionsIndex int
+
+	lastChangedPosition bbq.Position
+	currentPosition     bbq.Position
 
 	// Cache alike for compiledTypes and constants in the pool.
 	typesInPool     map[sema.TypeID]uint16
@@ -341,7 +343,7 @@ func (c *Compiler[_, _]) addConstant(kind constant.Kind, data []byte) *Constant 
 }
 
 func (c *Compiler[_, _]) emitGetConstant(constant *Constant) {
-	c.codeGen.Emit(opcode.InstructionGetConstant{
+	c.emit(opcode.InstructionGetConstant{
 		Constant: constant.index,
 	})
 }
@@ -367,7 +369,8 @@ func (c *Compiler[_, _]) emitIntConst(i int64) {
 }
 
 func (c *Compiler[_, _]) addIntConst(i int64) *Constant {
-	data := leb128.AppendInt64(nil, i)
+	// NOTE: also adjust VisitIntegerExpression!
+	data := interpreter.NewUnmeteredIntValueFromInt64(i).ToBigEndianBytes()
 	return c.addConstant(constant.Int, data)
 }
 
@@ -376,31 +379,31 @@ func (c *Compiler[_, _]) emitJump(target int) int {
 		panic(errors.NewDefaultUserError("invalid jump"))
 	}
 	offset := c.codeGen.Offset()
-	c.codeGen.Emit(opcode.InstructionJump{Target: uint16(target)})
+	c.emit(opcode.InstructionJump{Target: uint16(target)})
 	return offset
 }
 
 func (c *Compiler[_, _]) emitUndefinedJump() int {
 	offset := c.codeGen.Offset()
-	c.codeGen.Emit(opcode.InstructionJump{Target: math.MaxUint16})
+	c.emit(opcode.InstructionJump{Target: math.MaxUint16})
 	return offset
 }
 
 func (c *Compiler[_, _]) emitUndefinedJumpIfFalse() int {
 	offset := c.codeGen.Offset()
-	c.codeGen.Emit(opcode.InstructionJumpIfFalse{Target: math.MaxUint16})
+	c.emit(opcode.InstructionJumpIfFalse{Target: math.MaxUint16})
 	return offset
 }
 
 func (c *Compiler[_, _]) emitUndefinedJumpIfTrue() int {
 	offset := c.codeGen.Offset()
-	c.codeGen.Emit(opcode.InstructionJumpIfTrue{Target: math.MaxUint16})
+	c.emit(opcode.InstructionJumpIfTrue{Target: math.MaxUint16})
 	return offset
 }
 
 func (c *Compiler[_, _]) emitUndefinedJumpIfNil() int {
 	offset := c.codeGen.Offset()
-	c.codeGen.Emit(opcode.InstructionJumpIfNil{Target: math.MaxUint16})
+	c.emit(opcode.InstructionJumpIfNil{Target: math.MaxUint16})
 	return offset
 }
 
@@ -458,6 +461,50 @@ func (c *Compiler[_, _]) popReturns() {
 		previousReturns = &c.returns[lastIndex-1]
 	}
 	c.currentReturn = previousReturns
+}
+
+func (c *Compiler[_, _]) compileDeclaration(declaration ast.Declaration) {
+	c.compileWithPositionInfo(
+		declaration,
+		func() {
+			ast.AcceptDeclaration[struct{}](declaration, c)
+		},
+	)
+}
+
+func (c *Compiler[_, _]) compileStatement(statement ast.Statement) {
+	c.compileWithPositionInfo(
+		statement,
+		func() {
+			ast.AcceptStatement[struct{}](statement, c)
+		},
+	)
+}
+
+func (c *Compiler[_, _]) compileExpression(expression ast.Expression) {
+	c.compileWithPositionInfo(
+		expression,
+		func() {
+			ast.AcceptExpression[struct{}](expression, c)
+		},
+	)
+}
+
+func (c *Compiler[_, _]) compileWithPositionInfo(
+	hasPosition ast.HasPosition,
+	compile func(),
+) {
+	prevCurrentPosition := c.currentPosition
+	c.currentPosition = bbq.Position{
+		StartPos: hasPosition.StartPosition(),
+		EndPos:   hasPosition.EndPosition(c.memoryGauge),
+	}
+
+	defer func() {
+		c.currentPosition = prevCurrentPosition
+	}()
+
+	compile()
 }
 
 func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
@@ -708,6 +755,7 @@ func (c *Compiler[E, _]) newBBQFunction(function *function[E]) bbq.Function[E] {
 		LocalCount:     function.localCount,
 		ParameterCount: function.parameterCount,
 		TypeIndex:      function.typeIndex,
+		LineNumbers:    function.lineNumbers,
 	}
 }
 
@@ -772,10 +820,6 @@ func (c *Compiler[_, _]) exportContracts() []*bbq.Contract {
 	return contracts
 }
 
-func (c *Compiler[_, _]) compileDeclaration(declaration ast.Declaration) {
-	ast.AcceptDeclaration[struct{}](declaration, c)
-}
-
 func (c *Compiler[_, _]) compileBlock(
 	block *ast.Block,
 	enclosingDeclKind common.DeclarationKind,
@@ -817,7 +861,7 @@ func (c *Compiler[_, _]) compileBlock(
 
 			local := c.currentFunction.findLocal(tempResultVariableName)
 			if local == nil {
-				c.codeGen.Emit(opcode.InstructionReturn{})
+				c.emit(opcode.InstructionReturn{})
 			} else {
 				c.emitGetLocal(local.index)
 				c.emitTransferAndReturnValue(returnType)
@@ -826,7 +870,7 @@ func (c *Compiler[_, _]) compileBlock(
 			// If there are no post conditions,
 			// and if there is no return statement at the end,
 			// then emit an empty return.
-			c.codeGen.Emit(opcode.InstructionReturn{})
+			c.emit(opcode.InstructionReturn{})
 		}
 	}
 }
@@ -889,14 +933,6 @@ func (c *Compiler[_, _]) compileFunctionBlock(
 	)
 }
 
-func (c *Compiler[_, _]) compileStatement(statement ast.Statement) {
-	ast.AcceptStatement[struct{}](statement, c)
-}
-
-func (c *Compiler[_, _]) compileExpression(expression ast.Expression) {
-	ast.AcceptExpression[struct{}](expression, c)
-}
-
 func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_ struct{}) {
 	expression := statement.Expression
 
@@ -929,7 +965,7 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 				// (1.a.ii)
 				// If there is no temp-result variable, that means the return type is void.
 				// So just drop the void-value.
-				c.codeGen.Emit(opcode.InstructionDrop{})
+				c.emit(opcode.InstructionDrop{})
 			}
 
 			// And jump to the start of the post conditions.
@@ -950,7 +986,7 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 		} else {
 			// (2.b)
 			// If there are no post conditions, return then-and-there.
-			c.codeGen.Emit(opcode.InstructionReturn{})
+			c.emit(opcode.InstructionReturn{})
 		}
 	}
 
@@ -958,13 +994,13 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 }
 
 func (c *Compiler[_, _]) emitGetLocal(localIndex uint16) {
-	c.codeGen.Emit(opcode.InstructionGetLocal{
+	c.emit(opcode.InstructionGetLocal{
 		Local: localIndex,
 	})
 }
 
 func (c *Compiler[_, _]) emitSetLocal(localIndex uint16) {
-	c.codeGen.Emit(opcode.InstructionSetLocal{
+	c.emit(opcode.InstructionSetLocal{
 		Local: localIndex,
 	})
 }
@@ -1018,7 +1054,7 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 
 			// Then branch: unwrap the optional and declare the variable
 			c.emitGetLocal(tempIndex)
-			c.codeGen.Emit(opcode.InstructionUnwrap{})
+			c.emit(opcode.InstructionUnwrap{})
 			varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(test)
 			c.emitTransfer(varDeclTypes.TargetType)
 
@@ -1089,9 +1125,9 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 	c.compileExpression(statement.Value)
 
 	// Get an iterator to the resulting value, and store it in a local index.
-	c.codeGen.Emit(opcode.InstructionIterator{})
+	c.emit(opcode.InstructionIterator{})
 	iteratorLocalIndex := c.currentFunction.generateLocalIndex()
-	c.codeGen.Emit(opcode.InstructionSetLocal{
+	c.emit(opcode.InstructionSetLocal{
 		Local: iteratorLocalIndex,
 	})
 
@@ -1114,7 +1150,7 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 
 	// Loop test: Get the iterator and call `hasNext()`.
 	c.emitGetLocal(iteratorLocalIndex)
-	c.codeGen.Emit(opcode.InstructionIteratorHasNext{})
+	c.emit(opcode.InstructionIteratorHasNext{})
 
 	endJump := c.emitUndefinedJumpIfFalse()
 
@@ -1127,13 +1163,13 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 		// <index> = <index> + 1
 		c.emitGetLocal(indexLocalVar.index)
 		c.emitIntConst(1)
-		c.codeGen.Emit(opcode.InstructionAdd{})
+		c.emit(opcode.InstructionAdd{})
 		c.emitSetLocal(indexLocalVar.index)
 	}
 
 	// Get the iterator and call `next()` (value for arrays, key for dictionaries, etc.)
 	c.emitGetLocal(iteratorLocalIndex)
-	c.codeGen.Emit(opcode.InstructionIteratorNext{})
+	c.emit(opcode.InstructionIteratorNext{})
 
 	forStmtTypes := c.DesugaredElaboration.ForStatementType(statement)
 	loopVarType := forStmtTypes.ValueVariableType
@@ -1141,7 +1177,7 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 
 	if isResultReference {
 		index := c.getOrAddType(loopVarType)
-		c.codeGen.Emit(opcode.InstructionNewRef{
+		c.emit(opcode.InstructionNewRef{
 			Type:       index,
 			IsImplicit: true,
 		})
@@ -1188,7 +1224,7 @@ func (c *Compiler[_, _]) VisitEmitStatement(statement *ast.EmitStatement) (_ str
 			eventType := c.DesugaredElaboration.EmitStatementEventType(statement)
 			typeIndex := c.getOrAddType(eventType)
 
-			c.codeGen.Emit(opcode.InstructionEmitEvent{
+			c.emit(opcode.InstructionEmitEvent{
 				Type:     typeIndex,
 				ArgCount: uint16(argCount),
 			})
@@ -1220,7 +1256,7 @@ func (c *Compiler[_, _]) VisitSwitchStatement(statement *ast.SwitchStatement) (_
 		if !isDefault {
 			c.emitGetLocal(localIndex)
 			c.compileExpression(switchCase.Expression)
-			c.codeGen.Emit(opcode.InstructionEqual{})
+			c.emit(opcode.InstructionEqual{})
 			previousJump = c.emitUndefinedJumpIfFalse()
 		}
 
@@ -1311,7 +1347,7 @@ func (c *Compiler[_, _]) compileGlobalVariable(declaration *ast.VariableDeclarat
 
 func (c *Compiler[_, _]) emitTransferAndReturnValue(returnType sema.Type) {
 	c.emitTransfer(returnType)
-	c.codeGen.Emit(opcode.InstructionReturnValue{})
+	c.emit(opcode.InstructionReturnValue{})
 }
 
 func (c *Compiler[_, _]) emitDeclareLocal(name string) *local {
@@ -1338,7 +1374,7 @@ func (c *Compiler[_, _]) VisitAssignmentStatement(statement *ast.AssignmentState
 		c.emitTransfer(assignmentTypes.TargetType)
 
 		constant := c.addStringConst(target.Identifier.Identifier)
-		c.codeGen.Emit(opcode.InstructionSetField{
+		c.emit(opcode.InstructionSetField{
 			FieldName: constant.index,
 		})
 
@@ -1350,7 +1386,7 @@ func (c *Compiler[_, _]) VisitAssignmentStatement(statement *ast.AssignmentState
 		assignmentTypes := c.DesugaredElaboration.AssignmentStatementTypes(statement)
 		c.emitTransfer(assignmentTypes.TargetType)
 
-		c.codeGen.Emit(opcode.InstructionSetIndex{})
+		c.emit(opcode.InstructionSetIndex{})
 
 	default:
 		// TODO:
@@ -1372,7 +1408,7 @@ func (c *Compiler[_, _]) VisitExpressionStatement(statement *ast.ExpressionState
 		// Do nothing. Destroy operation will not produce any result.
 	default:
 		// Otherwise, drop the expression evaluation result.
-		c.codeGen.Emit(opcode.InstructionDrop{})
+		c.emit(opcode.InstructionDrop{})
 	}
 
 	return
@@ -1385,15 +1421,15 @@ func (c *Compiler[_, _]) VisitVoidExpression(_ *ast.VoidExpression) (_ struct{})
 
 func (c *Compiler[_, _]) VisitBoolExpression(expression *ast.BoolExpression) (_ struct{}) {
 	if expression.Value {
-		c.codeGen.Emit(opcode.InstructionTrue{})
+		c.emit(opcode.InstructionTrue{})
 	} else {
-		c.codeGen.Emit(opcode.InstructionFalse{})
+		c.emit(opcode.InstructionFalse{})
 	}
 	return
 }
 
 func (c *Compiler[_, _]) VisitNilExpression(_ *ast.NilExpression) (_ struct{}) {
-	c.codeGen.Emit(opcode.InstructionNil{})
+	c.emit(opcode.InstructionNil{})
 	return
 }
 
@@ -1406,46 +1442,75 @@ func (c *Compiler[_, _]) VisitIntegerExpression(expression *ast.IntegerExpressio
 
 	switch constantKind {
 	case constant.Int:
-		// TODO: support larger integers
-		data = leb128.AppendInt64(nil, value.Int64())
+		// NOTE: also adjust addIntConst!
+		data = interpreter.NewUnmeteredIntValueFromBigInt(value).ToBigEndianBytes()
 
-	case constant.Int8,
-		constant.Int16,
-		constant.Int32:
-		data = leb128.AppendInt32(nil, int32(value.Int64()))
+	case constant.Int8:
+		data = interpreter.NewUnmeteredInt8Value(int8(value.Int64())).ToBigEndianBytes()
+
+	case constant.Int16:
+		data = interpreter.NewUnmeteredInt16Value(int16(value.Int64())).ToBigEndianBytes()
+
+	case constant.Int32:
+		data = interpreter.NewUnmeteredInt32Value(int32(value.Int64())).ToBigEndianBytes()
 
 	case constant.Int64:
-		data = leb128.AppendInt64(nil, value.Int64())
+		data = interpreter.NewUnmeteredInt64Value(value.Int64()).ToBigEndianBytes()
+
+	case constant.Int128:
+		data = interpreter.NewUnmeteredInt128ValueFromBigInt(value).ToBigEndianBytes()
+
+	case constant.Int256:
+		data = interpreter.NewUnmeteredInt256ValueFromBigInt(value).ToBigEndianBytes()
 
 	case constant.UInt:
-		// TODO: support larger integers
-		data = leb128.AppendUint64(nil, value.Uint64())
+		data = interpreter.NewUnmeteredUIntValueFromBigInt(value).ToBigEndianBytes()
 
-	case constant.UInt8,
-		constant.Word8,
-		constant.UInt16,
-		constant.Word16,
-		constant.UInt32,
-		constant.Word32:
-		data = leb128.AppendUint32(nil, uint32(value.Uint64()))
+	case constant.UInt8:
+		data = interpreter.NewUnmeteredUInt8Value(uint8(value.Uint64())).ToBigEndianBytes()
 
-	case constant.UInt64,
-		constant.Word64:
-		data = leb128.AppendUint64(nil, value.Uint64())
+	case constant.UInt16:
+		data = interpreter.NewUnmeteredUInt16Value(uint16(value.Uint64())).ToBigEndianBytes()
+
+	case constant.UInt32:
+		data = interpreter.NewUnmeteredUInt32Value(uint32(value.Uint64())).ToBigEndianBytes()
+
+	case constant.UInt64:
+		data = interpreter.NewUnmeteredUInt64Value(value.Uint64()).ToBigEndianBytes()
+
+	case constant.UInt128:
+		data = interpreter.NewUnmeteredUInt128ValueFromBigInt(value).ToBigEndianBytes()
+
+	case constant.UInt256:
+		data = interpreter.NewUnmeteredUInt256ValueFromBigInt(value).ToBigEndianBytes()
+
+	case constant.Word8:
+		data = interpreter.NewUnmeteredWord8Value(uint8(value.Uint64())).ToBigEndianBytes()
+
+	case constant.Word16:
+		data = interpreter.NewUnmeteredWord16Value(uint16(value.Uint64())).ToBigEndianBytes()
+
+	case constant.Word32:
+		data = interpreter.NewUnmeteredWord32Value(uint32(value.Uint64())).ToBigEndianBytes()
+
+	case constant.Word64:
+		data = interpreter.NewUnmeteredWord64Value(value.Uint64()).ToBigEndianBytes()
+
+	case constant.Word128:
+		data = interpreter.NewUnmeteredWord128ValueFromBigInt(value).ToBigEndianBytes()
+
+	case constant.Word256:
+		data = interpreter.NewUnmeteredWord256ValueFromBigInt(value).ToBigEndianBytes()
 
 	case constant.Address:
 		data = value.Bytes()
 
-	// TODO:
-	// case constantkind.Int128:
-	// case constantkind.Int256:
-	// case constantkind.UInt128:
-	// case constantkind.UInt256:
-	// case constantkind.Word128:
-	// case constantkind.Word256:
-
 	default:
-		panic(errors.NewUnexpectedError("unsupported constant kind: %s", constantKind))
+		panic(errors.NewUnexpectedError(
+			"unsupported integer type %s / constant kind %s",
+			integerType,
+			constantKind,
+		))
 	}
 
 	c.emitGetConstant(c.addConstant(constantKind, data))
@@ -1491,12 +1556,12 @@ func (c *Compiler[_, _]) VisitFixedPointExpression(expression *ast.FixedPointExp
 }
 
 func (c *Compiler[_, _]) addUFix64Constant(value *big.Int) *Constant {
-	data := leb128.AppendUint64(nil, value.Uint64())
+	data := interpreter.NewUnmeteredUFix64Value(value.Uint64()).ToBigEndianBytes()
 	return c.addConstant(constant.UFix64, data)
 }
 
 func (c *Compiler[_, _]) addFix64Constant(value *big.Int) *Constant {
-	data := leb128.AppendInt64(nil, value.Int64())
+	data := interpreter.NewUnmeteredFix64Value(value.Int64()).ToBigEndianBytes()
 	return c.addConstant(constant.Fix64, data)
 }
 
@@ -1517,7 +1582,7 @@ func (c *Compiler[_, _]) VisitArrayExpression(array *ast.ArrayExpression) (_ str
 		c.emitTransfer(elementExpectedType)
 	}
 
-	c.codeGen.Emit(
+	c.emit(
 		opcode.InstructionNewArray{
 			Type:       typeIndex,
 			Size:       uint16(size),
@@ -1547,7 +1612,7 @@ func (c *Compiler[_, _]) VisitDictionaryExpression(dictionary *ast.DictionaryExp
 		c.emitTransfer(dictionaryType.ValueType)
 	}
 
-	c.codeGen.Emit(
+	c.emit(
 		opcode.InstructionNewDictionary{
 			Type:       typeIndex,
 			Size:       uint16(size),
@@ -1582,14 +1647,14 @@ func (c *Compiler[_, _]) emitVariableLoad(name string) {
 
 	upvalueIndex, ok := c.currentFunction.findOrAddUpvalue(name)
 	if ok {
-		c.codeGen.Emit(opcode.InstructionGetUpvalue{
+		c.emit(opcode.InstructionGetUpvalue{
 			Upvalue: upvalueIndex,
 		})
 		return
 	}
 
 	global := c.findGlobal(name)
-	c.codeGen.Emit(opcode.InstructionGetGlobal{
+	c.emit(opcode.InstructionGetGlobal{
 		Global: global.Index,
 	})
 }
@@ -1603,14 +1668,14 @@ func (c *Compiler[_, _]) emitVariableStore(name string) {
 
 	upvalueIndex, ok := c.currentFunction.findOrAddUpvalue(name)
 	if ok {
-		c.codeGen.Emit(opcode.InstructionSetUpvalue{
+		c.emit(opcode.InstructionSetUpvalue{
 			Upvalue: upvalueIndex,
 		})
 		return
 	}
 
 	global := c.findGlobal(name)
-	c.codeGen.Emit(opcode.InstructionSetGlobal{
+	c.emit(opcode.InstructionSetGlobal{
 		Global: global.Index,
 	})
 }
@@ -1659,7 +1724,7 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 	c.compileArguments(expression.Arguments, invocationTypes)
 
 	typeArgs := c.loadTypeArguments(invocationTypes)
-	c.codeGen.Emit(opcode.InstructionInvoke{
+	c.emit(opcode.InstructionInvoke{
 		TypeArgs: typeArgs,
 		ArgCount: uint16(argumentCount),
 	})
@@ -1693,7 +1758,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 
 		typeArgs := c.loadTypeArguments(invocationTypes)
 
-		c.codeGen.Emit(opcode.InstructionInvoke{
+		c.emit(opcode.InstructionInvoke{
 			TypeArgs: typeArgs,
 			ArgCount: uint16(argumentCount),
 		})
@@ -1723,7 +1788,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		)
 
 		funcNameConst := c.addStringConst(funcName)
-		c.codeGen.Emit(
+		c.emit(
 			opcode.InstructionInvokeMethodDynamic{
 				Name:     funcNameConst.index,
 				TypeArgs: typeArgs,
@@ -1755,7 +1820,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		// Compile as static-function call.
 		// No receiver is loaded.
 		c.compileArguments(expression.Arguments, invocationTypes)
-		c.codeGen.Emit(opcode.InstructionInvoke{
+		c.emit(opcode.InstructionInvoke{
 			TypeArgs: typeArgs,
 			ArgCount: uint16(argumentCount),
 		})
@@ -1769,7 +1834,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 			invocationTypes,
 		)
 
-		c.codeGen.Emit(opcode.InstructionInvokeMethodStatic{
+		c.emit(opcode.InstructionInvokeMethodStatic{
 			TypeArgs: typeArgs,
 			ArgCount: argsCountWithReceiver,
 		})
@@ -1792,7 +1857,7 @@ func (c *Compiler[_, _]) compileMethodInvocationArguments(
 
 	// Unwrap the target, if the member access is via optional chaining.
 	if memberInfo.IsOptional {
-		c.codeGen.Emit(opcode.InstructionUnwrap{})
+		c.emit(opcode.InstructionUnwrap{})
 
 		// TODO: Implement the remaining parts of optional-chaining.
 		// e.g: early returning with nil, if the target is nil.
@@ -1861,14 +1926,14 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 	if memberAccessInfo.IsOptional {
 		// TODO: Complete the optional-chaining implementations.
 		//  e.g: Need a nil check, since unwrap panics on nil
-		c.codeGen.Emit(opcode.InstructionUnwrap{})
+		c.emit(opcode.InstructionUnwrap{})
 	}
 
 	constant := c.addStringConst(expression.Identifier.Identifier)
 
 	// TODO: remove member if `isNestedResourceMove`
 	//  See `Interpreter.memberExpressionGetterSetter` for the reference implementation.
-	c.codeGen.Emit(opcode.InstructionGetField{
+	c.emit(opcode.InstructionGetField{
 		FieldName: constant.index,
 	})
 
@@ -1876,7 +1941,7 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 	// This is pre-computed at the checker.
 	if memberAccessInfo.ReturnReference {
 		index := c.getOrAddType(memberAccessInfo.ResultingType)
-		c.codeGen.Emit(opcode.InstructionNewRef{
+		c.emit(opcode.InstructionNewRef{
 			Type:       index,
 			IsImplicit: true,
 		})
@@ -1890,7 +1955,7 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 func (c *Compiler[_, _]) VisitIndexExpression(expression *ast.IndexExpression) (_ struct{}) {
 	c.compileExpression(expression.TargetExpression)
 	c.compileExpression(expression.IndexingExpression)
-	c.codeGen.Emit(opcode.InstructionGetIndex{})
+	c.emit(opcode.InstructionGetIndex{})
 
 	indexExpressionTypes, ok := c.DesugaredElaboration.IndexExpressionTypes(expression)
 	if !ok {
@@ -1901,7 +1966,7 @@ func (c *Compiler[_, _]) VisitIndexExpression(expression *ast.IndexExpression) (
 	// This is pre-computed at the checker.
 	if indexExpressionTypes.ReturnReference {
 		index := c.getOrAddType(indexExpressionTypes.ResultType)
-		c.codeGen.Emit(opcode.InstructionNewRef{
+		c.emit(opcode.InstructionNewRef{
 			Type:       index,
 			IsImplicit: true,
 		})
@@ -1933,13 +1998,13 @@ func (c *Compiler[_, _]) VisitUnaryExpression(expression *ast.UnaryExpression) (
 
 	switch expression.Operation {
 	case ast.OperationNegate:
-		c.codeGen.Emit(opcode.InstructionNot{})
+		c.emit(opcode.InstructionNot{})
 
 	case ast.OperationMinus:
-		c.codeGen.Emit(opcode.InstructionNegate{})
+		c.emit(opcode.InstructionNegate{})
 
 	case ast.OperationMul:
-		c.codeGen.Emit(opcode.InstructionDeref{})
+		c.emit(opcode.InstructionDeref{})
 
 	case ast.OperationMove:
 		// Transfer to the target type.
@@ -1963,18 +2028,18 @@ func (c *Compiler[_, _]) VisitBinaryExpression(expression *ast.BinaryExpression)
 	switch expression.Operation {
 	case ast.OperationNilCoalesce:
 		// Duplicate the value for the nil equality check.
-		c.codeGen.Emit(opcode.InstructionDup{})
+		c.emit(opcode.InstructionDup{})
 		elseJump := c.emitUndefinedJumpIfNil()
 
 		// Then branch
-		c.codeGen.Emit(opcode.InstructionUnwrap{})
+		c.emit(opcode.InstructionUnwrap{})
 		thenJump := c.emitUndefinedJump()
 
 		// Else branch
 		c.patchJump(elseJump)
 		// Drop the duplicated condition result,
 		// as it is not needed for the 'else' path.
-		c.codeGen.Emit(opcode.InstructionDrop{})
+		c.emit(opcode.InstructionDrop{})
 		c.compileExpression(expression.Right)
 
 		// End
@@ -1990,12 +2055,12 @@ func (c *Compiler[_, _]) VisitBinaryExpression(expression *ast.BinaryExpression)
 
 		// Left or right is true
 		c.patchJump(leftTrueJump)
-		c.codeGen.Emit(opcode.InstructionTrue{})
+		c.emit(opcode.InstructionTrue{})
 		trueJump := c.emitUndefinedJump()
 
 		// Left and right are false
 		c.patchJump(rightFalseJump)
-		c.codeGen.Emit(opcode.InstructionFalse{})
+		c.emit(opcode.InstructionFalse{})
 
 		c.patchJump(trueJump)
 
@@ -2008,13 +2073,13 @@ func (c *Compiler[_, _]) VisitBinaryExpression(expression *ast.BinaryExpression)
 		rightFalseJump := c.emitUndefinedJumpIfFalse()
 
 		// Left and right are true
-		c.codeGen.Emit(opcode.InstructionTrue{})
+		c.emit(opcode.InstructionTrue{})
 		trueJump := c.emitUndefinedJump()
 
 		// Left or right is false
 		c.patchJump(leftFalseJump)
 		c.patchJump(rightFalseJump)
-		c.codeGen.Emit(opcode.InstructionFalse{})
+		c.emit(opcode.InstructionFalse{})
 
 		c.patchJump(trueJump)
 
@@ -2023,40 +2088,40 @@ func (c *Compiler[_, _]) VisitBinaryExpression(expression *ast.BinaryExpression)
 
 		switch expression.Operation {
 		case ast.OperationPlus:
-			c.codeGen.Emit(opcode.InstructionAdd{})
+			c.emit(opcode.InstructionAdd{})
 		case ast.OperationMinus:
-			c.codeGen.Emit(opcode.InstructionSubtract{})
+			c.emit(opcode.InstructionSubtract{})
 		case ast.OperationMul:
-			c.codeGen.Emit(opcode.InstructionMultiply{})
+			c.emit(opcode.InstructionMultiply{})
 		case ast.OperationDiv:
-			c.codeGen.Emit(opcode.InstructionDivide{})
+			c.emit(opcode.InstructionDivide{})
 		case ast.OperationMod:
-			c.codeGen.Emit(opcode.InstructionMod{})
+			c.emit(opcode.InstructionMod{})
 
 		case ast.OperationBitwiseOr:
-			c.codeGen.Emit(opcode.InstructionBitwiseOr{})
+			c.emit(opcode.InstructionBitwiseOr{})
 		case ast.OperationBitwiseAnd:
-			c.codeGen.Emit(opcode.InstructionBitwiseAnd{})
+			c.emit(opcode.InstructionBitwiseAnd{})
 		case ast.OperationBitwiseXor:
-			c.codeGen.Emit(opcode.InstructionBitwiseXor{})
+			c.emit(opcode.InstructionBitwiseXor{})
 		case ast.OperationBitwiseLeftShift:
-			c.codeGen.Emit(opcode.InstructionBitwiseLeftShift{})
+			c.emit(opcode.InstructionBitwiseLeftShift{})
 		case ast.OperationBitwiseRightShift:
-			c.codeGen.Emit(opcode.InstructionBitwiseRightShift{})
+			c.emit(opcode.InstructionBitwiseRightShift{})
 
 		case ast.OperationEqual:
-			c.codeGen.Emit(opcode.InstructionEqual{})
+			c.emit(opcode.InstructionEqual{})
 		case ast.OperationNotEqual:
-			c.codeGen.Emit(opcode.InstructionNotEqual{})
+			c.emit(opcode.InstructionNotEqual{})
 
 		case ast.OperationLess:
-			c.codeGen.Emit(opcode.InstructionLess{})
+			c.emit(opcode.InstructionLess{})
 		case ast.OperationLessEqual:
-			c.codeGen.Emit(opcode.InstructionLessOrEqual{})
+			c.emit(opcode.InstructionLessOrEqual{})
 		case ast.OperationGreater:
-			c.codeGen.Emit(opcode.InstructionGreater{})
+			c.emit(opcode.InstructionGreater{})
 		case ast.OperationGreaterEqual:
-			c.codeGen.Emit(opcode.InstructionGreaterOrEqual{})
+			c.emit(opcode.InstructionGreaterOrEqual{})
 		default:
 			panic(errors.NewUnreachableError())
 		}
@@ -2155,7 +2220,7 @@ func (c *Compiler[_, _]) VisitCastingExpression(expression *ast.CastingExpressio
 		panic(errors.NewUnreachableError())
 	}
 
-	c.codeGen.Emit(castInstruction)
+	c.emit(castInstruction)
 	return
 }
 
@@ -2166,7 +2231,7 @@ func (c *Compiler[_, _]) VisitCreateExpression(expression *ast.CreateExpression)
 
 func (c *Compiler[_, _]) VisitDestroyExpression(expression *ast.DestroyExpression) (_ struct{}) {
 	c.compileExpression(expression.Expression)
-	c.codeGen.Emit(opcode.InstructionDestroy{})
+	c.emit(opcode.InstructionDestroy{})
 	return
 }
 
@@ -2174,7 +2239,7 @@ func (c *Compiler[_, _]) VisitReferenceExpression(expression *ast.ReferenceExpre
 	c.compileExpression(expression.Expression)
 	borrowType := c.DesugaredElaboration.ReferenceExpressionBorrowType(expression)
 	typeIndex := c.getOrAddType(borrowType)
-	c.codeGen.Emit(opcode.InstructionNewRef{
+	c.emit(opcode.InstructionNewRef{
 		Type: typeIndex,
 	})
 	return
@@ -2182,7 +2247,7 @@ func (c *Compiler[_, _]) VisitReferenceExpression(expression *ast.ReferenceExpre
 
 func (c *Compiler[_, _]) VisitForceExpression(expression *ast.ForceExpression) (_ struct{}) {
 	c.compileExpression(expression.Expression)
-	c.codeGen.Emit(opcode.InstructionUnwrap{})
+	c.emit(opcode.InstructionUnwrap{})
 	return
 }
 
@@ -2196,7 +2261,7 @@ func (c *Compiler[_, _]) VisitPathExpression(expression *ast.PathExpression) (_ 
 	identifierConst := c.addStringConst(identifier)
 	identifierIndex := identifierConst.index
 
-	c.codeGen.Emit(
+	c.emit(
 		opcode.InstructionNewPath{
 			Domain:     domain,
 			Identifier: identifierIndex,
@@ -2275,7 +2340,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 
 	typeIndex := c.getOrAddType(enclosingType)
 
-	c.codeGen.Emit(
+	c.emit(
 		opcode.InstructionNew{
 			Kind: kind,
 			Type: typeIndex,
@@ -2293,10 +2358,10 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		// }
 
 		// Duplicate the top of stack and store it in both global variable and in `self`
-		c.codeGen.Emit(opcode.InstructionDup{})
+		c.emit(opcode.InstructionDup{})
 		global := c.findGlobal(typeName)
 
-		c.codeGen.Emit(opcode.InstructionSetGlobal{
+		c.emit(opcode.InstructionSetGlobal{
 			Global: global.Index,
 		})
 	}
@@ -2316,7 +2381,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	c.emitGetLocal(self.index)
 
 	// No need to transfer, since the type is same as the constructed value, for initializers.
-	c.codeGen.Emit(opcode.InstructionReturnValue{})
+	c.emit(opcode.InstructionReturnValue{})
 }
 
 func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, _ bool) (_ struct{}) {
@@ -2613,7 +2678,7 @@ func (c *Compiler[_, _]) emitTransfer(targetType sema.Type) {
 	//}
 
 	typeIndex := c.getOrAddType(targetType)
-	c.codeGen.Emit(opcode.InstructionTransfer{
+	c.emit(opcode.InstructionTransfer{
 		Type: typeIndex,
 	})
 }
@@ -2686,8 +2751,26 @@ func (c *Compiler[_, _]) compilePotentiallyInheritedCode(statement ast.Statement
 }
 
 func (c *Compiler[E, _]) emitNewClosure(functionIndex uint16, function *function[E]) {
-	c.codeGen.Emit(opcode.InstructionNewClosure{
+	c.emit(opcode.InstructionNewClosure{
 		Function: functionIndex,
 		Upvalues: function.upvalues,
 	})
+}
+
+func (c *Compiler[E, _]) emit(instruction opcode.Instruction) {
+	// Get the index of the instruction to be emitted.
+	// This is the offset before emitting the current instruction.
+	instructionIndex := c.codeGen.Offset()
+
+	c.codeGen.Emit(instruction)
+
+	// If the line number info changed since the last recorded position info,
+	// Then add the current instruction's position info.
+	if c.lastChangedPosition != c.currentPosition {
+		c.currentFunction.lineNumbers.AddPositionInfo(
+			uint16(instructionIndex),
+			c.currentPosition,
+		)
+		c.lastChangedPosition = c.currentPosition
+	}
 }

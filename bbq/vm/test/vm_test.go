@@ -1709,24 +1709,21 @@ func TestTransaction(t *testing.T) {
 
 		vmContext := vmInstance.Context()
 
-		err := vmInstance.ExecuteTransaction(nil)
+		err := vmInstance.InvokeTransaction(nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
 		// Rerun the same again using internal functions, to get the access to the transaction value.
 
-		transaction, err := vmInstance.InvokeExternally(commons.TransactionWrapperCompositeName)
+		transaction, err := vmInstance.InvokeTransactionWrapper()
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.IsType(t, &interpreter.CompositeValue{}, transaction)
-		compositeValue := transaction.(*interpreter.CompositeValue)
-
 		// At the beginning, 'a' is uninitialized
-		assert.Nil(t, compositeValue.GetMember(vmContext, vm.EmptyLocationRange, "a"))
+		assert.Nil(t, transaction.GetMember(vmContext, vm.EmptyLocationRange, "a"))
 
 		// Invoke 'prepare'
-		_, err = vmInstance.InvokeExternally(commons.TransactionPrepareFunctionName, transaction)
+		err = vmInstance.InvokeTransactionPrepare(transaction, nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1734,11 +1731,11 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("Hello!"),
-			compositeValue.GetMember(vmContext, vm.EmptyLocationRange, "a"),
+			transaction.GetMember(vmContext, vm.EmptyLocationRange, "a"),
 		)
 
 		// Invoke 'execute'
-		_, err = vmInstance.InvokeExternally(commons.TransactionExecuteFunctionName, transaction)
+		err = vmInstance.InvokeTransactionExecute(transaction)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1746,7 +1743,7 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("Hello again!"),
-			compositeValue.GetMember(vmContext, vm.EmptyLocationRange, "a"),
+			transaction.GetMember(vmContext, vm.EmptyLocationRange, "a"),
 		)
 	})
 
@@ -1783,24 +1780,21 @@ func TestTransaction(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("Hello again!"),
 		}
 
-		err := vmInstance.ExecuteTransaction(args)
+		err := vmInstance.InvokeTransaction(args)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
 		// Rerun the same again using internal functions, to get the access to the transaction value.
 
-		transaction, err := vmInstance.InvokeExternally(commons.TransactionWrapperCompositeName)
+		transaction, err := vmInstance.InvokeTransactionWrapper()
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		require.IsType(t, &interpreter.CompositeValue{}, transaction)
-		compositeValue := transaction.(*interpreter.CompositeValue)
-
 		// At the beginning, 'a' is uninitialized
-		assert.Nil(t, compositeValue.GetMember(vmContext, vm.EmptyLocationRange, "a"))
+		assert.Nil(t, transaction.GetMember(vmContext, vm.EmptyLocationRange, "a"))
 
 		// Invoke 'prepare'
-		_, err = vmInstance.InvokeExternally(commons.TransactionPrepareFunctionName, transaction)
+		err = vmInstance.InvokeTransactionPrepare(transaction, nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1808,11 +1802,11 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("Hello!"),
-			compositeValue.GetMember(vmContext, vm.EmptyLocationRange, "a"),
+			transaction.GetMember(vmContext, vm.EmptyLocationRange, "a"),
 		)
 
 		// Invoke 'execute'
-		_, err = vmInstance.InvokeExternally(commons.TransactionExecuteFunctionName, transaction)
+		err = vmInstance.InvokeTransactionExecute(transaction)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1820,7 +1814,7 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("Hello again!"),
-			compositeValue.GetMember(vmContext, vm.EmptyLocationRange, "a"),
+			transaction.GetMember(vmContext, vm.EmptyLocationRange, "a"),
 		)
 	})
 
@@ -1863,7 +1857,7 @@ func TestTransaction(t *testing.T) {
 
 		var logs []string
 
-		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		vmInstance := CompileAndPrepareToInvoke(t,
 			`
@@ -1900,7 +1894,7 @@ func TestTransaction(t *testing.T) {
 			},
 		)
 
-		err := vmInstance.ExecuteTransaction(nil)
+		err := vmInstance.InvokeTransaction(nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1946,7 +1940,7 @@ func TestTransaction(t *testing.T) {
 
 		var logs []string
 
-		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		vmInstance := CompileAndPrepareToInvoke(t,
 			`
@@ -1979,7 +1973,7 @@ func TestTransaction(t *testing.T) {
 			},
 		)
 
-		err := vmInstance.ExecuteTransaction(nil)
+		err := vmInstance.InvokeTransaction(nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -2025,7 +2019,7 @@ func TestTransaction(t *testing.T) {
 
 		var logs []string
 
-		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		vmInstance := CompileAndPrepareToInvoke(t,
 			`
@@ -2063,7 +2057,7 @@ func TestTransaction(t *testing.T) {
 			},
 		)
 
-		err := vmInstance.ExecuteTransaction(nil)
+		err := vmInstance.InvokeTransaction(nil)
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "pre/post condition failed")
 
@@ -2109,7 +2103,7 @@ func TestTransaction(t *testing.T) {
 
 		var logs []string
 
-		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		vmInstance := CompileAndPrepareToInvoke(t,
 			`
@@ -2148,7 +2142,7 @@ func TestTransaction(t *testing.T) {
 			},
 		)
 
-		err := vmInstance.ExecuteTransaction(nil)
+		err := vmInstance.InvokeTransaction(nil)
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "pre/post condition failed")
 
@@ -3722,7 +3716,7 @@ func TestFunctionPreConditions(t *testing.T) {
 		var logs []string
 
 		config := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
-		config.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		config.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		_, err := CompileAndInvokeWithOptions(
 			t,
@@ -3785,7 +3779,7 @@ func TestFunctionPreConditions(t *testing.T) {
 			return elaboration.InterfaceType(typeID)
 		}
 
-		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
 		activation.DeclareValue(stdlib.PanicFunction)
@@ -4161,7 +4155,7 @@ func TestFunctionPostConditions(t *testing.T) {
 		var logs []string
 
 		config := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
-		config.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		config.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		_, err := CompileAndInvokeWithOptions(
 			t,
@@ -4535,7 +4529,7 @@ func TestDefaultFunctionsWithConditions(t *testing.T) {
 	t.Run("default in parent, conditions in child", func(t *testing.T) {
 		t.Parallel()
 
-		_, err, logs := CompileAndInvokeWithLogs(t,
+		_, logs, err := CompileAndInvokeWithLogs(t,
 			`
               struct interface Foo {
                   fun test(_ a: Int) {
@@ -4584,7 +4578,7 @@ func TestDefaultFunctionsWithConditions(t *testing.T) {
 	t.Run("default and conditions in parent, more conditions in child", func(t *testing.T) {
 		t.Parallel()
 
-		_, err, logs := CompileAndInvokeWithLogs(t,
+		_, logs, err := CompileAndInvokeWithLogs(t,
 			`
               struct interface Foo {
                   fun test(_ a: Int) {
@@ -4671,7 +4665,7 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 		var logs []string
 		vmConfig := vm.NewConfig(storage)
 
-		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		_, err := CompileAndInvokeWithOptions(t,
 			`
@@ -4754,7 +4748,7 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 		var logs []string
 		vmConfig := vm.NewConfig(storage)
 
-		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		_, err := CompileAndInvokeWithOptions(t,
 			`
@@ -4841,7 +4835,7 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 		var logs []string
 		vmConfig := vm.NewConfig(storage)
 
-		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		_, err := CompileAndInvokeWithOptions(t,
 			`
@@ -5056,13 +5050,28 @@ func TestCasting(t *testing.T) {
 			interpreter.TrueValue,
 		)
 		require.Error(t, err)
-		assert.ErrorIs(
+		assert.Equal(
 			t,
-			err,
-			interpreter.ForceCastTypeMismatchError{
+			&interpreter.ForceCastTypeMismatchError{
 				ExpectedType: sema.IntType,
 				ActualType:   sema.BoolType,
+				LocationRange: interpreter.LocationRange{
+					Location: TestLocation,
+					HasPosition: bbq.Position{
+						StartPos: ast.Position{
+							Offset: 70,
+							Line:   3,
+							Column: 25,
+						},
+						EndPos: ast.Position{
+							Offset: 78,
+							Line:   3,
+							Column: 33,
+						},
+					},
+				},
 			},
+			err,
 		)
 	})
 
@@ -5218,14 +5227,6 @@ func TestIntegers(t *testing.T) {
 		sema.AllUnsignedIntegerTypes,
 		sema.AllSignedIntegerTypes,
 	) {
-		// TODO:
-		switch integerType {
-		case sema.Int128Type, sema.Int256Type,
-			sema.UInt128Type, sema.UInt256Type,
-			sema.Word128Type, sema.Word256Type:
-			continue
-		}
-
 		test(integerType)
 	}
 }
@@ -5320,12 +5321,12 @@ func TestForLoop(t *testing.T) {
 		result, err := CompileAndInvoke(t,
 			`
                 fun test(): String {
-                    var array = [5, 6, 7, 8]
+                    var array = ["a", "b", "c", "d"]
                     var keys = ""
                     var values = ""
                     for i, e in array {
                         keys = keys.concat(i.toString())
-                        values = values.concat(e.toString())
+                        values = values.concat(e)
                     }
 
                     return keys.concat("_").concat(values)
@@ -5334,7 +5335,7 @@ func TestForLoop(t *testing.T) {
 			"test",
 		)
 		require.NoError(t, err)
-		assert.Equal(t, interpreter.NewUnmeteredStringValue("0123_5678"), result)
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("0123_abcd"), result)
 	})
 
 	t.Run("array loop scoping", func(t *testing.T) {
@@ -5810,7 +5811,9 @@ func TestCompileForce(t *testing.T) {
 			interpreter.Nil,
 		)
 		require.Error(t, err)
-		assert.ErrorIs(t, err, interpreter.ForceNilError{})
+
+		var forceNilError *interpreter.ForceNilError
+		require.ErrorAs(t, err, &forceNilError)
 	})
 
 	t.Run("nil, AnyStruct", func(t *testing.T) {
@@ -5827,7 +5830,8 @@ func TestCompileForce(t *testing.T) {
 			interpreter.Nil,
 		)
 		require.Error(t, err)
-		assert.ErrorIs(t, err, interpreter.ForceNilError{})
+		var forceNilError *interpreter.ForceNilError
+		require.ErrorAs(t, err, &forceNilError)
 	})
 
 	t.Run("non-optional", func(t *testing.T) {
@@ -5987,7 +5991,7 @@ func TestReturnStatements(t *testing.T) {
 	t.Run("conditional return with post condition", func(t *testing.T) {
 		t.Parallel()
 
-		actual, err, logs := CompileAndInvokeWithLogs(t,
+		actual, logs, err := CompileAndInvokeWithLogs(t,
 			`
               fun test(a: Bool): Int {
                   post {
@@ -6035,7 +6039,7 @@ func TestReturnStatements(t *testing.T) {
 	t.Run("conditional return with post condition in initializer", func(t *testing.T) {
 		t.Parallel()
 
-		actual, err, logs := CompileAndInvokeWithLogs(t,
+		actual, logs, err := CompileAndInvokeWithLogs(t,
 			`
               struct Foo {
                   var i: Int
@@ -7570,7 +7574,7 @@ func TestInheritedConditions(t *testing.T) {
 		}
 
 		var logs []string
-		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		PrepareVMConfig(t, vmConfig, programs)
 
@@ -7959,7 +7963,7 @@ func TestInvocationExpressionEvaluationOrder(t *testing.T) {
 	t.Run("static function", func(t *testing.T) {
 		t.Parallel()
 
-		_, err, logs := CompileAndInvokeWithLogs(t,
+		_, logs, err := CompileAndInvokeWithLogs(t,
 			`
               fun test() {
                   getFunction()(getArgument())
@@ -7995,7 +7999,7 @@ func TestInvocationExpressionEvaluationOrder(t *testing.T) {
 	t.Run("object method", func(t *testing.T) {
 		t.Parallel()
 
-		_, err, logs := CompileAndInvokeWithLogs(t,
+		_, logs, err := CompileAndInvokeWithLogs(t,
 			`
               fun test() {
                   getReceiver().method(getArgument())
@@ -8191,7 +8195,7 @@ func TestGlobalVariables(t *testing.T) {
 	t.Run("forward references", func(t *testing.T) {
 		t.Parallel()
 
-		result, err, logs := CompileAndInvokeWithLogs(t,
+		result, logs, err := CompileAndInvokeWithLogs(t,
 			`
               var a = initializeA()
               var b = initializeB()
@@ -8267,7 +8271,7 @@ func TestGlobalVariables(t *testing.T) {
 		storage := interpreter.NewInMemoryStorage(nil)
 		vmConfig := vm.NewConfig(storage)
 
-		vmConfig.NativeFunctionsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
 
 		// Only prepare, do not invoke anything.
 

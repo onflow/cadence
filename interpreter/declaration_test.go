@@ -118,7 +118,7 @@ func TestInterpretPassBuiltinByValue(t *testing.T) {
 
 				t.Run("in function", func(t *testing.T) {
 
-					inter := parseCheckAndInterpret(t,
+					inter := parseCheckAndPrepare(t,
 						fmt.Sprintf(
 							`
                                 fun test() {
@@ -135,7 +135,7 @@ func TestInterpretPassBuiltinByValue(t *testing.T) {
 
 				t.Run("global declaration", func(t *testing.T) {
 
-					_ = parseCheckAndInterpret(t,
+					_ = parseCheckAndPrepare(t,
 						fmt.Sprintf(
 							`
                                 let x = %s

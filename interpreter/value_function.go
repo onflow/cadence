@@ -268,7 +268,7 @@ func (f *HostFunctionValue) GetMember(context MemberAccessibleContext, _ Locatio
 	return nil
 }
 
-func (v *HostFunctionValue) GetMethod(
+func (f *HostFunctionValue) GetMethod(
 	_ MemberAccessibleContext,
 	_ LocationRange,
 	_ string,
@@ -330,8 +330,8 @@ func (*HostFunctionValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
-func (v *HostFunctionValue) SetNestedVariables(variables map[string]Variable) {
-	v.NestedVariables = variables
+func (f *HostFunctionValue) SetNestedVariables(variables map[string]Variable) {
+	f.NestedVariables = variables
 }
 
 // BoundFunctionValue
@@ -482,7 +482,7 @@ func GetReceiver(
 		// `storageRef.ReferencedValue` above already checks for the type validity, if it's not nil.
 		// If nil, that means the value has been moved out of storage.
 		if receiver == nil {
-			panic(ReferencedValueChangedError{
+			panic(&ReferencedValueChangedError{
 				LocationRange: locationRange,
 			})
 		}

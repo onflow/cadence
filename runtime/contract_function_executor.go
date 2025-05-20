@@ -279,9 +279,9 @@ func (executor *contractFunctionExecutor) executeWithVM(
 	)
 
 	// receiver + arguments
-	invocationArguments := make([]interpreter.Value, 0, 1+len(executor.arguments))
-	invocationArguments = append(invocationArguments, contractValue)
-	invocationArguments, err = executor.appendArguments(context, invocationArguments)
+	arguments := make([]interpreter.Value, 0, len(executor.arguments))
+
+	arguments, err = executor.appendArguments(context, arguments)
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +290,11 @@ func (executor *contractFunctionExecutor) executeWithVM(
 	semaType := interpreter.MustConvertStaticToSemaType(staticType, context)
 	qualifiedFuncName := commons.TypeQualifiedName(semaType, executor.functionName)
 
-	value, err := executor.vm.InvokeExternally(qualifiedFuncName, invocationArguments...)
+	value, err := executor.vm.InvokeMethodExternally(
+		qualifiedFuncName,
+		contractValue,
+		arguments...,
+	)
 	if err != nil {
 		return nil, err
 	}

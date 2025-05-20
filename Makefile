@@ -87,11 +87,6 @@ test-tools:
 test-with-compiler:
 	(go test -parallel 8 ./interpreter/... -compile=true)
 
-
-.PHONY: lint-github-actions
-lint-github-actions: build-linter
-	tools/golangci-lint/golangci-lint run --out-format=colored-line-number,github-actions --timeout=5m  -v ./...
-
 .PHONY: lint
 lint: build-linter
 	tools/golangci-lint/golangci-lint run $(LINTERS) --timeout=5m -v ./...
@@ -128,6 +123,7 @@ check-headers:
 
 .PHONY: generate
 generate:
+	go install golang.org/x/tools/cmd/stringer@v0.32.0
 	go generate -v ./...
 
 .PHONY: check-tidy

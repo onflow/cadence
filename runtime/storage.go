@@ -264,9 +264,18 @@ func (s *Storage) commit(context interpreter.ValueTransferContext, commitContrac
 
 	size := slabStorage.DeltasSizeWithoutTempAddresses()
 	if size > 0 {
-		context.ReportComputation(common.ComputationKindEncodeValue, uint(size))
-		usage := common.NewBytesMemoryUsage(int(size))
-		common.UseMemory(context, usage)
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindEncodeValue,
+				Intensity: size,
+			},
+		)
+
+		common.UseMemory(
+			context,
+			common.NewBytesMemoryUsage(int(size)),
+		)
 	}
 
 	deltas := slabStorage.DeltasWithoutTempAddresses()

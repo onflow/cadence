@@ -434,7 +434,7 @@ func interpreterFTTransfer(tb testing.TB) {
 		interpreter.EmptyLocationRange,
 	)
 
-	err = inter.InvokeTransaction(0, signer)
+	err = inter.InvokeTransaction(nil, signer)
 	require.NoError(tb, err)
 
 	// Run setup account transaction
@@ -466,7 +466,7 @@ func interpreterFTTransfer(tb testing.TB) {
 			interpreter.EmptyLocationRange,
 		)
 
-		err = inter.InvokeTransaction(0, signer)
+		err = inter.InvokeTransaction(nil, signer)
 		require.NoError(tb, err)
 	}
 
@@ -489,9 +489,10 @@ func interpreterFTTransfer(tb testing.TB) {
 	)
 
 	err = inter.InvokeTransaction(
-		0,
-		interpreter.AddressValue(senderAddress),
-		interpreter.NewUnmeteredUFix64ValueWithInteger(total, interpreter.EmptyLocationRange),
+		[]interpreter.Value{
+			interpreter.AddressValue(senderAddress),
+			interpreter.NewUnmeteredUFix64ValueWithInteger(total, interpreter.EmptyLocationRange),
+		},
 		signer,
 	)
 	require.NoError(tb, err)
@@ -535,9 +536,10 @@ func interpreterFTTransfer(tb testing.TB) {
 	for loop() {
 
 		err = inter.InvokeTransaction(
-			0,
-			transferAmount,
-			interpreter.AddressValue(receiverAddress),
+			[]interpreter.Value{
+				transferAmount,
+				interpreter.AddressValue(receiverAddress),
+			},
 			signer,
 		)
 		require.NoError(tb, err)

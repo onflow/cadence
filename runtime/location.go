@@ -18,11 +18,6 @@
 
 package runtime
 
-import (
-	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/interpreter"
-)
-
 func ResolveLocationWithInterface(
 	i Interface,
 	identifiers []Identifier,
@@ -31,11 +26,5 @@ func ResolveLocationWithInterface(
 	res []ResolvedLocation,
 	err error,
 ) {
-	errors.WrapPanic(func() {
-		res, err = i.ResolveLocation(identifiers, location)
-	})
-	if err != nil {
-		err = interpreter.WrappedExternalError(err)
-	}
-	return
+	return i.ResolveLocation(identifiers, location)
 }
