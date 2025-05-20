@@ -390,15 +390,8 @@ func (e *checkingEnvironment) getProgram(
 			Elaboration: elaboration,
 		}
 
-		var compiledProgram compiledProgram
-		compile := e.compile
-		if compile != nil {
-			compiledProgram = compile(interpreterProgram, location)
-		}
-
 		return &Program{
 			interpreterProgram: interpreterProgram,
-			compiledProgram:    compiledProgram,
 		}, nil
 	}
 
