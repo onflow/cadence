@@ -828,7 +828,7 @@ func TestInterpretIntegerMinMax(t *testing.T) {
 			t,
 			inter,
 			expected,
-			inter.Globals.Get("x").GetValue(inter),
+			inter.GetGlobal("x"),
 		)
 	}
 

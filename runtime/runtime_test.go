@@ -152,16 +152,16 @@ func TestRuntimeConcurrentImport(t *testing.T) {
 		OnProgramChecked: func(location Location, duration time.Duration) {
 			atomic.AddUint64(&checkCount, 1)
 		},
-		OnGetAndSetProgram: func(
+		OnGetOrLoadProgram: func(
 			location Location,
-			load func() (*interpreter.Program, error),
+			load func() (*Program, error),
 		) (
-			program *interpreter.Program,
+			program *Program,
 			err error,
 		) {
 			item, ok := programs.Load(location)
 			if ok {
-				program = item.(*interpreter.Program)
+				program = item.(*Program)
 				return
 			}
 
@@ -217,7 +217,7 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 
 	t.Parallel()
 
-	programs := map[Location]*interpreter.Program{}
+	programs := map[Location]*Program{}
 	programsHits := make(map[Location]bool)
 
 	importedScript := []byte(`
@@ -231,11 +231,11 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 
 	runtime := NewTestInterpreterRuntime()
 	runtimeInterface := &TestRuntimeInterface{
-		OnGetAndSetProgram: func(
+		OnGetOrLoadProgram: func(
 			location Location,
-			load func() (*interpreter.Program, error),
+			load func() (*Program, error),
 		) (
-			program *interpreter.Program,
+			program *Program,
 			err error,
 		) {
 			var ok bool
@@ -6648,7 +6648,7 @@ func TestRuntimeProgramsHitForToplevelPrograms(t *testing.T) {
 	accountCodes := map[common.Location][]byte{}
 	var events []cadence.Event
 
-	programs := map[common.Location]*interpreter.Program{}
+	programs := map[common.Location]*Program{}
 
 	var accountCounter uint8 = 0
 
@@ -6664,11 +6664,11 @@ func TestRuntimeProgramsHitForToplevelPrograms(t *testing.T) {
 		OnGetCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
-		OnGetAndSetProgram: func(
+		OnGetOrLoadProgram: func(
 			location Location,
-			load func() (*interpreter.Program, error),
+			load func() (*Program, error),
 		) (
-			program *interpreter.Program,
+			program *Program,
 			err error,
 		) {
 			programsHits = append(programsHits, location)
@@ -7494,8 +7494,8 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		runtime := NewTestInterpreterRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
-			OnGetAndSetProgram: func(_ Location, _ func() (*interpreter.Program, error)) (*interpreter.Program, error) {
-				panic(errors.New("crash while getting/setting program"))
+			OnGetOrLoadProgram: func(_ Location, _ func() (*Program, error)) (*Program, error) {
+				panic(errors.New("panic while getting/setting program"))
 			},
 		}
 
@@ -8967,7 +8967,7 @@ func TestRuntimeWrappedErrorHandling(t *testing.T) {
 			events = append(events, event)
 			return nil
 		},
-		OnGetAndSetProgram: func(location Location, load func() (*interpreter.Program, error)) (*interpreter.Program, error) {
+		OnGetOrLoadProgram: func(location Location, load func() (*Program, error)) (*Program, error) {
 			program, err := load()
 			if err == nil {
 				return program, nil

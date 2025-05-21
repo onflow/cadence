@@ -2024,7 +2024,7 @@ func TestInterpretEntitledReferenceCollections(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement Y
 
@@ -2054,7 +2054,7 @@ func TestInterpretEntitledReferenceCollections(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement Y
 

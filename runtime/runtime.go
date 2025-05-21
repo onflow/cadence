@@ -31,6 +31,12 @@ import (
 	"github.com/onflow/cadence/stdlib"
 )
 
+type Program struct {
+	interpreterProgram *interpreter.Program
+	// TODO: enable once feature branch is merged
+	//compiledProgram    *compiledProgram
+}
+
 type Script struct {
 	Source    []byte
 	Arguments [][]byte

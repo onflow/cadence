@@ -81,7 +81,7 @@ func TestInterpretTransactions(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           transaction {
 
             var x: Int
@@ -104,7 +104,7 @@ func TestInterpretTransactions(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           transaction {
 
             var x: Int
@@ -122,12 +122,10 @@ func TestInterpretTransactions(t *testing.T) {
 		err := inter.InvokeTransaction(nil)
 		RequireError(t, err)
 
-		var conditionErr *interpreter.ConditionError
-		require.ErrorAs(t, err, &conditionErr)
-
-		assert.Equal(t,
+		assertConditionError(
+			t,
+			err,
 			ast.ConditionKindPre,
-			conditionErr.ConditionKind,
 		)
 	})
 
@@ -135,7 +133,7 @@ func TestInterpretTransactions(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           transaction {
 
             var x: Int
@@ -162,7 +160,7 @@ func TestInterpretTransactions(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           transaction {
 
             var x: Int
@@ -184,12 +182,10 @@ func TestInterpretTransactions(t *testing.T) {
 		err := inter.InvokeTransaction(nil)
 		RequireError(t, err)
 
-		var conditionErr *interpreter.ConditionError
-		require.ErrorAs(t, err, &conditionErr)
-
-		assert.Equal(t,
+		assertConditionError(
+			t,
+			err,
 			ast.ConditionKindPost,
-			conditionErr.ConditionKind,
 		)
 	})
 
