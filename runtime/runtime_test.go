@@ -8077,6 +8077,9 @@ error: unexpectedly found nil while forcing an Optional value
  9 |         return a
 10 |             .firstIndex(of: 5)!
    |                ^^^^^^^^^^^^^^^^
+
+Was this error unhelpful?
+Consider suggesting an improvement here: https://github.com/onflow/cadence/issues.
 `
 
 	require.Equal(t, errorString, err.Error())
@@ -8130,6 +8133,9 @@ error: unexpectedly found nil while forcing an Optional value
 10 |             .firstIndex(of: 5)
 11 |                 ?.toString()!
    |                ^^^^^^^^^^^^^^
+
+Was this error unhelpful?
+Consider suggesting an improvement here: https://github.com/onflow/cadence/issues.
 `
 
 	require.Equal(t, errorString, err.Error())
