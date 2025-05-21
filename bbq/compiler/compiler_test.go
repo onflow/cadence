@@ -3295,16 +3295,17 @@ func TestCompileFunctionConditions(t *testing.T) {
 			[]opcode.Instruction{
 				// $_result = x
 				opcode.InstructionGetLocal{Local: xIndex},
+				opcode.InstructionTransfer{Type: 1},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.InstructionJump{Target: 3},
+				opcode.InstructionJump{Target: 4},
 
 				// Get the reference and assign to `result`.
 				// i.e: `let result = &$_result`
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionNewRef{Type: 1},
-				opcode.InstructionTransfer{Type: 1},
+				opcode.InstructionNewRef{Type: 2},
+				opcode.InstructionTransfer{Type: 2},
 				opcode.InstructionSetLocal{Local: resultIndex},
 
 				// result != nil
@@ -3314,12 +3315,12 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.InstructionNot{},
-				opcode.InstructionJumpIfFalse{Target: 17},
+				opcode.InstructionJumpIfFalse{Target: 18},
 
 				// panic("pre/post condition failed")
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 0}, // error message
-				opcode.InstructionTransfer{Type: 2},
+				opcode.InstructionTransfer{Type: 3},
 				opcode.InstructionInvoke{ArgCount: 1},
 
 				// Drop since it's a statement-expression
@@ -3327,7 +3328,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransfer{Type: 3},
+				opcode.InstructionTransfer{Type: 1},
 				opcode.InstructionReturnValue{},
 			},
 			program.Functions[0].Code,

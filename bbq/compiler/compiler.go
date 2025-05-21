@@ -2007,7 +2007,12 @@ func (c *Compiler[_, _]) VisitUnaryExpression(expression *ast.UnaryExpression) (
 		c.emit(opcode.InstructionDeref{})
 
 	case ast.OperationMove:
-		// TODO: invalidate
+		// Transfer to the target type.
+		targetType := c.DesugaredElaboration.MoveExpressionTypes(expression)
+		typeIndex := c.getOrAddType(targetType)
+		c.codeGen.Emit(opcode.InstructionTransfer{
+			Type: typeIndex,
+		})
 
 	default:
 		panic(errors.NewUnreachableError())
