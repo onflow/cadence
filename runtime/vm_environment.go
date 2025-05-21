@@ -31,7 +31,6 @@ import (
 	"github.com/onflow/cadence/stdlib"
 )
 
-type compiledPrograms map[common.Location]compiledProgram
 type compiledProgram struct {
 	program              *bbq.InstructionProgram
 	desugaredElaboration *compiler.DesugaredElaboration
@@ -42,7 +41,6 @@ type compiledProgram struct {
 type vmEnvironmentReconfigured struct {
 	Interface
 	storage *Storage
-	compiledPrograms
 }
 
 type vmEnvironment struct {
@@ -78,13 +76,10 @@ var _ common.MemoryGauge = &vmEnvironment{}
 
 func newVMEnvironment(config Config) *vmEnvironment {
 	env := &vmEnvironment{
-		vmEnvironmentReconfigured: vmEnvironmentReconfigured{
-			compiledPrograms: make(compiledPrograms),
-		},
 		config:                        config,
-		checkingEnvironment:           newCheckingEnvironment(),
 		SimpleContractAdditionTracker: stdlib.NewSimpleContractAdditionTracker(),
 	}
+	env.checkingEnvironment = newCheckingEnvironment()
 	env.vmConfig = env.newVMConfig()
 	env.compilerConfig = env.newCompilerConfig()
 	return env
@@ -152,7 +147,6 @@ func (e *vmEnvironment) Configure(
 	// TODO:
 	coverageReport *CoverageReport,
 ) {
-	clear(e.compiledPrograms)
 	e.Interface = runtimeInterface
 	e.storage = storage
 	e.vmConfig.SetStorage(storage)
@@ -277,7 +271,7 @@ func (e *vmEnvironment) ProgramLog(message string, _ interpreter.LocationRange) 
 	return e.Interface.ProgramLog(message)
 }
 
-func (e *vmEnvironment) loadProgram(location common.Location) (*interpreter.Program, error) {
+func (e *vmEnvironment) loadProgram(location common.Location) (*Program, error) {
 	const getAndSetProgram = true
 	program, err := e.checkingEnvironment.GetProgram(
 		location,
@@ -286,6 +280,12 @@ func (e *vmEnvironment) loadProgram(location common.Location) (*interpreter.Prog
 	)
 	if err != nil {
 		return nil, err
+	}
+
+	// If the program is not compiled yet, compile it.
+	// Directly update the program (pointer), which will also update the program "cache" kept by the embedder.
+	if program.compiledProgram == nil {
+		program.compiledProgram = e.compileProgram(program.interpreterProgram, location)
 	}
 
 	return program, nil
@@ -297,7 +297,7 @@ func (e *vmEnvironment) loadElaboration(location common.Location) (*sema.Elabora
 		return nil, err
 	}
 
-	return program.Elaboration, nil
+	return program.interpreterProgram.Elaboration, nil
 }
 
 func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
@@ -337,44 +337,34 @@ func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.Ty
 func (e *vmEnvironment) compileProgram(
 	program *interpreter.Program,
 	location common.Location,
-) compiledProgram {
+) *compiledProgram {
 	comp := compiler.NewInstructionCompilerWithConfig(
 		program,
 		location,
 		e.compilerConfig,
 	)
 
-	compiledProgram := compiledProgram{
+	return &compiledProgram{
 		program:              comp.Compile(),
 		desugaredElaboration: comp.DesugaredElaboration,
 	}
-	e.compiledPrograms[location] = compiledProgram
-	return compiledProgram
-}
-
-func (e *vmEnvironment) loadAndCompileProgram(location common.Location) compiledProgram {
-	program, err := e.loadProgram(location)
-	if err != nil {
-		panic(fmt.Errorf("failed to load program for location %s: %w", location, err))
-	}
-
-	return e.compileProgram(program, location)
 }
 
 func (e *vmEnvironment) resolveDesugaredElaboration(location common.Location) (*compiler.DesugaredElaboration, error) {
-	compiledProgram, ok := e.compiledPrograms[location]
-	if !ok {
-		compiledProgram = e.loadAndCompileProgram(location)
+	program, err := e.loadProgram(location)
+	if err != nil {
+		return nil, err
 	}
-	return compiledProgram.desugaredElaboration, nil
+
+	return program.compiledProgram.desugaredElaboration, nil
 }
 
 func (e *vmEnvironment) importProgram(location common.Location) *bbq.InstructionProgram {
-	compiledProgram, ok := e.compiledPrograms[location]
-	if !ok {
-		compiledProgram = e.loadAndCompileProgram(location)
+	program, err := e.loadProgram(location)
+	if err != nil {
+		panic(fmt.Errorf("failed to load program for imported location %s: %w", location, err))
 	}
-	return compiledProgram.program
+	return program.compiledProgram.program
 }
 
 func (e *vmEnvironment) newVM(

@@ -119,9 +119,9 @@ func (e ExternalInterface) GetCode(location Location) (code []byte, err error) {
 
 func (e ExternalInterface) GetOrLoadProgram(
 	location Location,
-	load func() (*interpreter.Program, error),
+	load func() (*Program, error),
 ) (
-	program *interpreter.Program,
+	program *Program,
 	err error,
 ) {
 	errors.WrapPanic(func() {

@@ -218,7 +218,7 @@ func (e *checkingEnvironment) resolveImport(
 	}
 
 	return sema.ElaborationImport{
-		Elaboration: program.Elaboration,
+		Elaboration: program.interpreterProgram.Elaboration,
 	}, nil
 }
 
@@ -264,7 +264,7 @@ func (e *checkingEnvironment) ParseAndCheckProgram(
 	*interpreter.Program,
 	error,
 ) {
-	return e.getProgram(
+	program, err := e.getProgram(
 		location,
 		func() ([]byte, error) {
 			return code, nil
@@ -276,6 +276,10 @@ func (e *checkingEnvironment) ParseAndCheckProgram(
 			location: true,
 		},
 	)
+	if err != nil {
+		return nil, err
+	}
+	return program.interpreterProgram, nil
 }
 
 // parseAndCheckProgram parses and checks the given program.
@@ -331,7 +335,7 @@ func (e *checkingEnvironment) GetProgram(
 	storeProgram bool,
 	checkedImports importResolutionResults,
 ) (
-	*interpreter.Program,
+	*Program,
 	error,
 ) {
 	return e.getProgram(
@@ -352,10 +356,10 @@ func (e *checkingEnvironment) getProgram(
 	getAndSetProgram bool,
 	checkedImports importResolutionResults,
 ) (
-	program *interpreter.Program,
+	program *Program,
 	err error,
 ) {
-	load := func() (*interpreter.Program, error) {
+	load := func() (*Program, error) {
 		code, err := getCode()
 		if err != nil {
 			return nil, err
@@ -375,9 +379,13 @@ func (e *checkingEnvironment) getProgram(
 			return nil, err
 		}
 
-		return &interpreter.Program{
+		interpreterProgram := &interpreter.Program{
 			Program:     parsedProgram,
 			Elaboration: elaboration,
+		}
+
+		return &Program{
+			interpreterProgram: interpreterProgram,
 		}, nil
 	}
 
@@ -386,7 +394,7 @@ func (e *checkingEnvironment) getProgram(
 	}
 
 	errors.WrapPanic(func() {
-		program, err = e.runtimeInterface.GetOrLoadProgram(location, func() (program *interpreter.Program, err error) {
+		program, err = e.runtimeInterface.GetOrLoadProgram(location, func() (program *Program, err error) {
 			// Loading is done by Cadence.
 			// If it panics with a user error, e.g. when parsing fails due to a memory metering error,
 			// then do not treat it as an external error (the load callback is called by the embedder)
