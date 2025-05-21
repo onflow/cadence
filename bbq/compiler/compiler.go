@@ -231,12 +231,16 @@ func (c *Compiler[_, _]) addGlobal(name string) *Global {
 }
 
 func (c *Compiler[_, _]) addImportedGlobal(location common.Location, name string) *Global {
-	// Index is not set here. It is set only if this imported global is used.
-	global := &Global{
-		Location: location,
-		Name:     name,
+	global, exists := c.importedGlobals[name]
+	if !exists {
+		// Index is not set here. It is set only if this imported global is used.
+		global = &Global{
+			Location: location,
+			Name:     name,
+		}
+		c.importedGlobals[name] = global
 	}
-	c.importedGlobals[name] = global
+
 	return global
 }
 
@@ -2564,29 +2568,43 @@ func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclarati
 	}
 
 	for _, location := range resolvedLocations {
-		importedProgram := c.Config.ImportHandler(location.Location)
-
-		// Add a global variable for the imported contract value.
-		contracts := importedProgram.Contracts
-		for _, contract := range contracts {
-			c.addImportedGlobal(location.Location, contract.Name)
-		}
-
-		for _, function := range importedProgram.Functions {
-			name := function.QualifiedName
-
-			//// TODO: Skip the contract initializer.
-			//// It should never be able to invoked within the code.
-			//if isContract && name == commons.InitFunctionName {
-			//	continue
-			//}
-
-			// TODO: Filter-in only public functions
-			c.addImportedGlobal(location.Location, name)
-		}
+		c.addGlobalsFromImportedProgram(location.Location)
 	}
 
 	return
+}
+
+func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location) {
+	// Built-in location has no program.
+	if location == nil {
+		return
+	}
+
+	importedProgram := c.Config.ImportHandler(location)
+
+	// Add a global variable for the imported contract value.
+	contracts := importedProgram.Contracts
+	for _, contract := range contracts {
+		c.addImportedGlobal(location, contract.Name)
+	}
+
+	for _, function := range importedProgram.Functions {
+		name := function.QualifiedName
+
+		//// TODO: Skip the contract initializer.
+		//// It should never be able to invoked within the code.
+		//if isContract && name == commons.InitFunctionName {
+		//	continue
+		//}
+
+		// TODO: Filter-in only public functions
+		c.addImportedGlobal(location, name)
+	}
+
+	// Recursively add transitive imports.
+	for _, impt := range importedProgram.Imports {
+		c.addGlobalsFromImportedProgram(impt.Location)
+	}
 }
 
 func (c *Compiler[_, _]) VisitTransactionDeclaration(_ *ast.TransactionDeclaration) (_ struct{}) {

@@ -6133,3 +6133,176 @@ func TestCompileLineNumberInfo(t *testing.T) {
 		pos,
 	)
 }
+
+func TestCompileImports(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple import", func(t *testing.T) {
+		t.Parallel()
+
+		aContract := `
+            contract A {
+                fun test() {}
+            }
+        `
+
+		programs := CompiledPrograms{}
+
+		contractsAddress := common.MustBytesToAddress([]byte{0x1})
+
+		aLocation := common.NewAddressLocation(nil, contractsAddress, "A")
+		bLocation := common.NewAddressLocation(nil, contractsAddress, "B")
+
+		aProgram := ParseCheckAndCompile(
+			t,
+			aContract,
+			aLocation,
+			programs,
+		)
+
+		// Should have no imports
+		assert.Empty(t, aProgram.Imports)
+
+		// Deploy a second contract.
+
+		bContract := fmt.Sprintf(`
+          import A from %[1]s
+
+          contract B {
+              fun test() {
+                  return A.test()
+              }
+          }
+        `,
+			contractsAddress.HexWithPrefix(),
+		)
+
+		bProgram := ParseCheckAndCompile(t, bContract, bLocation, programs)
+
+		// Should have import for contract value `A` and the method `A.test`.
+		assert.Equal(
+			t,
+			[]bbq.Import{
+				{
+					Location: aLocation,
+					Name:     "A.test",
+				},
+				{
+					Location: aLocation,
+					Name:     "A",
+				},
+			},
+			bProgram.Imports,
+		)
+	})
+
+	t.Run("transitive import", func(t *testing.T) {
+		t.Parallel()
+
+		aContract := `
+            contract A {
+                struct Foo {
+                    fun test() {}
+                    fun unusedMethodOfFoo() {}
+                }
+
+                fun unusedMethodOfA() {}
+            }
+        `
+
+		programs := CompiledPrograms{}
+
+		contractsAddress := common.MustBytesToAddress([]byte{0x1})
+
+		aLocation := common.NewAddressLocation(nil, contractsAddress, "A")
+		bLocation := common.NewAddressLocation(nil, contractsAddress, "B")
+		cLocation := common.NewAddressLocation(nil, contractsAddress, "C")
+
+		aProgram := ParseCheckAndCompile(
+			t,
+			aContract,
+			aLocation,
+			programs,
+		)
+
+		// Should have no imports
+		assert.Empty(t, aProgram.Imports)
+
+		// Deploy a second contract.
+
+		bContract := fmt.Sprintf(`
+            import A from %[1]s
+
+            contract B {
+                struct Bar {
+                    fun getFoo(): A.Foo {
+                        return A.Foo()
+                    }
+
+                    fun unusedMethodOfBar() {}
+                }
+
+                fun unusedMethodOfA() {}
+            }
+        `,
+			contractsAddress.HexWithPrefix(),
+		)
+
+		bProgram := ParseCheckAndCompile(t, bContract, bLocation, programs)
+
+		// Should have only one import for `A.Foo()` constructor.
+		assert.Equal(
+			t,
+			[]bbq.Import{
+				{
+					Location: aLocation,
+					Name:     "A.Foo",
+				},
+			},
+			bProgram.Imports,
+		)
+
+		// Deploy third contract
+
+		cContract := fmt.Sprintf(`
+            import B from %[1]s
+
+            contract C {
+                struct Baz {
+                    fun test() {
+                        var foo = B.Bar().getFoo()
+
+                        // Invokes a function of 'A.Foo', which is a transitive dependency.
+                        foo.test()
+                    }
+                }
+            }
+        `,
+			contractsAddress.HexWithPrefix(),
+		)
+
+		cProgram := ParseCheckAndCompile(t, cContract, cLocation, programs)
+
+		// Should have 3 imports, including the transitive dependency `A.Foo.test`.
+		// Should only have used imports.
+		assert.Equal(
+			t,
+			[]bbq.Import{
+				{
+					Location: bLocation,
+					Name:     "B.Bar.getFoo",
+				},
+				{
+					Location: bLocation,
+					Name:     "B.Bar",
+				},
+				{
+					Location: aLocation,
+					Name:     "A.Foo.test",
+				},
+			},
+			cProgram.Imports,
+		)
+	})
+}
