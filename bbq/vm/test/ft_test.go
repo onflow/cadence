@@ -25,8 +25,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/activations"
-	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/compiler"
@@ -137,97 +135,65 @@ func compiledFTTransfer(tb testing.TB) {
 
 	storage := interpreter.NewInMemoryStorage(nil)
 
-	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, stdlib.PanicFunction)
-	interpreter.Declare(baseActivation, stdlib.AssertFunction)
-	interpreter.Declare(baseActivation, stdlib.NewGetAccountFunction(accountHandler))
+	vmConfig := vm.NewConfig(storage)
 
-	interConfig := &interpreter.Config{
-		Storage: storage,
-		BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
-			return baseActivation
-		},
-		ContractValueHandler: func(
-			inter *interpreter.Interpreter,
-			compositeType *sema.CompositeType,
-			constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
-			invocationRange ast.Range,
-		) interpreter.ContractValue {
+	vmConfig.AccountHandler = accountHandler
 
-			constructor := constructorGenerator(common.ZeroAddress)
-
-			value, err := interpreter.InvokeFunctionValue(
-				inter,
-				constructor,
-				nil,
-				nil,
-				nil,
-				compositeType,
-				ast.EmptyRange,
-			)
-			if err != nil {
-				panic(err)
-			}
-
-			flowTokenContractValue := value.(*interpreter.CompositeValue)
-			return flowTokenContractValue
-		},
-		CapabilityBorrowHandler: func(
-			context interpreter.BorrowCapabilityControllerContext,
-			locationRange interpreter.LocationRange,
-			address interpreter.AddressValue,
-			capabilityID interpreter.UInt64Value,
-			wantedBorrowType *sema.ReferenceType,
-			capabilityBorrowType *sema.ReferenceType,
-		) interpreter.ReferenceValue {
-			return stdlib.BorrowCapabilityController(
-				context,
-				locationRange,
-				address,
-				capabilityID,
-				wantedBorrowType,
-				capabilityBorrowType,
-				accountHandler,
-			)
-		},
-		OnEventEmitted: func(
-			_ interpreter.ValueExportContext,
-			_ interpreter.LocationRange,
-			_ *sema.CompositeType,
-			_ []interpreter.Value,
-		) error {
-			// NO-OP
-			return nil
-		},
-		InjectedCompositeFieldsHandler: func(
-			context interpreter.AccountCreationContext,
-			_ common.Location,
-			_ string,
-			_ common.CompositeKind,
-		) map[string]interpreter.Value {
-
-			accountRef := stdlib.NewAccountReferenceValue(
-				context,
-				accountHandler,
-				interpreter.NewAddressValue(nil, contractsAddress),
-				interpreter.FullyEntitledAccountAccess,
-				interpreter.EmptyLocationRange,
-			)
-
-			return map[string]interpreter.Value{
-				sema.ContractAccountFieldName: accountRef,
-			}
-		},
-		AccountHandler: func(context interpreter.AccountCreationContext, address interpreter.AddressValue) interpreter.Value {
-			return stdlib.NewAccountValue(context, nil, address)
-		},
+	vmConfig.CapabilityBorrowHandler = func(
+		context interpreter.BorrowCapabilityControllerContext,
+		locationRange interpreter.LocationRange,
+		address interpreter.AddressValue,
+		capabilityID interpreter.UInt64Value,
+		wantedBorrowType *sema.ReferenceType,
+		capabilityBorrowType *sema.ReferenceType,
+	) interpreter.ReferenceValue {
+		return stdlib.BorrowCapabilityController(
+			context,
+			locationRange,
+			address,
+			capabilityID,
+			wantedBorrowType,
+			capabilityBorrowType,
+			accountHandler,
+		)
 	}
 
-	vmConfig := vm.NewConfig(storage).
-		WithAccountHandler(accountHandler).
-		WithInterpreterConfig(interConfig)
+	vmConfig.OnEventEmitted = func(
+		_ interpreter.ValueExportContext,
+		_ interpreter.LocationRange,
+		_ *sema.CompositeType,
+		_ []interpreter.Value,
+	) error {
+		// NO-OP
+		return nil
+	}
 
-	vmConfig = PrepareVMConfig(tb, vmConfig, compiledPrograms)
+	vmConfig.InjectedCompositeFieldsHandler = func(
+		context interpreter.AccountCreationContext,
+		_ common.Location,
+		_ string,
+		_ common.CompositeKind,
+	) map[string]interpreter.Value {
+
+		accountRef := stdlib.NewAccountReferenceValue(
+			context,
+			accountHandler,
+			interpreter.NewAddressValue(nil, contractsAddress),
+			interpreter.FullyEntitledAccountAccess,
+			interpreter.EmptyLocationRange,
+		)
+
+		return map[string]interpreter.Value{
+			sema.ContractAccountFieldName: accountRef,
+		}
+	}
+
+	vmConfig.AccountHandlerFunc = func(
+		context interpreter.AccountCreationContext,
+		address interpreter.AddressValue,
+	) interpreter.Value {
+		return stdlib.NewAccountValue(context, nil, address)
+	}
 
 	vmConfig.ImportHandler = importHandler
 
@@ -238,6 +204,8 @@ func compiledFTTransfer(tb testing.TB) {
 	) *interpreter.CompositeValue {
 		return contractValues[location]
 	}
+
+	vmConfig = PrepareVMConfig(tb, vmConfig, compiledPrograms)
 
 	// Initialize contracts
 

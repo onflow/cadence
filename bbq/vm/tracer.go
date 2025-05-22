@@ -44,11 +44,11 @@ func (t Tracer) ReportArrayValueConstructTrace(_ string, _ int, _ time.Duration)
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Context) ReportArrayValueDestroyTrace(_ string, _ int, _ time.Duration) {
+func (t Tracer) ReportArrayValueDestroyTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Context) ReportArrayValueConformsToStaticTypeTrace(_ string, _ int, _ time.Duration) {
+func (t Tracer) ReportArrayValueConformsToStaticTypeTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -68,15 +68,15 @@ func (t Tracer) ReportDictionaryValueGetMemberTrace(_ string, _ int, _ string, _
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Context) ReportDictionaryValueConstructTrace(_ string, _ int, _ time.Duration) {
+func (t Tracer) ReportDictionaryValueConstructTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Context) ReportDictionaryValueDestroyTrace(_ string, _ int, _ time.Duration) {
+func (t Tracer) ReportDictionaryValueDestroyTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Context) ReportDictionaryValueConformsToStaticTypeTrace(_ string, _ int, _ time.Duration) {
+func (t Tracer) ReportDictionaryValueConformsToStaticTypeTrace(_ string, _ int, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 

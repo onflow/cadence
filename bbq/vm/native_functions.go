@@ -146,7 +146,7 @@ func init() {
 				address := arguments[0].(interpreter.AddressValue)
 				return NewAccountReferenceValue(
 					context,
-					context.GetAccountHandler(),
+					context.AccountHandler,
 					common.Address(address),
 				)
 			},

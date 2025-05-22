@@ -30,19 +30,33 @@ import (
 // Config contains the VM configurations that is safe to be re-used across VMs/executions.
 // It does not hold data specific to a single execution. i.e: No state is maintained.
 type Config struct {
-	common.MemoryGauge
-	common.ComputationGauge
-	commons.ImportHandler
-	ContractValueHandler
-	BuiltinGlobalsProvider
 	Tracer
-	stdlib.Logger
+	storage                interpreter.Storage
+	ImportHandler          commons.ImportHandler
+	ContractValueHandler   ContractValueHandler
+	BuiltinGlobalsProvider BuiltinGlobalsProvider
+	Logger                 stdlib.Logger
+	AccountHandler         stdlib.AccountHandler
+	TypeLoader             func(location common.Location, typeID interpreter.TypeID) sema.ContainedType
 
-	storage           interpreter.Storage
-	interpreterConfig *interpreter.Config
-
-	accountHandler stdlib.AccountHandler
-	TypeLoader     func(location common.Location, typeID interpreter.TypeID) sema.ContainedType
+	MemoryGauge      common.MemoryGauge
+	ComputationGauge common.ComputationGauge
+	// CapabilityCheckHandler is used to check ID capabilities
+	CapabilityCheckHandler interpreter.CapabilityCheckHandlerFunc
+	// CapabilityBorrowHandler is used to borrow ID capabilities
+	CapabilityBorrowHandler interpreter.CapabilityBorrowHandlerFunc
+	// ValidateAccountCapabilitiesGetHandler is used to handle when a capability of an account is got.
+	ValidateAccountCapabilitiesGetHandler interpreter.ValidateAccountCapabilitiesGetHandlerFunc
+	// ValidateAccountCapabilitiesPublishHandler is used to handle when a capability of an account is got.
+	ValidateAccountCapabilitiesPublishHandler interpreter.ValidateAccountCapabilitiesPublishHandlerFunc
+	// OnEventEmitted is triggered when an event is emitted by the program
+	OnEventEmitted interpreter.OnEventEmittedFunc
+	// AccountHandlerFunc is used to handle accounts
+	AccountHandlerFunc interpreter.AccountHandlerFunc
+	// InjectedCompositeFieldsHandler is used to initialize new composite values' fields
+	InjectedCompositeFieldsHandler interpreter.InjectedCompositeFieldsHandlerFunc
+	// UUIDHandler is used to handle the generation of UUIDs
+	UUIDHandler interpreter.UUIDHandlerFunc
 
 	debugEnabled bool
 }
@@ -51,16 +65,6 @@ func NewConfig(storage interpreter.Storage) *Config {
 	return &Config{
 		storage: storage,
 	}
-}
-
-func (c *Config) WithAccountHandler(handler stdlib.AccountHandler) *Config {
-	c.accountHandler = handler
-	return c
-}
-
-func (c *Config) WithInterpreterConfig(config *interpreter.Config) *Config {
-	c.interpreterConfig = config
-	return c
 }
 
 func (c *Config) WithDebugEnabled() *Config {
@@ -74,10 +78,6 @@ func (c *Config) MeterMemory(usage common.MemoryUsage) error {
 	}
 
 	return c.MemoryGauge.MeterMemory(usage)
-}
-
-func (c *Config) InterpreterConfig() *interpreter.Config {
-	return c.interpreterConfig
 }
 
 func (c *Config) Storage() interpreter.Storage {
@@ -196,19 +196,12 @@ func (c *Config) MeterComputation(usage common.ComputationUsage) error {
 	return c.ComputationGauge.MeterComputation(usage)
 }
 
-func (c *Config) InjectedCompositeFieldsHandler() interpreter.InjectedCompositeFieldsHandlerFunc {
-	if c.interpreterConfig == nil {
-		return nil
-	}
-	return c.interpreterConfig.InjectedCompositeFieldsHandler
+func (c *Config) GetInjectedCompositeFieldsHandler() interpreter.InjectedCompositeFieldsHandlerFunc {
+	return c.InjectedCompositeFieldsHandler
 }
 
-func (c *Config) AccountHandler() interpreter.AccountHandlerFunc {
-	return c.interpreterConfig.AccountHandler
-}
-
-func (c *Config) GetAccountHandler() stdlib.AccountHandler {
-	return c.accountHandler
+func (c *Config) GetAccountHandlerFunc() interpreter.AccountHandlerFunc {
+	return c.AccountHandlerFunc
 }
 
 func (c *Config) GetContractValue(contractLocation common.AddressLocation) (*interpreter.CompositeValue, error) {
@@ -216,20 +209,20 @@ func (c *Config) GetContractValue(contractLocation common.AddressLocation) (*int
 	return nil, nil
 }
 
-func (c *Config) ValidateAccountCapabilitiesGetHandler() interpreter.ValidateAccountCapabilitiesGetHandlerFunc {
-	return c.interpreterConfig.ValidateAccountCapabilitiesGetHandler
+func (c *Config) GetValidateAccountCapabilitiesGetHandler() interpreter.ValidateAccountCapabilitiesGetHandlerFunc {
+	return c.ValidateAccountCapabilitiesGetHandler
 }
 
-func (c *Config) ValidateAccountCapabilitiesPublishHandler() interpreter.ValidateAccountCapabilitiesPublishHandlerFunc {
-	return c.interpreterConfig.ValidateAccountCapabilitiesPublishHandler
+func (c *Config) GetValidateAccountCapabilitiesPublishHandler() interpreter.ValidateAccountCapabilitiesPublishHandlerFunc {
+	return c.ValidateAccountCapabilitiesPublishHandler
 }
 
-func (c *Config) CapabilityBorrowHandler() interpreter.CapabilityBorrowHandlerFunc {
-	return c.interpreterConfig.CapabilityBorrowHandler
+func (c *Config) GetCapabilityBorrowHandler() interpreter.CapabilityBorrowHandlerFunc {
+	return c.CapabilityBorrowHandler
 }
 
 func (c *Config) GetCapabilityCheckHandler() interpreter.CapabilityCheckHandlerFunc {
-	return c.interpreterConfig.CapabilityCheckHandler
+	return c.CapabilityCheckHandler
 }
 
 func (c *Config) EmitEvent(
@@ -238,7 +231,7 @@ func (c *Config) EmitEvent(
 	eventType *sema.CompositeType,
 	eventFields []Value,
 ) {
-	onEventEmitted := c.interpreterConfig.OnEventEmitted
+	onEventEmitted := c.OnEventEmitted
 	if onEventEmitted == nil {
 		panic(&interpreter.EventEmissionUnavailableError{
 			LocationRange: locationRange,
