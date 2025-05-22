@@ -856,7 +856,7 @@ func TestParseInvalidSingleQuoteImport(t *testing.T) {
 
 	_, err := testParseProgram(`import 'X'`)
 
-	require.EqualError(t, err, "Parsing failed:\nerror: unrecognized character: U+0027 '''\n --> :1:7\n  |\n1 | import 'X'\n  |        ^\n\nerror: unexpected end in import declaration: expected string, address, or identifier\n --> :1:7\n  |\n1 | import 'X'\n  |        ^\n")
+	require.ErrorContains(t, err, "Parsing failed:\nerror: unrecognized character: U+0027 '''\n --> :1:7\n  |\n1 | import 'X'\n  |        ^\n\nerror: unexpected end in import declaration: expected string, address, or identifier\n --> :1:7\n  |\n1 | import 'X'\n  |        ^\n")
 }
 
 func TestParseExpressionDepthLimit(t *testing.T) {

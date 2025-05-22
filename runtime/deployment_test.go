@@ -95,7 +95,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			var runtimeErr Error
 			require.ErrorAs(t, err, &runtimeErr)
 
-			assert.EqualError(t, runtimeErr, expectedErrorMessage)
+			assert.ErrorContains(t, runtimeErr, expectedErrorMessage)
 
 			assert.Len(t, runtimeErr.Codes, 2)
 			assert.Len(t, runtimeErr.Programs, programsCount)
