@@ -52,7 +52,7 @@ func init() {
 
 				return stdlib.AccountCapabilitiesGet(
 					context,
-					context.GetAccountHandler(),
+					context.AccountHandler,
 					pathValue,
 					semaBorrowType,
 					false,
@@ -84,7 +84,7 @@ func init() {
 
 				return stdlib.AccountCapabilitiesGet(
 					context,
-					context.GetAccountHandler(),
+					context.AccountHandler,
 					pathValue,
 					semaBorrowType,
 					true,

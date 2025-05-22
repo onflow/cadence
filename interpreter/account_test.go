@@ -658,9 +658,7 @@ func testAccountWithErrorHandlerWithCompiler(
 			return uuid, nil
 		}
 
-		vmConfig.WithInterpreterConfig(&interpreter.Config{
-			UUIDHandler: uuidHandler,
-		})
+		vmConfig.UUIDHandler = uuidHandler
 
 		elaboration := programs[parseAndCheckOptions.Location].DesugaredElaboration
 

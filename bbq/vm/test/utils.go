@@ -645,19 +645,13 @@ func PrepareVMConfig(
 		config = vm.NewConfig(storage)
 	}
 
-	if config.GetAccountHandler() == nil {
-		config = config.WithAccountHandler(&testAccountHandler{})
+	if config.AccountHandler == nil {
+		config.AccountHandler = &testAccountHandler{}
 	}
 
-	interpreterConfig := config.InterpreterConfig()
-	if interpreterConfig == nil {
-		interpreterConfig = &interpreter.Config{}
-		config = config.WithInterpreterConfig(interpreterConfig)
-	}
-
-	if interpreterConfig.UUIDHandler == nil {
+	if config.UUIDHandler == nil {
 		var uuid uint64
-		interpreterConfig.UUIDHandler = func() (uint64, error) {
+		config.UUIDHandler = func() (uint64, error) {
 			uuid++
 			return uuid, nil
 		}

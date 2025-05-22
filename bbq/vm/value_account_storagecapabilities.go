@@ -53,7 +53,7 @@ func init() {
 					arguments,
 					context,
 					EmptyLocationRange,
-					context.GetAccountHandler(),
+					context.AccountHandler,
 					accountAddress,
 					semaType,
 				)
@@ -88,7 +88,7 @@ func init() {
 
 				return stdlib.AccountStorageCapabilitiesIssueWithType(
 					context,
-					context.GetAccountHandler(),
+					context.AccountHandler,
 					typeValue,
 					accountAddress,
 					targetPathValue,
@@ -116,7 +116,7 @@ func init() {
 
 				return stdlib.AccountStorageCapabilitiesGetController(
 					context,
-					context.GetAccountHandler(),
+					context.AccountHandler,
 					capabilityIDValue,
 					accountAddress,
 					EmptyLocationRange,
@@ -143,7 +143,7 @@ func init() {
 
 				return stdlib.AccountStorageCapabilitiesGetControllers(
 					context,
-					context.GetAccountHandler(),
+					context.AccountHandler,
 					targetPathValue,
 					accountAddress,
 					EmptyLocationRange,
@@ -179,7 +179,7 @@ func init() {
 
 				return stdlib.AccountStorageCapabilitiesForeachController(
 					context,
-					context.GetAccountHandler(),
+					context.AccountHandler,
 					functionValue,
 					accountAddress,
 					targetPathValue,

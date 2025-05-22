@@ -4980,7 +4980,7 @@ func GetCompositeValueComputedFields(v *CompositeValue) map[string]ComputedField
 }
 
 func GetCompositeValueInjectedFields(context MemberAccessibleContext, v *CompositeValue) map[string]Value {
-	injectedCompositeFieldsHandler := context.InjectedCompositeFieldsHandler()
+	injectedCompositeFieldsHandler := context.GetInjectedCompositeFieldsHandler()
 	if injectedCompositeFieldsHandler == nil {
 		return nil
 	}
@@ -5729,7 +5729,7 @@ func CapabilityBorrow(
 		}
 	}
 
-	borrowHandler := invocationContext.CapabilityBorrowHandler()
+	borrowHandler := invocationContext.GetCapabilityBorrowHandler()
 
 	referenceValue := borrowHandler(
 		invocationContext,
@@ -5896,11 +5896,11 @@ func (interpreter *Interpreter) IsTypeInfoRecovered(location common.Location) bo
 	return elaboration.IsRecovered
 }
 
-func (interpreter *Interpreter) AccountHandler() AccountHandlerFunc {
+func (interpreter *Interpreter) GetAccountHandlerFunc() AccountHandlerFunc {
 	return interpreter.SharedState.Config.AccountHandler
 }
 
-func (interpreter *Interpreter) InjectedCompositeFieldsHandler() InjectedCompositeFieldsHandlerFunc {
+func (interpreter *Interpreter) GetInjectedCompositeFieldsHandler() InjectedCompositeFieldsHandlerFunc {
 	return interpreter.SharedState.Config.InjectedCompositeFieldsHandler
 }
 
@@ -5953,15 +5953,15 @@ func (interpreter *Interpreter) MutationDuringCapabilityControllerIteration() bo
 	return interpreter.SharedState.MutationDuringCapabilityControllerIteration
 }
 
-func (interpreter *Interpreter) ValidateAccountCapabilitiesGetHandler() ValidateAccountCapabilitiesGetHandlerFunc {
+func (interpreter *Interpreter) GetValidateAccountCapabilitiesGetHandler() ValidateAccountCapabilitiesGetHandlerFunc {
 	return interpreter.SharedState.Config.ValidateAccountCapabilitiesGetHandler
 }
 
-func (interpreter *Interpreter) ValidateAccountCapabilitiesPublishHandler() ValidateAccountCapabilitiesPublishHandlerFunc {
+func (interpreter *Interpreter) GetValidateAccountCapabilitiesPublishHandler() ValidateAccountCapabilitiesPublishHandlerFunc {
 	return interpreter.SharedState.Config.ValidateAccountCapabilitiesPublishHandler
 }
 
-func (interpreter *Interpreter) CapabilityBorrowHandler() CapabilityBorrowHandlerFunc {
+func (interpreter *Interpreter) GetCapabilityBorrowHandler() CapabilityBorrowHandlerFunc {
 	return interpreter.SharedState.Config.CapabilityBorrowHandler
 }
 

@@ -3088,14 +3088,10 @@ func TestDefaultFunctions(t *testing.T) {
 		}
 
 		var uuid uint64 = 42
-		vmConfig.WithInterpreterConfig(
-			&interpreter.Config{
-				UUIDHandler: func() (uint64, error) {
-					uuid++
-					return uuid, nil
-				},
-			},
-		)
+		vmConfig.UUIDHandler = func() (uint64, error) {
+			uuid++
+			return uuid, nil
+		}
 
 		contractsAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -3223,14 +3219,10 @@ func TestDefaultFunctions(t *testing.T) {
 		}
 
 		var uuid uint64 = 42
-		vmConfig.WithInterpreterConfig(
-			&interpreter.Config{
-				UUIDHandler: func() (uint64, error) {
-					uuid++
-					return uuid, nil
-				},
-			},
-		)
+		vmConfig.UUIDHandler = func() (uint64, error) {
+			uuid++
+			return uuid, nil
+		}
 
 		contractsAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -3323,17 +3315,7 @@ func TestDefaultFunctions(t *testing.T) {
 		programs := map[common.Location]*CompiledProgram{}
 		contractValues := map[common.Location]*interpreter.CompositeValue{}
 
-		vmConfig := vm.NewConfig(storage).
-			WithAccountHandler(&testAccountHandler{
-				//emitEvent: func(
-				//	_ interpreter.ValueExportContext,
-				//	_ interpreter.LocationRange,
-				//	_ *sema.CompositeType,
-				//	_ []interpreter.Value,
-				//) {
-				//	// ignore
-				//},
-			})
+		vmConfig := vm.NewConfig(storage)
 
 		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 			program, ok := programs[location]
@@ -3360,14 +3342,10 @@ func TestDefaultFunctions(t *testing.T) {
 		}
 
 		var uuid uint64 = 42
-		vmConfig.WithInterpreterConfig(
-			&interpreter.Config{
-				UUIDHandler: func() (uint64, error) {
-					uuid++
-					return uuid, nil
-				},
-			},
-		)
+		vmConfig.UUIDHandler = func() (uint64, error) {
+			uuid++
+			return uuid, nil
+		}
 
 		contractsAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -4954,33 +4932,29 @@ func TestEmit(t *testing.T) {
 	var eventEmitted bool
 
 	vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
-	vmConfig.WithInterpreterConfig(
-		&interpreter.Config{
-			OnEventEmitted: func(
-				context interpreter.ValueExportContext,
-				locationRange interpreter.LocationRange,
-				eventType *sema.CompositeType,
-				eventFields []interpreter.Value,
-			) error {
-				require.False(t, eventEmitted)
-				eventEmitted = true
+	vmConfig.OnEventEmitted = func(
+		context interpreter.ValueExportContext,
+		locationRange interpreter.LocationRange,
+		eventType *sema.CompositeType,
+		eventFields []interpreter.Value,
+	) error {
+		require.False(t, eventEmitted)
+		eventEmitted = true
 
-				assert.Equal(t,
-					[]interpreter.Value{
-						interpreter.NewUnmeteredIntValueFromInt64(1),
-					},
-					eventFields,
-				)
-
-				assert.Equal(t,
-					TestLocation.TypeID(nil, "Inc"),
-					eventType.ID(),
-				)
-
-				return nil
+		assert.Equal(t,
+			[]interpreter.Value{
+				interpreter.NewUnmeteredIntValueFromInt64(1),
 			},
-		},
-	)
+			eventFields,
+		)
+
+		assert.Equal(t,
+			TestLocation.TypeID(nil, "Inc"),
+			eventType.ID(),
+		)
+
+		return nil
+	}
 
 	_, err := CompileAndInvokeWithOptions(t,
 		`
@@ -6190,7 +6164,7 @@ func TestContractAccount(t *testing.T) {
 
 	addressValue := interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1})
 
-	vmConfig := (&vm.Config{
+	vmConfig := &vm.Config{
 		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
 		},
@@ -6206,27 +6180,27 @@ func TestContractAccount(t *testing.T) {
 
 			return elaboration.InterfaceType(typeID)
 		},
-	}).WithInterpreterConfig(&interpreter.Config{
-		InjectedCompositeFieldsHandler: func(
-			context interpreter.AccountCreationContext,
-			_ common.Location,
-			_ string,
-			_ common.CompositeKind,
-		) map[string]interpreter.Value {
+	}
 
-			accountRef := stdlib.NewAccountReferenceValue(
-				context,
-				nil,
-				addressValue,
-				interpreter.FullyEntitledAccountAccess,
-				interpreter.EmptyLocationRange,
-			)
+	vmConfig.InjectedCompositeFieldsHandler = func(
+		context interpreter.AccountCreationContext,
+		_ common.Location,
+		_ string,
+		_ common.CompositeKind,
+	) map[string]interpreter.Value {
 
-			return map[string]interpreter.Value{
-				sema.ContractAccountFieldName: accountRef,
-			}
-		},
-	})
+		accountRef := stdlib.NewAccountReferenceValue(
+			context,
+			nil,
+			addressValue,
+			interpreter.FullyEntitledAccountAccess,
+			interpreter.EmptyLocationRange,
+		)
+
+		return map[string]interpreter.Value{
+			sema.ContractAccountFieldName: accountRef,
+		}
+	}
 
 	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
@@ -6314,7 +6288,7 @@ func TestResourceOwner(t *testing.T) {
 
 	var uuid uint64 = 42
 
-	vmConfig := (&vm.Config{
+	vmConfig := &vm.Config{
 		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
 		},
@@ -6330,35 +6304,39 @@ func TestResourceOwner(t *testing.T) {
 
 			return elaboration.InterfaceType(typeID)
 		},
-	}).WithInterpreterConfig(&interpreter.Config{
-		UUIDHandler: func() (uint64, error) {
-			uuid++
-			return uuid, nil
-		},
+	}
 
-		InjectedCompositeFieldsHandler: func(
-			context interpreter.AccountCreationContext,
-			_ common.Location,
-			_ string,
-			_ common.CompositeKind,
-		) map[string]interpreter.Value {
+	vmConfig.UUIDHandler = func() (uint64, error) {
+		uuid++
+		return uuid, nil
+	}
 
-			accountRef := stdlib.NewAccountReferenceValue(
-				context,
-				nil,
-				addressValue,
-				interpreter.FullyEntitledAccountAccess,
-				interpreter.EmptyLocationRange,
-			)
+	vmConfig.InjectedCompositeFieldsHandler = func(
+		context interpreter.AccountCreationContext,
+		_ common.Location,
+		_ string,
+		_ common.CompositeKind,
+	) map[string]interpreter.Value {
 
-			return map[string]interpreter.Value{
-				sema.ContractAccountFieldName: accountRef,
-			}
-		},
-		AccountHandler: func(context interpreter.AccountCreationContext, address interpreter.AddressValue) interpreter.Value {
-			return stdlib.NewAccountValue(context, nil, address)
-		},
-	})
+		accountRef := stdlib.NewAccountReferenceValue(
+			context,
+			nil,
+			addressValue,
+			interpreter.FullyEntitledAccountAccess,
+			interpreter.EmptyLocationRange,
+		)
+
+		return map[string]interpreter.Value{
+			sema.ContractAccountFieldName: accountRef,
+		}
+	}
+
+	vmConfig.AccountHandlerFunc = func(
+		context interpreter.AccountCreationContext,
+		address interpreter.AddressValue,
+	) interpreter.Value {
+		return stdlib.NewAccountValue(context, nil, address)
+	}
 
 	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
@@ -6443,7 +6421,7 @@ func TestResourceUUID(t *testing.T) {
 
 	var uuid uint64 = 42
 
-	vmConfig := (&vm.Config{
+	vmConfig := &vm.Config{
 		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
 		},
@@ -6459,15 +6437,19 @@ func TestResourceUUID(t *testing.T) {
 
 			return elaboration.InterfaceType(typeID)
 		},
-	}).WithInterpreterConfig(&interpreter.Config{
-		UUIDHandler: func() (uint64, error) {
-			uuid++
-			return uuid, nil
-		},
-		AccountHandler: func(context interpreter.AccountCreationContext, address interpreter.AddressValue) interpreter.Value {
-			return stdlib.NewAccountValue(context, nil, address)
-		},
-	})
+	}
+
+	vmConfig.UUIDHandler = func() (uint64, error) {
+		uuid++
+		return uuid, nil
+	}
+
+	vmConfig.AccountHandlerFunc = func(
+		context interpreter.AccountCreationContext,
+		address interpreter.AddressValue,
+	) interpreter.Value {
+		return stdlib.NewAccountValue(context, nil, address)
+	}
 
 	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
@@ -7094,12 +7076,10 @@ func TestEmitInContract(t *testing.T) {
 		}
 
 		var uuid uint64 = 42
-		vmConfig.WithInterpreterConfig(&interpreter.Config{
-			UUIDHandler: func() (uint64, error) {
-				uuid++
-				return uuid, nil
-			},
-		})
+		vmConfig.UUIDHandler = func() (uint64, error) {
+			uuid++
+			return uuid, nil
+		}
 
 		contractsAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -7157,31 +7137,27 @@ func TestEmitInContract(t *testing.T) {
 		)
 
 		eventEmitted := false
-		vmConfig.WithInterpreterConfig(
-			&interpreter.Config{
-				OnEventEmitted: func(
-					context interpreter.ValueExportContext,
-					locationRange interpreter.LocationRange,
-					eventType *sema.CompositeType,
-					eventFields []interpreter.Value,
-				) error {
-					require.False(t, eventEmitted)
-					eventEmitted = true
+		vmConfig.OnEventEmitted = func(
+			context interpreter.ValueExportContext,
+			locationRange interpreter.LocationRange,
+			eventType *sema.CompositeType,
+			eventFields []interpreter.Value,
+		) error {
+			require.False(t, eventEmitted)
+			eventEmitted = true
 
-					assert.Equal(t,
-						cLocation.TypeID(nil, "C.TestEvent"),
-						eventType.ID(),
-					)
+			assert.Equal(t,
+				cLocation.TypeID(nil, "C.TestEvent"),
+				eventType.ID(),
+			)
 
-					assert.Equal(t,
-						[]interpreter.Value{},
-						eventFields,
-					)
+			assert.Equal(t,
+				[]interpreter.Value{},
+				eventFields,
+			)
 
-					return nil
-				},
-			},
-		)
+			return nil
+		}
 
 		require.False(t, eventEmitted)
 
@@ -7241,12 +7217,10 @@ func TestInheritedConditions(t *testing.T) {
 		}
 
 		var uuid uint64 = 42
-		vmConfig.WithInterpreterConfig(&interpreter.Config{
-			UUIDHandler: func() (uint64, error) {
-				uuid++
-				return uuid, nil
-			},
-		})
+		vmConfig.UUIDHandler = func() (uint64, error) {
+			uuid++
+			return uuid, nil
+		}
 
 		contractsAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -7328,31 +7302,27 @@ func TestInheritedConditions(t *testing.T) {
 		)
 
 		eventEmitted := false
-		vmConfig.WithInterpreterConfig(
-			&interpreter.Config{
-				OnEventEmitted: func(
-					context interpreter.ValueExportContext,
-					locationRange interpreter.LocationRange,
-					eventType *sema.CompositeType,
-					eventFields []interpreter.Value,
-				) error {
-					require.False(t, eventEmitted)
-					eventEmitted = true
+		vmConfig.OnEventEmitted = func(
+			context interpreter.ValueExportContext,
+			locationRange interpreter.LocationRange,
+			eventType *sema.CompositeType,
+			eventFields []interpreter.Value,
+		) error {
+			require.False(t, eventEmitted)
+			eventEmitted = true
 
-					assert.Equal(t,
-						cLocation.TypeID(nil, "B.TestEvent"),
-						eventType.ID(),
-					)
+			assert.Equal(t,
+				cLocation.TypeID(nil, "B.TestEvent"),
+				eventType.ID(),
+			)
 
-					assert.Equal(t,
-						[]interpreter.Value{},
-						eventFields,
-					)
+			assert.Equal(t,
+				[]interpreter.Value{},
+				eventFields,
+			)
 
-					return nil
-				},
-			},
-		)
+			return nil
+		}
 
 		require.False(t, eventEmitted)
 
@@ -7406,14 +7376,10 @@ func TestInheritedConditions(t *testing.T) {
 		}
 
 		var uuid uint64 = 42
-		vmConfig.WithInterpreterConfig(
-			&interpreter.Config{
-				UUIDHandler: func() (uint64, error) {
-					uuid++
-					return uuid, nil
-				},
-			},
-		)
+		vmConfig.UUIDHandler = func() (uint64, error) {
+			uuid++
+			return uuid, nil
+		}
 
 		contractsAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -7512,31 +7478,28 @@ func TestInheritedConditions(t *testing.T) {
 		)
 
 		eventEmitted := false
-		vmConfig.WithInterpreterConfig(
-			&interpreter.Config{
-				OnEventEmitted: func(
-					context interpreter.ValueExportContext,
-					locationRange interpreter.LocationRange,
-					eventType *sema.CompositeType,
-					eventFields []interpreter.Value,
-				) error {
-					require.False(t, eventEmitted)
-					eventEmitted = true
+		vmConfig.OnEventEmitted = func(
+			context interpreter.ValueExportContext,
+			locationRange interpreter.LocationRange,
+			eventType *sema.CompositeType,
+			eventFields []interpreter.Value,
+		) error {
+			require.False(t, eventEmitted)
+			eventEmitted = true
 
-					assert.Equal(t,
-						cLocation.TypeID(nil, "A.TestEvent"),
-						eventType.ID(),
-					)
+			assert.Equal(t,
+				cLocation.TypeID(nil, "A.TestEvent"),
+				eventType.ID(),
+			)
 
-					assert.Equal(t,
-						[]interpreter.Value{},
-						eventFields,
-					)
+			assert.Equal(t,
+				[]interpreter.Value{},
+				eventFields,
+			)
 
-					return nil
-				},
-			},
-		)
+			return nil
+		}
+
 		require.False(t, eventEmitted)
 
 		result, err := compileAndInvokeWithOptionsAndPrograms(

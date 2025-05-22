@@ -600,7 +600,7 @@ func (v *CompositeValue) OwnerValue(context MemberAccessibleContext, locationRan
 		return NilOptionalValue
 	}
 
-	accountHandler := context.AccountHandler()
+	accountHandler := context.GetAccountHandlerFunc()
 
 	ownerAccount := accountHandler(context, AddressValue(address))
 
