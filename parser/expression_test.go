@@ -6503,6 +6503,30 @@ func TestParseStringTemplate(t *testing.T) {
 			errs,
 		)
 	})
+
+	t.Run("unterminated string with template", func(t *testing.T) {
+
+		t.Parallel()
+
+		code := `
+          let code = "\(a)
+        `
+
+		_, errs := testParseStatements(code)
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid end of string literal: missing '\"'",
+					Pos: ast.Position{
+						Offset: 27,
+						Line:   2,
+						Column: 27,
+					},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseNilCoalescing(t *testing.T) {
