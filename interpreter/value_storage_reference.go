@@ -210,13 +210,37 @@ func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, locat
 	}
 
 	// If the member is a function, it is always a bound-function.
-	// By default, bound functions create and hold an ephemeral reference (`SelfReference`).
-	// For storage references, replace this default one with the actual storage reference.
+	// By default, bound functions create and hold an ephemeral reference
+	// (in `BoundFunctionValue.SelfReference`).
+	// For storage references, replace this default one with a storage reference.
+	//
+	// However, we cannot use the storage reference as-is:
+	// Because we look up the member on the referenced value,
+	// we also must use its type as the borrowed type for the `SelfReference` type,
+	// because during invocation the bound function can only be invoked
+	// if the type of the dereferenced value at that time still matches
+	// the type of the dereferenced value at the time of binding (here).
+	//
+	// For example, imagine storing a value of type T (e.g. `String`),
+	// creating a reference with a supertype (e.g. `AnyStruct`),
+	// and then creating a bound function on it.
+	// Then, if we change the storage location to store a value of unrelated type U instead (e.g. `Int`),
+	// and invoke the bound function, the bound function is potentially invalid.
+	//
 	// It is not possible (or a lot of work), to create the bound function with the storage reference
 	// when it was created originally, because `getMember(referencedValue, ...)` doesn't know
 	// whether the member was accessed directly, or via a reference.
+
 	if boundFunction, isBoundFunction := member.(BoundFunctionValue); isBoundFunction {
-		boundFunction.SelfReference = v
+		referencedValueStaticType := referencedValue.StaticType(context)
+
+		boundFunction.SelfReference = NewStorageReferenceValue(
+			context,
+			v.Authorization,
+			v.TargetStorageAddress,
+			v.TargetPath,
+			MustConvertStaticToSemaType(referencedValueStaticType, context),
+		)
 		return boundFunction
 	}
 
