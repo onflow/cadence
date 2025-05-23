@@ -12870,5 +12870,6 @@ func TestRuntimeStorageReferenceBoundFunctionConfusion(t *testing.T) {
 	)
 	RequireError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.DereferenceError{})
+	var dereferenceError *interpreter.DereferenceError
+	require.ErrorAs(t, err, &dereferenceError)
 }
