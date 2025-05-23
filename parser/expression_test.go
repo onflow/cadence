@@ -6471,6 +6471,38 @@ func TestParseStringTemplate(t *testing.T) {
 			errs,
 		)
 	})
+
+	t.Run("unterminated second string literal, with templates", func(t *testing.T) {
+
+		t.Parallel()
+
+		code := `
+          let code = "sadas\(a)""\(a)
+        `
+
+		_, errs := testParseStatements(code)
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid end of string literal: missing '\"'",
+					Pos: ast.Position{
+						Offset: 38,
+						Line:   2,
+						Column: 38,
+					},
+				},
+				&SyntaxError{
+					Message: "statements on the same line must be separated with a semicolon",
+					Pos: ast.Position{
+						Offset: 33,
+						Line:   2,
+						Column: 32,
+					},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseNilCoalescing(t *testing.T) {
