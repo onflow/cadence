@@ -1183,24 +1183,38 @@ func defineStringExpression() {
 
 				// parser already points to next token
 				curToken = p.current
+
 				if curToken.Is(lexer.TokenStringTemplate) {
+					// If the next token is a string template,
+					// then we need to parse the expression inside the template
+
 					// advance to the expression
 					p.next()
 					value, err := parseExpression(p, lowestBindingPower)
+
 					// consider invalid expression first
 					if err != nil {
 						return nil, err
 					}
+
 					_, err = p.mustOne(lexer.TokenParenClose)
 					if err != nil {
 						return nil, err
 					}
+
 					values = append(values, value)
+
 					// parser already points to next token
 					curToken = p.current
+
 					// safely call next because this should always be a string
 					p.next()
+
 					missingEnd = true
+				} else {
+					// If the next token is not a string template,
+					// then we are done with parsing the string literal
+					break
 				}
 			}
 
