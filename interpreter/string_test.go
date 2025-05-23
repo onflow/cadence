@@ -937,3 +937,24 @@ func TestInterpretStringCount(t *testing.T) {
 		runTest(test)
 	}
 }
+
+func TestUnterminatedStringTemplate(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndPrepare(t, `
+transaction {
+    prepare() {
+        let code = "\(a)
+    }
+}
+    `)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Equal(t,
+		interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeCharacter},
+		result,
+	)
+}
