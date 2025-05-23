@@ -7257,3 +7257,35 @@ func (g *limitingMemoryGauge) MeterMemory(usage common.MemoryUsage) error {
 
 	return nil
 }
+
+func TestParseUnterminatedStringLiteral(t *testing.T) {
+
+	t.Parallel()
+
+	code := `
+        let code = """
+    `
+
+	_, errs := testParseStatements(code)
+	AssertEqualWithDiff(t,
+		[]error{
+			&SyntaxError{
+				Message: "invalid end of string literal: missing '\"'",
+				Pos: ast.Position{
+					Offset: 23,
+					Line:   2,
+					Column: 22,
+				},
+			},
+			&SyntaxError{
+				Message: "statements on the same line must be separated with a semicolon",
+				Pos: ast.Position{
+					Offset: 22,
+					Line:   2,
+					Column: 21,
+				},
+			},
+		},
+		errs,
+	)
+}
