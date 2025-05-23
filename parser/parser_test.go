@@ -80,28 +80,77 @@ func (*testTokenStream) Reclaim() {
 	// NO-OP
 }
 
+func checkErrorsPrintable(errs []error, code string) {
+	if len(errs) == 0 {
+		return
+	}
+	err := Error{
+		Code:   []byte(code),
+		Errors: errs,
+	}
+	_ = err.Error()
+}
+
 func testParseStatements(s string) ([]ast.Statement, []error) {
-	return ParseStatements(nil, []byte(s), Config{})
+	return testParseStatementsWithConfig(s, Config{})
+}
+
+func testParseStatementsWithConfig(s string, config Config) ([]ast.Statement, []error) {
+	statements, errs := ParseStatements(nil, []byte(s), config)
+	checkErrorsPrintable(errs, s)
+	return statements, errs
 }
 
 func testParseDeclarations(s string) ([]ast.Declaration, []error) {
-	return ParseDeclarations(nil, []byte(s), Config{})
+	return testParseDeclarationsWithConfig(s, Config{})
+}
+
+func testParseDeclarationsWithConfig(s string, config Config) ([]ast.Declaration, []error) {
+	declarations, errs := ParseDeclarations(nil, []byte(s), config)
+	checkErrorsPrintable(errs, s)
+	return declarations, errs
 }
 
 func testParseProgram(s string) (*ast.Program, error) {
-	return ParseProgram(nil, []byte(s), Config{})
+	return testParseProgramWithConfig(s, Config{})
+}
+
+func testParseProgramWithConfig(s string, config Config) (*ast.Program, error) {
+	program, err := ParseProgram(nil, []byte(s), config)
+	if err != nil {
+		_ = err.Error()
+	}
+	return program, err
 }
 
 func testParseExpression(s string) (ast.Expression, []error) {
-	return ParseExpression(nil, []byte(s), Config{})
+	return testParseExpressionWithConfig(s, Config{})
+}
+
+func testParseExpressionWithConfig(s string, config Config) (ast.Expression, []error) {
+	expression, errs := ParseExpression(nil, []byte(s), config)
+	checkErrorsPrintable(errs, s)
+	return expression, errs
 }
 
 func testParseArgumentList(s string) (ast.Arguments, []error) {
-	return ParseArgumentList(nil, []byte(s), Config{})
+	return testParseArgumentListWithConfig(s, Config{})
+}
+
+func testParseArgumentListWithConfig(s string, config Config) (ast.Arguments, []error) {
+	arguments, errs := ParseArgumentList(nil, []byte(s), config)
+	checkErrorsPrintable(errs, s)
+	return arguments, errs
 }
 
 func testParseType(s string) (ast.Type, []error) {
-	return ParseType(nil, []byte(s), Config{})
+	return testParseTypeWithConfig(s, Config{})
+}
+
+func testParseTypeWithConfig(s string, config Config) (ast.Type, []error) {
+	ty, errs := ParseType(nil, []byte(s), config)
+	checkErrorsPrintable(errs, s)
+	return ty, errs
 }
 
 func TestParseInvalid(t *testing.T) {
@@ -934,11 +983,11 @@ func TestParseLocalReplayLimit(t *testing.T) {
 	}
 	builder.WriteString(">()")
 
-	code := []byte(builder.String())
-	_, err := ParseProgram(nil, code, Config{})
+	code := builder.String()
+	_, err := testParseProgram(code)
 	AssertEqualWithDiff(t,
 		Error{
-			Code: code,
+			Code: []byte(code),
 			Errors: []error{
 				&SyntaxError{
 					Message: fmt.Sprintf(
@@ -969,11 +1018,11 @@ func TestParseGlobalReplayLimit(t *testing.T) {
 		}
 	}
 
-	code := []byte(builder.String())
-	_, err := ParseProgram(nil, code, Config{})
+	code := builder.String()
+	_, err := testParseProgram(code)
 	AssertEqualWithDiff(t,
 		Error{
-			Code: code,
+			Code: []byte(code),
 			Errors: []error{
 				&SyntaxError{
 					Message: fmt.Sprintf(
