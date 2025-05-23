@@ -26,6 +26,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"testing/quick"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -7344,4 +7345,26 @@ func (g *limitingMemoryGauge) MeterMemory(usage common.MemoryUsage) error {
 	g.limits[usage.Kind] -= usage.Amount
 
 	return nil
+}
+
+func TestStringQuick(t *testing.T) {
+
+	t.Parallel()
+
+	f := func(text string) bool {
+		res, errs := testParseExpression(
+			ast.QuoteString(text),
+		)
+		if len(errs) > 0 {
+			return false
+		}
+		literal, ok := res.(*ast.StringExpression)
+		if !ok {
+			return false
+		}
+		return literal.Value == text
+	}
+	if err := quick.Check(f, nil); err != nil {
+		t.Error(err)
+	}
 }
