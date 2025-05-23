@@ -33,6 +33,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/parser/lexer"
+	"github.com/onflow/cadence/pretty"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
@@ -81,7 +82,26 @@ func (*testTokenStream) Reclaim() {
 }
 
 func testParseStatements(s string) ([]ast.Statement, []error) {
-	return ParseStatements(nil, []byte(s), Config{})
+	stmts, errs := ParseStatements(nil, []byte(s), Config{})
+
+	if errs != nil {
+		for _, err := range errs {
+			var sb strings.Builder
+			printer := pretty.NewErrorPrettyPrinter(&sb, true)
+			printErr := printer.PrettyPrintError(
+				err,
+				TestLocation,
+				map[common.Location][]byte{
+					TestLocation: []byte(s),
+				},
+			)
+
+			if printErr != nil {
+				panic(printErr)
+			}
+		}
+	}
+	return stmts, errs
 }
 
 func testParseDeclarations(s string) ([]ast.Declaration, []error) {
