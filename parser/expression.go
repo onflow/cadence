@@ -1232,7 +1232,8 @@ func defineStringExpression() {
 			} else {
 				return ast.NewStringTemplateExpression(
 					p.memoryGauge,
-					literals, values,
+					literals,
+					values,
 					ast.NewRange(p.memoryGauge,
 						startToken.StartPos,
 						endToken.EndPos),
