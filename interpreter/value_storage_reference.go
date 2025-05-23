@@ -232,14 +232,14 @@ func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, locat
 	// whether the member was accessed directly, or via a reference.
 
 	if boundFunction, isBoundFunction := member.(BoundFunctionValue); isBoundFunction {
-		referencedValueStaticType := referencedValue.StaticType(interpreter)
+		referencedValueStaticType := referencedValue.StaticType(context)
 
 		boundFunction.SelfReference = NewStorageReferenceValue(
-			interpreter,
+			context,
 			v.Authorization,
 			v.TargetStorageAddress,
 			v.TargetPath,
-			interpreter.MustConvertStaticToSemaType(referencedValueStaticType),
+			MustConvertStaticToSemaType(referencedValueStaticType, context),
 		)
 		return boundFunction
 	}
