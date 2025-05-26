@@ -106,10 +106,14 @@ func (executor *scriptExecutor) preprocess() (err error) {
 
 	runtimeInterface := context.Interface
 
+	config := executor.runtime.Config()
+
 	storage := NewStorage(
 		runtimeInterface,
 		runtimeInterface,
-		StorageConfig{},
+		StorageConfig{
+			StorageFormatV2Enabled: config.StorageFormatV2Enabled,
+		},
 	)
 	executor.storage = storage
 
@@ -118,7 +122,7 @@ func (executor *scriptExecutor) preprocess() (err error) {
 		if context.UseVM {
 			return errors.NewUnexpectedError("cannot execute script with the VM")
 		}
-		environment = NewScriptInterpreterEnvironment(executor.runtime.Config())
+		environment = NewScriptInterpreterEnvironment(config)
 	}
 
 	switch environment.(type) {
