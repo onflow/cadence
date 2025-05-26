@@ -583,14 +583,16 @@ func (p *parser) endAmbiguity() {
 }
 
 type parserProgress struct {
-	offset int
+	initialized bool
+	offset      int
 }
 
 // checkProgress checks that the parser has made progress since it was called last with this parserProgress.
 func (p *parser) checkProgress(progress *parserProgress) bool {
 	parserOffset := p.current.StartPos.Offset
 
-	if progress.offset == 0 {
+	if !progress.initialized {
+		progress.initialized = true
 		progress.offset = parserOffset
 		return true
 	}
