@@ -346,10 +346,12 @@ func blockCommentState(nesting int) stateFn {
 		case '/':
 			beforeSlashOffset := l.prevEndOffset
 			if l.acceptOne('*') {
-				starOffset := l.endOffset
-				l.endOffset = beforeSlashOffset
-				l.emitType(TokenBlockCommentContent)
-				l.endOffset = starOffset
+				if beforeSlashOffset-l.startOffset > 0 {
+					starOffset := l.endOffset
+					l.endOffset = beforeSlashOffset
+					l.emitType(TokenBlockCommentContent)
+					l.endOffset = starOffset
+				}
 				l.emitType(TokenBlockCommentStart)
 				return blockCommentState(nesting + 1)
 			}
@@ -357,10 +359,12 @@ func blockCommentState(nesting int) stateFn {
 		case '*':
 			beforeStarOffset := l.prevEndOffset
 			if l.acceptOne('/') {
-				slashOffset := l.endOffset
-				l.endOffset = beforeStarOffset
-				l.emitType(TokenBlockCommentContent)
-				l.endOffset = slashOffset
+				if beforeStarOffset-l.startOffset > 0 {
+					slashOffset := l.endOffset
+					l.endOffset = beforeStarOffset
+					l.emitType(TokenBlockCommentContent)
+					l.endOffset = slashOffset
+				}
 				l.emitType(TokenBlockCommentEnd)
 				return blockCommentState(nesting - 1)
 			}
