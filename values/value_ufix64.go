@@ -192,8 +192,9 @@ func (v UFix64Value) Div(gauge common.MemoryGauge, other UFix64Value) (UFix64Val
 	return NewUFix64Value(gauge, valueGetter)
 }
 
-func (v UFix64Value) SaturatingDiv(gauge common.MemoryGauge, other UFix64Value) (UFix64Value, error) {
-	return v.Div(gauge, other)
+func (v UFix64Value) SaturatingDiv(_ common.MemoryGauge, _ UFix64Value) (UFix64Value, error) {
+	// UFix64 does not have a saturating division operation, see sema.UFix64Type
+	panic(errors.NewUnreachableError())
 }
 
 func (v UFix64Value) Mod(gauge common.MemoryGauge, other UFix64Value) (UFix64Value, error) {
