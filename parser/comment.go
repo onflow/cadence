@@ -19,13 +19,17 @@
 package parser
 
 import (
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/parser/lexer"
 )
 
 func (p *parser) parseBlockComment() (endToken lexer.Token, ok bool) {
 	var depth int
 
-	for {
+	var progress parserProgress
+
+	for p.checkProgress(&progress) {
+
 		switch p.current.Type {
 		case lexer.TokenBlockCommentStart:
 			p.next()
@@ -61,4 +65,6 @@ func (p *parser) parseBlockComment() (endToken lexer.Token, ok bool) {
 			return
 		}
 	}
+
+	panic(errors.NewUnreachableError())
 }

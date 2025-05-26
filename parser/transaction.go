@@ -21,6 +21,7 @@ package parser
 import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/parser/lexer"
 )
 
@@ -142,8 +143,13 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	var endPos ast.Position
 
 	sawPost := false
-	atEnd := false
-	for !atEnd {
+
+	var (
+		atEnd    bool
+		progress parserProgress
+	)
+	for !atEnd && p.checkProgress(&progress) {
+
 		p.skipSpaceAndComments()
 
 		switch p.current.Type {
@@ -212,7 +218,9 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 }
 
 func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err error) {
-	for {
+	var progress parserProgress
+	for p.checkProgress(&progress) {
+
 		_, docString := p.parseTrivia(triviaOptions{
 			skipNewlines:    true,
 			parseDocStrings: true,
@@ -253,6 +261,8 @@ func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err erro
 			return
 		}
 	}
+
+	panic(errors.NewUnreachableError())
 }
 
 func parseTransactionExecute(p *parser) (*ast.SpecialFunctionDeclaration, error) {

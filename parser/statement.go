@@ -26,7 +26,8 @@ import (
 
 func parseStatements(p *parser, isEndToken func(token lexer.Token) bool) (statements []ast.Statement, err error) {
 	sawSemicolon := false
-	for {
+	var progress parserProgress
+	for p.checkProgress(&progress) {
 		p.skipSpaceAndComments()
 		switch p.current.Type {
 		case lexer.TokenSemicolon:
@@ -68,6 +69,8 @@ func parseStatements(p *parser, isEndToken func(token lexer.Token) bool) (statem
 			sawSemicolon = false
 		}
 	}
+
+	panic(errors.NewUnreachableError())
 }
 
 func parseStatement(p *parser) (ast.Statement, error) {
@@ -300,8 +303,11 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 
 	var ifStatements []*ast.IfStatement
 
-	for {
+	var progress parserProgress
+	for p.checkProgress(&progress) {
+
 		startPos := p.current.StartPos
+
 		p.nextSemanticToken()
 
 		var variableDeclaration *ast.VariableDeclaration
@@ -581,8 +587,11 @@ func parseConditions(p *parser, startPos ast.Position) (*ast.Conditions, error) 
 
 	var conditions []ast.Condition
 
-	var done bool
-	for !done {
+	var (
+		done     bool
+		progress parserProgress
+	)
+	for !done && p.checkProgress(&progress) {
 		p.skipSpaceAndComments()
 		switch p.current.Type {
 		case lexer.TokenSemicolon:
@@ -724,7 +733,9 @@ func parseSwitchCases(p *parser) (cases []*ast.SwitchCase, err error) {
 		p.next()
 	}
 
-	for {
+	var progress parserProgress
+	for p.checkProgress(&progress) {
+
 		p.skipSpaceAndComments()
 
 		switch p.current.Type {
@@ -756,6 +767,8 @@ func parseSwitchCases(p *parser) (cases []*ast.SwitchCase, err error) {
 			reportUnexpected()
 		}
 	}
+
+	panic(errors.NewUnreachableError())
 }
 
 // parseSwitchCase parses a switch case (hasExpression == true)

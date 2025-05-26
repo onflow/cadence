@@ -453,9 +453,14 @@ func (p *parser) parseTrivia(options triviaOptions) (containsNewline bool, docSt
 		}
 	}()
 
-	var atEnd, insideLineDocString bool
+	var insideLineDocString bool
 
-	for !atEnd {
+	var (
+		atEnd    bool
+		progress parserProgress
+	)
+	for !atEnd && p.checkProgress(&progress) {
+
 		switch p.current.Type {
 		case lexer.TokenSpace:
 			space, ok := p.current.SpaceOrError.(lexer.Space)
@@ -575,6 +580,27 @@ func (p *parser) endAmbiguity() {
 	if p.ambiguityLevel == 0 {
 		p.localReplayedTokensCount = 0
 	}
+}
+
+type parserProgress struct {
+	offset int
+}
+
+// checkProgress checks that the parser has made progress since it was called last with this parserProgress.
+func (p *parser) checkProgress(progress *parserProgress) bool {
+	parserOffset := p.current.StartPos.Offset
+
+	if progress.offset == 0 {
+		progress.offset = parserOffset
+		return true
+	}
+
+	if parserOffset == progress.offset {
+		panic(errors.NewUnexpectedError("parser did not make progress"))
+	}
+
+	progress.offset = parserOffset
+	return true
 }
 
 func ParseExpression(
