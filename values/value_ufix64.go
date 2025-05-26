@@ -182,6 +182,10 @@ func (v UFix64Value) Div(gauge common.MemoryGauge, other UFix64Value) (UFix64Val
 		result := new(big.Int).Mul(a, sema.Fix64FactorBig)
 		result.Div(result, b)
 
+		if !result.IsUint64() {
+			return 0, OverflowError{}
+		}
+
 		return result.Uint64(), nil
 	}
 

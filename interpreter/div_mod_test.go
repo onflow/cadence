@@ -27,6 +27,7 @@ import (
 
 	. "github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
 )
 
 func TestDivModUInt8(t *testing.T) {
@@ -3266,27 +3267,47 @@ func TestDivModUFix64(t *testing.T) {
 
 	const ufix64MaxIntDividend = UFix64MaxValue / sema.Fix64Factor
 
+	// 0
+	ufix64Zero := NewUnmeteredUFix64ValueWithInteger(0, EmptyLocationRange)
+	// 0.1
+	ufix64ZeroDotOne := NewUnmeteredUFix64Value(1 * sema.Fix64Factor / 10)
+	// 1.0
+	ufix64One := NewUnmeteredUFix64ValueWithInteger(1, EmptyLocationRange)
+	// 2.0
+	ufix64Two := NewUnmeteredUFix64ValueWithInteger(2, EmptyLocationRange)
+
 	tests := []struct {
-		a, b  uint64
-		valid bool
+		a     uint64
+		b     UFix64Value
+		panic any
 	}{
-		{0, 0, false},
-		{1, 0, false},
-		{2, 0, false},
-		{ufix64MaxIntDividend, 0, false},
-		{ufix64MaxIntDividend + 1, 0, false},
+		// 0
+		{0, ufix64Zero, "division by zero"},
+		{1, ufix64Zero, "division by zero"},
+		{2, ufix64Zero, "division by zero"},
+		{ufix64MaxIntDividend, ufix64Zero, "division by zero"},
+		{ufix64MaxIntDividend + 1, ufix64Zero, OverflowError{}},
 
-		{0, 1, true},
-		{1, 1, true},
-		{2, 1, true},
-		{ufix64MaxIntDividend, 1, true},
-		{ufix64MaxIntDividend + 1, 1, false},
+		// 0.1
+		{0, ufix64ZeroDotOne, nil},
+		{1, ufix64ZeroDotOne, nil},
+		{2, ufix64ZeroDotOne, nil},
+		{ufix64MaxIntDividend, ufix64ZeroDotOne, values.OverflowError{}},
+		{ufix64MaxIntDividend + 1, ufix64ZeroDotOne, OverflowError{}},
 
-		{0, 2, true},
-		{1, 2, true},
-		{2, 2, true},
-		{ufix64MaxIntDividend, 2, true},
-		{ufix64MaxIntDividend + 1, 2, false},
+		// 1.0
+		{0, ufix64One, nil},
+		{1, ufix64One, nil},
+		{2, ufix64One, nil},
+		{ufix64MaxIntDividend, ufix64One, nil},
+		{ufix64MaxIntDividend + 1, ufix64One, OverflowError{}},
+
+		// 2.0
+		{0, ufix64Two, nil},
+		{1, ufix64Two, nil},
+		{2, ufix64Two, nil},
+		{ufix64MaxIntDividend, ufix64Two, nil},
+		{ufix64MaxIntDividend + 1, ufix64Two, OverflowError{}},
 	}
 
 	inter, err := NewInterpreter(nil, nil, &Config{})
@@ -3305,14 +3326,13 @@ func TestDivModUFix64(t *testing.T) {
 
 			f := func() {
 				a := NewUnmeteredUFix64ValueWithInteger(test.a, EmptyLocationRange)
-				b := NewUnmeteredUFix64ValueWithInteger(test.b, EmptyLocationRange)
-				f(a, b)
+				f(a, test.b)
 			}
 
-			if test.valid {
+			if test.panic == nil {
 				assert.NotPanics(t, f)
 			} else {
-				assert.Panics(t, f)
+				assert.PanicsWithValue(t, test.panic, f)
 			}
 		}
 	}
