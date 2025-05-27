@@ -31,7 +31,8 @@ import (
 )
 
 func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []ast.Declaration, err error) {
-	var progress parserProgress
+	progress := p.newProgress()
+
 	for p.checkProgress(&progress) {
 
 		_, docString := p.parseTrivia(triviaOptions{
@@ -80,8 +81,10 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 	staticModifierEnabled := p.config.StaticModifierEnabled
 	nativeModifierEnabled := p.config.NativeModifierEnabled
 
-	var progress parserProgress
+	progress := p.newProgress()
+
 	for p.checkProgress(&progress) {
+
 		p.skipSpaceAndComments()
 
 		switch p.current.Type {
@@ -714,11 +717,11 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 	parseMoreIdentifiers := func() error {
 		expectCommaOrFrom := false
 
-		var (
-			atEnd    bool
-			progress parserProgress
-		)
+		var atEnd bool
+		progress := p.newProgress()
+
 		for !atEnd && p.checkProgress(&progress) {
+
 			p.nextSemanticToken()
 
 			switch p.current.Type {
@@ -1141,8 +1144,10 @@ func parseEntitlementMapping(p *parser, docString string) (*ast.EntitlementMapRe
 func parseEntitlementMappingsAndInclusions(p *parser, endTokenType lexer.TokenType) ([]ast.EntitlementMapElement, error) {
 	var elements []ast.EntitlementMapElement
 
-	var progress parserProgress
+	progress := p.newProgress()
+
 	for p.checkProgress(&progress) {
+
 		_, docString := p.parseTrivia(triviaOptions{
 			skipNewlines:    true,
 			parseDocStrings: true,
@@ -1334,9 +1339,12 @@ func parseCompositeOrInterfaceDeclaration(
 	var isInterface bool
 	var identifier ast.Identifier
 
-	var progress parserProgress
+	progress := p.newProgress()
+
 	for p.checkProgress(&progress) {
+
 		p.skipSpaceAndComments()
+
 		if !p.current.Is(lexer.TokenIdentifier) {
 			return nil, p.syntaxError(
 				"expected %s, got %s",
@@ -1530,8 +1538,10 @@ func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) 
 
 	var declarations []ast.Declaration
 
-	var progress parserProgress
+	progress := p.newProgress()
+
 	for p.checkProgress(&progress) {
+
 		_, docString := p.parseTrivia(triviaOptions{
 			skipNewlines:    true,
 			parseDocStrings: true,
@@ -1592,8 +1602,10 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 	staticModifierEnabled := p.config.StaticModifierEnabled
 	nativeModifierEnabled := p.config.NativeModifierEnabled
 
-	var progress parserProgress
+	progress := p.newProgress()
+
 	for p.checkProgress(&progress) {
+
 		p.skipSpaceAndComments()
 
 		switch p.current.Type {

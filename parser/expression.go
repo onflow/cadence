@@ -1004,10 +1004,10 @@ func defineInvocationExpression() {
 func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos ast.Position, err error) {
 	expectArgument := true
 
-	var (
-		atEnd    bool
-		progress parserProgress
-	)
+	var atEnd bool
+
+	progress := p.newProgress()
+
 	for !atEnd && p.checkProgress(&progress) {
 
 		p.skipSpaceAndComments()
@@ -1168,7 +1168,7 @@ func defineStringExpression() {
 			// flag for ending " check
 			missingEnd := true
 
-			var progress parserProgress
+			progress := p.newProgress()
 
 			for curToken.Is(lexer.TokenString) &&
 				p.checkProgress(&progress) {
@@ -1246,7 +1246,7 @@ func defineArrayExpression() {
 
 			var values []ast.Expression
 
-			var progress parserProgress
+			progress := p.newProgress()
 
 			for !p.current.Is(lexer.TokenBracketClose) &&
 				p.checkProgress(&progress) {
@@ -1293,7 +1293,8 @@ func defineDictionaryExpression() {
 
 			var entries []ast.DictionaryEntry
 
-			var progress parserProgress
+			progress := p.newProgress()
+
 			for !p.current.Is(lexer.TokenBraceClose) &&
 				p.checkProgress(&progress) {
 
@@ -1552,7 +1553,8 @@ func parseExpression(p *parser, rightBindingPower int) (ast.Expression, error) {
 		return nil, err
 	}
 
-	var progress parserProgress
+	progress := p.newProgress()
+
 	for p.checkProgress(&progress) {
 
 		// Automatically skip any trivia between the left and right expression.

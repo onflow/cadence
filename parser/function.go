@@ -53,10 +53,9 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 
 	expectParameter := true
 
-	var (
-		atEnd    bool
-		progress parserProgress
-	)
+	var atEnd bool
+	progress := p.newProgress()
+
 	for !atEnd && p.checkProgress(&progress) {
 
 		p.skipSpaceAndComments()
@@ -223,10 +222,9 @@ func parseTypeParameterList(p *parser) (*ast.TypeParameterList, error) {
 
 	expectTypeParameter := true
 
-	var (
-		atEnd    bool
-		progress parserProgress
-	)
+	var atEnd bool
+	progress := p.newProgress()
+
 	for !atEnd && p.checkProgress(&progress) {
 
 		p.skipSpaceAndComments()

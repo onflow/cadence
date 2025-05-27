@@ -455,10 +455,9 @@ func (p *parser) parseTrivia(options triviaOptions) (containsNewline bool, docSt
 
 	var insideLineDocString bool
 
-	var (
-		atEnd    bool
-		progress parserProgress
-	)
+	var atEnd bool
+	progress := p.newProgress()
+
 	for !atEnd && p.checkProgress(&progress) {
 
 		switch p.current.Type {
@@ -583,24 +582,22 @@ func (p *parser) endAmbiguity() {
 }
 
 type parserProgress struct {
-	initialized bool
-	offset      int
+	offset int
+}
+
+func (p *parser) newProgress() parserProgress {
+	return parserProgress{
+		// -1, because the first call of checkProgress should succeed
+		offset: p.current.StartPos.Offset - 1,
+	}
 }
 
 // checkProgress checks that the parser has made progress since it was called last with this parserProgress.
 func (p *parser) checkProgress(progress *parserProgress) bool {
 	parserOffset := p.current.StartPos.Offset
-
-	if !progress.initialized {
-		progress.initialized = true
-		progress.offset = parserOffset
-		return true
-	}
-
 	if parserOffset == progress.offset {
 		panic(errors.NewUnexpectedError("parser did not make progress"))
 	}
-
 	progress.offset = parserOffset
 	return true
 }

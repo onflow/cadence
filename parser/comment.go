@@ -26,7 +26,7 @@ import (
 func (p *parser) parseBlockComment() (endToken lexer.Token, ok bool) {
 	var depth int
 
-	var progress parserProgress
+	progress := p.newProgress()
 
 	for p.checkProgress(&progress) {
 

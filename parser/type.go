@@ -169,7 +169,8 @@ func defineParenthesizedTypes() {
 func parseNominalTypeRemainder(p *parser, token lexer.Token) (*ast.NominalType, error) {
 	var nestedIdentifiers []ast.Identifier
 
-	var progress parserProgress
+	progress := p.newProgress()
+
 	for p.current.Is(lexer.TokenDot) &&
 		p.checkProgress(&progress) {
 
@@ -341,10 +342,9 @@ func defineIntersectionOrDictionaryType() {
 
 			expectType := true
 
-			var (
-				atEnd    bool
-				progress parserProgress
-			)
+			var atEnd bool
+			progress := p.newProgress()
+
 			for !atEnd && p.checkProgress(&progress) {
 
 				p.skipSpaceAndComments()
@@ -542,10 +542,9 @@ func parseNominalTypes(
 ) {
 	expectType := true
 
-	var (
-		atEnd    bool
-		progress parserProgress
-	)
+	var atEnd bool
+	progress := p.newProgress()
+
 	for !atEnd && p.checkProgress(&progress) {
 
 		p.skipSpaceAndComments()
@@ -607,10 +606,9 @@ func parseParameterTypeAnnotations(p *parser) (typeAnnotations []*ast.TypeAnnota
 
 	expectTypeAnnotation := true
 
-	var (
-		atEnd    bool
-		progress parserProgress
-	)
+	var atEnd bool
+	progress := p.newProgress()
+
 	for !atEnd && p.checkProgress(&progress) {
 
 		p.skipSpaceAndComments()
@@ -681,7 +679,8 @@ func parseType(p *parser, rightBindingPower int) (ast.Type, error) {
 		return nil, err
 	}
 
-	var progress parserProgress
+	progress := p.newProgress()
+
 	for p.checkProgress(&progress) {
 
 		var done bool
@@ -847,10 +846,9 @@ func parseCommaSeparatedTypeAnnotations(
 ) {
 	expectTypeAnnotation := true
 
-	var (
-		atEnd    bool
-		progress parserProgress
-	)
+	var atEnd bool
+	progress := p.newProgress()
+
 	for !atEnd && p.checkProgress(&progress) {
 
 		p.skipSpaceAndComments()

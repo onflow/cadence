@@ -144,10 +144,9 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 
 	sawPost := false
 
-	var (
-		atEnd    bool
-		progress parserProgress
-	)
+	var atEnd bool
+	progress := p.newProgress()
+
 	for !atEnd && p.checkProgress(&progress) {
 
 		p.skipSpaceAndComments()
@@ -218,7 +217,8 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 }
 
 func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err error) {
-	var progress parserProgress
+	progress := p.newProgress()
+
 	for p.checkProgress(&progress) {
 
 		_, docString := p.parseTrivia(triviaOptions{

@@ -26,9 +26,13 @@ import (
 
 func parseStatements(p *parser, isEndToken func(token lexer.Token) bool) (statements []ast.Statement, err error) {
 	sawSemicolon := false
-	var progress parserProgress
+
+	progress := p.newProgress()
+
 	for p.checkProgress(&progress) {
+
 		p.skipSpaceAndComments()
+
 		switch p.current.Type {
 		case lexer.TokenSemicolon:
 			sawSemicolon = true
@@ -303,7 +307,8 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 
 	var ifStatements []*ast.IfStatement
 
-	var progress parserProgress
+	progress := p.newProgress()
+
 	for p.checkProgress(&progress) {
 
 		startPos := p.current.StartPos
@@ -587,12 +592,13 @@ func parseConditions(p *parser, startPos ast.Position) (*ast.Conditions, error) 
 
 	var conditions []ast.Condition
 
-	var (
-		done     bool
-		progress parserProgress
-	)
+	var done bool
+	progress := p.newProgress()
+
 	for !done && p.checkProgress(&progress) {
+
 		p.skipSpaceAndComments()
+
 		switch p.current.Type {
 		case lexer.TokenSemicolon:
 			p.next()
@@ -733,7 +739,8 @@ func parseSwitchCases(p *parser) (cases []*ast.SwitchCase, err error) {
 		p.next()
 	}
 
-	var progress parserProgress
+	progress := p.newProgress()
+
 	for p.checkProgress(&progress) {
 
 		p.skipSpaceAndComments()
