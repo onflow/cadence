@@ -1002,9 +1002,14 @@ func defineInvocationExpression() {
 }
 
 func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos ast.Position, err error) {
-	atEnd := false
 	expectArgument := true
-	for !atEnd {
+
+	var atEnd bool
+
+	progress := p.newProgress()
+
+	for !atEnd && p.checkProgress(&progress) {
+
 		p.skipSpaceAndComments()
 
 		switch p.current.Type {
@@ -1163,7 +1168,11 @@ func defineStringExpression() {
 			// flag for ending " check
 			missingEnd := true
 
-			for curToken.Is(lexer.TokenString) {
+			progress := p.newProgress()
+
+			for curToken.Is(lexer.TokenString) &&
+				p.checkProgress(&progress) {
+
 				literal = p.tokenSource(curToken)
 
 				// remove quotation marks if they exist
@@ -1251,8 +1260,14 @@ func defineArrayExpression() {
 			p.skipSpaceAndComments()
 
 			var values []ast.Expression
-			for !p.current.Is(lexer.TokenBracketClose) {
+
+			progress := p.newProgress()
+
+			for !p.current.Is(lexer.TokenBracketClose) &&
+				p.checkProgress(&progress) {
+
 				p.skipSpaceAndComments()
+
 				if len(values) > 0 {
 					if !p.current.Is(lexer.TokenComma) {
 						break
@@ -1292,8 +1307,14 @@ func defineDictionaryExpression() {
 			p.skipSpaceAndComments()
 
 			var entries []ast.DictionaryEntry
-			for !p.current.Is(lexer.TokenBraceClose) {
+
+			progress := p.newProgress()
+
+			for !p.current.Is(lexer.TokenBraceClose) &&
+				p.checkProgress(&progress) {
+
 				p.skipSpaceAndComments()
+
 				if len(entries) > 0 {
 					if !p.current.Is(lexer.TokenComma) {
 						break
@@ -1547,7 +1568,10 @@ func parseExpression(p *parser, rightBindingPower int) (ast.Expression, error) {
 		return nil, err
 	}
 
-	for {
+	progress := p.newProgress()
+
+	for p.checkProgress(&progress) {
+
 		// Automatically skip any trivia between the left and right expression.
 		// However, do not automatically skip newlines:
 		// Some left denotations do not support newlines before them,
