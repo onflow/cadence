@@ -96,7 +96,7 @@ func NewUnmeteredInt128ValueFromBigInt(value *big.Int) Int128Value {
 	}
 }
 
-func NewInt128ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Int128Value {
+func NewInt128ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
 	return NewInt128ValueFromBigInt(
 		gauge,
 		func() *big.Int {
