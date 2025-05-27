@@ -111,9 +111,7 @@ func (executor *contractFunctionExecutor) preprocess() (err error) {
 	storage := NewStorage(
 		runtimeInterface,
 		runtimeInterface,
-		StorageConfig{
-			StorageFormatV2Enabled: config.StorageFormatV2Enabled,
-		},
+		StorageConfig{},
 	)
 	executor.storage = storage
 
