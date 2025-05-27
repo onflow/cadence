@@ -2947,9 +2947,10 @@ var StringValueParsers = func() map[string]TypedStringValueParser {
 	return parsers
 }()
 
-type fromBigEndianBytesFunctionValue struct {
-	receiverType sema.Type
-	hostFunction *HostFunctionValue
+type TypedBigEndianBytesConverter struct {
+	ReceiverType sema.Type
+	ByteLength   uint
+	Converter    BigEndianBytesConverter
 }
 
 func padWithZeroes(b []byte, expectedLen int) []byte {
@@ -2979,27 +2980,27 @@ func padWithZeroes(b []byte, expectedLen int) []byte {
 	return res
 }
 
-// a function that attempts to create a Number from a big-endian bytes.
-type bigEndianBytesConverter[T Value] func(common.MemoryGauge, []byte) T
+// BigEndianBytesConverter is a function that attempts to create a Number from big-endian bytes.
+type BigEndianBytesConverter func(common.MemoryGauge, []byte) Value
 
-func newFromBigEndianBytesFunction[T Value](
-	ty sema.Type,
-	byteLength uint,
-	converter bigEndianBytesConverter[T],
-) fromBigEndianBytesFunctionValue {
-	functionType := sema.FromBigEndianBytesFunctionType(ty)
+func newFromBigEndianBytesFunction(typedConverter TypedBigEndianBytesConverter) FunctionValue {
+	functionType := sema.FromBigEndianBytesFunctionType(typedConverter.ReceiverType)
+	byteLength := typedConverter.ByteLength
+	converter := typedConverter.Converter
 
 	// Converter functions are static functions.
-	hostFunctionImpl := NewUnmeteredStaticHostFunctionValue(
+	return NewUnmeteredStaticHostFunctionValue(
 		functionType,
 		func(invocation Invocation) Value {
+			context := invocation.InvocationContext
+			locationRange := invocation.LocationRange
+
 			argument, ok := invocation.Arguments[0].(*ArrayValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			context := invocation.InvocationContext
-			bytes, err := ByteArrayValueToByteSlice(context, argument, invocation.LocationRange)
+			bytes, err := ByteArrayValueToByteSlice(context, argument, locationRange)
 			if err != nil {
 				return Nil
 			}
@@ -3012,54 +3013,53 @@ func newFromBigEndianBytesFunction[T Value](
 			return NewSomeValueNonCopying(context, converter(context, bytes))
 		},
 	)
-	return fromBigEndianBytesFunctionValue{
-		receiverType: ty,
-		hostFunction: hostFunctionImpl,
-	}
 }
 
-var fromBigEndianBytesFunctionValues = func() map[string]fromBigEndianBytesFunctionValue {
-	declarations := []fromBigEndianBytesFunctionValue{
+var BigEndianBytesConverters = func() map[string]TypedBigEndianBytesConverter {
+	converters := map[string]TypedBigEndianBytesConverter{}
+
+	for _, converter := range []TypedBigEndianBytesConverter{
 		// Int*
-		newFromBigEndianBytesFunction(sema.Int8Type, sema.Int8TypeSize, NewInt8ValueFromBigEndianBytes),
-		newFromBigEndianBytesFunction(sema.Int16Type, sema.Int16TypeSize, NewInt16ValueFromBigEndianBytes),
-		newFromBigEndianBytesFunction(sema.Int32Type, sema.Int32TypeSize, NewInt32ValueFromBigEndianBytes),
-		newFromBigEndianBytesFunction(sema.Int64Type, sema.Int64TypeSize, NewInt64ValueFromBigEndianBytes),
-		newFromBigEndianBytesFunction(sema.Int128Type, sema.Int128TypeSize, NewInt128ValueFromBigEndianBytes),
-		newFromBigEndianBytesFunction(sema.Int256Type, sema.Int256TypeSize, NewInt256ValueFromBigEndianBytes),
-		newFromBigEndianBytesFunction(sema.IntType, 0, NewIntValueFromBigEndianBytes),
+		{sema.Int8Type, sema.Int8TypeSize, NewInt8ValueFromBigEndianBytes},
+		{sema.Int16Type, sema.Int16TypeSize, NewInt16ValueFromBigEndianBytes},
+		{sema.Int32Type, sema.Int32TypeSize, NewInt32ValueFromBigEndianBytes},
+		{sema.Int64Type, sema.Int64TypeSize, NewInt64ValueFromBigEndianBytes},
+		{sema.Int128Type, sema.Int128TypeSize, NewInt128ValueFromBigEndianBytes},
+		{sema.Int256Type, sema.Int256TypeSize, NewInt256ValueFromBigEndianBytes},
+		{sema.IntType, 0, NewIntValueFromBigEndianBytes},
 
 		// UInt*
-		newFromBigEndianBytesFunction(sema.UInt8Type, sema.UInt8TypeSize, NewUInt8ValueFromBigEndianBytes),
-		newFromBigEndianBytesFunction(sema.UInt16Type, sema.UInt16TypeSize, NewUInt16ValueFromBigEndianBytes),
-		newFromBigEndianBytesFunction(sema.UInt32Type, sema.UInt32TypeSize, NewUInt32ValueFromBigEndianBytes),
-		newFromBigEndianBytesFunction(sema.UInt64Type, sema.UInt64TypeSize, NewUInt64ValueFromBigEndianBytes),
-		newFromBigEndianBytesFunction(sema.UInt128Type, sema.UInt128TypeSize, NewUInt128ValueFromBigEndianBytes),
-		newFromBigEndianBytesFunction(sema.UInt256Type, sema.UInt256TypeSize, NewUInt256ValueFromBigEndianBytes),
-		newFromBigEndianBytesFunction(sema.UIntType, 0, NewUIntValueFromBigEndianBytes),
+		{sema.UInt8Type, sema.UInt8TypeSize, NewUInt8ValueFromBigEndianBytes},
+		{sema.UInt16Type, sema.UInt16TypeSize, NewUInt16ValueFromBigEndianBytes},
+		{sema.UInt32Type, sema.UInt32TypeSize, NewUInt32ValueFromBigEndianBytes},
+		{sema.UInt64Type, sema.UInt64TypeSize, NewUInt64ValueFromBigEndianBytes},
+		{sema.UInt128Type, sema.UInt128TypeSize, NewUInt128ValueFromBigEndianBytes},
+		{sema.UInt256Type, sema.UInt256TypeSize, NewUInt256ValueFromBigEndianBytes},
+		{sema.UIntType, 0, NewUIntValueFromBigEndianBytes},
 
 		// Word*
-		newFromBigEndianBytesFunction(sema.Word8Type, sema.Word8TypeSize, NewWord8ValueFromBigEndianBytes),
-		newFromBigEndianBytesFunction(sema.Word16Type, sema.Word16TypeSize, NewWord16ValueFromBigEndianBytes),
-		newFromBigEndianBytesFunction(sema.Word32Type, sema.Word32TypeSize, NewWord32ValueFromBigEndianBytes),
-		newFromBigEndianBytesFunction(sema.Word64Type, sema.Word64TypeSize, NewWord64ValueFromBigEndianBytes),
-		newFromBigEndianBytesFunction(sema.Word128Type, sema.Word128TypeSize, NewWord128ValueFromBigEndianBytes),
-		newFromBigEndianBytesFunction(sema.Word256Type, sema.Word256TypeSize, NewWord256ValueFromBigEndianBytes),
+		{sema.Word8Type, sema.Word8TypeSize, NewWord8ValueFromBigEndianBytes},
+		{sema.Word16Type, sema.Word16TypeSize, NewWord16ValueFromBigEndianBytes},
+		{sema.Word32Type, sema.Word32TypeSize, NewWord32ValueFromBigEndianBytes},
+		{sema.Word64Type, sema.Word64TypeSize, NewWord64ValueFromBigEndianBytes},
+		{sema.Word128Type, sema.Word128TypeSize, NewWord128ValueFromBigEndianBytes},
+		{sema.Word256Type, sema.Word256TypeSize, NewWord256ValueFromBigEndianBytes},
 
 		// Fix*
-		newFromBigEndianBytesFunction(sema.Fix64Type, sema.Fix64TypeSize, NewFix64ValueFromBigEndianBytes),
+		{sema.Fix64Type, sema.Fix64TypeSize, NewFix64ValueFromBigEndianBytes},
 
 		// UFix*
-		newFromBigEndianBytesFunction(sema.UFix64Type, sema.UFix64TypeSize, NewUFix64ValueFromBigEndianBytes),
+		{sema.UFix64Type, sema.UFix64TypeSize, NewUFix64ValueFromBigEndianBytes},
+	} {
+		// index by type name
+		typeName := converter.ReceiverType.String()
+		if _, ok := converters[typeName]; ok {
+			panic(errors.NewUnexpectedError("duplicate from big-endian bytes converter for type %s", typeName))
+		}
+		converters[typeName] = converter
 	}
 
-	values := make(map[string]fromBigEndianBytesFunctionValue, len(declarations))
-	for _, decl := range declarations {
-		// index declaration by type name
-		values[decl.receiverType.String()] = decl
-	}
-
-	return values
+	return converters
 }()
 
 type ValueConverterDeclaration struct {
@@ -3391,7 +3391,7 @@ func init() {
 			panic(fmt.Sprintf("missing fromString implementation for number type: %s", numberType))
 		}
 
-		if _, ok := fromBigEndianBytesFunctionValues[typeName]; !ok {
+		if _, ok := BigEndianBytesConverters[typeName]; !ok {
 			panic(fmt.Sprintf("missing fromBigEndianBytes implementation for number type: %s", numberType))
 		}
 	}
@@ -3756,9 +3756,9 @@ var converterFunctionValues = func() []converterFunction {
 			addMember(sema.FromStringFunctionName, newFromStringFunction(stringValueParser))
 		}
 
-		fromBigEndianBytesVal := fromBigEndianBytesFunctionValues[declaration.Name]
-
-		addMember(sema.FromBigEndianBytesFunctionName, fromBigEndianBytesVal.hostFunction)
+		if bigEndianBytesConverter, ok := BigEndianBytesConverters[declaration.Name]; ok {
+			addMember(sema.FromBigEndianBytesFunctionName, newFromBigEndianBytesFunction(bigEndianBytesConverter))
+		}
 
 		if declaration.nestedVariables != nil {
 			for _, variable := range declaration.nestedVariables {
