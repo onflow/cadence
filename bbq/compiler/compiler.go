@@ -1819,8 +1819,11 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	c.emitVariableLoad(funcName)
 
 	// An invocation can be either a method of a value (e.g: `"someString".Concat("otherString")`),
-	// or a function on a type (e.g: `String.Join(["someString", "otherString"], "separator")`).
-	if isFunctionOnType(accessedType) {
+	// or a function on a "type function" (e.g: `String.join(["someString", "otherString"], separator: ", ")`),
+	// where `String` is a function.
+	if accessedFunctionType, ok := accessedType.(*sema.FunctionType); ok &&
+		accessedFunctionType.TypeFunctionType != nil {
+
 		// Compile as static-function call.
 		// No receiver is loaded.
 		c.compileArguments(expression.Arguments, invocationTypes)
@@ -1843,11 +1846,6 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 			ArgCount: argsCountWithReceiver,
 		})
 	}
-}
-
-func isFunctionOnType(accessedType sema.Type) bool {
-	funcType, ok := accessedType.(*sema.FunctionType)
-	return ok && funcType.IsConstructor
 }
 
 func (c *Compiler[_, _]) compileMethodInvocationArguments(

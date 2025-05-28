@@ -333,10 +333,12 @@ func init() {
 		// NOTE: declare in loop, as captured in closure below
 		convert := declaration.Convert
 
+		functionType := sema.BaseValueActivation.Find(declaration.Name).Type.(*sema.FunctionType)
+
 		RegisterFunction(
 			NewNativeFunctionValue(
 				declaration.Name,
-				declaration.FunctionType,
+				functionType,
 				func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 					return convert(
 						context.MemoryGauge,

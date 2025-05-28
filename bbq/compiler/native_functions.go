@@ -85,7 +85,7 @@ func init() {
 		// Register the constructor. e.g: `String()`
 		addNativeFunction(constructor.name)
 
-		// Register the members of the constructor/type. e.g: `String.Join()`
+		// Register the members of the constructor/type. e.g: `String.join()`
 		registerBoundFunctions(constructor.typ)
 	}
 
