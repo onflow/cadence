@@ -1786,15 +1786,14 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 			panic(errors.NewDefaultUserError("invalid function name"))
 		}
 
-		c.withOptionalChaining(
+		c.withOptionalChainingOptimized(
 			invokedExpr.Expression,
 			isOptional,
 			func() {
-				c.compileMethodInvocationArguments(
-					expression.Arguments,
-					memberInfo,
-					invocationTypes,
-				)
+				// withOptionalChainingOptimized already load the receiver onto the stack.
+
+				// Compile arguments
+				c.compileArguments(expression.Arguments, invocationTypes)
 
 				funcNameConst := c.addStringConst(funcName)
 				c.emit(
@@ -1822,13 +1821,13 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		accessedType,
 		invokedExpr.Identifier.Identifier,
 	)
-	c.emitVariableLoad(funcName)
 
 	// An invocation can be either a method of a value (e.g: `"someString".Concat("otherString")`),
 	// or a function on a type (e.g: `String.Join(["someString", "otherString"], "separator")`).
 	if isFunctionOnType(accessedType) {
 		// Compile as static-function call.
 		// No receiver is loaded.
+		c.emitVariableLoad(funcName)
 		c.compileArguments(expression.Arguments, invocationTypes)
 		c.emit(opcode.InstructionInvoke{
 			TypeArgs: typeArgs,
@@ -1838,14 +1837,18 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		c.withOptionalChaining(
 			invokedExpr.Expression,
 			isOptional,
-			func() {
+			func(receiverIndex uint16) {
 				// Compile as object-method call.
-				// First argument is the receiver.
-				c.compileMethodInvocationArguments(
-					expression.Arguments,
-					memberInfo,
-					invocationTypes,
-				)
+
+				// Function must be loaded only if the receiver is non-nil.
+				c.emitVariableLoad(funcName)
+
+				// The receiver is loaded first.
+				// So 'self' is always the zero-th argument.
+				c.emitGetLocal(receiverIndex)
+
+				// Compile arguments
+				c.compileArguments(expression.Arguments, invocationTypes)
 
 				c.emit(opcode.InstructionInvokeMethodStatic{
 					TypeArgs: typeArgs,
@@ -1856,45 +1859,81 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	}
 }
 
-// withOptionalChaining executes the `compile` function, with optional chaining.
-// IMPORTANT: This function expects the `compile` procedure to assume the target expression
-// is already loaded on to the stack.
-// This is an optimization to avoid redundant store-to/load-from local indexes.
+// withOptionalChaining compiles the `ifNotNil` procedure with optional chaining.
 func (c *Compiler[_, _]) withOptionalChaining(
 	targetExpression ast.Expression,
 	isOptional bool,
-	compile func(),
+	ifNotNil func(targetIndex uint16),
+) {
+
+	c.compileExpression(targetExpression)
+
+	tempIndex := c.currentFunction.generateLocalIndex()
+	c.emitSetLocal(tempIndex)
+
+	var nilJump int
+	if isOptional {
+		// If the target is nil, jump to the instruction where nil is returned.
+		nilJump = c.emitOptionalChainingNilJump(tempIndex)
+		c.emitSetLocal(tempIndex)
+	}
+
+	ifNotNil(tempIndex)
+
+	c.patchOptionalChainingNilJump(isOptional, nilJump)
+}
+
+// withOptionalChainingOptimized compiles the `ifNotNil` procedure with optional chaining.
+// IMPORTANT: This function expects the `ifNotNil` procedure to assume the target expression
+// is already loaded on to the stack.
+// This is an optimization to avoid redundant store-to/load-from local indexes.
+// If the `ifNotNil` procedure need to load other values before the target is loaded,
+// then use the withOptionalChaining counterpart method.
+func (c *Compiler[_, _]) withOptionalChainingOptimized(
+	targetExpression ast.Expression,
+	isOptional bool,
+	ifNotNil func(),
 ) {
 
 	c.compileExpression(targetExpression)
 
 	var nilJump int
 	if isOptional {
-		targetIndex := c.currentFunction.generateLocalIndex()
-		c.emitSetLocal(targetIndex)
-
-		// If the value is nil, return nil.
-		// If the receiver is nil, jump to the instruction where nil is returned.
-		c.emitGetLocal(targetIndex)
-		nilJump = c.emitUndefinedJumpIfNil()
-
-		// Otherwise unwrap.
-		c.emitGetLocal(targetIndex)
-		c.emit(opcode.InstructionUnwrap{})
+		tempIndex := c.currentFunction.generateLocalIndex()
+		c.emitSetLocal(tempIndex)
+		nilJump = c.emitOptionalChainingNilJump(tempIndex)
 	}
 
-	compile()
+	ifNotNil()
+
+	c.patchOptionalChainingNilJump(isOptional, nilJump)
+}
+
+func (c *Compiler[_, _]) emitOptionalChainingNilJump(tempIndex uint16) int {
+	// If the value is nil, return nil.
+	// If the receiver is nil, jump to the instruction where nil is returned.
+	c.emitGetLocal(tempIndex)
+	nilJump := c.emitUndefinedJumpIfNil()
+
+	// Otherwise unwrap.
+	c.emitGetLocal(tempIndex)
+	c.emit(opcode.InstructionUnwrap{})
+	return nilJump
+}
+
+func (c *Compiler[_, _]) patchOptionalChainingNilJump(isOptional bool, nilJump int) {
+	if !isOptional {
+		return
+	}
 
 	// TODO: Need to wrap the result back with an optional, if `memberAccessInfo.IsOptional`
-	if isOptional {
-		// Jump to the end, to skip the nil returning instructions.
-		jumpToEnd := c.emitUndefinedJump()
+	// Jump to the end to skip the nil returning instructions.
+	jumpToEnd := c.emitUndefinedJump()
 
-		c.patchJump(nilJump)
-		c.emit(opcode.InstructionNil{})
+	c.patchJump(nilJump)
+	c.emit(opcode.InstructionNil{})
 
-		c.patchJump(jumpToEnd)
-	}
+	c.patchJump(jumpToEnd)
 }
 
 func isFunctionOnType(accessedType sema.Type) bool {
@@ -1903,20 +1942,13 @@ func isFunctionOnType(accessedType sema.Type) bool {
 }
 
 func (c *Compiler[_, _]) compileMethodInvocationArguments(
+	receiverIndex uint16,
 	arguments ast.Arguments,
-	memberInfo sema.MemberAccessInfo,
 	invocationTypes sema.InvocationExpressionTypes,
 ) {
-	// It is assumed the receiver is already loaded first.
+	// The receiver is loaded first.
 	// So 'self' is always the zero-th argument.
-
-	// Unwrap the target, if the member access is via optional chaining.
-	if memberInfo.IsOptional {
-		c.emit(opcode.InstructionUnwrap{})
-
-		// TODO: Implement the remaining parts of optional-chaining.
-		// e.g: early returning with nil, if the target is nil.
-	}
+	c.emitGetLocal(receiverIndex)
 
 	// Compile arguments
 	c.compileArguments(arguments, invocationTypes)
@@ -1978,10 +2010,13 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 
 	constant := c.addStringConst(expression.Identifier.Identifier)
 
-	c.withOptionalChaining(
+	c.withOptionalChainingOptimized(
 		expression.Expression,
 		memberAccessInfo.IsOptional,
 		func() {
+			// withOptionalChainingOptimized evaluates the target expression
+			// and leave the value on stack.
+			// i.e: the target/parent is already loaded.
 
 			// TODO: remove member if `isNestedResourceMove`
 			//  See `Interpreter.memberExpressionGetterSetter` for the reference implementation.

@@ -2610,6 +2610,7 @@ func TestCompileMethodInvocation(t *testing.T) {
 		const (
 			// fooIndex is the index of the local variable `foo`, which is the first local variable
 			fooIndex = iota
+			tempIndex
 		)
 
 		assert.Equal(t,
@@ -2620,9 +2621,12 @@ func TestCompileMethodInvocation(t *testing.T) {
 				opcode.InstructionTransfer{Type: 1},
 				opcode.InstructionSetLocal{Local: fooIndex},
 
+				opcode.InstructionGetLocal{Local: fooIndex},
+				opcode.InstructionSetLocal{Local: tempIndex},
+
 				// foo.f(true)
 				opcode.InstructionGetGlobal{Global: fFuncIndex},
-				opcode.InstructionGetLocal{Local: fooIndex},
+				opcode.InstructionGetLocal{Local: tempIndex},
 				opcode.InstructionTrue{},
 				opcode.InstructionTransfer{Type: 2},
 				opcode.InstructionInvokeMethodStatic{
@@ -3059,13 +3063,17 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	const (
 		selfIndex = iota
+		tempIndex
 	)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
+			opcode.InstructionGetLocal{Local: selfIndex},
+			opcode.InstructionSetLocal{Local: tempIndex},
+
 			// self.test()
 			opcode.InstructionGetGlobal{Global: interfaceFunctionIndex}, // must be interface method's index
-			opcode.InstructionGetLocal{Local: selfIndex},
+			opcode.InstructionGetLocal{Local: tempIndex},
 			opcode.InstructionInvokeMethodStatic{
 				TypeArgs: nil,
 				ArgCount: 1,
@@ -3786,8 +3794,14 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		// `D.Vault` type's `getBalance` function.
 
+		// Local var indexes
 		const (
-			selfIndex         = 0
+			selfIndex = iota
+			tempIndex
+		)
+
+		// Constant indexes
+		const (
 			panicMessageIndex = 1
 		)
 
@@ -3807,13 +3821,17 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		assert.Equal(t,
 			[]opcode.Instruction{
-				// Get function value `A.TestStruct.test()`
-				opcode.InstructionGetGlobal{Global: 9},
-
 				// Load receiver `A.TestStruct()`
-				opcode.InstructionGetGlobal{Global: 10},
+				opcode.InstructionGetGlobal{Global: 9},
 				opcode.InstructionInvoke{ArgCount: 0},
 
+				// Store in temp index
+				opcode.InstructionSetLocal{Local: tempIndex},
+
+				// Get function value `A.TestStruct.test()`
+				opcode.InstructionGetGlobal{Global: 10},
+				// Load receiver at the temp index, as the first argument.
+				opcode.InstructionGetLocal{Local: tempIndex},
 				opcode.InstructionInvokeMethodStatic{
 					ArgCount: 1,
 				},
@@ -3821,7 +3839,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// if !<condition>
 				// panic("pre/post condition failed")
 				opcode.InstructionNot{},
-				opcode.InstructionJumpIfFalse{Target: 11},
+				opcode.InstructionJumpIfFalse{Target: 13},
 
 				opcode.InstructionGetGlobal{Global: panicFunctionIndex},
 				opcode.InstructionGetConstant{Constant: panicMessageIndex},
@@ -3848,11 +3866,11 @@ func TestCompileFunctionConditions(t *testing.T) {
 			[]bbq.Import{
 				{
 					Location: aLocation,
-					Name:     "A.TestStruct.test",
+					Name:     "A.TestStruct",
 				},
 				{
 					Location: aLocation,
-					Name:     "A.TestStruct",
+					Name:     "A.TestStruct.test",
 				},
 				{
 					Location: nil,
@@ -6187,11 +6205,11 @@ func TestCompileImports(t *testing.T) {
 			[]bbq.Import{
 				{
 					Location: aLocation,
-					Name:     "A.test",
+					Name:     "A",
 				},
 				{
 					Location: aLocation,
-					Name:     "A",
+					Name:     "A.test",
 				},
 			},
 			bProgram.Imports,
@@ -6292,11 +6310,11 @@ func TestCompileImports(t *testing.T) {
 			[]bbq.Import{
 				{
 					Location: bLocation,
-					Name:     "B.Bar.getFoo",
+					Name:     "B.Bar",
 				},
 				{
 					Location: bLocation,
-					Name:     "B.Bar",
+					Name:     "B.Bar.getFoo",
 				},
 				{
 					Location: aLocation,
@@ -6304,6 +6322,162 @@ func TestCompileImports(t *testing.T) {
 				},
 			},
 			cProgram.Imports,
+		)
+	})
+}
+
+func TestCompileOptionalChaining(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("field", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            struct Foo {
+                var bar: Int
+                init(value: Int) {
+                    self.bar = value
+                }
+            }
+
+            fun test(): Int? {
+                let foo: Foo? = nil
+                return foo?.bar
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		require.Len(t, program.Functions, 4)
+
+		functions := comp.ExportFunctions()
+		require.Equal(t, len(program.Functions), len(functions))
+
+		const (
+			fooIndex = iota
+			tempIndex
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				//  let foo: Foo? = nil
+				opcode.InstructionNil{},
+				opcode.InstructionTransfer{Type: 1},
+				opcode.InstructionSetLocal{Local: fooIndex},
+
+				// Store the value in a temp index for the nil check.
+				opcode.InstructionGetLocal{Local: fooIndex},
+				opcode.InstructionSetLocal{Local: tempIndex},
+
+				// Nil check
+				opcode.InstructionGetLocal{Local: tempIndex},
+				opcode.InstructionJumpIfNil{Target: 11},
+
+				// If `foo != nil`
+				// Unwrap optional
+				opcode.InstructionGetLocal{Local: tempIndex},
+				opcode.InstructionUnwrap{},
+
+				// foo.bar
+				opcode.InstructionGetField{FieldName: 0},
+				opcode.InstructionJump{Target: 12},
+
+				// If `foo == nil`
+				opcode.InstructionNil{},
+
+				// Return value
+				opcode.InstructionTransfer{Type: 2},
+				opcode.InstructionReturnValue{},
+			},
+			functions[0].Code,
+		)
+
+		assert.Equal(t,
+			[]constant.Constant{
+				{
+					Data: []byte("bar"),
+					Kind: constant.String,
+				},
+			},
+			program.Constants,
+		)
+	})
+
+	t.Run("method", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            struct Foo {
+                fun bar(): Int {
+                    return 1
+                }
+            }
+
+            fun test(): Int? {
+                let foo: Foo? = nil
+                return foo?.bar()
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		require.Len(t, program.Functions, 5)
+
+		functions := comp.ExportFunctions()
+		require.Equal(t, len(program.Functions), len(functions))
+
+		const (
+			fooIndex = iota
+			tempIndex
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				//  let foo: Foo? = nil
+				opcode.InstructionNil{},
+				opcode.InstructionTransfer{Type: 1},
+				opcode.InstructionSetLocal{Local: fooIndex},
+
+				// Store the receiver in a temp index for the nil check.
+				opcode.InstructionGetLocal{Local: fooIndex},
+				opcode.InstructionSetLocal{Local: tempIndex},
+
+				// Nil check
+				opcode.InstructionGetLocal{Local: tempIndex},
+				opcode.InstructionJumpIfNil{Target: 14},
+
+				// If `foo != nil`
+				// Unwrap the optional
+				opcode.InstructionGetLocal{Local: tempIndex},
+				opcode.InstructionUnwrap{},
+				opcode.InstructionSetLocal{Local: tempIndex},
+
+				// Load `Foo.bar` function
+				opcode.InstructionGetGlobal{Global: 4},
+				// Load receiver
+				opcode.InstructionGetLocal{Local: tempIndex},
+				opcode.InstructionInvokeMethodStatic{ArgCount: 1},
+				opcode.InstructionJump{Target: 15},
+
+				// If `foo == nil`
+				opcode.InstructionNil{},
+
+				// Return value
+				opcode.InstructionTransfer{Type: 2},
+				opcode.InstructionReturnValue{},
+			},
+			functions[0].Code,
 		)
 	})
 }
