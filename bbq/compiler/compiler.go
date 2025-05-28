@@ -1941,19 +1941,6 @@ func isFunctionOnType(accessedType sema.Type) bool {
 	return ok && funcType.IsConstructor
 }
 
-func (c *Compiler[_, _]) compileMethodInvocationArguments(
-	receiverIndex uint16,
-	arguments ast.Arguments,
-	invocationTypes sema.InvocationExpressionTypes,
-) {
-	// The receiver is loaded first.
-	// So 'self' is always the zero-th argument.
-	c.emitGetLocal(receiverIndex)
-
-	// Compile arguments
-	c.compileArguments(arguments, invocationTypes)
-}
-
 func isDynamicMethodInvocation(accessedType sema.Type) bool {
 	switch typ := accessedType.(type) {
 	case *sema.ReferenceType:

@@ -8285,3 +8285,121 @@ func TestGlobalVariables(t *testing.T) {
 		)
 	})
 }
+
+func TestOptionalChaining(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil, field", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+            struct Foo {
+                var bar: Int
+                init(value: Int) {
+                    self.bar = value
+                }
+            }
+
+            fun test(): Int? {
+                let foo: Foo? = nil
+                return foo?.bar
+            }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			interpreter.Nil,
+			result,
+		)
+	})
+
+	t.Run("non-nil, field", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+            struct Foo {
+                var bar: Int
+                init(_ value: Int) {
+                    self.bar = value
+                }
+            }
+
+            fun test(): Int? {
+                let foo: Foo? = Foo(5)
+                return foo?.bar
+            }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(5),
+			),
+			result,
+		)
+	})
+
+	t.Run("nil, method", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+            struct Foo {
+                fun bar(): Int {
+                    return 1
+                }
+            }
+
+            fun test(): Int? {
+                let foo: Foo? = nil
+                return foo?.bar()
+            }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			interpreter.Nil,
+			result,
+		)
+	})
+
+	t.Run("non-nil, method", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+            struct Foo {
+                fun bar(): Int {
+                    return 4
+                }
+            }
+
+            fun test(): Int? {
+                let foo: Foo? = Foo()
+                return foo?.bar()
+            }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(4),
+			),
+			result,
+		)
+	})
+}
