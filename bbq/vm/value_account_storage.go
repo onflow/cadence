@@ -38,7 +38,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeSaveFunctionName,
 			sema.Account_StorageTypeSaveFunctionType,
-			func(context *Context, typeArs []bbq.StaticType, args ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, args ...Value) Value {
 
 				address := getAccountTypePrivateAddressValue(args[receiverIndex])
 
@@ -61,13 +61,13 @@ func init() {
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeBorrowFunctionName,
 			sema.Account_StorageTypeBorrowFunctionType,
-			func(context *Context, typeArgs []bbq.StaticType, args ...Value) Value {
+			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
 				address := getAccountTypePrivateAddressValue(args[receiverIndex])
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
 				arguments := args[typeBoundFunctionArgumentOffset:]
 
-				borrowType := typeArgs[0]
+				borrowType := typeArguments[0]
 				semaBorrowType := interpreter.MustConvertStaticToSemaType(borrowType, context)
 
 				return interpreter.AccountStorageBorrow(
@@ -87,7 +87,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeForEachPublicFunctionName,
 			sema.Account_StorageTypeForEachPublicFunctionType,
-			func(context *Context, typeArs []bbq.StaticType, args ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, args ...Value) Value {
 
 				address := getAccountTypePrivateAddressValue(args[receiverIndex])
 
@@ -112,7 +112,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeForEachStoredFunctionName,
 			sema.Account_StorageTypeForEachPublicFunctionType,
-			func(context *Context, typeArs []bbq.StaticType, args ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, args ...Value) Value {
 
 				address := getAccountTypePrivateAddressValue(args[receiverIndex])
 
@@ -137,7 +137,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeTypeFunctionName,
 			sema.Account_StorageTypeTypeFunctionType,
-			func(context *Context, typeArs []bbq.StaticType, args ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, args ...Value) Value {
 
 				address := getAccountTypePrivateAddressValue(args[receiverIndex])
 
@@ -159,13 +159,13 @@ func init() {
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeLoadFunctionName,
 			sema.Account_StorageTypeLoadFunctionType,
-			func(context *Context, typeArgs []bbq.StaticType, args ...Value) Value {
+			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
 				address := getAccountTypePrivateAddressValue(args[receiverIndex])
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
 				arguments := args[typeBoundFunctionArgumentOffset:]
 
-				borrowType := typeArgs[0]
+				borrowType := typeArguments[0]
 				semaBorrowType := interpreter.MustConvertStaticToSemaType(borrowType, context)
 
 				return interpreter.AccountStorageRead(
@@ -186,13 +186,13 @@ func init() {
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeCopyFunctionName,
 			sema.Account_StorageTypeCopyFunctionType,
-			func(context *Context, typeArgs []bbq.StaticType, args ...Value) Value {
+			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
 				address := getAccountTypePrivateAddressValue(args[receiverIndex]).ToAddress()
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
 				arguments := args[typeBoundFunctionArgumentOffset:]
 
-				borrowType := typeArgs[0]
+				borrowType := typeArguments[0]
 				semaBorrowType := interpreter.MustConvertStaticToSemaType(borrowType, context)
 
 				return interpreter.AccountStorageRead(
@@ -213,13 +213,13 @@ func init() {
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeCheckFunctionName,
 			sema.Account_StorageTypeCheckFunctionType,
-			func(context *Context, typeArgs []bbq.StaticType, args ...Value) Value {
+			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
 				address := getAccountTypePrivateAddressValue(args[receiverIndex]).ToAddress()
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
 				arguments := args[typeBoundFunctionArgumentOffset:]
 
-				borrowType := typeArgs[0]
+				borrowType := typeArguments[0]
 				semaBorrowType := interpreter.MustConvertStaticToSemaType(borrowType, context)
 
 				return interpreter.AccountStorageCheck(

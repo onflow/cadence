@@ -41,7 +41,7 @@ func init() {
 					innerValueType,
 				)
 			},
-			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]
 				optionalValue := value.(interpreter.OptionalValue)
 				innerValueType := optionalValue.InnerValueType(context)

@@ -36,7 +36,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.ToStringFunctionName,
 			sema.ToStringFunctionType,
-			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
 				address := arguments[receiverIndex].(interpreter.CharacterValue)
 				return interpreter.CharacterValueToString(
 					context,
