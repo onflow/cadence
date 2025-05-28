@@ -3813,6 +3813,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// Load receiver `A.TestStruct()`
 				opcode.InstructionGetGlobal{Global: 10},
 				opcode.InstructionInvoke{ArgCount: 0},
+
 				opcode.InstructionInvokeMethodStatic{
 					ArgCount: 1,
 				},

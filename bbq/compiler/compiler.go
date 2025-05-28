@@ -1769,6 +1769,8 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		return
 	}
 
+	isOptional := memberInfo.IsOptional
+
 	typeArgs := c.loadTypeArguments(invocationTypes)
 
 	// Invocations into the interface code, such as default functions and inherited conditions,
@@ -1784,30 +1786,34 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 			panic(errors.NewDefaultUserError("invalid function name"))
 		}
 
-		c.compileMethodInvocationArguments(
-			invokedExpr,
-			expression.Arguments,
-			memberInfo,
-			invocationTypes,
-		)
+		c.withOptionalChaining(
+			invokedExpr.Expression,
+			isOptional,
+			func() {
+				c.compileMethodInvocationArguments(
+					expression.Arguments,
+					memberInfo,
+					invocationTypes,
+				)
 
-		funcNameConst := c.addStringConst(funcName)
-		c.emit(
-			opcode.InstructionInvokeMethodDynamic{
-				Name:     funcNameConst.index,
-				TypeArgs: typeArgs,
-				ArgCount: argsCountWithReceiver,
+				funcNameConst := c.addStringConst(funcName)
+				c.emit(
+					opcode.InstructionInvokeMethodDynamic{
+						Name:     funcNameConst.index,
+						TypeArgs: typeArgs,
+						ArgCount: argsCountWithReceiver,
+					},
+				)
 			},
 		)
 
 		return
-
 	}
 
 	// If the function is accessed via optional-chaining,
 	// then the target type is the inner type of the optional.
 	accessedType := memberInfo.AccessedType
-	if memberInfo.IsOptional {
+	if isOptional {
 		accessedType = sema.UnwrapOptionalType(accessedType)
 	}
 
@@ -1829,19 +1835,65 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 			ArgCount: uint16(argumentCount),
 		})
 	} else {
-		// Compile as object-method call.
-		// First argument is the receiver.
-		c.compileMethodInvocationArguments(
-			invokedExpr,
-			expression.Arguments,
-			memberInfo,
-			invocationTypes,
-		)
+		c.withOptionalChaining(
+			invokedExpr.Expression,
+			isOptional,
+			func() {
+				// Compile as object-method call.
+				// First argument is the receiver.
+				c.compileMethodInvocationArguments(
+					expression.Arguments,
+					memberInfo,
+					invocationTypes,
+				)
 
-		c.emit(opcode.InstructionInvokeMethodStatic{
-			TypeArgs: typeArgs,
-			ArgCount: argsCountWithReceiver,
-		})
+				c.emit(opcode.InstructionInvokeMethodStatic{
+					TypeArgs: typeArgs,
+					ArgCount: argsCountWithReceiver,
+				})
+			},
+		)
+	}
+}
+
+// withOptionalChaining executes the `compile` function, with optional chaining.
+// IMPORTANT: This function expects the `compile` procedure to assume the target expression
+// is already loaded on to the stack.
+// This is an optimization to avoid redundant store-to/load-from local indexes.
+func (c *Compiler[_, _]) withOptionalChaining(
+	targetExpression ast.Expression,
+	isOptional bool,
+	compile func(),
+) {
+
+	c.compileExpression(targetExpression)
+
+	var nilJump int
+	if isOptional {
+		targetIndex := c.currentFunction.generateLocalIndex()
+		c.emitSetLocal(targetIndex)
+
+		// If the value is nil, return nil.
+		// If the receiver is nil, jump to the instruction where nil is returned.
+		c.emitGetLocal(targetIndex)
+		nilJump = c.emitUndefinedJumpIfNil()
+
+		// Otherwise unwrap.
+		c.emitGetLocal(targetIndex)
+		c.emit(opcode.InstructionUnwrap{})
+	}
+
+	compile()
+
+	// TODO: Need to wrap the result back with an optional, if `memberAccessInfo.IsOptional`
+	if isOptional {
+		// Jump to the end, to skip the nil returning instructions.
+		jumpToEnd := c.emitUndefinedJump()
+
+		c.patchJump(nilJump)
+		c.emit(opcode.InstructionNil{})
+
+		c.patchJump(jumpToEnd)
 	}
 }
 
@@ -1851,13 +1903,12 @@ func isFunctionOnType(accessedType sema.Type) bool {
 }
 
 func (c *Compiler[_, _]) compileMethodInvocationArguments(
-	invokedExpr *ast.MemberExpression,
 	arguments ast.Arguments,
 	memberInfo sema.MemberAccessInfo,
 	invocationTypes sema.InvocationExpressionTypes,
 ) {
-	// Receiver is loaded first. So 'self' is always the zero-th argument.
-	c.compileExpression(invokedExpr.Expression)
+	// It is assumed the receiver is already loaded first.
+	// So 'self' is always the zero-th argument.
 
 	// Unwrap the target, if the member access is via optional chaining.
 	if memberInfo.IsOptional {
@@ -1920,38 +1971,35 @@ func (c *Compiler[_, _]) loadTypeArguments(invocationTypes sema.InvocationExpres
 }
 
 func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression) (_ struct{}) {
-	c.compileExpression(expression.Expression)
-
 	memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(expression)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	if memberAccessInfo.IsOptional {
-		// TODO: Complete the optional-chaining implementations.
-		//  e.g: Need a nil check, since unwrap panics on nil
-		c.emit(opcode.InstructionUnwrap{})
-	}
-
 	constant := c.addStringConst(expression.Identifier.Identifier)
 
-	// TODO: remove member if `isNestedResourceMove`
-	//  See `Interpreter.memberExpressionGetterSetter` for the reference implementation.
-	c.emit(opcode.InstructionGetField{
-		FieldName: constant.index,
-	})
+	c.withOptionalChaining(
+		expression.Expression,
+		memberAccessInfo.IsOptional,
+		func() {
 
-	// Return a reference, if the member is accessed via a reference.
-	// This is pre-computed at the checker.
-	if memberAccessInfo.ReturnReference {
-		index := c.getOrAddType(memberAccessInfo.ResultingType)
-		c.emit(opcode.InstructionNewRef{
-			Type:       index,
-			IsImplicit: true,
-		})
-	}
+			// TODO: remove member if `isNestedResourceMove`
+			//  See `Interpreter.memberExpressionGetterSetter` for the reference implementation.
+			c.emit(opcode.InstructionGetField{
+				FieldName: constant.index,
+			})
 
-	// TODO: Need to wrap the result back with an optional, if `memberAccessInfo.IsOptional`
+			// Return a reference, if the member is accessed via a reference.
+			// This is pre-computed at the checker.
+			if memberAccessInfo.ReturnReference {
+				index := c.getOrAddType(memberAccessInfo.ResultingType)
+				c.emit(opcode.InstructionNewRef{
+					Type:       index,
+					IsImplicit: true,
+				})
+			}
+		},
+	)
 
 	return
 }
