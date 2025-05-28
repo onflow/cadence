@@ -91,7 +91,7 @@ func NewVM(
 	// Delegate the function invocations to the vm.
 	context.invokeFunction = func(function Value, arguments []Value) (Value, error) {
 		// invokeExternally runs the VM, which is incorrect for native functions.
-		if function, ok := function.(NativeFunctionValue); ok {
+		if function, ok := function.(*NativeFunctionValue); ok {
 			result := function.Function(vm.context, nil, arguments...)
 			return result, nil
 		}
@@ -901,7 +901,7 @@ func invokeFunction(
 	case CompiledFunctionValue:
 		vm.pushCallFrame(functionValue, arguments)
 
-	case NativeFunctionValue:
+	case *NativeFunctionValue:
 		result := functionValue.Function(vm.context, typeArguments, arguments...)
 		vm.push(result)
 

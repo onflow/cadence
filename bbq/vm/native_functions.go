@@ -51,12 +51,12 @@ func NativeFunctions() map[string]*Variable {
 	return funcs
 }
 
-func RegisterFunction(functionValue NativeFunctionValue) {
+func RegisterFunction(functionValue *NativeFunctionValue) {
 	functionName := functionValue.Name
 	registerFunction(functionName, functionValue)
 }
 
-func registerFunction(functionName string, functionValue NativeFunctionValue) {
+func registerFunction(functionName string, functionValue *NativeFunctionValue) {
 	_, ok := nativeFunctions[functionName]
 	if ok {
 		panic(errors.NewUnexpectedError("function already exists: %s", functionName))
@@ -65,7 +65,7 @@ func registerFunction(functionName string, functionValue NativeFunctionValue) {
 	nativeFunctions[functionName] = functionValue
 }
 
-func RegisterTypeBoundFunction(typeName string, functionValue NativeFunctionValue) {
+func RegisterTypeBoundFunction(typeName string, functionValue *NativeFunctionValue) {
 	// Update the name of the function to be type-qualified
 	qualifiedName := commons.QualifiedName(typeName, functionValue.Name)
 	functionValue.Name = qualifiedName
@@ -73,7 +73,7 @@ func RegisterTypeBoundFunction(typeName string, functionValue NativeFunctionValu
 	RegisterFunction(functionValue)
 }
 
-func RegisterTypeBoundCommonFunction(typeName string, functionValue NativeFunctionValue) {
+func RegisterTypeBoundCommonFunction(typeName string, functionValue *NativeFunctionValue) {
 	// Here the function value is common for many types.
 	// Hence, do not update the function name to be type-qualified.
 	// Only the key in the map is type-qualified.
@@ -407,7 +407,7 @@ func registerBuiltinTypeBoundFunctions(
 }
 
 // Built-in functions that are common to all the types.
-var commonBuiltinTypeBoundFunctions = []NativeFunctionValue{
+var commonBuiltinTypeBoundFunctions = []*NativeFunctionValue{
 
 	// `isInstance` function
 	NewNativeFunctionValue(
@@ -438,7 +438,7 @@ var commonBuiltinTypeBoundFunctions = []NativeFunctionValue{
 	// TODO: add remaining functions
 }
 
-var IndexedCommonBuiltinTypeBoundFunctions = map[string]NativeFunctionValue{}
+var IndexedCommonBuiltinTypeBoundFunctions = map[string]*NativeFunctionValue{}
 
 func registerAllSaturatingArithmeticFunctions() {
 	for _, ty := range common.Concat(
@@ -532,7 +532,7 @@ func registerSaturatingArithmeticFunctions(t sema.SaturatingArithmeticType) {
 	}
 }
 
-func newFromStringFunction(typedParser interpreter.TypedStringValueParser) NativeFunctionValue {
+func newFromStringFunction(typedParser interpreter.TypedStringValueParser) *NativeFunctionValue {
 	functionType := sema.FromStringFunctionType(typedParser.ReceiverType)
 	parser := typedParser.Parser
 
@@ -549,7 +549,7 @@ func newFromStringFunction(typedParser interpreter.TypedStringValueParser) Nativ
 	)
 }
 
-func newFromBigEndianBytesFunction(typedConverter interpreter.TypedBigEndianBytesConverter) NativeFunctionValue {
+func newFromBigEndianBytesFunction(typedConverter interpreter.TypedBigEndianBytesConverter) *NativeFunctionValue {
 	functionType := sema.FromBigEndianBytesFunctionType(typedConverter.ReceiverType)
 	byteLength := typedConverter.ByteLength
 	converter := typedConverter.Converter
