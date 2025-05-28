@@ -112,6 +112,7 @@ var _ stdlib.BLSPoPVerifier = &interpreterEnvironment{}
 var _ stdlib.BLSPublicKeyAggregator = &interpreterEnvironment{}
 var _ stdlib.BLSSignatureAggregator = &interpreterEnvironment{}
 var _ stdlib.Hasher = &interpreterEnvironment{}
+var _ stdlib.Exporter = &interpreterEnvironment{}
 var _ ArgumentDecoder = &interpreterEnvironment{}
 var _ common.MemoryGauge = &interpreterEnvironment{}
 var _ common.ComputationGauge = &interpreterEnvironment{}
@@ -589,4 +590,19 @@ func (e *interpreterEnvironment) getBaseActivation(
 
 func (e *interpreterEnvironment) ProgramLog(message string, _ interpreter.LocationRange) error {
 	return e.Interface.ProgramLog(message)
+}
+
+func (e *interpreterEnvironment) ExportValue(
+	value interpreter.Value,
+	interpreter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+) (
+	cadence.Value,
+	error,
+) {
+	return ExportValue(
+		value,
+		interpreter,
+		locationRange,
+	)
 }
