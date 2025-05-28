@@ -285,15 +285,6 @@ func (AddressValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func AddressValueFromString(gauge common.MemoryGauge, string *StringValue) Value {
-	addr, err := common.HexToAddressAssertPrefix(string.Str)
-	if err != nil {
-		return Nil
-	}
-
-	return NewSomeValueNonCopying(gauge, NewAddressValue(gauge, addr))
-}
-
 func AddressValueFromByteArray(context ContainerMutationContext, byteArray *ArrayValue, locationRange LocationRange) AddressValue {
 	bytes, err := ByteArrayValueToByteSlice(context, byteArray, locationRange)
 	if err != nil {
@@ -301,4 +292,13 @@ func AddressValueFromByteArray(context ContainerMutationContext, byteArray *Arra
 	}
 
 	return NewAddressValue(context, common.MustBytesToAddress(bytes))
+}
+
+func AddressValueFromString(gauge common.MemoryGauge, string *StringValue) Value {
+	addr, err := common.HexToAddressAssertPrefix(string.Str)
+	if err != nil {
+		return Nil
+	}
+
+	return NewSomeValueNonCopying(gauge, NewAddressValue(gauge, addr))
 }
