@@ -3407,14 +3407,37 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 				Name: sema.AddressTypeFromBytesFunctionName,
 				Value: NewUnmeteredStaticHostFunctionValue(
 					sema.AddressTypeFromBytesFunctionType,
-					AddressFromBytes,
+					func(invocation Invocation) Value {
+						context := invocation.InvocationContext
+						locationRange := invocation.LocationRange
+
+						byteArray, ok := invocation.Arguments[0].(*ArrayValue)
+						if !ok {
+							panic(errors.NewUnreachableError())
+						}
+
+						return AddressValueFromByteArray(
+							context,
+							byteArray,
+							locationRange,
+						)
+					},
 				),
 			},
 			{
 				Name: sema.AddressTypeFromStringFunctionName,
 				Value: NewUnmeteredStaticHostFunctionValue(
 					sema.AddressTypeFromStringFunctionType,
-					AddressFromString,
+					func(invocation Invocation) Value {
+						context := invocation.InvocationContext
+
+						string, ok := invocation.Arguments[0].(*StringValue)
+						if !ok {
+							panic(errors.NewUnreachableError())
+						}
+
+						return AddressValueFromString(context, string)
+					},
 				),
 			},
 		},
