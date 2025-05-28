@@ -123,7 +123,7 @@ func TestInterpretToBytes(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let x: Address = 0x123456
           let y = x.toBytes()
         `)
@@ -168,7 +168,7 @@ func TestInterpretAddressFromBytes(t *testing.T) {
 				innerCode,
 			)
 
-			inter := parseCheckAndInterpret(t, code)
+			inter := parseCheckAndPrepare(t, code)
 			res, err := inter.Invoke("test")
 
 			require.NoError(t, err)
@@ -186,14 +186,14 @@ func TestInterpretAddressFromBytes(t *testing.T) {
 
 			code := fmt.Sprintf(`
                   fun test(): Bool {
-                    let address : Address = %s;
+                    let address: Address = %s;
 					return address == Address.fromBytes(address.toBytes());
                   }
             	`,
 				innerCode,
 			)
 
-			inter := parseCheckAndInterpret(t, code)
+			inter := parseCheckAndPrepare(t, code)
 			res, err := inter.Invoke("test")
 
 			require.NoError(t, err)
@@ -217,7 +217,7 @@ func TestInterpretAddressFromBytes(t *testing.T) {
 				innerCode,
 			)
 
-			inter := parseCheckAndInterpret(t, code)
+			inter := parseCheckAndPrepare(t, code)
 			_, err := inter.Invoke("test")
 
 			RequireError(t, err)
@@ -254,7 +254,7 @@ func TestInterpretAddressFromString(t *testing.T) {
 				innerCode,
 			)
 
-			inter := parseCheckAndInterpret(t, code)
+			inter := parseCheckAndPrepare(t, code)
 			res, err := inter.Invoke("test")
 
 			require.NoError(t, err)
@@ -275,14 +275,14 @@ func TestInterpretAddressFromString(t *testing.T) {
 
 			code := fmt.Sprintf(`
 	              fun test(): Bool {
-	                let address : Address? = %s;
+	                let address: Address? = %s;
 					return address == Address.fromString(address!.toString());
 	              }
 	        	`,
 				innerCode,
 			)
 
-			inter := parseCheckAndInterpret(t, code)
+			inter := parseCheckAndPrepare(t, code)
 			res, err := inter.Invoke("test")
 
 			require.NoError(t, err)
@@ -306,7 +306,7 @@ func TestInterpretAddressFromString(t *testing.T) {
 				innerCode,
 			)
 
-			inter := parseCheckAndInterpret(t, code)
+			inter := parseCheckAndPrepare(t, code)
 			res, err := inter.Invoke("test")
 			require.NoError(t, err)
 
