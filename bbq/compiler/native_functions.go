@@ -101,6 +101,8 @@ func init() {
 	// Value conversion functions
 	for _, declaration := range interpreter.ConverterDeclarations {
 		addNativeFunction(declaration.Name)
+		declarationVariable := sema.BaseValueActivation.Find(declaration.Name)
+		registerBoundFunctions(declarationVariable.Type)
 	}
 }
 

@@ -45,5 +45,20 @@ func init() {
 				},
 			),
 		)
+
+		RegisterTypeBoundFunction(
+			typeName,
+			NewNativeFunctionValue(
+				sema.ToBigEndianBytesFunctionName,
+				sema.ToBigEndianBytesFunctionType,
+				func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+					number := arguments[receiverIndex].(interpreter.NumberValue)
+					return interpreter.ByteSliceToByteArrayValue(
+						context,
+						number.ToBigEndianBytes(),
+					)
+				},
+			),
+		)
 	}
 }
