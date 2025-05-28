@@ -106,6 +106,8 @@ func (executor *contractFunctionExecutor) preprocess() (err error) {
 
 	runtimeInterface := context.Interface
 
+	config := executor.runtime.Config()
+
 	storage := NewStorage(
 		runtimeInterface,
 		runtimeInterface,
@@ -117,9 +119,9 @@ func (executor *contractFunctionExecutor) preprocess() (err error) {
 	if environment == nil {
 		// TODO: Uncomment once the compiler branch is merged to master.
 		//if context.UseVM {
-		//	//environment = NewBaseVMEnvironment(executor.runtime.Config())
+		//	//environment = NewBaseVMEnvironment(config)
 		//} else {
-		environment = NewBaseInterpreterEnvironment(executor.runtime.Config())
+		environment = NewBaseInterpreterEnvironment(config)
 		//}
 	}
 	environment.Configure(
