@@ -106,6 +106,8 @@ func (executor *scriptExecutor) preprocess() (err error) {
 
 	runtimeInterface := context.Interface
 
+	config := executor.runtime.Config()
+
 	storage := NewStorage(
 		runtimeInterface,
 		runtimeInterface,
@@ -115,7 +117,7 @@ func (executor *scriptExecutor) preprocess() (err error) {
 
 	environment := context.Environment
 	if environment == nil {
-		environment = NewScriptInterpreterEnvironment(executor.runtime.Config())
+		environment = NewScriptInterpreterEnvironment(config)
 	}
 	environment.Configure(
 		runtimeInterface,

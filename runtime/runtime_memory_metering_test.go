@@ -732,7 +732,8 @@ func TestRuntimeLogFunctionStringConversionMetering(t *testing.T) {
 
 	testMetering := func(strLiteral string) (meteredAmount, actualLen uint64) {
 
-		script := fmt.Sprintf(`
+		script := fmt.Sprintf(
+			`
                 access(all) fun main() {
                     let s = "%s"
                     log(s)
@@ -871,7 +872,6 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 				Location:  common.TransactionLocation{},
 			},
 		)
-
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -926,7 +926,6 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 				Location:  common.TransactionLocation{},
 			},
 		)
-
 		require.NoError(t, err)
 		assert.True(t, storageUsedInvoked)
 
@@ -1088,7 +1087,6 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 				Location:  common.TransactionLocation{},
 			},
 		)
-
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -1143,7 +1141,6 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 				Location:  common.TransactionLocation{},
 			},
 		)
-
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -1175,23 +1172,23 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 		_, err := rt.ExecuteScript(
 			Script{
 				Source: []byte(`
-                    access(all) fun main() {
-                        let acc = getAuthAccount<auth(Storage) &Account>(0x02)
-                        var i = 0
-                        var f = Foo()
-                        while i<1000 {
-                            let path = StoragePath(identifier: "i".concat(i.toString()))!
-                            acc.storage.save(f, to: path)
-                            i=i+1
-                        }
-                    }
+                  access(all) fun main() {
+                      let acc = getAuthAccount<auth(Storage) &Account>(0x02)
+                      var i = 0
+                      var f = Foo()
+                      while i<1000 {
+                          let path = StoragePath(identifier: "i".concat(i.toString()))!
+                          acc.storage.save(f, to: path)
+                          i=i+1
+                      }
+                  }
 
-                    access(all) struct Foo {
-                        access(self) var id: Int
-                        init() {
-                            self.id = 123456789
-                        }
-                    }
+                  access(all) struct Foo {
+                      access(self) var id: Int
+                      init() {
+                          self.id = 123456789
+                      }
+                  }
                 `),
 			},
 			Context{
@@ -1199,7 +1196,6 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 				Location:  common.ScriptLocation{},
 			},
 		)
-
 		require.NoError(t, err)
 
 		assert.Equal(t,

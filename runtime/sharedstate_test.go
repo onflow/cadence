@@ -144,14 +144,14 @@ func TestRuntimeSharedState(t *testing.T) {
 	err := runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(`
-                import C1 from 0x1
+                        import C1 from 0x1
 
-                transaction {
-                    prepare(signer: &Account) {
-                        C1.hello()
-                    }
-                }
-            `),
+                        transaction {
+                            prepare(signer: &Account) {
+                                C1.hello()
+                            }
+                        }
+                    `),
 			Arguments: nil,
 		},
 		Context{
@@ -211,21 +211,77 @@ func TestRuntimeSharedState(t *testing.T) {
 	// Assert shared state was used,
 	// i.e. data was not re-read
 
-	require.Equal(t,
-		[]ownerKeyPair{
-			{
-				owner: signerAddress[:],
-				key:   []byte(AccountStorageKey),
-			},
-			{
-				owner: signerAddress[:],
-				key:   []byte(AccountStorageKey),
-			},
-			{
-				owner: signerAddress[:],
-				key:   []byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
-			},
+	expectedReads := []ownerKeyPair{
+		// Read account register to check if it is a migrated account
+		// Read returns no value.
+		{
+			owner: signerAddress[:],
+			key:   []byte(AccountStorageKey),
 		},
+		// Read contract domain register.
+		// Read returns no value.
+		{
+			owner: signerAddress[:],
+			key:   []byte(common.StorageDomainContract.Identifier()),
+		},
+		// Read all available domain registers to check if it is a new account
+		// Read returns no value.
+		{
+			owner: signerAddress[:],
+			key:   []byte(common.PathDomainStorage.Identifier()),
+		},
+		{
+			owner: signerAddress[:],
+			key:   []byte(common.PathDomainPrivate.Identifier()),
+		},
+		{
+			owner: signerAddress[:],
+			key:   []byte(common.PathDomainPublic.Identifier()),
+		},
+		{
+			owner: signerAddress[:],
+			key:   []byte(common.StorageDomainContract.Identifier()),
+		},
+		{
+			owner: signerAddress[:],
+			key:   []byte(common.StorageDomainInbox.Identifier()),
+		},
+		{
+			owner: signerAddress[:],
+			key:   []byte(common.StorageDomainCapabilityController.Identifier()),
+		},
+		{
+			owner: signerAddress[:],
+			key:   []byte(common.StorageDomainCapabilityControllerTag.Identifier()),
+		},
+		{
+			owner: signerAddress[:],
+			key:   []byte(common.StorageDomainPathCapability.Identifier()),
+		},
+		{
+			owner: signerAddress[:],
+			key:   []byte(common.StorageDomainAccountCapability.Identifier()),
+		},
+		{
+			owner: signerAddress[:],
+			key:   []byte(AccountStorageKey),
+		},
+		{
+			owner: signerAddress[:],
+			key:   []byte(AccountStorageKey),
+		},
+		{
+			owner: signerAddress[:],
+			key:   []byte(AccountStorageKey),
+		},
+		{
+			owner: signerAddress[:],
+			key:   []byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+		},
+	}
+
+	require.Equal(t,
+		expectedReads,
 		ledgerReads,
 	)
 }

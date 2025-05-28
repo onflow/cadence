@@ -52,9 +52,9 @@ func TestRuntimeContract(t *testing.T) {
 	}
 
 	runTest := func(t *testing.T, tc testCase) {
-		config := DefaultTestInterpreterConfig
+		t.Parallel()
 
-		runtime := NewTestInterpreterRuntimeWithConfig(config)
+		runtime := NewTestInterpreterRuntime()
 
 		var loggedMessages []string
 
@@ -522,8 +522,6 @@ func TestRuntimeContract(t *testing.T) {
 	}
 
 	t.Run("valid contract, correct name", func(t *testing.T) {
-		t.Parallel()
-
 		runTest(t, testCase{
 			name:        "Test",
 			code:        `access(all) contract Test {}`,
@@ -534,8 +532,6 @@ func TestRuntimeContract(t *testing.T) {
 	})
 
 	t.Run("valid contract interface, correct name", func(t *testing.T) {
-		t.Parallel()
-
 		runTest(t, testCase{
 			name:        "Test",
 			code:        `access(all) contract interface Test {}`,
@@ -546,8 +542,6 @@ func TestRuntimeContract(t *testing.T) {
 	})
 
 	t.Run("valid contract, wrong name", func(t *testing.T) {
-		t.Parallel()
-
 		runTest(t, testCase{
 			name:        "XYZ",
 			code:        `access(all) contract Test {}`,
@@ -557,8 +551,6 @@ func TestRuntimeContract(t *testing.T) {
 	})
 
 	t.Run("valid contract interface, wrong name", func(t *testing.T) {
-		t.Parallel()
-
 		runTest(t, testCase{
 			name:        "XYZ",
 			code:        `access(all) contract interface Test {}`,
@@ -568,8 +560,6 @@ func TestRuntimeContract(t *testing.T) {
 	})
 
 	t.Run("invalid code", func(t *testing.T) {
-		t.Parallel()
-
 		runTest(t, testCase{
 			name:        "Test",
 			code:        `foo`,
@@ -579,8 +569,6 @@ func TestRuntimeContract(t *testing.T) {
 	})
 
 	t.Run("missing contract or contract interface", func(t *testing.T) {
-		t.Parallel()
-
 		runTest(t, testCase{
 			name:        "Test",
 			code:        ``,
@@ -590,8 +578,6 @@ func TestRuntimeContract(t *testing.T) {
 	})
 
 	t.Run("two contracts", func(t *testing.T) {
-		t.Parallel()
-
 		runTest(t, testCase{
 			name: "Test",
 			code: `
@@ -605,8 +591,6 @@ func TestRuntimeContract(t *testing.T) {
 	})
 
 	t.Run("two contract interfaces", func(t *testing.T) {
-		t.Parallel()
-
 		runTest(t, testCase{
 			name: "Test",
 			code: `
@@ -620,8 +604,6 @@ func TestRuntimeContract(t *testing.T) {
 	})
 
 	t.Run("contract and contract interface", func(t *testing.T) {
-		t.Parallel()
-
 		runTest(t, testCase{
 			name: "Test",
 			code: `
