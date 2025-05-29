@@ -321,11 +321,11 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 	t.Run("invalid negative Fix64 to UFix64", func(t *testing.T) {
 
 		inter := parseCheckAndPrepare(t, `
-		  fun test(): UFix64 {
-		      let x: Fix64 = -1.0
-		      return UFix64(x)
-		  }
-		`)
+          fun test(): UFix64 {
+              let x: Fix64 = -1.0
+              return UFix64(x)
+          }
+        `)
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
@@ -339,11 +339,11 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 		inter := parseCheckAndPrepare(t,
 			fmt.Sprintf(
 				`
-		          fun test(): Fix64 {
-		              let x: UFix64 = %d.0
-		              return Fix64(x)
-		          }
-		        `,
+                  fun test(): Fix64 {
+                      let x: UFix64 = %d.0
+                      return Fix64(x)
+                  }
+                `,
 				sema.Fix64TypeMaxInt+1,
 			),
 		)
@@ -364,11 +364,11 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				inter := parseCheckAndPrepare(t,
 					fmt.Sprintf(
 						`
-	                     fun test(): UFix64 {
-	                         let x: %s = -1
-	                         return UFix64(x)
-	                     }
-	                   `,
+                         fun test(): UFix64 {
+                             let x: %s = -1
+                             return UFix64(x)
+                         }
+                       `,
 						integerType,
 					),
 				)
@@ -402,11 +402,11 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				inter := parseCheckAndPrepare(t,
 					fmt.Sprintf(
 						`
-	                     fun test(): UFix64 {
-	                         let x: %s = %d
-	                         return UFix64(x)
-	                     }
-	                   `,
+                         fun test(): UFix64 {
+                             let x: %s = %d
+                             return UFix64(x)
+                         }
+                       `,
 						integerType,
 						sema.UFix64TypeMaxInt+1,
 					),
@@ -440,11 +440,11 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				inter := parseCheckAndPrepare(t,
 					fmt.Sprintf(
 						`
-	                     fun test(): UFix64 {
-	                         let x: %s = %d
-	                         return UFix64(x)
-	                     }
-	                   `,
+                         fun test(): UFix64 {
+                             let x: %s = %d
+                             return UFix64(x)
+                         }
+                       `,
 						integerType,
 						testedValue,
 					),
@@ -478,11 +478,11 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				inter := parseCheckAndPrepare(t,
 					fmt.Sprintf(
 						`
-	                     fun test(): Fix64 {
-	                         let x: %s = %d
-	                         return Fix64(x)
-	                     }
-	                   `,
+                         fun test(): Fix64 {
+                             let x: %s = %d
+                             return Fix64(x)
+                         }
+                       `,
 						integerType,
 						testedValue,
 					),
@@ -516,11 +516,11 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				inter := parseCheckAndPrepare(t,
 					fmt.Sprintf(
 						`
-	                     fun test(): Fix64 {
-	                         let x: %s = %d
-	                         return Fix64(x)
-	                     }
-	                   `,
+                         fun test(): Fix64 {
+                             let x: %s = %d
+                             return Fix64(x)
+                         }
+                       `,
 						integerType,
 						testedValue,
 					),
@@ -550,9 +550,9 @@ func TestInterpretFixedPointMinMax(t *testing.T) {
 		inter := parseCheckAndInterpret(t,
 			fmt.Sprintf(
 				`
-				  let min = %[1]s.min
-				  let max = %[1]s.max
-				`,
+                  let min = %[1]s.min
+                  let max = %[1]s.max
+                `,
 				ty,
 			),
 		)
@@ -611,7 +611,7 @@ func TestInterpretStringFixedPointConversion(t *testing.T) {
 	}
 
 	type testsuite struct {
-		name         string
+		typeName     string
 		toFixedValue func(isNegative bool, decimal, fractional *big.Int, scale uint) (interpreter.Value, error)
 		intBounds    []*big.Int
 		fracBounds   []*big.Int
@@ -678,14 +678,23 @@ func TestInterpretStringFixedPointConversion(t *testing.T) {
 	}
 
 	test := func(suite testsuite) {
-		t.Run(suite.name, func(t *testing.T) {
+		t.Run(suite.typeName, func(t *testing.T) {
 			t.Parallel()
 
-			code := fmt.Sprintf(`
-				fun fromStringTest(s: String): %s? {
-					return %s.fromString(s)
-				}
-			`, suite.name, suite.name)
+			code := fmt.Sprintf(
+				`
+                    fun fromStringTest(s: String): %[1]s? {
+                        let a = %[1]s.fromString(s)
+                        let f = %[1]s.fromString
+                        let b = f(s)
+                        if a != b {
+                            return nil
+                        }
+                        return b
+                    }
+                `,
+				suite.typeName,
+			)
 
 			inter := parseCheckAndPrepare(t, code)
 
