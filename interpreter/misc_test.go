@@ -8061,8 +8061,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 
 	t.Parallel()
 
-	// TODO: Enable test: Need var-decl second value.
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       resource R {
           let id: Int
           init(id: Int) {

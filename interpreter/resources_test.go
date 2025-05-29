@@ -3061,7 +3061,7 @@ func TestInterpretMovedResourceInSecondValue(t *testing.T) {
 
 	t.Parallel()
 
-	inter, err := parseCheckAndInterpretWithOptions(t, `
+	inter, err := parseCheckAndPrepareWithOptions(t, `
         resource R{}
 
         fun collect(copy2: @R?, _ arrRef: auth(Mutate) &[R]): @R {
