@@ -814,7 +814,7 @@ func TestInterpretIntegerMinMax(t *testing.T) {
 
 	test := func(t *testing.T, ty sema.Type, field string, expected interpreter.Value) {
 
-		inter := parseCheckAndInterpret(t,
+		inter := parseCheckAndPrepare(t,
 			fmt.Sprintf(
 				`
                   let x = %s.%s

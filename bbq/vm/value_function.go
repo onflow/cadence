@@ -173,6 +173,7 @@ type NativeFunctionValue struct {
 	// A function value can only have either one of `functionType` or `functionTypeGetter`.
 	functionType       *sema.FunctionType
 	functionTypeGetter func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType
+	fields             map[string]Value
 }
 
 func NewNativeFunctionValue(
@@ -344,6 +345,11 @@ func (v *NativeFunctionValue) GetMember(
 	locationRange interpreter.LocationRange,
 	name string,
 ) interpreter.Value {
+	value, ok := v.fields[name]
+	if ok {
+		return value
+	}
+
 	if function := context.GetMethod(v, name, locationRange); function != nil {
 		return function
 	}

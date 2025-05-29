@@ -337,19 +337,36 @@ func init() {
 
 		functionType := sema.BaseValueActivation.Find(declaration.Name).Type.(*sema.FunctionType)
 
-		RegisterFunction(
-			NewNativeFunctionValue(
-				declaration.Name,
-				functionType,
-				func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-					return convert(
-						context.MemoryGauge,
-						arguments[0],
-						EmptyLocationRange,
-					)
-				},
-			),
+		function := NewNativeFunctionValue(
+			declaration.Name,
+			functionType,
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+				return convert(
+					context.MemoryGauge,
+					arguments[0],
+					EmptyLocationRange,
+				)
+			},
 		)
+		RegisterFunction(function)
+
+		addMember := func(name string, value interpreter.Value) {
+			if function.fields == nil {
+				function.fields = make(map[string]interpreter.Value)
+			}
+			if _, exists := function.fields[name]; exists {
+				panic(errors.NewUnexpectedError("member already exists: %s", name))
+			}
+			function.fields[name] = value
+		}
+
+		if declaration.Min != nil {
+			addMember(sema.NumberTypeMinFieldName, declaration.Min)
+		}
+
+		if declaration.Max != nil {
+			addMember(sema.NumberTypeMaxFieldName, declaration.Max)
+		}
 
 		if stringValueParser, ok := interpreter.StringValueParsers[declaration.Name]; ok {
 			RegisterTypeBoundFunction(
