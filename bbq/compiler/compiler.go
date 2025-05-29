@@ -594,6 +594,7 @@ func (c *Compiler[_, _]) reserveGlobals(
 		nil,
 		variableDecls,
 		nil,
+		nil,
 		functionDecls,
 		compositeDecls,
 		interfaceDecls,
@@ -604,6 +605,7 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 	enclosingType sema.CompositeKindedType,
 	variableDecls []*ast.VariableDeclaration,
 	specialFunctionDecls []*ast.SpecialFunctionDeclaration,
+	enumCaseDecls []*ast.EnumCaseDeclaration,
 	functionDecls []*ast.FunctionDeclaration,
 	compositeDecls []*ast.CompositeDeclaration,
 	interfaceDecls []*ast.InterfaceDeclaration,
@@ -631,6 +633,14 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 			funcName := commons.TypeQualifiedName(enclosingType, boundFunction.name)
 			c.addGlobal(funcName)
 		}
+	}
+
+	for _, declaration := range enumCaseDecls {
+		// Reserve a global variable for each enum case.
+		// The enum case name is used as the global variable name.
+		// e.g: `enum E { case A, case B }` will reserve globals `E.A`, `E.B`.
+		qualifiedName := commons.TypeQualifiedName(enclosingType, declaration.Identifier.Identifier)
+		c.addGlobal(qualifiedName)
 	}
 
 	for _, declaration := range functionDecls {
@@ -669,6 +679,7 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 			compositeType,
 			nil,
 			members.SpecialFunctions(),
+			members.EnumCases(),
 			members.Functions(),
 			members.Composites(),
 			members.Interfaces(),
@@ -685,6 +696,7 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 			interfaceType,
 			nil,
 			members.SpecialFunctions(),
+			members.EnumCases(),
 			members.Functions(),
 			members.Composites(),
 			members.Interfaces(),
@@ -1437,10 +1449,16 @@ func (c *Compiler[_, _]) VisitNilExpression(_ *ast.NilExpression) (_ struct{}) {
 }
 
 func (c *Compiler[_, _]) VisitIntegerExpression(expression *ast.IntegerExpression) (_ struct{}) {
+	value := expression.Value
 	integerType := c.DesugaredElaboration.IntegerExpressionType(expression)
+	c.emitIntegerConstant(value, integerType)
+
+	return
+}
+
+func (c *Compiler[_, _]) emitIntegerConstant(value *big.Int, integerType sema.Type) {
 	constantKind := constant.FromSemaType(integerType)
 
-	value := expression.Value
 	var data []byte
 
 	switch constantKind {
@@ -1517,8 +1535,6 @@ func (c *Compiler[_, _]) VisitIntegerExpression(expression *ast.IntegerExpressio
 	}
 
 	c.emitGetConstant(c.addConstant(constantKind, data))
-
-	return
 }
 
 func (c *Compiler[_, _]) VisitFixedPointExpression(expression *ast.FixedPointExpression) (_ struct{}) {
@@ -2582,6 +2598,14 @@ func (c *Compiler[_, _]) compileCompositeMembers(
 	// Add the methods that are provided natively.
 	c.addBuiltinMethods(compositeKindedType)
 
+	for index, enumCase := range members.EnumCases() {
+		c.compileEnumCaseDeclaration(
+			enumCase,
+			compositeKindedType.(*sema.CompositeType),
+			index,
+		)
+	}
+
 	for _, function := range members.Functions() {
 		c.compileDeclaration(function)
 	}
@@ -2687,6 +2711,47 @@ func (c *Compiler[_, _]) VisitTransactionDeclaration(_ *ast.TransactionDeclarati
 func (c *Compiler[_, _]) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) (_ struct{}) {
 	// TODO
 	panic(errors.NewUnreachableError())
+}
+
+func (c *Compiler[_, _]) compileEnumCaseDeclaration(
+	declaration *ast.EnumCaseDeclaration,
+	compositeType *sema.CompositeType,
+	index int,
+) (_ struct{}) {
+
+	variableGetterFunctionType := sema.NewSimpleFunctionType(
+		sema.FunctionPurityImpure,
+		nil,
+		sema.NewTypeAnnotation(compositeType),
+	)
+
+	caseName := declaration.Identifier.Identifier
+	getterName := commons.TypeQualifiedName(compositeType, caseName)
+
+	globalVariable := c.addGlobalVariableWithGetter(
+		getterName,
+		variableGetterFunctionType,
+	)
+
+	func() {
+		previousFunction := c.currentFunction
+		c.targetFunction(globalVariable.Getter)
+		defer c.targetFunction(previousFunction)
+
+		// No parameters
+
+		c.emitVariableLoad(commons.TypeQualifier(compositeType))
+		c.emitIntegerConstant(
+			big.NewInt(int64(index)),
+			compositeType.EnumRawType,
+		)
+		c.emit(opcode.InstructionInvoke{
+			ArgCount: 1,
+		})
+		c.emitTransferAndReturnValue(compositeType)
+	}()
+
+	return
 }
 
 func (c *Compiler[_, _]) VisitAttachmentDeclaration(_ *ast.AttachmentDeclaration) (_ struct{}) {

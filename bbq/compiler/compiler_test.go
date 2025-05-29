@@ -6426,11 +6426,65 @@ func TestCompileEnum(t *testing.T) {
 		)
 	}
 
+	variables := program.Variables
+	require.Len(t, variables, 3)
+
+	const (
+		testAIndex = iota
+		testBIndex
+		testCIndex
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionGetGlobal{Global: 0},
+			opcode.InstructionGetConstant{Constant: 1},
+			opcode.InstructionInvoke{ArgCount: 1},
+			opcode.InstructionTransfer{Type: 1},
+			opcode.InstructionReturnValue{},
+		},
+		variables[testAIndex].Getter.Code,
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionGetGlobal{Global: 0},
+			opcode.InstructionGetConstant{Constant: 2},
+			opcode.InstructionInvoke{ArgCount: 1},
+			opcode.InstructionTransfer{Type: 1},
+			opcode.InstructionReturnValue{},
+		},
+		variables[testBIndex].Getter.Code,
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionGetGlobal{Global: 0},
+			opcode.InstructionGetConstant{Constant: 3},
+			opcode.InstructionInvoke{ArgCount: 1},
+			opcode.InstructionTransfer{Type: 1},
+			opcode.InstructionReturnValue{},
+		},
+		variables[testCIndex].Getter.Code,
+	)
+
 	assert.Equal(t,
 		[]constant.Constant{
 			{
 				Data: []byte("rawValue"),
 				Kind: constant.String,
+			},
+			{
+				Data: []byte{0x0},
+				Kind: constant.UInt8,
+			},
+			{
+				Data: []byte{0x1},
+				Kind: constant.UInt8,
+			},
+			{
+				Data: []byte{0x2},
+				Kind: constant.UInt8,
 			},
 		},
 		program.Constants,
