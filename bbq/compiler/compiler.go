@@ -1062,6 +1062,15 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 			varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(test)
 			c.emitTransfer(varDeclTypes.TargetType)
 
+			// Before declaring the variable, evaluate and assign the second value.
+			if test.SecondValue != nil {
+				c.compileAssignment(
+					test.Value,
+					test.SecondValue,
+					varDeclTypes.ValueType,
+				)
+			}
+
 			// Declare the variable *after* unwrapping the optional,
 			// in a new scope
 			c.currentFunction.locals.PushNewWithCurrent()
