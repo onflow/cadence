@@ -101,7 +101,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.Account_CapabilitiesTypePublishFunctionName,
 			sema.Account_CapabilitiesTypePublishFunctionType,
-			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.Capabilities)
 				accountAddress := getAccountTypePrivateAddressValue(args[receiverIndex])
 
@@ -138,7 +138,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.Account_CapabilitiesTypeUnpublishFunctionName,
 			sema.Account_CapabilitiesTypeUnpublishFunctionType,
-			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.Capabilities)
 				accountAddress := getAccountTypePrivateAddressValue(args[receiverIndex])
 
@@ -165,7 +165,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.Account_CapabilitiesTypeExistsFunctionName,
 			sema.Account_CapabilitiesTypeExistsFunctionType,
-			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, args ...Value) Value {
 				// Get address field from the receiver (Account.Capabilities)
 				accountAddress := getAccountTypePrivateAddressValue(args[receiverIndex])
 

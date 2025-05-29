@@ -21,6 +21,7 @@ package vm
 import (
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -36,13 +37,54 @@ func init() {
 		NewNativeFunctionValue(
 			sema.ToStringFunctionName,
 			sema.ToStringFunctionType,
-			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
 				address := arguments[receiverIndex].(interpreter.AddressValue)
 				return interpreter.AddressValueToStringFunction(
 					context,
 					address,
 					EmptyLocationRange,
 				)
+			},
+		),
+	)
+
+	RegisterTypeBoundFunction(
+		typeName,
+		NewNativeFunctionValue(
+			sema.AddressTypeToBytesFunctionName,
+			sema.AddressTypeToBytesFunctionType,
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+				addressValue := arguments[receiverIndex].(interpreter.AddressValue)
+				address := common.Address(addressValue)
+				return interpreter.ByteSliceToByteArrayValue(context, address[:])
+			},
+		),
+	)
+
+	RegisterTypeBoundFunction(
+		typeName,
+		NewNativeFunctionValue(
+			sema.AddressTypeFromBytesFunctionName,
+			sema.AddressTypeFromBytesFunctionType,
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+				byteArrayValue := arguments[0].(*interpreter.ArrayValue)
+				return interpreter.AddressValueFromByteArray(
+					context,
+					byteArrayValue,
+					EmptyLocationRange,
+				)
+			},
+		),
+	)
+
+	RegisterTypeBoundFunction(
+		typeName,
+		NewNativeFunctionValue(
+			sema.AddressTypeFromStringFunctionName,
+			sema.AddressTypeFromStringFunctionType,
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+				stringValue := arguments[0].(*interpreter.StringValue)
+				return interpreter.AddressValueFromString(context, stringValue)
 			},
 		),
 	)

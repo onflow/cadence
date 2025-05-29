@@ -86,11 +86,12 @@ func init() {
 		NewNativeFunctionValue(
 			commons.LogFunctionName,
 			stdlib.LogFunctionType,
-			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+				value := arguments[0]
 				return stdlib.Log(
 					context,
 					context,
-					arguments[0],
+					value,
 					EmptyLocationRange,
 				)
 			},
@@ -101,7 +102,7 @@ func init() {
 		NewNativeFunctionValue(
 			commons.AssertFunctionName,
 			stdlib.AssertFunctionType,
-			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
 				result, ok := arguments[0].(interpreter.BoolValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -129,9 +130,10 @@ func init() {
 		NewNativeFunctionValue(
 			commons.PanicFunctionName,
 			stdlib.PanicFunctionType,
-			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+				message := arguments[0]
 				return stdlib.PanicWithError(
-					arguments[0],
+					message,
 					EmptyLocationRange,
 				)
 			},
@@ -142,7 +144,7 @@ func init() {
 		NewNativeFunctionValue(
 			commons.GetAccountFunctionName,
 			stdlib.GetAccountFunctionType,
-			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
 				address := arguments[0].(interpreter.AddressValue)
 				return NewAccountReferenceValue(
 					context,
@@ -339,7 +341,7 @@ func init() {
 			NewNativeFunctionValue(
 				declaration.Name,
 				functionType,
-				func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+				func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
 					return convert(
 						context.MemoryGauge,
 						arguments[0],
@@ -411,7 +413,7 @@ var commonBuiltinTypeBoundFunctions = []NativeFunctionValue{
 	NewNativeFunctionValue(
 		sema.IsInstanceFunctionName,
 		sema.IsInstanceFunctionType,
-		func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+		func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
 			value := arguments[receiverIndex]
 
 			typeValue, ok := arguments[typeBoundFunctionArgumentOffset].(interpreter.TypeValue)
@@ -427,7 +429,7 @@ var commonBuiltinTypeBoundFunctions = []NativeFunctionValue{
 	NewNativeFunctionValue(
 		sema.GetTypeFunctionName,
 		sema.GetTypeFunctionType,
-		func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+		func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
 			value := arguments[receiverIndex]
 			return interpreter.ValueGetType(context, value)
 		},
@@ -460,7 +462,7 @@ func registerSaturatingArithmeticFunctions(t sema.SaturatingArithmeticType) {
 			NewNativeFunctionValue(
 				functionName,
 				sema.SaturatingArithmeticTypeFunctionTypes[t],
-				func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
+				func(context *Context, _ []bbq.StaticType, args ...Value) Value {
 					v, ok := args[receiverIndex].(interpreter.NumberValue)
 					if !ok {
 						panic(errors.NewUnreachableError())
