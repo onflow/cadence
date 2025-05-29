@@ -8347,6 +8347,43 @@ func TestOptionalChaining(t *testing.T) {
 		)
 	})
 
+	t.Run("non-nil, nested field", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+            struct Foo {
+                var bar: Bar
+                init() {
+                    self.bar = Bar(5)
+                }
+            }
+
+            struct Bar {
+                var id: Int
+                init(_ id: Int) {
+                    self.id = id
+                }
+            }
+
+            fun test(): Int? {
+                let foo: Foo? = Foo()
+                return foo?.bar?.id
+            }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(5),
+			),
+			result,
+		)
+	})
+
 	t.Run("nil, method", func(t *testing.T) {
 		t.Parallel()
 
