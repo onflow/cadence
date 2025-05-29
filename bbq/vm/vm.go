@@ -809,6 +809,17 @@ func opGetIndex(vm *VM) {
 	vm.push(element)
 }
 
+func opRemoveIndex(vm *VM) {
+	container, index := vm.pop2()
+	containerValue := container.(interpreter.ValueIndexableValue)
+	element := containerValue.RemoveKey(
+		vm.context,
+		EmptyLocationRange,
+		index,
+	)
+	vm.push(element)
+}
+
 func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 
@@ -997,6 +1008,23 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 	fieldName := getStringConstant(vm, fieldNameIndex)
 
 	fieldValue := memberAccessibleValue.GetMember(vm.context, EmptyLocationRange, fieldName)
+	if fieldValue == nil {
+		panic(&interpreter.UseBeforeInitializationError{
+			Name: fieldName,
+		})
+	}
+
+	vm.push(fieldValue)
+}
+
+func opRemoveField(vm *VM, ins opcode.InstructionRemoveField) {
+	memberAccessibleValue := vm.pop().(interpreter.MemberAccessibleValue)
+
+	// VM assumes the field name is always a string.
+	fieldNameIndex := ins.FieldName
+	fieldName := getStringConstant(vm, fieldNameIndex)
+
+	fieldValue := memberAccessibleValue.RemoveMember(vm.context, EmptyLocationRange, fieldName)
 	if fieldValue == nil {
 		panic(&interpreter.UseBeforeInitializationError{
 			Name: fieldName,
@@ -1386,6 +1414,8 @@ func (vm *VM) run() {
 			opSetIndex(vm)
 		case opcode.InstructionGetIndex:
 			opGetIndex(vm)
+		case opcode.InstructionRemoveIndex:
+			opRemoveIndex(vm)
 		case opcode.InstructionInvoke:
 			opInvoke(vm, ins)
 		case opcode.InstructionInvokeMethodStatic:
@@ -1408,6 +1438,8 @@ func (vm *VM) run() {
 			opSetField(vm, ins)
 		case opcode.InstructionGetField:
 			opGetField(vm, ins)
+		case opcode.InstructionRemoveField:
+			opRemoveField(vm, ins)
 		case opcode.InstructionTransfer:
 			opTransfer(vm, ins)
 		case opcode.InstructionDestroy:
