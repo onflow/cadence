@@ -8307,3 +8307,25 @@ func TestUserInvokesNativeFunction(t *testing.T) {
 		result,
 	)
 }
+
+func TestBoundStaticFunction(t *testing.T) {
+
+	t.Parallel()
+
+	result, err := CompileAndInvoke(t,
+		`
+          fun test(): UInt8? {
+              let f = UInt8.fromString
+              return f("1")
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	require.Equal(t,
+		interpreter.NewUnmeteredSomeValueNonCopying(
+			interpreter.NewUnmeteredUInt8Value(1),
+		),
+		result,
+	)
+}

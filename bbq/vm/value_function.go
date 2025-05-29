@@ -201,6 +201,7 @@ func NewNativeFunctionValueWithDerivedType(
 
 var _ Value = &NativeFunctionValue{}
 var _ FunctionValue = &NativeFunctionValue{}
+var _ interpreter.MemberAccessibleValue = &NativeFunctionValue{}
 
 func (*NativeFunctionValue) IsValue() {}
 
@@ -336,6 +337,45 @@ func (v *NativeFunctionValue) Invoke(invocation interpreter.Invocation) interpre
 		v,
 		invocation.Arguments,
 	)
+}
+
+func (v *NativeFunctionValue) GetMember(
+	context interpreter.MemberAccessibleContext,
+	locationRange interpreter.LocationRange,
+	name string,
+) interpreter.Value {
+	if function := context.GetMethod(v, name, locationRange); function != nil {
+		return function
+	}
+
+	return nil
+}
+
+func (*NativeFunctionValue) RemoveMember(
+	_ interpreter.ValueTransferContext,
+	_ interpreter.LocationRange,
+	_ string,
+) interpreter.Value {
+	panic(errors.NewUnreachableError())
+}
+
+func (*NativeFunctionValue) SetMember(
+	_ interpreter.ValueTransferContext,
+	_ interpreter.LocationRange,
+	_ string,
+	_ interpreter.Value,
+) bool {
+	panic(errors.NewUnreachableError())
+}
+
+func (v *NativeFunctionValue) GetMethod(
+	_ interpreter.MemberAccessibleContext,
+	_ interpreter.LocationRange,
+	_ string,
+) interpreter.FunctionValue {
+	// Should never be called, VM should not look up method on value.
+	// See `NativeFunctionValue.GetMember`
+	panic(errors.NewUnreachableError())
 }
 
 // BoundFunctionPointerValue is a function-pointer taken for an object-method.

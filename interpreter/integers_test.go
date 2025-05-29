@@ -955,7 +955,13 @@ func TestInterpretStringIntegerConversion(t *testing.T) {
 		code := fmt.Sprintf(
 			`
               fun testFromString(_ input: String): Int? {
-                  return %s.fromString(input).map(Int)
+                  let a = %[1]s.fromString(input).map(Int)
+                  let f = %[1]s.fromString
+                  let b = f(input).map(Int)
+                  if a != b {
+                      return nil
+                  }
+                  return b
               }
             `,
 			typ,
