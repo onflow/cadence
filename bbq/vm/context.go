@@ -239,6 +239,15 @@ func (c *Context) GetMethod(
 		return nil
 	}
 
+	// If the value is a "type function" (e.g., `String`, `Int`, etc.),
+	// then return the method directly, as the method is essentially "static"
+	// and does not expect a receiver.
+	if functionValue, ok := value.(FunctionValue); ok &&
+		functionValue.FunctionType(c).TypeFunctionType != nil {
+
+		return method
+	}
+
 	return NewBoundFunctionPointerValue(
 		c,
 		value,

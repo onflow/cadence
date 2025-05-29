@@ -173,14 +173,15 @@ type NativeFunctionValue struct {
 	// A function value can only have either one of `functionType` or `functionTypeGetter`.
 	functionType       *sema.FunctionType
 	functionTypeGetter func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType
+	fields             map[string]Value
 }
 
 func NewNativeFunctionValue(
 	name string,
 	funcType *sema.FunctionType,
 	function NativeFunction,
-) NativeFunctionValue {
-	return NativeFunctionValue{
+) *NativeFunctionValue {
+	return &NativeFunctionValue{
 		Name:         name,
 		Function:     function,
 		functionType: funcType,
@@ -191,22 +192,23 @@ func NewNativeFunctionValueWithDerivedType(
 	name string,
 	typeGetter func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType,
 	function NativeFunction,
-) NativeFunctionValue {
-	return NativeFunctionValue{
+) *NativeFunctionValue {
+	return &NativeFunctionValue{
 		Name:               name,
 		Function:           function,
 		functionTypeGetter: typeGetter,
 	}
 }
 
-var _ Value = NativeFunctionValue{}
-var _ FunctionValue = NativeFunctionValue{}
+var _ Value = &NativeFunctionValue{}
+var _ FunctionValue = &NativeFunctionValue{}
+var _ interpreter.MemberAccessibleValue = &NativeFunctionValue{}
 
-func (NativeFunctionValue) IsValue() {}
+func (*NativeFunctionValue) IsValue() {}
 
-func (v NativeFunctionValue) IsFunctionValue() {}
+func (v *NativeFunctionValue) IsFunctionValue() {}
 
-func (v NativeFunctionValue) StaticType(context interpreter.ValueStaticTypeContext) bbq.StaticType {
+func (v *NativeFunctionValue) StaticType(context interpreter.ValueStaticTypeContext) bbq.StaticType {
 	// Get the type using `self.FunctionType()`, which panics if the type needs to be derived.
 	// This is correct/expected, since this method (`StaticType`) should've never been called,
 	// if the function's type needs to be derived.
@@ -218,7 +220,7 @@ func (v NativeFunctionValue) StaticType(context interpreter.ValueStaticTypeConte
 	)
 }
 
-func (v NativeFunctionValue) Transfer(_ interpreter.ValueTransferContext,
+func (v *NativeFunctionValue) Transfer(_ interpreter.ValueTransferContext,
 	_ interpreter.LocationRange,
 	_ atree.Address,
 	_ bool,
@@ -229,7 +231,7 @@ func (v NativeFunctionValue) Transfer(_ interpreter.ValueTransferContext,
 	return v
 }
 
-func (v NativeFunctionValue) String() string {
+func (v *NativeFunctionValue) String() string {
 	if v.HasGenericType() {
 		// If the type is not pre-known, just return the name.
 		return v.Name
@@ -238,11 +240,11 @@ func (v NativeFunctionValue) String() string {
 	return v.functionType.String()
 }
 
-func (v NativeFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v *NativeFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return interpreter.NonStorable{Value: v}, nil
 }
 
-func (v NativeFunctionValue) Accept(
+func (v *NativeFunctionValue) Accept(
 	_ interpreter.ValueVisitContext,
 	_ interpreter.Visitor,
 	_ interpreter.LocationRange,
@@ -251,7 +253,7 @@ func (v NativeFunctionValue) Accept(
 	panic(errors.NewUnreachableError())
 }
 
-func (v NativeFunctionValue) Walk(
+func (v *NativeFunctionValue) Walk(
 	_ interpreter.ValueWalkContext,
 	_ func(interpreter.Value),
 	_ interpreter.LocationRange,
@@ -259,7 +261,7 @@ func (v NativeFunctionValue) Walk(
 	// NO-OP
 }
 
-func (v NativeFunctionValue) ConformsToStaticType(
+func (v *NativeFunctionValue) ConformsToStaticType(
 	_ interpreter.ValueStaticTypeConformanceContext,
 	_ interpreter.LocationRange,
 	_ interpreter.TypeConformanceResults,
@@ -267,11 +269,11 @@ func (v NativeFunctionValue) ConformsToStaticType(
 	return true
 }
 
-func (v NativeFunctionValue) RecursiveString(_ interpreter.SeenReferences) string {
+func (v *NativeFunctionValue) RecursiveString(_ interpreter.SeenReferences) string {
 	return v.String()
 }
 
-func (v NativeFunctionValue) MeteredString(
+func (v *NativeFunctionValue) MeteredString(
 	context interpreter.ValueStringContext,
 	_ interpreter.SeenReferences,
 	_ interpreter.LocationRange,
@@ -284,30 +286,30 @@ func (v NativeFunctionValue) MeteredString(
 	return v.StaticType(context).MeteredString(context)
 }
 
-func (v NativeFunctionValue) IsResourceKinded(_ interpreter.ValueStaticTypeContext) bool {
+func (v *NativeFunctionValue) IsResourceKinded(_ interpreter.ValueStaticTypeContext) bool {
 	return false
 }
 
-func (v NativeFunctionValue) NeedsStoreTo(_ atree.Address) bool {
+func (v *NativeFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v NativeFunctionValue) DeepRemove(_ interpreter.ValueRemoveContext, _ bool) {
+func (v *NativeFunctionValue) DeepRemove(_ interpreter.ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
-func (v NativeFunctionValue) Clone(_ interpreter.ValueCloneContext) interpreter.Value {
+func (v *NativeFunctionValue) Clone(_ interpreter.ValueCloneContext) interpreter.Value {
 	return v
 }
 
-func (v NativeFunctionValue) IsImportable(
+func (v *NativeFunctionValue) IsImportable(
 	_ interpreter.ValueImportableContext,
 	_ interpreter.LocationRange,
 ) bool {
 	return false
 }
 
-func (v NativeFunctionValue) FunctionType(interpreter.ValueStaticTypeContext) *sema.FunctionType {
+func (v *NativeFunctionValue) FunctionType(interpreter.ValueStaticTypeContext) *sema.FunctionType {
 	if v.functionTypeGetter != nil {
 		// For native functions where the type is NOT pre-known, This method should never be invoked.
 		// Such functions must always be wrapped with a `BoundFunctionPointerValue`.
@@ -316,7 +318,7 @@ func (v NativeFunctionValue) FunctionType(interpreter.ValueStaticTypeContext) *s
 	return v.functionType
 }
 
-func (v NativeFunctionValue) ResolvedFunctionType(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+func (v *NativeFunctionValue) ResolvedFunctionType(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 	if v.functionTypeGetter == nil {
 		// ResolvedFunctionType shouldn't get called for functions where the type is pre-know.
 		panic(errors.NewUnreachableError())
@@ -327,15 +329,59 @@ func (v NativeFunctionValue) ResolvedFunctionType(receiver Value, context interp
 	return v.functionTypeGetter(receiver, context)
 }
 
-func (v NativeFunctionValue) HasGenericType() bool {
+func (v *NativeFunctionValue) HasGenericType() bool {
 	return v.functionTypeGetter != nil
 }
 
-func (v NativeFunctionValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
+func (v *NativeFunctionValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
 	return invocation.InvocationContext.InvokeFunction(
 		v,
 		invocation.Arguments,
 	)
+}
+
+func (v *NativeFunctionValue) GetMember(
+	context interpreter.MemberAccessibleContext,
+	locationRange interpreter.LocationRange,
+	name string,
+) interpreter.Value {
+	value, ok := v.fields[name]
+	if ok {
+		return value
+	}
+
+	if function := context.GetMethod(v, name, locationRange); function != nil {
+		return function
+	}
+
+	return nil
+}
+
+func (*NativeFunctionValue) RemoveMember(
+	_ interpreter.ValueTransferContext,
+	_ interpreter.LocationRange,
+	_ string,
+) interpreter.Value {
+	panic(errors.NewUnreachableError())
+}
+
+func (*NativeFunctionValue) SetMember(
+	_ interpreter.ValueTransferContext,
+	_ interpreter.LocationRange,
+	_ string,
+	_ interpreter.Value,
+) bool {
+	panic(errors.NewUnreachableError())
+}
+
+func (v *NativeFunctionValue) GetMethod(
+	_ interpreter.MemberAccessibleContext,
+	_ interpreter.LocationRange,
+	_ string,
+) interpreter.FunctionValue {
+	// Should never be called, VM should not look up method on value.
+	// See `NativeFunctionValue.GetMember`
+	panic(errors.NewUnreachableError())
 }
 
 // BoundFunctionPointerValue is a function-pointer taken for an object-method.
