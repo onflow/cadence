@@ -547,7 +547,7 @@ func TestInterpretFixedPointMinMax(t *testing.T) {
 
 	test := func(t *testing.T, ty sema.Type, test testCase) {
 
-		inter := parseCheckAndInterpret(t,
+		inter := parseCheckAndPrepare(t,
 			fmt.Sprintf(
 				`
                   let min = %[1]s.min
