@@ -4730,11 +4730,6 @@ func init() {
 
 // CompositeType
 
-type EnumInfo struct {
-	RawType Type
-	Cases   []string
-}
-
 type Conformance struct {
 	InterfaceType        *InterfaceType
 	ConformanceChainRoot *InterfaceType
