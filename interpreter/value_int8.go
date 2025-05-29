@@ -50,7 +50,7 @@ func NewUnmeteredInt8Value(value int8) Int8Value {
 	return Int8Value(value)
 }
 
-func NewInt8ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Int8Value {
+func NewInt8ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
 	return NewInt8Value(
 		gauge,
 		func() int8 {

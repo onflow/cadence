@@ -405,7 +405,7 @@ func NativeFunctionsWithLogAndPanic(logs *[]string) vm.BuiltinGlobalsProvider {
 			vm.NewNativeFunctionValue(
 				commons.PanicFunctionName,
 				stdlib.PanicFunctionType,
-				func(context *vm.Context, typeArguments []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+				func(context *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 					messageValue, ok := arguments[0].(*interpreter.StringValue)
 					if !ok {
 						panic(errors.NewUnreachableError())

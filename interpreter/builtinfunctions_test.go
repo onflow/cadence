@@ -123,7 +123,7 @@ func TestInterpretToBytes(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let x: Address = 0x123456
           let y = x.toBytes()
         `)
@@ -168,7 +168,7 @@ func TestInterpretAddressFromBytes(t *testing.T) {
 				innerCode,
 			)
 
-			inter := parseCheckAndInterpret(t, code)
+			inter := parseCheckAndPrepare(t, code)
 			res, err := inter.Invoke("test")
 
 			require.NoError(t, err)
@@ -186,14 +186,14 @@ func TestInterpretAddressFromBytes(t *testing.T) {
 
 			code := fmt.Sprintf(`
                   fun test(): Bool {
-                    let address : Address = %s;
+                    let address: Address = %s;
 					return address == Address.fromBytes(address.toBytes());
                   }
             	`,
 				innerCode,
 			)
 
-			inter := parseCheckAndInterpret(t, code)
+			inter := parseCheckAndPrepare(t, code)
 			res, err := inter.Invoke("test")
 
 			require.NoError(t, err)
@@ -217,7 +217,7 @@ func TestInterpretAddressFromBytes(t *testing.T) {
 				innerCode,
 			)
 
-			inter := parseCheckAndInterpret(t, code)
+			inter := parseCheckAndPrepare(t, code)
 			_, err := inter.Invoke("test")
 
 			RequireError(t, err)
@@ -254,7 +254,7 @@ func TestInterpretAddressFromString(t *testing.T) {
 				innerCode,
 			)
 
-			inter := parseCheckAndInterpret(t, code)
+			inter := parseCheckAndPrepare(t, code)
 			res, err := inter.Invoke("test")
 
 			require.NoError(t, err)
@@ -275,14 +275,14 @@ func TestInterpretAddressFromString(t *testing.T) {
 
 			code := fmt.Sprintf(`
 	              fun test(): Bool {
-	                let address : Address? = %s;
+	                let address: Address? = %s;
 					return address == Address.fromString(address!.toString());
 	              }
 	        	`,
 				innerCode,
 			)
 
-			inter := parseCheckAndInterpret(t, code)
+			inter := parseCheckAndPrepare(t, code)
 			res, err := inter.Invoke("test")
 
 			require.NoError(t, err)
@@ -306,7 +306,7 @@ func TestInterpretAddressFromString(t *testing.T) {
 				innerCode,
 			)
 
-			inter := parseCheckAndInterpret(t, code)
+			inter := parseCheckAndPrepare(t, code)
 			res, err := inter.Invoke("test")
 			require.NoError(t, err)
 
@@ -580,7 +580,7 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 
 			t.Run(fmt.Sprintf("%s: %s", ty, value), func(t *testing.T) {
 
-				inter := parseCheckAndInterpret(t,
+				inter := parseCheckAndPrepare(t,
 					fmt.Sprintf(
 						`
 	                      let value: %s = %s
@@ -591,7 +591,7 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 					),
 				)
 
-				result := inter.Globals.Get("result").GetValue(inter)
+				result := inter.GetGlobal("result")
 
 				AssertValuesEqual(
 					t,
@@ -914,7 +914,7 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 	for ty, tests := range validTestsWithRoundtrip {
 		for value, expected := range tests {
 			t.Run(fmt.Sprintf("%s: %s", ty, value), func(t *testing.T) {
-				inter := parseCheckAndInterpret(t,
+				inter := parseCheckAndPrepare(t,
 					fmt.Sprintf(
 						`
 	                      let resultOpt: %s? = %s.fromBigEndianBytes(%s)
@@ -933,13 +933,13 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 					t,
 					inter,
 					expected,
-					inter.Globals.Get("result").GetValue(inter),
+					inter.GetGlobal("result"),
 				)
 				AssertValuesEqual(
 					t,
 					inter,
 					interpreter.TrueValue,
-					inter.Globals.Get("roundTripEqual").GetValue(inter),
+					inter.GetGlobal("roundTripEqual"),
 				)
 			})
 		}
@@ -948,7 +948,7 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 	for ty, tests := range invalidTests {
 		for _, value := range tests {
 			t.Run(fmt.Sprintf("%s: %s", ty, value), func(t *testing.T) {
-				inter := parseCheckAndInterpret(t,
+				inter := parseCheckAndPrepare(t,
 					fmt.Sprintf(
 						`
 	                      let result: %s? = %s.fromBigEndianBytes(%s)
@@ -963,7 +963,7 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 					t,
 					inter,
 					interpreter.NilValue{},
-					inter.Globals.Get("result").GetValue(inter),
+					inter.GetGlobal("result"),
 				)
 			})
 		}

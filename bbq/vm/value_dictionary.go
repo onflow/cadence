@@ -37,7 +37,7 @@ func init() {
 				dictionaryType := dictionaryType(receiver, context)
 				return sema.DictionaryRemoveFunctionType(dictionaryType)
 			},
-			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]
 				dictionary := value.(*interpreter.DictionaryValue)
 				key := arguments[1]
@@ -54,7 +54,7 @@ func init() {
 				dictionaryType := dictionaryType(receiver, context)
 				return sema.DictionaryInsertFunctionType(dictionaryType)
 			},
-			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]
 				dictionary := value.(*interpreter.DictionaryValue)
 				keyValue := arguments[1]
@@ -78,7 +78,7 @@ func init() {
 				dictionaryType := dictionaryType(receiver, context)
 				return sema.DictionaryContainsKeyFunctionType(dictionaryType)
 			},
-			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]
 				dictionary := value.(*interpreter.DictionaryValue)
 				key := arguments[1]
@@ -100,7 +100,7 @@ func init() {
 				dictionaryType := dictionaryValue.SemaType(context)
 				return sema.DictionaryRemoveFunctionType(dictionaryType)
 			},
-			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
 				value := arguments[receiverIndex]
 				dictionary := value.(*interpreter.DictionaryValue)
 				funcArgument := arguments[1].(FunctionValue)

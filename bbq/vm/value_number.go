@@ -36,11 +36,26 @@ func init() {
 			NewNativeFunctionValue(
 				sema.ToStringFunctionName,
 				sema.ToStringFunctionType,
-				func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+				func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
 					number := arguments[receiverIndex].(interpreter.NumberValue)
 					return interpreter.NumberValueToString(
 						context,
 						number,
+					)
+				},
+			),
+		)
+
+		RegisterTypeBoundFunction(
+			typeName,
+			NewNativeFunctionValue(
+				sema.ToBigEndianBytesFunctionName,
+				sema.ToBigEndianBytesFunctionType,
+				func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+					number := arguments[receiverIndex].(interpreter.NumberValue)
+					return interpreter.ByteSliceToByteArrayValue(
+						context,
+						number.ToBigEndianBytes(),
 					)
 				},
 			),

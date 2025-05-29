@@ -75,7 +75,7 @@ func NewUnmeteredFix64Value(integer int64) Fix64Value {
 	return Fix64Value(integer)
 }
 
-func NewFix64ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Fix64Value {
+func NewFix64ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
 	return NewFix64Value(
 		gauge,
 		func() int64 {

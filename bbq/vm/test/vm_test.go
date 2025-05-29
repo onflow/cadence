@@ -8286,6 +8286,28 @@ func TestGlobalVariables(t *testing.T) {
 	})
 }
 
+func TestUserInvokesNativeFunction(t *testing.T) {
+
+	t.Parallel()
+
+	result, err := CompileAndInvoke(t,
+		`
+          fun test(): Int? {
+              let opt: UInt8? = 1
+              return opt.map(Int)
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	require.Equal(t,
+		interpreter.NewUnmeteredSomeValueNonCopying(
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+		),
+		result,
+	)
+}
+
 func TestOptionalChaining(t *testing.T) {
 	t.Parallel()
 

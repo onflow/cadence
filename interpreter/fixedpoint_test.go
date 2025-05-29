@@ -687,7 +687,7 @@ func TestInterpretStringFixedPointConversion(t *testing.T) {
 				}
 			`, suite.name, suite.name)
 
-			inter := parseCheckAndInterpret(t, code)
+			inter := parseCheckAndPrepare(t, code)
 
 			testcases := genCases(suite.intBounds, suite.fracBounds)
 

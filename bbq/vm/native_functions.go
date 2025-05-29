@@ -86,11 +86,12 @@ func init() {
 		NewNativeFunctionValue(
 			commons.LogFunctionName,
 			stdlib.LogFunctionType,
-			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+				value := arguments[0]
 				return stdlib.Log(
 					context,
 					context,
-					arguments[0],
+					value,
 					EmptyLocationRange,
 				)
 			},
@@ -101,7 +102,7 @@ func init() {
 		NewNativeFunctionValue(
 			commons.AssertFunctionName,
 			stdlib.AssertFunctionType,
-			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
 				result, ok := arguments[0].(interpreter.BoolValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -129,9 +130,10 @@ func init() {
 		NewNativeFunctionValue(
 			commons.PanicFunctionName,
 			stdlib.PanicFunctionType,
-			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+				message := arguments[0]
 				return stdlib.PanicWithError(
-					arguments[0],
+					message,
 					EmptyLocationRange,
 				)
 			},
@@ -142,7 +144,7 @@ func init() {
 		NewNativeFunctionValue(
 			commons.GetAccountFunctionName,
 			stdlib.GetAccountFunctionType,
-			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
 				address := arguments[0].(interpreter.AddressValue)
 				return NewAccountReferenceValue(
 					context,
@@ -333,11 +335,13 @@ func init() {
 		// NOTE: declare in loop, as captured in closure below
 		convert := declaration.Convert
 
+		functionType := sema.BaseValueActivation.Find(declaration.Name).Type.(*sema.FunctionType)
+
 		RegisterFunction(
 			NewNativeFunctionValue(
 				declaration.Name,
-				declaration.FunctionType,
-				func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+				functionType,
+				func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
 					return convert(
 						context.MemoryGauge,
 						arguments[0],
@@ -346,6 +350,20 @@ func init() {
 				},
 			),
 		)
+
+		if stringValueParser, ok := interpreter.StringValueParsers[declaration.Name]; ok {
+			RegisterTypeBoundFunction(
+				commons.TypeQualifier(stringValueParser.ReceiverType),
+				newFromStringFunction(stringValueParser),
+			)
+		}
+
+		if bigEndianBytesConverter, ok := interpreter.BigEndianBytesConverters[declaration.Name]; ok {
+			RegisterTypeBoundFunction(
+				commons.TypeQualifier(bigEndianBytesConverter.ReceiverType),
+				newFromBigEndianBytesFunction(bigEndianBytesConverter),
+			)
+		}
 	}
 
 	// Value constructors
@@ -395,7 +413,7 @@ var commonBuiltinTypeBoundFunctions = []NativeFunctionValue{
 	NewNativeFunctionValue(
 		sema.IsInstanceFunctionName,
 		sema.IsInstanceFunctionType,
-		func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+		func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
 			value := arguments[receiverIndex]
 
 			typeValue, ok := arguments[typeBoundFunctionArgumentOffset].(interpreter.TypeValue)
@@ -411,7 +429,7 @@ var commonBuiltinTypeBoundFunctions = []NativeFunctionValue{
 	NewNativeFunctionValue(
 		sema.GetTypeFunctionName,
 		sema.GetTypeFunctionType,
-		func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+		func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
 			value := arguments[receiverIndex]
 			return interpreter.ValueGetType(context, value)
 		},
@@ -444,7 +462,7 @@ func registerSaturatingArithmeticFunctions(t sema.SaturatingArithmeticType) {
 			NewNativeFunctionValue(
 				functionName,
 				sema.SaturatingArithmeticTypeFunctionTypes[t],
-				func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
+				func(context *Context, _ []bbq.StaticType, args ...Value) Value {
 					v, ok := args[receiverIndex].(interpreter.NumberValue)
 					if !ok {
 						panic(errors.NewUnreachableError())
@@ -512,4 +530,51 @@ func registerSaturatingArithmeticFunctions(t sema.SaturatingArithmeticType) {
 			},
 		)
 	}
+}
+
+func newFromStringFunction(typedParser interpreter.TypedStringValueParser) NativeFunctionValue {
+	functionType := sema.FromStringFunctionType(typedParser.ReceiverType)
+	parser := typedParser.Parser
+
+	return NewNativeFunctionValue(
+		sema.FromStringFunctionName,
+		functionType,
+		func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+			argument, ok := arguments[0].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			return parser(context, argument.Str)
+		},
+	)
+}
+
+func newFromBigEndianBytesFunction(typedConverter interpreter.TypedBigEndianBytesConverter) NativeFunctionValue {
+	functionType := sema.FromBigEndianBytesFunctionType(typedConverter.ReceiverType)
+	byteLength := typedConverter.ByteLength
+	converter := typedConverter.Converter
+
+	return NewNativeFunctionValue(
+		sema.FromBigEndianBytesFunctionName,
+		functionType,
+		func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+
+			argument, ok := arguments[0].(*interpreter.ArrayValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			bytes, err := interpreter.ByteArrayValueToByteSlice(context, argument, EmptyLocationRange)
+			if err != nil {
+				return interpreter.Nil
+			}
+
+			// overflow
+			if byteLength != 0 && uint(len(bytes)) > byteLength {
+				return interpreter.Nil
+			}
+
+			return interpreter.NewSomeValueNonCopying(context, converter(context, bytes))
+		},
+	)
 }

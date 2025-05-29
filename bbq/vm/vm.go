@@ -89,7 +89,15 @@ func NewVM(
 	}
 
 	// Delegate the function invocations to the vm.
-	context.invokeFunction = vm.invokeExternally
+	context.invokeFunction = func(function Value, arguments []Value) (Value, error) {
+		// invokeExternally runs the VM, which is incorrect for native functions.
+		if function, ok := function.(NativeFunctionValue); ok {
+			result := function.Function(vm.context, nil, arguments...)
+			return result, nil
+		}
+
+		return vm.invokeExternally(function, arguments)
+	}
 
 	context.lookupFunction = vm.maybeLookupFunction
 
