@@ -3607,6 +3607,11 @@ type FunctionType struct {
 	memberResolvers          map[string]MemberResolver
 	memberResolversOnce      sync.Once
 	IsConstructor            bool
+	// TypeFunctionType indicates that this function type is a "type function",
+	// a function that can have members (in a sense, "static" fields and functions).
+	// This is used for built-in functions like `Int`, `UInt8`, `String`, etc.
+	// which have members like `Int.fromString`, `UInt8.min`, `String.join`, etc.
+	TypeFunctionType Type
 }
 
 func NewSimpleFunctionType(
@@ -4477,7 +4482,8 @@ func init() {
 
 func NumberConversionFunctionType(numberType Type) *FunctionType {
 	return &FunctionType{
-		Purity: FunctionPurityView,
+		Purity:           FunctionPurityView,
+		TypeFunctionType: numberType,
 		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -4511,7 +4517,8 @@ func baseFunctionVariable(name string, ty *FunctionType, docString string) *Vari
 }
 
 var AddressConversionFunctionType = &FunctionType{
-	Purity: FunctionPurityView,
+	Purity:           FunctionPurityView,
+	TypeFunctionType: TheAddressType,
 	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,

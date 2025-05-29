@@ -85,7 +85,7 @@ func init() {
 		// Register the constructor. e.g: `String()`
 		addNativeFunction(constructor.name)
 
-		// Register the members of the constructor/type. e.g: `String.Join()`
+		// Register the members of the constructor/type. e.g: `String.join()`
 		registerBoundFunctions(constructor.typ)
 	}
 
@@ -101,6 +101,8 @@ func init() {
 	// Value conversion functions
 	for _, declaration := range interpreter.ConverterDeclarations {
 		addNativeFunction(declaration.Name)
+		declarationVariable := sema.BaseValueActivation.Find(declaration.Name)
+		registerBoundFunctions(declarationVariable.Type)
 	}
 }
 

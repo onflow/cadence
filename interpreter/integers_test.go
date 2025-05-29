@@ -960,7 +960,7 @@ func TestInterpretStringIntegerConversion(t *testing.T) {
             `,
 			typ,
 		)
-		inter := parseCheckAndInterpret(t, code)
+		inter := parseCheckAndPrepare(t, code)
 
 		placeInRange := func(x *big.Int) *big.Int {
 			z := big.NewInt(0).Sub(high, low)

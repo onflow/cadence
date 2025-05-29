@@ -580,7 +580,7 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 
 			t.Run(fmt.Sprintf("%s: %s", ty, value), func(t *testing.T) {
 
-				inter := parseCheckAndInterpret(t,
+				inter := parseCheckAndPrepare(t,
 					fmt.Sprintf(
 						`
 	                      let value: %s = %s
@@ -591,7 +591,7 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 					),
 				)
 
-				result := inter.Globals.Get("result").GetValue(inter)
+				result := inter.GetGlobal("result")
 
 				AssertValuesEqual(
 					t,
@@ -914,7 +914,7 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 	for ty, tests := range validTestsWithRoundtrip {
 		for value, expected := range tests {
 			t.Run(fmt.Sprintf("%s: %s", ty, value), func(t *testing.T) {
-				inter := parseCheckAndInterpret(t,
+				inter := parseCheckAndPrepare(t,
 					fmt.Sprintf(
 						`
 	                      let resultOpt: %s? = %s.fromBigEndianBytes(%s)
@@ -933,13 +933,13 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 					t,
 					inter,
 					expected,
-					inter.Globals.Get("result").GetValue(inter),
+					inter.GetGlobal("result"),
 				)
 				AssertValuesEqual(
 					t,
 					inter,
 					interpreter.TrueValue,
-					inter.Globals.Get("roundTripEqual").GetValue(inter),
+					inter.GetGlobal("roundTripEqual"),
 				)
 			})
 		}
@@ -948,7 +948,7 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 	for ty, tests := range invalidTests {
 		for _, value := range tests {
 			t.Run(fmt.Sprintf("%s: %s", ty, value), func(t *testing.T) {
-				inter := parseCheckAndInterpret(t,
+				inter := parseCheckAndPrepare(t,
 					fmt.Sprintf(
 						`
 	                      let result: %s? = %s.fromBigEndianBytes(%s)
@@ -963,7 +963,7 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 					t,
 					inter,
 					interpreter.NilValue{},
-					inter.Globals.Get("result").GetValue(inter),
+					inter.GetGlobal("result"),
 				)
 			})
 		}

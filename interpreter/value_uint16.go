@@ -58,7 +58,7 @@ func NewUnmeteredUInt16Value(value uint16) UInt16Value {
 	return UInt16Value(value)
 }
 
-func NewUInt16ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) UInt16Value {
+func NewUInt16ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
 	return NewUInt16Value(
 		gauge,
 		func() uint16 {

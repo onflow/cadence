@@ -49,7 +49,7 @@ func NewUnmeteredUInt32Value(value uint32) UInt32Value {
 	return UInt32Value(value)
 }
 
-func NewUInt32ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) UInt32Value {
+func NewUInt32ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
 	return NewUInt32Value(
 		gauge,
 		func() uint32 {

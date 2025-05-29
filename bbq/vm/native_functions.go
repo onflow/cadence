@@ -333,10 +333,12 @@ func init() {
 		// NOTE: declare in loop, as captured in closure below
 		convert := declaration.Convert
 
+		functionType := sema.BaseValueActivation.Find(declaration.Name).Type.(*sema.FunctionType)
+
 		RegisterFunction(
 			NewNativeFunctionValue(
 				declaration.Name,
-				declaration.FunctionType,
+				functionType,
 				func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
 					return convert(
 						context.MemoryGauge,
@@ -346,6 +348,20 @@ func init() {
 				},
 			),
 		)
+
+		if stringValueParser, ok := interpreter.StringValueParsers[declaration.Name]; ok {
+			RegisterTypeBoundFunction(
+				commons.TypeQualifier(stringValueParser.ReceiverType),
+				newFromStringFunction(stringValueParser),
+			)
+		}
+
+		if bigEndianBytesConverter, ok := interpreter.BigEndianBytesConverters[declaration.Name]; ok {
+			RegisterTypeBoundFunction(
+				commons.TypeQualifier(bigEndianBytesConverter.ReceiverType),
+				newFromBigEndianBytesFunction(bigEndianBytesConverter),
+			)
+		}
 	}
 
 	// Value constructors
@@ -512,4 +528,51 @@ func registerSaturatingArithmeticFunctions(t sema.SaturatingArithmeticType) {
 			},
 		)
 	}
+}
+
+func newFromStringFunction(typedParser interpreter.TypedStringValueParser) NativeFunctionValue {
+	functionType := sema.FromStringFunctionType(typedParser.ReceiverType)
+	parser := typedParser.Parser
+
+	return NewNativeFunctionValue(
+		sema.FromStringFunctionName,
+		functionType,
+		func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+			argument, ok := arguments[0].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			return parser(context, argument.Str)
+		},
+	)
+}
+
+func newFromBigEndianBytesFunction(typedConverter interpreter.TypedBigEndianBytesConverter) NativeFunctionValue {
+	functionType := sema.FromBigEndianBytesFunctionType(typedConverter.ReceiverType)
+	byteLength := typedConverter.ByteLength
+	converter := typedConverter.Converter
+
+	return NewNativeFunctionValue(
+		sema.FromBigEndianBytesFunctionName,
+		functionType,
+		func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+
+			argument, ok := arguments[0].(*interpreter.ArrayValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			bytes, err := interpreter.ByteArrayValueToByteSlice(context, argument, EmptyLocationRange)
+			if err != nil {
+				return interpreter.Nil
+			}
+
+			// overflow
+			if byteLength != 0 && uint(len(bytes)) > byteLength {
+				return interpreter.Nil
+			}
+
+			return interpreter.NewSomeValueNonCopying(context, converter(context, bytes))
+		},
+	)
 }

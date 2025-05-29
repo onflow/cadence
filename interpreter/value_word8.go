@@ -58,7 +58,7 @@ func NewUnmeteredWord8Value(value uint8) Word8Value {
 	return Word8Value(value)
 }
 
-func NewWord8ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Word8Value {
+func NewWord8ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
 	return NewWord8Value(
 		gauge,
 		func() uint8 {
