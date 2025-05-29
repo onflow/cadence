@@ -2557,9 +2557,15 @@ func (c *Compiler[_, _]) VisitCompositeDeclaration(declaration *ast.CompositeDec
 		c.compileDeclaration(specialFunc)
 	}
 
-	// If the initializer is not declared, generate an empty initializer.
+	// If the initializer is not declared, generate
+	// - a synthetic initializer for enum types, otherwise
+	// - an empty initializer
 	if !hasInit {
-		c.generateEmptyInit()
+		if compositeType.Kind == common.CompositeKindEnum {
+			c.generateEnumInit(compositeType.EnumRawType)
+		} else {
+			c.generateEmptyInit()
+		}
 	}
 
 	// Visit members.
@@ -2817,6 +2823,24 @@ func (c *Compiler[_, _]) generateEmptyInit() {
 		emptyInitializerFuncType,
 	)
 	c.VisitSpecialFunctionDeclaration(emptyInitializer)
+}
+
+func (c *Compiler[_, _]) generateEnumInit(rawValueType sema.Type) {
+	enumInitializer, assignmentStatement := newEnumInitializer(c.memoryGauge, rawValueType.String())
+	enumInitializerFuncType := newEnumInitializerFuncType(rawValueType)
+
+	c.DesugaredElaboration.SetAssignmentStatementType(
+		assignmentStatement,
+		sema.AssignmentStatementTypes{
+			ValueType:  rawValueType,
+			TargetType: rawValueType,
+		},
+	)
+	c.DesugaredElaboration.SetFunctionDeclarationFunctionType(
+		enumInitializer.FunctionDeclaration,
+		enumInitializerFuncType,
+	)
+	c.VisitSpecialFunctionDeclaration(enumInitializer)
 }
 
 func (c *Compiler[_, _]) compilePotentiallyInheritedCode(statement ast.Statement, f func()) {

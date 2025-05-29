@@ -1686,7 +1686,7 @@ func TestCompileMember(t *testing.T) {
 				},
 				opcode.InstructionSetLocal{Local: selfIndex},
 
-				// self.x = value
+				// self.foo = value
 				opcode.InstructionGetLocal{Local: selfIndex},
 				opcode.InstructionGetLocal{Local: valueIndex},
 				opcode.InstructionTransfer{Type: 2},
@@ -6480,4 +6480,83 @@ func TestCompileOptionalChaining(t *testing.T) {
 			functions[0].Code,
 		)
 	})
+}
+
+func TestCompileEnum(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        enum Test: UInt8 {
+            case a
+            case b
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	require.Len(t, program.Functions, 3)
+
+	functions := comp.ExportFunctions()
+	require.Equal(t, len(program.Functions), len(functions))
+
+	const (
+		initFuncIndex = iota
+		// Next two indexes are for builtin methods (i.e: getType, isInstance)
+		_
+		_
+	)
+
+	{
+		const parameterCount = 1
+
+		// rawValueIndex is the index of the parameter `rawValue`, which is the first parameter
+		const rawValueIndex = iota
+
+		// localsOffset is the offset of the first local variable.
+		// Initializers do not have a $result variable
+		const localsOffset = parameterCount
+
+		const (
+			// selfIndex is the index of the local variable `self`, which is the first local variable
+			selfIndex = localsOffset + iota
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// let self = Test()
+				opcode.InstructionNew{
+					Kind: common.CompositeKindEnum,
+					Type: 1,
+				},
+				opcode.InstructionSetLocal{Local: selfIndex},
+
+				// self.rawValue = rawValue
+				opcode.InstructionGetLocal{Local: selfIndex},
+				opcode.InstructionGetLocal{Local: rawValueIndex},
+				opcode.InstructionTransfer{Type: 2},
+				opcode.InstructionSetField{FieldName: 0},
+
+				// return self
+				opcode.InstructionGetLocal{Local: selfIndex},
+				opcode.InstructionReturnValue{},
+			},
+			functions[initFuncIndex].Code,
+		)
+	}
+
+	assert.Equal(t,
+		[]constant.Constant{
+			{
+				Data: []byte("rawValue"),
+				Kind: constant.String,
+			},
+		},
+		program.Constants,
+	)
 }

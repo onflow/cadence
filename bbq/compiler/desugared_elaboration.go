@@ -240,7 +240,7 @@ func (e *DesugaredElaboration) AssignmentStatementTypes(assignment *ast.Assignme
 	return e.elaboration.AssignmentStatementTypes(assignment)
 }
 
-func (e *DesugaredElaboration) SetAssignmentStatementTypes(
+func (e *DesugaredElaboration) SetAssignmentStatementType(
 	assignment *ast.AssignmentStatement,
 	types sema.AssignmentStatementTypes,
 ) {

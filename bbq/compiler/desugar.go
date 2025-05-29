@@ -1371,7 +1371,7 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 				TargetType: paramType,
 			}
 
-			d.elaboration.SetAssignmentStatementTypes(assignment, assignmentTypes)
+			d.elaboration.SetAssignmentStatementType(assignment, assignmentTypes)
 		}
 
 		// Create an init function.
@@ -1545,6 +1545,112 @@ var emptyInitializerFuncType = sema.NewSimpleFunctionType(
 	nil,
 	sema.VoidTypeAnnotation,
 )
+
+func newEnumInitializer(gauge common.MemoryGauge, rawType string) (*ast.SpecialFunctionDeclaration, *ast.AssignmentStatement) {
+
+	rawValueIdentifier := ast.NewIdentifier(
+		gauge,
+		sema.EnumRawValueFieldName,
+		ast.EmptyPosition,
+	)
+
+	parameters := []*ast.Parameter{
+		ast.NewParameter(
+			gauge,
+			sema.EnumRawValueFieldName,
+			rawValueIdentifier,
+			ast.NewTypeAnnotation(
+				gauge,
+				false,
+				ast.NewNominalType(
+					gauge,
+					ast.NewIdentifier(gauge, rawType, ast.EmptyPosition),
+					nil,
+				),
+				ast.EmptyPosition,
+			),
+			nil,
+			ast.EmptyPosition,
+		),
+	}
+
+	assignmentStatement := ast.NewAssignmentStatement(
+		gauge,
+		ast.NewMemberExpression(
+			gauge,
+			ast.NewIdentifierExpression(
+				gauge,
+				ast.NewIdentifier(
+					gauge,
+					sema.SelfIdentifier,
+					ast.EmptyPosition,
+				),
+			),
+			false,
+			ast.EmptyPosition,
+			rawValueIdentifier,
+		),
+		ast.NewTransfer(
+			gauge,
+			ast.TransferOperationCopy,
+			ast.EmptyPosition,
+		),
+		ast.NewIdentifierExpression(
+			gauge,
+			rawValueIdentifier,
+		),
+	)
+	initializer := ast.NewFunctionDeclaration(
+		gauge,
+		ast.AccessNotSpecified,
+		ast.FunctionPurityUnspecified,
+		false,
+		false,
+		ast.NewIdentifier(
+			gauge,
+			commons.InitFunctionName,
+			ast.EmptyPosition,
+		),
+		nil,
+		ast.NewParameterList(gauge, parameters, ast.EmptyRange),
+		nil,
+		ast.NewFunctionBlock(
+			gauge,
+			ast.NewBlock(
+				gauge,
+				[]ast.Statement{
+					assignmentStatement,
+				},
+				ast.EmptyRange,
+			),
+			nil,
+			nil,
+		),
+		ast.Position{},
+		"",
+	)
+
+	functionDeclaration := ast.NewSpecialFunctionDeclaration(
+		nil,
+		common.DeclarationKindInitializer,
+		initializer,
+	)
+
+	return functionDeclaration, assignmentStatement
+}
+
+func newEnumInitializerFuncType(rawValueType sema.Type) *sema.FunctionType {
+	return sema.NewSimpleFunctionType(
+		sema.FunctionPurityImpure,
+		[]sema.Parameter{
+			{
+				Identifier:     sema.EnumRawValueFieldName,
+				TypeAnnotation: sema.NewTypeAnnotation(rawValueType),
+			},
+		},
+		sema.VoidTypeAnnotation,
+	)
+}
 
 func simpleFunctionDeclaration(
 	memoryGauge common.MemoryGauge,
