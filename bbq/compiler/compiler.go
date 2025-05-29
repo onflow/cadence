@@ -301,14 +301,13 @@ func (c *Compiler[E, T]) newFunction(
 ) *function[E] {
 	functionTypeIndex := c.getOrAddType(functionType)
 
-	function := newFunction[E](
+	return newFunction[E](
 		c.currentFunction,
 		name,
 		qualifiedName,
 		parameterCount,
 		functionTypeIndex,
 	)
-	return function
 }
 
 func (c *Compiler[E, T]) targetFunction(function *function[E]) {
@@ -562,7 +561,7 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 		c.compileDeclaration(declaration)
 	}
 
-	functions := c.ExportFunctions()
+	functions := c.exportFunctions()
 	constants := c.exportConstants()
 	types := c.exportTypes()
 	imports := c.exportImports()
@@ -735,7 +734,7 @@ func (c *Compiler[_, _]) exportImports() []bbq.Import {
 	return exportedImports
 }
 
-func (c *Compiler[E, _]) ExportFunctions() []bbq.Function[E] {
+func (c *Compiler[E, _]) exportFunctions() []bbq.Function[E] {
 	var functions []bbq.Function[E]
 
 	count := len(c.functions)
@@ -2578,7 +2577,6 @@ func (c *Compiler[_, _]) compileCompositeMembers(
 	compositeKindedType sema.CompositeKindedType,
 	members *ast.Members,
 ) {
-
 	// Important: Must be visited in the same order as the globals were reserved in `reserveGlobalVars`.
 
 	// Add the methods that are provided natively.
