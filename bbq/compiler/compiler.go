@@ -1769,6 +1769,8 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		return
 	}
 
+	isOptional := memberInfo.IsOptional
+
 	typeArgs := c.loadTypeArguments(invocationTypes)
 
 	// Invocations into the interface code, such as default functions and inherited conditions,
@@ -1784,30 +1786,33 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 			panic(errors.NewDefaultUserError("invalid function name"))
 		}
 
-		c.compileMethodInvocationArguments(
-			invokedExpr,
-			expression.Arguments,
-			memberInfo,
-			invocationTypes,
-		)
+		c.withOptionalChainingOptimized(
+			invokedExpr.Expression,
+			isOptional,
+			func() {
+				// withOptionalChainingOptimized already load the receiver onto the stack.
 
-		funcNameConst := c.addStringConst(funcName)
-		c.emit(
-			opcode.InstructionInvokeMethodDynamic{
-				Name:     funcNameConst.index,
-				TypeArgs: typeArgs,
-				ArgCount: argsCountWithReceiver,
+				// Compile arguments
+				c.compileArguments(expression.Arguments, invocationTypes)
+
+				funcNameConst := c.addStringConst(funcName)
+				c.emit(
+					opcode.InstructionInvokeMethodDynamic{
+						Name:     funcNameConst.index,
+						TypeArgs: typeArgs,
+						ArgCount: argsCountWithReceiver,
+					},
+				)
 			},
 		)
 
 		return
-
 	}
 
 	// If the function is accessed via optional-chaining,
 	// then the target type is the inner type of the optional.
 	accessedType := memberInfo.AccessedType
-	if memberInfo.IsOptional {
+	if isOptional {
 		accessedType = sema.UnwrapOptionalType(accessedType)
 	}
 
@@ -1816,7 +1821,6 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		accessedType,
 		invokedExpr.Identifier.Identifier,
 	)
-	c.emitVariableLoad(funcName)
 
 	// An invocation can be either a method of a value (e.g: `"someString".Concat("otherString")`),
 	// or a function on a "type function" (e.g: `String.join(["someString", "otherString"], separator: ", ")`),
@@ -1826,47 +1830,113 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 
 		// Compile as static-function call.
 		// No receiver is loaded.
+		c.emitVariableLoad(funcName)
 		c.compileArguments(expression.Arguments, invocationTypes)
 		c.emit(opcode.InstructionInvoke{
 			TypeArgs: typeArgs,
 			ArgCount: uint16(argumentCount),
 		})
 	} else {
-		// Compile as object-method call.
-		// First argument is the receiver.
-		c.compileMethodInvocationArguments(
-			invokedExpr,
-			expression.Arguments,
-			memberInfo,
-			invocationTypes,
-		)
+		c.withOptionalChaining(
+			invokedExpr.Expression,
+			isOptional,
+			func(receiverIndex uint16) {
+				// Compile as object-method call.
 
-		c.emit(opcode.InstructionInvokeMethodStatic{
-			TypeArgs: typeArgs,
-			ArgCount: argsCountWithReceiver,
-		})
+				// Function must be loaded only if the receiver is non-nil.
+				c.emitVariableLoad(funcName)
+
+				// The receiver is loaded first.
+				// So 'self' is always the zero-th argument.
+				c.emitGetLocal(receiverIndex)
+
+				// Compile arguments
+				c.compileArguments(expression.Arguments, invocationTypes)
+
+				c.emit(opcode.InstructionInvokeMethodStatic{
+					TypeArgs: typeArgs,
+					ArgCount: argsCountWithReceiver,
+				})
+			},
+		)
 	}
 }
 
-func (c *Compiler[_, _]) compileMethodInvocationArguments(
-	invokedExpr *ast.MemberExpression,
-	arguments ast.Arguments,
-	memberInfo sema.MemberAccessInfo,
-	invocationTypes sema.InvocationExpressionTypes,
+// withOptionalChaining compiles the `ifNotNil` procedure with optional chaining.
+func (c *Compiler[_, _]) withOptionalChaining(
+	targetExpression ast.Expression,
+	isOptional bool,
+	ifNotNil func(targetIndex uint16),
 ) {
-	// Receiver is loaded first. So 'self' is always the zero-th argument.
-	c.compileExpression(invokedExpr.Expression)
 
-	// Unwrap the target, if the member access is via optional chaining.
-	if memberInfo.IsOptional {
-		c.emit(opcode.InstructionUnwrap{})
+	c.compileExpression(targetExpression)
 
-		// TODO: Implement the remaining parts of optional-chaining.
-		// e.g: early returning with nil, if the target is nil.
+	tempIndex := c.currentFunction.generateLocalIndex()
+	c.emitSetLocal(tempIndex)
+
+	var nilJump int
+	if isOptional {
+		// If the target is nil, jump to the instruction where nil is returned.
+		nilJump = c.emitOptionalChainingNilJump(tempIndex)
+		c.emitSetLocal(tempIndex)
 	}
 
-	// Compile arguments
-	c.compileArguments(arguments, invocationTypes)
+	ifNotNil(tempIndex)
+
+	c.patchOptionalChainingNilJump(isOptional, nilJump)
+}
+
+// withOptionalChainingOptimized compiles the `ifNotNil` procedure with optional chaining.
+// IMPORTANT: This function expects the `ifNotNil` procedure to assume the target expression
+// is already loaded on to the stack.
+// This is an optimization to avoid redundant store-to/load-from local indexes.
+// If the `ifNotNil` procedure need to load other values before the target is loaded,
+// then use the withOptionalChaining counterpart method.
+func (c *Compiler[_, _]) withOptionalChainingOptimized(
+	targetExpression ast.Expression,
+	isOptional bool,
+	ifNotNil func(),
+) {
+
+	c.compileExpression(targetExpression)
+
+	var nilJump int
+	if isOptional {
+		tempIndex := c.currentFunction.generateLocalIndex()
+		c.emitSetLocal(tempIndex)
+		nilJump = c.emitOptionalChainingNilJump(tempIndex)
+	}
+
+	ifNotNil()
+
+	c.patchOptionalChainingNilJump(isOptional, nilJump)
+}
+
+func (c *Compiler[_, _]) emitOptionalChainingNilJump(tempIndex uint16) int {
+	// If the value is nil, return nil.
+	// If the receiver is nil, jump to the instruction where nil is returned.
+	c.emitGetLocal(tempIndex)
+	nilJump := c.emitUndefinedJumpIfNil()
+
+	// Otherwise unwrap.
+	c.emitGetLocal(tempIndex)
+	c.emit(opcode.InstructionUnwrap{})
+	return nilJump
+}
+
+func (c *Compiler[_, _]) patchOptionalChainingNilJump(isOptional bool, nilJump int) {
+	if !isOptional {
+		return
+	}
+
+	// TODO: Need to wrap the result back with an optional, if `memberAccessInfo.IsOptional`
+	// Jump to the end to skip the nil returning instructions.
+	jumpToEnd := c.emitUndefinedJump()
+
+	c.patchJump(nilJump)
+	c.emit(opcode.InstructionNil{})
+
+	c.patchJump(jumpToEnd)
 }
 
 func isDynamicMethodInvocation(accessedType sema.Type) bool {
@@ -1918,38 +1988,38 @@ func (c *Compiler[_, _]) loadTypeArguments(invocationTypes sema.InvocationExpres
 }
 
 func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression) (_ struct{}) {
-	c.compileExpression(expression.Expression)
-
 	memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(expression)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	if memberAccessInfo.IsOptional {
-		// TODO: Complete the optional-chaining implementations.
-		//  e.g: Need a nil check, since unwrap panics on nil
-		c.emit(opcode.InstructionUnwrap{})
-	}
-
 	constant := c.addStringConst(expression.Identifier.Identifier)
 
-	// TODO: remove member if `isNestedResourceMove`
-	//  See `Interpreter.memberExpressionGetterSetter` for the reference implementation.
-	c.emit(opcode.InstructionGetField{
-		FieldName: constant.index,
-	})
+	c.withOptionalChainingOptimized(
+		expression.Expression,
+		memberAccessInfo.IsOptional,
+		func() {
+			// withOptionalChainingOptimized evaluates the target expression
+			// and leave the value on stack.
+			// i.e: the target/parent is already loaded.
 
-	// Return a reference, if the member is accessed via a reference.
-	// This is pre-computed at the checker.
-	if memberAccessInfo.ReturnReference {
-		index := c.getOrAddType(memberAccessInfo.ResultingType)
-		c.emit(opcode.InstructionNewRef{
-			Type:       index,
-			IsImplicit: true,
-		})
-	}
+			// TODO: remove member if `isNestedResourceMove`
+			//  See `Interpreter.memberExpressionGetterSetter` for the reference implementation.
+			c.emit(opcode.InstructionGetField{
+				FieldName: constant.index,
+			})
 
-	// TODO: Need to wrap the result back with an optional, if `memberAccessInfo.IsOptional`
+			// Return a reference, if the member is accessed via a reference.
+			// This is pre-computed at the checker.
+			if memberAccessInfo.ReturnReference {
+				index := c.getOrAddType(memberAccessInfo.ResultingType)
+				c.emit(opcode.InstructionNewRef{
+					Type:       index,
+					IsImplicit: true,
+				})
+			}
+		},
+	)
 
 	return
 }
