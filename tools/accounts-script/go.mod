@@ -1,4 +1,4 @@
-module github.com/onflow/cadence/tools/snapshot-explorer
+module github.com/onflow/cadence/tools/accounts-script
 
 go 1.23.7
 

@@ -1,41 +1,105 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"time"
 
 	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"go.uber.org/atomic"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/flow-go/cmd/util/ledger/util"
 	"github.com/onflow/flow-go/cmd/util/ledger/util/registers"
 	"github.com/onflow/flow-go/engine/execution/computation"
 	"github.com/onflow/flow-go/fvm"
 	"github.com/onflow/flow-go/fvm/storage/snapshot"
 	"github.com/onflow/flow-go/ledger"
+	"github.com/onflow/flow-go/ledger/common/pathfinder"
+	"github.com/onflow/flow-go/ledger/complete"
+	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
+	"github.com/onflow/flow-go/ledger/complete/wal"
 	"github.com/onflow/flow-go/model/flow"
+	"github.com/onflow/flow-go/module/metrics"
+	"github.com/onflow/flow-go/utils/debug"
 )
 
-var ErrNotImplemented = errors.New("not implemented")
+// references flow-go/cmd/util/cmd/checkpoint-collect-stats
+
+type PayloadInfo struct {
+	Address string `json:"address"`
+	Key     string `json:"key"`
+	Type    string `json:"type"`
+	Size    uint64 `json:"size"`
+}
 
 var (
-	flagState           = flag.String("state", "", "Path to state snapshot (.sp file)")
-	flagStateCommitment = flag.String("state-commitment", "", "State commitment (64 hex chars)")
-	flagChain           = flag.String("chain", "testnet", "Flow chain ID")
-	flagScript          = flag.String("script", "", "Cadence script path")
+	flagCheckpointDir = flag.String("checkpoint directory", "", "Path to directory containing checkpoint files")
+	flagChain         = flag.String("chain", "flow-mainnet", "Flow chain ID")
+	flagScript        = flag.String("script", "", "Cadence script path")
 )
+
+func ReadTrieForPayloads(tries []*trie.MTrie) []*ledger.Payload {
+	var payloads []*ledger.Payload
+	for _, trie := range tries {
+		payloads = append(payloads, trie.AllPayloads()...)
+	}
+	return payloads
+}
+
+func getPayloadsFromCheckpoint() []*ledger.Payload {
+	memAllocBefore := debug.GetHeapAllocsBytes()
+	log.Info().Msgf("loading checkpoint(s) from %v", flagCheckpointDir)
+
+	diskWal, err := wal.NewDiskWAL(zerolog.Nop(), nil, &metrics.NoopCollector{}, *flagCheckpointDir, complete.DefaultCacheSize, pathfinder.PathByteSize, wal.SegmentSize)
+	if err != nil {
+		log.Fatal().Err(err).Msg("cannot create WAL")
+	}
+	led, err := complete.NewLedger(diskWal, complete.DefaultCacheSize, &metrics.NoopCollector{}, log.Logger, 0)
+	if err != nil {
+		log.Fatal().Err(err).Msg("cannot create ledger from write-a-head logs and checkpoints")
+	}
+	compactor, err := complete.NewCompactor(led, diskWal, zerolog.Nop(), complete.DefaultCacheSize, math.MaxInt, 1, atomic.NewBool(false), &metrics.NoopCollector{})
+	if err != nil {
+		log.Fatal().Err(err).Msg("cannot create compactor")
+	}
+	<-compactor.Ready()
+	defer func() {
+		<-led.Done()
+		<-compactor.Done()
+	}()
+
+	memAllocAfter := debug.GetHeapAllocsBytes()
+	log.Info().Msgf("the checkpoint is loaded, mem usage: %d", memAllocAfter-memAllocBefore)
+
+	var tries []*trie.MTrie
+
+	ts, err := led.Tries()
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get tries")
+	}
+
+	tries = append(tries, ts...)
+
+	log.Info().Msgf("retrieving payloads from %d tries", len(tries))
+
+	payloads := ReadTrieForPayloads(tries)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to collect stats")
+	}
+
+	return payloads
+}
 
 func main() {
 
 	flag.Parse()
 
-	if *flagState == "" || *flagStateCommitment == "" || *flagScript == "" {
-		fmt.Println("Usage: go run main.go --state <file.sp> --state-commitment <hex> --chain <testnet|mainnet> --script <file.cdc>")
+	if *flagCheckpointDir == "" || *flagScript == "" {
+		fmt.Println("Usage: go run main.go --checkpoint-dir <dir> --chain <chain> --script <file.cdc>")
 		os.Exit(1)
 	}
 
@@ -45,22 +109,11 @@ func main() {
 	})
 
 	chainID := flow.ChainID(*flagChain)
+	// Validate chain ID
+	_ = chainID.Chain()
 
-	log.Info().Msg("loading state ...")
-
-	var (
-		err      error
-		payloads []*ledger.Payload
-	)
-	log.Info().Msg("reading trie")
-
-	stateCommitment := util.ParseStateCommitment(*flagStateCommitment)
-	payloads, err = util.ReadTrieForPayloads(*flagState, stateCommitment)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to read payloads")
-	}
-
-	log.Info().Msgf("creating registers from payloads (%d)", len(payloads))
+	// Load execution state and retrieve payloads async
+	payloads := getPayloadsFromCheckpoint()
 
 	registersByAccount, err := registers.NewByAccountFromPayloads(payloads)
 	if err != nil {
