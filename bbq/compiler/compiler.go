@@ -211,7 +211,7 @@ func (c *Compiler[_, _]) findGlobal(name string) *Global {
 	// i.e: same order as their indexes (preceded by globals defined in the current program).
 	// e.g: [global1, global2, ... [importedGlobal1, importedGlobal2, ...]].
 	// Earlier we already reserved the indexes for the globals defined in the current program.
-	// (`reserveGlobalVars`)
+	// (`reserveGlobals`)
 
 	c.usedImportedGlobals = append(c.usedImportedGlobals, importedGlobal)
 
@@ -591,29 +591,14 @@ func (c *Compiler[_, _]) reserveGlobals(
 		c.addGlobal(contract.Name)
 	}
 
-	for _, declaration := range variableDecls {
-		variableName := declaration.Identifier.Identifier
-		c.addGlobal(variableName)
-	}
+	c.reserveVariableGlobals(
+		nil,
+		variableDecls,
+		nil,
+		compositeDecls,
+	)
 
-	for _, declaration := range compositeDecls {
-		compositeType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
-		if compositeType.Kind != common.CompositeKindEnum {
-			continue
-		}
-
-		enumCaseDecls := declaration.Members.EnumCases()
-		for _, declaration := range enumCaseDecls {
-			// Reserve a global variable for each enum case.
-			// The enum case name is used as the global variable name.
-			// e.g: `enum E { case A; case B }` will reserve globals `E.A`, `E.B`.
-			enumCaseName := declaration.Identifier.Identifier
-			qualifiedName := commons.TypeQualifiedName(compositeType, enumCaseName)
-			c.addGlobal(qualifiedName)
-		}
-	}
-
-	c.reserveGlobalVars(
+	c.reserveFunctionGlobals(
 		nil,
 		nil,
 		functionDecls,
@@ -622,14 +607,47 @@ func (c *Compiler[_, _]) reserveGlobals(
 	)
 }
 
-func (c *Compiler[_, _]) reserveGlobalVars(
+func (c *Compiler[_, _]) reserveVariableGlobals(
+	enclosingType sema.CompositeKindedType,
+	variableDecls []*ast.VariableDeclaration,
+	enumCaseDecls []*ast.EnumCaseDeclaration,
+	compositeDecls []*ast.CompositeDeclaration,
+) {
+	for _, declaration := range variableDecls {
+		variableName := declaration.Identifier.Identifier
+		c.addGlobal(variableName)
+	}
+
+	for _, declaration := range enumCaseDecls {
+		// Reserve a global variable for each enum case.
+		// The enum case name is used as the global variable name.
+		// e.g: `enum E { case A; case B }` will reserve globals `E.A`, `E.B`.
+		enumCaseName := declaration.Identifier.Identifier
+		qualifiedName := commons.TypeQualifiedName(enclosingType, enumCaseName)
+		c.addGlobal(qualifiedName)
+	}
+
+	for _, declaration := range compositeDecls {
+		compositeType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
+
+		members := declaration.Members
+
+		c.reserveVariableGlobals(
+			compositeType,
+			nil,
+			members.EnumCases(),
+			members.Composites(),
+		)
+	}
+}
+
+func (c *Compiler[_, _]) reserveFunctionGlobals(
 	enclosingType sema.CompositeKindedType,
 	specialFunctionDecls []*ast.SpecialFunctionDeclaration,
 	functionDecls []*ast.FunctionDeclaration,
 	compositeDecls []*ast.CompositeDeclaration,
 	interfaceDecls []*ast.InterfaceDeclaration,
 ) {
-
 	for _, declaration := range specialFunctionDecls {
 		switch declaration.Kind {
 		case common.DeclarationKindDestructorLegacy,
@@ -662,30 +680,28 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 		compositeType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
 
 		// Members of event types are skipped from compiling (see `VisitCompositeDeclaration`).
-		// Hence also skip from reserving global variables for them.
+		// Hence also skip from reserving globals for them.
 		if compositeType.Kind == common.CompositeKindEvent {
 			continue
 		}
 
-		// For composite types other than contracts, global variables
+		// For composite types other than contracts, globals
 		// reserved by the type-name will be used for the init method.
-		// For contracts, global variables reserved by the type-name
+		// For contracts, globals reserved by the type-name
 		// will be used for the contract value (already reserved before getting here).
-		// Hence, reserve a separate global var for contract inits.
+		// Hence, reserve a separate global for contract inits.
 		if declaration.CompositeKind == common.CompositeKindContract {
 			qualifiedName := commons.TypeQualifiedName(compositeType, commons.InitFunctionName)
 			c.addGlobal(qualifiedName)
 		} else {
-			// Reserve a global-var for the value-constructor.
+			// Reserve a global for the value-constructor.
 			constructorName := commons.TypeQualifier(compositeType)
 			c.addGlobal(constructorName)
 		}
 
-		// Define globals for functions before visiting function bodies.
-
 		members := declaration.Members
 
-		c.reserveGlobalVars(
+		c.reserveFunctionGlobals(
 			compositeType,
 			members.SpecialFunctions(),
 			members.Functions(),
@@ -695,12 +711,12 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 	}
 
 	for _, declaration := range interfaceDecls {
-		// Don't need a global-var for the value-constructor for interfaces
+		// Don't need a global for the value-constructor for interfaces
 
 		members := declaration.Members
 		interfaceType := c.DesugaredElaboration.InterfaceDeclarationType(declaration)
 
-		c.reserveGlobalVars(
+		c.reserveFunctionGlobals(
 			interfaceType,
 			members.SpecialFunctions(),
 			members.Functions(),
@@ -2621,7 +2637,7 @@ func (c *Compiler[_, _]) compileCompositeMembers(
 	compositeKindedType sema.CompositeKindedType,
 	members *ast.Members,
 ) {
-	// Important: Must be visited in the same order as the globals were reserved in `reserveGlobalVars`.
+	// Important: Must be visited in the same order as the globals were reserved in `reserveGlobals`.
 
 	// Add the methods that are provided natively.
 	c.addBuiltinMethods(compositeKindedType)
