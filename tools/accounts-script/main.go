@@ -37,7 +37,7 @@ type PayloadInfo struct {
 }
 
 var (
-	flagCheckpointDir = flag.String("checkpoint directory", "", "Path to directory containing checkpoint files")
+	flagCheckpointDir = flag.String("checkpoint-dir", "", "Path to directory containing checkpoint files")
 	flagChain         = flag.String("chain", "flow-mainnet", "Flow chain ID")
 	flagScript        = flag.String("script", "", "Cadence script path")
 )
