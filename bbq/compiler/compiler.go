@@ -591,9 +591,29 @@ func (c *Compiler[_, _]) reserveGlobals(
 		c.addGlobal(contract.Name)
 	}
 
+	for _, declaration := range variableDecls {
+		variableName := declaration.Identifier.Identifier
+		c.addGlobal(variableName)
+	}
+
+	for _, declaration := range compositeDecls {
+		compositeType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
+		if compositeType.Kind != common.CompositeKindEnum {
+			continue
+		}
+
+		enumCaseDecls := declaration.Members.EnumCases()
+		for _, declaration := range enumCaseDecls {
+			// Reserve a global variable for each enum case.
+			// The enum case name is used as the global variable name.
+			// e.g: `enum E { case A; case B }` will reserve globals `E.A`, `E.B`.
+			enumCaseName := declaration.Identifier.Identifier
+			qualifiedName := commons.TypeQualifiedName(compositeType, enumCaseName)
+			c.addGlobal(qualifiedName)
+		}
+	}
+
 	c.reserveGlobalVars(
-		nil,
-		variableDecls,
 		nil,
 		nil,
 		functionDecls,
@@ -604,17 +624,11 @@ func (c *Compiler[_, _]) reserveGlobals(
 
 func (c *Compiler[_, _]) reserveGlobalVars(
 	enclosingType sema.CompositeKindedType,
-	variableDecls []*ast.VariableDeclaration,
 	specialFunctionDecls []*ast.SpecialFunctionDeclaration,
-	enumCaseDecls []*ast.EnumCaseDeclaration,
 	functionDecls []*ast.FunctionDeclaration,
 	compositeDecls []*ast.CompositeDeclaration,
 	interfaceDecls []*ast.InterfaceDeclaration,
 ) {
-	for _, declaration := range variableDecls {
-		variableName := declaration.Identifier.Identifier
-		c.addGlobal(variableName)
-	}
 
 	for _, declaration := range specialFunctionDecls {
 		switch declaration.Kind {
@@ -636,15 +650,6 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 			qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
 			c.addGlobal(qualifiedName)
 		}
-	}
-
-	for _, declaration := range enumCaseDecls {
-		// Reserve a global variable for each enum case.
-		// The enum case name is used as the global variable name.
-		// e.g: `enum E { case A; case B }` will reserve globals `E.A`, `E.B`.
-		enumCaseName := declaration.Identifier.Identifier
-		qualifiedName := commons.TypeQualifiedName(enclosingType, enumCaseName)
-		c.addGlobal(qualifiedName)
 	}
 
 	for _, declaration := range functionDecls {
@@ -682,9 +687,7 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 
 		c.reserveGlobalVars(
 			compositeType,
-			nil,
 			members.SpecialFunctions(),
-			members.EnumCases(),
 			members.Functions(),
 			members.Composites(),
 			members.Interfaces(),
@@ -699,9 +702,7 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 
 		c.reserveGlobalVars(
 			interfaceType,
-			nil,
 			members.SpecialFunctions(),
-			members.EnumCases(),
 			members.Functions(),
 			members.Composites(),
 			members.Interfaces(),
@@ -2030,7 +2031,6 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 
 			qualifiedName := commons.TypeQualifiedName(compositeType, identifier)
 			c.emitGlobalLoad(qualifiedName)
-
 
 			return
 		}
