@@ -1127,7 +1127,8 @@ func EnumConstructorType(compositeType *CompositeType) *FunctionType {
 				Type: compositeType,
 			},
 		),
-		Members: &StringMemberOrderedMap{},
+		Members:          &StringMemberOrderedMap{},
+		TypeFunctionType: compositeType,
 	}
 }
 

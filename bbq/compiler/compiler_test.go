@@ -6369,6 +6369,10 @@ func TestCompileEnum(t *testing.T) {
             case b
             case c
         }
+
+        fun test(): UInt8 {
+            return Test.a.rawValue
+        }
     `)
 	require.NoError(t, err)
 
@@ -6379,10 +6383,11 @@ func TestCompileEnum(t *testing.T) {
 	program := comp.Compile()
 
 	functions := program.Functions
-	require.Len(t, functions, 3)
+	require.Len(t, functions, 4)
 
 	const (
-		initFuncIndex = iota
+		testFuncIndex = iota
+		initFuncIndex
 		// Next two indexes are for builtin methods (i.e: getType, isInstance)
 		_
 		_
@@ -6408,14 +6413,14 @@ func TestCompileEnum(t *testing.T) {
 				// let self = Test()
 				opcode.InstructionNew{
 					Kind: common.CompositeKindEnum,
-					Type: 1,
+					Type: 3,
 				},
 				opcode.InstructionSetLocal{Local: selfIndex},
 
 				// self.rawValue = rawValue
 				opcode.InstructionGetLocal{Local: selfIndex},
 				opcode.InstructionGetLocal{Local: rawValueIndex},
-				opcode.InstructionTransfer{Type: 2},
+				opcode.InstructionTransfer{Type: 1},
 				opcode.InstructionSetField{FieldName: 0},
 
 				// return self
@@ -6423,6 +6428,16 @@ func TestCompileEnum(t *testing.T) {
 				opcode.InstructionReturnValue{},
 			},
 			functions[initFuncIndex].Code,
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				opcode.InstructionGetGlobal{Global: 4},
+				opcode.InstructionGetField{FieldName: 0},
+				opcode.InstructionTransfer{Type: 1},
+				opcode.InstructionReturnValue{},
+			},
+			functions[testFuncIndex].Code,
 		)
 	}
 
@@ -6437,10 +6452,10 @@ func TestCompileEnum(t *testing.T) {
 
 	assert.Equal(t,
 		[]opcode.Instruction{
-			opcode.InstructionGetGlobal{Global: 0},
+			opcode.InstructionGetGlobal{Global: 1},
 			opcode.InstructionGetConstant{Constant: 1},
 			opcode.InstructionInvoke{ArgCount: 1},
-			opcode.InstructionTransfer{Type: 1},
+			opcode.InstructionTransfer{Type: 3},
 			opcode.InstructionReturnValue{},
 		},
 		variables[testAIndex].Getter.Code,
@@ -6448,10 +6463,10 @@ func TestCompileEnum(t *testing.T) {
 
 	assert.Equal(t,
 		[]opcode.Instruction{
-			opcode.InstructionGetGlobal{Global: 0},
+			opcode.InstructionGetGlobal{Global: 1},
 			opcode.InstructionGetConstant{Constant: 2},
 			opcode.InstructionInvoke{ArgCount: 1},
-			opcode.InstructionTransfer{Type: 1},
+			opcode.InstructionTransfer{Type: 3},
 			opcode.InstructionReturnValue{},
 		},
 		variables[testBIndex].Getter.Code,
@@ -6459,10 +6474,10 @@ func TestCompileEnum(t *testing.T) {
 
 	assert.Equal(t,
 		[]opcode.Instruction{
-			opcode.InstructionGetGlobal{Global: 0},
+			opcode.InstructionGetGlobal{Global: 1},
 			opcode.InstructionGetConstant{Constant: 3},
 			opcode.InstructionInvoke{ArgCount: 1},
-			opcode.InstructionTransfer{Type: 1},
+			opcode.InstructionTransfer{Type: 3},
 			opcode.InstructionReturnValue{},
 		},
 		variables[testCIndex].Getter.Code,

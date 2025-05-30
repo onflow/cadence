@@ -2008,7 +2008,25 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 		panic(errors.NewUnreachableError())
 	}
 
-	constant := c.addStringConst(expression.Identifier.Identifier)
+	identifier := expression.Identifier.Identifier
+
+	accessedType := memberAccessInfo.AccessedType
+
+	// Accessing an enum case?
+	if accessedFunctionType, ok := accessedType.(*sema.FunctionType); ok &&
+		accessedFunctionType.TypeFunctionType != nil {
+
+		if compositeType, ok := accessedFunctionType.TypeFunctionType.(*sema.CompositeType); ok &&
+			compositeType.GetCompositeKind() == common.CompositeKindEnum {
+
+			variableName := commons.TypeQualifiedName(compositeType, identifier)
+			c.emitVariableLoad(variableName)
+
+			return
+		}
+	}
+
+	constant := c.addStringConst(identifier)
 
 	c.withOptionalChainingOptimized(
 		expression.Expression,
