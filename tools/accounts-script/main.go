@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -23,6 +24,7 @@ import (
 	"github.com/onflow/flow-go/ledger/complete/wal"
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/module/metrics"
+	moduleUtil "github.com/onflow/flow-go/module/util"
 	"github.com/onflow/flow-go/utils/debug"
 )
 
@@ -79,27 +81,38 @@ func ProcessAndRunScriptOnTrie(chainID flow.ChainID, tries []*trie.MTrie) {
 			log.Fatal().Msgf("failed to read script file: %s", err)
 		}
 
+		logAccount := moduleUtil.LogProgress(
+			log.Logger,
+			moduleUtil.DefaultLogProgressConfig(
+				"processing account group",
+				registersByAccount.AccountCount(),
+			),
+		)
+
 		// Loop over all account registers with their owner string
-		registersByAccount.ForEachAccount(func(accountRegisters *registers.AccountRegisters) error {
-			ownerStr := accountRegisters.Owner()
-			address := flow.HexToAddress(ownerStr)
-			cadenceAddr := cadence.NewAddress(address)
+		registersByAccount.ForEachAccount(
+			func(accountRegisters *registers.AccountRegisters) error {
+				defer logAccount(1)
+				owner := accountRegisters.Owner()
+				address := common.BytesToAddress([]byte(owner))
+				cadenceAddr := cadence.NewAddress([8]byte(address.Bytes()))
 
-			argBytes, err := jsoncdc.Encode(cadenceAddr)
-			if err != nil {
-				log.Error().Err(err).Str("address", address.Hex()).Msg("failed to encode argument")
-				return err
-			}
+				argBytes, err := jsoncdc.Encode(cadenceAddr)
+				if err != nil {
+					log.Error().Err(err).Str("address", address.Hex()).Msg("failed to encode argument")
+					return err
+				}
 
-			result, err := runScript(vm, ctx, storageSnapshot, code, [][]byte{argBytes})
-			if err != nil {
-				log.Error().Err(err).Str("address", address.Hex()).Msg("script execution failed")
-				return err
-			}
+				result, err := runScript(vm, ctx, storageSnapshot, code, [][]byte{argBytes})
+				if err != nil {
+					log.Error().Err(err).Str("address", address.Hex()).Msg("script execution failed")
+					return err
+				}
 
-			log.Info().Msgf("Address: %s, Result: %s\n", address.Hex(), string(result))
-			return nil
-		})
+				log.Info().Msgf("Address: %s, Result: %s", owner, string(result))
+				return nil
+			},
+		)
 	}
 }
 
