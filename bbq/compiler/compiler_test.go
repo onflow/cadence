@@ -6439,7 +6439,8 @@ func TestCompileOptionalChaining(t *testing.T) {
 
 		const (
 			fooIndex = iota
-			tempIndex
+			optionalValueTempIndex
+			unwrappedValueTempIndex
 		)
 
 		assert.Equal(t,
@@ -6451,22 +6452,22 @@ func TestCompileOptionalChaining(t *testing.T) {
 
 				// Store the receiver in a temp index for the nil check.
 				opcode.InstructionGetLocal{Local: fooIndex},
-				opcode.InstructionSetLocal{Local: tempIndex},
+				opcode.InstructionSetLocal{Local: optionalValueTempIndex},
 
 				// Nil check
-				opcode.InstructionGetLocal{Local: tempIndex},
+				opcode.InstructionGetLocal{Local: optionalValueTempIndex},
 				opcode.InstructionJumpIfNil{Target: 14},
 
 				// If `foo != nil`
 				// Unwrap the optional
-				opcode.InstructionGetLocal{Local: tempIndex},
+				opcode.InstructionGetLocal{Local: optionalValueTempIndex},
 				opcode.InstructionUnwrap{},
-				opcode.InstructionSetLocal{Local: tempIndex},
+				opcode.InstructionSetLocal{Local: unwrappedValueTempIndex},
 
 				// Load `Foo.bar` function
 				opcode.InstructionGetGlobal{Global: 4},
 				// Load receiver
-				opcode.InstructionGetLocal{Local: tempIndex},
+				opcode.InstructionGetLocal{Local: unwrappedValueTempIndex},
 				opcode.InstructionInvokeMethodStatic{ArgCount: 1},
 				opcode.InstructionJump{Target: 15},
 
