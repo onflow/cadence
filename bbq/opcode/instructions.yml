@@ -92,6 +92,21 @@
       - name: "value"
         type: "value"
 
+- name: "removeField"
+  description:
+    Pops a value off the stack, the target.
+    Remove the value of the given field from the target, and pushes it onto the stack.
+  operands:
+    - name: "fieldName"
+      type: "constantIndex"
+  valueEffects:
+    pop:
+      - name: "target"
+        type: "value"
+    push:
+      - name: "value"
+        type: "value"
+
 - name: "setField"
   description:
     Pops two values off the stack, the target and the value,
@@ -112,6 +127,21 @@
   description:
     Pops two values off the stack, the array and the index,
     and then pushes the value at the given index of the array onto the stack.
+  valueEffects:
+    pop:
+      - name: "array"
+        type: "array"
+      - name: "index"
+        type: "integer"
+    push:
+      - name: "value"
+        type: "value"
+
+
+- name: "removeIndex"
+  description:
+    Pops two values off the stack, the array and the index.
+    Removes the value at the given index from the array and pushes it onto the stack.
   valueEffects:
     pop:
       - name: "array"

@@ -122,11 +122,11 @@ const (
 	GetGlobal
 	SetGlobal
 	GetField
+	RemoveField
 	SetField
 	SetIndex
 	GetIndex
-	_
-	_
+	RemoveIndex
 	_
 	_
 	_

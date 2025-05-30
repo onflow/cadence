@@ -38,7 +38,7 @@ func TestInterpretOptionalResourceBindingWithSecondValue(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       resource R {
           let field: Int
 
@@ -3017,7 +3017,7 @@ func TestInterpretMovedResourceInOptionalBinding(t *testing.T) {
 
 	t.Parallel()
 
-	inter, err := parseCheckAndInterpretWithOptions(t, `
+	inter, err := parseCheckAndPrepareWithOptions(t, `
         resource R{}
 
         fun collect(copy2: @R?, _ arrRef: auth(Mutate) &[R]): @R {
@@ -3061,7 +3061,7 @@ func TestInterpretMovedResourceInSecondValue(t *testing.T) {
 
 	t.Parallel()
 
-	inter, err := parseCheckAndInterpretWithOptions(t, `
+	inter, err := parseCheckAndPrepareWithOptions(t, `
         resource R{}
 
         fun collect(copy2: @R?, _ arrRef: auth(Mutate) &[R]): @R {

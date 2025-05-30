@@ -1062,6 +1062,15 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 			varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(test)
 			c.emitTransfer(varDeclTypes.TargetType)
 
+			// Before declaring the variable, evaluate and assign the second value.
+			if test.SecondValue != nil {
+				c.compileAssignment(
+					test.Value,
+					test.SecondValue,
+					varDeclTypes.ValueType,
+				)
+			}
+
 			// Declare the variable *after* unwrapping the optional,
 			// in a new scope
 			c.currentFunction.locals.PushNewWithCurrent()
@@ -1295,23 +1304,31 @@ func (c *Compiler[_, _]) VisitVariableDeclaration(declaration *ast.VariableDecla
 	// If so, use the corresponding elaboration.
 	c.compilePotentiallyInheritedCode(declaration, func() {
 
-		// TODO: second value
-
 		name := declaration.Identifier.Identifier
-		// TODO: This can be nil only for synthetic-result variable
-		//   Any better way to handle this?
+
+		// Value can be nil only for synthetic-result variable.
 		if declaration.Value == nil {
 			c.currentFunction.declareLocal(name)
-		} else {
-			// Compile the value expression *before* declaring the variable
-			c.compileExpression(declaration.Value)
-
-			varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(declaration)
-			c.emitTransfer(varDeclTypes.TargetType)
-
-			// Declare the variable *after* compiling the value expression
-			c.emitDeclareLocal(name)
+			return
 		}
+
+		// Compile the value expression *before* declaring the variable.
+		c.compileExpression(declaration.Value)
+
+		varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(declaration)
+		c.emitTransfer(varDeclTypes.TargetType)
+
+		// Before declaring the variable, evaluate and assign the second value.
+		if declaration.SecondValue != nil {
+			c.compileAssignment(
+				declaration.Value,
+				declaration.SecondValue,
+				varDeclTypes.ValueType,
+			)
+		}
+
+		// Declare the variable *after* compiling the value expressions.
+		c.emitDeclareLocal(name)
 	})
 
 	return
@@ -1361,22 +1378,30 @@ func (c *Compiler[_, _]) emitDeclareLocal(name string) *local {
 }
 
 func (c *Compiler[_, _]) VisitAssignmentStatement(statement *ast.AssignmentStatement) (_ struct{}) {
+	assignmentTypes := c.DesugaredElaboration.AssignmentStatementTypes(statement)
+	c.compileAssignment(
+		statement.Target,
+		statement.Value,
+		assignmentTypes.TargetType,
+	)
+	return
+}
 
-	switch target := statement.Target.(type) {
+func (c *Compiler[_, _]) compileAssignment(
+	target ast.Expression,
+	value ast.Expression,
+	targetType sema.Type,
+) {
+	switch target := target.(type) {
 	case *ast.IdentifierExpression:
-		c.compileExpression(statement.Value)
-		assignmentTypes := c.DesugaredElaboration.AssignmentStatementTypes(statement)
-		c.emitTransfer(assignmentTypes.TargetType)
-
+		c.compileExpression(value)
+		c.emitTransfer(targetType)
 		c.emitVariableStore(target.Identifier.Identifier)
 
 	case *ast.MemberExpression:
 		c.compileExpression(target.Expression)
-
-		c.compileExpression(statement.Value)
-		assignmentTypes := c.DesugaredElaboration.AssignmentStatementTypes(statement)
-		c.emitTransfer(assignmentTypes.TargetType)
-
+		c.compileExpression(value)
+		c.emitTransfer(targetType)
 		constant := c.addStringConst(target.Identifier.Identifier)
 		c.emit(opcode.InstructionSetField{
 			FieldName: constant.index,
@@ -1385,18 +1410,14 @@ func (c *Compiler[_, _]) VisitAssignmentStatement(statement *ast.AssignmentState
 	case *ast.IndexExpression:
 		c.compileExpression(target.TargetExpression)
 		c.compileExpression(target.IndexingExpression)
-
-		c.compileExpression(statement.Value)
-		assignmentTypes := c.DesugaredElaboration.AssignmentStatementTypes(statement)
-		c.emitTransfer(assignmentTypes.TargetType)
-
+		c.compileExpression(value)
+		c.emitTransfer(targetType)
 		c.emit(opcode.InstructionSetIndex{})
 
 	default:
 		// TODO:
 		panic(errors.NewUnreachableError())
 	}
-	return
 }
 
 func (c *Compiler[_, _]) VisitSwapStatement(_ *ast.SwapStatement) (_ struct{}) {
@@ -2003,11 +2024,16 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 			// and leave the value on stack.
 			// i.e: the target/parent is already loaded.
 
-			// TODO: remove member if `isNestedResourceMove`
-			//  See `Interpreter.memberExpressionGetterSetter` for the reference implementation.
-			c.emit(opcode.InstructionGetField{
-				FieldName: constant.index,
-			})
+			isNestedResourceMove := c.DesugaredElaboration.IsNestedResourceMoveExpression(expression)
+			if isNestedResourceMove {
+				c.emit(opcode.InstructionRemoveField{
+					FieldName: constant.index,
+				})
+			} else {
+				c.emit(opcode.InstructionGetField{
+					FieldName: constant.index,
+				})
+			}
 
 			// Return a reference, if the member is accessed via a reference.
 			// This is pre-computed at the checker.
@@ -2027,7 +2053,13 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 func (c *Compiler[_, _]) VisitIndexExpression(expression *ast.IndexExpression) (_ struct{}) {
 	c.compileExpression(expression.TargetExpression)
 	c.compileExpression(expression.IndexingExpression)
-	c.emit(opcode.InstructionGetIndex{})
+
+	isNestedResourceMove := c.DesugaredElaboration.IsNestedResourceMoveExpression(expression)
+	if isNestedResourceMove {
+		c.emit(opcode.InstructionRemoveIndex{})
+	} else {
+		c.emit(opcode.InstructionGetIndex{})
+	}
 
 	indexExpressionTypes, ok := c.DesugaredElaboration.IndexExpressionTypes(expression)
 	if !ok {

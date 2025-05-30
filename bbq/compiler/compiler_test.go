@@ -6481,3 +6481,352 @@ func TestCompileOptionalChaining(t *testing.T) {
 		)
 	})
 }
+
+func TestCompileSecondValueAssignment(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("in variable declaration", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                let x: @R <- create R()
+                var y: @R? <- create R()
+
+                let z: @R? <- y <- x 
+
+                destroy y
+                destroy z
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		require.Len(t, program.Functions, 4)
+
+		functions := comp.ExportFunctions()
+		require.Equal(t, len(functions), len(program.Functions))
+
+		const (
+			xIndex = iota
+			yIndex
+			zIndex
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// let x: @R <- create R()
+				opcode.InstructionGetGlobal{Global: 1},
+				opcode.InstructionInvoke{ArgCount: 0},
+				opcode.InstructionTransfer{Type: 1},
+				opcode.InstructionSetLocal{Local: xIndex},
+
+				// var y: @R? <- create R()
+				opcode.InstructionGetGlobal{Global: 1},
+				opcode.InstructionInvoke{ArgCount: 0},
+				opcode.InstructionTransfer{Type: 2},
+				opcode.InstructionSetLocal{Local: yIndex},
+
+				// <- y
+				opcode.InstructionGetLocal{Local: yIndex},
+				opcode.InstructionTransfer{Type: 2},
+
+				// Second value assignment.
+				// y <- x
+				opcode.InstructionGetLocal{Local: xIndex},
+				opcode.InstructionTransfer{Type: 2},
+				opcode.InstructionSetLocal{Local: yIndex},
+
+				// Store the transferred y-value above, to z.
+				// z <- y
+				opcode.InstructionSetLocal{Local: zIndex},
+
+				// destroy y
+				opcode.InstructionGetLocal{Local: yIndex},
+				opcode.InstructionDestroy{},
+
+				// destroy z
+				opcode.InstructionGetLocal{Local: zIndex},
+				opcode.InstructionDestroy{},
+
+				opcode.InstructionReturn{},
+			},
+			functions[0].Code,
+		)
+	})
+
+	t.Run("index expr in variable declaration", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                let x: @R <- create R()
+                var y <- {"r" : <- create R()}
+
+                let z: @R? <- y["r"] <- x 
+
+                destroy y
+                destroy z
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		require.Len(t, program.Functions, 4)
+
+		functions := comp.ExportFunctions()
+		require.Equal(t, len(functions), len(program.Functions))
+
+		const (
+			xIndex = iota
+			yIndex
+			zIndex
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// let x: @R <- create R()
+				opcode.InstructionGetGlobal{Global: 1},
+				opcode.InstructionInvoke{ArgCount: 0},
+				opcode.InstructionTransfer{Type: 1},
+				opcode.InstructionSetLocal{Local: xIndex},
+
+				// var y <- {"r" : <- create R()}
+				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionTransfer{Type: 3},
+				opcode.InstructionGetGlobal{Global: 1},
+				opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0},
+				opcode.InstructionTransfer{Type: 1},
+				opcode.InstructionTransfer{Type: 1},
+				opcode.InstructionNewDictionary{Type: 2, Size: 1, IsResource: true},
+				opcode.InstructionTransfer{Type: 2},
+				opcode.InstructionSetLocal{Local: yIndex},
+
+				// <- y["r"]
+				opcode.InstructionGetLocal{Local: yIndex},
+				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionRemoveIndex{},
+				opcode.InstructionTransfer{Type: 4},
+
+				// Second value assignment.
+				// y["r"] <- x
+				opcode.InstructionGetLocal{Local: yIndex},
+				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionGetLocal{Local: xIndex},
+				opcode.InstructionTransfer{Type: 4},
+				opcode.InstructionSetIndex{},
+
+				// Store the transferred y-value above (already on stack), to z.
+				// z <- y["r"]
+				opcode.InstructionSetLocal{Local: zIndex},
+
+				// destroy y
+				opcode.InstructionGetLocal{Local: yIndex},
+				opcode.InstructionDestroy{},
+
+				// destroy z
+				opcode.InstructionGetLocal{Local: zIndex},
+				opcode.InstructionDestroy{},
+
+				opcode.InstructionReturn{},
+			},
+			functions[0].Code,
+		)
+	})
+
+	t.Run("member expr in variable declaration", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            resource Foo {
+                var bar: @Bar
+                init() {
+                    self.bar <- create Bar()
+                }
+            }
+
+            resource Bar {}
+
+            fun test() {
+                let x: @Bar <- create Bar()
+                var y <- create Foo()
+
+                let z <- y.bar <- x
+
+                destroy y
+                destroy z
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		require.Len(t, program.Functions, 7)
+
+		functions := comp.ExportFunctions()
+		require.Equal(t, len(functions), len(program.Functions))
+
+		const (
+			xIndex = iota
+			yIndex
+			zIndex
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// let x: @R <- create R()
+				opcode.InstructionGetGlobal{Global: 4},
+				opcode.InstructionInvoke{ArgCount: 0},
+				opcode.InstructionTransfer{Type: 1},
+				opcode.InstructionSetLocal{Local: xIndex},
+
+				// var y <- {"r" : <- create R()}
+				opcode.InstructionGetGlobal{Global: 1},
+				opcode.InstructionInvoke{ArgCount: 0},
+				opcode.InstructionTransfer{Type: 2},
+				opcode.InstructionSetLocal{Local: yIndex},
+
+				// <- y.bar
+				opcode.InstructionGetLocal{Local: yIndex},
+				opcode.InstructionRemoveField{FieldName: 0},
+				opcode.InstructionTransfer{Type: 1},
+
+				// Second value assignment.
+				// y.bar <- x
+				opcode.InstructionGetLocal{Local: yIndex},
+				opcode.InstructionGetLocal{Local: xIndex},
+				opcode.InstructionTransfer{Type: 1},
+				opcode.InstructionSetField{FieldName: 0},
+
+				// Store the transferred y-value above (already on stack), to z.
+				// z <- y.bar
+				opcode.InstructionSetLocal{Local: zIndex},
+
+				// destroy y
+				opcode.InstructionGetLocal{Local: yIndex},
+				opcode.InstructionDestroy{},
+
+				// destroy z
+				opcode.InstructionGetLocal{Local: zIndex},
+				opcode.InstructionDestroy{},
+
+				opcode.InstructionReturn{},
+			},
+			functions[0].Code,
+		)
+	})
+
+	t.Run("in if statement", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                let x: @R <- create R()
+                var y: @R? <- create R()
+
+                if let z <- y <- x {
+                    let res: @R <- z
+                    destroy res
+                }
+
+                destroy y
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		require.Len(t, program.Functions, 4)
+
+		functions := comp.ExportFunctions()
+		require.Equal(t, len(functions), len(program.Functions))
+
+		const (
+			xIndex = iota
+			yIndex
+			tempIndex
+			zIndex
+			resIndex
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// let x: @R <- create R()
+				opcode.InstructionGetGlobal{Global: 1},
+				opcode.InstructionInvoke{ArgCount: 0},
+				opcode.InstructionTransfer{Type: 1},
+				opcode.InstructionSetLocal{Local: xIndex},
+
+				// var y: @R? <- create R()
+				opcode.InstructionGetGlobal{Global: 1},
+				opcode.InstructionInvoke{ArgCount: 0},
+				opcode.InstructionTransfer{Type: 2},
+				opcode.InstructionSetLocal{Local: yIndex},
+
+				// store y in temp index for nil check
+				opcode.InstructionGetLocal{Local: yIndex},
+				opcode.InstructionSetLocal{Local: tempIndex},
+
+				// nil check on temp y
+				opcode.InstructionGetLocal{Local: tempIndex},
+				opcode.InstructionJumpIfNil{Target: 24},
+
+				// If not-nil, transfer the temp y (i.e: <- y)
+				opcode.InstructionGetLocal{Local: tempIndex},
+				opcode.InstructionUnwrap{},
+				opcode.InstructionTransfer{Type: 1},
+
+				// Second value assignment.
+				// y <- x
+				opcode.InstructionGetLocal{Local: xIndex},
+				opcode.InstructionTransfer{Type: 2},
+				opcode.InstructionSetLocal{Local: yIndex},
+
+				// Store the transferred y-value above, to z.
+				// z <- y
+				opcode.InstructionSetLocal{Local: zIndex},
+
+				//  let res: @R <- z
+				opcode.InstructionGetLocal{Local: zIndex},
+				opcode.InstructionTransfer{Type: 1},
+				opcode.InstructionSetLocal{Local: resIndex},
+
+				// destroy res
+				opcode.InstructionGetLocal{Local: resIndex},
+				opcode.InstructionDestroy{},
+
+				// destroy y
+				opcode.InstructionGetLocal{Local: yIndex},
+				opcode.InstructionDestroy{},
+
+				opcode.InstructionReturn{},
+			},
+			functions[0].Code,
+		)
+	})
+}
