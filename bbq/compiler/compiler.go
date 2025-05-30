@@ -224,6 +224,7 @@ func (c *Compiler[_, _]) addGlobal(name string) *Global {
 		panic(errors.NewDefaultUserError("invalid global declaration"))
 	}
 	global := &Global{
+		Name:  name,
 		Index: uint16(count),
 	}
 	c.Globals[name] = global
@@ -640,10 +641,10 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 	for _, declaration := range enumCaseDecls {
 		// Reserve a global variable for each enum case.
 		// The enum case name is used as the global variable name.
-		// e.g: `enum E { case A, case B }` will reserve globals `E.A`, `E.B`.
+		// e.g: `enum E { case A; case B }` will reserve globals `E.A`, `E.B`.
 		enumCaseName := declaration.Identifier.Identifier
 		qualifiedName := commons.TypeQualifiedName(enclosingType, enumCaseName)
-		g := c.addGlobal(qualifiedName)
+		c.addGlobal(qualifiedName)
 	}
 
 	for _, declaration := range functionDecls {
@@ -2027,8 +2028,9 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 		if compositeType, ok := accessedFunctionType.TypeFunctionType.(*sema.CompositeType); ok &&
 			compositeType.GetCompositeKind() == common.CompositeKindEnum {
 
-			variableName := commons.TypeQualifiedName(compositeType, identifier)
-			c.emitGlobalLoad(variableName)
+			qualifiedName := commons.TypeQualifiedName(compositeType, identifier)
+			c.emitGlobalLoad(qualifiedName)
+
 
 			return
 		}
@@ -2766,7 +2768,8 @@ func (c *Compiler[_, _]) compileEnumCaseDeclaration(
 
 		// No parameters
 
-		c.emitGlobalLoad(commons.TypeQualifier(compositeType))
+		qualifiedName := commons.TypeQualifier(compositeType)
+		c.emitGlobalLoad(qualifiedName)
 		c.emitIntegerConstant(
 			big.NewInt(int64(index)),
 			compositeType.EnumRawType,

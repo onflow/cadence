@@ -6371,7 +6371,7 @@ func TestCompileEnum(t *testing.T) {
         }
 
         fun test(): UInt8 {
-            return Test.a.rawValue
+            return Test.b.rawValue
         }
     `)
 	require.NoError(t, err)
@@ -6432,7 +6432,7 @@ func TestCompileEnum(t *testing.T) {
 
 		assert.Equal(t,
 			[]opcode.Instruction{
-				opcode.InstructionGetGlobal{Global: 4},
+				opcode.InstructionGetGlobal{Global: 5},
 				opcode.InstructionGetField{FieldName: 0},
 				opcode.InstructionTransfer{Type: 1},
 				opcode.InstructionReturnValue{},

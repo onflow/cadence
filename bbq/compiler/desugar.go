@@ -1529,7 +1529,7 @@ var emptyInitializer = func() *ast.SpecialFunctionDeclaration {
 			nil,
 			nil,
 		),
-		ast.Position{},
+		ast.EmptyPosition,
 		"",
 	)
 
@@ -1626,12 +1626,12 @@ func newEnumInitializer(gauge common.MemoryGauge, rawType string) (*ast.SpecialF
 			nil,
 			nil,
 		),
-		ast.Position{},
+		ast.EmptyPosition,
 		"",
 	)
 
 	functionDeclaration := ast.NewSpecialFunctionDeclaration(
-		nil,
+		gauge,
 		common.DeclarationKindInitializer,
 		initializer,
 	)
