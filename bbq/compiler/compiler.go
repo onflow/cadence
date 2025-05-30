@@ -1889,21 +1889,13 @@ func (c *Compiler[_, _]) withOptionalChaining(
 	isOptional bool,
 	ifNotNil func(targetIndex uint16),
 ) {
+	nilJump := c.compileOptionalChainingNilJump(targetExpression, isOptional)
 
-	c.compileExpression(targetExpression)
+	// Assign the unwrapped value to a temp local variable.
+	unwrappedValueTempIndex := c.currentFunction.generateLocalIndex()
+	c.emitSetLocal(unwrappedValueTempIndex)
 
-	tempIndex := c.currentFunction.generateLocalIndex()
-	c.emitSetLocal(tempIndex)
-
-	var nilJump int
-	if isOptional {
-		// If the target is nil, jump to the instruction where nil is returned.
-		nilJump = c.emitOptionalChainingNilJump(tempIndex)
-		c.emitSetLocal(tempIndex)
-	}
-
-	ifNotNil(tempIndex)
-
+	ifNotNil(unwrappedValueTempIndex)
 	c.patchOptionalChainingNilJump(isOptional, nilJump)
 }
 
@@ -1918,24 +1910,28 @@ func (c *Compiler[_, _]) withOptionalChainingOptimized(
 	isOptional bool,
 	ifNotNil func(),
 ) {
-
-	c.compileExpression(targetExpression)
-
-	var nilJump int
-	if isOptional {
-		tempIndex := c.currentFunction.generateLocalIndex()
-		c.emitSetLocal(tempIndex)
-		nilJump = c.emitOptionalChainingNilJump(tempIndex)
-	}
-
+	nilJump := c.compileOptionalChainingNilJump(targetExpression, isOptional)
 	ifNotNil()
-
 	c.patchOptionalChainingNilJump(isOptional, nilJump)
 }
 
-func (c *Compiler[_, _]) emitOptionalChainingNilJump(tempIndex uint16) int {
-	// If the value is nil, return nil.
-	// If the receiver is nil, jump to the instruction where nil is returned.
+// compileOptionalChainingNilJump compiles the nil-check for optional chaining.
+// If the value is nil, a jump is emitted to the nil-returning instructions.
+// Otherwise, if the value is unwrapped and left on stack.
+func (c *Compiler[_, _]) compileOptionalChainingNilJump(
+	targetExpression ast.Expression,
+	isOptional bool,
+) int {
+	c.compileExpression(targetExpression)
+
+	if !isOptional {
+		return -1
+	}
+
+	tempIndex := c.currentFunction.generateLocalIndex()
+	c.emitSetLocal(tempIndex)
+
+	// If the value is nil, return nil. by jumping to the instruction where nil is returned.
 	c.emitGetLocal(tempIndex)
 	nilJump := c.emitUndefinedJumpIfNil()
 

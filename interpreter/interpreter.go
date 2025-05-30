@@ -5990,7 +5990,7 @@ func (interpreter *Interpreter) WithResourceDestruction(
 	f()
 }
 
-func checkResourceLoss(context ValueStaticTypeContext, value Value, locationRange LocationRange) {
+func CheckResourceLoss(context ValueStaticTypeContext, value Value, locationRange LocationRange) {
 	if !value.IsResourceKinded(context) {
 		return
 	}

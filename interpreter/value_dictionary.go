@@ -674,7 +674,7 @@ func (v *DictionaryValue) SetKey(context ContainerMutationContext, locationRange
 	}
 
 	if existingValue != nil {
-		checkResourceLoss(context, existingValue, locationRange)
+		CheckResourceLoss(context, existingValue, locationRange)
 	}
 }
 

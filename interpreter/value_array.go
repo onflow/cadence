@@ -559,7 +559,7 @@ func (v *ArrayValue) Set(context ContainerMutationContext, locationRange Locatio
 	context.MaybeValidateAtreeStorage()
 
 	existingValue := StoredValue(context, existingStorable, context.Storage())
-	checkResourceLoss(context, existingValue, locationRange)
+	CheckResourceLoss(context, existingValue, locationRange)
 	existingValue.DeepRemove(context, true) // existingValue is standalone because it was overwritten in parent container.
 
 	RemoveReferencedSlab(context, existingStorable)

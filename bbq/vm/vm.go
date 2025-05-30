@@ -748,6 +748,12 @@ func opGetLocal(vm *VM, ins opcode.InstructionGetLocal) {
 func opSetLocal(vm *VM, ins opcode.InstructionSetLocal) {
 	localIndex := ins.Local
 	absoluteIndex := vm.callFrame.localsOffset + localIndex
+
+	existingValue := vm.locals[absoluteIndex]
+	if existingValue != nil {
+		interpreter.CheckResourceLoss(vm.context, existingValue, EmptyLocationRange)
+	}
+
 	vm.locals[absoluteIndex] = vm.pop()
 }
 

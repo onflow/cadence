@@ -3830,3 +3830,156 @@ func TestInterpretInvalidNilCoalescingResourceDuplication(t *testing.T) {
 	})
 
 }
+
+func TestForceAssignment(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil variable", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(
+			t,
+			`
+            resource R {}
+
+            fun test(): @R {
+                var r: @R? <- nil
+                r <-! create R()
+                return <- r!
+            }
+            `,
+		)
+
+		result, err := invokable.Invoke("test")
+		require.NoError(t, err)
+
+		assert.IsType(
+			t,
+			&interpreter.CompositeValue{},
+			result,
+		)
+	})
+
+	t.Run("non-nil variable", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(
+			t,
+			`
+            resource R {}
+
+            fun test() {
+                var r: @R? <- create R()
+                r <-! create R()
+                destroy r
+            }
+            `,
+		)
+
+		_, err := invokable.Invoke("test")
+		RequireError(t, err)
+
+		var resourceLossError *interpreter.ResourceLossError
+		assert.ErrorAs(t, err, &resourceLossError)
+	})
+
+	t.Run("nil field", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(
+			t,
+			`
+            resource R1 {
+                var r2: @R2?
+                init() {
+                    self.r2 <- nil
+                }
+            }
+
+            resource R2 {}
+
+            fun test() {
+                var r1: @R1 <- create R1()
+                r1.r2 <-! create R2()
+                destroy r1
+            }
+            `,
+		)
+
+		_, err := invokable.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("non-nil field", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(
+			t,
+			`
+            resource R1 {
+                var r2: @R2?
+                init() {
+                    self.r2 <- create R2()
+                }
+            }
+
+            resource R2 {}
+
+            fun test() {
+                var r1: @R1 <- create R1()
+                r1.r2 <-! create R2()
+                destroy r1
+            }
+            `,
+		)
+
+		_, err := invokable.Invoke("test")
+		RequireError(t, err)
+
+		var resourceLossError *interpreter.ResourceLossError
+		assert.ErrorAs(t, err, &resourceLossError)
+	})
+
+	t.Run("nil index", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(
+			t,
+			`
+            resource R {}
+
+            fun test() {
+                var r: @[R?] <- [nil]
+                r[0] <-! create R()
+                destroy r
+            }
+            `,
+		)
+
+		_, err := invokable.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("non-nil index", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(
+			t,
+			`
+            resource R {}
+
+            fun test() {
+                var r: @[R?] <- [<- create R()]
+                r[0] <-! create R()
+                destroy r
+            }
+            `,
+		)
+
+		_, err := invokable.Invoke("test")
+		RequireError(t, err)
+
+		var resourceLossError *interpreter.ResourceLossError
+		assert.ErrorAs(t, err, &resourceLossError)
+	})
+}
