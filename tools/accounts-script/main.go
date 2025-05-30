@@ -17,7 +17,6 @@ import (
 	"github.com/onflow/flow-go/engine/execution/computation"
 	"github.com/onflow/flow-go/fvm"
 	"github.com/onflow/flow-go/fvm/storage/snapshot"
-	"github.com/onflow/flow-go/ledger"
 	"github.com/onflow/flow-go/ledger/common/pathfinder"
 	"github.com/onflow/flow-go/ledger/complete"
 	"github.com/onflow/flow-go/ledger/complete/mtrie/trie"
@@ -42,15 +41,69 @@ var (
 	flagScript        = flag.String("script", "", "Cadence script path")
 )
 
-func ReadTrieForPayloads(tries []*trie.MTrie) []*ledger.Payload {
-	var payloads []*ledger.Payload
+func ProcessAndRunScriptOnTrie(chainID flow.ChainID, tries []*trie.MTrie) {
+	log.Info().Msgf("Processing %d tries", len(tries))
 	for _, trie := range tries {
-		payloads = append(payloads, trie.AllPayloads()...)
+
+		// create registers to view accounts and for storage snapshot
+		registersByAccount, err := registers.NewByAccountFromPayloads(trie.AllPayloads())
+		if err != nil {
+			log.Fatal().Err(err)
+		}
+		log.Info().Msgf(
+			"created %d registers from payloads (%d accounts)",
+			registersByAccount.Count(),
+			registersByAccount.AccountCount(),
+		)
+
+		options := computation.DefaultFVMOptions(chainID, false, false)
+		options = append(
+			options,
+			fvm.WithContractDeploymentRestricted(false),
+			fvm.WithContractRemovalRestricted(false),
+			fvm.WithAuthorizationChecksEnabled(false),
+			fvm.WithSequenceNumberCheckAndIncrementEnabled(false),
+			fvm.WithTransactionFeesEnabled(false),
+		)
+		ctx := fvm.NewContext(options...)
+
+		storageSnapshot := registers.StorageSnapshot{
+			Registers: registersByAccount,
+		}
+
+		vm := fvm.NewVirtualMachine()
+
+		// Read the script from file
+		code, err := os.ReadFile(*flagScript)
+		if err != nil {
+			log.Fatal().Msgf("failed to read script file: %s", err)
+		}
+
+		// Loop over all account registers with their owner string
+		registersByAccount.ForEachAccount(func(accountRegisters *registers.AccountRegisters) error {
+			ownerStr := accountRegisters.Owner()
+			address := flow.HexToAddress(ownerStr)
+			cadenceAddr := cadence.NewAddress(address)
+
+			argBytes, err := jsoncdc.Encode(cadenceAddr)
+			if err != nil {
+				log.Error().Err(err).Str("address", address.Hex()).Msg("failed to encode argument")
+				return err
+			}
+
+			result, err := runScript(vm, ctx, storageSnapshot, code, [][]byte{argBytes})
+			if err != nil {
+				log.Error().Err(err).Str("address", address.Hex()).Msg("script execution failed")
+				return err
+			}
+
+			log.Info().Msgf("Address: %s, Result: %s\n", address.Hex(), string(result))
+			return nil
+		})
 	}
-	return payloads
 }
 
-func getPayloadsFromCheckpoint() []*ledger.Payload {
+func getTriesFromCheckpoint() []*trie.MTrie {
 	memAllocBefore := debug.GetHeapAllocsBytes()
 	log.Info().Msgf("loading checkpoint(s) from %v", *flagCheckpointDir)
 
@@ -84,14 +137,7 @@ func getPayloadsFromCheckpoint() []*ledger.Payload {
 
 	tries = append(tries, ts...)
 
-	log.Info().Msgf("retrieving payloads from %d tries", len(tries))
-
-	payloads := ReadTrieForPayloads(tries)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to collect stats")
-	}
-
-	return payloads
+	return tries
 }
 
 func main() {
@@ -112,63 +158,10 @@ func main() {
 	// Validate chain ID
 	_ = chainID.Chain()
 
-	// Load execution state and retrieve payloads async
-	payloads := getPayloadsFromCheckpoint()
+	// Load execution state and retrieve payloads
+	tries := getTriesFromCheckpoint()
 
-	registersByAccount, err := registers.NewByAccountFromPayloads(payloads)
-	if err != nil {
-		log.Fatal().Err(err)
-	}
-	log.Info().Msgf(
-		"created %d registers from payloads (%d accounts)",
-		registersByAccount.Count(),
-		registersByAccount.AccountCount(),
-	)
-
-	options := computation.DefaultFVMOptions(chainID, false, false)
-	options = append(
-		options,
-		fvm.WithContractDeploymentRestricted(false),
-		fvm.WithContractRemovalRestricted(false),
-		fvm.WithAuthorizationChecksEnabled(false),
-		fvm.WithSequenceNumberCheckAndIncrementEnabled(false),
-		fvm.WithTransactionFeesEnabled(false),
-	)
-	ctx := fvm.NewContext(options...)
-
-	storageSnapshot := registers.StorageSnapshot{
-		Registers: registersByAccount,
-	}
-
-	vm := fvm.NewVirtualMachine()
-
-	// Read the script from file
-	code, err := os.ReadFile(*flagScript)
-	if err != nil {
-		log.Fatal().Msgf("failed to read script file: %s", err)
-	}
-
-	// Loop over all account registers with their owner string
-	registersByAccount.ForEachAccount(func(accountRegisters *registers.AccountRegisters) error {
-		ownerStr := accountRegisters.Owner()
-		address := flow.HexToAddress(ownerStr)
-		cadenceAddr := cadence.NewAddress(address)
-
-		argBytes, err := jsoncdc.Encode(cadenceAddr)
-		if err != nil {
-			log.Error().Err(err).Str("address", address.Hex()).Msg("failed to encode argument")
-			return err
-		}
-
-		result, err := runScript(vm, ctx, storageSnapshot, code, [][]byte{argBytes})
-		if err != nil {
-			log.Error().Err(err).Str("address", address.Hex()).Msg("script execution failed")
-			return err
-		}
-
-		fmt.Printf("Address: %s, Result: %s\n", address.Hex(), string(result))
-		return nil
-	})
+	ProcessAndRunScriptOnTrie(chainID, tries)
 }
 
 func runScript(

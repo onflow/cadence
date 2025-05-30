@@ -1,4 +1,5 @@
-pub fun main(address: Address): {String: String} {
+access(all)
+fun main(address: Address): String {
     let account = getAccount(address)
     // iterate over all storage
     account.storage.forEachStored(fun (path: StoragePath, type: Type): Bool {
