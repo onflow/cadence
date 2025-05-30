@@ -6432,7 +6432,7 @@ func TestCompileEnum(t *testing.T) {
 
 		assert.Equal(t,
 			[]opcode.Instruction{
-				opcode.InstructionGetGlobal{Global: 5},
+				opcode.InstructionGetGlobal{Global: 1},
 				opcode.InstructionGetField{FieldName: 0},
 				opcode.InstructionTransfer{Type: 1},
 				opcode.InstructionReturnValue{},
@@ -6452,7 +6452,7 @@ func TestCompileEnum(t *testing.T) {
 
 	assert.Equal(t,
 		[]opcode.Instruction{
-			opcode.InstructionGetGlobal{Global: 1},
+			opcode.InstructionGetGlobal{Global: 4},
 			opcode.InstructionGetConstant{Constant: 1},
 			opcode.InstructionInvoke{ArgCount: 1},
 			opcode.InstructionTransfer{Type: 3},
@@ -6463,7 +6463,7 @@ func TestCompileEnum(t *testing.T) {
 
 	assert.Equal(t,
 		[]opcode.Instruction{
-			opcode.InstructionGetGlobal{Global: 1},
+			opcode.InstructionGetGlobal{Global: 4},
 			opcode.InstructionGetConstant{Constant: 2},
 			opcode.InstructionInvoke{ArgCount: 1},
 			opcode.InstructionTransfer{Type: 3},
@@ -6474,7 +6474,7 @@ func TestCompileEnum(t *testing.T) {
 
 	assert.Equal(t,
 		[]opcode.Instruction{
-			opcode.InstructionGetGlobal{Global: 1},
+			opcode.InstructionGetGlobal{Global: 4},
 			opcode.InstructionGetConstant{Constant: 3},
 			opcode.InstructionInvoke{ArgCount: 1},
 			opcode.InstructionTransfer{Type: 3},
