@@ -8484,3 +8484,25 @@ func TestBoundStaticFunction(t *testing.T) {
 		result,
 	)
 }
+
+func TestEnum(t *testing.T) {
+
+	t.Parallel()
+
+	result, err := CompileAndInvoke(t,
+		`
+            enum Test: UInt8 {
+                case a
+                case b
+                case c
+            }
+
+            fun test(): UInt8 {
+                return Test.b.rawValue
+            }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.NewUnmeteredUInt8Value(1), result)
+}
