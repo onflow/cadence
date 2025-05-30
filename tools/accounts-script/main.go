@@ -84,7 +84,7 @@ func ProcessAndRunScriptOnTrie(chainID flow.ChainID, tries []*trie.MTrie) {
 		logAccount := moduleUtil.LogProgress(
 			log.Logger,
 			moduleUtil.DefaultLogProgressConfig(
-				"processing account group",
+				"processing accounts",
 				registersByAccount.AccountCount(),
 			),
 		)
@@ -109,7 +109,7 @@ func ProcessAndRunScriptOnTrie(chainID flow.ChainID, tries []*trie.MTrie) {
 					return err
 				}
 
-				log.Info().Msgf("Address: %s, Result: %s", owner, string(result))
+				log.Info().Msgf("Address: %s, Result: %s", address.Hex(), string(result))
 				return nil
 			},
 		)
