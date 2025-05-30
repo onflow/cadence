@@ -52,7 +52,7 @@ func ReadTrieForPayloads(tries []*trie.MTrie) []*ledger.Payload {
 
 func getPayloadsFromCheckpoint() []*ledger.Payload {
 	memAllocBefore := debug.GetHeapAllocsBytes()
-	log.Info().Msgf("loading checkpoint(s) from %v", flagCheckpointDir)
+	log.Info().Msgf("loading checkpoint(s) from %v", *flagCheckpointDir)
 
 	diskWal, err := wal.NewDiskWAL(zerolog.Nop(), nil, &metrics.NoopCollector{}, *flagCheckpointDir, complete.DefaultCacheSize, pathfinder.PathByteSize, wal.SegmentSize)
 	if err != nil {
