@@ -621,8 +621,9 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 			common.DeclarationKindPrepare:
 			// Important: All special functions visited within `VisitSpecialFunctionDeclaration`
 			// must be also visited here. And must be visited only them. e.g: Don't visit inits.
-			funcName := commons.TypeQualifiedName(enclosingType, declaration.FunctionDeclaration.Identifier.Identifier)
-			c.addGlobal(funcName)
+			functionName := declaration.FunctionDeclaration.Identifier.Identifier
+			qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
+			c.addGlobal(qualifiedName)
 		}
 	}
 
@@ -630,8 +631,9 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 	// Only do it for user-defined types (i.e: `compositeTypeName` is not empty).
 	if enclosingType != nil {
 		for _, boundFunction := range commonBuiltinTypeBoundFunctions {
-			funcName := commons.TypeQualifiedName(enclosingType, boundFunction.name)
-			c.addGlobal(funcName)
+			functionName := boundFunction.name
+			qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
+			c.addGlobal(qualifiedName)
 		}
 	}
 
@@ -639,13 +641,15 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 		// Reserve a global variable for each enum case.
 		// The enum case name is used as the global variable name.
 		// e.g: `enum E { case A, case B }` will reserve globals `E.A`, `E.B`.
-		qualifiedName := commons.TypeQualifiedName(enclosingType, declaration.Identifier.Identifier)
-		c.addGlobal(qualifiedName)
+		enumCaseName := declaration.Identifier.Identifier
+		qualifiedName := commons.TypeQualifiedName(enclosingType, enumCaseName)
+		g := c.addGlobal(qualifiedName)
 	}
 
 	for _, declaration := range functionDecls {
-		funcName := commons.TypeQualifiedName(enclosingType, declaration.Identifier.Identifier)
-		c.addGlobal(funcName)
+		functionName := declaration.Identifier.Identifier
+		qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
+		c.addGlobal(qualifiedName)
 	}
 
 	for _, declaration := range compositeDecls {
@@ -1672,6 +1676,10 @@ func (c *Compiler[_, _]) emitVariableLoad(name string) {
 		return
 	}
 
+	c.emitGlobalLoad(name)
+}
+
+func (c *Compiler[_, _]) emitGlobalLoad(name string) {
 	global := c.findGlobal(name)
 	c.emit(opcode.InstructionGetGlobal{
 		Global: global.Index,
@@ -1770,7 +1778,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		// Calling a type constructor must be invoked statically. e.g: `SomeContract.Foo()`.
 
 		// Load function value
-		c.emitVariableLoad(funcName)
+		c.emitGlobalLoad(funcName)
 
 		// Compile arguments
 		c.compileArguments(expression.Arguments, invocationTypes)
@@ -1845,7 +1853,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 
 		// Compile as static-function call.
 		// No receiver is loaded.
-		c.emitVariableLoad(funcName)
+		c.emitGlobalLoad(funcName)
 		c.compileArguments(expression.Arguments, invocationTypes)
 		c.emit(opcode.InstructionInvoke{
 			TypeArgs: typeArgs,
@@ -1859,7 +1867,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 				// Compile as object-method call.
 
 				// Function must be loaded only if the receiver is non-nil.
-				c.emitVariableLoad(funcName)
+				c.emitGlobalLoad(funcName)
 
 				// The receiver is loaded first.
 				// So 'self' is always the zero-th argument.
@@ -2020,7 +2028,7 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 			compositeType.GetCompositeKind() == common.CompositeKindEnum {
 
 			variableName := commons.TypeQualifiedName(compositeType, identifier)
-			c.emitVariableLoad(variableName)
+			c.emitGlobalLoad(variableName)
 
 			return
 		}
@@ -2758,7 +2766,7 @@ func (c *Compiler[_, _]) compileEnumCaseDeclaration(
 
 		// No parameters
 
-		c.emitVariableLoad(commons.TypeQualifier(compositeType))
+		c.emitGlobalLoad(commons.TypeQualifier(compositeType))
 		c.emitIntegerConstant(
 			big.NewInt(int64(index)),
 			compositeType.EnumRawType,
