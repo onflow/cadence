@@ -6373,6 +6373,10 @@ func TestCompileEnum(t *testing.T) {
         fun test(): UInt8 {
             return Test.b.rawValue
         }
+
+        fun test2(rawValue: UInt8) {
+            Test(rawValue: rawValue)
+        }
     `)
 	require.NoError(t, err)
 
@@ -6382,15 +6386,34 @@ func TestCompileEnum(t *testing.T) {
 	)
 	program := comp.Compile()
 
+	variables := program.Variables
+	require.Len(t, variables, 3)
+
+	const (
+		testAVarIndex = iota
+		testBVarIndex
+		testCVarIndex
+	)
+
 	functions := program.Functions
-	require.Len(t, functions, 4)
+	require.Len(t, functions, 5)
 
 	const (
 		testFuncIndex = iota
-		initFuncIndex
+		test2FuncIndex
+		testConstructorFuncIndex
 		// Next two indexes are for builtin methods (i.e: getType, isInstance)
 		_
 		_
+	)
+
+	const (
+		testAGlobalIndex = iota
+		testBGlobalIndex
+		testCGlobalIndex
+		testGlobalIndex
+		test2GlobalIndex
+		testConstructorGlobalIndex
 	)
 
 	{
@@ -6427,60 +6450,69 @@ func TestCompileEnum(t *testing.T) {
 				opcode.InstructionGetLocal{Local: selfIndex},
 				opcode.InstructionReturnValue{},
 			},
-			functions[initFuncIndex].Code,
-		)
-
-		assert.Equal(t,
-			[]opcode.Instruction{
-				opcode.InstructionGetGlobal{Global: 1},
-				opcode.InstructionGetField{FieldName: 0},
-				opcode.InstructionTransfer{Type: 1},
-				opcode.InstructionReturnValue{},
-			},
-			functions[testFuncIndex].Code,
+			functions[testConstructorFuncIndex].Code,
 		)
 	}
 
-	variables := program.Variables
-	require.Len(t, variables, 3)
-
-	const (
-		testAIndex = iota
-		testBIndex
-		testCIndex
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionGetGlobal{Global: testBGlobalIndex},
+			opcode.InstructionGetField{FieldName: 0},
+			opcode.InstructionTransfer{Type: 1},
+			opcode.InstructionReturnValue{},
+		},
+		functions[testFuncIndex].Code,
 	)
+
+	{
+		// rawValueIndex is the index of the parameter `rawValue`, which is the first parameter
+		const rawValueIndex = iota
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// TODO: lookup function, instead of constructor function
+				opcode.InstructionGetGlobal{Global: 5},
+				opcode.InstructionGetLocal{Local: rawValueIndex},
+				opcode.InstructionTransfer{Type: 1},
+				opcode.InstructionInvoke{ArgCount: 1},
+				opcode.InstructionDrop{},
+				opcode.InstructionReturn{},
+			},
+			functions[test2FuncIndex].Code,
+		)
+	}
 
 	assert.Equal(t,
 		[]opcode.Instruction{
-			opcode.InstructionGetGlobal{Global: 4},
+			opcode.InstructionGetGlobal{Global: testConstructorGlobalIndex},
 			opcode.InstructionGetConstant{Constant: 1},
 			opcode.InstructionInvoke{ArgCount: 1},
 			opcode.InstructionTransfer{Type: 3},
 			opcode.InstructionReturnValue{},
 		},
-		variables[testAIndex].Getter.Code,
+		variables[testAVarIndex].Getter.Code,
 	)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
-			opcode.InstructionGetGlobal{Global: 4},
+			opcode.InstructionGetGlobal{Global: testConstructorGlobalIndex},
 			opcode.InstructionGetConstant{Constant: 2},
 			opcode.InstructionInvoke{ArgCount: 1},
 			opcode.InstructionTransfer{Type: 3},
 			opcode.InstructionReturnValue{},
 		},
-		variables[testBIndex].Getter.Code,
+		variables[testBVarIndex].Getter.Code,
 	)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
-			opcode.InstructionGetGlobal{Global: 4},
+			opcode.InstructionGetGlobal{Global: testConstructorGlobalIndex},
 			opcode.InstructionGetConstant{Constant: 3},
 			opcode.InstructionInvoke{ArgCount: 1},
 			opcode.InstructionTransfer{Type: 3},
 			opcode.InstructionReturnValue{},
 		},
-		variables[testCIndex].Getter.Code,
+		variables[testCVarIndex].Getter.Code,
 	)
 
 	assert.Equal(t,
