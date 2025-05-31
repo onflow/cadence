@@ -43,7 +43,7 @@ var (
 	flagScript        = flag.String("script", "", "Cadence script path")
 )
 
-func ProcessAndRunScriptOnTrie(chainID flow.ChainID, tries []*trie.MTrie) {
+func ProcessAndRunScriptOnTrie(chainID flow.ChainID, tries []*trie.MTrie) error {
 	log.Info().Msgf("Processing %d tries", len(tries))
 	for _, trie := range tries {
 
@@ -90,7 +90,7 @@ func ProcessAndRunScriptOnTrie(chainID flow.ChainID, tries []*trie.MTrie) {
 		)
 
 		// Loop over all account registers with their owner string
-		registersByAccount.ForEachAccount(
+		err = registersByAccount.ForEachAccount(
 			func(accountRegisters *registers.AccountRegisters) error {
 				defer logAccount(1)
 				owner := accountRegisters.Owner()
@@ -103,17 +103,22 @@ func ProcessAndRunScriptOnTrie(chainID flow.ChainID, tries []*trie.MTrie) {
 					return err
 				}
 
-				result, err := runScript(vm, ctx, storageSnapshot, code, [][]byte{argBytes})
+				_, err = runScript(vm, ctx, storageSnapshot, code, [][]byte{argBytes})
 				if err != nil {
-					log.Error().Err(err).Str("address", address.Hex()).Msg("script execution failed")
+					log.Error().Err(err).Str("address", address.Hex()).Msg("cadence error")
 					return err
 				}
 
-				log.Info().Msgf("Address: %s, Result: %s", address.Hex(), string(result))
+				// log.Info().Msgf("Address: %s, Result: %s", address.Hex(), string(result))
 				return nil
 			},
 		)
+
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func getTriesFromCheckpoint() []*trie.MTrie {
@@ -174,7 +179,12 @@ func main() {
 	// Load execution state and retrieve payloads
 	tries := getTriesFromCheckpoint()
 
-	ProcessAndRunScriptOnTrie(chainID, tries)
+	err := ProcessAndRunScriptOnTrie(chainID, tries)
+
+	if err != nil {
+		log.Fatal().Err(err).Msg("storage iteration failed")
+	}
+	log.Info().Msgf("Success")
 }
 
 func runScript(
