@@ -1373,7 +1373,7 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 				TargetType: paramType,
 			}
 
-			d.elaboration.SetAssignmentStatementType(assignment, assignmentTypes)
+			d.elaboration.SetAssignmentStatementTypes(assignment, assignmentTypes)
 		}
 
 		// Create an init function.
@@ -1614,7 +1614,7 @@ func newEnumInitializer(
 		),
 	)
 
-	elaboration.SetAssignmentStatementType(
+	elaboration.SetAssignmentStatementTypes(
 		assignmentStatement,
 		sema.AssignmentStatementTypes{
 			ValueType:  rawValueType,
