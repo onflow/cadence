@@ -75,19 +75,20 @@ func LinkGlobals(
 
 	executable := NewExecutableProgram(location, program, nil)
 
-	globalsLen := len(program.Variables) + len(program.Functions) + len(importedGlobals) + 1
+	globalsLen := len(program.Contracts) + len(program.Variables) + len(program.Functions) + len(importedGlobals)
 	indexedGlobalsLen := len(program.Functions)
 
 	globals := make([]*Variable, 0, globalsLen)
 	indexedGlobals := make(map[string]*Variable, indexedGlobalsLen)
 
+	// NOTE: ensure both the context and the mapping are updated
+
 	for _, contract := range program.Contracts {
-		// Update the globals - both the context and the mapping.
-		// Contract value is always at the zero-th index.
 		contractVariable := &interpreter.SimpleVariable{}
 		contractVariable.InitializeWithGetter(func() interpreter.Value {
 			return loadContractValue(contract, context)
 		})
+
 		globals = append(globals, contractVariable)
 		indexedGlobals[contract.Name] = contractVariable
 	}
@@ -134,6 +135,7 @@ func LinkGlobals(
 
 		variable := &interpreter.SimpleVariable{}
 		variable.InitializeWithValue(value)
+
 		globals = append(globals, variable)
 		indexedGlobals[function.QualifiedName] = variable
 	}

@@ -1140,7 +1140,7 @@ func (interpreter *Interpreter) declareCompositeValue(
 	variable Variable,
 ) {
 	if declaration.Kind() == common.CompositeKindEnum {
-		return interpreter.declareEnumConstructor(declaration.(*ast.CompositeDeclaration), lexicalScope)
+		return interpreter.declareEnumLookupFunction(declaration.(*ast.CompositeDeclaration), lexicalScope)
 	} else {
 		return interpreter.declareNonEnumCompositeValue(declaration, lexicalScope)
 	}
@@ -1569,7 +1569,7 @@ type EnumCase struct {
 	Value    MemberAccessibleValue
 }
 
-func (interpreter *Interpreter) declareEnumConstructor(
+func (interpreter *Interpreter) declareEnumLookupFunction(
 	declaration *ast.CompositeDeclaration,
 	lexicalScope *VariableActivation,
 ) (
@@ -1643,7 +1643,13 @@ func (interpreter *Interpreter) declareEnumConstructor(
 		HasPosition: declaration,
 	}
 
-	value := EnumConstructorFunction(interpreter, compositeType, caseValues, constructorNestedVariables)
+	enumLookupFunctionType := interpreter.Program.Elaboration.EnumLookupFunctionType(compositeType)
+	value := EnumLookupFunction(
+		interpreter,
+		enumLookupFunctionType,
+		caseValues,
+		constructorNestedVariables,
+	)
 	variable.SetValue(
 		interpreter,
 		locationRange,
@@ -1653,9 +1659,9 @@ func (interpreter *Interpreter) declareEnumConstructor(
 	return lexicalScope, variable
 }
 
-func EnumConstructorFunction(
+func EnumLookupFunction(
 	gauge common.MemoryGauge,
-	enumType *sema.CompositeType,
+	functionType *sema.FunctionType,
 	cases []EnumCase,
 	nestedVariables map[string]Variable,
 ) *HostFunctionValue {
@@ -1674,7 +1680,7 @@ func EnumConstructorFunction(
 	// Constructor is a static function.
 	constructor := NewStaticHostFunctionValue(
 		gauge,
-		sema.EnumConstructorType(enumType),
+		functionType,
 		func(invocation Invocation) Value {
 			rawValue, ok := invocation.Arguments[0].(IntegerValue)
 			if !ok {

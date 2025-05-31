@@ -26,43 +26,33 @@ import (
 
 const CryptoContractLocation = common.IdentifierLocation("Crypto")
 
-func cryptoAlgorithmEnumConstructorType[T sema.CryptoAlgorithm](
+func cryptoAlgorithmEnumLookupType[T sema.CryptoAlgorithm](
 	enumType *sema.CompositeType,
 	enumCases []T,
 ) *sema.FunctionType {
 
-	members := make([]*sema.Member, len(enumCases))
-	for i, algo := range enumCases {
-		members[i] = sema.NewUnmeteredPublicConstantFieldMember(
-			enumType,
-			algo.Name(),
-			enumType,
-			algo.DocString(),
+	functionType := sema.EnumLookupFunctionType(enumType)
+
+	for _, algo := range enumCases {
+		name := algo.Name()
+		functionType.Members.Set(
+			name,
+			sema.NewUnmeteredPublicConstantFieldMember(
+				enumType,
+				name,
+				enumType,
+				algo.DocString(),
+			),
 		)
 	}
 
-	return &sema.FunctionType{
-		Purity:        sema.FunctionPurityView,
-		IsConstructor: true,
-		Parameters: []sema.Parameter{
-			{
-				Identifier:     sema.EnumRawValueFieldName,
-				TypeAnnotation: sema.NewTypeAnnotation(enumType.EnumRawType),
-			},
-		},
-		ReturnTypeAnnotation: sema.NewTypeAnnotation(
-			&sema.OptionalType{
-				Type: enumType,
-			},
-		),
-		Members: sema.MembersAsMap(members),
-	}
+	return functionType
 }
 
 type enumCaseConstructor func(rawValue interpreter.UInt8Value) interpreter.MemberAccessibleValue
 
 func cryptoAlgorithmEnumValueAndCaseValues[T sema.CryptoAlgorithm](
-	enumType *sema.CompositeType,
+	functionType *sema.FunctionType,
 	enumCases []T,
 	caseConstructor enumCaseConstructor,
 ) (
@@ -87,9 +77,9 @@ func cryptoAlgorithmEnumValueAndCaseValues[T sema.CryptoAlgorithm](
 			interpreter.NewVariableWithValue(nil, caseValue)
 	}
 
-	value = interpreter.EnumConstructorFunction(
+	value = interpreter.EnumLookupFunction(
 		nil,
-		enumType,
+		functionType,
 		caseValues,
 		constructorNestedVariables,
 	)

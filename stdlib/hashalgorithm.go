@@ -163,8 +163,13 @@ func hash(
 
 func NewHashAlgorithmConstructor(hasher Hasher) StandardLibraryValue {
 
-	hashAlgorithmConstructorValue, _ := cryptoAlgorithmEnumValueAndCaseValues(
+	enumLookupType := cryptoAlgorithmEnumLookupType(
 		sema.HashAlgorithmType,
+		sema.HashAlgorithms,
+	)
+
+	hashAlgorithmConstructorValue, _ := cryptoAlgorithmEnumValueAndCaseValues(
+		enumLookupType,
 		sema.HashAlgorithms,
 		func(rawValue interpreter.UInt8Value) interpreter.MemberAccessibleValue {
 			// Assume rawValues are all valid, given we iterate over sema.HashAlgorithms
@@ -174,11 +179,8 @@ func NewHashAlgorithmConstructor(hasher Hasher) StandardLibraryValue {
 	)
 
 	return StandardLibraryValue{
-		Name: sema.HashAlgorithmTypeName,
-		Type: cryptoAlgorithmEnumConstructorType(
-			sema.HashAlgorithmType,
-			sema.HashAlgorithms,
-		),
+		Name:  sema.HashAlgorithmTypeName,
+		Type:  enumLookupType,
 		Value: hashAlgorithmConstructorValue,
 		Kind:  common.DeclarationKindEnum,
 	}
