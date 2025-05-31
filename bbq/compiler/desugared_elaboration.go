@@ -387,6 +387,10 @@ func (e *DesugaredElaboration) MoveExpressionTypes(expression *ast.UnaryExpressi
 	return e.elaboration.MoveExpressionTypes(expression)
 }
 
+func (e *DesugaredElaboration) IsNestedResourceMoveExpression(expression ast.Expression) bool {
+	return e.elaboration.IsNestedResourceMoveExpression(expression)
+}
+
 func (e *DesugaredElaboration) EnumLookupFunctionType(enumType *sema.CompositeType) *sema.FunctionType {
 	return e.elaboration.EnumLookupFunctionType(enumType)
 }

@@ -348,6 +348,50 @@ func DecodeGetField(ip *uint16, code []byte) (i InstructionGetField) {
 	return i
 }
 
+// InstructionRemoveField
+//
+// Pops a value off the stack, the target. Remove the value of the given field from the target, and pushes it onto the stack.
+type InstructionRemoveField struct {
+	FieldName uint16
+}
+
+var _ Instruction = InstructionRemoveField{}
+
+func (InstructionRemoveField) Opcode() Opcode {
+	return RemoveField
+}
+
+func (i InstructionRemoveField) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
+}
+
+func (i InstructionRemoveField) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "fieldName", i.FieldName, colorize)
+}
+
+func (i InstructionRemoveField) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfConstantArgument(sb, "fieldName", constants[i.FieldName], colorize)
+}
+
+func (i InstructionRemoveField) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.FieldName)
+}
+
+func DecodeRemoveField(ip *uint16, code []byte) (i InstructionRemoveField) {
+	i.FieldName = decodeUint16(ip, code)
+	return i
+}
+
 // InstructionSetField
 //
 // Pops two values off the stack, the target and the value, and then sets the field at the given index of the target to the value.
@@ -418,6 +462,35 @@ func (i InstructionGetIndex) ResolvedOperandsString(sb *strings.Builder,
 }
 
 func (i InstructionGetIndex) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
+// InstructionRemoveIndex
+//
+// Pops two values off the stack, the array and the index. Removes the value at the given index from the array and pushes it onto the stack.
+type InstructionRemoveIndex struct {
+}
+
+var _ Instruction = InstructionRemoveIndex{}
+
+func (InstructionRemoveIndex) Opcode() Opcode {
+	return RemoveIndex
+}
+
+func (i InstructionRemoveIndex) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionRemoveIndex) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionRemoveIndex) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
+func (i InstructionRemoveIndex) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
@@ -2294,10 +2367,14 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return DecodeSetGlobal(ip, code)
 	case GetField:
 		return DecodeGetField(ip, code)
+	case RemoveField:
+		return DecodeRemoveField(ip, code)
 	case SetField:
 		return DecodeSetField(ip, code)
 	case GetIndex:
 		return InstructionGetIndex{}
+	case RemoveIndex:
+		return InstructionRemoveIndex{}
 	case SetIndex:
 		return InstructionSetIndex{}
 	case True:
