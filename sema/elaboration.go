@@ -173,6 +173,7 @@ type Elaboration struct {
 	semanticAccesses                    map[ast.Access]Access
 	resultVariableTypes                 map[ast.Element]Type
 	moveExpressionTypes                 map[*ast.UnaryExpression]Type
+	enumLookupFunctionTypes             map[*CompositeType]*FunctionType
 	isChecking                          bool
 	// IsRecovered is true if the program was recovered (see runtime.Interface.RecoverProgram)
 	IsRecovered bool
@@ -1108,4 +1109,18 @@ func (e *Elaboration) MoveExpressionTypes(expression *ast.UnaryExpression) Type 
 		return nil
 	}
 	return e.moveExpressionTypes[expression]
+}
+
+func (e *Elaboration) SetEnumLookupFunctionType(enumType *CompositeType, functionType *FunctionType) {
+	if e.enumLookupFunctionTypes == nil {
+		e.enumLookupFunctionTypes = map[*CompositeType]*FunctionType{}
+	}
+	e.enumLookupFunctionTypes[enumType] = functionType
+}
+
+func (e *Elaboration) EnumLookupFunctionType(enumType *CompositeType) (functionType *FunctionType) {
+	if e.enumLookupFunctionTypes == nil {
+		return
+	}
+	return e.enumLookupFunctionTypes[enumType]
 }
