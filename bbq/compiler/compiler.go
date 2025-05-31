@@ -621,7 +621,7 @@ func (c *Compiler[_, _]) reserveVariableGlobals(
 	for _, declaration := range enumCaseDecls {
 		// Reserve a global variable for each enum case.
 		// The enum case name is used as the global variable name.
-		// e.g: `enum E { case A; case B }` will reserve globals `E.A`, `E.B`.
+		// e.g: `enum E: UInt8 { case A; case B }` will reserve globals `E.A`, `E.B`.
 		enumCaseName := declaration.Identifier.Identifier
 		qualifiedName := commons.TypeQualifiedName(enclosingType, enumCaseName)
 		c.addGlobal(qualifiedName)
@@ -685,18 +685,38 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 			continue
 		}
 
-		// For composite types other than contracts, globals
-		// reserved by the type-name will be used for the init method.
-		// For contracts, globals reserved by the type-name
-		// will be used for the contract value (already reserved before getting here).
-		// Hence, reserve a separate global for contract inits.
-		if declaration.CompositeKind == common.CompositeKindContract {
-			qualifiedName := commons.TypeQualifiedName(compositeType, commons.InitFunctionName)
-			c.addGlobal(qualifiedName)
-		} else {
-			// Reserve a global for the value-constructor.
-			constructorName := commons.TypeQualifier(compositeType)
-			c.addGlobal(constructorName)
+		// Reserve a global for contract the constructor function.
+
+		var constructorName string
+
+		switch declaration.CompositeKind {
+		case common.CompositeKindContract:
+			// For contracts, a global with the type-name is used for the contract value
+			// (already reserved in `reserveGlobals` before getting here).
+			// Suffix the type-name.
+
+			constructorName = commons.TypeQualifiedName(compositeType, commons.InitFunctionName)
+
+		case common.CompositeKindEnum:
+			// For enums, a global with the type-name is used for the "lookup function".
+			// For example, for `enum E: UInt8 { case A; case B }`, the lookup function is `fun E(rawValue: UInt8): E?`.
+			// Suffix the type-name.
+
+			constructorName = commons.TypeQualifiedName(compositeType, commons.InitFunctionName)
+
+		default:
+			// For other composite types, the type-name is used for the constructor function.
+
+			constructorName = commons.TypeQualifier(compositeType)
+		}
+
+		c.addGlobal(constructorName)
+
+		if declaration.CompositeKind == common.CompositeKindEnum {
+			// For enums, also reserve a global for the "lookup function".
+			// For example, for `enum E: UInt8 { case A; case B }`, the lookup function is `fun E(rawValue: UInt8): E?`.
+			functionName := commons.TypeQualifier(compositeType)
+			c.addGlobal(functionName)
 		}
 
 		members := declaration.Members
@@ -2621,7 +2641,11 @@ func (c *Compiler[_, _]) VisitCompositeDeclaration(declaration *ast.CompositeDec
 	// - an empty initializer
 	if !hasInit {
 		if compositeType.Kind == common.CompositeKindEnum {
-			c.generateEnumInit(compositeType.EnumRawType)
+			c.generateEnumInit(compositeType)
+			c.generateEnumLookup(
+				compositeType,
+				declaration.Members.EnumCases(),
+			)
 		} else {
 			c.generateEmptyInit()
 		}
@@ -2784,8 +2808,8 @@ func (c *Compiler[_, _]) compileEnumCaseDeclaration(
 
 		// No parameters
 
-		qualifiedName := commons.TypeQualifier(compositeType)
-		c.emitGlobalLoad(qualifiedName)
+		constructorName := commons.TypeQualifiedName(compositeType, commons.InitFunctionName)
+		c.emitGlobalLoad(constructorName)
 		c.emitIntegerConstant(
 			big.NewInt(int64(index)),
 			compositeType.EnumRawType,
@@ -2933,22 +2957,39 @@ func (c *Compiler[_, _]) generateEmptyInit() {
 	c.VisitSpecialFunctionDeclaration(emptyInitializer)
 }
 
-func (c *Compiler[_, _]) generateEnumInit(rawValueType sema.Type) {
-	enumInitializer, assignmentStatement := newEnumInitializer(c.memoryGauge, rawValueType.String())
-	enumInitializerFuncType := newEnumInitializerFuncType(rawValueType)
+func (c *Compiler[_, _]) generateEnumInit(enumType *sema.CompositeType) {
+	enumInitializer := newEnumInitializer(c.memoryGauge, enumType, c.DesugaredElaboration)
+	enumInitializerFuncType := newEnumInitializerFuncType(enumType.EnumRawType)
 
-	c.DesugaredElaboration.SetAssignmentStatementType(
-		assignmentStatement,
-		sema.AssignmentStatementTypes{
-			ValueType:  rawValueType,
-			TargetType: rawValueType,
-		},
-	)
 	c.DesugaredElaboration.SetFunctionDeclarationFunctionType(
 		enumInitializer.FunctionDeclaration,
 		enumInitializerFuncType,
 	)
 	c.VisitSpecialFunctionDeclaration(enumInitializer)
+}
+
+func (c *Compiler[_, _]) generateEnumLookup(enumType *sema.CompositeType, enumCases []*ast.EnumCaseDeclaration) {
+	enumLookup := newEnumLookup(
+		c.memoryGauge,
+		enumType,
+		enumCases,
+		c.DesugaredElaboration,
+	)
+	enumLookupFuncType := newEnumLookupFuncType(c.memoryGauge, enumType)
+
+	c.DesugaredElaboration.SetFunctionDeclarationFunctionType(
+		enumLookup,
+		enumLookupFuncType,
+	)
+
+	// TODO: improve
+	previousCompositeTypeStack := c.compositeTypeStack
+	c.compositeTypeStack = &Stack[sema.CompositeKindedType]{}
+	defer func() {
+		c.compositeTypeStack = previousCompositeTypeStack
+	}()
+
+	c.VisitFunctionDeclaration(enumLookup, false)
 }
 
 func (c *Compiler[_, _]) compilePotentiallyInheritedCode(statement ast.Statement, f func()) {

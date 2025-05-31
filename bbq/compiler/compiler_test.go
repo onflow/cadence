@@ -6396,12 +6396,13 @@ func TestCompileEnum(t *testing.T) {
 	)
 
 	functions := program.Functions
-	require.Len(t, functions, 5)
+	require.Len(t, functions, 6)
 
 	const (
 		testFuncIndex = iota
 		test2FuncIndex
 		testConstructorFuncIndex
+		testLookupFuncIndex
 		// Next two indexes are for builtin methods (i.e: getType, isInstance)
 		_
 		_
@@ -6414,6 +6415,7 @@ func TestCompileEnum(t *testing.T) {
 		testGlobalIndex
 		test2GlobalIndex
 		testConstructorGlobalIndex
+		testLookupGlobalIndex
 	)
 
 	{
@@ -6454,6 +6456,65 @@ func TestCompileEnum(t *testing.T) {
 		)
 	}
 
+	{
+		const parameterCount = 1
+
+		const (
+			// rawValueIndex is the index of the parameter `rawValue`, which is the first parameter
+			rawValueIndex = iota
+			// tempIndex is the index of the temporary variable used for switch
+			tempIndex
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// let temp = rawValue
+				opcode.InstructionGetLocal{Local: rawValueIndex},
+				opcode.InstructionSetLocal{Local: tempIndex},
+
+				// switch temp
+
+				// case 1: return Test.a
+				opcode.InstructionGetLocal{Local: tempIndex},
+				opcode.InstructionGetConstant{Constant: 1},
+				opcode.InstructionEqual{},
+				opcode.InstructionJumpIfFalse{Target: 10},
+				opcode.InstructionGetGlobal{Global: testAGlobalIndex},
+				opcode.InstructionTransfer{Type: 5},
+				opcode.InstructionReturnValue{},
+				opcode.InstructionJump{Target: 29},
+
+				// case 2: return Test.b
+				opcode.InstructionGetLocal{Local: tempIndex},
+				opcode.InstructionGetConstant{Constant: 2},
+				opcode.InstructionEqual{},
+				opcode.InstructionJumpIfFalse{Target: 18},
+				opcode.InstructionGetGlobal{Global: testBGlobalIndex},
+				opcode.InstructionTransfer{Type: 5},
+				opcode.InstructionReturnValue{},
+				opcode.InstructionJump{Target: 29},
+
+				// case 3: return Test.c
+				opcode.InstructionGetLocal{Local: tempIndex},
+				opcode.InstructionGetConstant{Constant: 3},
+				opcode.InstructionEqual{},
+				opcode.InstructionJumpIfFalse{Target: 26},
+				opcode.InstructionGetGlobal{Global: testCGlobalIndex},
+				opcode.InstructionTransfer{Type: 5},
+				opcode.InstructionReturnValue{},
+				opcode.InstructionJump{Target: 29},
+
+				// default: return nil
+				opcode.InstructionNil{},
+				opcode.InstructionTransfer{Type: 5},
+				opcode.InstructionReturnValue{},
+
+				opcode.InstructionReturn{},
+			},
+			functions[testLookupFuncIndex].Code,
+		)
+	}
+
 	assert.Equal(t,
 		[]opcode.Instruction{
 			opcode.InstructionGetGlobal{Global: testBGlobalIndex},
@@ -6470,8 +6531,7 @@ func TestCompileEnum(t *testing.T) {
 
 		assert.Equal(t,
 			[]opcode.Instruction{
-				// TODO: lookup function, instead of constructor function
-				opcode.InstructionGetGlobal{Global: 5},
+				opcode.InstructionGetGlobal{Global: testLookupGlobalIndex},
 				opcode.InstructionGetLocal{Local: rawValueIndex},
 				opcode.InstructionTransfer{Type: 1},
 				opcode.InstructionInvoke{ArgCount: 1},

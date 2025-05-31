@@ -19,7 +19,9 @@
 package compiler
 
 import (
+	"math/big"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/onflow/cadence/ast"
@@ -1546,7 +1548,14 @@ var emptyInitializerFuncType = sema.NewSimpleFunctionType(
 	sema.VoidTypeAnnotation,
 )
 
-func newEnumInitializer(gauge common.MemoryGauge, rawType string) (*ast.SpecialFunctionDeclaration, *ast.AssignmentStatement) {
+func newEnumInitializer(
+	gauge common.MemoryGauge,
+	enumType *sema.CompositeType,
+	elaboration *DesugaredElaboration,
+) *ast.SpecialFunctionDeclaration {
+
+	rawValueType := enumType.EnumRawType
+	rawValueTypeName := rawValueType.String()
 
 	rawValueIdentifier := ast.NewIdentifier(
 		gauge,
@@ -1564,7 +1573,11 @@ func newEnumInitializer(gauge common.MemoryGauge, rawType string) (*ast.SpecialF
 				false,
 				ast.NewNominalType(
 					gauge,
-					ast.NewIdentifier(gauge, rawType, ast.EmptyPosition),
+					ast.NewIdentifier(
+						gauge,
+						rawValueTypeName,
+						ast.EmptyPosition,
+					),
 					nil,
 				),
 				ast.EmptyPosition,
@@ -1600,6 +1613,15 @@ func newEnumInitializer(gauge common.MemoryGauge, rawType string) (*ast.SpecialF
 			rawValueIdentifier,
 		),
 	)
+
+	elaboration.SetAssignmentStatementType(
+		assignmentStatement,
+		sema.AssignmentStatementTypes{
+			ValueType:  rawValueType,
+			TargetType: rawValueType,
+		},
+	)
+
 	initializer := ast.NewFunctionDeclaration(
 		gauge,
 		ast.AccessNotSpecified,
@@ -1630,13 +1652,11 @@ func newEnumInitializer(gauge common.MemoryGauge, rawType string) (*ast.SpecialF
 		"",
 	)
 
-	functionDeclaration := ast.NewSpecialFunctionDeclaration(
+	return ast.NewSpecialFunctionDeclaration(
 		gauge,
 		common.DeclarationKindInitializer,
 		initializer,
 	)
-
-	return functionDeclaration, assignmentStatement
 }
 
 func newEnumInitializerFuncType(rawValueType sema.Type) *sema.FunctionType {
@@ -1649,6 +1669,197 @@ func newEnumInitializerFuncType(rawValueType sema.Type) *sema.FunctionType {
 			},
 		},
 		sema.VoidTypeAnnotation,
+	)
+}
+
+func newEnumLookup(
+	gauge common.MemoryGauge,
+	enumType *sema.CompositeType,
+	enumCases []*ast.EnumCaseDeclaration,
+	elaboration *DesugaredElaboration,
+) *ast.FunctionDeclaration {
+
+	typeIdentifier := ast.NewIdentifier(
+		gauge,
+		enumType.Identifier,
+		ast.EmptyPosition,
+	)
+
+	rawValueType := enumType.EnumRawType
+	rawValueTypeName := rawValueType.String()
+
+	rawValueIdentifier := ast.NewIdentifier(
+		gauge,
+		sema.EnumRawValueFieldName,
+		ast.EmptyPosition,
+	)
+
+	parameters := []*ast.Parameter{
+		ast.NewParameter(
+			gauge,
+			sema.EnumRawValueFieldName,
+			rawValueIdentifier,
+			ast.NewTypeAnnotation(
+				gauge,
+				false,
+				ast.NewNominalType(
+					gauge,
+					ast.NewIdentifier(
+						gauge,
+						rawValueTypeName,
+						ast.EmptyPosition,
+					),
+					nil,
+				),
+				ast.EmptyPosition,
+			),
+			nil,
+			ast.EmptyPosition,
+		),
+	}
+
+	switchCases := make([]*ast.SwitchCase, 0, len(enumCases)+1)
+
+	optionalEnumType := sema.NewOptionalType(gauge, enumType)
+
+	for index, enumCase := range enumCases {
+
+		// case <index>: return <enumType>.<caseName>
+
+		literal := []byte(strconv.Itoa(index))
+		integerExpression := ast.NewIntegerExpression(
+			gauge,
+			literal,
+			big.NewInt(int64(index)),
+			10,
+			ast.EmptyRange,
+		)
+		elaboration.SetIntegerExpressionType(
+			integerExpression,
+			rawValueType,
+		)
+
+		memberExpression := ast.NewMemberExpression(
+			gauge,
+			ast.NewIdentifierExpression(
+				gauge,
+				typeIdentifier,
+			),
+			false,
+			ast.EmptyPosition,
+			ast.NewIdentifier(
+				gauge,
+				enumCase.Identifier.Identifier,
+				ast.EmptyPosition,
+			),
+		)
+		elaboration.SetMemberExpressionMemberAccessInfo(
+			memberExpression,
+			sema.MemberAccessInfo{
+				AccessedType:  elaboration.EnumLookupFunctionType(enumType),
+				ResultingType: enumType,
+			},
+		)
+
+		returnStatement := ast.NewReturnStatement(
+			gauge,
+			memberExpression,
+			ast.EmptyRange,
+		)
+
+		elaboration.SetReturnStatementTypes(
+			returnStatement,
+			sema.ReturnStatementTypes{
+				ValueType:  enumType,
+				ReturnType: optionalEnumType,
+			},
+		)
+
+		switchCases = append(
+			switchCases,
+			&ast.SwitchCase{
+				Expression: integerExpression,
+				Statements: []ast.Statement{
+					returnStatement,
+				},
+			},
+		)
+	}
+
+	// default: return nil
+
+	nilReturnStatement := ast.NewReturnStatement(
+		gauge,
+		ast.NewNilExpression(gauge, ast.EmptyPosition),
+		ast.EmptyRange,
+	)
+
+	elaboration.SetReturnStatementTypes(
+		nilReturnStatement,
+		sema.ReturnStatementTypes{
+			ValueType:  optionalEnumType,
+			ReturnType: optionalEnumType,
+		},
+	)
+
+	switchCases = append(
+		switchCases,
+		&ast.SwitchCase{
+			Statements: []ast.Statement{
+				nilReturnStatement,
+			},
+		},
+	)
+
+	switchStatement := ast.NewSwitchStatement(
+		gauge,
+		ast.NewIdentifierExpression(gauge, rawValueIdentifier),
+		switchCases,
+		ast.EmptyRange,
+	)
+
+	return ast.NewFunctionDeclaration(
+		gauge,
+		ast.AccessNotSpecified,
+		ast.FunctionPurityUnspecified,
+		false,
+		false,
+		typeIdentifier,
+		nil,
+		ast.NewParameterList(gauge, parameters, ast.EmptyRange),
+		nil,
+		ast.NewFunctionBlock(
+			gauge,
+			ast.NewBlock(
+				gauge,
+				[]ast.Statement{
+					switchStatement,
+				},
+				ast.EmptyRange,
+			),
+			nil,
+			nil,
+		),
+		ast.EmptyPosition,
+		"",
+	)
+}
+
+func newEnumLookupFuncType(
+	gauge common.MemoryGauge,
+	enumType *sema.CompositeType,
+) *sema.FunctionType {
+	return sema.NewSimpleFunctionType(
+		sema.FunctionPurityImpure,
+		[]sema.Parameter{
+			{
+				Identifier:     sema.EnumRawValueFieldName,
+				TypeAnnotation: sema.NewTypeAnnotation(enumType.EnumRawType),
+			},
+		},
+		sema.NewTypeAnnotation(
+			sema.NewOptionalType(gauge, enumType),
+		),
 	)
 }
 

@@ -386,3 +386,11 @@ func (e *DesugaredElaboration) GetGlobalType(name string) (*sema.Variable, bool)
 func (e *DesugaredElaboration) MoveExpressionTypes(expression *ast.UnaryExpression) sema.Type {
 	return e.elaboration.MoveExpressionTypes(expression)
 }
+
+func (e *DesugaredElaboration) EnumLookupFunctionType(enumType *sema.CompositeType) *sema.FunctionType {
+	return e.elaboration.EnumLookupFunctionType(enumType)
+}
+
+func (e *DesugaredElaboration) SetIntegerExpressionType(expression *ast.IntegerExpression, valueType sema.Type) {
+	e.elaboration.SetIntegerExpressionType(expression, valueType)
+}
