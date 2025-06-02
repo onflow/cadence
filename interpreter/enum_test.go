@@ -40,12 +40,14 @@ func TestInterpretEnum(t *testing.T) {
       }
     `)
 
-	var expectedType interpreter.Value
+	expectedType := &interpreter.HostFunctionValue{}
+
 	// TODO: enable once feature branch is merged
+	//var expectedType interpreter.Value
 	//if *compile {
 	//	expectedType = vm.CompiledFunctionValue{}
 	//} else {
-	expectedType = &interpreter.HostFunctionValue{}
+	//	expectedType = &interpreter.HostFunctionValue{}
 	//}
 
 	assert.IsType(t,

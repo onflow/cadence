@@ -8279,12 +8279,14 @@ func TestInterpretOptionalChainingFunctionRead(t *testing.T) {
 		inter.GetGlobal("x2"),
 	)
 
-	var expected interpreter.FunctionValue
+	expected := interpreter.BoundFunctionValue{}
+
 	// TODO: enable once feature branch is merged
+	//var expected interpreter.FunctionValue
 	//if *compile {
 	//	expected = &vm.BoundFunctionPointerValue{}
 	//} else {
-	expected = interpreter.BoundFunctionValue{}
+	//	expected = interpreter.BoundFunctionValue{}
 	//}
 
 	assert.IsType(t,
