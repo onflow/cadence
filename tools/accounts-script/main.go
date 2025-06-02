@@ -1,3 +1,21 @@
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright Flow Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package main
 
 import (
@@ -88,7 +106,7 @@ func ProcessAndRunScriptOnTrie(chainID flow.ChainID, tries []*trie.MTrie) error 
 			),
 		)
 
-		addresses := make([][]byte, 0)
+		addresses := make([]cadence.Value, 0)
 
 		// Loop over all account registers with their owner string
 		err = registersByAccount.ForEachAccount(
@@ -98,16 +116,16 @@ func ProcessAndRunScriptOnTrie(chainID flow.ChainID, tries []*trie.MTrie) error 
 				address := common.BytesToAddress([]byte(owner))
 				cadenceAddr := cadence.NewAddress([8]byte(address.Bytes()))
 
-				argBytes, err := jsoncdc.Encode(cadenceAddr)
-				if err != nil {
-					log.Error().Err(err).Str("address", address.Hex()).Msg("failed to encode argument")
-					return err
-				}
-
-				addresses = append(addresses, argBytes)
+				addresses = append(addresses, cadenceAddr)
 
 				if len(addresses) >= *flagBatchSize {
-					_, err = runScript(vm, ctx, storageSnapshot, code, addresses)
+					argBytes, err := jsoncdc.Encode(cadence.NewArray(addresses))
+					if err != nil {
+						log.Error().Err(err).Str("address", address.Hex()).Msg("failed to encode argument")
+						return err
+					}
+
+					_, err = runScript(vm, ctx, storageSnapshot, code, [][]byte{argBytes})
 					if err != nil {
 						log.Error().Err(err).Str("address batch failed with last address", address.Hex()).Msg("cadence error")
 						return err
