@@ -1907,8 +1907,8 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	// An invocation can be either a method of a value (e.g: `"someString".Concat("otherString")`),
 	// or a function on a "type function" (e.g: `String.join(["someString", "otherString"], separator: ", ")`),
 	// where `String` is a function.
-	if accessedFunctionType, ok := accessedType.(*sema.FunctionType); ok &&
-		accessedFunctionType.TypeFunctionType != nil {
+	accessedTypeFunctionType := typeFunctionType(accessedType)
+	if accessedTypeFunctionType != nil {
 
 		// Compile as static-function call.
 		// No receiver is loaded.
@@ -2069,6 +2069,25 @@ func (c *Compiler[_, _]) loadTypeArguments(invocationTypes sema.InvocationExpres
 	return typeArgs
 }
 
+func typeFunctionType(ty sema.Type) sema.Type {
+	functionType, ok := ty.(*sema.FunctionType)
+	if !ok {
+		return nil
+	}
+	return functionType.TypeFunctionType
+}
+
+func enumType(ty sema.Type) *sema.CompositeType {
+	compositeType, ok := ty.(*sema.CompositeType)
+	if !ok {
+		return nil
+	}
+	if compositeType.GetCompositeKind() != common.CompositeKindEnum {
+		return nil
+	}
+	return compositeType
+}
+
 func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression) (_ struct{}) {
 	memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(expression)
 	if !ok {
@@ -2080,13 +2099,12 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 	accessedType := memberAccessInfo.AccessedType
 
 	// Accessing an enum case?
-	if accessedFunctionType, ok := accessedType.(*sema.FunctionType); ok &&
-		accessedFunctionType.TypeFunctionType != nil {
+	accessedTypeFunctionType := typeFunctionType(accessedType)
+	if accessedTypeFunctionType != nil {
 
-		if compositeType, ok := accessedFunctionType.TypeFunctionType.(*sema.CompositeType); ok &&
-			compositeType.GetCompositeKind() == common.CompositeKindEnum {
-
-			qualifiedName := commons.TypeQualifiedName(compositeType, identifier)
+		accessedEnumType := enumType(accessedTypeFunctionType)
+		if accessedEnumType != nil {
+			qualifiedName := commons.TypeQualifiedName(accessedEnumType, identifier)
 			c.emitGlobalLoad(qualifiedName)
 
 			return
