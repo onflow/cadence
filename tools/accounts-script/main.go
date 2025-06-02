@@ -130,6 +130,8 @@ func ProcessAndRunScriptOnTrie(chainID flow.ChainID, tries []*trie.MTrie) error 
 						log.Error().Err(err).Str("address batch failed with last address", address.Hex()).Msg("cadence error")
 						return err
 					}
+
+					addresses = make([]cadence.Value, 0)
 				}
 
 				// log.Info().Msgf("Address: %s, Result: %s", address.Hex(), string(result))
