@@ -104,6 +104,8 @@ func (executor *transactionExecutor) preprocess() (err error) {
 
 	runtimeInterface := context.Interface
 
+	config := executor.runtime.Config()
+
 	storage := NewStorage(
 		runtimeInterface,
 		runtimeInterface,
@@ -116,7 +118,7 @@ func (executor *transactionExecutor) preprocess() (err error) {
 		if context.UseVM {
 			return errors.NewUnexpectedError("cannot execute transaction with the VM")
 		}
-		environment = NewBaseInterpreterEnvironment(executor.runtime.Config())
+		environment = NewBaseInterpreterEnvironment(config)
 	}
 
 	switch environment.(type) {

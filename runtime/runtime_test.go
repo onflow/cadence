@@ -8077,6 +8077,9 @@ error: unexpectedly found nil while forcing an Optional value
  9 |         return a
 10 |             .firstIndex(of: 5)!
    |                ^^^^^^^^^^^^^^^^
+
+Was this error unhelpful?
+Consider suggesting an improvement here: https://github.com/onflow/cadence/issues.
 `
 
 	require.Equal(t, errorString, err.Error())
@@ -8130,6 +8133,9 @@ error: unexpectedly found nil while forcing an Optional value
 10 |             .firstIndex(of: 5)
 11 |                 ?.toString()!
    |                ^^^^^^^^^^^^^^
+
+Was this error unhelpful?
+Consider suggesting an improvement here: https://github.com/onflow/cadence/issues.
 `
 
 	require.Equal(t, errorString, err.Error())
@@ -12752,4 +12758,49 @@ func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
 		cadence.NewInt(42),
 		events[0].FieldsMappedByName()["x"],
 	)
+}
+
+func TestRuntimeStorageReferenceBoundFunctionConfusion(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntime()
+
+	transaction := []byte(`
+      transaction {
+          prepare(account: auth(Storage) &Account) {
+              account.storage.save([account] as AnyStruct, to:/storage/x)
+              var r = account.storage.borrow<auth(Mutate) &[&Account]>(from:/storage/x)!
+              var f = r.remove 
+              var ff = f as! (fun(Int): auth(Storage) &Account)
+              account.storage.load<AnyStruct>(from:/storage/x)
+              let publicAccount = getAccount(account.address)
+              account.storage.save([publicAccount] as AnyStruct, to:/storage/x)
+              destroy  ff(0).storage.load<@AnyResource>(from:/storage/flowTokenVault)
+          }
+      }
+    `)
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{{42}}, nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: transaction,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	RequireError(t, err)
+
+	var dereferenceError *interpreter.DereferenceError
+	require.ErrorAs(t, err, &dereferenceError)
 }
