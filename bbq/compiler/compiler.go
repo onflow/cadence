@@ -211,7 +211,7 @@ func (c *Compiler[_, _]) findGlobal(name string) *Global {
 	// i.e: same order as their indexes (preceded by globals defined in the current program).
 	// e.g: [global1, global2, ... [importedGlobal1, importedGlobal2, ...]].
 	// Earlier we already reserved the indexes for the globals defined in the current program.
-	// (`reserveGlobalVars`)
+	// (`reserveGlobals`)
 
 	c.usedImportedGlobals = append(c.usedImportedGlobals, importedGlobal)
 
@@ -224,6 +224,7 @@ func (c *Compiler[_, _]) addGlobal(name string) *Global {
 		panic(errors.NewDefaultUserError("invalid global declaration"))
 	}
 	global := &Global{
+		Name:  name,
 		Index: uint16(count),
 	}
 	c.Globals[name] = global
@@ -301,14 +302,13 @@ func (c *Compiler[E, T]) newFunction(
 ) *function[E] {
 	functionTypeIndex := c.getOrAddType(functionType)
 
-	function := newFunction[E](
+	return newFunction[E](
 		c.currentFunction,
 		name,
 		qualifiedName,
 		parameterCount,
 		functionTypeIndex,
 	)
-	return function
 }
 
 func (c *Compiler[E, T]) targetFunction(function *function[E]) {
@@ -562,7 +562,7 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 		c.compileDeclaration(declaration)
 	}
 
-	functions := c.ExportFunctions()
+	functions := c.exportFunctions()
 	constants := c.exportConstants()
 	types := c.exportTypes()
 	imports := c.exportImports()
@@ -591,9 +591,15 @@ func (c *Compiler[_, _]) reserveGlobals(
 		c.addGlobal(contract.Name)
 	}
 
-	c.reserveGlobalVars(
+	c.reserveVariableGlobals(
 		nil,
 		variableDecls,
+		nil,
+		compositeDecls,
+	)
+
+	c.reserveFunctionGlobals(
+		nil,
 		nil,
 		functionDecls,
 		compositeDecls,
@@ -601,27 +607,56 @@ func (c *Compiler[_, _]) reserveGlobals(
 	)
 }
 
-func (c *Compiler[_, _]) reserveGlobalVars(
+func (c *Compiler[_, _]) reserveVariableGlobals(
 	enclosingType sema.CompositeKindedType,
 	variableDecls []*ast.VariableDeclaration,
-	specialFunctionDecls []*ast.SpecialFunctionDeclaration,
-	functionDecls []*ast.FunctionDeclaration,
+	enumCaseDecls []*ast.EnumCaseDeclaration,
 	compositeDecls []*ast.CompositeDeclaration,
-	interfaceDecls []*ast.InterfaceDeclaration,
 ) {
 	for _, declaration := range variableDecls {
 		variableName := declaration.Identifier.Identifier
 		c.addGlobal(variableName)
 	}
 
+	for _, declaration := range enumCaseDecls {
+		// Reserve a global variable for each enum case.
+		// The enum case name is used as the global variable name.
+		// e.g: `enum E: UInt8 { case A; case B }` will reserve globals `E.A`, `E.B`.
+		enumCaseName := declaration.Identifier.Identifier
+		qualifiedName := commons.TypeQualifiedName(enclosingType, enumCaseName)
+		c.addGlobal(qualifiedName)
+	}
+
+	for _, declaration := range compositeDecls {
+		compositeType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
+
+		members := declaration.Members
+
+		c.reserveVariableGlobals(
+			compositeType,
+			nil,
+			members.EnumCases(),
+			members.Composites(),
+		)
+	}
+}
+
+func (c *Compiler[_, _]) reserveFunctionGlobals(
+	enclosingType sema.CompositeKindedType,
+	specialFunctionDecls []*ast.SpecialFunctionDeclaration,
+	functionDecls []*ast.FunctionDeclaration,
+	compositeDecls []*ast.CompositeDeclaration,
+	interfaceDecls []*ast.InterfaceDeclaration,
+) {
 	for _, declaration := range specialFunctionDecls {
 		switch declaration.Kind {
 		case common.DeclarationKindDestructorLegacy,
 			common.DeclarationKindPrepare:
 			// Important: All special functions visited within `VisitSpecialFunctionDeclaration`
 			// must be also visited here. And must be visited only them. e.g: Don't visit inits.
-			funcName := commons.TypeQualifiedName(enclosingType, declaration.FunctionDeclaration.Identifier.Identifier)
-			c.addGlobal(funcName)
+			functionName := declaration.FunctionDeclaration.Identifier.Identifier
+			qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
+			c.addGlobal(qualifiedName)
 		}
 	}
 
@@ -629,46 +664,65 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 	// Only do it for user-defined types (i.e: `compositeTypeName` is not empty).
 	if enclosingType != nil {
 		for _, boundFunction := range commonBuiltinTypeBoundFunctions {
-			funcName := commons.TypeQualifiedName(enclosingType, boundFunction.name)
-			c.addGlobal(funcName)
+			functionName := boundFunction.name
+			qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
+			c.addGlobal(qualifiedName)
 		}
 	}
 
 	for _, declaration := range functionDecls {
-		funcName := commons.TypeQualifiedName(enclosingType, declaration.Identifier.Identifier)
-		c.addGlobal(funcName)
+		functionName := declaration.Identifier.Identifier
+		qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
+		c.addGlobal(qualifiedName)
 	}
 
 	for _, declaration := range compositeDecls {
 		compositeType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
 
 		// Members of event types are skipped from compiling (see `VisitCompositeDeclaration`).
-		// Hence also skip from reserving global variables for them.
+		// Hence also skip from reserving globals for them.
 		if compositeType.Kind == common.CompositeKindEvent {
 			continue
 		}
 
-		// For composite types other than contracts, global variables
-		// reserved by the type-name will be used for the init method.
-		// For contracts, global variables reserved by the type-name
-		// will be used for the contract value (already reserved before getting here).
-		// Hence, reserve a separate global var for contract inits.
-		if declaration.CompositeKind == common.CompositeKindContract {
-			qualifiedName := commons.TypeQualifiedName(compositeType, commons.InitFunctionName)
-			c.addGlobal(qualifiedName)
-		} else {
-			// Reserve a global-var for the value-constructor.
-			constructorName := commons.TypeQualifier(compositeType)
-			c.addGlobal(constructorName)
+		// Reserve a global for contract the constructor function.
+
+		var constructorName string
+
+		switch declaration.CompositeKind {
+		case common.CompositeKindContract:
+			// For contracts, a global with the type-name is used for the contract value
+			// (already reserved in `reserveGlobals` before getting here).
+			// Suffix the type-name.
+
+			constructorName = commons.TypeQualifiedName(compositeType, commons.InitFunctionName)
+
+		case common.CompositeKindEnum:
+			// For enums, a global with the type-name is used for the "lookup function".
+			// For example, for `enum E: UInt8 { case A; case B }`, the lookup function is `fun E(rawValue: UInt8): E?`.
+			// Suffix the type-name.
+
+			constructorName = commons.TypeQualifiedName(compositeType, commons.InitFunctionName)
+
+		default:
+			// For other composite types, the type-name is used for the constructor function.
+
+			constructorName = commons.TypeQualifier(compositeType)
 		}
 
-		// Define globals for functions before visiting function bodies.
+		c.addGlobal(constructorName)
+
+		if declaration.CompositeKind == common.CompositeKindEnum {
+			// For enums, also reserve a global for the "lookup function".
+			// For example, for `enum E: UInt8 { case A; case B }`, the lookup function is `fun E(rawValue: UInt8): E?`.
+			functionName := commons.TypeQualifier(compositeType)
+			c.addGlobal(functionName)
+		}
 
 		members := declaration.Members
 
-		c.reserveGlobalVars(
+		c.reserveFunctionGlobals(
 			compositeType,
-			nil,
 			members.SpecialFunctions(),
 			members.Functions(),
 			members.Composites(),
@@ -677,14 +731,13 @@ func (c *Compiler[_, _]) reserveGlobalVars(
 	}
 
 	for _, declaration := range interfaceDecls {
-		// Don't need a global-var for the value-constructor for interfaces
+		// Don't need a global for the value-constructor for interfaces
 
 		members := declaration.Members
 		interfaceType := c.DesugaredElaboration.InterfaceDeclarationType(declaration)
 
-		c.reserveGlobalVars(
+		c.reserveFunctionGlobals(
 			interfaceType,
-			nil,
 			members.SpecialFunctions(),
 			members.Functions(),
 			members.Composites(),
@@ -735,7 +788,7 @@ func (c *Compiler[_, _]) exportImports() []bbq.Import {
 	return exportedImports
 }
 
-func (c *Compiler[E, _]) ExportFunctions() []bbq.Function[E] {
+func (c *Compiler[E, _]) exportFunctions() []bbq.Function[E] {
 	var functions []bbq.Function[E]
 
 	count := len(c.functions)
@@ -1459,10 +1512,16 @@ func (c *Compiler[_, _]) VisitNilExpression(_ *ast.NilExpression) (_ struct{}) {
 }
 
 func (c *Compiler[_, _]) VisitIntegerExpression(expression *ast.IntegerExpression) (_ struct{}) {
+	value := expression.Value
 	integerType := c.DesugaredElaboration.IntegerExpressionType(expression)
+	c.emitIntegerConstant(value, integerType)
+
+	return
+}
+
+func (c *Compiler[_, _]) emitIntegerConstant(value *big.Int, integerType sema.Type) {
 	constantKind := constant.FromSemaType(integerType)
 
-	value := expression.Value
 	var data []byte
 
 	switch constantKind {
@@ -1539,8 +1598,6 @@ func (c *Compiler[_, _]) VisitIntegerExpression(expression *ast.IntegerExpressio
 	}
 
 	c.emitGetConstant(c.addConstant(constantKind, data))
-
-	return
 }
 
 func (c *Compiler[_, _]) VisitFixedPointExpression(expression *ast.FixedPointExpression) (_ struct{}) {
@@ -1678,6 +1735,10 @@ func (c *Compiler[_, _]) emitVariableLoad(name string) {
 		return
 	}
 
+	c.emitGlobalLoad(name)
+}
+
+func (c *Compiler[_, _]) emitGlobalLoad(name string) {
 	global := c.findGlobal(name)
 	c.emit(opcode.InstructionGetGlobal{
 		Global: global.Index,
@@ -1776,7 +1837,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		// Calling a type constructor must be invoked statically. e.g: `SomeContract.Foo()`.
 
 		// Load function value
-		c.emitVariableLoad(funcName)
+		c.emitGlobalLoad(funcName)
 
 		// Compile arguments
 		c.compileArguments(expression.Arguments, invocationTypes)
@@ -1846,12 +1907,12 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	// An invocation can be either a method of a value (e.g: `"someString".Concat("otherString")`),
 	// or a function on a "type function" (e.g: `String.join(["someString", "otherString"], separator: ", ")`),
 	// where `String` is a function.
-	if accessedFunctionType, ok := accessedType.(*sema.FunctionType); ok &&
-		accessedFunctionType.TypeFunctionType != nil {
+	accessedTypeFunctionType := typeFunctionType(accessedType)
+	if accessedTypeFunctionType != nil {
 
 		// Compile as static-function call.
 		// No receiver is loaded.
-		c.emitVariableLoad(funcName)
+		c.emitGlobalLoad(funcName)
 		c.compileArguments(expression.Arguments, invocationTypes)
 		c.emit(opcode.InstructionInvoke{
 			TypeArgs: typeArgs,
@@ -1865,7 +1926,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 				// Compile as object-method call.
 
 				// Function must be loaded only if the receiver is non-nil.
-				c.emitVariableLoad(funcName)
+				c.emitGlobalLoad(funcName)
 
 				// The receiver is loaded first.
 				// So 'self' is always the zero-th argument.
@@ -2004,13 +2065,49 @@ func (c *Compiler[_, _]) loadTypeArguments(invocationTypes sema.InvocationExpres
 	return typeArgs
 }
 
+func typeFunctionType(ty sema.Type) sema.Type {
+	functionType, ok := ty.(*sema.FunctionType)
+	if !ok {
+		return nil
+	}
+	return functionType.TypeFunctionType
+}
+
+func enumType(ty sema.Type) *sema.CompositeType {
+	compositeType, ok := ty.(*sema.CompositeType)
+	if !ok {
+		return nil
+	}
+	if compositeType.GetCompositeKind() != common.CompositeKindEnum {
+		return nil
+	}
+	return compositeType
+}
+
 func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression) (_ struct{}) {
 	memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(expression)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	constant := c.addStringConst(expression.Identifier.Identifier)
+	identifier := expression.Identifier.Identifier
+
+	accessedType := memberAccessInfo.AccessedType
+
+	// Accessing an enum case?
+	accessedTypeFunctionType := typeFunctionType(accessedType)
+	if accessedTypeFunctionType != nil {
+
+		accessedEnumType := enumType(accessedTypeFunctionType)
+		if accessedEnumType != nil {
+			qualifiedName := commons.TypeQualifiedName(accessedEnumType, identifier)
+			c.emitGlobalLoad(qualifiedName)
+
+			return
+		}
+	}
+
+	constant := c.addStringConst(identifier)
 
 	c.withOptionalChainingOptimized(
 		expression.Expression,
@@ -2585,9 +2682,19 @@ func (c *Compiler[_, _]) VisitCompositeDeclaration(declaration *ast.CompositeDec
 		c.compileDeclaration(specialFunc)
 	}
 
-	// If the initializer is not declared, generate an empty initializer.
+	// If the initializer is not declared, generate
+	// - a synthetic initializer for enum types, otherwise
+	// - an empty initializer
 	if !hasInit {
-		c.generateEmptyInit()
+		if compositeType.Kind == common.CompositeKindEnum {
+			c.generateEnumInit(compositeType)
+			c.generateEnumLookup(
+				compositeType,
+				declaration.Members.EnumCases(),
+			)
+		} else {
+			c.generateEmptyInit()
+		}
 	}
 
 	// Visit members.
@@ -2600,11 +2707,18 @@ func (c *Compiler[_, _]) compileCompositeMembers(
 	compositeKindedType sema.CompositeKindedType,
 	members *ast.Members,
 ) {
-
-	// Important: Must be visited in the same order as the globals were reserved in `reserveGlobalVars`.
+	// Important: Must be visited in the same order as the globals were reserved in `reserveGlobals`.
 
 	// Add the methods that are provided natively.
 	c.addBuiltinMethods(compositeKindedType)
+
+	for index, enumCase := range members.EnumCases() {
+		c.compileEnumCaseDeclaration(
+			enumCase,
+			compositeKindedType.(*sema.CompositeType),
+			index,
+		)
+	}
 
 	for _, function := range members.Functions() {
 		c.compileDeclaration(function)
@@ -2711,6 +2825,48 @@ func (c *Compiler[_, _]) VisitTransactionDeclaration(_ *ast.TransactionDeclarati
 func (c *Compiler[_, _]) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) (_ struct{}) {
 	// TODO
 	panic(errors.NewUnreachableError())
+}
+
+func (c *Compiler[_, _]) compileEnumCaseDeclaration(
+	declaration *ast.EnumCaseDeclaration,
+	compositeType *sema.CompositeType,
+	index int,
+) (_ struct{}) {
+
+	variableGetterFunctionType := sema.NewSimpleFunctionType(
+		sema.FunctionPurityImpure,
+		nil,
+		sema.NewTypeAnnotation(compositeType),
+	)
+
+	caseName := declaration.Identifier.Identifier
+	getterName := commons.TypeQualifiedName(compositeType, caseName)
+
+	globalVariable := c.addGlobalVariableWithGetter(
+		getterName,
+		variableGetterFunctionType,
+	)
+
+	func() {
+		previousFunction := c.currentFunction
+		c.targetFunction(globalVariable.Getter)
+		defer c.targetFunction(previousFunction)
+
+		// No parameters
+
+		constructorName := commons.TypeQualifiedName(compositeType, commons.InitFunctionName)
+		c.emitGlobalLoad(constructorName)
+		c.emitIntegerConstant(
+			big.NewInt(int64(index)),
+			compositeType.EnumRawType,
+		)
+		c.emit(opcode.InstructionInvoke{
+			ArgCount: 1,
+		})
+		c.emitTransferAndReturnValue(compositeType)
+	}()
+
+	return
 }
 
 func (c *Compiler[_, _]) VisitAttachmentDeclaration(_ *ast.AttachmentDeclaration) (_ struct{}) {
@@ -2845,6 +3001,41 @@ func (c *Compiler[_, _]) generateEmptyInit() {
 		emptyInitializerFuncType,
 	)
 	c.VisitSpecialFunctionDeclaration(emptyInitializer)
+}
+
+func (c *Compiler[_, _]) generateEnumInit(enumType *sema.CompositeType) {
+	enumInitializer := newEnumInitializer(c.memoryGauge, enumType, c.DesugaredElaboration)
+	enumInitializerFuncType := newEnumInitializerFuncType(enumType.EnumRawType)
+
+	c.DesugaredElaboration.SetFunctionDeclarationFunctionType(
+		enumInitializer.FunctionDeclaration,
+		enumInitializerFuncType,
+	)
+	c.VisitSpecialFunctionDeclaration(enumInitializer)
+}
+
+func (c *Compiler[_, _]) generateEnumLookup(enumType *sema.CompositeType, enumCases []*ast.EnumCaseDeclaration) {
+	enumLookup := newEnumLookup(
+		c.memoryGauge,
+		enumType,
+		enumCases,
+		c.DesugaredElaboration,
+	)
+	enumLookupFuncType := newEnumLookupFuncType(c.memoryGauge, enumType)
+
+	c.DesugaredElaboration.SetFunctionDeclarationFunctionType(
+		enumLookup,
+		enumLookupFuncType,
+	)
+
+	// TODO: improve
+	previousCompositeTypeStack := c.compositeTypeStack
+	c.compositeTypeStack = &Stack[sema.CompositeKindedType]{}
+	defer func() {
+		c.compositeTypeStack = previousCompositeTypeStack
+	}()
+
+	c.VisitFunctionDeclaration(enumLookup, false)
 }
 
 func (c *Compiler[_, _]) compilePotentiallyInheritedCode(statement ast.Statement, f func()) {

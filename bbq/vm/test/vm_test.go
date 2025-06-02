@@ -8484,3 +8484,69 @@ func TestBoundStaticFunction(t *testing.T) {
 		result,
 	)
 }
+
+func TestEnumAccess(t *testing.T) {
+
+	t.Parallel()
+
+	result, err := CompileAndInvoke(t,
+		`
+            enum Test: UInt8 {
+                case a
+                case b
+                case c
+            }
+
+            fun test(): UInt8 {
+                return Test.b.rawValue
+            }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.NewUnmeteredUInt8Value(1), result)
+}
+
+func TestEnumLookupSuccess(t *testing.T) {
+
+	t.Parallel()
+
+	result, err := CompileAndInvoke(t,
+		`
+            enum Test: UInt8 {
+                case a
+                case b
+                case c
+            }
+
+            fun test(): AnyStruct {
+                return Test(rawValue: 1)
+            }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	assert.IsType(t, &interpreter.SomeValue{}, result)
+}
+
+func TestEnumLookupFailure(t *testing.T) {
+
+	t.Parallel()
+
+	result, err := CompileAndInvoke(t,
+		`
+            enum Test: UInt8 {
+                case a
+                case b
+                case c
+            }
+
+            fun test(): AnyStruct {
+                return Test(rawValue: 5)
+            }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.Nil, result)
+}

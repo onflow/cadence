@@ -59,10 +59,8 @@ func TestCompileRecursionFib(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	const (
 		// functionTypeIndex is the index of the function type, which is the first type
@@ -185,10 +183,8 @@ func TestCompileImperativeFib(t *testing.T) {
 		iIndex
 	)
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	const (
 		// functionTypeIndex is the index of the function type, which is the first type
@@ -322,10 +318,8 @@ func TestCompileBreak(t *testing.T) {
 	// iIndex is the index of the local variable `i`, which is the first local variable
 	const iIndex = 0
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -409,10 +403,8 @@ func TestCompileContinue(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	// iIndex is the index of the local variable `i`, which is the first local variable
 	const iIndex = 0
@@ -494,10 +486,8 @@ func TestCompileArray(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	// xsIndex is the index of the local variable `xs`, which is the first local variable
 	const xsIndex = 0
@@ -562,10 +552,8 @@ func TestCompileDictionary(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	// xsIndex is the index of the local variable `xs`, which is the first local variable
 	const xsIndex = 0
@@ -651,10 +639,8 @@ func TestCompileIfLet(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	const (
 		xIndex     = iota
@@ -728,10 +714,8 @@ func TestCompileIfLetScope(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(functions), len(program.Functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	const (
 		// yIndex is the index of the parameter `y`, which is the first parameter
@@ -831,10 +815,8 @@ func TestCompileSwitch(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	const (
 		// xIndex is the index of the parameter `x`, which is the first parameter
@@ -945,10 +927,8 @@ func TestSwitchBreak(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	const (
 		// xIndex is the index of the parameter `x`, which is the first parameter
@@ -1032,10 +1012,8 @@ func TestWhileSwitchBreak(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	const (
 		// xIndex is the index of the local variable `x`, which is the first local variable
@@ -1122,10 +1100,8 @@ func TestCompileEmit(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	// xIndex is the index of the parameter `x`, which is the first parameter
 	const xIndex = 0
@@ -1166,10 +1142,8 @@ func TestCompileSimpleCast(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	// xIndex is the index of the parameter `x`, which is the first parameter
 	const xIndex = 0
@@ -1205,10 +1179,8 @@ func TestCompileForceCast(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	// xIndex is the index of the parameter `x`, which is the first parameter
 	const xIndex = 0
@@ -1244,10 +1216,8 @@ func TestCompileFailableCast(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	// xIndex is the index of the parameter `x`, which is the first parameter
 	const xIndex = 0
@@ -1296,10 +1266,8 @@ func TestCompileNestedLoop(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	const (
 		// iIndex is the index of the local variable `i`, which is the first local variable
@@ -1423,10 +1391,8 @@ func TestCompileAssignLocal(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	// xIndex is the index of the local variable `x`, which is the first local variable
 	const xIndex = 0
@@ -1508,7 +1474,6 @@ func TestCompileAssignGlobal(t *testing.T) {
 	// global var `x` initializer
 	variables := program.Variables
 	require.Len(t, variables, 1)
-	require.Equal(t, len(variables), len(variables))
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -1553,10 +1518,8 @@ func TestCompileIndex(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	const (
 		// arrayIndex is the index of the parameter `array`, which is the first parameter
@@ -1597,10 +1560,8 @@ func TestCompileAssignIndex(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	const (
 		// arrayIndex is the index of the parameter `array`, which is the first parameter
@@ -1649,10 +1610,8 @@ func TestCompileMember(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 4)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 4)
 
 	const (
 		initFuncIndex = iota
@@ -1686,7 +1645,7 @@ func TestCompileMember(t *testing.T) {
 				},
 				opcode.InstructionSetLocal{Local: selfIndex},
 
-				// self.x = value
+				// self.foo = value
 				opcode.InstructionGetLocal{Local: selfIndex},
 				opcode.InstructionGetLocal{Local: valueIndex},
 				opcode.InstructionTransfer{Type: 2},
@@ -1745,10 +1704,8 @@ func TestCompileExpressionStatement(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 2)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 2)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -1789,10 +1746,8 @@ func TestCompileBool(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	const (
 		// yesIndex is the index of the local variable `yes`, which is the first local variable
@@ -1837,10 +1792,8 @@ func TestCompileString(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -1890,10 +1843,8 @@ func TestCompilePositiveIntegers(t *testing.T) {
 			)
 			program := comp.Compile()
 
-			require.Len(t, program.Functions, 1)
-
-			functions := comp.ExportFunctions()
-			require.Equal(t, len(program.Functions), len(functions))
+			functions := program.Functions
+			require.Len(t, functions, 1)
 
 			const (
 				// vIndex is the index of the local variable `v`, which is the first local variable
@@ -2014,10 +1965,8 @@ func TestCompileNegativeIntegers(t *testing.T) {
 			)
 			program := comp.Compile()
 
-			require.Len(t, program.Functions, 1)
-
-			functions := comp.ExportFunctions()
-			require.Equal(t, len(program.Functions), len(functions))
+			functions := program.Functions
+			require.Len(t, functions, 1)
 
 			const (
 				// vIndex is the index of the local variable `v`, which is the first local variable
@@ -2096,10 +2045,8 @@ func TestCompileAddress(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	const (
 		// vIndex is the index of the local variable `v`, which is the first local variable
@@ -2156,10 +2103,8 @@ func TestCompilePositiveFixedPoint(t *testing.T) {
 			)
 			program := comp.Compile()
 
-			require.Len(t, program.Functions, 1)
-
-			functions := comp.ExportFunctions()
-			require.Equal(t, len(program.Functions), len(functions))
+			functions := program.Functions
+			require.Len(t, functions, 1)
 
 			const (
 				// vIndex is the index of the local variable `v`, which is the first local variable
@@ -2238,10 +2183,8 @@ func TestCompileNegativeFixedPoint(t *testing.T) {
 			)
 			program := comp.Compile()
 
-			require.Len(t, program.Functions, 1)
-
-			functions := comp.ExportFunctions()
-			require.Equal(t, len(program.Functions), len(functions))
+			functions := program.Functions
+			require.Len(t, functions, 1)
 
 			const (
 				// vIndex is the index of the local variable `v`, which is the first local variable
@@ -2306,10 +2249,8 @@ func TestCompileUnaryNot(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	const (
 		// noIndex is the index of the local variable `no`, which is the first local variable
@@ -2347,10 +2288,8 @@ func TestCompileUnaryNegate(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	const (
 		// xIndex is the index of the parameter `x`, which is the first parameter
@@ -2390,10 +2329,8 @@ func TestCompileUnaryDeref(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	const (
 		// refIndex is the index of the parameter `ref`, which is the first parameter
@@ -2444,10 +2381,8 @@ func TestCompileBinary(t *testing.T) {
 			)
 			program := comp.Compile()
 
-			require.Len(t, program.Functions, 1)
-
-			functions := comp.ExportFunctions()
-			require.Equal(t, len(program.Functions), len(functions))
+			functions := program.Functions
+			require.Len(t, functions, 1)
 
 			const (
 				// vIndex is the index of the local variable `v`, which is the first local variable
@@ -2529,10 +2464,8 @@ func TestCompileNilCoalesce(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	// valueIndex is the index of the parameter `value`, which is the first parameter
 	const valueIndex = 0
@@ -2592,10 +2525,8 @@ func TestCompileMethodInvocation(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 5)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 5)
 
 	const (
 		testFuncIndex = iota
@@ -2693,10 +2624,8 @@ func TestCompileResourceCreateAndDestroy(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 4)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(functions), len(program.Functions))
+	functions := program.Functions
+	require.Len(t, functions, 4)
 
 	const (
 		testFuncIndex = iota
@@ -2772,10 +2701,8 @@ func TestCompilePath(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(functions), len(program.Functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -2825,10 +2752,8 @@ func TestCompileBlockScope(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(functions), len(program.Functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	const (
 		// yIndex is the index of the parameter `y`, which is the first parameter
@@ -2916,10 +2841,8 @@ func TestCompileBlockScope2(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(functions), len(program.Functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	const (
 		// yIndex is the index of the parameter `y`, which is the first parameter
@@ -3022,7 +2945,8 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 7)
+	functions := program.Functions
+	require.Len(t, functions, 7)
 
 	const (
 		concreteTypeConstructorIndex uint16 = iota
@@ -3146,7 +3070,8 @@ func TestCompileFunctionConditions(t *testing.T) {
 		)
 		program := comp.Compile()
 
-		require.Len(t, program.Functions, 1)
+		functions := program.Functions
+		require.Len(t, functions, 1)
 
 		const (
 			xIndex = iota
@@ -3205,7 +3130,8 @@ func TestCompileFunctionConditions(t *testing.T) {
 		)
 		program := comp.Compile()
 
-		require.Len(t, program.Functions, 1)
+		functions := program.Functions
+		require.Len(t, functions, 1)
 
 		// xIndex is the index of the parameter `x`, which is the first parameter
 		const (
@@ -3281,7 +3207,8 @@ func TestCompileFunctionConditions(t *testing.T) {
 		)
 		program := comp.Compile()
 
-		require.Len(t, program.Functions, 1)
+		functions := program.Functions
+		require.Len(t, functions, 1)
 
 		// xIndex is the index of the parameter `x`, which is the first parameter
 		const (
@@ -3376,7 +3303,8 @@ func TestCompileFunctionConditions(t *testing.T) {
 		)
 
 		program := comp.Compile()
-		require.Len(t, program.Functions, 6)
+		functions := program.Functions
+		require.Len(t, functions, 6)
 
 		// Function indexes
 		const (
@@ -3538,7 +3466,8 @@ func TestCompileFunctionConditions(t *testing.T) {
 		)
 
 		program := comp.Compile()
-		require.Len(t, program.Functions, 6)
+		functions := program.Functions
+		require.Len(t, functions, 6)
 
 		// Function indexes
 		const (
@@ -3902,7 +3831,8 @@ func TestForLoop(t *testing.T) {
 			checker.Location,
 		)
 		program := comp.Compile()
-		require.Len(t, program.Functions, 1)
+		functions := program.Functions
+		require.Len(t, functions, 1)
 
 		const (
 			arrayValueIndex = iota
@@ -3958,7 +3888,8 @@ func TestForLoop(t *testing.T) {
 			checker.Location,
 		)
 		program := comp.Compile()
-		require.Len(t, program.Functions, 1)
+		functions := program.Functions
+		require.Len(t, functions, 1)
 
 		const (
 			arrayValueIndex = iota
@@ -4045,7 +3976,8 @@ func TestForLoop(t *testing.T) {
 			checker.Location,
 		)
 		program := comp.Compile()
-		require.Len(t, program.Functions, 1)
+		functions := program.Functions
+		require.Len(t, functions, 1)
 
 		const (
 			arrayValueIndex = iota
@@ -4135,10 +4067,8 @@ func TestCompileIf(t *testing.T) {
 		yIndex
 	)
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -4210,10 +4140,8 @@ func TestCompileConditional(t *testing.T) {
 	// xIndex is the index of the parameter `x`, which is the first parameter
 	const xIndex = 0
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -4275,10 +4203,8 @@ func TestCompileOr(t *testing.T) {
 		yIndex
 	)
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -4326,10 +4252,8 @@ func TestCompileAnd(t *testing.T) {
 		yIndex
 	)
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -4395,7 +4319,8 @@ func TestCompileTransaction(t *testing.T) {
 	)
 
 	program := comp.Compile()
-	require.Len(t, program.Functions, 5)
+	functions := program.Functions
+	require.Len(t, functions, 5)
 
 	// Function indexes
 	const (
@@ -4547,10 +4472,8 @@ func TestCompileForce(t *testing.T) {
 		)
 		program := comp.Compile()
 
-		require.Len(t, program.Functions, 1)
-
-		functions := comp.ExportFunctions()
-		require.Equal(t, len(program.Functions), len(functions))
+		functions := program.Functions
+		require.Len(t, functions, 1)
 
 		// xIndex is the index of the parameter `x`, which is the first parameter
 		const xIndex = 0
@@ -4582,10 +4505,8 @@ func TestCompileForce(t *testing.T) {
 		)
 		program := comp.Compile()
 
-		require.Len(t, program.Functions, 1)
-
-		functions := comp.ExportFunctions()
-		require.Equal(t, len(program.Functions), len(functions))
+		functions := program.Functions
+		require.Len(t, functions, 1)
 
 		// xIndex is the index of the parameter `x`, which is the first parameter
 		const xIndex = 0
@@ -4623,10 +4544,8 @@ func TestCompileReturns(t *testing.T) {
 		)
 		program := comp.Compile()
 
-		require.Len(t, program.Functions, 1)
-
-		functions := comp.ExportFunctions()
-		require.Equal(t, len(program.Functions), len(functions))
+		functions := program.Functions
+		require.Len(t, functions, 1)
 
 		assert.Equal(t,
 			[]opcode.Instruction{
@@ -4653,10 +4572,8 @@ func TestCompileReturns(t *testing.T) {
 		)
 		program := comp.Compile()
 
-		require.Len(t, program.Functions, 1)
-
-		functions := comp.ExportFunctions()
-		require.Equal(t, len(program.Functions), len(functions))
+		functions := program.Functions
+		require.Len(t, functions, 1)
 
 		// xIndex is the index of the parameter `x`, which is the first parameter
 		const xIndex = 0
@@ -4689,10 +4606,8 @@ func TestCompileReturns(t *testing.T) {
 		)
 		program := comp.Compile()
 
-		require.Len(t, program.Functions, 1)
-
-		functions := comp.ExportFunctions()
-		require.Equal(t, len(program.Functions), len(functions))
+		functions := program.Functions
+		require.Len(t, functions, 1)
 
 		assert.Equal(t,
 			[]opcode.Instruction{
@@ -4734,10 +4649,8 @@ func TestCompileReturns(t *testing.T) {
 		)
 		program := comp.Compile()
 
-		require.Len(t, program.Functions, 1)
-
-		functions := comp.ExportFunctions()
-		require.Equal(t, len(program.Functions), len(functions))
+		functions := program.Functions
+		require.Len(t, functions, 1)
 
 		const (
 			tempResultIndex = iota
@@ -4802,10 +4715,8 @@ func TestCompileReturns(t *testing.T) {
 		)
 		program := comp.Compile()
 
-		require.Len(t, program.Functions, 2)
-
-		functions := comp.ExportFunctions()
-		require.Equal(t, len(program.Functions), len(functions))
+		functions := program.Functions
+		require.Len(t, functions, 2)
 
 		assert.Equal(t,
 			[]opcode.Instruction{
@@ -4858,10 +4769,8 @@ func TestCompileFunctionExpression(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 2)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 2)
 
 	const (
 		addOneIndex = iota
@@ -4945,10 +4854,8 @@ func TestCompileInnerFunction(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 2)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 2)
 
 	const (
 		addOneIndex = iota
@@ -5031,10 +4938,8 @@ func TestCompileFunctionExpressionOuterVariableUse(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 2)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 2)
 
 	const (
 		// xLocalIndex is the local index of the variable `x`, which is the first local variable
@@ -5113,10 +5018,8 @@ func TestCompileInnerFunctionOuterVariableUse(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 2)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 2)
 
 	const (
 		// xLocalIndex is the local index of the variable `x`, which is the first local variable
@@ -5210,10 +5113,8 @@ func TestCompileInnerFunctionOuterOuterVariableUse(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 3)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 3)
 
 	const (
 		// xLocalIndex is the local index of the variable `x`, which is the first local variable
@@ -5325,10 +5226,8 @@ func TestCompileRecursiveInnerFunction(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 2)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 2)
 
 	// innerLocalIndex is the local index of the variable `inner`, which is the first local variable
 	const innerLocalIndex = 0
@@ -5395,10 +5294,8 @@ func TestCompileFunctionExpressionOuterOuterVariableUse(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 3)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 3)
 
 	{
 		const (
@@ -5611,10 +5508,8 @@ func TestCompileTransferConstant(t *testing.T) {
 		)
 		program := comp.Compile()
 
-		require.Len(t, program.Functions, 1)
-
-		functions := comp.ExportFunctions()
-		require.Equal(t, len(program.Functions), len(functions))
+		functions := program.Functions
+		require.Len(t, functions, 1)
 
 		assert.Equal(t,
 			[]opcode.Instruction{
@@ -5655,10 +5550,8 @@ func TestCompileTransferConstant(t *testing.T) {
 		)
 		program := comp.Compile()
 
-		require.Len(t, program.Functions, 1)
-
-		functions := comp.ExportFunctions()
-		require.Equal(t, len(program.Functions), len(functions))
+		functions := program.Functions
+		require.Len(t, functions, 1)
 
 		assert.Equal(t,
 			[]opcode.Instruction{
@@ -5706,10 +5599,8 @@ func TestCompileTransferNewPath(t *testing.T) {
 		)
 		program := comp.Compile()
 
-		require.Len(t, program.Functions, 1)
-
-		functions := comp.ExportFunctions()
-		require.Equal(t, len(program.Functions), len(functions))
+		functions := program.Functions
+		require.Len(t, functions, 1)
 
 		assert.Equal(t,
 			[]opcode.Instruction{
@@ -5753,10 +5644,8 @@ func TestCompileTransferNewPath(t *testing.T) {
 		)
 		program := comp.Compile()
 
-		require.Len(t, program.Functions, 1)
-
-		functions := comp.ExportFunctions()
-		require.Equal(t, len(program.Functions), len(functions))
+		functions := program.Functions
+		require.Len(t, functions, 1)
 
 		assert.Equal(t,
 			[]opcode.Instruction{
@@ -5802,10 +5691,8 @@ func TestCompileTransferClosure(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 2)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 2)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -5839,10 +5726,8 @@ func TestCompileTransferNil(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -5877,10 +5762,8 @@ func TestCompileArgument(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 2)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 2)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -5966,10 +5849,8 @@ func TestCompileLineNumberInfo(t *testing.T) {
 	)
 	program := comp.Compile()
 
-	require.Len(t, program.Functions, 1)
-
-	functions := comp.ExportFunctions()
-	require.Equal(t, len(program.Functions), len(functions))
+	functions := program.Functions
+	require.Len(t, functions, 1)
 
 	testFunction := functions[0]
 
@@ -6354,10 +6235,8 @@ func TestCompileOptionalChaining(t *testing.T) {
 		)
 		program := comp.Compile()
 
-		require.Len(t, program.Functions, 4)
-
-		functions := comp.ExportFunctions()
-		require.Equal(t, len(program.Functions), len(functions))
+		functions := program.Functions
+		require.Len(t, functions, 4)
 
 		const (
 			fooIndex = iota
@@ -6432,10 +6311,8 @@ func TestCompileOptionalChaining(t *testing.T) {
 		)
 		program := comp.Compile()
 
-		require.Len(t, program.Functions, 5)
-
-		functions := comp.ExportFunctions()
-		require.Equal(t, len(program.Functions), len(functions))
+		functions := program.Functions
+		require.Len(t, functions, 5)
 
 		const (
 			fooIndex = iota
@@ -6497,7 +6374,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
                 let x: @R <- create R()
                 var y: @R? <- create R()
 
-                let z: @R? <- y <- x 
+                let z: @R? <- y <- x
 
                 destroy y
                 destroy z
@@ -6511,10 +6388,8 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 		)
 		program := comp.Compile()
 
-		require.Len(t, program.Functions, 4)
-
-		functions := comp.ExportFunctions()
-		require.Equal(t, len(functions), len(program.Functions))
+		functions := program.Functions
+		require.Len(t, functions, 4)
 
 		const (
 			xIndex = iota
@@ -6574,7 +6449,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
                 let x: @R <- create R()
                 var y <- {"r" : <- create R()}
 
-                let z: @R? <- y["r"] <- x 
+                let z: @R? <- y["r"] <- x
 
                 destroy y
                 destroy z
@@ -6588,10 +6463,8 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 		)
 		program := comp.Compile()
 
-		require.Len(t, program.Functions, 4)
-
-		functions := comp.ExportFunctions()
-		require.Equal(t, len(functions), len(program.Functions))
+		functions := program.Functions
+		require.Len(t, functions, 4)
 
 		const (
 			xIndex = iota
@@ -6681,10 +6554,8 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 		)
 		program := comp.Compile()
 
-		require.Len(t, program.Functions, 7)
-
-		functions := comp.ExportFunctions()
-		require.Equal(t, len(functions), len(program.Functions))
+		functions := program.Functions
+		require.Len(t, functions, 7)
 
 		const (
 			xIndex = iota
@@ -6762,10 +6633,8 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 		)
 		program := comp.Compile()
 
-		require.Len(t, program.Functions, 4)
-
-		functions := comp.ExportFunctions()
-		require.Equal(t, len(functions), len(program.Functions))
+		functions := program.Functions
+		require.Len(t, functions, 4)
 
 		const (
 			xIndex = iota
@@ -6830,4 +6699,241 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 			functions[0].Code,
 		)
 	})
+}
+
+func TestCompileEnum(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        enum Test: UInt8 {
+            case a
+            case b
+            case c
+        }
+
+        fun test(): UInt8 {
+            return Test.b.rawValue
+        }
+
+        fun test2(rawValue: UInt8) {
+            Test(rawValue: rawValue)
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	variables := program.Variables
+	require.Len(t, variables, 3)
+
+	const (
+		testAVarIndex = iota
+		testBVarIndex
+		testCVarIndex
+	)
+
+	functions := program.Functions
+	require.Len(t, functions, 6)
+
+	const (
+		testFuncIndex = iota
+		test2FuncIndex
+		testConstructorFuncIndex
+		testLookupFuncIndex
+		// Next two indexes are for builtin methods (i.e: getType, isInstance)
+		_
+		_
+	)
+
+	const (
+		testAGlobalIndex = iota
+		testBGlobalIndex
+		testCGlobalIndex
+		testGlobalIndex
+		test2GlobalIndex
+		testConstructorGlobalIndex
+		testLookupGlobalIndex
+	)
+
+	{
+		const parameterCount = 1
+
+		// rawValueIndex is the index of the parameter `rawValue`, which is the first parameter
+		const rawValueIndex = iota
+
+		// localsOffset is the offset of the first local variable.
+		// Initializers do not have a $result variable
+		const localsOffset = parameterCount
+
+		const (
+			// selfIndex is the index of the local variable `self`, which is the first local variable
+			selfIndex = localsOffset + iota
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// let self = Test()
+				opcode.InstructionNew{
+					Kind: common.CompositeKindEnum,
+					Type: 3,
+				},
+				opcode.InstructionSetLocal{Local: selfIndex},
+
+				// self.rawValue = rawValue
+				opcode.InstructionGetLocal{Local: selfIndex},
+				opcode.InstructionGetLocal{Local: rawValueIndex},
+				opcode.InstructionTransfer{Type: 1},
+				opcode.InstructionSetField{FieldName: 0},
+
+				// return self
+				opcode.InstructionGetLocal{Local: selfIndex},
+				opcode.InstructionReturnValue{},
+			},
+			functions[testConstructorFuncIndex].Code,
+		)
+	}
+
+	{
+		const (
+			// rawValueIndex is the index of the parameter `rawValue`, which is the first parameter
+			rawValueIndex = iota
+			// tempIndex is the index of the temporary variable used for switch
+			tempIndex
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// let temp = rawValue
+				opcode.InstructionGetLocal{Local: rawValueIndex},
+				opcode.InstructionSetLocal{Local: tempIndex},
+
+				// switch temp
+
+				// case 1: return Test.a
+				opcode.InstructionGetLocal{Local: tempIndex},
+				opcode.InstructionGetConstant{Constant: 1},
+				opcode.InstructionEqual{},
+				opcode.InstructionJumpIfFalse{Target: 10},
+				opcode.InstructionGetGlobal{Global: testAGlobalIndex},
+				opcode.InstructionTransfer{Type: 5},
+				opcode.InstructionReturnValue{},
+				opcode.InstructionJump{Target: 29},
+
+				// case 2: return Test.b
+				opcode.InstructionGetLocal{Local: tempIndex},
+				opcode.InstructionGetConstant{Constant: 2},
+				opcode.InstructionEqual{},
+				opcode.InstructionJumpIfFalse{Target: 18},
+				opcode.InstructionGetGlobal{Global: testBGlobalIndex},
+				opcode.InstructionTransfer{Type: 5},
+				opcode.InstructionReturnValue{},
+				opcode.InstructionJump{Target: 29},
+
+				// case 3: return Test.c
+				opcode.InstructionGetLocal{Local: tempIndex},
+				opcode.InstructionGetConstant{Constant: 3},
+				opcode.InstructionEqual{},
+				opcode.InstructionJumpIfFalse{Target: 26},
+				opcode.InstructionGetGlobal{Global: testCGlobalIndex},
+				opcode.InstructionTransfer{Type: 5},
+				opcode.InstructionReturnValue{},
+				opcode.InstructionJump{Target: 29},
+
+				// default: return nil
+				opcode.InstructionNil{},
+				opcode.InstructionTransfer{Type: 5},
+				opcode.InstructionReturnValue{},
+
+				opcode.InstructionReturn{},
+			},
+			functions[testLookupFuncIndex].Code,
+		)
+	}
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionGetGlobal{Global: testBGlobalIndex},
+			opcode.InstructionGetField{FieldName: 0},
+			opcode.InstructionTransfer{Type: 1},
+			opcode.InstructionReturnValue{},
+		},
+		functions[testFuncIndex].Code,
+	)
+
+	{
+		// rawValueIndex is the index of the parameter `rawValue`, which is the first parameter
+		const rawValueIndex = iota
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				opcode.InstructionGetGlobal{Global: testLookupGlobalIndex},
+				opcode.InstructionGetLocal{Local: rawValueIndex},
+				opcode.InstructionTransfer{Type: 1},
+				opcode.InstructionInvoke{ArgCount: 1},
+				opcode.InstructionDrop{},
+				opcode.InstructionReturn{},
+			},
+			functions[test2FuncIndex].Code,
+		)
+	}
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionGetGlobal{Global: testConstructorGlobalIndex},
+			opcode.InstructionGetConstant{Constant: 1},
+			opcode.InstructionInvoke{ArgCount: 1},
+			opcode.InstructionTransfer{Type: 3},
+			opcode.InstructionReturnValue{},
+		},
+		variables[testAVarIndex].Getter.Code,
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionGetGlobal{Global: testConstructorGlobalIndex},
+			opcode.InstructionGetConstant{Constant: 2},
+			opcode.InstructionInvoke{ArgCount: 1},
+			opcode.InstructionTransfer{Type: 3},
+			opcode.InstructionReturnValue{},
+		},
+		variables[testBVarIndex].Getter.Code,
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionGetGlobal{Global: testConstructorGlobalIndex},
+			opcode.InstructionGetConstant{Constant: 3},
+			opcode.InstructionInvoke{ArgCount: 1},
+			opcode.InstructionTransfer{Type: 3},
+			opcode.InstructionReturnValue{},
+		},
+		variables[testCVarIndex].Getter.Code,
+	)
+
+	assert.Equal(t,
+		[]constant.Constant{
+			{
+				Data: []byte("rawValue"),
+				Kind: constant.String,
+			},
+			{
+				Data: []byte{0x0},
+				Kind: constant.UInt8,
+			},
+			{
+				Data: []byte{0x1},
+				Kind: constant.UInt8,
+			},
+			{
+				Data: []byte{0x2},
+				Kind: constant.UInt8,
+			},
+		},
+		program.Constants,
+	)
 }
