@@ -41,10 +41,29 @@ var (
 	flagCheckpointDir = flag.String("checkpoint-dir", "", "Path to directory containing checkpoint files")
 	flagChain         = flag.String("chain", "flow-mainnet", "Flow chain ID")
 	flagScript        = flag.String("script", "", "Cadence script path")
+	flagBatchSize     = flag.Int("batch", 1000, "Batch size for addresses passed to script")
 )
 
 func ProcessAndRunScriptOnTrie(chainID flow.ChainID, tries []*trie.MTrie) error {
 	log.Info().Msgf("Processing %d tries", len(tries))
+	options := computation.DefaultFVMOptions(chainID, false, false)
+	options = append(
+		options,
+		fvm.WithContractDeploymentRestricted(false),
+		fvm.WithContractRemovalRestricted(false),
+		fvm.WithAuthorizationChecksEnabled(false),
+		fvm.WithSequenceNumberCheckAndIncrementEnabled(false),
+		fvm.WithTransactionFeesEnabled(false),
+	)
+	ctx := fvm.NewContext(options...)
+	vm := fvm.NewVirtualMachine()
+
+	// Read the script from file
+	code, err := os.ReadFile(*flagScript)
+	if err != nil {
+		log.Fatal().Msgf("failed to read script file: %s", err)
+	}
+
 	for _, trie := range tries {
 
 		// create registers to view accounts and for storage snapshot
@@ -58,27 +77,8 @@ func ProcessAndRunScriptOnTrie(chainID flow.ChainID, tries []*trie.MTrie) error 
 			registersByAccount.AccountCount(),
 		)
 
-		options := computation.DefaultFVMOptions(chainID, false, false)
-		options = append(
-			options,
-			fvm.WithContractDeploymentRestricted(false),
-			fvm.WithContractRemovalRestricted(false),
-			fvm.WithAuthorizationChecksEnabled(false),
-			fvm.WithSequenceNumberCheckAndIncrementEnabled(false),
-			fvm.WithTransactionFeesEnabled(false),
-		)
-		ctx := fvm.NewContext(options...)
-
 		storageSnapshot := registers.StorageSnapshot{
 			Registers: registersByAccount,
-		}
-
-		vm := fvm.NewVirtualMachine()
-
-		// Read the script from file
-		code, err := os.ReadFile(*flagScript)
-		if err != nil {
-			log.Fatal().Msgf("failed to read script file: %s", err)
 		}
 
 		logAccount := moduleUtil.LogProgress(
@@ -88,6 +88,8 @@ func ProcessAndRunScriptOnTrie(chainID flow.ChainID, tries []*trie.MTrie) error 
 				registersByAccount.AccountCount(),
 			),
 		)
+
+		addresses := make([][]byte, 0)
 
 		// Loop over all account registers with their owner string
 		err = registersByAccount.ForEachAccount(
@@ -103,10 +105,14 @@ func ProcessAndRunScriptOnTrie(chainID flow.ChainID, tries []*trie.MTrie) error 
 					return err
 				}
 
-				_, err = runScript(vm, ctx, storageSnapshot, code, [][]byte{argBytes})
-				if err != nil {
-					log.Error().Err(err).Str("address", address.Hex()).Msg("cadence error")
-					return err
+				addresses = append(addresses, argBytes)
+
+				if len(addresses) >= *flagBatchSize {
+					_, err = runScript(vm, ctx, storageSnapshot, code, addresses)
+					if err != nil {
+						log.Error().Err(err).Str("address batch failed with last address", address.Hex()).Msg("cadence error")
+						return err
+					}
 				}
 
 				// log.Info().Msgf("Address: %s, Result: %s", address.Hex(), string(result))
