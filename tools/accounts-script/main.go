@@ -45,15 +45,6 @@ import (
 	moduleUtil "github.com/onflow/flow-go/module/util"
 )
 
-// references flow-go/cmd/util/cmd/checkpoint-collect-stats
-
-type PayloadInfo struct {
-	Address string `json:"address"`
-	Key     string `json:"key"`
-	Type    string `json:"type"`
-	Size    uint64 `json:"size"`
-}
-
 var (
 	flagCheckpointDir = flag.String("checkpoint-dir", "", "Path to directory containing checkpoint files")
 	flagChain         = flag.String("chain", "flow-mainnet", "Flow chain ID")
@@ -62,7 +53,7 @@ var (
 )
 
 func ProcessAndRunScriptOnTrie(chainID flow.ChainID, tries []*trie.MTrie) error {
-	log.Info().Msgf("Processing %d tries", len(tries))
+	log.Info().Msgf("processing %d tries", len(tries))
 	options := computation.DefaultFVMOptions(chainID, false, false)
 	options = append(
 		options,
@@ -207,7 +198,7 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("storage iteration failed")
 	}
-	log.Info().Msgf("Success")
+	log.Info().Msgf("success")
 }
 
 func runScript(
