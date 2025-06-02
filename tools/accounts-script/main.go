@@ -25,7 +25,6 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/onflow/flow-go/module/metrics"
 	moduleUtil "github.com/onflow/flow-go/module/util"
-	"github.com/onflow/flow-go/utils/debug"
 )
 
 // references flow-go/cmd/util/cmd/checkpoint-collect-stats
@@ -128,7 +127,6 @@ func ProcessAndRunScriptOnTrie(chainID flow.ChainID, tries []*trie.MTrie) error 
 }
 
 func getTriesFromCheckpoint() []*trie.MTrie {
-	memAllocBefore := debug.GetHeapAllocsBytes()
 	log.Info().Msgf("loading checkpoint(s) from %v", *flagCheckpointDir)
 
 	diskWal, err := wal.NewDiskWAL(zerolog.Nop(), nil, &metrics.NoopCollector{}, *flagCheckpointDir, complete.DefaultCacheSize, pathfinder.PathByteSize, wal.SegmentSize)
@@ -149,8 +147,7 @@ func getTriesFromCheckpoint() []*trie.MTrie {
 		<-compactor.Done()
 	}()
 
-	memAllocAfter := debug.GetHeapAllocsBytes()
-	log.Info().Msgf("the checkpoint is loaded, mem usage: %d", memAllocAfter-memAllocBefore)
+	log.Info().Msg("the checkpoint is loaded")
 
 	var tries []*trie.MTrie
 
@@ -168,8 +165,8 @@ func main() {
 
 	flag.Parse()
 
-	if *flagCheckpointDir == "" || *flagScript == "" {
-		fmt.Println("Usage: go run main.go --checkpoint-dir <dir> --chain <chain> --script <file.cdc>")
+	if *flagCheckpointDir == "" || *flagScript == "" || *flagChain == "" {
+		fmt.Println("Usage: go run main.go --checkpoint-dir <dir> --chain <chain> --script <file.cdc> --batch <1000>")
 		os.Exit(1)
 	}
 
