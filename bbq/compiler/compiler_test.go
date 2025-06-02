@@ -6798,8 +6798,6 @@ func TestCompileEnum(t *testing.T) {
 	}
 
 	{
-		const parameterCount = 1
-
 		const (
 			// rawValueIndex is the index of the parameter `rawValue`, which is the first parameter
 			rawValueIndex = iota
