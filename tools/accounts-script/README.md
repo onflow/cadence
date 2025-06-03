@@ -10,14 +10,14 @@ This tool was tested on vm `mainnet26-execution-leo`.
 
 ## Usage example
 
-Assuming this is running on `mainnet26-execution-leo`, we are given an entire execution snapshot (as opposed to just a checkpoint), we are starting from scratch and all required permissions are given.
+Assuming this is running on a vm `mainnet26-execution-xyz`, we are given an entire execution snapshot (as opposed to just a checkpoint), we are starting from scratch and all required permissions are given.
 
 ```sh
-# start vm instance
-gcloud compute instances start mainnet26-execution-leo --zone=us-central1-f --project=flow-multi-region
+# start vm instance, change zone and project flags as required
+gcloud compute instances start mainnet26-execution-xyz --zone=us-central1-f --project=flow-multi-region
 
-# connect via ssh
-gcloud compute ssh --ssh-flag="-A" --tunnel-through-iap --zone=us-central1-f mainnet26-execution-leo --project=flow-multi-region
+# connect via ssh, change zone and project flags as required
+gcloud compute ssh --ssh-flag="-A" --tunnel-through-iap --zone=us-central1-f mainnet26-execution-xyz --project=flow-multi-region
 
 sudo su
 
