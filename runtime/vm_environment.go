@@ -103,6 +103,8 @@ func NewScriptVMEnvironment(config Config) Environment {
 
 func (e *vmEnvironment) newVMConfig() *vm.Config {
 	config := vm.NewConfig(nil)
+	config.MemoryGauge = e
+	config.ComputationGauge = e
 	config.TypeLoader = e.loadType
 	config.Logger = e
 	config.ContractValueHandler = e.loadContractValue
