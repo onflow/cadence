@@ -3111,7 +3111,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 		RequireError(t, err)
 
 		if *compile {
-			require.ErrorContains(t, err, "invalid transfer: expected 'String', found 'Int'")
+			require.ErrorContains(t, err, "invalid transfer of value: expected `String`, got `Int`")
 		} else {
 			var transferTypeError *interpreter.ValueTransferTypeError
 			require.ErrorAs(t, err, &transferTypeError)
