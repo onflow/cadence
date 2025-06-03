@@ -33,16 +33,26 @@ func TestInterpretEnum(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       enum E: Int64 {
           case a
           case b
       }
     `)
 
+	expectedType := &interpreter.HostFunctionValue{}
+
+	// TODO: enable once feature branch is merged
+	//var expectedType interpreter.Value
+	//if *compile {
+	//	expectedType = vm.CompiledFunctionValue{}
+	//} else {
+	//	expectedType = &interpreter.HostFunctionValue{}
+	//}
+
 	assert.IsType(t,
-		&interpreter.HostFunctionValue{},
-		inter.Globals.Get("E").GetValue(inter),
+		expectedType,
+		inter.GetGlobal("E"),
 	)
 }
 
@@ -50,7 +60,7 @@ func TestInterpretEnumCaseUse(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       enum E: Int64 {
           case a
           case b
@@ -60,7 +70,7 @@ func TestInterpretEnumCaseUse(t *testing.T) {
       let b = E.b
     `)
 
-	a := inter.Globals.Get("a").GetValue(inter)
+	a := inter.GetGlobal("a")
 	require.IsType(t,
 		&interpreter.CompositeValue{},
 		a,
@@ -71,7 +81,7 @@ func TestInterpretEnumCaseUse(t *testing.T) {
 		a.(*interpreter.CompositeValue).Kind,
 	)
 
-	b := inter.Globals.Get("b").GetValue(inter)
+	b := inter.GetGlobal("b")
 	require.IsType(t,
 		&interpreter.CompositeValue{},
 		b,
@@ -87,7 +97,7 @@ func TestInterpretEnumCaseRawValue(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       enum E: Int64 {
           case a
           case b
@@ -101,14 +111,14 @@ func TestInterpretEnumCaseRawValue(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredInt64Value(0),
-		inter.Globals.Get("a").GetValue(inter),
+		inter.GetGlobal("a"),
 	)
 
 	RequireValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredInt64Value(1),
-		inter.Globals.Get("b").GetValue(inter),
+		inter.GetGlobal("b"),
 	)
 }
 
@@ -116,7 +126,7 @@ func TestInterpretEnumCaseEquality(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       enum E: Int64 {
           case a
           case b
@@ -143,7 +153,7 @@ func TestInterpretEnumCaseEquality(t *testing.T) {
 			interpreter.TrueValue,
 			interpreter.TrueValue,
 		),
-		inter.Globals.Get("res").GetValue(inter),
+		inter.GetGlobal("res"),
 	)
 }
 
@@ -151,7 +161,7 @@ func TestInterpretEnumConstructor(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       enum E: Int64 {
           case a
           case b
@@ -180,7 +190,7 @@ func TestInterpretEnumConstructor(t *testing.T) {
 			interpreter.TrueValue,
 			interpreter.TrueValue,
 		),
-		inter.Globals.Get("res").GetValue(inter),
+		inter.GetGlobal("res"),
 	)
 }
 
@@ -188,7 +198,7 @@ func TestInterpretEnumInstance(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       enum E: Int64 {
           case a
           case b
@@ -213,7 +223,7 @@ func TestInterpretEnumInstance(t *testing.T) {
 			interpreter.TrueValue,
 			interpreter.TrueValue,
 		),
-		inter.Globals.Get("res").GetValue(inter),
+		inter.GetGlobal("res"),
 	)
 }
 
@@ -221,7 +231,7 @@ func TestInterpretEnumInContract(t *testing.T) {
 
 	t.Parallel()
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           contract C {
               enum E: UInt8 {
@@ -244,11 +254,11 @@ func TestInterpretEnumInContract(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	c := inter.Globals.Get("C").GetValue(inter)
-	require.IsType(t, &interpreter.CompositeValue{}, c)
-	contract := c.(*interpreter.CompositeValue)
+	c := inter.GetGlobal("C")
+	contract, ok := c.(interpreter.MemberAccessibleValue)
+	require.True(t, ok)
 
-	eValue := contract.GetField(inter, "e")
+	eValue := contract.GetMember(inter, interpreter.EmptyLocationRange, "e")
 	require.NotNil(t, eValue)
 
 	require.IsType(t, &interpreter.CompositeValue{}, eValue)

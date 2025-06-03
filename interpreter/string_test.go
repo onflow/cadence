@@ -200,11 +200,20 @@ func TestInterpretStringFromUtf8(t *testing.T) {
 
 	for _, testCase := range testCases {
 
-		code := fmt.Sprintf(`
-			fun testString(): String? {
-				return String.fromUTF8(%s)
-			}
-		`, testCase.expr)
+		code := fmt.Sprintf(
+			`
+              fun testString(): String? {
+                  let a = String.fromUTF8(%[1]s)
+                  let f = String.fromUTF8
+                  let b = f(%[1]s)
+                  if a != b {
+                      return nil
+                  }
+                  return b
+              }
+            `,
+			testCase.expr,
+		)
 
 		inter := parseCheckAndPrepare(t, code)
 
@@ -236,9 +245,16 @@ func TestInterpretStringFromCharacters(t *testing.T) {
 
 	inter := parseCheckAndPrepare(t, `
       fun test(): String {
-          return String.fromCharacters(["👪", "❤️"])
+          let characters: [Character] = ["👪", "❤️"]
+          let a = String.fromCharacters(characters)
+          let f = String.fromCharacters
+          let b = f(characters)
+          if a != b {
+              return ""
+          }
+          return b
       }
-	`)
+    `)
 
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
@@ -469,18 +485,25 @@ func TestInterpretStringJoin(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndPrepare(t, `
-		fun test(): String {
-			return String.join(["👪", "❤️"], separator: "//")
-		}
+        fun test(): String {
+            let parts = ["👪", "❤️"]
+            let a = String.join(parts, separator: "//")
+            let f = String.join
+            let b = f(parts, separator: "//")
+            if a != b {
+                return ""
+            }
+            return b
+        }
 
-		fun testEmptyArray(): String {
-			return String.join([], separator: "//")
-		}
+        fun testEmptyArray(): String {
+            return String.join([], separator: "//")
+        }
 
-		fun testSingletonArray(): String {
-			return String.join(["pqrS"], separator: "//")
-		}
-	`)
+        fun testSingletonArray(): String {
+            return String.join(["pqrS"], separator: "//")
+        }
+    `)
 
 	testCase := func(t *testing.T, funcName string, expected *interpreter.StringValue) {
 		t.Run(funcName, func(t *testing.T) {
