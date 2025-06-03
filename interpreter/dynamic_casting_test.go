@@ -3478,7 +3478,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 
 							t.Run(fmt.Sprintf("valid: from %s to %s", fromType, targetType), func(t *testing.T) {
 
-								inter, err := parseCheckAndInterpretWithOptions(t,
+								inter, err := parseCheckAndPrepareWithOptions(t,
 									fmt.Sprintf(
 										`
                                   struct S {}
@@ -3519,7 +3519,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 
 							t.Run(fmt.Sprintf("invalid: from %s to Capability<&%s>", fromType, otherType), func(t *testing.T) {
 
-								inter, err := parseCheckAndInterpretWithOptions(t,
+								inter, err := parseCheckAndPrepareWithOptions(t,
 									fmt.Sprintf(
 										`
                                   struct S {}

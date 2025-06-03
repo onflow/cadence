@@ -183,7 +183,27 @@ func ParseCheckAndPrepareWithOptions(
 	vmConfig := vm.NewConfig(storage).
 		WithDebugEnabled()
 
-	vmConfig.TypeLoader = compilerUtils.CompiledProgramsTypeLoader(programs)
+	typeLoader := compilerUtils.CompiledProgramsTypeLoader(programs)
+
+	if options.CheckerConfig != nil {
+		typeActivationHandler := options.CheckerConfig.BaseTypeActivationHandler
+		if typeActivationHandler != nil {
+			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+				activation := typeActivationHandler(location)
+				typeName := location.QualifiedIdentifier(typeID)
+				variable := activation.Find(typeName)
+				if variable != nil {
+					return variable.Type.(sema.ContainedType)
+				}
+
+				return typeLoader(location, typeID)
+			}
+		}
+	}
+
+	if vmConfig.TypeLoader == nil {
+		vmConfig.TypeLoader = typeLoader
+	}
 
 	if interpreterConfig != nil {
 		vmConfig.MemoryGauge = interpreterConfig.MemoryGauge

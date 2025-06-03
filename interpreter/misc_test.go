@@ -3747,7 +3747,7 @@ func TestInterpretCompositeNilEquality(t *testing.T) {
 				conformances = ": Int"
 			}
 
-			inter, err := parseCheckAndInterpretWithOptions(t,
+			inter, err := parseCheckAndPrepareWithOptions(t,
 				fmt.Sprintf(
 					`
                       access(all) %[1]s X%[2]s %[3]s
@@ -3952,7 +3952,7 @@ func TestInterpretInterfaceFunctionUse(t *testing.T) {
 
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
-			inter, err := parseCheckAndInterpretWithOptions(t,
+			inter, err := parseCheckAndPrepareWithOptions(t,
 				fmt.Sprintf(
 					`
                       access(all) %[1]s interface Test {
@@ -7771,7 +7771,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			var eventTypes []*sema.CompositeType
 			var eventsFields [][]interpreter.Value
 
-			inter, err := parseCheckAndInterpretWithOptions(
+			inter, err := parseCheckAndPrepareWithOptions(
 				t, code, ParseCheckAndInterpretOptions{
 					CheckerConfig: &sema.Config{
 						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
@@ -8475,7 +8475,7 @@ func TestInterpretCompositeDeclarationNestedTypeScopingOuterInner(t *testing.T) 
 
 	t.Parallel()
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           access(all) contract Test {
 
@@ -8585,7 +8585,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 	t.Run("with custom handler", func(t *testing.T) {
 		addressValue := interpreter.AddressValue(common.MustBytesToAddress([]byte{0x1}))
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			code,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
@@ -8951,7 +8951,7 @@ func TestInterpretHexDecode(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               fun hexDecode(_ s: String): [UInt8] {
                   if s.length % 2 != 0 {
@@ -9173,7 +9173,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, valueDeclaration)
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
 			CheckerConfig: &sema.Config{
@@ -9213,7 +9213,7 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 
 	t.Run("new to nil", func(t *testing.T) {
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           resource X {}
 
           fun test() {
@@ -9229,7 +9229,7 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 
 	t.Run("new to non-nil", func(t *testing.T) {
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
          resource X {}
 
          fun test() {
@@ -9248,7 +9248,7 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 
 	t.Run("existing to nil", func(t *testing.T) {
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
          resource X {}
 
          fun test() {
@@ -9265,7 +9265,7 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 
 	t.Run("existing to non-nil", func(t *testing.T) {
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
          resource X {}
 
          fun test() {
@@ -9285,7 +9285,7 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 
 	t.Run("force-assignment initialization", func(t *testing.T) {
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
          resource X {}
 
          resource Y {
@@ -11766,7 +11766,7 @@ func TestInterpretArrayToConstantSized(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, stdlib.PanicFunction)
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                fun test(): [UInt8; 20] {
                     return "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"

@@ -56,20 +56,20 @@ func TestInterpretCompositeValue(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("Apple"),
-			inter.Globals.Get("name").GetValue(inter),
+			inter.GetGlobal("name"),
 		)
 
 		RequireValuesEqual(
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("Red"),
-			inter.Globals.Get("color").GetValue(inter),
+			inter.GetGlobal("color"),
 		)
 	})
 }
 
 // Utility methods
-func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
+func testCompositeValue(t *testing.T, code string) Invokable {
 
 	storage := newUnmeteredInMemoryStorage()
 
@@ -142,7 +142,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, valueDeclaration)
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
 			CheckerConfig: &sema.Config{
