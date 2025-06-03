@@ -31,7 +31,6 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 )
 
@@ -210,14 +209,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 						require.NoError(t, err)
 						assert.Equal(t, interpreter.TrueValue, result)
 					default:
-						RequireError(t, err)
-
-						operandError := &interpreter.InvalidOperandsError{}
-						require.ErrorAs(t, err, operandError)
-
-						assert.Equal(t, op, operandError.Operation)
-						assert.Equal(t, subtype, operandError.LeftType)
-						assert.Equal(t, rhsType, operandError.RightType)
+						assert.Failf(t, "unknown operation: %s", op.String())
 					}
 				})
 			}
@@ -274,14 +266,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 						require.NoError(t, err)
 						assert.Equal(t, interpreter.TrueValue, result)
 					default:
-						RequireError(t, err)
-
-						operandError := &interpreter.InvalidOperandsError{}
-						require.ErrorAs(t, err, operandError)
-
-						assert.Equal(t, op, operandError.Operation)
-						assert.Equal(t, subtype, operandError.LeftType)
-						assert.Equal(t, rhsType, operandError.RightType)
+						assert.Failf(t, "unknown operation: %s", op.String())
 					}
 				})
 			}
@@ -324,14 +309,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 						require.NoError(t, err)
 						assert.Equal(t, interpreter.TrueValue, result)
 					default:
-						RequireError(t, err)
-
-						operandError := &interpreter.InvalidOperandsError{}
-						require.ErrorAs(t, err, operandError)
-
-						assert.Equal(t, op, operandError.Operation)
-						assert.Equal(t, subtype, operandError.LeftType)
-						assert.Equal(t, rhsType, operandError.RightType)
+						assert.Failf(t, "unknown operation: %s", op.String())
 					}
 				})
 			}
@@ -374,14 +352,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 						require.NoError(t, err)
 						assert.Equal(t, interpreter.TrueValue, result)
 					default:
-						RequireError(t, err)
-
-						operandError := &interpreter.InvalidOperandsError{}
-						require.ErrorAs(t, err, operandError)
-
-						assert.Equal(t, op, operandError.Operation)
-						assert.Equal(t, subtype, operandError.LeftType)
-						assert.Equal(t, rhsType, operandError.RightType)
+						assert.Failf(t, "unknown operation: %s", op.String())
 					}
 				})
 			}
