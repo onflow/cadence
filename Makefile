@@ -86,6 +86,7 @@ test-tools:
 .PHONY: test-with-compiler
 test-with-compiler:
 	(go test -parallel 8 ./interpreter/... -compile=true)
+	(go test -parallel 8 ./runtime/... -compile=true)
 
 .PHONY: lint
 lint: build-linter

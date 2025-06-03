@@ -3111,7 +3111,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 		RequireError(t, err)
 
 		if *compile {
-			require.ErrorContains(t, err, "invalid transfer: expected 'String', found 'Int'")
+			require.ErrorContains(t, err, "invalid transfer of value: expected `String`, got `Int`")
 		} else {
 			var transferTypeError *interpreter.ValueTransferTypeError
 			require.ErrorAs(t, err, &transferTypeError)
@@ -12799,8 +12799,134 @@ func TestRuntimeStorageReferenceBoundFunctionConfusion(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
+
 	RequireError(t, err)
 
 	var dereferenceError *interpreter.DereferenceError
 	require.ErrorAs(t, err, &dereferenceError)
+}
+
+type testComputationGauge struct {
+	meter map[common.ComputationKind]uint64
+}
+
+func newTestComputationGauge() *testComputationGauge {
+	return &testComputationGauge{
+		meter: make(map[common.ComputationKind]uint64),
+	}
+}
+
+func (g *testComputationGauge) MeterComputation(usage common.ComputationUsage) error {
+	g.meter[usage.Kind] += usage.Intensity
+	return nil
+}
+
+func (g *testComputationGauge) getComputation(kind common.ComputationKind) uint64 {
+	return g.meter[kind]
+}
+
+func TestRuntimeMetering(t *testing.T) {
+
+	t.Parallel()
+
+	addressValue := Address{
+		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+	}
+
+	runtime := NewTestInterpreterRuntime()
+
+	contract := []byte(`
+        access(all) contract Test {
+
+            access(all) fun hello() {
+                log("Hello World!")
+            }
+        }
+    `)
+
+	deploy := DeploymentTransaction("Test", contract)
+
+	var accountCode []byte
+	var loggedMessages []string
+
+	storage := NewTestLedger(nil, nil)
+
+	memoryGauge := newTestMemoryGauge()
+	computationGauge := newTestComputationGauge()
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: storage,
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{addressValue}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+			return accountCode, nil
+		},
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnProgramLog: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
+		OnMeterMemory: func(usage common.MemoryUsage) error {
+			return memoryGauge.MeterMemory(usage)
+		},
+		OnMeterComputation: func(usage common.ComputationUsage) error {
+			return computationGauge.MeterComputation(usage)
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.NotNil(t, accountCode)
+
+	_, err = runtime.InvokeContractFunction(
+		common.AddressLocation{
+			Address: addressValue,
+			Name:    "Test",
+		},
+		"hello",
+		nil,
+		nil,
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]string{
+			`"Hello World!"`,
+		},
+		loggedMessages,
+	)
+
+	assert.Equal(t, uint64(98), memoryGauge.getMemory(common.MemoryKindRawString))
+	if *compile {
+		assert.Equal(t, uint64(1), computationGauge.getComputation(common.ComputationKindInstructionInvoke))
+		assert.Equal(t, uint64(2), computationGauge.getComputation(common.ComputationKindFunctionInvocation))
+	} else {
+		assert.Equal(t, uint64(3), computationGauge.getComputation(common.ComputationKindFunctionInvocation))
+	}
 }
