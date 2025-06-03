@@ -59,6 +59,6 @@ func TestErrorOutputIncludesLocationRage(t *testing.T) {
 				},
 			},
 		}.Error(),
-		"Execution failed:\nerror: dereference failed\n --> test:0:0\n",
+		"Execution failed:\nerror: dereference failed\n --> test:0:0\n\nWas this error unhelpful?\nConsider suggesting an improvement here: https://github.com/onflow/cadence/issues.\n",
 	)
 }

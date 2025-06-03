@@ -115,6 +115,7 @@ func (e CheckerError) Error() string {
 	if printErr != nil {
 		panic(printErr)
 	}
+	sb.WriteString(errors.ErrorPrompt)
 	return sb.String()
 }
 

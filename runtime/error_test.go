@@ -60,7 +60,7 @@ func TestRuntimeError(t *testing.T) {
 			},
 		)
 
-		require.EqualError(
+		require.ErrorContains(
 			t,
 			err,
 			"Execution failed:\n"+
@@ -93,7 +93,7 @@ func TestRuntimeError(t *testing.T) {
 				Location:  location,
 			},
 		)
-		require.EqualError(
+		require.ErrorContains(
 			t,
 			err,
 			"Execution failed:\n"+
@@ -133,7 +133,7 @@ func TestRuntimeError(t *testing.T) {
 				Location:  location,
 			},
 		)
-		require.EqualError(
+		require.ErrorContains(
 			t,
 			err,
 			"Execution failed:\n"+
@@ -171,7 +171,7 @@ func TestRuntimeError(t *testing.T) {
 				Location:  location,
 			},
 		)
-		require.EqualError(
+		require.ErrorContains(
 			t,
 			err,
 			"Execution failed:\n"+
@@ -221,7 +221,7 @@ func TestRuntimeError(t *testing.T) {
 			},
 		)
 
-		require.EqualError(t, err,
+		require.ErrorContains(t, err,
 			"Execution failed:\n"+
 				"  --> 0100000000000000000000000000000000000000000000000000000000000000:15:12\n"+
 				"   |\n"+
@@ -275,7 +275,7 @@ func TestRuntimeError(t *testing.T) {
 				Location:  location,
 			},
 		)
-		require.EqualError(
+		require.ErrorContains(
 			t,
 			err,
 			"Execution failed:\nerror: unexpected token: identifier\n"+
@@ -318,7 +318,7 @@ func TestRuntimeError(t *testing.T) {
 				Location:  location,
 			},
 		)
-		require.EqualError(
+		require.ErrorContains(
 			t,
 			err,
 			"Execution failed:\n"+
@@ -375,7 +375,7 @@ func TestRuntimeError(t *testing.T) {
 				Location:  location,
 			},
 		)
-		require.EqualError(
+		require.ErrorContains(
 			t,
 			err,
 			"Execution failed:\n"+
@@ -456,7 +456,7 @@ func TestRuntimeError(t *testing.T) {
 				Location:  location,
 			},
 		)
-		require.EqualError(t, err,
+		require.ErrorContains(t, err,
 			"Execution failed:\n"+
 				"error: function declarations are not valid at the top-level\n"+
 				" --> 0000000000000002.B:3:30\n"+

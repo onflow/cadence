@@ -70,7 +70,7 @@ func withWritesToStorage(
 		var slabIndex atree.SlabIndex
 		binary.BigEndian.PutUint32(slabIndex[:], randomIndex)
 
-		storage.AccountStorage.SetNewAccountStorageMapSlabIndex(address, slabIndex)
+		storage.AccountStorageV2.SetNewAccountStorageMapSlabIndex(address, slabIndex)
 	}
 
 	handler(storage, inter)
@@ -222,7 +222,7 @@ func TestRuntimeAccountStorage(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	script := []byte(`
       transaction {
@@ -260,7 +260,7 @@ func TestRuntimeAccountStorage(t *testing.T) {
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err := rt.ExecuteTransaction(
 		Script{
 			Source: script,
 		},
@@ -281,7 +281,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	addressString, err := hex.DecodeString("aad3e26e406987c2")
 	require.NoError(t, err)
@@ -352,7 +352,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
 
 	// Deploy contract
 
-	err = runtime.ExecuteTransaction(
+	err = rt.ExecuteTransaction(
 		Script{
 			Source: deployTestContractTx,
 		},
@@ -385,7 +385,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
       }
     `
 
-	err = runtime.ExecuteTransaction(
+	err = rt.ExecuteTransaction(
 		Script{
 			Source: []byte(testTx),
 		},
@@ -402,7 +402,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	storage := NewTestLedger(nil, nil)
 
@@ -425,7 +425,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 
 	// Store a value and link a capability
 
-	err := runtime.ExecuteTransaction(
+	err := rt.ExecuteTransaction(
 		Script{
 			Source: []byte(`
               transaction {
@@ -446,7 +446,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 
 	t.Run("read stored, storage, existing", func(t *testing.T) {
 
-		value, err := runtime.ReadStored(
+		value, err := rt.ReadStored(
 			signer,
 			cadence.Path{
 				Domain:     common.PathDomainStorage,
@@ -463,7 +463,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 
 	t.Run("read stored, storage, non-existing", func(t *testing.T) {
 
-		value, err := runtime.ReadStored(
+		value, err := rt.ReadStored(
 			signer,
 			cadence.Path{
 				Domain:     common.PathDomainStorage,
@@ -480,7 +480,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 
 	t.Run("read stored, public, existing", func(t *testing.T) {
 
-		value, err := runtime.ReadStored(
+		value, err := rt.ReadStored(
 			signer,
 			cadence.Path{
 				Domain:     common.PathDomainPublic,
@@ -507,7 +507,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 
 	t.Run("read stored, public, non-existing", func(t *testing.T) {
 
-		value, err := runtime.ReadStored(
+		value, err := rt.ReadStored(
 			signer,
 			cadence.Path{
 				Domain:     common.PathDomainPublic,
@@ -527,7 +527,7 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	testAddress, err := common.HexToAddress("0x0b2a3299cc857e29")
 	require.NoError(t, err)
@@ -569,7 +569,7 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 		},
 	}
 
-	err = runtime.ExecuteTransaction(
+	err = rt.ExecuteTransaction(
 		Script{
 			Source: DeploymentTransaction(
 				"TopShot",
@@ -583,7 +583,7 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err = rt.ExecuteTransaction(
 		Script{
 			Source: DeploymentTransaction(
 				"TopShotShardedCollection",
@@ -597,7 +597,7 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err = rt.ExecuteTransaction(
 		Script{
 			Source: DeploymentTransaction(
 				"TopshotAdminReceiver",
@@ -616,7 +616,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	nftAddress, err := common.HexToAddress("0x1d7e57aa55817448")
 	require.NoError(t, err)
@@ -670,7 +670,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 
 	signerAddress = topShotAddress
 
-	err = runtime.ExecuteTransaction(
+	err = rt.ExecuteTransaction(
 		Script{
 			Source: deployTx,
 		},
@@ -683,7 +683,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 
 	// Mint moments
 
-	err = runtime.ExecuteTransaction(
+	err = rt.ExecuteTransaction(
 		Script{
 			Source: []byte(`
               import TopShot from 0x0b2a3299cc857e29
@@ -735,7 +735,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 
 	signerAddress = common.MustBytesToAddress([]byte{0x42})
 
-	err = runtime.ExecuteTransaction(
+	err = rt.ExecuteTransaction(
 		Script{
 			Source: []byte(setupTx),
 		},
@@ -784,7 +784,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err = rt.ExecuteTransaction(
 		Script{
 			Source:    []byte(transferTx),
 			Arguments: [][]byte{encodedArg},
@@ -806,7 +806,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	const contract = `
       access(all) contract Test {
@@ -931,7 +931,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 
 	signerAddress = contractAddress
 
-	err := runtime.ExecuteTransaction(
+	err := rt.ExecuteTransaction(
 		Script{
 			Source: deployTx,
 		},
@@ -944,7 +944,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 
 	// Mint moments
 
-	err = runtime.ExecuteTransaction(
+	err = rt.ExecuteTransaction(
 		Script{
 			Source: []byte(`
               import Test from 0x1
@@ -989,7 +989,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 
 	signerAddress = common.MustBytesToAddress([]byte{0x2})
 
-	err = runtime.ExecuteTransaction(
+	err = rt.ExecuteTransaction(
 		Script{
 			Source: []byte(setupTx),
 		},
@@ -1038,7 +1038,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 	encodedArg, err := json.Encode(cadence.NewArray(values))
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(
+	err = rt.ExecuteTransaction(
 		Script{
 			Source:    []byte(transferTx),
 			Arguments: [][]byte{encodedArg},
@@ -1055,7 +1055,7 @@ func TestRuntimeStoragePublishAndUnpublish(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	storage := NewTestLedger(nil, nil)
 
@@ -1078,7 +1078,7 @@ func TestRuntimeStoragePublishAndUnpublish(t *testing.T) {
 
 	// Store a value and publish a capability
 
-	err := runtime.ExecuteTransaction(
+	err := rt.ExecuteTransaction(
 		Script{
 			Source: []byte(`
               transaction {
@@ -1102,7 +1102,7 @@ func TestRuntimeStoragePublishAndUnpublish(t *testing.T) {
 
 	// Unpublish the capability
 
-	err = runtime.ExecuteTransaction(
+	err = rt.ExecuteTransaction(
 		Script{
 			Source: []byte(`
             transaction {
@@ -1123,7 +1123,7 @@ func TestRuntimeStoragePublishAndUnpublish(t *testing.T) {
 
 	// Get the capability after unpublish
 
-	err = runtime.ExecuteTransaction(
+	err = rt.ExecuteTransaction(
 		Script{
 			Source: []byte(`
               transaction {
@@ -1145,7 +1145,7 @@ func TestRuntimeStorageSaveCapability(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	storage := NewTestLedger(nil, nil)
 
@@ -1191,7 +1191,7 @@ func TestRuntimeStorageSaveCapability(t *testing.T) {
 		Location:  nextTransactionLocation(),
 	}
 
-	err := runtime.ExecuteTransaction(
+	err := rt.ExecuteTransaction(
 		Script{
 			Source: []byte(fmt.Sprintf(
 				`
@@ -1215,7 +1215,7 @@ func TestRuntimeStorageSaveCapability(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	value, err := runtime.ReadStored(signer, storagePath1, context)
+	value, err := rt.ReadStored(signer, storagePath1, context)
 	require.NoError(t, err)
 
 	expected := cadence.NewCapability(
@@ -1231,7 +1231,7 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	signerAddress := common.MustBytesToAddress([]byte{0x42})
 
@@ -1279,7 +1279,7 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
 
 	// Deploy contract
 
-	err := runtime.ExecuteTransaction(
+	err := rt.ExecuteTransaction(
 		Script{
 			Source: deployTx,
 		},
@@ -1310,7 +1310,7 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
       }
     `
 
-	err = runtime.ExecuteTransaction(
+	err = rt.ExecuteTransaction(
 		Script{
 			Source: []byte(testTx),
 		},
@@ -1327,7 +1327,7 @@ func TestRuntimeStorageReferenceDowncast(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	signerAddress := common.MustBytesToAddress([]byte{0x42})
 
@@ -1377,7 +1377,7 @@ func TestRuntimeStorageReferenceDowncast(t *testing.T) {
 
 	// Deploy contract
 
-	err := runtime.ExecuteTransaction(
+	err := rt.ExecuteTransaction(
 		Script{
 			Source: deployTx,
 		},
@@ -1407,7 +1407,7 @@ func TestRuntimeStorageReferenceDowncast(t *testing.T) {
       }
     `
 
-	err = runtime.ExecuteTransaction(
+	err = rt.ExecuteTransaction(
 		Script{
 			Source: []byte(testTx),
 		},
@@ -1425,7 +1425,7 @@ func TestRuntimeStorageNonStorable(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
@@ -1467,7 +1467,7 @@ func TestRuntimeStorageNonStorable(t *testing.T) {
 
 			nextTransactionLocation := NewTransactionLocationGenerator()
 
-			err := runtime.ExecuteTransaction(
+			err := rt.ExecuteTransaction(
 				Script{
 					Source: tx,
 				},
@@ -1487,7 +1487,7 @@ func TestRuntimeStorageRecursiveReference(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
@@ -1510,7 +1510,7 @@ func TestRuntimeStorageRecursiveReference(t *testing.T) {
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
+	err := rt.ExecuteTransaction(
 		Script{
 			Source: []byte(code),
 		},
@@ -1528,7 +1528,7 @@ func TestRuntimeStorageTransfer(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	address1 := common.MustBytesToAddress([]byte{0x1})
 	address2 := common.MustBytesToAddress([]byte{0x2})
@@ -1558,7 +1558,7 @@ func TestRuntimeStorageTransfer(t *testing.T) {
        }
     `)
 
-	err := runtime.ExecuteTransaction(
+	err := rt.ExecuteTransaction(
 		Script{
 			Source: storeTx,
 		},
@@ -1585,7 +1585,7 @@ func TestRuntimeStorageTransfer(t *testing.T) {
        }
     `)
 
-	err = runtime.ExecuteTransaction(
+	err = rt.ExecuteTransaction(
 		Script{
 			Source: transferTx,
 		},
@@ -1627,16 +1627,19 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 
 	var signers []Address
 
-	deployTx := DeploymentTransaction("Test", []byte(`
-      access(all) contract Test {
+	deployTx := DeploymentTransaction(
+		"Test",
+		[]byte(`
+          access(all) contract Test {
 
-          access(all) resource R {}
+              access(all) resource R {}
 
-          access(all) fun createR(): @R {
-              return <-create R()
+              access(all) fun createR(): @R {
+                  return <-create R()
+              }
           }
-      }
-    `))
+        `),
+	)
 
 	type resourceOwnerChange struct {
 		uuid       *interpreter.UInt64Value
@@ -1831,7 +1834,7 @@ func TestRuntimeStorageUsed(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	ledger := NewTestLedger(nil, nil)
 
@@ -1881,7 +1884,7 @@ func TestRuntimeStorageUsed(t *testing.T) {
         }
     `)
 
-	_, err := runtime.ExecuteScript(
+	_, err := rt.ExecuteScript(
 		Script{
 			Source: script,
 		},
@@ -2045,7 +2048,7 @@ transaction {
 }
 `
 
-	runtime := NewTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	testAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -2084,7 +2087,7 @@ transaction {
 
 	// Deploy contract
 
-	err := runtime.ExecuteTransaction(
+	err := rt.ExecuteTransaction(
 		Script{
 			Source: DeploymentTransaction(
 				"Test",
@@ -2100,7 +2103,7 @@ transaction {
 
 	// Run transaction
 
-	err = runtime.ExecuteTransaction(
+	err = rt.ExecuteTransaction(
 		Script{
 			Source: []byte(tx),
 		},
@@ -2174,7 +2177,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
           }
         `
 
-		runtime := NewTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
 		accountCodes := map[Location][]byte{}
 
@@ -2218,7 +2221,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		// Deploy contract
 
-		err := runtime.ExecuteTransaction(
+		err := rt.ExecuteTransaction(
 			Script{
 				Source: DeploymentTransaction(
 					"TestContract",
@@ -2239,7 +2242,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 			common.MustBytesToAddress([]byte{0x2}),
 		}
 
-		err = runtime.ExecuteTransaction(
+		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(tx),
 			},
@@ -2302,7 +2305,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
           }
         `
 
-		runtime := NewTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
 		testAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -2343,7 +2346,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		// Deploy contract
 
-		err := runtime.ExecuteTransaction(
+		err := rt.ExecuteTransaction(
 			Script{
 				Source: DeploymentTransaction(
 					"TestContract",
@@ -2359,7 +2362,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		// Run transaction
 
-		err = runtime.ExecuteTransaction(
+		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(tx),
 			},
@@ -2432,7 +2435,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
           }
         `
 
-		runtime := NewTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
 		testAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -2476,7 +2479,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		// Deploy contract
 
-		err := runtime.ExecuteTransaction(
+		err := rt.ExecuteTransaction(
 			Script{
 				Source: DeploymentTransaction(
 					"TestContract",
@@ -2492,7 +2495,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		// Run transaction
 
-		err = runtime.ExecuteTransaction(
+		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(tx),
 			},
@@ -2555,7 +2558,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
           }
         `
 
-		runtime := NewTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
 		testAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -2599,7 +2602,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		// Deploy contract
 
-		err := runtime.ExecuteTransaction(
+		err := rt.ExecuteTransaction(
 			Script{
 				Source: DeploymentTransaction(
 					"TestContract",
@@ -2615,7 +2618,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		// Run transaction
 
-		err = runtime.ExecuteTransaction(
+		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(tx),
 			},
@@ -2677,7 +2680,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
           }
         `
 
-		runtime := NewTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
 		testAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -2721,7 +2724,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		// Deploy contract
 
-		err := runtime.ExecuteTransaction(
+		err := rt.ExecuteTransaction(
 			Script{
 				Source: DeploymentTransaction(
 					"TestContract",
@@ -2737,7 +2740,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
 		// Run transaction
 
-		err = runtime.ExecuteTransaction(
+		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(tx),
 			},
@@ -2767,7 +2770,7 @@ func TestRuntimeNoAtreeSendOnClosedChannelDuringCommit(t *testing.T) {
 
 		for i := 0; i < 1000; i++ {
 
-			runtime := NewTestInterpreterRuntime()
+			rt := NewTestInterpreterRuntime()
 
 			address := common.MustBytesToAddress([]byte{0x1})
 
@@ -2790,7 +2793,7 @@ func TestRuntimeNoAtreeSendOnClosedChannelDuringCommit(t *testing.T) {
 
 			nextTransactionLocation := NewTransactionLocationGenerator()
 
-			err := runtime.ExecuteTransaction(
+			err := rt.ExecuteTransaction(
 				Script{
 					Source: []byte(code),
 				},
@@ -2812,7 +2815,7 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
@@ -2847,7 +2850,7 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
 
 	// Deploy contract
 
-	err := runtime.ExecuteTransaction(
+	err := rt.ExecuteTransaction(
 		Script{
 			Source: DeploymentTransaction(
 				"C",
@@ -2912,7 +2915,7 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
 
 	// Store enum case
 
-	err = runtime.ExecuteTransaction(
+	err = rt.ExecuteTransaction(
 		Script{
 			Source: []byte(`
               import C from 0x1
@@ -2935,7 +2938,7 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
 
 	// Load enum case
 
-	err = runtime.ExecuteTransaction(
+	err = rt.ExecuteTransaction(
 		Script{
 			Source: []byte(`
               import C from 0x1
@@ -3008,7 +3011,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
@@ -3062,7 +3065,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 
 	runtimeInterface := newRuntimeInterface()
 
-	err := runtime.ExecuteTransaction(
+	err := rt.ExecuteTransaction(
 		Script{
 			Source: deployTx,
 		},
@@ -3077,7 +3080,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 
 	runtimeInterface = newRuntimeInterface()
 
-	err = runtime.ExecuteTransaction(
+	err = rt.ExecuteTransaction(
 		Script{
 			Source: []byte(`
              import Test from 0x1
@@ -3102,7 +3105,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 
 	runtimeInterface = newRuntimeInterface()
 
-	storage, inter, err := runtime.Storage(Context{
+	storage, inter, err := rt.Storage(Context{
 		Interface: runtimeInterface,
 	})
 	require.NoError(t, err)
@@ -3152,7 +3155,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 		address := common.MustBytesToAddress([]byte{0x1})
 		accountCodes := map[common.Location][]byte{}
 		ledger := NewTestLedger(nil, nil)
@@ -3200,7 +3203,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		runtimeInterface, _ := newRuntimeInterface()
 
-		err := runtime.ExecuteTransaction(
+		err := rt.ExecuteTransaction(
 			Script{
 				Source: deployTx,
 			},
@@ -3215,7 +3218,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		runtimeInterface, _ = newRuntimeInterface()
 
-		err = runtime.ExecuteTransaction(
+		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(`
                     import Test from 0x1
@@ -3247,7 +3250,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 		runtimeInterface, programStack = newRuntimeInterface()
 
 		// Read value
-		err = runtime.ExecuteTransaction(
+		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(`
                     transaction {
@@ -3280,7 +3283,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 		address := common.MustBytesToAddress([]byte{0x1})
 		accountCodes := map[common.Location][]byte{}
 		ledger := NewTestLedger(nil, nil)
@@ -3324,7 +3327,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		runtimeInterface := newRuntimeInterface()
 
-		err := runtime.ExecuteTransaction(
+		err := rt.ExecuteTransaction(
 			Script{
 				Source: deployTx,
 			},
@@ -3339,7 +3342,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		runtimeInterface = newRuntimeInterface()
 
-		err = runtime.ExecuteTransaction(
+		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(`
                     import Test from 0x1
@@ -3382,7 +3385,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 		runtimeInterface = newRuntimeInterface()
 
 		// Read value
-		err = runtime.ExecuteTransaction(
+		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(`
                     transaction {
@@ -3413,7 +3416,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 		address := common.MustBytesToAddress([]byte{0x1})
 		accountCodes := map[common.Location][]byte{}
 		ledger := NewTestLedger(nil, nil)
@@ -3458,7 +3461,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		runtimeInterface := newRuntimeInterface()
 
-		err := runtime.ExecuteTransaction(
+		err := rt.ExecuteTransaction(
 			Script{
 				Source: deployTx,
 			},
@@ -3473,7 +3476,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		runtimeInterface = newRuntimeInterface()
 
-		err = runtime.ExecuteTransaction(
+		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(`
                     import Test from 0x1
@@ -3515,7 +3518,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 		runtimeInterface = newRuntimeInterface()
 
 		// Read value
-		err = runtime.ExecuteTransaction(
+		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(`
                     transaction {
@@ -3545,7 +3548,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 		address := common.MustBytesToAddress([]byte{0x1})
 		accountCodes := map[common.Location][]byte{}
 		ledger := NewTestLedger(nil, nil)
@@ -3590,7 +3593,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		runtimeInterface := newRuntimeInterface()
 
-		err := runtime.ExecuteTransaction(
+		err := rt.ExecuteTransaction(
 			Script{
 				Source: deployTx,
 			},
@@ -3605,7 +3608,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		runtimeInterface = newRuntimeInterface()
 
-		err = runtime.ExecuteTransaction(
+		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(`
                     import Test from 0x1
@@ -3659,7 +3662,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 		}
 
 		// Read value
-		err = runtime.ExecuteTransaction(
+		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(`
                     transaction {
@@ -3690,7 +3693,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 		address := common.MustBytesToAddress([]byte{0x1})
 		accountCodes := map[common.Location][]byte{}
 		ledger := NewTestLedger(nil, nil)
@@ -3752,7 +3755,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		runtimeInterface := newRuntimeInterface()
 
-		err := runtime.ExecuteTransaction(
+		err := rt.ExecuteTransaction(
 			Script{
 				Source: deployFoo,
 			},
@@ -3765,7 +3768,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		// Deploy `Bar` contract
 
-		err = runtime.ExecuteTransaction(
+		err = rt.ExecuteTransaction(
 			Script{
 				Source: deployBar,
 			},
@@ -3780,7 +3783,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		runtimeInterface = newRuntimeInterface()
 
-		err = runtime.ExecuteTransaction(
+		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(`
                     import Bar from 0x1
@@ -3816,7 +3819,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		// 1) Iterate through public paths
 
-		err = runtime.ExecuteTransaction(
+		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(`
                     import Foo from 0x1
@@ -3854,7 +3857,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		// 2) Iterate through storage paths
 
-		err = runtime.ExecuteTransaction(
+		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(`
                     import Foo from 0x1
@@ -3886,7 +3889,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 		address := common.MustBytesToAddress([]byte{0x1})
 		accountCodes := map[common.Location][]byte{}
 		ledger := NewTestLedger(nil, nil)
@@ -3952,7 +3955,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		runtimeInterface := newRuntimeInterface()
 
-		err := runtime.ExecuteTransaction(
+		err := rt.ExecuteTransaction(
 			Script{
 				Source: deployFoo,
 			},
@@ -3965,7 +3968,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		// Deploy `Bar` contract
 
-		err = runtime.ExecuteTransaction(
+		err = rt.ExecuteTransaction(
 			Script{
 				Source: deployBar,
 			},
@@ -3980,7 +3983,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		runtimeInterface = newRuntimeInterface()
 
-		err = runtime.ExecuteTransaction(
+		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(`
                     import Bar from 0x1
@@ -4014,7 +4017,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		// 1) Iterate through public paths
 
-		err = runtime.ExecuteTransaction(
+		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(`
                     import Foo from 0x1
@@ -4055,7 +4058,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		// 2) Iterate through storage paths
 
-		err = runtime.ExecuteTransaction(
+		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(`
                     import Foo from 0x1
@@ -4092,7 +4095,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		test := func(brokenType bool, t *testing.T) {
 
-			runtime := NewTestInterpreterRuntime()
+			rt := NewTestInterpreterRuntime()
 			address := common.MustBytesToAddress([]byte{0x1})
 			accountCodes := map[common.Location][]byte{}
 			ledger := NewTestLedger(nil, nil)
@@ -4159,7 +4162,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 			runtimeInterface := newRuntimeInterface()
 
-			err := runtime.ExecuteTransaction(
+			err := rt.ExecuteTransaction(
 				Script{
 					Source: deployFoo,
 				},
@@ -4172,7 +4175,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 			// Deploy `Bar` contract
 
-			err = runtime.ExecuteTransaction(
+			err = rt.ExecuteTransaction(
 				Script{
 					Source: deployBar,
 				},
@@ -4187,7 +4190,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 			runtimeInterface = newRuntimeInterface()
 
-			err = runtime.ExecuteTransaction(
+			err = rt.ExecuteTransaction(
 				Script{
 					Source: []byte(`
                       import Bar from 0x1
@@ -4228,7 +4231,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 				count = 1
 			}
 
-			err = runtime.ExecuteTransaction(
+			err = rt.ExecuteTransaction(
 				Script{
 					Source: []byte(fmt.Sprintf(`
                           import Foo from 0x1
@@ -4271,7 +4274,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 	t.Run("box and convert arguments, forEachStored", func(t *testing.T) {
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
@@ -4297,7 +4300,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
               return res
 		  }
         `
-		result, err := runtime.ExecuteScript(
+		result, err := rt.ExecuteScript(
 			Script{
 				Source: []byte(script),
 			},
@@ -4317,7 +4320,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 	t.Run("box and convert arguments, forEachPublic", func(t *testing.T) {
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
@@ -4347,7 +4350,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
               return res
 		  }
         `
-		result, err := runtime.ExecuteScript(
+		result, err := rt.ExecuteScript(
 			Script{
 				Source: []byte(script),
 			},
@@ -4372,7 +4375,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 	address := common.MustBytesToAddress([]byte{0x1})
 
 	newRuntime := func() (TestInterpreterRuntime, *TestRuntimeInterface) {
-		runtime := NewTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 		accountCodes := map[common.Location][]byte{}
 
 		runtimeInterface := &TestRuntimeInterface{
@@ -4393,7 +4396,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 				return nil
 			},
 		}
-		return runtime, runtimeInterface
+		return rt, runtimeInterface
 	}
 
 	t.Run("paths field", func(t *testing.T) {
@@ -4445,13 +4448,13 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 
 		deployTestContractTx := DeploymentTransaction("Test", []byte(testContract))
 
-		runtime, runtimeInterface := newRuntime()
+		rt, runtimeInterface := newRuntime()
 
 		nextTransactionLocation := NewTransactionLocationGenerator()
 
 		// Deploy contract
 
-		err := runtime.ExecuteTransaction(
+		err := rt.ExecuteTransaction(
 			Script{
 				Source: deployTestContractTx,
 			},
@@ -4463,7 +4466,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 		require.NoError(t, err)
 
 		invoke := func(name string) (cadence.Value, error) {
-			return runtime.InvokeContractFunction(
+			return rt.InvokeContractFunction(
 				contractLocation,
 				name,
 				nil,
@@ -4586,7 +4589,9 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 
 	t.Run("forEachPublic PublicAccount", func(t *testing.T) {
 
-		runtime, runtimeInterface := newRuntime()
+		t.Parallel()
+
+		rt, runtimeInterface := newRuntime()
 
 		const script = `
           access(all)
@@ -4629,7 +4634,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
           }
         `
 
-		result, err := runtime.ExecuteScript(
+		result, err := rt.ExecuteScript(
 			Script{
 				Source: []byte(script),
 			},
@@ -4649,7 +4654,9 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 
 	t.Run("forEachPublic PublicAccount number", func(t *testing.T) {
 
-		runtime, runtimeInterface := newRuntime()
+		t.Parallel()
+
+		rt, runtimeInterface := newRuntime()
 
 		const script = `
           access(all)
@@ -4690,7 +4697,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
           }
         `
 
-		result, err := runtime.ExecuteScript(
+		result, err := rt.ExecuteScript(
 			Script{
 				Source: []byte(script),
 			},
@@ -4709,7 +4716,10 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 	})
 
 	t.Run("forEachPublic AuthAccount", func(t *testing.T) {
-		runtime, runtimeInterface := newRuntime()
+
+		t.Parallel()
+
+		rt, runtimeInterface := newRuntime()
 
 		const script = `
           access(all)
@@ -4752,7 +4762,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
            }
         `
 
-		result, err := runtime.ExecuteScript(
+		result, err := rt.ExecuteScript(
 			Script{
 				Source: []byte(script),
 			},
@@ -4771,7 +4781,10 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 	})
 
 	t.Run("forEachStored", func(t *testing.T) {
-		runtime, runtimeInterface := newRuntime()
+
+		t.Parallel()
+
+		rt, runtimeInterface := newRuntime()
 
 		const script = `
           access(all)
@@ -4806,7 +4819,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
           }
         `
 
-		result, err := runtime.ExecuteScript(
+		result, err := rt.ExecuteScript(
 			Script{
 				Source: []byte(script),
 			},
@@ -4825,7 +4838,10 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 	})
 
 	t.Run("forEachStored after empty", func(t *testing.T) {
-		runtime, runtimeInterface := newRuntime()
+
+		t.Parallel()
+
+		rt, runtimeInterface := newRuntime()
 
 		const script = `
           access(all)
@@ -4858,7 +4874,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 
 		nextScriptLocation := NewScriptLocationGenerator()
 
-		result, err := runtime.ExecuteScript(
+		result, err := rt.ExecuteScript(
 			Script{
 				Source: []byte(script),
 			},
@@ -4889,7 +4905,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
           }
         `
 
-		result, err = runtime.ExecuteScript(
+		result, err = rt.ExecuteScript(
 			Script{
 				Source: []byte(script2),
 			},
@@ -4908,7 +4924,9 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 	})
 
 	t.Run("forEachStored with update", func(t *testing.T) {
-		runtime, runtimeInterface := newRuntime()
+		t.Parallel()
+
+		rt, runtimeInterface := newRuntime()
 
 		const script = `
           access(all)
@@ -4954,7 +4972,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
           }
         `
 
-		result, err := runtime.ExecuteScript(
+		result, err := rt.ExecuteScript(
 			Script{
 				Source: []byte(script),
 			},
@@ -4973,7 +4991,10 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 	})
 
 	t.Run("forEachStored with mutation", func(t *testing.T) {
-		runtime, runtimeInterface := newRuntime()
+
+		t.Parallel()
+
+		rt, runtimeInterface := newRuntime()
 
 		const script = `
           access(all)
@@ -5017,7 +5038,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
           }
         `
 
-		_, err := runtime.ExecuteScript(
+		_, err := rt.ExecuteScript(
 			Script{
 				Source: []byte(script),
 			},
@@ -5033,7 +5054,10 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 	})
 
 	t.Run("forEachStored with early termination", func(t *testing.T) {
-		runtime, runtimeInterface := newRuntime()
+
+		t.Parallel()
+
+		rt, runtimeInterface := newRuntime()
 
 		const script = `
           access(all)
@@ -5076,7 +5100,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
           }
         `
 
-		result, err := runtime.ExecuteScript(
+		result, err := rt.ExecuteScript(
 			Script{
 				Source: []byte(script),
 			},
@@ -5102,7 +5126,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 	address := common.MustBytesToAddress([]byte{0x1})
 
 	newRuntime := func() (TestInterpreterRuntime, *TestRuntimeInterface) {
-		runtime := NewTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 		accountCodes := map[common.Location][]byte{}
 
 		runtimeInterface := &TestRuntimeInterface{
@@ -5123,7 +5147,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				return nil
 			},
 		}
-		return runtime, runtimeInterface
+		return rt, runtimeInterface
 	}
 
 	test := func(continueAfterMutation bool) {
@@ -5131,7 +5155,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 		t.Run(fmt.Sprintf("forEachStored, continue: %t", continueAfterMutation), func(t *testing.T) {
 			t.Parallel()
 
-			runtime, runtimeInterface := newRuntime()
+			rt, runtimeInterface := newRuntime()
 
 			script := fmt.Sprintf(
 				`
@@ -5156,7 +5180,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				continueAfterMutation,
 			)
 
-			_, err := runtime.ExecuteScript(
+			_, err := rt.ExecuteScript(
 				Script{
 					Source: []byte(script),
 				},
@@ -5179,7 +5203,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 		t.Run(fmt.Sprintf("forEachPublic, continue: %t", continueAfterMutation), func(t *testing.T) {
 			t.Parallel()
 
-			runtime, runtimeInterface := newRuntime()
+			rt, runtimeInterface := newRuntime()
 
 			script := fmt.Sprintf(
 				`
@@ -5209,7 +5233,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				continueAfterMutation,
 			)
 
-			_, err := runtime.ExecuteScript(
+			_, err := rt.ExecuteScript(
 				Script{
 					Source: []byte(script),
 				},
@@ -5232,7 +5256,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 		t.Run(fmt.Sprintf("with function call, continue: %t", continueAfterMutation), func(t *testing.T) {
 			t.Parallel()
 
-			runtime, runtimeInterface := newRuntime()
+			rt, runtimeInterface := newRuntime()
 
 			script := fmt.Sprintf(
 				`
@@ -5264,7 +5288,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				continueAfterMutation,
 			)
 
-			_, err := runtime.ExecuteScript(
+			_, err := rt.ExecuteScript(
 				Script{
 					Source: []byte(script),
 				},
@@ -5287,7 +5311,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 		t.Run(fmt.Sprintf("with function call and nested iteration, continue: %t", continueAfterMutation), func(t *testing.T) {
 			t.Parallel()
 
-			runtime, runtimeInterface := newRuntime()
+			rt, runtimeInterface := newRuntime()
 
 			script := fmt.Sprintf(
 				`
@@ -5322,7 +5346,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				continueAfterMutation,
 			)
 
-			_, err := runtime.ExecuteScript(
+			_, err := rt.ExecuteScript(
 				Script{
 					Source: []byte(script),
 				},
@@ -5345,7 +5369,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 		t.Run(fmt.Sprintf("load, continue: %t", continueAfterMutation), func(t *testing.T) {
 			t.Parallel()
 
-			runtime, runtimeInterface := newRuntime()
+			rt, runtimeInterface := newRuntime()
 
 			script := fmt.Sprintf(
 				`
@@ -5370,7 +5394,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				continueAfterMutation,
 			)
 
-			_, err := runtime.ExecuteScript(
+			_, err := rt.ExecuteScript(
 				Script{
 					Source: []byte(script),
 				},
@@ -5392,7 +5416,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 		t.Run(fmt.Sprintf("publish, continue: %t", continueAfterMutation), func(t *testing.T) {
 			t.Parallel()
 
-			runtime, runtimeInterface := newRuntime()
+			rt, runtimeInterface := newRuntime()
 
 			script := fmt.Sprintf(
 				`
@@ -5419,7 +5443,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				continueAfterMutation,
 			)
 
-			_, err := runtime.ExecuteScript(
+			_, err := rt.ExecuteScript(
 				Script{
 					Source: []byte(script),
 				},
@@ -5441,7 +5465,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 		t.Run(fmt.Sprintf("unpublish, continue: %t", continueAfterMutation), func(t *testing.T) {
 			t.Parallel()
 
-			runtime, runtimeInterface := newRuntime()
+			rt, runtimeInterface := newRuntime()
 
 			script := fmt.Sprintf(
 				`
@@ -5468,7 +5492,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				continueAfterMutation,
 			)
 
-			_, err := runtime.ExecuteScript(
+			_, err := rt.ExecuteScript(
 				Script{
 					Source: []byte(script),
 				},
@@ -5490,7 +5514,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 		t.Run(fmt.Sprintf("with imported function call, continue: %t", continueAfterMutation), func(t *testing.T) {
 			t.Parallel()
 
-			runtime, runtimeInterface := newRuntime()
+			rt, runtimeInterface := newRuntime()
 
 			// Deploy contract
 
@@ -5507,7 +5531,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 
 			deployTestContractTx := DeploymentTransaction("Test", []byte(testContract))
 
-			err := runtime.ExecuteTransaction(
+			err := rt.ExecuteTransaction(
 				Script{
 					Source: deployTestContractTx,
 				},
@@ -5544,7 +5568,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				continueAfterMutation,
 			)
 
-			_, err = runtime.ExecuteScript(
+			_, err = rt.ExecuteScript(
 				Script{
 					Source: []byte(script),
 				},
@@ -5570,7 +5594,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 	t.Run("state properly cleared on iteration end", func(t *testing.T) {
 		t.Parallel()
 
-		runtime, runtimeInterface := newRuntime()
+		rt, runtimeInterface := newRuntime()
 
 		const script = `
           access(all)
@@ -5597,7 +5621,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
           }
         `
 
-		_, err := runtime.ExecuteScript(
+		_, err := rt.ExecuteScript(
 			Script{
 				Source: []byte(script),
 			},
@@ -5612,7 +5636,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 	t.Run("non-lambda", func(t *testing.T) {
 		t.Parallel()
 
-		runtime, runtimeInterface := newRuntime()
+		rt, runtimeInterface := newRuntime()
 
 		const script = `
           access(all)
@@ -5628,7 +5652,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
           }
         `
 
-		_, err := runtime.ExecuteScript(
+		_, err := rt.ExecuteScript(
 			Script{
 				Source: []byte(script),
 			},
@@ -5643,7 +5667,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 	t.Run("method", func(t *testing.T) {
 		t.Parallel()
 
-		runtime, runtimeInterface := newRuntime()
+		rt, runtimeInterface := newRuntime()
 
 		const script = `
           access(all)
@@ -5664,7 +5688,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
           }
         `
 
-		_, err := runtime.ExecuteScript(
+		_, err := rt.ExecuteScript(
 			Script{
 				Source: []byte(script),
 			},
@@ -5684,7 +5708,7 @@ func TestRuntimeTypeOrderInsignificance(t *testing.T) {
 	address := common.MustBytesToAddress([]byte{0x1})
 
 	newRuntime := func() (TestInterpreterRuntime, *TestRuntimeInterface) {
-		runtime := NewTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 		accountCodes := map[common.Location][]byte{}
 
 		runtimeInterface := &TestRuntimeInterface{
@@ -5705,13 +5729,13 @@ func TestRuntimeTypeOrderInsignificance(t *testing.T) {
 				return nil
 			},
 		}
-		return runtime, runtimeInterface
+		return rt, runtimeInterface
 	}
 
 	t.Run("intersection types", func(t *testing.T) {
 		t.Parallel()
 
-		runtime, runtimeInterface := newRuntime()
+		rt, runtimeInterface := newRuntime()
 
 		deployTx := DeploymentTransaction("Test", []byte(`
             access(all)
@@ -5767,7 +5791,7 @@ func TestRuntimeTypeOrderInsignificance(t *testing.T) {
 
 		for _, tx := range [][]byte{deployTx, tx1, tx2} {
 
-			err := runtime.ExecuteTransaction(
+			err := rt.ExecuteTransaction(
 				Script{
 					Source: tx,
 				},
@@ -5783,7 +5807,7 @@ func TestRuntimeTypeOrderInsignificance(t *testing.T) {
 	t.Run("entitlements", func(t *testing.T) {
 		t.Parallel()
 
-		runtime, runtimeInterface := newRuntime()
+		rt, runtimeInterface := newRuntime()
 
 		deployTx := DeploymentTransaction("Test", []byte(`
             access(all)
@@ -5839,7 +5863,7 @@ func TestRuntimeTypeOrderInsignificance(t *testing.T) {
 
 		for _, tx := range [][]byte{deployTx, tx1, tx2} {
 
-			err := runtime.ExecuteTransaction(
+			err := rt.ExecuteTransaction(
 				Script{
 					Source: tx,
 				},
@@ -5859,7 +5883,7 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 
 	t.Run("resource", func(t *testing.T) {
 
-		runtime := NewTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
 		signerAddress := common.MustBytesToAddress([]byte{0x42})
 
@@ -5907,7 +5931,7 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 
 		// Deploy contract
 
-		err := runtime.ExecuteTransaction(
+		err := rt.ExecuteTransaction(
 			Script{
 				Source: deployTx,
 			},
@@ -5941,7 +5965,7 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
             }
         `
 
-		err = runtime.ExecuteTransaction(
+		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(testTx),
 			},
@@ -5959,7 +5983,7 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 	t.Run("struct", func(t *testing.T) {
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
 		tx := []byte(`
             transaction {
@@ -5995,7 +6019,7 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 
 		nextTransactionLocation := NewTransactionLocationGenerator()
 
-		err := runtime.ExecuteTransaction(
+		err := rt.ExecuteTransaction(
 			Script{
 				Source: tx,
 			},
@@ -6011,7 +6035,7 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 
 	t.Run("replace resource", func(t *testing.T) {
 
-		runtime := NewTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
 		signerAddress := common.MustBytesToAddress([]byte{0x42})
 
@@ -6067,7 +6091,7 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 
 		// Deploy contract
 
-		err := runtime.ExecuteTransaction(
+		err := rt.ExecuteTransaction(
 			Script{
 				Source: deployTx,
 			},
@@ -6105,7 +6129,7 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
             }
         `
 
-		err = runtime.ExecuteTransaction(
+		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(testTx),
 			},
@@ -6126,7 +6150,7 @@ func TestRuntimeStorageReferenceAccess(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
@@ -6179,7 +6203,7 @@ func TestRuntimeStorageReferenceAccess(t *testing.T) {
 
 	// Deploy contract
 
-	err := runtime.ExecuteTransaction(
+	err := rt.ExecuteTransaction(
 		Script{
 			Source: deployTx,
 		},
@@ -6206,7 +6230,7 @@ func TestRuntimeStorageReferenceAccess(t *testing.T) {
           }
         `)
 
-		err = runtime.ExecuteTransaction(
+		err = rt.ExecuteTransaction(
 			Script{
 				Source: transferTx,
 			},
@@ -6236,7 +6260,7 @@ func TestRuntimeStorageReferenceAccess(t *testing.T) {
           }
         `)
 
-		err = runtime.ExecuteTransaction(
+		err = rt.ExecuteTransaction(
 			Script{
 				Source: transferTx,
 			},
@@ -6529,7 +6553,7 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 	})
 }
 
-func TestRuntimeStorage2(t *testing.T) {
+func TestRuntimeStorageForMigratedAccount(t *testing.T) {
 	t.Parallel()
 
 	address := common.MustBytesToAddress([]byte{0x1})
@@ -7034,6 +7058,177 @@ func TestRuntimeStorage2(t *testing.T) {
 	})
 }
 
+func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
+
+	t.Parallel()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	newTestLedgerWithUnmigratedAccount := func(
+		onRead LedgerOnRead,
+		onWrite LedgerOnWrite,
+		address common.Address,
+		domains []common.StorageDomain,
+		domainStorageMapCount int,
+	) (TestLedger, accountStorageMapValues) {
+		ledger := NewTestLedger(nil, nil)
+		storage := NewStorage(
+			ledger,
+			nil,
+			StorageConfig{},
+		)
+
+		inter := NewTestInterpreter(t)
+
+		accountValues := make(accountStorageMapValues)
+
+		random := rand.New(rand.NewSource(42))
+
+		for _, domain := range domains {
+			accountValues[domain] = make(domainStorageMapValues)
+
+			// Create domain storage map
+			domainStorageMap := interpreter.NewDomainStorageMap(nil, storage, atree.Address(address))
+
+			// Write domain register
+			domainStorageMapValueID := domainStorageMap.ValueID()
+			err := ledger.SetValue(address[:], []byte(domain.Identifier()), domainStorageMapValueID[8:])
+			require.NoError(t, err)
+
+			// Write elements to to domain storage map
+			for len(accountValues[domain]) < domainStorageMapCount {
+				n := random.Int()
+				key := interpreter.StringStorageMapKey(strconv.Itoa(n))
+				value := interpreter.NewUnmeteredIntValueFromInt64(int64(n))
+
+				_ = domainStorageMap.WriteValue(inter, key, value)
+
+				accountValues[domain][key] = value
+			}
+		}
+
+		// Commit changes
+		const commitContractUpdates = false
+		err := storage.Commit(inter, commitContractUpdates)
+		require.NoError(t, err)
+
+		// Create a new storage
+		newLedger := NewTestLedgerWithData(onRead, onWrite, ledger.StoredValues, ledger.StorageIndices)
+
+		return newLedger, accountValues
+	}
+
+	// This test reads non-existent domain storage map and commit changes.
+	// pre-condition: storage contains domain register and domain storage map
+	// post-condition: no change
+	// migration: none because only read ops.
+	t.Run("read non-existent domain storage map", func(t *testing.T) {
+		existingDomains := []common.StorageDomain{
+			common.PathDomainStorage.StorageDomain(),
+		}
+
+		var writeCount int
+
+		// Create storage with unmigrated accounts
+		const domainStorageMapCount = 5
+		ledger, _ := newTestLedgerWithUnmigratedAccount(
+			nil,
+			LedgerOnWriteCounter(&writeCount),
+			address,
+			existingDomains,
+			domainStorageMapCount)
+		storage := NewStorage(
+			ledger,
+			nil,
+			StorageConfig{},
+		)
+
+		inter := NewTestInterpreterWithStorage(t, storage)
+
+		// Get non-existent domain storage map
+		const createIfNotExists = false
+		nonExistingDomain := common.PathDomainPublic.StorageDomain()
+		domainStorageMap := storage.GetDomainStorageMap(inter, address, nonExistingDomain, createIfNotExists)
+		require.Nil(t, domainStorageMap)
+
+		// TODO: remove migration
+		// storage.ScheduleV2MigrationForModifiedAccounts()
+
+		// Commit changes
+		const commitContractUpdates = false
+		err := storage.Commit(inter, commitContractUpdates)
+		require.NoError(t, err)
+
+		// Check there are no writes to underlying storage
+		require.Equal(t, 0, writeCount)
+	})
+
+	// This test reads existing domain storage map and commit changes.
+	// pre-condition: storage contains domain register and domain storage map
+	// post-condition: no change
+	// migration: none because only read ops
+	readExistingDomainTestCases := []struct {
+		name              string
+		createIfNotExists bool
+	}{
+		{name: "(createIfNotExists is true)", createIfNotExists: true},
+		{name: "(createIfNotExists is false)", createIfNotExists: false},
+	}
+
+	for _, tc := range readExistingDomainTestCases {
+		t.Run("read existing domain storage map "+tc.name, func(t *testing.T) {
+
+			var writeCount int
+
+			existingDomains := []common.StorageDomain{common.PathDomainStorage.StorageDomain()}
+			const existingDomainStorageMapCount = 5
+
+			// Create storage with existing domain storage map
+			ledger, accountValues := newTestLedgerWithUnmigratedAccount(
+				nil,
+				LedgerOnWriteCounter(&writeCount),
+				address,
+				existingDomains,
+				existingDomainStorageMapCount,
+			)
+			storage := NewStorage(
+				ledger,
+				nil,
+				StorageConfig{},
+			)
+
+			inter := NewTestInterpreterWithStorage(t, storage)
+
+			// Read existing domain storage map
+			for domain, domainValues := range accountValues {
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, tc.createIfNotExists)
+				require.NotNil(t, domainStorageMap)
+				require.Equal(t, uint64(len(domainValues)), domainStorageMap.Count())
+
+				// Read elements to domain storage map
+				for k, expectedV := range domainValues {
+					v := domainStorageMap.ReadValue(nil, k)
+					ev, ok := v.(interpreter.EquatableValue)
+					require.True(t, ok)
+					require.True(t, ev.Equal(inter, interpreter.EmptyLocationRange, expectedV))
+				}
+			}
+
+			// Commit changes
+			const commitContractUpdates = false
+			err := storage.Commit(inter, commitContractUpdates)
+			require.NoError(t, err)
+
+			// Check storage health after commit
+			err = storage.CheckHealth()
+			require.NoError(t, err)
+
+			// Check writes to underlying storage
+			require.Equal(t, 0, writeCount)
+		})
+	}
+}
+
 // TestRuntimeStorageDomainStorageMapInlinedState tests inlined state
 // of domain storage map when large number of elements are inserted,
 // updated, and removed from domain storage map.
@@ -7309,22 +7504,35 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 			createIfNotExists:             false,
 			expectedDomainStorageMapIsNil: true,
 			expectedReadsFor1stGetDomainStorageMapCall: []ownerKeyPair{
+				// Check if account is v2
 				{
 					owner: address[:],
 					key:   []byte(AccountStorageKey),
+				},
+				// Check domain register
+				{
+					owner: address[:],
+					key:   []byte(common.StorageDomainPathStorage.Identifier()),
 				},
 			},
 			expectedReadsFor2ndGetDomainStorageMapCall: []ownerKeyPair{
 				// Second GetDomainStorageMap() has the same register reading as the first GetDomainStorageMap()
 				// because account status can't be cached in previous call.
 
+				// Check if account is v2
 				{
 					owner: address[:],
 					key:   []byte(AccountStorageKey),
 				},
+				// Check domain register
+				{
+					owner: address[:],
+					key:   []byte(common.StorageDomainPathStorage.Identifier()),
+				},
 			},
 			expectedReadsSet: map[string]struct{}{
-				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)): {},
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):          {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage): {},
 			},
 		},
 		{
@@ -7333,6 +7541,53 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 			createIfNotExists:             true,
 			expectedDomainStorageMapIsNil: false,
 			expectedReadsFor1stGetDomainStorageMapCall: []ownerKeyPair{
+				// Check if account is v2
+				{
+					owner: address[:],
+					key:   []byte(AccountStorageKey),
+				},
+				// Check domain register
+				{
+					owner: address[:],
+					key:   []byte(common.StorageDomainPathStorage.Identifier()),
+				},
+				// Check all domain registers
+				{
+					owner: address[:],
+					key:   []byte(common.PathDomainStorage.Identifier()),
+				},
+				{
+					owner: address[:],
+					key:   []byte(common.PathDomainPrivate.Identifier()),
+				},
+				{
+					owner: address[:],
+					key:   []byte(common.PathDomainPublic.Identifier()),
+				},
+				{
+					owner: address[:],
+					key:   []byte(common.StorageDomainContract.Identifier()),
+				},
+				{
+					owner: address[:],
+					key:   []byte(common.StorageDomainInbox.Identifier()),
+				},
+				{
+					owner: address[:],
+					key:   []byte(common.StorageDomainCapabilityController.Identifier()),
+				},
+				{
+					owner: address[:],
+					key:   []byte(common.StorageDomainCapabilityControllerTag.Identifier()),
+				},
+				{
+					owner: address[:],
+					key:   []byte(common.StorageDomainPathCapability.Identifier()),
+				},
+				{
+					owner: address[:],
+					key:   []byte(common.StorageDomainAccountCapability.Identifier()),
+				},
 				// Read account register to load account storage map
 				{
 					owner: address[:],
@@ -7344,7 +7599,16 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 				// domain storage map is created and cached in the first GetDomainStorageMap().
 			},
 			expectedReadsSet: map[string]struct{}{
-				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)): {},
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):                      {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage):             {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathPrivate):             {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathPublic):              {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainContract):                {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainInbox):                   {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainCapabilityController):    {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainCapabilityControllerTag): {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathCapability):          {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainAccountCapability):       {},
 			},
 		},
 	}
@@ -7398,14 +7662,293 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 	}
 }
 
-func TestGetDomainStorageMapRegisterReads(t *testing.T) {
+func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
+
 	t.Parallel()
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
 	type getStorageDataFunc func() (storedValues map[string][]byte, StorageIndices map[string]uint64)
 
-	createAccountWithDomain := func(
+	createV1AccountWithDomain := func(
+		address common.Address,
+		domain common.StorageDomain,
+	) getStorageDataFunc {
+		return func() (storedValues map[string][]byte, StorageIndices map[string]uint64) {
+			ledger := NewTestLedger(nil, nil)
+
+			persistentSlabStorage := NewPersistentSlabStorage(ledger, nil)
+
+			orderedMap, err := atree.NewMap(
+				persistentSlabStorage,
+				atree.Address(address),
+				atree.NewDefaultDigesterBuilder(),
+				interpreter.EmptyTypeInfo{},
+			)
+			require.NoError(t, err)
+
+			slabIndex := orderedMap.SlabID().Index()
+
+			for i := range 3 {
+
+				key := interpreter.StringStorageMapKey(strconv.Itoa(i))
+
+				value := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
+
+				existingStorable, err := orderedMap.Set(
+					key.AtreeValueCompare,
+					key.AtreeValueHashInput,
+					key.AtreeValue(),
+					value,
+				)
+				require.NoError(t, err)
+				require.Nil(t, existingStorable)
+			}
+
+			// Commit domain storage map
+			err = persistentSlabStorage.FastCommit(runtime.NumCPU())
+			require.NoError(t, err)
+
+			// Create domain register
+			err = ledger.SetValue(address[:], []byte(domain.Identifier()), slabIndex[:])
+			require.NoError(t, err)
+
+			return ledger.StoredValues, ledger.StorageIndices
+		}
+	}
+
+	testCases := []struct {
+		name                                       string
+		getStorageData                             getStorageDataFunc
+		domain                                     common.StorageDomain
+		createIfNotExists                          bool
+		expectedDomainStorageMapIsNil              bool
+		expectedReadsFor1stGetDomainStorageMapCall []ownerKeyPair
+		expectedReadsFor2ndGetDomainStorageMapCall []ownerKeyPair
+		expectedReadsSet                           map[string]struct{}
+	}{
+		{
+			name:                          "domain storage map does not exist, createIfNotExists = false",
+			getStorageData:                createV1AccountWithDomain(address, common.StorageDomainPathPublic),
+			domain:                        common.StorageDomainPathStorage,
+			createIfNotExists:             false,
+			expectedDomainStorageMapIsNil: true,
+			expectedReadsFor1stGetDomainStorageMapCall: []ownerKeyPair{
+				// Check if account is v2
+				{
+					owner: address[:],
+					key:   []byte(AccountStorageKey),
+				},
+				// Check domain register
+				{
+					owner: address[:],
+					key:   []byte(common.StorageDomainPathStorage.Identifier()),
+				},
+			},
+			expectedReadsFor2ndGetDomainStorageMapCall: []ownerKeyPair{
+				// Check if account is v2
+				{
+					owner: address[:],
+					key:   []byte(AccountStorageKey),
+				},
+				// Check domain register
+				{
+					owner: address[:],
+					key:   []byte(common.StorageDomainPathStorage.Identifier()),
+				},
+			},
+			expectedReadsSet: map[string]struct{}{
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):          {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage): {},
+			},
+		},
+		{
+			name:                          "domain storage map does not exist, createIfNotExists = true",
+			getStorageData:                createV1AccountWithDomain(address, common.StorageDomainPathPublic),
+			domain:                        common.StorageDomainPathStorage,
+			createIfNotExists:             true,
+			expectedDomainStorageMapIsNil: false,
+			expectedReadsFor1stGetDomainStorageMapCall: []ownerKeyPair{
+				// Check if account is v2
+				{
+					owner: address[:],
+					key:   []byte(AccountStorageKey),
+				},
+				// Check domain register
+				{
+					owner: address[:],
+					key:   []byte(common.StorageDomainPathStorage.Identifier()),
+				},
+				// Check all domain registers until any existing domain is checked
+				{
+					owner: address[:],
+					key:   []byte(common.PathDomainStorage.Identifier()),
+				},
+				{
+					owner: address[:],
+					key:   []byte(common.PathDomainPrivate.Identifier()),
+				},
+				{
+					owner: address[:],
+					key:   []byte(common.PathDomainPublic.Identifier()),
+				},
+				// Check domain register
+				{
+					owner: address[:],
+					key:   []byte(common.StorageDomainPathStorage.Identifier()),
+				},
+			},
+			expectedReadsFor2ndGetDomainStorageMapCall: []ownerKeyPair{
+				// No register reading from second GetDomainStorageMap() because
+				// domain storage map is created and cached in the first
+				// GetDomainStorageMap().
+			},
+			expectedReadsSet: map[string]struct{}{
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):          {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage): {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathPrivate): {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathPublic):  {},
+			},
+		},
+		{
+			name:                          "domain storage map exists, createIfNotExists = false",
+			getStorageData:                createV1AccountWithDomain(address, common.StorageDomainPathStorage),
+			domain:                        common.StorageDomainPathStorage,
+			createIfNotExists:             false,
+			expectedDomainStorageMapIsNil: false,
+			expectedReadsFor1stGetDomainStorageMapCall: []ownerKeyPair{
+				// Check if account is v2
+				{
+					owner: address[:],
+					key:   []byte(AccountStorageKey),
+				},
+				// Check domain register
+				{
+					owner: address[:],
+					key:   []byte(common.StorageDomainPathStorage.Identifier()),
+				},
+				// Read domain register
+				{
+					owner: address[:],
+					key:   []byte(common.StorageDomainPathStorage.Identifier()),
+				},
+				// Read domain storage map register
+				{
+					owner: address[:],
+					key:   []byte{'$', 0, 0, 0, 0, 0, 0, 0, 1},
+				},
+			},
+			expectedReadsFor2ndGetDomainStorageMapCall: []ownerKeyPair{
+				// No register reading from second GetDomainStorageMap() because
+				// domain storage map is created and cached in the first
+				// GetDomainStorageMap().
+			},
+			expectedReadsSet: map[string]struct{}{
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):           {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage):  {},
+				concatRegisterAddressAndKey(address, []byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
+			},
+		},
+		{
+			name:                          "domain storage map exists, createIfNotExists = true",
+			getStorageData:                createV1AccountWithDomain(address, common.StorageDomainPathStorage),
+			domain:                        common.StorageDomainPathStorage,
+			createIfNotExists:             true,
+			expectedDomainStorageMapIsNil: false,
+			expectedReadsFor1stGetDomainStorageMapCall: []ownerKeyPair{
+				// Check if account is v2
+				{
+					owner: address[:],
+					key:   []byte(AccountStorageKey),
+				},
+				// Check given domain register
+				{
+					owner: address[:],
+					key:   []byte(common.StorageDomainPathStorage.Identifier()),
+				},
+				// Read given domain register
+				{
+					owner: address[:],
+					key:   []byte(common.StorageDomainPathStorage.Identifier()),
+				},
+				// Read domain storage map register
+				{
+					owner: address[:],
+					key:   []byte{'$', 0, 0, 0, 0, 0, 0, 0, 1},
+				},
+			},
+			expectedReadsFor2ndGetDomainStorageMapCall: []ownerKeyPair{
+				// No register reading from second GetDomainStorageMap() because
+				// domain storage map is created and cached in the first
+				// GetDomainStorageMap().
+			},
+			expectedReadsSet: map[string]struct{}{
+				concatRegisterAddressAndKey(address, []byte(AccountStorageKey)):           {},
+				concatRegisterAddressAndDomain(address, common.StorageDomainPathStorage):  {},
+				concatRegisterAddressAndKey(address, []byte{'$', 0, 0, 0, 0, 0, 0, 0, 1}): {},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+
+			storedValues, storedIndices := tc.getStorageData()
+
+			var ledgerReads []ownerKeyPair
+			ledgerReadsSet := make(map[string]struct{})
+
+			ledger := NewTestLedgerWithData(
+				func(owner, key, _ []byte) {
+					ledgerReads = append(
+						ledgerReads,
+						ownerKeyPair{
+							owner: owner,
+							key:   key,
+						},
+					)
+					ledgerReadsSet[string(owner)+"|"+string(key)] = struct{}{}
+				},
+				nil,
+				storedValues,
+				storedIndices,
+			)
+
+			storage := NewStorage(
+				ledger,
+				nil,
+				StorageConfig{},
+			)
+
+			inter := NewTestInterpreterWithStorage(t, storage)
+
+			domainStorageMap := storage.GetDomainStorageMap(inter, address, tc.domain, tc.createIfNotExists)
+			require.Equal(t, tc.expectedDomainStorageMapIsNil, domainStorageMap == nil)
+			require.Equal(t, tc.expectedReadsFor1stGetDomainStorageMapCall, ledgerReads)
+
+			ledgerReads = ledgerReads[:0]
+
+			domainStorageMap = storage.GetDomainStorageMap(inter, address, tc.domain, tc.createIfNotExists)
+			require.Equal(t, tc.expectedDomainStorageMapIsNil, domainStorageMap == nil)
+			require.Equal(t, tc.expectedReadsFor2ndGetDomainStorageMapCall, ledgerReads)
+
+			// Check underlying ledger reads
+			require.Equal(t, len(ledgerReadsSet), len(tc.expectedReadsSet))
+			for k := range ledgerReadsSet {
+				require.Contains(t, tc.expectedReadsSet, k)
+			}
+		})
+	}
+}
+
+func TestGetDomainStorageMapRegisterReadsForV2Account(t *testing.T) {
+	t.Parallel()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	type getStorageDataFunc func() (storedValues map[string][]byte, StorageIndices map[string]uint64)
+
+	createV2AccountWithDomain := func(
 		address common.Address,
 		domain common.StorageDomain,
 	) getStorageDataFunc {
@@ -7483,11 +8026,16 @@ func TestGetDomainStorageMapRegisterReads(t *testing.T) {
 	}{
 		{
 			name:                          "domain storage map does not exist, createIfNotExists = false",
-			getStorageData:                createAccountWithDomain(address, common.StorageDomainPathPublic),
+			getStorageData:                createV2AccountWithDomain(address, common.StorageDomainPathPublic),
 			domain:                        common.StorageDomainPathStorage,
 			createIfNotExists:             false,
 			expectedDomainStorageMapIsNil: true,
 			expectedReadsFor1stGetDomainStorageMapCall: []ownerKeyPair{
+				// Check if account is v2
+				{
+					owner: address[:],
+					key:   []byte(AccountStorageKey),
+				},
 				// Read account register
 				{
 					owner: address[:],
@@ -7511,11 +8059,16 @@ func TestGetDomainStorageMapRegisterReads(t *testing.T) {
 		},
 		{
 			name:                          "domain storage map does not exist, createIfNotExists = true",
-			getStorageData:                createAccountWithDomain(address, common.StorageDomainPathPublic),
+			getStorageData:                createV2AccountWithDomain(address, common.StorageDomainPathPublic),
 			domain:                        common.StorageDomainPathStorage,
 			createIfNotExists:             true,
 			expectedDomainStorageMapIsNil: false,
 			expectedReadsFor1stGetDomainStorageMapCall: []ownerKeyPair{
+				// Check if account is v2
+				{
+					owner: address[:],
+					key:   []byte(AccountStorageKey),
+				},
 				// Read account register
 				{
 					owner: address[:],
@@ -7539,11 +8092,16 @@ func TestGetDomainStorageMapRegisterReads(t *testing.T) {
 		},
 		{
 			name:                          "domain storage map exists, createIfNotExists = false",
-			getStorageData:                createAccountWithDomain(address, common.StorageDomainPathStorage),
+			getStorageData:                createV2AccountWithDomain(address, common.StorageDomainPathStorage),
 			domain:                        common.StorageDomainPathStorage,
 			createIfNotExists:             false,
 			expectedDomainStorageMapIsNil: false,
 			expectedReadsFor1stGetDomainStorageMapCall: []ownerKeyPair{
+				// Check if account is v2
+				{
+					owner: address[:],
+					key:   []byte(AccountStorageKey),
+				},
 				// Read account register
 				{
 					owner: address[:],
@@ -7567,11 +8125,16 @@ func TestGetDomainStorageMapRegisterReads(t *testing.T) {
 		},
 		{
 			name:                          "domain storage map exists, createIfNotExists = true",
-			getStorageData:                createAccountWithDomain(address, common.StorageDomainPathStorage),
+			getStorageData:                createV2AccountWithDomain(address, common.StorageDomainPathStorage),
 			domain:                        common.StorageDomainPathStorage,
 			createIfNotExists:             true,
 			expectedDomainStorageMapIsNil: false,
 			expectedReadsFor1stGetDomainStorageMapCall: []ownerKeyPair{
+				// Check if account is v2
+				{
+					owner: address[:],
+					key:   []byte(AccountStorageKey),
+				},
 				// Read account register
 				{
 					owner: address[:],
@@ -7641,6 +8204,227 @@ func TestGetDomainStorageMapRegisterReads(t *testing.T) {
 			require.Equal(t, len(ledgerReadsSet), len(tc.expectedReadsSet))
 			for k := range ledgerReadsSet {
 				require.Contains(t, tc.expectedReadsSet, k)
+			}
+		})
+	}
+}
+
+func TestAccountStorageFormatForNonExistingAccount(t *testing.T) {
+
+	t.Parallel()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	testCases := []struct {
+		name   string
+		format StorageFormat
+	}{
+		{
+			name:   "non-existing account",
+			format: StorageFormatUnknown,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ledger := NewTestLedger(nil, nil)
+
+			storage := NewStorage(
+				ledger,
+				nil,
+				StorageConfig{},
+			)
+
+			for range 2 {
+				format := storage.AccountStorageFormat(address)
+				require.Equal(t, tc.format, format)
+			}
+		})
+	}
+}
+
+func TestAccountStorageFormatForV1Account(t *testing.T) {
+	t.Parallel()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	createV1AccountWithDomain := func(
+		address common.Address,
+		domain common.StorageDomain,
+	) (storedValues map[string][]byte, StorageIndices map[string]uint64) {
+		ledger := NewTestLedger(nil, nil)
+
+		persistentSlabStorage := NewPersistentSlabStorage(ledger, nil)
+
+		orderedMap, err := atree.NewMap(
+			persistentSlabStorage,
+			atree.Address(address),
+			atree.NewDefaultDigesterBuilder(),
+			interpreter.EmptyTypeInfo{},
+		)
+		require.NoError(t, err)
+
+		slabIndex := orderedMap.SlabID().Index()
+
+		for i := range 3 {
+
+			key := interpreter.StringStorageMapKey(strconv.Itoa(i))
+
+			value := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
+
+			existingStorable, err := orderedMap.Set(
+				key.AtreeValueCompare,
+				key.AtreeValueHashInput,
+				key.AtreeValue(),
+				value,
+			)
+			require.NoError(t, err)
+			require.Nil(t, existingStorable)
+		}
+
+		// Commit domain storage map
+		err = persistentSlabStorage.FastCommit(runtime.NumCPU())
+		require.NoError(t, err)
+
+		// Create domain register
+		err = ledger.SetValue(address[:], []byte(domain.Identifier()), slabIndex[:])
+		require.NoError(t, err)
+
+		return ledger.StoredValues, ledger.StorageIndices
+	}
+
+	testCases := []struct {
+		name   string
+		format StorageFormat
+	}{
+		{
+			name:   "v1 account",
+			format: StorageFormatV1,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+
+			storedValues, storedIndices := createV1AccountWithDomain(
+				address,
+				common.StorageDomainPathStorage,
+			)
+
+			ledger := NewTestLedgerWithData(nil, nil, storedValues, storedIndices)
+
+			storage := NewStorage(
+				ledger,
+				nil,
+				StorageConfig{},
+			)
+
+			for range 2 {
+				format := storage.AccountStorageFormat(address)
+				require.Equal(t, tc.format, format)
+			}
+		})
+	}
+}
+
+func TestAccountStorageFormatForV2Account(t *testing.T) {
+	t.Parallel()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	createV2AccountWithDomain := func(
+		address common.Address,
+		domain common.StorageDomain,
+	) (storedValues map[string][]byte, StorageIndices map[string]uint64) {
+		ledger := NewTestLedger(nil, nil)
+
+		persistentSlabStorage := NewPersistentSlabStorage(ledger, nil)
+
+		accountOrderedMap, err := atree.NewMap(
+			persistentSlabStorage,
+			atree.Address(address),
+			atree.NewDefaultDigesterBuilder(),
+			interpreter.EmptyTypeInfo{},
+		)
+		require.NoError(t, err)
+
+		slabIndex := accountOrderedMap.SlabID().Index()
+
+		domainOrderedMap, err := atree.NewMap(
+			persistentSlabStorage,
+			atree.Address(address),
+			atree.NewDefaultDigesterBuilder(),
+			interpreter.EmptyTypeInfo{},
+		)
+		require.NoError(t, err)
+
+		domainKey := interpreter.Uint64StorageMapKey(domain)
+
+		existingDomain, err := accountOrderedMap.Set(
+			domainKey.AtreeValueCompare,
+			domainKey.AtreeValueHashInput,
+			domainKey.AtreeValue(),
+			domainOrderedMap,
+		)
+		require.NoError(t, err)
+		require.Nil(t, existingDomain)
+
+		for i := range 3 {
+
+			key := interpreter.StringStorageMapKey(strconv.Itoa(i))
+
+			value := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
+
+			existingStorable, err := domainOrderedMap.Set(
+				key.AtreeValueCompare,
+				key.AtreeValueHashInput,
+				key.AtreeValue(),
+				value,
+			)
+			require.NoError(t, err)
+			require.Nil(t, existingStorable)
+		}
+
+		// Commit domain storage map
+		err = persistentSlabStorage.FastCommit(runtime.NumCPU())
+		require.NoError(t, err)
+
+		// Create account register
+		err = ledger.SetValue(address[:], []byte(AccountStorageKey), slabIndex[:])
+		require.NoError(t, err)
+
+		return ledger.StoredValues, ledger.StorageIndices
+	}
+
+	testCases := []struct {
+		name   string
+		format StorageFormat
+	}{
+		{
+			name:   "v2 account",
+			format: StorageFormatV2,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+
+			storedValues, storedIndices := createV2AccountWithDomain(
+				address,
+				common.StorageDomainPathStorage,
+			)
+
+			ledger := NewTestLedgerWithData(nil, nil, storedValues, storedIndices)
+
+			storage := NewStorage(
+				ledger,
+				nil,
+				StorageConfig{},
+			)
+
+			for range 2 {
+				format := storage.AccountStorageFormat(address)
+				require.Equal(t, tc.format, format)
 			}
 		})
 	}
@@ -7776,4 +8560,11 @@ func concatRegisterAddressAndKey(
 	key []byte,
 ) string {
 	return string(address[:]) + "|" + string(key)
+}
+
+func concatRegisterAddressAndDomain(
+	address common.Address,
+	domain common.StorageDomain,
+) string {
+	return string(address[:]) + "|" + domain.Identifier()
 }

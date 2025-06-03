@@ -115,309 +115,353 @@ type EmptyVisitor struct {
 var _ Visitor = &EmptyVisitor{}
 
 func (v EmptyVisitor) VisitSimpleCompositeValue(context ValueVisitContext, value *SimpleCompositeValue) {
-	if v.SimpleCompositeValueVisitor == nil {
+	visitor := v.SimpleCompositeValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.SimpleCompositeValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitTypeValue(context ValueVisitContext, value TypeValue) {
-	if v.TypeValueVisitor == nil {
+	visitor := v.TypeValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.TypeValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitVoidValue(context ValueVisitContext, value VoidValue) {
-	if v.VoidValueVisitor == nil {
+	visitor := v.VoidValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.VoidValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitBoolValue(context ValueVisitContext, value BoolValue) {
-	if v.BoolValueVisitor == nil {
+	visitor := v.BoolValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.BoolValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitStringValue(context ValueVisitContext, value *StringValue) {
-	if v.StringValueVisitor == nil {
+	visitor := v.StringValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.StringValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitCharacterValue(context ValueVisitContext, value CharacterValue) {
-	if v.StringValueVisitor == nil {
+	visitor := v.CharacterValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.CharacterValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitArrayValue(context ValueVisitContext, value *ArrayValue) bool {
-	if v.ArrayValueVisitor == nil {
+	visitor := v.ArrayValueVisitor
+	if visitor == nil {
 		return true
 	}
-	return v.ArrayValueVisitor(context, value)
+	return visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitIntValue(context ValueVisitContext, value IntValue) {
-	if v.IntValueVisitor == nil {
+	visitor := v.IntValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.IntValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitInt8Value(context ValueVisitContext, value Int8Value) {
-	if v.Int8ValueVisitor == nil {
+	visitor := v.Int8ValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.Int8ValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitInt16Value(context ValueVisitContext, value Int16Value) {
-	if v.Int16ValueVisitor == nil {
+	visitor := v.Int16ValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.Int16ValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitInt32Value(context ValueVisitContext, value Int32Value) {
-	if v.Int32ValueVisitor == nil {
+	visitor := v.Int32ValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.Int32ValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitInt64Value(context ValueVisitContext, value Int64Value) {
-	if v.Int64ValueVisitor == nil {
+	visitor := v.Int64ValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.Int64ValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitInt128Value(context ValueVisitContext, value Int128Value) {
-	if v.Int128ValueVisitor == nil {
+	visitor := v.Int128ValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.Int128ValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitInt256Value(context ValueVisitContext, value Int256Value) {
-	if v.Int256ValueVisitor == nil {
+	visitor := v.Int256ValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.Int256ValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitUIntValue(context ValueVisitContext, value UIntValue) {
-	if v.UIntValueVisitor == nil {
+	visitor := v.UIntValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.UIntValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitUInt8Value(context ValueVisitContext, value UInt8Value) {
-	if v.UInt8ValueVisitor == nil {
+	visitor := v.UInt8ValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.UInt8ValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitUInt16Value(context ValueVisitContext, value UInt16Value) {
-	if v.UInt16ValueVisitor == nil {
+	visitor := v.UInt16ValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.UInt16ValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitUInt32Value(context ValueVisitContext, value UInt32Value) {
-	if v.UInt32ValueVisitor == nil {
+	visitor := v.UInt32ValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.UInt32ValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitUInt64Value(context ValueVisitContext, value UInt64Value) {
-	if v.UInt64ValueVisitor == nil {
+	visitor := v.UInt64ValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.UInt64ValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitUInt128Value(context ValueVisitContext, value UInt128Value) {
-	if v.UInt128ValueVisitor == nil {
+	visitor := v.UInt128ValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.UInt128ValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitUInt256Value(context ValueVisitContext, value UInt256Value) {
-	if v.UInt256ValueVisitor == nil {
+	visitor := v.UInt256ValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.UInt256ValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitWord8Value(context ValueVisitContext, value Word8Value) {
-	if v.Word8ValueVisitor == nil {
+	visitor := v.Word8ValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.Word8ValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitWord16Value(context ValueVisitContext, value Word16Value) {
-	if v.Word16ValueVisitor == nil {
+	visitor := v.Word16ValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.Word16ValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitWord32Value(context ValueVisitContext, value Word32Value) {
-	if v.Word32ValueVisitor == nil {
+	visitor := v.Word32ValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.Word32ValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitWord64Value(context ValueVisitContext, value Word64Value) {
-	if v.Word64ValueVisitor == nil {
+	visitor := v.Word64ValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.Word64ValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitWord128Value(context ValueVisitContext, value Word128Value) {
-	if v.Word128ValueVisitor == nil {
+	visitor := v.Word128ValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.Word128ValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitWord256Value(context ValueVisitContext, value Word256Value) {
-	if v.Word256ValueVisitor == nil {
+	visitor := v.Word256ValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.Word256ValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitFix64Value(context ValueVisitContext, value Fix64Value) {
-	if v.Fix64ValueVisitor == nil {
+	visitor := v.Fix64ValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.Fix64ValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitUFix64Value(context ValueVisitContext, value UFix64Value) {
-	if v.UFix64ValueVisitor == nil {
+	visitor := v.UFix64ValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.UFix64ValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitCompositeValue(context ValueVisitContext, value *CompositeValue) bool {
-	if v.CompositeValueVisitor == nil {
+	visitor := v.CompositeValueVisitor
+	if visitor == nil {
 		return true
 	}
-	return v.CompositeValueVisitor(context, value)
+	return visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitDictionaryValue(context ValueVisitContext, value *DictionaryValue) bool {
-	if v.DictionaryValueVisitor == nil {
+	visitor := v.DictionaryValueVisitor
+	if visitor == nil {
 		return true
 	}
-	return v.DictionaryValueVisitor(context, value)
+	return visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitNilValue(context ValueVisitContext, value NilValue) {
-	if v.NilValueVisitor == nil {
+	visitor := v.NilValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.NilValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitSomeValue(context ValueVisitContext, value *SomeValue) bool {
-	if v.SomeValueVisitor == nil {
+	visitor := v.SomeValueVisitor
+	if visitor == nil {
 		return true
 	}
-	return v.SomeValueVisitor(context, value)
+	return visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitStorageReferenceValue(context ValueVisitContext, value *StorageReferenceValue) {
-	if v.StorageReferenceValueVisitor == nil {
+	visitor := v.StorageReferenceValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.StorageReferenceValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitEphemeralReferenceValue(context ValueVisitContext, value *EphemeralReferenceValue) {
-	if v.EphemeralReferenceValueVisitor == nil {
+	visitor := v.EphemeralReferenceValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.EphemeralReferenceValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitAddressValue(context ValueVisitContext, value AddressValue) {
-	if v.AddressValueVisitor == nil {
+	visitor := v.AddressValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.AddressValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitPathValue(context ValueVisitContext, value PathValue) {
-	if v.PathValueVisitor == nil {
+	visitor := v.PathValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.PathValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitCapabilityValue(context ValueVisitContext, value *IDCapabilityValue) {
-	if v.CapabilityValueVisitor == nil {
+	visitor := v.CapabilityValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.CapabilityValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitPublishedValue(context ValueVisitContext, value *PublishedValue) {
-	if v.PublishedValueVisitor == nil {
+	visitor := v.PublishedValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.PublishedValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitInterpretedFunctionValue(context ValueVisitContext, value *InterpretedFunctionValue) {
-	if v.InterpretedFunctionValueVisitor == nil {
+	visitor := v.InterpretedFunctionValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.InterpretedFunctionValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitHostFunctionValue(context ValueVisitContext, value *HostFunctionValue) {
-	if v.HostFunctionValueVisitor == nil {
+	visitor := v.HostFunctionValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.HostFunctionValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitBoundFunctionValue(context ValueVisitContext, value BoundFunctionValue) {
-	if v.BoundFunctionValueVisitor == nil {
+	visitor := v.BoundFunctionValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.BoundFunctionValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitStorageCapabilityControllerValue(context ValueVisitContext, value *StorageCapabilityControllerValue) {
-	if v.StorageCapabilityControllerValueVisitor == nil {
+	visitor := v.StorageCapabilityControllerValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.StorageCapabilityControllerValueVisitor(context, value)
+	visitor(context, value)
 }
 
 func (v EmptyVisitor) VisitAccountCapabilityControllerValue(context ValueVisitContext, value *AccountCapabilityControllerValue) {
-	if v.AccountCapabilityControllerValueVisitor == nil {
+	visitor := v.AccountCapabilityControllerValueVisitor
+	if visitor == nil {
 		return
 	}
-	v.AccountCapabilityControllerValueVisitor(context, value)
+	visitor(context, value)
 }

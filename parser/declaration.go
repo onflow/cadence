@@ -31,7 +31,10 @@ import (
 )
 
 func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []ast.Declaration, err error) {
-	for {
+	progress := p.newProgress()
+
+	for p.checkProgress(&progress) {
+
 		_, docString := p.parseTrivia(triviaOptions{
 			skipNewlines:    true,
 			parseDocStrings: true,
@@ -60,6 +63,8 @@ func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []
 			declarations = append(declarations, declaration)
 		}
 	}
+
+	panic(errors.NewUnreachableError())
 }
 
 func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
@@ -76,7 +81,10 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 	staticModifierEnabled := p.config.StaticModifierEnabled
 	nativeModifierEnabled := p.config.NativeModifierEnabled
 
-	for {
+	progress := p.newProgress()
+
+	for p.checkProgress(&progress) {
+
 		p.skipSpaceAndComments()
 
 		switch p.current.Type {
@@ -278,6 +286,8 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 
 		return nil, nil
 	}
+
+	panic(errors.NewUnreachableError())
 }
 
 func handlePriv(p *parser) {
@@ -707,8 +717,11 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 	parseMoreIdentifiers := func() error {
 		expectCommaOrFrom := false
 
-		atEnd := false
-		for !atEnd {
+		var atEnd bool
+		progress := p.newProgress()
+
+		for !atEnd && p.checkProgress(&progress) {
+
 			p.nextSemanticToken()
 
 			switch p.current.Type {
@@ -1131,7 +1144,10 @@ func parseEntitlementMapping(p *parser, docString string) (*ast.EntitlementMapRe
 func parseEntitlementMappingsAndInclusions(p *parser, endTokenType lexer.TokenType) ([]ast.EntitlementMapElement, error) {
 	var elements []ast.EntitlementMapElement
 
-	for {
+	progress := p.newProgress()
+
+	for p.checkProgress(&progress) {
+
 		_, docString := p.parseTrivia(triviaOptions{
 			skipNewlines:    true,
 			parseDocStrings: true,
@@ -1171,6 +1187,8 @@ func parseEntitlementMappingsAndInclusions(p *parser, endTokenType lexer.TokenTy
 			}
 		}
 	}
+
+	panic(errors.NewUnreachableError())
 }
 
 // parseEntitlementOrMappingDeclaration parses an entitlement declaration,
@@ -1321,8 +1339,12 @@ func parseCompositeOrInterfaceDeclaration(
 	var isInterface bool
 	var identifier ast.Identifier
 
-	for {
+	progress := p.newProgress()
+
+	for p.checkProgress(&progress) {
+
 		p.skipSpaceAndComments()
+
 		if !p.current.Is(lexer.TokenIdentifier) {
 			return nil, p.syntaxError(
 				"expected %s, got %s",
@@ -1516,7 +1538,10 @@ func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) 
 
 	var declarations []ast.Declaration
 
-	for {
+	progress := p.newProgress()
+
+	for p.checkProgress(&progress) {
+
 		_, docString := p.parseTrivia(triviaOptions{
 			skipNewlines:    true,
 			parseDocStrings: true,
@@ -1544,6 +1569,8 @@ func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) 
 			declarations = append(declarations, memberOrNestedDeclaration)
 		}
 	}
+
+	panic(errors.NewUnreachableError())
 }
 
 // parseMemberOrNestedDeclaration parses a composite or interface member,
@@ -1575,7 +1602,10 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 	staticModifierEnabled := p.config.StaticModifierEnabled
 	nativeModifierEnabled := p.config.NativeModifierEnabled
 
-	for {
+	progress := p.newProgress()
+
+	for p.checkProgress(&progress) {
+
 		p.skipSpaceAndComments()
 
 		switch p.current.Type {
@@ -1826,6 +1856,8 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 
 		return nil, nil
 	}
+
+	panic(errors.NewUnreachableError())
 }
 
 func rejectAllModifiers(
