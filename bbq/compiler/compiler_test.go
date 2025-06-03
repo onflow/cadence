@@ -6937,3 +6937,81 @@ func TestCompileEnum(t *testing.T) {
 		program.Constants,
 	)
 }
+
+func TestCompileOptionalArgument(t *testing.T) {
+	t.Parallel()
+
+	assertFunction := stdlib.NewStandardLibraryStaticFunction(
+		commons.AssertFunctionName,
+		&sema.FunctionType{
+			Purity: sema.FunctionPurityView,
+			Parameters: []sema.Parameter{
+				{
+					Label:          sema.ArgumentLabelNotRequired,
+					Identifier:     "condition",
+					TypeAnnotation: sema.BoolTypeAnnotation,
+				},
+				{
+					Identifier:     "message",
+					TypeAnnotation: sema.StringTypeAnnotation,
+				},
+			},
+			ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+			// `message` parameter is optional
+			Arity: &sema.Arity{Min: 1, Max: 2},
+		},
+		``,
+		nil,
+	)
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(assertFunction)
+
+	checker, err := ParseAndCheckWithOptions(t,
+		`
+              fun test() {
+			  					assert(true, message: "hello")
+                  assert(false)
+              }
+            `,
+		ParseAndCheckOptions{
+			Config: &sema.Config{
+				BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 1)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// assert(true, message: "hello")
+			opcode.InstructionGetGlobal{Global: 1},
+			opcode.InstructionTrue{},
+			opcode.InstructionTransfer{Type: 0x1},
+			opcode.InstructionGetConstant{Constant: 0x0},
+			opcode.InstructionTransfer{Type: 0x2},
+			opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0x2},
+			opcode.InstructionDrop{},
+
+			// assert(false)
+			opcode.InstructionGetGlobal{Global: 0x1},
+			opcode.InstructionFalse{},
+			opcode.InstructionTransfer{Type: 0x1},
+			opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0x1},
+			opcode.InstructionDrop{},
+			opcode.InstructionReturn{},
+		},
+		functions[0].Code,
+	)
+}

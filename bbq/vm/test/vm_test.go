@@ -1675,6 +1675,65 @@ func TestNativeFunctions(t *testing.T) {
 
 		require.Equal(t, interpreter.NewUnmeteredStringValue("Hello, World!"), result)
 	})
+
+	t.Run("assert function", func(t *testing.T) {
+		t.Parallel()
+
+		assertFunction := stdlib.NewStandardLibraryStaticFunction(
+			commons.AssertFunctionName,
+			&sema.FunctionType{
+				Parameters: []sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "condition",
+						TypeAnnotation: sema.BoolTypeAnnotation,
+					},
+					{
+						Identifier:     "message",
+						TypeAnnotation: sema.StringTypeAnnotation,
+					},
+				},
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+				// `message` parameter is optional
+				Arity: &sema.Arity{Min: 1, Max: 2},
+			},
+			``,
+			nil,
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(assertFunction)
+
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+              fun test() {
+                  assert(true)
+                  assert(false, message: "hello")
+              }
+            `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		vmConfig := &vm.Config{}
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		_, err = vmInstance.InvokeExternally("test")
+		require.EqualError(t, err, "assertion failed: hello")
+		require.Equal(t, 0, vmInstance.StackSize())
+	})
 }
 
 func TestTransaction(t *testing.T) {
