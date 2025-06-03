@@ -8550,3 +8550,75 @@ func TestEnumLookupFailure(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, interpreter.Nil, result)
 }
+
+type testMemoryGauge struct {
+	meter map[common.MemoryKind]uint64
+}
+
+func newTestMemoryGauge() *testMemoryGauge {
+	return &testMemoryGauge{
+		meter: make(map[common.MemoryKind]uint64),
+	}
+}
+
+func (g *testMemoryGauge) MeterMemory(usage common.MemoryUsage) error {
+	g.meter[usage.Kind] += usage.Amount
+	return nil
+}
+
+func (g *testMemoryGauge) getMemory(kind common.MemoryKind) uint64 {
+	return g.meter[kind]
+}
+
+type testComputationGauge struct {
+	meter map[common.ComputationKind]uint64
+}
+
+func newTestComputationGauge() *testComputationGauge {
+	return &testComputationGauge{
+		meter: make(map[common.ComputationKind]uint64),
+	}
+}
+
+func (g *testComputationGauge) MeterComputation(usage common.ComputationUsage) error {
+	g.meter[usage.Kind] += usage.Intensity
+	return nil
+}
+
+func (g *testComputationGauge) getComputation(kind common.ComputationKind) uint64 {
+	return g.meter[kind]
+}
+
+func TestMetering(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, imperativeFib)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	memoryGauge := newTestMemoryGauge()
+	computationGauge := newTestComputationGauge()
+
+	vmConfig := &vm.Config{
+		MemoryGauge:      memoryGauge,
+		ComputationGauge: computationGauge,
+	}
+	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+	result, err := vmInstance.InvokeExternally(
+		"fib",
+		interpreter.NewUnmeteredIntValueFromInt64(23),
+	)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(28657), result)
+	assert.Equal(t, 0, vmInstance.StackSize())
+
+	assert.Equal(t, uint64(2032), memoryGauge.getMemory(common.MemoryKindBigInt))
+	assert.Equal(t, uint64(88), computationGauge.getComputation(common.ComputationKindInstructionSetLocal))
+}
