@@ -1693,7 +1693,7 @@ func opEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
 }
 
 func opNewClosure(vm *VM, ins opcode.InstructionNewClosure) {
-	common.UseComputation(vm.context, common.InstructionReturnValueComputationUsage)
+	common.UseComputation(vm.context, common.InstructionNewClosureComputationUsage)
 
 	executable := vm.callFrame.function.Executable
 	functionIndex := ins.Function
