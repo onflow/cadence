@@ -6970,7 +6970,7 @@ func TestCompileOptionalArgument(t *testing.T) {
 	checker, err := ParseAndCheckWithOptions(t,
 		`
               fun test() {
-			  					assert(true, message: "hello")
+                  assert(true, message: "hello")
                   assert(false)
               }
             `,
