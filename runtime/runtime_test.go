@@ -9265,7 +9265,7 @@ func BenchmarkRuntimeResourceTracking(b *testing.B) {
                 import Foo from 0x1
 
                 transaction {
-                    prepare(signer: &Account) {
+                    prepare(signer: auth(Storage) &Account) {
                         signer.storage.save(<- Foo.getResourceArray(), to: /storage/r)
                     }
                 }
@@ -9288,7 +9288,7 @@ func BenchmarkRuntimeResourceTracking(b *testing.B) {
                 import Foo from 0x1
 
                 transaction {
-                    prepare(signer: &Account) {
+                    prepare(signer: auth(Storage) &Account) {
                         // When the array is loaded from storage, all elements are also loaded.
                         // So all moves of this resource will check for tracking of all elements aas well.
 
@@ -11934,21 +11934,21 @@ func BenchmarkContractFunctionInvocation(b *testing.B) {
 	addressValue := cadence.BytesToAddress([]byte{0x1})
 
 	contract := []byte(`
-      pub contract Test {
-          pub fun helloText(): String {
+      access(all) contract Test {
+          access(all) fun helloText(): String {
               return "global function of the imported program"
           }
 
           init() {}
 
-          pub struct Foo {
-              pub var id : String
+          access(all) struct Foo {
+              access(all) var id: String
 
               init(_ id: String) {
                   self.id = id
               }
 
-              pub fun sayHello(_ id: Int): String {
+              access(all) fun sayHello(_ id: Int): String {
                   // return self.id
                   return Test.helloText()
               }
@@ -12003,7 +12003,7 @@ func BenchmarkContractFunctionInvocation(b *testing.B) {
 	script := `      
       import Test from 0x01
 
-      pub fun main(count: Int): String {
+      access(all) fun main(count: Int): String {
           var i = 0
           var r = Test.Foo("Hello from Foo!")
           while i < count {
