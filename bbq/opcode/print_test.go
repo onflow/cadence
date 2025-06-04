@@ -45,14 +45,14 @@ func TestPrintRecursionFib(t *testing.T) {
 		byte(GetLocal), 0, 0,
 		byte(GetConstant), 0, 1,
 		byte(Subtract),
-		byte(Transfer), 0, 0,
+		byte(TransferAndConvert), 0, 0,
 		byte(GetGlobal), 0, 0,
 		byte(Invoke), 0, 0, 0, 0,
 		// fib(n - 2)
 		byte(GetLocal), 0, 0,
 		byte(GetConstant), 0, 0,
 		byte(Subtract),
-		byte(Transfer), 0, 0,
+		byte(TransferAndConvert), 0, 0,
 		byte(GetGlobal), 0, 0,
 		byte(Invoke), 0, 0, 0, 0,
 		// return sum
@@ -60,26 +60,26 @@ func TestPrintRecursionFib(t *testing.T) {
 		byte(ReturnValue),
 	}
 
-	const expected = `  0 |    GetLocal | local:0
-  1 | GetConstant | constant:0
-  2 |        Less |
-  3 | JumpIfFalse | target:14
-  4 |    GetLocal | local:0
-  5 | ReturnValue |
-  6 |    GetLocal | local:0
-  7 | GetConstant | constant:1
-  8 |    Subtract |
-  9 |    Transfer | type:0
- 10 |   GetGlobal | global:0
- 11 |      Invoke | typeArgs:[] argCount:0
- 12 |    GetLocal | local:0
- 13 | GetConstant | constant:0
- 14 |    Subtract |
- 15 |    Transfer | type:0
- 16 |   GetGlobal | global:0
- 17 |      Invoke | typeArgs:[] argCount:0
- 18 |         Add |
- 19 | ReturnValue |
+	const expected = `  0 |           GetLocal | local:0
+  1 |        GetConstant | constant:0
+  2 |               Less |
+  3 |        JumpIfFalse | target:14
+  4 |           GetLocal | local:0
+  5 |        ReturnValue |
+  6 |           GetLocal | local:0
+  7 |        GetConstant | constant:1
+  8 |           Subtract |
+  9 | TransferAndConvert | type:0
+ 10 |          GetGlobal | global:0
+ 11 |             Invoke | typeArgs:[] argCount:0
+ 12 |           GetLocal | local:0
+ 13 |        GetConstant | constant:0
+ 14 |           Subtract |
+ 15 | TransferAndConvert | type:0
+ 16 |          GetGlobal | global:0
+ 17 |             Invoke | typeArgs:[] argCount:0
+ 18 |                Add |
+ 19 |        ReturnValue |
 
 `
 
@@ -173,7 +173,7 @@ func TestPrintInstruction(t *testing.T) {
 		"JumpIfTrue target:258":  {byte(JumpIfTrue), 1, 2},
 		"JumpIfNil target:258":   {byte(JumpIfNil), 1, 2},
 
-		"Transfer type:258": {byte(Transfer), 1, 2},
+		"TransferAndConvert type:258": {byte(TransferAndConvert), 1, 2},
 
 		"New kind:CompositeKind(258) type:772": {byte(New), 1, 2, 3, 4},
 
