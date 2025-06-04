@@ -291,17 +291,17 @@ func (e *vmEnvironment) loadProgram(location common.Location) (*Program, error) 
 	return program, nil
 }
 
-func (e *vmEnvironment) loadElaboration(location common.Location) (*sema.Elaboration, error) {
+func (e *vmEnvironment) loadDesugaredElaboration(location common.Location) (*compiler.DesugaredElaboration, error) {
 	program, err := e.loadProgram(location)
 	if err != nil {
 		return nil, err
 	}
 
-	return program.interpreterProgram.Elaboration, nil
+	return program.compiledProgram.desugaredElaboration, nil
 }
 
 func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-	program, err := e.loadProgram(location)
+	elaboration, err := e.loadDesugaredElaboration(location)
 	if err != nil {
 		panic(fmt.Errorf(
 			"cannot load type %s: failed to load elaboration for location %s: %w",
@@ -310,8 +310,6 @@ func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.Ty
 			err,
 		))
 	}
-
-	elaboration := program.compiledProgram.desugaredElaboration
 
 	compositeType := elaboration.CompositeType(typeID)
 	if compositeType != nil {
