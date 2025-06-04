@@ -58,8 +58,6 @@ func TestRuntimeExecuteScript(t *testing.T) {
 	runtime := NewTestRuntime()
 
 	script := []byte(`
-      import "imported"
-
       access(all) fun main(): Int {
           let answer = 42
           return answer
@@ -83,6 +81,53 @@ func TestRuntimeExecuteScript(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, cadence.NewInt(42), value)
+}
+
+func TestRuntimeExecuteTransaction(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestRuntime()
+
+	script := []byte(`
+      transaction {
+		  prepare(signer: &Account) {
+              log(signer.address)
+          }
+          execute {}
+        }
+    `)
+
+	signer := common.MustBytesToAddress([]byte{0x42})
+
+	var messages []string
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{signer}, nil
+		},
+		OnProgramLog: func(message string) {
+			messages = append(messages, message)
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]string{"0x0000000000000042"},
+		messages,
+	)
 }
 
 func TestRuntimeImport(t *testing.T) {
@@ -410,6 +455,7 @@ func TestRuntimeInvalidTransactionArgumentAccount(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)
@@ -452,6 +498,7 @@ func TestRuntimeTransactionWithAccount(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1195,6 +1242,7 @@ func TestRuntimeProgramWithNoTransaction(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)
@@ -1228,6 +1276,7 @@ func TestRuntimeProgramWithMultipleTransaction(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)
@@ -1351,6 +1400,7 @@ func TestRuntimeStorage(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					UseVM:     *compile,
 				},
 			)
 			require.NoError(t, err)
@@ -1461,6 +1511,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1472,6 +1523,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1483,6 +1535,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1562,6 +1615,7 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1573,6 +1627,7 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1653,6 +1708,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1664,6 +1720,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1742,6 +1799,7 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1753,6 +1811,7 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1891,6 +1950,7 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1902,6 +1962,7 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1986,6 +2047,7 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1997,6 +2059,7 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -2095,6 +2158,7 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -2106,6 +2170,7 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -2487,6 +2552,7 @@ func TestRuntimeStorageChanges(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -2498,6 +2564,7 @@ func TestRuntimeStorageChanges(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -2541,6 +2608,7 @@ func TestRuntimeAccountAddress(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -2584,6 +2652,7 @@ func TestRuntimePublicAccountAddress(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -2678,6 +2747,7 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -2689,6 +2759,7 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -3376,6 +3447,7 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -4311,6 +4383,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -4324,6 +4397,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -4442,6 +4516,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -4453,6 +4528,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -4980,6 +5056,7 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -5009,6 +5086,7 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		RequireError(t, err)
@@ -5248,6 +5326,7 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -5269,6 +5348,7 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -5430,6 +5510,7 @@ func TestRuntimeResourceOwnerFieldUseArray(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -5454,6 +5535,7 @@ func TestRuntimeResourceOwnerFieldUseArray(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -5604,6 +5686,7 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -5628,6 +5711,7 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -5744,6 +5828,7 @@ func TestRuntimeMetrics(t *testing.T) {
 		Context{
 			Interface: i1,
 			Location:  transactionLocation,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -5762,12 +5847,14 @@ func TestRuntimeMetrics(t *testing.T) {
 		},
 		r1.programChecked,
 	)
-	assert.Equal(t,
-		map[common.Location]int{
-			transactionLocation: 1,
-		},
-		r1.programInterpreted,
-	)
+	if !*compile {
+		assert.Equal(t,
+			map[common.Location]int{
+				transactionLocation: 1,
+			},
+			r1.programInterpreted,
+		)
+	}
 
 	i2, r2 := newRuntimeInterface()
 
@@ -5780,6 +5867,7 @@ func TestRuntimeMetrics(t *testing.T) {
 		Context{
 			Interface: i2,
 			Location:  transactionLocation,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -5798,12 +5886,14 @@ func TestRuntimeMetrics(t *testing.T) {
 		},
 		r2.programChecked,
 	)
-	assert.Equal(t,
-		map[common.Location]int{
-			transactionLocation: 1,
-		},
-		r2.programInterpreted,
-	)
+	if !*compile {
+		assert.Equal(t,
+			map[common.Location]int{
+				transactionLocation: 1,
+			},
+			r2.programInterpreted,
+		)
+	}
 }
 
 type ownerKeyPair struct {
@@ -5950,6 +6040,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -5965,6 +6056,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -6115,6 +6207,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -6163,6 +6256,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -6190,6 +6284,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -6248,6 +6343,7 @@ func TestRuntimeExternalError(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -6290,6 +6386,7 @@ func TestRuntimeExternalNonError(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -6419,6 +6516,7 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -6636,6 +6734,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -8052,6 +8151,7 @@ func TestRuntimeTypeMismatchErrorMessage(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -9154,6 +9254,7 @@ func BenchmarkRuntimeResourceTracking(b *testing.B) {
 			Interface:   runtimeInterface,
 			Location:    nextTransactionLocation(),
 			Environment: environment,
+			UseVM:       *compile,
 		},
 	)
 	require.NoError(b, err)
@@ -9205,6 +9306,7 @@ func BenchmarkRuntimeResourceTracking(b *testing.B) {
 			Interface:   runtimeInterface,
 			Location:    nextTransactionLocation(),
 			Environment: environment,
+			UseVM:       *compile,
 		},
 	)
 	require.NoError(b, err)
@@ -9834,6 +9936,7 @@ func TestRuntimeNestedResourceMoveInTransaction(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -11112,6 +11215,7 @@ func TestRuntimeForbidPublicEntitlementBorrow(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -11201,6 +11305,7 @@ func TestRuntimeForbidPublicEntitlementGet(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -11550,6 +11655,7 @@ func TestRuntimeStorageEnumAsDictionaryKey(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -11964,6 +12070,7 @@ func TestRuntimeInvocationReturnTypeInferenceFailure(t *testing.T) {
 		Context{
 			Interface: newRuntimeInterface(),
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)
@@ -12510,6 +12617,7 @@ func TestRuntimeFunctionTypeConfusion(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
