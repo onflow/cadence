@@ -2038,12 +2038,6 @@ func (c *Compiler[_, _]) compileArguments(arguments ast.Arguments, invocationTyp
 		c.compileExpression(argument.Expression)
 		c.emitTransfer(invocationTypes.ParameterTypes[index])
 	}
-
-	// TODO: Is this needed?
-	//// Load empty values for optional parameters, if they are not provided.
-	//for i := len(expression.Arguments); i < invocationTypes.ParamCount; i++ {
-	//	c.emit(opcode.Empty)
-	//}
 }
 
 func (c *Compiler[_, _]) loadTypeArguments(invocationTypes sema.InvocationExpressionTypes) []uint16 {

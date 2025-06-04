@@ -1676,7 +1676,7 @@ func TestNativeFunctions(t *testing.T) {
 		require.Equal(t, interpreter.NewUnmeteredStringValue("Hello, World!"), result)
 	})
 
-	t.Run("assert function", func(t *testing.T) {
+	t.Run("optional args assert", func(t *testing.T) {
 		t.Parallel()
 
 		assertFunction := stdlib.NewStandardLibraryStaticFunction(
