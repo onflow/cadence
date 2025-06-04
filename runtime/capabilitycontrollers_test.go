@@ -45,7 +45,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 		err error,
 	) {
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		accountCodes := map[Location][]byte{}
 
@@ -3554,7 +3554,7 @@ func TestRuntimeCapabilityBorrowAsInheritedInterface(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	contract := []byte(`
         access(all) contract Test {
@@ -3666,7 +3666,7 @@ func TestRuntimeCapabilityControllerOperationAfterDeletion(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			t.Parallel()
 
-			rt := NewTestInterpreterRuntime()
+			rt := NewTestRuntime()
 
 			tx := []byte(fmt.Sprintf(
 				`
@@ -3834,7 +3834,7 @@ func TestRuntimeCapabilitiesGetBackwardCompatibility(t *testing.T) {
 
 	test := func(t *testing.T, value interpreter.Value) {
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
@@ -3936,7 +3936,7 @@ func TestRuntimeCapabilitiesPublishBackwardCompatibility(t *testing.T) {
 
 	test := func(t *testing.T, value interpreter.Value) {
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		var events []cadence.Event
 
@@ -4027,7 +4027,7 @@ func TestRuntimeCapabilitiesUnpublishBackwardCompatibility(t *testing.T) {
 
 	test := func(t *testing.T, value interpreter.Value) {
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		var events []cadence.Event
 

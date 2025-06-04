@@ -36,7 +36,7 @@ func TestRuntimeAccountEntitlementSaveAndLoadSuccess(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -128,7 +128,7 @@ func TestRuntimeAccountEntitlementSaveAndLoadFail(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -221,7 +221,7 @@ func TestRuntimeAccountEntitlementAttachment(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -327,7 +327,7 @@ func TestRuntimeAccountExportEntitledRef(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -404,7 +404,7 @@ func TestRuntimeAccountEntitlementNamingConflict(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -507,7 +507,7 @@ func TestRuntimeAccountEntitlementCapabilityCasting(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -608,7 +608,7 @@ func TestRuntimeAccountEntitlementCapabilityDictionary(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -724,7 +724,7 @@ func TestRuntimeAccountEntitlementGenericCapabilityDictionary(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -842,7 +842,7 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 	address := common.MustBytesToAddress([]byte{0x1})
 
 	test := func(t *testing.T, script string) {
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		accountCodes := map[common.Location][]byte{}
 
@@ -1121,7 +1121,7 @@ func TestRuntimeImportedEntitlementMapInclude(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	furtherUpstreamDeployTx := DeploymentTransaction("FurtherUpstream", []byte(`
@@ -1299,7 +1299,7 @@ func TestRuntimeEntitlementMapIncludeDeduped(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	script := []byte(`

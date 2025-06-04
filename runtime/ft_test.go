@@ -583,7 +583,7 @@ access(all) fun main(account: Address): UFix64 {
 
 func testRuntimeFungibleTokenTransfer(tb testing.TB, useVM bool) {
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 	senderAddress := common.MustBytesToAddress([]byte{0x2})
@@ -976,7 +976,7 @@ func getField(declaration *ast.CompositeDeclaration, name string) *ast.FieldDecl
 
 func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 	userAddress := common.MustBytesToAddress([]byte{0x2})

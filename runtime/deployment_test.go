@@ -148,7 +148,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			argumentCode,
 		))
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		var accountCode []byte
 		var events []cadence.Event

@@ -41,7 +41,7 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 	t.Parallel()
 
 	executeScript := func(code string, inter Interface) (cadence.Value, error) {
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 		return runtime.ExecuteScript(
 			Script{
 				Source: []byte(code),
@@ -166,7 +166,7 @@ func TestRuntimeHashingAlgorithmExport(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 	runtimeInterface := &TestRuntimeInterface{}
 	nextScriptLocation := NewScriptLocationGenerator()
 
@@ -211,7 +211,7 @@ func TestRuntimeSignatureAlgorithmExport(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 	runtimeInterface := &TestRuntimeInterface{}
 	nextScriptLocation := NewScriptLocationGenerator()
 
@@ -256,7 +256,7 @@ func TestRuntimeSignatureAlgorithmImport(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 	runtimeInterface := &TestRuntimeInterface{
 		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(nil, b)
@@ -333,7 +333,7 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 
 		storage := NewTestLedger(nil, nil)
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: storage,
 			OnHash: func(data []byte, tag string, hashAlgorithm HashAlgorithm) ([]byte, error) {
@@ -405,7 +405,7 @@ func TestRuntimeBLSVerifyPoP(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	script := []byte(`
 
@@ -464,7 +464,7 @@ func TestRuntimeBLSAggregateSignatures(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	script := []byte(`
 
@@ -529,7 +529,7 @@ func TestRuntimeBLSAggregatePublicKeys(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	script := []byte(`
 
@@ -624,7 +624,7 @@ func TestRuntimeTraversingMerkleProof(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	script := []byte(`
         access(all) fun main(rootHash: [UInt8], address: [UInt8], accountProof: [[UInt8]]){

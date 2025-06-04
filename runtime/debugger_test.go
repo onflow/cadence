@@ -56,7 +56,7 @@ func TestRuntimeDebugger(t *testing.T) {
 
 		config := DefaultTestInterpreterConfig
 		config.Debugger = debugger
-		runtime := NewTestInterpreterRuntimeWithConfig(config)
+		runtime := NewTestRuntimeWithConfig(config)
 
 		address := common.MustBytesToAddress([]byte{0x1})
 
@@ -149,7 +149,7 @@ func TestRuntimeDebuggerBreakpoints(t *testing.T) {
 
 		config := DefaultTestInterpreterConfig
 		config.Debugger = debugger
-		runtime := NewTestInterpreterRuntimeWithConfig(config)
+		runtime := NewTestRuntimeWithConfig(config)
 
 		address := common.MustBytesToAddress([]byte{0x1})
 

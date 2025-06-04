@@ -64,7 +64,7 @@ func TestRuntimeDeployedContracts(t *testing.T) {
 		}
 		`
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	runtimeInterface := &TestRuntimeInterface{

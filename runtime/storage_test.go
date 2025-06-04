@@ -154,7 +154,7 @@ func TestRuntimeStorageWrite(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
@@ -222,7 +222,7 @@ func TestRuntimeAccountStorage(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	script := []byte(`
       transaction {
@@ -281,7 +281,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	addressString, err := hex.DecodeString("aad3e26e406987c2")
 	require.NoError(t, err)
@@ -402,7 +402,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	storage := NewTestLedger(nil, nil)
 
@@ -527,7 +527,7 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	testAddress, err := common.HexToAddress("0x0b2a3299cc857e29")
 	require.NoError(t, err)
@@ -616,7 +616,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	nftAddress, err := common.HexToAddress("0x1d7e57aa55817448")
 	require.NoError(t, err)
@@ -806,7 +806,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	const contract = `
       access(all) contract Test {
@@ -1055,7 +1055,7 @@ func TestRuntimeStoragePublishAndUnpublish(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	storage := NewTestLedger(nil, nil)
 
@@ -1145,7 +1145,7 @@ func TestRuntimeStorageSaveCapability(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	storage := NewTestLedger(nil, nil)
 
@@ -1231,7 +1231,7 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	signerAddress := common.MustBytesToAddress([]byte{0x42})
 
@@ -1327,7 +1327,7 @@ func TestRuntimeStorageReferenceDowncast(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	signerAddress := common.MustBytesToAddress([]byte{0x42})
 
@@ -1425,7 +1425,7 @@ func TestRuntimeStorageNonStorable(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
@@ -1487,7 +1487,7 @@ func TestRuntimeStorageRecursiveReference(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
@@ -1528,7 +1528,7 @@ func TestRuntimeStorageTransfer(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	address1 := common.MustBytesToAddress([]byte{0x1})
 	address2 := common.MustBytesToAddress([]byte{0x2})
@@ -1618,7 +1618,7 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 
 	config := DefaultTestInterpreterConfig
 	config.ResourceOwnerChangeHandlerEnabled = true
-	rt := NewTestInterpreterRuntimeWithConfig(config)
+	rt := NewTestRuntimeWithConfig(config)
 
 	address1 := common.MustBytesToAddress([]byte{0x1})
 	address2 := common.MustBytesToAddress([]byte{0x2})
@@ -1834,7 +1834,7 @@ func TestRuntimeStorageUsed(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	ledger := NewTestLedger(nil, nil)
 
@@ -2048,7 +2048,7 @@ transaction {
 }
 `
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	testAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -2177,7 +2177,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
           }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		accountCodes := map[Location][]byte{}
 
@@ -2305,7 +2305,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
           }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		testAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -2435,7 +2435,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
           }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		testAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -2558,7 +2558,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
           }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		testAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -2680,7 +2680,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
           }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		testAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -2770,7 +2770,7 @@ func TestRuntimeNoAtreeSendOnClosedChannelDuringCommit(t *testing.T) {
 
 		for i := 0; i < 1000; i++ {
 
-			rt := NewTestInterpreterRuntime()
+			rt := NewTestRuntime()
 
 			address := common.MustBytesToAddress([]byte{0x1})
 
@@ -2815,7 +2815,7 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
@@ -2974,7 +2974,7 @@ func TestRuntimeStorageReadNoImplicitWrite(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	address, err := common.HexToAddress("0x1")
 	require.NoError(t, err)
@@ -3011,7 +3011,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
@@ -3155,7 +3155,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 		address := common.MustBytesToAddress([]byte{0x1})
 		accountCodes := map[common.Location][]byte{}
 		ledger := NewTestLedger(nil, nil)
@@ -3283,7 +3283,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 		address := common.MustBytesToAddress([]byte{0x1})
 		accountCodes := map[common.Location][]byte{}
 		ledger := NewTestLedger(nil, nil)
@@ -3416,7 +3416,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 		address := common.MustBytesToAddress([]byte{0x1})
 		accountCodes := map[common.Location][]byte{}
 		ledger := NewTestLedger(nil, nil)
@@ -3548,7 +3548,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 		address := common.MustBytesToAddress([]byte{0x1})
 		accountCodes := map[common.Location][]byte{}
 		ledger := NewTestLedger(nil, nil)
@@ -3693,7 +3693,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 		address := common.MustBytesToAddress([]byte{0x1})
 		accountCodes := map[common.Location][]byte{}
 		ledger := NewTestLedger(nil, nil)
@@ -3889,7 +3889,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 		address := common.MustBytesToAddress([]byte{0x1})
 		accountCodes := map[common.Location][]byte{}
 		ledger := NewTestLedger(nil, nil)
@@ -4095,7 +4095,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		test := func(brokenType bool, t *testing.T) {
 
-			rt := NewTestInterpreterRuntime()
+			rt := NewTestRuntime()
 			address := common.MustBytesToAddress([]byte{0x1})
 			accountCodes := map[common.Location][]byte{}
 			ledger := NewTestLedger(nil, nil)
@@ -4274,7 +4274,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 	t.Run("box and convert arguments, forEachStored", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
@@ -4320,7 +4320,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 	t.Run("box and convert arguments, forEachPublic", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
@@ -4374,8 +4374,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	newRuntime := func() (TestInterpreterRuntime, *TestRuntimeInterface) {
-		rt := NewTestInterpreterRuntime()
+	newRuntime := func() (TestRuntime, *TestRuntimeInterface) {
+		rt := NewTestRuntime()
 		accountCodes := map[common.Location][]byte{}
 
 		runtimeInterface := &TestRuntimeInterface{
@@ -5125,8 +5125,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	newRuntime := func() (TestInterpreterRuntime, *TestRuntimeInterface) {
-		rt := NewTestInterpreterRuntime()
+	newRuntime := func() (TestRuntime, *TestRuntimeInterface) {
+		rt := NewTestRuntime()
 		accountCodes := map[common.Location][]byte{}
 
 		runtimeInterface := &TestRuntimeInterface{
@@ -5707,8 +5707,8 @@ func TestRuntimeTypeOrderInsignificance(t *testing.T) {
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	newRuntime := func() (TestInterpreterRuntime, *TestRuntimeInterface) {
-		rt := NewTestInterpreterRuntime()
+	newRuntime := func() (TestRuntime, *TestRuntimeInterface) {
+		rt := NewTestRuntime()
 		accountCodes := map[common.Location][]byte{}
 
 		runtimeInterface := &TestRuntimeInterface{
@@ -5883,7 +5883,7 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 
 	t.Run("resource", func(t *testing.T) {
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		signerAddress := common.MustBytesToAddress([]byte{0x42})
 
@@ -5983,7 +5983,7 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 	t.Run("struct", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		tx := []byte(`
             transaction {
@@ -6035,7 +6035,7 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 
 	t.Run("replace resource", func(t *testing.T) {
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		signerAddress := common.MustBytesToAddress([]byte{0x42})
 
@@ -6150,7 +6150,7 @@ func TestRuntimeStorageReferenceAccess(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
