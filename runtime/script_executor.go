@@ -177,8 +177,12 @@ func (executor *scriptExecutor) preprocess() (err error) {
 		executor.interpret = executor.scriptExecutionFunction()
 
 	case *vmEnvironment:
-		compiledProgram := environment.compileProgram(program, location)
-		executor.vm = environment.newVM(location, compiledProgram.program)
+		var program *Program
+		program, err = environment.loadProgram(location)
+		if err != nil {
+			return newError(err, location, codesAndPrograms)
+		}
+		executor.vm = environment.newVM(location, program.compiledProgram.program)
 
 	default:
 		return errors.NewUnexpectedError("scripts can only be executed with the interpreter")
