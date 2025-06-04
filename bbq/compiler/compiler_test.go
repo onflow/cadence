@@ -6943,23 +6943,7 @@ func TestCompileOptionalArgument(t *testing.T) {
 
 	assertFunction := stdlib.NewStandardLibraryStaticFunction(
 		commons.AssertFunctionName,
-		&sema.FunctionType{
-			Purity: sema.FunctionPurityView,
-			Parameters: []sema.Parameter{
-				{
-					Label:          sema.ArgumentLabelNotRequired,
-					Identifier:     "condition",
-					TypeAnnotation: sema.BoolTypeAnnotation,
-				},
-				{
-					Identifier:     "message",
-					TypeAnnotation: sema.StringTypeAnnotation,
-				},
-			},
-			ReturnTypeAnnotation: sema.VoidTypeAnnotation,
-			// `message` parameter is optional
-			Arity: &sema.Arity{Min: 1, Max: 2},
-		},
+		stdlib.AssertFunctionType,
 		``,
 		nil,
 	)
