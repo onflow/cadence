@@ -34,7 +34,7 @@ func TestRuntimeTypeStorage(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	tx1 := []byte(`
       transaction {
@@ -102,7 +102,7 @@ func TestRuntimeBlockFieldTypes(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		script := []byte(`
             transaction {
@@ -162,7 +162,7 @@ func TestRuntimeBlockFieldTypes(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		script := []byte(`
             access(all) fun main(): [UFix64] {

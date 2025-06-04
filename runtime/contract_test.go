@@ -54,7 +54,7 @@ func TestRuntimeContract(t *testing.T) {
 	runTest := func(t *testing.T, tc testCase) {
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		var loggedMessages []string
 
@@ -698,7 +698,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 		},
 	}
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
@@ -799,7 +799,7 @@ func TestRuntimeContractInterfaceEventEmission(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployInterfaceTx := DeploymentTransaction("TestInterface", []byte(`
@@ -935,7 +935,7 @@ func TestRuntimeContractInterfaceConditionEventEmission(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployInterfaceTx := DeploymentTransaction("TestInterface", []byte(`
@@ -1112,7 +1112,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		deployTx := DeploymentTransaction("Foo", []byte(`access(all) contract Foo {}`))
 
@@ -1188,7 +1188,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		updateTx := []byte(`
 			transaction {
@@ -1251,7 +1251,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		deployTx := DeploymentTransaction("Foo", []byte(`access(all) contract Foo {}`))
 
@@ -1306,7 +1306,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		deployTx := DeploymentTransaction("Foo", []byte(`access(all) contract Foo {}`))
 

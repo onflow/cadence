@@ -39,7 +39,7 @@ func TestRuntimeSharedState(t *testing.T) {
 
 	config := DefaultTestInterpreterConfig
 	config.AtreeValidationEnabled = false
-	runtime := NewTestInterpreterRuntimeWithConfig(config)
+	runtime := NewTestRuntimeWithConfig(config)
 
 	deploy1 := DeploymentTransaction("C1", []byte(`
         access(all) contract C1 {

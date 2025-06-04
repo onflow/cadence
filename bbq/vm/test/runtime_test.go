@@ -496,7 +496,7 @@ func TestFTContractInvocation(t *testing.T) {
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	// Deploy contracts
 

@@ -37,7 +37,7 @@ func TestRuntimeAccountInboxPublishUnpublish(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var logs []string
 	var events []string
@@ -127,7 +127,7 @@ func TestRuntimeAccountInboxUnpublishWrongType(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var logs []string
 	var events []string
@@ -207,7 +207,7 @@ func TestRuntimeAccountInboxUnpublishAbsent(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var logs []string
 	var events []string
@@ -297,7 +297,7 @@ func TestRuntimeAccountInboxUnpublishRemove(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var logs []string
 	var events []string
@@ -410,7 +410,7 @@ func TestRuntimeAccountInboxUnpublishWrongAccount(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var logs []string
 	var events []string
@@ -542,7 +542,7 @@ func TestRuntimeAccountInboxPublishClaim(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var logs []string
 	var events []string
@@ -652,7 +652,7 @@ func TestRuntimeAccountInboxPublishClaimWrongType(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var logs []string
 	var events []string
@@ -754,7 +754,7 @@ func TestRuntimeAccountInboxPublishClaimWrongName(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var logs []string
 	var events []string
@@ -857,7 +857,7 @@ func TestRuntimeAccountInboxPublishClaimRemove(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var logs []string
 	var events []string
@@ -985,7 +985,7 @@ func TestRuntimeAccountInboxPublishClaimWrongAccount(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var logs []string
 	var events []string

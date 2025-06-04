@@ -87,7 +87,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
@@ -385,7 +385,7 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
@@ -582,7 +582,7 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 	signer1 := common.MustBytesToAddress([]byte{0x1})
 	signer2 := common.MustBytesToAddress([]byte{0x2})
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	contract := []byte(`
      access(all) contract Test {
@@ -749,7 +749,7 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	contract := []byte(resourceDictionaryContract)
 
@@ -878,7 +878,7 @@ func TestRuntimeResourceDictionaryValues_Destruction(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	contract := []byte(resourceDictionaryContract)
 
@@ -991,7 +991,7 @@ func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	contract := []byte(resourceDictionaryContract)
 
@@ -1132,7 +1132,7 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	contract := []byte(resourceDictionaryContract)
 
@@ -1314,7 +1314,7 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 
 func BenchmarkRuntimeResourceDictionaryValues(b *testing.B) {
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 

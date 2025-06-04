@@ -1803,7 +1803,7 @@ func TestRuntimeExportEventValue(t *testing.T) {
 }
 
 func exportEventFromScript(t *testing.T, script string) cadence.Event {
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var events []cadence.Event
 
@@ -1833,7 +1833,7 @@ func exportEventFromScript(t *testing.T, script string) cadence.Event {
 }
 
 func exportValueFromScript(t *testing.T, script string) cadence.Value {
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	value, err := rt.ExecuteScript(
 		Script{
@@ -1961,7 +1961,7 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
 
 		// Arrange
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		transaction := `
             transaction {
@@ -2043,7 +2043,7 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
             }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
@@ -2080,7 +2080,7 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
             }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
@@ -2527,7 +2527,7 @@ func TestRuntimeEnumValue(t *testing.T) {
 }
 
 func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.Value, error) {
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	runtimeInterface := &TestRuntimeInterface{
 		Storage: NewTestLedger(nil, nil),
@@ -4059,7 +4059,7 @@ func TestRuntimeStringValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(stringValue)
 		require.NoError(t, err)
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		var validated bool
 
@@ -4109,7 +4109,7 @@ func TestRuntimeTypeValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(typeValue)
 		require.NoError(t, err)
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		var ok bool
 
@@ -4157,7 +4157,7 @@ func TestRuntimeTypeValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(typeValue)
 		require.NoError(t, err)
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
@@ -4204,7 +4204,7 @@ func TestRuntimeCapabilityValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(capabilityValue)
 		require.NoError(t, err)
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
@@ -4245,7 +4245,7 @@ func TestRuntimeCapabilityValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(capabilityValue)
 		require.NoError(t, err)
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
@@ -4293,7 +4293,7 @@ func TestRuntimeCapabilityValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(capabilityValue)
 		require.NoError(t, err)
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
@@ -4331,7 +4331,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 		encodedArg, err := json.Encode(arg)
 		require.NoError(t, err)
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		return rt.ExecuteScript(
 			Script{
@@ -4681,7 +4681,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
             }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		storage := NewTestLedger(nil, nil)
 
@@ -4747,7 +4747,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
             }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		storage := NewTestLedger(nil, nil)
 
@@ -4811,7 +4811,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
             }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		var publicKeyValidated bool
 
@@ -4882,7 +4882,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
             }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		var publicKeyValidated bool
 
@@ -5229,7 +5229,7 @@ func TestRuntimeNestedStructArgPassing(t *testing.T) {
           }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		storage := NewTestLedger(nil, nil)
 
@@ -5292,7 +5292,7 @@ func TestRuntimeNestedStructArgPassing(t *testing.T) {
           }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		storage := NewTestLedger(nil, nil)
 
@@ -5327,7 +5327,7 @@ func TestRuntimeNestedStructArgPassing(t *testing.T) {
 func TestRuntimeDestroyedResourceReferenceExport(t *testing.T) {
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	script := []byte(`
         access(all) resource S {}
@@ -5378,7 +5378,7 @@ func TestRuntimeDeploymentResultValueImportExport(t *testing.T) {
             access(all) fun main(v: DeploymentResult) {}
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 		runtimeInterface := &TestRuntimeInterface{}
 
 		_, err := rt.ExecuteScript(
@@ -5407,7 +5407,7 @@ func TestRuntimeDeploymentResultValueImportExport(t *testing.T) {
             }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 		runtimeInterface := &TestRuntimeInterface{}
 
 		_, err := rt.ExecuteScript(
@@ -5441,7 +5441,7 @@ func TestRuntimeDeploymentResultTypeImportExport(t *testing.T) {
             }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		typeValue := cadence.NewTypeValue(cadence.NewStructType(
 			nil,
@@ -5488,7 +5488,7 @@ func TestRuntimeDeploymentResultTypeImportExport(t *testing.T) {
             }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 		runtimeInterface := &TestRuntimeInterface{}
 
 		result, err := rt.ExecuteScript(
@@ -5569,7 +5569,7 @@ func TestRuntimeExportInterfaceType(t *testing.T) {
             }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		_, err := rt.ExecuteScript(
 			Script{
@@ -5607,7 +5607,7 @@ func TestRuntimeExportInterfaceType(t *testing.T) {
             }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		_, err := rt.ExecuteScript(
 			Script{

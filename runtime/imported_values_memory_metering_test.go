@@ -46,7 +46,7 @@ func TestRuntimeImportedValueMemoryMetering(t *testing.T) {
 
 	executeScript := func(t *testing.T, script []byte, meter map[common.MemoryKind]uint64, args ...cadence.Value) {
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			OnMeterMemory: testUseMemory(meter),
@@ -524,7 +524,7 @@ func TestRuntimeImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			t.Parallel()
 
-			runtime := NewTestInterpreterRuntime()
+			runtime := NewTestRuntime()
 
 			meter := make(map[common.MemoryKind]uint64)
 			runtimeInterface := &TestRuntimeInterface{
@@ -596,7 +596,7 @@ func TestRuntimeScriptDecodedLocationMetering(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			runtime := NewTestInterpreterRuntime()
+			runtime := NewTestRuntime()
 
 			meter := make(map[common.MemoryKind]uint64)
 			runtimeInterface := &TestRuntimeInterface{

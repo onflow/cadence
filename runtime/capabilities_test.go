@@ -37,8 +37,8 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	newRuntime := func() (TestInterpreterRuntime, *TestRuntimeInterface) {
-		runtime := NewTestInterpreterRuntime()
+	newRuntime := func() (TestRuntime, *TestRuntimeInterface) {
+		runtime := NewTestRuntime()
 		accountCodes := map[common.Location][]byte{}
 
 		runtimeInterface := &TestRuntimeInterface{

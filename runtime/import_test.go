@@ -39,7 +39,7 @@ func TestRuntimeCyclicImport(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	imported1 := []byte(`
       import p2
@@ -118,7 +118,7 @@ func TestRuntimeCyclicImport(t *testing.T) {
 
 func TestRuntimeCheckCyclicImportsAfterUpdate(t *testing.T) {
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -215,7 +215,7 @@ func TestRuntimeCheckCyclicImportsAfterUpdate(t *testing.T) {
 
 func TestRuntimeCheckCyclicImportAddress(t *testing.T) {
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -326,7 +326,7 @@ func TestRuntimeCheckCyclicImportAddress(t *testing.T) {
 
 func TestRuntimeCheckCyclicImportToSelfDuringDeploy(t *testing.T) {
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -415,7 +415,7 @@ func TestRuntimeContractImport(t *testing.T) {
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
 	}
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	contract := []byte(`
         access(all) contract Foo {

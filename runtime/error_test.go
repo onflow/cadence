@@ -42,7 +42,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		script := []byte(`X`)
 
@@ -76,7 +76,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		script := []byte(`fun test() {}`)
 
@@ -109,7 +109,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		script := []byte(`
             access(all) fun main() {
@@ -149,7 +149,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		script := []byte(`
 			access(all) fun main() {
@@ -187,7 +187,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		script := []byte(`
 			access(all) resource Resource {
@@ -247,7 +247,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		importedScript := []byte(`X`)
 
@@ -290,7 +290,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		importedScript := []byte(`fun test() {}`)
 
@@ -334,7 +334,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		importedScript := []byte(`
             access(all) fun add() {
@@ -446,7 +446,7 @@ func TestRuntimeError(t *testing.T) {
 			},
 		}
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(codes[location]),
@@ -489,7 +489,7 @@ func TestRuntimeError(t *testing.T) {
 func TestRuntimeMultipleInterfaceDefaultImplementationsError(t *testing.T) {
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	makeDeployTransaction := func(name, code string) []byte {
 		return []byte(fmt.Sprintf(

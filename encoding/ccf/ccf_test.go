@@ -17146,7 +17146,7 @@ func TestEncodeEventWithAttachment(t *testing.T) {
 }
 
 func exportEventFromScript(t *testing.T, script string) cadence.Event {
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var events []cadence.Event
 

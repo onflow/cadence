@@ -604,7 +604,7 @@ func BenchmarkInterpreterFTTransfer(b *testing.B) {
 
 func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
-	interpreterRuntime := NewTestInterpreterRuntime()
+	interpreterRuntime := NewTestRuntime()
 
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 	senderAddress := common.MustBytesToAddress([]byte{0x2})

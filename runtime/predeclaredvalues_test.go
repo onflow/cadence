@@ -58,7 +58,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 		checkScript func(result cadence.Value, err error),
 	) {
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		deploy := DeploymentTransaction(contractName, []byte(contract))
 
@@ -285,7 +285,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
           }
 	    `)
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
@@ -357,7 +357,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
           }
 	    `)
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
@@ -429,7 +429,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
           }
 	    `)
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
@@ -506,7 +506,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
           }
 	    `)
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
@@ -586,7 +586,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
           }
 	    `)
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
@@ -687,7 +687,7 @@ func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
       }
 	`)
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	runtimeInterface := &TestRuntimeInterface{
 		Storage: NewTestLedger(nil, nil),
