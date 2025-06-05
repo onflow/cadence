@@ -1336,7 +1336,7 @@ func BenchmarkRuntimeResourceDictionaryValues(b *testing.B) {
 
      transaction {
 
-         prepare(signer: &Account) {
+         prepare(signer: auth(Storage) &Account) {
              let data: @{Int: Test.R} <- {}
              var i = 0
              while i < 1000 {
@@ -1403,7 +1403,7 @@ func BenchmarkRuntimeResourceDictionaryValues(b *testing.B) {
 
      transaction {
 
-         prepare(signer: &Account) {
+         prepare(signer: auth(Storage) &Account) {
              let ref = signer.storage.borrow<&{Int: Test.R}>(from: /storage/data)!
              assert(ref[50] != nil)
         }
