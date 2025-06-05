@@ -19,9 +19,12 @@
 package vm
 
 import (
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 )
 
@@ -62,6 +65,36 @@ func NewAccountReferenceValue(
 
 func init() {
 	// Any member methods goes here
+	accountContractsTypeName := commons.TypeQualifier(sema.AccountTypeContractsFieldType)
+
+	// Methods on `Account.Contracts` value.
+
+	RegisterTypeBoundFunction(
+		accountContractsTypeName,
+		NewNativeFunctionValue(
+			sema.Account_ContractsTypeAddFunctionName,
+			sema.Account_ContractsTypeAddFunctionType,
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+				// TODO: implement Account.Contracts.add
+				// below is placeholder test code
+				nameValue, ok := arguments[1].(*interpreter.StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				newCodeValue, ok := arguments[2].(*interpreter.ArrayValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return interpreter.NewDeployedContractValue(context,
+					interpreter.AddressValue{},
+					nameValue,
+					newCodeValue,
+				)
+			},
+		),
+	)
 }
 
 func getAccountTypePrivateAddressValue(receiver Value) interpreter.AddressValue {

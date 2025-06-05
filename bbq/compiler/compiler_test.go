@@ -6956,10 +6956,10 @@ func TestCompileOptionalArgument(t *testing.T) {
 
 		checker, err := ParseAndCheckWithOptions(t,
 			`
-              fun test() {
-                  assert(true, message: "hello")
-                  assert(false)
-              }
+            fun test() {
+                assert(true, message: "hello")
+                assert(false)
+            }
             `,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
@@ -7008,13 +7008,13 @@ func TestCompileOptionalArgument(t *testing.T) {
 
 		aContract := `
             contract A {
-							fun test() {
-								self.account.contracts.add(
-									name: "Foo",
-									code: " contract Foo { let message: String\n init(message:String) {self.message = message}\nfun test(): String {return self.message}}".utf8,
-									message: "Optional arg",
-								)
-							}
+                fun test() {
+                    self.account.contracts.add(
+                        name: "Foo",
+                        code: " contract Foo { let message: String\n init(message:String) {self.message = message}\nfun test(): String {return self.message}}".utf8,
+                        message: "Optional arg",
+                    )
+                }
             }
         `
 

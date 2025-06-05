@@ -8595,152 +8595,157 @@ func TestEnumLookupFailure(t *testing.T) {
 	assert.Equal(t, interpreter.Nil, result)
 }
 
-// func TestAccountMethodOptionalArgs(t *testing.T) {
+func TestAccountMethodOptionalArgs(t *testing.T) {
 
-// 	t.Parallel()
+	t.Parallel()
 
-// 	importLocation := common.NewAddressLocation(nil, common.Address{0x1}, "C")
+	importLocation := common.NewAddressLocation(nil, common.Address{0x1}, "C")
 
-// 	importedChecker, err := ParseAndCheckWithOptions(t,
-// 		`
-//           contract C {
-// 							fun test(){
-// 									self.account.contracts.add(
-// 											name: "Foo",
-// 											code: " contract Foo { let message: String\n init(message:String) {self.message = message}\nfun test(): String {return self.message}}".utf8,
-// 											message: "Optional arg",
-// 									)
-// 							}
-//           }
-//         `,
-// 		ParseAndCheckOptions{
-// 			Location: importLocation,
-// 			Config: &sema.Config{
-// 				BaseValueActivationHandler: TestBaseValueActivation,
-// 			},
-// 		},
-// 	)
-// 	require.NoError(t, err)
+	importedChecker, err := ParseAndCheckWithOptions(t,
+		`
+			contract C {
+				fun test(): DeployedContract {
+					self.account.contracts.add(
+						name: "Bar",
+						code: "contract Bar { }".utf8,
+					)
+					return self.account.contracts.add(
+						name: "Foo",
+						code: "contract Foo { let message: String\n init(message:String) {self.message = message}\nfun test(): String {return self.message}}".utf8,
+						message: "Optional arg",
+					)
+				}
+			}
+        `,
+		ParseAndCheckOptions{
+			Location: importLocation,
+			Config: &sema.Config{
+				BaseValueActivationHandler: TestBaseValueActivation,
+			},
+		},
+	)
+	require.NoError(t, err)
 
-// 	importCompiler := compiler.NewInstructionCompiler(
-// 		interpreter.ProgramFromChecker(importedChecker),
-// 		importedChecker.Location,
-// 	)
-// 	importedProgram := importCompiler.Compile()
+	importCompiler := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(importedChecker),
+		importedChecker.Location,
+	)
+	importedProgram := importCompiler.Compile()
 
-// 	_, importedContractValue := initializeContract(
-// 		t,
-// 		importLocation,
-// 		importedProgram,
-// 		nil,
-// 	)
+	_, importedContractValue := initializeContract(
+		t,
+		importLocation,
+		importedProgram,
+		nil,
+	)
 
-// 	checker, err := ParseAndCheckWithOptions(t,
-// 		`
-//           import C from 0x1
+	checker, err := ParseAndCheckWithOptions(t,
+		`
+          import C from 0x1
 
-//           fun test() {
-//               C.test()
-//           }
-//         `,
-// 		ParseAndCheckOptions{
-// 			Config: &sema.Config{
-// 				ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
-// 					return sema.ElaborationImport{
-// 						Elaboration: importedChecker.Elaboration,
-// 					}, nil
-// 				},
-// 			},
-// 		},
-// 	)
-// 	require.NoError(t, err)
+          fun test():String {
+              return C.test().name
+          }
+        `,
+		ParseAndCheckOptions{
+			Config: &sema.Config{
+				ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
 
-// 	comp := compiler.NewInstructionCompiler(
-// 		interpreter.ProgramFromChecker(checker),
-// 		checker.Location,
-// 	)
-// 	comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
-// 		return importedProgram
-// 	}
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+		return importedProgram
+	}
 
-// 	program := comp.Compile()
+	program := comp.Compile()
 
-// 	addressValue := interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1})
+	addressValue := interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1})
 
-// 	var uuid uint64 = 42
+	var uuid uint64 = 42
 
-// 	vmConfig := &vm.Config{
-// 		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
-// 			return importedProgram
-// 		},
-// 		ContractValueHandler: func(*vm.Context, common.Location) *interpreter.CompositeValue {
-// 			return importedContractValue
-// 		},
-// 		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-// 			elaboration := importedChecker.Elaboration
-// 			compositeType := elaboration.CompositeType(typeID)
-// 			if compositeType != nil {
-// 				return compositeType
-// 			}
+	vmConfig := &vm.Config{
+		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
+			return importedProgram
+		},
+		ContractValueHandler: func(*vm.Context, common.Location) *interpreter.CompositeValue {
+			return importedContractValue
+		},
+		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+			elaboration := importedChecker.Elaboration
+			compositeType := elaboration.CompositeType(typeID)
+			if compositeType != nil {
+				return compositeType
+			}
 
-// 			return elaboration.InterfaceType(typeID)
-// 		},
-// 		AccountHandler: &testAccountHandler{
-// 			emitEvent: func(
-// 				_ interpreter.ValueExportContext,
-// 				_ interpreter.LocationRange,
-// 				_ *sema.CompositeType,
-// 				_ []interpreter.Value,
-// 			) {
-// 				// ignore
-// 			},
-// 		},
-// 	}
+			return elaboration.InterfaceType(typeID)
+		},
+		AccountHandler: &testAccountHandler{
+			emitEvent: func(
+				_ interpreter.ValueExportContext,
+				_ interpreter.LocationRange,
+				_ *sema.CompositeType,
+				_ []interpreter.Value,
+			) {
+				// ignore
+			},
+		},
+	}
 
-// 	vmConfig.UUIDHandler = func() (uint64, error) {
-// 		uuid++
-// 		return uuid, nil
-// 	}
+	vmConfig.UUIDHandler = func() (uint64, error) {
+		uuid++
+		return uuid, nil
+	}
 
-// 	vmConfig.InjectedCompositeFieldsHandler = func(
-// 		context interpreter.AccountCreationContext,
-// 		_ common.Location,
-// 		_ string,
-// 		_ common.CompositeKind,
-// 	) map[string]interpreter.Value {
+	vmConfig.InjectedCompositeFieldsHandler = func(
+		context interpreter.AccountCreationContext,
+		_ common.Location,
+		_ string,
+		_ common.CompositeKind,
+	) map[string]interpreter.Value {
 
-// 		accountRef := stdlib.NewAccountReferenceValue(
-// 			context,
-// 			nil,
-// 			addressValue,
-// 			interpreter.FullyEntitledAccountAccess,
-// 			interpreter.EmptyLocationRange,
-// 		)
+		accountRef := stdlib.NewAccountReferenceValue(
+			context,
+			nil,
+			addressValue,
+			interpreter.FullyEntitledAccountAccess,
+			interpreter.EmptyLocationRange,
+		)
 
-// 		return map[string]interpreter.Value{
-// 			sema.ContractAccountFieldName: accountRef,
-// 		}
-// 	}
+		return map[string]interpreter.Value{
+			sema.ContractAccountFieldName: accountRef,
+		}
+	}
 
-// 	vmConfig.AccountHandlerFunc = func(
-// 		context interpreter.AccountCreationContext,
-// 		address interpreter.AddressValue,
-// 	) interpreter.Value {
-// 		return stdlib.NewAccountValue(context, nil, address)
-// 	}
+	vmConfig.AccountHandlerFunc = func(
+		context interpreter.AccountCreationContext,
+		address interpreter.AddressValue,
+	) interpreter.Value {
+		return stdlib.NewAccountValue(context, nil, address)
+	}
 
-// 	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
-// 	result, err := vmInstance.InvokeExternally("test")
-// 	require.NoError(t, err)
-// 	require.Equal(t, 0, vmInstance.StackSize())
+	result, err := vmInstance.InvokeExternally("test")
+	require.NoError(t, err)
+	require.Equal(t, 0, vmInstance.StackSize())
 
-//		require.Equal(
-//			t,
-//			interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-//			result,
-//		)
-//	}
+	require.Equal(
+		t,
+		interpreter.NewUnmeteredStringValue("Foo"),
+		result,
+	)
+}
+
 type testMemoryGauge struct {
 	meter map[common.MemoryKind]uint64
 }
