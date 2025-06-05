@@ -63,8 +63,6 @@ var parseCheckAndInterpretWithOptionsAndMemoryMetering = test_utils.ParseCheckAn
 
 type testEvent = test_utils.TestEvent
 
-var parseCheckAndInterpretWithEvents = test_utils.ParseCheckAndInterpretWithEvents
-
 func newUnmeteredInMemoryStorage() interpreter.InMemoryStorage {
 	return interpreter.NewInMemoryStorage(nil)
 }
