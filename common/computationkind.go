@@ -142,4 +142,150 @@ const (
 	// RLP
 	ComputationKindSTDLIBRLPDecodeString
 	ComputationKindSTDLIBRLPDecodeList
+
+	// VM Instructions
+
+	// Control flow
+
+	ComputationKindInstructionReturn
+	ComputationKindInstructionReturnValue
+	ComputationKindInstructionJump
+	ComputationKindInstructionJumpIfFalse
+	ComputationKindInstructionJumpIfTrue
+	ComputationKindInstructionJumpIfNil
+	_
+	_
+	_
+	_
+
+	// Number operations
+
+	ComputationKindInstructionAdd
+	ComputationKindInstructionSubtract
+	ComputationKindInstructionMultiply
+	ComputationKindInstructionDivide
+	ComputationKindInstructionMod
+	ComputationKindInstructionNegate
+	_
+	_
+	_
+
+	// Bitwise operations
+
+	ComputationKindInstructionBitwiseOr
+	ComputationKindInstructionBitwiseAnd
+	ComputationKindInstructionBitwiseXor
+	ComputationKindInstructionBitwiseLeftShift
+	ComputationKindInstructionBitwiseRightShift
+	_
+
+	// Comparison
+
+	ComputationKindInstructionLess
+	ComputationKindInstructionGreater
+	ComputationKindInstructionLessOrEqual
+	ComputationKindInstructionGreaterOrEqual
+
+	// Equality
+
+	ComputationKindInstructionEqual
+	ComputationKindInstructionNotEqual
+
+	// Unary/Binary operators
+
+	ComputationKindInstructionNot
+	_
+	_
+	_
+	ComputationKindInstructionUnwrap
+	ComputationKindInstructionDestroy
+	ComputationKindInstructionTransferAndConvert
+	ComputationKindInstructionSimpleCast
+	ComputationKindInstructionFailableCast
+	ComputationKindInstructionForceCast
+	ComputationKindInstructionDeref
+	ComputationKindInstructionTransfer
+	_
+	_
+	_
+	_
+	_
+
+	// Value/Constant loading
+
+	ComputationKindInstructionTrue
+	ComputationKindInstructionFalse
+	ComputationKindInstructionNil
+	ComputationKindInstructionNew
+	ComputationKindInstructionNewPath
+	ComputationKindInstructionNewArray
+	ComputationKindInstructionNewDictionary
+	ComputationKindInstructionNewRef
+	ComputationKindInstructionNewClosure
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+
+	ComputationKindInstructionGetConstant
+	ComputationKindInstructionGetLocal
+	ComputationKindInstructionSetLocal
+	ComputationKindInstructionGetUpvalue
+	ComputationKindInstructionSetUpvalue
+	ComputationKindInstructionGetGlobal
+	ComputationKindInstructionSetGlobal
+	ComputationKindInstructionGetField
+	ComputationKindInstructionRemoveField
+	ComputationKindInstructionSetField
+	ComputationKindInstructionSetIndex
+	ComputationKindInstructionGetIndex
+	ComputationKindInstructionRemoveIndex
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+
+	// Invocations
+
+	ComputationKindInstructionInvoke
+	ComputationKindInstructionInvokeMethodStatic
+	ComputationKindInstructionInvokeMethodDynamic
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+
+	// Stack operations
+
+	ComputationKindInstructionDrop
+	ComputationKindInstructionDup
+	_
+	_
+	_
+	_
+	_
+	_
+
+	// Iterator related
+
+	ComputationKindInstructionIterator
+	ComputationKindInstructionIteratorHasNext
+	ComputationKindInstructionIteratorNext
+
+	// Other
+
+	ComputationKindInstructionEmitEvent
 )

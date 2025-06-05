@@ -37,7 +37,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInTransaction(t *testing.
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	accountCodes := map[common.Location][]byte{}
 
@@ -205,7 +205,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInSameContract(t *testing
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	accountCodes := map[common.Location][]byte{}
 

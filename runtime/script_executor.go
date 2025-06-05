@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -50,6 +51,7 @@ type scriptExecutor struct {
 	runtime Runtime
 	scriptExecutorPreparation
 	script Script
+	vm     *vm.VM
 }
 
 func newScriptExecutor(
@@ -118,16 +120,10 @@ func (executor *scriptExecutor) preprocess() (err error) {
 	environment := context.Environment
 	if environment == nil {
 		if context.UseVM {
-			return errors.NewUnexpectedError("cannot execute script with the VM")
+			environment = NewScriptVMEnvironment(config)
+		} else {
+			environment = NewScriptInterpreterEnvironment(config)
 		}
-		environment = NewScriptInterpreterEnvironment(config)
-	}
-
-	switch environment.(type) {
-	case *interpreterEnvironment:
-		break
-	default:
-		return errors.NewUnexpectedError("scripts can only be executed with the interpreter")
 	}
 
 	environment.Configure(
@@ -176,7 +172,17 @@ func (executor *scriptExecutor) preprocess() (err error) {
 		return newError(err, location, codesAndPrograms)
 	}
 
-	executor.interpret = executor.scriptExecutionFunction()
+	switch environment := environment.(type) {
+	case *interpreterEnvironment:
+		executor.interpret = executor.scriptExecutionFunction()
+
+	case *vmEnvironment:
+		compiledProgram := environment.compileProgram(program, location)
+		executor.vm = environment.newVM(location, compiledProgram.program)
+
+	default:
+		return errors.NewUnexpectedError("scripts can only be executed with the interpreter")
+	}
 
 	return nil
 }
@@ -200,17 +206,23 @@ func (executor *scriptExecutor) execute() (val cadence.Value, err error) {
 		codesAndPrograms,
 	)
 
+	var result cadence.Value
+
 	switch environment := environment.(type) {
 	case *interpreterEnvironment:
-		value, err := executor.executeWithInterpreter(environment)
-		if err != nil {
-			return nil, newError(err, executor.context.Location, codesAndPrograms)
-		}
-		return value, nil
+		result, err = executor.executeWithInterpreter(environment)
+
+	case *vmEnvironment:
+		result, err = executor.executeWithVM(environment)
 
 	default:
 		panic(errors.NewUnexpectedError("unsupported environment: %T", environment))
 	}
+
+	if err != nil {
+		return nil, newError(err, executor.context.Location, codesAndPrograms)
+	}
+	return result, nil
 }
 
 func (executor *scriptExecutor) executeWithInterpreter(
@@ -248,6 +260,59 @@ func (executor *scriptExecutor) executeWithInterpreter(
 	}
 
 	return result, nil
+}
+
+func (executor *scriptExecutor) executeWithVM(
+	environment *vmEnvironment,
+) (val cadence.Value, err error) {
+
+	context := executor.vm.Context()
+	codesAndPrograms := executor.codesAndPrograms
+
+	// Recover internal panics and return them as an error.
+	// For example, the argument validation might attempt to
+	// load contract code for non-existing types
+
+	defer Recover(
+		func(internalErr Error) {
+			err = internalErr
+		},
+		executor.context.Location,
+		codesAndPrograms,
+	)
+
+	values, err := importValidatedArguments(
+		context,
+		executor.environment,
+		interpreter.EmptyLocationRange,
+		executor.script.Arguments,
+		executor.functionEntryPointType.Parameters,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	value, err := executor.vm.InvokeExternally(
+		sema.FunctionEntryPointName,
+		values...,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Write back all stored values, which were actually just cached, back into storage
+	err = environment.commitStorage(context)
+	if err != nil {
+		return nil, err
+	}
+
+	var exportedValue cadence.Value
+	exportedValue, err = ExportValue(value, context, interpreter.EmptyLocationRange)
+	if err != nil {
+		return nil, err
+	}
+
+	return exportedValue, nil
 }
 
 func (executor *scriptExecutor) scriptExecutionFunction() interpretFunc {

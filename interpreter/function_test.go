@@ -177,7 +177,7 @@ func TestInterpretResultVariable(t *testing.T) {
 
 		var checkerErrors []error
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             access(all) resource R {
                 access(all) var id: UInt8
 				access(all) fun setID(_ id: UInt8) {
@@ -239,7 +239,7 @@ func TestInterpretResultVariable(t *testing.T) {
 
 		var checkerErrors []error
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             access(all) resource R {
                 access(all) var id: UInt8
 

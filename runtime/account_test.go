@@ -46,7 +46,7 @@ func TestRuntimeAccountKeyConstructor(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	script := []byte(`
         access(all) fun main(): AccountKey {
@@ -91,7 +91,7 @@ func TestRuntimeReturnPublicAccount(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	script := []byte(`
         access(all) fun main(): &Account {
@@ -124,7 +124,7 @@ func TestRuntimeReturnAuthAccount(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	script := []byte(`
         access(all) fun main(): auth(Storage) &Account {
@@ -164,7 +164,7 @@ func TestRuntimeStoreAccountAPITypes(t *testing.T) {
 		sema.PublicKeyType,
 	} {
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(fmt.Sprintf(`
             transaction {
@@ -229,7 +229,7 @@ type accountTestEnvironment struct {
 
 func newAccountTestEnv() accountTestEnvironment {
 	storage := newTestAccountKeyStorage()
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	rtInterface := newAccountKeyTestRuntimeInterface(storage)
 
 	addPublicKeyValidation(rtInterface, nil)
@@ -594,7 +594,7 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	pubKey1 := []byte{1, 2, 3}
 	pubKey1Value := newBytesValue(pubKey1)
@@ -1061,7 +1061,7 @@ func TestRuntimeHashAlgorithm(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	script := []byte(`
         access(all) fun main(): [HashAlgorithm?] {
@@ -1136,7 +1136,7 @@ func TestRuntimeSignatureAlgorithm(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	script := []byte(`
         access(all) fun main(): [SignatureAlgorithm?] {
@@ -1457,7 +1457,7 @@ func TestRuntimePublicKey(t *testing.T) {
 	t.Parallel()
 
 	executeScript := func(code string, runtimeInterface Interface) (cadence.Value, error) {
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		value, err := rt.ExecuteScript(
 			Script{
@@ -1816,7 +1816,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 	t.Run("get existing contract", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             transaction {
@@ -1858,7 +1858,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 	t.Run("get non-existing contract", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             transaction {
@@ -1900,7 +1900,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 	t.Run("borrow existing contract", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		accountCodes := map[Location][]byte{}
 		var events []cadence.Event
@@ -1993,7 +1993,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 	t.Run("borrow existing contract with incorrect type", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		accountCodes := map[Location][]byte{}
 		var events []cadence.Event
@@ -2084,7 +2084,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 	t.Run("borrow existing contract interface", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		accountCodes := map[Location][]byte{}
 		var events []cadence.Event
@@ -2180,7 +2180,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 	t.Run("borrow existing contract with entitlement authorization", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		accountCodes := map[Location][]byte{}
 		var events []cadence.Event
@@ -2258,7 +2258,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 	t.Run("borrow non-existing contract", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
@@ -2294,7 +2294,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 	t.Run("get names", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             transaction {
@@ -2338,7 +2338,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 	t.Run("update names", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             transaction {
@@ -2377,7 +2377,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 	t.Run("update names through reference", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             transaction {
@@ -2425,7 +2425,7 @@ func TestRuntimePublicAccountContracts(t *testing.T) {
 	t.Run("get existing contract", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             access(all) fun main(): [AnyStruct] {
@@ -2483,7 +2483,7 @@ func TestRuntimePublicAccountContracts(t *testing.T) {
 	t.Run("get non-existing contract", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             access(all) fun main() {
@@ -2521,7 +2521,7 @@ func TestRuntimePublicAccountContracts(t *testing.T) {
 	t.Run("get names", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             access(all) fun main(): &[String] {
@@ -2571,7 +2571,7 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 	t.Run("script", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             access(all) fun main(): UInt64 {
@@ -2603,7 +2603,7 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 	t.Run("incorrect arg type", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             access(all) fun main() {
@@ -2631,7 +2631,7 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 	t.Run("no args", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             access(all) fun main() {
@@ -2659,7 +2659,7 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 	t.Run("too many args", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             access(all) fun main() {
@@ -2686,7 +2686,7 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 	t.Run("transaction", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             transaction {
