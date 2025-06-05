@@ -7328,6 +7328,7 @@ func TestCompileOptionalArgument(t *testing.T) {
 		assert.Equal(t,
 			[]opcode.Instruction{
 				// assert(true, message: "hello")
+				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},
 				opcode.InstructionTrue{},
 				opcode.InstructionTransferAndConvert{Type: 0x1},
@@ -7337,6 +7338,7 @@ func TestCompileOptionalArgument(t *testing.T) {
 				opcode.InstructionDrop{},
 
 				// assert(false)
+				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 0x1},
 				opcode.InstructionFalse{},
 				opcode.InstructionTransferAndConvert{Type: 0x1},
@@ -7381,6 +7383,7 @@ func TestCompileOptionalArgument(t *testing.T) {
 
 		assert.Equal(t,
 			[]opcode.Instruction{
+				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: 0x0},
 				opcode.InstructionGetField{FieldName: 0x1},
 				opcode.InstructionGetField{FieldName: 0x0},
