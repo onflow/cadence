@@ -374,27 +374,20 @@ func (v *CompositeValue) Destroy(context ResourceDestructionContext, locationRan
 	if v.Functions == nil {
 		v.Functions = context.GetCompositeValueFunctions(v, locationRange)
 	}
-	for _, constructor := range v.defaultDestroyEventConstructors() {
 
-		// pass the container value to the creation of the default event as an implicit argument, so that
-		// its fields are accessible in the body of the event constructor
-		eventConstructorInvocation := NewInvocation(
-			context,
-			nil,
-			nil,
-			[]Value{v},
-			[]sema.Type{},
-			nil,
-			locationRange,
-		)
-
-		event := constructor.Invoke(eventConstructorInvocation).(*CompositeValue)
+	events := context.DefaultDestroyEvents(v, locationRange)
+	for _, event := range events {
+		// emit the event once destruction is complete
 		eventType := MustSemaTypeOfValue(event, context).(*sema.CompositeType)
 
 		eventFields := extractEventFields(context, event, eventType)
 
-		// emit the event once destruction is complete
-		defer context.EmitEvent(context, locationRange, eventType, eventFields)
+		defer context.EmitEvent(
+			context,
+			locationRange,
+			eventType,
+			eventFields,
+		)
 	}
 
 	valueID := v.ValueID()
@@ -421,6 +414,34 @@ func (v *CompositeValue) Destroy(context ResourceDestructionContext, locationRan
 	InvalidateReferencedResources(context, v, locationRange)
 
 	v.dictionary = nil
+}
+
+func (v *CompositeValue) DefaultDestroyEvents(
+	context ResourceDestructionContext,
+	locationRange LocationRange,
+) []*CompositeValue {
+	eventConstructors := v.defaultDestroyEventConstructors()
+
+	events := make([]*CompositeValue, len(eventConstructors))
+	for _, constructor := range eventConstructors {
+
+		// pass the container value to the creation of the default event as an implicit argument, so that
+		// its fields are accessible in the body of the event constructor
+		eventConstructorInvocation := NewInvocation(
+			context,
+			nil,
+			nil,
+			[]Value{v},
+			[]sema.Type{},
+			nil,
+			locationRange,
+		)
+
+		event := constructor.Invoke(eventConstructorInvocation).(*CompositeValue)
+		events = append(events, event)
+	}
+
+	return events
 }
 
 func (v *CompositeValue) getBuiltinMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {

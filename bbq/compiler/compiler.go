@@ -681,7 +681,8 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 
 		// Members of event types are skipped from compiling (see `VisitCompositeDeclaration`).
 		// Hence also skip from reserving globals for them.
-		if compositeType.Kind == common.CompositeKindEvent {
+		if compositeType.Kind == common.CompositeKindEvent &&
+			!declaration.IsResourceDestructionDefaultEvent() {
 			continue
 		}
 
@@ -2664,7 +2665,8 @@ func (c *Compiler[_, _]) VisitCompositeDeclaration(declaration *ast.CompositeDec
 	compositeType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
 
 	// Event declarations have no members
-	if compositeType.Kind == common.CompositeKindEvent {
+	if compositeType.Kind == common.CompositeKindEvent &&
+		!declaration.IsResourceDestructionDefaultEvent() {
 		return
 	}
 

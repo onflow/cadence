@@ -2777,7 +2777,7 @@ func TestInterpretDefaultDestroyEventArgumentScoping(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
             let x = 1
 

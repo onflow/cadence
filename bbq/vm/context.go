@@ -20,7 +20,6 @@ package vm
 
 import (
 	"github.com/onflow/atree"
-
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -260,4 +259,36 @@ func (c *Context) GetFunction(
 	name string,
 ) FunctionValue {
 	return c.lookupFunction(location, name)
+}
+
+func (c *Context) DefaultDestroyEvents(
+	resourceValue *interpreter.CompositeValue,
+	locationRange interpreter.LocationRange,
+) []*interpreter.CompositeValue {
+	method := c.GetMethod(
+		resourceValue,
+		commons.ResourceDestroyedEventsFunctionName,
+		EmptyLocationRange,
+	)
+
+	events := c.InvokeFunction(method, nil)
+	eventsArray, ok := events.(*interpreter.ArrayValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	eventValues := make([]*interpreter.CompositeValue, 0, eventsArray.Count())
+
+	eventsArray.Iterate(
+		c,
+		func(element interpreter.Value) (resume bool) {
+			event := element.(*interpreter.CompositeValue)
+			eventValues = append(eventValues, event)
+			return true
+		},
+		false,
+		locationRange,
+	)
+
+	return eventValues
 }
