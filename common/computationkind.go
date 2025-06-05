@@ -199,12 +199,12 @@ const (
 	_
 	ComputationKindInstructionUnwrap
 	ComputationKindInstructionDestroy
-	ComputationKindInstructionTransfer
+	ComputationKindInstructionTransferAndConvert
 	ComputationKindInstructionSimpleCast
 	ComputationKindInstructionFailableCast
 	ComputationKindInstructionForceCast
 	ComputationKindInstructionDeref
-	_
+	ComputationKindInstructionTransfer
 	_
 	_
 	_

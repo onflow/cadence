@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/constant"
@@ -1191,8 +1193,8 @@ func getStringConstant(vm *VM, index uint16) string {
 	return string(constant.Data)
 }
 
-func opTransfer(vm *VM, ins opcode.InstructionTransfer) {
-	common.UseComputation(vm.context, common.InstructionTransferComputationUsage)
+func opTransferAndConvert(vm *VM, ins opcode.InstructionTransferAndConvert) {
+	common.UseComputation(vm.context, common.InstructionTransferAndConvertComputationUsage)
 
 	typeIndex := ins.Type
 	targetType := vm.loadType(typeIndex)
@@ -1208,6 +1210,26 @@ func opTransfer(vm *VM, ins opcode.InstructionTransfer) {
 		interpreter.MustConvertStaticToSemaType(valueType, context),
 		interpreter.MustConvertStaticToSemaType(targetType, context),
 		EmptyLocationRange,
+	)
+
+	vm.replaceTop(transferredValue)
+}
+
+func opTransfer(vm *VM) {
+	common.UseComputation(vm.context, common.InstructionTransferComputationUsage)
+
+	context := vm.context
+
+	value := vm.peek()
+
+	transferredValue := value.Transfer(
+		context,
+		EmptyLocationRange,
+		atree.Address{},
+		false,
+		nil,
+		nil,
+		true, // argument is standalone.
 	)
 
 	vm.replaceTop(transferredValue)
@@ -1629,8 +1651,10 @@ func (vm *VM) run() {
 			opGetField(vm, ins)
 		case opcode.InstructionRemoveField:
 			opRemoveField(vm, ins)
+		case opcode.InstructionTransferAndConvert:
+			opTransferAndConvert(vm, ins)
 		case opcode.InstructionTransfer:
-			opTransfer(vm, ins)
+			opTransfer(vm)
 		case opcode.InstructionDestroy:
 			opDestroy(vm)
 		case opcode.InstructionNewPath:

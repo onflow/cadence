@@ -53,11 +53,12 @@ func _() {
 	_ = x[ComputationKindInstructionNot-1141]
 	_ = x[ComputationKindInstructionUnwrap-1145]
 	_ = x[ComputationKindInstructionDestroy-1146]
-	_ = x[ComputationKindInstructionTransfer-1147]
+	_ = x[ComputationKindInstructionTransferAndConvert-1147]
 	_ = x[ComputationKindInstructionSimpleCast-1148]
 	_ = x[ComputationKindInstructionFailableCast-1149]
 	_ = x[ComputationKindInstructionForceCast-1150]
 	_ = x[ComputationKindInstructionDeref-1151]
+	_ = x[ComputationKindInstructionTransfer-1152]
 	_ = x[ComputationKindInstructionTrue-1158]
 	_ = x[ComputationKindInstructionFalse-1159]
 	_ = x[ComputationKindInstructionNil-1160]
@@ -91,7 +92,7 @@ func _() {
 	_ = x[ComputationKindInstructionEmitEvent-1219]
 }
 
-const _ComputationKind_name = "UnknownStatementLoopFunctionInvocationCreateCompositeValueTransferCompositeValueDestroyCompositeValueCreateArrayValueTransferArrayValueDestroyArrayValueCreateDictionaryValueTransferDictionaryValueDestroyDictionaryValueEncodeValueSTDLIBPanicSTDLIBAssertSTDLIBRevertibleRandomSTDLIBRLPDecodeStringSTDLIBRLPDecodeListInstructionReturnInstructionReturnValueInstructionJumpInstructionJumpIfFalseInstructionJumpIfTrueInstructionJumpIfNilInstructionAddInstructionSubtractInstructionMultiplyInstructionDivideInstructionModInstructionNegateInstructionBitwiseOrInstructionBitwiseAndInstructionBitwiseXorInstructionBitwiseLeftShiftInstructionBitwiseRightShiftInstructionLessInstructionGreaterInstructionLessOrEqualInstructionGreaterOrEqualInstructionEqualInstructionNotEqualInstructionNotInstructionUnwrapInstructionDestroyInstructionTransferInstructionSimpleCastInstructionFailableCastInstructionForceCastInstructionDerefInstructionTrueInstructionFalseInstructionNilInstructionNewInstructionNewPathInstructionNewArrayInstructionNewDictionaryInstructionNewRefInstructionNewClosureInstructionGetConstantInstructionGetLocalInstructionSetLocalInstructionGetUpvalueInstructionSetUpvalueInstructionGetGlobalInstructionSetGlobalInstructionGetFieldInstructionRemoveFieldInstructionSetFieldInstructionSetIndexInstructionGetIndexInstructionRemoveIndexInstructionInvokeInstructionInvokeMethodStaticInstructionInvokeMethodDynamicInstructionDropInstructionDupInstructionIteratorInstructionIteratorHasNextInstructionIteratorNextInstructionEmitEvent"
+const _ComputationKind_name = "UnknownStatementLoopFunctionInvocationCreateCompositeValueTransferCompositeValueDestroyCompositeValueCreateArrayValueTransferArrayValueDestroyArrayValueCreateDictionaryValueTransferDictionaryValueDestroyDictionaryValueEncodeValueSTDLIBPanicSTDLIBAssertSTDLIBRevertibleRandomSTDLIBRLPDecodeStringSTDLIBRLPDecodeListInstructionReturnInstructionReturnValueInstructionJumpInstructionJumpIfFalseInstructionJumpIfTrueInstructionJumpIfNilInstructionAddInstructionSubtractInstructionMultiplyInstructionDivideInstructionModInstructionNegateInstructionBitwiseOrInstructionBitwiseAndInstructionBitwiseXorInstructionBitwiseLeftShiftInstructionBitwiseRightShiftInstructionLessInstructionGreaterInstructionLessOrEqualInstructionGreaterOrEqualInstructionEqualInstructionNotEqualInstructionNotInstructionUnwrapInstructionDestroyInstructionTransferAndConvertInstructionSimpleCastInstructionFailableCastInstructionForceCastInstructionDerefInstructionTransferInstructionTrueInstructionFalseInstructionNilInstructionNewInstructionNewPathInstructionNewArrayInstructionNewDictionaryInstructionNewRefInstructionNewClosureInstructionGetConstantInstructionGetLocalInstructionSetLocalInstructionGetUpvalueInstructionSetUpvalueInstructionGetGlobalInstructionSetGlobalInstructionGetFieldInstructionRemoveFieldInstructionSetFieldInstructionSetIndexInstructionGetIndexInstructionRemoveIndexInstructionInvokeInstructionInvokeMethodStaticInstructionInvokeMethodDynamicInstructionDropInstructionDupInstructionIteratorInstructionIteratorHasNextInstructionIteratorNextInstructionEmitEvent"
 
 var _ComputationKind_map = map[ComputationKind]string{
 	0:    _ComputationKind_name[0:7],
@@ -139,42 +140,43 @@ var _ComputationKind_map = map[ComputationKind]string{
 	1141: _ComputationKind_name[763:777],
 	1145: _ComputationKind_name[777:794],
 	1146: _ComputationKind_name[794:812],
-	1147: _ComputationKind_name[812:831],
-	1148: _ComputationKind_name[831:852],
-	1149: _ComputationKind_name[852:875],
-	1150: _ComputationKind_name[875:895],
-	1151: _ComputationKind_name[895:911],
-	1158: _ComputationKind_name[911:926],
-	1159: _ComputationKind_name[926:942],
-	1160: _ComputationKind_name[942:956],
-	1161: _ComputationKind_name[956:970],
-	1162: _ComputationKind_name[970:988],
-	1163: _ComputationKind_name[988:1007],
-	1164: _ComputationKind_name[1007:1031],
-	1165: _ComputationKind_name[1031:1048],
-	1166: _ComputationKind_name[1048:1069],
-	1178: _ComputationKind_name[1069:1091],
-	1179: _ComputationKind_name[1091:1110],
-	1180: _ComputationKind_name[1110:1129],
-	1181: _ComputationKind_name[1129:1150],
-	1182: _ComputationKind_name[1150:1171],
-	1183: _ComputationKind_name[1171:1191],
-	1184: _ComputationKind_name[1191:1211],
-	1185: _ComputationKind_name[1211:1230],
-	1186: _ComputationKind_name[1230:1252],
-	1187: _ComputationKind_name[1252:1271],
-	1188: _ComputationKind_name[1271:1290],
-	1189: _ComputationKind_name[1290:1309],
-	1190: _ComputationKind_name[1309:1331],
-	1198: _ComputationKind_name[1331:1348],
-	1199: _ComputationKind_name[1348:1377],
-	1200: _ComputationKind_name[1377:1407],
-	1208: _ComputationKind_name[1407:1422],
-	1209: _ComputationKind_name[1422:1436],
-	1216: _ComputationKind_name[1436:1455],
-	1217: _ComputationKind_name[1455:1481],
-	1218: _ComputationKind_name[1481:1504],
-	1219: _ComputationKind_name[1504:1524],
+	1147: _ComputationKind_name[812:841],
+	1148: _ComputationKind_name[841:862],
+	1149: _ComputationKind_name[862:885],
+	1150: _ComputationKind_name[885:905],
+	1151: _ComputationKind_name[905:921],
+	1152: _ComputationKind_name[921:940],
+	1158: _ComputationKind_name[940:955],
+	1159: _ComputationKind_name[955:971],
+	1160: _ComputationKind_name[971:985],
+	1161: _ComputationKind_name[985:999],
+	1162: _ComputationKind_name[999:1017],
+	1163: _ComputationKind_name[1017:1036],
+	1164: _ComputationKind_name[1036:1060],
+	1165: _ComputationKind_name[1060:1077],
+	1166: _ComputationKind_name[1077:1098],
+	1178: _ComputationKind_name[1098:1120],
+	1179: _ComputationKind_name[1120:1139],
+	1180: _ComputationKind_name[1139:1158],
+	1181: _ComputationKind_name[1158:1179],
+	1182: _ComputationKind_name[1179:1200],
+	1183: _ComputationKind_name[1200:1220],
+	1184: _ComputationKind_name[1220:1240],
+	1185: _ComputationKind_name[1240:1259],
+	1186: _ComputationKind_name[1259:1281],
+	1187: _ComputationKind_name[1281:1300],
+	1188: _ComputationKind_name[1300:1319],
+	1189: _ComputationKind_name[1319:1338],
+	1190: _ComputationKind_name[1338:1360],
+	1198: _ComputationKind_name[1360:1377],
+	1199: _ComputationKind_name[1377:1406],
+	1200: _ComputationKind_name[1406:1436],
+	1208: _ComputationKind_name[1436:1451],
+	1209: _ComputationKind_name[1451:1465],
+	1216: _ComputationKind_name[1465:1484],
+	1217: _ComputationKind_name[1484:1510],
+	1218: _ComputationKind_name[1510:1533],
+	1219: _ComputationKind_name[1533:1553],
 }
 
 func (i ComputationKind) String() string {

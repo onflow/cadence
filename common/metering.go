@@ -127,6 +127,7 @@ var (
 	InstructionNotComputationUsage                 = NewConstantComputationUsage(ComputationKindInstructionNot)
 	InstructionUnwrapComputationUsage              = NewConstantComputationUsage(ComputationKindInstructionUnwrap)
 	InstructionDestroyComputationUsage             = NewConstantComputationUsage(ComputationKindInstructionDestroy)
+	InstructionTransferAndConvertComputationUsage  = NewConstantComputationUsage(ComputationKindInstructionTransferAndConvert)
 	InstructionTransferComputationUsage            = NewConstantComputationUsage(ComputationKindInstructionTransfer)
 	InstructionSimpleCastComputationUsage          = NewConstantComputationUsage(ComputationKindInstructionSimpleCast)
 	InstructionFailableCastComputationUsage        = NewConstantComputationUsage(ComputationKindInstructionFailableCast)
