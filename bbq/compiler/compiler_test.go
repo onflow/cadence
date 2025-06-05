@@ -7474,6 +7474,8 @@ func TestCompileSwapIdentifiers(t *testing.T) {
 		yIndex
 		tempIndex1
 		tempIndex2
+		tempIndex3
+		tempIndex4
 	)
 
 	assert.Equal(t,
@@ -7499,12 +7501,18 @@ func TestCompileSwapIdentifiers(t *testing.T) {
 			opcode.InstructionGetLocal{Local: yIndex},
 			opcode.InstructionSetLocal{Local: tempIndex2},
 
-			opcode.InstructionGetLocal{Local: tempIndex2},
-			opcode.InstructionTransferAndConvert{Type: 0x1},
-			opcode.InstructionSetLocal{Local: xIndex},
-
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: tempIndex3},
+
+			opcode.InstructionGetLocal{Local: tempIndex2},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: tempIndex4},
+
+			opcode.InstructionGetLocal{Local: tempIndex4},
+			opcode.InstructionSetLocal{Local: xIndex},
+
+			opcode.InstructionGetLocal{Local: tempIndex3},
 			opcode.InstructionSetLocal{Local: yIndex},
 
 			// Return
@@ -7587,20 +7595,20 @@ func TestCompileSwapMembers(t *testing.T) {
 
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetField{FieldName: 0},
+			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionSetLocal{Local: tempIndex3},
 
 			opcode.InstructionGetLocal{Local: tempIndex2},
 			opcode.InstructionGetField{FieldName: 1},
+			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionSetLocal{Local: tempIndex4},
 
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetLocal{Local: tempIndex4},
-			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionSetField{FieldName: 0},
 
 			opcode.InstructionGetLocal{Local: tempIndex2},
 			opcode.InstructionGetLocal{Local: tempIndex3},
-			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionSetField{FieldName: 1},
 
 			// Return
@@ -7693,23 +7701,23 @@ func TestCompileSwapIndex(t *testing.T) {
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetLocal{Local: tempIndex2},
 			opcode.InstructionGetIndex{},
+			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionSetLocal{Local: tempIndex5},
 
 			opcode.InstructionGetLocal{Local: tempIndex3},
 			opcode.InstructionGetLocal{Local: tempIndex4},
 			opcode.InstructionGetIndex{},
+			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionSetLocal{Local: tempIndex6},
 
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetLocal{Local: tempIndex2},
 			opcode.InstructionGetLocal{Local: tempIndex6},
-			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionSetIndex{},
 
 			opcode.InstructionGetLocal{Local: tempIndex3},
 			opcode.InstructionGetLocal{Local: tempIndex4},
 			opcode.InstructionGetLocal{Local: tempIndex5},
-			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionSetIndex{},
 
 			// Return

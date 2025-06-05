@@ -1502,11 +1502,13 @@ func (c *Compiler[_, _]) VisitSwapStatement(statement *ast.SwapStatement) (_ str
 		statement.Left,
 		leftTargetIndex,
 		leftKeyIndex,
+		rightType,
 	)
 	rightValueIndex := c.compileSwapGet(
 		statement.Right,
 		rightTargetIndex,
 		rightKeyIndex,
+		leftType,
 	)
 
 	// Set right value to left target,
@@ -1519,14 +1521,12 @@ func (c *Compiler[_, _]) VisitSwapStatement(statement *ast.SwapStatement) (_ str
 		leftTargetIndex,
 		leftKeyIndex,
 		rightValueIndex,
-		leftType,
 	)
 	c.compileSwapSet(
 		statement.Right,
 		rightTargetIndex,
 		rightKeyIndex,
 		leftValueIndex,
-		rightType,
 	)
 
 	return
@@ -1570,16 +1570,11 @@ func (c *Compiler[_, _]) compileSwapKey(sideExpression ast.Expression) (keyLocal
 	return
 }
 
-func (c *Compiler[_, _]) compileSwapGet(sideExpression ast.Expression, targetIndex uint16, keyIndex uint16) (valueIndex uint16) {
+func (c *Compiler[_, _]) compileSwapGet(sideExpression ast.Expression, targetIndex uint16, keyIndex uint16, targetType sema.Type) (valueIndex uint16) {
 
 	switch sideExpression := sideExpression.(type) {
 	case *ast.IdentifierExpression:
-		// Avoid introducing a temporary local,
-		// use the target index directly as the value index.
-
-		valueIndex = targetIndex
-
-		return
+		c.emitGetLocal(targetIndex)
 
 	case *ast.MemberExpression:
 		memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(sideExpression)
@@ -1603,6 +1598,8 @@ func (c *Compiler[_, _]) compileSwapGet(sideExpression ast.Expression, targetInd
 		panic(errors.NewUnreachableError())
 	}
 
+	c.emitTransferAndConvert(targetType)
+
 	valueIndex = c.currentFunction.generateLocalIndex()
 	c.emitSetLocal(valueIndex)
 
@@ -1614,12 +1611,10 @@ func (c *Compiler[_, _]) compileSwapSet(
 	targetIndex uint16,
 	keyIndex uint16,
 	valueIndex uint16,
-	targetType sema.Type,
 ) {
 	switch sideExpression := sideExpression.(type) {
 	case *ast.IdentifierExpression:
 		c.emitGetLocal(valueIndex)
-		c.emitTransferAndConvert(targetType)
 		// NOTE: Assign to the original target. Do NOT use targetIndex here, because it is a temporary.
 		name := sideExpression.Identifier.Identifier
 		c.emitVariableStore(name)
@@ -1627,7 +1622,6 @@ func (c *Compiler[_, _]) compileSwapSet(
 	case *ast.MemberExpression:
 		c.emitGetLocal(targetIndex)
 		c.emitGetLocal(valueIndex)
-		c.emitTransferAndConvert(targetType)
 		name := sideExpression.Identifier.Identifier
 		constant := c.addStringConst(name)
 		c.emit(opcode.InstructionSetField{
@@ -1638,7 +1632,6 @@ func (c *Compiler[_, _]) compileSwapSet(
 		c.emitGetLocal(targetIndex)
 		c.emitGetLocal(keyIndex)
 		c.emitGetLocal(valueIndex)
-		c.emitTransferAndConvert(targetType)
 		c.emit(opcode.InstructionSetIndex{})
 
 	default:
