@@ -31,27 +31,27 @@ var _ Value = PlaceholderValue{}
 
 func (PlaceholderValue) IsValue() {}
 
-func (f PlaceholderValue) String() string {
-	return f.RecursiveString(SeenReferences{})
+func (v PlaceholderValue) String() string {
+	return v.RecursiveString(SeenReferences{})
 }
 
-func (f PlaceholderValue) RecursiveString(_ SeenReferences) string {
+func (PlaceholderValue) RecursiveString(_ SeenReferences) string {
 	return ""
 }
 
-func (f PlaceholderValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (PlaceholderValue) MeteredString(_ ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	return ""
 }
 
-func (f PlaceholderValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
+func (PlaceholderValue) Accept(_ ValueVisitContext, _ Visitor, _ LocationRange) {
 	// NO-OP
 }
 
-func (f PlaceholderValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (PlaceholderValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
-func (f PlaceholderValue) StaticType(_ ValueStaticTypeContext) StaticType {
+func (PlaceholderValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	return PrimitiveStaticTypeNever
 }
 
@@ -59,7 +59,7 @@ func (PlaceholderValue) IsImportable(_ ValueImportableContext, _ LocationRange) 
 	return false
 }
 
-func (f PlaceholderValue) ConformsToStaticType(
+func (PlaceholderValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
@@ -67,8 +67,8 @@ func (f PlaceholderValue) ConformsToStaticType(
 	return true
 }
 
-func (f PlaceholderValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
-	return NonStorable{Value: f}, nil
+func (v PlaceholderValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+	return NonStorable{Value: v}, nil
 }
 
 func (PlaceholderValue) NeedsStoreTo(_ atree.Address) bool {
@@ -79,7 +79,7 @@ func (PlaceholderValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
-func (f PlaceholderValue) Transfer(
+func (v PlaceholderValue) Transfer(
 	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
@@ -92,11 +92,11 @@ func (f PlaceholderValue) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
-	return f
+	return v
 }
 
-func (f PlaceholderValue) Clone(_ ValueCloneContext) Value {
-	return f
+func (v PlaceholderValue) Clone(_ ValueCloneContext) Value {
+	return v
 }
 
 func (PlaceholderValue) DeepRemove(_ ValueRemoveContext, _ bool) {
