@@ -35,11 +35,12 @@ func _() {
 	_ = x[Not-32]
 	_ = x[Unwrap-36]
 	_ = x[Destroy-37]
-	_ = x[Transfer-38]
+	_ = x[TransferAndConvert-38]
 	_ = x[SimpleCast-39]
 	_ = x[FailableCast-40]
 	_ = x[ForceCast-41]
 	_ = x[Deref-42]
+	_ = x[Transfer-43]
 	_ = x[True-49]
 	_ = x[False-50]
 	_ = x[Nil-51]
@@ -81,7 +82,7 @@ const (
 	_Opcode_name_1 = "AddSubtractMultiplyDivideModNegate"
 	_Opcode_name_2 = "BitwiseOrBitwiseAndBitwiseXorBitwiseLeftShiftBitwiseRightShift"
 	_Opcode_name_3 = "LessGreaterLessOrEqualGreaterOrEqualEqualNotEqualNot"
-	_Opcode_name_4 = "UnwrapDestroyTransferSimpleCastFailableCastForceCastDeref"
+	_Opcode_name_4 = "UnwrapDestroyTransferAndConvertSimpleCastFailableCastForceCastDerefTransfer"
 	_Opcode_name_5 = "TrueFalseNilNewNewPathNewArrayNewDictionaryNewRefNewClosure"
 	_Opcode_name_6 = "GetConstantGetLocalSetLocalGetUpvalueSetUpvalueGetGlobalSetGlobalGetFieldRemoveFieldSetFieldSetIndexGetIndexRemoveIndex"
 	_Opcode_name_7 = "InvokeInvokeMethodStaticInvokeMethodDynamic"
@@ -94,7 +95,7 @@ var (
 	_Opcode_index_1 = [...]uint8{0, 3, 11, 19, 25, 28, 34}
 	_Opcode_index_2 = [...]uint8{0, 9, 19, 29, 45, 62}
 	_Opcode_index_3 = [...]uint8{0, 4, 11, 22, 36, 41, 49, 52}
-	_Opcode_index_4 = [...]uint8{0, 6, 13, 21, 31, 43, 52, 57}
+	_Opcode_index_4 = [...]uint8{0, 6, 13, 31, 41, 53, 62, 67, 75}
 	_Opcode_index_5 = [...]uint8{0, 4, 9, 12, 15, 22, 30, 43, 49, 59}
 	_Opcode_index_6 = [...]uint8{0, 11, 19, 27, 37, 47, 56, 65, 73, 84, 92, 100, 108, 119}
 	_Opcode_index_7 = [...]uint8{0, 6, 24, 43}
@@ -115,7 +116,7 @@ func (i Opcode) String() string {
 	case 26 <= i && i <= 32:
 		i -= 26
 		return _Opcode_name_3[_Opcode_index_3[i]:_Opcode_index_3[i+1]]
-	case 36 <= i && i <= 42:
+	case 36 <= i && i <= 43:
 		i -= 36
 		return _Opcode_name_4[_Opcode_index_4[i]:_Opcode_index_4[i+1]]
 	case 49 <= i && i <= 57:

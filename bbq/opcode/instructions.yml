@@ -415,6 +415,17 @@
 
 - name: "transfer"
   description:
+    Pops a value off the stack, calls transfer, and then pushes it back on to the stack.
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "transferAndConvert"
+  description:
     Pops a value off the stack, transfers it to the given type, and then pushes it back on to the stack.
   operands:
     - name: "type"

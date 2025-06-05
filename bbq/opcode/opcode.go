@@ -79,12 +79,12 @@ const (
 	_
 	Unwrap
 	Destroy
-	Transfer
+	TransferAndConvert
 	SimpleCast
 	FailableCast
 	ForceCast
 	Deref
-	_
+	Transfer
 	_
 	_
 	_
