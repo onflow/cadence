@@ -849,12 +849,19 @@ func opGetIndex(vm *VM) {
 }
 
 func opRemoveIndex(vm *VM) {
+	context := vm.context
 	container, index := vm.pop2()
 	containerValue := container.(interpreter.ValueIndexableValue)
 	element := containerValue.RemoveKey(
-		vm.context,
+		context,
 		EmptyLocationRange,
 		index,
+	)
+	containerValue.SetKey(
+		context,
+		EmptyLocationRange,
+		index,
+		interpreter.PlaceholderValue{},
 	)
 	vm.push(element)
 }

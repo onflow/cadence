@@ -1474,14 +1474,176 @@ func (c *Compiler[_, _]) compileAssignment(
 		c.emit(opcode.InstructionSetIndex{})
 
 	default:
-		// TODO:
 		panic(errors.NewUnreachableError())
 	}
 }
 
-func (c *Compiler[_, _]) VisitSwapStatement(_ *ast.SwapStatement) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler[_, _]) VisitSwapStatement(statement *ast.SwapStatement) (_ struct{}) {
+
+	// Get type information
+
+	swapStatementTypes := c.DesugaredElaboration.SwapStatementTypes(statement)
+	leftType := swapStatementTypes.LeftType
+	rightType := swapStatementTypes.RightType
+
+	// Evaluate the left side (target and key)
+
+	leftTargetIndex := c.compileSwapTarget(statement.Left)
+	leftKeyIndex := c.compileSwapKey(statement.Left)
+
+	// Evaluate the right side (target and key)
+
+	rightTargetIndex := c.compileSwapTarget(statement.Right)
+	rightKeyIndex := c.compileSwapKey(statement.Right)
+
+	// Get left and right values
+
+	leftValueIndex := c.compileSwapGet(
+		statement.Left,
+		leftTargetIndex,
+		leftKeyIndex,
+	)
+	rightValueIndex := c.compileSwapGet(
+		statement.Right,
+		rightTargetIndex,
+		rightKeyIndex,
+	)
+
+	// Set right value to left target,
+	// and left value to right target
+
+	// TODO: invalidation?
+
+	c.compileSwapSet(
+		statement.Left,
+		leftTargetIndex,
+		leftKeyIndex,
+		rightValueIndex,
+		leftType,
+	)
+	c.compileSwapSet(
+		statement.Right,
+		rightTargetIndex,
+		rightKeyIndex,
+		leftValueIndex,
+		rightType,
+	)
+
+	return
+}
+
+func (c *Compiler[_, _]) compileSwapTarget(sideExpression ast.Expression) (targetLocalIndex uint16) {
+	switch sideExpression := sideExpression.(type) {
+	case *ast.IdentifierExpression:
+		c.compileExpression(sideExpression)
+	case *ast.MemberExpression:
+		c.compileExpression(sideExpression.Expression)
+	case *ast.IndexExpression:
+		c.compileExpression(sideExpression.TargetExpression)
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	targetLocalIndex = c.currentFunction.generateLocalIndex()
+	c.emitSetLocal(targetLocalIndex)
+
+	return
+}
+
+func (c *Compiler[_, _]) compileSwapKey(sideExpression ast.Expression) (keyLocalIndex uint16) {
+	switch sideExpression := sideExpression.(type) {
+	case *ast.IdentifierExpression, *ast.MemberExpression:
+		// No key expression for identifier and member expressions
+		return 0
+
+	case *ast.IndexExpression:
+		// If the side is an index expression, compile the indexing expression
+		c.compileExpression(sideExpression.IndexingExpression)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	keyLocalIndex = c.currentFunction.generateLocalIndex()
+	c.emitSetLocal(keyLocalIndex)
+
+	return
+}
+
+func (c *Compiler[_, _]) compileSwapGet(sideExpression ast.Expression, targetIndex uint16, keyIndex uint16) (valueIndex uint16) {
+
+	switch sideExpression := sideExpression.(type) {
+	case *ast.IdentifierExpression:
+		// Avoid introducing a temporary local,
+		// use the target index directly as the value index.
+
+		valueIndex = targetIndex
+
+		return
+
+	case *ast.MemberExpression:
+		memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(sideExpression)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		if memberAccessInfo.IsOptional {
+			panic(errors.NewUnexpectedError("optional member access is not supported in swap statements"))
+		}
+
+		c.emitGetLocal(targetIndex)
+		c.compileMemberAccess(sideExpression)
+
+	case *ast.IndexExpression:
+		c.emitGetLocal(targetIndex)
+		c.emitGetLocal(keyIndex)
+		c.compileIndexAccess(sideExpression)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	valueIndex = c.currentFunction.generateLocalIndex()
+	c.emitSetLocal(valueIndex)
+
+	return
+}
+
+func (c *Compiler[_, _]) compileSwapSet(
+	sideExpression ast.Expression,
+	targetIndex uint16,
+	keyIndex uint16,
+	valueIndex uint16,
+	targetType sema.Type,
+) {
+	switch sideExpression := sideExpression.(type) {
+	case *ast.IdentifierExpression:
+		c.emitGetLocal(valueIndex)
+		c.emitTransferAndConvert(targetType)
+		// NOTE: Assign to the original target. Do NOT use targetIndex here, because it is a temporary.
+		name := sideExpression.Identifier.Identifier
+		c.emitVariableStore(name)
+
+	case *ast.MemberExpression:
+		c.emitGetLocal(targetIndex)
+		c.emitGetLocal(valueIndex)
+		c.emitTransferAndConvert(targetType)
+		name := sideExpression.Identifier.Identifier
+		constant := c.addStringConst(name)
+		c.emit(opcode.InstructionSetField{
+			FieldName: constant.index,
+		})
+
+	case *ast.IndexExpression:
+		c.emitGetLocal(targetIndex)
+		c.emitGetLocal(keyIndex)
+		c.emitGetLocal(valueIndex)
+		c.emitTransferAndConvert(targetType)
+		c.emit(opcode.InstructionSetIndex{})
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func (c *Compiler[_, _]) VisitExpressionStatement(statement *ast.ExpressionStatement) (_ struct{}) {
@@ -2112,8 +2274,6 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 		}
 	}
 
-	constant := c.addStringConst(identifier)
-
 	c.withOptionalChainingOptimized(
 		expression.Expression,
 		memberAccessInfo.IsOptional,
@@ -2122,36 +2282,56 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 			// and leave the value on stack.
 			// i.e: the target/parent is already loaded.
 
-			isNestedResourceMove := c.DesugaredElaboration.IsNestedResourceMoveExpression(expression)
-			if isNestedResourceMove {
-				c.emit(opcode.InstructionRemoveField{
-					FieldName: constant.index,
-				})
-			} else {
-				c.emit(opcode.InstructionGetField{
-					FieldName: constant.index,
-				})
-			}
-
-			// Return a reference, if the member is accessed via a reference.
-			// This is pre-computed at the checker.
-			if memberAccessInfo.ReturnReference {
-				index := c.getOrAddType(memberAccessInfo.ResultingType)
-				c.emit(opcode.InstructionNewRef{
-					Type:       index,
-					IsImplicit: true,
-				})
-			}
+			c.compileMemberAccess(expression)
 		},
 	)
 
 	return
 }
 
+func (c *Compiler[_, _]) compileMemberAccess(expression *ast.MemberExpression) {
+
+	identifier := expression.Identifier.Identifier
+
+	constant := c.addStringConst(identifier)
+
+	isNestedResourceMove := c.DesugaredElaboration.IsNestedResourceMoveExpression(expression)
+	if isNestedResourceMove {
+		c.emit(opcode.InstructionRemoveField{
+			FieldName: constant.index,
+		})
+	} else {
+		c.emit(opcode.InstructionGetField{
+			FieldName: constant.index,
+		})
+	}
+
+	memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(expression)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// Return a reference, if the member is accessed via a reference.
+	// This is pre-computed at the checker.
+	if memberAccessInfo.ReturnReference {
+		index := c.getOrAddType(memberAccessInfo.ResultingType)
+		c.emit(opcode.InstructionNewRef{
+			Type:       index,
+			IsImplicit: true,
+		})
+	}
+}
+
 func (c *Compiler[_, _]) VisitIndexExpression(expression *ast.IndexExpression) (_ struct{}) {
 	c.compileExpression(expression.TargetExpression)
 	c.compileExpression(expression.IndexingExpression)
 
+	c.compileIndexAccess(expression)
+
+	return
+}
+
+func (c *Compiler[_, _]) compileIndexAccess(expression *ast.IndexExpression) {
 	isNestedResourceMove := c.DesugaredElaboration.IsNestedResourceMoveExpression(expression)
 	if isNestedResourceMove {
 		c.emit(opcode.InstructionRemoveIndex{})
@@ -2173,8 +2353,6 @@ func (c *Compiler[_, _]) VisitIndexExpression(expression *ast.IndexExpression) (
 			IsImplicit: true,
 		})
 	}
-
-	return
 }
 
 func (c *Compiler[_, _]) VisitConditionalExpression(expression *ast.ConditionalExpression) (_ struct{}) {

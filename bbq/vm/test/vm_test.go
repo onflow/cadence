@@ -8817,3 +8817,144 @@ func TestMetering(t *testing.T) {
 	assert.Equal(t, uint64(2032), memoryGauge.getMemory(common.MemoryKindBigInt))
 	assert.Equal(t, uint64(21), computationGauge.getComputation(common.ComputationKindLoop))
 }
+
+func TestSwapIdentifiers(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        fun test(): [Int] {
+            var x = 1
+            var y = 2
+            x <-> y
+            return [x, y]
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	vmConfig := &vm.Config{}
+	vmInstance := vm.NewVM(TestLocation, program, vmConfig)
+
+	result, err := vmInstance.InvokeExternally("test")
+	require.NoError(t, err)
+
+	context := vmInstance.Context()
+
+	AssertValuesEqual(
+		t,
+		context,
+		interpreter.NewArrayValue(
+			context,
+			interpreter.EmptyLocationRange,
+			interpreter.NewVariableSizedStaticType(nil, interpreter.PrimitiveStaticTypeInt),
+			common.ZeroAddress,
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+		),
+		result,
+	)
+}
+
+func TestSwapMembers(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        struct S {
+            var x: Int
+            var y: Int
+
+            init() {
+                self.x = 1
+                self.y = 2
+            }
+        }
+
+        fun test(): [Int] {
+            let s = S()
+            s.x <-> s.y
+            return [s.x, s.y]
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	vmConfig := &vm.Config{
+		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+			return checker.Elaboration.CompositeType(typeID)
+		},
+	}
+	vmInstance := vm.NewVM(TestLocation, program, vmConfig)
+
+	result, err := vmInstance.InvokeExternally("test")
+	require.NoError(t, err)
+
+	context := vmInstance.Context()
+
+	AssertValuesEqual(
+		t,
+		context,
+		interpreter.NewArrayValue(
+			context,
+			interpreter.EmptyLocationRange,
+			interpreter.NewVariableSizedStaticType(nil, interpreter.PrimitiveStaticTypeInt),
+			common.ZeroAddress,
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+		),
+		result,
+	)
+}
+
+func TestSwapIndex(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        fun test(): [String] {
+            let chars = ["a", "b"]
+            chars[0] <-> chars[1]
+            return chars
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	vmConfig := &vm.Config{}
+	vmInstance := vm.NewVM(TestLocation, program, vmConfig)
+
+	result, err := vmInstance.InvokeExternally("test")
+	require.NoError(t, err)
+
+	context := vmInstance.Context()
+
+	AssertValuesEqual(
+		t,
+		context,
+		interpreter.NewArrayValue(
+			context,
+			interpreter.EmptyLocationRange,
+			interpreter.NewVariableSizedStaticType(nil, interpreter.PrimitiveStaticTypeString),
+			common.ZeroAddress,
+			interpreter.NewUnmeteredStringValue("b"),
+			interpreter.NewUnmeteredStringValue("a"),
+		),
+		result,
+	)
+}
