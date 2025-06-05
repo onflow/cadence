@@ -939,6 +939,8 @@ func invokeFunction(
 	arguments []Value,
 	typeArguments []bbq.StaticType,
 ) {
+	context := vm.context
+	common.UseComputation(context, common.FunctionInvocationComputationUsage)
 
 	// Handle all function types in a single place, so this can be re-used everywhere.
 
@@ -951,7 +953,7 @@ func invokeFunction(
 		vm.pushCallFrame(functionValue, arguments)
 
 	case *NativeFunctionValue:
-		result := functionValue.Function(vm.context, typeArguments, arguments...)
+		result := functionValue.Function(context, typeArguments, arguments...)
 		vm.push(result)
 
 	default:
@@ -1513,6 +1515,10 @@ func (vm *VM) run() {
 			opDeref(vm)
 		case opcode.InstructionNewClosure:
 			opNewClosure(vm, ins)
+		case opcode.InstructionLoop:
+			opLoop(vm)
+		case opcode.InstructionStatement:
+			opStatement(vm)
 		default:
 			panic(errors.NewUnexpectedError("cannot execute instruction of type %T", ins))
 		}
@@ -1588,6 +1594,14 @@ func (vm *VM) captureUpvalue(absoluteLocalsIndex int) *Upvalue {
 	}
 	vm.callFrame.openUpvalues[absoluteLocalsIndex] = upvalue
 	return upvalue
+}
+
+func opLoop(vm *VM) {
+	common.UseComputation(vm.context, common.LoopComputationUsage)
+}
+
+func opStatement(vm *VM) {
+	common.UseComputation(vm.context, common.StatementComputationUsage)
 }
 
 func (vm *VM) initializeConstant(index uint16) (value Value) {

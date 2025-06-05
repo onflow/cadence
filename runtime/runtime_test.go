@@ -13157,10 +13157,5 @@ func TestRuntimeMetering(t *testing.T) {
 	)
 
 	assert.Equal(t, uint64(98), memoryGauge.getMemory(common.MemoryKindRawString))
-	if *compile {
-		assert.Equal(t, uint64(1), computationGauge.getComputation(common.ComputationKindInstructionInvoke))
-		assert.Equal(t, uint64(2), computationGauge.getComputation(common.ComputationKindFunctionInvocation))
-	} else {
-		assert.Equal(t, uint64(3), computationGauge.getComputation(common.ComputationKindFunctionInvocation))
-	}
+	assert.Equal(t, uint64(3), computationGauge.getComputation(common.ComputationKindFunctionInvocation))
 }

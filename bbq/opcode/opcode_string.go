@@ -71,7 +71,9 @@ func _() {
 	_ = x[IteratorHasNext-108]
 	_ = x[IteratorNext-109]
 	_ = x[EmitEvent-110]
-	_ = x[OpcodeMax-111]
+	_ = x[Loop-111]
+	_ = x[Statement-112]
+	_ = x[OpcodeMax-113]
 }
 
 const (
@@ -84,7 +86,7 @@ const (
 	_Opcode_name_6 = "GetConstantGetLocalSetLocalGetUpvalueSetUpvalueGetGlobalSetGlobalGetFieldRemoveFieldSetFieldSetIndexGetIndexRemoveIndex"
 	_Opcode_name_7 = "InvokeInvokeMethodStaticInvokeMethodDynamic"
 	_Opcode_name_8 = "DropDup"
-	_Opcode_name_9 = "IteratorIteratorHasNextIteratorNextEmitEventOpcodeMax"
+	_Opcode_name_9 = "IteratorIteratorHasNextIteratorNextEmitEventLoopStatementOpcodeMax"
 )
 
 var (
@@ -97,7 +99,7 @@ var (
 	_Opcode_index_6 = [...]uint8{0, 11, 19, 27, 37, 47, 56, 65, 73, 84, 92, 100, 108, 119}
 	_Opcode_index_7 = [...]uint8{0, 6, 24, 43}
 	_Opcode_index_8 = [...]uint8{0, 4, 7}
-	_Opcode_index_9 = [...]uint8{0, 8, 23, 35, 44, 53}
+	_Opcode_index_9 = [...]uint8{0, 8, 23, 35, 44, 48, 57, 66}
 )
 
 func (i Opcode) String() string {
@@ -128,7 +130,7 @@ func (i Opcode) String() string {
 	case 99 <= i && i <= 100:
 		i -= 99
 		return _Opcode_name_8[_Opcode_index_8[i]:_Opcode_index_8[i+1]]
-	case 107 <= i && i <= 111:
+	case 107 <= i && i <= 113:
 		i -= 107
 		return _Opcode_name_9[_Opcode_index_9[i]:_Opcode_index_9[i+1]]
 	default:

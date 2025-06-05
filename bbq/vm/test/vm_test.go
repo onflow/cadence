@@ -8620,5 +8620,5 @@ func TestMetering(t *testing.T) {
 	assert.Equal(t, 0, vmInstance.StackSize())
 
 	assert.Equal(t, uint64(2032), memoryGauge.getMemory(common.MemoryKindBigInt))
-	assert.Equal(t, uint64(88), computationGauge.getComputation(common.ComputationKindStatement))
+	assert.Equal(t, uint64(21), computationGauge.getComputation(common.ComputationKindLoop))
 }

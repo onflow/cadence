@@ -248,6 +248,8 @@ func TestPrintInstruction(t *testing.T) {
 		"IteratorNext":    {byte(IteratorNext)},
 
 		"EmitEvent type:258 argCount:772": {byte(EmitEvent), 1, 2, 3, 4},
+		"Loop":                            {byte(Loop)},
+		"Statement":                       {byte(Statement)},
 	}
 
 	// Check if there is any opcode that is not tested
