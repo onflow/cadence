@@ -869,3 +869,11 @@
     pop:
       - name: "arguments"
         # TODO: count
+
+- name: "loop"
+  description:
+    Indicates the start of a loop.
+
+- name: "statement"
+  description:
+    Indicates the start of a statement.

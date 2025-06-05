@@ -542,29 +542,21 @@ func (vm *VM) InvokeTransactionExecute(transaction *interpreter.CompositeValue) 
 }
 
 func opReturnValue(vm *VM) {
-	common.UseComputation(vm.context, common.InstructionReturnValueComputationUsage)
-
 	value := vm.pop()
 	vm.popCallFrame()
 	vm.push(value)
 }
 
 func opReturn(vm *VM) {
-	common.UseComputation(vm.context, common.InstructionReturnComputationUsage)
-
 	vm.popCallFrame()
 	vm.push(interpreter.Void)
 }
 
 func opJump(vm *VM, ins opcode.InstructionJump) {
-	common.UseComputation(vm.context, common.InstructionJumpComputationUsage)
-
 	vm.ip = ins.Target
 }
 
 func opJumpIfFalse(vm *VM, ins opcode.InstructionJumpIfFalse) {
-	common.UseComputation(vm.context, common.InstructionJumpIfFalseComputationUsage)
-
 	value := vm.pop().(interpreter.BoolValue)
 	if !value {
 		vm.ip = ins.Target
@@ -572,8 +564,6 @@ func opJumpIfFalse(vm *VM, ins opcode.InstructionJumpIfFalse) {
 }
 
 func opJumpIfTrue(vm *VM, ins opcode.InstructionJumpIfTrue) {
-	common.UseComputation(vm.context, common.InstructionJumpIfTrueComputationUsage)
-
 	value := vm.pop().(interpreter.BoolValue)
 	if value {
 		vm.ip = ins.Target
@@ -581,8 +571,6 @@ func opJumpIfTrue(vm *VM, ins opcode.InstructionJumpIfTrue) {
 }
 
 func opJumpIfNil(vm *VM, ins opcode.InstructionJumpIfNil) {
-	common.UseComputation(vm.context, common.InstructionJumpIfNilComputationUsage)
-
 	_, ok := vm.pop().(interpreter.NilValue)
 	if ok {
 		vm.ip = ins.Target
@@ -590,15 +578,11 @@ func opJumpIfNil(vm *VM, ins opcode.InstructionJumpIfNil) {
 }
 
 func opAdd(vm *VM) {
-	context := vm.context
-
-	common.UseComputation(context, common.InstructionAddComputationUsage)
-
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.NumberValue)
 	rightNumber := right.(interpreter.NumberValue)
 	result := leftNumber.Plus(
-		context,
+		vm.context,
 		rightNumber,
 		EmptyLocationRange,
 	)
@@ -606,15 +590,11 @@ func opAdd(vm *VM) {
 }
 
 func opSubtract(vm *VM) {
-	context := vm.context
-
-	common.UseComputation(context, common.InstructionSubtractComputationUsage)
-
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.NumberValue)
 	rightNumber := right.(interpreter.NumberValue)
 	result := leftNumber.Minus(
-		context,
+		vm.context,
 		rightNumber,
 		EmptyLocationRange,
 	)
@@ -622,15 +602,11 @@ func opSubtract(vm *VM) {
 }
 
 func opMultiply(vm *VM) {
-	context := vm.context
-
-	common.UseComputation(context, common.InstructionMultiplyComputationUsage)
-
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.NumberValue)
 	rightNumber := right.(interpreter.NumberValue)
 	result := leftNumber.Mul(
-		context,
+		vm.context,
 		rightNumber,
 		EmptyLocationRange,
 	)
@@ -638,15 +614,11 @@ func opMultiply(vm *VM) {
 }
 
 func opDivide(vm *VM) {
-	context := vm.context
-
-	common.UseComputation(context, common.InstructionDivideComputationUsage)
-
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.NumberValue)
 	rightNumber := right.(interpreter.NumberValue)
 	result := leftNumber.Div(
-		context,
+		vm.context,
 		rightNumber,
 		EmptyLocationRange,
 	)
@@ -654,15 +626,11 @@ func opDivide(vm *VM) {
 }
 
 func opMod(vm *VM) {
-	context := vm.context
-
-	common.UseComputation(context, common.InstructionModComputationUsage)
-
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.NumberValue)
 	rightNumber := right.(interpreter.NumberValue)
 	result := leftNumber.Mod(
-		context,
+		vm.context,
 		rightNumber,
 		EmptyLocationRange,
 	)
@@ -670,28 +638,20 @@ func opMod(vm *VM) {
 }
 
 func opNegate(vm *VM) {
-	context := vm.context
-
-	common.UseComputation(context, common.InstructionNegateComputationUsage)
-
 	value := vm.pop().(interpreter.NumberValue)
 	result := value.Negate(
-		context,
+		vm.context,
 		EmptyLocationRange,
 	)
 	vm.push(result)
 }
 
 func opBitwiseOr(vm *VM) {
-	context := vm.context
-
-	common.UseComputation(context, common.InstructionBitwiseOrComputationUsage)
-
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.IntegerValue)
 	rightNumber := right.(interpreter.IntegerValue)
 	result := leftNumber.BitwiseOr(
-		context,
+		vm.context,
 		rightNumber,
 		EmptyLocationRange,
 	)
@@ -699,15 +659,11 @@ func opBitwiseOr(vm *VM) {
 }
 
 func opBitwiseXor(vm *VM) {
-	context := vm.context
-
-	common.UseComputation(context, common.InstructionBitwiseXorComputationUsage)
-
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.IntegerValue)
 	rightNumber := right.(interpreter.IntegerValue)
 	result := leftNumber.BitwiseXor(
-		context,
+		vm.context,
 		rightNumber,
 		EmptyLocationRange,
 	)
@@ -715,15 +671,11 @@ func opBitwiseXor(vm *VM) {
 }
 
 func opBitwiseAnd(vm *VM) {
-	context := vm.context
-
-	common.UseComputation(context, common.InstructionBitwiseAndComputationUsage)
-
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.IntegerValue)
 	rightNumber := right.(interpreter.IntegerValue)
 	result := leftNumber.BitwiseAnd(
-		context,
+		vm.context,
 		rightNumber,
 		EmptyLocationRange,
 	)
@@ -731,15 +683,11 @@ func opBitwiseAnd(vm *VM) {
 }
 
 func opBitwiseLeftShift(vm *VM) {
-	context := vm.context
-
-	common.UseComputation(context, common.InstructionBitwiseLeftShiftComputationUsage)
-
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.IntegerValue)
 	rightNumber := right.(interpreter.IntegerValue)
 	result := leftNumber.BitwiseLeftShift(
-		context,
+		vm.context,
 		rightNumber,
 		EmptyLocationRange,
 	)
@@ -747,15 +695,11 @@ func opBitwiseLeftShift(vm *VM) {
 }
 
 func opBitwiseRightShift(vm *VM) {
-	context := vm.context
-
-	common.UseComputation(context, common.InstructionBitwiseRightShiftComputationUsage)
-
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.IntegerValue)
 	rightNumber := right.(interpreter.IntegerValue)
 	result := leftNumber.BitwiseRightShift(
-		context,
+		vm.context,
 		rightNumber,
 		EmptyLocationRange,
 	)
@@ -763,15 +707,11 @@ func opBitwiseRightShift(vm *VM) {
 }
 
 func opLess(vm *VM) {
-	context := vm.context
-
-	common.UseComputation(context, common.InstructionLessComputationUsage)
-
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.ComparableValue)
 	rightNumber := right.(interpreter.ComparableValue)
 	result := leftNumber.Less(
-		context,
+		vm.context,
 		rightNumber,
 		EmptyLocationRange,
 	)
@@ -779,15 +719,11 @@ func opLess(vm *VM) {
 }
 
 func opLessOrEqual(vm *VM) {
-	context := vm.context
-
-	common.UseComputation(context, common.InstructionLessOrEqualComputationUsage)
-
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.ComparableValue)
 	rightNumber := right.(interpreter.ComparableValue)
 	result := leftNumber.LessEqual(
-		context,
+		vm.context,
 		rightNumber,
 		EmptyLocationRange,
 	)
@@ -795,15 +731,11 @@ func opLessOrEqual(vm *VM) {
 }
 
 func opGreater(vm *VM) {
-	context := vm.context
-
-	common.UseComputation(context, common.InstructionGreaterComputationUsage)
-
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.ComparableValue)
 	rightNumber := right.(interpreter.ComparableValue)
 	result := leftNumber.Greater(
-		context,
+		vm.context,
 		rightNumber,
 		EmptyLocationRange,
 	)
@@ -811,15 +743,11 @@ func opGreater(vm *VM) {
 }
 
 func opGreaterOrEqual(vm *VM) {
-	context := vm.context
-
-	common.UseComputation(context, common.InstructionGreaterOrEqualComputationUsage)
-
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.ComparableValue)
 	rightNumber := right.(interpreter.ComparableValue)
 	result := leftNumber.GreaterEqual(
-		context,
+		vm.context,
 		rightNumber,
 		EmptyLocationRange,
 	)
@@ -827,20 +755,14 @@ func opGreaterOrEqual(vm *VM) {
 }
 
 func opTrue(vm *VM) {
-	common.UseComputation(vm.context, common.InstructionTrueComputationUsage)
-
 	vm.push(interpreter.TrueValue)
 }
 
 func opFalse(vm *VM) {
-	common.UseComputation(vm.context, common.InstructionFalseComputationUsage)
-
 	vm.push(interpreter.FalseValue)
 }
 
 func opGetConstant(vm *VM, ins opcode.InstructionGetConstant) {
-	common.UseComputation(vm.context, common.InstructionGetConstantComputationUsage)
-
 	constantIndex := ins.Constant
 	constant := vm.callFrame.function.Executable.Constants[constantIndex]
 	if constant == nil {
@@ -850,8 +772,6 @@ func opGetConstant(vm *VM, ins opcode.InstructionGetConstant) {
 }
 
 func opGetLocal(vm *VM, ins opcode.InstructionGetLocal) {
-	common.UseComputation(vm.context, common.InstructionGetLocalComputationUsage)
-
 	localIndex := ins.Local
 	absoluteIndex := vm.callFrame.localsOffset + localIndex
 	local := vm.locals[absoluteIndex]
@@ -859,8 +779,6 @@ func opGetLocal(vm *VM, ins opcode.InstructionGetLocal) {
 }
 
 func opSetLocal(vm *VM, ins opcode.InstructionSetLocal) {
-	common.UseComputation(vm.context, common.InstructionSetLocalComputationUsage)
-
 	localIndex := ins.Local
 	absoluteIndex := vm.callFrame.localsOffset + localIndex
 
@@ -873,8 +791,6 @@ func opSetLocal(vm *VM, ins opcode.InstructionSetLocal) {
 }
 
 func opGetUpvalue(vm *VM, ins opcode.InstructionGetUpvalue) {
-	common.UseComputation(vm.context, common.InstructionGetUpvalueComputationUsage)
-
 	upvalueIndex := ins.Upvalue
 	upvalue := vm.callFrame.function.Upvalues[upvalueIndex]
 	value := upvalue.closed
@@ -885,8 +801,6 @@ func opGetUpvalue(vm *VM, ins opcode.InstructionGetUpvalue) {
 }
 
 func opSetUpvalue(vm *VM, ins opcode.InstructionSetUpvalue) {
-	common.UseComputation(vm.context, common.InstructionSetUpvalueComputationUsage)
-
 	upvalueIndex := ins.Upvalue
 	upvalue := vm.callFrame.function.Upvalues[upvalueIndex]
 	value := vm.pop()
@@ -898,8 +812,6 @@ func opSetUpvalue(vm *VM, ins opcode.InstructionSetUpvalue) {
 }
 
 func opGetGlobal(vm *VM, ins opcode.InstructionGetGlobal) {
-	common.UseComputation(vm.context, common.InstructionGetGlobalComputationUsage)
-
 	globalIndex := ins.Global
 	globals := vm.callFrame.function.Executable.Globals
 	variable := globals[globalIndex]
@@ -907,8 +819,6 @@ func opGetGlobal(vm *VM, ins opcode.InstructionGetGlobal) {
 }
 
 func opSetGlobal(vm *VM, ins opcode.InstructionSetGlobal) {
-	common.UseComputation(vm.context, common.InstructionSetGlobalComputationUsage)
-
 	globalIndex := ins.Global
 	globals := vm.callFrame.function.Executable.Globals
 	value := vm.pop()
@@ -917,8 +827,6 @@ func opSetGlobal(vm *VM, ins opcode.InstructionSetGlobal) {
 }
 
 func opSetIndex(vm *VM) {
-	common.UseComputation(vm.context, common.InstructionSetIndexComputationUsage)
-
 	container, index, value := vm.pop3()
 	containerValue := container.(interpreter.ValueIndexableValue)
 	containerValue.SetKey(
@@ -930,8 +838,6 @@ func opSetIndex(vm *VM) {
 }
 
 func opGetIndex(vm *VM) {
-	common.UseComputation(vm.context, common.InstructionGetIndexComputationUsage)
-
 	container, index := vm.pop2()
 	containerValue := container.(interpreter.ValueIndexableValue)
 	element := containerValue.GetKey(
@@ -943,8 +849,6 @@ func opGetIndex(vm *VM) {
 }
 
 func opRemoveIndex(vm *VM) {
-	common.UseComputation(vm.context, common.InstructionRemoveIndexComputationUsage)
-
 	container, index := vm.pop2()
 	containerValue := container.(interpreter.ValueIndexableValue)
 	element := containerValue.RemoveKey(
@@ -956,8 +860,6 @@ func opRemoveIndex(vm *VM) {
 }
 
 func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
-	common.UseComputation(vm.context, common.InstructionInvokeComputationUsage)
-
 	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 
 	// Load arguments
@@ -982,8 +884,6 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 }
 
 func opInvokeMethodStatic(vm *VM, ins opcode.InstructionInvokeMethodStatic) {
-	common.UseComputation(vm.context, common.InstructionInvokeMethodStaticComputationUsage)
-
 	// Load type arguments
 	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 
@@ -1004,8 +904,6 @@ func opInvokeMethodStatic(vm *VM, ins opcode.InstructionInvokeMethodStatic) {
 }
 
 func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
-	common.UseComputation(vm.context, common.InstructionInvokeMethodDynamicComputationUsage)
-
 	// TODO: This method is now equivalent to: `GetField` + `Invoke` instructions.
 	// See if it can be replaced. That will reduce the complexity of `invokeFunction` method below.
 
@@ -1043,6 +941,8 @@ func invokeFunction(
 	arguments []Value,
 	typeArguments []bbq.StaticType,
 ) {
+	context := vm.context
+	common.UseComputation(context, common.FunctionInvocationComputationUsage)
 
 	// Handle all function types in a single place, so this can be re-used everywhere.
 
@@ -1055,7 +955,7 @@ func invokeFunction(
 		vm.pushCallFrame(functionValue, arguments)
 
 	case *NativeFunctionValue:
-		result := functionValue.Function(vm.context, typeArguments, arguments...)
+		result := functionValue.Function(context, typeArguments, arguments...)
 		vm.push(result)
 
 	default:
@@ -1095,21 +995,15 @@ func maybeDereference(context interpreter.ValueStaticTypeContext, value Value) V
 }
 
 func opDrop(vm *VM) {
-	common.UseComputation(vm.context, common.InstructionDropComputationUsage)
-
 	_ = vm.pop()
 }
 
 func opDup(vm *VM) {
-	common.UseComputation(vm.context, common.InstructionDupComputationUsage)
-
 	top := vm.peek()
 	vm.push(top)
 }
 
 func opNew(vm *VM, ins opcode.InstructionNew) {
-	common.UseComputation(vm.context, common.InstructionNewComputationUsage)
-
 	compositeKind := ins.Kind
 
 	// decode location
@@ -1138,8 +1032,6 @@ func opNew(vm *VM, ins opcode.InstructionNew) {
 }
 
 func opSetField(vm *VM, ins opcode.InstructionSetField) {
-	common.UseComputation(vm.context, common.InstructionSetFieldComputationUsage)
-
 	target, fieldValue := vm.pop2()
 
 	// VM assumes the field name is always a string.
@@ -1151,8 +1043,6 @@ func opSetField(vm *VM, ins opcode.InstructionSetField) {
 }
 
 func opGetField(vm *VM, ins opcode.InstructionGetField) {
-	common.UseComputation(vm.context, common.InstructionGetFieldComputationUsage)
-
 	memberAccessibleValue := vm.pop().(interpreter.MemberAccessibleValue)
 
 	// VM assumes the field name is always a string.
@@ -1170,8 +1060,6 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 }
 
 func opRemoveField(vm *VM, ins opcode.InstructionRemoveField) {
-	common.UseComputation(vm.context, common.InstructionRemoveFieldComputationUsage)
-
 	memberAccessibleValue := vm.pop().(interpreter.MemberAccessibleValue)
 
 	// VM assumes the field name is always a string.
@@ -1194,8 +1082,6 @@ func getStringConstant(vm *VM, index uint16) string {
 }
 
 func opTransferAndConvert(vm *VM, ins opcode.InstructionTransferAndConvert) {
-	common.UseComputation(vm.context, common.InstructionTransferAndConvertComputationUsage)
-
 	typeIndex := ins.Type
 	targetType := vm.loadType(typeIndex)
 
@@ -1216,8 +1102,6 @@ func opTransferAndConvert(vm *VM, ins opcode.InstructionTransferAndConvert) {
 }
 
 func opTransfer(vm *VM) {
-	common.UseComputation(vm.context, common.InstructionTransferComputationUsage)
-
 	context := vm.context
 
 	value := vm.peek()
@@ -1236,15 +1120,11 @@ func opTransfer(vm *VM) {
 }
 
 func opDestroy(vm *VM) {
-	common.UseComputation(vm.context, common.InstructionDestroyComputationUsage)
-
 	value := vm.pop().(interpreter.ResourceKindedValue)
 	value.Destroy(vm.context, EmptyLocationRange)
 }
 
 func opNewPath(vm *VM, ins opcode.InstructionNewPath) {
-	common.UseComputation(vm.context, common.InstructionNewPathComputationUsage)
-
 	identifierIndex := ins.Identifier
 	identifier := getStringConstant(vm, identifierIndex)
 	value := interpreter.NewPathValue(
@@ -1256,8 +1136,6 @@ func opNewPath(vm *VM, ins opcode.InstructionNewPath) {
 }
 
 func opSimpleCast(vm *VM, ins opcode.InstructionSimpleCast) {
-	common.UseComputation(vm.context, common.InstructionSimpleCastComputationUsage)
-
 	value := vm.pop()
 
 	typeIndex := ins.Type
@@ -1271,8 +1149,6 @@ func opSimpleCast(vm *VM, ins opcode.InstructionSimpleCast) {
 }
 
 func opFailableCast(vm *VM, ins opcode.InstructionFailableCast) {
-	common.UseComputation(vm.context, common.InstructionFailableCastComputationUsage)
-
 	value := vm.pop()
 
 	typeIndex := ins.Type
@@ -1303,8 +1179,6 @@ func opFailableCast(vm *VM, ins opcode.InstructionFailableCast) {
 }
 
 func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
-	common.UseComputation(vm.context, common.InstructionForceCastComputationUsage)
-
 	value := vm.pop()
 
 	typeIndex := ins.Type
@@ -1360,14 +1234,10 @@ func castValueAndValueType(context *Context, targetType bbq.StaticType, value Va
 }
 
 func opNil(vm *VM) {
-	common.UseComputation(vm.context, common.InstructionNilComputationUsage)
-
 	vm.push(interpreter.Nil)
 }
 
 func opEqual(vm *VM) {
-	common.UseComputation(vm.context, common.InstructionEqualComputationUsage)
-
 	left, right := vm.peekPop()
 	result := interpreter.TestValueEqual(
 		vm.context,
@@ -1379,8 +1249,6 @@ func opEqual(vm *VM) {
 }
 
 func opNotEqual(vm *VM) {
-	common.UseComputation(vm.context, common.InstructionNotEqualComputationUsage)
-
 	left, right := vm.peekPop()
 	result := !interpreter.TestValueEqual(
 		vm.context,
@@ -1392,15 +1260,11 @@ func opNotEqual(vm *VM) {
 }
 
 func opNot(vm *VM) {
-	common.UseComputation(vm.context, common.InstructionNotComputationUsage)
-
 	value := vm.peek().(interpreter.BoolValue)
 	vm.replaceTop(!value)
 }
 
 func opUnwrap(vm *VM) {
-	common.UseComputation(vm.context, common.InstructionUnwrapComputationUsage)
-
 	value := vm.peek()
 	switch value := value.(type) {
 	case *interpreter.SomeValue:
@@ -1413,8 +1277,6 @@ func opUnwrap(vm *VM) {
 }
 
 func opNewArray(vm *VM, ins opcode.InstructionNewArray) {
-	common.UseComputation(vm.context, common.InstructionNewArrayComputationUsage)
-
 	typeIndex := ins.Type
 	typ := vm.loadType(typeIndex).(interpreter.ArrayStaticType)
 
@@ -1437,8 +1299,6 @@ func opNewArray(vm *VM, ins opcode.InstructionNewArray) {
 }
 
 func opNewDictionary(vm *VM, ins opcode.InstructionNewDictionary) {
-	common.UseComputation(vm.context, common.InstructionNewDictionaryComputationUsage)
-
 	typeIndex := ins.Type
 	typ := vm.loadType(typeIndex).(*interpreter.DictionaryStaticType)
 
@@ -1455,8 +1315,6 @@ func opNewDictionary(vm *VM, ins opcode.InstructionNewDictionary) {
 }
 
 func opNewRef(vm *VM, ins opcode.InstructionNewRef) {
-	common.UseComputation(vm.context, common.InstructionNewRefComputationUsage)
-
 	typeIndex := ins.Type
 	borrowedType := vm.loadType(typeIndex)
 	value := vm.pop()
@@ -1475,8 +1333,6 @@ func opNewRef(vm *VM, ins opcode.InstructionNewRef) {
 }
 
 func opIterator(vm *VM) {
-	common.UseComputation(vm.context, common.InstructionIteratorComputationUsage)
-
 	value := vm.pop()
 	iterable := value.(interpreter.IterableValue)
 	iterator := iterable.Iterator(vm.context, EmptyLocationRange)
@@ -1484,8 +1340,6 @@ func opIterator(vm *VM) {
 }
 
 func opIteratorHasNext(vm *VM) {
-	common.UseComputation(vm.context, common.InstructionIteratorHasNextComputationUsage)
-
 	value := vm.pop()
 	iterator := value.(*IteratorWrapperValue)
 	result := interpreter.BoolValue(iterator.HasNext())
@@ -1493,8 +1347,6 @@ func opIteratorHasNext(vm *VM) {
 }
 
 func opIteratorNext(vm *VM) {
-	common.UseComputation(vm.context, common.InstructionIteratorNextComputationUsage)
-
 	value := vm.pop()
 	iterator := value.(*IteratorWrapperValue)
 	element := iterator.Next(vm.context, EmptyLocationRange)
@@ -1502,8 +1354,6 @@ func opIteratorNext(vm *VM) {
 }
 
 func opDeref(vm *VM) {
-	common.UseComputation(vm.context, common.InstructionDerefComputationUsage)
-
 	value := vm.pop()
 	dereferenced := interpreter.DereferenceValue(vm.context, EmptyLocationRange, value)
 	vm.push(dereferenced)
@@ -1687,6 +1537,10 @@ func (vm *VM) run() {
 			opDeref(vm)
 		case opcode.InstructionNewClosure:
 			opNewClosure(vm, ins)
+		case opcode.InstructionLoop:
+			opLoop(vm)
+		case opcode.InstructionStatement:
+			opStatement(vm)
 		default:
 			panic(errors.NewUnexpectedError("cannot execute instruction of type %T", ins))
 		}
@@ -1695,8 +1549,6 @@ func (vm *VM) run() {
 
 func opEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
 	context := vm.context
-
-	common.UseComputation(context, common.InstructionEmitEventComputationUsage)
 
 	typeIndex := ins.Type
 	eventStaticType := vm.loadType(typeIndex).(*interpreter.CompositeStaticType)
@@ -1717,8 +1569,6 @@ func opEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
 }
 
 func opNewClosure(vm *VM, ins opcode.InstructionNewClosure) {
-	common.UseComputation(vm.context, common.InstructionNewClosureComputationUsage)
-
 	executable := vm.callFrame.function.Executable
 	functionIndex := ins.Function
 	function := &executable.Program.Functions[functionIndex]
@@ -1766,6 +1616,14 @@ func (vm *VM) captureUpvalue(absoluteLocalsIndex int) *Upvalue {
 	}
 	vm.callFrame.openUpvalues[absoluteLocalsIndex] = upvalue
 	return upvalue
+}
+
+func opLoop(vm *VM) {
+	common.UseComputation(vm.context, common.LoopComputationUsage)
+}
+
+func opStatement(vm *VM) {
+	common.UseComputation(vm.context, common.StatementComputationUsage)
 }
 
 func (vm *VM) initializeConstant(index uint16) (value Value) {

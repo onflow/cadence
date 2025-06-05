@@ -2378,6 +2378,64 @@ func DecodeEmitEvent(ip *uint16, code []byte) (i InstructionEmitEvent) {
 	return i
 }
 
+// InstructionLoop
+//
+// Indicates the start of a loop.
+type InstructionLoop struct {
+}
+
+var _ Instruction = InstructionLoop{}
+
+func (InstructionLoop) Opcode() Opcode {
+	return Loop
+}
+
+func (i InstructionLoop) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionLoop) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionLoop) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
+func (i InstructionLoop) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
+// InstructionStatement
+//
+// Indicates the start of a statement.
+type InstructionStatement struct {
+}
+
+var _ Instruction = InstructionStatement{}
+
+func (InstructionStatement) Opcode() Opcode {
+	return Statement
+}
+
+func (i InstructionStatement) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionStatement) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionStatement) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
+func (i InstructionStatement) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
 func DecodeInstruction(ip *uint16, code []byte) Instruction {
 	switch Opcode(decodeByte(ip, code)) {
 	case Unknown:
@@ -2508,6 +2566,10 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionIteratorNext{}
 	case EmitEvent:
 		return DecodeEmitEvent(ip, code)
+	case Loop:
+		return InstructionLoop{}
+	case Statement:
+		return InstructionStatement{}
 	}
 
 	panic(errors.NewUnreachableError())

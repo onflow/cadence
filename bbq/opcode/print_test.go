@@ -249,6 +249,8 @@ func TestPrintInstruction(t *testing.T) {
 
 		"EmitEvent type:258 argCount:772": {byte(EmitEvent), 1, 2, 3, 4},
 		"Transfer":                        {byte(Transfer)},
+		"Loop":                            {byte(Loop)},
+		"Statement":                       {byte(Statement)},
 	}
 
 	// Check if there is any opcode that is not tested

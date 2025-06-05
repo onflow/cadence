@@ -480,6 +480,7 @@ func (c *Compiler[_, _]) compileStatement(statement ast.Statement) {
 	c.compileWithPositionInfo(
 		statement,
 		func() {
+			c.emit(opcode.InstructionStatement{})
 			ast.AcceptStatement[struct{}](statement, c)
 		},
 	)
@@ -1172,6 +1173,9 @@ func (c *Compiler[_, _]) VisitWhileStatement(statement *ast.WhileStatement) (_ s
 	endJump := c.emitUndefinedJumpIfFalse()
 
 	// Compile the body
+
+	c.emit(opcode.InstructionLoop{})
+
 	c.compileBlock(
 		statement.Block,
 		common.DeclarationKindUnknown,
@@ -1220,7 +1224,9 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 
 	endJump := c.emitUndefinedJumpIfFalse()
 
-	// Loop Body.
+	// Compile the body
+
+	c.emit(opcode.InstructionLoop{})
 
 	// Increment the index if needed.
 	// This is done as the first thing inside the loop, so that we don't need to

@@ -168,6 +168,8 @@ const (
 	// Other
 
 	EmitEvent
+	Loop
+	Statement
 
 	// NOTE: not an actual opcode, must be last item
 	OpcodeMax
