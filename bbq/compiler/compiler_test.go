@@ -7348,6 +7348,16 @@ func TestCompileOptionalArgument(t *testing.T) {
 			},
 			functions[0].Code,
 		)
+
+		assert.Equal(t,
+			[]constant.Constant{
+				{
+					Data: []byte("hello"),
+					Kind: constant.String,
+				},
+			},
+			program.Constants,
+		)
 	})
 
 	t.Run("account add optional args", func(t *testing.T) {
@@ -7385,16 +7395,16 @@ func TestCompileOptionalArgument(t *testing.T) {
 			[]opcode.Instruction{
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: 0x0},
-				opcode.InstructionGetField{FieldName: 0x1},
 				opcode.InstructionGetField{FieldName: 0x0},
+				opcode.InstructionGetField{FieldName: 0x1},
 				opcode.InstructionNewRef{Type: 0x4, IsImplicit: true},
 				opcode.InstructionSetLocal{Local: 0x1},
 				opcode.InstructionGetGlobal{Global: 0x5},
 				opcode.InstructionGetLocal{Local: 0x1},
 				opcode.InstructionGetConstant{Constant: 0x2},
 				opcode.InstructionTransferAndConvert{Type: 0x5},
-				opcode.InstructionGetConstant{Constant: 0x4},
-				opcode.InstructionGetField{FieldName: 0x3},
+				opcode.InstructionGetConstant{Constant: 0x3},
+				opcode.InstructionGetField{FieldName: 0x4},
 				opcode.InstructionTransferAndConvert{Type: 0x6},
 				opcode.InstructionGetConstant{Constant: 0x5},
 				opcode.InstructionTransfer{},
@@ -7403,5 +7413,338 @@ func TestCompileOptionalArgument(t *testing.T) {
 				opcode.InstructionReturn{}},
 			functions[3].Code,
 		)
+
+		assert.Equal(t,
+			[]constant.Constant{
+				{
+					Data: []byte("account"),
+					Kind: constant.String,
+				},
+				{
+					Data: []byte("contracts"),
+					Kind: constant.String,
+				},
+				{
+					Data: []byte("Foo"),
+					Kind: constant.String,
+				},
+				{
+					Data: []byte(" contract Foo { let message: String\n init(message:String) {self.message = message}\nfun test(): String {return self.message}}"),
+					Kind: constant.String,
+				},
+				{
+					Data: []byte("utf8"),
+					Kind: constant.String,
+				},
+				{
+					Data: []byte("Optional arg"),
+					Kind: constant.String,
+				},
+			},
+			program.Constants,
+		)
 	})
+
+}
+
+func TestCompileSwapIdentifiers(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        fun test() {
+            var x = 1
+            var y = 2
+            x <-> y
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 1)
+
+	const (
+		xIndex = iota
+		yIndex
+		tempIndex1
+		tempIndex2
+		tempIndex3
+		tempIndex4
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// var x = 1
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: xIndex},
+
+			// var y = 2
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 1},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: yIndex},
+
+			// x <-> y
+			opcode.InstructionStatement{},
+
+			opcode.InstructionGetLocal{Local: xIndex},
+			opcode.InstructionSetLocal{Local: tempIndex1},
+
+			opcode.InstructionGetLocal{Local: yIndex},
+			opcode.InstructionSetLocal{Local: tempIndex2},
+
+			opcode.InstructionGetLocal{Local: tempIndex1},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: tempIndex3},
+
+			opcode.InstructionGetLocal{Local: tempIndex2},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: tempIndex4},
+
+			opcode.InstructionGetLocal{Local: tempIndex4},
+			opcode.InstructionSetLocal{Local: xIndex},
+
+			opcode.InstructionGetLocal{Local: tempIndex3},
+			opcode.InstructionSetLocal{Local: yIndex},
+
+			// Return
+			opcode.InstructionReturn{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]constant.Constant{
+			{
+				Data: []byte{0x1},
+				Kind: constant.Int,
+			},
+			{
+				Data: []byte{0x2},
+				Kind: constant.Int,
+			},
+		},
+		program.Constants,
+	)
+}
+
+func TestCompileSwapMembers(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        struct S {
+            var x: Int
+            var y: Int
+
+            init() {
+                self.x = 1
+                self.y = 2
+            }
+        }
+
+        fun test() {
+            let s = S()
+            s.x <-> s.y
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 4)
+
+	const (
+		sIndex = iota
+		tempIndex1
+		tempIndex2
+		tempIndex3
+		tempIndex4
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// let s = S()
+			opcode.InstructionStatement{},
+			opcode.InstructionGetGlobal{Global: 1},
+			opcode.InstructionInvoke{},
+			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionSetLocal{Local: sIndex},
+
+			// s.x <-> s.y
+			opcode.InstructionStatement{},
+
+			opcode.InstructionGetLocal{Local: sIndex},
+			opcode.InstructionSetLocal{Local: tempIndex1},
+
+			opcode.InstructionGetLocal{Local: sIndex},
+			opcode.InstructionSetLocal{Local: tempIndex2},
+
+			opcode.InstructionGetLocal{Local: tempIndex1},
+			opcode.InstructionGetField{FieldName: 0},
+			opcode.InstructionTransferAndConvert{Type: 2},
+			opcode.InstructionSetLocal{Local: tempIndex3},
+
+			opcode.InstructionGetLocal{Local: tempIndex2},
+			opcode.InstructionGetField{FieldName: 1},
+			opcode.InstructionTransferAndConvert{Type: 2},
+			opcode.InstructionSetLocal{Local: tempIndex4},
+
+			opcode.InstructionGetLocal{Local: tempIndex1},
+			opcode.InstructionGetLocal{Local: tempIndex4},
+			opcode.InstructionSetField{FieldName: 0},
+
+			opcode.InstructionGetLocal{Local: tempIndex2},
+			opcode.InstructionGetLocal{Local: tempIndex3},
+			opcode.InstructionSetField{FieldName: 1},
+
+			// Return
+			opcode.InstructionReturn{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]constant.Constant{
+			{
+				Data: []byte("x"),
+				Kind: constant.String,
+			},
+			{
+				Data: []byte("y"),
+				Kind: constant.String,
+			},
+			{
+				Data: []byte{0x1},
+				Kind: constant.Int,
+			},
+			{
+				Data: []byte{0x2},
+				Kind: constant.Int,
+			},
+		},
+		program.Constants,
+	)
+}
+
+func TestCompileSwapIndex(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        fun test() {
+            let chars = ["a", "b"]
+            chars[0] <-> chars[1]
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 1)
+
+	const (
+		charsIndex = iota
+		tempIndex1
+		tempIndex2
+		tempIndex3
+		tempIndex4
+		tempIndex5
+		tempIndex6
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// let chars = ["a", "b"]
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0},
+			opcode.InstructionTransferAndConvert{Type: 2},
+			opcode.InstructionGetConstant{Constant: 1},
+			opcode.InstructionTransferAndConvert{Type: 2},
+			opcode.InstructionNewArray{Type: 1, Size: 2},
+			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionSetLocal{Local: charsIndex},
+
+			// chars[0] <-> chars[1]
+			opcode.InstructionStatement{},
+
+			opcode.InstructionGetLocal{Local: charsIndex},
+			opcode.InstructionSetLocal{Local: tempIndex1},
+
+			opcode.InstructionGetConstant{Constant: 2},
+			opcode.InstructionSetLocal{Local: tempIndex2},
+
+			opcode.InstructionGetLocal{Local: charsIndex},
+			opcode.InstructionSetLocal{Local: tempIndex3},
+
+			opcode.InstructionGetConstant{Constant: 3},
+			opcode.InstructionSetLocal{Local: tempIndex4},
+
+			opcode.InstructionGetLocal{Local: tempIndex1},
+			opcode.InstructionGetLocal{Local: tempIndex2},
+			opcode.InstructionGetIndex{},
+			opcode.InstructionTransferAndConvert{Type: 2},
+			opcode.InstructionSetLocal{Local: tempIndex5},
+
+			opcode.InstructionGetLocal{Local: tempIndex3},
+			opcode.InstructionGetLocal{Local: tempIndex4},
+			opcode.InstructionGetIndex{},
+			opcode.InstructionTransferAndConvert{Type: 2},
+			opcode.InstructionSetLocal{Local: tempIndex6},
+
+			opcode.InstructionGetLocal{Local: tempIndex1},
+			opcode.InstructionGetLocal{Local: tempIndex2},
+			opcode.InstructionGetLocal{Local: tempIndex6},
+			opcode.InstructionSetIndex{},
+
+			opcode.InstructionGetLocal{Local: tempIndex3},
+			opcode.InstructionGetLocal{Local: tempIndex4},
+			opcode.InstructionGetLocal{Local: tempIndex5},
+			opcode.InstructionSetIndex{},
+
+			// Return
+			opcode.InstructionReturn{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]constant.Constant{
+			{
+				Data: []byte("a"),
+				Kind: constant.String,
+			},
+			{
+				Data: []byte("b"),
+				Kind: constant.String,
+			},
+			{
+				Data: []byte{0x0},
+				Kind: constant.Int,
+			},
+			{
+				Data: []byte{0x1},
+				Kind: constant.Int,
+			},
+		},
+		program.Constants,
+	)
 }

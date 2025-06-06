@@ -398,3 +398,7 @@ func (e *DesugaredElaboration) EnumLookupFunctionType(enumType *sema.CompositeTy
 func (e *DesugaredElaboration) SetIntegerExpressionType(expression *ast.IntegerExpression, valueType sema.Type) {
 	e.elaboration.SetIntegerExpressionType(expression, valueType)
 }
+
+func (e *DesugaredElaboration) SwapStatementTypes(statement *ast.SwapStatement) sema.SwapStatementTypes {
+	return e.elaboration.SwapStatementTypes(statement)
+}
