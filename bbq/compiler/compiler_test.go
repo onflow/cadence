@@ -1626,10 +1626,11 @@ func TestCompileIndex(t *testing.T) {
 			// array[index]
 			opcode.InstructionGetLocal{Local: arrayIndex},
 			opcode.InstructionGetLocal{Local: indexIndex},
+			opcode.InstructionTransferAndConvert{Type: 1},
 			opcode.InstructionGetIndex{},
 
 			// return
-			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -1670,8 +1671,9 @@ func TestCompileAssignIndex(t *testing.T) {
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: arrayIndex},
 			opcode.InstructionGetLocal{Local: indexIndex},
-			opcode.InstructionGetLocal{Local: valueIndex},
 			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionGetLocal{Local: valueIndex},
+			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionSetIndex{},
 			opcode.InstructionReturn{},
 		},
@@ -6140,11 +6142,12 @@ func TestCompileLineNumberInfo(t *testing.T) {
 			// array[index]
 			opcode.InstructionGetLocal{Local: arrayIndex},
 			opcode.InstructionGetLocal{Local: indexIndex},
+			opcode.InstructionTransferAndConvert{Type: 1},
 			// value + value
 			opcode.InstructionGetLocal{Local: valueIndex},
 			opcode.InstructionGetLocal{Local: valueIndex},
 			opcode.InstructionAdd{},
-			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionSetIndex{},
 
 			// return
@@ -6212,11 +6215,30 @@ func TestCompileLineNumberInfo(t *testing.T) {
 				},
 			},
 
+			// Transfer and convert `index`.
+			// Opcodes:
+			//   opcode.InstructionTransferAndConvert{Type: 1}
+			{
+				InstructionIndex: 3,
+				Position: bbq.Position{
+					StartPos: ast.Position{
+						Offset: 66,
+						Line:   3,
+						Column: 10,
+					},
+					EndPos: ast.Position{
+						Offset: 93,
+						Line:   3,
+						Column: 37,
+					},
+				},
+			},
+
 			// Load variable `value`.
 			// Opcodes:
 			//   opcode.InstructionGetLocal{Local: valueIndex}
 			{
-				InstructionIndex: 3,
+				InstructionIndex: 4,
 				Position: bbq.Position{
 					StartPos: ast.Position{
 						Offset: 81,
@@ -6235,7 +6257,7 @@ func TestCompileLineNumberInfo(t *testing.T) {
 			// Opcodes:
 			//   opcode.InstructionGetLocal{Local: valueIndex}
 			{
-				InstructionIndex: 4,
+				InstructionIndex: 5,
 				Position: bbq.Position{
 					StartPos: ast.Position{
 						Offset: 89,
@@ -6254,7 +6276,7 @@ func TestCompileLineNumberInfo(t *testing.T) {
 			// Opcodes:
 			//   opcode.InstructionAdd{},
 			{
-				InstructionIndex: 5,
+				InstructionIndex: 6,
 				Position: bbq.Position{
 					StartPos: ast.Position{
 						Offset: 81,
@@ -6274,7 +6296,7 @@ func TestCompileLineNumberInfo(t *testing.T) {
 			//   opcode.InstructionTransferAndConvert{Type: 1}
 			//   opcode.InstructionSetIndex{}
 			{
-				InstructionIndex: 6,
+				InstructionIndex: 7,
 				Position: bbq.Position{
 					StartPos: ast.Position{
 						Offset: 66,
@@ -6293,7 +6315,7 @@ func TestCompileLineNumberInfo(t *testing.T) {
 			// since this is an injected return.
 			// opcode.InstructionReturn{}
 			{
-				InstructionIndex: 8,
+				InstructionIndex: 9,
 				Position: bbq.Position{
 					StartPos: ast.Position{
 						Offset: 7,
@@ -6808,6 +6830,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				// <- y["r"]
 				opcode.InstructionGetLocal{Local: yIndex},
 				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionTransferAndConvert{Type: 3},
 				opcode.InstructionRemoveIndex{},
 				opcode.InstructionTransferAndConvert{Type: 4},
 
@@ -6815,6 +6838,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				// y["r"] <- x
 				opcode.InstructionGetLocal{Local: yIndex},
 				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionTransferAndConvert{Type: 3},
 				opcode.InstructionGetLocal{Local: xIndex},
 				opcode.InstructionTransferAndConvert{Type: 4},
 				opcode.InstructionSetIndex{},
@@ -7700,23 +7724,27 @@ func TestCompileSwapIndex(t *testing.T) {
 
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetLocal{Local: tempIndex2},
+			opcode.InstructionTransferAndConvert{Type: 3},
 			opcode.InstructionGetIndex{},
 			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionSetLocal{Local: tempIndex5},
 
 			opcode.InstructionGetLocal{Local: tempIndex3},
 			opcode.InstructionGetLocal{Local: tempIndex4},
+			opcode.InstructionTransferAndConvert{Type: 3},
 			opcode.InstructionGetIndex{},
 			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionSetLocal{Local: tempIndex6},
 
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetLocal{Local: tempIndex2},
+			opcode.InstructionTransferAndConvert{Type: 3},
 			opcode.InstructionGetLocal{Local: tempIndex6},
 			opcode.InstructionSetIndex{},
 
 			opcode.InstructionGetLocal{Local: tempIndex3},
 			opcode.InstructionGetLocal{Local: tempIndex4},
+			opcode.InstructionTransferAndConvert{Type: 3},
 			opcode.InstructionGetLocal{Local: tempIndex5},
 			opcode.InstructionSetIndex{},
 
