@@ -47,6 +47,7 @@ type Desugar struct {
 
 	modifiedDeclarations           []ast.Declaration
 	inheritedFuncsWithConditions   map[string][]*inheritedFunction
+	inheritedEvents                map[sema.Type][]*inheritedEvent
 	postConditionIndices           map[*ast.FunctionBlock]int
 	inheritedConditionParamBinding map[ast.Statement]map[string]string
 	isInheritedFunction            bool
@@ -61,6 +62,12 @@ type inheritedFunction struct {
 	rewrittenConditions      sema.PostConditionsRewrite
 	elaboration              *DesugaredElaboration
 	hasDefaultImplementation bool
+}
+
+type inheritedEvent struct {
+	enclosingType    sema.Type
+	eventDeclaration *ast.CompositeDeclaration
+	eventType        *sema.CompositeType
 }
 
 var _ ast.DeclarationVisitor[ast.Declaration] = &Desugar{}
@@ -792,13 +799,15 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 	// Recursively de-sugar nested declarations (functions, types, etc.)
 
 	prevInheritedFuncsWithConditions := d.inheritedFuncsWithConditions
+	prevInheritedEvents := d.inheritedEvents
 	prevEnclosingInterfaceType := d.enclosingInterfaceType
 
-	d.inheritedFuncsWithConditions = d.inheritedFunctionsWithConditions(compositeType)
+	d.inheritedFuncsWithConditions, d.inheritedEvents = d.inheritedFunctionsWithConditionsAndEvents(compositeType)
 	d.enclosingInterfaceType = nil
 
 	defer func() {
 		d.inheritedFuncsWithConditions = prevInheritedFuncsWithConditions
+		d.inheritedEvents = prevInheritedEvents
 		d.enclosingInterfaceType = prevEnclosingInterfaceType
 	}()
 
@@ -840,7 +849,7 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 
 	desugaredMembers = append(desugaredMembers, inheritedDefaultFuncs...)
 
-	defaultDestroyDeclaration := d.elaboration.elaboration.DefaultDestroyDeclaration(declaration)
+	defaultDestroyDeclaration := d.elaboration.DefaultDestroyDeclaration(declaration)
 	if defaultDestroyDeclaration != nil {
 		eventEmittingFunction := d.generateResourceDestroyedEventsGetterFunction(
 			compositeType,
@@ -866,8 +875,12 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 	return modifiedDecl
 }
 
-func (d *Desugar) inheritedFunctionsWithConditions(compositeType sema.ConformingType) map[string][]*inheritedFunction {
+func (d *Desugar) inheritedFunctionsWithConditionsAndEvents(compositeType sema.ConformingType) (
+	map[string][]*inheritedFunction,
+	map[sema.Type][]*inheritedEvent,
+) {
 	inheritedFunctions := make(map[string][]*inheritedFunction)
+	inheritedEvents := make(map[sema.Type][]*inheritedEvent)
 
 	addInheritedFunction := func(
 		functionDecl *ast.FunctionDeclaration,
@@ -925,9 +938,21 @@ func (d *Desugar) inheritedFunctionsWithConditions(compositeType sema.Conforming
 			functionDecl := specialFunctionDecl.FunctionDeclaration
 			addInheritedFunction(functionDecl, elaboration, interfaceType)
 		}
+
+		defaultDestroyEvent := elaboration.DefaultDestroyDeclaration(interfaceDecl)
+		eventType := elaboration.CompositeDeclarationType(defaultDestroyEvent)
+		if defaultDestroyEvent != nil {
+			events := inheritedEvents[compositeType]
+			events = append(events, &inheritedEvent{
+				enclosingType:    interfaceType,
+				eventDeclaration: defaultDestroyEvent,
+				eventType:        eventType,
+			})
+			inheritedEvents[compositeType] = events
+		}
 	})
 
-	return inheritedFunctions
+	return inheritedFunctions, inheritedEvents
 }
 
 func (d *Desugar) inheritedDefaultFunctions(
@@ -1937,25 +1962,41 @@ func (d *Desugar) transactionCompositeType() *sema.CompositeType {
 }
 
 // Generate a function to get all the resource-destroyed events
-// associated with the given composite type.
-// TODO: Handle inherited events.
+// associated with the given composite type, as an array.
 func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 	enclosingType sema.Type,
 	eventDeclaration *ast.CompositeDeclaration,
 ) *ast.FunctionDeclaration {
 
+	// Generate a function:
+	// ```
+	//   func $ResourceDestroyed(): [AnyStruct] {
+	//      return [
+	//          R.$ResourceDestroyed(args...),
+	//          I.$ResourceDestroyed(args...),
+	//          ...,
+	//      ]
+	//   }
+	// ```
+
 	astRange := eventDeclaration.Range
 	startPos := eventDeclaration.StartPos
 
-	allEvents := make([]ast.Expression, 0)
+	eventConstructorInvocations := make([]ast.Expression, 0)
 	eventTypes := make([]sema.Type, 0)
 
-	for _, declaration := range []*ast.CompositeDeclaration{
-		eventDeclaration,
-	} {
+	addEventConstructorInvocation := func(
+		eventDeclaration *ast.CompositeDeclaration,
+		eventType *sema.CompositeType,
+		enclosingType sema.Type,
+	) {
+		// Generate a constructor-invocation to construct an event-value.
+		// e.g: `R.ResourceDestroyed(a, ...)`
+
 		eventConstructor := constructorFunction(eventDeclaration)
 		parameters := eventConstructor.ParameterList.Parameters
 
+		// Generate arguments.
 		arguments := make(ast.Arguments, 0, len(parameters))
 		for _, param := range parameters {
 			arguments = append(
@@ -1969,6 +2010,7 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 
 		endPos := eventDeclaration.EndPos
 
+		// Generate the invoked expression: `R.ResourceDestroyed`
 		memberExpression := ast.NewMemberExpression(
 			d.memoryGauge,
 			ast.NewIdentifierExpression(
@@ -1981,10 +2023,9 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 			),
 			false,
 			startPos,
-			declaration.Identifier,
+			eventDeclaration.Identifier,
 		)
 
-		eventType := d.elaboration.CompositeDeclarationType(declaration)
 		eventConstructorFuncType := eventType.ConstructorFunctionType()
 
 		d.elaboration.SetMemberExpressionMemberAccessInfo(
@@ -2003,6 +2044,7 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 			},
 		)
 
+		// Generate the invocation: `R.ResourceDestroyed(a, ...)`
 		eventConstructorInvocation := ast.NewInvocationExpression(
 			d.memoryGauge,
 			memberExpression,
@@ -2018,19 +2060,42 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 		invocationTypes := sema.InvocationExpressionTypes{
 			ReturnType:     eventType,
 			ParameterTypes: paramTypes,
-			ArgumentTypes:  paramTypes, // TODO:
+			ArgumentTypes:  paramTypes,
 		}
 
 		d.elaboration.SetInvocationExpressionTypes(eventConstructorInvocation, invocationTypes)
 
-		allEvents = append(allEvents, eventConstructorInvocation)
+		eventConstructorInvocations = append(eventConstructorInvocations, eventConstructorInvocation)
 		eventTypes = append(eventTypes, eventType)
+	}
+
+	// Construct events and add them as arr elements.
+	// NOTE: The below order of events construction
+	// is to be equivalent to the interpreter.
+
+	// Construct self defined event
+	eventType := d.elaboration.CompositeDeclarationType(eventDeclaration)
+	addEventConstructorInvocation(
+		eventDeclaration,
+		eventType,
+		enclosingType,
+	)
+
+	// Construct inherited events
+	inheritedEvents := d.inheritedEvents[enclosingType]
+	for i := len(inheritedEvents) - 1; i >= 0; i-- {
+		inheritedEvent := inheritedEvents[i]
+		addEventConstructorInvocation(
+			inheritedEvent.eventDeclaration,
+			inheritedEvent.eventType,
+			inheritedEvent.enclosingType,
+		)
 	}
 
 	// Put all the events in an array.
 	arrayExpression := ast.NewArrayExpression(
 		d.memoryGauge,
-		allEvents,
+		eventConstructorInvocations,
 		astRange,
 	)
 

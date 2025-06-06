@@ -413,3 +413,7 @@ func (e *DesugaredElaboration) EnumLookupFunctionType(enumType *sema.CompositeTy
 func (e *DesugaredElaboration) SetIntegerExpressionType(expression *ast.IntegerExpression, valueType sema.Type) {
 	e.elaboration.SetIntegerExpressionType(expression, valueType)
 }
+
+func (e *DesugaredElaboration) DefaultDestroyDeclaration(declaration ast.Declaration) *ast.CompositeDeclaration {
+	return e.elaboration.DefaultDestroyDeclaration(declaration)
+}
