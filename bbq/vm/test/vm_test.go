@@ -8958,3 +8958,59 @@ func TestSwapIndex(t *testing.T) {
 		result,
 	)
 }
+
+func TestImplicitBoxing(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        fun f(_ y: Int?): AnyStruct {
+            return y
+        }
+
+        fun g(): Int? {
+            return 3
+        }
+
+        fun test(): [AnyStruct] {
+            let x: Int? = 1
+            return [x, f(2), g()]
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	vmConfig := &vm.Config{}
+	vmInstance := vm.NewVM(TestLocation, program, vmConfig)
+
+	result, err := vmInstance.InvokeExternally("test")
+	require.NoError(t, err)
+
+	context := vmInstance.Context()
+
+	AssertValuesEqual(
+		t,
+		context,
+		interpreter.NewArrayValue(
+			context,
+			interpreter.EmptyLocationRange,
+			interpreter.NewVariableSizedStaticType(nil, interpreter.PrimitiveStaticTypeAnyStruct),
+			common.ZeroAddress,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+			),
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			),
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(3),
+			),
+		),
+		result,
+	)
+}
