@@ -314,8 +314,15 @@ func (l *lexer) endPos() position {
 
 	var w int
 	for offset := startOffset; offset < endOffset-1; offset += w {
+
 		var r rune
-		r, w = utf8.DecodeRune(l.input[offset:])
+		b := l.input[offset:]
+		r, w = utf8.DecodeRune(b)
+
+		// fallback to 1 byte width if decoding fails
+		if w <= 0 {
+			w = 1
+		}
 
 		if r == '\n' {
 			endPos.line++

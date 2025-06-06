@@ -3133,3 +3133,20 @@ func TestLimit(t *testing.T) {
 	_, err := Lex([]byte(code), nil)
 	require.ErrorAs(t, err, &TokenLimitReachedError{})
 }
+
+func TestLexInvalidRune(t *testing.T) {
+
+	t.Parallel()
+
+	code := `"\(FFFF\`
+
+	tokens, err := Lex([]byte(code), nil)
+	require.NoError(t, err)
+
+	for {
+		token := tokens.Next()
+		if token.Type == TokenEOF {
+			break
+		}
+	}
+}
