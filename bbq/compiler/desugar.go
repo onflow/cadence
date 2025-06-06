@@ -814,12 +814,16 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 	var desugaredMembers []ast.Declaration
 	membersDesugared := false
 
+	// If the declaration is the default-destroy event, then generate a synthetic-constructor,
+	// so that it can be constructed externally.
+	// Default-destroy event can only have the constructor. So no need to visit other members.
 	if declaration.IsResourceDestructionDefaultEvent() {
 		initializer := constructorFunction(declaration)
 		desugaredMember := d.desugarDefaultDestroyEventInitializer(compositeType, initializer)
 		desugaredMembers = append(desugaredMembers, desugaredMember)
 		membersDesugared = true
 	} else {
+		// Otherwise, visit and desugar members.
 		existingMembers := declaration.Members.Declarations()
 		for _, member := range existingMembers {
 			desugaredMember := d.desugarDeclaration(member)
@@ -849,6 +853,9 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 
 	desugaredMembers = append(desugaredMembers, inheritedDefaultFuncs...)
 
+	// If the declaration contains a default-destroy event as a member,
+	// Then generate a getter-function, that will construct and return
+	// all destroy events, including the inherited ones.
 	defaultDestroyDeclaration := d.elaboration.DefaultDestroyDeclaration(declaration)
 	if defaultDestroyDeclaration != nil {
 		eventEmittingFunction := d.generateResourceDestroyedEventsGetterFunction(
