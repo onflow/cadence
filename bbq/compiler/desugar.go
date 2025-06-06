@@ -19,7 +19,6 @@
 package compiler
 
 import (
-	"fmt"
 	"math/big"
 	"slices"
 	"strconv"
@@ -105,7 +104,7 @@ func (d *Desugar) Run() DesugaredProgram {
 
 	program := ast.NewProgram(d.memoryGauge, d.modifiedDeclarations)
 
-	fmt.Println(ast.Prettier(program))
+	//fmt.Println(ast.Prettier(program))
 
 	return DesugaredProgram{
 		program:                        program,

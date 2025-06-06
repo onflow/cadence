@@ -200,6 +200,9 @@ func (c *Context) CallStack() []interpreter.Invocation {
 	return nil
 }
 
+// InvokeFunction function invokes a given function value with the given arguments.
+// For bound functions, it expects the first argument to be the receiver.
+// i.e: The caller is responsible for preparing the arguments.
 func (c *Context) InvokeFunction(
 	fn interpreter.FunctionValue,
 	arguments []interpreter.Value,
@@ -271,7 +274,14 @@ func (c *Context) DefaultDestroyEvents(
 		EmptyLocationRange,
 	)
 
-	events := c.InvokeFunction(method, nil)
+	if method == nil {
+		return nil
+	}
+
+	// Always have the receiver as the first argument.
+	arguments := []Value{resourceValue}
+
+	events := c.InvokeFunction(method, arguments)
 	eventsArray, ok := events.(*interpreter.ArrayValue)
 	if !ok {
 		panic(errors.NewUnreachableError())

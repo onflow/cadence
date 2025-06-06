@@ -6464,7 +6464,7 @@ func TestInterpretResourceMoveInArrayAndDestroy(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           resource Foo {
               event ResourceDestroyed(
@@ -6538,7 +6538,7 @@ func TestInterpretResourceMoveInDictionaryAndDestroy(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           resource Foo {
               event ResourceDestroyed(
@@ -7036,7 +7036,7 @@ func TestInterpretResourceDestroyExpressionDestructor(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
            resource R {
                event ResourceDestroyed()
@@ -7079,7 +7079,7 @@ func TestInterpretResourceDestroyExpressionNestedResources(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           resource B {
             var foo: Int
@@ -7154,7 +7154,7 @@ func TestInterpretResourceDestroyArray(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           resource R {
               event ResourceDestroyed()
@@ -7197,7 +7197,7 @@ func TestInterpretResourceDestroyDictionary(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           resource R {
               event ResourceDestroyed()
@@ -7240,7 +7240,7 @@ func TestInterpretResourceDestroyOptionalSome(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           resource R {
               event ResourceDestroyed()
@@ -7282,7 +7282,7 @@ func TestInterpretResourceDestroyOptionalNil(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           resource R {
               event ResourceDestroyed()
@@ -9664,7 +9664,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
             resource B {
                 let id: Int

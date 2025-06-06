@@ -422,7 +422,7 @@ func (v *CompositeValue) DefaultDestroyEvents(
 ) []*CompositeValue {
 	eventConstructors := v.defaultDestroyEventConstructors()
 
-	events := make([]*CompositeValue, len(eventConstructors))
+	events := make([]*CompositeValue, 0, len(eventConstructors))
 	for _, constructor := range eventConstructors {
 
 		// pass the container value to the creation of the default event as an implicit argument, so that
