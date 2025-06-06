@@ -853,16 +853,14 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 
 	desugaredMembers = append(desugaredMembers, inheritedDefaultFuncs...)
 
-	// If the declaration contains a default-destroy event as a member,
-	// Then generate a getter-function, that will construct and return
-	// all destroy events, including the inherited ones.
-	defaultDestroyDeclaration := d.elaboration.DefaultDestroyDeclaration(declaration)
-	if defaultDestroyDeclaration != nil {
-		eventEmittingFunction := d.generateResourceDestroyedEventsGetterFunction(
-			compositeType,
-			defaultDestroyDeclaration,
-		)
-		desugaredMembers = append(desugaredMembers, eventEmittingFunction)
+	// Generate a getter-function, that will construct and return
+	// all resource-destroyed events, including the inherited ones.
+	destroyEventsReturningFunction := d.generateResourceDestroyedEventsGetterFunction(
+		compositeType,
+		declaration,
+	)
+	if destroyEventsReturningFunction != nil {
+		desugaredMembers = append(desugaredMembers, destroyEventsReturningFunction)
 	}
 
 	modifiedDecl := ast.NewCompositeDeclaration(
@@ -1971,8 +1969,8 @@ func (d *Desugar) transactionCompositeType() *sema.CompositeType {
 // Generate a function to get all the resource-destroyed events
 // associated with the given composite type, as an array.
 func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
-	enclosingType sema.Type,
-	eventDeclaration *ast.CompositeDeclaration,
+	compositeType sema.Type,
+	compositeDeclaration *ast.CompositeDeclaration,
 ) *ast.FunctionDeclaration {
 
 	// Generate a function:
@@ -1986,9 +1984,6 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 	//   }
 	// ```
 
-	astRange := eventDeclaration.Range
-	startPos := eventDeclaration.StartPos
-
 	eventConstructorInvocations := make([]ast.Expression, 0)
 	eventTypes := make([]sema.Type, 0)
 
@@ -1999,6 +1994,8 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 	) {
 		// Generate a constructor-invocation to construct an event-value.
 		// e.g: `R.ResourceDestroyed(a, ...)`
+
+		startPos := eventDeclaration.StartPos
 
 		eventConstructor := constructorFunction(eventDeclaration)
 		parameters := eventConstructor.ParameterList.Parameters
@@ -2081,15 +2078,18 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 	// is to be equivalent to the interpreter.
 
 	// Construct self defined event
-	eventType := d.elaboration.CompositeDeclarationType(eventDeclaration)
-	addEventConstructorInvocation(
-		eventDeclaration,
-		eventType,
-		enclosingType,
-	)
+	defaultDestroyEventDeclaration := d.elaboration.DefaultDestroyDeclaration(compositeDeclaration)
+	if defaultDestroyEventDeclaration != nil {
+		eventType := d.elaboration.CompositeDeclarationType(defaultDestroyEventDeclaration)
+		addEventConstructorInvocation(
+			defaultDestroyEventDeclaration,
+			eventType,
+			compositeType,
+		)
+	}
 
 	// Construct inherited events
-	inheritedEvents := d.inheritedEvents[enclosingType]
+	inheritedEvents := d.inheritedEvents[compositeType]
 	for i := len(inheritedEvents) - 1; i >= 0; i-- {
 		inheritedEvent := inheritedEvents[i]
 		addEventConstructorInvocation(
@@ -2098,6 +2098,13 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 			inheritedEvent.enclosingType,
 		)
 	}
+
+	if len(eventConstructorInvocations) == 0 {
+		return nil
+	}
+
+	astRange := compositeDeclaration.Range
+	startPos := compositeDeclaration.StartPos
 
 	// Put all the events in an array.
 	arrayExpression := ast.NewArrayExpression(
