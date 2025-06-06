@@ -63,8 +63,6 @@ var parseCheckAndInterpretWithOptionsAndMemoryMetering = test_utils.ParseCheckAn
 
 type testEvent = test_utils.TestEvent
 
-var parseCheckAndInterpretWithEvents = test_utils.ParseCheckAndInterpretWithEvents
-
 func newUnmeteredInMemoryStorage() interpreter.InMemoryStorage {
 	return interpreter.NewInMemoryStorage(nil)
 }
@@ -6942,7 +6940,7 @@ func TestInterpretSwapVariables(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        fun test(): [Int] {
            var x = 2
            var y = 3
@@ -6975,7 +6973,7 @@ func TestInterpretSwapArrayAndField(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        struct Foo {
            var bar: Int
 
@@ -7826,7 +7824,7 @@ func TestInterpretSwapResourceDictionaryElementReturnSwapped(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       resource X {}
 
       fun test(): @X? {
@@ -7853,7 +7851,7 @@ func TestInterpretSwapResourceDictionaryElementReturnDictionary(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       resource X {}
 
       fun test(): @{String: X} {
@@ -7891,7 +7889,7 @@ func TestInterpretSwapResourceDictionaryElementRemoveUsingNil(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       resource X {}
 
       fun test(): @X? {
@@ -12322,7 +12320,7 @@ func TestInterpretSwapInSameArray(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           struct S {
               let value: Int
 
@@ -12378,33 +12376,33 @@ func TestInterpretSwapDictionaryKeysWithSideEffects(t *testing.T) {
 	t.Run("simple", func(t *testing.T) {
 		t.Parallel()
 
-		inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
+		inter, getLogs, err := parseCheckAndPrepareWithConditionLogs(t, `
           let xs: [{Int: String}] = [{2: "x"}, {3: "y"}]
 
           fun a(): Int {
-              log("a")
+              conditionLog("a")
               return 0
           }
 
           fun b(): Int {
-              log("b")
+              conditionLog("b")
               return 2
           }
 
           fun c(): Int {
-              log("c")
+              conditionLog("c")
               return 1
           }
 
           fun d(): Int {
-              log("d")
+              conditionLog("d")
               return 3
           }
 
           fun test() {
-              log(xs)
+              conditionLog(xs)
               xs[a()][b()] <-> xs[c()][d()]
-              log(xs)
+              conditionLog(xs)
           }
         `)
 		require.NoError(t, err)
@@ -12429,7 +12427,7 @@ func TestInterpretSwapDictionaryKeysWithSideEffects(t *testing.T) {
 	t.Run("resources", func(t *testing.T) {
 		t.Parallel()
 
-		inter, getEvents, err := parseCheckAndInterpretWithEvents(t, `
+		inter, getEvents, err := parseCheckAndPrepareWithEvents(t, `
           resource Resource {
 			  event ResourceDestroyed(
                   value: Int = self.value

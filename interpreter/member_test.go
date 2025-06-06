@@ -1125,7 +1125,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("anystruct swap on reference", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct Foo {
                 var array: [Int]
                 init() {

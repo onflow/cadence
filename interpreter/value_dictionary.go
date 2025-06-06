@@ -666,7 +666,7 @@ func (v *DictionaryValue) SetKey(context ContainerMutationContext, locationRange
 	case NilValue:
 		existingValue = v.Remove(context, locationRange, keyValue)
 
-	case placeholderValue:
+	case PlaceholderValue:
 		// NO-OP
 
 	default:

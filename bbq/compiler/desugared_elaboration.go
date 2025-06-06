@@ -414,6 +414,10 @@ func (e *DesugaredElaboration) SetIntegerExpressionType(expression *ast.IntegerE
 	e.elaboration.SetIntegerExpressionType(expression, valueType)
 }
 
+func (e *DesugaredElaboration) SwapStatementTypes(statement *ast.SwapStatement) sema.SwapStatementTypes {
+	return e.elaboration.SwapStatementTypes(statement)
+}
+
 func (e *DesugaredElaboration) DefaultDestroyDeclaration(declaration ast.Declaration) *ast.CompositeDeclaration {
 	return e.elaboration.DefaultDestroyDeclaration(declaration)
 }

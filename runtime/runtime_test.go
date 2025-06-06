@@ -58,8 +58,6 @@ func TestRuntimeExecuteScript(t *testing.T) {
 	runtime := NewTestRuntime()
 
 	script := []byte(`
-      import "imported"
-
       access(all) fun main(): Int {
           let answer = 42
           return answer
@@ -83,6 +81,53 @@ func TestRuntimeExecuteScript(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, cadence.NewInt(42), value)
+}
+
+func TestRuntimeExecuteTransaction(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestRuntime()
+
+	script := []byte(`
+      transaction {
+		  prepare(signer: &Account) {
+              log(signer.address)
+          }
+          execute {}
+        }
+    `)
+
+	signer := common.MustBytesToAddress([]byte{0x42})
+
+	var messages []string
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{signer}, nil
+		},
+		OnProgramLog: func(message string) {
+			messages = append(messages, message)
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]string{"0x0000000000000042"},
+		messages,
+	)
 }
 
 func TestRuntimeImport(t *testing.T) {
@@ -410,6 +455,7 @@ func TestRuntimeInvalidTransactionArgumentAccount(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)
@@ -452,6 +498,7 @@ func TestRuntimeTransactionWithAccount(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1195,6 +1242,7 @@ func TestRuntimeProgramWithNoTransaction(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)
@@ -1228,6 +1276,7 @@ func TestRuntimeProgramWithMultipleTransaction(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)
@@ -1351,6 +1400,7 @@ func TestRuntimeStorage(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					UseVM:     *compile,
 				},
 			)
 			require.NoError(t, err)
@@ -1461,6 +1511,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1472,6 +1523,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1483,6 +1535,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1562,6 +1615,7 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1573,6 +1627,7 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1653,6 +1708,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1664,6 +1720,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1742,6 +1799,7 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1753,6 +1811,7 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1891,6 +1950,7 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1902,6 +1962,7 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1986,6 +2047,7 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1997,6 +2059,7 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -2095,6 +2158,7 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -2106,6 +2170,7 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -2195,13 +2260,15 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
 			},
 		}
 
+		nextScriptLocation := NewScriptLocationGenerator()
+
 		actual, err := runtime.ExecuteScript(
 			Script{
 				Source: []byte(test.code),
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
 				UseVM:     *compile,
 			},
 		)
@@ -2360,13 +2427,15 @@ func TestRuntimeScriptParameterTypeNotImportableError(t *testing.T) {
 		},
 	}
 
+	nextScriptLocation := NewScriptLocationGenerator()
+
 	_, err := runtime.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Location:  nextScriptLocation(),
 			UseVM:     *compile,
 		},
 	)
@@ -2487,6 +2556,7 @@ func TestRuntimeStorageChanges(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -2498,6 +2568,7 @@ func TestRuntimeStorageChanges(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -2541,6 +2612,7 @@ func TestRuntimeAccountAddress(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -2584,6 +2656,7 @@ func TestRuntimePublicAccountAddress(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -2678,6 +2751,7 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -2689,6 +2763,7 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -3376,6 +3451,7 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -4311,6 +4387,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -4324,6 +4401,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -4442,6 +4520,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -4453,6 +4532,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -4980,6 +5060,7 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -5009,6 +5090,7 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		RequireError(t, err)
@@ -5248,6 +5330,7 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -5269,6 +5352,7 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -5430,6 +5514,7 @@ func TestRuntimeResourceOwnerFieldUseArray(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -5454,6 +5539,7 @@ func TestRuntimeResourceOwnerFieldUseArray(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -5604,6 +5690,7 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -5628,6 +5715,7 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -5744,6 +5832,7 @@ func TestRuntimeMetrics(t *testing.T) {
 		Context{
 			Interface: i1,
 			Location:  transactionLocation,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -5762,12 +5851,14 @@ func TestRuntimeMetrics(t *testing.T) {
 		},
 		r1.programChecked,
 	)
-	assert.Equal(t,
-		map[common.Location]int{
-			transactionLocation: 1,
-		},
-		r1.programInterpreted,
-	)
+	if !*compile {
+		assert.Equal(t,
+			map[common.Location]int{
+				transactionLocation: 1,
+			},
+			r1.programInterpreted,
+		)
+	}
 
 	i2, r2 := newRuntimeInterface()
 
@@ -5780,6 +5871,7 @@ func TestRuntimeMetrics(t *testing.T) {
 		Context{
 			Interface: i2,
 			Location:  transactionLocation,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -5798,12 +5890,14 @@ func TestRuntimeMetrics(t *testing.T) {
 		},
 		r2.programChecked,
 	)
-	assert.Equal(t,
-		map[common.Location]int{
-			transactionLocation: 1,
-		},
-		r2.programInterpreted,
-	)
+	if !*compile {
+		assert.Equal(t,
+			map[common.Location]int{
+				transactionLocation: 1,
+			},
+			r2.programInterpreted,
+		)
+	}
 }
 
 type ownerKeyPair struct {
@@ -5950,6 +6044,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -5965,6 +6060,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -6115,6 +6211,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -6163,6 +6260,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -6190,6 +6288,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -6248,6 +6347,7 @@ func TestRuntimeExternalError(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -6290,6 +6390,7 @@ func TestRuntimeExternalNonError(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -6419,6 +6520,7 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -6636,6 +6738,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -7080,6 +7183,8 @@ func TestRuntimeExecuteScriptArguments(t *testing.T) {
 				},
 			}
 
+			nextScriptLocation := NewScriptLocationGenerator()
+
 			_, err := runtime.ExecuteScript(
 				Script{
 					Source:    script,
@@ -7087,7 +7192,7 @@ func TestRuntimeExecuteScriptArguments(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  common.ScriptLocation{0x1},
+					Location:  nextScriptLocation(),
 					UseVM:     *compile,
 				},
 			)
@@ -7186,13 +7291,15 @@ func TestRuntimeAccountsInDictionary(t *testing.T) {
 
 		runtimeInterface := &TestRuntimeInterface{}
 
+		nextScriptLocation := NewScriptLocationGenerator()
+
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
 			},
 		)
 
@@ -7215,13 +7322,15 @@ func TestRuntimeAccountsInDictionary(t *testing.T) {
 
 		runtimeInterface := &TestRuntimeInterface{}
 
+		nextScriptLocation := NewScriptLocationGenerator()
+
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
 			},
 		)
 
@@ -7251,13 +7360,15 @@ func TestRuntimeAccountsInDictionary(t *testing.T) {
 			Storage: NewTestLedger(nil, nil),
 		}
 
+		nextScriptLocation := NewScriptLocationGenerator()
+
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
 			},
 		)
 		require.NoError(t, err)
@@ -7366,13 +7477,15 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			},
 		}
 
+		nextScriptLocation := NewScriptLocationGenerator()
+
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
 			},
 		)
 
@@ -7400,13 +7513,15 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			},
 		}
 
+		nextScriptLocation := NewScriptLocationGenerator()
+
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
 				UseVM:     *compile,
 			},
 		)
@@ -7439,13 +7554,15 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			},
 		}
 
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
 		err := runtime.ExecuteTransaction(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.TransactionLocation{},
+				Location:  nextTransactionLocation(),
 			},
 		)
 
@@ -7644,13 +7761,15 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			},
 		}
 
+		nextScriptLocation := NewScriptLocationGenerator()
+
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
 				UseVM:     *compile,
 			},
 		)
@@ -7821,6 +7940,8 @@ func TestRuntimeImportAnyStruct(t *testing.T) {
 		},
 	}
 
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
 	err := rt.ExecuteTransaction(
 		Script{
 			Source: []byte(`
@@ -7834,7 +7955,8 @@ func TestRuntimeImportAnyStruct(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.TransactionLocation{},
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -7888,12 +8010,7 @@ func BenchmarkRuntimeScriptNoop(b *testing.B) {
 
 	environment := NewScriptInterpreterEnvironment(Config{})
 
-	context := Context{
-		Interface:   runtimeInterface,
-		Location:    common.ScriptLocation{},
-		Environment: environment,
-		UseVM:       *compile,
-	}
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	runtime := NewTestRuntime()
 
@@ -7901,7 +8018,12 @@ func BenchmarkRuntimeScriptNoop(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, _ = runtime.ExecuteScript(script, context)
+		_, _ = runtime.ExecuteScript(script, Context{
+			Interface:   runtimeInterface,
+			Location:    nextScriptLocation(),
+			Environment: environment,
+			UseVM:       *compile,
+		})
 	}
 }
 
@@ -7912,6 +8034,8 @@ func TestRuntimeImportTestStdlib(t *testing.T) {
 	rt := NewTestRuntime()
 
 	runtimeInterface := &TestRuntimeInterface{}
+
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	_, err := rt.ExecuteScript(
 		Script{
@@ -7925,7 +8049,7 @@ func TestRuntimeImportTestStdlib(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Location:  nextScriptLocation(),
 		},
 	)
 
@@ -7946,6 +8070,8 @@ func TestRuntimeGetCurrentBlockScript(t *testing.T) {
 
 	runtimeInterface := &TestRuntimeInterface{}
 
+	nextScriptLocation := NewScriptLocationGenerator()
+
 	_, err := rt.ExecuteScript(
 		Script{
 			Source: []byte(`
@@ -7956,7 +8082,7 @@ func TestRuntimeGetCurrentBlockScript(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Location:  nextScriptLocation(),
 		},
 	)
 
@@ -8052,6 +8178,7 @@ func TestRuntimeTypeMismatchErrorMessage(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -8110,13 +8237,15 @@ func TestRuntimeErrorExcerpts(t *testing.T) {
 		Storage:                      NewTestLedger(nil, nil),
 	}
 
+	nextScriptLocation := NewScriptLocationGenerator()
+
 	_, err := rt.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Location:  nextScriptLocation(),
 			UseVM:     *compile,
 		},
 	)
@@ -8124,7 +8253,7 @@ func TestRuntimeErrorExcerpts(t *testing.T) {
 
 	errorString := `Execution failed:
 error: unexpectedly found nil while forcing an Optional value
-  --> 0000000000000000000000000000000000000000000000000000000000000000:9:15
+  --> 0100000000000000000000000000000000000000000000000000000000000000:9:15
    |
  9 |         return a
 10 |             .firstIndex(of: 5)!
@@ -8166,13 +8295,15 @@ func TestRuntimeErrorExcerptsMultiline(t *testing.T) {
 		Storage:                      NewTestLedger(nil, nil),
 	}
 
+	nextScriptLocation := NewScriptLocationGenerator()
+
 	_, err := rt.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Location:  nextScriptLocation(),
 			UseVM:     *compile,
 		},
 	)
@@ -8180,7 +8311,7 @@ func TestRuntimeErrorExcerptsMultiline(t *testing.T) {
 
 	errorString := `Execution failed:
 error: unexpectedly found nil while forcing an Optional value
-  --> 0000000000000000000000000000000000000000000000000000000000000000:9:15
+  --> 0100000000000000000000000000000000000000000000000000000000000000:9:15
    |
  9 |         return a
 10 |             .firstIndex(of: 5)
@@ -8225,6 +8356,8 @@ func TestRuntimeAccountTypeEquality(t *testing.T) {
 		},
 	}
 
+	nextScriptLocation := NewScriptLocationGenerator()
+
 	result, err := rt.ExecuteScript(
 		Script{
 			Source: script,
@@ -8234,7 +8367,7 @@ func TestRuntimeAccountTypeEquality(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Location:  nextScriptLocation(),
 		},
 	)
 	require.NoError(t, err)
@@ -8269,13 +8402,15 @@ func TestRuntimeFlowEventTypes(t *testing.T) {
 		Storage: NewTestLedger(nil, nil),
 	}
 
+	nextScriptLocation := NewScriptLocationGenerator()
+
 	result, err := rt.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Location:  nextScriptLocation(),
 		},
 	)
 	require.NoError(t, err)
@@ -8696,6 +8831,8 @@ func TestRuntimeOptionalReferenceAttack(t *testing.T) {
 		},
 	}
 
+	nextScriptLocation := NewScriptLocationGenerator()
+
 	_, err := runtime.ExecuteScript(
 		Script{
 			Source:    []byte(script),
@@ -8703,7 +8840,7 @@ func TestRuntimeOptionalReferenceAttack(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Location:  nextScriptLocation(),
 			UseVM:     *compile,
 		},
 	)
@@ -8745,6 +8882,8 @@ func TestRuntimeReturnDestroyedOptional(t *testing.T) {
 		Storage: NewTestLedger(nil, nil),
 	}
 
+	nextScriptLocation := NewScriptLocationGenerator()
+
 	// Test
 
 	_, err := runtime.ExecuteScript(
@@ -8753,7 +8892,7 @@ func TestRuntimeReturnDestroyedOptional(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Location:  nextScriptLocation(),
 			UseVM:     *compile,
 		},
 	)
@@ -8798,13 +8937,15 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 			},
 		}
 
+		nextScriptLocation := NewScriptLocationGenerator()
+
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
 				UseVM:     *compile,
 			},
 		)
@@ -8834,13 +8975,15 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 			},
 		}
 
+		nextScriptLocation := NewScriptLocationGenerator()
+
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
 				UseVM:     *compile,
 			},
 		)
@@ -8873,13 +9016,15 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 			},
 		}
 
+		nextScriptLocation := NewScriptLocationGenerator()
+
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
 			},
 		)
 
@@ -8920,13 +9065,15 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 			},
 		}
 
+		nextScriptLocation := NewScriptLocationGenerator()
+
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
 			},
 		)
 
@@ -9154,6 +9301,7 @@ func BenchmarkRuntimeResourceTracking(b *testing.B) {
 			Interface:   runtimeInterface,
 			Location:    nextTransactionLocation(),
 			Environment: environment,
+			UseVM:       *compile,
 		},
 	)
 	require.NoError(b, err)
@@ -9164,7 +9312,7 @@ func BenchmarkRuntimeResourceTracking(b *testing.B) {
                 import Foo from 0x1
 
                 transaction {
-                    prepare(signer: &Account) {
+                    prepare(signer: auth(Storage) &Account) {
                         signer.storage.save(<- Foo.getResourceArray(), to: /storage/r)
                     }
                 }
@@ -9174,6 +9322,7 @@ func BenchmarkRuntimeResourceTracking(b *testing.B) {
 			Interface:   runtimeInterface,
 			Location:    nextTransactionLocation(),
 			Environment: environment,
+			UseVM:       *compile,
 		},
 	)
 	require.NoError(b, err)
@@ -9187,7 +9336,7 @@ func BenchmarkRuntimeResourceTracking(b *testing.B) {
                 import Foo from 0x1
 
                 transaction {
-                    prepare(signer: &Account) {
+                    prepare(signer: auth(Storage) &Account) {
                         // When the array is loaded from storage, all elements are also loaded.
                         // So all moves of this resource will check for tracking of all elements aas well.
 
@@ -9205,6 +9354,7 @@ func BenchmarkRuntimeResourceTracking(b *testing.B) {
 			Interface:   runtimeInterface,
 			Location:    nextTransactionLocation(),
 			Environment: environment,
+			UseVM:       *compile,
 		},
 	)
 	require.NoError(b, err)
@@ -9834,6 +9984,7 @@ func TestRuntimeNestedResourceMoveInTransaction(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -10944,6 +11095,9 @@ func TestRuntimeContractWithInvalidCapability(t *testing.T) {
 		},
 	}
 
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
+
 	// Deploy contract
 
 	err := runtime.ExecuteTransaction(
@@ -10952,7 +11106,7 @@ func TestRuntimeContractWithInvalidCapability(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.TransactionLocation{},
+			Location:  nextTransactionLocation(),
 		},
 	)
 	require.NoError(t, err)
@@ -10965,7 +11119,7 @@ func TestRuntimeContractWithInvalidCapability(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Location:  nextScriptLocation(),
 			UseVM:     *compile,
 		},
 	)
@@ -11112,6 +11266,7 @@ func TestRuntimeForbidPublicEntitlementBorrow(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -11201,6 +11356,7 @@ func TestRuntimeForbidPublicEntitlementGet(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -11550,6 +11706,7 @@ func TestRuntimeStorageEnumAsDictionaryKey(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -11828,21 +11985,21 @@ func BenchmarkContractFunctionInvocation(b *testing.B) {
 	addressValue := cadence.BytesToAddress([]byte{0x1})
 
 	contract := []byte(`
-      pub contract Test {
-          pub fun helloText(): String {
+      access(all) contract Test {
+          access(all) fun helloText(): String {
               return "global function of the imported program"
           }
 
           init() {}
 
-          pub struct Foo {
-              pub var id : String
+          access(all) struct Foo {
+              access(all) var id: String
 
               init(_ id: String) {
                   self.id = id
               }
 
-              pub fun sayHello(_ id: Int): String {
+              access(all) fun sayHello(_ id: Int): String {
                   // return self.id
                   return Test.helloText()
               }
@@ -11881,6 +12038,7 @@ func BenchmarkContractFunctionInvocation(b *testing.B) {
 	}
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -11897,7 +12055,7 @@ func BenchmarkContractFunctionInvocation(b *testing.B) {
 	script := `      
       import Test from 0x01
 
-      pub fun main(count: Int): String {
+      access(all) fun main(count: Int): String {
           var i = 0
           var r = Test.Foo("Hello from Foo!")
           while i < count {
@@ -11921,7 +12079,7 @@ func BenchmarkContractFunctionInvocation(b *testing.B) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Location:  nextScriptLocation(),
 				UseVM:     *compile,
 			},
 		)
@@ -11964,6 +12122,7 @@ func TestRuntimeInvocationReturnTypeInferenceFailure(t *testing.T) {
 		Context{
 			Interface: newRuntimeInterface(),
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)
@@ -12316,6 +12475,9 @@ func TestRuntimeClosureScopingFunctionExpression(t *testing.T) {
 			return json.Decode(nil, b)
 		},
 	}
+
+	nextScriptLocation := NewScriptLocationGenerator()
+
 	actual, err := rt.ExecuteScript(
 		Script{
 			Source:    []byte(script),
@@ -12323,7 +12485,7 @@ func TestRuntimeClosureScopingFunctionExpression(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Location:  nextScriptLocation(),
 			UseVM:     *compile,
 		},
 	)
@@ -12346,6 +12508,8 @@ func TestRuntimeClosureScopingInnerFunction(t *testing.T) {
         }
     `
 
+	nextScriptLocation := NewScriptLocationGenerator()
+
 	actual, err := rt.ExecuteScript(
 		Script{
 			Source:    []byte(script),
@@ -12357,7 +12521,7 @@ func TestRuntimeClosureScopingInnerFunction(t *testing.T) {
 					return json.Decode(nil, b)
 				},
 			},
-			Location: common.ScriptLocation{},
+			Location: nextScriptLocation(),
 			UseVM:    *compile,
 		},
 	)
@@ -12396,19 +12560,23 @@ func TestRuntimeInterfaceConditionDeduplication(t *testing.T) {
 
 	var events []string
 
+	runtimeInterface := &TestRuntimeInterface{
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event.FieldsMappedByName()["message"].String())
+			return nil
+		},
+	}
+
+	nextScriptLocation := NewScriptLocationGenerator()
+
 	_, err := rt.ExecuteScript(
 		Script{
 			Source: []byte(script),
 		},
 		Context{
-			Interface: &TestRuntimeInterface{
-				OnEmitEvent: func(event cadence.Event) error {
-					events = append(events, event.FieldsMappedByName()["message"].String())
-					return nil
-				},
-			},
-			Location: common.ScriptLocation{},
-			UseVM:    *compile,
+			Interface: runtimeInterface,
+			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -12510,6 +12678,7 @@ func TestRuntimeFunctionTypeConfusion(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -12988,10 +13157,11 @@ func TestRuntimeMetering(t *testing.T) {
 	)
 
 	assert.Equal(t, uint64(98), memoryGauge.getMemory(common.MemoryKindRawString))
+	var expectedFunctionInvocations uint64
 	if *compile {
-		assert.Equal(t, uint64(1), computationGauge.getComputation(common.ComputationKindInstructionInvoke))
-		assert.Equal(t, uint64(2), computationGauge.getComputation(common.ComputationKindFunctionInvocation))
+		expectedFunctionInvocations = 4
 	} else {
-		assert.Equal(t, uint64(3), computationGauge.getComputation(common.ComputationKindFunctionInvocation))
+		expectedFunctionInvocations = 3
 	}
+	assert.Equal(t, expectedFunctionInvocations, computationGauge.getComputation(common.ComputationKindFunctionInvocation))
 }

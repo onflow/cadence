@@ -27,159 +27,53 @@ func _() {
 	_ = x[ComputationKindSTDLIBRevertibleRandom-1102]
 	_ = x[ComputationKindSTDLIBRLPDecodeString-1108]
 	_ = x[ComputationKindSTDLIBRLPDecodeList-1109]
-	_ = x[ComputationKindInstructionReturn-1110]
-	_ = x[ComputationKindInstructionReturnValue-1111]
-	_ = x[ComputationKindInstructionJump-1112]
-	_ = x[ComputationKindInstructionJumpIfFalse-1113]
-	_ = x[ComputationKindInstructionJumpIfTrue-1114]
-	_ = x[ComputationKindInstructionJumpIfNil-1115]
-	_ = x[ComputationKindInstructionAdd-1120]
-	_ = x[ComputationKindInstructionSubtract-1121]
-	_ = x[ComputationKindInstructionMultiply-1122]
-	_ = x[ComputationKindInstructionDivide-1123]
-	_ = x[ComputationKindInstructionMod-1124]
-	_ = x[ComputationKindInstructionNegate-1125]
-	_ = x[ComputationKindInstructionBitwiseOr-1129]
-	_ = x[ComputationKindInstructionBitwiseAnd-1130]
-	_ = x[ComputationKindInstructionBitwiseXor-1131]
-	_ = x[ComputationKindInstructionBitwiseLeftShift-1132]
-	_ = x[ComputationKindInstructionBitwiseRightShift-1133]
-	_ = x[ComputationKindInstructionLess-1135]
-	_ = x[ComputationKindInstructionGreater-1136]
-	_ = x[ComputationKindInstructionLessOrEqual-1137]
-	_ = x[ComputationKindInstructionGreaterOrEqual-1138]
-	_ = x[ComputationKindInstructionEqual-1139]
-	_ = x[ComputationKindInstructionNotEqual-1140]
-	_ = x[ComputationKindInstructionNot-1141]
-	_ = x[ComputationKindInstructionUnwrap-1145]
-	_ = x[ComputationKindInstructionDestroy-1146]
-	_ = x[ComputationKindInstructionTransfer-1147]
-	_ = x[ComputationKindInstructionSimpleCast-1148]
-	_ = x[ComputationKindInstructionFailableCast-1149]
-	_ = x[ComputationKindInstructionForceCast-1150]
-	_ = x[ComputationKindInstructionDeref-1151]
-	_ = x[ComputationKindInstructionTrue-1158]
-	_ = x[ComputationKindInstructionFalse-1159]
-	_ = x[ComputationKindInstructionNil-1160]
-	_ = x[ComputationKindInstructionNew-1161]
-	_ = x[ComputationKindInstructionNewPath-1162]
-	_ = x[ComputationKindInstructionNewArray-1163]
-	_ = x[ComputationKindInstructionNewDictionary-1164]
-	_ = x[ComputationKindInstructionNewRef-1165]
-	_ = x[ComputationKindInstructionNewClosure-1166]
-	_ = x[ComputationKindInstructionGetConstant-1178]
-	_ = x[ComputationKindInstructionGetLocal-1179]
-	_ = x[ComputationKindInstructionSetLocal-1180]
-	_ = x[ComputationKindInstructionGetUpvalue-1181]
-	_ = x[ComputationKindInstructionSetUpvalue-1182]
-	_ = x[ComputationKindInstructionGetGlobal-1183]
-	_ = x[ComputationKindInstructionSetGlobal-1184]
-	_ = x[ComputationKindInstructionGetField-1185]
-	_ = x[ComputationKindInstructionRemoveField-1186]
-	_ = x[ComputationKindInstructionSetField-1187]
-	_ = x[ComputationKindInstructionSetIndex-1188]
-	_ = x[ComputationKindInstructionGetIndex-1189]
-	_ = x[ComputationKindInstructionRemoveIndex-1190]
-	_ = x[ComputationKindInstructionInvoke-1198]
-	_ = x[ComputationKindInstructionInvokeMethodStatic-1199]
-	_ = x[ComputationKindInstructionInvokeMethodDynamic-1200]
-	_ = x[ComputationKindInstructionDrop-1208]
-	_ = x[ComputationKindInstructionDup-1209]
-	_ = x[ComputationKindInstructionIterator-1216]
-	_ = x[ComputationKindInstructionIteratorHasNext-1217]
-	_ = x[ComputationKindInstructionIteratorNext-1218]
-	_ = x[ComputationKindInstructionEmitEvent-1219]
 }
 
-const _ComputationKind_name = "UnknownStatementLoopFunctionInvocationCreateCompositeValueTransferCompositeValueDestroyCompositeValueCreateArrayValueTransferArrayValueDestroyArrayValueCreateDictionaryValueTransferDictionaryValueDestroyDictionaryValueEncodeValueSTDLIBPanicSTDLIBAssertSTDLIBRevertibleRandomSTDLIBRLPDecodeStringSTDLIBRLPDecodeListInstructionReturnInstructionReturnValueInstructionJumpInstructionJumpIfFalseInstructionJumpIfTrueInstructionJumpIfNilInstructionAddInstructionSubtractInstructionMultiplyInstructionDivideInstructionModInstructionNegateInstructionBitwiseOrInstructionBitwiseAndInstructionBitwiseXorInstructionBitwiseLeftShiftInstructionBitwiseRightShiftInstructionLessInstructionGreaterInstructionLessOrEqualInstructionGreaterOrEqualInstructionEqualInstructionNotEqualInstructionNotInstructionUnwrapInstructionDestroyInstructionTransferInstructionSimpleCastInstructionFailableCastInstructionForceCastInstructionDerefInstructionTrueInstructionFalseInstructionNilInstructionNewInstructionNewPathInstructionNewArrayInstructionNewDictionaryInstructionNewRefInstructionNewClosureInstructionGetConstantInstructionGetLocalInstructionSetLocalInstructionGetUpvalueInstructionSetUpvalueInstructionGetGlobalInstructionSetGlobalInstructionGetFieldInstructionRemoveFieldInstructionSetFieldInstructionSetIndexInstructionGetIndexInstructionRemoveIndexInstructionInvokeInstructionInvokeMethodStaticInstructionInvokeMethodDynamicInstructionDropInstructionDupInstructionIteratorInstructionIteratorHasNextInstructionIteratorNextInstructionEmitEvent"
+const (
+	_ComputationKind_name_0 = "Unknown"
+	_ComputationKind_name_1 = "StatementLoopFunctionInvocation"
+	_ComputationKind_name_2 = "CreateCompositeValueTransferCompositeValueDestroyCompositeValue"
+	_ComputationKind_name_3 = "CreateArrayValueTransferArrayValueDestroyArrayValue"
+	_ComputationKind_name_4 = "CreateDictionaryValueTransferDictionaryValueDestroyDictionaryValue"
+	_ComputationKind_name_5 = "EncodeValue"
+	_ComputationKind_name_6 = "STDLIBPanicSTDLIBAssertSTDLIBRevertibleRandom"
+	_ComputationKind_name_7 = "STDLIBRLPDecodeStringSTDLIBRLPDecodeList"
+)
 
-var _ComputationKind_map = map[ComputationKind]string{
-	0:    _ComputationKind_name[0:7],
-	1001: _ComputationKind_name[7:16],
-	1002: _ComputationKind_name[16:20],
-	1003: _ComputationKind_name[20:38],
-	1010: _ComputationKind_name[38:58],
-	1011: _ComputationKind_name[58:80],
-	1012: _ComputationKind_name[80:101],
-	1025: _ComputationKind_name[101:117],
-	1026: _ComputationKind_name[117:135],
-	1027: _ComputationKind_name[135:152],
-	1040: _ComputationKind_name[152:173],
-	1041: _ComputationKind_name[173:196],
-	1042: _ComputationKind_name[196:218],
-	1080: _ComputationKind_name[218:229],
-	1100: _ComputationKind_name[229:240],
-	1101: _ComputationKind_name[240:252],
-	1102: _ComputationKind_name[252:274],
-	1108: _ComputationKind_name[274:295],
-	1109: _ComputationKind_name[295:314],
-	1110: _ComputationKind_name[314:331],
-	1111: _ComputationKind_name[331:353],
-	1112: _ComputationKind_name[353:368],
-	1113: _ComputationKind_name[368:390],
-	1114: _ComputationKind_name[390:411],
-	1115: _ComputationKind_name[411:431],
-	1120: _ComputationKind_name[431:445],
-	1121: _ComputationKind_name[445:464],
-	1122: _ComputationKind_name[464:483],
-	1123: _ComputationKind_name[483:500],
-	1124: _ComputationKind_name[500:514],
-	1125: _ComputationKind_name[514:531],
-	1129: _ComputationKind_name[531:551],
-	1130: _ComputationKind_name[551:572],
-	1131: _ComputationKind_name[572:593],
-	1132: _ComputationKind_name[593:620],
-	1133: _ComputationKind_name[620:648],
-	1135: _ComputationKind_name[648:663],
-	1136: _ComputationKind_name[663:681],
-	1137: _ComputationKind_name[681:703],
-	1138: _ComputationKind_name[703:728],
-	1139: _ComputationKind_name[728:744],
-	1140: _ComputationKind_name[744:763],
-	1141: _ComputationKind_name[763:777],
-	1145: _ComputationKind_name[777:794],
-	1146: _ComputationKind_name[794:812],
-	1147: _ComputationKind_name[812:831],
-	1148: _ComputationKind_name[831:852],
-	1149: _ComputationKind_name[852:875],
-	1150: _ComputationKind_name[875:895],
-	1151: _ComputationKind_name[895:911],
-	1158: _ComputationKind_name[911:926],
-	1159: _ComputationKind_name[926:942],
-	1160: _ComputationKind_name[942:956],
-	1161: _ComputationKind_name[956:970],
-	1162: _ComputationKind_name[970:988],
-	1163: _ComputationKind_name[988:1007],
-	1164: _ComputationKind_name[1007:1031],
-	1165: _ComputationKind_name[1031:1048],
-	1166: _ComputationKind_name[1048:1069],
-	1178: _ComputationKind_name[1069:1091],
-	1179: _ComputationKind_name[1091:1110],
-	1180: _ComputationKind_name[1110:1129],
-	1181: _ComputationKind_name[1129:1150],
-	1182: _ComputationKind_name[1150:1171],
-	1183: _ComputationKind_name[1171:1191],
-	1184: _ComputationKind_name[1191:1211],
-	1185: _ComputationKind_name[1211:1230],
-	1186: _ComputationKind_name[1230:1252],
-	1187: _ComputationKind_name[1252:1271],
-	1188: _ComputationKind_name[1271:1290],
-	1189: _ComputationKind_name[1290:1309],
-	1190: _ComputationKind_name[1309:1331],
-	1198: _ComputationKind_name[1331:1348],
-	1199: _ComputationKind_name[1348:1377],
-	1200: _ComputationKind_name[1377:1407],
-	1208: _ComputationKind_name[1407:1422],
-	1209: _ComputationKind_name[1422:1436],
-	1216: _ComputationKind_name[1436:1455],
-	1217: _ComputationKind_name[1455:1481],
-	1218: _ComputationKind_name[1481:1504],
-	1219: _ComputationKind_name[1504:1524],
-}
+var (
+	_ComputationKind_index_1 = [...]uint8{0, 9, 13, 31}
+	_ComputationKind_index_2 = [...]uint8{0, 20, 42, 63}
+	_ComputationKind_index_3 = [...]uint8{0, 16, 34, 51}
+	_ComputationKind_index_4 = [...]uint8{0, 21, 44, 66}
+	_ComputationKind_index_6 = [...]uint8{0, 11, 23, 45}
+	_ComputationKind_index_7 = [...]uint8{0, 21, 40}
+)
 
 func (i ComputationKind) String() string {
-	if str, ok := _ComputationKind_map[i]; ok {
-		return str
+	switch {
+	case i == 0:
+		return _ComputationKind_name_0
+	case 1001 <= i && i <= 1003:
+		i -= 1001
+		return _ComputationKind_name_1[_ComputationKind_index_1[i]:_ComputationKind_index_1[i+1]]
+	case 1010 <= i && i <= 1012:
+		i -= 1010
+		return _ComputationKind_name_2[_ComputationKind_index_2[i]:_ComputationKind_index_2[i+1]]
+	case 1025 <= i && i <= 1027:
+		i -= 1025
+		return _ComputationKind_name_3[_ComputationKind_index_3[i]:_ComputationKind_index_3[i+1]]
+	case 1040 <= i && i <= 1042:
+		i -= 1040
+		return _ComputationKind_name_4[_ComputationKind_index_4[i]:_ComputationKind_index_4[i+1]]
+	case i == 1080:
+		return _ComputationKind_name_5
+	case 1100 <= i && i <= 1102:
+		i -= 1100
+		return _ComputationKind_name_6[_ComputationKind_index_6[i]:_ComputationKind_index_6[i+1]]
+	case 1108 <= i && i <= 1109:
+		i -= 1108
+		return _ComputationKind_name_7[_ComputationKind_index_7[i]:_ComputationKind_index_7[i+1]]
+	default:
+		return "ComputationKind(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return "ComputationKind(" + strconv.FormatInt(int64(i), 10) + ")"
 }

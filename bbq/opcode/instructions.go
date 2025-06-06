@@ -1252,9 +1252,8 @@ func (i InstructionUnwrap) Encode(code *[]byte) {
 
 // InstructionTransfer
 //
-// Pops a value off the stack, transfers it to the given type, and then pushes it back on to the stack.
+// Pops a value off the stack, calls transfer, and then pushes it back on to the stack.
 type InstructionTransfer struct {
-	Type uint16
 }
 
 var _ Instruction = InstructionTransfer{}
@@ -1264,18 +1263,48 @@ func (InstructionTransfer) Opcode() Opcode {
 }
 
 func (i InstructionTransfer) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionTransfer) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionTransfer) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
+func (i InstructionTransfer) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
+// InstructionTransferAndConvert
+//
+// Pops a value off the stack, transfers it to the given type, and then pushes it back on to the stack.
+type InstructionTransferAndConvert struct {
+	Type uint16
+}
+
+var _ Instruction = InstructionTransferAndConvert{}
+
+func (InstructionTransferAndConvert) Opcode() Opcode {
+	return TransferAndConvert
+}
+
+func (i InstructionTransferAndConvert) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
 	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionTransfer) OperandsString(sb *strings.Builder, colorize bool) {
+func (i InstructionTransferAndConvert) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "type", i.Type, colorize)
 }
 
-func (i InstructionTransfer) ResolvedOperandsString(sb *strings.Builder,
+func (i InstructionTransferAndConvert) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
 	functionNames []string,
@@ -1284,12 +1313,12 @@ func (i InstructionTransfer) ResolvedOperandsString(sb *strings.Builder,
 	printfTypeArgument(sb, "type", types[i.Type], colorize)
 }
 
-func (i InstructionTransfer) Encode(code *[]byte) {
+func (i InstructionTransferAndConvert) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 	emitUint16(code, i.Type)
 }
 
-func DecodeTransfer(ip *uint16, code []byte) (i InstructionTransfer) {
+func DecodeTransferAndConvert(ip *uint16, code []byte) (i InstructionTransferAndConvert) {
 	i.Type = decodeUint16(ip, code)
 	return i
 }
@@ -2349,6 +2378,64 @@ func DecodeEmitEvent(ip *uint16, code []byte) (i InstructionEmitEvent) {
 	return i
 }
 
+// InstructionLoop
+//
+// Indicates the start of a loop.
+type InstructionLoop struct {
+}
+
+var _ Instruction = InstructionLoop{}
+
+func (InstructionLoop) Opcode() Opcode {
+	return Loop
+}
+
+func (i InstructionLoop) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionLoop) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionLoop) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
+func (i InstructionLoop) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
+// InstructionStatement
+//
+// Indicates the start of a statement.
+type InstructionStatement struct {
+}
+
+var _ Instruction = InstructionStatement{}
+
+func (InstructionStatement) Opcode() Opcode {
+	return Statement
+}
+
+func (i InstructionStatement) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionStatement) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionStatement) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
+func (i InstructionStatement) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
 func DecodeInstruction(ip *uint16, code []byte) Instruction {
 	switch Opcode(decodeByte(ip, code)) {
 	case Unknown:
@@ -2412,7 +2499,9 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 	case Unwrap:
 		return InstructionUnwrap{}
 	case Transfer:
-		return DecodeTransfer(ip, code)
+		return InstructionTransfer{}
+	case TransferAndConvert:
+		return DecodeTransferAndConvert(ip, code)
 	case SimpleCast:
 		return DecodeSimpleCast(ip, code)
 	case FailableCast:
@@ -2477,6 +2566,10 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionIteratorNext{}
 	case EmitEvent:
 		return DecodeEmitEvent(ip, code)
+	case Loop:
+		return InstructionLoop{}
+	case Statement:
+		return InstructionStatement{}
 	}
 
 	panic(errors.NewUnreachableError())

@@ -79,12 +79,12 @@ const (
 	_
 	Unwrap
 	Destroy
-	Transfer
+	TransferAndConvert
 	SimpleCast
 	FailableCast
 	ForceCast
 	Deref
-	_
+	Transfer
 	_
 	_
 	_
@@ -168,6 +168,8 @@ const (
 	// Other
 
 	EmitEvent
+	Loop
+	Statement
 
 	// NOTE: not an actual opcode, must be last item
 	OpcodeMax
