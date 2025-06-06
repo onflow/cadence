@@ -6138,3 +6138,10 @@ func (interpreter *Interpreter) GetGlobal(name string) Value {
 func (interpreter *Interpreter) GetGlobalType(name string) (*sema.Variable, bool) {
 	return interpreter.Program.Elaboration.GetGlobalType(name)
 }
+
+func (interpreter *Interpreter) DefaultDestroyEvents(
+	resourceValue *CompositeValue,
+	locationRange LocationRange,
+) []*CompositeValue {
+	return resourceValue.DefaultDestroyEvents(interpreter, locationRange)
+}

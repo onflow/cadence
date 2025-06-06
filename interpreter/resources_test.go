@@ -2330,7 +2330,7 @@ func TestInterpretResourceInterfaceDefaultDestroyEvent(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
             resource interface I {
                 let id: Int
@@ -2416,7 +2416,7 @@ func TestInterpretResourceInterfaceDefaultDestroyEventMultipleInheritance(t *tes
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t, `
+	inter, err := parseCheckAndPrepareWithOptions(t, `
             resource interface I {
                 let id: Int
 
@@ -2492,7 +2492,7 @@ func TestInterpretResourceInterfaceDefaultDestroyEventIndirectInheritance(t *tes
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
             resource interface I {
                 let id: Int
@@ -2569,7 +2569,7 @@ func TestInterpretResourceInterfaceDefaultDestroyEventNoCompositeEvent(t *testin
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
             resource interface I {
                 let id: Int
@@ -2777,7 +2777,7 @@ func TestInterpretDefaultDestroyEventArgumentScoping(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
             let x = 1
 

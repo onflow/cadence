@@ -46,6 +46,7 @@ type DesugaredElaboration struct {
 	returnStatementTypes              map[*ast.ReturnStatement]sema.ReturnStatementTypes
 	emitStatementEventTypes           map[*ast.EmitStatement]*sema.CompositeType
 	compositeTypes                    map[common.TypeID]*sema.CompositeType
+	arrayExpressionTypes              map[*ast.ArrayExpression]sema.ArrayExpressionTypes
 }
 
 func NewDesugaredElaboration(elaboration *sema.Elaboration) *DesugaredElaboration {
@@ -262,7 +263,21 @@ func (e *DesugaredElaboration) FixedPointExpressionType(expression *ast.FixedPoi
 	return e.elaboration.FixedPointExpression(expression)
 }
 
+func (e *DesugaredElaboration) SetArrayExpressionTypes(expression *ast.ArrayExpression, types sema.ArrayExpressionTypes) {
+	if e.arrayExpressionTypes == nil {
+		e.arrayExpressionTypes = map[*ast.ArrayExpression]sema.ArrayExpressionTypes{}
+	}
+	e.arrayExpressionTypes[expression] = types
+}
+
 func (e *DesugaredElaboration) ArrayExpressionTypes(expression *ast.ArrayExpression) sema.ArrayExpressionTypes {
+	if e.arrayExpressionTypes != nil {
+		types, ok := e.arrayExpressionTypes[expression]
+		if ok {
+			return types
+		}
+	}
+
 	return e.elaboration.ArrayExpressionTypes(expression)
 }
 
@@ -401,4 +416,8 @@ func (e *DesugaredElaboration) SetIntegerExpressionType(expression *ast.IntegerE
 
 func (e *DesugaredElaboration) SwapStatementTypes(statement *ast.SwapStatement) sema.SwapStatementTypes {
 	return e.elaboration.SwapStatementTypes(statement)
+}
+
+func (e *DesugaredElaboration) DefaultDestroyDeclaration(declaration ast.Declaration) *ast.CompositeDeclaration {
+	return e.elaboration.DefaultDestroyDeclaration(declaration)
 }
