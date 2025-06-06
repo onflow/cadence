@@ -1468,9 +1468,13 @@ func (c *Compiler[_, _]) compileAssignment(
 
 	case *ast.IndexExpression:
 		c.compileExpression(target.TargetExpression)
+
 		c.compileExpression(target.IndexingExpression)
+		c.emitIndexKeyTransferAndConvert(target)
+
 		c.compileExpression(value)
 		c.emitTransferAndConvert(targetType)
+
 		c.emit(opcode.InstructionSetIndex{})
 
 	default:
@@ -1631,12 +1635,23 @@ func (c *Compiler[_, _]) compileSwapSet(
 	case *ast.IndexExpression:
 		c.emitGetLocal(targetIndex)
 		c.emitGetLocal(keyIndex)
+		c.emitIndexKeyTransferAndConvert(sideExpression)
 		c.emitGetLocal(valueIndex)
 		c.emit(opcode.InstructionSetIndex{})
 
 	default:
 		panic(errors.NewUnreachableError())
 	}
+}
+
+func (c *Compiler[_, _]) emitIndexKeyTransferAndConvert(indexExpression *ast.IndexExpression) {
+	indexExpressionTypes, ok := c.DesugaredElaboration.IndexExpressionTypes(indexExpression)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	indexedType := indexExpressionTypes.IndexedType
+	c.emitTransferAndConvert(indexedType.IndexingType())
 }
 
 func (c *Compiler[_, _]) VisitExpressionStatement(statement *ast.ExpressionStatement) (_ struct{}) {
@@ -2324,7 +2339,11 @@ func (c *Compiler[_, _]) VisitIndexExpression(expression *ast.IndexExpression) (
 	return
 }
 
+// compileIndexAccess compiles the index access, i.e. RemoveIndex or GetIndex.
+// It assumes the target and indexing/key expressions are already compiled on the stack.
 func (c *Compiler[_, _]) compileIndexAccess(expression *ast.IndexExpression) {
+	c.emitIndexKeyTransferAndConvert(expression)
+
 	isNestedResourceMove := c.DesugaredElaboration.IsNestedResourceMoveExpression(expression)
 	if isNestedResourceMove {
 		c.emit(opcode.InstructionRemoveIndex{})
