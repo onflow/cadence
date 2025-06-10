@@ -13085,9 +13085,6 @@ func TestRuntimeMetering(t *testing.T) {
 
 	storage := NewTestLedger(nil, nil)
 
-	memoryGauge := newTestMemoryGauge()
-	computationGauge := newTestComputationGauge()
-
 	runtimeInterface := &TestRuntimeInterface{
 		Storage: storage,
 		OnGetCode: func(_ Location) (bytes []byte, err error) {
@@ -13110,13 +13107,9 @@ func TestRuntimeMetering(t *testing.T) {
 		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
-		OnMeterMemory: func(usage common.MemoryUsage) error {
-			return memoryGauge.MeterMemory(usage)
-		},
-		OnMeterComputation: func(usage common.ComputationUsage) error {
-			return computationGauge.MeterComputation(usage)
-		},
 	}
+
+	// Deploy the contract
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
@@ -13132,6 +13125,14 @@ func TestRuntimeMetering(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.NotNil(t, accountCode)
+
+	// Invoke the contract function, metering memory and computation
+
+	memoryGauge := newTestMemoryGauge()
+	computationGauge := newTestComputationGauge()
+
+	runtimeInterface.OnMeterMemory = memoryGauge.MeterMemory
+	runtimeInterface.OnMeterComputation = computationGauge.MeterComputation
 
 	_, err = runtime.InvokeContractFunction(
 		common.AddressLocation{
@@ -13156,12 +13157,7 @@ func TestRuntimeMetering(t *testing.T) {
 		loggedMessages,
 	)
 
-	assert.Equal(t, uint64(98), memoryGauge.getMemory(common.MemoryKindRawString))
-	var expectedFunctionInvocations uint64
-	if *compile {
-		expectedFunctionInvocations = 4
-	} else {
-		expectedFunctionInvocations = 3
-	}
-	assert.Equal(t, expectedFunctionInvocations, computationGauge.getComputation(common.ComputationKindFunctionInvocation))
+	assert.Equal(t, uint64(30), memoryGauge.getMemory(common.MemoryKindRawString))
+	assert.Equal(t, uint64(2), computationGauge.getComputation(common.ComputationKindFunctionInvocation))
+	assert.Equal(t, uint64(1), computationGauge.getComputation(common.ComputationKindStatement))
 }
