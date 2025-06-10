@@ -81,9 +81,6 @@ type Compiler[E, T any] struct {
 	typesInPool     map[sema.TypeID]uint16
 	constantsInPool map[constantsCacheKey]*Constant
 
-	// TODO: initialize
-	memoryGauge common.MemoryGauge
-
 	codeGen CodeGen[E]
 	typeGen TypeGen[T]
 }
@@ -504,7 +501,7 @@ func (c *Compiler[_, _]) compileWithPositionInfo(
 	prevCurrentPosition := c.currentPosition
 	c.currentPosition = bbq.Position{
 		StartPos: hasPosition.StartPosition(),
-		EndPos:   hasPosition.EndPosition(c.memoryGauge),
+		EndPos:   hasPosition.EndPosition(c.Config.MemoryGauge),
 	}
 
 	defer func() {
@@ -518,7 +515,7 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 
 	// Desugar the program before compiling.
 	desugar := NewDesugar(
-		c.memoryGauge,
+		c.Config.MemoryGauge,
 		c.Config,
 		c.Program,
 		c.DesugaredElaboration,
@@ -3211,7 +3208,7 @@ func (c *Compiler[_, T]) getOrAddType(ty sema.Type) uint16 {
 	index, ok := c.typesInPool[typeID]
 
 	if !ok {
-		staticType := interpreter.ConvertSemaToStaticType(c.memoryGauge, ty)
+		staticType := interpreter.ConvertSemaToStaticType(c.Config.MemoryGauge, ty)
 		data := c.typeGen.CompileType(staticType)
 		index = c.addCompiledType(ty, data)
 		c.typesInPool[typeID] = index
@@ -3255,7 +3252,7 @@ func (c *Compiler[_, _]) generateEmptyInit() {
 }
 
 func (c *Compiler[_, _]) generateEnumInit(enumType *sema.CompositeType) {
-	enumInitializer := newEnumInitializer(c.memoryGauge, enumType, c.DesugaredElaboration)
+	enumInitializer := newEnumInitializer(c.Config.MemoryGauge, enumType, c.DesugaredElaboration)
 	enumInitializerFuncType := newEnumInitializerFuncType(enumType.EnumRawType)
 
 	c.DesugaredElaboration.SetFunctionDeclarationFunctionType(
@@ -3266,13 +3263,15 @@ func (c *Compiler[_, _]) generateEnumInit(enumType *sema.CompositeType) {
 }
 
 func (c *Compiler[_, _]) generateEnumLookup(enumType *sema.CompositeType, enumCases []*ast.EnumCaseDeclaration) {
+	memoryGauge := c.Config.MemoryGauge
+
 	enumLookup := newEnumLookup(
-		c.memoryGauge,
+		memoryGauge,
 		enumType,
 		enumCases,
 		c.DesugaredElaboration,
 	)
-	enumLookupFuncType := newEnumLookupFuncType(c.memoryGauge, enumType)
+	enumLookupFuncType := newEnumLookupFuncType(memoryGauge, enumType)
 
 	c.DesugaredElaboration.SetFunctionDeclarationFunctionType(
 		enumLookup,
