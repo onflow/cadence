@@ -319,7 +319,7 @@ func (v *DictionaryValue) iterateKeys(
 		}
 	}
 
-	interpreter.WithMutationPrevention(v.ValueID(), iterate)
+	interpreter.WithContainerMutationPrevention(v.ValueID(), iterate)
 }
 
 func (v *DictionaryValue) IterateReadOnly(
@@ -396,7 +396,7 @@ func (v *DictionaryValue) iterate(
 		}
 	}
 
-	context.WithMutationPrevention(v.ValueID(), iterate)
+	context.WithContainerMutationPrevention(v.ValueID(), iterate)
 }
 
 type DictionaryKeyIterator struct {
@@ -587,7 +587,7 @@ func (v *DictionaryValue) ForEachKey(
 		}
 	}
 
-	context.WithMutationPrevention(v.ValueID(), iterate)
+	context.WithContainerMutationPrevention(v.ValueID(), iterate)
 }
 
 func (v *DictionaryValue) ContainsKey(
@@ -645,7 +645,7 @@ func (v *DictionaryValue) GetKey(context ValueComparisonContext, locationRange L
 }
 
 func (v *DictionaryValue) SetKey(context ContainerMutationContext, locationRange LocationRange, keyValue Value, value Value) {
-	context.ValidateMutation(v.ValueID(), locationRange)
+	context.ValidateContainerMutation(v.ValueID(), locationRange)
 
 	checkContainerMutation(context, v.Type.KeyType, keyValue, locationRange)
 	checkContainerMutation(
@@ -940,7 +940,7 @@ func (v *DictionaryValue) RemoveWithoutTransfer(
 	existingValueStorable atree.Storable,
 ) {
 
-	context.ValidateMutation(v.ValueID(), locationRange)
+	context.ValidateContainerMutation(v.ValueID(), locationRange)
 
 	valueComparator := newValueComparator(context, locationRange)
 	hashInputProvider := newHashInputProvider(context, locationRange)
@@ -1013,7 +1013,7 @@ func (v *DictionaryValue) InsertWithoutTransfer(
 	keyValue, value atree.Value,
 ) (existingValueStorable atree.Storable) {
 
-	context.ValidateMutation(v.ValueID(), locationRange)
+	context.ValidateContainerMutation(v.ValueID(), locationRange)
 
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(v.dictionary.Count(), v.elementSize, false)

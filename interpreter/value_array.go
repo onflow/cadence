@@ -282,15 +282,19 @@ func (v *ArrayValue) iterate(
 		}
 	}
 
-	context.WithMutationPrevention(v.ValueID(), iterate)
+	context.WithContainerMutationPrevention(v.ValueID(), iterate)
 }
 
 func (v *ArrayValue) Iterator(_ ValueStaticTypeContext, _ LocationRange) ValueIterator {
+	valueID := v.array.ValueID()
+
 	arrayIterator, err := v.array.Iterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+
 	return &ArrayIterator{
+		valueID:       valueID,
 		atreeIterator: arrayIterator,
 	}
 }
@@ -519,7 +523,7 @@ func (v *ArrayValue) SetKey(context ContainerMutationContext, locationRange Loca
 
 func (v *ArrayValue) Set(context ContainerMutationContext, locationRange LocationRange, index int, element Value) {
 
-	context.ValidateMutation(v.ValueID(), locationRange)
+	context.ValidateContainerMutation(v.ValueID(), locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Set function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -604,7 +608,7 @@ func (v *ArrayValue) MeteredString(context ValueStringContext, seenReferences Se
 
 func (v *ArrayValue) Append(context ValueTransferContext, locationRange LocationRange, element Value) {
 
-	context.ValidateMutation(v.ValueID(), locationRange)
+	context.ValidateContainerMutation(v.ValueID(), locationRange)
 
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
@@ -660,7 +664,7 @@ func (v *ArrayValue) InsertWithoutTransfer(
 	index int,
 	element Value,
 ) {
-	context.ValidateMutation(v.ValueID(), locationRange)
+	context.ValidateContainerMutation(v.ValueID(), locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Insert function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -732,7 +736,7 @@ func (v *ArrayValue) RemoveWithoutTransfer(
 	index int,
 ) atree.Storable {
 
-	context.ValidateMutation(v.ValueID(), locationRange)
+	context.ValidateContainerMutation(v.ValueID(), locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Remove function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -2028,6 +2032,7 @@ func (v *ArrayValue) Inlined() bool {
 // Array iterator
 
 type ArrayIterator struct {
+	valueID       atree.ValueID
 	atreeIterator atree.ArrayIterator
 	next          atree.Value
 }
@@ -2072,4 +2077,8 @@ func (i *ArrayIterator) Next(context ValueIteratorContext, _ LocationRange) Valu
 	// atree.Array iterator returns low-level atree.Value,
 	// convert to high-level interpreter.Value
 	return MustConvertStoredValue(context, atreeValue)
+}
+
+func (i *ArrayIterator) ValueID() (atree.ValueID, bool) {
+	return i.valueID, true
 }

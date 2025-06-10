@@ -260,6 +260,7 @@ type ValueIteratorContext interface {
 type ValueIterator interface {
 	HasNext() bool
 	Next(context ValueIteratorContext, locationRange LocationRange) Value
+	ValueID() (atree.ValueID, bool)
 }
 
 // atreeContainerBackedValue is an interface for values using atree containers

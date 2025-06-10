@@ -1026,9 +1026,9 @@ type StorageMutatedDuringIterationError struct {
 var _ errors.UserError = &StorageMutatedDuringIterationError{}
 var _ HasLocationRange = &StorageMutatedDuringIterationError{}
 
-func (StorageMutatedDuringIterationError) IsUserError() {}
+func (*StorageMutatedDuringIterationError) IsUserError() {}
 
-func (StorageMutatedDuringIterationError) Error() string {
+func (*StorageMutatedDuringIterationError) Error() string {
 	return "storage iteration continued after modifying storage"
 }
 
