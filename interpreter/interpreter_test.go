@@ -60,6 +60,18 @@ func parseCheckAndPrepareWithOptions(
 	return test_utils.ParseCheckAndPrepareWithOptions(tb, code, options, *compile)
 }
 
+func parseCheckAndPrepareWithLogs(
+	tb testing.TB,
+	code string,
+) (
+	invokable Invokable,
+	getLogs func() []string,
+	err error,
+) {
+	tb.Helper()
+	return test_utils.ParseCheckAndPrepareWithLogs(tb, code, *compile)
+}
+
 func parseCheckAndPrepareWithAtreeValidationsDisabled(
 	tb testing.TB,
 	code string,

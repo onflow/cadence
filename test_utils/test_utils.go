@@ -155,6 +155,59 @@ func ParseCheckAndPrepareWithEvents(tb testing.TB, code string, compile bool) (
 	return invokable, getEvents, err
 }
 
+func ParseCheckAndPrepareWithLogs(
+	tb testing.TB,
+	code string,
+	compile bool,
+) (
+	invokable Invokable,
+	getLogs func() []string,
+	err error,
+) {
+
+	var logs []string
+
+	valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
+		"log",
+		stdlib.LogFunctionType,
+		"",
+		func(invocation interpreter.Invocation) interpreter.Value {
+			value := invocation.Arguments[0]
+			logs = append(logs, value.String())
+			return interpreter.Void
+		},
+	)
+
+	baseValueActivation := sema.NewVariableActivation(nil)
+	baseValueActivation.DeclareValue(valueDeclaration)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, valueDeclaration)
+
+	invokable, err = ParseCheckAndPrepareWithOptions(tb,
+		code,
+		ParseCheckAndInterpretOptions{
+			CheckerConfig: &sema.Config{
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
+			},
+			Config: &interpreter.Config{
+				BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+			},
+		},
+		compile,
+	)
+
+	getLogs = func() []string {
+		return logs
+	}
+
+	return invokable, getLogs, err
+}
+
 func ParseCheckAndPrepareWithOptions(
 	tb testing.TB,
 	code string,
@@ -223,7 +276,11 @@ func ParseCheckAndPrepareWithOptions(
 		// then convert them to corresponding functions in compiler and in vm.
 		if interpreterConfig.BaseActivationHandler != nil {
 			baseActivation := interpreterConfig.BaseActivationHandler(nil)
-			baseActivationVariables := baseActivation.ValuesInFunction()
+
+			// Only iterate through values defined at the current-level.
+			// Do not get the values defined in the parent activation/scope.
+			// (i.e: only get the values that were added externally for tests)
+			baseActivationVariables := baseActivation.ValuesInCurrentLevel()
 
 			vmConfig.BuiltinGlobalsProvider = func() map[string]*vm.Variable {
 				builtinGlobals := vm.NativeFunctions()
@@ -231,10 +288,6 @@ func ParseCheckAndPrepareWithOptions(
 				// Add the given built-in values.
 				// Convert the externally provided `interpreter.HostFunctionValue`s into `vm.NativeFunctionValue`s.
 				for name, variable := range baseActivationVariables { //nolint:maprange
-
-					if builtinGlobals[name] != nil {
-						continue
-					}
 
 					value := variable.GetValue(nil)
 
@@ -371,73 +424,6 @@ func ParseCheckAndInterpretWithAtreeValidationsDisabled(
 		nil,
 		false,
 	)
-}
-
-func ParseCheckAndInterpretWithLogs(
-	tb testing.TB,
-	code string,
-) (
-	inter *interpreter.Interpreter,
-	getLogs func() []string,
-	err error,
-) {
-	var logs []string
-
-	logFunction := stdlib.NewStandardLibraryStaticFunction(
-		"log",
-		&sema.FunctionType{
-			Parameters: []sema.Parameter{
-				{
-					Label:          sema.ArgumentLabelNotRequired,
-					Identifier:     "value",
-					TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
-				},
-			},
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(
-				sema.VoidType,
-			),
-		},
-		``,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			message := invocation.Arguments[0].MeteredString(
-				invocation.InvocationContext,
-				interpreter.SeenReferences{},
-				invocation.LocationRange,
-			)
-			logs = append(logs, message)
-			return interpreter.Void
-		},
-	)
-
-	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(logFunction)
-
-	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, logFunction)
-
-	result, err := ParseCheckAndInterpretWithOptions(
-		tb,
-		code,
-		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
-				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
-					return baseActivation
-				},
-			},
-			CheckerConfig: &sema.Config{
-				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-					return baseValueActivation
-				},
-			},
-			HandleCheckerError: nil,
-		},
-	)
-
-	getLogs = func() []string {
-		return logs
-	}
-
-	return result, getLogs, err
 }
 
 func ParseCheckAndInterpretWithMemoryMetering(
@@ -587,43 +573,4 @@ func parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
 type TestEvent struct {
 	EventType   *sema.CompositeType
 	EventFields []interpreter.Value
-}
-
-func ParseCheckAndInterpretWithEvents(tb testing.TB, code string) (
-	inter *interpreter.Interpreter,
-	getEvents func() []TestEvent,
-	err error,
-) {
-	var events []TestEvent
-
-	inter, err = ParseCheckAndInterpretWithOptions(tb,
-		code,
-		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
-				OnEventEmitted: func(
-					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
-					eventType *sema.CompositeType,
-					eventFields []interpreter.Value,
-				) error {
-					events = append(
-						events,
-						TestEvent{
-							EventType:   eventType,
-							EventFields: eventFields,
-						},
-					)
-					return nil
-				},
-			},
-		},
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	getEvents = func() []TestEvent {
-		return events
-	}
-	return inter, getEvents, nil
 }
