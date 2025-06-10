@@ -29,24 +29,17 @@ import (
 type Identifier struct {
 	Identifier string
 	Pos        Position
-	Comments   Comments
 }
 
-func NewIdentifier(memoryGauge common.MemoryGauge, identifier string, pos Position) Identifier {
-	return NewIdentifierWithComments(memoryGauge, identifier, pos, Comments{})
-}
-
-func NewIdentifierWithComments(
+func NewIdentifier(
 	memoryGauge common.MemoryGauge,
 	identifier string,
 	pos Position,
-	comments Comments,
 ) Identifier {
 	common.UseMemory(memoryGauge, common.IdentifierMemoryUsage)
 	return Identifier{
 		Identifier: identifier,
 		Pos:        pos,
-		Comments:   comments,
 	}
 }
 

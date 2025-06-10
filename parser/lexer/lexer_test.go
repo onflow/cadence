@@ -877,10 +877,32 @@ func TestLexBasic(t *testing.T) {
 		)
 	})
 
-	t.Run("Trivia", func(t *testing.T) {
+	t.Run("trivia", func(t *testing.T) {
 		testLex(t,
 			"// test is in next line \n/* test is here */ test // test is in the same line\n// test is in previous line",
 			[]token{
+				{
+					Token: Token{
+						Type:         TokenSpace,
+						SpaceOrError: Space{ContainsNewline: true},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 24, Offset: 24},
+							EndPos:   ast.Position{Line: 1, Column: 24, Offset: 24},
+						},
+					},
+					Source: "\n",
+				},
+				{
+					Token: Token{
+						Type:         TokenSpace,
+						SpaceOrError: Space{},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 18, Offset: 43},
+							EndPos:   ast.Position{Line: 2, Column: 18, Offset: 43},
+						},
+					},
+					Source: " ",
+				},
 				{
 					Token: Token{
 						Type: TokenIdentifier,
@@ -888,8 +910,39 @@ func TestLexBasic(t *testing.T) {
 							StartPos: ast.Position{Line: 2, Column: 19, Offset: 44},
 							EndPos:   ast.Position{Line: 2, Column: 22, Offset: 47},
 						},
+						Comments: ast.Comments{
+							Leading: []*ast.Comment{
+								ast.NewComment(nil, []byte("// test is in next line ")),
+								ast.NewComment(nil, []byte("/* test is here */")),
+							},
+							Trailing: []*ast.Comment{
+								ast.NewComment(nil, []byte("// test is in the same line")),
+							},
+						},
 					},
 					Source: "test",
+				},
+				{
+					Token: Token{
+						Type:         TokenSpace,
+						SpaceOrError: Space{},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 23, Offset: 48},
+							EndPos:   ast.Position{Line: 2, Column: 23, Offset: 48},
+						},
+					},
+					Source: " ",
+				},
+				{
+					Token: Token{
+						Type:         TokenSpace,
+						SpaceOrError: Space{ContainsNewline: true},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 51, Offset: 76},
+							EndPos:   ast.Position{Line: 2, Column: 51, Offset: 76},
+						},
+					},
+					Source: "\n",
 				},
 				{
 					Token: Token{
@@ -897,6 +950,11 @@ func TestLexBasic(t *testing.T) {
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 3, Column: 27, Offset: 104},
 							EndPos:   ast.Position{Line: 3, Column: 27, Offset: 104},
+						},
+						Comments: ast.Comments{
+							Leading: []*ast.Comment{
+								ast.NewComment(nil, []byte("// test is in previous line")),
+							},
 						},
 					},
 				},
@@ -2626,11 +2684,29 @@ func TestLexBlockComment(t *testing.T) {
 			`/* test foo /* bar */ asd */  `,
 			[]token{
 				{
+					Source: "  ",
+					Token: Token{
+						Type: TokenSpace,
+						SpaceOrError: Space{
+							ContainsNewline: false,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 28, Offset: 28},
+							EndPos:   ast.Position{Line: 1, Column: 29, Offset: 29},
+						},
+					},
+				},
+				{
 					Token: Token{
 						Type: TokenEOF,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 30, Offset: 30},
 							EndPos:   ast.Position{Line: 1, Column: 30, Offset: 30},
+						},
+						Comments: ast.Comments{
+							Leading: []*ast.Comment{
+								ast.NewComment(nil, []byte("/* test foo /* bar */ asd */")),
+							},
 						},
 					},
 				},
@@ -2644,30 +2720,15 @@ func TestLexBlockComment(t *testing.T) {
 			[]token{
 				{
 					Token: Token{
-						Type: TokenBlockCommentStart,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
-						},
-					},
-					Source: "/*",
-				},
-				{
-					Token: Token{
-						Type: TokenBlockCommentEnd,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
-						},
-					},
-					Source: "*/",
-				},
-				{
-					Token: Token{
 						Type: TokenEOF,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
 							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+						Comments: ast.Comments{
+							Leading: []*ast.Comment{
+								ast.NewComment(nil, []byte("/**/")),
+							},
 						},
 					},
 				},
@@ -3569,6 +3630,11 @@ func TestLexLineComment(t *testing.T) {
 							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
 						},
+						Comments: ast.Comments{
+							Trailing: []*ast.Comment{
+								ast.NewComment(nil, []byte("// bar ")),
+							},
+						},
 					},
 					Source: "foo",
 				},
@@ -3623,6 +3689,11 @@ func TestLexLineComment(t *testing.T) {
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
+						Comments: ast.Comments{
+							Trailing: []*ast.Comment{
+								ast.NewComment(nil, []byte("// bar ")),
+							},
 						},
 					},
 					Source: "foo",

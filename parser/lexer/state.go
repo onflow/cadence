@@ -360,7 +360,7 @@ func blockCommentState(l *lexer, nesting int) stateFn {
 					l.endOffset = beforeSlashOffset
 					l.endOffset = starOffset
 				}
-				return blockCommentState(nesting + 1)
+				return blockCommentState(l, nesting+1)
 			}
 
 		case '*':
@@ -371,7 +371,7 @@ func blockCommentState(l *lexer, nesting int) stateFn {
 					l.endOffset = beforeStarOffset
 					l.endOffset = slashOffset
 				}
-				return blockCommentState(nesting - 1)
+				return blockCommentState(l, nesting-1)
 			}
 
 			return blockCommentState(l, nesting)

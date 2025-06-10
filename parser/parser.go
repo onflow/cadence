@@ -508,11 +508,11 @@ func (p *parser) nonReservedIdentifier(errMsgContext string) (ast.Identifier, er
 }
 
 func (p *parser) tokenToIdentifier(token lexer.Token) ast.Identifier {
-	return ast.NewIdentifierWithComments(
+	return ast.NewIdentifier(
 		p.memoryGauge,
 		string(p.tokenSource(token)),
 		token.StartPos,
-		token.Comments,
+		// TODO(preserve-comments): Handle comments for identifiers (attach them to parent structs?)
 	)
 }
 

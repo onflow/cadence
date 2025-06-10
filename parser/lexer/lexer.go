@@ -300,7 +300,7 @@ func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, co
 		Comments: ast.Comments{
 			Leading: leadingComments,
 			// Trailing comments can't be determined, as it wasn't consumed yet at this point.
-			Trailing: []*ast.Comment{},
+			Trailing: nil,
 		},
 	}
 
@@ -347,6 +347,15 @@ func (l *lexer) updatePreviousTrailingComments() {
 
 	if lastNonSpaceTokenIndex != -1 {
 		lastNonSpaceToken := &l.tokens[lastNonSpaceTokenIndex]
+
+		if len(trailing) == 0 {
+			return
+		}
+
+		if lastNonSpaceToken.Trailing == nil {
+			lastNonSpaceToken.Trailing = []*ast.Comment{}
+		}
+
 		lastNonSpaceToken.Trailing = append(lastNonSpaceToken.Trailing, trailing...)
 	}
 }
