@@ -164,6 +164,7 @@ const (
 	Iterator
 	IteratorHasNext
 	IteratorNext
+	IteratorEnd
 
 	// Other
 

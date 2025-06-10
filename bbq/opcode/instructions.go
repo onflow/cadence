@@ -2300,7 +2300,7 @@ func (i InstructionIteratorHasNext) Encode(code *[]byte) {
 
 // InstructionIteratorNext
 //
-// Pops a value-iterator from stack, calls `next()` method on it, and push the result back onto the stack.
+// Pops a value-iterator from the stack, calls `next()` method on it, and push the result back onto the stack.
 type InstructionIteratorNext struct {
 }
 
@@ -2324,6 +2324,35 @@ func (i InstructionIteratorNext) ResolvedOperandsString(sb *strings.Builder,
 }
 
 func (i InstructionIteratorNext) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
+// InstructionIteratorEnd
+//
+// Pops a value-iterator from the stack end invalidates it. The iterator may no longer be used after this instruction.
+type InstructionIteratorEnd struct {
+}
+
+var _ Instruction = InstructionIteratorEnd{}
+
+func (InstructionIteratorEnd) Opcode() Opcode {
+	return IteratorEnd
+}
+
+func (i InstructionIteratorEnd) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionIteratorEnd) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionIteratorEnd) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
+func (i InstructionIteratorEnd) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
@@ -2564,6 +2593,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionIteratorHasNext{}
 	case IteratorNext:
 		return InstructionIteratorNext{}
+	case IteratorEnd:
+		return InstructionIteratorEnd{}
 	case EmitEvent:
 		return DecodeEmitEvent(ip, code)
 	case Loop:
