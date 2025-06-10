@@ -372,3 +372,7 @@ func (i *ReferenceValueIterator) Next(context ValueIteratorContext, locationRang
 func (i *ReferenceValueIterator) HasNext() bool {
 	return i.iterator.HasNext()
 }
+
+func (i *ReferenceValueIterator) ValueID() (atree.ValueID, bool) {
+	return i.iterator.ValueID()
+}

@@ -42,8 +42,11 @@ type Context struct {
 	mutationDuringCapabilityControllerIteration bool
 	referencedResourceKindedValues              ReferencedResourceKindedValues
 
-	invokeFunction func(function Value, arguments []Value) (Value, error)
-	lookupFunction func(location common.Location, name string) FunctionValue
+	invokeFunction                func(function Value, arguments []Value) (Value, error)
+	lookupFunction                func(location common.Location, name string) FunctionValue
+	inStorageIteration            bool
+	storageMutatedDuringIteration bool
+	containerValueIteration       map[atree.ValueID]int
 
 	// TODO: stack-trace, location, etc.
 }
@@ -66,18 +69,22 @@ func NewContext(config *Config) *Context {
 	}
 }
 
+func (c *Context) RecordStorageMutation() {
+	if c.inStorageIteration {
+		c.storageMutatedDuringIteration = true
+	}
+}
+
 func (c *Context) StorageMutatedDuringIteration() bool {
-	//TODO
-	return false
+	return c.storageMutatedDuringIteration
 }
 
 func (c *Context) InStorageIteration() bool {
-	//TODO
-	return false
+	return c.inStorageIteration
 }
 
-func (c *Context) SetInStorageIteration(b bool) {
-	//TODO
+func (c *Context) SetInStorageIteration(inStorageIteration bool) {
+	c.inStorageIteration = inStorageIteration
 }
 
 func (c *Context) GetCapabilityControllerIterations() map[interpreter.AddressPath]int {
@@ -144,23 +151,44 @@ func (c *Context) MaybeValidateAtreeStorage() {
 	// NO-OP: no validation happens for now
 }
 
-func (c *Context) RecordStorageMutation() {
-	// TODO
-	// NO-OP
-}
-
 func (c *Context) IsTypeInfoRecovered(location common.Location) bool {
 	//TODO
 	return false
 }
 
-func (c *Context) WithMutationPrevention(valueID atree.ValueID, f func()) {
+func (c *Context) WithContainerMutationPrevention(valueID atree.ValueID, f func()) {
+	if c == nil {
+		f()
+		return
+	}
+
+	c.startContainerValueIteration(valueID)
 	f()
-	//TODO
+	c.endContainerValueIteration(valueID)
 }
 
-func (c *Context) ValidateMutation(valueID atree.ValueID, locationRange interpreter.LocationRange) {
-	//TODO
+func (c *Context) endContainerValueIteration(valueID atree.ValueID) {
+	c.containerValueIteration[valueID]--
+	if c.containerValueIteration[valueID] <= 0 {
+		delete(c.containerValueIteration, valueID)
+	}
+}
+
+func (c *Context) startContainerValueIteration(valueID atree.ValueID) {
+	if c.containerValueIteration == nil {
+		c.containerValueIteration = make(map[atree.ValueID]int)
+	}
+	c.containerValueIteration[valueID]++
+}
+
+func (c *Context) ValidateContainerMutation(valueID atree.ValueID, locationRange interpreter.LocationRange) {
+	_, present := c.containerValueIteration[valueID]
+	if !present {
+		return
+	}
+	panic(&interpreter.ContainerMutatedDuringIterationError{
+		LocationRange: locationRange,
+	})
 }
 
 func (c *Context) GetCompositeValueFunctions(v *interpreter.CompositeValue, locationRange interpreter.LocationRange) *interpreter.FunctionOrderedMap {

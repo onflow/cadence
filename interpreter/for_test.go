@@ -548,8 +548,7 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 	t.Run("Mutating reference to resource array", func(t *testing.T) {
 		t.Parallel()
 
-		// TODO: Use compiler (need mutation-while-iterating validation)
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource Foo{
                 fun sayHello() {}
             }
@@ -582,8 +581,7 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 	t.Run("Mutating reference to struct array", func(t *testing.T) {
 		t.Parallel()
 
-		// TODO: Use compiler (need mutation-while-iterating validation)
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct Foo{
                 fun sayHello() {}
             }

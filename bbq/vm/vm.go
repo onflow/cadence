@@ -1342,7 +1342,11 @@ func opNewRef(vm *VM, ins opcode.InstructionNewRef) {
 func opIterator(vm *VM) {
 	value := vm.pop()
 	iterable := value.(interpreter.IterableValue)
-	iterator := iterable.Iterator(vm.context, EmptyLocationRange)
+	context := vm.context
+	iterator := iterable.Iterator(context, EmptyLocationRange)
+	if valueID, ok := iterator.ValueID(); ok {
+		context.startContainerValueIteration(valueID)
+	}
 	vm.push(NewIteratorWrapperValue(iterator))
 }
 
@@ -1358,6 +1362,14 @@ func opIteratorNext(vm *VM) {
 	iterator := value.(*IteratorWrapperValue)
 	element := iterator.Next(vm.context, EmptyLocationRange)
 	vm.push(element)
+}
+
+func opIteratorEnd(vm *VM) {
+	value := vm.pop()
+	iterator := value.(*IteratorWrapperValue)
+	if valueID, ok := iterator.ValueID(); ok {
+		vm.context.endContainerValueIteration(valueID)
+	}
 }
 
 func opDeref(vm *VM) {
@@ -1540,6 +1552,8 @@ func (vm *VM) run() {
 			opIteratorHasNext(vm)
 		case opcode.InstructionIteratorNext:
 			opIteratorNext(vm)
+		case opcode.InstructionIteratorEnd:
+			opIteratorEnd(vm)
 		case opcode.InstructionDeref:
 			opDeref(vm)
 		case opcode.InstructionNewClosure:

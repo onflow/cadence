@@ -4366,11 +4366,9 @@ func AccountStorageIterate(
 	}
 	storageIterator := storageMap.Iterator(invocationContext)
 
-	inIteration := invocationContext.InStorageIteration()
+	wasInIteration := invocationContext.InStorageIteration()
 	invocationContext.SetInStorageIteration(true)
-	defer func() {
-		invocationContext.SetInStorageIteration(inIteration)
-	}()
+	defer invocationContext.SetInStorageIteration(wasInIteration)
 
 	for key, value := storageIterator.Next(); key != nil && value != nil; key, value = storageIterator.Next() {
 
@@ -5944,7 +5942,7 @@ func capabilityCheckFunction(
 	)
 }
 
-func (interpreter *Interpreter) ValidateMutation(valueID atree.ValueID, locationRange LocationRange) {
+func (interpreter *Interpreter) ValidateContainerMutation(valueID atree.ValueID, locationRange LocationRange) {
 	_, present := interpreter.SharedState.containerValueIteration[valueID]
 	if !present {
 		return
@@ -5954,7 +5952,7 @@ func (interpreter *Interpreter) ValidateMutation(valueID atree.ValueID, location
 	})
 }
 
-func (interpreter *Interpreter) WithMutationPrevention(valueID atree.ValueID, f func()) {
+func (interpreter *Interpreter) WithContainerMutationPrevention(valueID atree.ValueID, f func()) {
 	if interpreter == nil {
 		f()
 		return

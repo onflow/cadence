@@ -246,6 +246,7 @@ func TestPrintInstruction(t *testing.T) {
 		"Iterator":        {byte(Iterator)},
 		"IteratorHasNext": {byte(IteratorHasNext)},
 		"IteratorNext":    {byte(IteratorNext)},
+		"IteratorEnd":     {byte(IteratorEnd)},
 
 		"EmitEvent type:258 argCount:772": {byte(EmitEvent), 1, 2, 3, 4},
 		"Transfer":                        {byte(Transfer)},

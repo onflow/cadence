@@ -4408,17 +4408,17 @@ func TestRuntimeStorageIteration2(t *testing.T) {
           contract Test {
               access(all)
               fun saveStorage() {
-                  self.account.storage.save(0, to:/storage/foo)
+                  self.account.storage.save(0, to: /storage/foo)
               }
 
               access(all)
               fun saveOtherStorage() {
-                  self.account.storage.save(0, to:/storage/bar)
+                  self.account.storage.save(0, to: /storage/bar)
               }
 
               access(all)
               fun loadStorage() {
-                  self.account.storage.load<Int>(from:/storage/foo)
+                  self.account.storage.load<Int>(from: /storage/foo)
               }
 
               access(all)
