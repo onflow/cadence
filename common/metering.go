@@ -911,3 +911,10 @@ func NewAtreeEncodedSlabMemoryUsage(slabsCount uint) MemoryUsage {
 		Amount: uint64(slabsCount),
 	}
 }
+
+func NewGoSliceMemoryUsages(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindGoSliceLength,
+		Amount: uint64(length),
+	}
+}

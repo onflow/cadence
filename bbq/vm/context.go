@@ -288,6 +288,9 @@ func (c *Context) DefaultDestroyEvents(
 		panic(errors.NewUnreachableError())
 	}
 
+	length := eventsArray.Count()
+	common.UseMemory(c, common.NewGoSliceMemoryUsages(length))
+
 	eventValues := make([]*interpreter.CompositeValue, 0, eventsArray.Count())
 
 	eventsArray.Iterate(
