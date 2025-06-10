@@ -805,7 +805,7 @@ func parseEventDeclaration(
 			nil,
 			nil,
 			parameterList.StartPos,
-			"",
+			ast.Comments{},
 		),
 	)
 
@@ -1486,6 +1486,7 @@ func parseSpecialFunctionDeclaration(
 	staticPos *ast.Position,
 	nativePos *ast.Position,
 	identifier ast.Identifier,
+	// Comments can be safely ignored
 	docString string,
 ) (*ast.SpecialFunctionDeclaration, error) {
 
@@ -1539,7 +1540,7 @@ func parseSpecialFunctionDeclaration(
 			nil,
 			functionBlock,
 			startPos,
-			docString,
+			ast.Comments{},
 		),
 	), nil
 }

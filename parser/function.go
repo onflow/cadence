@@ -393,7 +393,7 @@ func parseFunctionDeclaration(
 	leadingComments = append(leadingComments, startComments...)
 	leadingComments = append(leadingComments, startToken.Comments.Leading...)
 
-	return ast.NewFunctionDeclarationWithComments(
+	return ast.NewFunctionDeclaration(
 		p.memoryGauge,
 		access,
 		purity,

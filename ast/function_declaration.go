@@ -79,39 +79,6 @@ var _ Element = &FunctionDeclaration{}
 var _ Declaration = &FunctionDeclaration{}
 var _ Statement = &FunctionDeclaration{}
 
-// TODO(preserve-comments): Temporary, add `comments` param to NewFunctionDeclaration in the future
-func NewFunctionDeclarationWithComments(
-	gauge common.MemoryGauge,
-	access Access,
-	purity FunctionPurity,
-	isStatic bool,
-	isNative bool,
-	identifier Identifier,
-	typeParameterList *TypeParameterList,
-	parameterList *ParameterList,
-	returnTypeAnnotation *TypeAnnotation,
-	functionBlock *FunctionBlock,
-	startPos Position,
-	comments Comments,
-) *FunctionDeclaration {
-	decl := NewFunctionDeclaration(
-		gauge,
-		access,
-		purity,
-		isStatic,
-		isNative,
-		identifier,
-		typeParameterList,
-		parameterList,
-		returnTypeAnnotation,
-		functionBlock,
-		startPos,
-		"",
-	)
-	decl.Comments = comments
-	return decl
-}
-
 func NewFunctionDeclaration(
 	gauge common.MemoryGauge,
 	access Access,
@@ -124,7 +91,7 @@ func NewFunctionDeclaration(
 	returnTypeAnnotation *TypeAnnotation,
 	functionBlock *FunctionBlock,
 	startPos Position,
-	docString string,
+	comments Comments,
 ) *FunctionDeclaration {
 	common.UseMemory(gauge, common.FunctionDeclarationMemoryUsage)
 
@@ -146,6 +113,7 @@ func NewFunctionDeclaration(
 		ReturnTypeAnnotation: returnTypeAnnotation,
 		FunctionBlock:        functionBlock,
 		StartPos:             startPos,
+		Comments:             comments,
 	}
 }
 

@@ -331,7 +331,7 @@ func parseFunctionDeclaration(
 		return nil, err
 	}
 
-	return ast.NewFunctionDeclarationWithComments(
+	return ast.NewFunctionDeclaration(
 		p.memoryGauge,
 		access,
 		ast.FunctionPurityUnspecified,

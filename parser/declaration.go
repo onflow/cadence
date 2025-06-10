@@ -983,7 +983,7 @@ func parseEventDeclaration(
 			nil,
 			nil,
 			parameterList.StartPos,
-			"",
+			ast.Comments{},
 		),
 	)
 
@@ -1995,7 +1995,7 @@ func parseSpecialFunctionDeclaration(
 	return ast.NewSpecialFunctionDeclaration(
 		p.memoryGauge,
 		declarationKind,
-		ast.NewFunctionDeclarationWithComments(
+		ast.NewFunctionDeclaration(
 			p.memoryGauge,
 			access,
 			purity,

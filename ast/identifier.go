@@ -33,14 +33,9 @@ type Identifier struct {
 }
 
 func NewIdentifier(memoryGauge common.MemoryGauge, identifier string, pos Position) Identifier {
-	common.UseMemory(memoryGauge, common.IdentifierMemoryUsage)
-	return Identifier{
-		Identifier: identifier,
-		Pos:        pos,
-	}
+	return NewIdentifierWithComments(memoryGauge, identifier, pos, Comments{})
 }
 
-// NewIdentifierWithComments TODO(preserve-comments): Migrate to NewIdentifier?
 func NewIdentifierWithComments(
 	memoryGauge common.MemoryGauge,
 	identifier string,

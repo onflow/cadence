@@ -282,7 +282,7 @@ func parseTransactionExecute(p *parser) (*ast.SpecialFunctionDeclaration, error)
 				nil,
 			),
 			identifier.Pos,
-			"",
+			ast.Comments{},
 		),
 	), nil
 }

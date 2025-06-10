@@ -103,17 +103,16 @@ func parseStatement(p *parser) (ast.Statement, error) {
 		case KeywordView:
 			// save current stream state before looking ahead for the `fun` keyword
 			cursor := p.tokens.Cursor()
-			current := p.current
-			purityPos := current.StartPos
+			purityToken := p.current
 
 			p.nextSemanticToken()
 			if p.isToken(p.current, lexer.TokenIdentifier, KeywordFun) {
-				return parseFunctionDeclarationOrFunctionExpressionStatement(p, ast.FunctionPurityView, &purityPos)
+				return parseFunctionDeclarationOrFunctionExpressionStatement(p, ast.FunctionPurityView, &purityToken)
 			}
 
 			// no `fun` :( revert back to previous lexer state and treat it as an identifier
 			p.tokens.Revert(cursor)
-			p.current = current
+			p.current = purityToken
 			tokenIsIdentifier = true
 
 		case KeywordFun:
@@ -178,10 +177,20 @@ func parseStatement(p *parser) (ast.Statement, error) {
 func parseFunctionDeclarationOrFunctionExpressionStatement(
 	p *parser,
 	purity ast.FunctionPurity,
-	purityPos *ast.Position,
+	purityToken *lexer.Token,
 ) (ast.Statement, error) {
+	var leadingComments []*ast.Comment
+	var startPos ast.Position
 
-	startPos := *ast.EarlierPosition(&p.current.StartPos, purityPos)
+	funToken := p.current
+	if purityToken == nil {
+		startPos = funToken.StartPos
+	} else {
+		startPos = *ast.EarlierPosition(&funToken.StartPos, &purityToken.StartPos)
+		leadingComments = append(leadingComments, purityToken.Comments.PackToList()...)
+	}
+
+	leadingComments = append(leadingComments, funToken.Comments.PackToList()...)
 
 	// Skip the `fun` keyword
 	p.nextSemanticToken()
@@ -223,7 +232,9 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(
 			returnTypeAnnotation,
 			functionBlock,
 			startPos,
-			"",
+			ast.Comments{
+				Leading: leadingComments,
+			},
 		), nil
 	} else {
 		parameterList, returnTypeAnnotation, functionBlock, err :=
