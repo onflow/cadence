@@ -411,21 +411,21 @@ func (c *Compiler[_, _]) emitUndefinedJumpIfNil() int {
 	return offset
 }
 
-func (c *Compiler[_, _]) patchJump(opcodeOffset int) {
-	count := c.codeGen.Offset()
-	if count == 0 {
-		panic(errors.NewUnreachableError())
-	}
-	if count >= math.MaxUint16 {
-		panic(errors.NewDefaultUserError("invalid jump"))
-	}
-	c.codeGen.PatchJump(opcodeOffset, uint16(count))
+func (c *Compiler[_, _]) patchJumpHere(jumpOpcodeOffset int) {
+	c.patchJump(jumpOpcodeOffset, c.codeGen.Offset())
 }
 
-func (c *Compiler[_, _]) patchJumps(offsets []int) {
-	for _, offset := range offsets {
-		c.patchJump(offset)
+func (c *Compiler[_, _]) patchJump(jumpOpcodeOffset int, targetInstructionOffset int) {
+	if targetInstructionOffset == 0 {
+		panic(errors.NewUnreachableError())
 	}
+	if targetInstructionOffset >= math.MaxUint16 {
+		panic(errors.NewDefaultUserError("invalid jump"))
+	}
+	c.codeGen.PatchJump(
+		jumpOpcodeOffset,
+		uint16(targetInstructionOffset),
+	)
 }
 
 func (c *Compiler[_, _]) pushControlFlow(start int) {
@@ -434,13 +434,15 @@ func (c *Compiler[_, _]) pushControlFlow(start int) {
 	c.currentControlFlow = &c.controlFlows[index]
 }
 
-func (c *Compiler[_, _]) popControlFlow() {
+func (c *Compiler[_, _]) popControlFlow(endOffset int) {
 	lastIndex := len(c.controlFlows) - 1
 	l := c.controlFlows[lastIndex]
 	c.controlFlows[lastIndex] = controlFlow{}
 	c.controlFlows = c.controlFlows[:lastIndex]
 
-	c.patchJumps(l.breaks)
+	for _, breakOffset := range l.breaks {
+		c.patchJump(breakOffset, endOffset)
+	}
 
 	var previousControlFlow *controlFlow
 	if lastIndex > 0 {
@@ -895,7 +897,10 @@ func (c *Compiler[_, _]) compileBlock(
 			// Once the post conditions are reached, patch all the previous return statements
 			// to jump to the current index (i.e: update them to jump to the post conditions).
 			if index == c.postConditionsIndex {
-				c.patchJumps(c.currentReturn.returns)
+				offset := c.codeGen.Offset()
+				for _, jumpOpcodeOffset := range c.currentReturn.returns {
+					c.patchJump(jumpOpcodeOffset, offset)
+				}
 			}
 			c.compileStatement(statement)
 		}
@@ -1009,8 +1014,13 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 	// after compiling the rest of the statements (post conditions).
 
 	if expression != nil {
+		// (1) Return with a value
+
 		// TODO: copy
 		c.compileExpression(expression)
+
+		// End active iterators *after* the expression is compiled.
+		c.emitActiveIteratorEnds()
 
 		if c.hasPostConditions() {
 			tempResultVar := c.currentFunction.findLocal(tempResultVariableName)
@@ -1036,6 +1046,10 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 			c.emitTransferAndConvertAndReturnValue(returnTypes.ReturnType)
 		}
 	} else {
+		// (2) Empty return
+
+		c.emitActiveIteratorEnds()
+
 		if c.hasPostConditions() {
 			// (2.a)
 			// If there are post conditions, jump to the start of the post conditions.
@@ -1049,6 +1063,17 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 	}
 
 	return
+}
+
+func (c *Compiler[_, _]) emitActiveIteratorEnds() {
+	for _, activeIteratorLocalIndex := range c.currentFunction.activeIteratorLocalIndices {
+		c.emitIteratorEnd(activeIteratorLocalIndex)
+	}
+}
+
+func (c *Compiler[_, _]) emitIteratorEnd(iteratorLocalIndex uint16) {
+	c.emitGetLocal(iteratorLocalIndex)
+	c.codeGen.Emit(opcode.InstructionIteratorEnd{})
 }
 
 func (c *Compiler[_, _]) emitGetLocal(localIndex uint16) {
@@ -1149,15 +1174,15 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 		elseBlock := statement.Else
 		if elseBlock != nil {
 			thenJump := c.emitUndefinedJump()
-			c.patchJump(elseJump)
+			c.patchJumpHere(elseJump)
 			c.compileBlock(
 				elseBlock,
 				common.DeclarationKindUnknown,
 				nil,
 			)
-			c.patchJump(thenJump)
+			c.patchJumpHere(thenJump)
 		} else {
-			c.patchJump(elseJump)
+			c.patchJumpHere(elseJump)
 		}
 	})
 	return
@@ -1167,7 +1192,10 @@ func (c *Compiler[_, _]) VisitWhileStatement(statement *ast.WhileStatement) (_ s
 	testOffset := c.codeGen.Offset()
 
 	c.pushControlFlow(testOffset)
-	defer c.popControlFlow()
+	var endOffset int
+	defer func() {
+		c.popControlFlow(endOffset)
+	}()
 
 	c.compileExpression(statement.Test)
 	endJump := c.emitUndefinedJumpIfFalse()
@@ -1185,7 +1213,8 @@ func (c *Compiler[_, _]) VisitWhileStatement(statement *ast.WhileStatement) (_ s
 	c.emitJump(testOffset)
 
 	// Patch the failed test to jump here
-	c.patchJump(endJump)
+	endOffset = c.codeGen.Offset()
+	c.patchJump(endJump, endOffset)
 
 	return
 }
@@ -1200,6 +1229,11 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 	c.emit(opcode.InstructionSetLocal{
 		Local: iteratorLocalIndex,
 	})
+	// Push the iterator local index to the active iterators.
+	c.currentFunction.activeIteratorLocalIndices = append(
+		c.currentFunction.activeIteratorLocalIndices,
+		iteratorLocalIndex,
+	)
 
 	// Initialize 'index' variable, if needed.
 	index := statement.Index
@@ -1216,7 +1250,10 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 
 	testOffset := c.codeGen.Offset()
 	c.pushControlFlow(testOffset)
-	defer c.popControlFlow()
+	var endOffset int
+	defer func() {
+		c.popControlFlow(endOffset)
+	}()
 
 	// Loop test: Get the iterator and call `hasNext()`.
 	c.emitGetLocal(iteratorLocalIndex)
@@ -1273,7 +1310,15 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 	// Jump back to the loop test. i.e: `hasNext()`
 	c.emitJump(testOffset)
 
-	c.patchJump(endJump)
+	endOffset = c.codeGen.Offset()
+	c.patchJump(endJump, endOffset)
+
+	c.emitIteratorEnd(iteratorLocalIndex)
+
+	// Pop the iterator local index from the active iterators.
+	activeIteratorLocalIndices := c.currentFunction.activeIteratorLocalIndices
+	c.currentFunction.activeIteratorLocalIndices = activeIteratorLocalIndices[:len(activeIteratorLocalIndices)-1]
+
 	return
 }
 
@@ -1314,13 +1359,16 @@ func (c *Compiler[_, _]) VisitSwitchStatement(statement *ast.SwitchStatement) (_
 	// Pass an invalid start offset to pushControlFlow to indicate that this is a switch statement,
 	// which does not allow jumps to the start (i.e., no continue statements).
 	c.pushControlFlow(-1)
-	defer c.popControlFlow()
+	var endOffset int
+	defer func() {
+		c.popControlFlow(endOffset)
+	}()
 
 	previousJump := -1
 
 	for _, switchCase := range statement.Cases {
 		if previousJump >= 0 {
-			c.patchJump(previousJump)
+			c.patchJumpHere(previousJump)
 			previousJump = -1
 		}
 
@@ -1342,8 +1390,10 @@ func (c *Compiler[_, _]) VisitSwitchStatement(statement *ast.SwitchStatement) (_
 		}
 	}
 
+	endOffset = c.codeGen.Offset()
+
 	if previousJump >= 0 {
-		c.patchJump(previousJump)
+		c.patchJump(previousJump, endOffset)
 	}
 
 	return
@@ -2187,10 +2237,10 @@ func (c *Compiler[_, _]) patchOptionalChainingNilJump(isOptional bool, nilJump i
 	// Jump to the end to skip the nil returning instructions.
 	jumpToEnd := c.emitUndefinedJump()
 
-	c.patchJump(nilJump)
+	c.patchJumpHere(nilJump)
 	c.emit(opcode.InstructionNil{})
 
-	c.patchJump(jumpToEnd)
+	c.patchJumpHere(jumpToEnd)
 }
 
 func isDynamicMethodInvocation(accessedType sema.Type) bool {
@@ -2377,10 +2427,10 @@ func (c *Compiler[_, _]) VisitConditionalExpression(expression *ast.ConditionalE
 	thenJump := c.emitUndefinedJump()
 
 	// Else branch
-	c.patchJump(elseJump)
+	c.patchJumpHere(elseJump)
 	c.compileExpression(expression.Else)
 
-	c.patchJump(thenJump)
+	c.patchJumpHere(thenJump)
 
 	return
 }
@@ -2428,14 +2478,14 @@ func (c *Compiler[_, _]) VisitBinaryExpression(expression *ast.BinaryExpression)
 		thenJump := c.emitUndefinedJump()
 
 		// Else branch
-		c.patchJump(elseJump)
+		c.patchJumpHere(elseJump)
 		// Drop the duplicated condition result,
 		// as it is not needed for the 'else' path.
 		c.emit(opcode.InstructionDrop{})
 		c.compileExpression(expression.Right)
 
 		// End
-		c.patchJump(thenJump)
+		c.patchJumpHere(thenJump)
 
 	case ast.OperationOr:
 		// TODO: optimize chains of ors / ands
@@ -2446,15 +2496,15 @@ func (c *Compiler[_, _]) VisitBinaryExpression(expression *ast.BinaryExpression)
 		rightFalseJump := c.emitUndefinedJumpIfFalse()
 
 		// Left or right is true
-		c.patchJump(leftTrueJump)
+		c.patchJumpHere(leftTrueJump)
 		c.emit(opcode.InstructionTrue{})
 		trueJump := c.emitUndefinedJump()
 
 		// Left and right are false
-		c.patchJump(rightFalseJump)
+		c.patchJumpHere(rightFalseJump)
 		c.emit(opcode.InstructionFalse{})
 
-		c.patchJump(trueJump)
+		c.patchJumpHere(trueJump)
 
 	case ast.OperationAnd:
 		// TODO: optimize chains of ors / ands
@@ -2469,11 +2519,11 @@ func (c *Compiler[_, _]) VisitBinaryExpression(expression *ast.BinaryExpression)
 		trueJump := c.emitUndefinedJump()
 
 		// Left or right is false
-		c.patchJump(leftFalseJump)
-		c.patchJump(rightFalseJump)
+		c.patchJumpHere(leftFalseJump)
+		c.patchJumpHere(rightFalseJump)
 		c.emit(opcode.InstructionFalse{})
 
-		c.patchJump(trueJump)
+		c.patchJumpHere(trueJump)
 
 	default:
 		c.compileExpression(expression.Right)

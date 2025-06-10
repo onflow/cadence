@@ -4046,6 +4046,10 @@ func TestForLoop(t *testing.T) {
 				// Jump to the beginning (condition) of the loop.
 				opcode.InstructionJump{Target: 4},
 
+				// End of the loop, end the iterator.
+				opcode.InstructionGetLocal{Local: iteratorVarIndex},
+				opcode.InstructionIteratorEnd{},
+
 				// Return
 				opcode.InstructionReturn{},
 			},
@@ -4119,6 +4123,10 @@ func TestForLoop(t *testing.T) {
 
 				// Jump to the beginning (condition) of the loop.
 				opcode.InstructionJump{Target: 6},
+
+				// End of the loop, end the iterator.
+				opcode.InstructionGetLocal{Local: iteratorVarIndex},
+				opcode.InstructionIteratorEnd{},
 
 				// Return
 				opcode.InstructionReturn{},
@@ -4219,12 +4227,151 @@ func TestForLoop(t *testing.T) {
 				// Jump to the beginning (condition) of the loop.
 				opcode.InstructionJump{Target: 8},
 
+				// End of the loop, end the iterator.
+				opcode.InstructionGetLocal{Local: iteratorVarIndex},
+				opcode.InstructionIteratorEnd{},
+
 				// Return
 				opcode.InstructionReturn{},
 			},
 			program.Functions[0].Code,
 		)
 	})
+
+	t.Run("nested, with return", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            fun test(a: [Int], b: [Int]): Int {
+                for x in a {
+                    for y in b {
+                        return x + y
+                    }
+                    return x
+                }
+                return 0
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+		functions := program.Functions
+		require.Len(t, functions, 1)
+
+		const (
+			aIndex = iota
+			bIndex
+			iter1Index
+			xIndex
+			iter2Index
+			yIndex
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+
+				// Get the iterator and store in local var.
+				// `var <iterator> = a.Iterator`
+				opcode.InstructionStatement{},
+				opcode.InstructionGetLocal{Local: aIndex},
+				opcode.InstructionIterator{},
+				opcode.InstructionSetLocal{Local: iter1Index},
+
+				// Loop condition: Check whether `iterator.hasNext()`
+				opcode.InstructionGetLocal{Local: iter1Index},
+				opcode.InstructionIteratorHasNext{},
+
+				// If false, then jump to the end of the loop
+				opcode.InstructionJumpIfFalse{Target: 44},
+
+				opcode.InstructionLoop{},
+
+				// If true, get the next element and store in local var.
+				// var x = iterator.next()
+				opcode.InstructionGetLocal{Local: iter1Index},
+				opcode.InstructionIteratorNext{},
+				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionSetLocal{Local: xIndex},
+
+				// Get the iterator and store in local var.
+				// `var <iterator> = b.Iterator`
+				opcode.InstructionStatement{},
+				opcode.InstructionGetLocal{Local: bIndex},
+				opcode.InstructionIterator{},
+				opcode.InstructionSetLocal{Local: iter2Index},
+
+				// Loop condition: Check whether `iterator.hasNext()`
+				opcode.InstructionGetLocal{Local: iter2Index},
+				opcode.InstructionIteratorHasNext{},
+
+				// If false, then jump to the end of the loop
+				opcode.InstructionJumpIfFalse{Target: 35},
+
+				opcode.InstructionLoop{},
+
+				// If true, get the next element and store in local var.
+				// var y = iterator.next()
+				opcode.InstructionGetLocal{Local: iter2Index},
+				opcode.InstructionIteratorNext{},
+				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionSetLocal{Local: yIndex},
+
+				// return x + y
+				// Also, end all active iterators (inner and outer).
+				opcode.InstructionStatement{},
+
+				opcode.InstructionGetLocal{Local: xIndex},
+				opcode.InstructionGetLocal{Local: yIndex},
+				opcode.InstructionAdd{},
+
+				opcode.InstructionGetLocal{Local: iter1Index},
+				opcode.InstructionIteratorEnd{},
+				opcode.InstructionGetLocal{Local: iter2Index},
+				opcode.InstructionIteratorEnd{},
+
+				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionReturnValue{},
+
+				// Jump to the beginning (condition) of the inner loop.
+				opcode.InstructionJump{Target: 16},
+
+				// End of the loop, end the inner iterator.
+				opcode.InstructionGetLocal{Local: iter2Index},
+				opcode.InstructionIteratorEnd{},
+
+				// return x
+				// Also, end all active iterators (outer).
+				opcode.InstructionStatement{},
+
+				opcode.InstructionGetLocal{Local: xIndex},
+
+				opcode.InstructionGetLocal{Local: iter1Index},
+				opcode.InstructionIteratorEnd{},
+
+				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionReturnValue{},
+
+				// Jump to the beginning (condition) of the outer loop.
+				opcode.InstructionJump{Target: 4},
+
+				// End of the loop, end the outer iterator.
+				opcode.InstructionGetLocal{Local: iter1Index},
+				opcode.InstructionIteratorEnd{},
+
+				// return 0
+				opcode.InstructionStatement{},
+				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionReturnValue{},
+			},
+			program.Functions[0].Code,
+		)
+	})
+
 }
 
 func TestCompileIf(t *testing.T) {

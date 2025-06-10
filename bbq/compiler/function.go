@@ -28,17 +28,18 @@ import (
 )
 
 type function[E any] struct {
-	enclosing      *function[E]
-	name           string
-	qualifiedName  string
-	code           []E
-	locals         *activations.Activations[*local]
-	localCount     uint16
-	parameterCount uint16
-	upvalues       []opcode.Upvalue
-	upvalueIndices map[opcode.Upvalue]uint16
-	typeIndex      uint16
-	lineNumbers    bbq.LineNumberTable
+	enclosing                  *function[E]
+	name                       string
+	qualifiedName              string
+	code                       []E
+	locals                     *activations.Activations[*local]
+	localCount                 uint16
+	parameterCount             uint16
+	upvalues                   []opcode.Upvalue
+	upvalueIndices             map[opcode.Upvalue]uint16
+	typeIndex                  uint16
+	lineNumbers                bbq.LineNumberTable
+	activeIteratorLocalIndices []uint16
 }
 
 func newFunction[E any](
