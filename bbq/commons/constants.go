@@ -18,6 +18,8 @@
 
 package commons
 
+import "github.com/onflow/cadence/ast"
+
 const (
 	InitFunctionName                = "init"
 	ExecuteFunctionName             = "execute"
@@ -28,6 +30,9 @@ const (
 	AssertFunctionName              = "assert"
 	PanicFunctionName               = "panic"
 	GetAccountFunctionName          = "getAccount"
+
+	GeneratedNameQualifier              = "$"
+	ResourceDestroyedEventsFunctionName = GeneratedNameQualifier + ast.ResourceDestructionDefaultEventName
 
 	// Names used by generated constructs
 

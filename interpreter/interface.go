@@ -389,6 +389,7 @@ type ResourceDestructionContext interface {
 	InvocationContext
 
 	GetResourceDestructionContextForLocation(location common.Location) ResourceDestructionContext
+	DefaultDestroyEvents(resourceValue *CompositeValue, locationRange LocationRange) []*CompositeValue
 }
 
 var _ ResourceDestructionContext = &Interpreter{}
