@@ -214,7 +214,7 @@ type IfStatement struct {
 	Else     *Block
 	StartPos Position `json:"-"`
 	// Comments.Leading comments that appear before `if` keyword
-	Comments Comments
+	Comments Comments `json:"-"`
 }
 
 var _ Element = &IfStatement{}

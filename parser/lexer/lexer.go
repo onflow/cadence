@@ -149,6 +149,7 @@ func (l *lexer) clear() {
 	l.tokenCount = 0
 	l.mode = lexerModeNormal
 	l.openBrackets = 0
+	l.currentComments = nil
 }
 
 func (l *lexer) Reclaim() {
@@ -480,16 +481,6 @@ func IsIdentifierRune(r rune) bool {
 		r >= 'A' && r <= 'Z' ||
 		r >= '0' && r <= '9' ||
 		r == '_'
-}
-
-func IsValidIdentifier(s string) bool {
-	for _, r := range s {
-		if !IsIdentifierRune(r) {
-			return false
-		}
-	}
-
-	return true
 }
 
 func (l *lexer) scanLineComment() {
