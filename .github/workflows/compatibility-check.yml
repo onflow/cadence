@@ -21,6 +21,8 @@ on:
       # Feature branches would get checked when they are going to get merged into the `master` anyway.
       - master
       - 'v**'
+      # We want to check the compatibility of the entitlements refactor
+      - 'feature/entitlements-refactor'
 
 env:
   GO_VERSION: '1.23'

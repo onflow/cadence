@@ -48,6 +48,8 @@ func TestErrorInterfaceConformance(t *testing.T) {
 	require.NoError(t, err)
 
 	pkg := pkgs[0]
+	require.Empty(t, pkg.Errors)
+
 	errorsPkgScope := pkg.Types.Scope()
 
 	// Get the builtin scope. Builtin scope is a parent of any pkg scope
@@ -74,7 +76,7 @@ func TestErrorInterfaceConformance(t *testing.T) {
 		parser.Error{},
 		interpreter.Error{},
 		runtime.Error{},
-		interpreter.StackTraceError{},
+		&interpreter.StackTraceError{},
 	}
 
 	errorsToSkip := make(map[string]any)

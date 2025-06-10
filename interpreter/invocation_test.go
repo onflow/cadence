@@ -44,7 +44,8 @@ func TestInterpretFunctionInvocationCheckArgumentTypes(t *testing.T) {
 	_, err := inter.Invoke("test", interpreter.TrueValue)
 	RequireError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
+	var transferTypeError *interpreter.ValueTransferTypeError
+	require.ErrorAs(t, err, &transferTypeError)
 }
 
 func TestInterpretSelfDeclaration(t *testing.T) {
@@ -62,7 +63,7 @@ func TestInterpretSelfDeclaration(t *testing.T) {
 			func(invocation interpreter.Invocation) interpreter.Value {
 				// Check that the *caller's* self
 
-				callStack := invocation.Interpreter.CallStack()
+				callStack := invocation.InvocationContext.CallStack()
 				parentInvocation := callStack[len(callStack)-1]
 
 				if expectSelf {
@@ -150,11 +151,10 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 
 	value := interpreter.NewUnmeteredUIntValueFromUint64(42)
 
-	test := inter.Globals.Get("test").GetValue(inter).(interpreter.FunctionValue)
+	test := inter.GetGlobal("test").(interpreter.FunctionValue)
 
 	invocation := interpreter.NewInvocation(
 		inter,
-		nil,
 		nil,
 		nil,
 		[]interpreter.Value{value},
@@ -163,11 +163,13 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 		interpreter.EmptyLocationRange,
 	)
 
-	_, err := inter.InvokeFunction(
+	_, err := interpreter.InvokeFunction(
+		inter,
 		test,
 		invocation,
 	)
 	RequireError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
+	var memberAccessTypeError *interpreter.MemberAccessTypeError
+	require.ErrorAs(t, err, &memberAccessTypeError)
 }

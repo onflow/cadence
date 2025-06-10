@@ -19,7 +19,7 @@
 package interpreter
 
 type ValueWalker interface {
-	WalkValue(interpreter *Interpreter, value Value) ValueWalker
+	WalkValue(context ValueWalkContext, value Value) ValueWalker
 }
 
 // WalkValue traverses a Value object graph in depth-first order:
@@ -32,16 +32,16 @@ type ValueWalker interface {
 // followed by a call of WalkValue(nil) on the returned walker.
 //
 // The initial walker may not be nil.
-func WalkValue(interpreter *Interpreter, walker ValueWalker, value Value, locationRange LocationRange) {
-	if walker = walker.WalkValue(interpreter, value); walker == nil {
+func WalkValue(context ValueWalkContext, walker ValueWalker, value Value, locationRange LocationRange) {
+	if walker = walker.WalkValue(context, value); walker == nil {
 		return
 	}
 
 	value.Walk(
-		interpreter,
+		context,
 		func(child Value) {
 			WalkValue(
-				interpreter,
+				context,
 				walker,
 				child,
 				locationRange,
@@ -50,5 +50,5 @@ func WalkValue(interpreter *Interpreter, walker ValueWalker, value Value, locati
 		locationRange,
 	)
 
-	walker.WalkValue(interpreter, nil)
+	walker.WalkValue(context, nil)
 }

@@ -42,10 +42,10 @@ type TestRuntimeInterface struct {
 
 	OnResolveLocation  sema.LocationHandlerFunc
 	OnGetCode          func(_ runtime.Location) ([]byte, error)
-	OnGetAndSetProgram func(
+	OnGetOrLoadProgram func(
 		location runtime.Location,
-		load func() (*interpreter.Program, error),
-	) (*interpreter.Program, error)
+		load func() (*runtime.Program, error),
+	) (*runtime.Program, error)
 	OnSetInterpreterSharedState func(state *interpreter.SharedState)
 	OnGetInterpreterSharedState func() *interpreter.SharedState
 	OnCreateAccount             func(payer runtime.Address) (address runtime.Address, err error)
@@ -73,7 +73,7 @@ type TestRuntimeInterface struct {
 		newAddress common.Address,
 	)
 	OnGenerateUUID       func() (uint64, error)
-	OnMeterComputation   func(compKind common.ComputationKind, intensity uint) error
+	OnMeterComputation   func(usage common.ComputationUsage) error
 	OnDecodeArgument     func(b []byte, t cadence.Type) (cadence.Value, error)
 	OnProgramParsed      func(location runtime.Location, duration time.Duration)
 	OnProgramChecked     func(location runtime.Location, duration time.Duration)
@@ -97,7 +97,7 @@ type TestRuntimeInterface struct {
 	OnGetAccountAvailableBalance func(_ runtime.Address) (uint64, error)
 	OnGetStorageUsed             func(_ runtime.Address) (uint64, error)
 	OnGetStorageCapacity         func(_ runtime.Address) (uint64, error)
-	Programs                     map[runtime.Location]*interpreter.Program
+	Programs                     map[runtime.Location]*runtime.Program
 	OnImplementationDebugLog     func(message string) error
 	OnValidatePublicKey          func(publicKey *stdlib.PublicKey) error
 	OnBLSVerifyPOP               func(pk *stdlib.PublicKey, s []byte) (bool, error)
@@ -117,7 +117,7 @@ type TestRuntimeInterface struct {
 	OnGenerateAccountID              func(address common.Address) (uint64, error)
 	OnRecoverProgram                 func(program *ast.Program, location common.Location) ([]byte, error)
 	OnValidateAccountCapabilitiesGet func(
-		inter *interpreter.Interpreter,
+		context interpreter.AccountCapabilityGetValidationContext,
 		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		path interpreter.PathValue,
@@ -125,7 +125,7 @@ type TestRuntimeInterface struct {
 		capabilityBorrowType *sema.ReferenceType,
 	) (bool, error)
 	OnValidateAccountCapabilitiesPublish func(
-		inter *interpreter.Interpreter,
+		context interpreter.AccountCapabilityPublishValidationContext,
 		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		path interpreter.PathValue,
@@ -165,14 +165,14 @@ func (i *TestRuntimeInterface) GetCode(location runtime.Location) ([]byte, error
 
 func (i *TestRuntimeInterface) GetOrLoadProgram(
 	location runtime.Location,
-	load func() (*interpreter.Program, error),
+	load func() (*runtime.Program, error),
 ) (
-	program *interpreter.Program,
+	program *runtime.Program,
 	err error,
 ) {
-	if i.OnGetAndSetProgram == nil {
+	if i.OnGetOrLoadProgram == nil {
 		if i.Programs == nil {
-			i.Programs = map[runtime.Location]*interpreter.Program{}
+			i.Programs = map[runtime.Location]*runtime.Program{}
 		}
 
 		var ok bool
@@ -191,7 +191,7 @@ func (i *TestRuntimeInterface) GetOrLoadProgram(
 		return
 	}
 
-	return i.OnGetAndSetProgram(location, load)
+	return i.OnGetOrLoadProgram(location, load)
 }
 
 func (i *TestRuntimeInterface) SetInterpreterSharedState(state *interpreter.SharedState) {
@@ -367,11 +367,11 @@ func (i *TestRuntimeInterface) GenerateUUID() (uint64, error) {
 	return i.OnGenerateUUID()
 }
 
-func (i *TestRuntimeInterface) MeterComputation(compKind common.ComputationKind, intensity uint) error {
+func (i *TestRuntimeInterface) MeterComputation(usage common.ComputationUsage) error {
 	if i.OnMeterComputation == nil {
 		return nil
 	}
-	return i.OnMeterComputation(compKind, intensity)
+	return i.OnMeterComputation(usage)
 }
 
 func (i *TestRuntimeInterface) DecodeArgument(b []byte, t cadence.Type) (cadence.Value, error) {
@@ -626,7 +626,7 @@ func (i *TestRuntimeInterface) RecoverProgram(program *ast.Program, location com
 }
 
 func (i *TestRuntimeInterface) ValidateAccountCapabilitiesGet(
-	inter *interpreter.Interpreter,
+	context interpreter.AccountCapabilityGetValidationContext,
 	locationRange interpreter.LocationRange,
 	address interpreter.AddressValue,
 	path interpreter.PathValue,
@@ -637,7 +637,7 @@ func (i *TestRuntimeInterface) ValidateAccountCapabilitiesGet(
 		return true, nil
 	}
 	return i.OnValidateAccountCapabilitiesGet(
-		inter,
+		context,
 		locationRange,
 		address,
 		path,
@@ -647,7 +647,7 @@ func (i *TestRuntimeInterface) ValidateAccountCapabilitiesGet(
 }
 
 func (i *TestRuntimeInterface) ValidateAccountCapabilitiesPublish(
-	inter *interpreter.Interpreter,
+	context interpreter.AccountCapabilityPublishValidationContext,
 	locationRange interpreter.LocationRange,
 	address interpreter.AddressValue,
 	path interpreter.PathValue,
@@ -657,7 +657,7 @@ func (i *TestRuntimeInterface) ValidateAccountCapabilitiesPublish(
 		return true, nil
 	}
 	return i.OnValidateAccountCapabilitiesPublish(
-		inter,
+		context,
 		locationRange,
 		address,
 		path,

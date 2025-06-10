@@ -18,7 +18,7 @@
 
 package common
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=ComputationKind -trimprefix=ComputationKind
+//go:generate stringer -type=ComputationKind -trimprefix=ComputationKind
 
 // ComputationKind captures kind of computation that would be used for metring computation
 type ComputationKind uint

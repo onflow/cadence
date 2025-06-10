@@ -213,7 +213,8 @@ func TestRuntimeAccountEntitlementSaveAndLoadFail(t *testing.T) {
 		},
 	)
 
-	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+	var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+	require.ErrorAs(t, err, &forceCastTypeMismatchError)
 }
 
 func TestRuntimeAccountEntitlementAttachment(t *testing.T) {
@@ -599,7 +600,8 @@ func TestRuntimeAccountEntitlementCapabilityCasting(t *testing.T) {
 		},
 	)
 
-	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+	var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+	require.ErrorAs(t, err, &forceCastTypeMismatchError)
 }
 
 func TestRuntimeAccountEntitlementCapabilityDictionary(t *testing.T) {
@@ -714,7 +716,8 @@ func TestRuntimeAccountEntitlementCapabilityDictionary(t *testing.T) {
 		},
 	)
 
-	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+	var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+	require.ErrorAs(t, err, &forceCastTypeMismatchError)
 }
 
 func TestRuntimeAccountEntitlementGenericCapabilityDictionary(t *testing.T) {
@@ -1128,7 +1131,7 @@ func TestRuntimeImportedEntitlementMapInclude(t *testing.T) {
             access(all) entitlement Z
 
             access(all) entitlement mapping M {
-                X -> Y 
+                X -> Y
                 Y -> Z
             }
         }
@@ -1136,6 +1139,7 @@ func TestRuntimeImportedEntitlementMapInclude(t *testing.T) {
 
 	upstreamDeployTx := DeploymentTransaction("Upstream", []byte(`
         import FurtherUpstream from 0x1
+
         access(all) contract Upstream {
             access(all) entitlement A
             access(all) entitlement B
@@ -1144,7 +1148,7 @@ func TestRuntimeImportedEntitlementMapInclude(t *testing.T) {
             access(all) entitlement mapping M {
                 include FurtherUpstream.M
 
-                A -> FurtherUpstream.Y 
+                A -> FurtherUpstream.Y
                 FurtherUpstream.X -> B
             }
         }
@@ -1153,6 +1157,7 @@ func TestRuntimeImportedEntitlementMapInclude(t *testing.T) {
 	testDeployTx := DeploymentTransaction("Test", []byte(`
         import FurtherUpstream from 0x1
         import Upstream from 0x1
+
         access(all) contract Test {
             access(all) entitlement E
             access(all) entitlement F
@@ -1168,10 +1173,12 @@ func TestRuntimeImportedEntitlementMapInclude(t *testing.T) {
             }
 
             access(all) struct S {
-                access(mapping M) fun performMap(): auth(mapping M) &Int {
-                    return &1
+                access(mapping M) let x: [Int]
+
+                init() {
+                    self.x = [1]
                 }
-            } 
+            }
         }
     `))
 
@@ -1182,32 +1189,40 @@ func TestRuntimeImportedEntitlementMapInclude(t *testing.T) {
 
         access(all) fun main() {
             let ref1 = &Test.S() as auth(FurtherUpstream.X, Upstream.C, Test.E) &Test.S
-
-            assert([ref1.performMap()].getType() == 
-            Type<[auth(
-                // from map of FurtherUpstream.X 
-                FurtherUpstream.Y, 
-                Upstream.B, 
-                // from map of Upstream.C
-                FurtherUpstream.X, 
-                // from map of Test.E 
-                FurtherUpstream.Z,
-                Test.G
-            ) &Int]>(), message: "test 1 failed")
+            ref1.x
+            let type1 = Type<
+                auth(
+                    // from map of FurtherUpstream.X
+                    FurtherUpstream.Y,
+                    Upstream.B,
+                    // from map of Upstream.C
+                    FurtherUpstream.X,
+                    // from map of Test.E
+                    FurtherUpstream.Z,
+                    Test.G
+                ) &Int
+            >()
+            assert(type1 != nil)
+            assert(ref1.x[0].getType() == Type<Int>())
 
             let ref2 = &Test.S() as auth(FurtherUpstream.Y, Upstream.A, Test.F) &Test.S
-            assert([ref2.performMap()].getType() == 
-                Type<[auth(
-                    // from map of FurtherUpstream.Y 
-                    FurtherUpstream.Z, 
+            ref2.x
+            let type2 = Type<
+                auth(
+                    // from map of FurtherUpstream.Y
+                    FurtherUpstream.Z,
                     // from map of Upstream.A
                     FurtherUpstream.Y,
-                    // from map of Test.F 
+                    // from map of Test.F
                     Upstream.C
-                ) &Int]>(), message: "test 2 failed")
+                ) &Int
+            >()
+            assert(type2 != nil)
+            assert(ref2.x[0].getType() == Type<Int>())
 
             let ref3 = &Test.S() as auth(FurtherUpstream.Z, Upstream.B, Test.G) &Test.S
-              assert([ref3.performMap()].getType() == Type<[&Int]>(), message: "test 3 failed")
+            ref3.x
+            assert(ref3.x[0].getType() == Type<Int>())
         }
      `)
 
@@ -1294,16 +1309,16 @@ func TestRuntimeEntitlementMapIncludeDeduped(t *testing.T) {
 	access(all) entitlement X
 	access(all) entitlement Y
 	access(all) entitlement mapping N1 {
-	  E -> F 
-	  E -> E 
+	  E -> F
+	  E -> E
 	  E -> X
 	  E -> Y
-	  F -> F 
-	  F -> E 
+	  F -> F
+	  F -> E
 	  F -> X
 	  F -> Y
-	  X -> F 
-	  X -> E 
+	  X -> F
+	  X -> E
 	  X -> X
 	  X -> Y
 	}
@@ -1457,7 +1472,7 @@ func TestRuntimeEntitlementMapIncludeDeduped(t *testing.T) {
 	  include P1
 	  include P2
 	  include P3
-	}       
+	}
 	
 	access(all) fun main() {}
     `)

@@ -197,7 +197,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInTransaction(t *testing.
 	)
 	RequireError(t, err)
 
-	var forceNilError interpreter.ForceNilError
+	var forceNilError *interpreter.ForceNilError
 	require.ErrorAs(t, err, &forceNilError)
 }
 

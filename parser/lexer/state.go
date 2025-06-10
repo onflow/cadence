@@ -355,19 +355,23 @@ func blockCommentState(l *lexer, nesting int) stateFn {
 		case '/':
 			beforeSlashOffset := l.prevEndOffset
 			if l.acceptOne('*') {
-				starOffset := l.endOffset
-				l.endOffset = beforeSlashOffset
-				l.endOffset = starOffset
-				return blockCommentState(l, nesting+1)
+				if beforeSlashOffset-l.startOffset > 0 {
+					starOffset := l.endOffset
+					l.endOffset = beforeSlashOffset
+					l.endOffset = starOffset
+				}
+				return blockCommentState(nesting + 1)
 			}
 
 		case '*':
 			beforeStarOffset := l.prevEndOffset
 			if l.acceptOne('/') {
-				slashOffset := l.endOffset
-				l.endOffset = beforeStarOffset
-				l.endOffset = slashOffset
-				return blockCommentState(l, nesting-1)
+				if beforeStarOffset-l.startOffset > 0 {
+					slashOffset := l.endOffset
+					l.endOffset = beforeStarOffset
+					l.endOffset = slashOffset
+				}
+				return blockCommentState(nesting - 1)
 			}
 
 			return blockCommentState(l, nesting)

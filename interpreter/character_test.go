@@ -34,7 +34,7 @@ func TestInterpretCharacterUtf8Field(t *testing.T) {
 	t.Parallel()
 
 	runTest := func(t *testing.T, code string, expectedValues ...interpreter.Value) {
-		inter := parseCheckAndInterpret(t, fmt.Sprintf(`
+		inter := parseCheckAndPrepare(t, fmt.Sprintf(`
 		fun test(): [UInt8] {
 			let c: Character = "%s"
 			return c.utf8

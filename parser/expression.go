@@ -569,7 +569,7 @@ func defineLessThanOrTypeArgumentsExpression() {
 				defer func() {
 					err := recover()
 					// MemoryError should abort parsing
-					_, ok := err.(errors.MemoryError)
+					_, ok := err.(errors.MemoryMeteringError)
 					if ok {
 						panic(err)
 					}
@@ -1002,9 +1002,14 @@ func defineInvocationExpression() {
 }
 
 func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos ast.Position, err error) {
-	atEnd := false
 	expectArgument := true
-	for !atEnd {
+
+	var atEnd bool
+
+	progress := p.newProgress()
+
+	for !atEnd && p.checkProgress(&progress) {
+
 		p.skipSpace()
 
 		switch p.current.Type {
@@ -1163,7 +1168,11 @@ func defineStringExpression() {
 			// flag for ending " check
 			missingEnd := true
 
-			for curToken.Is(lexer.TokenString) {
+			progress := p.newProgress()
+
+			for curToken.Is(lexer.TokenString) &&
+				p.checkProgress(&progress) {
+
 				literal = p.tokenSource(curToken)
 
 				// remove quotation marks if they exist
@@ -1183,24 +1192,38 @@ func defineStringExpression() {
 
 				// parser already points to next token
 				curToken = p.current
+
 				if curToken.Is(lexer.TokenStringTemplate) {
+					// If the next token is a string template,
+					// then we need to parse the expression inside the template
+
 					// advance to the expression
 					p.next()
 					value, err := parseExpression(p, lowestBindingPower)
+
 					// consider invalid expression first
 					if err != nil {
 						return nil, err
 					}
+
 					_, err = p.mustOne(lexer.TokenParenClose)
 					if err != nil {
 						return nil, err
 					}
+
 					values = append(values, value)
+
 					// parser already points to next token
 					curToken = p.current
+
 					// safely call next because this should always be a string
 					p.next()
+
 					missingEnd = true
+				} else {
+					// If the next token is not a string template,
+					// then we are done with parsing the string literal
+					break
 				}
 			}
 
@@ -1218,7 +1241,8 @@ func defineStringExpression() {
 			} else {
 				return ast.NewStringTemplateExpression(
 					p.memoryGauge,
-					literals, values,
+					literals,
+					values,
 					ast.NewRange(p.memoryGauge,
 						startToken.StartPos,
 						endToken.EndPos),
@@ -1236,8 +1260,14 @@ func defineArrayExpression() {
 			p.skipSpace()
 
 			var values []ast.Expression
-			for !p.current.Is(lexer.TokenBracketClose) {
+
+			progress := p.newProgress()
+
+			for !p.current.Is(lexer.TokenBracketClose) &&
+				p.checkProgress(&progress) {
+
 				p.skipSpace()
+
 				if len(values) > 0 {
 					if !p.current.Is(lexer.TokenComma) {
 						break
@@ -1277,8 +1307,14 @@ func defineDictionaryExpression() {
 			p.skipSpace()
 
 			var entries []ast.DictionaryEntry
-			for !p.current.Is(lexer.TokenBraceClose) {
+
+			progress := p.newProgress()
+
+			for !p.current.Is(lexer.TokenBraceClose) &&
+				p.checkProgress(&progress) {
+
 				p.skipSpace()
+
 				if len(entries) > 0 {
 					if !p.current.Is(lexer.TokenComma) {
 						break
@@ -1532,7 +1568,10 @@ func parseExpression(p *parser, rightBindingPower int) (ast.Expression, error) {
 		return nil, err
 	}
 
-	for {
+	progress := p.newProgress()
+
+	for p.checkProgress(&progress) {
+
 		// Automatically skip any trivia between the left and right expression.
 		// However, do not automatically skip newlines:
 		// Some left denotations do not support newlines before them,

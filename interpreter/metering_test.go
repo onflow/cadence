@@ -398,6 +398,14 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 	)
 }
 
+type computationGaugeFunc func(usage common.ComputationUsage) error
+
+var _ common.ComputationGauge = computationGaugeFunc(nil)
+
+func (f computationGaugeFunc) MeterComputation(usage common.ComputationUsage) error {
+	return f(usage)
+}
+
 func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
 
 	t.Parallel()
@@ -405,7 +413,8 @@ func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
 	t.Run("reverse", func(t *testing.T) {
 		t.Parallel()
 
-		computationMeteredValues := make(map[common.ComputationKind]uint)
+		computationMeteredValues := make(map[common.ComputationKind]uint64)
+
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun main() {
                 let x = [1, 2, 3]
@@ -413,9 +422,10 @@ func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
-					OnMeterComputation: func(compKind common.ComputationKind, intensity uint) {
-						computationMeteredValues[compKind] += intensity
-					},
+					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
+						computationMeteredValues[usage.Kind] += usage.Intensity
+						return nil
+					}),
 				},
 			},
 		)
@@ -424,13 +434,14 @@ func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint(3), computationMeteredValues[common.ComputationKindLoop])
+		assert.Equal(t, uint64(3), computationMeteredValues[common.ComputationKindLoop])
 	})
 
 	t.Run("map", func(t *testing.T) {
 		t.Parallel()
 
-		computationMeteredValues := make(map[common.ComputationKind]uint)
+		computationMeteredValues := make(map[common.ComputationKind]uint64)
+
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun main() {
                 let x = [1, 2, 3, 4]
@@ -441,9 +452,10 @@ func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
-					OnMeterComputation: func(compKind common.ComputationKind, intensity uint) {
-						computationMeteredValues[compKind] += intensity
-					},
+					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
+						computationMeteredValues[usage.Kind] += usage.Intensity
+						return nil
+					}),
 				},
 			},
 		)
@@ -452,13 +464,14 @@ func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint(5), computationMeteredValues[common.ComputationKindLoop])
+		assert.Equal(t, uint64(5), computationMeteredValues[common.ComputationKindLoop])
 	})
 
 	t.Run("filter", func(t *testing.T) {
 		t.Parallel()
 
-		computationMeteredValues := make(map[common.ComputationKind]uint)
+		computationMeteredValues := make(map[common.ComputationKind]uint64)
+
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun main() {
                 let x = [1, 2, 3, 4, 5]
@@ -469,9 +482,10 @@ func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
-					OnMeterComputation: func(compKind common.ComputationKind, intensity uint) {
-						computationMeteredValues[compKind] += intensity
-					},
+					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
+						computationMeteredValues[usage.Kind] += usage.Intensity
+						return nil
+					}),
 				},
 			},
 		)
@@ -480,13 +494,13 @@ func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint(6), computationMeteredValues[common.ComputationKindLoop])
+		assert.Equal(t, uint64(6), computationMeteredValues[common.ComputationKindLoop])
 	})
 
 	t.Run("slice", func(t *testing.T) {
 		t.Parallel()
 
-		computationMeteredValues := make(map[common.ComputationKind]uint)
+		computationMeteredValues := make(map[common.ComputationKind]uint64)
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun main() {
                 let x = [1, 2, 3, 4, 5, 6]
@@ -494,9 +508,10 @@ func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
-					OnMeterComputation: func(compKind common.ComputationKind, intensity uint) {
-						computationMeteredValues[compKind] += intensity
-					},
+					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
+						computationMeteredValues[usage.Kind] += usage.Intensity
+						return nil
+					}),
 				},
 			},
 		)
@@ -505,13 +520,13 @@ func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint(4), computationMeteredValues[common.ComputationKindLoop])
+		assert.Equal(t, uint64(4), computationMeteredValues[common.ComputationKindLoop])
 	})
 
 	t.Run("concat", func(t *testing.T) {
 		t.Parallel()
 
-		computationMeteredValues := make(map[common.ComputationKind]uint)
+		computationMeteredValues := make(map[common.ComputationKind]uint64)
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun main() {
                 let x = [1, 2, 3]
@@ -519,9 +534,10 @@ func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
-					OnMeterComputation: func(compKind common.ComputationKind, intensity uint) {
-						computationMeteredValues[compKind] += intensity
-					},
+					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
+						computationMeteredValues[usage.Kind] += usage.Intensity
+						return nil
+					}),
 				},
 			},
 		)
@@ -532,7 +548,7 @@ func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
 
 		// Computation is (arrayLength +1). It's an overestimate.
 		// The last one is for checking the end of array.
-		assert.Equal(t, uint(7), computationMeteredValues[common.ComputationKindLoop])
+		assert.Equal(t, uint64(7), computationMeteredValues[common.ComputationKindLoop])
 	})
 }
 
@@ -543,16 +559,18 @@ func TestInterpretStdlibComputationMetering(t *testing.T) {
 	t.Run("string join", func(t *testing.T) {
 		t.Parallel()
 
-		computationMeteredValues := make(map[common.ComputationKind]uint)
+		computationMeteredValues := make(map[common.ComputationKind]uint64)
+
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun main() {
                 let s = String.join(["one", "two", "three", "four"], separator: ", ")
             }`,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
-					OnMeterComputation: func(compKind common.ComputationKind, intensity uint) {
-						computationMeteredValues[compKind] += intensity
-					},
+					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
+						computationMeteredValues[usage.Kind] += usage.Intensity
+						return nil
+					}),
 				},
 			},
 		)
@@ -561,22 +579,24 @@ func TestInterpretStdlibComputationMetering(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint(4), computationMeteredValues[common.ComputationKindLoop])
+		assert.Equal(t, uint64(4), computationMeteredValues[common.ComputationKindLoop])
 	})
 
 	t.Run("string concat", func(t *testing.T) {
 		t.Parallel()
 
-		computationMeteredValues := make(map[common.ComputationKind]uint)
+		computationMeteredValues := make(map[common.ComputationKind]uint64)
+
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun main() {
                 let s = "a b c".concat("1 2 3")
             }`,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
-					OnMeterComputation: func(compKind common.ComputationKind, intensity uint) {
-						computationMeteredValues[compKind] += intensity
-					},
+					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
+						computationMeteredValues[usage.Kind] += usage.Intensity
+						return nil
+					}),
 				},
 			},
 		)
@@ -585,22 +605,24 @@ func TestInterpretStdlibComputationMetering(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint(10), computationMeteredValues[common.ComputationKindLoop])
+		assert.Equal(t, uint64(10), computationMeteredValues[common.ComputationKindLoop])
 	})
 
 	t.Run("string replace all", func(t *testing.T) {
 		t.Parallel()
 
-		computationMeteredValues := make(map[common.ComputationKind]uint)
+		computationMeteredValues := make(map[common.ComputationKind]uint64)
+
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun main() {
                 let s = "abcadeaf".replaceAll(of: "a", with: "z")
             }`,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
-					OnMeterComputation: func(compKind common.ComputationKind, intensity uint) {
-						computationMeteredValues[compKind] += intensity
-					},
+					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
+						computationMeteredValues[usage.Kind] += usage.Intensity
+						return nil
+					}),
 				},
 			},
 		)
@@ -609,22 +631,24 @@ func TestInterpretStdlibComputationMetering(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint(55), computationMeteredValues[common.ComputationKindLoop])
+		assert.Equal(t, uint64(55), computationMeteredValues[common.ComputationKindLoop])
 	})
 
 	t.Run("string to lower", func(t *testing.T) {
 		t.Parallel()
 
-		computationMeteredValues := make(map[common.ComputationKind]uint)
+		computationMeteredValues := make(map[common.ComputationKind]uint64)
+
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun main() {
                 let s = "ABCdef".toLower()
             }`,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
-					OnMeterComputation: func(compKind common.ComputationKind, intensity uint) {
-						computationMeteredValues[compKind] += intensity
-					},
+					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
+						computationMeteredValues[usage.Kind] += usage.Intensity
+						return nil
+					}),
 				},
 			},
 		)
@@ -633,22 +657,24 @@ func TestInterpretStdlibComputationMetering(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint(6), computationMeteredValues[common.ComputationKindLoop])
+		assert.Equal(t, uint64(6), computationMeteredValues[common.ComputationKindLoop])
 	})
 
 	t.Run("string split", func(t *testing.T) {
 		t.Parallel()
 
-		computationMeteredValues := make(map[common.ComputationKind]uint)
+		computationMeteredValues := make(map[common.ComputationKind]uint64)
+
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun main() {
                 let s = "abc/d/ef//".split(separator: "/")
             }`,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
-					OnMeterComputation: func(compKind common.ComputationKind, intensity uint) {
-						computationMeteredValues[compKind] += intensity
-					},
+					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
+						computationMeteredValues[usage.Kind] += usage.Intensity
+						return nil
+					}),
 				},
 			},
 		)
@@ -657,6 +683,6 @@ func TestInterpretStdlibComputationMetering(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint(58), computationMeteredValues[common.ComputationKindLoop])
+		assert.Equal(t, uint64(58), computationMeteredValues[common.ComputationKindLoop])
 	})
 }

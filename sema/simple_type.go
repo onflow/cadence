@@ -56,12 +56,15 @@ type SimpleType struct {
 	// e.g. StructStringer
 	conformances                         []*InterfaceType
 	effectiveInterfaceConformanceSet     *InterfaceSet
+	effectiveInterfaceConformances       []Conformance
 	effectiveInterfaceConformanceSetOnce sync.Once
+	effectiveInterfaceConformancesOnce   sync.Once
 }
 
 var _ Type = &SimpleType{}
 var _ ValueIndexableType = &SimpleType{}
 var _ ContainerType = &SimpleType{}
+var _ ConformingType = &SimpleType{}
 
 func (*SimpleType) IsType() {}
 
@@ -147,10 +150,6 @@ func (t *SimpleType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
-func (t *SimpleType) Map(_ common.MemoryGauge, _ map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
-	return f(t)
-}
-
 func (t *SimpleType) GetMembers() map[string]MemberResolver {
 	t.initializeMembers()
 	return t.memberResolvers
@@ -215,4 +214,16 @@ func (t *SimpleType) initializeEffectiveInterfaceConformanceSet() {
 			t.effectiveInterfaceConformanceSet.Add(conformance)
 		}
 	})
+}
+
+func (t *SimpleType) EffectiveInterfaceConformances() []Conformance {
+	t.effectiveInterfaceConformancesOnce.Do(func() {
+		t.effectiveInterfaceConformances = distinctConformances(
+			t.conformances,
+			nil,
+			map[*InterfaceType]struct{}{},
+		)
+	})
+
+	return t.effectiveInterfaceConformances
 }

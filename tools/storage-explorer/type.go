@@ -37,7 +37,7 @@ func prepareType(value interpreter.Value, inter *interpreter.Interpreter) (resul
 		}
 	}()
 
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	semaType, err := interpreter.ConvertStaticToSemaType(inter, staticType)
 	if err != nil {
 		typeID := staticType.ID()
 		return typeID, string(typeID)

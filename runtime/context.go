@@ -27,6 +27,9 @@ type Context struct {
 	Location       Location
 	Environment    Environment
 	CoverageReport *CoverageReport
+
+	// UseVM configures if the VM should be used
+	UseVM bool
 }
 
 // CodesAndPrograms collects the source code and AST for each location.

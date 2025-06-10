@@ -58,13 +58,23 @@ func NewUnmeteredWord8Value(value uint8) Word8Value {
 	return Word8Value(value)
 }
 
-func (Word8Value) isValue() {}
-
-func (v Word8Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitWord8Value(interpreter, v)
+func NewWord8ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
+	return NewWord8Value(
+		gauge,
+		func() uint8 {
+			bytes := padWithZeroes(b, 1)
+			return bytes[0]
+		},
+	)
 }
 
-func (Word8Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (Word8Value) IsValue() {}
+
+func (v Word8Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitWord8Value(context, v)
+}
+
+func (Word8Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -72,7 +82,7 @@ func (Word8Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeWord8)
 }
 
-func (Word8Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (Word8Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -84,11 +94,11 @@ func (v Word8Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Word8Value) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v Word8Value) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
-		interpreter,
+		context,
 		common.NewRawStringMemoryUsage(
-			OverEstimateNumberStringLength(interpreter, v),
+			OverEstimateNumberStringLength(context, v),
 		),
 	)
 	return v.String()
@@ -105,7 +115,7 @@ func (v Word8Value) Negate(NumberValueArithmeticContext, LocationRange) NumberVa
 func (v Word8Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationPlus,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -127,7 +137,7 @@ func (v Word8Value) SaturatingPlus(NumberValueArithmeticContext, NumberValue, Lo
 func (v Word8Value) Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationMinus,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -149,7 +159,7 @@ func (v Word8Value) SaturatingMinus(NumberValueArithmeticContext, NumberValue, L
 func (v Word8Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationMod,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -158,7 +168,7 @@ func (v Word8Value) Mod(context NumberValueArithmeticContext, other NumberValue,
 	}
 
 	if o == 0 {
-		panic(DivisionByZeroError{
+		panic(&DivisionByZeroError{
 			LocationRange: locationRange,
 		})
 	}
@@ -173,7 +183,7 @@ func (v Word8Value) Mod(context NumberValueArithmeticContext, other NumberValue,
 func (v Word8Value) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationMul,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -195,7 +205,7 @@ func (v Word8Value) SaturatingMul(NumberValueArithmeticContext, NumberValue, Loc
 func (v Word8Value) Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word8Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationDiv,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -204,7 +214,7 @@ func (v Word8Value) Div(context NumberValueArithmeticContext, other NumberValue,
 	}
 
 	if o == 0 {
-		panic(DivisionByZeroError{
+		panic(&DivisionByZeroError{
 			LocationRange: locationRange,
 		})
 	}
@@ -223,7 +233,7 @@ func (v Word8Value) SaturatingDiv(NumberValueArithmeticContext, NumberValue, Loc
 func (v Word8Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationLess,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -237,7 +247,7 @@ func (v Word8Value) Less(context ValueComparisonContext, other ComparableValue, 
 func (v Word8Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationLessEqual,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -251,7 +261,7 @@ func (v Word8Value) LessEqual(context ValueComparisonContext, other ComparableVa
 func (v Word8Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationGreater,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -265,7 +275,7 @@ func (v Word8Value) Greater(context ValueComparisonContext, other ComparableValu
 func (v Word8Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationGreaterEqual,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -305,7 +315,7 @@ func ConvertWord8(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 func (v Word8Value) BitwiseOr(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationBitwiseOr,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -323,7 +333,7 @@ func (v Word8Value) BitwiseOr(context ValueStaticTypeContext, other IntegerValue
 func (v Word8Value) BitwiseXor(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationBitwiseXor,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -341,7 +351,7 @@ func (v Word8Value) BitwiseXor(context ValueStaticTypeContext, other IntegerValu
 func (v Word8Value) BitwiseAnd(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationBitwiseAnd,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -359,7 +369,7 @@ func (v Word8Value) BitwiseAnd(context ValueStaticTypeContext, other IntegerValu
 func (v Word8Value) BitwiseLeftShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationBitwiseLeftShift,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -377,7 +387,7 @@ func (v Word8Value) BitwiseLeftShift(context ValueStaticTypeContext, other Integ
 func (v Word8Value) BitwiseRightShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word8Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationBitwiseRightShift,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -392,16 +402,24 @@ func (v Word8Value) BitwiseRightShift(context ValueStaticTypeContext, other Inte
 	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	return getNumberValueMember(interpreter, v, name, sema.Word8Type, locationRange)
+func (v Word8Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	return context.GetMethod(v, name, locationRange)
 }
 
-func (Word8Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (v Word8Value) GetMethod(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	name string,
+) FunctionValue {
+	return getNumberValueFunctionMember(context, v, name, sema.Word8Type, locationRange)
+}
+
+func (Word8Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (Word8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (Word8Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -411,7 +429,7 @@ func (v Word8Value) ToBigEndianBytes() []byte {
 }
 
 func (v Word8Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -430,12 +448,12 @@ func (Word8Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Word8Value) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (Word8Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v Word8Value) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -444,16 +462,16 @@ func (v Word8Value) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (v Word8Value) Clone(_ *Interpreter) Value {
+func (v Word8Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 
-func (Word8Value) DeepRemove(_ *Interpreter, _ bool) {
+func (Word8Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

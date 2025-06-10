@@ -23,8 +23,9 @@ import (
 )
 
 type Config struct {
-	MemoryGauge common.MemoryGauge
-	Storage     Storage
+	MemoryGauge      common.MemoryGauge
+	ComputationGauge common.ComputationGauge
+	Storage          Storage
 	// ImportLocationHandler is used to handle imports of locations
 	ImportLocationHandler ImportLocationHandlerFunc
 	// OnInvokedFunctionReturn is triggered when an invoked function returned
@@ -33,8 +34,6 @@ type Config struct {
 	OnRecordTrace OnRecordTraceFunc
 	// OnResourceOwnerChange is triggered when the owner of a resource changes
 	OnResourceOwnerChange OnResourceOwnerChangeFunc
-	// OnMeterComputation is triggered when a computation is about to happen
-	OnMeterComputation OnMeterComputationFunc
 	// InjectedCompositeFieldsHandler is used to initialize new composite values' fields
 	InjectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
 	// ContractValueHandler is used to handle imports of values
@@ -70,8 +69,6 @@ type Config struct {
 	CapabilityCheckHandler CapabilityCheckHandlerFunc
 	// CapabilityBorrowHandler is used to borrow ID capabilities
 	CapabilityBorrowHandler CapabilityBorrowHandlerFunc
-	// LegacyContractUpgradeEnabled specifies whether to fall back to the old parser when attempting a contract upgrade
-	LegacyContractUpgradeEnabled bool
 	// ValidateAccountCapabilitiesGetHandler is used to handle when a capability of an account is got.
 	ValidateAccountCapabilitiesGetHandler ValidateAccountCapabilitiesGetHandlerFunc
 	// ValidateAccountCapabilitiesPublishHandler is used to handle when a capability of an account is got.

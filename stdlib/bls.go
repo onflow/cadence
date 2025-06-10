@@ -49,10 +49,11 @@ func newBLSAggregatePublicKeysFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
-			inter.ExpectType(
+			interpreter.ExpectType(
+				inter,
 				publicKeysValue,
 				sema.PublicKeyArrayType,
 				locationRange,
@@ -81,11 +82,7 @@ func newBLSAggregatePublicKeysFunction(
 				locationRange,
 			)
 
-			var err error
-			var aggregatedPublicKey *PublicKey
-			errors.WrapPanic(func() {
-				aggregatedPublicKey, err = aggregator.BLSAggregatePublicKeys(publicKeys)
-			})
+			aggregatedPublicKey, err := aggregator.BLSAggregatePublicKeys(publicKeys)
 
 			// If the crypto layer produces an error, we have invalid input, return nil
 			if err != nil {
@@ -126,10 +123,11 @@ func newBLSAggregateSignaturesFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
-			inter.ExpectType(
+			interpreter.ExpectType(
+				inter,
 				signaturesValue,
 				sema.ByteArrayArrayType,
 				locationRange,
@@ -158,11 +156,7 @@ func newBLSAggregateSignaturesFunction(
 				locationRange,
 			)
 
-			var err error
-			var aggregatedSignature []byte
-			errors.WrapPanic(func() {
-				aggregatedSignature, err = aggregator.BLSAggregateSignatures(bytesArray)
-			})
+			aggregatedSignature, err := aggregator.BLSAggregateSignatures(bytesArray)
 
 			// If the crypto layer produces an error, we have invalid input, return nil
 			if err != nil {
@@ -193,9 +187,29 @@ func NewBLSContract(
 	gauge common.MemoryGauge,
 	handler BLSContractHandler,
 ) StandardLibraryValue {
-	blsContractFields := map[string]interpreter.Value{
-		BLSTypeAggregatePublicKeysFunctionName: newBLSAggregatePublicKeysFunction(gauge, handler),
-		BLSTypeAggregateSignaturesFunctionName: newBLSAggregateSignaturesFunction(gauge, handler),
+	methods := map[string]interpreter.FunctionValue{}
+
+	computeLazyStoredMethod := func(name string) interpreter.FunctionValue {
+		switch name {
+		case BLSTypeAggregatePublicKeysFunctionName:
+			return newBLSAggregatePublicKeysFunction(gauge, handler)
+		case BLSTypeAggregateSignaturesFunctionName:
+			return newBLSAggregateSignaturesFunction(gauge, handler)
+		default:
+			return nil
+		}
+	}
+
+	blsContractMethodsGetter := func(name string, _ interpreter.MemberAccessibleContext) interpreter.FunctionValue {
+		method, ok := methods[name]
+		if !ok {
+			method = computeLazyStoredMethod(name)
+			if method != nil {
+				methods[name] = method
+			}
+		}
+
+		return method
 	}
 
 	blsContractValue := interpreter.NewSimpleCompositeValue(
@@ -203,8 +217,9 @@ func NewBLSContract(
 		BLSType.ID(),
 		BLSTypeStaticType,
 		nil,
-		blsContractFields,
 		nil,
+		nil,
+		blsContractMethodsGetter,
 		nil,
 		nil,
 	)

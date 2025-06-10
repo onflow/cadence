@@ -1695,9 +1695,8 @@ func TestStaticTypeConversion(t *testing.T) {
 			}
 
 			convertedSemaType, err := ConvertStaticToSemaType(
-				nil,
-				test.staticType,
 				handler,
+				test.staticType,
 			)
 			require.NoError(t, err)
 			require.Equal(t,
@@ -1732,7 +1731,7 @@ type staticTypeConversionHandler struct {
 	getEntitlementMapType func(typeID common.TypeID) (*sema.EntitlementMapType, error)
 }
 
-var _ StaticTypeConversionHandler = staticTypeConversionHandler{}
+var _ TypeConverter = staticTypeConversionHandler{}
 
 func (s staticTypeConversionHandler) GetInterfaceType(
 	location common.Location,
@@ -1756,6 +1755,11 @@ func (s staticTypeConversionHandler) GetEntitlementType(typeID TypeID) (*sema.En
 
 func (s staticTypeConversionHandler) GetEntitlementMapType(typeID TypeID) (*sema.EntitlementMapType, error) {
 	return s.getEntitlementMapType(typeID)
+}
+
+func (s staticTypeConversionHandler) MeterMemory(_ common.MemoryUsage) error {
+	// NO-OP
+	return nil
 }
 
 func TestIntersectionStaticType_ID(t *testing.T) {

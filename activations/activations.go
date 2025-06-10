@@ -70,8 +70,8 @@ func (a *Activation[T]) Find(name string) (_ T) {
 	return
 }
 
-// FunctionValues returns all values in the current function activation.
-func (a *Activation[T]) FunctionValues() map[string]T {
+// ValuesInFunction returns all values in the current function activation.
+func (a *Activation[T]) ValuesInFunction() map[string]T {
 
 	values := make(map[string]T)
 

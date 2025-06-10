@@ -63,6 +63,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 		nil,
 		nil,
 		nil,
+		nil,
 	)
 
 	self.isTransaction = true
@@ -107,7 +108,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 					transactionScope,
 				)
 
-				prepare.invoke(invocation)
+				prepare.Invoke(invocation)
 			}
 
 			var body func() StatementResult
@@ -122,7 +123,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				invocationWithoutArguments.Arguments = nil
 
 				body = func() StatementResult {
-					value := execute.invoke(invocationWithoutArguments)
+					value := execute.Invoke(invocationWithoutArguments)
 					return ReturnResult{
 						Value: value,
 					}

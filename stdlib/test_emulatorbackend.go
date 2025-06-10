@@ -263,7 +263,7 @@ func (t *testEmulatorBackendType) newExecuteScriptFunction(
 		emulatorBackend,
 		t.executeScriptFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.Interpreter
+			invocationContext := invocation.InvocationContext
 
 			script, ok := invocation.Arguments[0].(*interpreter.StringValue)
 			if !ok {
@@ -271,7 +271,7 @@ func (t *testEmulatorBackendType) newExecuteScriptFunction(
 			}
 
 			args, err := arrayValueToSlice(
-				inter,
+				invocationContext,
 				invocation.Arguments[1],
 				invocation.LocationRange,
 			)
@@ -279,9 +279,9 @@ func (t *testEmulatorBackendType) newExecuteScriptFunction(
 				panic(errors.NewUnexpectedErrorFromCause(err))
 			}
 
-			result := blockchain.RunScript(inter, script.Str, args)
+			result := blockchain.RunScript(invocationContext, script.Str, args)
 
-			return newScriptResult(inter, result.Value, result)
+			return newScriptResult(invocationContext, result.Value, result)
 		},
 	)
 }
@@ -311,7 +311,7 @@ func (t *testEmulatorBackendType) newCreateAccountFunction(
 				panic(err)
 			}
 
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
 			return newTestAccountValue(
@@ -324,7 +324,7 @@ func (t *testEmulatorBackendType) newCreateAccountFunction(
 }
 
 func newTestAccountValue(
-	inter *interpreter.Interpreter,
+	context interpreter.InvocationContext,
 	locationRange interpreter.LocationRange,
 	account *Account,
 ) interpreter.Value {
@@ -333,14 +333,15 @@ func newTestAccountValue(
 	address := interpreter.NewAddressValue(nil, account.Address)
 
 	publicKey := NewPublicKeyValue(
-		inter,
+		context,
 		locationRange,
 		account.PublicKey,
 	)
 
 	// Create an 'Account' by calling its constructor.
-	accountConstructor := getConstructor(inter, testAccountTypeName)
-	accountValue, err := inter.InvokeExternally(
+	accountConstructor := getConstructor(context, testAccountTypeName)
+	accountValue, err := interpreter.InvokeExternally(
+		context,
 		accountConstructor,
 		accountConstructor.Type,
 		[]interpreter.Value{
@@ -388,7 +389,7 @@ func (t *testEmulatorBackendType) newGetAccountFunction(
 				})
 			}
 
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
 			return newTestAccountValue(
@@ -423,7 +424,7 @@ func (t *testEmulatorBackendType) newAddTransactionFunction(
 		emulatorBackend,
 		t.addTransactionFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
 			transactionValue, ok := invocation.Arguments[0].(interpreter.MemberAccessibleValue)
@@ -518,7 +519,7 @@ func (t *testEmulatorBackendType) newExecuteNextTransactionFunction(
 				return interpreter.Nil
 			}
 
-			return newTransactionResult(invocation.Interpreter, result)
+			return newTransactionResult(invocation.InvocationContext, result)
 		},
 	)
 }
@@ -569,7 +570,7 @@ func (t *testEmulatorBackendType) newDeployContractFunction(
 		emulatorBackend,
 		t.deployContractFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 
 			// Contract name
 			name, ok := invocation.Arguments[0].(*interpreter.StringValue)
@@ -624,7 +625,7 @@ func (t *testEmulatorBackendType) newLogsFunction(
 		t.logsFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			logs := blockchain.Logs()
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 
 			arrayType := interpreter.NewVariableSizedStaticType(
 				inter,
@@ -682,7 +683,7 @@ func (t *testEmulatorBackendType) newServiceAccountFunction(
 			}
 
 			return newTestAccountValue(
-				invocation.Interpreter,
+				invocation.InvocationContext,
 				invocation.LocationRange,
 				serviceAccount,
 			)
@@ -726,7 +727,7 @@ func (t *testEmulatorBackendType) newEventsFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			return blockchain.Events(invocation.Interpreter, eventType)
+			return blockchain.Events(invocation.InvocationContext, eventType)
 		},
 	)
 }
@@ -813,7 +814,7 @@ func (t *testEmulatorBackendType) newCreateSnapshotFunction(
 			}
 
 			err := blockchain.CreateSnapshot(name.Str)
-			return newErrorValue(invocation.Interpreter, err)
+			return newErrorValue(invocation.InvocationContext, err)
 		},
 	)
 }
@@ -843,7 +844,7 @@ func (t *testEmulatorBackendType) newLoadSnapshotFunction(
 			}
 
 			err := blockchain.LoadSnapshot(name.Str)
-			return newErrorValue(invocation.Interpreter, err)
+			return newErrorValue(invocation.InvocationContext, err)
 		},
 	)
 }

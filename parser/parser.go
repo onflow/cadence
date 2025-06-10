@@ -441,8 +441,10 @@ func (p *parser) skipSpace() (containsNewline bool) {
 
 func (p *parser) skipSpaceWithOptions(options skipSpaceOptions) (containsNewline bool) {
 	var atEnd bool
+	progress := p.newProgress()
 
-	for !atEnd {
+	for !atEnd && p.checkProgress(&progress) {
+
 		switch p.current.Type {
 		case lexer.TokenSpace:
 			space, ok := p.current.SpaceOrError.(lexer.Space)
@@ -526,6 +528,27 @@ func (p *parser) endAmbiguity() {
 	if p.ambiguityLevel == 0 {
 		p.localReplayedTokensCount = 0
 	}
+}
+
+type parserProgress struct {
+	offset int
+}
+
+func (p *parser) newProgress() parserProgress {
+	return parserProgress{
+		// -1, because the first call of checkProgress should succeed
+		offset: p.current.StartPos.Offset - 1,
+	}
+}
+
+// checkProgress checks that the parser has made progress since it was called last with this parserProgress.
+func (p *parser) checkProgress(progress *parserProgress) bool {
+	parserOffset := p.current.StartPos.Offset
+	if parserOffset == progress.offset {
+		panic(errors.NewUnexpectedError("parser did not make progress"))
+	}
+	progress.offset = parserOffset
+	return true
 }
 
 func ParseExpression(

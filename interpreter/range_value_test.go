@@ -524,7 +524,7 @@ func TestInclusiveRangeConstructionInvalid(t *testing.T) {
 
 			RequireError(t, err)
 
-			require.ErrorAs(t, err, expectedError)
+			require.ErrorAs(t, err, &expectedError)
 			require.True(t, strings.Contains(err.Error(), expectedMessage))
 		})
 	}

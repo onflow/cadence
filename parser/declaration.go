@@ -31,7 +31,10 @@ import (
 )
 
 func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []ast.Declaration, err error) {
-	for {
+	progress := p.newProgress()
+
+	for p.checkProgress(&progress) {
+
 		p.skipSpaceWithOptions(skipSpaceOptions{
 			skipNewlines: true,
 		})
@@ -59,6 +62,8 @@ func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []
 			declarations = append(declarations, declaration)
 		}
 	}
+
+	panic(errors.NewUnreachableError())
 }
 
 func parseDeclaration(p *parser) (ast.Declaration, error) {
@@ -76,7 +81,10 @@ func parseDeclaration(p *parser) (ast.Declaration, error) {
 	staticModifierEnabled := p.config.StaticModifierEnabled
 	nativeModifierEnabled := p.config.NativeModifierEnabled
 
-	for {
+	progress := p.newProgress()
+
+	for p.checkProgress(&progress) {
+
 		p.skipSpace()
 
 		switch p.current.Type {
@@ -278,6 +286,8 @@ func parseDeclaration(p *parser) (ast.Declaration, error) {
 
 		return nil, nil
 	}
+
+	panic(errors.NewUnreachableError())
 }
 
 func handlePriv(p *parser) {
@@ -719,8 +729,11 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 	parseMoreIdentifiers := func() error {
 		expectCommaOrFrom := false
 
-		atEnd := false
-		for !atEnd {
+		var atEnd bool
+		progress := p.newProgress()
+
+		for !atEnd && p.checkProgress(&progress) {
+
 			p.nextSemanticToken()
 
 			switch p.current.Type {
@@ -973,7 +986,7 @@ func parseEventDeclaration(
 		common.DeclarationKindInitializer,
 		ast.NewFunctionDeclaration(
 			p.memoryGauge,
-			ast.AccessNotSpecified,
+			access,
 			ast.FunctionPurityUnspecified,
 			false,
 			false,
@@ -1155,12 +1168,16 @@ func parseEntitlementMapping(p *parser, docString string) (*ast.EntitlementMapRe
 func parseEntitlementMappingsAndInclusions(p *parser, endTokenType lexer.TokenType) ([]ast.EntitlementMapElement, error) {
 	var elements []ast.EntitlementMapElement
 
-	for {
+	progress := p.newProgress()
+
+	for p.checkProgress(&progress) {
+
 		// TODO(preserve-comments): Compute doc string
 		var docString string
 		p.skipSpaceWithOptions(skipSpaceOptions{
 			skipNewlines: true,
 		})
+
 
 		switch p.current.Type {
 
@@ -1196,6 +1213,8 @@ func parseEntitlementMappingsAndInclusions(p *parser, endTokenType lexer.TokenTy
 			}
 		}
 	}
+
+	panic(errors.NewUnreachableError())
 }
 
 // parseEntitlementOrMappingDeclaration parses an entitlement declaration,
@@ -1356,8 +1375,12 @@ func parseCompositeOrInterfaceDeclaration(
 	var isInterface bool
 	var identifier ast.Identifier
 
-	for {
+	progress := p.newProgress()
+
+	for p.checkProgress(&progress) {
+
 		p.skipSpace()
+
 		if !p.current.Is(lexer.TokenIdentifier) {
 			return nil, p.syntaxError(
 				"expected %s, got %s",
@@ -1567,7 +1590,10 @@ func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) 
 
 	var declarations []ast.Declaration
 
-	for {
+	progress := p.newProgress()
+
+	for p.checkProgress(&progress) {
+
 		p.skipSpaceWithOptions(skipSpaceOptions{
 			skipNewlines: true,
 		})
@@ -1594,6 +1620,8 @@ func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) 
 			declarations = append(declarations, memberOrNestedDeclaration)
 		}
 	}
+
+	panic(errors.NewUnreachableError())
 }
 
 // parseMemberOrNestedDeclaration parses a composite or interface member,
@@ -1626,7 +1654,10 @@ func parseMemberOrNestedDeclaration(p *parser) (ast.Declaration, error) {
 	staticModifierEnabled := p.config.StaticModifierEnabled
 	nativeModifierEnabled := p.config.NativeModifierEnabled
 
-	for {
+	progress := p.newProgress()
+
+	for p.checkProgress(&progress) {
+
 		p.skipSpace()
 
 		switch p.current.Type {
@@ -1874,6 +1905,8 @@ func parseMemberOrNestedDeclaration(p *parser) (ast.Declaration, error) {
 
 		return nil, nil
 	}
+
+	panic(errors.NewUnreachableError())
 }
 
 func rejectAllModifiers(

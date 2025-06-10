@@ -235,7 +235,7 @@ type interpreterStorage struct {
 var _ interpreter.Storage = &interpreterStorage{}
 
 func (i interpreterStorage) GetDomainStorageMap(
-	_ *interpreter.Interpreter,
+	_ interpreter.StorageMutationTracker,
 	_ common.Address,
 	_ common.StorageDomain,
 	_ bool,
@@ -486,7 +486,7 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			log.Println(encoded)
+			log.Println(string(encoded))
 		}
 	}
 }

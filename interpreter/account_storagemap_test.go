@@ -49,9 +49,7 @@ func TestAccountStorageMapDomainExists(t *testing.T) {
 		storage := runtime.NewStorage(
 			ledger,
 			nil,
-			runtime.StorageConfig{
-				StorageFormatV2Enabled: true,
-			},
+			runtime.StorageConfig{},
 		)
 
 		accountStorageMap := interpreter.NewAccountStorageMap(nil, storage, atree.Address(address))
@@ -75,9 +73,7 @@ func TestAccountStorageMapDomainExists(t *testing.T) {
 		storage := runtime.NewStorage(
 			ledger,
 			nil,
-			runtime.StorageConfig{
-				StorageFormatV2Enabled: true,
-			},
+			runtime.StorageConfig{},
 		)
 
 		// Turn off AtreeStorageValidationEnabled and explicitly check atree storage health at the end of test.
@@ -119,9 +115,7 @@ func TestAccountStorageMapGetDomain(t *testing.T) {
 		storage := runtime.NewStorage(
 			ledger,
 			nil,
-			runtime.StorageConfig{
-				StorageFormatV2Enabled: true,
-			},
+			runtime.StorageConfig{},
 		)
 
 		// Turn off AtreeStorageValidationEnabled and explicitly check atree storage health at the end of test.
@@ -158,9 +152,7 @@ func TestAccountStorageMapGetDomain(t *testing.T) {
 		storage := runtime.NewStorage(
 			ledger,
 			nil,
-			runtime.StorageConfig{
-				StorageFormatV2Enabled: true,
-			},
+			runtime.StorageConfig{},
 		)
 
 		// Turn off AtreeStorageValidationEnabled and explicitly check atree storage health at the end of test.
@@ -206,9 +198,7 @@ func TestAccountStorageMapCreateDomain(t *testing.T) {
 		storage := runtime.NewStorage(
 			ledger,
 			nil,
-			runtime.StorageConfig{
-				StorageFormatV2Enabled: true,
-			},
+			runtime.StorageConfig{},
 		)
 
 		// Turn off AtreeStorageValidationEnabled and explicitly check atree storage health at the end of test.
@@ -259,9 +249,7 @@ func TestAccountStorageMapCreateDomain(t *testing.T) {
 		storage := runtime.NewStorage(
 			ledger,
 			nil,
-			runtime.StorageConfig{
-				StorageFormatV2Enabled: true,
-			},
+			runtime.StorageConfig{},
 		)
 
 		// Turn off AtreeStorageValidationEnabled and explicitly check atree storage health at the end of test.
@@ -319,9 +307,7 @@ func TestAccountStorageMapSetAndUpdateDomain(t *testing.T) {
 		storage := runtime.NewStorage(
 			ledger,
 			nil,
-			runtime.StorageConfig{
-				StorageFormatV2Enabled: true,
-			},
+			runtime.StorageConfig{},
 		)
 
 		// Turn off AtreeStorageValidationEnabled and explicitly check atree storage health at the end of test.
@@ -375,9 +361,7 @@ func TestAccountStorageMapSetAndUpdateDomain(t *testing.T) {
 		storage := runtime.NewStorage(
 			ledger,
 			nil,
-			runtime.StorageConfig{
-				StorageFormatV2Enabled: true,
-			},
+			runtime.StorageConfig{},
 		)
 
 		// Turn off AtreeStorageValidationEnabled and explicitly check atree storage health at the end of test.
@@ -433,9 +417,7 @@ func TestAccountStorageMapRemoveDomain(t *testing.T) {
 		storage := runtime.NewStorage(
 			ledger,
 			nil,
-			runtime.StorageConfig{
-				StorageFormatV2Enabled: true,
-			},
+			runtime.StorageConfig{},
 		)
 
 		// Turn off AtreeStorageValidationEnabled and explicitly check atree storage health at the end of test.
@@ -482,9 +464,7 @@ func TestAccountStorageMapRemoveDomain(t *testing.T) {
 		storage := runtime.NewStorage(
 			ledger,
 			nil,
-			runtime.StorageConfig{
-				StorageFormatV2Enabled: true,
-			},
+			runtime.StorageConfig{},
 		)
 
 		// Turn off AtreeStorageValidationEnabled and explicitly check atree storage health at the end of test.
@@ -537,9 +517,7 @@ func TestAccountStorageMapIterator(t *testing.T) {
 		storage := runtime.NewStorage(
 			ledger,
 			nil,
-			runtime.StorageConfig{
-				StorageFormatV2Enabled: true,
-			},
+			runtime.StorageConfig{},
 		)
 
 		// Turn off AtreeStorageValidationEnabled and explicitly check atree storage health at the end of test.
@@ -583,9 +561,7 @@ func TestAccountStorageMapIterator(t *testing.T) {
 		storage := runtime.NewStorage(
 			ledger,
 			nil,
-			runtime.StorageConfig{
-				StorageFormatV2Enabled: true,
-			},
+			runtime.StorageConfig{},
 		)
 
 		// Turn off AtreeStorageValidationEnabled and explicitly check atree storage health at the end of test.
@@ -650,9 +626,7 @@ func TestAccountStorageMapDomains(t *testing.T) {
 		storage := runtime.NewStorage(
 			ledger,
 			nil,
-			runtime.StorageConfig{
-				StorageFormatV2Enabled: true,
-			},
+			runtime.StorageConfig{},
 		)
 
 		accountStorageMap := interpreter.NewAccountStorageMap(nil, storage, atree.Address(address))
@@ -674,9 +648,7 @@ func TestAccountStorageMapDomains(t *testing.T) {
 		storage := runtime.NewStorage(
 			ledger,
 			nil,
-			runtime.StorageConfig{
-				StorageFormatV2Enabled: true,
-			},
+			runtime.StorageConfig{},
 		)
 
 		// Turn off automatic AtreeStorageValidationEnabled and explicitly check atree storage health directly.
@@ -719,9 +691,7 @@ func TestAccountStorageMapLoadFromRootSlabID(t *testing.T) {
 			storage := runtime.NewStorage(
 				ledger,
 				nil,
-				runtime.StorageConfig{
-					StorageFormatV2Enabled: true,
-				},
+				runtime.StorageConfig{},
 			)
 
 			inter := NewTestInterpreterWithStorage(t, storage)
@@ -755,9 +725,7 @@ func TestAccountStorageMapLoadFromRootSlabID(t *testing.T) {
 			storage := runtime.NewStorage(
 				ledger,
 				nil,
-				runtime.StorageConfig{
-					StorageFormatV2Enabled: true,
-				},
+				runtime.StorageConfig{},
 			)
 
 			// Turn off automatic AtreeStorageValidationEnabled and explicitly check atree storage health directly.
@@ -857,9 +825,7 @@ func checkAccountStorageMapDataWithRawData(
 	storage := runtime.NewStorage(
 		ledger,
 		nil,
-		runtime.StorageConfig{
-			StorageFormatV2Enabled: true,
-		},
+		runtime.StorageConfig{},
 	)
 
 	inter := NewTestInterpreterWithStorage(tb, storage)

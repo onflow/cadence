@@ -31,7 +31,7 @@ var account_ContractsTypeID = sema.Account_ContractsType.ID()
 var account_ContractsStaticType StaticType = PrimitiveStaticTypeAccount_Contracts // unmetered
 var account_ContractsFieldNames []string = nil
 
-type ContractNamesGetter func(interpreter *Interpreter, locationRange LocationRange) *ArrayValue
+type ContractNamesGetter func(context MemberAccessibleContext, locationRange LocationRange) *ArrayValue
 
 func NewAccountContractsValue(
 	gauge common.MemoryGauge,
@@ -47,9 +47,9 @@ func NewAccountContractsValue(
 
 	var accountContracts *SimpleCompositeValue
 
-	fields := map[string]Value{}
+	methods := map[string]FunctionValue{}
 
-	computeLazyStoredField := func(name string) Value {
+	computeLazyStoredMethod := func(name string) FunctionValue {
 		switch name {
 		case sema.Account_ContractsTypeAddFunctionName:
 			return addFunction(accountContracts)
@@ -68,24 +68,32 @@ func NewAccountContractsValue(
 		return nil
 	}
 
-	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
+	computeField := func(name string, context MemberAccessibleContext, locationRange LocationRange) Value {
 		switch name {
 		case sema.Account_ContractsTypeNamesFieldName:
-			return namesGetter(inter, locationRange)
+			return namesGetter(context, locationRange)
 		}
 
-		field := computeLazyStoredField(name)
-		if field != nil {
-			fields[name] = field
+		return nil
+	}
+
+	methodGetter := func(name string, _ MemberAccessibleContext) FunctionValue {
+		method, ok := methods[name]
+		if !ok {
+			method = computeLazyStoredMethod(name)
+			if method != nil {
+				methods[name] = method
+			}
 		}
-		return field
+
+		return method
 	}
 
 	var str string
-	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+	stringer := func(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
 		if str == "" {
-			common.UseMemory(interpreter, common.AccountContractsStringMemoryUsage)
-			addressStr := address.MeteredString(interpreter, seenReferences, locationRange)
+			common.UseMemory(context, common.AccountContractsStringMemoryUsage)
+			addressStr := address.MeteredString(context, seenReferences, locationRange)
 			str = fmt.Sprintf("Account.Contracts(%s)", addressStr)
 		}
 		return str
@@ -96,8 +104,10 @@ func NewAccountContractsValue(
 		account_ContractsTypeID,
 		account_ContractsStaticType,
 		account_ContractsFieldNames,
-		fields,
+		// No fields, only computed fields, and methods.
+		nil,
 		computeField,
+		methodGetter,
 		nil,
 		stringer,
 	)

@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/errors"
 )
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=AccessCheckMode
+//go:generate stringer -type=AccessCheckMode
 
 type AccessCheckMode uint
 

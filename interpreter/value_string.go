@@ -112,13 +112,13 @@ func (v *StringValue) prepareGraphemes() {
 	}
 }
 
-func (*StringValue) isValue() {}
+func (*StringValue) IsValue() {}
 
-func (v *StringValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitStringValue(interpreter, v)
+func (v *StringValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitStringValue(context, v)
 }
 
-func (*StringValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (*StringValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -126,7 +126,7 @@ func (*StringValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeString)
 }
 
-func (*StringValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (*StringValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return sema.StringType.Importable
 }
 
@@ -138,9 +138,9 @@ func (v *StringValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v *StringValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v *StringValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
 	l := format.FormattedStringLength(v.Str)
-	common.UseMemory(interpreter, common.NewRawStringMemoryUsage(l))
+	common.UseMemory(context, common.NewRawStringMemoryUsage(l))
 	return v.String()
 }
 
@@ -155,7 +155,7 @@ func (v *StringValue) Equal(_ ValueComparisonContext, _ LocationRange, other Val
 func (v *StringValue) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	otherString, ok := other.(*StringValue)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationLess,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -169,7 +169,7 @@ func (v *StringValue) Less(context ValueComparisonContext, other ComparableValue
 func (v *StringValue) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	otherString, ok := other.(*StringValue)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationLessEqual,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -183,7 +183,7 @@ func (v *StringValue) LessEqual(context ValueComparisonContext, other Comparable
 func (v *StringValue) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	otherString, ok := other.(*StringValue)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationGreater,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -197,7 +197,7 @@ func (v *StringValue) Greater(context ValueComparisonContext, other ComparableVa
 func (v *StringValue) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	otherString, ok := other.(*StringValue)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationGreaterEqual,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -225,7 +225,7 @@ func (v *StringValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch [
 	return buffer
 }
 
-func (v *StringValue) Concat(interpreter *Interpreter, other *StringValue, locationRange LocationRange) Value {
+func (v *StringValue) Concat(context StringValueFunctionContext, other *StringValue, locationRange LocationRange) Value {
 
 	firstLength := len(v.Str)
 	secondLength := len(other.Str)
@@ -235,10 +235,16 @@ func (v *StringValue) Concat(interpreter *Interpreter, other *StringValue, locat
 	memoryUsage := common.NewStringMemoryUsage(newLength)
 
 	// Meter computation as if the two strings were iterated.
-	interpreter.ReportComputation(common.ComputationKindLoop, uint(newLength))
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindLoop,
+			Intensity: uint64(newLength),
+		},
+	)
 
 	return NewStringValue(
-		interpreter,
+		context,
 		memoryUsage,
 		func() string {
 			var sb strings.Builder
@@ -264,7 +270,7 @@ func (v *StringValue) slice(fromIndex int, toIndex int, locationRange LocationRa
 	length := v.Length()
 
 	if fromIndex < 0 || fromIndex > length || toIndex < 0 || toIndex > length {
-		panic(StringSliceIndicesError{
+		panic(&StringSliceIndicesError{
 			FromIndex:     fromIndex,
 			UpToIndex:     toIndex,
 			Length:        length,
@@ -273,7 +279,7 @@ func (v *StringValue) slice(fromIndex int, toIndex int, locationRange LocationRa
 	}
 
 	if fromIndex > toIndex {
-		panic(InvalidSliceIndexError{
+		panic(&InvalidSliceIndexError{
 			FromIndex:     fromIndex,
 			UpToIndex:     toIndex,
 			LocationRange: locationRange,
@@ -314,7 +320,7 @@ func (v *StringValue) checkBounds(index int, locationRange LocationRange) {
 	length := v.Length()
 
 	if index < 0 || index >= length {
-		panic(StringIndexOutOfBoundsError{
+		panic(&StringIndexOutOfBoundsError{
 			Index:         index,
 			Length:        length,
 			LocationRange: locationRange,
@@ -322,7 +328,7 @@ func (v *StringValue) checkBounds(index int, locationRange LocationRange) {
 	}
 }
 
-func (v *StringValue) GetKey(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
+func (v *StringValue) GetKey(context ValueComparisonContext, locationRange LocationRange, key Value) Value {
 	index := key.(NumberValue).ToInt(locationRange)
 	v.checkBounds(index, locationRange)
 
@@ -334,7 +340,7 @@ func (v *StringValue) GetKey(interpreter *Interpreter, locationRange LocationRan
 
 	char := v.graphemes.Str()
 	return NewCharacterValue(
-		interpreter,
+		context,
 		common.NewCharacterMemoryUsage(len(char)),
 		func() string {
 			return char
@@ -342,45 +348,57 @@ func (v *StringValue) GetKey(interpreter *Interpreter, locationRange LocationRan
 	)
 }
 
-func (*StringValue) SetKey(_ *Interpreter, _ LocationRange, _ Value, _ Value) {
+func (*StringValue) SetKey(_ ContainerMutationContext, _ LocationRange, _ Value, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
-func (*StringValue) InsertKey(_ *Interpreter, _ LocationRange, _ Value, _ Value) {
+func (*StringValue) InsertKey(_ ContainerMutationContext, _ LocationRange, _ Value, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
-func (*StringValue) RemoveKey(_ *Interpreter, _ LocationRange, _ Value) Value {
+func (*StringValue) RemoveKey(_ ContainerMutationContext, _ LocationRange, _ Value) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (v *StringValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v *StringValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
 	switch name {
 	case sema.StringTypeLengthFieldName:
 		length := v.Length()
-		return NewIntValueFromInt64(interpreter, int64(length))
+		return NewIntValueFromInt64(context, int64(length))
 
 	case sema.StringTypeUtf8FieldName:
-		return ByteSliceToByteArrayValue(interpreter, []byte(v.Str))
+		return ByteSliceToByteArrayValue(context, []byte(v.Str))
+	}
 
+	return context.GetMethod(v, name, locationRange)
+}
+
+func (v *StringValue) GetMethod(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	name string,
+) FunctionValue {
+	switch name {
 	case sema.StringTypeConcatFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.StringTypeConcatFunctionType,
 			func(v *StringValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
-				otherArray, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				return v.Concat(interpreter, otherArray, locationRange)
+				invocationContext := invocation.InvocationContext
+				other := invocation.Arguments[0]
+				return StringConcat(
+					invocationContext,
+					v,
+					other,
+					locationRange,
+				)
 			},
 		)
 
 	case sema.StringTypeSliceFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.StringTypeSliceFunctionType,
 			func(v *StringValue, invocation Invocation) Value {
@@ -400,7 +418,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 
 	case sema.StringTypeContainsFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.StringTypeContainsFunctionType,
 			func(v *StringValue, invocation Invocation) Value {
@@ -409,13 +427,13 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 					panic(errors.NewUnreachableError())
 				}
 
-				return v.Contains(invocation.Interpreter, other)
+				return v.Contains(invocation.InvocationContext, other)
 			},
 		)
 
 	case sema.StringTypeIndexFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.StringTypeIndexFunctionType,
 			func(v *StringValue, invocation Invocation) Value {
@@ -424,13 +442,13 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 					panic(errors.NewUnreachableError())
 				}
 
-				return v.IndexOf(invocation.Interpreter, other)
+				return v.IndexOf(invocation.InvocationContext, other)
 			},
 		)
 
 	case sema.StringTypeCountFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.StringTypeIndexFunctionType,
 			func(v *StringValue, invocation Invocation) Value {
@@ -440,7 +458,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 				}
 
 				return v.Count(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 					other,
 				)
@@ -449,12 +467,12 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 
 	case sema.StringTypeDecodeHexFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.StringTypeDecodeHexFunctionType,
 			func(v *StringValue, invocation Invocation) Value {
 				return v.DecodeHex(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 				)
 			},
@@ -462,17 +480,17 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 
 	case sema.StringTypeToLowerFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.StringTypeToLowerFunctionType,
 			func(v *StringValue, invocation Invocation) Value {
-				return v.ToLower(invocation.Interpreter)
+				return v.ToLower(invocation.InvocationContext)
 			},
 		)
 
 	case sema.StringTypeSplitFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.StringTypeSplitFunctionType,
 			func(v *StringValue, invocation Invocation) Value {
@@ -482,7 +500,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 				}
 
 				return v.Split(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 					separator,
 				)
@@ -491,7 +509,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 
 	case sema.StringTypeReplaceAllFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.StringTypeReplaceAllFunctionType,
 			func(v *StringValue, invocation Invocation) Value {
@@ -506,7 +524,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 				}
 
 				return v.ReplaceAll(
-					invocation.Interpreter,
+					invocation.InvocationContext,
 					invocation.LocationRange,
 					original,
 					replacement,
@@ -518,12 +536,25 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 	return nil
 }
 
-func (*StringValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func StringConcat(
+	context StringValueFunctionContext,
+	this *StringValue,
+	other Value,
+	locationRange LocationRange,
+) Value {
+	otherArray, ok := other.(*StringValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	return this.Concat(context, otherArray, locationRange)
+}
+
+func (*StringValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Strings have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (*StringValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (*StringValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Strings have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -549,10 +580,16 @@ func (v *StringValue) Length() int {
 	return v.length
 }
 
-func (v *StringValue) ToLower(interpreter *Interpreter) *StringValue {
+func (v *StringValue) ToLower(context StringValueFunctionContext) *StringValue {
 
 	// Meter computation as if the string was iterated.
-	interpreter.ReportComputation(common.ComputationKindLoop, uint(len(v.Str)))
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindLoop,
+			Intensity: uint64(len(v.Str)),
+		},
+	)
 
 	// Over-estimate resulting string length,
 	// as an uppercase character may be converted to several lower-case characters, e.g İ => [i, ̇]
@@ -570,7 +607,7 @@ func (v *StringValue) ToLower(interpreter *Interpreter) *StringValue {
 	memoryUsage := common.NewStringMemoryUsage(lengthEstimate)
 
 	return NewStringValue(
-		interpreter,
+		context,
 		memoryUsage,
 		func() string {
 			return strings.ToLower(v.Str)
@@ -578,26 +615,29 @@ func (v *StringValue) ToLower(interpreter *Interpreter) *StringValue {
 	)
 }
 
-func (v *StringValue) Split(inter *Interpreter, locationRange LocationRange, separator *StringValue) *ArrayValue {
+func (v *StringValue) Split(context ArrayCreationContext, locationRange LocationRange, separator *StringValue) *ArrayValue {
 
 	if len(separator.Str) == 0 {
-		return v.Explode(inter, locationRange)
+		return v.Explode(context, locationRange)
 	}
 
-	count := v.count(inter, locationRange, separator) + 1
+	count := v.count(context, locationRange, separator) + 1
 
 	partIndex := 0
 
 	remaining := v
 
 	return NewArrayValueWithIterator(
-		inter,
+		context,
 		VarSizedArrayOfStringType,
 		common.ZeroAddress,
 		uint64(count),
 		func() Value {
 
-			inter.ReportComputation(common.ComputationKindLoop, 1)
+			common.UseComputation(
+				context,
+				common.LoopComputationUsage,
+			)
 
 			if partIndex >= count {
 				return nil
@@ -609,7 +649,7 @@ func (v *StringValue) Split(inter *Interpreter, locationRange LocationRange, sep
 				return remaining
 			}
 
-			separatorCharacterIndex, _ := remaining.indexOf(inter, separator)
+			separatorCharacterIndex, _ := remaining.indexOf(context, separator)
 			if separatorCharacterIndex < 0 {
 				return nil
 			}
@@ -634,17 +674,17 @@ func (v *StringValue) Split(inter *Interpreter, locationRange LocationRange, sep
 }
 
 // Explode returns a Cadence array of type [String], where each element is a single character of the string
-func (v *StringValue) Explode(inter *Interpreter, locationRange LocationRange) *ArrayValue {
+func (v *StringValue) Explode(context ArrayCreationContext, locationRange LocationRange) *ArrayValue {
 
-	iterator := v.Iterator()
+	iterator := v.Iterator(context, locationRange)
 
 	return NewArrayValueWithIterator(
-		inter,
+		context,
 		VarSizedArrayOfStringType,
 		common.ZeroAddress,
 		uint64(v.Length()),
 		func() Value {
-			value := iterator.Next(inter, locationRange)
+			value := iterator.Next(context, locationRange)
 			if value == nil {
 				return nil
 			}
@@ -657,7 +697,7 @@ func (v *StringValue) Explode(inter *Interpreter, locationRange LocationRange) *
 			str := character.Str
 
 			return NewStringValue(
-				inter,
+				context,
 				common.NewStringMemoryUsage(len(str)),
 				func() string {
 					return str
@@ -668,13 +708,13 @@ func (v *StringValue) Explode(inter *Interpreter, locationRange LocationRange) *
 }
 
 func (v *StringValue) ReplaceAll(
-	inter *Interpreter,
+	context StringValueFunctionContext,
 	locationRange LocationRange,
 	original *StringValue,
 	replacement *StringValue,
 ) *StringValue {
 
-	count := v.count(inter, locationRange, original)
+	count := v.count(context, locationRange, original)
 	if count == 0 {
 		return v
 	}
@@ -684,12 +724,17 @@ func (v *StringValue) ReplaceAll(
 	memoryUsage := common.NewStringMemoryUsage(newByteLength)
 
 	// Meter computation as if the string was iterated.
-	inter.ReportComputation(common.ComputationKindLoop, uint(len(v.Str)))
-
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindLoop,
+			Intensity: uint64(len(v.Str)),
+		},
+	)
 	remaining := v
 
 	return NewStringValue(
-		inter,
+		context,
 		memoryUsage,
 		func() string {
 			var b strings.Builder
@@ -706,7 +751,7 @@ func (v *StringValue) ReplaceAll(
 						_, originalByteOffset = remaining.graphemes.Positions()
 					}
 				} else {
-					originalCharacterIndex, originalByteOffset = remaining.indexOf(inter, original)
+					originalCharacterIndex, originalByteOffset = remaining.indexOf(context, original)
 					if originalCharacterIndex < 0 {
 						panic(errors.NewUnreachableError())
 					}
@@ -735,30 +780,31 @@ func (*StringValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*StringValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (*StringValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v *StringValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
-	_ map[atree.ValueID]struct{},
+	_ map[atree.ValueID]struct {
+	},
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (v *StringValue) Clone(_ *Interpreter) Value {
+func (v *StringValue) Clone(_ ValueCloneContext) Value {
 	return NewUnmeteredStringValue(v.Str)
 }
 
-func (*StringValue) DeepRemove(_ *Interpreter, _ bool) {
+func (*StringValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
@@ -778,18 +824,18 @@ func (*StringValue) ChildStorables() []atree.Storable {
 var ByteArrayStaticType = ConvertSemaArrayTypeToStaticArrayType(nil, sema.ByteArrayType)
 
 // DecodeHex hex-decodes this string and returns an array of UInt8 values
-func (v *StringValue) DecodeHex(interpreter *Interpreter, locationRange LocationRange) *ArrayValue {
+func (v *StringValue) DecodeHex(context ArrayCreationContext, locationRange LocationRange) *ArrayValue {
 	bs, err := hex.DecodeString(v.Str)
 	if err != nil {
 		if err, ok := err.(hex.InvalidByteError); ok {
-			panic(InvalidHexByteError{
+			panic(&InvalidHexByteError{
 				LocationRange: locationRange,
 				Byte:          byte(err),
 			})
 		}
 
 		if err == hex.ErrLength {
-			panic(InvalidHexLengthError{
+			panic(&InvalidHexLengthError{
 				LocationRange: locationRange,
 			})
 		}
@@ -800,7 +846,7 @@ func (v *StringValue) DecodeHex(interpreter *Interpreter, locationRange Location
 	i := 0
 
 	return NewArrayValueWithIterator(
-		interpreter,
+		context,
 		ByteArrayStaticType,
 		common.ZeroAddress,
 		uint64(len(bs)),
@@ -810,7 +856,7 @@ func (v *StringValue) DecodeHex(interpreter *Interpreter, locationRange Location
 			}
 
 			value := NewUInt8Value(
-				interpreter,
+				context,
 				func() uint8 {
 					return bs[i]
 				},
@@ -824,36 +870,36 @@ func (v *StringValue) DecodeHex(interpreter *Interpreter, locationRange Location
 }
 
 func (v *StringValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true
 }
 
-func (v *StringValue) Iterator() StringValueIterator {
-	return StringValueIterator{
+func (v *StringValue) Iterator(_ ValueStaticTypeContext, _ LocationRange) ValueIterator {
+	return &StringValueIterator{
 		graphemes: uniseg.NewGraphemes(v.Str),
 	}
 }
 
 func (v *StringValue) ForEach(
-	interpreter *Interpreter,
+	context IterableValueForeachContext,
 	_ sema.Type,
 	function func(value Value) (resume bool),
 	transferElements bool,
 	locationRange LocationRange,
 ) {
-	iterator := v.Iterator()
+	iterator := v.Iterator(context, locationRange)
 	for {
-		value := iterator.Next(interpreter, locationRange)
+		value := iterator.Next(context, locationRange)
 		if value == nil {
 			return
 		}
 
 		if transferElements {
 			value = value.Transfer(
-				interpreter,
+				context,
 				locationRange,
 				atree.Address{},
 				false,
@@ -950,12 +996,12 @@ func (v *StringValue) isGraphemeBoundaryEndPrepared(end int) bool {
 	}
 }
 
-func (v *StringValue) IndexOf(inter *Interpreter, other *StringValue) IntValue {
-	index, _ := v.indexOf(inter, other)
-	return NewIntValueFromInt64(inter, int64(index))
+func (v *StringValue) IndexOf(context StringValueFunctionContext, other *StringValue) IntValue {
+	index, _ := v.indexOf(context, other)
+	return NewIntValueFromInt64(context, int64(index))
 }
 
-func (v *StringValue) indexOf(inter *Interpreter, other *StringValue) (characterIndex int, byteOffset int) {
+func (v *StringValue) indexOf(gauge common.ComputationGauge, other *StringValue) (characterIndex int, byteOffset int) {
 
 	if len(other.Str) == 0 {
 		return 0, 0
@@ -972,7 +1018,13 @@ func (v *StringValue) indexOf(inter *Interpreter, other *StringValue) (character
 
 	// Meter computation as if the string was iterated.
 	// This is a conservative over-estimation.
-	inter.ReportComputation(common.ComputationKindLoop, uint(len(v.Str)*len(other.Str)))
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindLoop,
+			Intensity: uint64(len(v.Str) * len(other.Str)),
+		},
+	)
 
 	v.prepareGraphemes()
 
@@ -1026,29 +1078,35 @@ func (v *StringValue) indexOf(inter *Interpreter, other *StringValue) (character
 	return -1, -1
 }
 
-func (v *StringValue) Contains(inter *Interpreter, other *StringValue) BoolValue {
-	characterIndex, _ := v.indexOf(inter, other)
+func (v *StringValue) Contains(context StringValueFunctionContext, other *StringValue) BoolValue {
+	characterIndex, _ := v.indexOf(context, other)
 	return characterIndex >= 0
 }
 
-func (v *StringValue) Count(inter *Interpreter, locationRange LocationRange, other *StringValue) IntValue {
-	index := v.count(inter, locationRange, other)
-	return NewIntValueFromInt64(inter, int64(index))
+func (v *StringValue) Count(context StringValueFunctionContext, locationRange LocationRange, other *StringValue) IntValue {
+	index := v.count(context, locationRange, other)
+	return NewIntValueFromInt64(context, int64(index))
 }
 
-func (v *StringValue) count(inter *Interpreter, locationRange LocationRange, other *StringValue) int {
+func (v *StringValue) count(gauge common.ComputationGauge, locationRange LocationRange, other *StringValue) int {
 	if other.Length() == 0 {
 		return 1 + v.Length()
 	}
 
 	// Meter computation as if the string was iterated.
-	inter.ReportComputation(common.ComputationKindLoop, uint(len(v.Str)))
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindLoop,
+			Intensity: uint64(len(v.Str)),
+		},
+	)
 
 	remaining := v
 	count := 0
 
 	for {
-		index, _ := remaining.indexOf(inter, other)
+		index, _ := remaining.indexOf(gauge, other)
 		if index == -1 {
 			return count
 		}
@@ -1065,15 +1123,27 @@ func (v *StringValue) count(inter *Interpreter, locationRange LocationRange, oth
 
 type StringValueIterator struct {
 	graphemes *uniseg.Graphemes
+	hasNext   *bool
 }
 
-var _ ValueIterator = StringValueIterator{}
+var _ ValueIterator = &StringValueIterator{}
 
-func (i StringValueIterator) Next(_ ValueIteratorContext, _ LocationRange) Value {
-	if !i.graphemes.Next() {
+func (i *StringValueIterator) Next(_ ValueIteratorContext, _ LocationRange) Value {
+	if !i.HasNext() {
 		return nil
 	}
+
+	i.hasNext = nil
 	return NewUnmeteredCharacterValue(i.graphemes.Str())
+}
+
+func (i *StringValueIterator) HasNext() bool {
+	if i.hasNext == nil {
+		hasNext := i.graphemes.Next()
+		i.hasNext = &hasNext
+	}
+
+	return *i.hasNext
 }
 
 func stringFunctionEncodeHex(invocation Invocation) Value {
@@ -1082,15 +1152,29 @@ func stringFunctionEncodeHex(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	inter := invocation.Interpreter
+	invocationContext := invocation.InvocationContext
+	locationRange := invocation.LocationRange
+
+	return StringFunctionEncodeHex(
+		invocationContext,
+		argument,
+		locationRange,
+	)
+}
+
+func StringFunctionEncodeHex(
+	invocationContext InvocationContext,
+	argument *ArrayValue,
+	locationRange LocationRange,
+) Value {
 	memoryUsage := common.NewStringMemoryUsage(
-		safeMul(argument.Count(), 2, invocation.LocationRange),
+		safeMul(argument.Count(), 2, locationRange),
 	)
 	return NewStringValue(
-		inter,
+		invocationContext,
 		memoryUsage,
 		func() string {
-			bytes, _ := ByteArrayValueToByteSlice(inter, argument, invocation.LocationRange)
+			bytes, _ := ByteArrayValueToByteSlice(invocationContext, argument, locationRange)
 			return hex.EncodeToString(bytes)
 		},
 	)
@@ -1102,9 +1186,23 @@ func stringFunctionFromUtf8(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	inter := invocation.Interpreter
+	invocationContext := invocation.InvocationContext
+	locationRange := invocation.LocationRange
+
+	return StringFunctionFromUtf8(
+		invocationContext,
+		argument,
+		locationRange,
+	)
+}
+
+func StringFunctionFromUtf8(
+	invocationContext InvocationContext,
+	argument *ArrayValue,
+	locationRange LocationRange,
+) Value {
 	// naively read the entire byte array before validating
-	buf, err := ByteArrayValueToByteSlice(inter, argument, invocation.LocationRange)
+	buf, err := ByteArrayValueToByteSlice(invocationContext, argument, locationRange)
 
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -1117,8 +1215,8 @@ func stringFunctionFromUtf8(invocation Invocation) Value {
 	memoryUsage := common.NewStringMemoryUsage(len(buf))
 
 	return NewSomeValueNonCopying(
-		inter,
-		NewStringValue(inter, memoryUsage, func() string {
+		invocationContext,
+		NewStringValue(invocationContext, memoryUsage, func() string {
 			return string(buf)
 		}),
 	)
@@ -1130,19 +1228,32 @@ func stringFunctionFromCharacters(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	inter := invocation.Interpreter
+	invocationContext := invocation.InvocationContext
+	locationRange := invocation.LocationRange
 
+	return StringFunctionFromCharacters(
+		invocationContext,
+		argument,
+		locationRange,
+	)
+}
+
+func StringFunctionFromCharacters(
+	invocationContext InvocationContext,
+	argument *ArrayValue,
+	locationRange LocationRange,
+) Value {
 	// NewStringMemoryUsage already accounts for empty string.
-	common.UseMemory(inter, common.NewStringMemoryUsage(0))
+	common.UseMemory(invocationContext, common.NewStringMemoryUsage(0))
 	var builder strings.Builder
 
 	argument.Iterate(
-		inter,
+		invocationContext,
 		func(element Value) (resume bool) {
 			character := element.(CharacterValue)
 			// Construct directly instead of using NewStringMemoryUsage to avoid
 			// having to decrement by 1 due to double counting of empty string.
-			common.UseMemory(inter,
+			common.UseMemory(invocationContext,
 				common.MemoryUsage{
 					Kind:   common.MemoryKindStringValue,
 					Amount: uint64(len(character.Str)),
@@ -1153,7 +1264,7 @@ func stringFunctionFromCharacters(invocation Invocation) Value {
 			return true
 		},
 		false,
-		invocation.LocationRange,
+		locationRange,
 	)
 
 	return NewUnmeteredStringValue(builder.String())
@@ -1165,37 +1276,54 @@ func stringFunctionJoin(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	inter := invocation.Interpreter
-
-	switch stringArray.Count() {
-	case 0:
-		return EmptyString
-	case 1:
-		return stringArray.Get(inter, invocation.LocationRange, 0)
-	}
+	invocationContext := invocation.InvocationContext
 
 	separator, ok := invocation.Arguments[1].(*StringValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
+	return StringFunctionJoin(
+		invocationContext,
+		stringArray,
+		separator,
+		invocation.LocationRange,
+	)
+}
+
+func StringFunctionJoin(
+	context InvocationContext,
+	stringArray *ArrayValue,
+	separator *StringValue,
+	locationRange LocationRange,
+) Value {
+	switch stringArray.Count() {
+	case 0:
+		return EmptyString
+	case 1:
+		return stringArray.Get(context, locationRange, 0)
+	}
+
 	// NewStringMemoryUsage already accounts for empty string.
-	common.UseMemory(inter, common.NewStringMemoryUsage(0))
+	common.UseMemory(context, common.NewStringMemoryUsage(0))
 	var builder strings.Builder
 	first := true
 
 	stringArray.Iterate(
-		inter,
+		context,
 		func(element Value) (resume bool) {
 
 			// Meter computation for iterating the array.
-			inter.ReportComputation(common.ComputationKindLoop, 1)
+			common.UseComputation(
+				context,
+				common.LoopComputationUsage,
+			)
 
 			// Add separator
 			if !first {
 				// Construct directly instead of using NewStringMemoryUsage to avoid
 				// having to decrement by 1 due to double counting of empty string.
-				common.UseMemory(inter,
+				common.UseMemory(context,
 					common.MemoryUsage{
 						Kind:   common.MemoryKindStringValue,
 						Amount: uint64(len(separator.Str)),
@@ -1212,7 +1340,7 @@ func stringFunctionJoin(invocation Invocation) Value {
 
 			// Construct directly instead of using NewStringMemoryUsage to avoid
 			// having to decrement by 1 due to double counting of empty string.
-			common.UseMemory(inter,
+			common.UseMemory(context,
 				common.MemoryUsage{
 					Kind:   common.MemoryKindStringValue,
 					Amount: uint64(len(str.Str)),
@@ -1223,7 +1351,7 @@ func stringFunctionJoin(invocation Invocation) Value {
 			return true
 		},
 		false,
-		invocation.LocationRange,
+		locationRange,
 	)
 
 	return NewUnmeteredStringValue(builder.String())

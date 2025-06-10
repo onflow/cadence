@@ -85,7 +85,7 @@ func NewGetBlockFunction(provider BlockAtHeightProvider) StandardLibraryValue {
 				panic(errors.NewUnreachableError())
 			}
 
-			memoryGauge := invocation.Interpreter
+			memoryGauge := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
 			block, exists := getBlockAtHeight(
@@ -112,14 +112,14 @@ var blockIDMemoryUsage = common.NewNumberMemoryUsage(
 )
 
 func NewBlockValue(
-	inter *interpreter.Interpreter,
+	context interpreter.ArrayCreationContext,
 	locationRange interpreter.LocationRange,
 	block Block,
 ) interpreter.Value {
 
 	// height
 	heightValue := interpreter.NewUInt64Value(
-		inter,
+		context,
 		func() uint64 {
 			return block.Height
 		},
@@ -127,21 +127,21 @@ func NewBlockValue(
 
 	// view
 	viewValue := interpreter.NewUInt64Value(
-		inter,
+		context,
 		func() uint64 {
 			return block.View
 		},
 	)
 
 	// ID
-	common.UseMemory(inter, blockIDMemoryUsage)
+	common.UseMemory(context, blockIDMemoryUsage)
 	var values = make([]interpreter.Value, sema.BlockTypeIdFieldType.Size)
 	for i, b := range block.Hash {
 		values[i] = interpreter.NewUnmeteredUInt8Value(b)
 	}
 
 	idValue := interpreter.NewArrayValue(
-		inter,
+		context,
 		locationRange,
 		BlockIDStaticType,
 		common.ZeroAddress,
@@ -151,7 +151,7 @@ func NewBlockValue(
 	// timestamp
 	// TODO: verify
 	timestampValue := interpreter.NewUFix64ValueWithInteger(
-		inter,
+		context,
 		func() uint64 {
 			return uint64(time.Unix(0, block.Timestamp).Unix())
 		},
@@ -159,7 +159,7 @@ func NewBlockValue(
 	)
 
 	return interpreter.NewBlockValue(
-		inter,
+		context,
 		heightValue,
 		viewValue,
 		idValue,
@@ -175,14 +175,11 @@ func getBlockAtHeight(
 	exists bool,
 ) {
 	var err error
-	errors.WrapPanic(func() {
-		block, exists, err = provider.GetBlockAtHeight(height)
-	})
+	block, exists, err = provider.GetBlockAtHeight(height)
 	if err != nil {
-		panic(interpreter.WrappedExternalError(err))
+		panic(err)
 	}
-
-	return block, exists
+	return
 }
 
 type CurrentBlockProvider interface {
@@ -198,13 +195,9 @@ func NewGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryVa
 		getCurrentBlockFunctionDocString,
 		func(invocation interpreter.Invocation) interpreter.Value {
 
-			var height uint64
-			var err error
-			errors.WrapPanic(func() {
-				height, err = provider.GetCurrentBlockHeight()
-			})
+			height, err := provider.GetCurrentBlockHeight()
 			if err != nil {
-				panic(interpreter.WrappedExternalError(err))
+				panic(err)
 			}
 
 			block, exists := getBlockAtHeight(
@@ -215,7 +208,7 @@ func NewGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryVa
 				panic(errors.NewUnexpectedError("cannot get current block"))
 			}
 
-			memoryGauge := invocation.Interpreter
+			memoryGauge := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
 			return NewBlockValue(memoryGauge, locationRange, block)

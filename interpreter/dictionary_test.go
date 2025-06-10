@@ -31,10 +31,9 @@ func TestInterpretDictionaryFunctionEntitlements(t *testing.T) {
 	t.Run("mutable reference", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
-            let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
-
+		inter := parseCheckAndPrepare(t, `
             fun test() {
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
                 var dictionaryRef = &dictionary as auth(Mutate) &{String: String}
 
                 // Public functions
@@ -56,10 +55,9 @@ func TestInterpretDictionaryFunctionEntitlements(t *testing.T) {
 	t.Run("non auth reference", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
-            let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
-
+		inter := parseCheckAndPrepare(t, `
             fun test() {
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
                 var dictionaryRef = &dictionary as &{String: String}
 
                 // Public functions
@@ -75,10 +73,9 @@ func TestInterpretDictionaryFunctionEntitlements(t *testing.T) {
 	t.Run("insert reference", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
-            let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
-
+		inter := parseCheckAndPrepare(t, `
             fun test() {
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
                 var dictionaryRef = &dictionary as auth(Mutate) &{String: String}
 
                 // Public functions
@@ -97,10 +94,9 @@ func TestInterpretDictionaryFunctionEntitlements(t *testing.T) {
 	t.Run("remove reference", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
-            let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
-
+		inter := parseCheckAndPrepare(t, `
             fun test() {
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
                 var dictionaryRef = &dictionary as auth(Mutate) &{String: String}
 
                 // Public functions

@@ -38,7 +38,7 @@ func TestInterpretPath(t *testing.T) {
 
 		t.Run(fmt.Sprintf("valid: %s", domain.Identifier()), func(t *testing.T) {
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       let x = /%s/random
@@ -54,7 +54,7 @@ func TestInterpretPath(t *testing.T) {
 					Domain:     domain,
 					Identifier: "random",
 				},
-				inter.Globals.Get("x").GetValue(inter),
+				inter.GetGlobal("x"),
 			)
 		})
 	}
@@ -77,7 +77,7 @@ func TestInterpretConvertStringToPath(t *testing.T) {
 
 			domainType := domainTypes[domain]
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       let x = %[1]s(identifier: "foo")!
@@ -91,7 +91,7 @@ func TestInterpretConvertStringToPath(t *testing.T) {
 					Domain:     domain,
 					Identifier: "foo",
 				},
-				inter.Globals.Get("x").GetValue(inter),
+				inter.GetGlobal("x"),
 			)
 		})
 
@@ -101,7 +101,7 @@ func TestInterpretConvertStringToPath(t *testing.T) {
 
 			domainType := domainTypes[domain]
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       let x = %[1]s(identifier: "2")!
@@ -115,7 +115,7 @@ func TestInterpretConvertStringToPath(t *testing.T) {
 					Domain:     domain,
 					Identifier: "2",
 				},
-				inter.Globals.Get("x").GetValue(inter),
+				inter.GetGlobal("x"),
 			)
 		})
 
@@ -125,7 +125,7 @@ func TestInterpretConvertStringToPath(t *testing.T) {
 
 			domainType := domainTypes[domain]
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       let x = %[1]s(identifier: "fo-o")!
@@ -139,7 +139,7 @@ func TestInterpretConvertStringToPath(t *testing.T) {
 					Domain:     domain,
 					Identifier: "fo-o",
 				},
-				inter.Globals.Get("x").GetValue(inter),
+				inter.GetGlobal("x"),
 			)
 		})
 	}

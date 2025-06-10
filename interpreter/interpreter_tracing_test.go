@@ -19,7 +19,6 @@
 package interpreter_test
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -73,7 +72,6 @@ func TestInterpreterTracing(t *testing.T) {
 			owner,
 		)
 		require.NotNil(t, array)
-		fmt.Println(traceOps)
 		require.Equal(t, len(traceOps), 1)
 		require.Equal(t, traceOps[0], "array.construct")
 
@@ -103,7 +101,6 @@ func TestInterpreterTracing(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("test"), interpreter.NewUnmeteredIntValueFromInt64(42),
 		)
 		require.NotNil(t, dict)
-		fmt.Println(traceOps)
 		require.Equal(t, len(traceOps), 1)
 		require.Equal(t, traceOps[0], "dictionary.construct")
 

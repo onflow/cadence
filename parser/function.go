@@ -53,9 +53,13 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 
 	expectParameter := true
 
-	atEnd := false
-	for !atEnd {
+	var atEnd bool
+	progress := p.newProgress()
+
+	for !atEnd && p.checkProgress(&progress) {
+
 		p.skipSpace()
+
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
 			if !expectParameter {
@@ -247,9 +251,13 @@ func parseTypeParameterList(p *parser) (*ast.TypeParameterList, error) {
 
 	expectTypeParameter := true
 
-	atEnd := false
-	for !atEnd {
+	var atEnd bool
+	progress := p.newProgress()
+
+	for !atEnd && p.checkProgress(&progress) {
+
 		p.skipSpace()
+
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
 			if !expectTypeParameter {

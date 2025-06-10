@@ -100,7 +100,7 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 			}
 
 			staticType := compositeValue.StaticType(interpreter)
-			semaType, err := interpreter.ConvertStaticToSemaType(staticType)
+			semaType, err := ConvertStaticToSemaType(interpreter, staticType)
 			if err != nil {
 				panic(err)
 			}

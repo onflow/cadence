@@ -59,13 +59,24 @@ func NewUnmeteredWord16Value(value uint16) Word16Value {
 	return Word16Value(value)
 }
 
-func (Word16Value) isValue() {}
-
-func (v Word16Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitWord16Value(interpreter, v)
+func NewWord16ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
+	return NewWord16Value(
+		gauge,
+		func() uint16 {
+			bytes := padWithZeroes(b, 2)
+			val := binary.BigEndian.Uint16(bytes)
+			return val
+		},
+	)
 }
 
-func (Word16Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (Word16Value) IsValue() {}
+
+func (v Word16Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitWord16Value(context, v)
+}
+
+func (Word16Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -73,7 +84,7 @@ func (Word16Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeWord16)
 }
 
-func (Word16Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (Word16Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -85,11 +96,11 @@ func (v Word16Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Word16Value) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v Word16Value) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	common.UseMemory(
-		interpreter,
+		context,
 		common.NewRawStringMemoryUsage(
-			OverEstimateNumberStringLength(interpreter, v),
+			OverEstimateNumberStringLength(context, v),
 		),
 	)
 	return v.String()
@@ -105,7 +116,7 @@ func (v Word16Value) Negate(NumberValueArithmeticContext, LocationRange) NumberV
 func (v Word16Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationPlus,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -127,7 +138,7 @@ func (v Word16Value) SaturatingPlus(NumberValueArithmeticContext, NumberValue, L
 func (v Word16Value) Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationMinus,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -149,7 +160,7 @@ func (v Word16Value) SaturatingMinus(NumberValueArithmeticContext, NumberValue, 
 func (v Word16Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationMod,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -158,7 +169,7 @@ func (v Word16Value) Mod(context NumberValueArithmeticContext, other NumberValue
 	}
 
 	if o == 0 {
-		panic(DivisionByZeroError{
+		panic(&DivisionByZeroError{
 			LocationRange: locationRange,
 		})
 	}
@@ -173,7 +184,7 @@ func (v Word16Value) Mod(context NumberValueArithmeticContext, other NumberValue
 func (v Word16Value) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationMul,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -195,7 +206,7 @@ func (v Word16Value) SaturatingMul(NumberValueArithmeticContext, NumberValue, Lo
 func (v Word16Value) Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationDiv,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -204,7 +215,7 @@ func (v Word16Value) Div(context NumberValueArithmeticContext, other NumberValue
 	}
 
 	if o == 0 {
-		panic(DivisionByZeroError{
+		panic(&DivisionByZeroError{
 			LocationRange: locationRange,
 		})
 	}
@@ -223,7 +234,7 @@ func (v Word16Value) SaturatingDiv(NumberValueArithmeticContext, NumberValue, Lo
 func (v Word16Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationLess,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -237,7 +248,7 @@ func (v Word16Value) Less(context ValueComparisonContext, other ComparableValue,
 func (v Word16Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationLessEqual,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -251,7 +262,7 @@ func (v Word16Value) LessEqual(context ValueComparisonContext, other ComparableV
 func (v Word16Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationGreater,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -265,7 +276,7 @@ func (v Word16Value) Greater(context ValueComparisonContext, other ComparableVal
 func (v Word16Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationGreaterEqual,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -305,7 +316,7 @@ func ConvertWord16(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 func (v Word16Value) BitwiseOr(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationBitwiseOr,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -323,7 +334,7 @@ func (v Word16Value) BitwiseOr(context ValueStaticTypeContext, other IntegerValu
 func (v Word16Value) BitwiseXor(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationBitwiseXor,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -341,7 +352,7 @@ func (v Word16Value) BitwiseXor(context ValueStaticTypeContext, other IntegerVal
 func (v Word16Value) BitwiseAnd(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationBitwiseAnd,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -359,7 +370,7 @@ func (v Word16Value) BitwiseAnd(context ValueStaticTypeContext, other IntegerVal
 func (v Word16Value) BitwiseLeftShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationBitwiseLeftShift,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -377,7 +388,7 @@ func (v Word16Value) BitwiseLeftShift(context ValueStaticTypeContext, other Inte
 func (v Word16Value) BitwiseRightShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue {
 	o, ok := other.(Word16Value)
 	if !ok {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     ast.OperationBitwiseRightShift,
 			LeftType:      v.StaticType(context),
 			RightType:     other.StaticType(context),
@@ -392,16 +403,24 @@ func (v Word16Value) BitwiseRightShift(context ValueStaticTypeContext, other Int
 	return NewWord16Value(context, valueGetter)
 }
 
-func (v Word16Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	return getNumberValueMember(interpreter, v, name, sema.Word16Type, locationRange)
+func (v Word16Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	return context.GetMethod(v, name, locationRange)
 }
 
-func (Word16Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (v Word16Value) GetMethod(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	name string,
+) FunctionValue {
+	return getNumberValueFunctionMember(context, v, name, sema.Word16Type, locationRange)
+}
+
+func (Word16Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (Word16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (Word16Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -413,7 +432,7 @@ func (v Word16Value) ToBigEndianBytes() []byte {
 }
 
 func (v Word16Value) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -432,12 +451,12 @@ func (Word16Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (Word16Value) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (Word16Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v Word16Value) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -446,16 +465,16 @@ func (v Word16Value) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (v Word16Value) Clone(_ *Interpreter) Value {
+func (v Word16Value) Clone(_ ValueCloneContext) Value {
 	return v
 }
 
-func (Word16Value) DeepRemove(_ *Interpreter, _ bool) {
+func (Word16Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

@@ -116,8 +116,8 @@ func (checker *Checker) expectedTypeForReferencedExpr(
 			checker.expectedTypeForReferencedExpr(expectedType.Type, hasPosition)
 
 		// Re-wrap with an optional
-		expectedLeftType = &OptionalType{Type: expectedLeftType}
-		returnType = &OptionalType{Type: returnType}
+		expectedLeftType = NewOptionalType(checker.memoryGauge, expectedLeftType)
+		returnType = NewOptionalType(checker.memoryGauge, returnType)
 
 	case *ReferenceType:
 		referencedType := expectedType.Type
