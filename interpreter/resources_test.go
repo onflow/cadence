@@ -3752,7 +3752,7 @@ func TestInterpretInvalidNilCoalescingResourceDuplication(t *testing.T) {
 
 		t.Parallel()
 
-		inter, err := parseCheckAndInterpretWithAtreeValidationsDisabled(t,
+		inter, err := parseCheckAndPrepareWithAtreeValidationsDisabled(t,
 			`
           resource R {
                let answer: Int
@@ -3795,7 +3795,7 @@ func TestInterpretInvalidNilCoalescingResourceDuplication(t *testing.T) {
 
 		t.Parallel()
 
-		inter, err := parseCheckAndInterpretWithAtreeValidationsDisabled(t,
+		inter, err := parseCheckAndPrepareWithAtreeValidationsDisabled(t,
 			`
               resource R {
                    let answer: Int

@@ -60,6 +60,20 @@ func parseCheckAndPrepareWithOptions(
 	return test_utils.ParseCheckAndPrepareWithOptions(tb, code, options, *compile)
 }
 
+func parseCheckAndPrepareWithAtreeValidationsDisabled(
+	tb testing.TB,
+	code string,
+	options ParseCheckAndInterpretOptions,
+) (Invokable, error) {
+	tb.Helper()
+	return test_utils.ParseCheckAndPrepareWithAtreeValidationsDisabled(
+		tb,
+		code,
+		options,
+		*compile,
+	)
+}
+
 func TestInterpreterOptionalBoxing(t *testing.T) {
 
 	t.Parallel()

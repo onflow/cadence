@@ -216,6 +216,8 @@ func ParseCheckAndPrepareWithOptions(
 		vmConfig.AccountHandlerFunc = interpreterConfig.AccountHandler
 		vmConfig.InjectedCompositeFieldsHandler = interpreterConfig.InjectedCompositeFieldsHandler
 		vmConfig.UUIDHandler = interpreterConfig.UUIDHandler
+		vmConfig.AtreeValueValidationEnabled = interpreterConfig.AtreeValueValidationEnabled
+		vmConfig.AtreeStorageValidationEnabled = interpreterConfig.AtreeStorageValidationEnabled
 
 		// If there are builtin functions provided externally (e.g: for tests),
 		// then convert them to corresponding functions in compiler and in vm.
@@ -306,6 +308,31 @@ func ParseCheckAndPrepareWithOptions(
 	elaboration := programs[parseAndCheckOptions.Location].DesugaredElaboration
 
 	return NewVMInvokable(vmInstance, elaboration), nil
+}
+
+func ParseCheckAndPrepareWithAtreeValidationsDisabled(
+	tb testing.TB,
+	code string,
+	options ParseCheckAndInterpretOptions,
+	compile bool,
+) (Invokable, error) {
+	tb.Helper()
+
+	if !compile {
+		return ParseCheckAndInterpretWithAtreeValidationsDisabled(tb, code, options)
+	}
+
+	interpreterConfig := options.Config
+	if interpreterConfig == nil {
+		interpreterConfig = &interpreter.Config{}
+		options.Config = interpreterConfig
+	}
+
+	interpreterConfig.AtreeStorageValidationEnabled = false
+	interpreterConfig.AtreeValueValidationEnabled = false
+
+	invokable, err := ParseCheckAndPrepareWithOptions(tb, code, options, compile)
+	return invokable, err
 }
 
 // Below helper functions were copied as-is from `misc_test.go`.

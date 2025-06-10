@@ -47,6 +47,7 @@ type Context struct {
 	inStorageIteration            bool
 	storageMutatedDuringIteration bool
 	containerValueIteration       map[atree.ValueID]int
+	destroyedResources            map[atree.ValueID]struct{}
 
 	// TODO: stack-trace, location, etc.
 }
@@ -66,6 +67,7 @@ func NewContext(config *Config) *Context {
 		CapabilityControllerIterations: make(map[interpreter.AddressPath]int),
 		mutationDuringCapabilityControllerIteration: false,
 		referencedResourceKindedValues:              ReferencedResourceKindedValues{},
+		destroyedResources:                          make(map[atree.ValueID]struct{}),
 	}
 }
 
@@ -197,7 +199,12 @@ func (c *Context) GetCompositeValueFunctions(v *interpreter.CompositeValue, loca
 }
 
 func (c *Context) EnforceNotResourceDestruction(valueID atree.ValueID, locationRange interpreter.LocationRange) {
-	//TODO
+	_, exists := c.destroyedResources[valueID]
+	if exists {
+		panic(&interpreter.DestroyedResourceError{
+			LocationRange: locationRange,
+		})
+	}
 }
 
 func (c *Context) GetMemberAccessContextForLocation(_ common.Location) interpreter.MemberAccessibleContext {
@@ -206,8 +213,11 @@ func (c *Context) GetMemberAccessContextForLocation(_ common.Location) interpret
 }
 
 func (c *Context) WithResourceDestruction(valueID atree.ValueID, locationRange interpreter.LocationRange, f func()) {
+	c.EnforceNotResourceDestruction(valueID, locationRange)
+
+	c.destroyedResources[valueID] = struct{}{}
+
 	f()
-	//TODO
 }
 
 func (c *Context) RecoverErrors(onError func(error)) {
