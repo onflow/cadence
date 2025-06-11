@@ -512,6 +512,11 @@ func InvokeFunction(errorHandler ErrorHandler, function FunctionValue, invocatio
 		err = internalErr
 	})
 
+	common.UseComputation(
+		invocation.InvocationContext,
+		common.FunctionInvocationComputationUsage,
+	)
+
 	value = function.Invoke(invocation)
 	return
 }
