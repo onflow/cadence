@@ -20,10 +20,25 @@ package compiler
 
 import (
 	"github.com/onflow/cadence/bbq/constant"
+	"github.com/onflow/cadence/common"
 )
 
 type Constant struct {
 	index uint16
 	data  []byte
 	kind  constant.Kind
+}
+
+func NewConstant(
+	gauge common.MemoryGauge,
+	index uint16,
+	kind constant.Kind,
+	data []byte,
+) *Constant {
+	common.UseMemory(gauge, common.CompilerConstantMemoryUsage)
+	return &Constant{
+		index: index,
+		kind:  kind,
+		data:  data,
+	}
 }

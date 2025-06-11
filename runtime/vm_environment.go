@@ -137,6 +137,7 @@ func (e *vmEnvironment) newCompilerConfig() *compiler.Config {
 		LocationHandler:     e.ResolveLocation,
 		ImportHandler:       e.importProgram,
 		ElaborationResolver: e.resolveDesugaredElaboration,
+		MemoryGauge:         e,
 	}
 }
 

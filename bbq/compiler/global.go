@@ -25,3 +25,17 @@ type Global struct {
 	Location common.Location
 	Index    uint16
 }
+
+func NewGlobal(
+	memoryGauge common.MemoryGauge,
+	name string,
+	location common.Location,
+	index uint16,
+) *Global {
+	common.UseMemory(memoryGauge, common.CompilerGlobalMemoryUsage)
+	return &Global{
+		Name:     name,
+		Location: location,
+		Index:    index,
+	}
+}

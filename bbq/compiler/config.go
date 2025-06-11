@@ -24,6 +24,7 @@ import (
 )
 
 type Config struct {
+	MemoryGauge            common.MemoryGauge
 	ImportHandler          commons.ImportHandler
 	LocationHandler        commons.LocationHandler
 	ElaborationResolver    func(location common.Location) (*DesugaredElaboration, error)
