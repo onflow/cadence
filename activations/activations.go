@@ -99,15 +99,7 @@ func (a *Activation[T]) ValuesInFunction() map[string]T {
 
 // ValuesInCurrentLevel returns all values in the current activation level.
 func (a *Activation[T]) ValuesInCurrentLevel() map[string]T {
-	values := make(map[string]T)
-
-	for name, value := range a.entries { //nolint:maprange
-		if _, ok := values[name]; !ok {
-			values[name] = value
-		}
-	}
-
-	return values
+	return a.entries
 }
 
 // Set sets the given name-value pair in the activation.
