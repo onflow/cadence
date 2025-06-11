@@ -338,6 +338,12 @@ var (
 	IntersectionStaticTypeStringMemoryUsage          = NewRawStringMemoryUsage(2)  // {}
 	IntersectionStaticTypeSeparatorStringMemoryUsage = NewRawStringMemoryUsage(2)  // ,
 	InclusiveRangeStaticTypeStringMemoryUsage        = NewRawStringMemoryUsage(16) // InclusiveRange<>
+
+	// Compiler
+
+	CompilerMemoryUsage         = NewConstantMemoryUsage(MemoryKindCompiler)
+	CompilerGlobalMemoryUsage   = NewConstantMemoryUsage(MemoryKindCompilerGlobal)
+	CompilerConstantMemoryUsage = NewConstantMemoryUsage(MemoryKindCompilerConstant)
 )
 
 func NewConstantMemoryUsage(kind MemoryKind) MemoryUsage {
