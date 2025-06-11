@@ -39,6 +39,7 @@ type LinkedGlobals struct {
 
 // LinkGlobals performs the linking of global functions and variables for a given program.
 func LinkGlobals(
+	memoryGauge common.MemoryGauge,
 	location common.Location,
 	program *bbq.InstructionProgram,
 	context *Context,
@@ -56,6 +57,7 @@ func LinkGlobals(
 
 			// Link and get all globals at the import location.
 			linkedGlobals = LinkGlobals(
+				memoryGauge,
 				importLocation,
 				importedProgram,
 				context,
@@ -79,8 +81,7 @@ func LinkGlobals(
 	globalsLen := len(program.Contracts) + len(program.Variables) + len(program.Functions) + len(importedGlobals)
 
 	globals := make([]*Variable, 0, globalsLen)
-	// TODO: meter
-	indexedGlobals := activations.NewActivation[*Variable](nil, nil)
+	indexedGlobals := activations.NewActivation[*Variable](memoryGauge, nil)
 
 	// NOTE: ensure both the context and the mapping are updated
 

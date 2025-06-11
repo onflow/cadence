@@ -79,9 +79,6 @@ func NewVM(
 	// linkedGlobalsCache is a local cache-alike that is being used to hold already linked imports.
 	linkedGlobalsCache := map[common.Location]LinkedGlobals{
 		BuiltInLocation: {
-			// It is NOT safe to re-use native functions map here because,
-			// once put into the cache, it will be updated by adding the
-			// globals of the current program.
 			indexedGlobals: context.BuiltinGlobalsProvider(),
 		},
 	}
@@ -106,6 +103,7 @@ func NewVM(
 
 	// Link global variables and functions.
 	linkedGlobals := LinkGlobals(
+		config.MemoryGauge,
 		location,
 		program,
 		context,
