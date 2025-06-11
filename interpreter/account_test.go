@@ -609,12 +609,13 @@ func testAccountWithErrorHandlerWithCompiler(
 
 	if compilerEnabled && *compile {
 		vmConfig := &vm.Config{
-			BuiltinGlobalsProvider: func() map[string]*vm.Variable {
-				funcs := vm.NativeFunctions()
+			BuiltinGlobalsProvider: func() *activations.Activation[*vm.Variable] {
+				baseActivation := vm.NativeFunctions()
+				activation := activations.NewActivation[*vm.Variable](nil, baseActivation)
 				variable := &interpreter.SimpleVariable{}
 				variable.InitializeWithValue(accountValueDeclaration.Value)
-				funcs[accountValueDeclaration.Name] = variable
-				return funcs
+				activation.Set(accountValueDeclaration.Name, variable)
+				return activation
 			},
 		}
 

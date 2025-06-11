@@ -24,6 +24,7 @@ import (
 
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/constant"
@@ -47,7 +48,7 @@ type VM struct {
 	ip      uint16
 
 	context            *Context
-	globals            map[string]*Variable
+	globals            *activations.Activation[*Variable]
 	linkedGlobalsCache map[common.Location]LinkedGlobals
 }
 
@@ -286,8 +287,8 @@ func (vm *VM) popCallFrame() {
 }
 
 func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err error) {
-	functionVariable, ok := vm.globals[name]
-	if !ok {
+	functionVariable := vm.globals.Find(name)
+	if functionVariable == nil {
 		return nil, UnknownFunctionError{
 			name: name,
 		}
@@ -323,8 +324,8 @@ func (vm *VM) InvokeMethodExternally(
 	v Value,
 	err error,
 ) {
-	functionVariable, ok := vm.globals[name]
-	if !ok {
+	functionVariable := vm.globals.Find(name)
+	if functionVariable == nil {
 		return nil, UnknownFunctionError{
 			name: name,
 		}
@@ -464,8 +465,8 @@ func (vm *VM) InvokeTransactionInit(transactionArgs []Value) error {
 	context := vm.context
 	globals := vm.globals
 
-	initializerVariable, ok := globals[commons.ProgramInitFunctionName]
-	if !ok {
+	initializerVariable := globals.Find(commons.ProgramInitFunctionName)
+	if initializerVariable == nil {
 		if len(transactionArgs) > 0 {
 			return interpreter.ArgumentCountError{
 				ParameterCount: 0,
@@ -489,8 +490,8 @@ func (vm *VM) InvokeTransactionInit(transactionArgs []Value) error {
 func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.CompositeValue, signers []Value) error {
 	context := vm.context
 
-	prepareVariable, ok := vm.globals[commons.TransactionPrepareFunctionName]
-	if !ok {
+	prepareVariable := vm.globals.Find(commons.TransactionPrepareFunctionName)
+	if prepareVariable == nil {
 		if len(signers) > 0 {
 			return interpreter.ArgumentCountError{
 				ParameterCount: 0,
@@ -520,8 +521,8 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.CompositeValue, 
 func (vm *VM) InvokeTransactionExecute(transaction *interpreter.CompositeValue) error {
 	context := vm.context
 
-	executeVariable, ok := vm.globals[commons.TransactionExecuteFunctionName]
-	if !ok {
+	executeVariable := vm.globals.Find(commons.TransactionExecuteFunctionName)
+	if executeVariable == nil {
 		return nil
 	}
 
@@ -1763,8 +1764,8 @@ func (vm *VM) maybeLookupFunction(location common.Location, name string) Functio
 
 func (vm *VM) lookupFunction(location common.Location, name string) (FunctionValue, bool) {
 	// First check in current program.
-	global, ok := vm.globals[name]
-	if ok {
+	global := vm.globals.Find(name)
+	if global != nil {
 		value := global.GetValue(vm.context)
 		return value.(FunctionValue), true
 	}
@@ -1786,8 +1787,8 @@ func (vm *VM) lookupFunction(location common.Location, name string) (FunctionVal
 		)
 	}
 
-	global, ok = linkedGlobals.indexedGlobals[name]
-	if !ok {
+	global = linkedGlobals.indexedGlobals.Find(name)
+	if global == nil {
 		return nil, false
 	}
 
@@ -1809,12 +1810,16 @@ func (vm *VM) Reset() {
 func (vm *VM) initializeGlobalVariables(program *bbq.InstructionProgram) {
 	for _, variable := range program.Variables {
 		// Get the values to ensure they are initialized.
-		_ = vm.globals[variable.Name].GetValue(vm.context)
+		_ = vm.Global(variable.Name)
 	}
 }
 
 func (vm *VM) Global(name string) Value {
-	return vm.globals[name].GetValue(vm.context)
+	variable := vm.globals.Find(name)
+	if variable == nil {
+		return nil
+	}
+	return variable.GetValue(vm.context)
 }
 
 // LocationRange returns the location of the currently executing instruction.

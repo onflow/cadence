@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -382,11 +383,13 @@ func CompileAndInvoke(
 }
 
 func NativeFunctionsWithLogAndPanic(logs *[]string) vm.BuiltinGlobalsProvider {
-	return func() map[string]*vm.Variable {
-		funcs := vm.NativeFunctions()
+	return func() *activations.Activation[*vm.Variable] {
+		baseActivation := vm.NativeFunctions()
+
+		activation := activations.NewActivation[*vm.Variable](nil, baseActivation)
 
 		logFunctionVariable := &interpreter.SimpleVariable{}
-		funcs[commons.LogFunctionName] = logFunctionVariable
+		activation.Set(commons.LogFunctionName, logFunctionVariable)
 		logFunctionVariable.InitializeWithValue(
 			vm.NewNativeFunctionValue(
 				commons.LogFunctionName,
@@ -400,7 +403,7 @@ func NativeFunctionsWithLogAndPanic(logs *[]string) vm.BuiltinGlobalsProvider {
 		)
 
 		panicFunctionVariable := &interpreter.SimpleVariable{}
-		funcs[commons.PanicFunctionName] = panicFunctionVariable
+		activation.Set(commons.PanicFunctionName, panicFunctionVariable)
 		panicFunctionVariable.InitializeWithValue(
 			vm.NewNativeFunctionValue(
 				commons.PanicFunctionName,
@@ -418,7 +421,7 @@ func NativeFunctionsWithLogAndPanic(logs *[]string) vm.BuiltinGlobalsProvider {
 			),
 		)
 
-		return funcs
+		return activation
 	}
 }
 

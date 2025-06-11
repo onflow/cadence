@@ -275,19 +275,21 @@ func ParseCheckAndPrepareWithOptions(
 		// If there are builtin functions provided externally (e.g: for tests),
 		// then convert them to corresponding functions in compiler and in vm.
 		if interpreterConfig.BaseActivationHandler != nil {
-			baseActivation := interpreterConfig.BaseActivationHandler(nil)
+			interpreterBaseActivation := interpreterConfig.BaseActivationHandler(nil)
 
 			// Only iterate through values defined at the current-level.
 			// Do not get the values defined in the parent activation/scope.
 			// (i.e: only get the values that were added externally for tests)
-			baseActivationVariables := baseActivation.ValuesInCurrentLevel()
+			interpreterBaseActivationVariables := interpreterBaseActivation.ValuesInCurrentLevel()
 
-			vmConfig.BuiltinGlobalsProvider = func() map[string]*vm.Variable {
-				builtinGlobals := vm.NativeFunctions()
+			vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[*vm.Variable] {
+				baseActivation := vm.NativeFunctions()
+
+				activation := activations.NewActivation[*vm.Variable](nil, baseActivation)
 
 				// Add the given built-in values.
 				// Convert the externally provided `interpreter.HostFunctionValue`s into `vm.NativeFunctionValue`s.
-				for name, variable := range baseActivationVariables { //nolint:maprange
+				for name, variable := range interpreterBaseActivationVariables { //nolint:maprange
 
 					value := variable.GetValue(nil)
 
@@ -315,17 +317,17 @@ func ParseCheckAndPrepareWithOptions(
 					vmVariable := &vm.Variable{}
 					vmVariable.InitializeWithValue(value)
 
-					builtinGlobals[name] = vmVariable
+					activation.Set(name, vmVariable)
 				}
 
-				return builtinGlobals
+				return activation
 			}
 
 			// Register externally provided globals in compiler.
 			compilerConfig = &compiler.Config{
 				BuiltinGlobalsProvider: func() map[string]*compiler.Global {
 					globals := compiler.NativeFunctions()
-					for name := range baseActivationVariables { //nolint:maprange
+					for name := range interpreterBaseActivationVariables { //nolint:maprange
 						if globals[name] != nil {
 							continue
 						}
