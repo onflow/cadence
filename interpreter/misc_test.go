@@ -53,10 +53,6 @@ var parseCheckAndInterpret = test_utils.ParseCheckAndInterpret
 
 var parseCheckAndInterpretWithOptions = test_utils.ParseCheckAndInterpretWithOptions
 
-var parseCheckAndInterpretWithAtreeValidationsDisabled = test_utils.ParseCheckAndInterpretWithAtreeValidationsDisabled
-
-var parseCheckAndInterpretWithLogs = test_utils.ParseCheckAndInterpretWithLogs
-
 var parseCheckAndInterpretWithMemoryMetering = test_utils.ParseCheckAndInterpretWithMemoryMetering
 
 var parseCheckAndInterpretWithOptionsAndMemoryMetering = test_utils.ParseCheckAndInterpretWithOptionsAndMemoryMetering

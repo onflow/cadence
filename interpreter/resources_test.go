@@ -2835,7 +2835,7 @@ func TestInterpretVariableDeclarationEvaluationOrder(t *testing.T) {
 
 	t.Parallel()
 
-	inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
+	inter, getLogs, err := parseCheckAndPrepareWithLogs(t, `
       // Necessary helper interface,
       // as AnyResource does not provide a uuid field,
       // and AnyResource must be used in collect
@@ -3623,7 +3623,7 @@ func TestInterpretResourceReferenceInvalidation(t *testing.T) {
 	t.Run("invalid reference logged in array", func(t *testing.T) {
 		t.Parallel()
 
-		inter, _, err := parseCheckAndInterpretWithLogs(t, `
+		inter, _, err := parseCheckAndPrepareWithLogs(t, `
 			resource R {}
 
 			fun main() {
@@ -3652,7 +3652,7 @@ func TestInterpretResourceReferenceInvalidation(t *testing.T) {
 	t.Run("invalid optional reference logged in array", func(t *testing.T) {
 		t.Parallel()
 
-		inter, _, err := parseCheckAndInterpretWithLogs(t, `
+		inter, _, err := parseCheckAndPrepareWithLogs(t, `
 			resource R {}
 
 			fun main() {
@@ -3685,7 +3685,7 @@ func TestInterpretResourceReferenceInvalidation(t *testing.T) {
 	t.Run("invalid reference logged in dict", func(t *testing.T) {
 		t.Parallel()
 
-		inter, _, err := parseCheckAndInterpretWithLogs(t, `
+		inter, _, err := parseCheckAndPrepareWithLogs(t, `
 			resource R {}
 
 			fun main() {
@@ -3712,7 +3712,7 @@ func TestInterpretResourceReferenceInvalidation(t *testing.T) {
 	t.Run("invalid reference logged in composite", func(t *testing.T) {
 		t.Parallel()
 
-		inter, _, err := parseCheckAndInterpretWithLogs(t, `
+		inter, _, err := parseCheckAndPrepareWithLogs(t, `
 			struct S {
 				let foo: &R
 				init(_ ref: &R) {
@@ -3752,7 +3752,7 @@ func TestInterpretInvalidNilCoalescingResourceDuplication(t *testing.T) {
 
 		t.Parallel()
 
-		inter, err := parseCheckAndInterpretWithAtreeValidationsDisabled(t,
+		inter, err := parseCheckAndPrepareWithAtreeValidationsDisabled(t,
 			`
           resource R {
                let answer: Int
@@ -3795,7 +3795,7 @@ func TestInterpretInvalidNilCoalescingResourceDuplication(t *testing.T) {
 
 		t.Parallel()
 
-		inter, err := parseCheckAndInterpretWithAtreeValidationsDisabled(t,
+		inter, err := parseCheckAndPrepareWithAtreeValidationsDisabled(t,
 			`
               resource R {
                    let answer: Int

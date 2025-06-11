@@ -892,7 +892,7 @@ func TestInterpretBrokenMetaTypeUsage(t *testing.T) {
 
 	t.Parallel()
 
-	inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
+	inter, getLogs, err := parseCheckAndPrepareWithLogs(t, `
        fun test(type1: Type, type2: Type): [Type] {
            let dict = {type1: "a", type2: "b"}
            log(dict.keys.length)

@@ -57,6 +57,10 @@ type Config struct {
 	InjectedCompositeFieldsHandler interpreter.InjectedCompositeFieldsHandlerFunc
 	// UUIDHandler is used to handle the generation of UUIDs
 	UUIDHandler interpreter.UUIDHandlerFunc
+	// AtreeStorageValidationEnabled determines if the validation of atree storage is enabled
+	AtreeStorageValidationEnabled bool
+	// AtreeValueValidationEnabled determines if the validation of atree values is enabled
+	AtreeValueValidationEnabled bool
 
 	debugEnabled bool
 }
