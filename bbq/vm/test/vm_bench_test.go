@@ -53,6 +53,7 @@ func BenchmarkRecursionFib(b *testing.B) {
 	vmConfig := &vm.Config{}
 	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
+	argument := interpreter.NewUnmeteredIntValueFromInt64(14)
 	expected := interpreter.NewUnmeteredIntValueFromInt64(377)
 
 	b.ReportAllocs()
@@ -60,10 +61,7 @@ func BenchmarkRecursionFib(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 
-		result, err := vmInstance.InvokeExternally(
-			"fib",
-			interpreter.NewUnmeteredIntValueFromInt64(14),
-		)
+		result, err := vmInstance.InvokeExternally("fib", argument)
 		require.NoError(b, err)
 		require.Equal(b, expected, result)
 	}
@@ -88,10 +86,43 @@ func BenchmarkImperativeFib(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	var value vm.Value = interpreter.NewUnmeteredIntValueFromInt64(14)
+	argument := interpreter.NewUnmeteredIntValueFromInt64(14)
+	expected := interpreter.NewUnmeteredIntValueFromInt64(377)
 
 	for i := 0; i < b.N; i++ {
-		_, err := vmInstance.InvokeExternally("fib", value)
+		result, err := vmInstance.InvokeExternally("fib", argument)
+		require.NoError(b, err)
+		require.Equal(b, expected, result)
+	}
+}
+
+func BenchmarkImperativeFibNewVM(b *testing.B) {
+
+	scriptLocation := runtime_utils.NewScriptLocationGenerator()
+
+	checker, err := ParseAndCheck(b,
+		imperativeFib+`
+
+        fun main(): Bool {
+            return fib(14) == 377
+        }
+    `)
+	require.NoError(b, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		vmConfig := &vm.Config{}
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		_, err := vmInstance.InvokeExternally("main")
 		require.NoError(b, err)
 	}
 }

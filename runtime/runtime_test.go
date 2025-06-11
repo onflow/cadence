@@ -8018,12 +8018,116 @@ func BenchmarkRuntimeScriptNoop(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, _ = runtime.ExecuteScript(script, Context{
+		_, err := runtime.ExecuteScript(script, Context{
 			Interface:   runtimeInterface,
 			Location:    nextScriptLocation(),
 			Environment: environment,
 			UseVM:       *compile,
 		})
+		require.NoError(b, err)
+	}
+}
+
+func BenchmarkRuntimeVMInvokeContractImperativeFib(b *testing.B) {
+
+	accountCodes := map[Location][]byte{}
+	var events []cadence.Event
+
+	signer := common.MustBytesToAddress([]byte{0x1})
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{signer}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(b),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
+			accountCodes[location] = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	fib := []byte(`
+	  access(all)
+      contract Fib {
+
+          access(all)
+          fun fib(_ n: Int): Int {
+            var fib1 = 1
+            var fib2 = 1
+            var fibonacci = fib1
+            var i = 2
+            while i < n {
+                fibonacci = fib1 + fib2
+                fib1 = fib2
+                fib2 = fibonacci
+                i = i + 1
+            }
+            return fibonacci
+          }
+
+          access(all)
+          fun main(): Bool {
+              return self.fib(14) == 377
+          }
+      }
+    `)
+
+	vmEnvironment := NewScriptVMEnvironment(Config{})
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	runtime := NewTestRuntime()
+
+	// Deploy the Fib contract
+	// (for now, with the interpreter instead of the VM, as the VM does not support deployment yet)
+
+	deploy := DeploymentTransaction("Fib", fib)
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(b, err)
+
+	location := common.AddressLocation{
+		Address: signer,
+		Name:    "Fib",
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, err = runtime.InvokeContractFunction(
+			location,
+			"main",
+			nil,
+			nil,
+			Context{
+				Interface:   runtimeInterface,
+				Location:    nextScriptLocation(),
+				Environment: vmEnvironment,
+				UseVM:       true,
+			},
+		)
+		require.NoError(b, err)
 	}
 }
 
