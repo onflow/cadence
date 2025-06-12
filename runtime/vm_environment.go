@@ -120,6 +120,8 @@ func (e *vmEnvironment) newVMConfig() *vm.Config {
 		AccountHandlerFunc:             e.newAccountValue,
 		OnEventEmitted:                 newOnEventEmittedHandler(&e.Interface),
 		AccountHandler:                 e,
+		CapabilityBorrowHandler:        newCapabilityBorrowHandler(e),
+		CapabilityCheckHandler:         newCapabilityCheckHandler(e),
 	}
 }
 
