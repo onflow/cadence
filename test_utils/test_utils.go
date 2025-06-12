@@ -328,7 +328,7 @@ func ParseCheckAndPrepareWithOptions(
 				BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
 					baseActivation := compiler.NativeFunctions()
 					activation := activations.NewActivation[compiler.GlobalImport](nil, baseActivation)
-					for name := range interpreterBaseActivationVariables {
+					for name := range interpreterBaseActivationVariables { //nolint:maprange
 						existing := activation.Find(name)
 						if existing != (compiler.GlobalImport{}) {
 							continue
