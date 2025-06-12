@@ -215,7 +215,12 @@ func (c *Compiler[_, _]) findGlobal(name string) *Global {
 	if count >= math.MaxUint16 {
 		panic(errors.NewUnexpectedError("invalid global declaration '%s'", name))
 	}
-	global = NewGlobal(c.Config.MemoryGauge, name, importedGlobal.Location, uint16(count))
+	global = NewGlobal(
+		c.Config.MemoryGauge,
+		name,
+		importedGlobal.Location,
+		uint16(count),
+	)
 	c.Globals[name] = global
 
 	// Also add it to the usedImportedGlobals.
