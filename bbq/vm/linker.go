@@ -21,6 +21,7 @@ package vm
 import (
 	"fmt"
 
+	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
@@ -33,11 +34,12 @@ type LinkedGlobals struct {
 	executable *ExecutableProgram
 
 	// globals defined in the program, indexed by name.
-	indexedGlobals map[string]*Variable
+	indexedGlobals *activations.Activation[*Variable]
 }
 
 // LinkGlobals performs the linking of global functions and variables for a given program.
 func LinkGlobals(
+	memoryGauge common.MemoryGauge,
 	location common.Location,
 	program *bbq.InstructionProgram,
 	context *Context,
@@ -55,6 +57,7 @@ func LinkGlobals(
 
 			// Link and get all globals at the import location.
 			linkedGlobals = LinkGlobals(
+				memoryGauge,
 				importLocation,
 				importedProgram,
 				context,
@@ -64,8 +67,8 @@ func LinkGlobals(
 			linkedGlobalsCache[importLocation] = linkedGlobals
 		}
 
-		importedGlobal, ok := linkedGlobals.indexedGlobals[programImport.Name]
-		if !ok {
+		importedGlobal := linkedGlobals.indexedGlobals.Find(programImport.Name)
+		if importedGlobal == nil {
 			panic(LinkerError{
 				Message: fmt.Sprintf("cannot find import '%s'", programImport.Name),
 			})
@@ -76,10 +79,9 @@ func LinkGlobals(
 	executable := NewExecutableProgram(location, program, nil)
 
 	globalsLen := len(program.Contracts) + len(program.Variables) + len(program.Functions) + len(importedGlobals)
-	indexedGlobalsLen := len(program.Functions)
 
 	globals := make([]*Variable, 0, globalsLen)
-	indexedGlobals := make(map[string]*Variable, indexedGlobalsLen)
+	indexedGlobals := activations.NewActivation[*Variable](memoryGauge, nil)
 
 	// NOTE: ensure both the context and the mapping are updated
 
@@ -90,7 +92,7 @@ func LinkGlobals(
 		})
 
 		globals = append(globals, contractVariable)
-		indexedGlobals[contract.Name] = contractVariable
+		indexedGlobals.Set(contract.Name, contractVariable)
 	}
 
 	for _, variable := range program.Variables {
@@ -110,7 +112,7 @@ func LinkGlobals(
 		}
 
 		globals = append(globals, simpleVariable)
-		indexedGlobals[variable.Name] = simpleVariable
+		indexedGlobals.Set(variable.Name, simpleVariable)
 	}
 
 	// Iterate through `program.Functions` to be deterministic.
@@ -137,7 +139,7 @@ func LinkGlobals(
 		variable.InitializeWithValue(value)
 
 		globals = append(globals, variable)
-		indexedGlobals[function.QualifiedName] = variable
+		indexedGlobals.Set(function.QualifiedName, variable)
 	}
 
 	// Globals of the current program are added first.

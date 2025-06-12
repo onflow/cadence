@@ -19,6 +19,7 @@
 package vm
 
 import (
+	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
@@ -33,22 +34,16 @@ const (
 	typeBoundFunctionArgumentOffset = 1
 )
 
-var nativeFunctions = map[string]Value{}
-
 // BuiltInLocation is the location of built-in constructs.
 // It's always nil.
 var BuiltInLocation common.Location = nil
 
-type BuiltinGlobalsProvider func() map[string]*Variable
+type BuiltinGlobalsProvider func() *activations.Activation[*Variable]
 
-func NativeFunctions() map[string]*Variable {
-	funcs := make(map[string]*Variable, len(nativeFunctions))
-	for name, value := range nativeFunctions { //nolint:maprange
-		variable := &interpreter.SimpleVariable{}
-		variable.InitializeWithValue(value)
-		funcs[name] = variable
-	}
-	return funcs
+var nativeFunctions *activations.Activation[*Variable]
+
+func NativeFunctions() *activations.Activation[*Variable] {
+	return nativeFunctions
 }
 
 func RegisterFunction(functionValue *NativeFunctionValue) {
@@ -57,12 +52,17 @@ func RegisterFunction(functionValue *NativeFunctionValue) {
 }
 
 func registerFunction(functionName string, functionValue *NativeFunctionValue) {
-	_, ok := nativeFunctions[functionName]
-	if ok {
-		panic(errors.NewUnexpectedError("function already exists: %s", functionName))
+	if nativeFunctions == nil {
+		nativeFunctions = activations.NewActivation[*Variable](nil, nil)
+	} else {
+		existing := nativeFunctions.Find(functionName)
+		if existing != nil {
+			panic(errors.NewUnexpectedError("function already exists: %s", functionName))
+		}
 	}
-
-	nativeFunctions[functionName] = functionValue
+	variable := &interpreter.SimpleVariable{}
+	variable.InitializeWithValue(functionValue)
+	nativeFunctions.Set(functionName, variable)
 }
 
 func RegisterTypeBoundFunction(typeName string, functionValue *NativeFunctionValue) {
