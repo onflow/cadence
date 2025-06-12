@@ -95,26 +95,32 @@ func NewBaseVMEnvironment(config Config) *vmEnvironment {
 
 func NewScriptVMEnvironment(config Config) Environment {
 	env := newVMEnvironment(config)
+
+	env.compilerConfig.BuiltinGlobalsProvider = compiler.DefaultBuiltinScriptGlobals
+	env.vmConfig.BuiltinGlobalsProvider = vm.DefaultBuiltinScriptGlobals
+
 	for _, valueDeclaration := range stdlib.DefaultScriptStandardLibraryValues(env) {
 		env.DeclareValue(valueDeclaration, nil)
 	}
+
 	return env
 }
 
 func (e *vmEnvironment) newVMConfig() *vm.Config {
-	config := vm.NewConfig(nil)
-	config.MemoryGauge = e
-	config.ComputationGauge = e
-	config.TypeLoader = e.loadType
-	config.Logger = e
-	config.ContractValueHandler = e.loadContractValue
-	config.ImportHandler = e.importProgram
-	config.InjectedCompositeFieldsHandler = newInjectedCompositeFieldsHandler(e)
-	config.UUIDHandler = newUUIDHandler(&e.Interface)
-	config.AccountHandlerFunc = e.newAccountValue
-	config.OnEventEmitted = newOnEventEmittedHandler(&e.Interface)
-	config.AccountHandler = e
-	return config
+	return &vm.Config{
+		MemoryGauge:                    e,
+		ComputationGauge:               e,
+		TypeLoader:                     e.loadType,
+		BuiltinGlobalsProvider:         vm.DefaultBuiltinGlobals,
+		Logger:                         e,
+		ContractValueHandler:           e.loadContractValue,
+		ImportHandler:                  e.importProgram,
+		InjectedCompositeFieldsHandler: newInjectedCompositeFieldsHandler(e),
+		UUIDHandler:                    newUUIDHandler(&e.Interface),
+		AccountHandlerFunc:             e.newAccountValue,
+		OnEventEmitted:                 newOnEventEmittedHandler(&e.Interface),
+		AccountHandler:                 e,
+	}
 }
 
 func (e *vmEnvironment) loadContractValue(
@@ -134,10 +140,11 @@ func (e *vmEnvironment) loadContractValue(
 }
 func (e *vmEnvironment) newCompilerConfig() *compiler.Config {
 	return &compiler.Config{
-		LocationHandler:     e.ResolveLocation,
-		ImportHandler:       e.importProgram,
-		ElaborationResolver: e.resolveDesugaredElaboration,
-		MemoryGauge:         e,
+		MemoryGauge:            e,
+		BuiltinGlobalsProvider: compiler.DefaultBuiltinGlobals,
+		LocationHandler:        e.ResolveLocation,
+		ImportHandler:          e.importProgram,
+		ElaborationResolver:    e.resolveDesugaredElaboration,
 	}
 }
 
