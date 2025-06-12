@@ -33,7 +33,7 @@ func init() {
 	accountCapabilitiesTypeName := commons.TypeQualifier(sema.Account_CapabilitiesType)
 
 	// Account.Capabilities.get
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		accountCapabilitiesTypeName,
 		NewNativeFunctionValue(
 			sema.Account_CapabilitiesTypeGetFunctionName,
@@ -64,7 +64,7 @@ func init() {
 	)
 
 	// Account.Capabilities.borrow
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		accountCapabilitiesTypeName,
 		NewNativeFunctionValue(
 			sema.Account_CapabilitiesTypeBorrowFunctionName,
@@ -96,7 +96,7 @@ func init() {
 	)
 
 	// Account.Capabilities.publish
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		accountCapabilitiesTypeName,
 		NewNativeFunctionValue(
 			sema.Account_CapabilitiesTypePublishFunctionName,
@@ -133,7 +133,7 @@ func init() {
 	)
 
 	// Account.Capabilities.unpublish
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		accountCapabilitiesTypeName,
 		NewNativeFunctionValue(
 			sema.Account_CapabilitiesTypeUnpublishFunctionName,
@@ -160,7 +160,7 @@ func init() {
 	)
 
 	// Account.Capabilities.exist
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		accountCapabilitiesTypeName,
 		NewNativeFunctionValue(
 			sema.Account_CapabilitiesTypeExistsFunctionName,

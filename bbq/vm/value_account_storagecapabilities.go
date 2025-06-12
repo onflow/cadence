@@ -33,7 +33,7 @@ func init() {
 	accountStorageCapabilitiesTypeName := commons.TypeQualifier(sema.Account_StorageCapabilitiesType)
 
 	// Account.StorageCapabilities.issue
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		accountStorageCapabilitiesTypeName,
 		NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeIssueFunctionName,
@@ -62,7 +62,7 @@ func init() {
 	)
 
 	// Account.StorageCapabilities.issueWithType
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		accountStorageCapabilitiesTypeName,
 		NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionName,
@@ -99,7 +99,7 @@ func init() {
 	)
 
 	// Account.StorageCapabilities.getController
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		accountStorageCapabilitiesTypeName,
 		NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeGetControllerFunctionName,
@@ -126,7 +126,7 @@ func init() {
 	)
 
 	// Account.StorageCapabilities.getControllers
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		accountStorageCapabilitiesTypeName,
 		NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeGetControllersFunctionName,
@@ -153,7 +153,7 @@ func init() {
 	)
 
 	// Account.StorageCapabilities.forEachController
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		accountStorageCapabilitiesTypeName,
 		NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionName,

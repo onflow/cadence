@@ -384,7 +384,7 @@ func CompileAndInvoke(
 
 func NativeFunctionsWithLogAndPanic(logs *[]string) vm.BuiltinGlobalsProvider {
 	return func() *activations.Activation[*vm.Variable] {
-		baseActivation := vm.NativeFunctions()
+		baseActivation := vm.DefaultBuiltinGlobals()
 
 		activation := activations.NewActivation[*vm.Variable](nil, baseActivation)
 

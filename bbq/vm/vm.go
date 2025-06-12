@@ -69,7 +69,7 @@ func NewVM(
 	}
 
 	if context.BuiltinGlobalsProvider == nil {
-		context.BuiltinGlobalsProvider = NativeFunctions
+		context.BuiltinGlobalsProvider = DefaultBuiltinGlobals
 	}
 
 	if context.referencedResourceKindedValues == nil {

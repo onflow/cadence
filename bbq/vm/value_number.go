@@ -31,7 +31,7 @@ func init() {
 	for _, pathType := range sema.AllNumberTypes {
 		typeName := commons.TypeQualifier(pathType)
 
-		RegisterTypeBoundFunction(
+		RegisterBuiltinTypeBoundFunction(
 			typeName,
 			NewNativeFunctionValue(
 				sema.ToStringFunctionName,
@@ -46,7 +46,7 @@ func init() {
 			),
 		)
 
-		RegisterTypeBoundFunction(
+		RegisterBuiltinTypeBoundFunction(
 			typeName,
 			NewNativeFunctionValue(
 				sema.ToBigEndianBytesFunctionName,

@@ -610,7 +610,7 @@ func testAccountWithErrorHandlerWithCompiler(
 	if compilerEnabled && *compile {
 		vmConfig := &vm.Config{
 			BuiltinGlobalsProvider: func() *activations.Activation[*vm.Variable] {
-				baseActivation := vm.NativeFunctions()
+				baseActivation := vm.DefaultBuiltinGlobals()
 				activation := activations.NewActivation[*vm.Variable](nil, baseActivation)
 				variable := &interpreter.SimpleVariable{}
 				variable.InitializeWithValue(accountValueDeclaration.Value)
@@ -637,7 +637,7 @@ func testAccountWithErrorHandlerWithCompiler(
 					ParseAndCheckOptions: parseAndCheckOptions,
 					CompilerConfig: &compiler.Config{
 						BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
-							baseActivation := compiler.NativeFunctions()
+							baseActivation := compiler.DefaultBuiltinGlobals()
 							activation := activations.NewActivation[compiler.GlobalImport](nil, baseActivation)
 							for _, valueDeclaration := range valueDeclarations {
 								name := valueDeclaration.Name

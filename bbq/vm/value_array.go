@@ -35,7 +35,7 @@ func init() {
 		commons.TypeQualifierArrayVariableSized,
 		commons.TypeQualifierArrayConstantSized,
 	} {
-		RegisterTypeBoundFunction(
+		RegisterBuiltinTypeBoundFunction(
 			typeQualifier,
 			NewNativeFunctionValueWithDerivedType(
 				sema.ArrayTypeFirstIndexFunctionName,
@@ -52,7 +52,7 @@ func init() {
 			),
 		)
 
-		RegisterTypeBoundFunction(
+		RegisterBuiltinTypeBoundFunction(
 			typeQualifier,
 			NewNativeFunctionValueWithDerivedType(
 				sema.ArrayTypeContainsFunctionName,
@@ -69,7 +69,7 @@ func init() {
 			),
 		)
 
-		RegisterTypeBoundFunction(
+		RegisterBuiltinTypeBoundFunction(
 			typeQualifier,
 			NewNativeFunctionValueWithDerivedType(
 				sema.ArrayTypeReverseFunctionName,
@@ -85,7 +85,7 @@ func init() {
 			),
 		)
 
-		RegisterTypeBoundFunction(
+		RegisterBuiltinTypeBoundFunction(
 			typeQualifier,
 			NewNativeFunctionValueWithDerivedType(
 				sema.ArrayTypeFilterFunctionName,
@@ -102,7 +102,7 @@ func init() {
 			),
 		)
 
-		RegisterTypeBoundFunction(
+		RegisterBuiltinTypeBoundFunction(
 			typeQualifier,
 			NewNativeFunctionValueWithDerivedType(
 				sema.ArrayTypeMapFunctionName,
@@ -122,7 +122,7 @@ func init() {
 
 	// Functions available only for variable-sized arrays.
 
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		commons.TypeQualifierArrayVariableSized,
 		NewNativeFunctionValueWithDerivedType(
 			sema.ArrayTypeAppendFunctionName,
@@ -140,7 +140,7 @@ func init() {
 		),
 	)
 
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		commons.TypeQualifierArrayVariableSized,
 		NewNativeFunctionValueWithDerivedType(
 			sema.ArrayTypeAppendAllFunctionName,
@@ -163,7 +163,7 @@ func init() {
 		),
 	)
 
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		commons.TypeQualifierArrayVariableSized,
 		NewNativeFunctionValueWithDerivedType(
 			sema.ArrayTypeConcatFunctionName,
@@ -180,7 +180,7 @@ func init() {
 		),
 	)
 
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		commons.TypeQualifierArrayVariableSized,
 		NewNativeFunctionValueWithDerivedType(
 			sema.ArrayTypeInsertFunctionName,
@@ -209,7 +209,7 @@ func init() {
 		),
 	)
 
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		commons.TypeQualifierArrayVariableSized,
 		NewNativeFunctionValueWithDerivedType(
 			sema.ArrayTypeRemoveFunctionName,
@@ -234,7 +234,7 @@ func init() {
 		),
 	)
 
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		commons.TypeQualifierArrayVariableSized,
 		NewNativeFunctionValueWithDerivedType(
 			sema.ArrayTypeRemoveFirstFunctionName,
@@ -250,7 +250,7 @@ func init() {
 		),
 	)
 
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		commons.TypeQualifierArrayVariableSized,
 		NewNativeFunctionValueWithDerivedType(
 			sema.ArrayTypeRemoveLastFunctionName,
@@ -266,7 +266,7 @@ func init() {
 		),
 	)
 
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		commons.TypeQualifierArrayVariableSized,
 		NewNativeFunctionValueWithDerivedType(
 			sema.ArrayTypeSliceFunctionName,
@@ -289,7 +289,7 @@ func init() {
 		),
 	)
 
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		commons.TypeQualifierArrayVariableSized,
 		NewNativeFunctionValueWithDerivedType(
 			sema.ArrayTypeToConstantSizedFunctionName,
@@ -312,7 +312,7 @@ func init() {
 
 	// Methods available only for constant-sized arrays.
 
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		commons.TypeQualifierArrayConstantSized,
 		NewNativeFunctionValueWithDerivedType(
 			sema.ArrayTypeToVariableSizedFunctionName,

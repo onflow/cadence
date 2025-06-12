@@ -33,7 +33,7 @@ func init() {
 	accountStorageTypeName := commons.TypeQualifier(sema.Account_StorageType)
 
 	// Account.Storage.save
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		accountStorageTypeName,
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeSaveFunctionName,
@@ -56,7 +56,7 @@ func init() {
 	)
 
 	// Account.Storage.borrow
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		accountStorageTypeName,
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeBorrowFunctionName,
@@ -82,7 +82,7 @@ func init() {
 	)
 
 	// Account.Storage.forEachPublic
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		accountStorageTypeName,
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeForEachPublicFunctionName,
@@ -107,7 +107,7 @@ func init() {
 	)
 
 	// Account.Storage.forEachStored
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		accountStorageTypeName,
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeForEachStoredFunctionName,
@@ -132,7 +132,7 @@ func init() {
 	)
 
 	// Account.Storage.type
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		accountStorageTypeName,
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeTypeFunctionName,
@@ -154,7 +154,7 @@ func init() {
 	)
 
 	// Account.Storage.load
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		accountStorageTypeName,
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeLoadFunctionName,
@@ -181,7 +181,7 @@ func init() {
 	)
 
 	// Account.Storage.copy
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		accountStorageTypeName,
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeCopyFunctionName,
@@ -208,7 +208,7 @@ func init() {
 	)
 
 	// Account.Storage.check
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		accountStorageTypeName,
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeCheckFunctionName,

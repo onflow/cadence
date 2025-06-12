@@ -283,7 +283,7 @@ func ParseCheckAndPrepareWithOptions(
 			interpreterBaseActivationVariables := interpreterBaseActivation.ValuesInCurrentLevel()
 
 			vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[*vm.Variable] {
-				baseActivation := vm.NativeFunctions()
+				baseActivation := vm.DefaultBuiltinGlobals()
 
 				activation := activations.NewActivation[*vm.Variable](nil, baseActivation)
 
@@ -326,7 +326,7 @@ func ParseCheckAndPrepareWithOptions(
 			// Register externally provided globals in compiler.
 			compilerConfig = &compiler.Config{
 				BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
-					baseActivation := compiler.NativeFunctions()
+					baseActivation := compiler.DefaultBuiltinGlobals()
 					activation := activations.NewActivation[compiler.GlobalImport](nil, baseActivation)
 					for name := range interpreterBaseActivationVariables { //nolint:maprange
 						existing := activation.Find(name)

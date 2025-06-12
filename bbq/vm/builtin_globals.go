@@ -40,49 +40,71 @@ var BuiltInLocation common.Location = nil
 
 type BuiltinGlobalsProvider func() *activations.Activation[*Variable]
 
-var nativeFunctions *activations.Activation[*Variable]
+var (
+	defaultBuiltinGlobals       = activations.NewActivation[*Variable](nil, nil)
+	defaultBuiltinScriptGlobals = activations.NewActivation[*Variable](nil, defaultBuiltinGlobals)
+)
 
-func NativeFunctions() *activations.Activation[*Variable] {
-	return nativeFunctions
+func DefaultBuiltinGlobals() *activations.Activation[*Variable] {
+	return defaultBuiltinGlobals
 }
 
-func RegisterFunction(functionValue *NativeFunctionValue) {
-	functionName := functionValue.Name
-	registerFunction(functionName, functionValue)
+func DefaultBuiltinScriptGlobals() *activations.Activation[*Variable] {
+	return defaultBuiltinScriptGlobals
 }
 
-func registerFunction(functionName string, functionValue *NativeFunctionValue) {
-	if nativeFunctions == nil {
-		nativeFunctions = activations.NewActivation[*Variable](nil, nil)
-	} else {
-		existing := nativeFunctions.Find(functionName)
-		if existing != nil {
-			panic(errors.NewUnexpectedError("function already exists: %s", functionName))
-		}
+func RegisterBuiltinFunction(functionValue *NativeFunctionValue) {
+	registerGlobalFunction(
+		functionValue.Name,
+		functionValue,
+		defaultBuiltinGlobals,
+	)
+}
+
+func RegisterBuiltinScriptFunction(functionValue *NativeFunctionValue) {
+	registerGlobalFunction(
+		functionValue.Name,
+		functionValue,
+		defaultBuiltinScriptGlobals,
+	)
+}
+
+func registerGlobalFunction(
+	functionName string,
+	functionValue *NativeFunctionValue,
+	activation *activations.Activation[*Variable],
+) {
+	existing := activation.Find(functionName)
+	if existing != nil {
+		panic(errors.NewUnexpectedError("function already exists: %s", functionName))
 	}
 	variable := &interpreter.SimpleVariable{}
 	variable.InitializeWithValue(functionValue)
-	nativeFunctions.Set(functionName, variable)
+	activation.Set(functionName, variable)
 }
 
-func RegisterTypeBoundFunction(typeName string, functionValue *NativeFunctionValue) {
+func RegisterBuiltinTypeBoundFunction(typeName string, functionValue *NativeFunctionValue) {
 	// Update the name of the function to be type-qualified
 	qualifiedName := commons.QualifiedName(typeName, functionValue.Name)
 	functionValue.Name = qualifiedName
 
-	RegisterFunction(functionValue)
+	RegisterBuiltinFunction(functionValue)
 }
 
-func RegisterTypeBoundCommonFunction(typeName string, functionValue *NativeFunctionValue) {
+func RegisterBuiltinTypeBoundCommonFunction(typeName string, functionValue *NativeFunctionValue) {
 	// Here the function value is common for many types.
 	// Hence, do not update the function name to be type-qualified.
 	// Only the key in the map is type-qualified.
 	qualifiedName := commons.QualifiedName(typeName, functionValue.Name)
-	registerFunction(qualifiedName, functionValue)
+	registerGlobalFunction(
+		qualifiedName,
+		functionValue,
+		defaultBuiltinGlobals,
+	)
 }
 
 func init() {
-	RegisterFunction(
+	RegisterBuiltinFunction(
 		NewNativeFunctionValue(
 			commons.LogFunctionName,
 			stdlib.LogFunctionType,
@@ -98,7 +120,7 @@ func init() {
 		),
 	)
 
-	RegisterFunction(
+	RegisterBuiltinFunction(
 		NewNativeFunctionValue(
 			commons.AssertFunctionName,
 			stdlib.AssertFunctionType,
@@ -126,7 +148,7 @@ func init() {
 		),
 	)
 
-	RegisterFunction(
+	RegisterBuiltinFunction(
 		NewNativeFunctionValue(
 			commons.PanicFunctionName,
 			stdlib.PanicFunctionType,
@@ -140,7 +162,7 @@ func init() {
 		),
 	)
 
-	RegisterFunction(
+	RegisterBuiltinFunction(
 		NewNativeFunctionValue(
 			commons.GetAccountFunctionName,
 			stdlib.GetAccountFunctionType,
@@ -157,7 +179,7 @@ func init() {
 
 	// Type constructors
 
-	RegisterFunction(
+	RegisterBuiltinFunction(
 		NewNativeFunctionValue(
 			sema.MetaTypeName,
 			sema.MetaTypeFunctionType,
@@ -170,7 +192,7 @@ func init() {
 		),
 	)
 
-	RegisterFunction(
+	RegisterBuiltinFunction(
 		NewNativeFunctionValue(
 			sema.OptionalTypeFunctionName,
 			sema.OptionalTypeFunctionType,
@@ -183,7 +205,7 @@ func init() {
 		),
 	)
 
-	RegisterFunction(
+	RegisterBuiltinFunction(
 		NewNativeFunctionValue(
 			sema.VariableSizedArrayTypeFunctionName,
 			sema.VariableSizedArrayTypeFunctionType,
@@ -199,7 +221,7 @@ func init() {
 		),
 	)
 
-	RegisterFunction(
+	RegisterBuiltinFunction(
 		NewNativeFunctionValue(
 			sema.ConstantSizedArrayTypeFunctionName,
 			sema.ConstantSizedArrayTypeFunctionType,
@@ -218,7 +240,7 @@ func init() {
 		),
 	)
 
-	RegisterFunction(
+	RegisterBuiltinFunction(
 		NewNativeFunctionValue(
 			sema.DictionaryTypeFunctionName,
 			sema.DictionaryTypeFunctionType,
@@ -236,7 +258,7 @@ func init() {
 		),
 	)
 
-	RegisterFunction(
+	RegisterBuiltinFunction(
 		NewNativeFunctionValue(
 			sema.CompositeTypeFunctionName,
 			sema.CompositeTypeFunctionType,
@@ -249,7 +271,7 @@ func init() {
 		),
 	)
 
-	RegisterFunction(
+	RegisterBuiltinFunction(
 		NewNativeFunctionValue(
 			sema.FunctionTypeFunctionName,
 			sema.FunctionTypeFunctionType,
@@ -268,7 +290,7 @@ func init() {
 		),
 	)
 
-	RegisterFunction(
+	RegisterBuiltinFunction(
 		NewNativeFunctionValue(
 			sema.ReferenceTypeFunctionName,
 			sema.ReferenceTypeFunctionType,
@@ -287,7 +309,7 @@ func init() {
 		),
 	)
 
-	RegisterFunction(
+	RegisterBuiltinFunction(
 		NewNativeFunctionValue(
 			sema.IntersectionTypeFunctionName,
 			sema.IntersectionTypeFunctionType,
@@ -304,7 +326,7 @@ func init() {
 		),
 	)
 
-	RegisterFunction(
+	RegisterBuiltinFunction(
 		NewNativeFunctionValue(
 			sema.CapabilityTypeFunctionName,
 			sema.CapabilityTypeFunctionType,
@@ -317,7 +339,7 @@ func init() {
 		),
 	)
 
-	RegisterFunction(
+	RegisterBuiltinFunction(
 		NewNativeFunctionValue(
 			sema.InclusiveRangeTypeFunctionName,
 			sema.InclusiveRangeTypeFunctionType,
@@ -348,7 +370,7 @@ func init() {
 				)
 			},
 		)
-		RegisterFunction(function)
+		RegisterBuiltinFunction(function)
 
 		addMember := func(name string, value interpreter.Value) {
 			if function.fields == nil {
@@ -369,14 +391,14 @@ func init() {
 		}
 
 		if stringValueParser, ok := interpreter.StringValueParsers[declaration.Name]; ok {
-			RegisterTypeBoundFunction(
+			RegisterBuiltinTypeBoundFunction(
 				commons.TypeQualifier(stringValueParser.ReceiverType),
 				newFromStringFunction(stringValueParser),
 			)
 		}
 
 		if bigEndianBytesConverter, ok := interpreter.BigEndianBytesConverters[declaration.Name]; ok {
-			RegisterTypeBoundFunction(
+			RegisterBuiltinTypeBoundFunction(
 				commons.TypeQualifier(bigEndianBytesConverter.ReceiverType),
 				newFromBigEndianBytesFunction(bigEndianBytesConverter),
 			)
@@ -385,7 +407,7 @@ func init() {
 
 	// Value constructors
 
-	RegisterFunction(
+	RegisterBuiltinFunction(
 		NewNativeFunctionValue(
 			sema.StringType.String(),
 			sema.StringFunctionType,
@@ -396,12 +418,12 @@ func init() {
 	)
 
 	// Register type-bound functions that are common to many types.
-	registerCommonBuiltinTypeBoundFunctions()
+	registerBuiltinCommonTypeBoundFunctions()
 
-	registerAllSaturatingArithmeticFunctions()
+	registerBuiltinSaturatingArithmeticFunctions()
 }
 
-func registerCommonBuiltinTypeBoundFunctions() {
+func registerBuiltinCommonTypeBoundFunctions() {
 	for _, builtinType := range commons.BuiltinTypes {
 		typeQualifier := commons.TypeQualifier(builtinType)
 		registerBuiltinTypeBoundFunctions(typeQualifier)
@@ -416,7 +438,7 @@ func registerBuiltinTypeBoundFunctions(
 	typeQualifier string,
 ) {
 	for _, boundFunction := range commonBuiltinTypeBoundFunctions {
-		RegisterTypeBoundCommonFunction(
+		RegisterBuiltinTypeBoundCommonFunction(
 			typeQualifier,
 			boundFunction,
 		)
@@ -457,24 +479,24 @@ var commonBuiltinTypeBoundFunctions = []*NativeFunctionValue{
 
 var IndexedCommonBuiltinTypeBoundFunctions = map[string]*NativeFunctionValue{}
 
-func registerAllSaturatingArithmeticFunctions() {
+func registerBuiltinSaturatingArithmeticFunctions() {
 	for _, ty := range common.Concat(
 		sema.AllUnsignedFixedPointTypes,
 		sema.AllSignedFixedPointTypes,
 		sema.AllUnsignedIntegerTypes,
 		sema.AllSignedIntegerTypes,
 	) {
-		registerSaturatingArithmeticFunctions(ty.(sema.SaturatingArithmeticType))
+		registerBuiltinTypeSaturatingArithmeticFunctions(ty.(sema.SaturatingArithmeticType))
 	}
 }
 
-func registerSaturatingArithmeticFunctions(t sema.SaturatingArithmeticType) {
+func registerBuiltinTypeSaturatingArithmeticFunctions(t sema.SaturatingArithmeticType) {
 
 	register := func(
 		functionName string,
 		op func(context *Context, v, other interpreter.NumberValue) interpreter.NumberValue,
 	) {
-		RegisterTypeBoundFunction(
+		RegisterBuiltinTypeBoundFunction(
 			commons.TypeQualifier(t),
 			NewNativeFunctionValue(
 				functionName,

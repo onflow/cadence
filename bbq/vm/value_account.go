@@ -69,7 +69,7 @@ func init() {
 
 	// Methods on `Account.Contracts` value.
 
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		accountContractsTypeName,
 		NewNativeFunctionValue(
 			sema.Account_ContractsTypeAddFunctionName,

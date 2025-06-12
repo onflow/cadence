@@ -30,7 +30,7 @@ func init() {
 	typeName := interpreter.PrimitiveStaticTypeCapability.String()
 
 	// Capability.borrow
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValueWithDerivedType(
 			sema.CapabilityTypeBorrowFunctionName,

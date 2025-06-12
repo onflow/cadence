@@ -151,7 +151,7 @@ func newCompiler[E, T any](
 	if config.BuiltinGlobalsProvider != nil {
 		globalImports = config.BuiltinGlobalsProvider()
 	} else {
-		globalImports = NativeFunctions()
+		globalImports = DefaultBuiltinGlobals()
 	}
 	globalImports = activations.NewActivation[GlobalImport](config.MemoryGauge, globalImports)
 
