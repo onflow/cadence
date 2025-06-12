@@ -325,18 +325,22 @@ func ParseCheckAndPrepareWithOptions(
 
 			// Register externally provided globals in compiler.
 			compilerConfig = &compiler.Config{
-				BuiltinGlobalsProvider: func() map[string]*compiler.Global {
-					globals := compiler.NativeFunctions()
-					for name := range interpreterBaseActivationVariables { //nolint:maprange
-						if globals[name] != nil {
+				BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
+					baseActivation := compiler.NativeFunctions()
+					activation := activations.NewActivation[compiler.GlobalImport](nil, baseActivation)
+					for name := range interpreterBaseActivationVariables {
+						existing := activation.Find(name)
+						if existing != (compiler.GlobalImport{}) {
 							continue
 						}
-						globals[name] = &compiler.Global{
-							Name: name,
-						}
+						activation.Set(
+							name,
+							compiler.GlobalImport{
+								Name: name,
+							},
+						)
 					}
-
-					return globals
+					return activation
 				},
 			}
 		}

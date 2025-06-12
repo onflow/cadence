@@ -636,15 +636,23 @@ func testAccountWithErrorHandlerWithCompiler(
 				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
 					ParseAndCheckOptions: parseAndCheckOptions,
 					CompilerConfig: &compiler.Config{
-						BuiltinGlobalsProvider: func() map[string]*compiler.Global {
-							builtins := compiler.NativeFunctions()
+						BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
+							baseActivation := compiler.NativeFunctions()
+							activation := activations.NewActivation[compiler.GlobalImport](nil, baseActivation)
 							for _, valueDeclaration := range valueDeclarations {
 								name := valueDeclaration.Name
-								builtins[name] = &compiler.Global{
-									Name: name,
+								existing := activation.Find(name)
+								if existing != (compiler.GlobalImport{}) {
+									continue
 								}
+								activation.Set(
+									name,
+									compiler.GlobalImport{
+										Name: name,
+									},
+								)
 							}
-							return builtins
+							return activation
 						},
 					},
 				},
