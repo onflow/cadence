@@ -1761,10 +1761,12 @@ func (vm *VM) maybeLookupFunction(location common.Location, name string) Functio
 }
 
 func (vm *VM) lookupFunction(location common.Location, name string) (FunctionValue, bool) {
+	context := vm.context
+
 	// First check in current program.
 	global := vm.globals.Find(name)
 	if global != nil {
-		value := global.GetValue(vm.context)
+		value := global.GetValue(context)
 		return value.(FunctionValue), true
 	}
 
@@ -1775,12 +1777,13 @@ func (vm *VM) lookupFunction(location common.Location, name string) (FunctionVal
 	if !ok {
 		// TODO: This currently link all functions in program, unnecessarily.
 		//   Link only the requested function.
-		program := vm.context.ImportHandler(location)
+		program := context.ImportHandler(location)
 
 		linkedGlobals = LinkGlobals(
+			context.MemoryGauge,
 			location,
 			program,
-			vm.context,
+			context,
 			vm.linkedGlobalsCache,
 		)
 	}
@@ -1790,7 +1793,7 @@ func (vm *VM) lookupFunction(location common.Location, name string) (FunctionVal
 		return nil, false
 	}
 
-	value := global.GetValue(vm.context)
+	value := global.GetValue(context)
 	return value.(FunctionValue), true
 }
 
