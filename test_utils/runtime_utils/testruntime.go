@@ -32,7 +32,7 @@ var _ runtime.Runtime = TestInterpreterRuntime{}
 
 func NewTestInterpreterRuntimeWithConfig(config runtime.Config) TestInterpreterRuntime {
 	return TestInterpreterRuntime{
-		Runtime: runtime.NewInterpreterRuntime(config),
+		Runtime: runtime.NewRuntime(config),
 	}
 }
 

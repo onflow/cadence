@@ -48,15 +48,15 @@ var _ atree.Value = PathLinkValue{}
 var _ EquatableValue = PathLinkValue{}
 var _ LinkValue = PathLinkValue{}
 
-func (PathLinkValue) isValue() {}
+func (PathLinkValue) IsValue() {}
 
 func (PathLinkValue) isLinkValue() {}
 
-func (v PathLinkValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange) {
+func (v PathLinkValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
-func (v PathLinkValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (v PathLinkValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -71,7 +71,7 @@ func (v PathLinkValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewCapabilityStaticType(context, v.Type)
 }
 
-func (PathLinkValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (PathLinkValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	panic(errors.NewUnreachableError())
 }
 
@@ -87,12 +87,12 @@ func (v PathLinkValue) RecursiveString(seenReferences SeenReferences) string {
 	)
 }
 
-func (v PathLinkValue) MeteredString(_ *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v PathLinkValue) MeteredString(_ ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	panic(errors.NewUnreachableError())
 }
 
 func (v PathLinkValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -126,7 +126,7 @@ func (PathLinkValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 }
 
 func (v PathLinkValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -135,19 +135,19 @@ func (v PathLinkValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (v PathLinkValue) Clone(inter *Interpreter) Value {
+func (v PathLinkValue) Clone(context ValueCloneContext) Value {
 	return PathLinkValue{
 		Type:       v.Type,
-		TargetPath: v.TargetPath.Clone(inter).(PathValue),
+		TargetPath: v.TargetPath.Clone(context).(PathValue),
 	}
 }
 
-func (PathLinkValue) DeepRemove(_ *Interpreter, _ bool) {
+func (PathLinkValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
@@ -173,15 +173,15 @@ var _ atree.Value = AccountLinkValue{}
 var _ EquatableValue = AccountLinkValue{}
 var _ LinkValue = AccountLinkValue{}
 
-func (AccountLinkValue) isValue() {}
+func (AccountLinkValue) IsValue() {}
 
 func (AccountLinkValue) isLinkValue() {}
 
-func (v AccountLinkValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange) {
+func (v AccountLinkValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
-func (AccountLinkValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (AccountLinkValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -203,7 +203,7 @@ func (v AccountLinkValue) StaticType(context ValueStaticTypeContext) StaticType 
 	)
 }
 
-func (AccountLinkValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (AccountLinkValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	panic(errors.NewUnreachableError())
 }
 
@@ -215,12 +215,12 @@ func (v AccountLinkValue) RecursiveString(_ SeenReferences) string {
 	panic(errors.NewUnreachableError())
 }
 
-func (v AccountLinkValue) MeteredString(_ *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v AccountLinkValue) MeteredString(_ ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	panic(errors.NewUnreachableError())
 }
 
 func (v AccountLinkValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -249,7 +249,7 @@ func (AccountLinkValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 }
 
 func (v AccountLinkValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -258,16 +258,16 @@ func (v AccountLinkValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (AccountLinkValue) Clone(_ *Interpreter) Value {
+func (AccountLinkValue) Clone(_ ValueCloneContext) Value {
 	return AccountLinkValue{}
 }
 
-func (AccountLinkValue) DeepRemove(_ *Interpreter, _ bool) {
+func (AccountLinkValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 

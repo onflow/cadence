@@ -321,8 +321,11 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 			p.writeString(emptyLineNumbers)
 
 			indicatorLength := excerpt.startPos.Column
-			if indicatorLength >= maxLineLength {
+			if indicatorLength > maxLineLength {
 				indicatorLength = maxLineLength
+			}
+			if indicatorLength > len(line) {
+				indicatorLength = len(line)
 			}
 
 			p.writeString(" ")

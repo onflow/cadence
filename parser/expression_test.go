@@ -26,6 +26,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"testing/quick"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -326,9 +327,9 @@ func TestParseAdvancedExpression(t *testing.T) {
 
 		_, errs := ParseExpression(gauge, []byte("1 < 2"), Config{})
 		require.Len(t, errs, 1)
-		require.IsType(t, errors.MemoryError{}, errs[0])
+		require.IsType(t, errors.MemoryMeteringError{}, errs[0])
 
-		fatalError, _ := errs[0].(errors.MemoryError)
+		fatalError, _ := errs[0].(errors.MemoryMeteringError)
 		var expectedError limitingMemoryGaugeError
 		assert.ErrorAs(t, fatalError, &expectedError)
 	})
@@ -342,9 +343,9 @@ func TestParseAdvancedExpression(t *testing.T) {
 
 		_, errs := ParseExpression(gauge, []byte("1 < 2 > 3"), Config{})
 		require.Len(t, errs, 1)
-		require.IsType(t, errors.MemoryError{}, errs[0])
+		require.IsType(t, errors.MemoryMeteringError{}, errs[0])
 
-		fatalError, _ := errs[0].(errors.MemoryError)
+		fatalError, _ := errs[0].(errors.MemoryMeteringError)
 		var expectedError limitingMemoryGaugeError
 		assert.ErrorAs(t, fatalError, &expectedError)
 	})
@@ -6439,6 +6440,94 @@ func TestParseStringTemplate(t *testing.T) {
 
 		AssertEqualWithDiff(t, expected, actual)
 	})
+
+	t.Run("unterminated second string literal", func(t *testing.T) {
+
+		t.Parallel()
+
+		code := `
+          let code = """
+        `
+
+		_, errs := testParseStatements(code)
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid end of string literal: missing '\"'",
+					Pos: ast.Position{
+						Offset: 25,
+						Line:   2,
+						Column: 24,
+					},
+				},
+				&SyntaxError{
+					Message: "statements on the same line must be separated with a semicolon",
+					Pos: ast.Position{
+						Offset: 24,
+						Line:   2,
+						Column: 23,
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("unterminated second string literal, with templates", func(t *testing.T) {
+
+		t.Parallel()
+
+		code := `
+          let code = "sadas\(a)""\(a)
+        `
+
+		_, errs := testParseStatements(code)
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid end of string literal: missing '\"'",
+					Pos: ast.Position{
+						Offset: 38,
+						Line:   2,
+						Column: 38,
+					},
+				},
+				&SyntaxError{
+					Message: "statements on the same line must be separated with a semicolon",
+					Pos: ast.Position{
+						Offset: 33,
+						Line:   2,
+						Column: 32,
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("unterminated string with template", func(t *testing.T) {
+
+		t.Parallel()
+
+		code := `
+          let code = "\(a)
+        `
+
+		_, errs := testParseStatements(code)
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid end of string literal: missing '\"'",
+					Pos: ast.Position{
+						Offset: 27,
+						Line:   2,
+						Column: 27,
+					},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseNilCoalescing(t *testing.T) {
@@ -7256,4 +7345,26 @@ func (g *limitingMemoryGauge) MeterMemory(usage common.MemoryUsage) error {
 	g.limits[usage.Kind] -= usage.Amount
 
 	return nil
+}
+
+func TestStringQuick(t *testing.T) {
+
+	t.Parallel()
+
+	f := func(text string) bool {
+		res, errs := testParseExpression(
+			ast.QuoteString(text),
+		)
+		if len(errs) > 0 {
+			return false
+		}
+		literal, ok := res.(*ast.StringExpression)
+		if !ok {
+			return false
+		}
+		return literal.Value == text
+	}
+	if err := quick.Check(f, nil); err != nil {
+		t.Error(err)
+	}
 }

@@ -31,7 +31,6 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 )
 
@@ -60,7 +59,7 @@ func TestInterpretEquality(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, capabilityValueDeclaration)
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               let maybeCapNonNil: Capability? = cap
               let maybeCapNil: Capability? = nil
@@ -86,14 +85,14 @@ func TestInterpretEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.TrueValue,
-			inter.Globals.Get("res1").GetValue(inter),
+			inter.GetGlobal("res1"),
 		)
 
 		AssertValuesEqual(
 			t,
 			inter,
 			interpreter.TrueValue,
-			inter.Globals.Get("res2").GetValue(inter),
+			inter.GetGlobal("res2"),
 		)
 	})
 
@@ -101,7 +100,7 @@ func TestInterpretEquality(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 		  fun func() {}
 
           let maybeFuncNonNil: (fun(): Void)? = func
@@ -114,14 +113,14 @@ func TestInterpretEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.TrueValue,
-			inter.Globals.Get("res1").GetValue(inter),
+			inter.GetGlobal("res1"),
 		)
 
 		AssertValuesEqual(
 			t,
 			inter,
 			interpreter.TrueValue,
-			inter.Globals.Get("res2").GetValue(inter),
+			inter.GetGlobal("res2"),
 		)
 	})
 
@@ -129,7 +128,7 @@ func TestInterpretEquality(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let n: Int? = 1
           let res = nil == n
 		`)
@@ -138,7 +137,7 @@ func TestInterpretEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.FalseValue,
-			inter.Globals.Get("res").GetValue(inter),
+			inter.GetGlobal("res"),
 		)
 	})
 }
@@ -198,7 +197,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 						op.Symbol(),
 					)
 
-					inter := parseCheckAndInterpret(t, code)
+					inter := parseCheckAndPrepare(t, code)
 
 					result, err := inter.Invoke("test")
 
@@ -210,14 +209,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 						require.NoError(t, err)
 						assert.Equal(t, interpreter.TrueValue, result)
 					default:
-						RequireError(t, err)
-
-						operandError := &interpreter.InvalidOperandsError{}
-						require.ErrorAs(t, err, operandError)
-
-						assert.Equal(t, op, operandError.Operation)
-						assert.Equal(t, subtype, operandError.LeftType)
-						assert.Equal(t, rhsType, operandError.RightType)
+						assert.Failf(t, "unknown operation: %s", op.String())
 					}
 				})
 			}
@@ -262,7 +254,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 						op.Symbol(),
 					)
 
-					inter := parseCheckAndInterpret(t, code)
+					inter := parseCheckAndPrepare(t, code)
 
 					result, err := inter.Invoke("test")
 
@@ -274,14 +266,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 						require.NoError(t, err)
 						assert.Equal(t, interpreter.TrueValue, result)
 					default:
-						RequireError(t, err)
-
-						operandError := &interpreter.InvalidOperandsError{}
-						require.ErrorAs(t, err, operandError)
-
-						assert.Equal(t, op, operandError.Operation)
-						assert.Equal(t, subtype, operandError.LeftType)
-						assert.Equal(t, rhsType, operandError.RightType)
+						assert.Failf(t, "unknown operation: %s", op.String())
 					}
 				})
 			}
@@ -312,7 +297,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 						op.Symbol(),
 					)
 
-					inter := parseCheckAndInterpret(t, code)
+					inter := parseCheckAndPrepare(t, code)
 
 					result, err := inter.Invoke("test")
 
@@ -324,14 +309,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 						require.NoError(t, err)
 						assert.Equal(t, interpreter.TrueValue, result)
 					default:
-						RequireError(t, err)
-
-						operandError := &interpreter.InvalidOperandsError{}
-						require.ErrorAs(t, err, operandError)
-
-						assert.Equal(t, op, operandError.Operation)
-						assert.Equal(t, subtype, operandError.LeftType)
-						assert.Equal(t, rhsType, operandError.RightType)
+						assert.Failf(t, "unknown operation: %s", op.String())
 					}
 				})
 			}
@@ -362,7 +340,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 						op.Symbol(),
 					)
 
-					inter := parseCheckAndInterpret(t, code)
+					inter := parseCheckAndPrepare(t, code)
 
 					result, err := inter.Invoke("test")
 
@@ -374,14 +352,7 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 						require.NoError(t, err)
 						assert.Equal(t, interpreter.TrueValue, result)
 					default:
-						RequireError(t, err)
-
-						operandError := &interpreter.InvalidOperandsError{}
-						require.ErrorAs(t, err, operandError)
-
-						assert.Equal(t, op, operandError.Operation)
-						assert.Equal(t, subtype, operandError.LeftType)
-						assert.Equal(t, rhsType, operandError.RightType)
+						assert.Failf(t, "unknown operation: %s", op.String())
 					}
 				})
 			}

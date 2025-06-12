@@ -307,9 +307,8 @@ func TestParseVariableDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseDeclarations(
-			nil,
-			[]byte("static var x = 1"),
+		_, errs := testParseDeclarationsWithConfig(
+			"static var x = 1",
 			Config{
 				StaticModifierEnabled: true,
 			},
@@ -345,9 +344,8 @@ func TestParseVariableDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseDeclarations(
-			nil,
-			[]byte("native var x = 1"),
+		_, errs := testParseDeclarationsWithConfig(
+			"native var x = 1",
 			Config{
 				NativeModifierEnabled: true,
 			},
@@ -1096,9 +1094,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseDeclarations(
-			nil,
-			[]byte("native fun foo() {}"),
+		result, errs := testParseDeclarationsWithConfig(
+			"native fun foo() {}",
 			Config{
 				NativeModifierEnabled: true,
 			},
@@ -1169,9 +1166,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseDeclarations(
-			nil,
-			[]byte("static fun foo() {}"),
+		result, errs := testParseDeclarationsWithConfig(
+			"static fun foo() {}",
 			Config{
 				StaticModifierEnabled: true,
 			},
@@ -1230,9 +1226,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseDeclarations(
-			nil,
-			[]byte("static native fun foo() {}"),
+		result, errs := testParseDeclarationsWithConfig(
+			"static native fun foo() {}",
 			Config{
 				StaticModifierEnabled: true,
 				NativeModifierEnabled: true,
@@ -1292,9 +1287,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseDeclarations(
-			nil,
-			[]byte("native static fun foo() {}"),
+		_, errs := testParseDeclarationsWithConfig(
+			"native static fun foo() {}",
 			Config{
 				StaticModifierEnabled: true,
 				NativeModifierEnabled: true,
@@ -1332,9 +1326,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseDeclarations(
-			nil,
-			[]byte("access(all) static native fun foo() {}"),
+		result, errs := testParseDeclarationsWithConfig(
+			"access(all) static native fun foo() {}",
 			Config{
 				StaticModifierEnabled: true,
 				NativeModifierEnabled: true,
@@ -1427,9 +1420,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseDeclarations(
-			nil,
-			[]byte("fun foo  < > () {}"),
+		result, errs := testParseDeclarationsWithConfig(
+			"fun foo  < > () {}",
 			Config{
 				TypeParametersEnabled: true,
 			},
@@ -1477,9 +1469,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseDeclarations(
-			nil,
-			[]byte("fun foo  < A  > () {}"),
+		result, errs := testParseDeclarationsWithConfig(
+			"fun foo  < A  > () {}",
 			Config{
 				TypeParametersEnabled: true,
 			},
@@ -1534,9 +1525,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseDeclarations(
-			nil,
-			[]byte("fun foo  < A  , B : C > () {}"),
+		result, errs := testParseDeclarationsWithConfig(
+			"fun foo  < A  , B : C > () {}",
 			Config{
 				TypeParametersEnabled: true,
 			},
@@ -1623,9 +1613,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseDeclarations(
-			nil,
-			[]byte("fun foo  < "),
+		_, errs := testParseDeclarationsWithConfig(
+			"fun foo  < ",
 			Config{
 				TypeParametersEnabled: true,
 			},
@@ -1646,9 +1635,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseDeclarations(
-			nil,
-			[]byte("fun foo  < A B > () { } "),
+		_, errs := testParseDeclarationsWithConfig(
+			"fun foo  < A B > () { } ",
 			Config{
 				TypeParametersEnabled: true,
 			},
@@ -2579,7 +2567,7 @@ func TestParseEvent(t *testing.T) {
 										Line:   1,
 										Column: 23,
 									},
-									Access: ast.AccessNotSpecified,
+									Access: ast.AccessSelf,
 								},
 								Kind: common.DeclarationKindInitializer,
 							},
@@ -2695,7 +2683,7 @@ func TestParseEvent(t *testing.T) {
 										Line:   1,
 										Column: 37,
 									},
-									Access: ast.AccessNotSpecified,
+									Access: ast.AccessAll,
 								},
 								Kind: common.DeclarationKindInitializer,
 							},
@@ -4779,9 +4767,8 @@ func TestParseEnumDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseDeclarations(
-			nil,
-			[]byte(" enum E { static case e }"),
+		_, errs := testParseDeclarationsWithConfig(
+			" enum E { static case e }",
 			Config{
 				StaticModifierEnabled: true,
 			},
@@ -4818,9 +4805,8 @@ func TestParseEnumDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseDeclarations(
-			nil,
-			[]byte(" enum E { native case e }"),
+		_, errs := testParseDeclarationsWithConfig(
+			" enum E { native case e }",
 			Config{
 				NativeModifierEnabled: true,
 			},
@@ -6191,9 +6177,12 @@ func TestParseInvalidMember(t *testing.T) {
 	t.Run("ignore", func(t *testing.T) {
 		t.Parallel()
 
-		_, errs := ParseDeclarations(nil, []byte(code), Config{
-			IgnoreLeadingIdentifierEnabled: true,
-		})
+		_, errs := testParseDeclarationsWithConfig(
+			code,
+			Config{
+				IgnoreLeadingIdentifierEnabled: true,
+			},
+		)
 		require.Empty(t, errs)
 
 	})
@@ -6201,9 +6190,12 @@ func TestParseInvalidMember(t *testing.T) {
 	t.Run("report", func(t *testing.T) {
 		t.Parallel()
 
-		_, errs := ParseDeclarations(nil, []byte(code), Config{
-			IgnoreLeadingIdentifierEnabled: false,
-		})
+		_, errs := testParseDeclarationsWithConfig(
+			code,
+			Config{
+				IgnoreLeadingIdentifierEnabled: false,
+			},
+		)
 
 		AssertEqualWithDiff(t,
 			[]error{
@@ -6890,9 +6882,8 @@ func TestParsePragmaNoArguments(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseDeclarations(
-			nil,
-			[]byte("static #foo"),
+		_, errs := testParseDeclarationsWithConfig(
+			"static #foo",
 			Config{
 				StaticModifierEnabled: true,
 			},
@@ -6928,9 +6919,8 @@ func TestParsePragmaNoArguments(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseDeclarations(
-			nil,
-			[]byte("native #foo"),
+		_, errs := testParseDeclarationsWithConfig(
+			"native #foo",
 			Config{
 				NativeModifierEnabled: true,
 			},
@@ -7945,9 +7935,8 @@ func TestParseInvalidCompositeFunctionNames(t *testing.T) {
 
 			t.Run(testName, func(t *testing.T) {
 
-				_, err := ParseProgram(
-					nil,
-					[]byte(fmt.Sprintf(
+				_, err := testParseProgram(
+					fmt.Sprintf(
 						`
                           %[1]s %[2]s Test %[4]s {
                               fun init() %[3]s
@@ -7957,8 +7946,7 @@ func TestParseInvalidCompositeFunctionNames(t *testing.T) {
 						interfaceKeyword,
 						body,
 						baseType,
-					)),
-					Config{},
+					),
 				)
 
 				errs, ok := err.(Error)
@@ -8209,11 +8197,10 @@ func TestParseInvalidImportWithModifier(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseDeclarations(
-			nil,
-			[]byte(`
+		_, errs := testParseDeclarationsWithConfig(
+			`
                 static import x from 0x1
-	        `),
+	        `,
 			Config{
 				StaticModifierEnabled: true,
 			},
@@ -8253,11 +8240,10 @@ func TestParseInvalidImportWithModifier(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseDeclarations(
-			nil,
-			[]byte(`
+		_, errs := testParseDeclarationsWithConfig(
+			`
                 native import x from 0x1
-	        `),
+	        `,
 			Config{
 				NativeModifierEnabled: true,
 			},
@@ -8302,11 +8288,10 @@ func TestParseInvalidEventWithModifier(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseDeclarations(
-			nil,
-			[]byte(`
+		_, errs := testParseDeclarationsWithConfig(
+			`
                 static event Foo()
-	        `),
+	        `,
 			Config{
 				StaticModifierEnabled: true,
 			},
@@ -8346,11 +8331,10 @@ func TestParseInvalidEventWithModifier(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseDeclarations(
-			nil,
-			[]byte(`
+		_, errs := testParseDeclarationsWithConfig(
+			`
                 native event Foo()
-	        `),
+	        `,
 			Config{
 				NativeModifierEnabled: true,
 			},
@@ -8396,11 +8380,10 @@ func TestParseCompositeWithModifier(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseDeclarations(
-			nil,
-			[]byte(`
+		_, errs := testParseDeclarationsWithConfig(
+			`
                 static struct Foo()
-	        `),
+	        `,
 			Config{
 				StaticModifierEnabled: true,
 			},
@@ -8440,11 +8423,10 @@ func TestParseCompositeWithModifier(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseDeclarations(
-			nil,
-			[]byte(`
+		_, errs := testParseDeclarationsWithConfig(
+			`
                 native struct Foo()
-	        `),
+	        `,
 			Config{
 				NativeModifierEnabled: true,
 			},
@@ -8489,11 +8471,10 @@ func TestParseTransactionWithModifier(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseDeclarations(
-			nil,
-			[]byte(`
+		_, errs := testParseDeclarationsWithConfig(
+			`
                 static transaction {}
-	        `),
+	        `,
 			Config{
 				StaticModifierEnabled: true,
 			},
@@ -8533,11 +8514,10 @@ func TestParseTransactionWithModifier(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseDeclarations(
-			nil,
-			[]byte(`
+		_, errs := testParseDeclarationsWithConfig(
+			`
                 native transaction {}
-	        `),
+	        `,
 			Config{
 				NativeModifierEnabled: true,
 			},

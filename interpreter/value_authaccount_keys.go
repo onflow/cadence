@@ -44,9 +44,9 @@ func NewAccountKeysValue(
 
 	var accountKeys *SimpleCompositeValue
 
-	fields := map[string]Value{}
+	methods := map[string]FunctionValue{}
 
-	computeLazyStoredField := func(name string) Value {
+	computeLazyStoredMethod := func(name string) FunctionValue {
 		switch name {
 		case sema.Account_KeysTypeAddFunctionName:
 			return addFunction(accountKeys)
@@ -61,24 +61,31 @@ func NewAccountKeysValue(
 		return nil
 	}
 
-	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
+	computeField := func(name string, _ MemberAccessibleContext, _ LocationRange) Value {
 		switch name {
 		case sema.Account_KeysTypeCountFieldName:
 			return getKeysCount()
 		}
+		return nil
+	}
 
-		field := computeLazyStoredField(name)
-		if field != nil {
-			fields[name] = field
+	methodsGetter := func(name string, _ MemberAccessibleContext) FunctionValue {
+		method, ok := methods[name]
+		if !ok {
+			method = computeLazyStoredMethod(name)
+			if method != nil {
+				methods[name] = method
+			}
 		}
-		return field
+
+		return method
 	}
 
 	var str string
-	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+	stringer := func(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
 		if str == "" {
-			common.UseMemory(interpreter, common.AccountKeysStringMemoryUsage)
-			addressStr := address.MeteredString(interpreter, seenReferences, locationRange)
+			common.UseMemory(context, common.AccountKeysStringMemoryUsage)
+			addressStr := address.MeteredString(context, seenReferences, locationRange)
 			str = fmt.Sprintf("Account.Keys(%s)", addressStr)
 		}
 		return str
@@ -89,8 +96,10 @@ func NewAccountKeysValue(
 		account_KeysTypeID,
 		account_KeysStaticType,
 		account_KeysFieldNames,
-		fields,
+		// No fields, only computed fields, and methods.
+		nil,
 		computeField,
+		methodsGetter,
 		nil,
 		stringer,
 	)

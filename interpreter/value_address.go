@@ -92,13 +92,13 @@ var _ EquatableValue = AddressValue{}
 var _ HashableValue = AddressValue{}
 var _ MemberAccessibleValue = AddressValue{}
 
-func (AddressValue) isValue() {}
+func (AddressValue) IsValue() {}
 
-func (v AddressValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitAddressValue(interpreter, v)
+func (v AddressValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitAddressValue(context, v)
 }
 
-func (AddressValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (AddressValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -106,7 +106,7 @@ func (AddressValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeAddress)
 }
 
-func (AddressValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (AddressValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return true
 }
 
@@ -118,8 +118,8 @@ func (v AddressValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v AddressValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
-	common.UseMemory(interpreter, common.AddressValueStringMemoryUsage)
+func (v AddressValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+	common.UseMemory(context, common.AddressValueStringMemoryUsage)
 	return v.String()
 }
 
@@ -156,39 +156,41 @@ func (v AddressValue) ToAddress() common.Address {
 	return common.Address(v)
 }
 
-func (v AddressValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v AddressValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	return context.GetMethod(v, name, locationRange)
+}
+
+func (v AddressValue) GetMethod(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	name string,
+) FunctionValue {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ToStringFunctionType,
 			func(v AddressValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
+				invocationContext := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
-				memoryUsage := common.NewStringMemoryUsage(
-					safeMul(common.AddressLength, 2, locationRange),
-				)
-
-				return NewStringValue(
-					interpreter,
-					memoryUsage,
-					func() string {
-						return v.String()
-					},
+				return AddressValueToStringFunction(
+					invocationContext,
+					v,
+					locationRange,
 				)
 			},
 		)
 
 	case sema.AddressTypeToBytesFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.AddressTypeToBytesFunctionType,
 			func(v AddressValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
+				interpreter := invocation.InvocationContext
 				address := common.Address(v)
 				return ByteSliceToByteArrayValue(interpreter, address[:])
 			},
@@ -198,18 +200,34 @@ func (v AddressValue) GetMember(interpreter *Interpreter, _ LocationRange, name 
 	return nil
 }
 
-func (AddressValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func AddressValueToStringFunction(
+	invocationContext InvocationContext,
+	v AddressValue,
+	locationRange LocationRange,
+) Value {
+	memoryUsage := common.NewStringMemoryUsage(
+		safeMul(common.AddressLength, 2, locationRange),
+	)
+
+	return NewStringValue(
+		invocationContext,
+		memoryUsage,
+		v.String,
+	)
+}
+
+func (AddressValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Addresses have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (AddressValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (AddressValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Addresses have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v AddressValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -228,12 +246,12 @@ func (AddressValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (AddressValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (AddressValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v AddressValue) Transfer(
-	interpreter *Interpreter,
+	transferContext ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -242,16 +260,16 @@ func (v AddressValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(transferContext, storable)
 	}
 	return v
 }
 
-func (v AddressValue) Clone(_ *Interpreter) Value {
+func (v AddressValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 
-func (AddressValue) DeepRemove(_ *Interpreter, _ bool) {
+func (AddressValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
@@ -267,33 +285,20 @@ func (AddressValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func AddressFromBytes(invocation Invocation) Value {
-	argument, ok := invocation.Arguments[0].(*ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	inter := invocation.Interpreter
-
-	bytes, err := ByteArrayValueToByteSlice(inter, argument, invocation.LocationRange)
+func AddressValueFromByteArray(context ContainerMutationContext, byteArray *ArrayValue, locationRange LocationRange) AddressValue {
+	bytes, err := ByteArrayValueToByteSlice(context, byteArray, locationRange)
 	if err != nil {
 		panic(err)
 	}
 
-	return NewAddressValue(invocation.Interpreter, common.MustBytesToAddress(bytes))
+	return NewAddressValue(context, common.MustBytesToAddress(bytes))
 }
 
-func AddressFromString(invocation Invocation) Value {
-	argument, ok := invocation.Arguments[0].(*StringValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	addr, err := common.HexToAddressAssertPrefix(argument.Str)
+func AddressValueFromString(gauge common.MemoryGauge, string *StringValue) Value {
+	addr, err := common.HexToAddressAssertPrefix(string.Str)
 	if err != nil {
 		return Nil
 	}
 
-	inter := invocation.Interpreter
-	return NewSomeValueNonCopying(inter, NewAddressValue(inter, addr))
+	return NewSomeValueNonCopying(gauge, NewAddressValue(gauge, addr))
 }

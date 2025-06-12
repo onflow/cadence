@@ -43,9 +43,9 @@ func NewAccountAccountCapabilitiesValue(
 
 	var accountCapabilities *SimpleCompositeValue
 
-	fields := map[string]Value{}
+	methods := map[string]FunctionValue{}
 
-	computeLazyStoredField := func(name string) Value {
+	computeLazyStoredMethod := func(name string) FunctionValue {
 		switch name {
 		case sema.Account_AccountCapabilitiesTypeGetControllerFunctionName:
 			return getControllerFunction(accountCapabilities)
@@ -62,19 +62,23 @@ func NewAccountAccountCapabilitiesValue(
 		return nil
 	}
 
-	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
-		field := computeLazyStoredField(name)
-		if field != nil {
-			fields[name] = field
+	methodGetter := func(name string, _ MemberAccessibleContext) FunctionValue {
+		method, ok := methods[name]
+		if !ok {
+			method = computeLazyStoredMethod(name)
+			if method != nil {
+				methods[name] = method
+			}
 		}
-		return field
+
+		return method
 	}
 
 	var str string
-	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+	stringer := func(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
 		if str == "" {
-			common.UseMemory(interpreter, common.AccountAccountCapabilitiesStringMemoryUsage)
-			addressStr := address.MeteredString(interpreter, seenReferences, locationRange)
+			common.UseMemory(context, common.AccountAccountCapabilitiesStringMemoryUsage)
+			addressStr := address.MeteredString(context, seenReferences, locationRange)
 			str = fmt.Sprintf("Account.AccountCapabilities(%s)", addressStr)
 		}
 		return str
@@ -85,11 +89,13 @@ func NewAccountAccountCapabilitiesValue(
 		account_AccountCapabilitiesTypeID,
 		account_AccountCapabilitiesStaticType,
 		account_AccountCapabilitiesFieldNames,
-		fields,
-		computeField,
+		// No fields, only methods.
+		nil,
+		nil,
+		methodGetter,
 		nil,
 		stringer,
-	)
+	).WithPrivateField(accountTypePrivateAddressFieldName, address)
 
 	return accountCapabilities
 }

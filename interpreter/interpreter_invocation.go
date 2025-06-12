@@ -25,7 +25,8 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-func (interpreter *Interpreter) InvokeFunctionValue(
+func InvokeFunctionValue(
+	context InvocationContext,
 	function FunctionValue,
 	arguments []Value,
 	argumentTypes []sema.Type,
@@ -38,11 +39,12 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 ) {
 
 	// recover internal panics and return them as an error
-	defer interpreter.RecoverErrors(func(internalErr error) {
+	defer context.RecoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
-	return interpreter.invokeFunctionValue(
+	return invokeFunctionValue(
+		context,
 		function,
 		arguments,
 		nil,
@@ -54,7 +56,8 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 	), nil
 }
 
-func (interpreter *Interpreter) invokeFunctionValue(
+func invokeFunctionValue(
+	context InvocationContext,
 	function FunctionValue,
 	arguments []Value,
 	expressions []ast.Expression,
@@ -68,6 +71,8 @@ func (interpreter *Interpreter) invokeFunctionValue(
 	parameterTypeCount := len(parameterTypes)
 
 	var transferredArguments []Value
+
+	location := context.GetLocation()
 
 	argumentCount := len(arguments)
 	if argumentCount > 0 {
@@ -84,13 +89,14 @@ func (interpreter *Interpreter) invokeFunctionValue(
 			}
 
 			locationRange := LocationRange{
-				Location:    interpreter.Location,
+				Location:    location,
 				HasPosition: locationPos,
 			}
 
 			if i < parameterTypeCount {
 				parameterType := parameterTypes[i]
-				transferredArguments[i] = interpreter.transferAndConvert(
+				transferredArguments[i] = TransferAndConvert(
+					context,
 					argument,
 					argumentType,
 					parameterType,
@@ -98,7 +104,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 				)
 			} else {
 				transferredArguments[i] = argument.Transfer(
-					interpreter,
+					context,
 					locationRange,
 					atree.Address{},
 					false,
@@ -111,13 +117,12 @@ func (interpreter *Interpreter) invokeFunctionValue(
 	}
 
 	locationRange := LocationRange{
-		Location:    interpreter.Location,
+		Location:    location,
 		HasPosition: invocationPosition,
 	}
 
 	invocation := NewInvocation(
-		interpreter,
-		nil,
+		context,
 		nil,
 		nil,
 		transferredArguments,
@@ -126,9 +131,9 @@ func (interpreter *Interpreter) invokeFunctionValue(
 		locationRange,
 	)
 
-	resultValue := function.invoke(invocation)
+	resultValue := function.Invoke(invocation)
 
-	functionReturnType := function.FunctionType().ReturnTypeAnnotation.Type
+	functionReturnType := function.FunctionType(context).ReturnTypeAnnotation.Type
 
 	// Only convert and box.
 	// No need to transfer, since transfer would happen later, when the return value gets assigned.
@@ -149,7 +154,8 @@ func (interpreter *Interpreter) invokeFunctionValue(
 	//
 	// Here runtime function's return type is `T`, but invocation's return type is `T?`.
 
-	return interpreter.ConvertAndBox(
+	return ConvertAndBox(
+		context,
 		locationRange,
 		resultValue,
 		functionReturnType,
@@ -176,13 +182,6 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 	}
 	if invocation.Base != nil {
 		interpreter.declareVariable(sema.BaseIdentifier, invocation.Base)
-	}
-	if invocation.BoundAuthorization != nil {
-		oldInvocationValue := interpreter.SharedState.currentEntitlementMappedValue
-		interpreter.SharedState.currentEntitlementMappedValue = invocation.BoundAuthorization
-		defer func() {
-			interpreter.SharedState.currentEntitlementMappedValue = oldInvocationValue
-		}()
 	}
 
 	return interpreter.invokeInterpretedFunctionActivated(function, invocation.Arguments, invocation.LocationRange)

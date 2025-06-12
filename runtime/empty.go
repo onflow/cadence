@@ -46,7 +46,7 @@ func (EmptyRuntimeInterface) ResolveLocation(_ []Identifier, _ Location) ([]Reso
 	panic("unexpected call to ResolveLocation")
 }
 
-func (EmptyRuntimeInterface) GetOrLoadProgram(_ Location, _ func() (*interpreter.Program, error)) (*interpreter.Program, error) {
+func (EmptyRuntimeInterface) GetOrLoadProgram(_ Location, _ func() (*Program, error)) (*Program, error) {
 	panic("unexpected call to GetOrLoadProgram")
 }
 
@@ -54,7 +54,7 @@ func (EmptyRuntimeInterface) GetAccountContractCode(_ common.AddressLocation) (c
 	panic("unexpected call to GetAccountContractCode")
 }
 
-func (EmptyRuntimeInterface) MeterComputation(_ common.ComputationKind, _ uint) error {
+func (EmptyRuntimeInterface) MeterComputation(_ common.ComputationUsage) error {
 	// NO-OP
 	return nil
 }
@@ -241,7 +241,7 @@ func (EmptyRuntimeInterface) RecoverProgram(_ *ast.Program, _ common.Location) (
 }
 
 func (EmptyRuntimeInterface) ValidateAccountCapabilitiesGet(
-	_ *interpreter.Interpreter,
+	_ interpreter.AccountCapabilityGetValidationContext,
 	_ interpreter.LocationRange,
 	_ interpreter.AddressValue,
 	_ interpreter.PathValue,
@@ -252,7 +252,7 @@ func (EmptyRuntimeInterface) ValidateAccountCapabilitiesGet(
 }
 
 func (EmptyRuntimeInterface) ValidateAccountCapabilitiesPublish(
-	_ *interpreter.Interpreter,
+	_ interpreter.AccountCapabilityPublishValidationContext,
 	_ interpreter.LocationRange,
 	_ interpreter.AddressValue,
 	_ interpreter.PathValue,

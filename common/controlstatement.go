@@ -22,7 +22,7 @@ import (
 	"github.com/onflow/cadence/errors"
 )
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=ControlStatement
+//go:generate stringer -type=ControlStatement
 
 type ControlStatement uint
 

@@ -26,22 +26,23 @@ import (
 	"github.com/kr/pretty"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 )
 
-func RequireValuesEqual(t testing.TB, inter *interpreter.Interpreter, expected, actual interpreter.Value) {
-	if !AssertValuesEqual(t, inter, expected, actual) {
+func RequireValuesEqual(t testing.TB, context interpreter.ValueComparisonContext, expected, actual interpreter.Value) {
+	if !AssertValuesEqual(t, context, expected, actual) {
 		t.FailNow()
 	}
 }
 
-func AssertValueSlicesEqual(t testing.TB, inter *interpreter.Interpreter, expected, actual []interpreter.Value) bool {
+func AssertValueSlicesEqual(t testing.TB, context interpreter.ValueComparisonContext, expected, actual []interpreter.Value) bool {
 	if !assert.Equal(t, len(expected), len(actual)) {
 		return false
 	}
 
 	for i, value := range expected {
-		if !AssertValuesEqual(t, inter, value, actual[i]) {
+		if !AssertValuesEqual(t, context, value, actual[i]) {
 			return false
 		}
 	}
@@ -49,20 +50,20 @@ func AssertValueSlicesEqual(t testing.TB, inter *interpreter.Interpreter, expect
 	return true
 }
 
-func ValuesAreEqual(inter *interpreter.Interpreter, expected, actual interpreter.Value) bool {
+func ValuesAreEqual(context interpreter.ValueComparisonContext, expected, actual interpreter.Value) bool {
 	if expected == nil {
 		return actual == nil
 	}
 
 	if expected, ok := expected.(interpreter.EquatableValue); ok {
-		return expected.Equal(inter, interpreter.EmptyLocationRange, actual)
+		return expected.Equal(context, interpreter.EmptyLocationRange, actual)
 	}
 
 	return assert.ObjectsAreEqual(expected, actual)
 }
 
-func AssertValuesEqual(t testing.TB, interpreter *interpreter.Interpreter, expected, actual interpreter.Value) bool {
-	if !ValuesAreEqual(interpreter, expected, actual) {
+func AssertValuesEqual(t testing.TB, context interpreter.ValueComparisonContext, expected, actual interpreter.Value) bool {
+	if !ValuesAreEqual(context, expected, actual) {
 		diff := pretty.Diff(expected, actual)
 
 		var message string
@@ -97,21 +98,21 @@ func AssertValuesEqual(t testing.TB, interpreter *interpreter.Interpreter, expec
 	return true
 }
 
-func ArrayElements(inter *interpreter.Interpreter, array *interpreter.ArrayValue) []interpreter.Value {
+func ArrayElements(gauge common.MemoryGauge, array *interpreter.ArrayValue) []interpreter.Value {
 	count := array.Count()
 	result := make([]interpreter.Value, count)
 	for i := 0; i < count; i++ {
-		result[i] = array.Get(inter, interpreter.EmptyLocationRange, i)
+		result[i] = array.Get(gauge, interpreter.EmptyLocationRange, i)
 	}
 	return result
 }
 
-func DictionaryKeyValues(inter *interpreter.Interpreter, dict *interpreter.DictionaryValue) []interpreter.Value {
+func DictionaryKeyValues(context interpreter.ContainerMutationContext, dict *interpreter.DictionaryValue) []interpreter.Value {
 	count := dict.Count() * 2
 	result := make([]interpreter.Value, count)
 	i := 0
 	dict.Iterate(
-		inter,
+		context,
 		interpreter.EmptyLocationRange,
 		func(key, value interpreter.Value) (resume bool) {
 			result[i*2] = key
@@ -134,7 +135,7 @@ type DictionaryEntry[K, V any] struct {
 // If a conversion fails, then this function returns (nil, false).
 // Useful in contexts when Cadence values need to be extracted into their go counterparts.
 func DictionaryEntries[K, V any](
-	inter *interpreter.Interpreter,
+	context interpreter.ContainerMutationContext,
 	dict *interpreter.DictionaryValue,
 	fromKey func(interpreter.Value) (K, bool),
 	fromVal func(interpreter.Value) (V, bool),
@@ -146,7 +147,7 @@ func DictionaryEntries[K, V any](
 	iterStatus := true
 	idx := 0
 	dict.Iterate(
-		inter,
+		context,
 		interpreter.EmptyLocationRange,
 		func(rawKey, rawValue interpreter.Value) (resume bool) {
 			key, ok := fromKey(rawKey)

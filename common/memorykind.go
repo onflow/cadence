@@ -18,7 +18,7 @@
 
 package common
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=MemoryKind -trimprefix=MemoryKind
+//go:generate stringer -type=MemoryKind -trimprefix=MemoryKind
 
 // MemoryKind
 type MemoryKind uint

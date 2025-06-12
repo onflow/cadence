@@ -56,6 +56,23 @@ func NewAccountCapabilitiesValue(
 			return storageCapabilitiesConstructor()
 		case sema.Account_CapabilitiesTypeAccountFieldName:
 			return accountCapabilitiesConstructor()
+		}
+
+		return nil
+	}
+
+	computeField := func(name string, _ MemberAccessibleContext, _ LocationRange) Value {
+		field := computeLazyStoredField(name)
+		if field != nil {
+			fields[name] = field
+		}
+		return field
+	}
+
+	methods := map[string]FunctionValue{}
+
+	computeLazyStoredMethod := func(name string) FunctionValue {
+		switch name {
 		case sema.Account_CapabilitiesTypeGetFunctionName:
 			return getFunction(capabilities)
 		case sema.Account_CapabilitiesTypeBorrowFunctionName:
@@ -71,19 +88,23 @@ func NewAccountCapabilitiesValue(
 		return nil
 	}
 
-	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
-		field := computeLazyStoredField(name)
-		if field != nil {
-			fields[name] = field
+	methodGetter := func(name string, _ MemberAccessibleContext) FunctionValue {
+		method, ok := methods[name]
+		if !ok {
+			method = computeLazyStoredMethod(name)
+			if method != nil {
+				methods[name] = method
+			}
 		}
-		return field
+
+		return method
 	}
 
 	var str string
-	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+	stringer := func(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
 		if str == "" {
-			common.UseMemory(interpreter, common.AccountCapabilitiesStringMemoryUsage)
-			addressStr := address.MeteredString(interpreter, seenReferences, locationRange)
+			common.UseMemory(context, common.AccountCapabilitiesStringMemoryUsage)
+			addressStr := address.MeteredString(context, seenReferences, locationRange)
 			str = fmt.Sprintf("Account.Capabilities(%s)", addressStr)
 		}
 		return str
@@ -96,9 +117,10 @@ func NewAccountCapabilitiesValue(
 		account_CapabilitiesFieldNames,
 		fields,
 		computeField,
+		methodGetter,
 		nil,
 		stringer,
-	)
+	).WithPrivateField(accountTypePrivateAddressFieldName, address)
 
 	return capabilities
 }

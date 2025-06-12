@@ -56,8 +56,8 @@ type Interface interface {
 	// - Do NOT implement this as a cache!
 	GetOrLoadProgram(
 		location Location,
-		load func() (*interpreter.Program, error),
-	) (*interpreter.Program, error)
+		load func() (*Program, error),
+	) (*Program, error)
 	// SetInterpreterSharedState sets the shared state of all interpreters.
 	SetInterpreterSharedState(state *interpreter.SharedState)
 	// GetInterpreterSharedState gets the shared state of all interpreters.
@@ -147,7 +147,7 @@ type Interface interface {
 	GenerateAccountID(address common.Address) (uint64, error)
 	RecoverProgram(program *ast.Program, location common.Location) ([]byte, error)
 	ValidateAccountCapabilitiesGet(
-		inter *interpreter.Interpreter,
+		context interpreter.AccountCapabilityGetValidationContext,
 		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		path interpreter.PathValue,
@@ -155,7 +155,7 @@ type Interface interface {
 		capabilityBorrowType *sema.ReferenceType,
 	) (bool, error)
 	ValidateAccountCapabilitiesPublish(
-		inter *interpreter.Interpreter,
+		context interpreter.AccountCapabilityPublishValidationContext,
 		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		path interpreter.PathValue,
@@ -170,7 +170,7 @@ type MeterInterface interface {
 	MeterMemory(usage common.MemoryUsage) error
 	// MeterComputation is a callback method for metering computation, it returns error
 	// when computation passes the limit (set by the environment)
-	MeterComputation(operationType common.ComputationKind, intensity uint) error
+	MeterComputation(usage common.ComputationUsage) error
 	// ComputationUsed returns the total computation used in the current runtime.
 	ComputationUsed() (uint64, error)
 	// MemoryUsed returns the total memory (estimate) used in the current runtime.

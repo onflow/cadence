@@ -26,7 +26,6 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/json"
-	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
@@ -45,7 +44,7 @@ func TestRuntimeContractUpdateWithDependencies(t *testing.T) {
 	}
 	var checkGetAndSetProgram, getProgramCalled bool
 
-	programs := map[Location]*interpreter.Program{}
+	programs := map[Location]*Program{}
 	clearPrograms := func() {
 		for l := range programs {
 			delete(programs, l)
@@ -74,11 +73,11 @@ func TestRuntimeContractUpdateWithDependencies(t *testing.T) {
 		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(nil, b)
 		},
-		OnGetAndSetProgram: func(
+		OnGetOrLoadProgram: func(
 			location Location,
-			load func() (*interpreter.Program, error),
+			load func() (*Program, error),
 		) (
-			program *interpreter.Program,
+			program *Program,
 			err error,
 		) {
 			_, isTransactionLocation := location.(common.TransactionLocation)
@@ -682,121 +681,6 @@ func TestRuntimeContractRedeploymentInSeparateTransactions(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestRuntimeLegacyContractUpdate(t *testing.T) {
-	t.Parallel()
-
-	runtime := NewTestInterpreterRuntimeWithConfig(Config{
-		AtreeValidationEnabled:       true,
-		LegacyContractUpgradeEnabled: true,
-	})
-
-	accountCodes := map[common.Location][]byte{}
-	signerAccount := common.MustBytesToAddress([]byte{0x1})
-	fooLocation := common.AddressLocation{
-		Address: signerAccount,
-		Name:    "Foo",
-	}
-	var checkGetAndSetProgram, getProgramCalled bool
-
-	programs := map[Location]*interpreter.Program{}
-	clearPrograms := func() {
-		for l := range programs {
-			delete(programs, l)
-		}
-	}
-
-	runtimeInterface := &TestRuntimeInterface{
-		OnGetCode: func(location Location) (bytes []byte, err error) {
-			return accountCodes[location], nil
-		},
-		Storage: NewTestLedger(nil, nil),
-		OnGetSigningAccounts: func() ([]Address, error) {
-			return []Address{signerAccount}, nil
-		},
-		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
-		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-			return accountCodes[location], nil
-		},
-		OnGetAccountContractNames: func(_ Address) ([]string, error) {
-			return []string{"Foo"}, nil
-		},
-		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
-			accountCodes[location] = code
-			return nil
-		},
-		OnEmitEvent: func(event cadence.Event) error {
-			return nil
-		},
-		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(nil, b)
-		},
-		OnGetAndSetProgram: func(
-			location Location,
-			load func() (*interpreter.Program, error),
-		) (
-			program *interpreter.Program,
-			err error,
-		) {
-			_, isTransactionLocation := location.(common.TransactionLocation)
-			if checkGetAndSetProgram && !isTransactionLocation {
-				require.Equal(t, location, fooLocation)
-				require.False(t, getProgramCalled)
-			}
-
-			var ok bool
-			program, ok = programs[location]
-			if ok {
-				return
-			}
-
-			program, err = load()
-
-			// NOTE: important: still set empty program,
-			// even if error occurred
-
-			programs[location] = program
-
-			return
-		},
-	}
-
-	nextTransactionLocation := NewTransactionLocationGenerator()
-
-	const fooContractV1 = `
-		pub contract Foo {
-            init() {}
-            pub fun hello() {}
-        }
-    `
-
-	const fooContractV2 = `
-        access(all) contract Foo {
-            init() {}
-            access(all) fun hello() {}
-        }
-    `
-
-	// Mock the deployment of the old 'Foo' contract
-	accountCodes[fooLocation] = []byte(fooContractV1)
-
-	// Programs are only valid during the transaction
-	clearPrograms()
-
-	// Update 'Foo' contract to Cadence 1.0 version
-
-	signerAccount = common.MustBytesToAddress([]byte{0x1})
-	err := runtime.ExecuteTransaction(
-		Script{
-			Source: UpdateTransaction("Foo", []byte(fooContractV2)),
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
-}
-
 func TestRuntimeContractUpdateWithOldProgramError(t *testing.T) {
 	t.Parallel()
 
@@ -810,7 +694,7 @@ func TestRuntimeContractUpdateWithOldProgramError(t *testing.T) {
 	}
 	var checkGetAndSetProgram, getProgramCalled bool
 
-	programs := map[Location]*interpreter.Program{}
+	programs := map[Location]*Program{}
 	clearPrograms := func() {
 		for l := range programs {
 			delete(programs, l)
@@ -842,11 +726,11 @@ func TestRuntimeContractUpdateWithOldProgramError(t *testing.T) {
 		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(nil, b)
 		},
-		OnGetAndSetProgram: func(
+		OnGetOrLoadProgram: func(
 			location Location,
-			load func() (*interpreter.Program, error),
+			load func() (*Program, error),
 		) (
-			program *interpreter.Program,
+			program *Program,
 			err error,
 		) {
 			_, isTransactionLocation := location.(common.TransactionLocation)

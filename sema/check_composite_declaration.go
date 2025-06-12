@@ -321,7 +321,7 @@ func availableDefaultFunctions(compositeType *CompositeType) map[string]struct{}
 	return defaultFunctions
 }
 
-// declareCompositeNestedTypes declares the types nested in a composite,
+// declareCompositeLikeNestedTypes declares the types nested in a composite,
 // and the constructors for them if `declareConstructors` is true
 // and `kind` is `ContainerKindComposite`.
 //
@@ -769,7 +769,7 @@ func (checker *Checker) declareAttachmentMembersAndValue(declaration *ast.Attach
 	checker.declareCompositeLikeMembersAndValue(declaration)
 }
 
-// declareCompositeMembersAndValue declares the members and the value
+// declareCompositeLikeMembersAndValue declares the members and the value
 // (e.g. constructor function for non-contract types; instance for contracts)
 // for the given composite declaration, and recursively for all nested declarations.
 //
@@ -1060,21 +1060,23 @@ func (checker *Checker) declareEnumConstructor(
 		constructorOrigins = make(map[string]*Origin, len(enumCases))
 	}
 
-	constructorType := EnumConstructorType(compositeType)
+	enumLookupFunctionType := EnumLookupFunctionType(compositeType)
+
+	checker.Elaboration.SetEnumLookupFunctionType(compositeType, enumLookupFunctionType)
 
 	memberCaseTypeAnnotation := NewTypeAnnotation(compositeType)
 
 	for _, enumCase := range enumCases {
 		caseName := enumCase.Identifier.Identifier
 
-		if constructorType.Members.Contains(caseName) {
+		if enumLookupFunctionType.Members.Contains(caseName) {
 			continue
 		}
 
-		constructorType.Members.Set(
+		enumLookupFunctionType.Members.Set(
 			caseName,
 			&Member{
-				ContainerType: constructorType,
+				ContainerType: enumLookupFunctionType,
 				// enum cases are always public
 				Access:          PrimitiveAccess(ast.AccessAll),
 				Identifier:      enumCase.Identifier,
@@ -1082,7 +1084,8 @@ func (checker *Checker) declareEnumConstructor(
 				DeclarationKind: common.DeclarationKindField,
 				VariableKind:    ast.VariableKindConstant,
 				DocString:       enumCase.DocString,
-			})
+			},
+		)
 
 		if checker.PositionInfo != nil && constructorOrigins != nil {
 			constructorOrigins[caseName] =
@@ -1095,12 +1098,12 @@ func (checker *Checker) declareEnumConstructor(
 	}
 
 	if checker.PositionInfo != nil {
-		checker.PositionInfo.recordMemberOrigins(constructorType, constructorOrigins)
+		checker.PositionInfo.recordMemberOrigins(enumLookupFunctionType, constructorOrigins)
 	}
 
 	_, err := checker.valueActivations.declare(variableDeclaration{
 		identifier: declaration.Identifier.Identifier,
-		ty:         constructorType,
+		ty:         enumLookupFunctionType,
 		docString:  declaration.DocString,
 		// NOTE: enums are always public
 		access:         PrimitiveAccess(ast.AccessAll),
@@ -1112,7 +1115,7 @@ func (checker *Checker) declareEnumConstructor(
 	checker.report(err)
 }
 
-func EnumConstructorType(compositeType *CompositeType) *FunctionType {
+func EnumLookupFunctionType(compositeType *CompositeType) *FunctionType {
 	return &FunctionType{
 		Purity:        FunctionPurityView,
 		IsConstructor: true,
@@ -1127,7 +1130,8 @@ func EnumConstructorType(compositeType *CompositeType) *FunctionType {
 				Type: compositeType,
 			},
 		),
-		Members: &StringMemberOrderedMap{},
+		Members:          &StringMemberOrderedMap{},
+		TypeFunctionType: compositeType,
 	}
 }
 
@@ -1791,11 +1795,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 
 		fieldAccess := checker.accessFromAstAccess(field.Access)
 
-		if entitlementMapAccess, ok := fieldAccess.(*EntitlementMapAccess); ok {
-			checker.entitlementMappingInScope = entitlementMapAccess.Type
-		}
 		fieldTypeAnnotation := checker.ConvertTypeAnnotation(field.TypeAnnotation)
-		checker.entitlementMappingInScope = nil
 		checker.checkTypeAnnotation(fieldTypeAnnotation, field.TypeAnnotation)
 
 		const declarationKind = common.DeclarationKindField
@@ -1869,7 +1869,6 @@ func (checker *Checker) defaultMembersAndOrigins(
 		functionType := checker.functionType(
 			function.IsNative(),
 			function.Purity,
-			functionAccess,
 			function.TypeParameterList,
 			function.ParameterList,
 			function.ReturnTypeAnnotation,
@@ -2338,6 +2337,8 @@ func (checker *Checker) checkSpecialFunction(
 		parameters,
 		VoidTypeAnnotation,
 	)
+
+	checker.Elaboration.SetFunctionDeclarationFunctionType(specialFunction.FunctionDeclaration, functionType)
 
 	checker.checkFunction(
 		specialFunction.FunctionDeclaration.ParameterList,

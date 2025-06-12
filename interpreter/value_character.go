@@ -77,13 +77,13 @@ var _ ComparableValue = CharacterValue{}
 var _ HashableValue = CharacterValue{}
 var _ MemberAccessibleValue = CharacterValue{}
 
-func (CharacterValue) isValue() {}
+func (CharacterValue) IsValue() {}
 
-func (v CharacterValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
-	visitor.VisitCharacterValue(interpreter, v)
+func (v CharacterValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitCharacterValue(context, v)
 }
 
-func (CharacterValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
+func (CharacterValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -91,7 +91,7 @@ func (CharacterValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeCharacter)
 }
 
-func (CharacterValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
+func (CharacterValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
 	return sema.CharacterType.Importable
 }
 
@@ -103,9 +103,9 @@ func (v CharacterValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v CharacterValue) MeteredString(interpreter *Interpreter, _ SeenReferences, _ LocationRange) string {
+func (v CharacterValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
 	l := format.FormattedStringLength(v.Str)
-	common.UseMemory(interpreter, common.NewRawStringMemoryUsage(l))
+	common.UseMemory(context, common.NewRawStringMemoryUsage(l))
 	return v.String()
 }
 
@@ -165,7 +165,7 @@ func (v CharacterValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch
 }
 
 func (v CharacterValue) ConformsToStaticType(
-	_ *Interpreter,
+	_ ValueStaticTypeConformanceContext,
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
@@ -180,12 +180,12 @@ func (CharacterValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (CharacterValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (CharacterValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	return false
 }
 
 func (v CharacterValue) Transfer(
-	interpreter *Interpreter,
+	context ValueTransferContext,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
@@ -194,16 +194,16 @@ func (v CharacterValue) Transfer(
 	_ bool,
 ) Value {
 	if remove {
-		interpreter.RemoveReferencedSlab(storable)
+		RemoveReferencedSlab(context, storable)
 	}
 	return v
 }
 
-func (v CharacterValue) Clone(_ *Interpreter) Value {
+func (v CharacterValue) Clone(_ ValueCloneContext) Value {
 	return v
 }
 
-func (CharacterValue) DeepRemove(_ *Interpreter, _ bool) {
+func (CharacterValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
@@ -219,41 +219,59 @@ func (CharacterValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (v CharacterValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v CharacterValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	switch name {
+	case sema.CharacterTypeUtf8FieldName:
+		common.UseMemory(context, common.NewBytesMemoryUsage(len(v.Str)))
+		return ByteSliceToByteArrayValue(context, []byte(v.Str))
+	}
+
+	return context.GetMethod(v, name, locationRange)
+}
+
+func (v CharacterValue) GetMethod(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	name string,
+) FunctionValue {
 	switch name {
 	case sema.ToStringFunctionName:
 		return NewBoundHostFunctionValue(
-			interpreter,
+			context,
 			v,
 			sema.ToStringFunctionType,
 			func(v CharacterValue, invocation Invocation) Value {
-				interpreter := invocation.Interpreter
+				invocationContext := invocation.InvocationContext
 
-				memoryUsage := common.NewStringMemoryUsage(len(v.Str))
-
-				return NewStringValue(
-					interpreter,
-					memoryUsage,
-					func() string {
-						return v.Str
-					},
-				)
+				return CharacterValueToString(invocationContext, v)
 			},
 		)
-
-	case sema.CharacterTypeUtf8FieldName:
-		common.UseMemory(interpreter, common.NewBytesMemoryUsage(len(v.Str)))
-		return ByteSliceToByteArrayValue(interpreter, []byte(v.Str))
 	}
+
 	return nil
 }
 
-func (CharacterValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func CharacterValueToString(
+	memoryGauge common.MemoryGauge,
+	v CharacterValue,
+) *StringValue {
+	memoryUsage := common.NewStringMemoryUsage(len(v.Str))
+
+	return NewStringValue(
+		memoryGauge,
+		memoryUsage,
+		func() string {
+			return v.Str
+		},
+	)
+}
+
+func (CharacterValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
 	// Characters have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (CharacterValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (CharacterValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
 	// Characters have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

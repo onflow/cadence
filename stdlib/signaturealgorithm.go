@@ -44,21 +44,24 @@ func NewSignatureAlgorithmCase(rawValue interpreter.UInt8Value) interpreter.Memb
 		nil,
 		nil,
 		nil,
+		nil,
 	)
 }
 
-var signatureAlgorithmConstructorValue, SignatureAlgorithmCaseValues = cryptoAlgorithmEnumValueAndCaseValues(
+var signatureAlgorithmLookupType = cryptoAlgorithmEnumLookupType(
 	sema.SignatureAlgorithmType,
+	sema.SignatureAlgorithms,
+)
+
+var signatureAlgorithmConstructorValue, SignatureAlgorithmCaseValues = cryptoAlgorithmEnumValueAndCaseValues(
+	signatureAlgorithmLookupType,
 	sema.SignatureAlgorithms,
 	NewSignatureAlgorithmCase,
 )
 
 var SignatureAlgorithmConstructor = StandardLibraryValue{
-	Name: sema.SignatureAlgorithmTypeName,
-	Type: cryptoAlgorithmEnumConstructorType(
-		sema.SignatureAlgorithmType,
-		sema.SignatureAlgorithms,
-	),
+	Name:  sema.SignatureAlgorithmTypeName,
+	Type:  signatureAlgorithmLookupType,
 	Value: signatureAlgorithmConstructorValue,
 	Kind:  common.DeclarationKindEnum,
 }

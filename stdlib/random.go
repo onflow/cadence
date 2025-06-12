@@ -98,12 +98,9 @@ type RandomGenerator interface {
 }
 
 func getRandomBytes(buffer []byte, generator RandomGenerator) {
-	var err error
-	errors.WrapPanic(func() {
-		err = generator.ReadRandom(buffer)
-	})
+	err := generator.ReadRandom(buffer)
 	if err != nil {
-		panic(interpreter.WrappedExternalError(err))
+		panic(err)
 	}
 }
 
@@ -115,7 +112,7 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 		revertibleRandomFunctionType,
 		revertibleRandomFunctionDocString,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.Interpreter
+			inter := invocation.InvocationContext
 
 			returnIntegerType := invocation.TypeParameterTypes.Oldest().Value
 

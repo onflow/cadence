@@ -68,10 +68,10 @@ type AssignmentStatementTypes struct {
 }
 
 type InvocationExpressionTypes struct {
-	ReturnType         Type
-	TypeArguments      *TypeParameterTypeOrderedMap
-	ArgumentTypes      []Type
-	TypeParameterTypes []Type
+	ReturnType     Type
+	TypeArguments  *TypeParameterTypeOrderedMap
+	ArgumentTypes  []Type
+	ParameterTypes []Type
 }
 
 type ArrayExpressionTypes struct {
@@ -171,6 +171,9 @@ type Elaboration struct {
 	expressionTypes                     map[ast.Expression]ExpressionTypes
 	TransactionTypes                    []*TransactionType
 	semanticAccesses                    map[ast.Access]Access
+	resultVariableTypes                 map[ast.Element]Type
+	moveExpressionTypes                 map[*ast.UnaryExpression]Type
+	enumLookupFunctionTypes             map[*CompositeType]*FunctionType
 	isChecking                          bool
 	// IsRecovered is true if the program was recovered (see runtime.Interface.RecoverProgram)
 	IsRecovered bool
@@ -870,6 +873,10 @@ func (e *Elaboration) SetImportDeclarationsResolvedLocations(
 	e.importDeclarationsResolvedLocations[declaration] = locations
 }
 
+func (e *Elaboration) AllImportDeclarationsResolvedLocations() map[*ast.ImportDeclaration][]ResolvedLocation {
+	return e.importDeclarationsResolvedLocations
+}
+
 func (e *Elaboration) ReferenceExpressionBorrowType(expression *ast.ReferenceExpression) Type {
 	if e.referenceExpressionBorrowTypes == nil {
 		return nil
@@ -1073,4 +1080,47 @@ func (e *Elaboration) ForStatementType(statement *ast.ForStatement) (types ForSt
 		return
 	}
 	return e.forStatementTypes[statement]
+}
+
+func (e *Elaboration) SetResultVariableType(declaration ast.Element, typ Type) {
+	if e.resultVariableTypes == nil {
+		e.resultVariableTypes = map[ast.Element]Type{}
+	}
+	e.resultVariableTypes[declaration] = typ
+}
+
+func (e *Elaboration) ResultVariableType(declaration ast.Element) (typ Type, exist bool) {
+	if e.resultVariableTypes == nil {
+		return
+	}
+	typ, exist = e.resultVariableTypes[declaration]
+	return
+}
+
+func (e *Elaboration) SetMoveExpressionTypes(expression *ast.UnaryExpression, targetType Type) {
+	if e.moveExpressionTypes == nil {
+		e.moveExpressionTypes = map[*ast.UnaryExpression]Type{}
+	}
+	e.moveExpressionTypes[expression] = targetType
+}
+
+func (e *Elaboration) MoveExpressionTypes(expression *ast.UnaryExpression) Type {
+	if e.moveExpressionTypes == nil {
+		return nil
+	}
+	return e.moveExpressionTypes[expression]
+}
+
+func (e *Elaboration) SetEnumLookupFunctionType(enumType *CompositeType, functionType *FunctionType) {
+	if e.enumLookupFunctionTypes == nil {
+		e.enumLookupFunctionTypes = map[*CompositeType]*FunctionType{}
+	}
+	e.enumLookupFunctionTypes[enumType] = functionType
+}
+
+func (e *Elaboration) EnumLookupFunctionType(enumType *CompositeType) (functionType *FunctionType) {
+	if e.enumLookupFunctionTypes == nil {
+		return
+	}
+	return e.enumLookupFunctionTypes[enumType]
 }
