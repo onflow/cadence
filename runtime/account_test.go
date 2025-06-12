@@ -108,13 +108,16 @@ func TestRuntimeReturnPublicAccount(t *testing.T) {
 		Storage:                      NewTestLedger(nil, nil),
 	}
 
+	nextScriptLocation := NewScriptLocationGenerator()
+
 	_, err := rt.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -141,13 +144,16 @@ func TestRuntimeReturnAuthAccount(t *testing.T) {
 		Storage:                      NewTestLedger(nil, nil),
 	}
 
+	nextScriptLocation := NewScriptLocationGenerator()
+
 	_, err := rt.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -2575,7 +2581,7 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 
 		script := []byte(`
             access(all) fun main(): UInt64 {
-                let acc = getAccount(0x02)
+                let acc = getAuthAccount<&Account>(0x02)
                 return acc.storage.used
             }
         `)
@@ -2586,13 +2592,16 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 			},
 		}
 
+		nextScriptLocation := NewScriptLocationGenerator()
+
 		result, err := rt.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{0x1},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -2613,13 +2622,16 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 
 		runtimeInterface := &TestRuntimeInterface{}
 
+		nextScriptLocation := NewScriptLocationGenerator()
+
 		_, err := rt.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{0x1},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -2641,13 +2653,16 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 
 		runtimeInterface := &TestRuntimeInterface{}
 
+		nextScriptLocation := NewScriptLocationGenerator()
+
 		_, err := rt.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{0x1},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -2669,13 +2684,16 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 
 		runtimeInterface := &TestRuntimeInterface{}
 
+		nextScriptLocation := NewScriptLocationGenerator()
+
 		_, err := rt.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{0x1},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		errs := RequireCheckerErrors(t, err, 1)
@@ -2703,13 +2721,16 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 			},
 		}
 
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
 		err := rt.ExecuteTransaction(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.TransactionLocation{0x1},
+				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 

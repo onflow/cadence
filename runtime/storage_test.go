@@ -1845,6 +1845,8 @@ func TestRuntimeStorageUsed(t *testing.T) {
 		},
 	}
 
+	nextScriptLocation := NewScriptLocationGenerator()
+
 	// NOTE: do NOT change the contents of this script,
 	// it matters how the array is constructed,
 	// ESPECIALLY the value of the addresses and the number of elements!
@@ -1890,7 +1892,7 @@ func TestRuntimeStorageUsed(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Location:  nextScriptLocation(),
 		},
 	)
 	require.NoError(t, err)
@@ -4280,6 +4282,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Storage: NewTestLedger(nil, nil),
 		}
 
+		nextScriptLocation := NewScriptLocationGenerator()
+
 		const script = `
           access(all)
 		  fun main(): String? {
@@ -4306,7 +4310,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4328,6 +4333,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 				return nil
 			},
 		}
+
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		const script = `
           access(all)
@@ -4356,7 +4363,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4593,6 +4601,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 
 		rt, runtimeInterface := newRuntime()
 
+		nextScriptLocation := NewScriptLocationGenerator()
+
 		const script = `
           access(all)
           struct S {
@@ -4640,7 +4650,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4657,6 +4668,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 		t.Parallel()
 
 		rt, runtimeInterface := newRuntime()
+
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		const script = `
           access(all)
@@ -4703,7 +4716,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4720,6 +4734,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 		t.Parallel()
 
 		rt, runtimeInterface := newRuntime()
+
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		const script = `
           access(all)
@@ -4768,7 +4784,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4785,6 +4802,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 		t.Parallel()
 
 		rt, runtimeInterface := newRuntime()
+
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		const script = `
           access(all)
@@ -4825,7 +4844,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4881,6 +4901,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4912,6 +4933,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4927,6 +4949,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 		t.Parallel()
 
 		rt, runtimeInterface := newRuntime()
+
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		const script = `
           access(all)
@@ -4978,7 +5002,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4995,6 +5020,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 		t.Parallel()
 
 		rt, runtimeInterface := newRuntime()
+
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		const script = `
           access(all)
@@ -5044,7 +5071,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		RequireError(t, err)
@@ -5058,6 +5086,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 		t.Parallel()
 
 		rt, runtimeInterface := newRuntime()
+
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		const script = `
           access(all)
@@ -5106,7 +5136,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -5157,6 +5188,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 
 			rt, runtimeInterface := newRuntime()
 
+			nextScriptLocation := NewScriptLocationGenerator()
+
 			script := fmt.Sprintf(
 				`
                   access(all)
@@ -5186,7 +5219,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  common.ScriptLocation{},
+					Location:  nextScriptLocation(),
+					UseVM:     *compile,
 				},
 			)
 
@@ -5204,6 +5238,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 			t.Parallel()
 
 			rt, runtimeInterface := newRuntime()
+
+			nextScriptLocation := NewScriptLocationGenerator()
 
 			script := fmt.Sprintf(
 				`
@@ -5239,7 +5275,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  common.ScriptLocation{},
+					Location:  nextScriptLocation(),
+					UseVM:     *compile,
 				},
 			)
 
@@ -5258,6 +5295,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 
 			rt, runtimeInterface := newRuntime()
 
+			nextScriptLocation := NewScriptLocationGenerator()
+
 			script := fmt.Sprintf(
 				`
                   access(all)
@@ -5294,7 +5333,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  common.ScriptLocation{},
+					Location:  nextScriptLocation(),
+					UseVM:     *compile,
 				},
 			)
 
@@ -5313,6 +5353,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 
 			rt, runtimeInterface := newRuntime()
 
+			nextScriptLocation := NewScriptLocationGenerator()
+
 			script := fmt.Sprintf(
 				`
                   access(all)
@@ -5352,7 +5394,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  common.ScriptLocation{},
+					Location:  nextScriptLocation(),
+					UseVM:     *compile,
 				},
 			)
 
@@ -5370,6 +5413,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 			t.Parallel()
 
 			rt, runtimeInterface := newRuntime()
+
+			nextScriptLocation := NewScriptLocationGenerator()
 
 			script := fmt.Sprintf(
 				`
@@ -5400,7 +5445,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  common.ScriptLocation{},
+					Location:  nextScriptLocation(),
+					UseVM:     *compile,
 				},
 			)
 			if continueAfterMutation {
@@ -5417,6 +5463,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 			t.Parallel()
 
 			rt, runtimeInterface := newRuntime()
+
+			nextScriptLocation := NewScriptLocationGenerator()
 
 			script := fmt.Sprintf(
 				`
@@ -5449,7 +5497,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  common.ScriptLocation{},
+					Location:  nextScriptLocation(),
+					UseVM:     *compile,
 				},
 			)
 			if continueAfterMutation {
@@ -5466,6 +5515,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 			t.Parallel()
 
 			rt, runtimeInterface := newRuntime()
+
+			nextScriptLocation := NewScriptLocationGenerator()
 
 			script := fmt.Sprintf(
 				`
@@ -5498,7 +5549,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  common.ScriptLocation{},
+					Location:  nextScriptLocation(),
+					UseVM:     *compile,
 				},
 			)
 			if continueAfterMutation {
@@ -5515,6 +5567,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 			t.Parallel()
 
 			rt, runtimeInterface := newRuntime()
+
+			nextScriptLocation := NewScriptLocationGenerator()
 
 			// Deploy contract
 
@@ -5574,7 +5628,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  common.ScriptLocation{},
+					Location:  nextScriptLocation(),
+					UseVM:     *compile,
 				},
 			)
 			if continueAfterMutation {
@@ -5595,6 +5650,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 		t.Parallel()
 
 		rt, runtimeInterface := newRuntime()
+
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		const script = `
           access(all)
@@ -5627,7 +5684,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -5637,6 +5695,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 		t.Parallel()
 
 		rt, runtimeInterface := newRuntime()
+
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		const script = `
           access(all)
@@ -5658,7 +5718,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -5668,6 +5729,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 		t.Parallel()
 
 		rt, runtimeInterface := newRuntime()
+
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		const script = `
           access(all)
@@ -5694,7 +5757,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -6329,7 +6393,7 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 	//  - account register
 	//  - account storage map
 	//  - zero or more non-inlined domain storage map
-	// migration: no migraiton for new account.
+	// migration: no migration for new account.
 	createDomainTestCases := []struct {
 		name                  string
 		newDomains            []common.StorageDomain
@@ -8450,7 +8514,7 @@ func createAndWriteAccountStorageMap(
 		require.NotNil(t, domainStorageMap)
 		require.Equal(t, uint64(0), domainStorageMap.Count())
 
-		// Write to to domain storage map
+		// Write to domain storage map
 		accountValues[domain] = writeToDomainStorageMap(inter, domainStorageMap, count, random)
 	}
 

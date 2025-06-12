@@ -858,6 +858,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  transactionLocation(),
+					UseVM:     *compile,
 				},
 			)
 
@@ -7300,6 +7301,7 @@ func TestRuntimeAccountsInDictionary(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -8305,6 +8307,7 @@ func TestRuntimeTypeMismatchErrorMessage(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)
