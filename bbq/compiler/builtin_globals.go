@@ -47,6 +47,7 @@ var stdlibFunctions = []string{
 }
 
 var scriptStdlibFunctions = []string{
+	commons.GetAuthAccountFunctionName,
 }
 
 type builtinFunction struct {

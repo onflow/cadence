@@ -177,6 +177,32 @@ func init() {
 		),
 	)
 
+	RegisterBuiltinScriptFunction(
+		NewNativeFunctionValue(
+			commons.GetAuthAccountFunctionName,
+			stdlib.GetAuthAccountFunctionType,
+			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+				accountAddress, ok := arguments[0].(interpreter.AddressValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				referenceType, ok := typeArguments[0].(*interpreter.ReferenceStaticType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return stdlib.NewAccountReferenceValue(
+					context,
+					context.AccountHandler,
+					accountAddress,
+					referenceType.Authorization,
+					EmptyLocationRange,
+				)
+			},
+		),
+	)
+
 	// Type constructors
 
 	RegisterBuiltinFunction(

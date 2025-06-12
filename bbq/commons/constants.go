@@ -30,6 +30,7 @@ const (
 	AssertFunctionName              = "assert"
 	PanicFunctionName               = "panic"
 	GetAccountFunctionName          = "getAccount"
+	GetAuthAccountFunctionName      = "getAuthAccount"
 
 	GeneratedNameQualifier              = "$"
 	ResourceDestroyedEventsFunctionName = GeneratedNameQualifier + ast.ResourceDestructionDefaultEventName
