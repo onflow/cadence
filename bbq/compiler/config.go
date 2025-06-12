@@ -19,6 +19,7 @@
 package compiler
 
 import (
+	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
 )
@@ -28,5 +29,5 @@ type Config struct {
 	ImportHandler          commons.ImportHandler
 	LocationHandler        commons.LocationHandler
 	ElaborationResolver    func(location common.Location) (*DesugaredElaboration, error)
-	BuiltinGlobalsProvider func() map[string]*Global
+	BuiltinGlobalsProvider func() *activations.Activation[GlobalImport]
 }

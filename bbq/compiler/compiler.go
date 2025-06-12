@@ -22,6 +22,7 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
@@ -44,16 +45,16 @@ type Compiler[E, T any] struct {
 
 	compositeTypeStack *Stack[sema.CompositeKindedType]
 
-	functions           []*function[E]
-	globalVariables     []*globalVariable[E]
-	constants           []*Constant
-	Globals             map[string]*Global
-	importedGlobals     map[string]*Global
-	usedImportedGlobals []*Global
-	controlFlows        []controlFlow
-	currentControlFlow  *controlFlow
-	returns             []returns
-	currentReturn       *returns
+	functions          []*function[E]
+	globalVariables    []*globalVariable[E]
+	constants          []*Constant
+	Globals            map[string]*Global
+	globalImports      *activations.Activation[GlobalImport]
+	importedGlobals    []*Global
+	controlFlows       []controlFlow
+	currentControlFlow *controlFlow
+	returns            []returns
+	currentReturn      *returns
 
 	types         []sema.Type
 	compiledTypes []T
@@ -133,6 +134,11 @@ func NewInstructionCompilerWithConfig(
 	)
 }
 
+type GlobalImport struct {
+	Location common.Location
+	Name     string
+}
+
 func newCompiler[E, T any](
 	program *interpreter.Program,
 	location common.Location,
@@ -141,12 +147,13 @@ func newCompiler[E, T any](
 	typeGen TypeGen[T],
 ) *Compiler[E, T] {
 
-	var globals map[string]*Global
+	var globalImports *activations.Activation[GlobalImport]
 	if config.BuiltinGlobalsProvider != nil {
-		globals = config.BuiltinGlobalsProvider()
+		globalImports = config.BuiltinGlobalsProvider()
 	} else {
-		globals = NativeFunctions()
+		globalImports = NativeFunctions()
 	}
+	globalImports = activations.NewActivation[GlobalImport](config.MemoryGauge, globalImports)
 
 	common.UseMemory(config.MemoryGauge, common.CompilerMemoryUsage)
 
@@ -156,7 +163,7 @@ func newCompiler[E, T any](
 		Config:               config,
 		location:             location,
 		Globals:              make(map[string]*Global),
-		importedGlobals:      globals,
+		globalImports:        globalImports,
 		typesInPool:          make(map[sema.TypeID]uint16),
 		constantsInPool:      make(map[constantsCacheKey]*Constant),
 		compositeTypeStack: &Stack[sema.CompositeKindedType]{
@@ -186,9 +193,16 @@ func (c *Compiler[_, _]) findGlobal(name string) *Global {
 		}
 	}
 
-	importedGlobal, ok := c.importedGlobals[name]
-	if !ok {
+	importedGlobal := c.globalImports.Find(name)
+	if importedGlobal == (GlobalImport{}) {
 		panic(errors.NewUnexpectedError("cannot find global declaration '%s'", name))
+	}
+	if importedGlobal.Name != name {
+		panic(errors.NewUnexpectedError(
+			"imported global %q does not match the expected name %q",
+			importedGlobal.Name,
+			name,
+		))
 	}
 
 	// Add the 'importedGlobal' to 'globals' when they are used for the first time.
@@ -201,8 +215,13 @@ func (c *Compiler[_, _]) findGlobal(name string) *Global {
 	if count >= math.MaxUint16 {
 		panic(errors.NewUnexpectedError("invalid global declaration '%s'", name))
 	}
-	importedGlobal.Index = uint16(count)
-	c.Globals[name] = importedGlobal
+	global = NewGlobal(
+		c.Config.MemoryGauge,
+		name,
+		importedGlobal.Location,
+		uint16(count),
+	)
+	c.Globals[name] = global
 
 	// Also add it to the usedImportedGlobals.
 	// This is later used to export the imports, which is eventually used by the linker.
@@ -212,9 +231,9 @@ func (c *Compiler[_, _]) findGlobal(name string) *Global {
 	// Earlier we already reserved the indexes for the globals defined in the current program.
 	// (`reserveGlobals`)
 
-	c.usedImportedGlobals = append(c.usedImportedGlobals, importedGlobal)
+	c.importedGlobals = append(c.importedGlobals, global)
 
-	return importedGlobal
+	return global
 }
 
 func (c *Compiler[_, _]) addGlobal(name string) *Global {
@@ -233,20 +252,18 @@ func (c *Compiler[_, _]) addGlobal(name string) *Global {
 	return global
 }
 
-func (c *Compiler[_, _]) addImportedGlobal(location common.Location, name string) *Global {
-	global, exists := c.importedGlobals[name]
-	if !exists {
-		global = NewGlobal(
-			c.Config.MemoryGauge,
-			name,
-			location,
-			// Index is not set here. It is set only if this imported global is used.
-			0,
-		)
-		c.importedGlobals[name] = global
+func (c *Compiler[_, _]) addImportedGlobal(location common.Location, name string) {
+	existing := c.globalImports.Find(name)
+	if existing != (GlobalImport{}) {
+		return
 	}
-
-	return global
+	c.globalImports.Set(
+		name,
+		GlobalImport{
+			Location: location,
+			Name:     name,
+		},
+	)
 }
 
 func (c *Compiler[E, T]) addFunction(
@@ -782,10 +799,10 @@ func (c *Compiler[_, T]) exportTypes() []T {
 func (c *Compiler[_, _]) exportImports() []bbq.Import {
 	var exportedImports []bbq.Import
 
-	count := len(c.usedImportedGlobals)
+	count := len(c.importedGlobals)
 	if count > 0 {
 		exportedImports = make([]bbq.Import, 0, count)
-		for _, importedGlobal := range c.usedImportedGlobals {
+		for _, importedGlobal := range c.importedGlobals {
 			bbqImport := bbq.Import{
 				Location: importedGlobal.Location,
 				Name:     importedGlobal.Name,

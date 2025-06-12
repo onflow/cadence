@@ -19,27 +19,17 @@
 package compiler
 
 import (
+	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 
 	"github.com/onflow/cadence/bbq/commons"
 )
 
-var nativeFunctions []*Global
+var nativeFunctions *activations.Activation[GlobalImport]
 
-func NativeFunctions() map[string]*Global {
-	funcs := make(map[string]*Global, len(nativeFunctions))
-	for _, nativeFunction := range nativeFunctions {
-
-		// Always return a copy.
-		// Because the indexes are modified my the imported program.
-		funcs[nativeFunction.Name] = &Global{
-			Name:     nativeFunction.Name,
-			Location: nativeFunction.Location,
-			Index:    nativeFunction.Index,
-		}
-	}
-	return funcs
+func NativeFunctions() *activations.Activation[GlobalImport] {
+	return nativeFunctions
 }
 
 var stdlibFunctions = []string{
@@ -121,8 +111,16 @@ func registerBoundFunctions(typ sema.Type) {
 }
 
 func addNativeFunction(name string) {
-	global := &Global{
-		Name: name,
+	if nativeFunctions == nil {
+		nativeFunctions = activations.NewActivation[GlobalImport](nil, nil)
 	}
-	nativeFunctions = append(nativeFunctions, global)
+
+	nativeFunctions.Set(
+		name,
+		GlobalImport{
+			// This is a native function, so the location is nil.
+			Location: nil,
+			Name:     name,
+		},
+	)
 }

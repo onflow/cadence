@@ -127,6 +127,36 @@ func BenchmarkImperativeFibNewVM(b *testing.B) {
 	}
 }
 
+func BenchmarkImperativeFibNewCompilerNewVM(b *testing.B) {
+
+	checker, err := ParseAndCheck(b,
+		imperativeFib+`
+
+        fun main(): Bool {
+            return fib(14) == 377
+        }
+    `)
+	require.NoError(b, err)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		vmConfig := &vm.Config{}
+		vmInstance := vm.NewVM(common.ScriptLocation{}, program, vmConfig)
+
+		_, err := vmInstance.InvokeExternally("main")
+		require.NoError(b, err)
+	}
+}
+
 func BenchmarkNewStruct(b *testing.B) {
 
 	scriptLocation := runtime_utils.NewScriptLocationGenerator()
