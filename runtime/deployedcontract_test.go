@@ -96,16 +96,16 @@ func TestRuntimeDeployedContracts(t *testing.T) {
 	}
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
-	newContext := func() Context {
-		return Context{Interface: runtimeInterface, Location: nextTransactionLocation()}
-	}
 
 	// deploy the contract
 	err := rt.ExecuteTransaction(
 		Script{
 			Source: DeploymentTransaction("Test", []byte(contractCode)),
 		},
-		newContext(),
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
 	)
 	require.NoError(t, err)
 
@@ -114,7 +114,10 @@ func TestRuntimeDeployedContracts(t *testing.T) {
 		Script{
 			Source: []byte(script),
 		},
-		newContext(),
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
 	)
 
 	require.NoError(t, err)

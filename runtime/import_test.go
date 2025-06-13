@@ -73,13 +73,16 @@ func TestRuntimeCyclicImport(t *testing.T) {
 		},
 	}
 
+	nextScriptLocation := NewScriptLocationGenerator()
+
 	_, err := runtime.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)

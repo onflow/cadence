@@ -3555,7 +3555,9 @@ func TestRuntimeStorageLoadedDestructionConcreteType(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-		})
+			UseVM:     *compile,
+		},
+	)
 	require.NoError(t, err)
 
 	require.Len(t, events, 2)
@@ -4065,6 +4067,7 @@ func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -4179,6 +4182,7 @@ func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)
@@ -4836,6 +4840,11 @@ func TestRuntimeRandom(t *testing.T) {
 			// example "modulo: UInt8(77)"
 			moduloArgument = fmt.Sprintf("modulo: %s(%s)", ty.String(), moduloArgument)
 		}
+
+		runtimeInterface := &TestRuntimeInterface{
+			OnReadRandom: randomGenerator,
+		}
+
 		return runtime.ExecuteScript(
 			Script{
 				Source: []byte(
@@ -4845,10 +4854,8 @@ func TestRuntimeRandom(t *testing.T) {
 					)),
 			},
 			Context{
-				Interface: &TestRuntimeInterface{
-					OnReadRandom: randomGenerator,
-				},
-				Location: nextScriptLocation(),
+				Interface: runtimeInterface,
+				Location:  nextScriptLocation(),
 			},
 		)
 	}
@@ -7333,6 +7340,7 @@ func TestRuntimeAccountsInDictionary(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -7371,6 +7379,7 @@ func TestRuntimeAccountsInDictionary(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -8020,12 +8029,15 @@ func BenchmarkRuntimeScriptNoop(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, err := runtime.ExecuteScript(script, Context{
-			Interface:   runtimeInterface,
-			Location:    nextScriptLocation(),
-			Environment: environment,
-			UseVM:       *compile,
-		})
+		_, err := runtime.ExecuteScript(
+			script,
+			Context{
+				Interface:   runtimeInterface,
+				Location:    nextScriptLocation(),
+				Environment: environment,
+				UseVM:       *compile,
+			},
+		)
 		require.NoError(b, err)
 	}
 }
@@ -11454,7 +11466,7 @@ func TestRuntimeForbidPublicEntitlementGet(t *testing.T) {
 	}
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
-	nexScriptLocation := NewScriptLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -11474,7 +11486,7 @@ func TestRuntimeForbidPublicEntitlementGet(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  nexScriptLocation(),
+			Location:  nextScriptLocation(),
 		},
 	)
 	require.NoError(t, err)
@@ -11856,6 +11868,7 @@ func TestResultRedeclared(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -11904,6 +11917,7 @@ func TestResultRedeclared(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
