@@ -34,8 +34,8 @@ type AttachmentDeclaration struct {
 	BaseType     *NominalType
 	Conformances []*NominalType
 	Members      *Members
-	DocString    string
 	Range
+	Comments
 }
 
 var _ Element = &AttachmentDeclaration{}
@@ -50,8 +50,8 @@ func NewAttachmentDeclaration(
 	baseType *NominalType,
 	conformances []*NominalType,
 	members *Members,
-	docString string,
 	declarationRange Range,
+	comments Comments,
 ) *AttachmentDeclaration {
 	common.UseMemory(memoryGauge, common.AttachmentDeclarationMemoryUsage)
 
@@ -61,8 +61,8 @@ func NewAttachmentDeclaration(
 		BaseType:     baseType,
 		Conformances: conformances,
 		Members:      members,
-		DocString:    docString,
 		Range:        declarationRange,
+		Comments:     comments,
 	}
 }
 
@@ -99,7 +99,7 @@ func (d *AttachmentDeclaration) DeclarationMembers() *Members {
 }
 
 func (d *AttachmentDeclaration) DeclarationDocString() string {
-	return d.DocString
+	return d.Comments.LeadingDocString()
 }
 
 func (*AttachmentDeclaration) Kind() common.CompositeKind {
@@ -199,9 +199,11 @@ func (d *AttachmentDeclaration) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Type string
 		*Alias
+		DocString string
 	}{
-		Type:  "AttachmentDeclaration",
-		Alias: (*Alias)(d),
+		Type:      "AttachmentDeclaration",
+		Alias:     (*Alias)(d),
+		DocString: d.DeclarationDocString(),
 	})
 }
 
@@ -296,6 +298,7 @@ type RemoveStatement struct {
 	Attachment *NominalType
 	Value      Expression
 	StartPos   Position `json:"-"`
+	Comments
 }
 
 var _ Element = &RemoveStatement{}
@@ -306,6 +309,7 @@ func NewRemoveStatement(
 	attachment *NominalType,
 	value Expression,
 	startPos Position,
+	comments Comments,
 ) *RemoveStatement {
 	common.UseMemory(gauge, common.RemoveStatementMemoryUsage)
 
@@ -313,6 +317,7 @@ func NewRemoveStatement(
 		Attachment: attachment,
 		Value:      value,
 		StartPos:   startPos,
+		Comments:   comments,
 	}
 }
 

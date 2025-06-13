@@ -34,7 +34,6 @@ import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/parser/lexer"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
@@ -2148,6 +2147,8 @@ func TestParseBlockComment(t *testing.T) {
 
 		t.Parallel()
 
+		// TODO(preserve-comments): Extracting comments from operator tokens is a bit difficult,
+		// 	so let's handle this later as it seems a pretty edge case location to add comments.
 		result, errs := testParseExpression(" 1/*test  foo*/+/* bar  */ 2  ")
 		require.Empty(t, errs)
 
@@ -2162,6 +2163,11 @@ func TestParseBlockComment(t *testing.T) {
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
 					},
+					Comments: ast.Comments{
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("/*test  foo*/")),
+						},
+					},
 				},
 				Right: &ast.IntegerExpression{
 					PositiveLiteral: []byte("2"),
@@ -2170,6 +2176,11 @@ func TestParseBlockComment(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 27, Offset: 27},
 						EndPos:   ast.Position{Line: 1, Column: 27, Offset: 27},
+					},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("/* bar  */")),
+						},
 					},
 				},
 			},
@@ -2227,71 +2238,6 @@ func TestParseBlockComment(t *testing.T) {
 		)
 	})
 
-	t.Run("invalid content", func(t *testing.T) {
-
-		t.Parallel()
-
-		// The lexer should never produce such an invalid token stream in the first place
-
-		tokens := &testTokenStream{
-			tokens: []lexer.Token{
-				{
-					Type: lexer.TokenBlockCommentStart,
-					Range: ast.Range{
-						StartPos: ast.Position{
-							Line:   1,
-							Offset: 0,
-							Column: 0,
-						},
-						EndPos: ast.Position{
-							Line:   1,
-							Offset: 1,
-							Column: 1,
-						},
-					},
-				},
-				{
-					Type: lexer.TokenIdentifier,
-					Range: ast.Range{
-						StartPos: ast.Position{
-							Line:   1,
-							Offset: 2,
-							Column: 2,
-						},
-						EndPos: ast.Position{
-							Line:   1,
-							Offset: 4,
-							Column: 4,
-						},
-					},
-				},
-				{Type: lexer.TokenEOF},
-			},
-			input: []byte(`/*foo`),
-		}
-
-		_, errs := ParseTokenStream(
-			nil,
-			tokens,
-			func(p *parser) (ast.Expression, error) {
-				return parseExpression(p, lowestBindingPower)
-			},
-			Config{},
-		)
-		AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "unexpected token identifier in block comment",
-					Pos: ast.Position{
-						Line:   1,
-						Offset: 2,
-						Column: 2,
-					},
-				},
-			},
-			errs,
-		)
-	})
 }
 
 func TestParseMulInfixExpression(t *testing.T) {
@@ -3079,6 +3025,12 @@ func TestParseLineComment(t *testing.T) {
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 2, Column: 1, Offset: 28},
 					EndPos:   ast.Position{Line: 2, Column: 1, Offset: 28},
+				},
+				Comments: ast.Comments{
+					Leading: []*ast.Comment{
+						ast.NewComment(nil, []byte("//// // this is a comment")),
+					},
+					Trailing: nil,
 				},
 			},
 			Right: &ast.IntegerExpression{
