@@ -20,6 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -40,23 +41,93 @@ func init() {
 				return sema.CapabilityTypeBorrowFunctionType(borrowType)
 			},
 			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
-				capabilityValue := args[receiverIndex].(*interpreter.IDCapabilityValue)
-				capabilityID := capabilityValue.ID
+				capabilityValue := args[receiverIndex]
+
+				var idCapabilityValue *interpreter.IDCapabilityValue
+
+				switch capabilityValue := capabilityValue.(type) {
+				case *interpreter.PathCapabilityValue: //nolint:staticcheck
+					// Borrowing of path values is never allowed
+					return interpreter.Nil
+
+				case *interpreter.IDCapabilityValue:
+					idCapabilityValue = capabilityValue
+
+				default:
+					panic(errors.NewUnreachableError())
+				}
+
+				capabilityID := idCapabilityValue.ID
 
 				if capabilityID == interpreter.InvalidCapabilityID {
 					return interpreter.Nil
 				}
 
-				capabilityBorrowType := interpreter.MustConvertStaticToSemaType(capabilityValue.BorrowType, context).(*sema.ReferenceType)
+				capabilityBorrowType := interpreter.MustConvertStaticToSemaType(idCapabilityValue.BorrowType, context).(*sema.ReferenceType)
 
 				var typeParameter sema.Type
 				if len(typeArguments) > 0 {
 					typeParameter = interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
 				}
 
-				address := capabilityValue.Address()
+				address := idCapabilityValue.Address()
 
 				return interpreter.CapabilityBorrow(
+					context,
+					typeParameter,
+					address,
+					capabilityID,
+					capabilityBorrowType,
+					EmptyLocationRange,
+				)
+			},
+		),
+	)
+
+	// Capability.check
+	RegisterBuiltinTypeBoundFunction(
+		typeName,
+		NewNativeFunctionValueWithDerivedType(
+			sema.CapabilityTypeCheckFunctionName,
+			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+				capability := receiver.(*interpreter.IDCapabilityValue)
+				borrowType := interpreter.MustConvertStaticToSemaType(capability.BorrowType, context).(*sema.ReferenceType)
+				return sema.CapabilityTypeCheckFunctionType(borrowType)
+			},
+			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
+
+				capabilityValue := args[receiverIndex]
+
+				var idCapabilityValue *interpreter.IDCapabilityValue
+
+				switch capabilityValue := capabilityValue.(type) {
+				case *interpreter.PathCapabilityValue: //nolint:staticcheck
+					// Borrowing of path values is never allowed
+					return interpreter.FalseValue
+
+				case *interpreter.IDCapabilityValue:
+					idCapabilityValue = capabilityValue
+
+				default:
+					panic(errors.NewUnreachableError())
+				}
+
+				capabilityID := idCapabilityValue.ID
+
+				if capabilityID == interpreter.InvalidCapabilityID {
+					return interpreter.FalseValue
+				}
+
+				capabilityBorrowType := interpreter.MustConvertStaticToSemaType(idCapabilityValue.BorrowType, context).(*sema.ReferenceType)
+
+				var typeParameter sema.Type
+				if len(typeArguments) > 0 {
+					typeParameter = interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
+				}
+
+				address := idCapabilityValue.Address()
+
+				return interpreter.CapabilityCheck(
 					context,
 					typeParameter,
 					address,

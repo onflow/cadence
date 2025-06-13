@@ -3886,6 +3886,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4263,6 +4264,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					UseVM:     *compile,
 				},
 			)
 			require.NoError(t, err)

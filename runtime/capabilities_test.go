@@ -662,6 +662,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 				nil,
 				Context{
 					Interface: runtimeInterface,
+					UseVM:     *compile,
 				},
 			)
 		}
@@ -802,7 +803,9 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 				name,
 				nil,
 				nil,
-				Context{Interface: runtimeInterface},
+				Context{
+					Interface: runtimeInterface,
+				},
 			)
 		}
 

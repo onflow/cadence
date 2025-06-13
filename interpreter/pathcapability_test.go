@@ -65,7 +65,7 @@ func TestInterpretPathCapability(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, value)
 
-		return parseCheckAndInterpretWithOptions(
+		return parseCheckAndPrepareWithOptions(
 			t,
 			code,
 			ParseCheckAndInterpretOptions{
