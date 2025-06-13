@@ -67,4 +67,43 @@ func init() {
 			},
 		),
 	)
+
+	// Capability.check
+	RegisterBuiltinTypeBoundFunction(
+		typeName,
+		NewNativeFunctionValueWithDerivedType(
+			sema.CapabilityTypeCheckFunctionName,
+			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+				capability := receiver.(*interpreter.IDCapabilityValue)
+				borrowType := interpreter.MustConvertStaticToSemaType(capability.BorrowType, context).(*sema.ReferenceType)
+				return sema.CapabilityTypeCheckFunctionType(borrowType)
+			},
+			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
+				capabilityValue := args[receiverIndex].(*interpreter.IDCapabilityValue)
+				capabilityID := capabilityValue.ID
+
+				if capabilityID == interpreter.InvalidCapabilityID {
+					return interpreter.FalseValue
+				}
+
+				capabilityBorrowType := interpreter.MustConvertStaticToSemaType(capabilityValue.BorrowType, context).(*sema.ReferenceType)
+
+				var typeParameter sema.Type
+				if len(typeArguments) > 0 {
+					typeParameter = interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
+				}
+
+				address := capabilityValue.Address()
+
+				return interpreter.CapabilityCheck(
+					context,
+					typeParameter,
+					address,
+					capabilityID,
+					capabilityBorrowType,
+					EmptyLocationRange,
+				)
+			},
+		),
+	)
 }

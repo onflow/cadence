@@ -5844,14 +5844,14 @@ func capabilityBorrowFunction(
 			locationRange := invocation.LocationRange
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
 
-			var typeParameter sema.Type
+			var typeArgument sema.Type
 			if typeParameterPair != nil {
-				typeParameter = typeParameterPair.Value
+				typeArgument = typeParameterPair.Value
 			}
 
 			return CapabilityBorrow(
 				invocationContext,
-				typeParameter,
+				typeArgument,
 				addressValue,
 				capabilityID,
 				capabilityBorrowType,
@@ -5863,7 +5863,7 @@ func capabilityBorrowFunction(
 
 func CapabilityBorrow(
 	invocationContext InvocationContext,
-	typeParameter sema.Type,
+	typeArgument sema.Type,
 	addressValue AddressValue,
 	capabilityID UInt64Value,
 	capabilityBorrowType *sema.ReferenceType,
@@ -5874,9 +5874,9 @@ func CapabilityBorrow(
 	}
 
 	var wantedBorrowType *sema.ReferenceType
-	if typeParameter != nil {
+	if typeArgument != nil {
 		var ok bool
-		wantedBorrowType, ok = typeParameter.(*sema.ReferenceType)
+		wantedBorrowType, ok = typeArgument.(*sema.ReferenceType)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
@@ -5912,38 +5912,58 @@ func capabilityCheckFunction(
 		sema.CapabilityTypeCheckFunctionType(capabilityBorrowType),
 		func(_ CapabilityValue, invocation Invocation) Value {
 
-			if capabilityID == InvalidCapabilityID {
-				return FalseValue
-			}
-
 			invocationContext := invocation.InvocationContext
 			locationRange := invocation.LocationRange
-
-			// NOTE: if a type argument is provided for the function,
-			// use it *instead* of the type of the value (if any)
-
-			var wantedBorrowType *sema.ReferenceType
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+
+			var typeArgument sema.Type
 			if typeParameterPair != nil {
-				ty := typeParameterPair.Value
-				var ok bool
-				wantedBorrowType, ok = ty.(*sema.ReferenceType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
+				typeArgument = typeParameterPair.Value
 			}
 
-			capabilityCheckHandler := invocationContext.GetCapabilityCheckHandler()
-
-			return capabilityCheckHandler(
+			return CapabilityCheck(
 				invocationContext,
-				locationRange,
+				typeArgument,
 				addressValue,
 				capabilityID,
-				wantedBorrowType,
 				capabilityBorrowType,
+				locationRange,
 			)
 		},
+	)
+}
+
+func CapabilityCheck(
+	invocationContext InvocationContext,
+	typeArgument sema.Type,
+	addressValue AddressValue,
+	capabilityID UInt64Value,
+	capabilityBorrowType *sema.ReferenceType,
+	locationRange LocationRange,
+) Value {
+
+	if capabilityID == InvalidCapabilityID {
+		return FalseValue
+	}
+
+	var wantedBorrowType *sema.ReferenceType
+	if typeArgument != nil {
+		var ok bool
+		wantedBorrowType, ok = typeArgument.(*sema.ReferenceType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+	}
+
+	checkHandler := invocationContext.GetCapabilityCheckHandler()
+
+	return checkHandler(
+		invocationContext,
+		locationRange,
+		addressValue,
+		capabilityID,
+		wantedBorrowType,
+		capabilityBorrowType,
 	)
 }
 
