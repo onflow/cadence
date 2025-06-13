@@ -187,10 +187,10 @@ const getAuthAccountFunctionDocString = `
 Returns the account for the given address. Only available in scripts
 `
 
-// getAuthAccountFunctionType represents the type
+// GetAuthAccountFunctionType represents the type
 //
 //	fun getAuthAccount<T: &Account>(_ address: Address): T
-var getAuthAccountFunctionType = func() *sema.FunctionType {
+var GetAuthAccountFunctionType = func() *sema.FunctionType {
 
 	typeParam := &sema.TypeParameter{
 		Name:      "T",
@@ -218,7 +218,7 @@ var getAuthAccountFunctionType = func() *sema.FunctionType {
 func NewGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
 	return NewStandardLibraryStaticFunction(
 		getAuthAccountFunctionName,
-		getAuthAccountFunctionType,
+		GetAuthAccountFunctionType,
 		getAuthAccountFunctionDocString,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			accountAddress, ok := invocation.Arguments[0].(interpreter.AddressValue)

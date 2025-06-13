@@ -32,7 +32,7 @@ func init() {
 
 	// Methods on `String` value.
 
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValue(
 			sema.StringTypeConcatFunctionName,
@@ -50,7 +50,7 @@ func init() {
 		),
 	)
 
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValue(
 			sema.StringTypeSliceFunctionName,
@@ -64,7 +64,7 @@ func init() {
 		),
 	)
 
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValue(
 			sema.StringTypeContainsFunctionName,
@@ -77,7 +77,7 @@ func init() {
 		),
 	)
 
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValue(
 			sema.StringTypeIndexFunctionName,
@@ -90,7 +90,7 @@ func init() {
 		),
 	)
 
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValue(
 			sema.StringTypeCountFunctionName,
@@ -103,7 +103,7 @@ func init() {
 		),
 	)
 
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValue(
 			sema.StringTypeDecodeHexFunctionName,
@@ -115,7 +115,7 @@ func init() {
 		),
 	)
 
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValue(
 			sema.StringTypeToLowerFunctionName,
@@ -127,7 +127,7 @@ func init() {
 		),
 	)
 
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValue(
 			sema.StringTypeSplitFunctionName,
@@ -144,7 +144,7 @@ func init() {
 		),
 	)
 
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValue(
 			sema.StringTypeReplaceAllFunctionName,
@@ -165,7 +165,7 @@ func init() {
 
 	// Methods on `String` type.
 
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValue(
 			sema.StringTypeEncodeHexFunctionName,
@@ -181,7 +181,7 @@ func init() {
 		),
 	)
 
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValue(
 			sema.StringTypeFromUtf8FunctionName,
@@ -197,7 +197,7 @@ func init() {
 		),
 	)
 
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValue(
 			sema.StringTypeFromCharactersFunctionName,
@@ -213,7 +213,7 @@ func init() {
 		),
 	)
 
-	RegisterTypeBoundFunction(
+	RegisterBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValue(
 			sema.StringTypeJoinFunctionName,

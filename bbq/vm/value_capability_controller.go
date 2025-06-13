@@ -24,7 +24,7 @@ package vm
 //	typeName := sema.StorageCapabilityControllerType.QualifiedName
 //
 //	// Capability.borrow
-//	RegisterTypeBoundFunction(
+//	RegisterBuiltinTypeBoundFunction(
 //		typeName,
 //		sema.StorageCapabilityControllerTypeSetTagFunctionName,
 //		NativeFunctionValue{

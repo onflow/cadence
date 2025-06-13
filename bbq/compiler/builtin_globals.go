@@ -26,10 +26,17 @@ import (
 	"github.com/onflow/cadence/bbq/commons"
 )
 
-var nativeFunctions *activations.Activation[GlobalImport]
+var (
+	defaultBuiltinGlobals       = activations.NewActivation[GlobalImport](nil, nil)
+	defaultBuiltinScriptGlobals = activations.NewActivation[GlobalImport](nil, defaultBuiltinGlobals)
+)
 
-func NativeFunctions() *activations.Activation[GlobalImport] {
-	return nativeFunctions
+func DefaultBuiltinGlobals() *activations.Activation[GlobalImport] {
+	return defaultBuiltinGlobals
+}
+
+func DefaultBuiltinScriptGlobals() *activations.Activation[GlobalImport] {
+	return defaultBuiltinScriptGlobals
 }
 
 var stdlibFunctions = []string{
@@ -37,6 +44,10 @@ var stdlibFunctions = []string{
 	commons.AssertFunctionName,
 	commons.PanicFunctionName,
 	commons.GetAccountFunctionName,
+}
+
+var scriptStdlibFunctions = []string{
+	commons.GetAuthAccountFunctionName,
 }
 
 type builtinFunction struct {
@@ -73,33 +84,38 @@ func init() {
 
 	for _, constructor := range valueConstructorFunctions {
 		// Register the constructor. e.g: `String()`
-		addNativeFunction(constructor.name)
+		registerDefaultBuiltinGlobal(constructor.name)
 
 		// Register the members of the constructor/type. e.g: `String.join()`
 		registerBoundFunctions(constructor.typ)
 	}
 
 	for _, funcName := range stdlibFunctions {
-		addNativeFunction(funcName)
+		registerDefaultBuiltinGlobal(funcName)
 	}
 
 	// Type constructors
 	for _, typeConstructor := range sema.RuntimeTypeConstructors {
-		addNativeFunction(typeConstructor.Name)
+		registerDefaultBuiltinGlobal(typeConstructor.Name)
 	}
 
 	// Value conversion functions
 	for _, declaration := range interpreter.ConverterDeclarations {
-		addNativeFunction(declaration.Name)
+		registerDefaultBuiltinGlobal(declaration.Name)
 		declarationVariable := sema.BaseValueActivation.Find(declaration.Name)
 		registerBoundFunctions(declarationVariable.Type)
+	}
+
+	// Script globals
+	for _, funcName := range scriptStdlibFunctions {
+		registerDefaultBuiltinScriptGlobal(funcName)
 	}
 }
 
 func registerBoundFunctions(typ sema.Type) {
 	for name := range typ.GetMembers() { //nolint:maprange
 		funcName := commons.TypeQualifiedName(typ, name)
-		addNativeFunction(funcName)
+		registerDefaultBuiltinGlobal(funcName)
 	}
 
 	compositeType, ok := typ.(*sema.CompositeType)
@@ -110,12 +126,8 @@ func registerBoundFunctions(typ sema.Type) {
 	}
 }
 
-func addNativeFunction(name string) {
-	if nativeFunctions == nil {
-		nativeFunctions = activations.NewActivation[GlobalImport](nil, nil)
-	}
-
-	nativeFunctions.Set(
+func registerGlobalImport(name string, activation *activations.Activation[GlobalImport]) {
+	activation.Set(
 		name,
 		GlobalImport{
 			// This is a native function, so the location is nil.
@@ -123,4 +135,12 @@ func addNativeFunction(name string) {
 			Name:     name,
 		},
 	)
+}
+
+func registerDefaultBuiltinGlobal(name string) {
+	registerGlobalImport(name, defaultBuiltinGlobals)
+}
+
+func registerDefaultBuiltinScriptGlobal(name string) {
+	registerGlobalImport(name, defaultBuiltinScriptGlobals)
 }

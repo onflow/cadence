@@ -33,6 +33,7 @@ import (
 	. "github.com/onflow/cadence/bbq/test_utils"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
@@ -9013,4 +9014,120 @@ func TestImplicitBoxing(t *testing.T) {
 		),
 		result,
 	)
+}
+
+func TestGetAuthAccount(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("available in script", func(t *testing.T) {
+
+		t.Parallel()
+
+		code := `
+          fun main(): &Account {
+              return getAuthAccount<auth(Storage) &Account>(0x1)
+          }
+        `
+
+		location := common.ScriptLocation{0x1}
+
+		activation := sema.NewVariableActivation(sema.BaseValueActivation)
+		activation.DeclareValue(
+			stdlib.NewStandardLibraryStaticFunction(
+				commons.GetAuthAccountFunctionName,
+				stdlib.GetAuthAccountFunctionType,
+				"",
+				nil,
+			),
+		)
+
+		compilerConfig := &compiler.Config{}
+		compilerConfig.BuiltinGlobalsProvider = compiler.DefaultBuiltinScriptGlobals
+
+		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+		vmConfig.BuiltinGlobalsProvider = vm.DefaultBuiltinScriptGlobals
+
+		result, err := CompileAndInvokeWithOptions(
+			t,
+			code,
+			"main",
+			CompilerAndVMOptions{
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					CompilerConfig: compilerConfig,
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						Location: location,
+						Config: &sema.Config{
+							LocationHandler: SingleIdentifierLocationResolver(t),
+							BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+								return activation
+							},
+						},
+					},
+				},
+				VMConfig: vmConfig,
+			},
+		)
+		require.NoError(t, err)
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, result)
+	})
+
+	t.Run("not available by default", func(t *testing.T) {
+
+		t.Parallel()
+
+		code := `
+          fun main(): &Account {
+              return getAuthAccount<auth(Storage) &Account>(0x1)
+          }
+        `
+
+		location := common.ScriptLocation{0x1}
+
+		activation := sema.NewVariableActivation(sema.BaseValueActivation)
+		activation.DeclareValue(
+			stdlib.NewStandardLibraryStaticFunction(
+				commons.GetAuthAccountFunctionName,
+				stdlib.GetAuthAccountFunctionType,
+				"",
+				nil,
+			),
+		)
+
+		compilerConfig := &compiler.Config{}
+		// NOTE: default globals do not include `getAuthAccount`
+
+		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+		// NOTE: default globals do not include `getAuthAccount`
+
+		var recovered any
+		defer func() {
+			recovered = recover()
+			require.IsType(t, errors.UnexpectedError{}, recovered)
+			unexpectedError := recovered.(errors.UnexpectedError)
+			require.ErrorContains(t, unexpectedError, "cannot find global declaration 'getAuthAccount'")
+		}()
+
+		_, err := CompileAndInvokeWithOptions(
+			t,
+			code,
+			"main",
+			CompilerAndVMOptions{
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					CompilerConfig: compilerConfig,
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						Location: location,
+						Config: &sema.Config{
+							LocationHandler: SingleIdentifierLocationResolver(t),
+							BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+								return activation
+							},
+						},
+					},
+				},
+				VMConfig: vmConfig,
+			},
+		)
+		RequireError(t, err)
+	})
 }
