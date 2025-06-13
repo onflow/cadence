@@ -154,7 +154,7 @@ func (e *vmEnvironment) Configure(
 	runtimeInterface Interface,
 	codesAndPrograms CodesAndPrograms,
 	storage *Storage,
-	// TODO:
+// TODO:
 	coverageReport *CoverageReport,
 ) {
 	e.Interface = runtimeInterface
@@ -292,10 +292,13 @@ func (e *vmEnvironment) loadProgram(location common.Location) (*Program, error) 
 		return nil, err
 	}
 
-	// If the program is not compiled yet, compile it.
+	// If there is a program, but it is not compiled yet, compile it.
 	// Directly update the program (pointer), which will also update the program "cache" kept by the embedder.
-	if program.compiledProgram == nil {
-		program.compiledProgram = e.compileProgram(program.interpreterProgram, location)
+	if program != nil && program.compiledProgram == nil {
+		program.compiledProgram = e.compileProgram(
+			program.interpreterProgram,
+			location,
+		)
 	}
 
 	return program, nil
