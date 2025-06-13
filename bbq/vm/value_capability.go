@@ -46,7 +46,7 @@ func init() {
 				var idCapabilityValue *interpreter.IDCapabilityValue
 
 				switch capabilityValue := capabilityValue.(type) {
-				case *interpreter.PathCapabilityValue:
+				case *interpreter.PathCapabilityValue: //nolint:staticcheck
 					// Borrowing of path values is never allowed
 					return interpreter.Nil
 
@@ -57,7 +57,6 @@ func init() {
 					panic(errors.NewUnreachableError())
 				}
 
-				idCapabilityValue = capabilityValue.(*interpreter.IDCapabilityValue)
 				capabilityID := idCapabilityValue.ID
 
 				if capabilityID == interpreter.InvalidCapabilityID {
@@ -102,7 +101,7 @@ func init() {
 				var idCapabilityValue *interpreter.IDCapabilityValue
 
 				switch capabilityValue := capabilityValue.(type) {
-				case *interpreter.PathCapabilityValue:
+				case *interpreter.PathCapabilityValue: //nolint:staticcheck
 					// Borrowing of path values is never allowed
 					return interpreter.FalseValue
 

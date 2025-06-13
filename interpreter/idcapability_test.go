@@ -35,16 +35,17 @@ import (
 
 type noopReferenceTracker struct{}
 
-func (_ noopReferenceTracker) ClearReferencedResourceKindedValues(_ atree.ValueID) {
-	return
+func (noopReferenceTracker) ClearReferencedResourceKindedValues(_ atree.ValueID) {
+	// NO-OP
 }
 
-func (_ noopReferenceTracker) ReferencedResourceKindedValues(_ atree.ValueID) map[*interpreter.EphemeralReferenceValue]struct{} {
+func (noopReferenceTracker) ReferencedResourceKindedValues(_ atree.ValueID) map[*interpreter.EphemeralReferenceValue]struct{} {
+	// NO-OP
 	return nil
 }
 
-func (_ noopReferenceTracker) MaybeTrackReferencedResourceKindedValue(_ *interpreter.EphemeralReferenceValue) {
-	return
+func (noopReferenceTracker) MaybeTrackReferencedResourceKindedValue(_ *interpreter.EphemeralReferenceValue) {
+	// NO-OP
 }
 
 var _ interpreter.ReferenceTracker = noopReferenceTracker{}

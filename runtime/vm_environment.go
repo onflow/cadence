@@ -154,7 +154,6 @@ func (e *vmEnvironment) Configure(
 	runtimeInterface Interface,
 	codesAndPrograms CodesAndPrograms,
 	storage *Storage,
-// TODO:
 	coverageReport *CoverageReport,
 ) {
 	e.Interface = runtimeInterface
@@ -165,6 +164,9 @@ func (e *vmEnvironment) Configure(
 		runtimeInterface,
 		codesAndPrograms,
 	)
+
+	// TODO: add support for coverage report
+	_ = coverageReport
 
 	configureVersionedFeatures(runtimeInterface)
 }
