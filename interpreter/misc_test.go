@@ -12515,7 +12515,7 @@ func TestInterpretStringTemplates(t *testing.T) {
 	t.Run("int", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			let x = 123
 			let y = "x = \(x)"
 		`)
@@ -12537,7 +12537,7 @@ func TestInterpretStringTemplates(t *testing.T) {
 	t.Run("multiple", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			let x = 123.321
 			let y = "abc"
 			let z = "\(y) and \(x)"
@@ -12554,7 +12554,7 @@ func TestInterpretStringTemplates(t *testing.T) {
 	t.Run("nested template", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			let x = "{}"
 			let y = "[\(x)]"
 			let z = "(\(y))"
@@ -12571,7 +12571,7 @@ func TestInterpretStringTemplates(t *testing.T) {
 	t.Run("boolean", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			let x = false
 			let y = "\(x)"
 		`)
@@ -12587,7 +12587,7 @@ func TestInterpretStringTemplates(t *testing.T) {
 	t.Run("func extracted", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			let add = fun(): Int {
 				return 2+2
 			}
@@ -12606,7 +12606,7 @@ func TestInterpretStringTemplates(t *testing.T) {
 	t.Run("path expr", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			let a = /public/foo
 			let x = "file at \(a)"
 		`)
@@ -12622,7 +12622,7 @@ func TestInterpretStringTemplates(t *testing.T) {
 	t.Run("consecutive", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			let c = "C"
 			let a: Character = "A"
 			let n = "N"
@@ -12640,7 +12640,7 @@ func TestInterpretStringTemplates(t *testing.T) {
 	t.Run("func", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			let add = fun(): Int {
 				return 2+2
 			}
@@ -12658,7 +12658,7 @@ func TestInterpretStringTemplates(t *testing.T) {
 	t.Run("ternary", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			let z = false
 			let x: String = "\(z ? "foo" : "bar" )"
 		`)
@@ -12674,7 +12674,7 @@ func TestInterpretStringTemplates(t *testing.T) {
 	t.Run("nested", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 			let x: String = "\(2*(4-2) + 1 == 5)"
 		`)
 

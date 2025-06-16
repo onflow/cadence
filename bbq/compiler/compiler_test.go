@@ -7949,10 +7949,10 @@ func TestCompileStringTemplate(t *testing.T) {
 			// let str = "2+2=\(2+2)"
 			opcode.InstructionStatement{},
 			opcode.InstructionGetConstant{Constant: 0x0},
-			opcode.InstructionGetConstant{Constant: 0x0},
-			opcode.InstructionAdd{},
 			opcode.InstructionGetConstant{Constant: 0x1},
 			opcode.InstructionGetConstant{Constant: 0x2},
+			opcode.InstructionGetConstant{Constant: 0x2},
+			opcode.InstructionAdd{},
 			opcode.InstructionStringTemplate{ValueSize: 0x2, ExprSize: 0x1},
 			opcode.InstructionTransferAndConvert{Type: 0x1},
 			opcode.InstructionSetLocal{Local: 0x0},
@@ -7966,16 +7966,17 @@ func TestCompileStringTemplate(t *testing.T) {
 	assert.Equal(t,
 		[]constant.Constant{
 			{
-				Data: []byte{0x2},
-				Kind: constant.Int,
+				Data: []byte("2+2="),
+				Kind: constant.String,
 			},
+
 			{
 				Data: []byte(""),
 				Kind: constant.String,
 			},
 			{
-				Data: []byte("2+2="),
-				Kind: constant.String,
+				Data: []byte{0x2},
+				Kind: constant.Int,
 			},
 		},
 		program.Constants,

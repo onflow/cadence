@@ -2665,8 +2665,6 @@ func (c *Compiler[_, _]) VisitStringTemplateExpression(expression *ast.StringTem
 	valueArrSize := len(expression.Values)
 	exprArrSize := len(expression.Expressions)
 
-	// iterate in reverse expressions -> values
-	// so that we can pop off stack in order
 	for _, value := range expression.Values {
 		c.emitStringConst(value)
 	}
