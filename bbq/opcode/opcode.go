@@ -171,7 +171,7 @@ const (
 	EmitEvent
 	Loop
 	Statement
-	StringInterpolation
+	StringTemplate
 
 	// NOTE: not an actual opcode, must be last item
 	OpcodeMax

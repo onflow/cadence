@@ -2465,54 +2465,54 @@ func (i InstructionStatement) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
-// InstructionStringInterpolation
+// InstructionStringTemplate
 //
-// Represents a string interpolation with an array of strings and an array of values, pops both off the stack.
-type InstructionStringInterpolation struct {
-	StringSize uint16
-	ValueSize  uint16
+// Represents a string template with an array of values (strings) and an array of expression, pops both off the stack.
+type InstructionStringTemplate struct {
+	ValueSize uint16
+	ExprSize  uint16
 }
 
-var _ Instruction = InstructionStringInterpolation{}
+var _ Instruction = InstructionStringTemplate{}
 
-func (InstructionStringInterpolation) Opcode() Opcode {
-	return StringInterpolation
+func (InstructionStringTemplate) Opcode() Opcode {
+	return StringTemplate
 }
 
-func (i InstructionStringInterpolation) String() string {
+func (i InstructionStringTemplate) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
 	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionStringInterpolation) OperandsString(sb *strings.Builder, colorize bool) {
-	sb.WriteByte(' ')
-	printfArgument(sb, "stringSize", i.StringSize, colorize)
+func (i InstructionStringTemplate) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "valueSize", i.ValueSize, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "exprSize", i.ExprSize, colorize)
 }
 
-func (i InstructionStringInterpolation) ResolvedOperandsString(sb *strings.Builder,
+func (i InstructionStringTemplate) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfArgument(sb, "stringSize", i.StringSize, colorize)
-	sb.WriteByte(' ')
 	printfArgument(sb, "valueSize", i.ValueSize, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "exprSize", i.ExprSize, colorize)
 }
 
-func (i InstructionStringInterpolation) Encode(code *[]byte) {
+func (i InstructionStringTemplate) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.StringSize)
 	emitUint16(code, i.ValueSize)
+	emitUint16(code, i.ExprSize)
 }
 
-func DecodeStringInterpolation(ip *uint16, code []byte) (i InstructionStringInterpolation) {
-	i.StringSize = decodeUint16(ip, code)
+func DecodeStringTemplate(ip *uint16, code []byte) (i InstructionStringTemplate) {
 	i.ValueSize = decodeUint16(ip, code)
+	i.ExprSize = decodeUint16(ip, code)
 	return i
 }
 
@@ -2652,8 +2652,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionLoop{}
 	case Statement:
 		return InstructionStatement{}
-	case StringInterpolation:
-		return DecodeStringInterpolation(ip, code)
+	case StringTemplate:
+		return DecodeStringTemplate(ip, code)
 	}
 
 	panic(errors.NewUnreachableError())

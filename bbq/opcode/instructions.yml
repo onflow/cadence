@@ -887,22 +887,22 @@
   description:
     Indicates the start of a statement.
 
-- name: "stringInterpolation"
+- name: "stringTemplate"
   description:
-    Represents a string interpolation with an array of strings and an array of values, pops both off the stack.
+    Represents a string template with an array of values (strings) and an array of expression, pops both off the stack.
   operands:
-    - name: "stringSize"
-      type: "size"
     - name: "valueSize"
+      type: "size"
+    - name: "exprSize"
       type: "size"
   valueEffects:
     pop:
       - name: "strings"
         type: "string"
-        count: "stringSize"
+        count: "valueSize"
       - name: "values"
         type: "value"
-        count: "valueSize"
+        count: "exprSize"
     push:
       - name: "string"
         type: "string"

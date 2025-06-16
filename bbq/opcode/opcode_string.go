@@ -75,7 +75,7 @@ func _() {
 	_ = x[EmitEvent-111]
 	_ = x[Loop-112]
 	_ = x[Statement-113]
-	_ = x[StringInterpolation-114]
+	_ = x[StringTemplate-114]
 	_ = x[OpcodeMax-115]
 }
 
@@ -89,7 +89,7 @@ const (
 	_Opcode_name_6 = "GetConstantGetLocalSetLocalGetUpvalueSetUpvalueGetGlobalSetGlobalGetFieldRemoveFieldSetFieldSetIndexGetIndexRemoveIndex"
 	_Opcode_name_7 = "InvokeInvokeMethodStaticInvokeMethodDynamic"
 	_Opcode_name_8 = "DropDup"
-	_Opcode_name_9 = "IteratorIteratorHasNextIteratorNextIteratorEndEmitEventLoopStatementStringInterpolationOpcodeMax"
+	_Opcode_name_9 = "IteratorIteratorHasNextIteratorNextIteratorEndEmitEventLoopStatementStringTemplateOpcodeMax"
 )
 
 var (
@@ -102,7 +102,7 @@ var (
 	_Opcode_index_6 = [...]uint8{0, 11, 19, 27, 37, 47, 56, 65, 73, 84, 92, 100, 108, 119}
 	_Opcode_index_7 = [...]uint8{0, 6, 24, 43}
 	_Opcode_index_8 = [...]uint8{0, 4, 7}
-	_Opcode_index_9 = [...]uint8{0, 8, 23, 35, 46, 55, 59, 68, 87, 96}
+	_Opcode_index_9 = [...]uint8{0, 8, 23, 35, 46, 55, 59, 68, 82, 91}
 )
 
 func (i Opcode) String() string {
