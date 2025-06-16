@@ -122,7 +122,7 @@ func (executor *transactionExecutor) preprocess() (err error) {
 	}
 
 	switch environment.(type) {
-	case *interpreterEnvironment:
+	case *InterpreterEnvironment:
 		break
 	default:
 		return errors.NewUnexpectedError("transactions can only be executed with the interpreter")
@@ -224,7 +224,7 @@ func (executor *transactionExecutor) execute() (err error) {
 	)
 
 	switch environment := environment.(type) {
-	case *interpreterEnvironment:
+	case *InterpreterEnvironment:
 		err = executor.executeWithInterpreter(environment)
 		if err != nil {
 			return newError(err, executor.context.Location, codesAndPrograms)
@@ -237,9 +237,9 @@ func (executor *transactionExecutor) execute() (err error) {
 }
 
 func (executor *transactionExecutor) executeWithInterpreter(
-	environment *interpreterEnvironment,
+	environment *InterpreterEnvironment,
 ) error {
-	_, inter, err := environment.interpret(
+	_, inter, err := environment.Interpret(
 		executor.context.Location,
 		executor.program,
 		executor.interpret,
