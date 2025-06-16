@@ -124,7 +124,7 @@ func (executor *scriptExecutor) preprocess() (err error) {
 	}
 
 	switch environment.(type) {
-	case *interpreterEnvironment:
+	case *InterpreterEnvironment:
 		break
 	default:
 		return errors.NewUnexpectedError("scripts can only be executed with the interpreter")
@@ -201,7 +201,7 @@ func (executor *scriptExecutor) execute() (val cadence.Value, err error) {
 	)
 
 	switch environment := environment.(type) {
-	case *interpreterEnvironment:
+	case *InterpreterEnvironment:
 		value, err := executor.executeWithInterpreter(environment)
 		if err != nil {
 			return nil, newError(err, executor.context.Location, codesAndPrograms)
@@ -214,10 +214,10 @@ func (executor *scriptExecutor) execute() (val cadence.Value, err error) {
 }
 
 func (executor *scriptExecutor) executeWithInterpreter(
-	environment *interpreterEnvironment,
+	environment *InterpreterEnvironment,
 ) (val cadence.Value, err error) {
 
-	value, inter, err := environment.interpret(
+	value, inter, err := environment.Interpret(
 		executor.context.Location,
 		executor.program,
 		executor.interpret,

@@ -374,12 +374,12 @@ func (r *runtime) Storage(context Context) (*Storage, *interpreter.Interpreter, 
 		context.CoverageReport,
 	)
 
-	interpreterEnv, ok := environment.(*interpreterEnvironment)
+	interpreterEnv, ok := environment.(*InterpreterEnvironment)
 	if !ok {
 		panic(errors.NewUnexpectedError("unsupported environment: %T", environment))
 	}
 
-	_, inter, err := interpreterEnv.interpret(
+	_, inter, err := interpreterEnv.Interpret(
 		location,
 		nil,
 		nil,
