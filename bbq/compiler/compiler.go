@@ -2661,9 +2661,25 @@ func (c *Compiler[_, _]) VisitStringExpression(expression *ast.StringExpression)
 	return
 }
 
-func (c *Compiler[_, _]) VisitStringTemplateExpression(_ *ast.StringTemplateExpression) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler[_, _]) VisitStringTemplateExpression(expression *ast.StringTemplateExpression) (_ struct{}) {
+	valueArrSize := len(expression.Values)
+	exprArrSize := len(expression.Expressions)
+
+	for _, value := range expression.Values {
+		c.emitStringConst(value)
+	}
+	for _, expression := range expression.Expressions {
+		c.compileExpression(expression)
+	}
+
+	c.emit(
+		opcode.InstructionStringTemplate{
+			ValueSize: uint16(valueArrSize),
+			ExprSize:  uint16(exprArrSize),
+		},
+	)
+
+	return
 }
 
 func (c *Compiler[_, _]) VisitCastingExpression(expression *ast.CastingExpression) (_ struct{}) {

@@ -7923,3 +7923,61 @@ func TestCompileSwapIndex(t *testing.T) {
 		program.Constants,
 	)
 }
+
+func TestCompileStringTemplate(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        fun test() {
+            let str = "2+2=\(2+2)"
+        }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 1)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// let str = "2+2=\(2+2)"
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0x0},
+			opcode.InstructionGetConstant{Constant: 0x1},
+			opcode.InstructionGetConstant{Constant: 0x2},
+			opcode.InstructionGetConstant{Constant: 0x2},
+			opcode.InstructionAdd{},
+			opcode.InstructionStringTemplate{ValueSize: 0x2, ExprSize: 0x1},
+			opcode.InstructionTransferAndConvert{Type: 0x1},
+			opcode.InstructionSetLocal{Local: 0x0},
+
+			// Return
+			opcode.InstructionReturn{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]constant.Constant{
+			{
+				Data: []byte("2+2="),
+				Kind: constant.String,
+			},
+			{
+				Data: []byte(""),
+				Kind: constant.String,
+			},
+			{
+				Data: []byte{0x2},
+				Kind: constant.Int,
+			},
+		},
+		program.Constants,
+	)
+}
