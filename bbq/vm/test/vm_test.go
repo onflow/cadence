@@ -3989,6 +3989,58 @@ func TestFunctionPreConditions(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, []string{"\"Foo.B\"", "\"Foo.C\"", "\"Bar.E\"", "\"Bar.F\"", "\"Foo.D\"", "\"A\""}, logs)
 	})
+
+	t.Run("in local function, fail", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := CompileAndInvoke(t,
+			`
+              fun main(x: Int): Int {
+
+                  fun foo(_ y: Int): Int {
+                      pre {
+                          y == 0
+                      }
+                      return y
+                  }
+
+                  return foo(x)
+              }
+            `,
+			"main",
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+		)
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "pre/post condition failed")
+	})
+
+	t.Run("in local function, pass", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+              fun main(x: Int): Int {
+
+                  fun foo(_ y: Int): Int {
+                      pre {
+                          y != 0
+                      }
+                      return y
+                  }
+
+                  return foo(x)
+              }
+            `,
+			"main",
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), result)
+	})
 }
 
 func TestFunctionPostConditions(t *testing.T) {
@@ -6122,7 +6174,6 @@ func TestFunctionExpression(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(6), actual)
-
 }
 
 func TestInnerFunction(t *testing.T) {

@@ -70,7 +70,8 @@ type inheritedEvent struct {
 	eventType        *sema.CompositeType
 }
 
-var _ ast.DeclarationVisitor[ast.Declaration] = &Desugar{}
+var _ ast.DeclarationVisitor[ast.Element] = &Desugar{}
+var _ ast.StatementVisitor[ast.Element] = &Desugar{}
 
 func NewDesugar(
 	memoryGauge common.MemoryGauge,
@@ -121,14 +122,26 @@ func (d *Desugar) Run() DesugaredProgram {
 }
 
 func (d *Desugar) desugarDeclaration(declaration ast.Declaration) ast.Declaration {
-	return ast.AcceptDeclaration[ast.Declaration](declaration, d)
+	desugaredDeclaration := ast.AcceptDeclaration[ast.Element](declaration, d)
+	if desugaredDeclaration == nil {
+		return nil
+	}
+	return desugaredDeclaration.(ast.Declaration)
 }
 
-func (d *Desugar) VisitVariableDeclaration(declaration *ast.VariableDeclaration) ast.Declaration {
+func (d *Desugar) desugarStatement(statement ast.Statement) ast.Statement {
+	desugaredStatement := ast.AcceptStatement[ast.Element](statement, d)
+	if desugaredStatement == nil {
+		return nil
+	}
+	return desugaredStatement.(ast.Statement)
+}
+
+func (d *Desugar) VisitVariableDeclaration(declaration *ast.VariableDeclaration) ast.Element {
 	return declaration
 }
 
-func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, _ bool) ast.Declaration {
+func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, _ bool) ast.Element {
 	funcBlock := declaration.FunctionBlock
 	funcName := declaration.Identifier.Identifier
 
@@ -170,7 +183,11 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration,
 
 		// Add the remaining statements that are defined in this function.
 		statements := funcBlock.Block.Statements
-		modifiedStatements = append(modifiedStatements, statements...)
+
+		for _, statement := range statements {
+			desugaredStatement := d.desugarStatement(statement)
+			modifiedStatements = append(modifiedStatements, desugaredStatement)
+		}
 
 	} else if d.enclosingInterfaceType != nil {
 		// If this is an interface-method without a body,
@@ -771,7 +788,7 @@ func declaredContractType(compositeKindedType sema.CompositeKindedType) sema.Com
 	return declaredContractType(containerType.(sema.CompositeKindedType))
 }
 
-func (d *Desugar) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) ast.Declaration {
+func (d *Desugar) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) ast.Element {
 	desugaredDecl := d.desugarDeclaration(declaration.FunctionDeclaration)
 	if desugaredDecl == nil {
 		return nil
@@ -789,11 +806,11 @@ func (d *Desugar) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFuncti
 	)
 }
 
-func (d *Desugar) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) ast.Declaration {
+func (d *Desugar) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) ast.Element {
 	return declaration
 }
 
-func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) ast.Declaration {
+func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) ast.Element {
 	compositeType := d.elaboration.CompositeDeclarationType(declaration)
 
 	// Recursively de-sugar nested declarations (functions, types, etc.)
@@ -1287,7 +1304,7 @@ func (d *Desugar) addImport(location common.Location) {
 	}
 }
 
-func (d *Desugar) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) ast.Declaration {
+func (d *Desugar) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) ast.Element {
 	interfaceType := d.elaboration.InterfaceDeclarationType(declaration)
 
 	prevEnclosingInterfaceType := d.enclosingInterfaceType
@@ -1329,15 +1346,15 @@ func (d *Desugar) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaratio
 	return modifiedDecl
 }
 
-func (d *Desugar) VisitEntitlementDeclaration(declaration *ast.EntitlementDeclaration) ast.Declaration {
+func (d *Desugar) VisitEntitlementDeclaration(declaration *ast.EntitlementDeclaration) ast.Element {
 	return declaration
 }
 
-func (d *Desugar) VisitEntitlementMappingDeclaration(declaration *ast.EntitlementMappingDeclaration) ast.Declaration {
+func (d *Desugar) VisitEntitlementMappingDeclaration(declaration *ast.EntitlementMappingDeclaration) ast.Element {
 	return declaration
 }
 
-func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclaration) ast.Declaration {
+func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclaration) ast.Element {
 	// Converts a transaction into a composite type declaration.
 	// Transaction parameters are converted into global variables.
 	// An initializer is generated to set parameters to above generated global variables.
@@ -1519,19 +1536,19 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 	return compositeDecl
 }
 
-func (d *Desugar) VisitFieldDeclaration(declaration *ast.FieldDeclaration) ast.Declaration {
+func (d *Desugar) VisitFieldDeclaration(declaration *ast.FieldDeclaration) ast.Element {
 	return declaration
 }
 
-func (d *Desugar) VisitEnumCaseDeclaration(declaration *ast.EnumCaseDeclaration) ast.Declaration {
+func (d *Desugar) VisitEnumCaseDeclaration(declaration *ast.EnumCaseDeclaration) ast.Element {
 	return declaration
 }
 
-func (d *Desugar) VisitPragmaDeclaration(declaration *ast.PragmaDeclaration) ast.Declaration {
+func (d *Desugar) VisitPragmaDeclaration(declaration *ast.PragmaDeclaration) ast.Element {
 	return declaration
 }
 
-func (d *Desugar) VisitImportDeclaration(declaration *ast.ImportDeclaration) ast.Declaration {
+func (d *Desugar) VisitImportDeclaration(declaration *ast.ImportDeclaration) ast.Element {
 	resolvedLocations, err := commons.ResolveLocation(
 		d.config.LocationHandler,
 		declaration.Identifiers,
@@ -1552,6 +1569,54 @@ func (d *Desugar) VisitImportDeclaration(declaration *ast.ImportDeclaration) ast
 	}
 
 	return declaration
+}
+
+func (d *Desugar) VisitReturnStatement(statement *ast.ReturnStatement) ast.Element {
+	return statement
+}
+
+func (d *Desugar) VisitContinueStatement(statement *ast.ContinueStatement) ast.Element {
+	return statement
+}
+
+func (d *Desugar) VisitBreakStatement(statement *ast.BreakStatement) ast.Element {
+	return statement
+}
+
+func (d *Desugar) VisitIfStatement(statement *ast.IfStatement) ast.Element {
+	return statement
+}
+
+func (d *Desugar) VisitForStatement(statement *ast.ForStatement) ast.Element {
+	return statement
+}
+
+func (d *Desugar) VisitAssignmentStatement(statement *ast.AssignmentStatement) ast.Element {
+	return statement
+}
+
+func (d *Desugar) VisitWhileStatement(statement *ast.WhileStatement) ast.Element {
+	return statement
+}
+
+func (d *Desugar) VisitSwapStatement(statement *ast.SwapStatement) ast.Element {
+	return statement
+}
+
+func (d *Desugar) VisitSwitchStatement(statement *ast.SwitchStatement) ast.Element {
+	return statement
+}
+
+func (d *Desugar) VisitEmitStatement(statement *ast.EmitStatement) ast.Element {
+	return statement
+}
+
+func (d *Desugar) VisitExpressionStatement(statement *ast.ExpressionStatement) ast.Element {
+	return statement
+}
+
+func (d *Desugar) VisitRemoveStatement(statement *ast.RemoveStatement) ast.Element {
+	return statement
 }
 
 var emptyInitializer = func() *ast.SpecialFunctionDeclaration {
