@@ -2465,6 +2465,57 @@ func (i InstructionStatement) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
+// InstructionStringInterpolation
+//
+// Represents a string interpolation with an array of strings and an array of values, pops both off the stack.
+type InstructionStringInterpolation struct {
+	StringSize uint16
+	ValueSize  uint16
+}
+
+var _ Instruction = InstructionStringInterpolation{}
+
+func (InstructionStringInterpolation) Opcode() Opcode {
+	return StringInterpolation
+}
+
+func (i InstructionStringInterpolation) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
+}
+
+func (i InstructionStringInterpolation) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "stringSize", i.StringSize, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "valueSize", i.ValueSize, colorize)
+}
+
+func (i InstructionStringInterpolation) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "stringSize", i.StringSize, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "valueSize", i.ValueSize, colorize)
+}
+
+func (i InstructionStringInterpolation) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.StringSize)
+	emitUint16(code, i.ValueSize)
+}
+
+func DecodeStringInterpolation(ip *uint16, code []byte) (i InstructionStringInterpolation) {
+	i.StringSize = decodeUint16(ip, code)
+	i.ValueSize = decodeUint16(ip, code)
+	return i
+}
+
 func DecodeInstruction(ip *uint16, code []byte) Instruction {
 	switch Opcode(decodeByte(ip, code)) {
 	case Unknown:
@@ -2601,6 +2652,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionLoop{}
 	case Statement:
 		return InstructionStatement{}
+	case StringInterpolation:
+		return DecodeStringInterpolation(ip, code)
 	}
 
 	panic(errors.NewUnreachableError())

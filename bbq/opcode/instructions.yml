@@ -886,3 +886,23 @@
 - name: "statement"
   description:
     Indicates the start of a statement.
+
+- name: "stringInterpolation"
+  description:
+    Represents a string interpolation with an array of strings and an array of values, pops both off the stack.
+  operands:
+    - name: "stringSize"
+      type: "size"
+    - name: "valueSize"
+      type: "size"
+  valueEffects:
+    pop:
+      - name: "strings"
+        type: "string"
+        count: "stringSize"
+      - name: "values"
+        type: "value"
+        count: "valueSize"
+    push:
+      - name: "string"
+        type: "string"
