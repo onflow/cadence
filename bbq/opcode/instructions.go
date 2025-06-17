@@ -523,6 +523,35 @@ func (i InstructionSetIndex) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
+// InstructionVoid
+//
+// Pushes the void value onto the stack.
+type InstructionVoid struct {
+}
+
+var _ Instruction = InstructionVoid{}
+
+func (InstructionVoid) Opcode() Opcode {
+	return Void
+}
+
+func (i InstructionVoid) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionVoid) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionVoid) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
+func (i InstructionVoid) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
 // InstructionTrue
 //
 // Pushes the boolean value `true` onto the stack.
@@ -2537,6 +2566,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionRemoveIndex{}
 	case SetIndex:
 		return InstructionSetIndex{}
+	case Void:
+		return InstructionVoid{}
 	case True:
 		return InstructionTrue{}
 	case False:

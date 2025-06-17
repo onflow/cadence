@@ -95,6 +95,7 @@ const (
 
 	True
 	False
+	Void
 	Nil
 	New
 	NewPath

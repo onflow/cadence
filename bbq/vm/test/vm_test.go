@@ -123,6 +123,70 @@ func TestImperativeFib(t *testing.T) {
 	require.Equal(t, 0, vmInstance.StackSize())
 }
 
+func TestVoid(t *testing.T) {
+
+	t.Parallel()
+
+	result, err := CompileAndInvoke(t,
+		`
+          fun test() {
+              return ()
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	require.Equal(t, interpreter.Void, result)
+}
+
+func TestTrue(t *testing.T) {
+
+	t.Parallel()
+
+	result, err := CompileAndInvoke(t,
+		`
+          fun test(): Bool {
+              return true
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	require.Equal(t, interpreter.TrueValue, result)
+}
+
+func TestFalse(t *testing.T) {
+
+	t.Parallel()
+
+	result, err := CompileAndInvoke(t,
+		`
+          fun test(): Bool {
+              return false
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	require.Equal(t, interpreter.FalseValue, result)
+}
+
+func TestNil(t *testing.T) {
+
+	t.Parallel()
+
+	result, err := CompileAndInvoke(t,
+		`
+          fun test(): Bool? {
+              return nil
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	require.Equal(t, interpreter.Nil, result)
+}
+
 func TestWhileBreak(t *testing.T) {
 
 	t.Parallel()

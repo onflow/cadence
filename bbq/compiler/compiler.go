@@ -1747,8 +1747,8 @@ func (c *Compiler[_, _]) VisitExpressionStatement(statement *ast.ExpressionState
 }
 
 func (c *Compiler[_, _]) VisitVoidExpression(_ *ast.VoidExpression) (_ struct{}) {
-	//TODO
-	panic(errors.NewUnreachableError())
+	c.emit(opcode.InstructionVoid{})
+	return
 }
 
 func (c *Compiler[_, _]) VisitBoolExpression(expression *ast.BoolExpression) (_ struct{}) {

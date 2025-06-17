@@ -503,6 +503,135 @@ func TestCompileContinue(t *testing.T) {
 	)
 }
 
+func TestCompileVoid(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun test() {
+          return ()
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 1)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// return nil
+			opcode.InstructionStatement{},
+			opcode.InstructionVoid{},
+			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionReturnValue{},
+		},
+		functions[0].Code,
+	)
+}
+
+func TestCompileTrue(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun test(): Bool {
+          return true
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 1)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+
+			// return true
+			opcode.InstructionStatement{},
+			opcode.InstructionTrue{},
+			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionReturnValue{},
+		},
+		functions[0].Code,
+	)
+}
+
+func TestCompileFalse(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun test(): Bool {
+          return false
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 1)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// return false
+			opcode.InstructionStatement{},
+			opcode.InstructionFalse{},
+			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionReturnValue{},
+		},
+		functions[0].Code,
+	)
+}
+
+func TestCompileNil(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun test(): Bool? {
+          return nil
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 1)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// return nil
+			opcode.InstructionStatement{},
+			opcode.InstructionNil{},
+			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionReturnValue{},
+		},
+		functions[0].Code,
+	)
+}
+
 func TestCompileArray(t *testing.T) {
 
 	t.Parallel()
