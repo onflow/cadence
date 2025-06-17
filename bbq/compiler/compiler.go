@@ -84,6 +84,11 @@ type Compiler[E, T any] struct {
 
 	codeGen CodeGen[E]
 	typeGen TypeGen[T]
+
+	// desugar is used to desugar the AST declarations, before the compiling starts.
+	// This could be also reused during compilation to desugar expressions.
+	// Important: It must NOT be reused to desugar any declaration, after the initial use.
+	desugar *Desugar
 }
 
 type constantsCacheKey struct {
@@ -539,7 +544,7 @@ func (c *Compiler[_, _]) compileWithPositionInfo(
 func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 
 	// Desugar the program before compiling.
-	desugar := NewDesugar(
+	c.desugar = NewDesugar(
 		c.Config.MemoryGauge,
 		c.Config,
 		c.Program,
@@ -547,7 +552,7 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 		c.location,
 	)
 
-	desugaredProgram := desugar.Run()
+	desugaredProgram := c.desugar.Run()
 
 	c.Program = desugaredProgram.program
 	c.postConditionsIndices = desugaredProgram.postConditionIndices
@@ -2601,7 +2606,10 @@ func (c *Compiler[_, _]) VisitBinaryExpression(expression *ast.BinaryExpression)
 }
 
 func (c *Compiler[_, _]) VisitFunctionExpression(expression *ast.FunctionExpression) (_ struct{}) {
-	// TODO: desugar function expressions
+	// It is OK/safe to use the desugar-instance to desugar the function-expression,
+	// since function-expression desugaring doesn't rely on contextual-information.
+	// (i.e: doesn't rely on where in the AST does this expression in located).
+	desugaredExpression := c.desugar.DesugarFunctionExpression(expression)
 
 	functionIndex := len(c.functions)
 
@@ -2610,7 +2618,7 @@ func (c *Compiler[_, _]) VisitFunctionExpression(expression *ast.FunctionExpress
 	}
 
 	parameterCount := 0
-	parameterList := expression.ParameterList
+	parameterList := desugaredExpression.ParameterList
 	if parameterList != nil {
 		parameterCount = len(parameterList.Parameters)
 	}
@@ -2619,7 +2627,7 @@ func (c *Compiler[_, _]) VisitFunctionExpression(expression *ast.FunctionExpress
 		panic(errors.NewDefaultUserError("invalid parameter count"))
 	}
 
-	functionType := c.DesugaredElaboration.FunctionExpressionFunctionType(expression)
+	functionType := c.DesugaredElaboration.FunctionExpressionFunctionType(desugaredExpression)
 
 	function := c.addFunction(
 		"",
@@ -2635,7 +2643,7 @@ func (c *Compiler[_, _]) VisitFunctionExpression(expression *ast.FunctionExpress
 
 		c.declareParameters(parameterList, false)
 		c.compileFunctionBlock(
-			expression.FunctionBlock,
+			desugaredExpression.FunctionBlock,
 			common.DeclarationKindUnknown,
 			functionType.ReturnTypeAnnotation.Type,
 		)
