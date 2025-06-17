@@ -12685,6 +12685,57 @@ func TestInterpretStringTemplates(t *testing.T) {
 			inter.GetGlobal("x"),
 		)
 	})
+
+	t.Run("loop", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+			fun test(): String {
+				let names = ["Alice", "Bob", "Charlie"]
+				var res = ""
+				for index, element in names {
+					res = "\(index):\(element) \(res)"
+				}
+				return res
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("2:Charlie 1:Bob 0:Alice "),
+			value,
+		)
+	})
+
+	t.Run("side effects", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+			var cnt = 0
+			fun test(): String {
+				fun foo(): Int {
+					let prev = cnt
+					cnt = cnt + 1
+					return prev
+				}
+				return "\(foo()) -> \(foo()) -> \(cnt)"
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("0 -> 1 -> 2"),
+			value,
+		)
+	})
 }
 
 func TestInterpretSomeValueChildContainerMutation(t *testing.T) {

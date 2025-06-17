@@ -9136,15 +9136,38 @@ func TestStringTemplate(t *testing.T) {
 
 	t.Parallel()
 
-	result, err := CompileAndInvoke(t,
-		`
-			fun test(): String {
-				var s = "2+2=\(2+2)"
-				return s
-			}
-		`,
-		"test",
-	)
-	require.NoError(t, err)
-	require.Equal(t, interpreter.NewUnmeteredStringValue("2+2=4"), result)
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+				fun test(): String {
+					var s = "2+2=\(2+2)"
+					return s
+				}
+			`,
+			"test",
+		)
+		require.NoError(t, err)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("2+2=4"), result)
+	})
+
+	t.Run("multiple exprs", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+				fun test(): String {
+					let a = "A"
+					let b = "B"
+					let c = 4
+					let str = "\(a) + \(b) = \(c)"
+					return str
+				}
+			`,
+			"test",
+		)
+		require.NoError(t, err)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("A + B = 4"), result)
+	})
 }
