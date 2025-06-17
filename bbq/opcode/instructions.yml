@@ -895,10 +895,10 @@
       type: "size"
   valueEffects:
     pop:
-      - name: "strings"
+      - name: "values"
         type: "string"
         count: "exprSize + 1"
-      - name: "values"
+      - name: "exprs"
         type: "value"
         count: "exprSize"
     push:
