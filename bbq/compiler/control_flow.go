@@ -19,8 +19,9 @@
 package compiler
 
 type controlFlow struct {
-	start  int
-	breaks []int
+	start       int
+	preContinue func()
+	breaks      []int
 }
 
 func (f *controlFlow) appendBreak(offset int) {

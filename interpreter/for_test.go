@@ -335,8 +335,7 @@ func TestInterpretForStatementCapturing(t *testing.T) {
 
 	t.Parallel()
 
-	// TODO: Use compiler (parseCheckAndPrepare)
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        fun test(): [Int] {
            let fs: [fun(): Int] = []
            for x in [1, 2, 3] {
