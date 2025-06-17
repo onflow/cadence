@@ -51,6 +51,13 @@
       - name: "value"
         type: "value"
 
+- name: "closeUpvalue"
+  description:
+    Closes the upvalue for the local at the given index.
+  operands:
+    - name: "local"
+      type: "localIndex"
+
 # Global instructions
 
 - name: "getGlobal"
@@ -166,6 +173,13 @@
         type: "value"
 
 # Value instantiation instructions
+
+- name: "void"
+  description: Pushes the void value onto the stack.
+  valueEffects:
+    push:
+      - name: "value"
+        type: "void"
 
 - name: "true"
   description: Pushes the boolean value `true` onto the stack.
@@ -886,3 +900,21 @@
 - name: "statement"
   description:
     Indicates the start of a statement.
+
+- name: "templateString"
+  description:
+    Represents a string template with an array of values (strings) and an array of expressions, pops both off the stack.
+  operands:
+    - name: "exprSize"
+      type: "size"
+  valueEffects:
+    pop:
+      - name: "values"
+        type: "string"
+        count: "exprSize + 1"
+      - name: "exprs"
+        type: "value"
+        count: "exprSize"
+    push:
+      - name: "string"
+        type: "string"

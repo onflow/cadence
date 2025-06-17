@@ -107,6 +107,7 @@ func (f *function[E]) findOrAddUpvalue(name string) (upvalueIndex uint16, ok boo
 
 	enclosingLocal := f.enclosing.findLocal(name)
 	if enclosingLocal != nil {
+		enclosingLocal.isCaptured = true
 		upvalue := opcode.Upvalue{
 			TargetIndex: enclosingLocal.index,
 			IsLocal:     true,

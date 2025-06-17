@@ -165,6 +165,7 @@ func TestPrintInstruction(t *testing.T) {
 		"SetLocal local:258":       {byte(SetLocal), 1, 2},
 		"GetUpvalue upvalue:258":   {byte(GetUpvalue), 1, 2},
 		"SetUpvalue upvalue:258":   {byte(SetUpvalue), 1, 2},
+		"CloseUpvalue local:258":   {byte(CloseUpvalue), 1, 2},
 		"GetGlobal global:258":     {byte(GetGlobal), 1, 2},
 		"SetGlobal global:258":     {byte(SetGlobal), 1, 2},
 
@@ -227,6 +228,7 @@ func TestPrintInstruction(t *testing.T) {
 		"True":                      {byte(True)},
 		"False":                     {byte(False)},
 		"Nil":                       {byte(Nil)},
+		"Void":                      {byte(Void)},
 		"GetField fieldName:258":    {byte(GetField), 1, 2},
 		"SetField fieldName:258":    {byte(SetField), 1, 2},
 		"RemoveField fieldName:258": {byte(RemoveField), 1, 2},
@@ -252,6 +254,7 @@ func TestPrintInstruction(t *testing.T) {
 		"Transfer":                        {byte(Transfer)},
 		"Loop":                            {byte(Loop)},
 		"Statement":                       {byte(Statement)},
+		"TemplateString exprSize:258":     {byte(TemplateString), 1, 2, 3, 4},
 	}
 
 	// Check if there is any opcode that is not tested

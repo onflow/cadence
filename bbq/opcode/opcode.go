@@ -95,6 +95,7 @@ const (
 
 	True
 	False
+	Void
 	Nil
 	New
 	NewPath
@@ -119,6 +120,7 @@ const (
 	SetLocal
 	GetUpvalue
 	SetUpvalue
+	CloseUpvalue
 	GetGlobal
 	SetGlobal
 	GetField
@@ -171,6 +173,7 @@ const (
 	EmitEvent
 	Loop
 	Statement
+	TemplateString
 
 	// NOTE: not an actual opcode, must be last item
 	OpcodeMax

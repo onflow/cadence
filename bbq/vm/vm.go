@@ -810,6 +810,16 @@ func opSetUpvalue(vm *VM, ins opcode.InstructionSetUpvalue) {
 	}
 }
 
+func opCloseUpvalue(vm *VM, ins opcode.InstructionCloseUpvalue) {
+	absoluteLocalsIndex := int(vm.callFrame.localsOffset) + int(ins.Local)
+	openUpvalues := vm.callFrame.openUpvalues
+	upvalue := openUpvalues[absoluteLocalsIndex]
+	if upvalue != nil {
+		upvalue.closed = vm.locals[absoluteLocalsIndex]
+		delete(openUpvalues, absoluteLocalsIndex)
+	}
+}
+
 func opGetGlobal(vm *VM, ins opcode.InstructionGetGlobal) {
 	globalIndex := ins.Global
 	globals := vm.callFrame.function.Executable.Globals
@@ -1243,6 +1253,10 @@ func opNil(vm *VM) {
 	vm.push(interpreter.Nil)
 }
 
+func opVoid(vm *VM) {
+	vm.push(interpreter.Void)
+}
+
 func opEqual(vm *VM) {
 	left, right := vm.peekPop()
 	result := interpreter.TestValueEqual(
@@ -1377,6 +1391,23 @@ func opDeref(vm *VM) {
 	vm.push(dereferenced)
 }
 
+func opStringTemplate(vm *VM, ins opcode.InstructionTemplateString) {
+	expressions := vm.popN(int(ins.ExprSize))
+	values := vm.popN(int(ins.ExprSize + 1))
+	var valuesStr []string
+
+	// convert values to string[]
+	for _, str := range values {
+		s, ok := str.(*interpreter.StringValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		valuesStr = append(valuesStr, s.Str)
+	}
+
+	vm.push(interpreter.BuildStringTemplate(valuesStr, expressions))
+}
+
 func (vm *VM) run() {
 
 	defer func() {
@@ -1485,6 +1516,8 @@ func (vm *VM) run() {
 			opGetUpvalue(vm, ins)
 		case opcode.InstructionSetUpvalue:
 			opSetUpvalue(vm, ins)
+		case opcode.InstructionCloseUpvalue:
+			opCloseUpvalue(vm, ins)
 		case opcode.InstructionGetGlobal:
 			opGetGlobal(vm, ins)
 		case opcode.InstructionSetGlobal:
@@ -1535,6 +1568,8 @@ func (vm *VM) run() {
 			opForceCast(vm, ins)
 		case opcode.InstructionNil:
 			opNil(vm)
+		case opcode.InstructionVoid:
+			opVoid(vm)
 		case opcode.InstructionEqual:
 			opEqual(vm)
 		case opcode.InstructionNotEqual:
@@ -1561,6 +1596,8 @@ func (vm *VM) run() {
 			opLoop(vm)
 		case opcode.InstructionStatement:
 			opStatement(vm)
+		case opcode.InstructionTemplateString:
+			opStringTemplate(vm, ins)
 		default:
 			panic(errors.NewUnexpectedError("cannot execute instruction of type %T", ins))
 		}
@@ -1623,7 +1660,8 @@ func opNewClosure(vm *VM, ins opcode.InstructionNewClosure) {
 
 func (vm *VM) captureUpvalue(absoluteLocalsIndex int) *Upvalue {
 	// Check if the upvalue already exists and reuse it
-	if upvalue, ok := vm.callFrame.openUpvalues[absoluteLocalsIndex]; ok {
+	openUpvalues := vm.callFrame.openUpvalues
+	if upvalue, ok := openUpvalues[absoluteLocalsIndex]; ok {
 		return upvalue
 	}
 
@@ -1631,10 +1669,11 @@ func (vm *VM) captureUpvalue(absoluteLocalsIndex int) *Upvalue {
 	upvalue := &Upvalue{
 		absoluteLocalsIndex: absoluteLocalsIndex,
 	}
-	if vm.callFrame.openUpvalues == nil {
-		vm.callFrame.openUpvalues = make(map[int]*Upvalue)
+	if openUpvalues == nil {
+		openUpvalues = make(map[int]*Upvalue)
+		vm.callFrame.openUpvalues = openUpvalues
 	}
-	vm.callFrame.openUpvalues[absoluteLocalsIndex] = upvalue
+	openUpvalues[absoluteLocalsIndex] = upvalue
 	return upvalue
 }
 
