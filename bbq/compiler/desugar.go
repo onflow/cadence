@@ -72,6 +72,7 @@ type inheritedEvent struct {
 
 var _ ast.DeclarationVisitor[ast.Element] = &Desugar{}
 var _ ast.StatementVisitor[ast.Element] = &Desugar{}
+var _ ast.ExpressionVisitor[ast.Element] = &Desugar{}
 
 func NewDesugar(
 	memoryGauge common.MemoryGauge,
@@ -102,7 +103,7 @@ type DesugaredProgram struct {
 func (d *Desugar) Run() DesugaredProgram {
 	declarations := d.program.Declarations()
 	for _, declaration := range declarations {
-		modifiedDeclaration := d.desugarDeclaration(declaration)
+		modifiedDeclaration, _ := d.desugarDeclaration(declaration)
 		if modifiedDeclaration != nil {
 			d.modifiedDeclarations = append(d.modifiedDeclarations, modifiedDeclaration)
 		}
@@ -121,105 +122,118 @@ func (d *Desugar) Run() DesugaredProgram {
 	}
 }
 
-func (d *Desugar) desugarDeclaration(declaration ast.Declaration) ast.Declaration {
+func (d *Desugar) desugarDeclaration(declaration ast.Declaration) (result ast.Declaration, desugared bool) {
 	desugaredDeclaration := ast.AcceptDeclaration[ast.Element](declaration, d)
 	if desugaredDeclaration == nil {
-		return nil
+		return nil, false
 	}
-	return desugaredDeclaration.(ast.Declaration)
+
+	desugared = desugaredDeclaration != declaration
+	return desugaredDeclaration.(ast.Declaration), desugared
 }
 
-func (d *Desugar) desugarStatement(statement ast.Statement) ast.Statement {
+func (d *Desugar) desugarStatement(statement ast.Statement) (result ast.Statement, desugared bool) {
 	desugaredStatement := ast.AcceptStatement[ast.Element](statement, d)
-	if desugaredStatement == nil {
-		return nil
+	desugared = desugaredStatement != statement
+	return desugaredStatement.(ast.Statement), desugared
+}
+
+func (d *Desugar) desugarExpression(expression ast.Expression) (result ast.Expression, desugared bool) {
+	if expression == nil {
+		return nil, false
 	}
-	return desugaredStatement.(ast.Statement)
+
+	desugaredExpression := ast.AcceptExpression[ast.Element](expression, d)
+	desugared = desugaredExpression != expression
+	return desugaredExpression.(ast.Expression), desugared
+}
+
+func (d *Desugar) desugarExpressions(expressions []ast.Expression) (desugaredExpressions []ast.Expression, desugared bool) {
+	return desugarList(expressions, d.desugarExpression)
+}
+
+func desugarList[T any](
+	list []T,
+	listEntryDesugarFunction func(item T) (desugaredEntry T, desugared bool),
+) (desugaredList []T, desugared bool) {
+
+	for index, entry := range list {
+		desugaredEntry, ok := listEntryDesugarFunction(entry)
+
+		// Below is an optimization to only create a new slice, if at-least one of the entries is desugared.
+		// i.e: If none of the entries need desugaring, then return the slice as-is.
+
+		// If at-least one entry is desugared already, then add the current entry
+		// to the desugared entries list (regardless whether the current entry was desugared or not).
+		if desugared {
+			desugaredList = append(desugaredList, desugaredEntry)
+			continue
+		}
+
+		// Otherwise, if the current entry is desugared (meaning, this is the first desugared entry),
+		// then add the original entries upto this point, and then add the current desugared entry.
+		if ok {
+			desugared = true
+			desugaredList = append(desugaredList, list[:index]...)
+			desugaredList = append(desugaredList, desugaredEntry)
+		}
+	}
+
+	if !desugared {
+		desugaredList = list
+	}
+
+	return
 }
 
 func (d *Desugar) VisitVariableDeclaration(declaration *ast.VariableDeclaration) ast.Element {
+	value, valueDesugared := d.desugarExpression(declaration.Value)
+	secondValue, secondValueDesugared := d.desugarExpression(declaration.SecondValue)
+
+	if valueDesugared || secondValueDesugared {
+		variableDeclaration := ast.NewVariableDeclaration(
+			d.memoryGauge,
+			declaration.Access,
+			declaration.IsConstant,
+			declaration.Identifier,
+			declaration.TypeAnnotation,
+			value,
+			declaration.Transfer,
+			declaration.StartPos,
+			declaration.SecondTransfer,
+			secondValue,
+			declaration.DocString,
+		)
+
+		varDeclTypes := d.elaboration.elaboration.VariableDeclarationTypes(declaration)
+		d.elaboration.elaboration.SetVariableDeclarationTypes(variableDeclaration, varDeclTypes)
+		return variableDeclaration
+	}
+
 	return declaration
 }
 
 func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration, _ bool) ast.Element {
 	funcBlock := declaration.FunctionBlock
 	funcName := declaration.Identifier.Identifier
-
-	preConditions := d.desugarPreConditions(
-		funcName,
-		declaration,
-	)
-	postConditions, beforeStatements := d.desugarPostConditions(
-		funcName,
-		declaration,
-	)
-
-	modifiedStatements := make([]ast.Statement, 0)
-	modifiedStatements = append(modifiedStatements, preConditions...)
-
-	modifiedStatements = append(modifiedStatements, beforeStatements...)
+	parameterList := declaration.ParameterList
+	returnTypeAnnotation := declaration.ReturnTypeAnnotation
 
 	functionType := d.elaboration.FunctionDeclarationFunctionType(declaration)
-	returnType := functionType.ReturnTypeAnnotation.Type
 
-	if funcBlock.HasStatements() {
-		pos := funcBlock.Block.StartPos
-
-		if len(postConditions) > 0 &&
-			returnType != sema.VoidType {
-
-			// If there are post conditions, and a return value, then define a temporary `$_result` variable.
-			// This is because there can be conditional-returns in the middle of the function.
-			// Thus, if there are post conditions, the return value would get assigned to this temp-result variable,
-			// and would be jumped to the post-condition(s). The actual return would be at the end of the function.
-			// This is done at the compiler.
-			modifiedStatements = d.declareTempResultVariable(
-				declaration,
-				returnType,
-				pos,
-				modifiedStatements,
-			)
-		}
-
-		// Add the remaining statements that are defined in this function.
-		statements := funcBlock.Block.Statements
-
-		for _, statement := range statements {
-			desugaredStatement := d.desugarStatement(statement)
-			modifiedStatements = append(modifiedStatements, desugaredStatement)
-		}
-
-	} else if d.enclosingInterfaceType != nil {
-		// If this is an interface-method without a body,
-		// then do not generate a function for it.
+	// If this is an interface-method without a body,
+	// then do not generate a function for it.
+	if d.enclosingInterfaceType != nil && !funcBlock.HasStatements() {
 		return nil
 	}
 
-	var modifiedFuncBlock *ast.FunctionBlock
-	if len(postConditions) > 0 {
-		// Keep track of where the post conditions start, for each function.
-		// This is used by the compiler to patch the jumps for return statements.
-		// Note: always use the "modifiedDecl" for tracking.
-		postConditionIndex := len(modifiedStatements)
-		defer func() {
-			d.postConditionIndices[modifiedFuncBlock] = postConditionIndex
-		}()
-
-		// TODO: Declare the `result` variable only if it is used in the post conditions
-		modifiedStatements = d.declareResultVariable(funcBlock, modifiedStatements, returnType)
-
-		modifiedStatements = append(modifiedStatements, postConditions...)
-	}
-
-	modifiedFuncBlock = ast.NewFunctionBlock(
-		d.memoryGauge,
-		ast.NewBlock(
-			d.memoryGauge,
-			modifiedStatements,
-			ast.NewRangeFromPositioned(d.memoryGauge, declaration),
-		),
-		nil,
-		nil,
+	modifiedFuncBlock := d.desugarFunctionBlock(
+		funcName,
+		funcBlock,
+		parameterList,
+		functionType,
+		returnTypeAnnotation,
+		declaration,
 	)
 
 	// TODO: Is the generated function needed to be desugared again?
@@ -243,13 +257,97 @@ func (d *Desugar) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration,
 	return modifiedDecl
 }
 
+func (d *Desugar) desugarFunctionBlock(
+	funcName string,
+	funcBlock *ast.FunctionBlock,
+	parameterList *ast.ParameterList,
+	functionType *sema.FunctionType,
+	returnTypeAnnotation *ast.TypeAnnotation,
+	hasPosition ast.HasPosition,
+) *ast.FunctionBlock {
+
+	preConditions := d.desugarPreConditions(
+		funcName,
+		funcBlock,
+		parameterList,
+	)
+	postConditions, beforeStatements := d.desugarPostConditions(
+		funcName,
+		funcBlock,
+		parameterList,
+	)
+
+	modifiedStatements := make([]ast.Statement, 0)
+	modifiedStatements = append(modifiedStatements, preConditions...)
+
+	modifiedStatements = append(modifiedStatements, beforeStatements...)
+
+	returnType := functionType.ReturnTypeAnnotation.Type
+
+	if funcBlock.HasStatements() {
+		pos := funcBlock.Block.StartPos
+
+		if len(postConditions) > 0 &&
+			returnType != sema.VoidType {
+
+			// If there are post conditions, and a return value, then define a temporary `$_result` variable.
+			// This is because there can be conditional-returns in the middle of the function.
+			// Thus, if there are post conditions, the return value would get assigned to this temp-result variable,
+			// and would be jumped to the post-condition(s). The actual return would be at the end of the function.
+			// This is done at the compiler.
+			tempResultVarDecl := d.tempResultVariable(
+				returnTypeAnnotation,
+				returnType,
+				pos,
+			)
+			modifiedStatements = append(modifiedStatements, tempResultVarDecl)
+		}
+
+		// Add the remaining statements that are defined in this function.
+		statements := funcBlock.Block.Statements
+
+		for _, statement := range statements {
+			desugaredStatement, _ := d.desugarStatement(statement)
+			modifiedStatements = append(modifiedStatements, desugaredStatement)
+		}
+	}
+
+	var modifiedFuncBlock *ast.FunctionBlock
+	if len(postConditions) > 0 {
+		// Keep track of where the post conditions start, for each function.
+		// This is used by the compiler to patch the jumps for return statements.
+		// Note: always use the "modifiedDecl" for tracking.
+		postConditionIndex := len(modifiedStatements)
+		defer func() {
+			d.postConditionIndices[modifiedFuncBlock] = postConditionIndex
+		}()
+
+		// TODO: Declare the `result` variable only if it is used in the post conditions
+		modifiedStatements = d.declareResultVariable(funcBlock, modifiedStatements, returnType)
+
+		modifiedStatements = append(modifiedStatements, postConditions...)
+	}
+
+	modifiedFuncBlock = ast.NewFunctionBlock(
+		d.memoryGauge,
+		ast.NewBlock(
+			d.memoryGauge,
+			modifiedStatements,
+			ast.NewRangeFromPositioned(d.memoryGauge, hasPosition),
+		),
+		nil,
+		nil,
+	)
+
+	return modifiedFuncBlock
+}
+
 // Declare a `$_result` synthetic variable, to temporarily hold return values.
-func (d *Desugar) declareTempResultVariable(
-	declaration *ast.FunctionDeclaration,
+func (d *Desugar) tempResultVariable(
+	returnTypeAnnotation *ast.TypeAnnotation,
 	returnType sema.Type,
 	pos ast.Position,
-	modifiedStatements []ast.Statement,
-) []ast.Statement {
+) *ast.VariableDeclaration {
 	tempResultVarDecl := ast.NewVariableDeclaration(
 		d.memoryGauge,
 		ast.AccessNotSpecified,
@@ -259,7 +357,7 @@ func (d *Desugar) declareTempResultVariable(
 			tempResultVariableName,
 			pos,
 		),
-		declaration.ReturnTypeAnnotation,
+		returnTypeAnnotation,
 
 		// We just need the variable to be defined. Value is assigned later.
 		nil,
@@ -283,8 +381,7 @@ func (d *Desugar) declareTempResultVariable(
 		},
 	)
 
-	modifiedStatements = append(modifiedStatements, tempResultVarDecl)
-	return modifiedStatements
+	return tempResultVarDecl
 }
 
 // Declare the `result` variable which will be made available to the post-conditions.
@@ -366,12 +463,12 @@ func (d *Desugar) tempResultIdentifierExpr(pos ast.Position) *ast.IdentifierExpr
 
 func (d *Desugar) desugarPreConditions(
 	enclosingFuncName string,
-	functionDecl *ast.FunctionDeclaration,
+	funcBlock *ast.FunctionBlock,
+	parameterList *ast.ParameterList,
 ) []ast.Statement {
 
 	desugaredConditions := make([]ast.Statement, 0)
 
-	funcBlock := functionDecl.FunctionBlock
 	functionHasImpl := d.functionHasImplementation(funcBlock)
 
 	// Desugar inherited pre-conditions
@@ -394,7 +491,7 @@ func (d *Desugar) desugarPreConditions(
 		for _, condition := range inheritedPreConditions.Conditions {
 			desugaredCondition := d.desugarInheritedCondition(
 				condition,
-				functionDecl.ParameterList,
+				parameterList,
 				inheritedFunc,
 			)
 			desugaredConditions = append(desugaredConditions, desugaredCondition)
@@ -430,12 +527,12 @@ func (d *Desugar) functionHasImplementation(funcBlock *ast.FunctionBlock) bool {
 
 func (d *Desugar) desugarPostConditions(
 	enclosingFuncName string,
-	functionDecl *ast.FunctionDeclaration,
+	funcBlock *ast.FunctionBlock,
+	parameterList *ast.ParameterList,
 ) (desugaredConditions []ast.Statement, beforeStatements []ast.Statement) {
 
 	desugaredConditions = make([]ast.Statement, 0)
 
-	funcBlock := functionDecl.FunctionBlock
 	var conditions *ast.Conditions
 	if funcBlock != nil {
 		conditions = funcBlock.PostConditions
@@ -492,7 +589,7 @@ func (d *Desugar) desugarPostConditions(
 			for _, condition := range inheritedFunc.rewrittenConditions.RewrittenPostConditions {
 				desugaredCondition := d.desugarInheritedCondition(
 					condition,
-					functionDecl.ParameterList,
+					parameterList,
 					inheritedFunc,
 				)
 				desugaredConditions = append(desugaredConditions, desugaredCondition)
@@ -789,15 +886,12 @@ func declaredContractType(compositeKindedType sema.CompositeKindedType) sema.Com
 }
 
 func (d *Desugar) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) ast.Element {
-	desugaredDecl := d.desugarDeclaration(declaration.FunctionDeclaration)
-	if desugaredDecl == nil {
-		return nil
+	desugaredDecl, desugared := d.desugarDeclaration(declaration.FunctionDeclaration)
+	if desugaredDecl == nil || !desugared {
+		return declaration
 	}
 
 	desugaredFunctionDecl := desugaredDecl.(*ast.FunctionDeclaration)
-	if desugaredFunctionDecl == declaration.FunctionDeclaration {
-		return declaration
-	}
 
 	return ast.NewSpecialFunctionDeclaration(
 		d.memoryGauge,
@@ -843,12 +937,12 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 		// Otherwise, visit and desugar members.
 		existingMembers := declaration.Members.Declarations()
 		for _, member := range existingMembers {
-			desugaredMember := d.desugarDeclaration(member)
+			desugaredMember, desugared := d.desugarDeclaration(member)
 			if desugaredMember == nil {
 				continue
 			}
 
-			membersDesugared = membersDesugared || (desugaredMember != member)
+			membersDesugared = membersDesugared || desugared
 			desugaredMembers = append(desugaredMembers, desugaredMember)
 		}
 	}
@@ -1111,7 +1205,9 @@ func (d *Desugar) desugarInheritedFunction(defaultFuncDelegator *ast.FunctionDec
 	defer func() {
 		d.isInheritedFunction = false
 	}()
-	return d.desugarDeclaration(defaultFuncDelegator)
+
+	functionDecl, _ := d.desugarDeclaration(defaultFuncDelegator)
+	return functionDecl
 }
 
 func (d *Desugar) isFunctionOverridden(
@@ -1319,7 +1415,7 @@ func (d *Desugar) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaratio
 
 	existingMembers := declaration.Members.Declarations()
 	for _, member := range existingMembers {
-		desugaredMember := d.desugarDeclaration(member)
+		desugaredMember, _ := d.desugarDeclaration(member)
 		if desugaredMember == nil {
 			continue
 		}
@@ -1467,7 +1563,7 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 
 	prepareBlock := transaction.Prepare
 	if prepareBlock != nil {
-		prepareFunction := d.desugarDeclaration(prepareBlock.FunctionDeclaration)
+		prepareFunction, _ := d.desugarDeclaration(prepareBlock.FunctionDeclaration)
 		members = append(members, prepareFunction)
 	}
 
@@ -1503,7 +1599,7 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 	// Then desugar the execute function so that the conditions will be
 	// inlined to the start and end of the execute function body.
 	if executeFunc != nil {
-		desugaredExecuteFunc := d.desugarDeclaration(executeFunc)
+		desugaredExecuteFunc, _ := d.desugarDeclaration(executeFunc)
 		members = append(members, desugaredExecuteFunc)
 	}
 
@@ -1572,6 +1668,19 @@ func (d *Desugar) VisitImportDeclaration(declaration *ast.ImportDeclaration) ast
 }
 
 func (d *Desugar) VisitReturnStatement(statement *ast.ReturnStatement) ast.Element {
+	expression, desugared := d.desugarExpression(statement.Expression)
+	if desugared {
+		desugaredReturn := ast.NewReturnStatement(
+			d.memoryGauge,
+			expression,
+			statement.Range,
+		)
+
+		returnStmtTypes := d.elaboration.ReturnStatementTypes(statement)
+		d.elaboration.SetReturnStatementTypes(desugaredReturn, returnStmtTypes)
+		return desugaredReturn
+	}
+
 	return statement
 }
 
@@ -1588,35 +1697,537 @@ func (d *Desugar) VisitIfStatement(statement *ast.IfStatement) ast.Element {
 }
 
 func (d *Desugar) VisitForStatement(statement *ast.ForStatement) ast.Element {
+	expression, exprDesugared := d.desugarExpression(statement.Value)
+	block, blockDesugared := d.desugarBlock(statement.Block)
+
+	if exprDesugared && blockDesugared {
+		desugaredForStatement := ast.NewForStatement(
+			d.memoryGauge,
+			statement.Identifier,
+			statement.Index,
+			block,
+			expression,
+			statement.StartPos,
+		)
+
+		forStmtType := d.elaboration.ForStatementType(statement)
+		d.elaboration.elaboration.SetForStatementType(desugaredForStatement, forStmtType)
+		return desugaredForStatement
+	}
+
 	return statement
 }
 
+func (d *Desugar) desugarBlock(block *ast.Block) (desugaredBlock *ast.Block, desugared bool) {
+	desugaredStatements, desugared := d.desugarStatements(block.Statements)
+
+	if desugared {
+		desugaredBlock = ast.NewBlock(
+			d.memoryGauge,
+			desugaredStatements,
+			block.Range,
+		)
+	} else {
+		desugaredBlock = block
+	}
+
+	return
+}
+
+func (d *Desugar) desugarStatements(statements []ast.Statement) (desugaredStatements []ast.Statement, desugared bool) {
+	return desugarList(statements, d.desugarStatement)
+}
+
 func (d *Desugar) VisitAssignmentStatement(statement *ast.AssignmentStatement) ast.Element {
+	target, targetDesugared := d.desugarExpression(statement.Target)
+	value, valueDesugared := d.desugarExpression(statement.Value)
+
+	if targetDesugared || valueDesugared {
+		desugaredAssignment := ast.NewAssignmentStatement(
+			d.memoryGauge,
+			target,
+			statement.Transfer,
+			value,
+		)
+
+		assignmentTypes := d.elaboration.AssignmentStatementTypes(statement)
+		d.elaboration.SetAssignmentStatementTypes(desugaredAssignment, assignmentTypes)
+	}
+
 	return statement
 }
 
 func (d *Desugar) VisitWhileStatement(statement *ast.WhileStatement) ast.Element {
+	test, testDesugared := d.desugarExpression(statement.Test)
+	block, blockDesugared := d.desugarBlock(statement.Block)
+
+	if testDesugared || blockDesugared {
+		// Type is not stored in the elaboration.
+		return ast.NewWhileStatement(
+			d.memoryGauge,
+			test,
+			block,
+			statement.StartPos,
+		)
+	}
+
 	return statement
 }
 
 func (d *Desugar) VisitSwapStatement(statement *ast.SwapStatement) ast.Element {
+	left, leftDesugared := d.desugarExpression(statement.Left)
+	right, rightDesugared := d.desugarExpression(statement.Right)
+
+	if leftDesugared || rightDesugared {
+		desugaredSwap := ast.NewSwapStatement(
+			d.memoryGauge,
+			left,
+			right,
+		)
+
+		swapTypes := d.elaboration.SwapStatementTypes(statement)
+		d.elaboration.elaboration.SetSwapStatementTypes(desugaredSwap, swapTypes)
+	}
+
 	return statement
 }
 
 func (d *Desugar) VisitSwitchStatement(statement *ast.SwitchStatement) ast.Element {
+	desugaredExpression, expressionDesugared := d.desugarExpression(statement.Expression)
+	desugaredCases, casesDesugared := d.desugarSwitchCases(statement.Cases)
+
+	if expressionDesugared || casesDesugared {
+		// Type is not stored in the elaboration.
+		return ast.NewSwitchStatement(
+			d.memoryGauge,
+			desugaredExpression,
+			desugaredCases,
+			statement.Range,
+		)
+	}
+
 	return statement
 }
 
+func (d *Desugar) desugarSwitchCases(cases []*ast.SwitchCase) (desugaredCases []*ast.SwitchCase, desugared bool) {
+	return desugarList(cases, d.desugarSwitchCase)
+}
+
+func (d *Desugar) desugarSwitchCase(switchCase *ast.SwitchCase) (desugaredCase *ast.SwitchCase, desugared bool) {
+	desugaredExpression, expressionDesugared := d.desugarExpression(switchCase.Expression)
+	desugaredStatements, statementsDesugared := d.desugarStatements(switchCase.Statements)
+
+	if expressionDesugared || statementsDesugared {
+		// Type is not stored in the elaboration.
+		return ast.NewSwitchCase(
+			d.memoryGauge,
+			desugaredExpression,
+			desugaredStatements,
+			switchCase.Range,
+		), true
+	}
+
+	return switchCase, false
+}
+
 func (d *Desugar) VisitEmitStatement(statement *ast.EmitStatement) ast.Element {
+	expression, desugared := d.desugarExpression(statement.InvocationExpression)
+	invocation := expression.(*ast.InvocationExpression)
+
+	if desugared {
+		desugaredEmit := ast.NewEmitStatement(
+			d.memoryGauge,
+			invocation,
+			statement.StartPos,
+		)
+		emitStmtType := d.elaboration.EmitStatementEventType(statement)
+		d.elaboration.elaboration.SetEmitStatementEventType(desugaredEmit, emitStmtType)
+		return desugaredEmit
+	}
+
 	return statement
 }
 
 func (d *Desugar) VisitExpressionStatement(statement *ast.ExpressionStatement) ast.Element {
+	expression, desugared := d.desugarExpression(statement.Expression)
+	if desugared {
+		// Type is not stored in the elaboration.
+		return ast.NewExpressionStatement(
+			d.memoryGauge,
+			expression,
+		)
+	}
+
 	return statement
 }
 
 func (d *Desugar) VisitRemoveStatement(statement *ast.RemoveStatement) ast.Element {
 	return statement
+}
+
+func (d *Desugar) VisitVoidExpression(expression *ast.VoidExpression) ast.Element {
+	return expression
+}
+
+func (d *Desugar) VisitNilExpression(expression *ast.NilExpression) ast.Element {
+	return expression
+}
+
+func (d *Desugar) VisitBoolExpression(expression *ast.BoolExpression) ast.Element {
+	return expression
+}
+
+func (d *Desugar) VisitStringExpression(expression *ast.StringExpression) ast.Element {
+	return expression
+}
+
+func (d *Desugar) VisitStringTemplateExpression(expression *ast.StringTemplateExpression) ast.Element {
+	desugaredExpressions, desugared := d.desugarExpressions(expression.Expressions)
+	if desugared {
+		// Type is not stored in the elaboration.
+		return ast.NewStringTemplateExpression(
+			d.memoryGauge,
+			expression.Values,
+			desugaredExpressions,
+			expression.Range,
+		)
+	}
+
+	return expression
+}
+
+func (d *Desugar) VisitIntegerExpression(expression *ast.IntegerExpression) ast.Element {
+	return expression
+}
+
+func (d *Desugar) VisitFixedPointExpression(expression *ast.FixedPointExpression) ast.Element {
+	return expression
+}
+
+func (d *Desugar) VisitDictionaryExpression(expression *ast.DictionaryExpression) ast.Element {
+	desugaredEntries, desugared := d.desugarDictionaryEntries(expression.Entries)
+	if desugared {
+		desugaredDictionaryExpr := ast.NewDictionaryExpression(
+			d.memoryGauge,
+			desugaredEntries,
+			expression.Range,
+		)
+
+		dictionaryExpressionTypes := d.elaboration.elaboration.DictionaryExpressionTypes(expression)
+		d.elaboration.elaboration.SetDictionaryExpressionTypes(desugaredDictionaryExpr, dictionaryExpressionTypes)
+		return desugaredDictionaryExpr
+	}
+
+	return expression
+}
+
+func (d *Desugar) desugarDictionaryEntries(entries []ast.DictionaryEntry) (desugaredEntries []ast.DictionaryEntry, desugared bool) {
+	return desugarList(entries, d.desugarDictionaryEntry)
+}
+
+func (d *Desugar) desugarDictionaryEntry(entry ast.DictionaryEntry) (desugaredEntry ast.DictionaryEntry, desugared bool) {
+	desugaredKey, keyDesugared := d.desugarExpression(entry.Key)
+	desugaredValue, valueDesugared := d.desugarExpression(entry.Value)
+
+	if keyDesugared || valueDesugared {
+		// Type is not stored in the elaboration.
+		return ast.NewDictionaryEntry(
+			d.memoryGauge,
+			desugaredKey,
+			desugaredValue,
+		), true
+	}
+
+	return entry, false
+}
+
+func (d *Desugar) VisitPathExpression(expression *ast.PathExpression) ast.Element {
+	return expression
+}
+
+func (d *Desugar) VisitForceExpression(expression *ast.ForceExpression) ast.Element {
+	desugaredExpression, desugared := d.desugarExpression(expression.Expression)
+	if desugared {
+		desugaredForceExpr := ast.NewForceExpression(
+			d.memoryGauge,
+			desugaredExpression,
+			expression.EndPos,
+		)
+
+		forceExprType := d.elaboration.elaboration.ForceExpressionType(expression)
+		d.elaboration.elaboration.SetForceExpressionType(desugaredForceExpr, forceExprType)
+		return desugaredForceExpr
+	}
+
+	return expression
+}
+
+func (d *Desugar) VisitArrayExpression(expression *ast.ArrayExpression) ast.Element {
+	desugaredValues, desugared := d.desugarExpressions(expression.Values)
+	if desugared {
+		desugaredArrayExpr := ast.NewArrayExpression(
+			d.memoryGauge,
+			desugaredValues,
+			expression.Range,
+		)
+
+		arrayExpressionTypes := d.elaboration.ArrayExpressionTypes(expression)
+		d.elaboration.SetArrayExpressionTypes(desugaredArrayExpr, arrayExpressionTypes)
+		return desugaredArrayExpr
+	}
+
+	return expression
+}
+
+func (d *Desugar) VisitInvocationExpression(expression *ast.InvocationExpression) ast.Element {
+	desugaredInvokedExpression, expressionDesugared := d.desugarExpression(expression.InvokedExpression)
+	desugaredArguments, argumentsDesugared := d.desugarArguments(expression.Arguments)
+
+	if expressionDesugared || argumentsDesugared {
+		desugaredInvocationExpr := ast.NewInvocationExpression(
+			d.memoryGauge,
+			desugaredInvokedExpression,
+			expression.TypeArguments,
+			desugaredArguments,
+			expression.ArgumentsStartPos,
+			expression.EndPos,
+		)
+
+		invocationExpressionTypes := d.elaboration.InvocationExpressionTypes(expression)
+		d.elaboration.SetInvocationExpressionTypes(desugaredInvocationExpr, invocationExpressionTypes)
+		return desugaredInvocationExpr
+	}
+
+	return expression
+}
+
+func (d *Desugar) desugarArguments(arguments ast.Arguments) (desugaredArguments ast.Arguments, desugared bool) {
+	return desugarList(arguments, d.desugarArgument)
+}
+
+func (d *Desugar) desugarArgument(argument *ast.Argument) (result *ast.Argument, desugared bool) {
+	originalExpression := argument.Expression
+	desugaredExpression := ast.AcceptExpression[ast.Element](argument.Expression, d)
+
+	desugared = desugaredExpression != originalExpression
+
+	if desugared {
+		result = ast.NewArgument(
+			d.memoryGauge,
+			argument.Label,
+			argument.LabelStartPos,
+			argument.LabelEndPos,
+			desugaredExpression.(ast.Expression),
+		)
+	} else {
+		result = argument
+	}
+
+	return
+}
+
+func (d *Desugar) VisitIdentifierExpression(expression *ast.IdentifierExpression) ast.Element {
+	return expression
+}
+
+func (d *Desugar) VisitIndexExpression(expression *ast.IndexExpression) ast.Element {
+	desugaredTarget, targetDesugared := d.desugarExpression(expression.TargetExpression)
+	desugaredIndex, indexDesugared := d.desugarExpression(expression.TargetExpression)
+
+	if targetDesugared || indexDesugared {
+		desugaredMemberExpr := ast.NewIndexExpression(
+			d.memoryGauge,
+			desugaredTarget,
+			desugaredIndex,
+			expression.Range,
+		)
+
+		indexExpressionTypes, ok := d.elaboration.IndexExpressionTypes(expression)
+		if ok {
+			d.elaboration.elaboration.SetIndexExpressionTypes(desugaredMemberExpr, indexExpressionTypes)
+		}
+
+		return desugaredMemberExpr
+	}
+
+	return expression
+}
+
+func (d *Desugar) VisitUnaryExpression(expression *ast.UnaryExpression) ast.Element {
+	desugaredExpression, desugared := d.desugarExpression(expression.Expression)
+	if desugared {
+		// Type is not stored in the elaboration.
+		return ast.NewUnaryExpression(
+			d.memoryGauge,
+			expression.Operation,
+			desugaredExpression,
+			expression.StartPos,
+		)
+	}
+
+	return expression
+}
+
+func (d *Desugar) VisitFunctionExpression(expression *ast.FunctionExpression) ast.Element {
+
+	parameterList := expression.ParameterList
+	returnTypeAnnotation := expression.ReturnTypeAnnotation
+
+	functionType := d.elaboration.elaboration.FunctionExpressionFunctionType(expression)
+
+	// TODO: If the function block was not desugared, avoid creating a new function-expression.
+	modifiedFuncBlock := d.desugarFunctionBlock(
+		"",
+		expression.FunctionBlock,
+		parameterList,
+		functionType,
+		returnTypeAnnotation,
+		expression,
+	)
+
+	functionExpr := ast.NewFunctionExpression(
+		d.memoryGauge,
+		expression.Purity,
+		parameterList,
+		returnTypeAnnotation,
+		modifiedFuncBlock,
+		expression.StartPos,
+	)
+
+	d.elaboration.elaboration.SetFunctionExpressionFunctionType(functionExpr, functionType)
+
+	return functionExpr
+}
+
+func (d *Desugar) VisitCreateExpression(expression *ast.CreateExpression) ast.Element {
+	desugaredExpression, desugared := d.desugarExpression(expression.InvocationExpression)
+	if desugared {
+		// Type is not stored in the elaboration.
+		invocation := desugaredExpression.(*ast.InvocationExpression)
+		return ast.NewCreateExpression(
+			d.memoryGauge,
+			invocation,
+			expression.StartPos,
+		)
+	}
+
+	return expression
+}
+
+func (d *Desugar) VisitMemberExpression(expression *ast.MemberExpression) ast.Element {
+	desugaredExpression, desugared := d.desugarExpression(expression.Expression)
+	if desugared {
+		desugaredMemberExpr := ast.NewMemberExpression(
+			d.memoryGauge,
+			desugaredExpression,
+			expression.Optional,
+			expression.AccessPos,
+			expression.Identifier,
+		)
+
+		memberAccessInfo, ok := d.elaboration.MemberExpressionMemberAccessInfo(expression)
+		if ok {
+			d.elaboration.SetMemberExpressionMemberAccessInfo(desugaredMemberExpr, memberAccessInfo)
+		}
+
+		return desugaredMemberExpr
+	}
+
+	return expression
+}
+
+func (d *Desugar) VisitReferenceExpression(expression *ast.ReferenceExpression) ast.Element {
+	desugaredExpression, desugared := d.desugarExpression(expression.Expression)
+	if desugared {
+		desugaredReferenceExpr := ast.NewReferenceExpression(
+			d.memoryGauge,
+			desugaredExpression,
+			expression.StartPos,
+		)
+
+		referenceExprType := d.elaboration.ReferenceExpressionBorrowType(expression)
+		d.elaboration.SetReferenceExpressionBorrowType(desugaredReferenceExpr, referenceExprType)
+
+		return desugaredReferenceExpr
+	}
+
+	return expression
+}
+
+func (d *Desugar) VisitDestroyExpression(expression *ast.DestroyExpression) ast.Element {
+	desugaredExpression, desugared := d.desugarExpression(expression.Expression)
+	if desugared {
+		// Type is not stored in the elaboration.
+		return ast.NewDestroyExpression(
+			d.memoryGauge,
+			desugaredExpression,
+			expression.StartPos,
+		)
+	}
+
+	return expression
+}
+
+func (d *Desugar) VisitCastingExpression(expression *ast.CastingExpression) ast.Element {
+	desugaredExpression, desugared := d.desugarExpression(expression.Expression)
+	if desugared {
+		desugaredCastingExpr := ast.NewCastingExpression(
+			d.memoryGauge,
+			desugaredExpression,
+			expression.Operation,
+			expression.TypeAnnotation,
+			expression.ParentVariableDeclaration,
+		)
+
+		castingExprTypes := d.elaboration.CastingExpressionTypes(expression)
+		d.elaboration.elaboration.SetCastingExpressionTypes(desugaredCastingExpr, castingExprTypes)
+
+		return desugaredCastingExpr
+	}
+
+	return expression
+}
+
+func (d *Desugar) VisitBinaryExpression(expression *ast.BinaryExpression) ast.Element {
+	leftExpr, leftDesugared := d.desugarExpression(expression.Left)
+	rightExpr, rightDesugared := d.desugarExpression(expression.Right)
+
+	if leftDesugared || rightDesugared {
+		desugaredBinaryExpr := ast.NewBinaryExpression(
+			d.memoryGauge,
+			expression.Operation,
+			leftExpr,
+			rightExpr,
+		)
+
+		binaryExprTypes := d.elaboration.elaboration.BinaryExpressionTypes(expression)
+		d.elaboration.elaboration.SetBinaryExpressionTypes(desugaredBinaryExpr, binaryExprTypes)
+		return desugaredBinaryExpr
+	}
+
+	return expression
+}
+
+func (d *Desugar) VisitConditionalExpression(expression *ast.ConditionalExpression) ast.Element {
+	testExpr, testDesugared := d.desugarExpression(expression.Test)
+	thenExpr, thenDesugared := d.desugarExpression(expression.Then)
+	elseExpr, elseDesugared := d.desugarExpression(expression.Else)
+
+	if testDesugared || thenDesugared || elseDesugared {
+		// Type is not stored in the elaboration.
+		return ast.NewConditionalExpression(
+			d.memoryGauge,
+			testExpr,
+			thenExpr,
+			elseExpr,
+		)
+	}
+
+	return expression
+}
+
+func (d *Desugar) VisitAttachExpression(expression *ast.AttachExpression) ast.Element {
+	return expression
 }
 
 var emptyInitializer = func() *ast.SpecialFunctionDeclaration {

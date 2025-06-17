@@ -168,6 +168,7 @@ const (
 	MemoryKindMembers
 	MemoryKindTypeAnnotation
 	MemoryKindDictionaryEntry
+	MemoryKindSwitchCase
 
 	MemoryKindFunctionDeclaration
 	MemoryKindCompositeDeclaration

@@ -3990,6 +3990,32 @@ func TestFunctionPreConditions(t *testing.T) {
 		assert.Equal(t, []string{"\"Foo.B\"", "\"Foo.C\"", "\"Bar.E\"", "\"Bar.F\"", "\"Foo.D\"", "\"A\""}, logs)
 	})
 
+	t.Run("in function expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := CompileAndInvoke(t,
+			`
+              fun main(x: Int): Int {
+
+                  var foo = fun(_ y: Int): Int {
+                      pre {
+                          y == 0
+                      }
+                      return y
+                  }
+
+                  return foo(x)
+              }
+            `,
+			"main",
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+		)
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "pre/post condition failed")
+	})
+
 	t.Run("in local function, fail", func(t *testing.T) {
 
 		t.Parallel()

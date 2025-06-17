@@ -121,6 +121,7 @@ var (
 	TransferMemoryUsage          = NewConstantMemoryUsage(MemoryKindTransfer)
 	TypeAnnotationMemoryUsage    = NewConstantMemoryUsage(MemoryKindTypeAnnotation)
 	DictionaryEntryMemoryUsage   = NewConstantMemoryUsage(MemoryKindDictionaryEntry)
+	SwitchCaseMemoryUsage        = NewConstantMemoryUsage(MemoryKindSwitchCase)
 
 	// AST Declarations
 
