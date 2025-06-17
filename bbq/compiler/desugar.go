@@ -123,12 +123,17 @@ func (d *Desugar) Run() DesugaredProgram {
 }
 
 func (d *Desugar) desugarDeclaration(declaration ast.Declaration) (result ast.Declaration, desugared bool) {
-	desugaredDeclaration := ast.AcceptDeclaration[ast.Element](declaration, d)
-	if desugaredDeclaration == nil {
+	if declaration == nil {
 		return nil, false
 	}
 
+	desugaredDeclaration := ast.AcceptDeclaration[ast.Element](declaration, d)
 	desugared = desugaredDeclaration != declaration
+
+	if desugaredDeclaration == nil {
+		return nil, desugared
+	}
+
 	return desugaredDeclaration.(ast.Declaration), desugared
 }
 
@@ -154,7 +159,7 @@ func (d *Desugar) desugarExpressions(expressions []ast.Expression) (desugaredExp
 
 func desugarList[T any](
 	list []T,
-	listEntryDesugarFunction func(item T) (desugaredEntry T, desugared bool),
+	listEntryDesugarFunction func(entry T) (desugaredEntry T, desugared bool),
 ) (desugaredList []T, desugared bool) {
 
 	for index, entry := range list {
@@ -170,11 +175,17 @@ func desugarList[T any](
 			continue
 		}
 
+		// If the current entry is also not desugared, then continue.
+		if !ok {
+			continue
+		}
+
 		// Otherwise, if the current entry is desugared (meaning, this is the first desugared entry),
 		// then add the original entries upto this point, and then add the current desugared entry.
-		if ok {
-			desugared = true
-			desugaredList = append(desugaredList, list[:index]...)
+		desugared = true
+		desugaredList = append(desugaredList, list[:index]...)
+
+		if any(desugaredEntry) != nil {
 			desugaredList = append(desugaredList, desugaredEntry)
 		}
 	}
@@ -1411,19 +1422,12 @@ func (d *Desugar) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaratio
 
 	// Recursively de-sugar nested declarations (functions, types, etc.)
 
-	var desugaredMembers []ast.Declaration
-
 	existingMembers := declaration.Members.Declarations()
-	for _, member := range existingMembers {
-		desugaredMember, _ := d.desugarDeclaration(member)
-		if desugaredMember == nil {
-			continue
-		}
-		desugaredMembers = append(desugaredMembers, desugaredMember)
-	}
 
-	// TODO: Optimize: If none of the existing members got updated or,
-	// if there are no inherited members, then return the same declaration as-is.
+	desugaredMembers, desugared := desugarList(existingMembers, d.desugarDeclaration)
+	if !desugared {
+		return declaration
+	}
 
 	modifiedDecl := ast.NewInterfaceDeclaration(
 		d.memoryGauge,
