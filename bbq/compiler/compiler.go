@@ -2662,7 +2662,6 @@ func (c *Compiler[_, _]) VisitStringExpression(expression *ast.StringExpression)
 }
 
 func (c *Compiler[_, _]) VisitStringTemplateExpression(expression *ast.StringTemplateExpression) (_ struct{}) {
-	valueArrSize := len(expression.Values)
 	exprArrSize := len(expression.Expressions)
 
 	for _, value := range expression.Values {
@@ -2673,9 +2672,8 @@ func (c *Compiler[_, _]) VisitStringTemplateExpression(expression *ast.StringTem
 	}
 
 	c.emit(
-		opcode.InstructionStringTemplate{
-			ValueSize: uint16(valueArrSize),
-			ExprSize:  uint16(exprArrSize),
+		opcode.InstructionTemplateString{
+			ExprSize: uint16(exprArrSize),
 		},
 	)
 

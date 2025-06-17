@@ -171,7 +171,7 @@ const (
 	EmitEvent
 	Loop
 	Statement
-	StringTemplate
+	TemplateString
 
 	// NOTE: not an actual opcode, must be last item
 	OpcodeMax

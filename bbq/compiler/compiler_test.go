@@ -7953,7 +7953,7 @@ func TestCompileStringTemplate(t *testing.T) {
 			opcode.InstructionGetConstant{Constant: 0x2},
 			opcode.InstructionGetConstant{Constant: 0x2},
 			opcode.InstructionAdd{},
-			opcode.InstructionStringTemplate{ValueSize: 0x2, ExprSize: 0x1},
+			opcode.InstructionTemplateString{ExprSize: 0x1},
 			opcode.InstructionTransferAndConvert{Type: 0x1},
 			opcode.InstructionSetLocal{Local: 0x0},
 

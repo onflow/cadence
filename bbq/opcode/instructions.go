@@ -2465,53 +2465,46 @@ func (i InstructionStatement) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
-// InstructionStringTemplate
+// InstructionTemplateString
 //
-// Represents a string template with an array of values (strings) and an array of expression, pops both off the stack.
-type InstructionStringTemplate struct {
-	ValueSize uint16
-	ExprSize  uint16
+// Represents a string template with an array of values (strings) and an array of expressions, pops both off the stack.
+type InstructionTemplateString struct {
+	ExprSize uint16
 }
 
-var _ Instruction = InstructionStringTemplate{}
+var _ Instruction = InstructionTemplateString{}
 
-func (InstructionStringTemplate) Opcode() Opcode {
-	return StringTemplate
+func (InstructionTemplateString) Opcode() Opcode {
+	return TemplateString
 }
 
-func (i InstructionStringTemplate) String() string {
+func (i InstructionTemplateString) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
 	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionStringTemplate) OperandsString(sb *strings.Builder, colorize bool) {
-	sb.WriteByte(' ')
-	printfArgument(sb, "valueSize", i.ValueSize, colorize)
+func (i InstructionTemplateString) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "exprSize", i.ExprSize, colorize)
 }
 
-func (i InstructionStringTemplate) ResolvedOperandsString(sb *strings.Builder,
+func (i InstructionTemplateString) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
 	sb.WriteByte(' ')
-	printfArgument(sb, "valueSize", i.ValueSize, colorize)
-	sb.WriteByte(' ')
 	printfArgument(sb, "exprSize", i.ExprSize, colorize)
 }
 
-func (i InstructionStringTemplate) Encode(code *[]byte) {
+func (i InstructionTemplateString) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
-	emitUint16(code, i.ValueSize)
 	emitUint16(code, i.ExprSize)
 }
 
-func DecodeStringTemplate(ip *uint16, code []byte) (i InstructionStringTemplate) {
-	i.ValueSize = decodeUint16(ip, code)
+func DecodeTemplateString(ip *uint16, code []byte) (i InstructionTemplateString) {
 	i.ExprSize = decodeUint16(ip, code)
 	return i
 }
@@ -2652,8 +2645,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionLoop{}
 	case Statement:
 		return InstructionStatement{}
-	case StringTemplate:
-		return DecodeStringTemplate(ip, code)
+	case TemplateString:
+		return DecodeTemplateString(ip, code)
 	}
 
 	panic(errors.NewUnreachableError())

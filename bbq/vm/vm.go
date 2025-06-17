@@ -1377,32 +1377,21 @@ func opDeref(vm *VM) {
 	vm.push(dereferenced)
 }
 
-func opStringTemplate(vm *VM, ins opcode.InstructionStringTemplate) {
+func opStringTemplate(vm *VM, ins opcode.InstructionTemplateString) {
 	expressions := vm.popN(int(ins.ExprSize))
-	values := vm.popN(int(ins.ValueSize))
+	values := vm.popN(int(ins.ExprSize + 1))
+	var valuesStr []string
 
-	// identical to interpreter
-	var builder strings.Builder
-	for i, str := range values {
+	// convert values to string[]
+	for _, str := range values {
 		s, ok := str.(*interpreter.StringValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
-		builder.WriteString(s.Str)
-		if i < len(expressions) {
-			// switch on value instead of type
-			switch e := expressions[i].(type) {
-			case *interpreter.StringValue:
-				builder.WriteString(e.Str)
-			case interpreter.CharacterValue:
-				builder.WriteString(e.Str)
-			default:
-				builder.WriteString(e.String())
-			}
-		}
+		valuesStr = append(valuesStr, s.Str)
 	}
 
-	vm.push(interpreter.NewUnmeteredStringValue(builder.String()))
+	vm.push(interpreter.BuildStringTemplate(valuesStr, expressions))
 }
 
 func (vm *VM) run() {
@@ -1589,7 +1578,7 @@ func (vm *VM) run() {
 			opLoop(vm)
 		case opcode.InstructionStatement:
 			opStatement(vm)
-		case opcode.InstructionStringTemplate:
+		case opcode.InstructionTemplateString:
 			opStringTemplate(vm, ins)
 		default:
 			panic(errors.NewUnexpectedError("cannot execute instruction of type %T", ins))

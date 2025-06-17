@@ -9136,32 +9136,15 @@ func TestStringTemplate(t *testing.T) {
 
 	t.Parallel()
 
-	checker, err := ParseAndCheck(t, `
-        fun test(): String {
-			var s = "2+2=\(2+2)"
-            return s
-        }
-    `)
-	require.NoError(t, err)
-
-	comp := compiler.NewInstructionCompiler(
-		interpreter.ProgramFromChecker(checker),
-		checker.Location,
+	result, err := CompileAndInvoke(t,
+		`
+			fun test(): String {
+				var s = "2+2=\(2+2)"
+				return s
+			}
+		`,
+		"test",
 	)
-	program := comp.Compile()
-
-	vmConfig := &vm.Config{}
-	vmInstance := vm.NewVM(TestLocation, program, vmConfig)
-
-	result, err := vmInstance.InvokeExternally("test")
 	require.NoError(t, err)
-
-	context := vmInstance.Context()
-
-	AssertValuesEqual(
-		t,
-		context,
-		interpreter.NewUnmeteredStringValue("2+2=4"),
-		result,
-	)
+	require.Equal(t, interpreter.NewUnmeteredStringValue("2+2=4"), result)
 }

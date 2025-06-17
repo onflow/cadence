@@ -75,7 +75,7 @@ func _() {
 	_ = x[EmitEvent-111]
 	_ = x[Loop-112]
 	_ = x[Statement-113]
-	_ = x[StringTemplate-114]
+	_ = x[TemplateString-114]
 	_ = x[OpcodeMax-115]
 }
 
@@ -89,7 +89,7 @@ const (
 	_Opcode_name_6 = "GetConstantGetLocalSetLocalGetUpvalueSetUpvalueGetGlobalSetGlobalGetFieldRemoveFieldSetFieldSetIndexGetIndexRemoveIndex"
 	_Opcode_name_7 = "InvokeInvokeMethodStaticInvokeMethodDynamic"
 	_Opcode_name_8 = "DropDup"
-	_Opcode_name_9 = "IteratorIteratorHasNextIteratorNextIteratorEndEmitEventLoopStatementStringTemplateOpcodeMax"
+	_Opcode_name_9 = "IteratorIteratorHasNextIteratorNextIteratorEndEmitEventLoopStatementTemplateStringOpcodeMax"
 )
 
 var (
