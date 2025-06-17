@@ -1139,17 +1139,18 @@ func (c *Compiler[_, _]) VisitContinueStatement(_ *ast.ContinueStatement) (_ str
 }
 
 func (c *Compiler[_, _]) emitContinue() {
-	preContinue := c.currentControlFlow.preContinue
+	currentControlFlow := c.currentControlFlow
+
+	preContinue := currentControlFlow.preContinue
 	if preContinue != nil {
 		preContinue()
 	}
 
-	start := c.currentControlFlow.start
+	start := currentControlFlow.start
 	if start <= 0 {
 		panic(errors.NewUnreachableError())
 	}
 	c.emitJump(start)
-	return
 }
 
 func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{}) {
