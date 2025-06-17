@@ -856,7 +856,11 @@ func declaredContractType(compositeKindedType sema.CompositeKindedType) sema.Com
 
 func (d *Desugar) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) ast.Element {
 	desugaredDecl, desugared := d.desugarDeclaration(declaration.FunctionDeclaration)
-	if desugaredDecl == nil || !desugared {
+	if desugaredDecl == nil {
+		return nil
+	}
+
+	if !desugared {
 		return declaration
 	}
 

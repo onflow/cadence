@@ -2640,7 +2640,7 @@ func (c *Compiler[_, _]) VisitBinaryExpression(expression *ast.BinaryExpression)
 func (c *Compiler[_, _]) VisitFunctionExpression(expression *ast.FunctionExpression) (_ struct{}) {
 	// It is OK/safe to use the desugar-instance to desugar the function-expression,
 	// since function-expression desugaring doesn't rely on contextual-information.
-	// (i.e: doesn't rely on where in the AST does this expression in located).
+	// (i.e: doesn't rely on where this expression is located in the AST; doesn't inherit from other functions, etc.).
 	desugaredExpression := c.desugar.DesugarFunctionExpression(expression)
 
 	functionIndex := len(c.functions)
