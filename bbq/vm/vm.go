@@ -1253,6 +1253,10 @@ func opNil(vm *VM) {
 	vm.push(interpreter.Nil)
 }
 
+func opVoid(vm *VM) {
+	vm.push(interpreter.Void)
+}
+
 func opEqual(vm *VM) {
 	left, right := vm.peekPop()
 	result := interpreter.TestValueEqual(
@@ -1564,6 +1568,8 @@ func (vm *VM) run() {
 			opForceCast(vm, ins)
 		case opcode.InstructionNil:
 			opNil(vm)
+		case opcode.InstructionVoid:
+			opVoid(vm)
 		case opcode.InstructionEqual:
 			opEqual(vm)
 		case opcode.InstructionNotEqual:

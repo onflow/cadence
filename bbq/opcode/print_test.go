@@ -228,6 +228,7 @@ func TestPrintInstruction(t *testing.T) {
 		"True":                      {byte(True)},
 		"False":                     {byte(False)},
 		"Nil":                       {byte(Nil)},
+		"Void":                      {byte(Void)},
 		"GetField fieldName:258":    {byte(GetField), 1, 2},
 		"SetField fieldName:258":    {byte(SetField), 1, 2},
 		"RemoveField fieldName:258": {byte(RemoveField), 1, 2},
