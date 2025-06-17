@@ -120,6 +120,7 @@ const (
 	SetLocal
 	GetUpvalue
 	SetUpvalue
+	CloseUpvalue
 	GetGlobal
 	SetGlobal
 	GetField

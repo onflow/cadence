@@ -19,5 +19,6 @@
 package compiler
 
 type local struct {
-	index uint16
+	index      uint16
+	isCaptured bool
 }

@@ -165,6 +165,7 @@ func TestPrintInstruction(t *testing.T) {
 		"SetLocal local:258":       {byte(SetLocal), 1, 2},
 		"GetUpvalue upvalue:258":   {byte(GetUpvalue), 1, 2},
 		"SetUpvalue upvalue:258":   {byte(SetUpvalue), 1, 2},
+		"CloseUpvalue local:258":   {byte(CloseUpvalue), 1, 2},
 		"GetGlobal global:258":     {byte(GetGlobal), 1, 2},
 		"SetGlobal global:258":     {byte(SetGlobal), 1, 2},
 
