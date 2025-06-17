@@ -252,6 +252,7 @@ func TestPrintInstruction(t *testing.T) {
 		"Transfer":                        {byte(Transfer)},
 		"Loop":                            {byte(Loop)},
 		"Statement":                       {byte(Statement)},
+		"TemplateString exprSize:258":     {byte(TemplateString), 1, 2, 3, 4},
 	}
 
 	// Check if there is any opcode that is not tested

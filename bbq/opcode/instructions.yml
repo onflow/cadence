@@ -886,3 +886,21 @@
 - name: "statement"
   description:
     Indicates the start of a statement.
+
+- name: "templateString"
+  description:
+    Represents a string template with an array of values (strings) and an array of expressions, pops both off the stack.
+  operands:
+    - name: "exprSize"
+      type: "size"
+  valueEffects:
+    pop:
+      - name: "values"
+        type: "string"
+        count: "exprSize + 1"
+      - name: "exprs"
+        type: "value"
+        count: "exprSize"
+    push:
+      - name: "string"
+        type: "string"

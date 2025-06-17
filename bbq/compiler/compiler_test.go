@@ -7923,3 +7923,153 @@ func TestCompileSwapIndex(t *testing.T) {
 		program.Constants,
 	)
 }
+
+func TestCompileStringTemplate(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			fun test() {
+				let str = "2+2=\(2+2)"
+			}
+		`)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 1)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// let str = "2+2=\(2+2)"
+				opcode.InstructionStatement{},
+				opcode.InstructionGetConstant{Constant: 0x0},
+				opcode.InstructionGetConstant{Constant: 0x1},
+				opcode.InstructionGetConstant{Constant: 0x2},
+				opcode.InstructionGetConstant{Constant: 0x2},
+				opcode.InstructionAdd{},
+				opcode.InstructionTemplateString{ExprSize: 0x1},
+				opcode.InstructionTransferAndConvert{Type: 0x1},
+				opcode.InstructionSetLocal{Local: 0x0},
+
+				// Return
+				opcode.InstructionReturn{},
+			},
+			functions[0].Code,
+		)
+
+		assert.Equal(t,
+			[]constant.Constant{
+				{
+					Data: []byte("2+2="),
+					Kind: constant.String,
+				},
+
+				{
+					Data: []byte(""),
+					Kind: constant.String,
+				},
+				{
+					Data: []byte{0x2},
+					Kind: constant.Int,
+				},
+			},
+			program.Constants,
+		)
+	})
+
+	t.Run("multiple exprs", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			fun test() {
+				let a = "A"
+				let b = "B"
+				let c = 4
+				let str = "\(a) + \(b) = \(c)"
+			}
+		`)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 1)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// let a = "A"
+				opcode.InstructionStatement{},
+				opcode.InstructionGetConstant{Constant: 0x0},
+				opcode.InstructionTransferAndConvert{Type: 0x1},
+				opcode.InstructionSetLocal{Local: 0x0},
+				// let b = "B"
+				opcode.InstructionStatement{},
+				opcode.InstructionGetConstant{Constant: 0x1},
+				opcode.InstructionTransferAndConvert{Type: 0x1},
+				opcode.InstructionSetLocal{Local: 0x1},
+				// let c = 4
+				opcode.InstructionStatement{},
+				opcode.InstructionGetConstant{Constant: 0x2},
+				opcode.InstructionTransferAndConvert{Type: 0x2},
+				opcode.InstructionSetLocal{Local: 0x2},
+				// let str = "\(a) + \(b) = \(c)"
+				opcode.InstructionStatement{},
+				opcode.InstructionGetConstant{Constant: 0x3},
+				opcode.InstructionGetConstant{Constant: 0x4},
+				opcode.InstructionGetConstant{Constant: 0x5},
+				opcode.InstructionGetConstant{Constant: 0x3},
+				opcode.InstructionGetLocal{Local: 0x0},
+				opcode.InstructionGetLocal{Local: 0x1},
+				opcode.InstructionGetLocal{Local: 0x2},
+				opcode.InstructionTemplateString{ExprSize: 0x3},
+				opcode.InstructionTransferAndConvert{Type: 0x1},
+				opcode.InstructionSetLocal{Local: 0x3},
+				opcode.InstructionReturn{},
+			},
+			functions[0].Code,
+		)
+
+		assert.Equal(t,
+			[]constant.Constant{
+				{
+					Data: []byte("A"),
+					Kind: constant.String,
+				},
+				{
+					Data: []byte("B"),
+					Kind: constant.String,
+				},
+				{
+					Data: []byte{0x4},
+					Kind: constant.Int,
+				},
+				{
+					Data: []byte(""),
+					Kind: constant.String,
+				},
+				{
+					Data: []byte(" + "),
+					Kind: constant.String,
+				},
+				{
+					Data: []byte(" = "),
+					Kind: constant.String,
+				},
+			},
+			program.Constants,
+		)
+	})
+}
