@@ -3990,7 +3990,7 @@ func TestFunctionPreConditions(t *testing.T) {
 		assert.Equal(t, []string{"\"Foo.B\"", "\"Foo.C\"", "\"Bar.E\"", "\"Bar.F\"", "\"Foo.D\"", "\"A\""}, logs)
 	})
 
-	t.Run("in function expression", func(t *testing.T) {
+	t.Run("in function expression, fail", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -4014,6 +4014,36 @@ func TestFunctionPreConditions(t *testing.T) {
 
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "pre/post condition failed")
+	})
+
+	t.Run("in function expression, pass", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+              fun main(x: Int): Int {
+
+                  var foo = fun(_ y: Int): Int {
+                      pre {
+                          y != 0
+                      }
+                      return y
+                  }
+
+                  return foo(x)
+              }
+            `,
+			"main",
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+		)
+
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			result,
+		)
 	})
 
 	t.Run("in local function, fail", func(t *testing.T) {
@@ -4065,7 +4095,11 @@ func TestFunctionPreConditions(t *testing.T) {
 		)
 
 		require.NoError(t, err)
-		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), result)
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			result,
+		)
 	})
 }
 
@@ -4451,6 +4485,118 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "a must be larger than 10")
+	})
+
+	t.Run("in function expression, fail", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := CompileAndInvoke(t,
+			`
+              fun main(x: Int): Int {
+
+                  var foo = fun(_ y: Int): Int {
+                      post {
+                          y == 0
+                      }
+                      return y
+                  }
+
+                  return foo(x)
+              }
+            `,
+			"main",
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+		)
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "pre/post condition failed")
+	})
+
+	t.Run("in function expression, pass", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+              fun main(x: Int): Int {
+
+                  var foo = fun(_ y: Int): Int {
+                      post {
+                          y != 0
+                      }
+                      return y
+                  }
+
+                  return foo(x)
+              }
+            `,
+			"main",
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+		)
+
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			result,
+		)
+	})
+
+	t.Run("in local function, fail", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := CompileAndInvoke(t,
+			`
+              fun main(x: Int): Int {
+
+                  fun foo(_ y: Int): Int {
+                      post {
+                          y == 0
+                      }
+                      return y
+                  }
+
+                  return foo(x)
+              }
+            `,
+			"main",
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+		)
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "pre/post condition failed")
+	})
+
+	t.Run("in local function, pass", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+              fun main(x: Int): Int {
+
+                  fun foo(_ y: Int): Int {
+                      post {
+                          y != 0
+                      }
+                      return y
+                  }
+
+                  return foo(x)
+              }
+            `,
+			"main",
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+		)
+
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			result,
+		)
 	})
 }
 
