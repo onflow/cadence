@@ -7923,3 +7923,146 @@ func TestCompileSwapIndex(t *testing.T) {
 		program.Constants,
 	)
 }
+
+func TestForStatementCapturing(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+	    fun test() {
+           for i, x in [1, 2, 3] {
+               let f = fun (): Int {
+                   return x + i
+               }
+               if x > 0 {
+                   continue
+               }
+               f()
+           }
+       }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 2)
+
+	const (
+		iterIndex = iota
+		iIndex
+		xIndex
+		fIndex
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+
+			// for i, x in [1, 2, 3]
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0},
+			opcode.InstructionTransferAndConvert{Type: 2},
+			opcode.InstructionGetConstant{Constant: 1},
+			opcode.InstructionTransferAndConvert{Type: 2},
+			opcode.InstructionGetConstant{Constant: 2},
+			opcode.InstructionTransferAndConvert{Type: 2},
+			opcode.InstructionNewArray{
+				Type:       1,
+				Size:       3,
+				IsResource: false,
+			},
+
+			// get iterator
+			opcode.InstructionIterator{},
+			opcode.InstructionSetLocal{Local: iterIndex},
+
+			// set i = -1
+			opcode.InstructionGetConstant{Constant: 3},
+			opcode.InstructionSetLocal{Local: iIndex},
+
+			// check if iterator has more elements
+			opcode.InstructionGetLocal{Local: iterIndex},
+			opcode.InstructionIteratorHasNext{},
+			opcode.InstructionJumpIfFalse{Target: 44},
+
+			opcode.InstructionLoop{},
+			// increment i
+			opcode.InstructionGetLocal{Local: iIndex},
+			opcode.InstructionGetConstant{Constant: 0},
+			opcode.InstructionAdd{},
+			opcode.InstructionSetLocal{Local: iIndex},
+
+			// get next iterator element
+			opcode.InstructionGetLocal{Local: iterIndex},
+			opcode.InstructionIteratorNext{},
+			opcode.InstructionTransferAndConvert{Type: 2},
+			opcode.InstructionSetLocal{Local: xIndex},
+
+			// let f = fun() ...
+			opcode.InstructionStatement{},
+			opcode.InstructionNewClosure{
+				Function: 1,
+				Upvalues: []opcode.Upvalue{
+					{
+						TargetIndex: xIndex,
+						IsLocal:     true,
+					},
+					{
+						TargetIndex: iIndex,
+						IsLocal:     true,
+					},
+				},
+			},
+			opcode.InstructionTransferAndConvert{Type: 3},
+			opcode.InstructionSetLocal{Local: fIndex},
+
+			// if x > 0
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: xIndex},
+			opcode.InstructionGetConstant{Constant: 4},
+			opcode.InstructionGreater{},
+			opcode.InstructionJumpIfFalse{Target: 37},
+
+			// continue
+			opcode.InstructionStatement{},
+			opcode.InstructionCloseUpvalue{Local: iIndex},
+			opcode.InstructionCloseUpvalue{Local: xIndex},
+			opcode.InstructionJump{Target: 12},
+
+			// f()
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 3},
+			opcode.InstructionInvoke{ArgCount: 0},
+			opcode.InstructionDrop{},
+
+			// next iteration
+			opcode.InstructionCloseUpvalue{Local: iIndex},
+			opcode.InstructionCloseUpvalue{Local: xIndex},
+			opcode.InstructionJump{Target: 12},
+
+			// end of for loop
+			opcode.InstructionGetLocal{Local: 0},
+			opcode.InstructionIteratorEnd{},
+
+			opcode.InstructionReturn{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// return x + i
+			opcode.InstructionStatement{},
+			opcode.InstructionGetUpvalue{Upvalue: 0},
+			opcode.InstructionGetUpvalue{Upvalue: 1},
+			opcode.InstructionAdd{},
+			opcode.InstructionTransferAndConvert{Type: 2},
+			opcode.InstructionReturnValue{},
+		},
+		functions[1].Code,
+	)
+}

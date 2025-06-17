@@ -810,6 +810,16 @@ func opSetUpvalue(vm *VM, ins opcode.InstructionSetUpvalue) {
 	}
 }
 
+func opCloseUpvalue(vm *VM, ins opcode.InstructionCloseUpvalue) {
+	absoluteLocalsIndex := int(vm.callFrame.localsOffset) + int(ins.Local)
+	openUpvalues := vm.callFrame.openUpvalues
+	upvalue := openUpvalues[absoluteLocalsIndex]
+	if upvalue != nil {
+		upvalue.closed = vm.locals[absoluteLocalsIndex]
+		delete(openUpvalues, absoluteLocalsIndex)
+	}
+}
+
 func opGetGlobal(vm *VM, ins opcode.InstructionGetGlobal) {
 	globalIndex := ins.Global
 	globals := vm.callFrame.function.Executable.Globals
@@ -1485,6 +1495,8 @@ func (vm *VM) run() {
 			opGetUpvalue(vm, ins)
 		case opcode.InstructionSetUpvalue:
 			opSetUpvalue(vm, ins)
+		case opcode.InstructionCloseUpvalue:
+			opCloseUpvalue(vm, ins)
 		case opcode.InstructionGetGlobal:
 			opGetGlobal(vm, ins)
 		case opcode.InstructionSetGlobal:
@@ -1623,7 +1635,8 @@ func opNewClosure(vm *VM, ins opcode.InstructionNewClosure) {
 
 func (vm *VM) captureUpvalue(absoluteLocalsIndex int) *Upvalue {
 	// Check if the upvalue already exists and reuse it
-	if upvalue, ok := vm.callFrame.openUpvalues[absoluteLocalsIndex]; ok {
+	openUpvalues := vm.callFrame.openUpvalues
+	if upvalue, ok := openUpvalues[absoluteLocalsIndex]; ok {
 		return upvalue
 	}
 
@@ -1631,10 +1644,11 @@ func (vm *VM) captureUpvalue(absoluteLocalsIndex int) *Upvalue {
 	upvalue := &Upvalue{
 		absoluteLocalsIndex: absoluteLocalsIndex,
 	}
-	if vm.callFrame.openUpvalues == nil {
-		vm.callFrame.openUpvalues = make(map[int]*Upvalue)
+	if openUpvalues == nil {
+		openUpvalues = make(map[int]*Upvalue)
+		vm.callFrame.openUpvalues = openUpvalues
 	}
-	vm.callFrame.openUpvalues[absoluteLocalsIndex] = upvalue
+	openUpvalues[absoluteLocalsIndex] = upvalue
 	return upvalue
 }
 

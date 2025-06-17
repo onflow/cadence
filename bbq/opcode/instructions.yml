@@ -51,6 +51,13 @@
       - name: "value"
         type: "value"
 
+- name: "closeUpvalue"
+  description:
+    Closes the upvalue for the local at the given index.
+  operands:
+    - name: "local"
+      type: "localIndex"
+
 # Global instructions
 
 - name: "getGlobal"

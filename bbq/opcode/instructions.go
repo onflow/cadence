@@ -216,6 +216,50 @@ func DecodeSetUpvalue(ip *uint16, code []byte) (i InstructionSetUpvalue) {
 	return i
 }
 
+// InstructionCloseUpvalue
+//
+// Closes the upvalue for the local at the given index.
+type InstructionCloseUpvalue struct {
+	Local uint16
+}
+
+var _ Instruction = InstructionCloseUpvalue{}
+
+func (InstructionCloseUpvalue) Opcode() Opcode {
+	return CloseUpvalue
+}
+
+func (i InstructionCloseUpvalue) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
+}
+
+func (i InstructionCloseUpvalue) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "local", i.Local, colorize)
+}
+
+func (i InstructionCloseUpvalue) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "local", i.Local, colorize)
+}
+
+func (i InstructionCloseUpvalue) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.Local)
+}
+
+func DecodeCloseUpvalue(ip *uint16, code []byte) (i InstructionCloseUpvalue) {
+	i.Local = decodeUint16(ip, code)
+	return i
+}
+
 // InstructionGetGlobal
 //
 // Pushes the value of the global at the given index onto the stack.
@@ -2477,6 +2521,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return DecodeGetUpvalue(ip, code)
 	case SetUpvalue:
 		return DecodeSetUpvalue(ip, code)
+	case CloseUpvalue:
+		return DecodeCloseUpvalue(ip, code)
 	case GetGlobal:
 		return DecodeGetGlobal(ip, code)
 	case SetGlobal:

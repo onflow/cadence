@@ -450,10 +450,17 @@ func (c *Compiler[_, _]) patchJump(jumpOpcodeOffset int, targetInstructionOffset
 	)
 }
 
-func (c *Compiler[_, _]) pushControlFlow(start int) {
+func (c *Compiler[_, _]) pushControlFlow(start int) *controlFlow {
 	index := len(c.controlFlows)
-	c.controlFlows = append(c.controlFlows, controlFlow{start: start})
-	c.currentControlFlow = &c.controlFlows[index]
+	c.controlFlows = append(
+		c.controlFlows,
+		controlFlow{
+			start: start,
+		},
+	)
+	current := &c.controlFlows[index]
+	c.currentControlFlow = current
+	return current
 }
 
 func (c *Compiler[_, _]) popControlFlow(endOffset int) {
@@ -1127,6 +1134,16 @@ func (c *Compiler[_, _]) VisitBreakStatement(_ *ast.BreakStatement) (_ struct{})
 }
 
 func (c *Compiler[_, _]) VisitContinueStatement(_ *ast.ContinueStatement) (_ struct{}) {
+	c.emitContinue()
+	return
+}
+
+func (c *Compiler[_, _]) emitContinue() {
+	preContinue := c.currentControlFlow.preContinue
+	if preContinue != nil {
+		preContinue()
+	}
+
 	start := c.currentControlFlow.start
 	if start <= 0 {
 		panic(errors.NewUnreachableError())
@@ -1266,18 +1283,31 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 	// Initialize 'index' variable, if needed.
 	index := statement.Index
 	indexNeeded := index != nil
-	var indexLocalVar *local
+	var indexLocal *local
 
 	if indexNeeded {
 		// `var <index> = -1`
 		// Start with -1 and then increment at the start of the loop,
 		// so that we don't have to deal with early exists of the loop.
 		c.emitIntConst(-1)
-		indexLocalVar = c.emitDeclareLocal(index.Identifier)
+		indexLocal = c.emitDeclareLocal(index.Identifier)
 	}
 
+	entryLocal := c.currentFunction.declareLocal(statement.Identifier.Identifier)
+
 	testOffset := c.codeGen.Offset()
-	c.pushControlFlow(testOffset)
+	controlFlow := c.pushControlFlow(testOffset)
+	controlFlow.preContinue = func() {
+		// If the index local (if any) or the entry local are captured,
+		// then we need to close the upvalue for them before continuing the loop.
+
+		if indexLocal != nil && indexLocal.isCaptured {
+			c.emitCloseUpvalue(indexLocal.index)
+		}
+		if entryLocal.isCaptured {
+			c.emitCloseUpvalue(entryLocal.index)
+		}
+	}
 	var endOffset int
 	defer func() {
 		c.popControlFlow(endOffset)
@@ -1298,10 +1328,10 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 	// worry about loop-control statements (e.g: continue, return, break) in the body.
 	if indexNeeded {
 		// <index> = <index> + 1
-		c.emitGetLocal(indexLocalVar.index)
+		c.emitGetLocal(indexLocal.index)
 		c.emitIntConst(1)
 		c.emit(opcode.InstructionAdd{})
-		c.emitSetLocal(indexLocalVar.index)
+		c.emitSetLocal(indexLocal.index)
 	}
 
 	// Get the iterator and call `next()` (value for arrays, key for dictionaries, etc.)
@@ -1326,7 +1356,7 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 
 	// Store it (next entry) in a local var.
 	// `<entry> = iterator.next()`
-	c.emitDeclareLocal(statement.Identifier.Identifier)
+	c.emitSetLocal(entryLocal.index)
 
 	// Compile the for-loop body.
 	c.compileBlock(
@@ -1335,8 +1365,9 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 		nil,
 	)
 
-	// Jump back to the loop test. i.e: `hasNext()`
-	c.emitJump(testOffset)
+	// Jump back to the loop test. i.e: `hasNext()`.
+	// Use a continue to ensure all instructions for the next loop iteration are generated (not just the jump).
+	c.emitContinue()
 
 	endOffset = c.codeGen.Offset()
 	c.patchJump(endJump, endOffset)
@@ -3339,6 +3370,12 @@ func (c *Compiler[E, _]) emitNewClosure(functionIndex uint16, function *function
 	c.emit(opcode.InstructionNewClosure{
 		Function: functionIndex,
 		Upvalues: function.upvalues,
+	})
+}
+
+func (c *Compiler[_, _]) emitCloseUpvalue(localIndex uint16) {
+	c.codeGen.Emit(opcode.InstructionCloseUpvalue{
+		Local: localIndex,
 	})
 }
 
