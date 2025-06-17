@@ -3286,28 +3286,28 @@ func TestDivModUFix64(t *testing.T) {
 		{1, ufix64Zero, "division by zero"},
 		{2, ufix64Zero, "division by zero"},
 		{ufix64MaxIntDividend, ufix64Zero, "division by zero"},
-		{ufix64MaxIntDividend + 1, ufix64Zero, OverflowError{}},
+		{ufix64MaxIntDividend + 1, ufix64Zero, &OverflowError{}},
 
 		// 0.1
 		{0, ufix64ZeroDotOne, nil},
 		{1, ufix64ZeroDotOne, nil},
 		{2, ufix64ZeroDotOne, nil},
 		{ufix64MaxIntDividend, ufix64ZeroDotOne, values.OverflowError{}},
-		{ufix64MaxIntDividend + 1, ufix64ZeroDotOne, OverflowError{}},
+		{ufix64MaxIntDividend + 1, ufix64ZeroDotOne, &OverflowError{}},
 
 		// 1.0
 		{0, ufix64One, nil},
 		{1, ufix64One, nil},
 		{2, ufix64One, nil},
 		{ufix64MaxIntDividend, ufix64One, nil},
-		{ufix64MaxIntDividend + 1, ufix64One, OverflowError{}},
+		{ufix64MaxIntDividend + 1, ufix64One, &OverflowError{}},
 
 		// 2.0
 		{0, ufix64Two, nil},
 		{1, ufix64Two, nil},
 		{2, ufix64Two, nil},
 		{ufix64MaxIntDividend, ufix64Two, nil},
-		{ufix64MaxIntDividend + 1, ufix64Two, OverflowError{}},
+		{ufix64MaxIntDividend + 1, ufix64Two, &OverflowError{}},
 	}
 
 	inter, err := NewInterpreter(nil, nil, &Config{})
@@ -3332,7 +3332,19 @@ func TestDivModUFix64(t *testing.T) {
 			if test.panic == nil {
 				assert.NotPanics(t, f)
 			} else {
-				assert.PanicsWithValue(t, test.panic, f)
+				var paniced bool
+				func() {
+					defer func() {
+						recovered := recover()
+						if recovered != nil {
+							paniced = true
+						}
+						assert.Equal(t, test.panic, recovered)
+					}()
+					f()
+				}()
+
+				assert.True(t, paniced, "expected panic but did not panic")
 			}
 		}
 	}
