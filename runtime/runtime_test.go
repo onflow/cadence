@@ -2822,6 +2822,7 @@ func TestRuntimeTransaction_CreateAccount(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -6500,6 +6501,7 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -6642,6 +6644,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)

@@ -69,7 +69,7 @@ func VMDefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLi
 		NewVMGetBlockFunction(handler),
 		NewVMGetCurrentBlockFunction(handler),
 		NewVMGetAccountFunction(handler),
-		// TODO: AccountConstructor
+		NewVMAccountConstructor(handler),
 		// TODO: PublicKeyConstructor
 		// TODO: HashAlgorithmConstructor
 		// TODO: RLPContract,

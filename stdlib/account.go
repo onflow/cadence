@@ -36,6 +36,8 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
+const accountFunctionName = "Account"
+
 const accountFunctionDocString = `
 Creates a new account, paid by the given existing account
 `
@@ -112,7 +114,7 @@ type AccountCreator interface {
 
 func NewInterpreterAccountConstructor(creator AccountCreator) StandardLibraryValue {
 	return NewInterpreterStandardLibraryStaticFunction(
-		"Account",
+		accountFunctionName,
 		accountFunctionType,
 		accountFunctionDocString,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -125,62 +127,99 @@ func NewInterpreterAccountConstructor(creator AccountCreator) StandardLibraryVal
 			inter := invocation.InvocationContext
 			locationRange := invocation.LocationRange
 
-			interpreter.ExpectType(
+			return NewAccount(
 				inter,
 				payer,
-				sema.AccountReferenceType,
 				locationRange,
+				creator,
 			)
+		},
+	)
+}
 
-			payerValue := payer.GetMember(
-				inter,
-				locationRange,
-				sema.AccountTypeAddressFieldName,
-			)
-			if payerValue == nil {
-				panic(errors.NewUnexpectedError("payer address is not set"))
-			}
+func NewVMAccountConstructor(creator AccountCreator) StandardLibraryValue {
+	return NewVMStandardLibraryStaticFunction(
+		accountFunctionName,
+		accountFunctionType,
+		accountFunctionDocString,
+		func(context *vm.Context, _ []bbq.StaticType, arguments ...interpreter.Value) interpreter.Value {
 
-			payerAddressValue, ok := payerValue.(interpreter.AddressValue)
+			payer, ok := arguments[0].(interpreter.MemberAccessibleValue)
 			if !ok {
-				panic(errors.NewUnexpectedError("payer address is not address"))
+				panic(errors.NewUnreachableError())
 			}
 
-			payerAddress := payerAddressValue.ToAddress()
+			return NewAccount(
+				context,
+				payer,
+				interpreter.EmptyLocationRange,
+				creator,
+			)
+		},
+	)
+}
 
-			err := creator.CommitStorageTemporarily(inter)
+func NewAccount(
+	context interpreter.MemberAccessibleContext,
+	payer interpreter.MemberAccessibleValue,
+	locationRange interpreter.LocationRange,
+	creator AccountCreator,
+) interpreter.Value {
+
+	interpreter.ExpectType(
+		context,
+		payer,
+		sema.AccountReferenceType,
+		locationRange,
+	)
+
+	payerValue := payer.GetMember(
+		context,
+		locationRange,
+		sema.AccountTypeAddressFieldName,
+	)
+	if payerValue == nil {
+		panic(errors.NewUnexpectedError("payer address is not set"))
+	}
+
+	payerAddressValue, ok := payerValue.(interpreter.AddressValue)
+	if !ok {
+		panic(errors.NewUnexpectedError("payer address is not address"))
+	}
+
+	payerAddress := payerAddressValue.ToAddress()
+
+	err := creator.CommitStorageTemporarily(context)
+	if err != nil {
+		panic(err)
+	}
+
+	addressValue := interpreter.NewAddressValueFromConstructor(
+		context,
+		func() (address common.Address) {
+			var err error
+			address, err = creator.CreateAccount(payerAddress)
 			if err != nil {
 				panic(err)
 			}
 
-			addressValue := interpreter.NewAddressValueFromConstructor(
-				inter,
-				func() (address common.Address) {
-					var err error
-					address, err = creator.CreateAccount(payerAddress)
-					if err != nil {
-						panic(err)
-					}
-
-					return
-				},
-			)
-
-			creator.EmitEvent(
-				inter,
-				locationRange,
-				AccountCreatedEventType,
-				[]interpreter.Value{addressValue},
-			)
-
-			return NewAccountReferenceValue(
-				inter,
-				creator,
-				addressValue,
-				interpreter.FullyEntitledAccountAccess,
-				locationRange,
-			)
+			return
 		},
+	)
+
+	creator.EmitEvent(
+		context,
+		locationRange,
+		AccountCreatedEventType,
+		[]interpreter.Value{addressValue},
+	)
+
+	return NewAccountReferenceValue(
+		context,
+		creator,
+		addressValue,
+		interpreter.FullyEntitledAccountAccess,
+		locationRange,
 	)
 }
 
