@@ -96,8 +96,9 @@ func NewBaseVMEnvironment(config Config) *vmEnvironment {
 func NewScriptVMEnvironment(config Config) Environment {
 	env := newVMEnvironment(config)
 
-	env.compilerConfig.BuiltinGlobalsProvider = compiler.DefaultBuiltinScriptGlobals
-	env.vmConfig.BuiltinGlobalsProvider = vm.DefaultBuiltinScriptGlobals
+	// TODO:
+	//env.compilerConfig.BuiltinGlobalsProvider = compiler.DefaultBuiltinScriptGlobals
+	//env.vmConfig.BuiltinGlobalsProvider = vm.DefaultBuiltinScriptGlobals
 
 	for _, valueDeclaration := range stdlib.DefaultScriptStandardLibraryValues(env) {
 		env.DeclareValue(valueDeclaration, nil)
@@ -112,14 +113,12 @@ func (e *vmEnvironment) newVMConfig() *vm.Config {
 		ComputationGauge:               e,
 		TypeLoader:                     e.loadType,
 		BuiltinGlobalsProvider:         vm.DefaultBuiltinGlobals,
-		Logger:                         e,
 		ContractValueHandler:           e.loadContractValue,
 		ImportHandler:                  e.importProgram,
 		InjectedCompositeFieldsHandler: newInjectedCompositeFieldsHandler(e),
 		UUIDHandler:                    newUUIDHandler(&e.Interface),
 		AccountHandlerFunc:             e.newAccountValue,
 		OnEventEmitted:                 newOnEventEmittedHandler(&e.Interface),
-		AccountHandler:                 e,
 		CapabilityBorrowHandler:        newCapabilityBorrowHandler(e),
 		CapabilityCheckHandler:         newCapabilityCheckHandler(e),
 	}

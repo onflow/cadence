@@ -42,7 +42,7 @@ func init() {
 				)
 			},
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				value := arguments[receiverIndex]
+				value := arguments[ReceiverIndex]
 				optionalValue := value.(interpreter.OptionalValue)
 				innerValueType := optionalValue.InnerValueType(context)
 

@@ -40,16 +40,16 @@ type StandardLibraryHandler interface {
 
 func DefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
 	return []StandardLibraryValue{
-		AssertFunction,
-		PanicFunction,
+		AssertInterpreterFunction,
+		InterpreterPanicFunction,
 		SignatureAlgorithmConstructor,
 		RLPContract,
 		InclusiveRangeConstructorFunction,
-		NewLogFunction(handler),
+		NewInterpreterLogFunction(handler),
 		NewRevertibleRandomFunction(handler),
 		NewGetBlockFunction(handler),
 		NewGetCurrentBlockFunction(handler),
-		NewGetAccountFunction(handler),
+		NewGetAccountInterpreterFunction(handler),
 		NewAccountConstructor(handler),
 		NewPublicKeyConstructor(handler),
 		NewBLSContract(nil, handler),
@@ -60,7 +60,7 @@ func DefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibr
 func DefaultScriptStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
 	return append(
 		DefaultStandardLibraryValues(handler),
-		NewGetAuthAccountFunction(handler),
+		NewGetAuthAccountInterpreterFunction(handler),
 	)
 }
 

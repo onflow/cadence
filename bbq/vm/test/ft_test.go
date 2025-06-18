@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/compiler"
@@ -92,6 +93,25 @@ func compiledFTTransfer(tb testing.TB) {
 			}
 			return imported.DesugaredElaboration, nil
 		},
+		BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
+			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+
+			activation.Set(
+				stdlib.AssertFunctionName,
+				compiler.GlobalImport{
+					Name: stdlib.AssertFunctionName,
+				},
+			)
+
+			activation.Set(
+				stdlib.GetAccountFunctionName,
+				compiler.GlobalImport{
+					Name: stdlib.GetAccountFunctionName,
+				},
+			)
+
+			return activation
+		},
 	}
 
 	// Parse and check contracts
@@ -136,8 +156,6 @@ func compiledFTTransfer(tb testing.TB) {
 	storage := interpreter.NewInMemoryStorage(nil)
 
 	vmConfig := vm.NewConfig(storage)
-
-	vmConfig.AccountHandler = accountHandler
 
 	vmConfig.CapabilityBorrowHandler = func(
 		context interpreter.BorrowCapabilityControllerContext,
@@ -205,6 +223,69 @@ func compiledFTTransfer(tb testing.TB) {
 		return contractValues[location]
 	}
 
+	vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[*vm.Variable] {
+		activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+
+		panicVariable := &vm.Variable{}
+		panicVariable.InitializeWithValue(stdlib.VMPanicFunction.Value)
+		activation.Set(
+			stdlib.PanicFunctionName,
+			panicVariable,
+		)
+
+		assertVariable := &vm.Variable{}
+		assertVariable.InitializeWithValue(stdlib.VMAssertFunction.Value)
+		activation.Set(
+			stdlib.AssertFunctionName,
+			assertVariable,
+		)
+
+		getAccountVariable := &vm.Variable{}
+		getAccountVariable.InitializeWithValue(stdlib.NewVMGetAccountFunction(accountHandler).Value)
+		activation.Set(
+			stdlib.GetAccountFunctionName,
+			getAccountVariable,
+		)
+
+		accountStorageCapabilitiesIssueVariable := &vm.Variable{}
+		accountStorageCapabilitiesIssueVariable.InitializeWithValue(
+			stdlib.NewVMAccountStorageCapabilitiesIssueFunction(accountHandler),
+		)
+		activation.Set(
+			commons.TypeQualifiedName(
+				sema.Account_StorageCapabilitiesType,
+				sema.Account_StorageCapabilitiesTypeIssueFunctionName,
+			),
+			accountStorageCapabilitiesIssueVariable,
+		)
+
+		accountCapabilitiesPublishVariable := &vm.Variable{}
+		accountCapabilitiesPublishVariable.InitializeWithValue(
+			stdlib.NewVMAccountCapabilitiesPublishFunction(accountHandler),
+		)
+		activation.Set(
+			commons.TypeQualifiedName(
+				sema.Account_CapabilitiesType,
+				sema.Account_CapabilitiesTypePublishFunctionName,
+			),
+			accountCapabilitiesPublishVariable,
+		)
+
+		accountCapabilitiesBorrowVariable := &vm.Variable{}
+		accountCapabilitiesBorrowVariable.InitializeWithValue(
+			stdlib.NewVMAccountCapabilitiesGetFunction(accountHandler, true),
+		)
+		activation.Set(
+			commons.TypeQualifiedName(
+				sema.Account_CapabilitiesType,
+				sema.Account_CapabilitiesTypeBorrowFunctionName,
+			),
+			accountCapabilitiesBorrowVariable,
+		)
+
+		return activation
+	}
+
 	vmConfig = PrepareVMConfig(tb, vmConfig, compiledPrograms)
 
 	// Initialize contracts
@@ -249,7 +330,13 @@ func compiledFTTransfer(tb testing.TB) {
 
 		setupTxVM := vm.NewVM(txLocation, program, vmConfig)
 
-		authorizer := vm.NewAuthAccountReferenceValue(setupTxVM.Context(), accountHandler, address)
+		authorizer := stdlib.NewAccountReferenceValue(
+			setupTxVM.Context(),
+			accountHandler,
+			interpreter.AddressValue(address),
+			interpreter.FullyEntitledAccountAccess,
+			interpreter.EmptyLocationRange,
+		)
 		err := setupTxVM.InvokeTransaction(nil, authorizer)
 		require.NoError(tb, err)
 		require.Equal(tb, 0, setupTxVM.StackSize())
@@ -282,7 +369,14 @@ func compiledFTTransfer(tb testing.TB) {
 		interpreter.NewUnmeteredUFix64Value(total),
 	}
 
-	mintTxAuthorizer := vm.NewAuthAccountReferenceValue(mintTxVM.Context(), accountHandler, contractsAddress)
+	mintTxAuthorizer := stdlib.NewAccountReferenceValue(
+		mintTxVM.Context(),
+		accountHandler,
+		interpreter.AddressValue(contractsAddress),
+		interpreter.FullyEntitledAccountAccess,
+		interpreter.EmptyLocationRange,
+	)
+
 	err := mintTxVM.InvokeTransaction(mintTxArgs, mintTxAuthorizer)
 	require.NoError(tb, err)
 	require.Equal(tb, 0, mintTxVM.StackSize())
@@ -314,7 +408,13 @@ func compiledFTTransfer(tb testing.TB) {
 		interpreter.AddressValue(receiverAddress),
 	}
 
-	tokenTransferTxAuthorizer := vm.NewAuthAccountReferenceValue(tokenTransferTxVM.Context(), accountHandler, senderAddress)
+	tokenTransferTxAuthorizer := stdlib.NewAccountReferenceValue(
+		tokenTransferTxVM.Context(),
+		accountHandler,
+		interpreter.AddressValue(senderAddress),
+		interpreter.FullyEntitledAccountAccess,
+		interpreter.EmptyLocationRange,
+	)
 
 	var transferCount int
 

@@ -8641,7 +8641,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 
 		var loggedString string
 
-		logFunction := stdlib.NewStandardLibraryStaticFunction(
+		logFunction := stdlib.NewStandardLibraryStaticInterpreterFunction(
 			"log",
 			&sema.FunctionType{
 				Parameters: []sema.Parameter{
@@ -8985,7 +8985,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 
 		var loggedString string
 
-		logFunction := stdlib.NewStandardLibraryStaticFunction(
+		logFunction := stdlib.NewStandardLibraryStaticInterpreterFunction(
 			"log",
 			&sema.FunctionType{
 				Parameters: []sema.Parameter{

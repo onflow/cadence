@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/bbq/compiler"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -382,44 +383,89 @@ func CompileAndInvoke(
 	)
 }
 
-func NativeFunctionsWithLogAndPanic(logs *[]string) vm.BuiltinGlobalsProvider {
-	return func() *activations.Activation[*vm.Variable] {
-		baseActivation := vm.DefaultBuiltinGlobals()
+func CompilerDefaultBuiltinGlobalsWithDefaultsAndLog() *activations.Activation[compiler.GlobalImport] {
+	activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 
-		activation := activations.NewActivation[*vm.Variable](nil, baseActivation)
+	activation.Set(
+		stdlib.LogFunctionName,
+		compiler.GlobalImport{
+			Name: stdlib.LogFunctionName,
+		},
+	)
+
+	return activation
+}
+
+func CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog() *activations.Activation[compiler.GlobalImport] {
+	activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+
+	activation.Set(
+		conditionLogFunctionName,
+		compiler.GlobalImport{
+			Name: conditionLogFunctionName,
+		},
+	)
+
+	return activation
+}
+
+func VMBuiltinGlobalsProviderWithDefaultsAndPanic() *activations.Activation[*vm.Variable] {
+	activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+
+	panicFunctionVariable := &interpreter.SimpleVariable{}
+	activation.Set(commons.PanicFunctionName, panicFunctionVariable)
+	panicFunctionVariable.InitializeWithValue(
+		vm.NewNativeFunctionValue(
+			commons.PanicFunctionName,
+			stdlib.PanicFunctionType,
+			func(context *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+				messageValue, ok := arguments[0].(*interpreter.StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				panic(stdlib.PanicError{
+					Message: messageValue.Str,
+				})
+			},
+		),
+	)
+
+	return activation
+}
+
+func NewVMBuiltinGlobalsProviderWithDefaultsPanicAndLog(logs *[]string) vm.BuiltinGlobalsProvider {
+
+	logFunction := stdlib.NewVMLogFunction(
+		stdlib.FunctionLogger(
+			func(message string, locationRange interpreter.LocationRange) error {
+				*logs = append(*logs, message)
+				return nil
+			},
+		),
+	)
+
+	return func() *activations.Activation[*vm.Variable] {
+		activation := activations.NewActivation(nil, VMBuiltinGlobalsProviderWithDefaultsAndPanic())
 
 		logFunctionVariable := &interpreter.SimpleVariable{}
-		activation.Set(commons.LogFunctionName, logFunctionVariable)
-		logFunctionVariable.InitializeWithValue(
-			vm.NewNativeFunctionValue(
-				commons.LogFunctionName,
-				stdlib.LogFunctionType,
-				func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					message := arguments[0].String()
-					*logs = append(*logs, message)
-					return interpreter.Void
-				},
-			),
-		)
+		logFunctionVariable.InitializeWithValue(logFunction.Value)
+		activation.Set(stdlib.LogFunctionName, logFunctionVariable)
 
-		panicFunctionVariable := &interpreter.SimpleVariable{}
-		activation.Set(commons.PanicFunctionName, panicFunctionVariable)
-		panicFunctionVariable.InitializeWithValue(
-			vm.NewNativeFunctionValue(
-				commons.PanicFunctionName,
-				stdlib.PanicFunctionType,
-				func(context *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-					messageValue, ok := arguments[0].(*interpreter.StringValue)
-					if !ok {
-						panic(errors.NewUnreachableError())
-					}
+		return activation
+	}
+}
 
-					panic(stdlib.PanicError{
-						Message: messageValue.Str,
-					})
-				},
-			),
-		)
+func NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(logs *[]string) vm.BuiltinGlobalsProvider {
+
+	conditionLogFunction := newConditionLogFunction(logs)
+
+	return func() *activations.Activation[*vm.Variable] {
+		activation := activations.NewActivation(nil, VMBuiltinGlobalsProviderWithDefaultsAndPanic())
+
+		logFunctionVariable := &interpreter.SimpleVariable{}
+		logFunctionVariable.InitializeWithValue(conditionLogFunction.Value)
+		activation.Set(conditionLogFunctionName, logFunctionVariable)
 
 		return activation
 	}
@@ -437,35 +483,23 @@ func CompileAndInvokeWithLogs(
 ) {
 
 	activation := sema.NewVariableActivation(sema.BaseValueActivation)
-	activation.DeclareValue(stdlib.PanicFunction)
-	activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-		commons.LogFunctionName,
-		sema.NewSimpleFunctionType(
-			sema.FunctionPurityView,
-			[]sema.Parameter{
-				{
-					Label:          sema.ArgumentLabelNotRequired,
-					Identifier:     "value",
-					TypeAnnotation: sema.AnyStructTypeAnnotation,
-				},
-			},
-			sema.VoidTypeAnnotation,
-		),
-		"",
-		nil,
-	))
+	activation.DeclareValue(stdlib.VMPanicFunction)
+	activation.DeclareValue(stdlib.NewVMLogFunction(nil))
+
+	compilerConfig := &compiler.Config{
+		BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndLog,
+	}
 
 	storage := interpreter.NewInMemoryStorage(nil)
 	vmConfig := vm.NewConfig(storage)
 
-	vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
+	vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndLog(&logs)
 
 	result, err = CompileAndInvokeWithOptions(
 		t,
 		code,
 		funcName,
 		CompilerAndVMOptions{
-			VMConfig: vmConfig,
 			ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
 				ParseAndCheckOptions: &ParseAndCheckOptions{
 					Config: &sema.Config{
@@ -475,7 +509,83 @@ func CompileAndInvokeWithLogs(
 						},
 					},
 				},
+				CompilerConfig: compilerConfig,
 			},
+			VMConfig: vmConfig,
+		},
+		arguments...,
+	)
+
+	return
+}
+
+const conditionLogFunctionName = "conditionLog"
+
+var conditionLogFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityView,
+	[]sema.Parameter{
+		{
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "value",
+			TypeAnnotation: sema.AnyStructTypeAnnotation,
+		},
+	},
+	sema.BoolTypeAnnotation,
+)
+
+func newConditionLogFunction(logs *[]string) stdlib.StandardLibraryValue {
+	return stdlib.NewVMStandardLibraryStaticFunction(
+		conditionLogFunctionName,
+		conditionLogFunctionType,
+		"",
+		func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+			message := arguments[0].String()
+			*logs = append(*logs, message)
+			return interpreter.TrueValue
+		},
+	)
+}
+
+func CompileAndInvokeWithConditionLogs(
+	t testing.TB,
+	code string,
+	funcName string,
+	arguments ...vm.Value,
+) (
+	result vm.Value,
+	logs []string,
+	err error,
+) {
+	activation := sema.NewVariableActivation(sema.BaseValueActivation)
+	activation.DeclareValue(stdlib.VMPanicFunction)
+	activation.DeclareValue(newConditionLogFunction(nil))
+
+	compilerConfig := &compiler.Config{
+		BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog,
+	}
+
+	storage := interpreter.NewInMemoryStorage(nil)
+	vmConfig := vm.NewConfig(storage)
+
+	vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(&logs)
+
+	result, err = CompileAndInvokeWithOptions(
+		t,
+		code,
+		funcName,
+		CompilerAndVMOptions{
+			ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Config: &sema.Config{
+						LocationHandler: SingleIdentifierLocationResolver(t),
+						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+							return activation
+						},
+					},
+				},
+				CompilerConfig: compilerConfig,
+			},
+			VMConfig: vmConfig,
 		},
 		arguments...,
 	)
@@ -648,10 +758,6 @@ func PrepareVMConfig(
 		config = vm.NewConfig(storage)
 	}
 
-	if config.AccountHandler == nil {
-		config.AccountHandler = &testAccountHandler{}
-	}
-
 	if config.UUIDHandler == nil {
 		var uuid uint64
 		config.UUIDHandler = func() (uint64, error) {
@@ -672,6 +778,10 @@ func PrepareVMConfig(
 			}
 			return program.Program
 		}
+	}
+
+	if config.BuiltinGlobalsProvider == nil {
+		config.BuiltinGlobalsProvider = VMBuiltinGlobalsProviderWithDefaultsAndPanic
 	}
 
 	return config

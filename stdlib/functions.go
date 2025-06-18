@@ -19,13 +19,14 @@
 package stdlib
 
 import (
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
 
-// NewStandardLibraryStaticFunction should only be used for creating static functions.
-func NewStandardLibraryStaticFunction(
+// NewStandardLibraryStaticInterpreterFunction should only be used for creating static functions.
+func NewStandardLibraryStaticInterpreterFunction(
 	name string,
 	functionType *sema.FunctionType,
 	docString string,
@@ -41,6 +42,34 @@ func NewStandardLibraryStaticFunction(
 	}
 
 	functionValue := interpreter.NewUnmeteredStaticHostFunctionValue(functionType, function)
+
+	return StandardLibraryValue{
+		Name:           name,
+		Type:           functionType,
+		DocString:      docString,
+		Value:          functionValue,
+		ArgumentLabels: argumentLabels,
+		Kind:           common.DeclarationKindFunction,
+	}
+}
+
+// NewVMStandardLibraryStaticFunction should only be used for creating static functions.
+func NewVMStandardLibraryStaticFunction(
+	name string,
+	functionType *sema.FunctionType,
+	docString string,
+	function vm.NativeFunction,
+) StandardLibraryValue {
+
+	parameters := functionType.Parameters
+
+	argumentLabels := make([]string, len(parameters))
+
+	for i, parameter := range parameters {
+		argumentLabels[i] = parameter.EffectiveArgumentLabel()
+	}
+
+	functionValue := vm.NewNativeFunctionValue(name, functionType, function)
 
 	return StandardLibraryValue{
 		Name:           name,

@@ -27,6 +27,8 @@ import (
 
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -109,7 +111,7 @@ type AccountCreator interface {
 }
 
 func NewAccountConstructor(creator AccountCreator) StandardLibraryValue {
-	return NewStandardLibraryStaticFunction(
+	return NewStandardLibraryStaticInterpreterFunction(
 		"Account",
 		accountFunctionType,
 		accountFunctionDocString,
@@ -182,7 +184,7 @@ func NewAccountConstructor(creator AccountCreator) StandardLibraryValue {
 	)
 }
 
-const getAuthAccountFunctionName = "getAuthAccount"
+const GetAuthAccountFunctionName = "getAuthAccount"
 const getAuthAccountFunctionDocString = `
 Returns the account for the given address. Only available in scripts
 `
@@ -215,9 +217,9 @@ var GetAuthAccountFunctionType = func() *sema.FunctionType {
 	}
 }()
 
-func NewGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
-	return NewStandardLibraryStaticFunction(
-		getAuthAccountFunctionName,
+func NewGetAuthAccountInterpreterFunction(handler AccountHandler) StandardLibraryValue {
+	return NewStandardLibraryStaticInterpreterFunction(
+		GetAuthAccountFunctionName,
 		GetAuthAccountFunctionType,
 		getAuthAccountFunctionDocString,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -252,6 +254,33 @@ func NewGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
 				accountAddress,
 				authorization,
 				locationRange,
+			)
+		},
+	)
+}
+
+func NewVMGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
+	return NewVMStandardLibraryStaticFunction(
+		GetAuthAccountFunctionName,
+		GetAuthAccountFunctionType,
+		getAuthAccountFunctionDocString,
+		func(context *vm.Context, typeArguments []bbq.StaticType, arguments ...interpreter.Value) interpreter.Value {
+			accountAddress, ok := arguments[0].(interpreter.AddressValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			referenceType, ok := typeArguments[0].(*interpreter.ReferenceStaticType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			return NewAccountReferenceValue(
+				context,
+				handler,
+				accountAddress,
+				referenceType.Authorization,
+				interpreter.EmptyLocationRange,
 			)
 		},
 	)
@@ -2148,6 +2177,8 @@ const getAccountFunctionDocString = `
 Returns the account for the given address
 `
 
+const GetAccountFunctionName = "getAccount"
+
 var GetAccountFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityView,
 	[]sema.Parameter{
@@ -2160,9 +2191,9 @@ var GetAccountFunctionType = sema.NewSimpleFunctionType(
 	sema.AccountReferenceTypeAnnotation,
 )
 
-func NewGetAccountFunction(handler AccountHandler) StandardLibraryValue {
-	return NewStandardLibraryStaticFunction(
-		"getAccount",
+func NewGetAccountInterpreterFunction(handler AccountHandler) StandardLibraryValue {
+	return NewStandardLibraryStaticInterpreterFunction(
+		GetAccountFunctionName,
 		GetAccountFunctionType,
 		getAccountFunctionDocString,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -2181,6 +2212,28 @@ func NewGetAccountFunction(handler AccountHandler) StandardLibraryValue {
 				accountAddress,
 				interpreter.UnauthorizedAccess,
 				locationRange,
+			)
+		},
+	)
+}
+
+func NewVMGetAccountFunction(handler AccountHandler) StandardLibraryValue {
+	return NewVMStandardLibraryStaticFunction(
+		GetAccountFunctionName,
+		GetAccountFunctionType,
+		getAccountFunctionDocString,
+		func(context *vm.Context, _ []bbq.StaticType, arguments ...interpreter.Value) interpreter.Value {
+			address, ok := arguments[0].(interpreter.AddressValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			return NewAccountReferenceValue(
+				context,
+				handler,
+				address,
+				interpreter.UnauthorizedAccess,
+				interpreter.EmptyLocationRange,
 			)
 		},
 	)
@@ -2249,11 +2302,11 @@ func newAccountStorageCapabilitiesValue(
 	return interpreter.NewAccountStorageCapabilitiesValue(
 		context,
 		addressValue,
-		newAccountStorageCapabilitiesGetControllerFunction(context, addressValue, handler),
-		newAccountStorageCapabilitiesGetControllersFunction(context, addressValue, handler),
-		newAccountStorageCapabilitiesForEachControllerFunction(context, addressValue, handler),
-		newAccountStorageCapabilitiesIssueFunction(context, issueHandler, addressValue),
-		newAccountStorageCapabilitiesIssueWithTypeFunction(context, issueHandler, addressValue),
+		newInterpreterAccountStorageCapabilitiesGetControllerFunction(context, addressValue, handler),
+		newInterpreterAccountStorageCapabilitiesGetControllersFunction(context, addressValue, handler),
+		newInterpreterAccountStorageCapabilitiesForEachControllerFunction(context, addressValue, handler),
+		newInterpreterAccountStorageCapabilitiesIssueFunction(context, issueHandler, addressValue),
+		newInterpreterAccountStorageCapabilitiesIssueWithTypeFunction(context, issueHandler, addressValue),
 	)
 }
 
@@ -2285,11 +2338,11 @@ func newAccountCapabilitiesValue(
 	return interpreter.NewAccountCapabilitiesValue(
 		context,
 		addressValue,
-		newAccountCapabilitiesGetFunction(context, addressValue, handler, false),
-		newAccountCapabilitiesGetFunction(context, addressValue, handler, true),
-		newAccountCapabilitiesExistsFunction(context, addressValue),
-		newAccountCapabilitiesPublishFunction(context, addressValue, handler),
-		newAccountCapabilitiesUnpublishFunction(context, addressValue, handler),
+		newInterpreterAccountCapabilitiesGetFunction(context, addressValue, handler, false),
+		newInterpreterAccountCapabilitiesGetFunction(context, addressValue, handler, true),
+		newInterpreterAccountCapabilitiesExistsFunction(context, addressValue),
+		newInterpreterAccountCapabilitiesPublishFunction(context, addressValue, handler),
+		newInterpreterAccountCapabilitiesUnpublishFunction(context, addressValue, handler),
 		func() interpreter.Value {
 			return newAccountStorageCapabilitiesValue(
 				context,
@@ -2309,7 +2362,7 @@ func newAccountCapabilitiesValue(
 	)
 }
 
-func newAccountStorageCapabilitiesGetControllerFunction(
+func newInterpreterAccountStorageCapabilitiesGetControllerFunction(
 	context interpreter.FunctionCreationContext,
 	addressValue interpreter.AddressValue,
 	handler CapabilityControllerHandler,
@@ -2344,6 +2397,42 @@ func newAccountStorageCapabilitiesGetControllerFunction(
 	}
 }
 
+func NewVMAccountStorageCapabilitiesGetControllerFunction(
+	handler CapabilityControllerHandler,
+) *vm.NativeFunctionValue {
+
+	// TODO:
+	//accountStorageCapabilitiesTypeName := commons.TypeQualifier(sema.Account_StorageCapabilitiesType)
+
+	return vm.NewNativeFunctionValue(
+		sema.Account_StorageCapabilitiesTypeGetControllerFunctionName,
+		sema.Account_StorageCapabilitiesTypeGetControllerFunctionType,
+		func(context *vm.Context, typeArguments []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
+			var receiver interpreter.Value
+
+			// arg[0] is the receiver. Actual arguments starts from 1.
+			receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+
+			// Get address field from the receiver (Account.StorageCapabilities)
+			accountAddress := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+
+			// Get capability ID argument
+			capabilityIDValue, ok := args[0].(interpreter.UInt64Value)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			return AccountStorageCapabilitiesGetController(
+				context,
+				handler,
+				capabilityIDValue,
+				accountAddress,
+				interpreter.EmptyLocationRange,
+			)
+		},
+	)
+}
+
 func AccountStorageCapabilitiesGetController(
 	invocationContext interpreter.InvocationContext,
 	handler CapabilityControllerHandler,
@@ -2374,7 +2463,7 @@ var storageCapabilityControllerReferencesArrayStaticType = &interpreter.Variable
 	},
 }
 
-func newAccountStorageCapabilitiesGetControllersFunction(
+func newInterpreterAccountStorageCapabilitiesGetControllersFunction(
 	context interpreter.FunctionCreationContext,
 	addressValue interpreter.AddressValue,
 	handler CapabilityControllerHandler,
@@ -2407,6 +2496,42 @@ func newAccountStorageCapabilitiesGetControllersFunction(
 			},
 		)
 	}
+}
+
+func NewVMAccountStorageCapabilitiesGetControllersFunction(
+	handler CapabilityControllerHandler,
+) *vm.NativeFunctionValue {
+
+	// TODO:
+	//accountStorageCapabilitiesTypeName := commons.TypeQualifier(sema.Account_StorageCapabilitiesType)
+
+	return vm.NewNativeFunctionValue(
+		sema.Account_StorageCapabilitiesTypeGetControllersFunctionName,
+		sema.Account_StorageCapabilitiesTypeGetControllersFunctionType,
+		func(context *vm.Context, typeArguments []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
+			var receiver interpreter.Value
+
+			// arg[0] is the receiver. Actual arguments starts from 1.
+			receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+
+			// Get address field from the receiver (Account.StorageCapabilities)
+			accountAddress := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+
+			// Get path argument
+			targetPathValue, ok := args[0].(interpreter.PathValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			return AccountStorageCapabilitiesGetControllers(
+				context,
+				handler,
+				targetPathValue,
+				accountAddress,
+				interpreter.EmptyLocationRange,
+			)
+		},
+	)
 }
 
 func AccountStorageCapabilitiesGetControllers(
@@ -2469,7 +2594,7 @@ var accountStorageCapabilitiesForEachControllerCallbackTypeParams = []sema.Type{
 	},
 }
 
-func newAccountStorageCapabilitiesForEachControllerFunction(
+func newInterpreterAccountStorageCapabilitiesForEachControllerFunction(
 	context interpreter.FunctionCreationContext,
 	addressValue interpreter.AddressValue,
 	handler CapabilityControllerHandler,
@@ -2509,6 +2634,48 @@ func newAccountStorageCapabilitiesForEachControllerFunction(
 			},
 		)
 	}
+}
+func NewVMAccountStorageCapabilitiesForEachControllerFunction(
+	handler CapabilityControllerHandler,
+) *vm.NativeFunctionValue {
+
+	// TODO:
+	//accountStorageCapabilitiesTypeName := commons.TypeQualifier(sema.Account_StorageCapabilitiesType)
+
+	return vm.NewNativeFunctionValue(
+		sema.Account_StorageCapabilitiesTypeForEachControllerFunctionName,
+		sema.Account_StorageCapabilitiesTypeForEachControllerFunctionType,
+		func(context *vm.Context, typeArguments []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
+			var receiver interpreter.Value
+
+			// arg[0] is the receiver. Actual arguments starts from 1.
+			receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+
+			// Get address field from the receiver (Account.StorageCapabilities)
+			accountAddress := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+
+			// Get path argument
+			targetPathValue, ok := args[0].(interpreter.PathValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Get function argument
+			functionValue, ok := args[1].(vm.FunctionValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			return AccountStorageCapabilitiesForeachController(
+				context,
+				handler,
+				functionValue,
+				accountAddress,
+				targetPathValue,
+				interpreter.EmptyLocationRange,
+			)
+		},
+	)
 }
 
 func AccountStorageCapabilitiesForeachController(
@@ -2607,7 +2774,7 @@ func AccountStorageCapabilitiesForeachController(
 	return interpreter.Void
 }
 
-func newAccountStorageCapabilitiesIssueFunction(
+func newInterpreterAccountStorageCapabilitiesIssueFunction(
 	context interpreter.FunctionCreationContext,
 	handler CapabilityControllerIssueHandler,
 	addressValue interpreter.AddressValue,
@@ -2641,6 +2808,41 @@ func newAccountStorageCapabilitiesIssueFunction(
 	}
 }
 
+func NewVMAccountStorageCapabilitiesIssueFunction(
+	handler CapabilityControllerIssueHandler,
+) *vm.NativeFunctionValue {
+
+	// TODO:
+	// accountStorageCapabilitiesTypeName := commons.TypeQualifier(sema.Account_StorageCapabilitiesType)
+
+	return vm.NewNativeFunctionValue(
+		sema.Account_StorageCapabilitiesTypeIssueFunctionName,
+		sema.Account_StorageCapabilitiesTypeIssueFunctionType,
+		func(context *vm.Context, typeArguments []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
+			var receiver interpreter.Value
+
+			// arg[0] is the receiver. Actual arguments starts from 1.
+			receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+
+			// Get address field from the receiver (Account.StorageCapabilities)
+			accountAddress := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+
+			// Get borrow type type-argument
+			typeParameter := typeArguments[0]
+			semaType := interpreter.MustConvertStaticToSemaType(typeParameter, context)
+
+			return AccountStorageCapabilitiesIssue(
+				args,
+				context,
+				interpreter.EmptyLocationRange,
+				handler,
+				accountAddress,
+				semaType,
+			)
+		},
+	)
+}
+
 func AccountStorageCapabilitiesIssue(
 	arguments []interpreter.Value,
 	invocationContext interpreter.InvocationContext,
@@ -2669,7 +2871,7 @@ func AccountStorageCapabilitiesIssue(
 	)
 }
 
-func newAccountStorageCapabilitiesIssueWithTypeFunction(
+func newInterpreterAccountStorageCapabilitiesIssueWithTypeFunction(
 	context interpreter.FunctionCreationContext,
 	handler CapabilityControllerIssueHandler,
 	addressValue interpreter.AddressValue,
@@ -2710,6 +2912,48 @@ func newAccountStorageCapabilitiesIssueWithTypeFunction(
 			},
 		)
 	}
+}
+
+func NewVMAccountStorageCapabilitiesIssueWithTypeFunction(
+	handler CapabilityControllerIssueHandler,
+) *vm.NativeFunctionValue {
+	// TODO:
+	//accountStorageCapabilitiesTypeName := commons.TypeQualifier(sema.Account_StorageCapabilitiesType)
+
+	return vm.NewNativeFunctionValue(
+		sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionName,
+		sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
+		func(context *vm.Context, typeArguments []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
+			var receiver interpreter.Value
+
+			// arg[0] is the receiver. Actual arguments starts from 1.
+			receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+
+			// Get address field from the receiver (Account.StorageCapabilities)
+			accountAddress := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+
+			// Get path argument
+			targetPathValue, ok := args[0].(interpreter.PathValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Get type argument
+			typeValue, ok := args[1].(interpreter.TypeValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			return AccountStorageCapabilitiesIssueWithType(
+				context,
+				handler,
+				typeValue,
+				accountAddress,
+				targetPathValue,
+				interpreter.EmptyLocationRange,
+			)
+		},
+	)
 }
 
 func AccountStorageCapabilitiesIssueWithType(
@@ -3526,7 +3770,7 @@ func getAccountCapabilityControllerIDsIterator(
 	return
 }
 
-func newAccountCapabilitiesPublishFunction(
+func newInterpreterAccountCapabilitiesPublishFunction(
 	context interpreter.FunctionCreationContext,
 	accountAddressValue interpreter.AddressValue,
 	handler CapabilityControllerHandler,
@@ -3565,6 +3809,49 @@ func newAccountCapabilitiesPublishFunction(
 			},
 		)
 	}
+}
+
+func NewVMAccountCapabilitiesPublishFunction(
+	handler CapabilityControllerHandler,
+) *vm.NativeFunctionValue {
+
+	// TODO:
+	//accountCapabilitiesTypeName := commons.TypeQualifier(sema.Account_CapabilitiesType)
+
+	return vm.NewNativeFunctionValue(
+		sema.Account_CapabilitiesTypePublishFunctionName,
+		sema.Account_CapabilitiesTypePublishFunctionType,
+		func(context *vm.Context, _ []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
+			var receiver interpreter.Value
+
+			// arg[0] is the receiver. Actual arguments starts from 1.
+			receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+
+			// Get address field from the receiver (Account.Capabilities)
+			accountAddress := vm.GetAccountTypePrivateAddressValue(receiver)
+
+			// Get capability argument
+			capabilityValue, ok := args[0].(interpreter.CapabilityValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Get path argument
+			pathValue, ok := args[1].(interpreter.PathValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			return AccountCapabilitiesPublish(
+				context,
+				handler,
+				capabilityValue,
+				pathValue,
+				accountAddress,
+				interpreter.EmptyLocationRange,
+			)
+		},
+	)
 }
 
 func AccountCapabilitiesPublish(
@@ -3684,7 +3971,7 @@ func AccountCapabilitiesPublish(
 	return interpreter.Void
 }
 
-func newAccountCapabilitiesUnpublishFunction(
+func newInterpreterAccountCapabilitiesUnpublishFunction(
 	context interpreter.FunctionCreationContext,
 	addressValue interpreter.AddressValue,
 	handler CapabilityControllerHandler,
@@ -3716,6 +4003,42 @@ func newAccountCapabilitiesUnpublishFunction(
 			},
 		)
 	}
+}
+
+func NewVMAccountCapabilitiesUnpublishFunction(
+	handler CapabilityControllerHandler,
+) *vm.NativeFunctionValue {
+
+	// TODO:
+	//accountCapabilitiesTypeName := commons.TypeQualifier(sema.Account_CapabilitiesType)
+
+	return vm.NewNativeFunctionValue(
+		sema.Account_CapabilitiesTypeUnpublishFunctionName,
+		sema.Account_CapabilitiesTypeUnpublishFunctionType,
+		func(context *vm.Context, _ []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
+			var receiver interpreter.Value
+
+			// arg[0] is the receiver. Actual arguments starts from 1.
+			receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+
+			// Get address field from the receiver (Account.Capabilities)
+			accountAddress := vm.GetAccountTypePrivateAddressValue(receiver)
+
+			// Get path argument.
+			pathValue, ok := args[0].(interpreter.PathValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			return AccountCapabilitiesUnpublish(
+				context,
+				handler,
+				pathValue,
+				accountAddress,
+				interpreter.EmptyLocationRange,
+			)
+		},
+	)
 }
 
 func AccountCapabilitiesUnpublish(
@@ -3966,7 +4289,7 @@ func CheckCapabilityController(
 	return referencedValue != nil
 }
 
-func newAccountCapabilitiesGetFunction(
+func newInterpreterAccountCapabilitiesGetFunction(
 	context interpreter.FunctionCreationContext,
 	addressValue interpreter.AddressValue,
 	controllerHandler CapabilityControllerHandler,
@@ -3974,7 +4297,6 @@ func newAccountCapabilitiesGetFunction(
 ) interpreter.BoundFunctionGenerator {
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		var funcType *sema.FunctionType
-
 		if borrow {
 			funcType = sema.Account_CapabilitiesTypeBorrowFunctionType
 		} else {
@@ -4009,6 +4331,54 @@ func newAccountCapabilitiesGetFunction(
 			},
 		)
 	}
+}
+
+func NewVMAccountCapabilitiesGetFunction(
+	controllerHandler CapabilityControllerHandler,
+	borrow bool,
+) *vm.NativeFunctionValue {
+
+	// TODO:
+	//accountCapabilitiesTypeName := commons.TypeQualifier(sema.Account_CapabilitiesType)
+
+	var funcType *sema.FunctionType
+	if borrow {
+		funcType = sema.Account_CapabilitiesTypeBorrowFunctionType
+	} else {
+		funcType = sema.Account_CapabilitiesTypeGetFunctionType
+	}
+
+	return vm.NewNativeFunctionValue(
+		sema.Account_CapabilitiesTypeGetFunctionName,
+		funcType,
+		func(context *vm.Context, typeArguments []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
+			var receiver interpreter.Value
+
+			// arg[0] is the receiver. Actual arguments starts from 1.
+			receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+
+			// Get address field from the receiver (Account.Capabilities)
+			address := vm.GetAccountTypePrivateAddressValue(receiver)
+
+			pathValue, ok := args[0].(interpreter.PathValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			borrowType := typeArguments[0]
+			semaBorrowType := interpreter.MustConvertStaticToSemaType(borrowType, context)
+
+			return AccountCapabilitiesGet(
+				context,
+				controllerHandler,
+				pathValue,
+				semaBorrowType,
+				borrow,
+				address,
+				interpreter.EmptyLocationRange,
+			)
+		},
+	)
 }
 
 func AccountCapabilitiesGet(
@@ -4185,7 +4555,7 @@ func AccountCapabilitiesGet(
 	return resultValue
 }
 
-func newAccountCapabilitiesExistsFunction(
+func newInterpreterAccountCapabilitiesExistsFunction(
 	context interpreter.FunctionCreationContext,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
@@ -4212,6 +4582,32 @@ func newAccountCapabilitiesExistsFunction(
 		)
 	}
 }
+
+// TODO: accountCapabilitiesTypeName := commons.TypeQualifier(sema.Account_CapabilitiesType)
+var VMAccountCapabilitiesExistsFunction *vm.NativeFunctionValue = vm.NewNativeFunctionValue(
+	sema.Account_CapabilitiesTypeExistsFunctionName,
+	sema.Account_CapabilitiesTypeExistsFunctionType,
+	func(context *vm.Context, _ []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
+		var receiver interpreter.Value
+
+		// arg[0] is the receiver. Actual arguments starts from 1.
+		receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+
+		// Get address field from the receiver (Account.Capabilities)
+		accountAddress := vm.GetAccountTypePrivateAddressValue(receiver)
+
+		pathValue, ok := args[0].(interpreter.PathValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		return AccountCapabilitiesExists(
+			context,
+			pathValue,
+			accountAddress.ToAddress(),
+		)
+	},
+)
 
 func AccountCapabilitiesExists(
 	invocationContext interpreter.InvocationContext,

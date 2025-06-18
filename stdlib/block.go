@@ -75,7 +75,7 @@ type BlockAtHeightProvider interface {
 }
 
 func NewGetBlockFunction(provider BlockAtHeightProvider) StandardLibraryValue {
-	return NewStandardLibraryStaticFunction(
+	return NewStandardLibraryStaticInterpreterFunction(
 		"getBlock",
 		getBlockFunctionType,
 		getBlockFunctionDocString,
@@ -189,7 +189,7 @@ type CurrentBlockProvider interface {
 }
 
 func NewGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryValue {
-	return NewStandardLibraryStaticFunction(
+	return NewStandardLibraryStaticInterpreterFunction(
 		"getCurrentBlock",
 		getCurrentBlockFunctionType,
 		getCurrentBlockFunctionDocString,

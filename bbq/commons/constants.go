@@ -26,11 +26,8 @@ const (
 	TransactionWrapperCompositeName = "transaction"
 	TransactionExecuteFunctionName  = "transaction.execute"
 	TransactionPrepareFunctionName  = "transaction.prepare"
-	LogFunctionName                 = "log"
-	AssertFunctionName              = "assert"
-	PanicFunctionName               = "panic"
-	GetAccountFunctionName          = "getAccount"
-	GetAuthAccountFunctionName      = "getAuthAccount"
+	// PanicFunctionName is the name of the panic function, which is needed for conditions
+	PanicFunctionName = "panic"
 
 	GeneratedNameQualifier              = "$"
 	ResourceDestroyedEventsFunctionName = GeneratedNameQualifier + ast.ResourceDestructionDefaultEventName

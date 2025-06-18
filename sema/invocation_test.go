@@ -316,7 +316,7 @@ func TestCheckInvocationWithOnlyVarargs(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
+	baseValueActivation.DeclareValue(stdlib.NewStandardLibraryStaticInterpreterFunction(
 		"foo",
 		&sema.FunctionType{
 			ReturnTypeAnnotation: sema.VoidTypeAnnotation,
@@ -626,7 +626,7 @@ func TestCheckInvocationWithIncorrectTypeParameter(t *testing.T) {
 	}
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
+	baseValueActivation.DeclareValue(stdlib.NewStandardLibraryStaticInterpreterFunction(
 		"foo",
 		funcType,
 		"",

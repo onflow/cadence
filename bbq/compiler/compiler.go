@@ -153,7 +153,7 @@ func newCompiler[E, T any](
 	} else {
 		globalImports = DefaultBuiltinGlobals()
 	}
-	globalImports = activations.NewActivation[GlobalImport](config.MemoryGauge, globalImports)
+	globalImports = activations.NewActivation(config.MemoryGauge, globalImports)
 
 	common.UseMemory(config.MemoryGauge, common.CompilerMemoryUsage)
 

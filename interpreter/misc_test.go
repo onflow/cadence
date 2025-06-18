@@ -1779,7 +1779,7 @@ func TestInterpretHostFunction(t *testing.T) {
 
 	require.NoError(t, err)
 
-	testFunction := stdlib.NewStandardLibraryStaticFunction(
+	testFunction := stdlib.NewStandardLibraryStaticInterpreterFunction(
 		"test",
 		&sema.FunctionType{
 			Parameters: []sema.Parameter{
@@ -1865,7 +1865,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 
 	called := false
 
-	testFunction := stdlib.NewStandardLibraryStaticFunction(
+	testFunction := stdlib.NewStandardLibraryStaticInterpreterFunction(
 		"test",
 		&sema.FunctionType{
 			Parameters: []sema.Parameter{
@@ -1971,7 +1971,7 @@ func TestInterpretHostFunctionWithOptionalArguments(t *testing.T) {
 
 	called := false
 
-	testFunction := stdlib.NewStandardLibraryStaticFunction(
+	testFunction := stdlib.NewStandardLibraryStaticInterpreterFunction(
 		"test",
 		&sema.FunctionType{
 			Parameters: []sema.Parameter{
@@ -4077,7 +4077,7 @@ func TestInterpretImportError(t *testing.T) {
 	var importedChecker1, importedChecker2 *sema.Checker
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.PanicFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterPanicFunction)
 
 	parseAndCheck := func(code string, location common.Location) *sema.Checker {
 		checker, err := ParseAndCheckWithOptions(t,
@@ -4139,7 +4139,7 @@ func TestInterpretImportError(t *testing.T) {
 	mainChecker := parseAndCheck(code, TestLocation)
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, stdlib.PanicFunction)
+	interpreter.Declare(baseActivation, stdlib.InterpreterPanicFunction)
 
 	storage := newUnmeteredInMemoryStorage()
 
@@ -5032,7 +5032,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			ReturnTypeAnnotation: sema.AnyStructTypeAnnotation,
 		}
 
-		valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
+		valueDeclaration := stdlib.NewStandardLibraryStaticInterpreterFunction(
 			"getStorageReference",
 			getStorageReferenceFunctionType,
 			"",
@@ -8329,10 +8329,10 @@ func TestInterpretOptionalChainingFieldReadAndNilCoalescing(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.PanicFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterPanicFunction)
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, stdlib.PanicFunction)
+	interpreter.Declare(baseActivation, stdlib.InterpreterPanicFunction)
 
 	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
@@ -8375,10 +8375,10 @@ func TestInterpretOptionalChainingFunctionCallAndNilCoalescing(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.PanicFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterPanicFunction)
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, stdlib.PanicFunction)
+	interpreter.Declare(baseActivation, stdlib.InterpreterPanicFunction)
 
 	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
@@ -8940,10 +8940,10 @@ func TestInterpretHexDecode(t *testing.T) {
 	t.Run("in Cadence", func(t *testing.T) {
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseValueActivation.DeclareValue(stdlib.PanicFunction)
+		baseValueActivation.DeclareValue(stdlib.InterpreterPanicFunction)
 
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-		interpreter.Declare(baseActivation, stdlib.PanicFunction)
+		interpreter.Declare(baseActivation, stdlib.InterpreterPanicFunction)
 
 		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
@@ -11755,10 +11755,10 @@ func TestInterpretArrayToConstantSized(t *testing.T) {
 		t.Parallel()
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseValueActivation.DeclareValue(stdlib.PanicFunction)
+		baseValueActivation.DeclareValue(stdlib.InterpreterPanicFunction)
 
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-		interpreter.Declare(baseActivation, stdlib.PanicFunction)
+		interpreter.Declare(baseActivation, stdlib.InterpreterPanicFunction)
 
 		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
@@ -11865,10 +11865,10 @@ func TestInterpretNilCoalesceReference(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.PanicFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterPanicFunction)
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, stdlib.PanicFunction)
+	interpreter.Declare(baseActivation, stdlib.InterpreterPanicFunction)
 
 	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
@@ -11909,10 +11909,10 @@ func TestInterpretNilCoalesceAnyResourceAndPanic(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.PanicFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterPanicFunction)
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, stdlib.PanicFunction)
+	interpreter.Declare(baseActivation, stdlib.InterpreterPanicFunction)
 
 	_, err := parseCheckAndPrepareWithOptions(t,
 		`

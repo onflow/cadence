@@ -253,9 +253,9 @@ func interpreterFTTransfer(tb testing.TB) {
 	}
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, stdlib.PanicFunction)
-	interpreter.Declare(baseActivation, stdlib.AssertFunction)
-	interpreter.Declare(baseActivation, stdlib.NewGetAccountFunction(accountHandler))
+	interpreter.Declare(baseActivation, stdlib.InterpreterPanicFunction)
+	interpreter.Declare(baseActivation, stdlib.AssertInterpreterFunction)
+	interpreter.Declare(baseActivation, stdlib.NewGetAccountInterpreterFunction(accountHandler))
 
 	subInterpreters := map[common.Location]*interpreter.Interpreter{}
 

@@ -21,6 +21,8 @@ package stdlib
 import (
 	"fmt"
 
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -43,6 +45,8 @@ const panicFunctionDocString = `
 Terminates the program unconditionally and reports a message which explains why the unrecoverable error occurred.
 `
 
+const PanicFunctionName = "panic"
+
 var PanicFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityView,
 	[]sema.Parameter{
@@ -55,14 +59,24 @@ var PanicFunctionType = sema.NewSimpleFunctionType(
 	sema.NeverTypeAnnotation,
 )
 
-var PanicFunction = NewStandardLibraryStaticFunction(
-	"panic",
+var InterpreterPanicFunction = NewStandardLibraryStaticInterpreterFunction(
+	PanicFunctionName,
 	PanicFunctionType,
 	panicFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		locationRange := invocation.LocationRange
-		arguments := invocation.Arguments
-		return PanicWithError(arguments[0], locationRange)
+		message := invocation.Arguments[0]
+		return PanicWithError(message, locationRange)
+	},
+)
+
+var VMPanicFunction = NewVMStandardLibraryStaticFunction(
+	PanicFunctionName,
+	PanicFunctionType,
+	panicFunctionDocString,
+	func(context *vm.Context, _ []bbq.StaticType, arguments ...interpreter.Value) interpreter.Value {
+		message := arguments[0]
+		return PanicWithError(message, interpreter.EmptyLocationRange)
 	},
 )
 

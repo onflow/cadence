@@ -72,7 +72,7 @@ func newPublicKeyValidationHandler(validator PublicKeyValidator) interpreter.Pub
 func NewPublicKeyConstructor(
 	publicKeyValidator PublicKeyValidator,
 ) StandardLibraryValue {
-	return NewStandardLibraryStaticFunction(
+	return NewStandardLibraryStaticInterpreterFunction(
 		sema.PublicKeyTypeName,
 		publicKeyConstructorFunctionType,
 		publicKeyConstructorFunctionDocString,

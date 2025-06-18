@@ -26,12 +26,11 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/stdlib"
 )
 
 const (
-	receiverIndex                   = 0
-	typeBoundFunctionArgumentOffset = 1
+	ReceiverIndex                   = 0
+	TypeBoundFunctionArgumentOffset = 1
 )
 
 // BuiltInLocation is the location of built-in constructs.
@@ -40,17 +39,10 @@ var BuiltInLocation common.Location = nil
 
 type BuiltinGlobalsProvider func() *activations.Activation[*Variable]
 
-var (
-	defaultBuiltinGlobals       = activations.NewActivation[*Variable](nil, nil)
-	defaultBuiltinScriptGlobals = activations.NewActivation[*Variable](nil, defaultBuiltinGlobals)
-)
+var defaultBuiltinGlobals = activations.NewActivation[*Variable](nil, nil)
 
 func DefaultBuiltinGlobals() *activations.Activation[*Variable] {
 	return defaultBuiltinGlobals
-}
-
-func DefaultBuiltinScriptGlobals() *activations.Activation[*Variable] {
-	return defaultBuiltinScriptGlobals
 }
 
 func RegisterBuiltinFunction(functionValue *NativeFunctionValue) {
@@ -58,14 +50,6 @@ func RegisterBuiltinFunction(functionValue *NativeFunctionValue) {
 		functionValue.Name,
 		functionValue,
 		defaultBuiltinGlobals,
-	)
-}
-
-func RegisterBuiltinScriptFunction(functionValue *NativeFunctionValue) {
-	registerGlobalFunction(
-		functionValue.Name,
-		functionValue,
-		defaultBuiltinScriptGlobals,
 	)
 }
 
@@ -104,104 +88,6 @@ func RegisterBuiltinTypeBoundCommonFunction(typeName string, functionValue *Nati
 }
 
 func init() {
-	RegisterBuiltinFunction(
-		NewNativeFunctionValue(
-			commons.LogFunctionName,
-			stdlib.LogFunctionType,
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				value := arguments[0]
-				return stdlib.Log(
-					context,
-					context,
-					value,
-					EmptyLocationRange,
-				)
-			},
-		),
-	)
-
-	RegisterBuiltinFunction(
-		NewNativeFunctionValue(
-			commons.AssertFunctionName,
-			stdlib.AssertFunctionType,
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				result, ok := arguments[0].(interpreter.BoolValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				var message string
-				if len(arguments) > 1 {
-					messageValue, ok := arguments[1].(*interpreter.StringValue)
-					if !ok {
-						panic(errors.NewUnreachableError())
-					}
-					message = messageValue.Str
-				}
-
-				return stdlib.Assert(
-					result,
-					message,
-					EmptyLocationRange,
-				)
-			},
-		),
-	)
-
-	RegisterBuiltinFunction(
-		NewNativeFunctionValue(
-			commons.PanicFunctionName,
-			stdlib.PanicFunctionType,
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				message := arguments[0]
-				return stdlib.PanicWithError(
-					message,
-					EmptyLocationRange,
-				)
-			},
-		),
-	)
-
-	RegisterBuiltinFunction(
-		NewNativeFunctionValue(
-			commons.GetAccountFunctionName,
-			stdlib.GetAccountFunctionType,
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				address := arguments[0].(interpreter.AddressValue)
-				return NewAccountReferenceValue(
-					context,
-					context.AccountHandler,
-					common.Address(address),
-				)
-			},
-		),
-	)
-
-	RegisterBuiltinScriptFunction(
-		NewNativeFunctionValue(
-			commons.GetAuthAccountFunctionName,
-			stdlib.GetAuthAccountFunctionType,
-			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
-				accountAddress, ok := arguments[0].(interpreter.AddressValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				referenceType, ok := typeArguments[0].(*interpreter.ReferenceStaticType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return stdlib.NewAccountReferenceValue(
-					context,
-					context.AccountHandler,
-					accountAddress,
-					referenceType.Authorization,
-					EmptyLocationRange,
-				)
-			},
-		),
-	)
 
 	// Type constructors
 
@@ -479,9 +365,9 @@ var commonBuiltinTypeBoundFunctions = []*NativeFunctionValue{
 		sema.IsInstanceFunctionName,
 		sema.IsInstanceFunctionType,
 		func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-			value := arguments[receiverIndex]
+			value := arguments[ReceiverIndex]
 
-			typeValue, ok := arguments[typeBoundFunctionArgumentOffset].(interpreter.TypeValue)
+			typeValue, ok := arguments[TypeBoundFunctionArgumentOffset].(interpreter.TypeValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -495,7 +381,7 @@ var commonBuiltinTypeBoundFunctions = []*NativeFunctionValue{
 		sema.GetTypeFunctionName,
 		sema.GetTypeFunctionType,
 		func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-			value := arguments[receiverIndex]
+			value := arguments[ReceiverIndex]
 			return interpreter.ValueGetType(context, value)
 		},
 	),
@@ -528,12 +414,12 @@ func registerBuiltinTypeSaturatingArithmeticFunctions(t sema.SaturatingArithmeti
 				functionName,
 				sema.SaturatingArithmeticTypeFunctionTypes[t],
 				func(context *Context, _ []bbq.StaticType, args ...Value) Value {
-					v, ok := args[receiverIndex].(interpreter.NumberValue)
+					v, ok := args[ReceiverIndex].(interpreter.NumberValue)
 					if !ok {
 						panic(errors.NewUnreachableError())
 					}
 
-					other, ok := args[typeBoundFunctionArgumentOffset].(interpreter.NumberValue)
+					other, ok := args[TypeBoundFunctionArgumentOffset].(interpreter.NumberValue)
 					if !ok {
 						panic(errors.NewUnreachableError())
 					}

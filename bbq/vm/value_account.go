@@ -25,40 +25,11 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/stdlib"
 )
 
 type AccountIDGenerator interface {
 	// GenerateAccountID generates a new, *non-zero*, unique ID for the given account.
 	GenerateAccountID(address common.Address) (uint64, error)
-}
-
-func NewAuthAccountReferenceValue(
-	conf *Context,
-	handler stdlib.AccountHandler,
-	address common.Address,
-) interpreter.Value {
-	return stdlib.NewAccountReferenceValue(
-		conf,
-		handler,
-		interpreter.AddressValue(address),
-		interpreter.FullyEntitledAccountAccess,
-		EmptyLocationRange,
-	)
-}
-
-func NewAccountReferenceValue(
-	conf *Context,
-	handler stdlib.AccountHandler,
-	address common.Address,
-) interpreter.Value {
-	return stdlib.NewAccountReferenceValue(
-		conf,
-		handler,
-		interpreter.AddressValue(address),
-		interpreter.UnauthorizedAccess,
-		EmptyLocationRange,
-	)
 }
 
 // members
@@ -97,7 +68,7 @@ func init() {
 	)
 }
 
-func getAccountTypePrivateAddressValue(receiver Value) interpreter.AddressValue {
+func GetAccountTypePrivateAddressValue(receiver Value) interpreter.AddressValue {
 	simpleCompositeValue := receiver.(*interpreter.SimpleCompositeValue)
 
 	addressMetaInfo := simpleCompositeValue.PrivateField(interpreter.AccountTypePrivateAddressFieldName)
