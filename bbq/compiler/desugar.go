@@ -297,7 +297,7 @@ func (d *Desugar) desugarFunctionBlock(
 	return modifiedFuncBlock
 }
 
-// Declare a `$_result` synthetic variable, to temporarily hold return values.
+// Creates a `$_result` synthetic variable, to temporarily hold return values.
 func (d *Desugar) tempResultVariable(
 	returnTypeAnnotation *ast.TypeAnnotation,
 	returnType sema.Type,
