@@ -487,25 +487,24 @@ func newAccountKeysValue(
 	return interpreter.NewAccountKeysValue(
 		context,
 		addressValue,
-		newAccountKeysAddFunction(
+		newInterpreterAccountKeysAddFunction(
 			context,
 			handler,
 			addressValue,
 		),
-		newAccountKeysGetFunction(
+		newInterpreterAccountKeysGetFunction(
 			context,
 			sema.Account_KeysTypeGetFunctionType,
 			handler,
 			addressValue,
 		),
-		newAccountKeysRevokeFunction(
+		newInterpreterAccountKeysRevokeFunction(
 			context,
 			handler,
 			addressValue,
 		),
-		newAccountKeysForEachFunction(
+		newInterpreterAccountKeysForEachFunction(
 			context,
-			sema.Account_KeysTypeForEachFunctionType,
 			handler,
 			addressValue,
 		),
@@ -648,71 +647,141 @@ type AccountKeyAdditionHandler interface {
 	AddAccountKey(address common.Address, key *PublicKey, algo sema.HashAlgorithm, weight int) (*AccountKey, error)
 }
 
-func newAccountKeysAddFunction(
+func newInterpreterAccountKeysAddFunction(
 	context interpreter.AccountKeyCreationContext,
 	handler AccountKeyAdditionHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountKeys interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 
-		// Converted addresses can be cached and don't have to be recomputed on each function invocation
-		address := addressValue.ToAddress()
-
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountKeys,
 			sema.Account_KeysTypeAddFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
+				inter := invocation.InvocationContext
+				locationRange := invocation.LocationRange
+
 				publicKeyValue, ok := invocation.Arguments[0].(*interpreter.CompositeValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
-				inter := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				publicKey, err := NewPublicKeyFromValue(context, locationRange, publicKeyValue)
-				if err != nil {
-					panic(err)
-				}
-
 				hashAlgoValue := invocation.Arguments[1]
-				hashAlgo := NewHashAlgorithmFromValue(context, locationRange, hashAlgoValue)
 
 				weightValue, ok := invocation.Arguments[2].(interpreter.UFix64Value)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
-				weight := weightValue.ToInt(locationRange)
-
-				accountKey, err := handler.AddAccountKey(address, publicKey, hashAlgo, weight)
-				if err != nil {
-					panic(err)
-				}
-
-				handler.EmitEvent(
+				return AccountKeysAdd(
 					inter,
+					addressValue,
+					publicKeyValue,
+					hashAlgoValue,
+					weightValue,
 					locationRange,
-					AccountKeyAddedFromPublicKeyEventType,
-					[]interpreter.Value{
-						addressValue,
-						publicKeyValue,
-						weightValue,
-						hashAlgoValue,
-						interpreter.NewIntValueFromInt64(inter, int64(accountKey.KeyIndex)),
-					},
-				)
-
-				return NewAccountKeyValue(
-					context,
-					locationRange,
-					accountKey,
 					handler,
 				)
 			},
 		)
 	}
+}
+
+func NewVMAccountKeysAddFunction(
+	handler AccountKeyAdditionHandler,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_KeysType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_KeysTypeAddFunctionName,
+			sema.Account_KeysTypeAddFunctionType,
+			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
+				var receiver interpreter.Value
+
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+
+				// Get address field from the receiver (Account.StorageCapabilities)
+				address := vm.GetAccountTypePrivateAddressValue(receiver)
+
+				publicKeyValue, ok := args[0].(*interpreter.CompositeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				hashAlgoValue := args[1]
+
+				weightValue, ok := args[2].(interpreter.UFix64Value)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return AccountKeysAdd(
+					context,
+					address,
+					publicKeyValue,
+					hashAlgoValue,
+					weightValue,
+					interpreter.EmptyLocationRange,
+					handler,
+				)
+			},
+		),
+	}
+}
+
+func AccountKeysAdd(
+	context interpreter.AccountKeyCreationContext,
+	addressValue interpreter.AddressValue,
+	publicKeyValue interpreter.MemberAccessibleValue,
+	hashAlgoValue interpreter.Value,
+	weightValue interpreter.UFix64Value,
+	locationRange interpreter.LocationRange,
+	handler AccountKeyAdditionHandler,
+) interpreter.Value {
+	publicKey, err := NewPublicKeyFromValue(context, locationRange, publicKeyValue)
+	if err != nil {
+		panic(err)
+	}
+
+	hashAlgo := NewHashAlgorithmFromValue(context, locationRange, hashAlgoValue)
+
+	weight := weightValue.ToInt(locationRange)
+
+	address := addressValue.ToAddress()
+
+	accountKey, err := handler.AddAccountKey(
+		address,
+		publicKey,
+		hashAlgo,
+		weight,
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	accountKeyIndex := interpreter.NewIntValueFromInt64(context, int64(accountKey.KeyIndex))
+
+	handler.EmitEvent(
+		context,
+		locationRange,
+		AccountKeyAddedFromPublicKeyEventType,
+		[]interpreter.Value{
+			addressValue,
+			publicKeyValue,
+			weightValue,
+			hashAlgoValue,
+			accountKeyIndex,
+		},
+	)
+
+	return NewAccountKeyValue(
+		context,
+		locationRange,
+		accountKey,
+		handler,
+	)
 }
 
 type AccountKey struct {
@@ -733,7 +802,7 @@ type AccountKeyProvider interface {
 	AccountKeysCount(address common.Address) (uint32, error)
 }
 
-func newAccountKeysGetFunction(
+func newInterpreterAccountKeysGetFunction(
 	context interpreter.FunctionCreationContext,
 	functionType *sema.FunctionType,
 	provider AccountKeyProvider,
@@ -749,48 +818,98 @@ func newAccountKeysGetFunction(
 			accountKeys,
 			functionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
+				inter := invocation.InvocationContext
+				locationRange := invocation.LocationRange
+
 				indexValue, ok := invocation.Arguments[0].(interpreter.IntValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				locationRange := invocation.LocationRange
-				index := indexValue.ToUint32(locationRange)
 
-				accountKey, err := provider.GetAccountKey(address, index)
-				if err != nil {
-					panic(err)
-				}
-
-				// Here it is expected the host function to return a nil key, if a key is not found at the given index.
-				// This is done because, if the host function returns an error when a key is not found, then
-				// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
-				if accountKey == nil {
-					return interpreter.Nil
-				}
-
-				inter := invocation.InvocationContext
-
-				return interpreter.NewSomeValueNonCopying(
+				return AccountKeysGet(
 					inter,
-					NewAccountKeyValue(
-						inter,
-						locationRange,
-						accountKey,
-						provider,
-					),
+					address,
+					indexValue,
+					locationRange,
+					provider,
 				)
 			},
 		)
 	}
 }
 
+func NewVMAccountKeysGetFunction(
+	provider AccountKeyProvider,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_KeysType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_KeysTypeGetFunctionName,
+			sema.Account_KeysTypeGetFunctionType,
+			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
+				var receiver interpreter.Value
+
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+
+				// Get address field from the receiver (Account.StorageCapabilities)
+				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+
+				indexValue, ok := args[0].(interpreter.IntValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return AccountKeysGet(
+					context,
+					address,
+					indexValue,
+					interpreter.EmptyLocationRange,
+					provider,
+				)
+			},
+		),
+	}
+}
+
+func AccountKeysGet(
+	context interpreter.AccountKeyCreationContext,
+	address common.Address,
+	indexValue interpreter.IntValue,
+	locationRange interpreter.LocationRange,
+	provider AccountKeyProvider,
+) interpreter.Value {
+	index := indexValue.ToUint32(locationRange)
+
+	accountKey, err := provider.GetAccountKey(address, index)
+	if err != nil {
+		panic(err)
+	}
+
+	// Here it is expected the host function to return a nil key, if a key is not found at the given index.
+	// This is done because, if the host function returns an error when a key is not found, then
+	// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
+	if accountKey == nil {
+		return interpreter.Nil
+	}
+
+	return interpreter.NewSomeValueNonCopying(
+		context,
+		NewAccountKeyValue(
+			context,
+			locationRange,
+			accountKey,
+			provider,
+		),
+	)
+}
+
 // accountKeysForEachCallbackTypeParams are the parameter types of the callback function of
 // `Account.Keys.forEachKey(_ f: fun(AccountKey): Bool)`
 var accountKeysForEachCallbackTypeParams = []sema.Type{sema.AccountKeyType}
 
-func newAccountKeysForEachFunction(
+func newInterpreterAccountKeysForEachFunction(
 	context interpreter.FunctionCreationContext,
-	functionType *sema.FunctionType,
 	provider AccountKeyProvider,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
@@ -800,79 +919,128 @@ func newAccountKeysForEachFunction(
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountKeys,
-			functionType,
+			sema.Account_KeysTypeForEachFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 				invocationContext := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
 				fnValue, ok := invocation.Arguments[0].(interpreter.FunctionValue)
-
-				fnValueType := fnValue.FunctionType(invocationContext)
-				parameterTypes := fnValueType.ParameterTypes()
-				returnType := fnValueType.ReturnTypeAnnotation.Type
-
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
-				liftKeyToValue := func(key *AccountKey) interpreter.Value {
-					return NewAccountKeyValue(
-						invocationContext,
-						locationRange,
-						key,
-						provider,
-					)
-				}
-
-				count, err := provider.AccountKeysCount(address)
-				if err != nil {
-					panic(err)
-				}
-
-				for index := uint32(0); index < count; index++ {
-
-					accountKey, err := provider.GetAccountKey(address, index)
-					if err != nil {
-						panic(err)
-					}
-
-					// Here it is expected the host function to return a nil key, if a key is not found at the given index.
-					// This is done because, if the host function returns an error when a key is not found, then
-					// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
-					if accountKey == nil {
-						continue
-					}
-
-					liftedKey := liftKeyToValue(accountKey)
-
-					res, err := interpreter.InvokeFunctionValue(
-						invocationContext,
-						fnValue,
-						[]interpreter.Value{liftedKey},
-						accountKeysForEachCallbackTypeParams,
-						parameterTypes,
-						returnType,
-						locationRange,
-					)
-					if err != nil {
-						// interpreter panicked while invoking the inner function value
-						panic(err)
-					}
-
-					shouldContinue, ok := res.(interpreter.BoolValue)
-					if !ok {
-						panic(errors.NewUnreachableError())
-					}
-
-					if !shouldContinue {
-						break
-					}
-				}
-
-				return interpreter.Void
+				return AccountKeysForEach(
+					invocationContext,
+					address,
+					fnValue,
+					locationRange,
+					provider,
+				)
 			},
 		)
 	}
+}
+
+func NewVMAccountKeysForEachFunction(
+	provider AccountKeyProvider,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_KeysType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_KeysTypeForEachFunctionName,
+			sema.Account_KeysTypeForEachFunctionType,
+			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
+				var receiver interpreter.Value
+
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+
+				// Get address field from the receiver (Account.StorageCapabilities)
+				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+
+				fnValue, ok := args[0].(interpreter.FunctionValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return AccountKeysForEach(
+					context,
+					address,
+					fnValue,
+					interpreter.EmptyLocationRange,
+					provider,
+				)
+			},
+		),
+	}
+}
+
+func AccountKeysForEach(
+	invocationContext interpreter.InvocationContext,
+	address common.Address,
+	fnValue interpreter.FunctionValue,
+	locationRange interpreter.LocationRange,
+	provider AccountKeyProvider,
+) interpreter.Value {
+	fnValueType := fnValue.FunctionType(invocationContext)
+	parameterTypes := fnValueType.ParameterTypes()
+	returnType := fnValueType.ReturnTypeAnnotation.Type
+
+	liftKeyToValue := func(key *AccountKey) interpreter.Value {
+		return NewAccountKeyValue(
+			invocationContext,
+			locationRange,
+			key,
+			provider,
+		)
+	}
+
+	count, err := provider.AccountKeysCount(address)
+	if err != nil {
+		panic(err)
+	}
+
+	for index := uint32(0); index < count; index++ {
+
+		accountKey, err := provider.GetAccountKey(address, index)
+		if err != nil {
+			panic(err)
+		}
+
+		// Here it is expected the host function to return a nil key, if a key is not found at the given index.
+		// This is done because, if the host function returns an error when a key is not found, then
+		// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
+		if accountKey == nil {
+			continue
+		}
+
+		liftedKey := liftKeyToValue(accountKey)
+
+		res, err := interpreter.InvokeFunctionValue(
+			invocationContext,
+			fnValue,
+			[]interpreter.Value{liftedKey},
+			accountKeysForEachCallbackTypeParams,
+			parameterTypes,
+			returnType,
+			locationRange,
+		)
+		if err != nil {
+			// interpreter panicked while invoking the inner function value
+			panic(err)
+		}
+
+		shouldContinue, ok := res.(interpreter.BoolValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		if !shouldContinue {
+			break
+		}
+	}
+
+	return interpreter.Void
 }
 
 func newAccountKeysCountGetter(
@@ -909,64 +1077,114 @@ type AccountKeyRevocationHandler interface {
 	RevokeAccountKey(address common.Address, index uint32) (*AccountKey, error)
 }
 
-func newAccountKeysRevokeFunction(
+func newInterpreterAccountKeysRevokeFunction(
 	context interpreter.FunctionCreationContext,
 	handler AccountKeyRevocationHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountKeys interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 
-		// Converted addresses can be cached and don't have to be recomputed on each function invocation
-		address := addressValue.ToAddress()
-
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountKeys,
 			sema.Account_KeysTypeRevokeFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
+				inter := invocation.InvocationContext
+				locationRange := invocation.LocationRange
+
 				indexValue, ok := invocation.Arguments[0].(interpreter.IntValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				locationRange := invocation.LocationRange
-				index := indexValue.ToUint32(locationRange)
 
-				accountKey, err := handler.RevokeAccountKey(address, index)
-				if err != nil {
-					panic(err)
-				}
-
-				// Here it is expected the host function to return a nil key, if a key is not found at the given index.
-				// This is done because, if the host function returns an error when a key is not found, then
-				// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
-				if accountKey == nil {
-					return interpreter.Nil
-				}
-
-				inter := invocation.InvocationContext
-
-				handler.EmitEvent(
+				return AccountKeysRevoke(
 					inter,
+					addressValue,
+					indexValue,
 					locationRange,
-					AccountKeyRemovedFromPublicKeyIndexEventType,
-					[]interpreter.Value{
-						addressValue,
-						indexValue,
-					},
-				)
-
-				return interpreter.NewSomeValueNonCopying(
-					inter,
-					NewAccountKeyValue(
-						inter,
-						locationRange,
-						accountKey,
-						handler,
-					),
+					handler,
 				)
 			},
 		)
 	}
+}
+
+func NewVMAccountKeysRevokeFunction(
+	handler AccountKeyRevocationHandler,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_KeysType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_KeysTypeRevokeFunctionName,
+			sema.Account_KeysTypeRevokeFunctionType,
+			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
+				var receiver interpreter.Value
+
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+
+				// Get address field from the receiver (Account.StorageCapabilities)
+				addressValue := vm.GetAccountTypePrivateAddressValue(receiver)
+
+				indexValue, ok := args[0].(interpreter.IntValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return AccountKeysRevoke(
+					context,
+					addressValue,
+					indexValue,
+					interpreter.EmptyLocationRange,
+					handler,
+				)
+			},
+		),
+	}
+}
+
+func AccountKeysRevoke(
+	inter interpreter.InvocationContext,
+	addressValue interpreter.AddressValue,
+	indexValue interpreter.IntValue,
+	locationRange interpreter.LocationRange,
+	handler AccountKeyRevocationHandler,
+) interpreter.Value {
+	index := indexValue.ToUint32(locationRange)
+
+	address := addressValue.ToAddress()
+
+	accountKey, err := handler.RevokeAccountKey(address, index)
+	if err != nil {
+		panic(err)
+	}
+
+	// Here it is expected the host function to return a nil key, if a key is not found at the given index.
+	// This is done because, if the host function returns an error when a key is not found, then
+	// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
+	if accountKey == nil {
+		return interpreter.Nil
+	}
+
+	handler.EmitEvent(
+		inter,
+		locationRange,
+		AccountKeyRemovedFromPublicKeyIndexEventType,
+		[]interpreter.Value{
+			addressValue,
+			indexValue,
+		},
+	)
+
+	return interpreter.NewSomeValueNonCopying(
+		inter,
+		NewAccountKeyValue(
+			inter,
+			locationRange,
+			accountKey,
+			handler,
+		),
+	)
 }
 
 func newAccountInboxPublishFunction(
