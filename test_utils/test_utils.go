@@ -254,10 +254,6 @@ func ParseCheckAndPrepareWithOptions(
 		}
 	}
 
-	if vmConfig.TypeLoader == nil {
-		vmConfig.TypeLoader = typeLoader
-	}
-
 	if interpreterConfig != nil {
 		vmConfig.MemoryGauge = interpreterConfig.MemoryGauge
 		vmConfig.ComputationGauge = interpreterConfig.ComputationGauge
@@ -344,6 +340,24 @@ func ParseCheckAndPrepareWithOptions(
 				},
 			}
 		}
+
+		if interpreterConfig.ImportLocationHandler != nil {
+			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+				impt := interpreterConfig.ImportLocationHandler(nil, location)
+				switch impt := impt.(type) {
+				case interpreter.VirtualImport:
+					return impt.Elaboration.CompositeType(typeID)
+				case interpreter.InterpreterImport:
+					return impt.Interpreter.Program.Elaboration.CompositeType(typeID)
+				}
+
+				return typeLoader(location, typeID)
+			}
+		}
+	}
+
+	if vmConfig.TypeLoader == nil {
+		vmConfig.TypeLoader = typeLoader
 	}
 
 	parseAndCheckOptions := &sema_utils.ParseAndCheckOptions{

@@ -9024,7 +9024,7 @@ func TestInterpretHexDecode(t *testing.T) {
 
 	t.Run("native", func(t *testing.T) {
 
-		inter := parseCheckAndInterpret(t,
+		inter := parseCheckAndPrepare(t,
 			`
               fun test(): [UInt8] {
                   return "476F20576974682074686520466C6F77".decodeHex()
@@ -9851,7 +9851,7 @@ func TestInterpretVoidReturn(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			inter := parseCheckAndInterpret(t, code)
+			inter := parseCheckAndPrepare(t, code)
 
 			value, err := inter.Invoke("test")
 			require.NoError(t, err)
