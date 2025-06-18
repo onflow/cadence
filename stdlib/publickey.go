@@ -69,7 +69,7 @@ func newPublicKeyValidationHandler(validator PublicKeyValidator) interpreter.Pub
 	}
 }
 
-func NewPublicKeyConstructor(
+func NewInterpreterPublicKeyConstructor(
 	publicKeyValidator PublicKeyValidator,
 ) StandardLibraryValue {
 	return NewStandardLibraryStaticInterpreterFunction(

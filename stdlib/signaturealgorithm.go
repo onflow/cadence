@@ -53,15 +53,15 @@ var signatureAlgorithmLookupType = cryptoAlgorithmEnumLookupType(
 	sema.SignatureAlgorithms,
 )
 
-var signatureAlgorithmConstructorValue, SignatureAlgorithmCaseValues = cryptoAlgorithmEnumValueAndCaseValues(
+var interpreterSignatureAlgorithmConstructorValue, SignatureAlgorithmCaseValues = cryptoAlgorithmEnumValueAndCaseValues(
 	signatureAlgorithmLookupType,
 	sema.SignatureAlgorithms,
 	NewSignatureAlgorithmCase,
 )
 
-var SignatureAlgorithmConstructor = StandardLibraryValue{
+var InterpreterSignatureAlgorithmConstructor = StandardLibraryValue{
 	Name:  sema.SignatureAlgorithmTypeName,
 	Type:  signatureAlgorithmLookupType,
-	Value: signatureAlgorithmConstructorValue,
+	Value: interpreterSignatureAlgorithmConstructorValue,
 	Kind:  common.DeclarationKindEnum,
 }

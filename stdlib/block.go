@@ -74,7 +74,7 @@ type BlockAtHeightProvider interface {
 	GetBlockAtHeight(height uint64) (block Block, exists bool, err error)
 }
 
-func NewGetBlockFunction(provider BlockAtHeightProvider) StandardLibraryValue {
+func NewInterpreterGetBlockFunction(provider BlockAtHeightProvider) StandardLibraryValue {
 	return NewStandardLibraryStaticInterpreterFunction(
 		"getBlock",
 		getBlockFunctionType,
@@ -188,7 +188,7 @@ type CurrentBlockProvider interface {
 	GetCurrentBlockHeight() (uint64, error)
 }
 
-func NewGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryValue {
+func NewInterpreterGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryValue {
 	return NewStandardLibraryStaticInterpreterFunction(
 		"getCurrentBlock",
 		getCurrentBlockFunctionType,

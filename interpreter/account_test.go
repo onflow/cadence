@@ -586,7 +586,7 @@ func testAccountWithErrorHandlerWithCompiler(
 		authAccountValueDeclaration,
 		pubAccountValueDeclaration,
 		accountValueDeclaration,
-		stdlib.InclusiveRangeConstructorFunction,
+		stdlib.InterpreterInclusiveRangeConstructor,
 	}
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)

@@ -19,6 +19,7 @@
 package stdlib
 
 import (
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -38,29 +39,76 @@ type StandardLibraryHandler interface {
 	Hasher
 }
 
-func DefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
+func InterpreterDefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
 	return []StandardLibraryValue{
-		AssertInterpreterFunction,
+		InterpreterAssertFunction,
 		InterpreterPanicFunction,
-		SignatureAlgorithmConstructor,
-		RLPContract,
-		InclusiveRangeConstructorFunction,
+		InterpreterSignatureAlgorithmConstructor,
+		InterpreterInclusiveRangeConstructor,
 		NewInterpreterLogFunction(handler),
-		NewRevertibleRandomFunction(handler),
-		NewGetBlockFunction(handler),
-		NewGetCurrentBlockFunction(handler),
-		NewGetAccountInterpreterFunction(handler),
-		NewAccountConstructor(handler),
-		NewPublicKeyConstructor(handler),
+		NewInterpreterRevertibleRandomFunction(handler),
+		NewInterpreterGetBlockFunction(handler),
+		NewInterpreterGetCurrentBlockFunction(handler),
+		NewInterpreterGetAccountFunction(handler),
+		NewInterpreterAccountConstructor(handler),
+		NewInterpreterPublicKeyConstructor(handler),
+		NewInterpreterHashAlgorithmConstructor(handler),
+		RLPContract,
 		NewBLSContract(nil, handler),
-		NewHashAlgorithmConstructor(handler),
 	}
 }
 
-func DefaultScriptStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
+func VMDefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
+	return []StandardLibraryValue{
+		VMAssertFunction,
+		VMPanicFunction,
+		// TODO: SignatureAlgorithmConstructor
+		// TODO: InclusiveRangeConstructor
+		NewVMLogFunction(handler),
+		// TODO: RevertibleRandomFunction
+		// TODO: GetBlockFunction
+		// TODO: GetCurrentBlockFunction
+		NewVMGetAccountFunction(handler),
+		// TODO: AccountConstructor
+		// TODO: PublicKeyConstructor
+		// TODO: HashAlgorithmConstructor
+		// TODO: RLPContract,
+		// TODO: BLSContract
+	}
+}
+
+type VMFunction struct {
+	BaseType      sema.Type
+	FunctionValue *vm.NativeFunctionValue
+}
+
+func VMFunctions(handler StandardLibraryHandler) []VMFunction {
+	return []VMFunction{
+		VMAccountCapabilitiesExistsFunction,
+		NewVMAccountCapabilitiesGetFunction(handler, false),
+		NewVMAccountCapabilitiesGetFunction(handler, true),
+		NewVMAccountCapabilitiesPublishFunction(handler),
+		NewVMAccountCapabilitiesUnpublishFunction(handler),
+
+		NewVMAccountStorageCapabilitiesGetControllersFunction(handler),
+		NewVMAccountStorageCapabilitiesGetControllerFunction(handler),
+		NewVMAccountStorageCapabilitiesForEachControllerFunction(handler),
+		NewVMAccountStorageCapabilitiesIssueFunction(handler),
+		NewVMAccountStorageCapabilitiesIssueWithTypeFunction(handler),
+	}
+}
+
+func InterpreterDefaultScriptStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
 	return append(
-		DefaultStandardLibraryValues(handler),
-		NewGetAuthAccountInterpreterFunction(handler),
+		InterpreterDefaultStandardLibraryValues(handler),
+		NewInterpreterGetAuthAccountFunction(handler),
+	)
+}
+
+func VMDefaultScriptStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
+	return append(
+		VMDefaultStandardLibraryValues(handler),
+		NewVMGetAuthAccountFunction(handler),
 	)
 }
 

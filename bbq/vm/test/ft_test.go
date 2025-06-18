@@ -247,41 +247,21 @@ func compiledFTTransfer(tb testing.TB) {
 			getAccountVariable,
 		)
 
-		accountStorageCapabilitiesIssueVariable := &vm.Variable{}
-		accountStorageCapabilitiesIssueVariable.InitializeWithValue(
-			stdlib.NewVMAccountStorageCapabilitiesIssueFunction(accountHandler),
-		)
-		activation.Set(
-			commons.TypeQualifiedName(
-				sema.Account_StorageCapabilitiesType,
-				sema.Account_StorageCapabilitiesTypeIssueFunctionName,
-			),
-			accountStorageCapabilitiesIssueVariable,
-		)
-
-		accountCapabilitiesPublishVariable := &vm.Variable{}
-		accountCapabilitiesPublishVariable.InitializeWithValue(
+		for _, vmFunction := range []stdlib.VMFunction{
 			stdlib.NewVMAccountCapabilitiesPublishFunction(accountHandler),
-		)
-		activation.Set(
-			commons.TypeQualifiedName(
-				sema.Account_CapabilitiesType,
-				sema.Account_CapabilitiesTypePublishFunctionName,
-			),
-			accountCapabilitiesPublishVariable,
-		)
-
-		accountCapabilitiesBorrowVariable := &vm.Variable{}
-		accountCapabilitiesBorrowVariable.InitializeWithValue(
+			stdlib.NewVMAccountStorageCapabilitiesIssueFunction(accountHandler),
 			stdlib.NewVMAccountCapabilitiesGetFunction(accountHandler, true),
-		)
-		activation.Set(
-			commons.TypeQualifiedName(
-				sema.Account_CapabilitiesType,
-				sema.Account_CapabilitiesTypeBorrowFunctionName,
-			),
-			accountCapabilitiesBorrowVariable,
-		)
+		} {
+			variable := &vm.Variable{}
+			variable.InitializeWithValue(vmFunction.FunctionValue)
+			activation.Set(
+				commons.TypeQualifiedName(
+					vmFunction.BaseType,
+					vmFunction.FunctionValue.Name,
+				),
+				variable,
+			)
+		}
 
 		return activation
 	}

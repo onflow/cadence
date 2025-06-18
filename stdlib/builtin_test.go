@@ -96,7 +96,7 @@ func TestCheckAssert(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(AssertInterpreterFunction)
+	baseValueActivation.DeclareValue(InterpreterAssertFunction)
 
 	parseAndCheck := func(t *testing.T, code string) (*sema.Checker, error) {
 		return ParseAndCheckWithOptions(t,
@@ -170,7 +170,7 @@ func TestInterpretAssert(t *testing.T) {
 
 	inter := newInterpreter(t,
 		`access(all) let test = assert`,
-		AssertInterpreterFunction,
+		InterpreterAssertFunction,
 	)
 
 	_, err := inter.Invoke(

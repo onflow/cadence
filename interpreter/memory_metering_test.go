@@ -1033,7 +1033,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-		for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(nil) {
+		for _, valueDeclaration := range stdlib.InterpreterDefaultStandardLibraryValues(nil) {
 			baseValueActivation.DeclareValue(valueDeclaration)
 			interpreter.Declare(baseActivation, valueDeclaration)
 		}
@@ -1079,10 +1079,10 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		for _, valueDeclaration := range []stdlib.StandardLibraryValue{
-			stdlib.NewPublicKeyConstructor(
+			stdlib.NewInterpreterPublicKeyConstructor(
 				assumeValidPublicKeyValidator{},
 			),
-			stdlib.SignatureAlgorithmConstructor,
+			stdlib.InterpreterSignatureAlgorithmConstructor,
 		} {
 			baseValueActivation.DeclareValue(valueDeclaration)
 			interpreter.Declare(baseActivation, valueDeclaration)
@@ -1135,10 +1135,10 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		for _, valueDeclaration := range []stdlib.StandardLibraryValue{
-			stdlib.NewPublicKeyConstructor(
+			stdlib.NewInterpreterPublicKeyConstructor(
 				assumeValidPublicKeyValidator{},
 			),
-			stdlib.SignatureAlgorithmConstructor,
+			stdlib.InterpreterSignatureAlgorithmConstructor,
 		} {
 			baseValueActivation.DeclareValue(valueDeclaration)
 			interpreter.Declare(baseActivation, valueDeclaration)

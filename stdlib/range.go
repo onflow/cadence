@@ -114,7 +114,7 @@ var inclusiveRangeConstructorFunctionType = func() *sema.FunctionType {
 	}
 }()
 
-var InclusiveRangeConstructorFunction = NewStandardLibraryStaticInterpreterFunction(
+var InterpreterInclusiveRangeConstructor = NewStandardLibraryStaticInterpreterFunction(
 	"InclusiveRange",
 	inclusiveRangeConstructorFunctionType,
 	inclusiveRangeConstructorFunctionDocString,
