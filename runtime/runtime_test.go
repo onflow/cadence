@@ -4856,6 +4856,7 @@ func TestRuntimeRandom(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 	}
