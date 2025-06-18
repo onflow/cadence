@@ -3324,7 +3324,7 @@ func TestInterpretInvalidatingLoopedReference(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         // Victim code starts here:
         resource VictimCompany {
 
