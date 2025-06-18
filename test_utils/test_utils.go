@@ -167,7 +167,7 @@ func ParseCheckAndPrepareWithLogs(
 
 	var logs []string
 
-	valueDeclaration := stdlib.NewStandardLibraryStaticInterpreterFunction(
+	valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
 		"log",
 		stdlib.LogFunctionType,
 		"",

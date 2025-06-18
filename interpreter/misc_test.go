@@ -1779,7 +1779,7 @@ func TestInterpretHostFunction(t *testing.T) {
 
 	require.NoError(t, err)
 
-	testFunction := stdlib.NewStandardLibraryStaticInterpreterFunction(
+	testFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
 		"test",
 		&sema.FunctionType{
 			Parameters: []sema.Parameter{
@@ -1865,7 +1865,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 
 	called := false
 
-	testFunction := stdlib.NewStandardLibraryStaticInterpreterFunction(
+	testFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
 		"test",
 		&sema.FunctionType{
 			Parameters: []sema.Parameter{
@@ -1971,7 +1971,7 @@ func TestInterpretHostFunctionWithOptionalArguments(t *testing.T) {
 
 	called := false
 
-	testFunction := stdlib.NewStandardLibraryStaticInterpreterFunction(
+	testFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
 		"test",
 		&sema.FunctionType{
 			Parameters: []sema.Parameter{
@@ -5032,7 +5032,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			ReturnTypeAnnotation: sema.AnyStructTypeAnnotation,
 		}
 
-		valueDeclaration := stdlib.NewStandardLibraryStaticInterpreterFunction(
+		valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
 			"getStorageReference",
 			getStorageReferenceFunctionType,
 			"",

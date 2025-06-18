@@ -308,7 +308,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 
 		invoked := false
 
-		valueDeclaration := stdlib.NewStandardLibraryStaticInterpreterFunction(
+		valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
 			"log",
 			stdlib.LogFunctionType,
 			"",
@@ -454,7 +454,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 
 		t.Parallel()
 
-		valueDeclaration := stdlib.NewStandardLibraryStaticInterpreterFunction(
+		valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
 			"log",
 			stdlib.LogFunctionType,
 			"",
@@ -706,7 +706,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 
 		invoked := false
 
-		valueDeclaration := stdlib.NewStandardLibraryStaticInterpreterFunction(
+		valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
 			"log",
 			stdlib.LogFunctionType,
 			"",
@@ -852,7 +852,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 
 		t.Parallel()
 
-		valueDeclaration := stdlib.NewStandardLibraryStaticInterpreterFunction(
+		valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
 			"log",
 			stdlib.LogFunctionType,
 			"",

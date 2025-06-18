@@ -25,8 +25,8 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-// NewStandardLibraryStaticInterpreterFunction should only be used for creating static functions.
-func NewStandardLibraryStaticInterpreterFunction(
+// NewInterpreterStandardLibraryStaticFunction should only be used for creating static functions.
+func NewInterpreterStandardLibraryStaticFunction(
 	name string,
 	functionType *sema.FunctionType,
 	docString string,

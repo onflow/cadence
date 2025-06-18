@@ -60,7 +60,7 @@ func (f FunctionLogger) ProgramLog(message string, locationRange interpreter.Loc
 }
 
 func NewInterpreterLogFunction(logger Logger) StandardLibraryValue {
-	return NewStandardLibraryStaticInterpreterFunction(
+	return NewInterpreterStandardLibraryStaticFunction(
 		LogFunctionName,
 		LogFunctionType,
 		logFunctionDocString,

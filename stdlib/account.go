@@ -111,7 +111,7 @@ type AccountCreator interface {
 }
 
 func NewInterpreterAccountConstructor(creator AccountCreator) StandardLibraryValue {
-	return NewStandardLibraryStaticInterpreterFunction(
+	return NewInterpreterStandardLibraryStaticFunction(
 		"Account",
 		accountFunctionType,
 		accountFunctionDocString,
@@ -218,7 +218,7 @@ var GetAuthAccountFunctionType = func() *sema.FunctionType {
 }()
 
 func NewInterpreterGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
-	return NewStandardLibraryStaticInterpreterFunction(
+	return NewInterpreterStandardLibraryStaticFunction(
 		GetAuthAccountFunctionName,
 		GetAuthAccountFunctionType,
 		getAuthAccountFunctionDocString,
@@ -2192,7 +2192,7 @@ var GetAccountFunctionType = sema.NewSimpleFunctionType(
 )
 
 func NewInterpreterGetAccountFunction(handler AccountHandler) StandardLibraryValue {
-	return NewStandardLibraryStaticInterpreterFunction(
+	return NewInterpreterStandardLibraryStaticFunction(
 		GetAccountFunctionName,
 		GetAccountFunctionType,
 		getAccountFunctionDocString,
