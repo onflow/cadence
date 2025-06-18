@@ -71,7 +71,6 @@ type inheritedEvent struct {
 }
 
 var _ ast.DeclarationVisitor[ast.Element] = &Desugar{}
-var _ ast.StatementVisitor[ast.Element] = &Desugar{}
 
 func NewDesugar(
 	memoryGauge common.MemoryGauge,
@@ -99,6 +98,8 @@ type DesugaredProgram struct {
 	inheritedConditionParamBinding map[ast.Statement]map[string]string
 }
 
+// Run desugars and rewrites the top-level declarations.
+// It will not desugar/rewrite any statements or expressions.
 func (d *Desugar) Run() DesugaredProgram {
 	declarations := d.program.Declarations()
 	for _, declaration := range declarations {
@@ -130,12 +131,6 @@ func (d *Desugar) desugarDeclaration(declaration ast.Declaration) (result ast.De
 	}
 
 	return desugaredDeclaration.(ast.Declaration), desugared
-}
-
-func (d *Desugar) desugarStatement(statement ast.Statement) (result ast.Statement, desugared bool) {
-	desugaredStatement := ast.AcceptStatement[ast.Element](statement, d)
-	desugared = desugaredStatement != statement
-	return desugaredStatement.(ast.Statement), desugared
 }
 
 func desugarList[T any](
@@ -276,8 +271,7 @@ func (d *Desugar) desugarFunctionBlock(
 		statements := funcBlock.Block.Statements
 
 		for _, statement := range statements {
-			desugaredStatement, _ := d.desugarStatement(statement)
-			modifiedStatements = append(modifiedStatements, desugaredStatement)
+			modifiedStatements = append(modifiedStatements, statement)
 		}
 	}
 
@@ -1633,56 +1627,12 @@ func (d *Desugar) VisitImportDeclaration(declaration *ast.ImportDeclaration) ast
 	return declaration
 }
 
-func (d *Desugar) VisitReturnStatement(statement *ast.ReturnStatement) ast.Element {
-	return statement
-}
-
-func (d *Desugar) VisitContinueStatement(statement *ast.ContinueStatement) ast.Element {
-	return statement
-}
-
-func (d *Desugar) VisitBreakStatement(statement *ast.BreakStatement) ast.Element {
-	return statement
-}
-
-func (d *Desugar) VisitIfStatement(statement *ast.IfStatement) ast.Element {
-	return statement
-}
-
-func (d *Desugar) VisitForStatement(statement *ast.ForStatement) ast.Element {
-	return statement
-}
-
-func (d *Desugar) VisitAssignmentStatement(statement *ast.AssignmentStatement) ast.Element {
-	return statement
-}
-
-func (d *Desugar) VisitWhileStatement(statement *ast.WhileStatement) ast.Element {
-	return statement
-}
-
-func (d *Desugar) VisitSwapStatement(statement *ast.SwapStatement) ast.Element {
-	return statement
-}
-
-func (d *Desugar) VisitSwitchStatement(statement *ast.SwitchStatement) ast.Element {
-	return statement
-}
-
-func (d *Desugar) VisitEmitStatement(statement *ast.EmitStatement) ast.Element {
-	return statement
-}
-
-func (d *Desugar) VisitExpressionStatement(statement *ast.ExpressionStatement) ast.Element {
-	return statement
-}
-
-func (d *Desugar) VisitRemoveStatement(statement *ast.RemoveStatement) ast.Element {
-	return statement
+func (d *Desugar) DesugarInnerFunction(declaration *ast.FunctionDeclaration) *ast.FunctionDeclaration {
+	desugaredDeclaration := d.VisitFunctionDeclaration(declaration, true)
+	return desugaredDeclaration.(*ast.FunctionDeclaration)
 }
 
 func (d *Desugar) DesugarFunctionExpression(expression *ast.FunctionExpression) *ast.FunctionExpression {
-
 	parameterList := expression.ParameterList
 	returnTypeAnnotation := expression.ReturnTypeAnnotation
 

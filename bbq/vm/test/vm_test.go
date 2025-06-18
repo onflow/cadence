@@ -4136,6 +4136,37 @@ func TestFunctionPreConditions(t *testing.T) {
 		assert.ErrorContains(t, err, "pre/post condition failed")
 	})
 
+	t.Run("in nested local function, fail", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := CompileAndInvoke(t,
+			`
+              fun main(x: Int): Int {
+
+                  if true {
+                      if true {
+                          fun foo(_ y: Int): Int {
+                              pre {
+                                  y == 0
+                              }
+                              return y
+                          }
+                          return foo(x)
+                      }
+                  }
+
+                  return 0
+              }
+            `,
+			"main",
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+		)
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "pre/post condition failed")
+	})
+
 	t.Run("in local function, pass", func(t *testing.T) {
 
 		t.Parallel()

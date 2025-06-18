@@ -86,8 +86,8 @@ type Compiler[E, T any] struct {
 	typeGen TypeGen[T]
 
 	// desugar is used to desugar the AST declarations, before the compiling starts.
-	// This could be also reused during compilation to desugar expressions.
-	// Important: It must NOT be reused to desugar any declaration, after the initial use.
+	// This could be also reused during compilation to desugar expressions and statements.
+	// Important: It must NOT be reused to desugar any top-level declaration, after the initial use.
 	desugar *Desugar
 }
 
@@ -2941,6 +2941,13 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 		functionName = commons.TypeQualifiedName(enclosingType, identifier)
 
 	} else {
+		// Inner function
+
+		// It is OK/safe to use the desugar-instance to desugar the inner function,
+		// since inner function desugaring doesn't rely on contextual-information.
+		// (i.e: doesn't rely on where this function is located in the AST; doesn't inherit from other functions, etc.).
+		declaration = c.desugar.DesugarInnerFunction(declaration)
+
 		innerFunctionLocal = c.currentFunction.declareLocal(identifier)
 	}
 
