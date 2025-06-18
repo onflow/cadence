@@ -1054,8 +1054,13 @@ func opSetField(vm *VM, ins opcode.InstructionSetField) {
 	fieldNameIndex := ins.FieldName
 	fieldName := getStringConstant(vm, fieldNameIndex)
 
-	target.(interpreter.MemberAccessibleValue).
-		SetMember(vm.context, EmptyLocationRange, fieldName, fieldValue)
+	memberAccessibleValue := target.(interpreter.MemberAccessibleValue)
+	memberAccessibleValue.SetMember(
+		vm.context,
+		EmptyLocationRange,
+		fieldName,
+		fieldValue,
+	)
 }
 
 func opGetField(vm *VM, ins opcode.InstructionGetField) {

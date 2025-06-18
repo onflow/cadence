@@ -340,7 +340,7 @@ func TestInterpretTransactions(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             enum Alpha: Int {
                 case A
                 case B
