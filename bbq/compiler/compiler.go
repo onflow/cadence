@@ -2668,7 +2668,7 @@ func (c *Compiler[_, _]) VisitFunctionExpression(expression *ast.FunctionExpress
 		c.declareParameters(parameterList, false)
 		c.compileFunctionBlock(
 			expression.FunctionBlock,
-			common.DeclarationKindUnknown,
+			common.DeclarationKindFunction,
 			functionType.ReturnTypeAnnotation.Type,
 		)
 	}()
