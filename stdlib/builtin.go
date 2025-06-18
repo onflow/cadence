@@ -66,8 +66,8 @@ func VMDefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLi
 		// TODO: InclusiveRangeConstructor
 		NewVMLogFunction(handler),
 		NewVMRevertibleRandomFunction(handler),
-		// TODO: GetBlockFunction
-		// TODO: GetCurrentBlockFunction
+		NewVMGetBlockFunction(handler),
+		NewVMGetCurrentBlockFunction(handler),
 		NewVMGetAccountFunction(handler),
 		// TODO: AccountConstructor
 		// TODO: PublicKeyConstructor
