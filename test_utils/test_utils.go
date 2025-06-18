@@ -286,6 +286,10 @@ func ParseCheckAndPrepareWithOptions(
 
 				activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
+				panicVariable := &vm.Variable{}
+				panicVariable.InitializeWithValue(stdlib.VMPanicFunction.Value)
+				activation.Set(stdlib.PanicFunctionName, panicVariable)
+
 				// Add the given built-in values.
 				// Convert the externally provided `interpreter.HostFunctionValue`s into `vm.NativeFunctionValue`s.
 				for name, variable := range interpreterBaseActivationVariables { //nolint:maprange
@@ -342,6 +346,18 @@ func ParseCheckAndPrepareWithOptions(
 					return activation
 				},
 			}
+		}
+	}
+
+	if vmConfig.BuiltinGlobalsProvider == nil {
+		vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[*vm.Variable] {
+			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+
+			panicVariable := &vm.Variable{}
+			panicVariable.InitializeWithValue(stdlib.VMPanicFunction.Value)
+			activation.Set(stdlib.PanicFunctionName, panicVariable)
+
+			return activation
 		}
 	}
 
