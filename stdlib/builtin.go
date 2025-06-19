@@ -73,7 +73,7 @@ func VMDefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLi
 		// TODO: PublicKeyConstructor
 		// TODO: HashAlgorithmConstructor
 		RLPContract,
-		// TODO: NewBLSContract(nil, handler),
+		NewBLSContract(nil, handler),
 	}
 }
 
@@ -114,6 +114,8 @@ func VMFunctions(handler StandardLibraryHandler) []VMFunction {
 		VMRLPDecodeStringFunction,
 		VMRLPDecodeListFunction,
 
+		NewVMBLSAggregatePublicKeysFunction(handler),
+		NewVMBLSAggregateSignaturesFunction(handler),
 	}
 }
 
