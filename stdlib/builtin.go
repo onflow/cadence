@@ -65,11 +65,11 @@ func VMDefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLi
 		// TODO: SignatureAlgorithmConstructor
 		// TODO: InclusiveRangeConstructor
 		NewVMLogFunction(handler),
-		// TODO: RevertibleRandomFunction
-		// TODO: GetBlockFunction
-		// TODO: GetCurrentBlockFunction
+		NewVMRevertibleRandomFunction(handler),
+		NewVMGetBlockFunction(handler),
+		NewVMGetCurrentBlockFunction(handler),
 		NewVMGetAccountFunction(handler),
-		// TODO: AccountConstructor
+		NewVMAccountConstructor(handler),
 		// TODO: PublicKeyConstructor
 		// TODO: HashAlgorithmConstructor
 		// TODO: RLPContract,

@@ -146,6 +146,7 @@ func TestRuntimeBlockFieldTypes(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -196,13 +197,16 @@ func TestRuntimeBlockFieldTypes(t *testing.T) {
 			},
 		}
 
+		nextScriptLocation := NewScriptLocationGenerator()
+
 		value, err := runtime.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 

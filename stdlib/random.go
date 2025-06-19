@@ -24,6 +24,8 @@ import (
 	"math/big"
 
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -125,6 +127,31 @@ func NewInterpreterRevertibleRandomFunction(generator RandomGenerator) StandardL
 			return RevertibleRandom(
 				generator,
 				inter,
+				returnIntegerType,
+				moduloValue,
+			)
+		},
+	)
+}
+
+func NewVMRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue {
+	return NewVMStandardLibraryStaticFunction(
+		revertibleRandomFunctionName,
+		revertibleRandomFunctionType,
+		revertibleRandomFunctionDocString,
+		func(context *vm.Context, typeArguments []bbq.StaticType, arguments ...vm.Value) vm.Value {
+
+			returnIntegerType := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
+
+			// arguments should be 0 or 1 at this point
+			var moduloValue interpreter.Value
+			if len(arguments) == 1 {
+				moduloValue = arguments[0]
+			}
+
+			return RevertibleRandom(
+				generator,
+				context,
 				returnIntegerType,
 				moduloValue,
 			)
