@@ -90,6 +90,11 @@ func VMFunctions(handler StandardLibraryHandler) []VMFunction {
 		NewVMAccountCapabilitiesPublishFunction(handler),
 		NewVMAccountCapabilitiesUnpublishFunction(handler),
 
+		NewVMAccountKeysAddFunction(handler),
+		NewVMAccountKeysGetFunction(handler),
+		NewVMAccountKeysRevokeFunction(handler),
+		NewVMAccountKeysForEachFunction(handler),
+
 		NewVMAccountStorageCapabilitiesGetControllersFunction(handler),
 		NewVMAccountStorageCapabilitiesGetControllerFunction(handler),
 		NewVMAccountStorageCapabilitiesForEachControllerFunction(handler),
