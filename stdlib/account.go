@@ -702,7 +702,7 @@ func NewVMAccountKeysAddFunction(
 				// arg[0] is the receiver. Actual arguments starts from 1.
 				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
 
-				// Get address field from the receiver (Account.StorageCapabilities)
+				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver)
 
 				publicKeyValue, ok := args[0].(*interpreter.CompositeValue)
@@ -852,7 +852,7 @@ func NewVMAccountKeysGetFunction(
 				// arg[0] is the receiver. Actual arguments starts from 1.
 				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
 
-				// Get address field from the receiver (Account.StorageCapabilities)
+				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
 
 				indexValue, ok := args[0].(interpreter.IntValue)
@@ -955,7 +955,7 @@ func NewVMAccountKeysForEachFunction(
 				// arg[0] is the receiver. Actual arguments starts from 1.
 				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
 
-				// Get address field from the receiver (Account.StorageCapabilities)
+				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
 
 				fnValue, ok := args[0].(interpreter.FunctionValue)
@@ -1123,7 +1123,7 @@ func NewVMAccountKeysRevokeFunction(
 				// arg[0] is the receiver. Actual arguments starts from 1.
 				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
 
-				// Get address field from the receiver (Account.StorageCapabilities)
+				// Get address field from the receiver
 				addressValue := vm.GetAccountTypePrivateAddressValue(receiver)
 
 				indexValue, ok := args[0].(interpreter.IntValue)
@@ -1144,7 +1144,7 @@ func NewVMAccountKeysRevokeFunction(
 }
 
 func AccountKeysRevoke(
-	inter interpreter.InvocationContext,
+	context interpreter.InvocationContext,
 	addressValue interpreter.AddressValue,
 	indexValue interpreter.IntValue,
 	locationRange interpreter.LocationRange,
@@ -1167,7 +1167,7 @@ func AccountKeysRevoke(
 	}
 
 	handler.EmitEvent(
-		inter,
+		context,
 		locationRange,
 		AccountKeyRemovedFromPublicKeyIndexEventType,
 		[]interpreter.Value{
@@ -1177,9 +1177,9 @@ func AccountKeysRevoke(
 	)
 
 	return interpreter.NewSomeValueNonCopying(
-		inter,
+		context,
 		NewAccountKeyValue(
-			inter,
+			context,
 			locationRange,
 			accountKey,
 			handler,
@@ -1187,18 +1187,20 @@ func AccountKeysRevoke(
 	)
 }
 
-func newAccountInboxPublishFunction(
+func newInterpreterAccountInboxPublishFunction(
 	context interpreter.FunctionCreationContext,
 	handler EventEmitter,
 	providerValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountInbox interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		provider := providerValue.ToAddress()
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountInbox,
 			sema.Account_InboxTypePublishFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
+				inter := invocation.InvocationContext
+				locationRange := invocation.LocationRange
+
 				value, ok := invocation.Arguments[0].(interpreter.CapabilityValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -1214,73 +1216,124 @@ func newAccountInboxPublishFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				inter := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				handler.EmitEvent(
+				return AccountInboxPublish(
 					inter,
 					locationRange,
-					AccountInboxPublishedEventType,
-					[]interpreter.Value{
-						providerValue,
-						recipientValue,
-						nameValue,
-						interpreter.NewTypeValue(inter, value.StaticType(inter)),
-					},
+					providerValue,
+					recipientValue,
+					nameValue,
+					value,
+					handler,
 				)
-
-				publishedValue := interpreter.NewPublishedValue(inter, recipientValue, value).Transfer(
-					inter,
-					locationRange,
-					atree.Address(provider),
-					true,
-					nil,
-					nil,
-					true, // New PublishedValue is standalone.
-				)
-
-				storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
-
-				inter.WriteStored(
-					provider,
-					common.StorageDomainInbox,
-					storageMapKey,
-					publishedValue,
-				)
-
-				return interpreter.Void
 			},
 		)
 	}
 }
 
-func newAccountInboxUnpublishFunction(
+func NewVMAccountInboxPublishFunction(
+	handler EventEmitter,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_InboxType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_InboxTypePublishFunctionName,
+			sema.Account_InboxTypePublishFunctionType,
+			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
+				var receiver interpreter.Value
+
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+
+				// Get address field from the receiver
+				providerValue := vm.GetAccountTypePrivateAddressValue(receiver)
+
+				value, ok := args[0].(interpreter.CapabilityValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				nameValue, ok := args[1].(*interpreter.StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				recipientValue := args[2].(interpreter.AddressValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return AccountInboxPublish(
+					context,
+					interpreter.EmptyLocationRange,
+					providerValue,
+					recipientValue,
+					nameValue,
+					value,
+					handler,
+				)
+			},
+		),
+	}
+}
+
+func AccountInboxPublish(
+	context interpreter.InvocationContext,
+	locationRange interpreter.LocationRange,
+	providerValue interpreter.AddressValue,
+	recipientValue interpreter.AddressValue,
+	nameValue *interpreter.StringValue,
+	value interpreter.CapabilityValue,
+	handler EventEmitter,
+) interpreter.Value {
+	handler.EmitEvent(
+		context,
+		locationRange,
+		AccountInboxPublishedEventType,
+		[]interpreter.Value{
+			providerValue,
+			recipientValue,
+			nameValue,
+			interpreter.NewTypeValue(context, value.StaticType(context)),
+		},
+	)
+
+	publishedValue := interpreter.NewPublishedValue(context, recipientValue, value).Transfer(
+		context,
+		locationRange,
+		atree.Address(providerValue),
+		true,
+		nil,
+		nil,
+		true, // New PublishedValue is standalone.
+	)
+
+	storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
+
+	context.WriteStored(
+		common.Address(providerValue),
+		common.StorageDomainInbox,
+		storageMapKey,
+		publishedValue,
+	)
+
+	return interpreter.Void
+}
+
+func newInterpreterAccountInboxUnpublishFunction(
 	context interpreter.FunctionCreationContext,
 	handler EventEmitter,
 	providerValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountInbox interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		provider := providerValue.ToAddress()
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountInbox,
 			sema.Account_InboxTypeUnpublishFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-				nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
 				inter := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
-				storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
-
-				readValue := inter.ReadStored(provider, common.StorageDomainInbox, storageMapKey)
-				if readValue == nil {
-					return interpreter.Nil
-				}
-				publishedValue := readValue.(*interpreter.PublishedValue)
+				nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -1289,51 +1342,124 @@ func newAccountInboxUnpublishFunction(
 				if typeParameterPair == nil {
 					panic(errors.NewUnreachableError())
 				}
+				borrowType := typeParameterPair.Value
 
-				ty := sema.NewCapabilityType(inter, typeParameterPair.Value)
-				publishedType := publishedValue.Value.StaticType(invocation.InvocationContext)
-				if !interpreter.IsSubTypeOfSemaType(inter, publishedType, ty) {
-					panic(&interpreter.ForceCastTypeMismatchError{
-						ExpectedType:  ty,
-						ActualType:    interpreter.MustConvertStaticToSemaType(publishedType, inter),
-						LocationRange: locationRange,
-					})
-				}
-
-				value := publishedValue.Value.Transfer(
+				return AccountInboxUnpublish(
 					inter,
 					locationRange,
-					atree.Address{},
-					true,
-					nil,
-					nil,
-					false, // publishedValue is an element in storage map because it is returned by ReadStored.
+					providerValue,
+					borrowType,
+					nameValue,
+					handler,
 				)
-
-				inter.WriteStored(
-					provider,
-					common.StorageDomainInbox,
-					storageMapKey,
-					nil,
-				)
-
-				handler.EmitEvent(
-					inter,
-					locationRange,
-					AccountInboxUnpublishedEventType,
-					[]interpreter.Value{
-						providerValue,
-						nameValue,
-					},
-				)
-
-				return interpreter.NewSomeValueNonCopying(inter, value)
 			},
 		)
 	}
 }
 
-func newAccountInboxClaimFunction(
+func NewVMAccountInboxUnpublishFunction(
+	handler EventEmitter,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_InboxType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_InboxTypeUnpublishFunctionName,
+			sema.Account_InboxTypeUnpublishFunctionType,
+			func(context *vm.Context, typeArguments []bbq.StaticType, args ...vm.Value) vm.Value {
+				var receiver interpreter.Value
+
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+
+				// Get address field from the receiver
+				providerValue := vm.GetAccountTypePrivateAddressValue(receiver)
+
+				nameValue, ok := args[0].(*interpreter.StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				borrowType := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
+
+				return AccountInboxUnpublish(
+					context,
+					interpreter.EmptyLocationRange,
+					providerValue,
+					borrowType,
+					nameValue,
+					handler,
+				)
+			},
+		),
+	}
+}
+
+func AccountInboxUnpublish(
+	context interpreter.InvocationContext,
+	locationRange interpreter.LocationRange,
+	providerValue interpreter.AddressValue,
+	borrowType sema.Type,
+	nameValue *interpreter.StringValue,
+	handler EventEmitter,
+) interpreter.Value {
+	storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
+
+	provider := common.Address(providerValue)
+
+	readValue := context.ReadStored(
+		provider,
+		common.StorageDomainInbox,
+		storageMapKey,
+	)
+	if readValue == nil {
+		return interpreter.Nil
+	}
+	publishedValue, ok := readValue.(*interpreter.PublishedValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	capabilityType := sema.NewCapabilityType(context, borrowType)
+	publishedType := publishedValue.Value.StaticType(context)
+	if !interpreter.IsSubTypeOfSemaType(context, publishedType, capabilityType) {
+		panic(&interpreter.ForceCastTypeMismatchError{
+			ExpectedType:  capabilityType,
+			ActualType:    interpreter.MustConvertStaticToSemaType(publishedType, context),
+			LocationRange: locationRange,
+		})
+	}
+
+	value := publishedValue.Value.Transfer(
+		context,
+		locationRange,
+		atree.Address{},
+		true,
+		nil,
+		nil,
+		false, // publishedValue is an element in storage map because it is returned by ReadStored.
+	)
+
+	context.WriteStored(
+		provider,
+		common.StorageDomainInbox,
+		storageMapKey,
+		nil,
+	)
+
+	handler.EmitEvent(
+		context,
+		locationRange,
+		AccountInboxUnpublishedEventType,
+		[]interpreter.Value{
+			providerValue,
+			nameValue,
+		},
+	)
+
+	return interpreter.NewSomeValueNonCopying(context, value)
+}
+
+func newInterpreterAccountInboxClaimFunction(
 	context interpreter.FunctionCreationContext,
 	handler EventEmitter,
 	recipientValue interpreter.AddressValue,
@@ -1344,6 +1470,9 @@ func newAccountInboxClaimFunction(
 			accountInbox,
 			sema.Account_InboxTypeClaimFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
+				inter := invocation.InvocationContext
+				locationRange := invocation.LocationRange
+
 				nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -1354,74 +1483,140 @@ func newAccountInboxClaimFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				inter := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				providerAddress := providerValue.ToAddress()
-
-				storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
-
-				readValue := inter.ReadStored(providerAddress, common.StorageDomainInbox, storageMapKey)
-				if readValue == nil {
-					return interpreter.Nil
-				}
-				publishedValue := readValue.(*interpreter.PublishedValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				// compare the intended recipient with the caller
-				if !publishedValue.Recipient.Equal(inter, locationRange, recipientValue) {
-					return interpreter.Nil
-				}
-
 				typeParameterPair := invocation.TypeParameterTypes.Oldest()
 				if typeParameterPair == nil {
 					panic(errors.NewUnreachableError())
 				}
 
-				ty := sema.NewCapabilityType(inter, typeParameterPair.Value)
-				publishedType := publishedValue.Value.StaticType(invocation.InvocationContext)
-				if !interpreter.IsSubTypeOfSemaType(inter, publishedType, ty) {
-					panic(&interpreter.ForceCastTypeMismatchError{
-						ExpectedType:  ty,
-						ActualType:    interpreter.MustConvertStaticToSemaType(publishedType, inter),
-						LocationRange: locationRange,
-					})
-				}
+				borrowType := typeParameterPair.Value
 
-				value := publishedValue.Value.Transfer(
+				return AccountInboxClaim(
 					inter,
 					locationRange,
-					atree.Address{},
-					true,
-					nil,
-					nil,
-					false, // publishedValue is an element in storage map because it is returned by ReadStored.
+					providerValue,
+					recipientValue,
+					nameValue,
+					borrowType,
+					handler,
 				)
-
-				inter.WriteStored(
-					providerAddress,
-					common.StorageDomainInbox,
-					storageMapKey,
-					nil,
-				)
-
-				handler.EmitEvent(
-					inter,
-					locationRange,
-					AccountInboxClaimedEventType,
-					[]interpreter.Value{
-						providerValue,
-						recipientValue,
-						nameValue,
-					},
-				)
-
-				return interpreter.NewSomeValueNonCopying(inter, value)
 			},
 		)
 	}
+}
+
+func NewVMAccountInboxClaimFunction(
+	handler EventEmitter,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_InboxType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_InboxTypeClaimFunctionName,
+			sema.Account_InboxTypeClaimFunctionType,
+			func(context *vm.Context, typeArguments []bbq.StaticType, args ...vm.Value) vm.Value {
+				var receiver interpreter.Value
+
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+
+				// Get address field from the receiver
+				recipientValue := vm.GetAccountTypePrivateAddressValue(receiver)
+
+				nameValue, ok := args[0].(*interpreter.StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				providerValue, ok := args[1].(interpreter.AddressValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				borrowType := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
+
+				return AccountInboxClaim(
+					context,
+					interpreter.EmptyLocationRange,
+					providerValue,
+					recipientValue,
+					nameValue,
+					borrowType,
+					handler,
+				)
+			},
+		),
+	}
+}
+
+func AccountInboxClaim(
+	context interpreter.InvocationContext,
+	locationRange interpreter.LocationRange,
+	providerValue interpreter.AddressValue,
+	recipientValue interpreter.AddressValue,
+	nameValue *interpreter.StringValue,
+	borrowType sema.Type,
+	handler EventEmitter,
+) interpreter.Value {
+	providerAddress := providerValue.ToAddress()
+
+	storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
+
+	readValue := context.ReadStored(
+		providerAddress,
+		common.StorageDomainInbox,
+		storageMapKey,
+	)
+	if readValue == nil {
+		return interpreter.Nil
+	}
+	publishedValue, ok := readValue.(*interpreter.PublishedValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// compare the intended recipient with the caller
+	if !publishedValue.Recipient.Equal(context, locationRange, recipientValue) {
+		return interpreter.Nil
+	}
+
+	ty := sema.NewCapabilityType(context, borrowType)
+	publishedType := publishedValue.Value.StaticType(context)
+	if !interpreter.IsSubTypeOfSemaType(context, publishedType, ty) {
+		panic(&interpreter.ForceCastTypeMismatchError{
+			ExpectedType:  ty,
+			ActualType:    interpreter.MustConvertStaticToSemaType(publishedType, context),
+			LocationRange: locationRange,
+		})
+	}
+
+	value := publishedValue.Value.Transfer(
+		context,
+		locationRange,
+		atree.Address{},
+		true,
+		nil,
+		nil,
+		false, // publishedValue is an element in storage map because it is returned by ReadStored.
+	)
+
+	context.WriteStored(
+		providerAddress,
+		common.StorageDomainInbox,
+		storageMapKey,
+		nil,
+	)
+
+	handler.EmitEvent(
+		context,
+		locationRange,
+		AccountInboxClaimedEventType,
+		[]interpreter.Value{
+			providerValue,
+			recipientValue,
+			nameValue,
+		},
+	)
+
+	return interpreter.NewSomeValueNonCopying(context, value)
 }
 
 func newAccountInboxValue(
@@ -1432,9 +1627,9 @@ func newAccountInboxValue(
 	return interpreter.NewAccountInboxValue(
 		context,
 		addressValue,
-		newAccountInboxPublishFunction(context, handler, addressValue),
-		newAccountInboxUnpublishFunction(context, handler, addressValue),
-		newAccountInboxClaimFunction(context, handler, addressValue),
+		newInterpreterAccountInboxPublishFunction(context, handler, addressValue),
+		newInterpreterAccountInboxUnpublishFunction(context, handler, addressValue),
+		newInterpreterAccountInboxClaimFunction(context, handler, addressValue),
 	)
 }
 
