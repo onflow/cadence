@@ -111,8 +111,9 @@ func VMFunctions(handler StandardLibraryHandler) []VMFunction {
 		NewVMAccountAccountCapabilitiesIssueFunction(handler),
 		NewVMAccountAccountCapabilitiesIssueWithTypeFunction(handler),
 
-		vmRLPDecodeStringFunction,
-		vmRLPDecodeListFunction,
+		VMRLPDecodeStringFunction,
+		VMRLPDecodeListFunction,
+
 	}
 }
 

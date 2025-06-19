@@ -66,7 +66,7 @@ var interpreterRLPDecodeStringFunction = interpreter.NewUnmeteredStaticHostFunct
 	},
 )
 
-var vmRLPDecodeStringFunction = VMFunction{
+var VMRLPDecodeStringFunction = VMFunction{
 	BaseType: RLPType,
 	FunctionValue: vm.NewNativeFunctionValue(
 		RLPTypeDecodeStringFunctionName,
@@ -74,7 +74,7 @@ var vmRLPDecodeStringFunction = VMFunction{
 		func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
 
 			// arg[0] is the receiver. Actual arguments starts from 1.
-			_, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+			args = args[vm.TypeBoundFunctionArgumentOffset:]
 
 			input, ok := args[0].(*interpreter.ArrayValue)
 			if !ok {
@@ -162,7 +162,7 @@ var interpreterRLPDecodeListFunction = interpreter.NewUnmeteredStaticHostFunctio
 	},
 )
 
-var vmRLPDecodeListFunction = VMFunction{
+var VMRLPDecodeListFunction = VMFunction{
 	BaseType: RLPType,
 	FunctionValue: vm.NewNativeFunctionValue(
 		RLPTypeDecodeListFunctionName,
@@ -170,7 +170,7 @@ var vmRLPDecodeListFunction = VMFunction{
 		func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
 
 			// arg[0] is the receiver. Actual arguments starts from 1.
-			_, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+			args = args[vm.TypeBoundFunctionArgumentOffset:]
 
 			input, ok := args[0].(*interpreter.ArrayValue)
 			if !ok {
