@@ -104,6 +104,12 @@ func VMFunctions(handler StandardLibraryHandler) []VMFunction {
 		NewVMAccountStorageCapabilitiesForEachControllerFunction(handler),
 		NewVMAccountStorageCapabilitiesIssueFunction(handler),
 		NewVMAccountStorageCapabilitiesIssueWithTypeFunction(handler),
+
+		NewVMAccountAccountCapabilitiesGetControllerFunction(handler),
+		NewVMAccountAccountCapabilitiesGetControllersFunction(handler),
+		NewVMAccountAccountCapabilitiesForEachControllerFunction(handler),
+		NewVMAccountAccountCapabilitiesIssueFunction(handler),
+		NewVMAccountAccountCapabilitiesIssueWithTypeFunction(handler),
 	}
 }
 
