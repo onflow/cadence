@@ -6186,7 +6186,6 @@ func TestFunctionExpression(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(6), actual)
-
 }
 
 func TestInnerFunction(t *testing.T) {

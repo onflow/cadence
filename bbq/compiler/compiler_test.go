@@ -8345,3 +8345,479 @@ func TestForStatementCapturing(t *testing.T) {
 		functions[1].Code,
 	)
 }
+
+func TestCompileFunctionExpressionConditions(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("pre condition", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+        fun test() {
+            var foo = fun(x: Int): Int {
+                pre {x > 0}
+                return 5
+            }
+        }
+    `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 2)
+
+		const (
+			testFunctionIndex = iota
+			anonymousFunctionIndex
+		)
+
+		// `test` function
+		assert.Equal(t,
+			[]opcode.Instruction{
+				opcode.InstructionStatement{},
+				opcode.InstructionNewClosure{Function: anonymousFunctionIndex},
+				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionSetLocal{Local: 0},
+				opcode.InstructionReturn{},
+			},
+			functions[testFunctionIndex].Code,
+		)
+
+		// Function expression. Would be equivalent to:
+		// fun foo(x: Int): Int {
+		//    if !(x > 0) {
+		//        panic("pre/post condition failed")
+		//    }
+		//    return 5
+		// }
+
+		const (
+			xIndex = iota
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				opcode.InstructionStatement{},
+
+				// x > 0
+				opcode.InstructionGetLocal{Local: xIndex},
+				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionGreater{},
+
+				// if !<condition>
+				opcode.InstructionNot{},
+				opcode.InstructionJumpIfFalse{Target: 12},
+
+				// panic("pre/post condition failed")
+				opcode.InstructionStatement{},
+				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
+				opcode.InstructionGetConstant{Constant: 1}, // error message
+				opcode.InstructionTransferAndConvert{Type: 2},
+				opcode.InstructionInvoke{ArgCount: 1},
+
+				// Drop since it's a statement-expression
+				opcode.InstructionDrop{},
+
+				// return 5
+				opcode.InstructionStatement{},
+				opcode.InstructionGetConstant{Constant: 2},
+				opcode.InstructionTransferAndConvert{Type: 3},
+				opcode.InstructionReturnValue{},
+			},
+			functions[anonymousFunctionIndex].Code,
+		)
+	})
+
+	t.Run("post condition", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+        fun test() {
+            var foo = fun(x: Int): Int {
+                post {x > 0}
+                return 5
+            }
+        }
+    `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 2)
+
+		const (
+			testFunctionIndex = iota
+			anonymousFunctionIndex
+		)
+
+		// `test` function
+		assert.Equal(t,
+			[]opcode.Instruction{
+				opcode.InstructionStatement{},
+				opcode.InstructionNewClosure{Function: anonymousFunctionIndex},
+				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionSetLocal{Local: 0},
+				opcode.InstructionReturn{},
+			},
+			functions[testFunctionIndex].Code,
+		)
+
+		// xIndex is the index of the parameter `x`, which is the first parameter
+		const (
+			xIndex = iota
+			tempResultIndex
+			resultIndex
+		)
+
+		// Would be equivalent to:
+		// fun test(x: Int): Int {
+		//    $_result = 5
+		//    let result = $_result
+		//    if !(x > 0) {
+		//        panic("pre/post condition failed")
+		//    }
+		//    return $_result
+		// }
+		assert.Equal(t,
+			[]opcode.Instruction{
+				opcode.InstructionStatement{},
+
+				// $_result = 5
+				opcode.InstructionStatement{},
+				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionSetLocal{Local: tempResultIndex},
+
+				// jump to post conditions
+				opcode.InstructionJump{Target: 5},
+
+				// let result = $_result
+				opcode.InstructionStatement{},
+				opcode.InstructionGetLocal{Local: tempResultIndex},
+				opcode.InstructionTransferAndConvert{Type: 2},
+				opcode.InstructionSetLocal{Local: resultIndex},
+
+				opcode.InstructionStatement{},
+
+				// x > 0
+				opcode.InstructionGetLocal{Local: xIndex},
+				opcode.InstructionGetConstant{Constant: 1},
+				opcode.InstructionGreater{},
+
+				// if !<condition>
+				opcode.InstructionNot{},
+				opcode.InstructionJumpIfFalse{Target: 21},
+
+				// panic("pre/post condition failed")
+				opcode.InstructionStatement{},
+				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
+				opcode.InstructionGetConstant{Constant: 2}, // error message
+				opcode.InstructionTransferAndConvert{Type: 3},
+				opcode.InstructionInvoke{ArgCount: 1},
+
+				// Drop since it's a statement-expression
+				opcode.InstructionDrop{},
+
+				// return $_result
+				opcode.InstructionGetLocal{Local: tempResultIndex},
+				opcode.InstructionTransferAndConvert{Type: 2},
+				opcode.InstructionReturnValue{},
+			},
+			functions[anonymousFunctionIndex].Code,
+		)
+	})
+}
+
+func TestCompileInnerFunctionConditions(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("pre condition", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+        fun test() {
+            fun foo(x: Int): Int {
+                pre {x > 0}
+                return 5
+            }
+        }
+    `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 2)
+
+		const (
+			testFunctionIndex = iota
+			anonymousFunctionIndex
+		)
+
+		// `test` function
+		assert.Equal(t,
+			[]opcode.Instruction{
+				opcode.InstructionStatement{},
+				opcode.InstructionNewClosure{Function: anonymousFunctionIndex},
+				opcode.InstructionSetLocal{Local: 0},
+				opcode.InstructionReturn{},
+			},
+			functions[testFunctionIndex].Code,
+		)
+
+		// Function expression. Would be equivalent to:
+		// fun foo(x: Int): Int {
+		//    if !(x > 0) {
+		//        panic("pre/post condition failed")
+		//    }
+		//    return 5
+		// }
+
+		const (
+			xIndex = iota
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				opcode.InstructionStatement{},
+
+				// x > 0
+				opcode.InstructionGetLocal{Local: xIndex},
+				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionGreater{},
+
+				// if !<condition>
+				opcode.InstructionNot{},
+				opcode.InstructionJumpIfFalse{Target: 12},
+
+				// panic("pre/post condition failed")
+				opcode.InstructionStatement{},
+				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
+				opcode.InstructionGetConstant{Constant: 1}, // error message
+				opcode.InstructionTransferAndConvert{Type: 2},
+				opcode.InstructionInvoke{ArgCount: 1},
+
+				// Drop since it's a statement-expression
+				opcode.InstructionDrop{},
+
+				// return 5
+				opcode.InstructionStatement{},
+				opcode.InstructionGetConstant{Constant: 2},
+				opcode.InstructionTransferAndConvert{Type: 3},
+				opcode.InstructionReturnValue{},
+			},
+			functions[anonymousFunctionIndex].Code,
+		)
+	})
+
+	t.Run("post condition", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+        fun test() {
+            fun foo(x: Int): Int {
+                post {x > 0}
+                return 5
+            }
+        }
+    `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 2)
+
+		const (
+			testFunctionIndex = iota
+			anonymousFunctionIndex
+		)
+
+		// `test` function
+		assert.Equal(t,
+			[]opcode.Instruction{
+				opcode.InstructionStatement{},
+				opcode.InstructionNewClosure{Function: anonymousFunctionIndex},
+				opcode.InstructionSetLocal{Local: 0},
+				opcode.InstructionReturn{},
+			},
+			functions[testFunctionIndex].Code,
+		)
+
+		// xIndex is the index of the parameter `x`, which is the first parameter
+		const (
+			xIndex = iota
+			tempResultIndex
+			resultIndex
+		)
+
+		// Would be equivalent to:
+		// fun test(x: Int): Int {
+		//    $_result = 5
+		//    let result = $_result
+		//    if !(x > 0) {
+		//        panic("pre/post condition failed")
+		//    }
+		//    return $_result
+		// }
+		assert.Equal(t,
+			[]opcode.Instruction{
+				opcode.InstructionStatement{},
+
+				// $_result = 5
+				opcode.InstructionStatement{},
+				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionSetLocal{Local: tempResultIndex},
+
+				// jump to post conditions
+				opcode.InstructionJump{Target: 5},
+
+				// let result = $_result
+				opcode.InstructionStatement{},
+				opcode.InstructionGetLocal{Local: tempResultIndex},
+				opcode.InstructionTransferAndConvert{Type: 2},
+				opcode.InstructionSetLocal{Local: resultIndex},
+
+				opcode.InstructionStatement{},
+
+				// x > 0
+				opcode.InstructionGetLocal{Local: xIndex},
+				opcode.InstructionGetConstant{Constant: 1},
+				opcode.InstructionGreater{},
+
+				// if !<condition>
+				opcode.InstructionNot{},
+				opcode.InstructionJumpIfFalse{Target: 21},
+
+				// panic("pre/post condition failed")
+				opcode.InstructionStatement{},
+				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
+				opcode.InstructionGetConstant{Constant: 2}, // error message
+				opcode.InstructionTransferAndConvert{Type: 3},
+				opcode.InstructionInvoke{ArgCount: 1},
+
+				// Drop since it's a statement-expression
+				opcode.InstructionDrop{},
+
+				// return $_result
+				opcode.InstructionGetLocal{Local: tempResultIndex},
+				opcode.InstructionTransferAndConvert{Type: 2},
+				opcode.InstructionReturnValue{},
+			},
+			functions[anonymousFunctionIndex].Code,
+		)
+	})
+
+	t.Run("function nested inside statements", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+        fun test() {
+            if true {
+                if true {
+                    fun foo(x: Int): Int {
+                        pre {x > 0}
+                        return 5
+                    }
+                }
+            }
+        }
+    `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 2)
+
+		const (
+			testFunctionIndex = iota
+			anonymousFunctionIndex
+		)
+
+		// `test` function
+		assert.Equal(t,
+			[]opcode.Instruction{
+				opcode.InstructionStatement{},
+				opcode.InstructionTrue{},
+				opcode.InstructionJumpIfFalse{Target: 9},
+				opcode.InstructionStatement{},
+				opcode.InstructionTrue{},
+				opcode.InstructionJumpIfFalse{Target: 9},
+				opcode.InstructionStatement{},
+				opcode.InstructionNewClosure{Function: anonymousFunctionIndex},
+				opcode.InstructionSetLocal{Local: 0},
+				opcode.InstructionReturn{},
+			},
+			functions[testFunctionIndex].Code,
+		)
+
+		// Function expression. Would be equivalent to:
+		// fun foo(x: Int): Int {
+		//    if !(x > 0) {
+		//        panic("pre/post condition failed")
+		//    }
+		//    return 5
+		// }
+
+		const (
+			xIndex = iota
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				opcode.InstructionStatement{},
+
+				// x > 0
+				opcode.InstructionGetLocal{Local: xIndex},
+				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionGreater{},
+
+				// if !<condition>
+				opcode.InstructionNot{},
+				opcode.InstructionJumpIfFalse{Target: 12},
+
+				// panic("pre/post condition failed")
+				opcode.InstructionStatement{},
+				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
+				opcode.InstructionGetConstant{Constant: 1}, // error message
+				opcode.InstructionTransferAndConvert{Type: 2},
+				opcode.InstructionInvoke{ArgCount: 1},
+
+				// Drop since it's a statement-expression
+				opcode.InstructionDrop{},
+
+				// return 5
+				opcode.InstructionStatement{},
+				opcode.InstructionGetConstant{Constant: 2},
+				opcode.InstructionTransferAndConvert{Type: 3},
+				opcode.InstructionReturnValue{},
+			},
+			functions[anonymousFunctionIndex].Code,
+		)
+	})
+
+}
