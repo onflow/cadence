@@ -26,7 +26,6 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/stdlib"
 )
 
 // Context holds the information about the current execution at any given point of time.
@@ -59,7 +58,6 @@ var _ interpreter.StorageContext = &Context{}
 var _ interpreter.StaticTypeConversionHandler = &Context{}
 var _ interpreter.ValueComparisonContext = &Context{}
 var _ interpreter.InvocationContext = &Context{}
-var _ stdlib.Logger = &Context{}
 
 func NewContext(config *Config) *Context {
 	return &Context{

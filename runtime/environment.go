@@ -167,7 +167,7 @@ func (e *interpreterEnvironment) NewInterpreterConfig() *interpreter.Config {
 
 func NewBaseInterpreterEnvironment(config Config) *interpreterEnvironment {
 	env := NewInterpreterEnvironment(config)
-	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(env) {
+	for _, valueDeclaration := range stdlib.InterpreterDefaultStandardLibraryValues(env) {
 		env.DeclareValue(valueDeclaration, nil)
 	}
 	return env
@@ -175,7 +175,7 @@ func NewBaseInterpreterEnvironment(config Config) *interpreterEnvironment {
 
 func NewScriptInterpreterEnvironment(config Config) Environment {
 	env := NewInterpreterEnvironment(config)
-	for _, valueDeclaration := range stdlib.DefaultScriptStandardLibraryValues(env) {
+	for _, valueDeclaration := range stdlib.InterpreterDefaultScriptStandardLibraryValues(env) {
 		env.DeclareValue(valueDeclaration, nil)
 	}
 	return env
@@ -222,7 +222,7 @@ func (e *interpreterEnvironment) interpreterBaseActivationFor(
 
 	baseActivation := e.baseActivationsByLocation[location]
 	if baseActivation == nil {
-		baseActivation = activations.NewActivation[interpreter.Variable](nil, defaultBaseActivation)
+		baseActivation = activations.NewActivation(nil, defaultBaseActivation)
 		if e.baseActivationsByLocation == nil {
 			e.baseActivationsByLocation = map[common.Location]*interpreter.VariableActivation{}
 		}

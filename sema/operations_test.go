@@ -340,7 +340,7 @@ func TestCheckNonIntegerComparisonOperations(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterInclusiveRangeConstructor)
 
 	allOperationTests := []operationWithTypeTests{
 		{

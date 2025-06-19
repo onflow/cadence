@@ -67,14 +67,9 @@ func PrintProgram(name string, program *bbq.InstructionProgram) { //nolint:unuse
 func TestBaseValueActivation(common.Location) *sema.VariableActivation {
 	// Only need to make the checker happy
 	activation := sema.NewVariableActivation(sema.BaseValueActivation)
-	activation.DeclareValue(stdlib.PanicFunction)
-	activation.DeclareValue(stdlib.AssertFunction)
-	activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-		"getAccount",
-		stdlib.GetAccountFunctionType,
-		"",
-		nil,
-	))
+	activation.DeclareValue(stdlib.VMPanicFunction)
+	activation.DeclareValue(stdlib.VMAssertFunction)
+	activation.DeclareValue(stdlib.NewVMGetAccountFunction(nil))
 	return activation
 }
 
@@ -215,23 +210,31 @@ func compile(
 ) (*bbq.InstructionProgram, *compiler.DesugaredElaboration) {
 
 	if config == nil {
-		config = &compiler.Config{
-			LocationHandler: SingleIdentifierLocationResolver(t),
-			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
-				imported, ok := programs[location]
-				if !ok {
-					return nil
-				}
-				return imported.Program
-			},
-			ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
-				imported, ok := programs[location]
-				if !ok {
-					return nil, fmt.Errorf("cannot find elaboration for %s", location)
-				}
+		config = &compiler.Config{}
+	}
 
-				return imported.DesugaredElaboration, nil
-			},
+	if config.LocationHandler == nil {
+		config.LocationHandler = SingleIdentifierLocationResolver(t)
+	}
+
+	if config.ImportHandler == nil {
+		config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			imported, ok := programs[location]
+			if !ok {
+				return nil
+			}
+			return imported.Program
+		}
+	}
+
+	if config.ElaborationResolver == nil {
+		config.ElaborationResolver = func(location common.Location) (*compiler.DesugaredElaboration, error) {
+			imported, ok := programs[location]
+			if !ok {
+				return nil, fmt.Errorf("cannot find elaboration for %s", location)
+			}
+
+			return imported.DesugaredElaboration, nil
 		}
 	}
 

@@ -905,8 +905,8 @@ func opInvokeMethodStatic(vm *VM, ins opcode.InstructionInvokeMethodStatic) {
 
 	// Load arguments
 	arguments := vm.popN(int(ins.ArgCount))
-	receiver := arguments[receiverIndex]
-	arguments[receiverIndex] = maybeDereference(vm.context, receiver)
+	receiver := arguments[ReceiverIndex]
+	arguments[ReceiverIndex] = maybeDereference(vm.context, receiver)
 
 	// Load the invoked value
 	functionValue := vm.pop()
@@ -928,8 +928,8 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
 
 	// Load arguments
 	arguments := vm.popN(int(ins.ArgCount))
-	receiver := arguments[receiverIndex]
-	arguments[receiverIndex] = maybeDereference(vm.context, receiver)
+	receiver := arguments[ReceiverIndex]
+	arguments[ReceiverIndex] = maybeDereference(vm.context, receiver)
 
 	// Get function
 	nameIndex := ins.Name

@@ -161,7 +161,7 @@ func hash(
 	return interpreter.ByteSliceToByteArrayValue(context, result)
 }
 
-func NewHashAlgorithmConstructor(hasher Hasher) StandardLibraryValue {
+func NewInterpreterHashAlgorithmConstructor(hasher Hasher) StandardLibraryValue {
 
 	enumLookupType := cryptoAlgorithmEnumLookupType(
 		sema.HashAlgorithmType,

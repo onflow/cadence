@@ -420,7 +420,7 @@ func TestCheckNeverInvocationExits(t *testing.T) {
 	t.Parallel()
 
 	valueDeclarations := []sema.ValueDeclaration{
-		stdlib.PanicFunction,
+		stdlib.InterpreterPanicFunction,
 	}
 
 	t.Run("expression statement", func(t *testing.T) {

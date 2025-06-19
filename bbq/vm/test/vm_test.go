@@ -25,9 +25,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/compiler"
 	"github.com/onflow/cadence/bbq/opcode"
 	. "github.com/onflow/cadence/bbq/test_utils"
@@ -1097,6 +1097,7 @@ func TestContractImport(t *testing.T) {
 				require.Equal(t, fooLocation, location)
 				return fooProgram
 			},
+			BuiltinGlobalsProvider: VMBuiltinGlobalsProviderWithDefaultsAndPanic,
 		}
 
 		_, barContractValue := initializeContract(
@@ -1199,6 +1200,7 @@ func TestContractImport(t *testing.T) {
 
 				return elaboration.InterfaceType(typeID)
 			},
+			BuiltinGlobalsProvider: VMBuiltinGlobalsProviderWithDefaultsAndPanic,
 		}
 
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
@@ -1656,26 +1658,10 @@ func TestNativeFunctions(t *testing.T) {
 
 		t.Parallel()
 
-		logFunction := stdlib.NewStandardLibraryStaticFunction(
-			commons.LogFunctionName,
-			&sema.FunctionType{
-				Parameters: []sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
-					},
-				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					sema.VoidType,
-				),
-			},
-			``,
-			nil,
-		)
+		var logged []string
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseValueActivation.DeclareValue(logFunction)
+		baseValueActivation.DeclareValue(stdlib.NewVMLogFunction(nil))
 
 		checker, err := ParseAndCheckWithOptions(t,
 			`
@@ -1693,18 +1679,19 @@ func TestNativeFunctions(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(
+		compConfig := &compiler.Config{
+			BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndLog,
+		}
+
+		comp := compiler.NewInstructionCompilerWithConfig(
 			interpreter.ProgramFromChecker(checker),
 			checker.Location,
+			compConfig,
 		)
 		program := comp.Compile()
 
-		var logged string
 		vmConfig := &vm.Config{
-			Logger: stdlib.FunctionLogger(func(message string, locationRange interpreter.LocationRange) error {
-				logged = message
-				return nil
-			}),
+			BuiltinGlobalsProvider: NewVMBuiltinGlobalsProviderWithDefaultsPanicAndLog(&logged),
 		}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
@@ -1712,7 +1699,7 @@ func TestNativeFunctions(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		assert.Equal(t, `"Hello, World!"`, logged)
+		assert.Equal(t, []string{`"Hello, World!"`}, logged)
 	})
 
 	t.Run("bound function", func(t *testing.T) {
@@ -1744,15 +1731,8 @@ func TestNativeFunctions(t *testing.T) {
 	t.Run("optional args assert", func(t *testing.T) {
 		t.Parallel()
 
-		assertFunction := stdlib.NewStandardLibraryStaticFunction(
-			commons.AssertFunctionName,
-			stdlib.AssertFunctionType,
-			``,
-			nil,
-		)
-
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseValueActivation.DeclareValue(assertFunction)
+		baseValueActivation.DeclareValue(stdlib.VMAssertFunction)
 
 		checker, err := ParseAndCheckWithOptions(t,
 			`
@@ -1771,13 +1751,35 @@ func TestNativeFunctions(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(
+		compConfig := &compiler.Config{
+			BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
+				activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+				activation.Set(
+					stdlib.AssertFunctionName,
+					compiler.GlobalImport{
+						Name: stdlib.AssertFunctionName,
+					},
+				)
+				return activation
+			},
+		}
+
+		comp := compiler.NewInstructionCompilerWithConfig(
 			interpreter.ProgramFromChecker(checker),
 			checker.Location,
+			compConfig,
 		)
 		program := comp.Compile()
 
-		vmConfig := &vm.Config{}
+		vmConfig := &vm.Config{
+			BuiltinGlobalsProvider: func() *activations.Activation[*vm.Variable] {
+				activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+				variable := &vm.Variable{}
+				variable.InitializeWithValue(stdlib.VMAssertFunction.Value)
+				activation.Set(stdlib.AssertFunctionName, variable)
+				return activation
+			},
+		}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		_, err = vmInstance.InvokeExternally("test")
@@ -1934,23 +1936,8 @@ func TestTransaction(t *testing.T) {
 		location := common.TransactionLocation{0x1}
 
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
-		activation.DeclareValue(stdlib.PanicFunction)
-		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-			"log",
-			sema.NewSimpleFunctionType(
-				sema.FunctionPurityView,
-				[]sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: sema.AnyStructTypeAnnotation,
-					},
-				},
-				sema.VoidTypeAnnotation,
-			),
-			"",
-			nil,
-		))
+		activation.DeclareValue(stdlib.VMPanicFunction)
+		activation.DeclareValue(newConditionLogFunction(nil))
 
 		parseAndCheckOptions := &ParseAndCheckOptions{
 			Location: location,
@@ -1962,11 +1949,15 @@ func TestTransaction(t *testing.T) {
 			},
 		}
 
+		compilerConfig := &compiler.Config{
+			BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog,
+		}
+
 		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
 
 		var logs []string
 
-		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(&logs)
 
 		vmInstance := CompileAndPrepareToInvoke(t,
 			`
@@ -1978,7 +1969,7 @@ func TestTransaction(t *testing.T) {
                   }
 
                   pre {
-                      print(self.count)
+                      conditionLog(self.count)
                   }
 
                   execute {
@@ -1986,19 +1977,15 @@ func TestTransaction(t *testing.T) {
                   }
 
                   post {
-                      print(self.count)
+                      conditionLog(self.count)
                   }
-              }
-
-              view fun print(_ n: Int): Bool {
-                  log(n.toString())
-                  return true
               }
             `,
 			CompilerAndVMOptions{
 				VMConfig: vmConfig,
 				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
 					ParseAndCheckOptions: parseAndCheckOptions,
+					CompilerConfig:       compilerConfig,
 				},
 			},
 		)
@@ -2007,7 +1994,7 @@ func TestTransaction(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		assert.Equal(t, []string{"\"2\"", "\"10\""}, logs)
+		assert.Equal(t, []string{"2", "10"}, logs)
 	})
 
 	t.Run("conditions without execute", func(t *testing.T) {
@@ -2017,23 +2004,8 @@ func TestTransaction(t *testing.T) {
 		location := common.TransactionLocation{0x1}
 
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
-		activation.DeclareValue(stdlib.PanicFunction)
-		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-			commons.LogFunctionName,
-			sema.NewSimpleFunctionType(
-				sema.FunctionPurityView,
-				[]sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: sema.AnyStructTypeAnnotation,
-					},
-				},
-				sema.VoidTypeAnnotation,
-			),
-			"",
-			nil,
-		))
+		activation.DeclareValue(stdlib.VMPanicFunction)
+		activation.DeclareValue(newConditionLogFunction(nil))
 
 		parseAndCheckOptions := &ParseAndCheckOptions{
 			Location: location,
@@ -2045,11 +2017,15 @@ func TestTransaction(t *testing.T) {
 			},
 		}
 
+		compilerConfig := &compiler.Config{
+			BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog,
+		}
+
 		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
 
 		var logs []string
 
-		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(&logs)
 
 		vmInstance := CompileAndPrepareToInvoke(t,
 			`
@@ -2061,23 +2037,19 @@ func TestTransaction(t *testing.T) {
                   }
 
                   pre {
-                      print(self.count)
+                      conditionLog(self.count)
                   }
 
                   post {
-                      print(self.count)
+                      conditionLog(self.count)
                   }
-              }
-
-              view fun print(_ n: Int): Bool {
-                  log(n.toString())
-                  return true
               }
             `,
 			CompilerAndVMOptions{
 				VMConfig: vmConfig,
 				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
 					ParseAndCheckOptions: parseAndCheckOptions,
+					CompilerConfig:       compilerConfig,
 				},
 			},
 		)
@@ -2086,7 +2058,7 @@ func TestTransaction(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
-		assert.Equal(t, []string{"\"2\"", "\"2\""}, logs)
+		assert.Equal(t, []string{"2", "2"}, logs)
 	})
 
 	t.Run("pre condition failed", func(t *testing.T) {
@@ -2096,23 +2068,8 @@ func TestTransaction(t *testing.T) {
 		location := common.TransactionLocation{0x1}
 
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
-		activation.DeclareValue(stdlib.PanicFunction)
-		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-			commons.LogFunctionName,
-			sema.NewSimpleFunctionType(
-				sema.FunctionPurityView,
-				[]sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: sema.AnyStructTypeAnnotation,
-					},
-				},
-				sema.VoidTypeAnnotation,
-			),
-			"",
-			nil,
-		))
+		activation.DeclareValue(stdlib.VMPanicFunction)
+		activation.DeclareValue(newConditionLogFunction(nil))
 
 		parseAndCheckOptions := &ParseAndCheckOptions{
 			Location: location,
@@ -2124,11 +2081,15 @@ func TestTransaction(t *testing.T) {
 			},
 		}
 
+		compilerConfig := &compiler.Config{
+			BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog,
+		}
+
 		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
 
 		var logs []string
 
-		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(&logs)
 
 		vmInstance := CompileAndPrepareToInvoke(t,
 			`
@@ -2140,7 +2101,7 @@ func TestTransaction(t *testing.T) {
                   }
 
                   pre {
-                      print(self.count)
+                      conditionLog(self.count)
                       false
                   }
 
@@ -2149,19 +2110,15 @@ func TestTransaction(t *testing.T) {
                   }
 
                   post {
-                      print(self.count)
+                      conditionLog(self.count)
                   }
-              }
-
-              view fun print(_ n: Int): Bool {
-                  log(n.toString())
-                  return true
               }
             `,
 			CompilerAndVMOptions{
 				VMConfig: vmConfig,
 				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
 					ParseAndCheckOptions: parseAndCheckOptions,
+					CompilerConfig:       compilerConfig,
 				},
 			},
 		)
@@ -2170,7 +2127,7 @@ func TestTransaction(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "pre/post condition failed")
 
-		assert.Equal(t, []string{"\"2\""}, logs)
+		assert.Equal(t, []string{"2"}, logs)
 	})
 
 	t.Run("post condition failed", func(t *testing.T) {
@@ -2180,23 +2137,8 @@ func TestTransaction(t *testing.T) {
 		location := common.TransactionLocation{0x1}
 
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
-		activation.DeclareValue(stdlib.PanicFunction)
-		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-			commons.LogFunctionName,
-			sema.NewSimpleFunctionType(
-				sema.FunctionPurityView,
-				[]sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: sema.AnyStructTypeAnnotation,
-					},
-				},
-				sema.VoidTypeAnnotation,
-			),
-			"",
-			nil,
-		))
+		activation.DeclareValue(stdlib.VMPanicFunction)
+		activation.DeclareValue(newConditionLogFunction(nil))
 
 		parseAndCheckOptions := &ParseAndCheckOptions{
 			Location: location,
@@ -2208,11 +2150,15 @@ func TestTransaction(t *testing.T) {
 			},
 		}
 
+		compilerConfig := &compiler.Config{
+			BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog,
+		}
+
 		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
 
 		var logs []string
 
-		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(&logs)
 
 		vmInstance := CompileAndPrepareToInvoke(t,
 			`
@@ -2224,7 +2170,7 @@ func TestTransaction(t *testing.T) {
                   }
 
                   pre {
-                      print(self.count)
+                      conditionLog(self.count)
                   }
 
                   execute {
@@ -2232,21 +2178,16 @@ func TestTransaction(t *testing.T) {
                   }
 
                   post {
-                      print(self.count)
+                      conditionLog(self.count)
                       false
                   }
-              }
-
-
-              view fun print(_ n: Int): Bool {
-                  log(n.toString())
-                  return true
               }
             `,
 			CompilerAndVMOptions{
 				VMConfig: vmConfig,
 				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
 					ParseAndCheckOptions: parseAndCheckOptions,
+					CompilerConfig:       compilerConfig,
 				},
 			},
 		)
@@ -2255,7 +2196,7 @@ func TestTransaction(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "pre/post condition failed")
 
-		assert.Equal(t, []string{"\"2\"", "\"10\""}, logs)
+		assert.Equal(t, []string{"2", "10"}, logs)
 	})
 }
 
@@ -3734,43 +3675,38 @@ func TestFunctionPreConditions(t *testing.T) {
 		code := `
           struct A: B {
               fun test() {
-                  pre { print("A") }
+                  pre { conditionLog("A") }
               }
           }
 
           struct interface B: C, D {
               fun test() {
-                  pre { print("B") }
+                  pre { conditionLog("B") }
               }
           }
 
           struct interface C: E, F {
               fun test() {
-                  pre { print("C") }
+                  pre { conditionLog("C") }
               }
           }
 
           struct interface D: F {
               fun test() {
-                  pre { print("D") }
+                  pre { conditionLog("D") }
               }
           }
 
           struct interface E {
               fun test() {
-                  pre { print("E") }
+                  pre { conditionLog("E") }
               }
           }
 
           struct interface F {
               fun test() {
-                  pre { print("F") }
+                  pre { conditionLog("F") }
               }
-          }
-
-          view fun print(_ msg: String): Bool {
-              log(msg)
-              return true
           }
 
           fun main() {
@@ -3779,50 +3715,10 @@ func TestFunctionPreConditions(t *testing.T) {
           }
         `
 
-		location := common.ScriptLocation{0x1}
-
-		activation := sema.NewVariableActivation(sema.BaseValueActivation)
-		activation.DeclareValue(stdlib.PanicFunction)
-		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-			commons.LogFunctionName,
-			sema.NewSimpleFunctionType(
-				sema.FunctionPurityView,
-				[]sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: sema.AnyStructTypeAnnotation,
-					},
-				},
-				sema.VoidTypeAnnotation,
-			),
-			"",
-			nil,
-		))
-
-		var logs []string
-
-		config := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
-		config.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
-
-		_, err := CompileAndInvokeWithOptions(
+		_, logs, err := CompileAndInvokeWithConditionLogs(
 			t,
 			code,
 			"main",
-			CompilerAndVMOptions{
-				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
-					ParseAndCheckOptions: &ParseAndCheckOptions{
-						Location: location,
-						Config: &sema.Config{
-							LocationHandler: SingleIdentifierLocationResolver(t),
-							BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
-								return activation
-							},
-						},
-					},
-				},
-				VMConfig: config,
-			},
 		)
 		require.NoError(t, err)
 
@@ -3866,26 +3762,11 @@ func TestFunctionPreConditions(t *testing.T) {
 			return elaboration.InterfaceType(typeID)
 		}
 
-		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(&logs)
 
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
-		activation.DeclareValue(stdlib.PanicFunction)
-		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-			commons.LogFunctionName,
-			sema.NewSimpleFunctionType(
-				sema.FunctionPurityView,
-				[]sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: sema.AnyStructTypeAnnotation,
-					},
-				},
-				sema.VoidTypeAnnotation,
-			),
-			"",
-			nil,
-		))
+		activation.DeclareValue(stdlib.VMPanicFunction)
+		activation.DeclareValue(newConditionLogFunction(nil))
 
 		contractsAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -3904,7 +3785,7 @@ func TestFunctionPreConditions(t *testing.T) {
                   }
 
                   view fun printFromE(_ msg: String): Bool {
-                      log("Bar.".concat(msg))
+                      conditionLog("Bar.".concat(msg))
                       return true
                   }
               }
@@ -3916,12 +3797,16 @@ func TestFunctionPreConditions(t *testing.T) {
                   }
 
                   view fun printFromF(_ msg: String): Bool {
-                      log("Bar.".concat(msg))
+                      conditionLog("Bar.".concat(msg))
                       return true
                   }
               }
           }
         `
+
+		compilerConfig := &compiler.Config{
+			BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog,
+		}
 
 		// Only need to compile
 		_ = ParseCheckAndCompileCodeWithOptions(
@@ -3929,6 +3814,7 @@ func TestFunctionPreConditions(t *testing.T) {
 			barContract,
 			barLocation,
 			ParseCheckAndCompileOptions{
+				CompilerConfig: compilerConfig,
 				ParseAndCheckOptions: &ParseAndCheckOptions{
 					Location: barLocation,
 					Config: &sema.Config{
@@ -3969,7 +3855,7 @@ func TestFunctionPreConditions(t *testing.T) {
                   }
 
                   view fun printFromFoo(_ msg: String): Bool {
-                      log("Foo.".concat(msg))
+                      conditionLog("Foo.".concat(msg))
                       return true
                   }
               }
@@ -3982,6 +3868,7 @@ func TestFunctionPreConditions(t *testing.T) {
 			fooContract,
 			fooLocation,
 			ParseCheckAndCompileOptions{
+				CompilerConfig: compilerConfig,
 				ParseAndCheckOptions: &ParseAndCheckOptions{
 					Location: fooLocation,
 					Config: &sema.Config{
@@ -4011,13 +3898,8 @@ func TestFunctionPreConditions(t *testing.T) {
 
               struct A: Foo.B {
                   fun test() {
-                      pre { print("A") }
+                      pre { conditionLog("A") }
                   }
-              }
-
-              view fun print(_ msg: String): Bool {
-                  log(msg)
-                  return true
               }
 
               fun main() {
@@ -4036,6 +3918,7 @@ func TestFunctionPreConditions(t *testing.T) {
 			"main",
 			CompilerAndVMOptions{
 				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					CompilerConfig: compilerConfig,
 					ParseAndCheckOptions: &ParseAndCheckOptions{
 						Location: location,
 						Config: &sema.Config{
@@ -4170,98 +4053,51 @@ func TestFunctionPostConditions(t *testing.T) {
 
 		t.Parallel()
 
-		code := `
-          struct A: B {
-              fun test() {
-                  post { print("A") }
-              }
-          }
-
-          struct interface B: C, D {
-              fun test() {
-                  post { print("B") }
-              }
-          }
-
-          struct interface C: E, F {
-              fun test() {
-                  post { print("C") }
-              }
-          }
-
-          struct interface D: F {
-              fun test() {
-                  post { print("D") }
-              }
-          }
-
-          struct interface E {
-              fun test() {
-                  post { print("E") }
-              }
-          }
-
-          struct interface F {
-              fun test() {
-                  post { print("F") }
-              }
-          }
-
-          view fun print(_ msg: String): Bool {
-              log(msg)
-              return true
-          }
-
-          fun main() {
-              let a = A()
-              a.test()
-          }
-        `
-
-		location := common.ScriptLocation{0x1}
-
-		activation := sema.NewVariableActivation(sema.BaseValueActivation)
-		activation.DeclareValue(stdlib.PanicFunction)
-		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-			commons.LogFunctionName,
-			sema.NewSimpleFunctionType(
-				sema.FunctionPurityView,
-				[]sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: sema.AnyStructTypeAnnotation,
-					},
-				},
-				sema.VoidTypeAnnotation,
-			),
-			"",
-			nil,
-		))
-
-		var logs []string
-
-		config := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
-		config.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
-
-		_, err := CompileAndInvokeWithOptions(
+		_, logs, err := CompileAndInvokeWithConditionLogs(
 			t,
-			code,
+			`
+              struct A: B {
+                  fun test() {
+                      post { conditionLog("A") }
+                  }
+              }
+
+              struct interface B: C, D {
+                  fun test() {
+                      post { conditionLog("B") }
+                  }
+              }
+
+              struct interface C: E, F {
+                  fun test() {
+                      post { conditionLog("C") }
+                  }
+              }
+
+              struct interface D: F {
+                  fun test() {
+                      post { conditionLog("D") }
+                  }
+              }
+
+              struct interface E {
+                  fun test() {
+                      post { conditionLog("E") }
+                  }
+              }
+
+              struct interface F {
+                  fun test() {
+                      post { conditionLog("F") }
+                  }
+              }
+
+              fun main() {
+                  let a = A()
+                  a.test()
+              }
+            `,
 			"main",
-			CompilerAndVMOptions{
-				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
-					ParseAndCheckOptions: &ParseAndCheckOptions{
-						Location: location,
-						Config: &sema.Config{
-							LocationHandler: SingleIdentifierLocationResolver(t),
-							BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
-								return activation
-							},
-						},
-					},
-				},
-				VMConfig: config,
-			},
 		)
 		require.NoError(t, err)
 
@@ -4616,32 +4452,27 @@ func TestDefaultFunctionsWithConditions(t *testing.T) {
 	t.Run("default in parent, conditions in child", func(t *testing.T) {
 		t.Parallel()
 
-		_, logs, err := CompileAndInvokeWithLogs(t,
+		_, logs, err := CompileAndInvokeWithConditionLogs(t,
 			`
               struct interface Foo {
                   fun test(_ a: Int) {
-                      printMessage("invoked Foo.test()")
+                      conditionLog("invoked Foo.test()")
                   }
               }
 
               struct interface Bar: Foo {
                   fun test(_ a: Int) {
                       pre {
-                           printMessage("invoked Bar.test() pre-condition")
+                           conditionLog("invoked Bar.test() pre-condition")
                       }
 
                       post {
-                           printMessage("invoked Bar.test() post-condition")
+                           conditionLog("invoked Bar.test() post-condition")
                       }
                   }
               }
 
               struct Test: Bar {}
-
-              view fun printMessage(_ msg: String): Bool {
-                  log(msg)
-                  return true
-              }
 
               fun main() {
                  Test().test(5)
@@ -4665,38 +4496,33 @@ func TestDefaultFunctionsWithConditions(t *testing.T) {
 	t.Run("default and conditions in parent, more conditions in child", func(t *testing.T) {
 		t.Parallel()
 
-		_, logs, err := CompileAndInvokeWithLogs(t,
+		_, logs, err := CompileAndInvokeWithConditionLogs(t,
 			`
               struct interface Foo {
                   fun test(_ a: Int) {
                       pre {
-                           printMessage("invoked Foo.test() pre-condition")
+                           conditionLog("invoked Foo.test() pre-condition")
                       }
                       post {
-                           printMessage("invoked Foo.test() post-condition")
+                           conditionLog("invoked Foo.test() post-condition")
                       }
-                      printMessage("invoked Foo.test()")
+                      conditionLog("invoked Foo.test()")
                   }
               }
 
               struct interface Bar: Foo {
                   fun test(_ a: Int) {
                       pre {
-                           printMessage("invoked Bar.test() pre-condition")
+                           conditionLog("invoked Bar.test() pre-condition")
                       }
 
                       post {
-                           printMessage("invoked Bar.test() post-condition")
+                           conditionLog("invoked Bar.test() post-condition")
                       }
                   }
               }
 
               struct Test: Bar {}
-
-              view fun printMessage(_ msg: String): Bool {
-                  log(msg)
-                  return true
-              }
 
               fun main() {
                  Test().test(5)
@@ -4728,33 +4554,9 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 	t.Run("condition in same type", func(t *testing.T) {
 		t.Parallel()
 
-		storage := interpreter.NewInMemoryStorage(nil)
-
-		activation := sema.NewVariableActivation(sema.BaseValueActivation)
-		activation.DeclareValue(stdlib.PanicFunction)
-		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-			commons.LogFunctionName,
-			sema.NewSimpleFunctionType(
-				sema.FunctionPurityView,
-				[]sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: sema.AnyStructTypeAnnotation,
-					},
-				},
-				sema.VoidTypeAnnotation,
-			),
-			"",
-			nil,
-		))
-
 		var logs []string
-		vmConfig := vm.NewConfig(storage)
 
-		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
-
-		_, err := CompileAndInvokeWithOptions(t,
+		_, logs, err := CompileAndInvokeWithConditionLogs(t,
 			`
               struct Test {
                   var i: Int
@@ -4765,16 +4567,11 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 
                   fun test() {
                       post {
-                          print(before(self.i).toString())
-                          print(self.i.toString())
+                          conditionLog(before(self.i).toString())
+                          conditionLog(self.i.toString())
                       }
                       self.i = 5
                   }
-              }
-
-              view fun print(_ msg: String): Bool {
-                  log(msg)
-                  return true
               }
 
               fun main() {
@@ -4782,19 +4579,6 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
               }
             `,
 			"main",
-			CompilerAndVMOptions{
-				VMConfig: vmConfig,
-				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
-					ParseAndCheckOptions: &ParseAndCheckOptions{
-						Config: &sema.Config{
-							LocationHandler: SingleIdentifierLocationResolver(t),
-							BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
-								return activation
-							},
-						},
-					},
-				},
-			},
 		)
 
 		require.NoError(t, err)
@@ -4811,41 +4595,15 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 	t.Run("inherited condition", func(t *testing.T) {
 		t.Parallel()
 
-		storage := interpreter.NewInMemoryStorage(nil)
-
-		activation := sema.NewVariableActivation(sema.BaseValueActivation)
-		activation.DeclareValue(stdlib.PanicFunction)
-		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-			commons.LogFunctionName,
-			sema.NewSimpleFunctionType(
-				sema.FunctionPurityView,
-				[]sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: sema.AnyStructTypeAnnotation,
-					},
-				},
-				sema.VoidTypeAnnotation,
-			),
-			"",
-			nil,
-		))
-
-		var logs []string
-		vmConfig := vm.NewConfig(storage)
-
-		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
-
-		_, err := CompileAndInvokeWithOptions(t,
+		_, logs, err := CompileAndInvokeWithConditionLogs(t,
 			`
                 struct interface Foo {
                     var i: Int
 
                     fun test() {
                         post {
-                            print(before(self.i).toString())
-                            print(self.i.toString())
+                            conditionLog(before(self.i).toString())
+                            conditionLog(self.i.toString())
                         }
                         self.i = 5
                     }
@@ -4859,29 +4617,11 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
                     }
                 }
 
-                view fun print(_ msg: String): Bool {
-                    log(msg)
-                    return true
-                }
-
                 fun main() {
                     Test().test()
                 }
             `,
 			"main",
-			CompilerAndVMOptions{
-				VMConfig: vmConfig,
-				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
-					ParseAndCheckOptions: &ParseAndCheckOptions{
-						Config: &sema.Config{
-							LocationHandler: SingleIdentifierLocationResolver(t),
-							BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
-								return activation
-							},
-						},
-					},
-				},
-			},
 		)
 
 		require.NoError(t, err)
@@ -4898,42 +4638,16 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 	t.Run("multiple inherited conditions", func(t *testing.T) {
 		t.Parallel()
 
-		storage := interpreter.NewInMemoryStorage(nil)
-
-		activation := sema.NewVariableActivation(sema.BaseValueActivation)
-		activation.DeclareValue(stdlib.PanicFunction)
-		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-			commons.LogFunctionName,
-			sema.NewSimpleFunctionType(
-				sema.FunctionPurityView,
-				[]sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: sema.AnyStructTypeAnnotation,
-					},
-				},
-				sema.VoidTypeAnnotation,
-			),
-			"",
-			nil,
-		))
-
-		var logs []string
-		vmConfig := vm.NewConfig(storage)
-
-		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
-
-		_, err := CompileAndInvokeWithOptions(t,
+		_, logs, err := CompileAndInvokeWithConditionLogs(t,
 			`
               struct interface Foo {
                   var i: Int
 
                   fun test() {
                       post {
-                          print(before(self.i).toString())
-                          print(before(self.i + 1).toString())
-                          print(self.i.toString())
+                          conditionLog(before(self.i).toString())
+                          conditionLog(before(self.i + 1).toString())
+                          conditionLog(self.i.toString())
                       }
                       self.i = 8
                   }
@@ -4944,7 +4658,7 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
 
                   fun test() {
                       post {
-                          print(before(self.i + 3).toString())
+                          conditionLog(before(self.i + 3).toString())
                       }
                   }
               }
@@ -4958,29 +4672,11 @@ func TestBeforeFunctionInPostConditions(t *testing.T) {
                   }
               }
 
-              view fun print(_ msg: String): Bool {
-                  log(msg)
-                  return true
-              }
-
               fun main() {
                   Test().test()
               }
             `,
 			"main",
-			CompilerAndVMOptions{
-				VMConfig: vmConfig,
-				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
-					ParseAndCheckOptions: &ParseAndCheckOptions{
-						Config: &sema.Config{
-							LocationHandler: SingleIdentifierLocationResolver(t),
-							BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
-								return activation
-							},
-						},
-					},
-				},
-			},
 		)
 
 		require.NoError(t, err)
@@ -6074,11 +5770,11 @@ func TestReturnStatements(t *testing.T) {
 	t.Run("conditional return with post condition", func(t *testing.T) {
 		t.Parallel()
 
-		actual, logs, err := CompileAndInvokeWithLogs(t,
+		actual, logs, err := CompileAndInvokeWithConditionLogs(t,
 			`
               fun test(a: Bool): Int {
                   post {
-                      printMessage("post condition executed")
+                      conditionLog("post condition executed")
                   }
 
                   if a {
@@ -6091,16 +5787,11 @@ func TestReturnStatements(t *testing.T) {
                       var b = 1
                       var c = 2
                       var d = 3
-                      printMessage("second condition reached 1")
-                      printMessage("second condition reached 2")
+                      conditionLog("second condition reached 1")
+                      conditionLog("second condition reached 2")
                   }
 
                   return 2
-              }
-
-              view fun printMessage(_ msg: String): Bool {
-                  log(msg)
-                  return true
               }
             `,
 			"test",
@@ -6122,13 +5813,13 @@ func TestReturnStatements(t *testing.T) {
 	t.Run("conditional return with post condition in initializer", func(t *testing.T) {
 		t.Parallel()
 
-		actual, logs, err := CompileAndInvokeWithLogs(t,
+		actual, logs, err := CompileAndInvokeWithConditionLogs(t,
 			`
               struct Foo {
                   var i: Int
                   init(_ a: Bool) {
                       post {
-                          printMessage("post condition executed")
+                          conditionLog("post condition executed")
                       }
                       if a {
                           self.i = 5
@@ -6142,11 +5833,6 @@ func TestReturnStatements(t *testing.T) {
               fun test(a: Bool): Int {
                   var foo = Foo(a)
                   return foo.i
-              }
-
-              view fun printMessage(_ msg: String): Bool {
-                  log(msg)
-                  return true
               }
             `,
 			"test",
@@ -6881,7 +6567,7 @@ func TestContractClosure(t *testing.T) {
 	)
 
 	activation := sema.NewVariableActivation(sema.BaseValueActivation)
-	activation.DeclareValue(stdlib.PanicFunction)
+	activation.DeclareValue(stdlib.VMPanicFunction)
 
 	checker, err := ParseAndCheckWithOptions(t,
 		`
@@ -6943,6 +6629,7 @@ func TestContractClosure(t *testing.T) {
 
 			return elaboration.InterfaceType(typeID)
 		},
+		BuiltinGlobalsProvider: VMBuiltinGlobalsProviderWithDefaultsAndPanic,
 	}
 
 	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
@@ -7645,7 +7332,7 @@ func TestInheritedConditions(t *testing.T) {
 		}
 
 		var logs []string
-		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(&logs)
 
 		PrepareVMConfig(t, vmConfig, programs)
 
@@ -7662,40 +7349,27 @@ func TestInheritedConditions(t *testing.T) {
             contract A {
                 struct TestStruct {
                     view fun test(): Bool {
-                        log("invoked TestStruct.test()")
+                        conditionLog("invoked TestStruct.test()")
                         return true
                     }
                 }
             }
         `
 
-		logFunction := stdlib.NewStandardLibraryStaticFunction(
-			commons.LogFunctionName,
-			&sema.FunctionType{
-				Purity: sema.FunctionPurityView,
-				Parameters: []sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
-					},
-				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					sema.VoidType,
-				),
-			},
-			``,
-			nil,
-		)
-
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseValueActivation.DeclareValue(logFunction)
+		baseValueActivation.DeclareValue(stdlib.VMPanicFunction)
+		baseValueActivation.DeclareValue(newConditionLogFunction(nil))
+
+		compilerConfig := &compiler.Config{
+			BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog,
+		}
 
 		aProgram := ParseCheckAndCompileCodeWithOptions(
 			t,
 			aContract,
 			aLocation,
 			ParseCheckAndCompileOptions{
+				CompilerConfig: compilerConfig,
 				ParseAndCheckOptions: &ParseAndCheckOptions{
 					Config: &sema.Config{
 						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
@@ -8321,28 +7995,16 @@ func TestGlobalVariables(t *testing.T) {
 		var logs []string
 
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
-		activation.DeclareValue(stdlib.PanicFunction)
-		activation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-			commons.LogFunctionName,
-			sema.NewSimpleFunctionType(
-				sema.FunctionPurityView,
-				[]sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: sema.AnyStructTypeAnnotation,
-					},
-				},
-				sema.VoidTypeAnnotation,
-			),
-			"",
-			nil,
-		))
+		activation.DeclareValue(stdlib.VMPanicFunction)
+		activation.DeclareValue(stdlib.NewVMLogFunction(nil))
 
+		compilerConfig := &compiler.Config{
+			BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndLog,
+		}
 		storage := interpreter.NewInMemoryStorage(nil)
 		vmConfig := vm.NewConfig(storage)
 
-		vmConfig.BuiltinGlobalsProvider = NativeFunctionsWithLogAndPanic(&logs)
+		vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndLog(&logs)
 
 		// Only prepare, do not invoke anything.
 
@@ -8367,7 +8029,6 @@ func TestGlobalVariables(t *testing.T) {
               }
             `,
 			CompilerAndVMOptions{
-				VMConfig: vmConfig,
 				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
 					ParseAndCheckOptions: &ParseAndCheckOptions{
 						Config: &sema.Config{
@@ -8377,7 +8038,9 @@ func TestGlobalVariables(t *testing.T) {
 							},
 						},
 					},
+					CompilerConfig: compilerConfig,
 				},
+				VMConfig: vmConfig,
 			},
 		)
 
@@ -8707,7 +8370,7 @@ func TestAccountMethodOptionalArgs(t *testing.T) {
 		`
           import C from 0x1
 
-          fun test():String {
+          fun test(): String {
               return C.test().name
           }
         `,
@@ -8752,16 +8415,6 @@ func TestAccountMethodOptionalArgs(t *testing.T) {
 			}
 
 			return elaboration.InterfaceType(typeID)
-		},
-		AccountHandler: &testAccountHandler{
-			emitEvent: func(
-				_ interpreter.ValueExportContext,
-				_ interpreter.LocationRange,
-				_ *sema.CompositeType,
-				_ []interpreter.Value,
-			) {
-				// ignore
-			},
 		},
 	}
 
@@ -9096,20 +8749,30 @@ func TestGetAuthAccount(t *testing.T) {
 		location := common.ScriptLocation{0x1}
 
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
-		activation.DeclareValue(
-			stdlib.NewStandardLibraryStaticFunction(
-				commons.GetAuthAccountFunctionName,
-				stdlib.GetAuthAccountFunctionType,
-				"",
-				nil,
-			),
-		)
+		activation.DeclareValue(stdlib.VMPanicFunction)
+		activation.DeclareValue(stdlib.NewVMGetAuthAccountFunction(nil))
 
-		compilerConfig := &compiler.Config{}
-		compilerConfig.BuiltinGlobalsProvider = compiler.DefaultBuiltinScriptGlobals
+		compilerConfig := &compiler.Config{
+			BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
+				activation := activations.NewActivation[compiler.GlobalImport](nil, compiler.DefaultBuiltinGlobals())
+				activation.Set(
+					stdlib.GetAuthAccountFunctionName,
+					compiler.GlobalImport{
+						Name: stdlib.GetAuthAccountFunctionName,
+					},
+				)
+				return activation
+			},
+		}
 
 		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
-		vmConfig.BuiltinGlobalsProvider = vm.DefaultBuiltinScriptGlobals
+		vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[*vm.Variable] {
+			activation := activations.NewActivation[*vm.Variable](nil, vm.DefaultBuiltinGlobals())
+			variable := &vm.Variable{}
+			variable.InitializeWithValue(stdlib.NewVMGetAuthAccountFunction(&testAccountHandler{}).Value)
+			activation.Set(stdlib.GetAuthAccountFunctionName, variable)
+			return activation
+		}
 
 		result, err := CompileAndInvokeWithOptions(
 			t,
@@ -9148,14 +8811,7 @@ func TestGetAuthAccount(t *testing.T) {
 		location := common.ScriptLocation{0x1}
 
 		activation := sema.NewVariableActivation(sema.BaseValueActivation)
-		activation.DeclareValue(
-			stdlib.NewStandardLibraryStaticFunction(
-				commons.GetAuthAccountFunctionName,
-				stdlib.GetAuthAccountFunctionType,
-				"",
-				nil,
-			),
-		)
+		activation.DeclareValue(stdlib.NewVMGetAuthAccountFunction(nil))
 
 		compilerConfig := &compiler.Config{}
 		// NOTE: default globals do not include `getAuthAccount`

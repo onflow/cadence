@@ -24,10 +24,12 @@ import (
 	"github.com/onflow/cadence/common"
 )
 
+type BuiltinGlobalsProvider func() *activations.Activation[GlobalImport]
+
 type Config struct {
 	MemoryGauge            common.MemoryGauge
 	ImportHandler          commons.ImportHandler
 	LocationHandler        commons.LocationHandler
 	ElaborationResolver    func(location common.Location) (*DesugaredElaboration, error)
-	BuiltinGlobalsProvider func() *activations.Activation[GlobalImport]
+	BuiltinGlobalsProvider BuiltinGlobalsProvider
 }

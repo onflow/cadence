@@ -21,10 +21,8 @@ package vm
 import (
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/stdlib"
 )
 
 // Config contains the VM configurations that is safe to be re-used across VMs/executions.
@@ -35,8 +33,6 @@ type Config struct {
 	ImportHandler          commons.ImportHandler
 	ContractValueHandler   ContractValueHandler
 	BuiltinGlobalsProvider BuiltinGlobalsProvider
-	Logger                 stdlib.Logger
-	AccountHandler         stdlib.AccountHandler
 	TypeLoader             func(location common.Location, typeID interpreter.TypeID) sema.ContainedType
 
 	MemoryGauge      common.MemoryGauge
@@ -251,13 +247,6 @@ func (c *Config) EmitEvent(
 	if err != nil {
 		panic(err)
 	}
-}
-
-func (c *Config) ProgramLog(message string, locationRange interpreter.LocationRange) error {
-	if c.Logger == nil {
-		return errors.NewDefaultUserError("logging is not supported in this environment")
-	}
-	return c.Logger.ProgramLog(message, locationRange)
 }
 
 func (c *Config) OnResourceOwnerChange(

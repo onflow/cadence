@@ -343,7 +343,7 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 			TypeBound: boundType,
 		}
 
-		function1 := stdlib.NewStandardLibraryStaticFunction(
+		function1 := stdlib.NewInterpreterStandardLibraryStaticFunction(
 			"foo",
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{

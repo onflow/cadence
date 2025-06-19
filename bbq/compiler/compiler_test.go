@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
@@ -3898,8 +3899,9 @@ func TestCompileFunctionConditions(t *testing.T) {
             }
         `
 
-		logFunction := stdlib.NewStandardLibraryStaticFunction(
-			commons.LogFunctionName,
+		// like stdlib log function, but view/pure
+		logFunction := stdlib.NewVMStandardLibraryStaticFunction(
+			stdlib.LogFunctionName,
 			&sema.FunctionType{
 				Purity: sema.FunctionPurityView,
 				Parameters: []sema.Parameter{
@@ -3914,6 +3916,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				),
 			},
 			``,
+			// not needed for this test
 			nil,
 		)
 
@@ -3942,27 +3945,40 @@ func TestCompileFunctionConditions(t *testing.T) {
 						},
 					},
 				},
+				CompilerConfig: &compiler.Config{
+					BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
+						activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+						activation.Set(
+							stdlib.LogFunctionName,
+							compiler.GlobalImport{
+								Name: stdlib.LogFunctionName,
+							},
+						)
+						return activation
+					},
+				},
 			},
 			programs,
 		)
 
 		// Deploy contract interface
 
-		bContract := fmt.Sprintf(`
-          import A from %[1]s
+		bContract := fmt.Sprintf(
+			`
+              import A from %[1]s
 
-          contract interface B {
+              contract interface B {
 
-              resource interface VaultInterface {
-                  var balance: Int
+                  resource interface VaultInterface {
+                      var balance: Int
 
-                  fun getBalance(): Int {
-                      // Call 'A.TestStruct()' which is only available to this contract interface.
-                      pre { A.TestStruct().test() }
+                      fun getBalance(): Int {
+                          // Call 'A.TestStruct()' which is only available to this contract interface.
+                          pre { A.TestStruct().test() }
+                      }
                   }
               }
-          }
-        `,
+            `,
 			contractsAddress.HexWithPrefix(),
 		)
 
@@ -3971,13 +3987,14 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		// Deploy another intermediate contract interface
 
-		cContract := fmt.Sprintf(`
-          import B from %[1]s
+		cContract := fmt.Sprintf(
+			`
+              import B from %[1]s
 
-          contract interface C: B {
-              resource interface VaultIntermediateInterface: B.VaultInterface {}
-          }
-        `,
+              contract interface C: B {
+                  resource interface VaultIntermediateInterface: B.VaultInterface {}
+              }
+            `,
 			contractsAddress.HexWithPrefix(),
 		)
 
@@ -7589,15 +7606,8 @@ func TestCompileOptionalArgument(t *testing.T) {
 	t.Run("assert function", func(t *testing.T) {
 		t.Parallel()
 
-		assertFunction := stdlib.NewStandardLibraryStaticFunction(
-			commons.AssertFunctionName,
-			stdlib.AssertFunctionType,
-			``,
-			nil,
-		)
-
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseValueActivation.DeclareValue(assertFunction)
+		baseValueActivation.DeclareValue(stdlib.VMAssertFunction)
 
 		checker, err := ParseAndCheckWithOptions(t,
 			`
@@ -7616,9 +7626,23 @@ func TestCompileOptionalArgument(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(
+		config := &compiler.Config{
+			BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
+				activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+				activation.Set(
+					stdlib.AssertFunctionName,
+					compiler.GlobalImport{
+						Name: stdlib.AssertFunctionName,
+					},
+				)
+				return activation
+			},
+		}
+
+		comp := compiler.NewInstructionCompilerWithConfig(
 			interpreter.ProgramFromChecker(checker),
 			checker.Location,
+			config,
 		)
 		program := comp.Compile()
 

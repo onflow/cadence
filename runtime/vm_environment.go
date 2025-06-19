@@ -21,7 +21,9 @@ package runtime
 import (
 	"fmt"
 
+	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/compiler"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
@@ -54,6 +56,9 @@ type vmEnvironment struct {
 	vmConfig       *vm.Config
 	compilerConfig *compiler.Config
 
+	defaultCompilerBuiltinGlobals *activations.Activation[compiler.GlobalImport]
+	defaultVMBuiltinGlobals       *activations.Activation[*vm.Variable]
+
 	*stdlib.SimpleContractAdditionTracker
 }
 
@@ -82,12 +87,30 @@ func newVMEnvironment(config Config) *vmEnvironment {
 	env.checkingEnvironment = newCheckingEnvironment()
 	env.vmConfig = env.newVMConfig()
 	env.compilerConfig = env.newCompilerConfig()
+
+	env.defaultCompilerBuiltinGlobals = activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+	env.defaultVMBuiltinGlobals = activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+
+	for _, vmFunction := range stdlib.VMFunctions(env) {
+		functionValue := vmFunction.FunctionValue
+		variable := &vm.Variable{}
+		variable.InitializeWithValue(functionValue)
+		qualifiedName := commons.TypeQualifiedName(
+			vmFunction.BaseType,
+			functionValue.Name,
+		)
+		env.defaultVMBuiltinGlobals.Set(
+			qualifiedName,
+			variable,
+		)
+	}
+
 	return env
 }
 
 func NewBaseVMEnvironment(config Config) *vmEnvironment {
 	env := newVMEnvironment(config)
-	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(env) {
+	for _, valueDeclaration := range stdlib.VMDefaultStandardLibraryValues(env) {
 		env.DeclareValue(valueDeclaration, nil)
 	}
 	return env
@@ -95,14 +118,9 @@ func NewBaseVMEnvironment(config Config) *vmEnvironment {
 
 func NewScriptVMEnvironment(config Config) Environment {
 	env := newVMEnvironment(config)
-
-	env.compilerConfig.BuiltinGlobalsProvider = compiler.DefaultBuiltinScriptGlobals
-	env.vmConfig.BuiltinGlobalsProvider = vm.DefaultBuiltinScriptGlobals
-
-	for _, valueDeclaration := range stdlib.DefaultScriptStandardLibraryValues(env) {
+	for _, valueDeclaration := range stdlib.VMDefaultScriptStandardLibraryValues(env) {
 		env.DeclareValue(valueDeclaration, nil)
 	}
-
 	return env
 }
 
@@ -111,15 +129,13 @@ func (e *vmEnvironment) newVMConfig() *vm.Config {
 		MemoryGauge:                    e,
 		ComputationGauge:               e,
 		TypeLoader:                     e.loadType,
-		BuiltinGlobalsProvider:         vm.DefaultBuiltinGlobals,
-		Logger:                         e,
+		BuiltinGlobalsProvider:         e.vmBuiltinGlobals,
 		ContractValueHandler:           e.loadContractValue,
 		ImportHandler:                  e.importProgram,
 		InjectedCompositeFieldsHandler: newInjectedCompositeFieldsHandler(e),
 		UUIDHandler:                    newUUIDHandler(&e.Interface),
 		AccountHandlerFunc:             e.newAccountValue,
 		OnEventEmitted:                 newOnEventEmittedHandler(&e.Interface),
-		AccountHandler:                 e,
 		CapabilityBorrowHandler:        newCapabilityBorrowHandler(e),
 		CapabilityCheckHandler:         newCapabilityCheckHandler(e),
 	}
@@ -140,10 +156,11 @@ func (e *vmEnvironment) loadContractValue(
 		e.storage,
 	)
 }
+
 func (e *vmEnvironment) newCompilerConfig() *compiler.Config {
 	return &compiler.Config{
 		MemoryGauge:            e,
-		BuiltinGlobalsProvider: compiler.DefaultBuiltinGlobals,
+		BuiltinGlobalsProvider: e.compilerBuiltinGlobals,
 		LocationHandler:        e.ResolveLocation,
 		ImportHandler:          e.importProgram,
 		ElaborationResolver:    e.resolveDesugaredElaboration,
@@ -174,7 +191,31 @@ func (e *vmEnvironment) Configure(
 func (e *vmEnvironment) DeclareValue(valueDeclaration stdlib.StandardLibraryValue, location common.Location) {
 	e.checkingEnvironment.declareValue(valueDeclaration, location)
 
-	// TODO: declare in compiler and VM
+	// TODO: add support for non-nil location
+	if location != nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	// Define the value in the compiler builtin globals
+
+	compilerBuiltinGlobals := e.defaultCompilerBuiltinGlobals
+
+	name := valueDeclaration.Name
+
+	compilerBuiltinGlobals.Set(
+		name,
+		compiler.GlobalImport{
+			Name: name,
+		},
+	)
+
+	// Define the value in the VM builtin globals
+
+	variable := &vm.Variable{}
+	variable.InitializeWithValue(valueDeclaration.Value)
+
+	vmBuiltinGlobals := e.defaultVMBuiltinGlobals
+	vmBuiltinGlobals.Set(name, variable)
 }
 
 func (e *vmEnvironment) DeclareType(typeDeclaration stdlib.StandardLibraryType, location common.Location) {
@@ -391,4 +432,14 @@ func (e *vmEnvironment) newVM(
 		program,
 		e.vmConfig,
 	)
+}
+
+func (e *vmEnvironment) vmBuiltinGlobals() *activations.Activation[*vm.Variable] {
+	// TODO: add support for per-location VM builtin globals
+	return e.defaultVMBuiltinGlobals
+}
+
+func (e *vmEnvironment) compilerBuiltinGlobals() *activations.Activation[compiler.GlobalImport] {
+	// TODO: add support for per-location compiler builtin globals
+	return e.defaultCompilerBuiltinGlobals
 }

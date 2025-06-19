@@ -167,7 +167,7 @@ func ParseCheckAndPrepareWithLogs(
 
 	var logs []string
 
-	valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
+	valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
 		"log",
 		stdlib.LogFunctionType,
 		"",
@@ -279,9 +279,12 @@ func ParseCheckAndPrepareWithOptions(
 			interpreterBaseActivationVariables := interpreterBaseActivation.ValuesInCurrentLevel()
 
 			vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[*vm.Variable] {
-				baseActivation := vm.DefaultBuiltinGlobals()
 
-				activation := activations.NewActivation[*vm.Variable](nil, baseActivation)
+				activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+
+				panicVariable := &vm.Variable{}
+				panicVariable.InitializeWithValue(stdlib.VMPanicFunction.Value)
+				activation.Set(stdlib.PanicFunctionName, panicVariable)
 
 				// Add the given built-in values.
 				// Convert the externally provided `interpreter.HostFunctionValue`s into `vm.NativeFunctionValue`s.
@@ -323,7 +326,7 @@ func ParseCheckAndPrepareWithOptions(
 			compilerConfig = &compiler.Config{
 				BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
 					baseActivation := compiler.DefaultBuiltinGlobals()
-					activation := activations.NewActivation[compiler.GlobalImport](nil, baseActivation)
+					activation := activations.NewActivation(nil, baseActivation)
 					for name := range interpreterBaseActivationVariables { //nolint:maprange
 						existing := activation.Find(name)
 						if existing != (compiler.GlobalImport{}) {
@@ -358,6 +361,18 @@ func ParseCheckAndPrepareWithOptions(
 
 	if vmConfig.TypeLoader == nil {
 		vmConfig.TypeLoader = typeLoader
+	}
+
+	if vmConfig.BuiltinGlobalsProvider == nil {
+		vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[*vm.Variable] {
+			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+
+			panicVariable := &vm.Variable{}
+			panicVariable.InitializeWithValue(stdlib.VMPanicFunction.Value)
+			activation.Set(stdlib.PanicFunctionName, panicVariable)
+
+			return activation
+		}
 	}
 
 	parseAndCheckOptions := &sema_utils.ParseAndCheckOptions{
@@ -453,7 +468,7 @@ func ParseCheckAndInterpretWithMemoryMetering(
 ) *interpreter.Interpreter {
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.PanicFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterPanicFunction)
 
 	inter, err := ParseCheckAndInterpretWithOptionsAndMemoryMetering(
 		t,

@@ -26,28 +26,10 @@ import (
 	"github.com/onflow/cadence/bbq/commons"
 )
 
-var (
-	defaultBuiltinGlobals       = activations.NewActivation[GlobalImport](nil, nil)
-	defaultBuiltinScriptGlobals = activations.NewActivation[GlobalImport](nil, defaultBuiltinGlobals)
-)
+var defaultBuiltinGlobals = activations.NewActivation[GlobalImport](nil, nil)
 
 func DefaultBuiltinGlobals() *activations.Activation[GlobalImport] {
 	return defaultBuiltinGlobals
-}
-
-func DefaultBuiltinScriptGlobals() *activations.Activation[GlobalImport] {
-	return defaultBuiltinScriptGlobals
-}
-
-var stdlibFunctions = []string{
-	commons.LogFunctionName,
-	commons.AssertFunctionName,
-	commons.PanicFunctionName,
-	commons.GetAccountFunctionName,
-}
-
-var scriptStdlibFunctions = []string{
-	commons.GetAuthAccountFunctionName,
 }
 
 type builtinFunction struct {
@@ -90,9 +72,8 @@ func init() {
 		registerBoundFunctions(constructor.typ)
 	}
 
-	for _, funcName := range stdlibFunctions {
-		registerDefaultBuiltinGlobal(funcName)
-	}
+	// The panic function is needed for conditions.
+	registerDefaultBuiltinGlobal(commons.PanicFunctionName)
 
 	// Type constructors
 	for _, typeConstructor := range sema.RuntimeTypeConstructors {
@@ -104,11 +85,6 @@ func init() {
 		registerDefaultBuiltinGlobal(declaration.Name)
 		declarationVariable := sema.BaseValueActivation.Find(declaration.Name)
 		registerBoundFunctions(declarationVariable.Type)
-	}
-
-	// Script globals
-	for _, funcName := range scriptStdlibFunctions {
-		registerDefaultBuiltinScriptGlobal(funcName)
 	}
 }
 
@@ -139,8 +115,4 @@ func registerGlobalImport(name string, activation *activations.Activation[Global
 
 func registerDefaultBuiltinGlobal(name string) {
 	registerGlobalImport(name, defaultBuiltinGlobals)
-}
-
-func registerDefaultBuiltinScriptGlobal(name string) {
-	registerGlobalImport(name, defaultBuiltinScriptGlobals)
 }

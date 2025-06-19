@@ -1477,10 +1477,10 @@ func TestInterpretDynamicCastingInclusiveRange(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterInclusiveRangeConstructor)
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, stdlib.InclusiveRangeConstructorFunction)
+	interpreter.Declare(baseActivation, stdlib.InterpreterInclusiveRangeConstructor)
 
 	options := ParseCheckAndInterpretOptions{
 		CheckerConfig: &sema.Config{

@@ -21,12 +21,16 @@ package stdlib
 import (
 	"fmt"
 
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
 
 // AssertFunction
+
+const AssertFunctionName = "assert"
 
 const assertFunctionDocString = `
 Terminates the program if the given condition is false, and reports a message which explains how the condition is false.
@@ -53,8 +57,8 @@ var AssertFunctionType = &sema.FunctionType{
 	Arity: &sema.Arity{Min: 1, Max: 2},
 }
 
-var AssertFunction = NewStandardLibraryStaticFunction(
-	"assert",
+var InterpreterAssertFunction = NewInterpreterStandardLibraryStaticFunction(
+	AssertFunctionName,
 	AssertFunctionType,
 	assertFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
@@ -72,7 +76,38 @@ var AssertFunction = NewStandardLibraryStaticFunction(
 			message = messageValue.Str
 		}
 
-		return Assert(result, message, invocation.LocationRange)
+		return Assert(
+			result,
+			message,
+			invocation.LocationRange,
+		)
+	},
+)
+
+var VMAssertFunction = NewVMStandardLibraryStaticFunction(
+	AssertFunctionName,
+	AssertFunctionType,
+	assertFunctionDocString,
+	func(context *vm.Context, _ []bbq.StaticType, arguments ...interpreter.Value) interpreter.Value {
+		result, ok := arguments[0].(interpreter.BoolValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		var message string
+		if len(arguments) > 1 {
+			messageValue, ok := arguments[1].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			message = messageValue.Str
+		}
+
+		return Assert(
+			result,
+			message,
+			interpreter.EmptyLocationRange,
+		)
 	},
 )
 

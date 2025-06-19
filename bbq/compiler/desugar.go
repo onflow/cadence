@@ -29,7 +29,6 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/stdlib"
 )
 
 const resultVariableName = "result"
@@ -608,13 +607,13 @@ func (d *Desugar) includeConditions(conditions *ast.Conditions) bool {
 var conditionFailedMessage = ast.NewStringExpression(nil, "pre/post condition failed", ast.EmptyRange)
 
 var panicFuncInvocationTypes = sema.InvocationExpressionTypes{
-	ReturnType: stdlib.PanicFunctionType.ReturnTypeAnnotation.Type,
 	ArgumentTypes: []sema.Type{
 		sema.StringType,
 	},
 	ParameterTypes: []sema.Type{
 		sema.StringType,
 	},
+	ReturnType: sema.NeverType,
 }
 
 func (d *Desugar) desugarCondition(condition ast.Condition, inheritedFrom *sema.InterfaceType) ast.Statement {
