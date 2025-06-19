@@ -8845,3 +8845,40 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 	})
 
 }
+
+func TestCompileAttachments(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			struct S {}
+			attachment A for S {
+				fun foo(): Int { return 3 }
+			}
+			fun test(): Int {
+				var s = S()
+				s = attach A() to s
+				return s[A]?.foo()!
+			}
+		`)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// TODO
+			},
+			functions[0].Code,
+		)
+	})
+}
