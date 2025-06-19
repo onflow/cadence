@@ -188,6 +188,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -3711,6 +3712,7 @@ func TestRuntimeCapabilityControllerOperationAfterDeletion(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					UseVM:     *compile,
 				},
 			)
 
