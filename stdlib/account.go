@@ -3577,10 +3577,7 @@ func NewVMAccountAccountCapabilitiesIssueFunction(
 			sema.Account_AccountCapabilitiesTypeIssueFunctionName,
 			sema.Account_AccountCapabilitiesTypeIssueFunctionType,
 			func(context *vm.Context, typeArguments []bbq.StaticType, args ...vm.Value) vm.Value {
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+				receiver := args[vm.ReceiverIndex]
 
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -5320,10 +5317,8 @@ func NewVMAccountAccountCapabilitiesGetControllersFunction(
 			sema.Account_AccountCapabilitiesTypeGetControllersFunctionName,
 			sema.Account_AccountCapabilitiesTypeGetControllersFunctionType,
 			func(context *vm.Context, _ []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
-				var receiver interpreter.Value
 
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+				receiver := args[vm.ReceiverIndex]
 
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
