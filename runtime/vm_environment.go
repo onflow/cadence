@@ -93,25 +93,15 @@ func newVMEnvironment(config Config) *vmEnvironment {
 
 	for _, vmFunction := range stdlib.VMFunctions(env) {
 		functionValue := vmFunction.FunctionValue
-		variable := &vm.Variable{}
-		variable.InitializeWithValue(functionValue)
 		qualifiedName := commons.TypeQualifiedName(
 			vmFunction.BaseType,
 			functionValue.Name,
 		)
-		env.defaultVMBuiltinGlobals.Set(
-			qualifiedName,
-			variable,
-		)
+		env.defineValue(qualifiedName, functionValue)
+	}
 
-		if env.defaultCompilerBuiltinGlobals.Find(qualifiedName) == (compiler.GlobalImport{}) {
-			env.defaultCompilerBuiltinGlobals.Set(
-				qualifiedName,
-				compiler.GlobalImport{
-					Name: qualifiedName,
-				},
-			)
-		}
+	for _, vmValue := range stdlib.VMValues(env) {
+		env.defineValue(vmValue.Name, vmValue.Value)
 	}
 
 	return env
@@ -148,6 +138,22 @@ func (e *vmEnvironment) newVMConfig() *vm.Config {
 		CapabilityBorrowHandler:        newCapabilityBorrowHandler(e),
 		CapabilityCheckHandler:         newCapabilityCheckHandler(e),
 	}
+}
+
+func (e *vmEnvironment) defineValue(name string, value vm.Value) {
+
+	if e.defaultCompilerBuiltinGlobals.Find(name) == (compiler.GlobalImport{}) {
+		e.defaultCompilerBuiltinGlobals.Set(
+			name,
+			compiler.GlobalImport{
+				Name: name,
+			},
+		)
+	}
+
+	variable := &vm.Variable{}
+	variable.InitializeWithValue(value)
+	e.defaultVMBuiltinGlobals.Set(name, variable)
 }
 
 func (e *vmEnvironment) loadContractValue(

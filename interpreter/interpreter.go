@@ -1687,6 +1687,8 @@ func EnumLookupFunction(
 		gauge,
 		functionType,
 		func(invocation Invocation) Value {
+			inter := invocation.InvocationContext
+
 			rawValue, ok := invocation.Arguments[0].(IntegerValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -1699,7 +1701,7 @@ func EnumLookupFunction(
 				return Nil
 			}
 
-			return NewSomeValueNonCopying(invocation.InvocationContext, caseValue)
+			return NewSomeValueNonCopying(inter, caseValue)
 		},
 	)
 

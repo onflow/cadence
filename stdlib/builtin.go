@@ -62,7 +62,7 @@ func VMDefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLi
 	return []StandardLibraryValue{
 		VMAssertFunction,
 		VMPanicFunction,
-		// TODO: SignatureAlgorithmConstructor
+		VMSignatureAlgorithmConstructor,
 		// TODO: InclusiveRangeConstructor
 		NewVMLogFunction(handler),
 		NewVMRevertibleRandomFunction(handler),
@@ -71,7 +71,7 @@ func VMDefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLi
 		NewVMGetAccountFunction(handler),
 		NewVMAccountConstructor(handler),
 		// TODO: PublicKeyConstructor
-		// TODO: HashAlgorithmConstructor
+		NewVMHashAlgorithmConstructor(handler),
 		RLPContract,
 		NewBLSContract(nil, handler),
 	}
@@ -116,7 +116,22 @@ func VMFunctions(handler StandardLibraryHandler) []VMFunction {
 
 		NewVMBLSAggregatePublicKeysFunction(handler),
 		NewVMBLSAggregateSignaturesFunction(handler),
+
+		NewVMHashAlgorithmHashFunction(handler),
+		NewVMHashAlgorithmHashWithTagFunction(handler),
 	}
+}
+
+type VMValue struct {
+	Name  string
+	Value vm.Value
+}
+
+func VMValues(handler StandardLibraryHandler) []VMValue {
+	return common.Concat(
+		VMSignatureAlgorithmCaseValues,
+		NewVMHashAlgorithmCaseValues(handler),
+	)
 }
 
 func InterpreterDefaultScriptStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
