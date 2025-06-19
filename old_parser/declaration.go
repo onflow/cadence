@@ -691,6 +691,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 	return ast.NewImportDeclaration(
 		p.memoryGauge,
 		identifiers,
+		nil,
 		location,
 		ast.NewRange(
 			p.memoryGauge,
