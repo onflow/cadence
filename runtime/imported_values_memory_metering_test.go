@@ -63,6 +63,7 @@ func TestRuntimeImportedValueMemoryMetering(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -552,6 +553,7 @@ func TestRuntimeImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  common.ScriptLocation{},
+					UseVM:     *compile,
 				},
 			)
 
@@ -625,6 +627,7 @@ func TestRuntimeScriptDecodedLocationMetering(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  common.ScriptLocation{},
+					UseVM:     *compile,
 				},
 			)
 

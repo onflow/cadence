@@ -102,6 +102,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -739,6 +740,8 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  transactionLocation(),
+					// TODO: contract deployment with VM
+					// UseVM:     *compile,
 				},
 			)
 
@@ -755,6 +758,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  transactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 	}
