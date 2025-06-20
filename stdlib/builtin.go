@@ -99,6 +99,9 @@ func VMFunctions(handler StandardLibraryHandler) []VMFunction {
 		NewVMAccountInboxUnpublishFunction(handler),
 		NewVMAccountInboxClaimFunction(handler),
 
+		NewVMAccountContractsGetFunction(handler),
+		NewVMAccountContractsBorrowFunction(handler),
+
 		NewVMAccountStorageCapabilitiesGetControllersFunction(handler),
 		NewVMAccountStorageCapabilitiesGetControllerFunction(handler),
 		NewVMAccountStorageCapabilitiesForEachControllerFunction(handler),
