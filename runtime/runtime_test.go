@@ -11796,6 +11796,7 @@ func TestRuntimeStorageEnumAsDictionaryKey(t *testing.T) {
 		Script{
 			Source: []byte(`
               import C from 0x1
+
               transaction {
                   prepare(signer: auth(Storage) &Account) {
                       signer.storage.save(<-C.createEmptyCollection(), to: /storage/collection)
@@ -11808,6 +11809,7 @@ func TestRuntimeStorageEnumAsDictionaryKey(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)

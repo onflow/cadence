@@ -3133,6 +3133,10 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location)
 		c.addImportedGlobal(location, contract.Name)
 	}
 
+	for _, variable := range importedProgram.Variables {
+		c.addImportedGlobal(location, variable.Name)
+	}
+
 	for _, function := range importedProgram.Functions {
 		name := function.QualifiedName
 
