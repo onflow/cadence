@@ -49,6 +49,7 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 			Context{
 				Interface: inter,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 	}
@@ -186,6 +187,7 @@ func TestRuntimeHashingAlgorithmExport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -231,6 +233,7 @@ func TestRuntimeSignatureAlgorithmExport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -296,6 +299,7 @@ func TestRuntimeSignatureAlgorithmImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -377,6 +381,7 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
