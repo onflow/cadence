@@ -372,6 +372,10 @@ func (e *vmEnvironment) loadDesugaredElaboration(location common.Location) (*com
 }
 
 func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+	if _, ok := location.(stdlib.FlowLocation); ok {
+		return stdlib.FlowEventTypes[typeID]
+	}
+
 	elaboration, err := e.loadDesugaredElaboration(location)
 	if err != nil {
 		panic(fmt.Errorf(
