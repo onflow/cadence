@@ -371,7 +371,12 @@ func (e *vmEnvironment) loadDesugaredElaboration(location common.Location) (*com
 	return program.compiledProgram.desugaredElaboration, nil
 }
 
+// TODO: Maybe split this to four separate methods like in the interpreter.
 func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+	if location == nil {
+		return stdlib.StandardLibraryTypes[typeID]
+	}
+
 	if _, ok := location.(stdlib.FlowLocation); ok {
 		return stdlib.FlowEventTypes[typeID]
 	}
