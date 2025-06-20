@@ -95,11 +95,21 @@ func VMFunctions(handler StandardLibraryHandler) []VMFunction {
 		NewVMAccountKeysRevokeFunction(handler),
 		NewVMAccountKeysForEachFunction(handler),
 
+		NewVMAccountInboxPublishFunction(handler),
+		NewVMAccountInboxUnpublishFunction(handler),
+		NewVMAccountInboxClaimFunction(handler),
+
 		NewVMAccountStorageCapabilitiesGetControllersFunction(handler),
 		NewVMAccountStorageCapabilitiesGetControllerFunction(handler),
 		NewVMAccountStorageCapabilitiesForEachControllerFunction(handler),
 		NewVMAccountStorageCapabilitiesIssueFunction(handler),
 		NewVMAccountStorageCapabilitiesIssueWithTypeFunction(handler),
+
+		NewVMAccountAccountCapabilitiesGetControllerFunction(handler),
+		NewVMAccountAccountCapabilitiesGetControllersFunction(handler),
+		NewVMAccountAccountCapabilitiesForEachControllerFunction(handler),
+		NewVMAccountAccountCapabilitiesIssueFunction(handler),
+		NewVMAccountAccountCapabilitiesIssueWithTypeFunction(handler),
 	}
 }
 
