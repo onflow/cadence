@@ -923,8 +923,6 @@ func opInvokeMethodStatic(vm *VM, ins opcode.InstructionInvokeMethodStatic) {
 
 	// Load arguments
 	arguments := vm.popN(int(ins.ArgCount))
-	//receiver := arguments[ReceiverIndex]
-	//arguments[ReceiverIndex] = maybeDereference(vm.context, receiver)
 
 	// Load the invoked value
 	boundFunction := vm.pop().(*BoundFunctionValue)
