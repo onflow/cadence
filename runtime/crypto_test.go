@@ -453,6 +453,7 @@ func TestRuntimeBLSVerifyPoP(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -591,6 +592,7 @@ func TestRuntimeBLSAggregatePublicKeys(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)

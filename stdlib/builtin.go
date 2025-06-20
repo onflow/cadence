@@ -70,7 +70,7 @@ func VMDefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLi
 		NewVMGetCurrentBlockFunction(handler),
 		NewVMGetAccountFunction(handler),
 		NewVMAccountConstructor(handler),
-		// TODO: PublicKeyConstructor
+		NewVMPublicKeyConstructor(handler),
 		NewVMHashAlgorithmConstructor(handler),
 		RLPContract,
 		NewBLSContract(nil, handler),
@@ -119,6 +119,9 @@ func VMFunctions(handler StandardLibraryHandler) []VMFunction {
 
 		NewVMHashAlgorithmHashFunction(handler),
 		NewVMHashAlgorithmHashWithTagFunction(handler),
+
+		NewVMPublicKeyVerifySignatureFunction(handler),
+		NewVMPublicKeyVerifyPoPFunction(handler),
 	}
 }
 

@@ -8922,7 +8922,7 @@ var AccountKeyTypeAnnotation = NewTypeAnnotation(AccountKeyType)
 
 const PublicKeyTypeName = "PublicKey"
 const PublicKeyTypePublicKeyFieldName = "publicKey"
-const PublicKeyTypeSignAlgoFieldName = "signatureAlgorithm"
+const PublicKeyTypeSignatureAlgorithmFieldName = "signatureAlgorithm"
 const PublicKeyTypeVerifyFunctionName = "verify"
 const PublicKeyTypeVerifyPoPFunctionName = "verifyPoP"
 
@@ -8934,12 +8934,12 @@ const publicKeySignAlgoFieldDocString = `
 The signature algorithm to be used with the key
 `
 
-const publicKeyVerifyFunctionDocString = `
+const publicKeyTypeVerifyFunctionDocString = `
 Verifies a signature. Checks whether the signature was produced by signing
 the given tag and data, using this public key and the given hash algorithm
 `
 
-const publicKeyVerifyPoPFunctionDocString = `
+const publicKeyTypeVerifyPoPFunctionDocString = `
 Verifies the proof of possession of the private key.
 This function is only implemented if the signature algorithm
 of the public key is BLS (BLS_BLS12_381).
@@ -8965,21 +8965,21 @@ var PublicKeyType = func() *CompositeType {
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			publicKeyType,
-			PublicKeyTypeSignAlgoFieldName,
+			PublicKeyTypeSignatureAlgorithmFieldName,
 			SignatureAlgorithmType,
 			publicKeySignAlgoFieldDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			publicKeyType,
 			PublicKeyTypeVerifyFunctionName,
-			PublicKeyVerifyFunctionType,
-			publicKeyVerifyFunctionDocString,
+			PublicKeyTypeVerifyFunctionType,
+			publicKeyTypeVerifyFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			publicKeyType,
 			PublicKeyTypeVerifyPoPFunctionName,
-			PublicKeyVerifyPoPFunctionType,
-			publicKeyVerifyPoPFunctionDocString,
+			PublicKeyTypeVerifyPoPFunctionType,
+			publicKeyTypeVerifyPoPFunctionDocString,
 		),
 	}
 
@@ -8997,7 +8997,7 @@ var PublicKeyArrayType = &VariableSizedType{
 
 var PublicKeyArrayTypeAnnotation = NewTypeAnnotation(PublicKeyArrayType)
 
-var PublicKeyVerifyFunctionType = NewSimpleFunctionType(
+var PublicKeyTypeVerifyFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]Parameter{
 		{
@@ -9020,7 +9020,7 @@ var PublicKeyVerifyFunctionType = NewSimpleFunctionType(
 	BoolTypeAnnotation,
 )
 
-var PublicKeyVerifyPoPFunctionType = NewSimpleFunctionType(
+var PublicKeyTypeVerifyPoPFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]Parameter{
 		{

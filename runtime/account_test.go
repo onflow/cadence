@@ -1418,6 +1418,7 @@ func (test accountKeyTestCase) executeTransaction(
 		Context{
 			Interface: runtimeInterface,
 			Location:  location,
+			UseVM:     *compile,
 		},
 	)
 	return err
@@ -1474,6 +1475,7 @@ func TestRuntimePublicKey(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
