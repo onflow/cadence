@@ -36,10 +36,6 @@ type interpretFunc func(inter *interpreter.Interpreter) (interpreter.Value, erro
 type Environment interface {
 	ArgumentDecoder
 
-	SetCompositeValueFunctionsHandler(
-		typeID common.TypeID,
-		handler stdlib.CompositeValueFunctionsHandler,
-	)
 	DeclareValue(
 		valueDeclaration stdlib.StandardLibraryValue,
 		location common.Location,
@@ -173,7 +169,7 @@ func NewBaseInterpreterEnvironment(config Config) *interpreterEnvironment {
 	return env
 }
 
-func NewScriptInterpreterEnvironment(config Config) Environment {
+func NewScriptInterpreterEnvironment(config Config) *interpreterEnvironment {
 	env := NewInterpreterEnvironment(config)
 	for _, valueDeclaration := range stdlib.InterpreterDefaultScriptStandardLibraryValues(env) {
 		env.DeclareValue(valueDeclaration, nil)
