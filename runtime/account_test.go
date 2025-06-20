@@ -1093,6 +1093,7 @@ func TestRuntimeHashAlgorithm(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1168,6 +1169,7 @@ func TestRuntimeSignatureAlgorithm(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1416,6 +1418,7 @@ func (test accountKeyTestCase) executeTransaction(
 		Context{
 			Interface: runtimeInterface,
 			Location:  location,
+			UseVM:     *compile,
 		},
 	)
 	return err
@@ -1472,6 +1475,7 @@ func TestRuntimePublicKey(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 

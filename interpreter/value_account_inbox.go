@@ -90,7 +90,7 @@ func NewAccountInboxValue(
 		methodGetter,
 		nil,
 		stringer,
-	)
+	).WithPrivateField(AccountTypePrivateAddressFieldName, addressValue)
 
 	return accountInbox
 }

@@ -47,7 +47,7 @@ func NewPublicKeyValue(
 			Value: publicKey,
 		},
 		{
-			Name:  sema.PublicKeyTypeSignAlgoFieldName,
+			Name:  sema.PublicKeyTypeSignatureAlgorithmFieldName,
 			Value: signAlgo,
 		},
 	}
