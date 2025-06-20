@@ -103,6 +103,15 @@ func newVMEnvironment(config Config) *vmEnvironment {
 			qualifiedName,
 			variable,
 		)
+
+		if env.defaultCompilerBuiltinGlobals.Find(qualifiedName) == (compiler.GlobalImport{}) {
+			env.defaultCompilerBuiltinGlobals.Set(
+				qualifiedName,
+				compiler.GlobalImport{
+					Name: qualifiedName,
+				},
+			)
+		}
 	}
 
 	return env

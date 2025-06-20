@@ -498,13 +498,16 @@ func TestRuntimeBLSAggregateSignatures(t *testing.T) {
 		},
 	}
 
+	nextScriptLocation := NewScriptLocationGenerator()
+
 	result, err := runtime.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -574,13 +577,15 @@ func TestRuntimeBLSAggregatePublicKeys(t *testing.T) {
 	}
 	addPublicKeyValidation(runtimeInterface, nil)
 
+	nextScriptLocation := NewScriptLocationGenerator()
+
 	result, err := runtime.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Location:  nextScriptLocation(),
 		},
 	)
 	require.NoError(t, err)

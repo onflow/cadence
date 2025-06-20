@@ -72,8 +72,8 @@ func VMDefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLi
 		NewVMAccountConstructor(handler),
 		// TODO: PublicKeyConstructor
 		// TODO: HashAlgorithmConstructor
-		// TODO: RLPContract,
-		// TODO: BLSContract
+		RLPContract,
+		NewBLSContract(nil, handler),
 	}
 }
 
@@ -110,6 +110,12 @@ func VMFunctions(handler StandardLibraryHandler) []VMFunction {
 		NewVMAccountAccountCapabilitiesForEachControllerFunction(handler),
 		NewVMAccountAccountCapabilitiesIssueFunction(handler),
 		NewVMAccountAccountCapabilitiesIssueWithTypeFunction(handler),
+
+		VMRLPDecodeStringFunction,
+		VMRLPDecodeListFunction,
+
+		NewVMBLSAggregatePublicKeysFunction(handler),
+		NewVMBLSAggregateSignaturesFunction(handler),
 	}
 }
 
