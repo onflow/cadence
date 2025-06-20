@@ -238,13 +238,15 @@ func (v *StorageCapabilityControllerValue) GetMember(context MemberAccessibleCon
 		switch typedResult := result.(type) {
 		case deletionCheckedFunctionValue:
 			result = typedResult.FunctionValue
-		case FunctionValue:
+		case BoundFunctionValue,
+			*HostFunctionValue,
+			*InterpretedFunctionValue:
 			panic(errors.NewUnexpectedError("functions need to check deletion. Use newHostFunctionValue"))
 		}
 	}()
 
 	// NOTE: check if controller is already deleted
-	v.checkDeleted()
+	v.CheckDeleted()
 
 	switch name {
 	case sema.StorageCapabilityControllerTypeTagFieldName:
@@ -259,7 +261,7 @@ func (v *StorageCapabilityControllerValue) GetMember(context MemberAccessibleCon
 	case sema.StorageCapabilityControllerTypeCapabilityFieldName:
 		return v.GetCapability(context)
 
-		// NOTE: when adding new functions, ensure checkDeleted is called,
+		// NOTE: when adding new functions, ensure CheckDeleted is called,
 		// by e.g. using StorageCapabilityControllerValue.newHostFunction
 	}
 
@@ -296,7 +298,7 @@ func (v *StorageCapabilityControllerValue) GetMethod(
 		}
 		return v.retargetFunction
 
-		// NOTE: when adding new functions, ensure checkDeleted is called,
+		// NOTE: when adding new functions, ensure CheckDeleted is called,
 		// by e.g. using StorageCapabilityControllerValue.newHostFunction
 	}
 
@@ -315,7 +317,7 @@ func (v *StorageCapabilityControllerValue) SetMember(
 	value Value,
 ) bool {
 	// NOTE: check if controller is already deleted
-	v.checkDeleted()
+	v.CheckDeleted()
 
 	switch identifier {
 	case sema.StorageCapabilityControllerTypeTagFieldName:
@@ -353,9 +355,9 @@ func (v *StorageCapabilityControllerValue) ReferenceValue(
 	)
 }
 
-// checkDeleted checks if the controller is deleted,
+// CheckDeleted checks if the controller is deleted,
 // and panics if it is.
-func (v *StorageCapabilityControllerValue) checkDeleted() {
+func (v *StorageCapabilityControllerValue) CheckDeleted() {
 	if v.deleted {
 		panic(errors.NewDefaultUserError("controller is deleted"))
 	}
@@ -373,7 +375,7 @@ func (v *StorageCapabilityControllerValue) newHostFunctionValue(
 			funcType,
 			func(v *StorageCapabilityControllerValue, invocation Invocation) Value {
 				// NOTE: check if controller is already deleted
-				v.checkDeleted()
+				v.CheckDeleted()
 
 				return f(invocation)
 			},
@@ -456,4 +458,8 @@ func (v *StorageCapabilityControllerValue) newSetTagFunction(
 			return Void
 		},
 	)
+}
+
+func (v *StorageCapabilityControllerValue) SetDeleted() {
+	v.deleted = true
 }
