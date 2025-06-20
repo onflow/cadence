@@ -129,7 +129,7 @@ const (
 	SetIndex
 	GetIndex
 	RemoveIndex
-	_
+	GetMethod
 	_
 	_
 	_

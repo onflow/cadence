@@ -168,6 +168,7 @@ func TestPrintInstruction(t *testing.T) {
 		"CloseUpvalue local:258":   {byte(CloseUpvalue), 1, 2},
 		"GetGlobal global:258":     {byte(GetGlobal), 1, 2},
 		"SetGlobal global:258":     {byte(SetGlobal), 1, 2},
+		"GetMethod method:258":     {byte(GetMethod), 1, 2},
 
 		"Jump target:258":        {byte(Jump), 1, 2},
 		"JumpIfFalse target:258": {byte(JumpIfFalse), 1, 2},

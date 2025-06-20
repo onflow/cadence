@@ -312,7 +312,7 @@ func (v *NativeFunctionValue) IsImportable(
 func (v *NativeFunctionValue) FunctionType(interpreter.ValueStaticTypeContext) *sema.FunctionType {
 	if v.functionTypeGetter != nil {
 		// For native functions where the type is NOT pre-known, This method should never be invoked.
-		// Such functions must always be wrapped with a `BoundFunctionPointerValue`.
+		// Such functions must always be wrapped with a `BoundFunctionValue`.
 		panic(errors.NewUnreachableError())
 	}
 	return v.functionType
@@ -384,8 +384,8 @@ func (v *NativeFunctionValue) GetMethod(
 	panic(errors.NewUnreachableError())
 }
 
-// BoundFunctionPointerValue is a function-pointer taken for an object-method.
-type BoundFunctionPointerValue struct {
+// BoundFunctionValue is a function-wrapper which captures the receivers of an object-method.
+type BoundFunctionValue struct {
 	receiverReference   interpreter.ReferenceValue
 	receiverIsReference bool
 
@@ -393,9 +393,9 @@ type BoundFunctionPointerValue struct {
 	functionType *sema.FunctionType
 }
 
-func NewBoundFunctionPointerValue(
+func NewBoundFunctionValue(
 	context interpreter.ReferenceCreationContext,
-	receiver interpreter.MemberAccessibleValue,
+	receiver interpreter.Value,
 	method FunctionValue,
 ) FunctionValue {
 
@@ -405,29 +405,29 @@ func NewBoundFunctionPointerValue(
 
 	receiverRef, receiverIsRef := interpreter.ReceiverReference(context, receiver)
 
-	return &BoundFunctionPointerValue{
+	return &BoundFunctionValue{
 		Method:              method,
 		receiverReference:   receiverRef,
 		receiverIsReference: receiverIsRef,
 	}
 }
 
-var _ Value = &BoundFunctionPointerValue{}
-var _ FunctionValue = &BoundFunctionPointerValue{}
+var _ Value = &BoundFunctionValue{}
+var _ FunctionValue = &BoundFunctionValue{}
 
-func (*BoundFunctionPointerValue) IsValue() {}
+func (*BoundFunctionValue) IsValue() {}
 
-func (v *BoundFunctionPointerValue) IsFunctionValue() {}
+func (v *BoundFunctionValue) IsFunctionValue() {}
 
-func (v *BoundFunctionPointerValue) HasGenericType() bool {
+func (v *BoundFunctionValue) HasGenericType() bool {
 	return v.Method.HasGenericType()
 }
 
-func (v *BoundFunctionPointerValue) ResolvedFunctionType(_ Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+func (v *BoundFunctionValue) ResolvedFunctionType(_ Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 	return v.FunctionType(context)
 }
 
-func (v *BoundFunctionPointerValue) StaticType(context interpreter.ValueStaticTypeContext) bbq.StaticType {
+func (v *BoundFunctionValue) StaticType(context interpreter.ValueStaticTypeContext) bbq.StaticType {
 	if v.functionType == nil {
 		// initialize `v.functionType` field
 		v.initializeFunctionType(context)
@@ -436,7 +436,7 @@ func (v *BoundFunctionPointerValue) StaticType(context interpreter.ValueStaticTy
 	return interpreter.NewFunctionStaticType(context, v.functionType)
 }
 
-func (v *BoundFunctionPointerValue) Transfer(_ interpreter.ValueTransferContext,
+func (v *BoundFunctionValue) Transfer(_ interpreter.ValueTransferContext,
 	_ interpreter.LocationRange,
 	_ atree.Address,
 	_ bool,
@@ -447,15 +447,15 @@ func (v *BoundFunctionPointerValue) Transfer(_ interpreter.ValueTransferContext,
 	return v
 }
 
-func (v *BoundFunctionPointerValue) String() string {
+func (v *BoundFunctionValue) String() string {
 	return v.Method.String()
 }
 
-func (v *BoundFunctionPointerValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v *BoundFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return interpreter.NonStorable{Value: v}, nil
 }
 
-func (v *BoundFunctionPointerValue) Accept(
+func (v *BoundFunctionValue) Accept(
 	_ interpreter.ValueVisitContext,
 	_ interpreter.Visitor,
 	_ interpreter.LocationRange,
@@ -464,7 +464,7 @@ func (v *BoundFunctionPointerValue) Accept(
 	panic(errors.NewUnreachableError())
 }
 
-func (v *BoundFunctionPointerValue) Walk(
+func (v *BoundFunctionValue) Walk(
 	_ interpreter.ValueWalkContext,
 	_ func(interpreter.Value),
 	_ interpreter.LocationRange,
@@ -472,7 +472,7 @@ func (v *BoundFunctionPointerValue) Walk(
 	// NO-OP
 }
 
-func (v *BoundFunctionPointerValue) ConformsToStaticType(
+func (v *BoundFunctionValue) ConformsToStaticType(
 	_ interpreter.ValueStaticTypeConformanceContext,
 	_ interpreter.LocationRange,
 	_ interpreter.TypeConformanceResults,
@@ -480,11 +480,11 @@ func (v *BoundFunctionPointerValue) ConformsToStaticType(
 	return true
 }
 
-func (v *BoundFunctionPointerValue) RecursiveString(_ interpreter.SeenReferences) string {
+func (v *BoundFunctionValue) RecursiveString(_ interpreter.SeenReferences) string {
 	return v.String()
 }
 
-func (v *BoundFunctionPointerValue) MeteredString(
+func (v *BoundFunctionValue) MeteredString(
 	context interpreter.ValueStringContext,
 	_ interpreter.SeenReferences,
 	_ interpreter.LocationRange,
@@ -493,30 +493,30 @@ func (v *BoundFunctionPointerValue) MeteredString(
 	return functionType.MeteredString(context)
 }
 
-func (v *BoundFunctionPointerValue) IsResourceKinded(_ interpreter.ValueStaticTypeContext) bool {
+func (v *BoundFunctionValue) IsResourceKinded(_ interpreter.ValueStaticTypeContext) bool {
 	return false
 }
 
-func (v *BoundFunctionPointerValue) NeedsStoreTo(_ atree.Address) bool {
+func (v *BoundFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v *BoundFunctionPointerValue) DeepRemove(_ interpreter.ValueRemoveContext, _ bool) {
+func (v *BoundFunctionValue) DeepRemove(_ interpreter.ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
-func (v *BoundFunctionPointerValue) Clone(_ interpreter.ValueCloneContext) interpreter.Value {
+func (v *BoundFunctionValue) Clone(_ interpreter.ValueCloneContext) interpreter.Value {
 	return v
 }
 
-func (v *BoundFunctionPointerValue) IsImportable(
+func (v *BoundFunctionValue) IsImportable(
 	_ interpreter.ValueImportableContext,
 	_ interpreter.LocationRange,
 ) bool {
 	return false
 }
 
-func (v *BoundFunctionPointerValue) FunctionType(context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+func (v *BoundFunctionValue) FunctionType(context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 	if v.functionType == nil {
 		v.initializeFunctionType(context)
 	}
@@ -524,7 +524,7 @@ func (v *BoundFunctionPointerValue) FunctionType(context interpreter.ValueStatic
 	return v.functionType
 }
 
-func (v *BoundFunctionPointerValue) initializeFunctionType(context interpreter.ValueStaticTypeContext) {
+func (v *BoundFunctionValue) initializeFunctionType(context interpreter.ValueStaticTypeContext) {
 	method := v.Method
 	// The type of the native function could be either pre-known (e.g: `Integer.toBigEndianBytes()`),
 	// Or would needs to be derived based on the receiver (e.g: `[Int8].append()`).
@@ -538,7 +538,7 @@ func (v *BoundFunctionPointerValue) initializeFunctionType(context interpreter.V
 	}
 }
 
-func (v *BoundFunctionPointerValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
+func (v *BoundFunctionValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
 	context := invocation.InvocationContext
 
 	arguments := make([]Value, 0, 1+len(invocation.Arguments))
@@ -551,7 +551,7 @@ func (v *BoundFunctionPointerValue) Invoke(invocation interpreter.Invocation) in
 	)
 }
 
-func (v *BoundFunctionPointerValue) Receiver(context interpreter.ValueStaticTypeContext) Value {
+func (v *BoundFunctionValue) Receiver(context interpreter.ValueStaticTypeContext) Value {
 	receiver := interpreter.GetReceiver(
 		v.receiverReference,
 		v.receiverIsReference,
