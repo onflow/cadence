@@ -325,6 +325,8 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -337,6 +339,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 				nil,
 				Context{
 					Interface: runtimeInterface,
+					UseVM:     *compile,
 				},
 			)
 		}
@@ -650,6 +653,8 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -793,6 +798,8 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -805,6 +812,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 				nil,
 				Context{
 					Interface: runtimeInterface,
+					UseVM:     *compile,
 				},
 			)
 		}

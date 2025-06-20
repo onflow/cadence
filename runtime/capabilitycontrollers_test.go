@@ -173,6 +173,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3626,6 +3628,8 @@ func TestRuntimeCapabilityBorrowAsInheritedInterface(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: contract deployment with VM
+			// UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)

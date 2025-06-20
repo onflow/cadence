@@ -49,16 +49,19 @@ func TestRuntimeDeployedContracts(t *testing.T) {
 				let deployedContract = signer.contracts.get(name: "Test")
 				assert(deployedContract!.name == "Test")
 
-				let expected: {String: Void} =
-					{ "A.2a00000000000000.Test.A": ()
-					, "A.2a00000000000000.Test.B": ()
-					, "A.2a00000000000000.Test.C": ()
-					}
+				let expected: {String: Void} = {
+                    "A.2a00000000000000.Test.A": (),
+					"A.2a00000000000000.Test.B": (),
+					"A.2a00000000000000.Test.C": ()
+				}
 				let types = deployedContract!.publicTypes()
 				assert(types.length == 3)
 
 				for type in types {
-					assert(expected[type.identifier] != nil, message: type.identifier)
+					assert(
+                        expected[type.identifier] != nil,
+                        message: type.identifier
+                    )
 				}
 			}
 		}
@@ -105,6 +108,8 @@ func TestRuntimeDeployedContracts(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: contract deployment with VM
+			// UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -117,6 +122,7 @@ func TestRuntimeDeployedContracts(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 

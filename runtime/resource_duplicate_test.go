@@ -86,6 +86,8 @@ func TestRuntimeResourceDuplicationWithContractTransferInTransaction(t *testing.
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: contract deployment with VM
+			// UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -99,6 +101,8 @@ func TestRuntimeResourceDuplicationWithContractTransferInTransaction(t *testing.
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: contract deployment with VM
+			// UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -139,6 +143,8 @@ func TestRuntimeResourceDuplicationWithContractTransferInTransaction(t *testing.
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: contract deployment with VM
+			// UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -193,6 +199,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInTransaction(t *testing.
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)
@@ -254,6 +261,8 @@ func TestRuntimeResourceDuplicationWithContractTransferInSameContract(t *testing
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: contract deployment with VM
+			// UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -267,6 +276,8 @@ func TestRuntimeResourceDuplicationWithContractTransferInSameContract(t *testing
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: contract deployment with VM
+			// UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -339,6 +350,8 @@ func TestRuntimeResourceDuplicationWithContractTransferInSameContract(t *testing
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: contract deployment with VM
+			// UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)

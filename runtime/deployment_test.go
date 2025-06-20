@@ -178,6 +178,8 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.TransactionLocation{},
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		exportedEventType := ExportType(

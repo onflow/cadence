@@ -431,15 +431,13 @@ func newAccountContractsValue(
 			handler,
 			addressValue,
 		),
-		newAccountContractsGetFunction(
+		newInterpreterAccountContractsGetFunction(
 			context,
-			sema.Account_ContractsTypeGetFunctionType,
 			handler,
 			addressValue,
 		),
-		newAccountContractsBorrowFunction(
+		newInterpreterAccountContractsBorrowFunction(
 			context,
-			sema.Account_ContractsTypeBorrowFunctionType,
 			handler,
 			addressValue,
 		),
@@ -1693,58 +1691,105 @@ type AccountContractProvider interface {
 	GetAccountContractCode(location common.AddressLocation) ([]byte, error)
 }
 
-func newAccountContractsGetFunction(
+func newInterpreterAccountContractsGetFunction(
 	context interpreter.FunctionCreationContext,
-	functionType *sema.FunctionType,
 	provider AccountContractProvider,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountContracts interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 
-		// Converted addresses can be cached and don't have to be recomputed on each function invocation
-		address := addressValue.ToAddress()
-
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountContracts,
-			functionType,
+			sema.Account_ContractsTypeGetFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
+				context := invocation.InvocationContext
+
 				nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				name := nameValue.Str
-				location := common.NewAddressLocation(invocation.InvocationContext, address, name)
 
-				code, err := provider.GetAccountContractCode(location)
-				if err != nil {
-					panic(err)
-				}
-
-				if len(code) > 0 {
-					return interpreter.NewSomeValueNonCopying(
-						invocation.InvocationContext,
-						interpreter.NewDeployedContractValue(
-							invocation.InvocationContext,
-							addressValue,
-							nameValue,
-							interpreter.ByteSliceToByteArrayValue(
-								invocation.InvocationContext,
-								code,
-							),
-						),
-					)
-				} else {
-					return interpreter.Nil
-				}
+				return AccountContractsGet(
+					context,
+					addressValue,
+					nameValue,
+					provider,
+				)
 			},
 		)
 	}
 }
 
-func newAccountContractsBorrowFunction(
+func NewVMAccountContractsGetFunction(provider AccountContractProvider) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_ContractsType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_ContractsTypeGetFunctionName,
+			sema.Account_ContractsTypeGetFunctionType,
+			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
+				var receiver interpreter.Value
+
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+
+				// Get address field from the receiver
+				addressValue := vm.GetAccountTypePrivateAddressValue(receiver)
+
+				nameValue, ok := args[0].(*interpreter.StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return AccountContractsGet(
+					context,
+					addressValue,
+					nameValue,
+					provider,
+				)
+			},
+		),
+	}
+}
+
+func AccountContractsGet(
+	context interpreter.InvocationContext,
+	addressValue interpreter.AddressValue,
+	nameValue *interpreter.StringValue,
+	provider AccountContractProvider,
+) interpreter.Value {
+	name := nameValue.Str
+	location := common.NewAddressLocation(
+		context,
+		common.Address(addressValue),
+		name,
+	)
+
+	code, err := provider.GetAccountContractCode(location)
+	if err != nil {
+		panic(err)
+	}
+
+	if len(code) > 0 {
+		return interpreter.NewSomeValueNonCopying(
+			context,
+			interpreter.NewDeployedContractValue(
+				context,
+				addressValue,
+				nameValue,
+				interpreter.ByteSliceToByteArrayValue(
+					context,
+					code,
+				),
+			),
+		)
+	} else {
+		return interpreter.Nil
+	}
+}
+
+func newInterpreterAccountContractsBorrowFunction(
 	context interpreter.AccountContractBorrowContext,
-	functionType *sema.FunctionType,
 	handler AccountContractsHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
@@ -1756,7 +1801,7 @@ func newAccountContractsBorrowFunction(
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountContracts,
-			functionType,
+			sema.Account_ContractsTypeBorrowFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
 				invocationContext := invocation.InvocationContext
@@ -1766,74 +1811,129 @@ func newAccountContractsBorrowFunction(
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				name := nameValue.Str
-				location := common.NewAddressLocation(invocation.InvocationContext, address, name)
 
 				typeParameterPair := invocation.TypeParameterTypes.Oldest()
 				if typeParameterPair == nil {
 					panic(errors.NewUnreachableError())
 				}
-				ty := typeParameterPair.Value
+				borrowType := typeParameterPair.Value
 
-				referenceType, ok := ty.(*sema.ReferenceType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				if referenceType.Authorization != sema.UnauthorizedAccess {
-					panic(errors.NewDefaultUserError("cannot borrow a reference with an authorization"))
-				}
-
-				// Check if the contract exists
-
-				code, err := handler.GetAccountContractCode(location)
-				if err != nil {
-					panic(err)
-				}
-				if len(code) == 0 {
-					return interpreter.Nil
-				}
-
-				// Load the contract and get the contract composite value.
-				// The requested contract may be a contract interface,
-				// in which case there will be no contract composite value.
-
-				contractLocation := common.NewAddressLocation(invocationContext, address, name)
-
-				contractValue, err := invocationContext.GetContractValue(contractLocation)
-				if err != nil {
-					var notDeclaredErr interpreter.NotDeclaredError
-					if goerrors.As(err, &notDeclaredErr) {
-						return interpreter.Nil
-					}
-
-					panic(err)
-				}
-
-				// Check the type
-
-				staticType := contractValue.StaticType(invocationContext)
-				if !interpreter.IsSubTypeOfSemaType(invocationContext, staticType, referenceType.Type) {
-					return interpreter.Nil
-				}
-
-				// No need to track the referenced value, since the reference is taken to a contract value.
-				// A contract value would never be moved or destroyed, within the execution of a program.
-				reference := interpreter.NewEphemeralReferenceValue(
+				return AccountContractsBorrow(
 					invocationContext,
-					interpreter.UnauthorizedAccess,
-					contractValue,
-					referenceType.Type,
 					locationRange,
-				)
-
-				return interpreter.NewSomeValueNonCopying(
-					invocationContext,
-					reference,
+					address,
+					nameValue,
+					borrowType,
+					handler,
 				)
 			},
 		)
 	}
+}
+
+func NewVMAccountContractsBorrowFunction(handler AccountContractsHandler) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_ContractsType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_ContractsTypeBorrowFunctionName,
+			sema.Account_ContractsTypeBorrowFunctionType,
+			func(context *vm.Context, typeArguments []bbq.StaticType, args ...vm.Value) vm.Value {
+
+				var receiver interpreter.Value
+
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+
+				// Get address field from the receiver
+				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+
+				nameValue, ok := args[0].(*interpreter.StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				borrowType := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
+
+				return AccountContractsBorrow(
+					context,
+					interpreter.EmptyLocationRange,
+					address,
+					nameValue,
+					borrowType,
+					handler,
+				)
+			},
+		),
+	}
+}
+
+func AccountContractsBorrow(
+	invocationContext interpreter.InvocationContext,
+	locationRange interpreter.LocationRange,
+	address common.Address,
+	nameValue *interpreter.StringValue,
+	borrowType sema.Type,
+	handler AccountContractsHandler,
+) interpreter.Value {
+	name := nameValue.Str
+	location := common.NewAddressLocation(invocationContext, address, name)
+
+	referenceType, ok := borrowType.(*sema.ReferenceType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	if referenceType.Authorization != sema.UnauthorizedAccess {
+		panic(errors.NewDefaultUserError("cannot borrow a reference with an authorization"))
+	}
+
+	// Check if the contract exists
+
+	code, err := handler.GetAccountContractCode(location)
+	if err != nil {
+		panic(err)
+	}
+	if len(code) == 0 {
+		return interpreter.Nil
+	}
+
+	// Load the contract and get the contract composite value.
+	// The requested contract may be a contract interface,
+	// in which case there will be no contract composite value.
+
+	contractLocation := common.NewAddressLocation(invocationContext, address, name)
+
+	contractValue, err := invocationContext.GetContractValue(contractLocation)
+	if err != nil {
+		var notDeclaredErr interpreter.NotDeclaredError
+		if goerrors.As(err, &notDeclaredErr) {
+			return interpreter.Nil
+		}
+
+		panic(err)
+	}
+
+	// Check the type
+
+	staticType := contractValue.StaticType(invocationContext)
+	if !interpreter.IsSubTypeOfSemaType(invocationContext, staticType, referenceType.Type) {
+		return interpreter.Nil
+	}
+
+	// No need to track the referenced value, since the reference is taken to a contract value.
+	// A contract value would never be moved or destroyed, within the execution of a program.
+	reference := interpreter.NewEphemeralReferenceValue(
+		invocationContext,
+		interpreter.UnauthorizedAccess,
+		contractValue,
+		referenceType.Type,
+		locationRange,
+	)
+
+	return interpreter.NewSomeValueNonCopying(
+		invocationContext,
+		reference,
+	)
 }
 
 type ContractAdditionTracker interface {
