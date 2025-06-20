@@ -2164,11 +2164,11 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 			panic(errors.NewDefaultUserError("invalid function name"))
 		}
 
-		c.withOptionalChainingOptimized(
+		c.withOptionalChaining(
 			invokedExpr.Expression,
 			isOptional,
 			func() {
-				// withOptionalChainingOptimized already load the receiver onto the stack.
+				// withOptionalChaining already load the receiver onto the stack.
 
 				// Compile arguments
 				c.compileArguments(expression.Arguments, invocationTypes)
@@ -2221,12 +2221,10 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		c.withOptionalChaining(
 			invokedExpr.Expression,
 			isOptional,
-			func(receiverIndex uint16) {
+			func() {
 				// Compile as object-method call.
 				// Function must be loaded only if the receiver is non-nil.
-
-				// The receiver is loaded first.
-				c.emitGetLocal(receiverIndex)
+				// The receiver is already on the stack.
 
 				// Get the method as a bound function.
 				// This is needed to capture the implicit reference that's get created by bound functions.
@@ -2248,28 +2246,10 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 }
 
 // withOptionalChaining compiles the `ifNotNil` procedure with optional chaining.
-func (c *Compiler[_, _]) withOptionalChaining(
-	targetExpression ast.Expression,
-	isOptional bool,
-	ifNotNil func(targetIndex uint16),
-) {
-	nilJump := c.compileOptionalChainingNilJump(targetExpression, isOptional)
-
-	// Assign the unwrapped value to a temp local variable.
-	unwrappedValueTempIndex := c.currentFunction.generateLocalIndex()
-	c.emitSetLocal(unwrappedValueTempIndex)
-
-	ifNotNil(unwrappedValueTempIndex)
-	c.patchOptionalChainingNilJump(isOptional, nilJump)
-}
-
-// withOptionalChainingOptimized compiles the `ifNotNil` procedure with optional chaining.
 // IMPORTANT: This function expects the `ifNotNil` procedure to assume the target expression
 // is already loaded on to the stack.
 // This is an optimization to avoid redundant store-to/load-from local indexes.
-// If the `ifNotNil` procedure need to load other values before the target is loaded,
-// then use the withOptionalChaining counterpart method.
-func (c *Compiler[_, _]) withOptionalChainingOptimized(
+func (c *Compiler[_, _]) withOptionalChaining(
 	targetExpression ast.Expression,
 	isOptional bool,
 	ifNotNil func(),
@@ -2409,11 +2389,11 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 		}
 	}
 
-	c.withOptionalChainingOptimized(
+	c.withOptionalChaining(
 		expression.Expression,
 		memberAccessInfo.IsOptional,
 		func() {
-			// withOptionalChainingOptimized evaluates the target expression
+			// withOptionalChaining evaluates the target expression
 			// and leave the value on stack.
 			// i.e: the target/parent is already loaded.
 

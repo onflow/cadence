@@ -2784,7 +2784,6 @@ func TestCompileMethodInvocation(t *testing.T) {
 		const (
 			// fooIndex is the index of the local variable `foo`, which is the first local variable
 			fooIndex = iota
-			tempIndex
 		)
 
 		assert.Equal(t,
@@ -2799,8 +2798,6 @@ func TestCompileMethodInvocation(t *testing.T) {
 				// foo.f(true)
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: fooIndex},
-				opcode.InstructionSetLocal{Local: tempIndex},
-				opcode.InstructionGetLocal{Local: tempIndex},
 				opcode.InstructionGetMethod{Method: fFuncIndex},
 				opcode.InstructionTrue{},
 				opcode.InstructionTransferAndConvert{Type: 2},
@@ -3249,18 +3246,14 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	const (
 		selfIndex = iota
-		tempIndex
 	)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
 			opcode.InstructionStatement{},
 
-			opcode.InstructionGetLocal{Local: selfIndex},
-			opcode.InstructionSetLocal{Local: tempIndex},
-
 			// self.test()
-			opcode.InstructionGetLocal{Local: tempIndex},
+			opcode.InstructionGetLocal{Local: selfIndex},
 			opcode.InstructionGetMethod{Method: interfaceFunctionIndex}, // must be interface method's index
 			opcode.InstructionInvokeMethodStatic{
 				TypeArgs: nil,
@@ -4045,7 +4038,6 @@ func TestCompileFunctionConditions(t *testing.T) {
 		// Local var indexes
 		const (
 			selfIndex = iota
-			tempIndex
 		)
 
 		// Constant indexes
@@ -4075,11 +4067,6 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionGetGlobal{Global: 9},
 				opcode.InstructionInvoke{ArgCount: 0},
 
-				// Store in temp index
-				opcode.InstructionSetLocal{Local: tempIndex},
-
-				// Load receiver at the temp index, as the first argument.
-				opcode.InstructionGetLocal{Local: tempIndex},
 				// Get function value `A.TestStruct.test()`
 				opcode.InstructionGetMethod{Method: 10},
 				opcode.InstructionInvokeMethodStatic{
@@ -4088,7 +4075,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.InstructionNot{},
-				opcode.InstructionJumpIfFalse{Target: 15},
+				opcode.InstructionJumpIfFalse{Target: 13},
 
 				// panic("pre/post condition failed")
 				opcode.InstructionStatement{},
@@ -6952,20 +6939,17 @@ func TestCompileOptionalChaining(t *testing.T) {
 
 				// Nil check
 				opcode.InstructionGetLocal{Local: optionalValueTempIndex},
-				opcode.InstructionJumpIfNil{Target: 16},
+				opcode.InstructionJumpIfNil{Target: 14},
 
 				// If `foo != nil`
-				// Unwrap the optional
+				// Unwrap the optional. (Loads receiver)
 				opcode.InstructionGetLocal{Local: optionalValueTempIndex},
 				opcode.InstructionUnwrap{},
-				opcode.InstructionSetLocal{Local: unwrappedValueTempIndex},
 
-				// Load receiver
-				opcode.InstructionGetLocal{Local: unwrappedValueTempIndex},
 				// Load `Foo.bar` function
 				opcode.InstructionGetMethod{Method: 4},
 				opcode.InstructionInvokeMethodStatic{ArgCount: 0},
-				opcode.InstructionJump{Target: 17},
+				opcode.InstructionJump{Target: 15},
 
 				// If `foo == nil`
 				opcode.InstructionNil{},
@@ -7718,22 +7702,34 @@ func TestCompileOptionalArgument(t *testing.T) {
 		assert.Equal(t,
 			[]opcode.Instruction{
 				opcode.InstructionStatement{},
+
+				// Load receiver `self.account.contracts`.
 				opcode.InstructionGetLocal{Local: 0},
 				opcode.InstructionGetField{FieldName: 0},
 				opcode.InstructionGetField{FieldName: 1},
 				opcode.InstructionNewRef{Type: 4, IsImplicit: true},
-				opcode.InstructionSetLocal{Local: 1},
-				opcode.InstructionGetLocal{Local: 1},
+
+				// Load function value `add()`
 				opcode.InstructionGetMethod{Method: 5},
+
+				// Load arguments.
+
+				// Name: "Foo",
 				opcode.InstructionGetConstant{Constant: 2},
 				opcode.InstructionTransferAndConvert{Type: 5},
+
+				// Contract code
 				opcode.InstructionGetConstant{Constant: 3},
 				opcode.InstructionGetField{FieldName: 4},
 				opcode.InstructionTransferAndConvert{Type: 6},
+
+				// Message: "Optional arg"
 				opcode.InstructionGetConstant{Constant: 5},
 				opcode.InstructionTransfer{},
+
 				opcode.InstructionInvokeMethodStatic{ArgCount: 3},
 				opcode.InstructionDrop{},
+
 				opcode.InstructionReturn{}},
 			functions[3].Code,
 		)
