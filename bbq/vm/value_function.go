@@ -395,7 +395,7 @@ type BoundFunctionPointerValue struct {
 
 func NewBoundFunctionPointerValue(
 	context interpreter.ReferenceCreationContext,
-	receiver interpreter.MemberAccessibleValue,
+	receiver interpreter.Value,
 	method FunctionValue,
 ) FunctionValue {
 

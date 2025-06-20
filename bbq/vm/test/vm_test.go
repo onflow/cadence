@@ -1259,7 +1259,11 @@ func TestContractAccessDuringInit(t *testing.T) {
 	t.Run("using contract name", func(t *testing.T) {
 		t.Parallel()
 
-		checker, err := ParseAndCheckWithOptions(t,
+		location := common.NewAddressLocation(nil, common.Address{0x1}, "MyContract")
+
+		programs := CompiledPrograms{}
+
+		program := ParseCheckAndCompile(t,
 			`
               contract MyContract {
                   var status: String
@@ -1273,19 +1277,12 @@ func TestContractAccessDuringInit(t *testing.T) {
                   }
               }
             `,
-			ParseAndCheckOptions{
-				Location: common.NewAddressLocation(nil, common.Address{0x1}, "MyContract"),
-			},
+			location,
+			programs,
 		)
-		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(
-			interpreter.ProgramFromChecker(checker),
-			checker.Location,
-		)
-		program := comp.Compile()
+		vmConfig := PrepareVMConfig(t, nil, programs)
 
-		vmConfig := &vm.Config{}
 		vmInstance, contractValue := initializeContract(
 			t,
 			scriptLocation(),
@@ -1300,7 +1297,11 @@ func TestContractAccessDuringInit(t *testing.T) {
 	t.Run("using self", func(t *testing.T) {
 		t.Parallel()
 
-		checker, err := ParseAndCheckWithOptions(t,
+		location := common.NewAddressLocation(nil, common.Address{0x1}, "MyContract")
+
+		programs := CompiledPrograms{}
+
+		program := ParseCheckAndCompile(t,
 			`
               contract MyContract {
                   var status: String
@@ -1314,19 +1315,12 @@ func TestContractAccessDuringInit(t *testing.T) {
                   }
               }
             `,
-			ParseAndCheckOptions{
-				Location: common.NewAddressLocation(nil, common.Address{0x1}, "MyContract"),
-			},
+			location,
+			programs,
 		)
-		require.NoError(t, err)
 
-		comp := compiler.NewInstructionCompiler(
-			interpreter.ProgramFromChecker(checker),
-			checker.Location,
-		)
-		program := comp.Compile()
+		vmConfig := PrepareVMConfig(t, nil, programs)
 
-		vmConfig := &vm.Config{}
 		vmInstance, contractValue := initializeContract(
 			t,
 			scriptLocation(),

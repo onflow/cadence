@@ -2036,6 +2036,13 @@ func (c *Compiler[_, _]) emitGlobalLoad(name string) {
 	})
 }
 
+func (c *Compiler[_, _]) emitMethodLoad(name string) {
+	global := c.findGlobal(name)
+	c.emit(opcode.InstructionGetMethod{
+		Method: global.Index,
+	})
+}
+
 func (c *Compiler[_, _]) emitVariableStore(name string) {
 	local := c.currentFunction.findLocal(name)
 	if local != nil {
@@ -2083,7 +2090,7 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 				memberInfo,
 				memberExpression,
 				invocationTypes,
-				argumentCount,
+				uint16(argumentCount),
 			)
 			return
 		}
@@ -2114,7 +2121,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	memberInfo sema.MemberAccessInfo,
 	invokedExpr *ast.MemberExpression,
 	invocationTypes sema.InvocationExpressionTypes,
-	argumentCount int,
+	argumentCount uint16,
 ) {
 	var funcName string
 
@@ -2137,7 +2144,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 
 		c.emit(opcode.InstructionInvoke{
 			TypeArgs: typeArgs,
-			ArgCount: uint16(argumentCount),
+			ArgCount: argumentCount,
 		})
 		return
 	}
@@ -2149,8 +2156,6 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	// Invocations into the interface code, such as default functions and inherited conditions,
 	// that were synthetically added at the desugar phase, must be static calls.
 	isInterfaceInheritedFuncCall := c.DesugaredElaboration.IsInterfaceMethodStaticCall(expression)
-
-	argsCountWithReceiver := uint16(argumentCount) + 1
 
 	// Any invocation on restricted-types must be dynamic
 	if !isInterfaceInheritedFuncCall && isDynamicMethodInvocation(memberInfo.AccessedType) {
@@ -2169,6 +2174,9 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 				c.compileArguments(expression.Arguments, invocationTypes)
 
 				funcNameConst := c.addStringConst(funcName)
+
+				argsCountWithReceiver := argumentCount + 1
+
 				c.emit(
 					opcode.InstructionInvokeMethodDynamic{
 						Name:     funcNameConst.index,
@@ -2207,7 +2215,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		c.compileArguments(expression.Arguments, invocationTypes)
 		c.emit(opcode.InstructionInvoke{
 			TypeArgs: typeArgs,
-			ArgCount: uint16(argumentCount),
+			ArgCount: argumentCount,
 		})
 	} else {
 		c.withOptionalChaining(
@@ -2215,20 +2223,24 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 			isOptional,
 			func(receiverIndex uint16) {
 				// Compile as object-method call.
-
 				// Function must be loaded only if the receiver is non-nil.
-				c.emitGlobalLoad(funcName)
 
 				// The receiver is loaded first.
-				// So 'self' is always the zero-th argument.
 				c.emitGetLocal(receiverIndex)
+
+				// Get the method as a bound function.
+				// This is needed to capture the implicit reference that's get created by bound functions.
+				c.emitMethodLoad(funcName)
 
 				// Compile arguments
 				c.compileArguments(expression.Arguments, invocationTypes)
 
 				c.emit(opcode.InstructionInvokeMethodStatic{
 					TypeArgs: typeArgs,
-					ArgCount: argsCountWithReceiver,
+
+					// Argument count does not include the receiver,
+					// since receiver is already captured by the bound-function.
+					ArgCount: argumentCount,
 				})
 			},
 		)

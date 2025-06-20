@@ -899,17 +899,39 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	)
 }
 
+func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
+	globalIndex := ins.Method
+	globals := vm.callFrame.function.Executable.Globals
+
+	variable := globals[globalIndex]
+	method := variable.GetValue(vm.context).(FunctionValue)
+
+	receiver := vm.pop()
+
+	boundFunction := NewBoundFunctionPointerValue(
+		vm.context,
+		receiver,
+		method,
+	)
+
+	vm.push(boundFunction)
+}
+
 func opInvokeMethodStatic(vm *VM, ins opcode.InstructionInvokeMethodStatic) {
 	// Load type arguments
 	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 
 	// Load arguments
 	arguments := vm.popN(int(ins.ArgCount))
-	receiver := arguments[ReceiverIndex]
-	arguments[ReceiverIndex] = maybeDereference(vm.context, receiver)
+	//receiver := arguments[ReceiverIndex]
+	//arguments[ReceiverIndex] = maybeDereference(vm.context, receiver)
 
 	// Load the invoked value
-	functionValue := vm.pop()
+	boundFunction := vm.pop().(*BoundFunctionPointerValue)
+
+	functionValue := boundFunction.Method
+	receiver := boundFunction.Receiver(vm.context)
+	arguments = append([]Value{receiver}, arguments...)
 
 	invokeFunction(
 		vm,
@@ -1533,6 +1555,8 @@ func (vm *VM) run() {
 			opGetIndex(vm)
 		case opcode.InstructionRemoveIndex:
 			opRemoveIndex(vm)
+		case opcode.InstructionGetMethod:
+			opGetMethod(vm, ins)
 		case opcode.InstructionInvoke:
 			opInvoke(vm, ins)
 		case opcode.InstructionInvokeMethodStatic:
