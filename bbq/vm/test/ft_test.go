@@ -349,11 +349,21 @@ func compiledFTTransfer(tb testing.TB) {
 		interpreter.NewUnmeteredUFix64Value(total),
 	}
 
+	// Use the same authorizations as the one defined in the transaction.
+	semaAuthorization := sema.NewEntitlementSetAccess(
+		[]*sema.EntitlementType{
+			sema.BorrowValueType,
+		},
+		sema.Conjunction,
+	)
+
+	authorization := interpreter.ConvertSemaAccessToStaticAuthorization(nil, semaAuthorization)
+
 	mintTxAuthorizer := stdlib.NewAccountReferenceValue(
 		mintTxVM.Context(),
 		accountHandler,
 		interpreter.AddressValue(contractsAddress),
-		interpreter.FullyEntitledAccountAccess,
+		authorization,
 		interpreter.EmptyLocationRange,
 	)
 
