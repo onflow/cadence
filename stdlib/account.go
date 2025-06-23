@@ -303,8 +303,8 @@ func NewVMGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
 		GetAuthAccountFunctionName,
 		GetAuthAccountFunctionType,
 		getAuthAccountFunctionDocString,
-		func(context *vm.Context, typeArguments []bbq.StaticType, arguments ...interpreter.Value) interpreter.Value {
-			accountAddress, ok := arguments[0].(interpreter.AddressValue)
+		func(context *vm.Context, typeArguments []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
+			accountAddress, ok := args[0].(interpreter.AddressValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -2957,7 +2957,7 @@ func NewVMAccountStorageCapabilitiesGetControllerFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeGetControllerFunctionName,
 			sema.Account_StorageCapabilitiesTypeGetControllerFunctionType,
-			func(context *vm.Context, typeArguments []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
+			func(context *vm.Context, _ []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
@@ -3057,7 +3057,7 @@ func NewVMAccountStorageCapabilitiesGetControllersFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeGetControllersFunctionName,
 			sema.Account_StorageCapabilitiesTypeGetControllersFunctionType,
-			func(context *vm.Context, typeArguments []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
+			func(context *vm.Context, _ []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
@@ -3193,7 +3193,7 @@ func NewVMAccountStorageCapabilitiesForEachControllerFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionName,
 			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionType,
-			func(context *vm.Context, typeArguments []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
+			func(context *vm.Context, _ []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
@@ -3470,7 +3470,7 @@ func NewVMAccountStorageCapabilitiesIssueWithTypeFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionName,
 			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
-			func(context *vm.Context, typeArguments []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
+			func(context *vm.Context, _ []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
@@ -3677,7 +3677,10 @@ func NewVMAccountAccountCapabilitiesIssueFunction(
 			sema.Account_AccountCapabilitiesTypeIssueFunctionName,
 			sema.Account_AccountCapabilitiesTypeIssueFunctionType,
 			func(context *vm.Context, typeArguments []bbq.StaticType, args ...vm.Value) vm.Value {
-				receiver := args[vm.ReceiverIndex]
+				var receiver interpreter.Value
+
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:] // nolint:staticcheck
 
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -3748,7 +3751,7 @@ func NewVMAccountAccountCapabilitiesIssueWithTypeFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_AccountCapabilitiesTypeIssueWithTypeFunctionName,
 			sema.Account_AccountCapabilitiesTypeIssueWithTypeFunctionType,
-			func(context *vm.Context, typeArguments []bbq.StaticType, args ...vm.Value) vm.Value {
+			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
@@ -5418,7 +5421,10 @@ func NewVMAccountAccountCapabilitiesGetControllersFunction(
 			sema.Account_AccountCapabilitiesTypeGetControllersFunctionType,
 			func(context *vm.Context, _ []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
 
-				receiver := args[vm.ReceiverIndex]
+				var receiver interpreter.Value
+
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:] // nolint:staticcheck
 
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()

@@ -63,9 +63,12 @@ func init() {
 		NewNativeFunctionValue(
 			sema.StorageCapabilityControllerTypeDeleteFunctionName,
 			sema.StorageCapabilityControllerTypeDeleteFunctionType,
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, args ...Value) Value {
 
-				receiver := arguments[ReceiverIndex]
+				var receiver interpreter.Value
+
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				receiver, args = args[ReceiverIndex], args[TypeBoundFunctionArgumentOffset:] // nolint:staticcheck
 
 				v := getCheckedStorageCapabilityControllerReceiver(receiver)
 
@@ -83,9 +86,12 @@ func init() {
 		NewNativeFunctionValue(
 			sema.StorageCapabilityControllerTypeTargetFunctionName,
 			sema.StorageCapabilityControllerTypeTargetFunctionType,
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, args ...Value) Value {
 
-				receiver := arguments[ReceiverIndex]
+				var receiver interpreter.Value
+
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				receiver, args = args[ReceiverIndex], args[TypeBoundFunctionArgumentOffset:] // nolint:staticcheck
 
 				v := getCheckedStorageCapabilityControllerReceiver(receiver)
 

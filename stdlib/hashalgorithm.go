@@ -114,7 +114,7 @@ func NewVMHashAlgorithmHashFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.HashAlgorithmTypeHashFunctionName,
 			sema.HashAlgorithmTypeHashFunctionType,
-			func(context *vm.Context, typeArguments []bbq.StaticType, args ...vm.Value) vm.Value {
+			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
@@ -187,7 +187,7 @@ func NewVMHashAlgorithmHashWithTagFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.HashAlgorithmTypeHashWithTagFunctionName,
 			sema.HashAlgorithmTypeHashWithTagFunctionType,
-			func(context *vm.Context, typeArguments []bbq.StaticType, args ...vm.Value) vm.Value {
+			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
@@ -283,7 +283,7 @@ func NewVMHashAlgorithmConstructor(hasher Hasher) StandardLibraryValue {
 	function := vm.NewNativeFunctionValue(
 		sema.HashAlgorithmTypeName,
 		hashAlgorithmLookupType,
-		func(context *vm.Context, typeArguments []bbq.StaticType, args ...vm.Value) vm.Value {
+		func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
 			rawValue := args[0].(interpreter.UInt8Value)
 
 			caseValue, ok := cases[rawValue]
