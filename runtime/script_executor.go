@@ -226,28 +226,11 @@ func (executor *scriptExecutor) executeWithInterpreter(
 		return nil, err
 	}
 
-	// Export before committing storage
-
-	result, err := ExportValue(
+	return ExportValue(
 		value,
 		inter,
 		interpreter.EmptyLocationRange,
 	)
-	if err != nil {
-		return nil, err
-	}
-
-	// Write back all stored values, which were actually just cached, back into storage.
-
-	// Even though this function is `ExecuteScript`, that doesn't imply the changes
-	// to storage will be actually persisted
-
-	err = environment.commitStorage(inter)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
 }
 
 func (executor *scriptExecutor) scriptExecutionFunction() interpretFunc {
