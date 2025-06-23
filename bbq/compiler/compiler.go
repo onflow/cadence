@@ -1577,8 +1577,16 @@ func (c *Compiler[_, _]) compileAssignment(
 		c.compileExpression(value)
 		c.emitTransferAndConvert(targetType)
 		constant := c.addStringConst(target.Identifier.Identifier)
+
+		memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(target)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		memberAccessTargetTypeIndex := c.getOrAddType(memberAccessInfo.AccessedType)
+
 		c.emit(opcode.InstructionSetField{
-			FieldName: constant.index,
+			FieldName:  constant.index,
+			TargetType: memberAccessTargetTypeIndex,
 		})
 
 	case *ast.IndexExpression:
@@ -2418,20 +2426,27 @@ func (c *Compiler[_, _]) compileMemberAccess(expression *ast.MemberExpression) {
 
 	constant := c.addStringConst(identifier)
 
+	memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(expression)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
 	isNestedResourceMove := c.DesugaredElaboration.IsNestedResourceMoveExpression(expression)
 	if isNestedResourceMove {
 		c.emit(opcode.InstructionRemoveField{
 			FieldName: constant.index,
 		})
 	} else {
-		c.emit(opcode.InstructionGetField{
-			FieldName: constant.index,
-		})
-	}
+		targetType := memberAccessInfo.AccessedType
+		if memberAccessInfo.IsOptional {
+			targetType = sema.UnwrapOptionalType(targetType)
+		}
+		targetTypeIndex := c.getOrAddType(targetType)
 
-	memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(expression)
-	if !ok {
-		panic(errors.NewUnreachableError())
+		c.emit(opcode.InstructionGetField{
+			FieldName:  constant.index,
+			TargetType: targetTypeIndex,
+		})
 	}
 
 	// Return a reference, if the member is accessed via a reference.

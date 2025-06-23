@@ -62,7 +62,7 @@ func NewVM(
 		config = &Config{}
 	}
 
-	context := NewContext(config)
+	context := NewContext(location, config)
 
 	if context.storage == nil {
 		context.storage = interpreter.NewInMemoryStorage(nil)
@@ -1050,6 +1050,12 @@ func opNew(vm *VM, ins opcode.InstructionNew) {
 func opSetField(vm *VM, ins opcode.InstructionSetField) {
 	target, fieldValue := vm.pop2()
 
+	checkMemberAccessTargetType(
+		vm,
+		ins.TargetType,
+		target,
+	)
+
 	// VM assumes the field name is always a string.
 	fieldNameIndex := ins.FieldName
 	fieldName := getStringConstant(vm, fieldNameIndex)
@@ -1066,6 +1072,12 @@ func opSetField(vm *VM, ins opcode.InstructionSetField) {
 func opGetField(vm *VM, ins opcode.InstructionGetField) {
 	memberAccessibleValue := vm.pop().(interpreter.MemberAccessibleValue)
 
+	checkMemberAccessTargetType(
+		vm,
+		ins.TargetType,
+		memberAccessibleValue,
+	)
+
 	// VM assumes the field name is always a string.
 	fieldNameIndex := ins.FieldName
 	fieldName := getStringConstant(vm, fieldNameIndex)
@@ -1078,6 +1090,24 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 	}
 
 	vm.push(fieldValue)
+}
+
+func checkMemberAccessTargetType(
+	vm *VM,
+	targetTypeIndex uint16,
+	actualTarget interpreter.Value,
+) {
+	targetType := vm.loadType(targetTypeIndex)
+
+	// TODO: Avoid sema type conversion.
+	targetSemaType := interpreter.MustConvertStaticToSemaType(targetType, vm.context)
+
+	interpreter.CheckMemberAccessTargetType(
+		vm.context,
+		actualTarget,
+		targetSemaType,
+		EmptyLocationRange,
+	)
 }
 
 func opRemoveField(vm *VM, ins opcode.InstructionRemoveField) {

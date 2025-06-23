@@ -47,6 +47,7 @@ type DesugaredElaboration struct {
 	emitStatementEventTypes           map[*ast.EmitStatement]*sema.CompositeType
 	compositeTypes                    map[common.TypeID]*sema.CompositeType
 	arrayExpressionTypes              map[*ast.ArrayExpression]sema.ArrayExpressionTypes
+	functionExpressionFunctionTypes   map[*ast.FunctionExpression]*sema.FunctionType
 }
 
 func NewDesugaredElaboration(elaboration *sema.Elaboration) *DesugaredElaboration {
@@ -361,7 +362,23 @@ func (e *DesugaredElaboration) SetFunctionDeclarationFunctionType(
 }
 
 func (e *DesugaredElaboration) FunctionExpressionFunctionType(expression *ast.FunctionExpression) *sema.FunctionType {
+	if e.functionExpressionFunctionTypes != nil {
+		typ, ok := e.functionExpressionFunctionTypes[expression]
+		if ok {
+			return typ
+		}
+	}
 	return e.elaboration.FunctionExpressionFunctionType(expression)
+}
+
+func (e *DesugaredElaboration) SetFunctionExpressionFunctionType(
+	expression *ast.FunctionExpression,
+	functionType *sema.FunctionType,
+) {
+	if e.functionExpressionFunctionTypes == nil {
+		e.functionExpressionFunctionTypes = map[*ast.FunctionExpression]*sema.FunctionType{}
+	}
+	e.functionExpressionFunctionTypes[expression] = functionType
 }
 
 func (e *DesugaredElaboration) IndexExpressionTypes(expression *ast.IndexExpression) (types sema.IndexExpressionTypes, contains bool) {

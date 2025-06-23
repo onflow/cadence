@@ -37,6 +37,7 @@ import (
 type Context struct {
 	*Config
 
+	location                                    common.Location
 	CapabilityControllerIterations              map[interpreter.AddressPath]int
 	mutationDuringCapabilityControllerIteration bool
 	referencedResourceKindedValues              ReferencedResourceKindedValues
@@ -59,9 +60,10 @@ var _ interpreter.StaticTypeConversionHandler = &Context{}
 var _ interpreter.ValueComparisonContext = &Context{}
 var _ interpreter.InvocationContext = &Context{}
 
-func NewContext(config *Config) *Context {
+func NewContext(location common.Location, config *Config) *Context {
 	return &Context{
 		Config:                         config,
+		location:                       location,
 		CapabilityControllerIterations: make(map[interpreter.AddressPath]int),
 		mutationDuringCapabilityControllerIteration: false,
 		referencedResourceKindedValues:              ReferencedResourceKindedValues{},
