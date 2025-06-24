@@ -62,7 +62,7 @@ func NewVM(
 		config = &Config{}
 	}
 
-	context := NewContext(location, config)
+	context := NewContext(config)
 
 	if context.storage == nil {
 		context.storage = interpreter.NewInMemoryStorage(nil)
