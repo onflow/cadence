@@ -6666,19 +6666,25 @@ func TestCompileImports(t *testing.T) {
 
 		// Deploy a second contract.
 
-		bContract := fmt.Sprintf(`
-          import A from %[1]s
+		bContract := fmt.Sprintf(
+			`
+              import A from %[1]s
 
-          contract B {
-              fun test() {
-                  return A.test()
+              contract B {
+                  fun test() {
+                      return A.test()
+                  }
               }
-          }
-        `,
+            `,
 			contractsAddress.HexWithPrefix(),
 		)
 
-		bProgram := ParseCheckAndCompile(t, bContract, bLocation, programs)
+		bProgram := ParseCheckAndCompile(
+			t,
+			bContract,
+			bLocation,
+			programs,
+		)
 
 		// Should have import for contract value `A` and the method `A.test`.
 		assert.Equal(
@@ -8840,4 +8846,68 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 		)
 	})
 
+}
+
+func TestCompileImportEnumCase(t *testing.T) {
+
+	t.Parallel()
+
+	aContract := `
+        contract A {
+            enum E: UInt8 {
+                case X
+            }
+        }
+    `
+
+	programs := CompiledPrograms{}
+
+	contractsAddress := common.MustBytesToAddress([]byte{0x1})
+
+	aLocation := common.NewAddressLocation(nil, contractsAddress, "A")
+	bLocation := common.NewAddressLocation(nil, contractsAddress, "B")
+
+	aProgram := ParseCheckAndCompile(
+		t,
+		aContract,
+		aLocation,
+		programs,
+	)
+
+	// Should have no imports
+	assert.Empty(t, aProgram.Imports)
+
+	// Deploy a second contract.
+
+	bContract := fmt.Sprintf(
+		`
+          import A from %[1]s
+
+          contract B {
+              fun test(): A.E {
+                  return A.E.X
+              }
+          }
+        `,
+		contractsAddress.HexWithPrefix(),
+	)
+
+	bProgram := ParseCheckAndCompile(
+		t,
+		bContract,
+		bLocation,
+		programs,
+	)
+
+	// Should have import for the enum case `A.E.X`.
+	assert.Equal(
+		t,
+		[]bbq.Import{
+			{
+				Location: aLocation,
+				Name:     "A.E.X",
+			},
+		},
+		bProgram.Imports,
+	)
 }

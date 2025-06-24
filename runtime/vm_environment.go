@@ -237,14 +237,6 @@ func (e *vmEnvironment) DeclareType(typeDeclaration stdlib.StandardLibraryType, 
 	e.checkingEnvironment.declareType(typeDeclaration, location)
 }
 
-func (e *vmEnvironment) SetCompositeValueFunctionsHandler(
-	typeID common.TypeID,
-	handler stdlib.CompositeValueFunctionsHandler,
-) {
-	// TODO:
-	panic(errors.NewUnreachableError())
-}
-
 func (e *vmEnvironment) CommitStorageTemporarily(context interpreter.ValueTransferContext) error {
 	const commitContractUpdates = false
 	return e.storage.Commit(context, commitContractUpdates)
