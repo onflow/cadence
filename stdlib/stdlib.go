@@ -27,18 +27,22 @@ import (
 var StandardLibraryTypes = map[sema.TypeID]sema.ContainedType{}
 
 func init() {
-	stdlibTypes := []sema.Type{
+	stdlibTypesList := []sema.Type{
 		BLSType,
 		RLPType,
 	}
 
-	extractTypes(
-		stdlibTypes,
+	extractNestedTypes(
+		stdlibTypesList,
+		StandardLibraryTypes,
 	)
 }
 
-func extractTypes(
+// extractNestedTypes extract all the types including the nested types,
+// from a list of types to a map.
+func extractNestedTypes(
 	types []sema.Type,
+	extractTo map[sema.TypeID]sema.ContainedType,
 ) {
 	for len(types) > 0 {
 		lastIndex := len(types) - 1
@@ -50,10 +54,10 @@ func extractTypes(
 
 		switch typ := typ.(type) {
 		case *sema.CompositeType:
-			StandardLibraryTypes[typ.ID()] = typ
+			extractTo[typ.ID()] = typ
 			nestedTypes = typ.NestedTypes
 		case *sema.InterfaceType:
-			StandardLibraryTypes[typ.ID()] = typ
+			extractTo[typ.ID()] = typ
 			nestedTypes = typ.NestedTypes
 		default:
 			panic(fmt.Errorf("expected only composite or interface type, found %t", typ))
