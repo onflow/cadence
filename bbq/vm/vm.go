@@ -35,7 +35,7 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-type Variable = interpreter.SimpleVariable
+type Variable = interpreter.Variable
 
 type VM struct {
 	stack  []Value
@@ -48,7 +48,7 @@ type VM struct {
 	ip      uint16
 
 	context            *Context
-	globals            *activations.Activation[*Variable]
+	globals            *activations.Activation[Variable]
 	linkedGlobalsCache map[common.Location]LinkedGlobals
 }
 

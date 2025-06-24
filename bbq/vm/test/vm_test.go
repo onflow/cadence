@@ -1215,6 +1215,131 @@ func TestContractImport(t *testing.T) {
 
 		require.Equal(t, interpreter.NewUnmeteredStringValue("Successfully withdrew"), result)
 	})
+
+	t.Run("contract field", func(t *testing.T) {
+
+		t.Parallel()
+
+		importLocation := common.NewAddressLocation(nil, common.Address{0x1}, "MyContract")
+
+		compilerConfig := &compiler.Config{
+			BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog,
+		}
+		activation := sema.NewVariableActivation(sema.BaseValueActivation)
+		activation.DeclareValue(newConditionLogFunction(nil))
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
+              contract Foo {
+                  var id: UInt8
+                  init() {
+                      self.id = 2
+                  }
+
+                  fun getIDUsingQualifiedName(): UInt8 {
+                      return Foo.id
+                  }
+
+                  fun getIDUsingSelf(): UInt8 {
+                      return Foo.id
+                  }
+              }
+            `,
+			ParseAndCheckOptions{
+				Location: importLocation,
+				Config: &sema.Config{
+					BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+						return activation
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		importCompiler := compiler.NewInstructionCompilerWithConfig(
+			interpreter.ProgramFromChecker(importedChecker),
+			importedChecker.Location,
+			compilerConfig,
+		)
+		importedProgram := importCompiler.Compile()
+
+		var logs []string
+		var importedContractValue *interpreter.CompositeValue
+
+		vmConfig := &vm.Config{
+			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
+				return importedProgram
+			},
+			ContractValueHandler: func(*vm.Context, common.Location) *interpreter.CompositeValue {
+				return importedContractValue
+			},
+			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+				elaboration := importedChecker.Elaboration
+				compositeType := elaboration.CompositeType(typeID)
+				if compositeType != nil {
+					return compositeType
+				}
+
+				return elaboration.InterfaceType(typeID)
+			},
+			BuiltinGlobalsProvider: NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(&logs),
+		}
+
+		_, importedContractValue = initializeContract(
+			t,
+			importLocation,
+			importedProgram,
+			vmConfig,
+		)
+
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+              import Foo from 0x01
+
+              fun main() {
+                  conditionLog(Foo.id)
+                  conditionLog(Foo.getIDUsingQualifiedName())
+                  conditionLog(Foo.getIDUsingSelf())
+              }
+            `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+					BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+						return activation
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompilerWithConfig(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+			compilerConfig,
+		)
+		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			return importedProgram
+		}
+		program := comp.Compile()
+
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		_, err = vmInstance.InvokeExternally("main")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+
+		require.Equal(
+			t,
+			[]string{"2", "2", "2"},
+			logs,
+		)
+	})
+
 }
 
 func TestInitializeContract(t *testing.T) {
@@ -1768,9 +1893,9 @@ func TestNativeFunctions(t *testing.T) {
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{
-			BuiltinGlobalsProvider: func() *activations.Activation[*vm.Variable] {
+			BuiltinGlobalsProvider: func() *activations.Activation[vm.Variable] {
 				activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
-				variable := &vm.Variable{}
+				variable := &interpreter.SimpleVariable{}
 				variable.InitializeWithValue(stdlib.VMAssertFunction.Value)
 				activation.Set(stdlib.AssertFunctionName, variable)
 				return activation
@@ -8750,9 +8875,9 @@ func TestGetAuthAccount(t *testing.T) {
 		}
 
 		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
-		vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[*vm.Variable] {
-			activation := activations.NewActivation[*vm.Variable](nil, vm.DefaultBuiltinGlobals())
-			variable := &vm.Variable{}
+		vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[vm.Variable] {
+			activation := activations.NewActivation[vm.Variable](nil, vm.DefaultBuiltinGlobals())
+			variable := &interpreter.SimpleVariable{}
 			variable.InitializeWithValue(stdlib.NewVMGetAuthAccountFunction(&testAccountHandler{}).Value)
 			activation.Set(stdlib.GetAuthAccountFunctionName, variable)
 			return activation

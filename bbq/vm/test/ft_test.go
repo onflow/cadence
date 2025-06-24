@@ -223,24 +223,24 @@ func compiledFTTransfer(tb testing.TB) {
 		return contractValues[location]
 	}
 
-	vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[*vm.Variable] {
+	vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[vm.Variable] {
 		activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
-		panicVariable := &vm.Variable{}
+		panicVariable := &interpreter.SimpleVariable{}
 		panicVariable.InitializeWithValue(stdlib.VMPanicFunction.Value)
 		activation.Set(
 			stdlib.PanicFunctionName,
 			panicVariable,
 		)
 
-		assertVariable := &vm.Variable{}
+		assertVariable := &interpreter.SimpleVariable{}
 		assertVariable.InitializeWithValue(stdlib.VMAssertFunction.Value)
 		activation.Set(
 			stdlib.AssertFunctionName,
 			assertVariable,
 		)
 
-		getAccountVariable := &vm.Variable{}
+		getAccountVariable := &interpreter.SimpleVariable{}
 		getAccountVariable.InitializeWithValue(stdlib.NewVMGetAccountFunction(accountHandler).Value)
 		activation.Set(
 			stdlib.GetAccountFunctionName,
@@ -252,7 +252,7 @@ func compiledFTTransfer(tb testing.TB) {
 			stdlib.NewVMAccountStorageCapabilitiesIssueFunction(accountHandler),
 			stdlib.NewVMAccountCapabilitiesGetFunction(accountHandler, true),
 		} {
-			variable := &vm.Variable{}
+			variable := &interpreter.SimpleVariable{}
 			variable.InitializeWithValue(vmFunction.FunctionValue)
 			activation.Set(
 				commons.TypeQualifiedName(
@@ -356,7 +356,6 @@ func compiledFTTransfer(tb testing.TB) {
 		},
 		sema.Conjunction,
 	)
-
 	authorization := interpreter.ConvertSemaAccessToStaticAuthorization(nil, semaAuthorization)
 
 	mintTxAuthorizer := stdlib.NewAccountReferenceValue(
@@ -402,7 +401,7 @@ func compiledFTTransfer(tb testing.TB) {
 		tokenTransferTxVM.Context(),
 		accountHandler,
 		interpreter.AddressValue(senderAddress),
-		interpreter.FullyEntitledAccountAccess,
+		authorization,
 		interpreter.EmptyLocationRange,
 	)
 

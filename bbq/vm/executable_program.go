@@ -33,7 +33,7 @@ import (
 type ExecutableProgram struct {
 	Location    common.Location
 	Program     *bbq.InstructionProgram
-	Globals     []*Variable
+	Globals     []Variable
 	Constants   []Value
 	StaticTypes []bbq.StaticType
 }
@@ -41,7 +41,7 @@ type ExecutableProgram struct {
 func NewExecutableProgram(
 	location common.Location,
 	program *bbq.InstructionProgram,
-	globals []*Variable,
+	globals []Variable,
 ) *ExecutableProgram {
 	return &ExecutableProgram{
 		Location:    location,

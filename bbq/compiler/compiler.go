@@ -1697,7 +1697,12 @@ func (c *Compiler[_, _]) compileSwapKey(sideExpression ast.Expression) (keyLocal
 	return
 }
 
-func (c *Compiler[_, _]) compileSwapGet(sideExpression ast.Expression, targetIndex uint16, keyIndex uint16, targetType sema.Type) (valueIndex uint16) {
+func (c *Compiler[_, _]) compileSwapGet(
+	sideExpression ast.Expression,
+	targetIndex uint16,
+	keyIndex uint16,
+	targetType sema.Type,
+) (valueIndex uint16) {
 
 	switch sideExpression := sideExpression.(type) {
 	case *ast.IdentifierExpression:

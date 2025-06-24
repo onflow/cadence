@@ -142,6 +142,7 @@ const (
 	MemoryKindAddressLocation
 	MemoryKindBytes
 	MemoryKindVariable
+	MemoryKindContractVariable
 	MemoryKindCompositeTypeInfo
 	MemoryKindCompositeField
 	MemoryKindInvocation
