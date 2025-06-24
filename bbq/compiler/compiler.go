@@ -1754,10 +1754,19 @@ func (c *Compiler[_, _]) compileSwapSet(
 	case *ast.MemberExpression:
 		c.emitGetLocal(targetIndex)
 		c.emitGetLocal(valueIndex)
+
 		name := sideExpression.Identifier.Identifier
 		constant := c.addStringConst(name)
+
+		memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(sideExpression)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		memberAccessTargetTypeIndex := c.getOrAddType(memberAccessInfo.AccessedType)
+
 		c.emit(opcode.InstructionSetField{
-			FieldName: constant.index,
+			FieldName:  constant.index,
+			TargetType: memberAccessTargetTypeIndex,
 		})
 
 	case *ast.IndexExpression:
