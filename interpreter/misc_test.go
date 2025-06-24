@@ -8276,7 +8276,7 @@ func TestInterpretOptionalChainingFunctionRead(t *testing.T) {
 
 	var expected interpreter.FunctionValue
 	if *compile {
-		expected = &vm.BoundFunctionPointerValue{}
+		expected = &vm.BoundFunctionValue{}
 	} else {
 		expected = interpreter.BoundFunctionValue{}
 	}
