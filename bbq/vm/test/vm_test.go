@@ -1259,9 +1259,9 @@ func TestContractAccessDuringInit(t *testing.T) {
 		t.Parallel()
 
 		location := common.NewAddressLocation(nil, common.Address{0x1}, "MyContract")
-		programs := map[common.Location]*CompiledProgram{}
+		programs := CompiledPrograms{}
 
-		program := ParseCheckAndCompileCodeWithOptions(t,
+		program := ParseCheckAndCompile(t,
 			`
               contract MyContract {
                   var status: String
@@ -1276,11 +1276,11 @@ func TestContractAccessDuringInit(t *testing.T) {
               }
             `,
 			location,
-			ParseCheckAndCompileOptions{},
 			programs,
 		)
 
 		vmConfig := PrepareVMConfig(t, nil, programs)
+
 		vmInstance, contractValue := initializeContract(
 			t,
 			scriptLocation(),
@@ -1296,9 +1296,10 @@ func TestContractAccessDuringInit(t *testing.T) {
 		t.Parallel()
 
 		location := common.NewAddressLocation(nil, common.Address{0x1}, "MyContract")
-		programs := map[common.Location]*CompiledProgram{}
 
-		program := ParseCheckAndCompileCodeWithOptions(t,
+		programs := CompiledPrograms{}
+
+		program := ParseCheckAndCompile(t,
 			`
               contract MyContract {
                   var status: String
@@ -1313,11 +1314,11 @@ func TestContractAccessDuringInit(t *testing.T) {
               }
             `,
 			location,
-			ParseCheckAndCompileOptions{},
 			programs,
 		)
 
 		vmConfig := PrepareVMConfig(t, nil, programs)
+
 		vmInstance, contractValue := initializeContract(
 			t,
 			scriptLocation(),

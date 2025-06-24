@@ -289,7 +289,7 @@ func (c *Context) GetMethod(
 		return method
 	}
 
-	return NewBoundFunctionPointerValue(
+	return NewBoundFunctionValue(
 		c,
 		value,
 		method,

@@ -350,7 +350,7 @@ func (vm *VM) InvokeMethodExternally(
 		}
 	}
 
-	boundFunction := NewBoundFunctionPointerValue(context, receiver, functionValue)
+	boundFunction := NewBoundFunctionValue(context, receiver, functionValue)
 
 	return vm.validateAndInvokeExternally(boundFunction, arguments)
 }
@@ -369,7 +369,7 @@ func (vm *VM) validateAndInvokeExternally(functionValue FunctionValue, arguments
 		return nil, err
 	}
 
-	if boundFunction, ok := functionValue.(*BoundFunctionPointerValue); ok {
+	if boundFunction, ok := functionValue.(*BoundFunctionValue); ok {
 		receiver := boundFunction.Receiver(vm.context)
 		preparedArguments = append([]Value{receiver}, preparedArguments...)
 	}
@@ -502,7 +502,7 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.CompositeValue, 
 
 	prepareValue := prepareVariable.GetValue(context)
 	prepareFunction := prepareValue.(FunctionValue)
-	boundPrepareFunction := NewBoundFunctionPointerValue(
+	boundPrepareFunction := NewBoundFunctionValue(
 		context,
 		transaction,
 		prepareFunction,
@@ -526,7 +526,7 @@ func (vm *VM) InvokeTransactionExecute(transaction *interpreter.CompositeValue) 
 
 	executeValue := executeVariable.GetValue(context)
 	executeFunction := executeValue.(FunctionValue)
-	boundExecuteFunction := NewBoundFunctionPointerValue(
+	boundExecuteFunction := NewBoundFunctionValue(
 		context,
 		transaction,
 		executeFunction,
@@ -885,7 +885,7 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	functionValue := vm.pop()
 
 	// If the function is a pointer to an object-method, then the receiver is implicitly captured.
-	if boundFunction, isBoundFUnction := functionValue.(*BoundFunctionPointerValue); isBoundFUnction {
+	if boundFunction, isBoundFUnction := functionValue.(*BoundFunctionValue); isBoundFUnction {
 		functionValue = boundFunction.Method
 		receiver := boundFunction.Receiver(vm.context)
 		arguments = append([]Value{receiver}, arguments...)
@@ -899,17 +899,37 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	)
 }
 
+func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
+	globalIndex := ins.Method
+	globals := vm.callFrame.function.Executable.Globals
+
+	variable := globals[globalIndex]
+	method := variable.GetValue(vm.context).(FunctionValue)
+
+	receiver := vm.pop()
+
+	boundFunction := NewBoundFunctionValue(
+		vm.context,
+		receiver,
+		method,
+	)
+
+	vm.push(boundFunction)
+}
+
 func opInvokeMethodStatic(vm *VM, ins opcode.InstructionInvokeMethodStatic) {
 	// Load type arguments
 	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 
 	// Load arguments
 	arguments := vm.popN(int(ins.ArgCount))
-	receiver := arguments[ReceiverIndex]
-	arguments[ReceiverIndex] = maybeDereference(vm.context, receiver)
 
 	// Load the invoked value
-	functionValue := vm.pop()
+	boundFunction := vm.pop().(*BoundFunctionValue)
+
+	functionValue := boundFunction.Method
+	receiver := boundFunction.Receiver(vm.context)
+	arguments = append([]Value{receiver}, arguments...)
 
 	invokeFunction(
 		vm,
@@ -962,7 +982,7 @@ func invokeFunction(
 
 	// Handle all function types in a single place, so this can be re-used everywhere.
 
-	if boundFunction, ok := functionValue.(*BoundFunctionPointerValue); ok {
+	if boundFunction, ok := functionValue.(*BoundFunctionValue); ok {
 		functionValue = boundFunction.Method
 	}
 
@@ -1563,6 +1583,8 @@ func (vm *VM) run() {
 			opGetIndex(vm)
 		case opcode.InstructionRemoveIndex:
 			opRemoveIndex(vm)
+		case opcode.InstructionGetMethod:
+			opGetMethod(vm, ins)
 		case opcode.InstructionInvoke:
 			opInvoke(vm, ins)
 		case opcode.InstructionInvokeMethodStatic:

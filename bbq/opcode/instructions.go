@@ -1221,6 +1221,50 @@ func DecodeInvokeMethodDynamic(ip *uint16, code []byte) (i InstructionInvokeMeth
 	return i
 }
 
+// InstructionGetMethod
+//
+// Pops a value off the stack, the receiver, and then pushes the value of the function at the given index onto the stack.
+type InstructionGetMethod struct {
+	Method uint16
+}
+
+var _ Instruction = InstructionGetMethod{}
+
+func (InstructionGetMethod) Opcode() Opcode {
+	return GetMethod
+}
+
+func (i InstructionGetMethod) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
+}
+
+func (i InstructionGetMethod) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "method", i.Method, colorize)
+}
+
+func (i InstructionGetMethod) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "method", i.Method, colorize)
+}
+
+func (i InstructionGetMethod) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.Method)
+}
+
+func DecodeGetMethod(ip *uint16, code []byte) (i InstructionGetMethod) {
+	i.Method = decodeUint16(ip, code)
+	return i
+}
+
 // InstructionDup
 //
 // Pops a value off the stack, duplicates it, and then pushes the original and the copy back on to the stack.
@@ -2654,6 +2698,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return DecodeInvokeMethodStatic(ip, code)
 	case InvokeMethodDynamic:
 		return DecodeInvokeMethodDynamic(ip, code)
+	case GetMethod:
+		return DecodeGetMethod(ip, code)
 	case Dup:
 		return InstructionDup{}
 	case Drop:

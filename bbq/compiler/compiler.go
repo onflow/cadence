@@ -2044,6 +2044,13 @@ func (c *Compiler[_, _]) emitGlobalLoad(name string) {
 	})
 }
 
+func (c *Compiler[_, _]) emitMethodLoad(name string) {
+	global := c.findGlobal(name)
+	c.emit(opcode.InstructionGetMethod{
+		Method: global.Index,
+	})
+}
+
 func (c *Compiler[_, _]) emitVariableStore(name string) {
 	local := c.currentFunction.findLocal(name)
 	if local != nil {
@@ -2091,7 +2098,7 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 				memberInfo,
 				memberExpression,
 				invocationTypes,
-				argumentCount,
+				uint16(argumentCount),
 			)
 			return
 		}
@@ -2122,7 +2129,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	memberInfo sema.MemberAccessInfo,
 	invokedExpr *ast.MemberExpression,
 	invocationTypes sema.InvocationExpressionTypes,
-	argumentCount int,
+	argumentCount uint16,
 ) {
 	var funcName string
 
@@ -2145,7 +2152,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 
 		c.emit(opcode.InstructionInvoke{
 			TypeArgs: typeArgs,
-			ArgCount: uint16(argumentCount),
+			ArgCount: argumentCount,
 		})
 		return
 	}
@@ -2158,8 +2165,6 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	// that were synthetically added at the desugar phase, must be static calls.
 	isInterfaceInheritedFuncCall := c.DesugaredElaboration.IsInterfaceMethodStaticCall(expression)
 
-	argsCountWithReceiver := uint16(argumentCount) + 1
-
 	// Any invocation on restricted-types must be dynamic
 	if !isInterfaceInheritedFuncCall && isDynamicMethodInvocation(memberInfo.AccessedType) {
 		funcName = invokedExpr.Identifier.Identifier
@@ -2167,16 +2172,19 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 			panic(errors.NewDefaultUserError("invalid function name"))
 		}
 
-		c.withOptionalChainingOptimized(
+		c.withOptionalChaining(
 			invokedExpr.Expression,
 			isOptional,
 			func() {
-				// withOptionalChainingOptimized already load the receiver onto the stack.
+				// withOptionalChaining already load the receiver onto the stack.
 
 				// Compile arguments
 				c.compileArguments(expression.Arguments, invocationTypes)
 
 				funcNameConst := c.addStringConst(funcName)
+
+				argsCountWithReceiver := argumentCount + 1
+
 				c.emit(
 					opcode.InstructionInvokeMethodDynamic{
 						Name:     funcNameConst.index,
@@ -2215,28 +2223,30 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		c.compileArguments(expression.Arguments, invocationTypes)
 		c.emit(opcode.InstructionInvoke{
 			TypeArgs: typeArgs,
-			ArgCount: uint16(argumentCount),
+			ArgCount: argumentCount,
 		})
 	} else {
 		c.withOptionalChaining(
 			invokedExpr.Expression,
 			isOptional,
-			func(receiverIndex uint16) {
+			func() {
 				// Compile as object-method call.
-
 				// Function must be loaded only if the receiver is non-nil.
-				c.emitGlobalLoad(funcName)
+				// The receiver is already on the stack.
 
-				// The receiver is loaded first.
-				// So 'self' is always the zero-th argument.
-				c.emitGetLocal(receiverIndex)
+				// Get the method as a bound function.
+				// This is needed to capture the implicit reference that's get created by bound functions.
+				c.emitMethodLoad(funcName)
 
 				// Compile arguments
 				c.compileArguments(expression.Arguments, invocationTypes)
 
 				c.emit(opcode.InstructionInvokeMethodStatic{
 					TypeArgs: typeArgs,
-					ArgCount: argsCountWithReceiver,
+
+					// Argument count does not include the receiver,
+					// since receiver is already captured by the bound-function.
+					ArgCount: argumentCount,
 				})
 			},
 		)
@@ -2244,28 +2254,10 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 }
 
 // withOptionalChaining compiles the `ifNotNil` procedure with optional chaining.
-func (c *Compiler[_, _]) withOptionalChaining(
-	targetExpression ast.Expression,
-	isOptional bool,
-	ifNotNil func(targetIndex uint16),
-) {
-	nilJump := c.compileOptionalChainingNilJump(targetExpression, isOptional)
-
-	// Assign the unwrapped value to a temp local variable.
-	unwrappedValueTempIndex := c.currentFunction.generateLocalIndex()
-	c.emitSetLocal(unwrappedValueTempIndex)
-
-	ifNotNil(unwrappedValueTempIndex)
-	c.patchOptionalChainingNilJump(isOptional, nilJump)
-}
-
-// withOptionalChainingOptimized compiles the `ifNotNil` procedure with optional chaining.
 // IMPORTANT: This function expects the `ifNotNil` procedure to assume the target expression
 // is already loaded on to the stack.
 // This is an optimization to avoid redundant store-to/load-from local indexes.
-// If the `ifNotNil` procedure need to load other values before the target is loaded,
-// then use the withOptionalChaining counterpart method.
-func (c *Compiler[_, _]) withOptionalChainingOptimized(
+func (c *Compiler[_, _]) withOptionalChaining(
 	targetExpression ast.Expression,
 	isOptional bool,
 	ifNotNil func(),
@@ -2405,11 +2397,11 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 		}
 	}
 
-	c.withOptionalChainingOptimized(
+	c.withOptionalChaining(
 		expression.Expression,
 		memberAccessInfo.IsOptional,
 		func() {
-			// withOptionalChainingOptimized evaluates the target expression
+			// withOptionalChaining evaluates the target expression
 			// and leave the value on stack.
 			// i.e: the target/parent is already loaded.
 
@@ -3146,6 +3138,10 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location)
 	contracts := importedProgram.Contracts
 	for _, contract := range contracts {
 		c.addImportedGlobal(location, contract.Name)
+	}
+
+	for _, variable := range importedProgram.Variables {
+		c.addImportedGlobal(location, variable.Name)
 	}
 
 	for _, function := range importedProgram.Functions {

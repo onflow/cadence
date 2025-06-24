@@ -147,6 +147,7 @@ func TestRuntimeRLPDecodeString(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  common.ScriptLocation{},
+					UseVM:     *compile,
 				},
 			)
 			if len(test.expectedErrMsg) > 0 {
@@ -303,6 +304,7 @@ func TestRuntimeRLPDecodeList(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  common.ScriptLocation{},
+					UseVM:     *compile,
 				},
 			)
 			if len(test.expectedErrMsg) > 0 {
