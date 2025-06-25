@@ -1842,6 +1842,8 @@ func exportValueFromScript(t *testing.T, script string) cadence.Value {
 		Context{
 			Interface: &TestRuntimeInterface{},
 			Location:  common.ScriptLocation{},
+			// TODO: requires InclusiveRange support in the VM
+			//UseVM:     *compile,
 		},
 	)
 
@@ -2001,6 +2003,7 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.TransactionLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2018,6 +2021,7 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2056,6 +2060,7 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.Error(t, err)
@@ -2093,6 +2098,7 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.Error(t, err)
@@ -2551,6 +2557,8 @@ func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
+			// TODO: requires InclusiveRange support in the VM
+			//UseVM:     *compile,
 		},
 	)
 
@@ -4081,6 +4089,7 @@ func TestRuntimeStringValueImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -4131,6 +4140,7 @@ func TestRuntimeTypeValueImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -4173,6 +4183,7 @@ func TestRuntimeTypeValueImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -4220,6 +4231,7 @@ func TestRuntimeCapabilityValueImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -4261,6 +4273,7 @@ func TestRuntimeCapabilityValueImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -4309,6 +4322,7 @@ func TestRuntimeCapabilityValueImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -4341,6 +4355,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 	}
@@ -4702,6 +4717,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		RequireError(t, err)
@@ -4768,6 +4784,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -4838,6 +4855,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -4909,6 +4927,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -5250,6 +5269,7 @@ func TestRuntimeNestedStructArgPassing(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -5313,6 +5333,7 @@ func TestRuntimeNestedStructArgPassing(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -5359,6 +5380,7 @@ func TestRuntimeDestroyedResourceReferenceExport(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.Error(t, err)
@@ -5388,6 +5410,7 @@ func TestRuntimeDeploymentResultValueImportExport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -5417,6 +5440,7 @@ func TestRuntimeDeploymentResultValueImportExport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -5472,6 +5496,7 @@ func TestRuntimeDeploymentResultTypeImportExport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -5498,6 +5523,7 @@ func TestRuntimeDeploymentResultTypeImportExport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -5578,6 +5604,7 @@ func TestRuntimeExportInterfaceType(t *testing.T) {
 			Context{
 				Interface: &TestRuntimeInterface{},
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -5616,6 +5643,7 @@ func TestRuntimeExportInterfaceType(t *testing.T) {
 			Context{
 				Interface: &TestRuntimeInterface{},
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
