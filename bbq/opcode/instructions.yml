@@ -91,7 +91,7 @@
   operands:
     - name: "fieldName"
       type: "constantIndex"
-    - name: "targetType"
+    - name: "accessedType"
       type: "typeIndex"
   valueEffects:
     pop:
@@ -123,7 +123,7 @@
   operands:
     - name: "fieldName"
       type: "constantIndex"
-    - name: "targetType"
+    - name: "accessedType"
       type: "typeIndex"
   valueEffects:
     pop:

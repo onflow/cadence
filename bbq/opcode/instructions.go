@@ -352,8 +352,8 @@ func DecodeSetGlobal(ip *uint16, code []byte) (i InstructionSetGlobal) {
 //
 // Pops a value off the stack, the target, and then pushes the value of the field at the given index onto the stack.
 type InstructionGetField struct {
-	FieldName  uint16
-	TargetType uint16
+	FieldName    uint16
+	AccessedType uint16
 }
 
 var _ Instruction = InstructionGetField{}
@@ -373,7 +373,7 @@ func (i InstructionGetField) OperandsString(sb *strings.Builder, colorize bool) 
 	sb.WriteByte(' ')
 	printfArgument(sb, "fieldName", i.FieldName, colorize)
 	sb.WriteByte(' ')
-	printfArgument(sb, "targetType", i.TargetType, colorize)
+	printfArgument(sb, "accessedType", i.AccessedType, colorize)
 }
 
 func (i InstructionGetField) ResolvedOperandsString(sb *strings.Builder,
@@ -384,18 +384,18 @@ func (i InstructionGetField) ResolvedOperandsString(sb *strings.Builder,
 	sb.WriteByte(' ')
 	printfConstantArgument(sb, "fieldName", constants[i.FieldName], colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "targetType", types[i.TargetType], colorize)
+	printfTypeArgument(sb, "accessedType", types[i.AccessedType], colorize)
 }
 
 func (i InstructionGetField) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 	emitUint16(code, i.FieldName)
-	emitUint16(code, i.TargetType)
+	emitUint16(code, i.AccessedType)
 }
 
 func DecodeGetField(ip *uint16, code []byte) (i InstructionGetField) {
 	i.FieldName = decodeUint16(ip, code)
-	i.TargetType = decodeUint16(ip, code)
+	i.AccessedType = decodeUint16(ip, code)
 	return i
 }
 
@@ -447,8 +447,8 @@ func DecodeRemoveField(ip *uint16, code []byte) (i InstructionRemoveField) {
 //
 // Pops two values off the stack, the target and the value, and then sets the field at the given index of the target to the value.
 type InstructionSetField struct {
-	FieldName  uint16
-	TargetType uint16
+	FieldName    uint16
+	AccessedType uint16
 }
 
 var _ Instruction = InstructionSetField{}
@@ -468,7 +468,7 @@ func (i InstructionSetField) OperandsString(sb *strings.Builder, colorize bool) 
 	sb.WriteByte(' ')
 	printfArgument(sb, "fieldName", i.FieldName, colorize)
 	sb.WriteByte(' ')
-	printfArgument(sb, "targetType", i.TargetType, colorize)
+	printfArgument(sb, "accessedType", i.AccessedType, colorize)
 }
 
 func (i InstructionSetField) ResolvedOperandsString(sb *strings.Builder,
@@ -479,18 +479,18 @@ func (i InstructionSetField) ResolvedOperandsString(sb *strings.Builder,
 	sb.WriteByte(' ')
 	printfConstantArgument(sb, "fieldName", constants[i.FieldName], colorize)
 	sb.WriteByte(' ')
-	printfTypeArgument(sb, "targetType", types[i.TargetType], colorize)
+	printfTypeArgument(sb, "accessedType", types[i.AccessedType], colorize)
 }
 
 func (i InstructionSetField) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 	emitUint16(code, i.FieldName)
-	emitUint16(code, i.TargetType)
+	emitUint16(code, i.AccessedType)
 }
 
 func DecodeSetField(ip *uint16, code []byte) (i InstructionSetField) {
 	i.FieldName = decodeUint16(ip, code)
-	i.TargetType = decodeUint16(ip, code)
+	i.AccessedType = decodeUint16(ip, code)
 	return i
 }
 

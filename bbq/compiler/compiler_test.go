@@ -1876,7 +1876,7 @@ func TestCompileMember(t *testing.T) {
 				opcode.InstructionGetLocal{Local: selfIndex},
 				opcode.InstructionGetLocal{Local: valueIndex},
 				opcode.InstructionTransferAndConvert{Type: 2},
-				opcode.InstructionSetField{FieldName: 0, TargetType: 1},
+				opcode.InstructionSetField{FieldName: 0, AccessedType: 1},
 
 				// return self
 				opcode.InstructionGetLocal{Local: selfIndex},
@@ -1894,7 +1894,7 @@ func TestCompileMember(t *testing.T) {
 			[]opcode.Instruction{
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: selfIndex},
-				opcode.InstructionGetField{FieldName: 0, TargetType: 1},
+				opcode.InstructionGetField{FieldName: 0, AccessedType: 1},
 				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionReturnValue{},
 			},
@@ -4090,7 +4090,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// return self.balance
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: selfIndex},
-				opcode.InstructionGetField{FieldName: 0, TargetType: 6},
+				opcode.InstructionGetField{FieldName: 0, AccessedType: 6},
 				opcode.InstructionTransferAndConvert{Type: 5},
 				opcode.InstructionReturnValue{},
 			},
@@ -4847,7 +4847,7 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionGetLocal{Local: selfIndex},
 			opcode.InstructionGetConstant{Constant: const2Index},
 			opcode.InstructionTransferAndConvert{Type: 4},
-			opcode.InstructionSetField{FieldName: constFieldNameIndex, TargetType: 1},
+			opcode.InstructionSetField{FieldName: constFieldNameIndex, AccessedType: 1},
 
 			// return
 			opcode.InstructionReturn{},
@@ -4884,7 +4884,7 @@ func TestCompileTransaction(t *testing.T) {
 			// `self.count == 2`
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: selfIndex},
-			opcode.InstructionGetField{FieldName: constFieldNameIndex, TargetType: 1},
+			opcode.InstructionGetField{FieldName: constFieldNameIndex, AccessedType: 1},
 			opcode.InstructionGetConstant{Constant: const2Index},
 			opcode.InstructionEqual{},
 
@@ -4907,13 +4907,13 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionGetLocal{Local: selfIndex},
 			opcode.InstructionGetConstant{Constant: const10Index},
 			opcode.InstructionTransferAndConvert{Type: 4},
-			opcode.InstructionSetField{FieldName: constFieldNameIndex, TargetType: 1},
+			opcode.InstructionSetField{FieldName: constFieldNameIndex, AccessedType: 1},
 
 			// Post condition
 			// `self.count == 10`
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: selfIndex},
-			opcode.InstructionGetField{FieldName: constFieldNameIndex, TargetType: 1},
+			opcode.InstructionGetField{FieldName: constFieldNameIndex, AccessedType: 1},
 			opcode.InstructionGetConstant{Constant: const10Index},
 			opcode.InstructionEqual{},
 
@@ -6873,7 +6873,7 @@ func TestCompileOptionalChaining(t *testing.T) {
 				opcode.InstructionUnwrap{},
 
 				// foo.bar
-				opcode.InstructionGetField{FieldName: 0, TargetType: 2},
+				opcode.InstructionGetField{FieldName: 0, AccessedType: 2},
 				opcode.InstructionJump{Target: 14},
 
 				// If `foo == nil`
@@ -7214,7 +7214,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				opcode.InstructionGetLocal{Local: yIndex},
 				opcode.InstructionGetLocal{Local: xIndex},
 				opcode.InstructionTransferAndConvert{Type: 1},
-				opcode.InstructionSetField{FieldName: 0, TargetType: 2},
+				opcode.InstructionSetField{FieldName: 0, AccessedType: 2},
 
 				// Store the transferred y-value above (already on stack), to z.
 				// z <- y.bar
@@ -7425,7 +7425,7 @@ func TestCompileEnum(t *testing.T) {
 				opcode.InstructionGetLocal{Local: selfIndex},
 				opcode.InstructionGetLocal{Local: rawValueIndex},
 				opcode.InstructionTransferAndConvert{Type: 2},
-				opcode.InstructionSetField{FieldName: 0, TargetType: 1},
+				opcode.InstructionSetField{FieldName: 0, AccessedType: 1},
 
 				// return self
 				opcode.InstructionGetLocal{Local: selfIndex},
@@ -7509,7 +7509,7 @@ func TestCompileEnum(t *testing.T) {
 		[]opcode.Instruction{
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: testBGlobalIndex},
-			opcode.InstructionGetField{FieldName: 0, TargetType: 1},
+			opcode.InstructionGetField{FieldName: 0, AccessedType: 1},
 			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionReturnValue{},
 		},
@@ -7711,8 +7711,8 @@ func TestCompileOptionalArgument(t *testing.T) {
 
 				// Load receiver `self.account.contracts`.
 				opcode.InstructionGetLocal{Local: 0},
-				opcode.InstructionGetField{FieldName: 0, TargetType: 1},
-				opcode.InstructionGetField{FieldName: 1, TargetType: 4},
+				opcode.InstructionGetField{FieldName: 0, AccessedType: 1},
+				opcode.InstructionGetField{FieldName: 1, AccessedType: 4},
 				opcode.InstructionNewRef{Type: 5, IsImplicit: true},
 
 				// Load function value `add()`
@@ -7726,7 +7726,7 @@ func TestCompileOptionalArgument(t *testing.T) {
 
 				// Contract code
 				opcode.InstructionGetConstant{Constant: 3},
-				opcode.InstructionGetField{FieldName: 4, TargetType: 6},
+				opcode.InstructionGetField{FieldName: 4, AccessedType: 6},
 				opcode.InstructionTransferAndConvert{Type: 7},
 
 				// Message: "Optional arg"
@@ -7920,22 +7920,22 @@ func TestCompileSwapMembers(t *testing.T) {
 			opcode.InstructionSetLocal{Local: tempIndex2},
 
 			opcode.InstructionGetLocal{Local: tempIndex1},
-			opcode.InstructionGetField{FieldName: 0, TargetType: 1},
+			opcode.InstructionGetField{FieldName: 0, AccessedType: 1},
 			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionSetLocal{Local: tempIndex3},
 
 			opcode.InstructionGetLocal{Local: tempIndex2},
-			opcode.InstructionGetField{FieldName: 1, TargetType: 1},
+			opcode.InstructionGetField{FieldName: 1, AccessedType: 1},
 			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionSetLocal{Local: tempIndex4},
 
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetLocal{Local: tempIndex4},
-			opcode.InstructionSetField{FieldName: 0, TargetType: 1},
+			opcode.InstructionSetField{FieldName: 0, AccessedType: 1},
 
 			opcode.InstructionGetLocal{Local: tempIndex2},
 			opcode.InstructionGetLocal{Local: tempIndex3},
-			opcode.InstructionSetField{FieldName: 1, TargetType: 1},
+			opcode.InstructionSetField{FieldName: 1, AccessedType: 1},
 
 			// Return
 			opcode.InstructionReturn{},

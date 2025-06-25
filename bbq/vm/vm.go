@@ -1072,7 +1072,7 @@ func opSetField(vm *VM, ins opcode.InstructionSetField) {
 
 	checkMemberAccessTargetType(
 		vm,
-		ins.TargetType,
+		ins.AccessedType,
 		target,
 	)
 
@@ -1094,7 +1094,7 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 
 	checkMemberAccessTargetType(
 		vm,
-		ins.TargetType,
+		ins.AccessedType,
 		memberAccessibleValue,
 	)
 
@@ -1114,18 +1114,18 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 
 func checkMemberAccessTargetType(
 	vm *VM,
-	targetTypeIndex uint16,
-	actualTarget interpreter.Value,
+	accessedTypeIndex uint16,
+	accessedValue interpreter.Value,
 ) {
-	targetType := vm.loadType(targetTypeIndex)
+	accessedType := vm.loadType(accessedTypeIndex)
 
 	// TODO: Avoid sema type conversion.
-	targetSemaType := interpreter.MustConvertStaticToSemaType(targetType, vm.context)
+	accessedSemaType := interpreter.MustConvertStaticToSemaType(accessedType, vm.context)
 
 	interpreter.CheckMemberAccessTargetType(
 		vm.context,
-		actualTarget,
-		targetSemaType,
+		accessedValue,
+		accessedSemaType,
 		EmptyLocationRange,
 	)
 }

@@ -1582,11 +1582,11 @@ func (c *Compiler[_, _]) compileAssignment(
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
-		memberAccessTargetTypeIndex := c.getOrAddType(memberAccessInfo.AccessedType)
+		memberAccessedTypeIndex := c.getOrAddType(memberAccessInfo.AccessedType)
 
 		c.emit(opcode.InstructionSetField{
-			FieldName:  constant.index,
-			TargetType: memberAccessTargetTypeIndex,
+			FieldName:    constant.index,
+			AccessedType: memberAccessedTypeIndex,
 		})
 
 	case *ast.IndexExpression:
@@ -1762,11 +1762,11 @@ func (c *Compiler[_, _]) compileSwapSet(
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
-		memberAccessTargetTypeIndex := c.getOrAddType(memberAccessInfo.AccessedType)
+		memberAccessedTypeIndex := c.getOrAddType(memberAccessInfo.AccessedType)
 
 		c.emit(opcode.InstructionSetField{
-			FieldName:  constant.index,
-			TargetType: memberAccessTargetTypeIndex,
+			FieldName:    constant.index,
+			AccessedType: memberAccessedTypeIndex,
 		})
 
 	case *ast.IndexExpression:
@@ -2443,15 +2443,15 @@ func (c *Compiler[_, _]) compileMemberAccess(expression *ast.MemberExpression) {
 			FieldName: constant.index,
 		})
 	} else {
-		targetType := memberAccessInfo.AccessedType
+		accessedType := memberAccessInfo.AccessedType
 		if memberAccessInfo.IsOptional {
-			targetType = sema.UnwrapOptionalType(targetType)
+			accessedType = sema.UnwrapOptionalType(accessedType)
 		}
-		targetTypeIndex := c.getOrAddType(targetType)
+		accessedTypeIndex := c.getOrAddType(accessedType)
 
 		c.emit(opcode.InstructionGetField{
-			FieldName:  constant.index,
-			TargetType: targetTypeIndex,
+			FieldName:    constant.index,
+			AccessedType: accessedTypeIndex,
 		})
 	}
 
