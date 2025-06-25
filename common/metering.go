@@ -237,7 +237,6 @@ var (
 	FunctionStaticTypeMemoryUsage       = NewConstantMemoryUsage(MemoryKindFunctionStaticType)
 	EntitlementMapStaticTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindEntitlementMapStaticAccess)
 	InclusiveRangeStaticTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindInclusiveRangeStaticType)
-	TransactionStaticTypeMemoryUsage       = NewConstantMemoryUsage(MemoryKindTransactionStaticType)
 
 	// Sema types
 

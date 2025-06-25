@@ -76,7 +76,6 @@ const (
 	MemoryKindReferenceStaticType
 	MemoryKindCapabilityStaticType
 	MemoryKindFunctionStaticType
-	MemoryKindTransactionStaticType
 
 	// Cadence Values
 	MemoryKindCadenceVoidValue
