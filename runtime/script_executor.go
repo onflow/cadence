@@ -287,19 +287,7 @@ func (executor *scriptExecutor) executeWithVM(
 		return nil, err
 	}
 
-	// Write back all stored values, which were actually just cached, back into storage
-	err = environment.commitStorage(context)
-	if err != nil {
-		return nil, err
-	}
-
-	var exportedValue cadence.Value
-	exportedValue, err = ExportValue(value, context, interpreter.EmptyLocationRange)
-	if err != nil {
-		return nil, err
-	}
-
-	return exportedValue, nil
+	return ExportValue(value, context, interpreter.EmptyLocationRange)
 }
 
 func (executor *scriptExecutor) scriptExecutionFunction() interpretFunc {
