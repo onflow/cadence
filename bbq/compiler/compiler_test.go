@@ -8873,10 +8873,58 @@ func TestCompileAttachments(t *testing.T) {
 		program := comp.Compile()
 
 		functions := program.Functions
+		require.Len(t, functions, 8)
+
+		// globals
+		const (
+			testFunctionIndex = iota
+			sConstructorIndex
+			sGetTypeIndex
+			sIsInstanceIndex
+			aConstructorIndex
+			aGetTypeIndex
+			aIsInstanceIndex
+			aFooIndex
+		)
 
 		assert.Equal(t,
 			[]opcode.Instruction{
-				// TODO
+				// var s = S()
+				opcode.InstructionStatement{},
+				opcode.InstructionGetGlobal{Global: sConstructorIndex},
+				opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0x0},
+				opcode.InstructionTransferAndConvert{Type: 0x1},
+				opcode.InstructionSetLocal{Local: 0x0},
+
+				// s = attach A() to s
+				opcode.InstructionStatement{},
+				opcode.InstructionGetLocal{Local: 0x0},
+				opcode.InstructionGetGlobal{Global: aConstructorIndex},
+				opcode.InstructionGetLocal{Local: 0x0},
+				opcode.InstructionInvoke{TypeArgs: []uint16{0x1}, ArgCount: 0x1},
+				opcode.InstructionSetField{FieldName: 0x0},
+				opcode.InstructionGetLocal{Local: 0x0},
+				opcode.InstructionTransferAndConvert{Type: 0x1},
+				opcode.InstructionSetLocal{Local: 0x0},
+
+				// return s[A]?.foo()!
+				opcode.InstructionStatement{},
+				opcode.InstructionGetLocal{Local: 0x0},
+				opcode.InstructionGetField{FieldName: 0x0},
+				opcode.InstructionSetLocal{Local: 0x1},
+				opcode.InstructionGetLocal{Local: 0x1},
+				opcode.InstructionJumpIfNil{Target: 0x1b},
+				opcode.InstructionGetLocal{Local: 0x1},
+				opcode.InstructionUnwrap{},
+				opcode.InstructionSetLocal{Local: 0x2},
+				opcode.InstructionGetGlobal{Global: aFooIndex},
+				opcode.InstructionGetLocal{Local: 0x2},
+				opcode.InstructionInvokeMethodStatic{TypeArgs: []uint16(nil), ArgCount: 0x1},
+				opcode.InstructionJump{Target: 0x1c},
+				opcode.InstructionNil{},
+				opcode.InstructionUnwrap{},
+				opcode.InstructionTransferAndConvert{Type: 0x2},
+				opcode.InstructionReturnValue{},
 			},
 			functions[0].Code,
 		)

@@ -572,6 +572,7 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 	contracts := c.exportContracts()
 
 	compositeDeclarations := c.Program.CompositeDeclarations()
+	attachmentDeclarations := c.Program.AttachmentDeclarations()
 	variableDeclarations := c.Program.VariableDeclarations()
 	functionDeclarations := c.Program.FunctionDeclarations()
 	interfaceDeclarations := c.Program.InterfaceDeclarations()
@@ -583,6 +584,7 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 		functionDeclarations,
 		compositeDeclarations,
 		interfaceDeclarations,
+		attachmentDeclarations,
 	)
 
 	// Compile declarations
@@ -596,6 +598,9 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 		c.compileDeclaration(declaration)
 	}
 	for _, declaration := range interfaceDeclarations {
+		c.compileDeclaration(declaration)
+	}
+	for _, declaration := range attachmentDeclarations {
 		c.compileDeclaration(declaration)
 	}
 
@@ -621,6 +626,7 @@ func (c *Compiler[_, _]) reserveGlobals(
 	functionDecls []*ast.FunctionDeclaration,
 	compositeDecls []*ast.CompositeDeclaration,
 	interfaceDecls []*ast.InterfaceDeclaration,
+	attachmentDecls []*ast.AttachmentDeclaration,
 ) {
 	// Reserve globals for the contract values before everything.
 	// Contract values must be always start at the zero-th index.
@@ -633,6 +639,7 @@ func (c *Compiler[_, _]) reserveGlobals(
 		variableDecls,
 		nil,
 		compositeDecls,
+		attachmentDecls,
 	)
 
 	c.reserveFunctionGlobals(
@@ -641,6 +648,7 @@ func (c *Compiler[_, _]) reserveGlobals(
 		functionDecls,
 		compositeDecls,
 		interfaceDecls,
+		attachmentDecls,
 	)
 }
 
@@ -649,6 +657,7 @@ func (c *Compiler[_, _]) reserveVariableGlobals(
 	variableDecls []*ast.VariableDeclaration,
 	enumCaseDecls []*ast.EnumCaseDeclaration,
 	compositeDecls []*ast.CompositeDeclaration,
+	attachmentDecls []*ast.AttachmentDeclaration,
 ) {
 	for _, declaration := range variableDecls {
 		variableName := declaration.Identifier.Identifier
@@ -674,6 +683,20 @@ func (c *Compiler[_, _]) reserveVariableGlobals(
 			nil,
 			members.EnumCases(),
 			members.Composites(),
+			members.Attachments(),
+		)
+	}
+	for _, declaration := range attachmentDecls {
+		compositeType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
+
+		members := declaration.Members
+
+		c.reserveVariableGlobals(
+			compositeType,
+			nil,
+			members.EnumCases(),
+			members.Composites(),
+			members.Attachments(),
 		)
 	}
 }
@@ -684,6 +707,7 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 	functionDecls []*ast.FunctionDeclaration,
 	compositeDecls []*ast.CompositeDeclaration,
 	interfaceDecls []*ast.InterfaceDeclaration,
+	attachmentDecls []*ast.AttachmentDeclaration,
 ) {
 	for _, declaration := range specialFunctionDecls {
 		switch declaration.Kind {
@@ -765,6 +789,26 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 			members.Functions(),
 			members.Composites(),
 			members.Interfaces(),
+			members.Attachments(),
+		)
+	}
+
+	for _, declaration := range attachmentDecls {
+		compositeType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
+		// Reserve a global for the constructor function.
+
+		constructorName := commons.TypeQualifier(compositeType)
+		c.addGlobal(constructorName)
+
+		members := declaration.Members
+
+		c.reserveFunctionGlobals(
+			compositeType,
+			members.SpecialFunctions(),
+			members.Functions(),
+			members.Composites(),
+			members.Interfaces(),
+			members.Attachments(),
 		)
 	}
 
@@ -780,6 +824,7 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 			members.Functions(),
 			members.Composites(),
 			members.Interfaces(),
+			members.Attachments(),
 		)
 	}
 }
@@ -2057,7 +2102,7 @@ func (c *Compiler[_, _]) emitVariableStore(name string) {
 	})
 }
 
-func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExpression) (_ struct{}) {
+func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(expression *ast.InvocationExpression, implicitArg *ast.Expression, implicitArgType sema.Type) (_ struct{}) {
 	// TODO: copy
 
 	invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(expression)
@@ -2101,10 +2146,24 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 	c.compileArguments(expression.Arguments, invocationTypes)
 
 	typeArgs := c.loadTypeArguments(invocationTypes)
+	if implicitArg != nil {
+		typeArgs = append(typeArgs, c.getOrAddType(implicitArgType))
+		argumentCount += 1
+		if argumentCount >= math.MaxUint16 {
+			panic(errors.NewDefaultUserError("invalid number of arguments"))
+		}
+		c.compileExpression(*implicitArg)
+	}
+
 	c.emit(opcode.InstructionInvoke{
 		TypeArgs: typeArgs,
 		ArgCount: uint16(argumentCount),
 	})
+	return
+}
+
+func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExpression) (_ struct{}) {
+	c.visitInvocationExpressionWithImplicitArgument(expression, nil, nil)
 
 	return
 }
@@ -2447,9 +2506,21 @@ func (c *Compiler[_, _]) compileMemberAccess(expression *ast.MemberExpression) {
 
 func (c *Compiler[_, _]) VisitIndexExpression(expression *ast.IndexExpression) (_ struct{}) {
 	c.compileExpression(expression.TargetExpression)
-	c.compileExpression(expression.IndexingExpression)
 
-	c.compileIndexAccess(expression)
+	if attachmentType, ok := c.DesugaredElaboration.AttachmentAccessTypes(expression); ok {
+		// see getAttachmentValue() in interpreter
+		identifier := interpreter.AttachmentMemberName(string(attachmentType.ID()))
+
+		constant := c.addStringConst(identifier)
+
+		c.emit(opcode.InstructionGetField{
+			FieldName: constant.index,
+		})
+	} else {
+		c.compileExpression(expression.IndexingExpression)
+
+		c.compileIndexAccess(expression)
+	}
 
 	return
 }
@@ -3064,6 +3135,9 @@ func (c *Compiler[_, _]) compileCompositeMembers(
 	for _, nestedType := range members.Interfaces() {
 		c.compileDeclaration(nestedType)
 	}
+	for _, nestedAttachments := range members.Attachments() {
+		c.compileDeclaration(nestedAttachments)
+	}
 }
 
 func (c *Compiler[_, _]) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) (_ struct{}) {
@@ -3204,9 +3278,36 @@ func (c *Compiler[_, _]) compileEnumCaseDeclaration(
 	return
 }
 
-func (c *Compiler[_, _]) VisitAttachmentDeclaration(_ *ast.AttachmentDeclaration) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler[_, _]) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) (_ struct{}) {
+	// Similar to VisitCompositeDeclaration
+	// not refactored because need to access fields not accessible in CompositeLikeDeclaration
+	compositeType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
+
+	c.compositeTypeStack.push(compositeType)
+	defer func() {
+		c.compositeTypeStack.pop()
+	}()
+
+	// Compile members
+	hasInit := false
+	for _, specialFunc := range declaration.Members.SpecialFunctions() {
+		if specialFunc.Kind == common.DeclarationKindInitializer {
+			hasInit = true
+		}
+		c.compileDeclaration(specialFunc)
+	}
+
+	// If the initializer is not declared, generate
+	// - a synthetic initializer for enum types, otherwise
+	// - an empty initializer
+	if !hasInit {
+		c.generateEmptyInit()
+	}
+
+	// Visit members.
+	c.compileCompositeMembers(compositeType, declaration.Members)
+
+	return
 }
 
 func (c *Compiler[_, _]) VisitEntitlementDeclaration(_ *ast.EntitlementDeclaration) (_ struct{}) {
@@ -3224,9 +3325,29 @@ func (c *Compiler[_, _]) VisitRemoveStatement(_ *ast.RemoveStatement) (_ struct{
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler[_, _]) VisitAttachExpression(_ *ast.AttachExpression) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression) (_ struct{}) {
+	types := c.DesugaredElaboration.AttachTypes(expression)
+	baseType := types.BaseType
+	attachmentType := types.AttachType
+
+	// is this the best way to have base on stack
+	c.compileExpression(expression.Base)
+	// create the attachment
+	c.visitInvocationExpressionWithImplicitArgument(expression.Attachment, &expression.Base, baseType)
+	// attachment on stack
+
+	// TODO: pop and set base to be reference to base here
+	// 	     put back on stack
+
+	// add attachment value as a member of base
+	identifier := interpreter.AttachmentMemberName(string(attachmentType.ID()))
+	constant := c.addStringConst(identifier)
+	c.emit(opcode.InstructionSetField{
+		FieldName: constant.index,
+	})
+	// need base back on stack as return value
+	c.compileExpression(expression.Base)
+	return
 }
 
 func (c *Compiler[_, _]) emitTransferAndConvert(targetType sema.Type) {

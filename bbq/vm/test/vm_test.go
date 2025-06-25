@@ -8890,3 +8890,27 @@ func TestStringTemplate(t *testing.T) {
 		require.Equal(t, interpreter.NewUnmeteredStringValue("A + B = 4"), result)
 	})
 }
+
+func TestCompileAttachments(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t, `
+			struct S {}
+			attachment A for S {
+				fun foo(): Int { return 3 }
+			}
+			fun test(): Int {
+				var s = S()
+				s = attach A() to s
+				return s[A]?.foo()!
+			}
+		`, "test")
+		require.NoError(t, err)
+
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), result)
+	})
+}

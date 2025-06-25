@@ -1676,7 +1676,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	base.SetTypeKey(
 		interpreter,
 		locationRange,
-		attachmentType,
+		attachmentType.AttachType,
 		attachment,
 	)
 

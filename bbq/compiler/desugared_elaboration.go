@@ -421,3 +421,11 @@ func (e *DesugaredElaboration) SwapStatementTypes(statement *ast.SwapStatement) 
 func (e *DesugaredElaboration) DefaultDestroyDeclaration(declaration ast.Declaration) *ast.CompositeDeclaration {
 	return e.elaboration.DefaultDestroyDeclaration(declaration)
 }
+
+func (e *DesugaredElaboration) AttachTypes(expression *ast.AttachExpression) sema.AttachExprTypes {
+	return e.elaboration.AttachTypes(expression)
+}
+
+func (e *DesugaredElaboration) AttachmentAccessTypes(expression *ast.IndexExpression) (ty sema.Type, ok bool) {
+	return e.elaboration.AttachmentAccessTypes(expression)
+}
