@@ -4984,56 +4984,40 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 
 		rt, runtimeInterface := newRuntime()
 
-		const script = `
-          access(all)
-          struct S {
-              access(all)
-              let value: Int
+		const setup = `
+          transaction {
+              prepare(account: auth(Storage) &Account) {
 
-              init(value: Int) {
-                  self.value = value
+                  var total = 0
+                  account.storage.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                      total = total + 1
+                      return true
+                  })
+                  assert(total == 0)
+
+                  account.storage.save(1, to: /storage/foo1)
+                  account.storage.save(2, to: /storage/foo2)
+                  account.storage.save(5, to: /storage/foo3)
               }
-          }
-
-          access(all)
-          fun main(): Int {
-              let account = getAuthAccount<auth(Storage) &Account>(0x1)
-
-              var total = 0
-              account.storage.forEachStored(fun (path: StoragePath, type: Type): Bool {
-                  total = total + 1
-                  return true
-              })
-
-              account.storage.save(S(value: 1), to: /storage/foo1)
-              account.storage.save(S(value: 2), to: /storage/foo2)
-              account.storage.save(S(value: 5), to: /storage/foo3)
-
-              return total
           }
         `
 
+		nextTransactionLocation := NewTransactionLocationGenerator()
 		nextScriptLocation := NewScriptLocationGenerator()
 
-		result, err := rt.ExecuteScript(
+		err := rt.ExecuteTransaction(
 			Script{
-				Source: []byte(script),
+				Source: []byte(setup),
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  nextScriptLocation(),
+				Location:  nextTransactionLocation(),
 				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(
-			t,
-			cadence.NewInt(0),
-			result,
-		)
-
-		const script2 = `
+		const check = `
            access(all)
            fun main(): Int {
               let account = getAuthAccount<auth(Storage) &Account>(0x1)
@@ -5047,9 +5031,9 @@ func TestRuntimeStorageIteration2(t *testing.T) {
           }
         `
 
-		result, err = rt.ExecuteScript(
+		result, err := rt.ExecuteScript(
 			Script{
-				Source: []byte(script2),
+				Source: []byte(check),
 			},
 			Context{
 				Interface: runtimeInterface,

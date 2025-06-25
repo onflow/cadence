@@ -2031,14 +2031,14 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
 		assert.Equal(t, expected, actual)
 	})
 
-	t.Run("storage, recursive, same reference", func(t *testing.T) {
+	t.Run("storage, recursive, same reference, script", func(t *testing.T) {
 
 		t.Parallel()
 
 		script := `
             access(all) fun main(): &AnyStruct {
                 var acct = getAuthAccount<auth(Storage) &Account>(0x01)
-	            var v:[AnyStruct] = []
+	            var v: [AnyStruct] = []
 	            acct.storage.save(v, to: /storage/x)
 
                 var ref = acct.storage.borrow<auth(Insert) &[AnyStruct]>(from: /storage/x)!
@@ -2063,11 +2063,53 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
 				UseVM:     *compile,
 			},
 		)
+		// Non-storable values cannot be stored in storage,
+		// but script execution does not commit / serialize writes to storage.
+		require.NoError(t, err)
+	})
+
+	t.Run("storage, recursive, same reference, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            transaction {
+                prepare(acct: auth(Storage) &Account) {
+
+	                var v: [AnyStruct] = []
+	                acct.storage.save(v, to: /storage/x)
+
+                    var ref = acct.storage.borrow<auth(Insert) &[AnyStruct]>(from: /storage/x)!
+	                ref.append(ref)
+                }
+            }
+        `
+
+		rt := NewTestInterpreterRuntime()
+
+		address := common.MustBytesToAddress([]byte{0x01})
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []common.Address{address}, nil
+			},
+		}
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.TransactionLocation{},
+			},
+		)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "cannot store non-storable value")
 	})
 
-	t.Run("storage, recursive, two references", func(t *testing.T) {
+	t.Run("storage, recursive, two references, script", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2099,6 +2141,49 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
 				UseVM:     *compile,
+			},
+		)
+		// Non-storable values cannot be stored in storage,
+		// but script execution does not commit / serialize writes to storage.
+		require.NoError(t, err)
+	})
+
+	t.Run("storage, recursive, two references, transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+           transaction {
+                prepare(acct: auth(Storage) &Account) {
+	                let v: [AnyStruct] = []
+	                acct.storage.save(v, to: /storage/x)
+
+                    let ref1 = acct.storage.borrow<auth(Insert) &[AnyStruct]>(from: /storage/x)!
+                    let ref2 = acct.storage.borrow<&[AnyStruct]>(from: /storage/x)!
+
+	                ref1.append(ref2)
+                }
+           }
+        `
+
+		rt := NewTestInterpreterRuntime()
+
+		address := common.MustBytesToAddress([]byte{0x01})
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []common.Address{address}, nil
+			},
+		}
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.TransactionLocation{},
 			},
 		)
 		require.Error(t, err)
