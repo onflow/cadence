@@ -2085,7 +2085,7 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
             }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		address := common.MustBytesToAddress([]byte{0x01})
 
@@ -2166,7 +2166,7 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
            }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		address := common.MustBytesToAddress([]byte{0x01})
 
