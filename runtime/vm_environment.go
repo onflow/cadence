@@ -151,7 +151,7 @@ func (e *vmEnvironment) defineValue(name string, value vm.Value) {
 		)
 	}
 
-	variable := interpreter.NewVariableWithValue(e.vmConfig, value)
+	variable := interpreter.NewVariableWithValue(nil, value)
 	e.defaultVMBuiltinGlobals.Set(name, variable)
 }
 
@@ -226,7 +226,7 @@ func (e *vmEnvironment) DeclareValue(valueDeclaration stdlib.StandardLibraryValu
 	// Define the value in the VM builtin globals
 
 	variable := interpreter.NewVariableWithValue(
-		e.vmConfig,
+		nil,
 		valueDeclaration.Value,
 	)
 
