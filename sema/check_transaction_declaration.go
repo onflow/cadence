@@ -252,7 +252,9 @@ func (checker *Checker) visitTransactionExecuteFunction(
 }
 
 func (checker *Checker) declareTransactionDeclaration(declaration *ast.TransactionDeclaration) {
-	transactionType := &TransactionType{}
+	transactionType := &TransactionType{
+		Location: checker.Location,
+	}
 
 	if declaration.ParameterList != nil {
 		transactionType.Parameters = checker.parameters(declaration.ParameterList)

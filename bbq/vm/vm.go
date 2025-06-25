@@ -35,7 +35,7 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-type Variable = interpreter.SimpleVariable
+type Variable = interpreter.Variable
 
 type VM struct {
 	stack  []Value
@@ -48,7 +48,7 @@ type VM struct {
 	ip      uint16
 
 	context            *Context
-	globals            *activations.Activation[*Variable]
+	globals            *activations.Activation[Variable]
 	linkedGlobalsCache map[common.Location]LinkedGlobals
 }
 
@@ -1070,6 +1070,12 @@ func opNew(vm *VM, ins opcode.InstructionNew) {
 func opSetField(vm *VM, ins opcode.InstructionSetField) {
 	target, fieldValue := vm.pop2()
 
+	checkMemberAccessTargetType(
+		vm,
+		ins.AccessedType,
+		target,
+	)
+
 	// VM assumes the field name is always a string.
 	fieldNameIndex := ins.FieldName
 	fieldName := getStringConstant(vm, fieldNameIndex)
@@ -1086,6 +1092,12 @@ func opSetField(vm *VM, ins opcode.InstructionSetField) {
 func opGetField(vm *VM, ins opcode.InstructionGetField) {
 	memberAccessibleValue := vm.pop().(interpreter.MemberAccessibleValue)
 
+	checkMemberAccessTargetType(
+		vm,
+		ins.AccessedType,
+		memberAccessibleValue,
+	)
+
 	// VM assumes the field name is always a string.
 	fieldNameIndex := ins.FieldName
 	fieldName := getStringConstant(vm, fieldNameIndex)
@@ -1098,6 +1110,24 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 	}
 
 	vm.push(fieldValue)
+}
+
+func checkMemberAccessTargetType(
+	vm *VM,
+	accessedTypeIndex uint16,
+	accessedValue interpreter.Value,
+) {
+	accessedType := vm.loadType(accessedTypeIndex)
+
+	// TODO: Avoid sema type conversion.
+	accessedSemaType := interpreter.MustConvertStaticToSemaType(accessedType, vm.context)
+
+	interpreter.CheckMemberAccessTargetType(
+		vm.context,
+		accessedValue,
+		accessedSemaType,
+		EmptyLocationRange,
+	)
 }
 
 func opRemoveField(vm *VM, ins opcode.InstructionRemoveField) {

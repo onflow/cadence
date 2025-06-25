@@ -1627,7 +1627,7 @@ func (d *Desugar) DesugarFunctionExpression(expression *ast.FunctionExpression) 
 	parameterList := expression.ParameterList
 	returnTypeAnnotation := expression.ReturnTypeAnnotation
 
-	functionType := d.elaboration.elaboration.FunctionExpressionFunctionType(expression)
+	functionType := d.elaboration.FunctionExpressionFunctionType(expression)
 
 	// TODO: If the function block was not desugared, avoid creating a new function-expression.
 	modifiedFuncBlock := d.desugarFunctionBlock(
@@ -1648,7 +1648,7 @@ func (d *Desugar) DesugarFunctionExpression(expression *ast.FunctionExpression) 
 		expression.StartPos,
 	)
 
-	d.elaboration.elaboration.SetFunctionExpressionFunctionType(functionExpr, functionType)
+	d.elaboration.SetFunctionExpressionFunctionType(functionExpr, functionType)
 
 	return functionExpr
 }
@@ -1732,22 +1732,41 @@ func newEnumInitializer(
 		),
 	}
 
+	memberExpression := ast.NewMemberExpression(
+		gauge,
+		ast.NewIdentifierExpression(
+			gauge,
+			ast.NewIdentifier(
+				gauge,
+				sema.SelfIdentifier,
+				ast.EmptyPosition,
+			),
+		),
+		false,
+		ast.EmptyPosition,
+		rawValueIdentifier,
+	)
+
+	elaboration.SetMemberExpressionMemberAccessInfo(
+		memberExpression,
+		sema.MemberAccessInfo{
+			AccessedType:  enumType,
+			ResultingType: rawValueType,
+			Member: sema.NewFieldMember(
+				gauge,
+				enumType,
+				sema.UnauthorizedAccess,
+				ast.VariableKindConstant,
+				sema.EnumRawValueFieldName,
+				rawValueType,
+				"",
+			),
+		},
+	)
+
 	assignmentStatement := ast.NewAssignmentStatement(
 		gauge,
-		ast.NewMemberExpression(
-			gauge,
-			ast.NewIdentifierExpression(
-				gauge,
-				ast.NewIdentifier(
-					gauge,
-					sema.SelfIdentifier,
-					ast.EmptyPosition,
-				),
-			),
-			false,
-			ast.EmptyPosition,
-			rawValueIdentifier,
-		),
+		memberExpression,
 		ast.NewTransfer(
 			gauge,
 			ast.TransferOperationCopy,

@@ -73,11 +73,12 @@ func (c *Config) WithDebugEnabled() *Config {
 }
 
 func (c *Config) MeterMemory(usage common.MemoryUsage) error {
-	if c.MemoryGauge == nil {
+	gauge := c.MemoryGauge
+	if gauge == nil {
 		return nil
 	}
 
-	return c.MemoryGauge.MeterMemory(usage)
+	return gauge.MeterMemory(usage)
 }
 
 func (c *Config) Storage() interpreter.Storage {

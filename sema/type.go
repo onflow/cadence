@@ -8043,7 +8043,10 @@ func IsNilType(ty Type) bool {
 	return true
 }
 
+const TransactionTypeName = "transaction"
+
 type TransactionType struct {
+	Location            common.Location
 	Fields              []string
 	PrepareParameters   []Parameter
 	Parameters          []Parameter
@@ -8088,15 +8091,15 @@ func (t *TransactionType) Tag() TypeTag {
 }
 
 func (*TransactionType) String() string {
-	return "Transaction"
+	return TransactionTypeName
 }
 
 func (*TransactionType) QualifiedString() string {
-	return "Transaction"
+	return TransactionTypeName
 }
 
-func (*TransactionType) ID() TypeID {
-	return "Transaction"
+func (t *TransactionType) ID() TypeID {
+	return t.Location.TypeID(nil, TransactionTypeName)
 }
 
 func (*TransactionType) Equal(other Type) bool {

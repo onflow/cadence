@@ -278,12 +278,14 @@ func ParseCheckAndPrepareWithOptions(
 			// (i.e: only get the values that were added externally for tests)
 			interpreterBaseActivationVariables := interpreterBaseActivation.ValuesInCurrentLevel()
 
-			vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[*vm.Variable] {
+			vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[vm.Variable] {
 
 				activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
-				panicVariable := &vm.Variable{}
-				panicVariable.InitializeWithValue(stdlib.VMPanicFunction.Value)
+				panicVariable := interpreter.NewVariableWithValue(
+					nil,
+					stdlib.VMPanicFunction.Value,
+				)
 				activation.Set(stdlib.PanicFunctionName, panicVariable)
 
 				// Add the given built-in values.
@@ -313,8 +315,10 @@ func ParseCheckAndPrepareWithOptions(
 
 					}
 
-					vmVariable := &vm.Variable{}
-					vmVariable.InitializeWithValue(value)
+					vmVariable := interpreter.NewVariableWithValue(
+						nil,
+						value,
+					)
 
 					activation.Set(name, vmVariable)
 				}
@@ -364,11 +368,13 @@ func ParseCheckAndPrepareWithOptions(
 	}
 
 	if vmConfig.BuiltinGlobalsProvider == nil {
-		vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[*vm.Variable] {
+		vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[vm.Variable] {
 			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
-			panicVariable := &vm.Variable{}
-			panicVariable.InitializeWithValue(stdlib.VMPanicFunction.Value)
+			panicVariable := interpreter.NewVariableWithValue(
+				nil,
+				stdlib.VMPanicFunction.Value,
+			)
 			activation.Set(stdlib.PanicFunctionName, panicVariable)
 
 			return activation

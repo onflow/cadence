@@ -57,7 +57,7 @@ type vmEnvironment struct {
 	compilerConfig *compiler.Config
 
 	defaultCompilerBuiltinGlobals *activations.Activation[compiler.GlobalImport]
-	defaultVMBuiltinGlobals       *activations.Activation[*vm.Variable]
+	defaultVMBuiltinGlobals       *activations.Activation[vm.Variable]
 
 	*stdlib.SimpleContractAdditionTracker
 }
@@ -151,8 +151,7 @@ func (e *vmEnvironment) defineValue(name string, value vm.Value) {
 		)
 	}
 
-	variable := &vm.Variable{}
-	variable.InitializeWithValue(value)
+	variable := interpreter.NewVariableWithValue(nil, value)
 	e.defaultVMBuiltinGlobals.Set(name, variable)
 }
 
@@ -226,8 +225,10 @@ func (e *vmEnvironment) DeclareValue(valueDeclaration stdlib.StandardLibraryValu
 
 	// Define the value in the VM builtin globals
 
-	variable := &vm.Variable{}
-	variable.InitializeWithValue(valueDeclaration.Value)
+	variable := interpreter.NewVariableWithValue(
+		nil,
+		valueDeclaration.Value,
+	)
 
 	vmBuiltinGlobals := e.defaultVMBuiltinGlobals
 	vmBuiltinGlobals.Set(name, variable)
@@ -450,7 +451,7 @@ func (e *vmEnvironment) newVM(
 	)
 }
 
-func (e *vmEnvironment) vmBuiltinGlobals() *activations.Activation[*vm.Variable] {
+func (e *vmEnvironment) vmBuiltinGlobals() *activations.Activation[vm.Variable] {
 	// TODO: add support for per-location VM builtin globals
 	return e.defaultVMBuiltinGlobals
 }
