@@ -100,7 +100,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 					accessPos,
 					staticPos,
 					nativePos,
-					docString,
+					"",
 				)
 
 			case keywordImport:
@@ -415,7 +415,7 @@ func parseVariableDeclaration(
 		startPos,
 		secondTransfer,
 		secondValue,
-		docString,
+		ast.Comments{},
 	)
 
 	castingExpression, leftIsCasting := value.(*ast.CastingExpression)
@@ -698,6 +698,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 			endPos,
 		),
 		locationPos,
+		ast.Comments{},
 	), nil
 }
 
@@ -804,7 +805,7 @@ func parseEventDeclaration(
 			nil,
 			nil,
 			parameterList.StartPos,
-			"",
+			ast.Comments{},
 		),
 	)
 
@@ -822,12 +823,12 @@ func parseEventDeclaration(
 		identifier,
 		nil,
 		members,
-		docString,
 		ast.NewRange(
 			p.memoryGauge,
 			startPos,
 			parameterList.EndPos,
 		),
+		ast.Comments{},
 	), nil
 }
 
@@ -913,12 +914,12 @@ func parseFieldWithVariableKind(
 		variableKind,
 		identifier,
 		typeAnnotation,
-		docString,
 		ast.NewRange(
 			p.memoryGauge,
 			startPos,
 			typeAnnotation.EndPosition(p.memoryGauge),
 		),
+		ast.Comments{},
 	), nil
 }
 
@@ -1051,8 +1052,8 @@ func parseCompositeOrInterfaceDeclaration(
 			identifier,
 			[]*ast.NominalType{},
 			members,
-			docString,
 			declarationRange,
+			ast.Comments{},
 		), nil
 	} else {
 		return ast.NewCompositeDeclaration(
@@ -1062,8 +1063,8 @@ func parseCompositeOrInterfaceDeclaration(
 			identifier,
 			conformances,
 			members,
-			docString,
 			declarationRange,
+			ast.Comments{},
 		), nil
 	}
 }
@@ -1154,8 +1155,8 @@ func parseAttachmentDeclaration(
 		baseNominalType,
 		conformances,
 		members,
-		docString,
 		declarationRange,
+		ast.Comments{},
 	), nil
 }
 
@@ -1468,12 +1469,12 @@ func parseFieldDeclarationWithoutVariableKind(
 		ast.VariableKindNotSpecified,
 		identifier,
 		typeAnnotation,
-		docString,
 		ast.NewRange(
 			p.memoryGauge,
 			startPos,
 			typeAnnotation.EndPosition(p.memoryGauge),
 		),
+		ast.Comments{},
 	), nil
 }
 
@@ -1485,6 +1486,7 @@ func parseSpecialFunctionDeclaration(
 	staticPos *ast.Position,
 	nativePos *ast.Position,
 	identifier ast.Identifier,
+	// Comments can be safely ignored
 	docString string,
 ) (*ast.SpecialFunctionDeclaration, error) {
 
@@ -1538,7 +1540,7 @@ func parseSpecialFunctionDeclaration(
 			nil,
 			functionBlock,
 			startPos,
-			docString,
+			ast.Comments{},
 		),
 	), nil
 }

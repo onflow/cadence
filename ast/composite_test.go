@@ -406,8 +406,12 @@ func TestCompositeDeclaration_MarshalJSON(t *testing.T) {
 				},
 			},
 		},
-		Members:   NewUnmeteredMembers([]Declaration{}),
-		DocString: "test",
+		Members: NewUnmeteredMembers([]Declaration{}),
+		Comments: Comments{
+			Leading: []*Comment{
+				NewComment(nil, []byte("///test")),
+			},
+		},
 		Range: Range{
 			StartPos: Position{Offset: 7, Line: 8, Column: 9},
 			EndPos:   Position{Offset: 10, Line: 11, Column: 12},

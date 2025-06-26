@@ -24,8 +24,14 @@ import (
 
 type Token struct {
 	SpaceOrError any
+	Type         TokenType
 	ast.Range
-	Type TokenType
+	// TODO(preserve-comments): This is currently not true (first comment),
+	// 	as leading comments are just all comments after the trailing comments of the previous token.
+	// Leading comments span up to and including the first contiguous sequence of newlines characters.
+	// Trailing comments span up to, but not including, the next newline character.
+	// Not tracked for space token, since those are usually ignored in the parser.
+	ast.Comments
 }
 
 func (t Token) Is(ty TokenType) bool {
@@ -33,7 +39,10 @@ func (t Token) Is(ty TokenType) bool {
 }
 
 func (t Token) Source(input []byte) []byte {
-	startOffset := t.StartPos.Offset
-	endOffset := t.EndPos.Offset + 1
-	return input[startOffset:endOffset]
+	return t.Range.Source(input)
+}
+
+func (t Token) Equal(other Token) bool {
+	// ignore comments, since they should not be treated as source code
+	return t.Type == other.Type && t.Range == other.Range && t.SpaceOrError == other.SpaceOrError
 }

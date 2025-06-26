@@ -108,6 +108,7 @@ func parseParameterList(p *parser) (*ast.ParameterList, error) {
 			startPos,
 			endPos,
 		),
+		ast.Comments{},
 	), nil
 }
 
@@ -167,6 +168,7 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 		typeAnnotation,
 		nil,
 		startPos,
+		ast.Comments{},
 	), nil
 }
 
@@ -295,8 +297,8 @@ func parseFunctionDeclaration(
 	nativePos *ast.Position,
 	docString string,
 ) (*ast.FunctionDeclaration, error) {
-
-	startPos := ast.EarliestPosition(p.current.StartPos, accessPos, staticPos, nativePos)
+	startToken := p.current
+	startPos := ast.EarliestPosition(startToken.StartPos, accessPos, staticPos, nativePos)
 
 	// Skip the `fun` keyword
 	p.nextSemanticToken()
@@ -341,7 +343,9 @@ func parseFunctionDeclaration(
 		returnTypeAnnotation,
 		functionBlock,
 		startPos,
-		docString,
+		ast.Comments{
+			Leading: startToken.Leading,
+		},
 	), nil
 }
 

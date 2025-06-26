@@ -72,6 +72,59 @@ func TestParseVariableDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("var, no type annotation, copy, one value, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+// Before x
+var x = /* Before 1 */ 1 // After 1
+// Ignored
+`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.VariableDeclaration{
+					Access:     ast.AccessNotSpecified,
+					IsConstant: false,
+					Identifier: ast.Identifier{
+						Identifier: "x",
+						Pos:        ast.Position{Line: 3, Column: 4, Offset: 17},
+					},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before x")),
+							ast.NewComment(nil, []byte("/* Before 1 */")),
+						},
+						Trailing: []*ast.Comment{},
+					},
+					Value: &ast.IntegerExpression{
+						PositiveLiteral: []byte("1"),
+						Value:           big.NewInt(1),
+						Base:            10,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 3, Column: 23, Offset: 36},
+							EndPos:   ast.Position{Line: 3, Column: 23, Offset: 36},
+						},
+						Comments: ast.Comments{
+							Leading: []*ast.Comment{},
+							Trailing: []*ast.Comment{
+								ast.NewComment(nil, []byte("// After 1")),
+							},
+						},
+					},
+					Transfer: &ast.Transfer{
+						Operation: ast.TransferOperationCopy,
+						Pos:       ast.Position{Line: 3, Column: 6, Offset: 19},
+					},
+					StartPos: ast.Position{Line: 3, Column: 0, Offset: 13},
+				},
+			},
+			result,
+		)
+	})
+
 	t.Run("var, no type annotation, copy, one value, access(all)", func(t *testing.T) {
 
 		t.Parallel()
@@ -387,7 +440,8 @@ func TestParseParameterList(t *testing.T) {
 			nil,
 			[]byte(input),
 			func(p *parser) (*ast.ParameterList, error) {
-				return parseParameterList(p, false)
+				parameters, err := parseParameterList(p, false)
+				return parameters, err
 			},
 			Config{},
 		)
@@ -461,6 +515,62 @@ func TestParseParameterList(t *testing.T) {
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("one, resource type, with comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse(`( a : /* After colon */ 
+// Before type
+@Int /* After type */ )`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			&ast.ParameterList{
+				Parameters: []*ast.Parameter{
+					{
+						Label: "",
+						Identifier: ast.Identifier{
+							Identifier: "a",
+							Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+						TypeAnnotation: &ast.TypeAnnotation{
+							IsResource: true,
+							Type: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "Int",
+									Pos:        ast.Position{Line: 3, Column: 1, Offset: 41},
+								},
+								Comments: ast.Comments{
+									Leading: []*ast.Comment{
+										// This comment should be attached to Type instead of TypeAnnotation
+										// (even tho it's technically attached to the @ resource symbol) for simplicity.
+										ast.NewComment(nil, []byte("// Before type")),
+									},
+									Trailing: []*ast.Comment{
+										ast.NewComment(nil, []byte("/* After type */")),
+									},
+								},
+							},
+							StartPos: ast.Position{Line: 3, Column: 0, Offset: 40},
+						},
+						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+						Comments: ast.Comments{
+							Leading: []*ast.Comment{
+								ast.NewComment(nil, []byte("/* After colon */")),
+							},
+							Trailing: []*ast.Comment{},
+						},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 3, Column: 22, Offset: 62},
 				},
 			},
 			result,
@@ -555,6 +665,91 @@ func TestParseParameterList(t *testing.T) {
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 22, Offset: 22},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("two, with comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse(`( /* Before param b */ a b : /* Before b type annotation */ Int /* After param b */, 
+// Before param c
+c /* After c identifier */ : Int // After param c 
+)`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			&ast.ParameterList{
+				Parameters: []*ast.Parameter{
+					{
+						Label: "a",
+						Identifier: ast.Identifier{
+							Identifier: "b",
+							Pos:        ast.Position{Line: 1, Column: 25, Offset: 25},
+						},
+						TypeAnnotation: &ast.TypeAnnotation{
+							IsResource: false,
+							Type: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "Int",
+									Pos:        ast.Position{Line: 1, Column: 60, Offset: 60},
+								},
+								Comments: ast.Comments{
+									Leading: []*ast.Comment{},
+									Trailing: []*ast.Comment{
+										ast.NewComment(nil, []byte("/* After param b */")),
+									},
+								},
+							},
+							StartPos: ast.Position{Line: 1, Column: 60, Offset: 60},
+						},
+						StartPos: ast.Position{Line: 1, Column: 23, Offset: 23},
+						Comments: ast.Comments{
+							Leading: []*ast.Comment{
+								ast.NewComment(nil, []byte("/* Before param b */")),
+								ast.NewComment(nil, []byte("/* Before b type annotation */")),
+							},
+							Trailing: []*ast.Comment{},
+						},
+					},
+					{
+						Label: "",
+						Identifier: ast.Identifier{
+							Identifier: "c",
+							Pos:        ast.Position{Line: 3, Column: 0, Offset: 104},
+						},
+						TypeAnnotation: &ast.TypeAnnotation{
+							IsResource: false,
+							Type: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "Int",
+									Pos:        ast.Position{Line: 3, Column: 29, Offset: 133},
+								},
+								Comments: ast.Comments{
+									Leading: []*ast.Comment{},
+									Trailing: []*ast.Comment{
+										ast.NewComment(nil, []byte("// After param c ")),
+									},
+								},
+							},
+							StartPos: ast.Position{Line: 3, Column: 29, Offset: 133},
+						},
+						StartPos: ast.Position{Line: 3, Column: 0, Offset: 104},
+						Comments: ast.Comments{
+							Leading: []*ast.Comment{
+								ast.NewComment(nil, []byte("// Before param c")),
+								ast.NewComment(nil, []byte("/* After c identifier */")),
+							},
+							Trailing: []*ast.Comment{},
+						},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 4, Column: 0, Offset: 155},
 				},
 			},
 			result,
@@ -891,8 +1086,12 @@ func TestParseFunctionDeclaration(t *testing.T) {
 							},
 						},
 					},
-					DocString: " Test",
-					StartPos:  ast.Position{Line: 2, Column: 0, Offset: 9},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("/// Test")),
+						},
+					},
+					StartPos: ast.Position{Line: 2, Column: 0, Offset: 9},
 				},
 			},
 			result,
@@ -929,8 +1128,13 @@ func TestParseFunctionDeclaration(t *testing.T) {
 							},
 						},
 					},
-					DocString: " First line\n Second line",
-					StartPos:  ast.Position{Line: 7, Column: 0, Offset: 39},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("/// First line")),
+							ast.NewComment(nil, []byte("/// Second line")),
+						},
+					},
+					StartPos: ast.Position{Line: 7, Column: 0, Offset: 39},
 				},
 			},
 			result,
@@ -967,8 +1171,12 @@ func TestParseFunctionDeclaration(t *testing.T) {
 							},
 						},
 					},
-					DocString: " Cool dogs.\n\n Cool cats!! ",
-					StartPos:  ast.Position{Line: 7, Column: 0, Offset: 39},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("/** Cool dogs.\n\n Cool cats!! */")),
+						},
+					},
+					StartPos: ast.Position{Line: 7, Column: 0, Offset: 39},
 				},
 			},
 			result,
@@ -1373,7 +1581,10 @@ func TestParseFunctionDeclaration(t *testing.T) {
 						PreConditions:  (*ast.Conditions)(nil),
 						PostConditions: (*ast.Conditions)(nil),
 					},
-					DocString: "",
+					Comments: ast.Comments{
+						Leading:  []*ast.Comment{},
+						Trailing: []*ast.Comment{},
+					},
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos: ast.Position{
@@ -1662,7 +1873,10 @@ func TestParseAccess(t *testing.T) {
 		return Parse(
 			nil,
 			[]byte(input),
-			parseAccess,
+			func(p *parser) (ast.Access, error) {
+				access, _, err := parseAccess(p)
+				return access, err
+			},
 			Config{},
 		)
 	}
@@ -2107,6 +2321,39 @@ func TestParseImportDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("no identifiers, string location, with leading/trailing comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+// Before foo
+import "foo" /* After foo */`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.ImportDeclaration{
+					Identifiers: nil,
+					Location:    common.StringLocation("foo"),
+					LocationPos: ast.Position{Line: 3, Column: 7, Offset: 22},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 3, Column: 0, Offset: 15},
+						EndPos:   ast.Position{Line: 3, Column: 11, Offset: 26},
+					},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before foo")),
+						},
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("/* After foo */")),
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
 	t.Run("no identifiers, address location", func(t *testing.T) {
 
 		t.Parallel()
@@ -2244,11 +2491,11 @@ func TestParseImportDeclaration(t *testing.T) {
 		)
 	})
 
-	t.Run("three identifiers, address location", func(t *testing.T) {
+	t.Run("three identifiers, address location, with trailing comment", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseDeclarations(` import foo , bar , baz from 0x42`)
+		result, errs := testParseDeclarations(` import foo , bar , baz from 0x42 // After address`)
 		require.Empty(t, errs)
 
 		AssertEqualWithDiff(t,
@@ -2275,6 +2522,11 @@ func TestParseImportDeclaration(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 						EndPos:   ast.Position{Line: 1, Column: 32, Offset: 32},
+					},
+					Comments: ast.Comments{
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("// After address")),
+						},
 					},
 				},
 			},
@@ -2323,11 +2575,11 @@ func TestParseImportDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t, expected, result)
 	})
 
-	t.Run("no identifiers, identifier location", func(t *testing.T) {
+	t.Run("no identifiers, identifier location, with trailing comment", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseDeclarations(` import foo`)
+		result, errs := testParseDeclarations(` import foo // After foo`)
 		require.Empty(t, errs)
 
 		AssertEqualWithDiff(t,
@@ -2339,6 +2591,11 @@ func TestParseImportDeclaration(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 						EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+					},
+					Comments: ast.Comments{
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("// After foo")),
+						},
 					},
 				},
 			},
@@ -2359,6 +2616,7 @@ func TestParseImportDeclaration(t *testing.T) {
 		}, errs)
 
 	})
+
 	t.Run("from keyword as second identifier", func(t *testing.T) {
 
 		t.Parallel()
@@ -2461,6 +2719,63 @@ func TestParseEvent(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
 						EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("no parameters, with comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+// Before E
+event E() // After E
+// Ignored
+`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					Access:        ast.AccessNotSpecified,
+					CompositeKind: common.CompositeKindEvent,
+					Identifier: ast.Identifier{
+						Identifier: "E",
+						Pos:        ast.Position{Offset: 19, Line: 3, Column: 6},
+					},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before E")),
+						},
+					},
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.SpecialFunctionDeclaration{
+								Kind: common.DeclarationKindInitializer,
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									Access: ast.AccessNotSpecified,
+									ParameterList: &ast.ParameterList{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 20, Line: 3, Column: 7},
+											EndPos:   ast.Position{Offset: 21, Line: 3, Column: 8},
+										},
+										Comments: ast.Comments{
+											Trailing: []*ast.Comment{
+												ast.NewComment(nil, []byte("// After E")),
+											},
+										},
+									},
+									StartPos: ast.Position{Offset: 20, Line: 3, Column: 7},
+								},
+							},
+						},
+					),
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 13, Line: 3, Column: 0},
+						EndPos:   ast.Position{Offset: 21, Line: 3, Column: 8},
 					},
 				},
 			},
@@ -2594,6 +2909,120 @@ func TestParseEvent(t *testing.T) {
 						},
 					},
 					Access:        ast.AccessSelf,
+					CompositeKind: common.CompositeKindEvent,
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("one parameter with comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`event E2 (
+	// Before a
+	a: Int // After a
+)`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.SpecialFunctionDeclaration{
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									ParameterList: &ast.ParameterList{
+										Parameters: []*ast.Parameter{
+											{
+												TypeAnnotation: &ast.TypeAnnotation{
+													Type: &ast.NominalType{
+														Identifier: ast.Identifier{
+															Identifier: "Int",
+															Pos: ast.Position{
+																Offset: 28,
+																Line:   3,
+																Column: 4,
+															},
+														},
+														Comments: ast.Comments{
+															Trailing: []*ast.Comment{
+																ast.NewComment(nil, []byte("// After a")),
+															},
+														},
+													},
+													StartPos: ast.Position{
+														Offset: 28,
+														Line:   3,
+														Column: 4,
+													},
+												},
+												Identifier: ast.Identifier{
+													Identifier: "a",
+													Pos: ast.Position{
+														Offset: 25,
+														Line:   3,
+														Column: 1,
+													},
+												},
+												StartPos: ast.Position{
+													Offset: 25,
+													Line:   3,
+													Column: 1,
+												},
+												Comments: ast.Comments{
+													Leading: []*ast.Comment{
+														ast.NewComment(nil, []byte("// Before a")),
+													},
+												},
+											},
+										},
+										Range: ast.Range{
+											StartPos: ast.Position{
+												Offset: 9,
+												Line:   1,
+												Column: 9,
+											},
+											EndPos: ast.Position{
+												Offset: 43,
+												Line:   4,
+												Column: 0,
+											},
+										},
+									},
+									StartPos: ast.Position{
+										Offset: 9,
+										Line:   1,
+										Column: 9,
+									},
+									Access: ast.AccessNotSpecified,
+								},
+								Kind: common.DeclarationKindInitializer,
+							},
+						},
+					),
+					Identifier: ast.Identifier{
+						Identifier: "E2",
+						Pos: ast.Position{
+							Offset: 6,
+							Line:   1,
+							Column: 6,
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 0,
+							Line:   1,
+							Column: 0,
+						},
+						EndPos: ast.Position{
+							Offset: 43,
+							Line:   4,
+							Column: 0,
+						},
+					},
+					Access:        ast.AccessNotSpecified,
 					CompositeKind: common.CompositeKindEvent,
 				},
 			},
@@ -2772,7 +3201,7 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 					nil,
 					nil,
 					nil,
-					"",
+					nil,
 				)
 			},
 			Config{},
@@ -2857,10 +3286,7 @@ func TestParseField(t *testing.T) {
 			nil,
 			[]byte(input),
 			func(p *parser) (ast.Declaration, error) {
-				return parseMemberOrNestedDeclaration(
-					p,
-					"",
-				)
+				return parseMemberOrNestedDeclaration(p)
 			},
 			config,
 		)
@@ -3511,7 +3937,10 @@ func TestParseCompositeDeclaration(t *testing.T) {
 										},
 									},
 								},
-								DocString: "",
+								Comments: ast.Comments{
+									Leading:  []*ast.Comment{},
+									Trailing: []*ast.Comment{},
+								},
 								Identifier: ast.Identifier{
 									Identifier: "getFoo",
 									Pos: ast.Position{
@@ -3552,6 +3981,368 @@ func TestParseCompositeDeclaration(t *testing.T) {
 					},
 					Access:        ast.AccessNotSpecified,
 					CompositeKind: 0x1,
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("struct, with fields, functions, special functions, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+      // Before Test
+      struct Test {
+          // Before foo
+          access(all) var foo: Int
+
+          // Before init
+          init(foo: Int) {
+              self.foo = foo
+          }
+
+          // Before getFoo
+          access(all) fun getFoo(): Int {
+              return self.foo
+          }
+      }
+    `)
+
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.FieldDeclaration{
+								TypeAnnotation: &ast.TypeAnnotation{
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "Int",
+											Pos: ast.Position{
+												Offset: 97,
+												Line:   5,
+												Column: 31,
+											},
+										},
+									},
+									StartPos: ast.Position{
+										Offset: 97,
+										Line:   5,
+										Column: 31,
+									},
+									IsResource: false,
+								},
+								Identifier: ast.Identifier{
+									Identifier: "foo",
+									Pos: ast.Position{
+										Offset: 92,
+										Line:   5,
+										Column: 26,
+									},
+								},
+								Range: ast.Range{
+									StartPos: ast.Position{
+										Offset: 76,
+										Line:   5,
+										Column: 10,
+									},
+									EndPos: ast.Position{
+										Offset: 99,
+										Line:   5,
+										Column: 33,
+									},
+								},
+								Access:       ast.AccessAll,
+								VariableKind: 0x1,
+								Flags:        0x00,
+								Comments: ast.Comments{
+									Leading: []*ast.Comment{
+										ast.NewComment(nil, []byte("// Before foo")),
+									},
+								},
+							},
+							&ast.SpecialFunctionDeclaration{
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									ParameterList: &ast.ParameterList{
+										Parameters: []*ast.Parameter{
+											{
+												TypeAnnotation: &ast.TypeAnnotation{
+													Type: &ast.NominalType{
+														Identifier: ast.Identifier{
+															Identifier: "Int",
+															Pos: ast.Position{
+																Offset: 147,
+																Line:   8,
+																Column: 20,
+															},
+														},
+													},
+													StartPos: ast.Position{
+														Offset: 147,
+														Line:   8,
+														Column: 20,
+													},
+													IsResource: false,
+												},
+												Identifier: ast.Identifier{
+													Identifier: "foo",
+													Pos: ast.Position{
+														Offset: 142,
+														Line:   8,
+														Column: 15,
+													},
+												},
+												StartPos: ast.Position{
+													Offset: 142,
+													Line:   8,
+													Column: 15,
+												},
+											},
+										},
+										Range: ast.Range{
+											StartPos: ast.Position{
+												Offset: 141,
+												Line:   8,
+												Column: 14,
+											},
+											EndPos: ast.Position{
+												Offset: 150,
+												Line:   8,
+												Column: 23,
+											},
+										},
+									},
+									FunctionBlock: &ast.FunctionBlock{
+										Block: &ast.Block{
+											Statements: []ast.Statement{
+												&ast.AssignmentStatement{
+													Target: &ast.MemberExpression{
+														Expression: &ast.IdentifierExpression{
+															Identifier: ast.Identifier{
+																Identifier: "self",
+																Pos: ast.Position{
+																	Offset: 168,
+																	Line:   9,
+																	Column: 14,
+																},
+															},
+														},
+														Identifier: ast.Identifier{
+															Identifier: "foo",
+															Pos: ast.Position{
+																Offset: 173,
+																Line:   9,
+																Column: 19,
+															},
+														},
+														AccessPos: ast.Position{
+															Offset: 172,
+															Line:   9,
+															Column: 18,
+														},
+														Optional: false,
+													},
+													Transfer: &ast.Transfer{
+														Operation: 0x1,
+														Pos: ast.Position{
+															Offset: 177,
+															Line:   9,
+															Column: 23,
+														},
+													},
+													Value: &ast.IdentifierExpression{
+														Identifier: ast.Identifier{
+															Identifier: "foo",
+															Pos: ast.Position{
+																Offset: 179,
+																Line:   9,
+																Column: 25,
+															},
+														},
+													},
+												},
+											},
+											Range: ast.Range{
+												StartPos: ast.Position{
+													Offset: 152,
+													Line:   8,
+													Column: 25,
+												},
+												EndPos: ast.Position{
+													Offset: 193,
+													Line:   10,
+													Column: 10,
+												},
+											},
+										},
+									},
+									Identifier: ast.Identifier{
+										Identifier: "init",
+										Pos: ast.Position{
+											Offset: 137,
+											Line:   8,
+											Column: 10,
+										},
+									},
+									StartPos: ast.Position{
+										Offset: 137,
+										Line:   8,
+										Column: 10,
+									},
+									Access: ast.AccessNotSpecified,
+									Flags:  0x00,
+									Comments: ast.Comments{
+										Leading: []*ast.Comment{
+											ast.NewComment(nil, []byte("// Before init")),
+										},
+									},
+								},
+								Kind: 0xd,
+							},
+							&ast.FunctionDeclaration{
+								ParameterList: &ast.ParameterList{
+									Range: ast.Range{
+										StartPos: ast.Position{
+											Offset: 255,
+											Line:   13,
+											Column: 32,
+										},
+										EndPos: ast.Position{
+											Offset: 256,
+											Line:   13,
+											Column: 33,
+										},
+									},
+								},
+								ReturnTypeAnnotation: &ast.TypeAnnotation{
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "Int",
+											Pos: ast.Position{
+												Offset: 259,
+												Line:   13,
+												Column: 36,
+											},
+										},
+									},
+									StartPos: ast.Position{
+										Offset: 259,
+										Line:   13,
+										Column: 36,
+									},
+									IsResource: false,
+								},
+								FunctionBlock: &ast.FunctionBlock{
+									Block: &ast.Block{
+										Statements: []ast.Statement{
+											&ast.ReturnStatement{
+												Expression: &ast.MemberExpression{
+													Expression: &ast.IdentifierExpression{
+														Identifier: ast.Identifier{
+															Identifier: "self",
+															Pos: ast.Position{
+																Offset: 286,
+																Line:   14,
+																Column: 21,
+															},
+														},
+													},
+													Identifier: ast.Identifier{
+														Identifier: "foo",
+														Pos: ast.Position{
+															Offset: 291,
+															Line:   14,
+															Column: 26,
+														},
+													},
+													AccessPos: ast.Position{
+														Offset: 290,
+														Line:   14,
+														Column: 25,
+													},
+													Optional: false,
+												},
+												Range: ast.Range{
+													StartPos: ast.Position{
+														Offset: 279,
+														Line:   14,
+														Column: 14,
+													},
+													EndPos: ast.Position{
+														Offset: 293,
+														Line:   14,
+														Column: 28,
+													},
+												},
+											},
+										},
+										Range: ast.Range{
+											StartPos: ast.Position{
+												Offset: 263,
+												Line:   13,
+												Column: 40,
+											},
+											EndPos: ast.Position{
+												Offset: 305,
+												Line:   15,
+												Column: 10,
+											},
+										},
+									},
+								},
+								Comments: ast.Comments{
+									Leading: []*ast.Comment{
+										ast.NewComment(nil, []byte("// Before getFoo")),
+									},
+								},
+								Identifier: ast.Identifier{
+									Identifier: "getFoo",
+									Pos: ast.Position{
+										Offset: 249,
+										Line:   13,
+										Column: 26,
+									},
+								},
+								StartPos: ast.Position{
+									Offset: 233,
+									Line:   13,
+									Column: 10,
+								},
+								Access: ast.AccessAll,
+								Flags:  0x00,
+							},
+						},
+					),
+					Identifier: ast.Identifier{
+						Identifier: "Test",
+						Pos: ast.Position{
+							Offset: 35,
+							Line:   3,
+							Column: 13,
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 28,
+							Line:   3,
+							Column: 6,
+						},
+						EndPos: ast.Position{
+							Offset: 313,
+							Line:   16,
+							Column: 6,
+						},
+					},
+					Access:        ast.AccessNotSpecified,
+					CompositeKind: common.CompositeKindStructure,
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before Test")),
+						},
+					},
 				},
 			},
 			result,
@@ -3777,6 +4568,45 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 						EndPos:   ast.Position{Line: 1, Column: 32, Offset: 32},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("no conformances, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+    // Before E
+    access(all) attachment E for S {}`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.AttachmentDeclaration{
+					Access: ast.AccessAll,
+					Identifier: ast.Identifier{
+						Identifier: "E",
+						Pos:        ast.Position{Line: 3, Column: 27, Offset: 44},
+					},
+					BaseType: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "S",
+							Pos:        ast.Position{Line: 3, Column: 33, Offset: 50},
+						},
+					},
+					Members: &ast.Members{},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 3, Column: 4, Offset: 21},
+						EndPos:   ast.Position{Line: 3, Column: 36, Offset: 53},
+					},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before E")),
+						},
 					},
 				},
 			},
@@ -4324,6 +5154,40 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 						EndPos:   ast.Position{Line: 1, Column: 34, Offset: 34},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("struct, no conformances, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+// Before S
+access(all) struct interface S { }`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.InterfaceDeclaration{
+					Access:        ast.AccessAll,
+					CompositeKind: common.CompositeKindStructure,
+					Identifier: ast.Identifier{
+						Identifier: "S",
+						Pos:        ast.Position{Line: 3, Column: 29, Offset: 42},
+					},
+					Members: &ast.Members{},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 3, Column: 0, Offset: 13},
+						EndPos:   ast.Position{Line: 3, Column: 33, Offset: 46},
+					},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before S")),
+						},
 					},
 				},
 			},
@@ -4902,6 +5766,38 @@ func TestParseTransactionDeclaration(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 5, Line: 2, Column: 4},
 						EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
+					},
+				},
+			},
+			result.Declarations(),
+		)
+	})
+
+	t.Run("EmptyTransaction, comments", func(t *testing.T) {
+
+		const code = `
+		  // Before tx
+		  transaction {}
+		`
+		result, errs := testParseProgram(code)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.TransactionDeclaration{
+					Fields:         nil,
+					Prepare:        nil,
+					PreConditions:  nil,
+					PostConditions: nil,
+					Execute:        nil,
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before tx")),
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 22, Line: 3, Column: 4},
+						EndPos:   ast.Position{Offset: 35, Line: 3, Column: 17},
 					},
 				},
 			},
@@ -8563,10 +9459,7 @@ func TestParseNestedPragma(t *testing.T) {
 			nil,
 			[]byte(input),
 			func(p *parser) (ast.Declaration, error) {
-				return parseMemberOrNestedDeclaration(
-					p,
-					"",
-				)
+				return parseMemberOrNestedDeclaration(p)
 			},
 			config,
 		)
@@ -8801,6 +9694,38 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("basic, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+			// Before ABC
+			access(all) entitlement ABC`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.EntitlementDeclaration{
+					Access: ast.AccessAll,
+					Identifier: ast.Identifier{
+						Identifier: "ABC",
+						Pos:        ast.Position{Line: 3, Column: 27, Offset: 45},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 3, Column: 3, Offset: 21},
+						EndPos:   ast.Position{Line: 3, Column: 29, Offset: 47},
+					},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before ABC")),
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
 	t.Run("nested entitlement", func(t *testing.T) {
 
 		t.Parallel()
@@ -8941,8 +9866,12 @@ func TestParseMemberDocStrings(t *testing.T) {
 					Members: ast.NewUnmeteredMembers(
 						[]ast.Declaration{
 							&ast.FunctionDeclaration{
-								Access:    ast.AccessNotSpecified,
-								DocString: " noReturnNoBlock",
+								Access: ast.AccessNotSpecified,
+								Comments: ast.Comments{
+									Leading: []*ast.Comment{
+										ast.NewComment(nil, []byte("/// noReturnNoBlock")),
+									},
+								},
 								Identifier: ast.Identifier{
 									Identifier: "noReturnNoBlock",
 									Pos:        ast.Position{Offset: 78, Line: 5, Column: 18},
@@ -8956,8 +9885,12 @@ func TestParseMemberDocStrings(t *testing.T) {
 								StartPos: ast.Position{Offset: 74, Line: 5, Column: 14},
 							},
 							&ast.FunctionDeclaration{
-								Access:    ast.AccessNotSpecified,
-								DocString: " returnNoBlock",
+								Access: ast.AccessNotSpecified,
+								Comments: ast.Comments{
+									Leading: []*ast.Comment{
+										ast.NewComment(nil, []byte("/// returnNoBlock")),
+									},
+								},
 								Identifier: ast.Identifier{
 									Identifier: "returnNoBlock",
 									Pos:        ast.Position{Offset: 147, Line: 8, Column: 18},
@@ -8981,8 +9914,12 @@ func TestParseMemberDocStrings(t *testing.T) {
 								StartPos: ast.Position{Offset: 143, Line: 8, Column: 14},
 							},
 							&ast.FunctionDeclaration{
-								Access:    ast.AccessNotSpecified,
-								DocString: " returnAndBlock",
+								Access: ast.AccessNotSpecified,
+								Comments: ast.Comments{
+									Leading: []*ast.Comment{
+										ast.NewComment(nil, []byte("/// returnAndBlock")),
+									},
+								},
 								Identifier: ast.Identifier{
 									Identifier: "returnAndBlock",
 									Pos:        ast.Position{Offset: 220, Line: 11, Column: 18},
@@ -9056,8 +9993,12 @@ func TestParseMemberDocStrings(t *testing.T) {
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindUnknown,
 								FunctionDeclaration: &ast.FunctionDeclaration{
-									Access:    ast.AccessNotSpecified,
-									DocString: " unknown",
+									Access: ast.AccessNotSpecified,
+									Comments: ast.Comments{
+										Leading: []*ast.Comment{
+											ast.NewComment(nil, []byte("/// unknown")),
+										},
+									},
 									Identifier: ast.Identifier{
 										Identifier: "unknown",
 										Pos:        ast.Position{Offset: 66, Line: 5, Column: 14},
@@ -9074,8 +10015,12 @@ func TestParseMemberDocStrings(t *testing.T) {
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindInitializer,
 								FunctionDeclaration: &ast.FunctionDeclaration{
-									Access:    ast.AccessNotSpecified,
-									DocString: " initNoBlock",
+									Access: ast.AccessNotSpecified,
+									Comments: ast.Comments{
+										Leading: []*ast.Comment{
+											ast.NewComment(nil, []byte("/// initNoBlock")),
+										},
+									},
 									Identifier: ast.Identifier{
 										Identifier: "init",
 										Pos:        ast.Position{Offset: 121, Line: 8, Column: 14},
@@ -9132,6 +10077,38 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("empty, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+			// Before M
+			access(all) entitlement mapping M { }`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.EntitlementMappingDeclaration{
+					Access: ast.AccessAll,
+					Identifier: ast.Identifier{
+						Identifier: "M",
+						Pos:        ast.Position{Line: 3, Column: 35, Offset: 51},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 3, Column: 3, Offset: 19},
+						EndPos:   ast.Position{Line: 3, Column: 39, Offset: 55},
+					},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before M")),
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
 	t.Run("mappings", func(t *testing.T) {
 
 		t.Parallel()
@@ -9145,8 +10122,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.EntitlementMappingDeclaration{
-					Access:    ast.AccessAll,
-					DocString: "",
+					Access: ast.AccessAll,
 					Identifier: ast.Identifier{
 						Identifier: "M",
 						Pos: ast.Position{
@@ -9234,8 +10210,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.EntitlementMappingDeclaration{
-					Access:    ast.AccessAll,
-					DocString: "",
+					Access: ast.AccessAll,
 					Identifier: ast.Identifier{
 						Identifier: "M",
 						Pos: ast.Position{

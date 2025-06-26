@@ -29,6 +29,8 @@ const EOF rune = -1
 const (
 	TokenError TokenType = iota
 	TokenEOF
+	// TokenSpace must be preserved alongside the new comment structs,
+	// since some parsing code depends on it.
 	TokenSpace
 	TokenBinaryIntegerLiteral
 	TokenOctalIntegerLiteral
@@ -69,10 +71,6 @@ const (
 	TokenEqualEqual
 	TokenExclamationMark
 	TokenNotEqual
-	TokenBlockCommentStart
-	TokenBlockCommentEnd
-	TokenBlockCommentContent
-	TokenLineComment
 	TokenAmpersand
 	TokenAmpersandAmpersand
 	TokenCaret
@@ -180,14 +178,6 @@ func (t TokenType) String() string {
 		return `'!'`
 	case TokenNotEqual:
 		return `'!='`
-	case TokenBlockCommentStart:
-		return `'/*'`
-	case TokenBlockCommentContent:
-		return "block comment"
-	case TokenLineComment:
-		return "line comment"
-	case TokenBlockCommentEnd:
-		return `'*/'`
 	case TokenAmpersand:
 		return `'&'`
 	case TokenAmpersandAmpersand:

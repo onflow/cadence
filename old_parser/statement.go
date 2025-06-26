@@ -155,7 +155,7 @@ func parseStatement(p *parser) (ast.Statement, error) {
 
 func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.Statement, error) {
 
-	startPos := p.current.StartPos
+	startToken := p.current
 
 	// Skip the `fun` keyword
 	p.nextSemanticToken()
@@ -193,8 +193,10 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.State
 			parameterList,
 			returnTypeAnnotation,
 			functionBlock,
-			startPos,
-			"",
+			startToken.StartPos,
+			ast.Comments{
+				Leading: startToken.Comments.PackToList(),
+			},
 		), nil
 	} else {
 		parameterList, returnTypeAnnotation, functionBlock, err :=
@@ -211,7 +213,7 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.State
 				parameterList,
 				returnTypeAnnotation,
 				functionBlock,
-				startPos,
+				startToken.StartPos,
 			),
 		), nil
 	}
@@ -250,6 +252,7 @@ func parseReturnStatement(p *parser) (*ast.ReturnStatement, error) {
 			tokenRange.StartPos,
 			endPosition,
 		),
+		ast.Comments{},
 	), nil
 }
 
@@ -257,14 +260,14 @@ func parseBreakStatement(p *parser) *ast.BreakStatement {
 	tokenRange := p.current.Range
 	p.next()
 
-	return ast.NewBreakStatement(p.memoryGauge, tokenRange)
+	return ast.NewBreakStatement(p.memoryGauge, tokenRange, ast.Comments{})
 }
 
 func parseContinueStatement(p *parser) *ast.ContinueStatement {
 	tokenRange := p.current.Range
 	p.next()
 
-	return ast.NewContinueStatement(p.memoryGauge, tokenRange)
+	return ast.NewContinueStatement(p.memoryGauge, tokenRange, ast.Comments{})
 }
 
 func parseIfStatement(p *parser) (*ast.IfStatement, error) {
@@ -336,6 +339,7 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 			thenBlock,
 			elseBlock,
 			startPos,
+			ast.Comments{},
 		)
 
 		if variableDeclaration != nil {
@@ -359,6 +363,7 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 			p.memoryGauge,
 			[]ast.Statement{result},
 			ast.NewRangeFromPositioned(p.memoryGauge, result),
+			ast.Comments{},
 		)
 		result = outer
 	}
@@ -381,7 +386,7 @@ func parseWhileStatement(p *parser) (*ast.WhileStatement, error) {
 		return nil, err
 	}
 
-	return ast.NewWhileStatement(p.memoryGauge, expression, block, startPos), nil
+	return ast.NewWhileStatement(p.memoryGauge, expression, block, startPos, ast.Comments{}), nil
 }
 
 func parseForStatement(p *parser) (*ast.ForStatement, error) {
@@ -447,6 +452,7 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 		block,
 		expression,
 		startPos,
+		ast.Comments{},
 	), nil
 }
 
@@ -476,6 +482,7 @@ func parseBlock(p *parser) (*ast.Block, error) {
 			startToken.StartPos,
 			endToken.EndPos,
 		),
+		ast.Comments{},
 	), nil
 }
 
@@ -531,6 +538,7 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 				startToken.StartPos,
 				endToken.EndPos,
 			),
+			ast.Comments{},
 		),
 		preConditions,
 		postConditions,
@@ -612,7 +620,7 @@ func parseEmitStatement(p *parser) (*ast.EmitStatement, error) {
 		return nil, err
 	}
 
-	return ast.NewEmitStatement(p.memoryGauge, invocation, startPos), nil
+	return ast.NewEmitStatement(p.memoryGauge, invocation, startPos, ast.Comments{}), nil
 }
 
 func parseSwitchStatement(p *parser) (*ast.SwitchStatement, error) {
@@ -651,6 +659,7 @@ func parseSwitchStatement(p *parser) (*ast.SwitchStatement, error) {
 			startPos,
 			endToken.EndPos,
 		),
+		ast.Comments{},
 	), nil
 }
 
@@ -820,5 +829,6 @@ func parseRemoveStatement(
 		attachmentNominalType,
 		attached,
 		startPos,
+		ast.Comments{},
 	), nil
 }

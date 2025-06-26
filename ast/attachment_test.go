@@ -56,8 +56,12 @@ func TestAttachmentDeclaration_MarshallJSON(t *testing.T) {
 				),
 			},
 		},
-		Members:   NewMembers(nil, []Declaration{}),
-		DocString: "test",
+		Members: NewMembers(nil, []Declaration{}),
+		Comments: Comments{
+			Leading: []*Comment{
+				NewComment(nil, []byte("///test")),
+			},
+		},
 		Range: Range{
 			StartPos: Position{Offset: 1, Line: 2, Column: 3},
 			EndPos:   Position{Offset: 4, Line: 5, Column: 6},
@@ -141,8 +145,12 @@ func TestAttachmentDeclaration_Doc(t *testing.T) {
 				),
 			},
 		},
-		Members:   NewMembers(nil, []Declaration{}),
-		DocString: "test",
+		Members: NewMembers(nil, []Declaration{}),
+		Comments: Comments{
+			Leading: []*Comment{
+				NewComment(nil, []byte("///test")),
+			},
+		},
 		Range: Range{
 			StartPos: Position{Offset: 1, Line: 2, Column: 3},
 			EndPos:   Position{Offset: 4, Line: 5, Column: 6},

@@ -589,8 +589,8 @@ func TestParseBuffering(t *testing.T) {
 			[]error{
 				&RestrictedTypeError{
 					Range: ast.Range{
-						StartPos: ast.Position{Offset: 138, Line: 4, Column: 55},
-						EndPos:   ast.Position{Offset: 139, Line: 4, Column: 56},
+						StartPos: ast.Position{Offset: 145, Line: 4, Column: 62},
+						EndPos:   ast.Position{Offset: 145, Line: 4, Column: 62},
 					},
 				},
 			},
@@ -654,7 +654,7 @@ func TestParseEOF(t *testing.T) {
 			if err != nil {
 				return struct{}{}, err
 			}
-			p.skipSpaceAndComments()
+			p.skipSpace()
 			_, err = p.mustToken(lexer.TokenIdentifier, "b")
 			if err != nil {
 				return struct{}{}, err
@@ -1055,4 +1055,95 @@ func TestParseWhitespaceAtEnd(t *testing.T) {
 	)
 
 	assert.Empty(t, errs)
+}
+
+func TestParseComments(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("event declaration", func(t *testing.T) {
+		res, errs := ParseDeclarations(
+			nil,
+			[]byte(`
+/// Before MyEvent
+event MyEvent() // After MyEvent
+/// Ignored
+`),
+			Config{},
+		)
+
+		assert.Empty(t, errs)
+		assert.NotNil(t, res)
+
+		event, ok := res[0].(*ast.CompositeDeclaration)
+		assert.True(t, ok)
+		assert.Equal(t, ast.Comments{
+			Leading: []*ast.Comment{ast.NewComment(nil, []byte("/// Before MyEvent"))},
+		}, event.Comments)
+		assert.Equal(t, " Before MyEvent", event.DeclarationDocString())
+
+		decl, ok := event.Members.Declarations()[0].(*ast.SpecialFunctionDeclaration)
+		assert.True(t, ok)
+		assert.Equal(t, ast.Comments{
+			Trailing: []*ast.Comment{ast.NewComment(nil, []byte("// After MyEvent"))},
+		}, decl.FunctionDeclaration.ParameterList.Comments)
+		assert.Equal(t, "", decl.DeclarationDocString())
+
+	})
+
+	t.Run("function declaration", func(t *testing.T) {
+		res, errs := ParseProgram(
+			nil,
+			[]byte(`
+/// Inline doc 1 of first
+/// Inline doc 2 of first
+fun first() {} // Trailing inline comment of first
+
+/**
+Multi-line doc 1 of second
+*/
+/**
+Multi-line doc 2 of second
+*/
+fun second() {} /**
+Trailing multi-line comment of second
+*/
+`),
+			Config{},
+		)
+
+		assert.Empty(t, errs)
+		assert.NotNil(t, res)
+
+		first, ok := res.Declarations()[0].(*ast.FunctionDeclaration)
+		assert.True(t, ok)
+		assert.Equal(t, " Inline doc 1 of first\n Inline doc 2 of first", first.DeclarationDocString())
+		assert.Equal(t, ast.Comments{
+			Leading: []*ast.Comment{
+				ast.NewComment(nil, []byte("/// Inline doc 1 of first")),
+				ast.NewComment(nil, []byte("/// Inline doc 2 of first")),
+			},
+		}, first.Comments)
+		assert.Equal(t, ast.Comments{
+			Trailing: []*ast.Comment{
+				ast.NewComment(nil, []byte("// Trailing inline comment of first")),
+			},
+		}, first.FunctionBlock.Block.Comments)
+
+		second, ok := res.Declarations()[1].(*ast.FunctionDeclaration)
+		assert.True(t, ok)
+		assert.Equal(t, "\nMulti-line doc 1 of second\n\n\nMulti-line doc 2 of second\n", second.DeclarationDocString())
+		assert.Equal(t, ast.Comments{
+			Leading: []*ast.Comment{
+				ast.NewComment(nil, []byte("/**\nMulti-line doc 1 of second\n*/")),
+				ast.NewComment(nil, []byte("/**\nMulti-line doc 2 of second\n*/")),
+			},
+		}, second.Comments)
+		assert.Equal(t, ast.Comments{
+			Trailing: []*ast.Comment{
+				ast.NewComment(nil, []byte("/**\nTrailing multi-line comment of second\n*/")),
+			},
+		}, second.FunctionBlock.Block.Comments)
+	})
+
 }
