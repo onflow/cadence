@@ -48,7 +48,7 @@ type vmEnvironmentReconfigured struct {
 type vmEnvironment struct {
 	vmEnvironmentReconfigured
 
-	checkingEnvironment *checkingEnvironment
+	checkingEnvironment *CheckingEnvironment
 
 	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
 

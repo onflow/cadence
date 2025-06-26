@@ -3154,6 +3154,7 @@ var arrayDictionaryEntitlements = func() *EntitlementSet {
 	set.Add(MutateType)
 	set.Add(InsertType)
 	set.Add(RemoveType)
+	set.Minimize()
 	return set
 }()
 

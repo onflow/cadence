@@ -343,20 +343,9 @@ func (v UFix64Value) Div(context NumberValueArithmeticContext, other NumberValue
 	return UFix64Value{UFix64Value: result}
 }
 
-func (v UFix64Value) SaturatingDiv(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
-	defer func() {
-		r := recover()
-		if _, ok := r.(*InvalidOperandsError); ok {
-			panic(&InvalidOperandsError{
-				FunctionName:  sema.NumericTypeSaturatingDivideFunctionName,
-				LeftType:      v.StaticType(context),
-				RightType:     other.StaticType(context),
-				LocationRange: locationRange,
-			})
-		}
-	}()
-
-	return v.Div(context, other, locationRange)
+func (v UFix64Value) SaturatingDiv(_ NumberValueArithmeticContext, _ NumberValue, _ LocationRange) NumberValue {
+	// UFix64 does not have a saturating division operation, see sema.UFix64Type
+	panic(errors.NewUnreachableError())
 }
 
 func (v UFix64Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
