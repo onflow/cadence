@@ -853,12 +853,12 @@ func TestCheckImportAlias(t *testing.T) {
 
 		_, err = ParseAndCheckWithOptions(t,
 			`
-            import Foo as Bar from "imported"
-            access(all) fun main() {
-                var foo: &Bar = Bar
-                var x: &[Int] = Bar.x
-                var bar: Bar.Bar = Bar.Bar()
-            }
+			import Foo as Bar from "imported"
+			access(all) fun main() {
+				var foo: &Bar = Bar
+				var x: &[Int] = Bar.x
+				var bar: Bar.Bar = Bar.Bar()
+			}
             `,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
@@ -898,13 +898,13 @@ func TestCheckImportAlias(t *testing.T) {
 
 		_, err = ParseAndCheckWithOptions(t,
 			`
-            import Foo as Bar from "imported"
+			import Foo as Bar from "imported"
 			import Foo as Cab from "imported"
-            access(all) fun main() {
-                var foo: &Cab = Cab
-                var x: &[Int] = Bar.x
-                var bar: Cab.Bar = Cab.Bar()
-            }
+			access(all) fun main() {
+				var foo: &Cab = Cab
+				var x: &[Int] = Bar.x
+				var bar: Cab.Bar = Cab.Bar()
+			}
             `,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
@@ -924,7 +924,7 @@ func TestCheckImportAlias(t *testing.T) {
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
-            access(all) fun a(): Int {
+			access(all) fun a(): Int {
 				return 42
 			}
 			access(all) fun b(): Int {
@@ -940,11 +940,11 @@ func TestCheckImportAlias(t *testing.T) {
 
 		_, err = ParseAndCheckWithOptions(t,
 			`
-            import a as c from "imported"
+			import a as c from "imported"
 			import b as c from "imported"
-            access(all) fun main() {
-                c() + c()
-            }
+			access(all) fun main() {
+				c() + c()
+			}
             `,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
@@ -968,7 +968,7 @@ func TestCheckImportAlias(t *testing.T) {
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
-            access(all) fun a(): Int {
+			access(all) fun a(): Int {
 				return 42
 			}
 			`,
@@ -981,10 +981,10 @@ func TestCheckImportAlias(t *testing.T) {
 
 		_, err = ParseAndCheckWithOptions(t,
 			`
-            import c as a from "imported"
-            access(all) fun main() {
-                c() + c()
-            }
+			import c as a from "imported"
+			access(all) fun main() {
+				c() + c()
+			}
             `,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
@@ -1008,9 +1008,16 @@ func TestCheckImportAlias(t *testing.T) {
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
-            access(all) fun a(): Int {
-              return 42
-          	}
+			access(all) contract Foo {
+				access(all) let x: [Int]
+				access(all) fun answer(): Int {
+					return 42
+				}
+				access(all) struct Bar {}
+				init() {
+					self.x = []
+				}
+			}
 			`,
 			ParseAndCheckOptions{
 				Location: ImportedLocation,
@@ -1041,6 +1048,40 @@ func TestCheckImportAlias(t *testing.T) {
 
 		notDeclaredError := &sema.NotDeclaredError{}
 		assert.ErrorAs(t, errs[0], &notDeclaredError)
+	})
 
+	t.Run("valid, type equality", func(t *testing.T) {
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
+			access(all) contract Foo {
+			}
+			`,
+			ParseAndCheckOptions{
+				Location: ImportedLocation,
+			},
+		)
+
+		require.NoError(t, err)
+
+		_, err = ParseAndCheckWithOptions(t,
+			`
+			import Foo as Bar from "imported"
+			import Foo as Baz from "imported"
+
+			var foo: &Bar = Baz
+            `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+
+		require.NoError(t, err)
 	})
 }
