@@ -3333,6 +3333,15 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 
 	// is this the best way to have base on stack
 	c.compileExpression(expression.Base)
+	// copy of base
+	c.emitTransfer()
+	// store it locally
+	targetLocalIndex := c.currentFunction.generateLocalIndex()
+	c.emitSetLocal(targetLocalIndex)
+	// retrieve base again
+	c.emitGetLocal(targetLocalIndex)
+	// we want base to be a reference?
+
 	// create the attachment
 	c.visitInvocationExpressionWithImplicitArgument(expression.Attachment, &expression.Base, baseType)
 	// attachment on stack
@@ -3344,8 +3353,8 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 	c.emit(opcode.InstructionSetTypeKey{
 		Type: c.getOrAddType(attachmentType),
 	})
-	// need base back on stack as return value
-	c.compileExpression(expression.Base)
+	// retrieve attached copy of base
+	c.emitGetLocal(targetLocalIndex)
 	return
 }
 
