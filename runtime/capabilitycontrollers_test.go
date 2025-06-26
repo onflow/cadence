@@ -45,7 +45,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 		err error,
 	) {
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		accountCodes := map[Location][]byte{}
 
@@ -173,6 +173,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -188,6 +190,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -3554,7 +3557,7 @@ func TestRuntimeCapabilityBorrowAsInheritedInterface(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	contract := []byte(`
         access(all) contract Test {
@@ -3625,6 +3628,8 @@ func TestRuntimeCapabilityBorrowAsInheritedInterface(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: contract deployment with VM
+			// UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -3638,6 +3643,7 @@ func TestRuntimeCapabilityBorrowAsInheritedInterface(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -3666,7 +3672,7 @@ func TestRuntimeCapabilityControllerOperationAfterDeletion(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			t.Parallel()
 
-			rt := NewTestInterpreterRuntime()
+			rt := NewTestRuntime()
 
 			tx := []byte(fmt.Sprintf(
 				`
@@ -3710,6 +3716,7 @@ func TestRuntimeCapabilityControllerOperationAfterDeletion(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					UseVM:     *compile,
 				},
 			)
 
@@ -3834,7 +3841,7 @@ func TestRuntimeCapabilitiesGetBackwardCompatibility(t *testing.T) {
 
 	test := func(t *testing.T, value interpreter.Value) {
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
@@ -3877,6 +3884,7 @@ func TestRuntimeCapabilitiesGetBackwardCompatibility(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3936,7 +3944,7 @@ func TestRuntimeCapabilitiesPublishBackwardCompatibility(t *testing.T) {
 
 	test := func(t *testing.T, value interpreter.Value) {
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		var events []cadence.Event
 
@@ -3984,6 +3992,7 @@ func TestRuntimeCapabilitiesPublishBackwardCompatibility(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4027,7 +4036,7 @@ func TestRuntimeCapabilitiesUnpublishBackwardCompatibility(t *testing.T) {
 
 	test := func(t *testing.T, value interpreter.Value) {
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		var events []cadence.Event
 
@@ -4075,6 +4084,7 @@ func TestRuntimeCapabilitiesUnpublishBackwardCompatibility(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)

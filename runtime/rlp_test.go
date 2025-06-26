@@ -36,7 +36,7 @@ func TestRuntimeRLPDecodeString(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	script := []byte(`
 
@@ -147,6 +147,7 @@ func TestRuntimeRLPDecodeString(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  common.ScriptLocation{},
+					UseVM:     *compile,
 				},
 			)
 			if len(test.expectedErrMsg) > 0 {
@@ -176,7 +177,7 @@ func TestRuntimeRLPDecodeList(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	script := []byte(`
 
@@ -303,6 +304,7 @@ func TestRuntimeRLPDecodeList(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  common.ScriptLocation{},
+					UseVM:     *compile,
 				},
 			)
 			if len(test.expectedErrMsg) > 0 {

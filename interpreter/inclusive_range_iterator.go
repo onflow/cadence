@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
@@ -87,4 +89,8 @@ func (i *InclusiveRangeIterator) Next(context ValueIteratorContext, locationRang
 func (i *InclusiveRangeIterator) HasNext() bool {
 	// TODO: Not implemented yet
 	panic(errors.NewUnreachableError())
+}
+
+func (*InclusiveRangeIterator) ValueID() (atree.ValueID, bool) {
+	return atree.ValueID{}, false
 }

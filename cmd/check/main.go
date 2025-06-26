@@ -237,7 +237,7 @@ func runPath(
 	location := common.NewStringLocation(nil, path)
 
 	// standard library handler is only needed for execution, but we're only checking
-	standardLibraryValues := stdlib.DefaultScriptStandardLibraryValues(nil)
+	standardLibraryValues := stdlib.InterpreterDefaultScriptStandardLibraryValues(nil)
 
 	func() {
 		defer func() {

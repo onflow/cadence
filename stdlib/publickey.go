@@ -19,6 +19,8 @@
 package stdlib
 
 import (
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -37,7 +39,7 @@ var publicKeyConstructorFunctionType = sema.NewSimpleFunctionType(
 			TypeAnnotation: sema.ByteArrayTypeAnnotation,
 		},
 		{
-			Identifier:     sema.PublicKeyTypeSignAlgoFieldName,
+			Identifier:     sema.PublicKeyTypeSignatureAlgorithmFieldName,
 			TypeAnnotation: sema.SignatureAlgorithmTypeAnnotation,
 		},
 	},
@@ -69,10 +71,10 @@ func newPublicKeyValidationHandler(validator PublicKeyValidator) interpreter.Pub
 	}
 }
 
-func NewPublicKeyConstructor(
+func NewInterpreterPublicKeyConstructor(
 	publicKeyValidator PublicKeyValidator,
 ) StandardLibraryValue {
-	return NewStandardLibraryStaticFunction(
+	return NewInterpreterStandardLibraryStaticFunction(
 		sema.PublicKeyTypeName,
 		publicKeyConstructorFunctionType,
 		publicKeyConstructorFunctionDocString,
@@ -94,6 +96,36 @@ func NewPublicKeyConstructor(
 			return NewPublicKeyFromFields(
 				context,
 				locationRange,
+				publicKey,
+				signAlgo,
+				publicKeyValidator,
+			)
+		},
+	)
+}
+
+func NewVMPublicKeyConstructor(
+	publicKeyValidator PublicKeyValidator,
+) StandardLibraryValue {
+	return NewVMStandardLibraryStaticFunction(
+		sema.PublicKeyTypeName,
+		publicKeyConstructorFunctionType,
+		publicKeyConstructorFunctionDocString,
+		func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
+
+			publicKey, ok := args[0].(*interpreter.ArrayValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			signAlgo, ok := args[1].(*interpreter.SimpleCompositeValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			return NewPublicKeyFromFields(
+				context,
+				interpreter.EmptyLocationRange,
 				publicKey,
 				signAlgo,
 				publicKeyValidator,
@@ -159,7 +191,7 @@ func NewPublicKeyFromValue(
 	}
 
 	// sign algo field
-	signAlgoField := publicKey.GetMember(context, locationRange, sema.PublicKeyTypeSignAlgoFieldName)
+	signAlgoField := publicKey.GetMember(context, locationRange, sema.PublicKeyTypeSignatureAlgorithmFieldName)
 	if signAlgoField == nil {
 		return nil, errors.NewUnexpectedError("sign algorithm is not set")
 	}
@@ -204,7 +236,7 @@ type PublicKeySignatureVerifier interface {
 	) (bool, error)
 }
 
-func newPublicKeyVerifySignatureFunction(
+func newInterpreterPublicKeyVerifySignatureFunction(
 	inter *interpreter.Interpreter,
 	publicKeyValue *interpreter.CompositeValue,
 	verifier PublicKeySignatureVerifier,
@@ -212,8 +244,11 @@ func newPublicKeyVerifySignatureFunction(
 	return interpreter.NewBoundHostFunctionValue(
 		inter,
 		publicKeyValue,
-		sema.PublicKeyVerifyFunctionType,
+		sema.PublicKeyTypeVerifyFunctionType,
 		func(publicKeyValue *interpreter.CompositeValue, invocation interpreter.Invocation) interpreter.Value {
+			inter := invocation.InvocationContext
+			locationRange := invocation.LocationRange
+
 			signatureValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -234,51 +269,122 @@ func newPublicKeyVerifySignatureFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			inter := invocation.InvocationContext
-
-			locationRange := invocation.LocationRange
-
-			interpreter.ExpectType(
+			return PublicKeyVerifySignature(
 				inter,
-				publicKeyValue,
-				sema.PublicKeyType,
 				locationRange,
+				publicKeyValue,
+				signatureValue,
+				signedDataValue,
+				domainSeparationTagValue,
+				hashAlgorithmValue,
+				verifier,
 			)
-
-			signature, err := interpreter.ByteArrayValueToByteSlice(inter, signatureValue, locationRange)
-			if err != nil {
-				panic(errors.NewUnexpectedError("failed to get signature. %w", err))
-			}
-
-			signedData, err := interpreter.ByteArrayValueToByteSlice(inter, signedDataValue, locationRange)
-			if err != nil {
-				panic(errors.NewUnexpectedError("failed to get signed data. %w", err))
-			}
-
-			domainSeparationTag := domainSeparationTagValue.Str
-
-			hashAlgorithm := NewHashAlgorithmFromValue(inter, locationRange, hashAlgorithmValue)
-
-			publicKey, err := NewPublicKeyFromValue(inter, locationRange, publicKeyValue)
-			if err != nil {
-				return interpreter.FalseValue
-			}
-
-			valid, err := verifier.VerifySignature(
-				signature,
-				domainSeparationTag,
-				signedData,
-				publicKey.PublicKey,
-				publicKey.SignAlgo,
-				hashAlgorithm,
-			)
-			if err != nil {
-				panic(err)
-			}
-
-			return interpreter.BoolValue(valid)
 		},
 	)
+}
+
+func NewVMPublicKeyVerifySignatureFunction(verifier PublicKeySignatureVerifier) VMFunction {
+	return VMFunction{
+		BaseType: sema.PublicKeyType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.PublicKeyTypeVerifyFunctionName,
+			sema.PublicKeyTypeVerifyFunctionType,
+			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
+
+				var receiver interpreter.Value
+
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+
+				publicKeyValue, ok := receiver.(*interpreter.CompositeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				signatureValue, ok := args[0].(*interpreter.ArrayValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				signedDataValue, ok := args[1].(*interpreter.ArrayValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				domainSeparationTagValue, ok := args[2].(*interpreter.StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				hashAlgorithmValue, ok := args[3].(*interpreter.SimpleCompositeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return PublicKeyVerifySignature(
+					context,
+					interpreter.EmptyLocationRange,
+					publicKeyValue,
+					signatureValue,
+					signedDataValue,
+					domainSeparationTagValue,
+					hashAlgorithmValue,
+					verifier,
+				)
+			},
+		),
+	}
+}
+
+func PublicKeyVerifySignature(
+	context interpreter.InvocationContext,
+	locationRange interpreter.LocationRange,
+	publicKeyValue *interpreter.CompositeValue,
+	signatureValue *interpreter.ArrayValue,
+	signedDataValue *interpreter.ArrayValue,
+	domainSeparationTagValue *interpreter.StringValue,
+	hashAlgorithmValue *interpreter.SimpleCompositeValue,
+	verifier PublicKeySignatureVerifier,
+) interpreter.Value {
+	interpreter.ExpectType(
+		context,
+		publicKeyValue,
+		sema.PublicKeyType,
+		locationRange,
+	)
+
+	signature, err := interpreter.ByteArrayValueToByteSlice(context, signatureValue, locationRange)
+	if err != nil {
+		panic(errors.NewUnexpectedError("failed to get signature. %w", err))
+	}
+
+	signedData, err := interpreter.ByteArrayValueToByteSlice(context, signedDataValue, locationRange)
+	if err != nil {
+		panic(errors.NewUnexpectedError("failed to get signed data. %w", err))
+	}
+
+	domainSeparationTag := domainSeparationTagValue.Str
+
+	hashAlgorithm := NewHashAlgorithmFromValue(context, locationRange, hashAlgorithmValue)
+
+	publicKey, err := NewPublicKeyFromValue(context, locationRange, publicKeyValue)
+	if err != nil {
+		return interpreter.FalseValue
+	}
+
+	valid, err := verifier.VerifySignature(
+		signature,
+		domainSeparationTag,
+		signedData,
+		publicKey.PublicKey,
+		publicKey.SignAlgo,
+		hashAlgorithm,
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	return interpreter.BoolValue(valid)
 }
 
 type BLSPoPVerifier interface {
@@ -286,7 +392,7 @@ type BLSPoPVerifier interface {
 	BLSVerifyPOP(publicKey *PublicKey, signature []byte) (bool, error)
 }
 
-func newPublicKeyVerifyPoPFunction(
+func newInterpreterPublicKeyVerifyPoPFunction(
 	inter *interpreter.Interpreter,
 	publicKeyValue *interpreter.CompositeValue,
 	verifier BLSPoPVerifier,
@@ -294,41 +400,93 @@ func newPublicKeyVerifyPoPFunction(
 	return interpreter.NewBoundHostFunctionValue(
 		inter,
 		publicKeyValue,
-		sema.PublicKeyVerifyPoPFunctionType,
+		sema.PublicKeyTypeVerifyPoPFunctionType,
 		func(publicKeyValue *interpreter.CompositeValue, invocation interpreter.Invocation) interpreter.Value {
+			inter := invocation.InvocationContext
+			locationRange := invocation.LocationRange
+
 			signatureValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			inter := invocation.InvocationContext
-
-			locationRange := invocation.LocationRange
-
-			interpreter.ExpectType(
+			return PublicKeyVerifyPoP(
 				inter,
-				publicKeyValue,
-				sema.PublicKeyType,
 				locationRange,
+				publicKeyValue,
+				signatureValue,
+				verifier,
 			)
-
-			publicKey, err := NewPublicKeyFromValue(inter, locationRange, publicKeyValue)
-			if err != nil {
-				panic(err)
-			}
-
-			signature, err := interpreter.ByteArrayValueToByteSlice(inter, signatureValue, locationRange)
-			if err != nil {
-				panic(err)
-			}
-
-			valid, err := verifier.BLSVerifyPOP(publicKey, signature)
-			if err != nil {
-				panic(err)
-			}
-			return interpreter.BoolValue(valid)
 		},
 	)
+}
+
+func NewVMPublicKeyVerifyPoPFunction(verifier BLSPoPVerifier) VMFunction {
+	return VMFunction{
+		BaseType: sema.PublicKeyType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.PublicKeyTypeVerifyPoPFunctionName,
+			sema.PublicKeyTypeVerifyPoPFunctionType,
+			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
+
+				var receiver interpreter.Value
+
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+
+				publicKeyValue, ok := receiver.(*interpreter.CompositeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				signatureValue, ok := args[0].(*interpreter.ArrayValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return PublicKeyVerifyPoP(
+					context,
+					interpreter.EmptyLocationRange,
+					publicKeyValue,
+					signatureValue,
+					verifier,
+				)
+			},
+		),
+	}
+}
+
+func PublicKeyVerifyPoP(
+	context interpreter.InvocationContext,
+	locationRange interpreter.LocationRange,
+	publicKeyValue *interpreter.CompositeValue,
+	signatureValue *interpreter.ArrayValue,
+	verifier BLSPoPVerifier,
+) interpreter.Value {
+
+	interpreter.ExpectType(
+		context,
+		publicKeyValue,
+		sema.PublicKeyType,
+		locationRange,
+	)
+
+	publicKey, err := NewPublicKeyFromValue(context, locationRange, publicKeyValue)
+	if err != nil {
+		panic(err)
+	}
+
+	signature, err := interpreter.ByteArrayValueToByteSlice(context, signatureValue, locationRange)
+	if err != nil {
+		panic(err)
+	}
+
+	valid, err := verifier.BLSVerifyPOP(publicKey, signature)
+	if err != nil {
+		panic(err)
+	}
+
+	return interpreter.BoolValue(valid)
 }
 
 type PublicKeyFunctionsHandler interface {
@@ -345,12 +503,12 @@ func PublicKeyFunctions(
 
 	functions.Set(
 		sema.PublicKeyTypeVerifyFunctionName,
-		newPublicKeyVerifySignatureFunction(inter, publicKeyValue, handler),
+		newInterpreterPublicKeyVerifySignatureFunction(inter, publicKeyValue, handler),
 	)
 
 	functions.Set(
 		sema.PublicKeyTypeVerifyPoPFunctionName,
-		newPublicKeyVerifyPoPFunction(inter, publicKeyValue, handler),
+		newInterpreterPublicKeyVerifyPoPFunction(inter, publicKeyValue, handler),
 	)
 
 	return functions

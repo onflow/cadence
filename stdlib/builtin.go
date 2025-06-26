@@ -19,6 +19,7 @@
 package stdlib
 
 import (
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -38,29 +39,118 @@ type StandardLibraryHandler interface {
 	Hasher
 }
 
-func DefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
+func InterpreterDefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
 	return []StandardLibraryValue{
-		AssertFunction,
-		PanicFunction,
-		SignatureAlgorithmConstructor,
+		InterpreterAssertFunction,
+		InterpreterPanicFunction,
+		InterpreterSignatureAlgorithmConstructor,
+		InterpreterInclusiveRangeConstructor,
+		NewInterpreterLogFunction(handler),
+		NewInterpreterRevertibleRandomFunction(handler),
+		NewInterpreterGetBlockFunction(handler),
+		NewInterpreterGetCurrentBlockFunction(handler),
+		NewInterpreterGetAccountFunction(handler),
+		NewInterpreterAccountConstructor(handler),
+		NewInterpreterPublicKeyConstructor(handler),
+		NewInterpreterHashAlgorithmConstructor(handler),
 		RLPContract,
-		InclusiveRangeConstructorFunction,
-		NewLogFunction(handler),
-		NewRevertibleRandomFunction(handler),
-		NewGetBlockFunction(handler),
-		NewGetCurrentBlockFunction(handler),
-		NewGetAccountFunction(handler),
-		NewAccountConstructor(handler),
-		NewPublicKeyConstructor(handler),
 		NewBLSContract(nil, handler),
-		NewHashAlgorithmConstructor(handler),
 	}
 }
 
-func DefaultScriptStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
+func VMDefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
+	return []StandardLibraryValue{
+		VMAssertFunction,
+		VMPanicFunction,
+		VMSignatureAlgorithmConstructor,
+		// TODO: InclusiveRangeConstructor
+		NewVMLogFunction(handler),
+		NewVMRevertibleRandomFunction(handler),
+		NewVMGetBlockFunction(handler),
+		NewVMGetCurrentBlockFunction(handler),
+		NewVMGetAccountFunction(handler),
+		NewVMAccountConstructor(handler),
+		NewVMPublicKeyConstructor(handler),
+		NewVMHashAlgorithmConstructor(handler),
+		RLPContract,
+		NewBLSContract(nil, handler),
+	}
+}
+
+type VMFunction struct {
+	BaseType      sema.Type
+	FunctionValue *vm.NativeFunctionValue
+}
+
+func VMFunctions(handler StandardLibraryHandler) []VMFunction {
+	return []VMFunction{
+		VMAccountCapabilitiesExistsFunction,
+		NewVMAccountCapabilitiesGetFunction(handler, false),
+		NewVMAccountCapabilitiesGetFunction(handler, true),
+		NewVMAccountCapabilitiesPublishFunction(handler),
+		NewVMAccountCapabilitiesUnpublishFunction(handler),
+
+		NewVMAccountKeysAddFunction(handler),
+		NewVMAccountKeysGetFunction(handler),
+		NewVMAccountKeysRevokeFunction(handler),
+		NewVMAccountKeysForEachFunction(handler),
+
+		NewVMAccountInboxPublishFunction(handler),
+		NewVMAccountInboxUnpublishFunction(handler),
+		NewVMAccountInboxClaimFunction(handler),
+
+		NewVMAccountContractsGetFunction(handler),
+		NewVMAccountContractsBorrowFunction(handler),
+
+		NewVMAccountStorageCapabilitiesGetControllersFunction(handler),
+		NewVMAccountStorageCapabilitiesGetControllerFunction(handler),
+		NewVMAccountStorageCapabilitiesForEachControllerFunction(handler),
+		NewVMAccountStorageCapabilitiesIssueFunction(handler),
+		NewVMAccountStorageCapabilitiesIssueWithTypeFunction(handler),
+
+		NewVMAccountAccountCapabilitiesGetControllerFunction(handler),
+		NewVMAccountAccountCapabilitiesGetControllersFunction(handler),
+		NewVMAccountAccountCapabilitiesForEachControllerFunction(handler),
+		NewVMAccountAccountCapabilitiesIssueFunction(handler),
+		NewVMAccountAccountCapabilitiesIssueWithTypeFunction(handler),
+
+		VMRLPDecodeStringFunction,
+		VMRLPDecodeListFunction,
+
+		NewVMBLSAggregatePublicKeysFunction(handler),
+		NewVMBLSAggregateSignaturesFunction(handler),
+
+		NewVMHashAlgorithmHashFunction(handler),
+		NewVMHashAlgorithmHashWithTagFunction(handler),
+
+		NewVMPublicKeyVerifySignatureFunction(handler),
+		NewVMPublicKeyVerifyPoPFunction(handler),
+	}
+}
+
+type VMValue struct {
+	Name  string
+	Value vm.Value
+}
+
+func VMValues(handler StandardLibraryHandler) []VMValue {
+	return common.Concat(
+		VMSignatureAlgorithmCaseValues,
+		NewVMHashAlgorithmCaseValues(handler),
+	)
+}
+
+func InterpreterDefaultScriptStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
 	return append(
-		DefaultStandardLibraryValues(handler),
-		NewGetAuthAccountFunction(handler),
+		InterpreterDefaultStandardLibraryValues(handler),
+		NewInterpreterGetAuthAccountFunction(handler),
+	)
+}
+
+func VMDefaultScriptStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
+	return append(
+		VMDefaultStandardLibraryValues(handler),
+		NewVMGetAuthAccountFunction(handler),
 	)
 }
 

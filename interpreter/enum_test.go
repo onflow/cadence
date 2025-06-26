@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
@@ -40,15 +41,12 @@ func TestInterpretEnum(t *testing.T) {
       }
     `)
 
-	expectedType := &interpreter.HostFunctionValue{}
-
-	// TODO: enable once feature branch is merged
-	//var expectedType interpreter.Value
-	//if *compile {
-	//	expectedType = vm.CompiledFunctionValue{}
-	//} else {
-	//	expectedType = &interpreter.HostFunctionValue{}
-	//}
+	var expectedType interpreter.Value
+	if *compile {
+		expectedType = vm.CompiledFunctionValue{}
+	} else {
+		expectedType = &interpreter.HostFunctionValue{}
+	}
 
 	assert.IsType(t,
 		expectedType,

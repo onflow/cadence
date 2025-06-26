@@ -154,7 +154,7 @@ func TestRuntimeStorageWrite(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
@@ -191,6 +191,7 @@ func TestRuntimeStorageWrite(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -222,7 +223,7 @@ func TestRuntimeAccountStorage(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	script := []byte(`
       transaction {
@@ -267,6 +268,7 @@ func TestRuntimeAccountStorage(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -281,7 +283,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	addressString, err := hex.DecodeString("aad3e26e406987c2")
 	require.NoError(t, err)
@@ -359,6 +361,8 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: contract deployment with VM
+			// UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -392,6 +396,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -402,7 +407,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	storage := NewTestLedger(nil, nil)
 
@@ -440,6 +445,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -527,7 +533,7 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	testAddress, err := common.HexToAddress("0x0b2a3299cc857e29")
 	require.NoError(t, err)
@@ -579,6 +585,8 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: contract deployment with VM
+			// UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -588,6 +596,8 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 			Source: DeploymentTransaction(
 				"TopShotShardedCollection",
 				[]byte(realTopShotShardedCollectionContract),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			),
 		},
 		Context{
@@ -607,6 +617,8 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: contract deployment with VM
+			// UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -616,7 +628,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	nftAddress, err := common.HexToAddress("0x1d7e57aa55817448")
 	require.NoError(t, err)
@@ -677,6 +689,8 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: contract deployment with VM
+			// UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -806,7 +820,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	const contract = `
       access(all) contract Test {
@@ -938,6 +952,8 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: contract deployment with VM
+			// UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1055,7 +1071,7 @@ func TestRuntimeStoragePublishAndUnpublish(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	storage := NewTestLedger(nil, nil)
 
@@ -1096,6 +1112,7 @@ func TestRuntimeStoragePublishAndUnpublish(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1117,6 +1134,7 @@ func TestRuntimeStoragePublishAndUnpublish(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1136,6 +1154,7 @@ func TestRuntimeStoragePublishAndUnpublish(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1145,7 +1164,7 @@ func TestRuntimeStorageSaveCapability(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	storage := NewTestLedger(nil, nil)
 
@@ -1186,11 +1205,6 @@ func TestRuntimeStorageSaveCapability(t *testing.T) {
 	storagePath1 := newStoragePath()
 	storagePath2 := newStoragePath()
 
-	context := Context{
-		Interface: runtimeInterface,
-		Location:  nextTransactionLocation(),
-	}
-
 	err := rt.ExecuteTransaction(
 		Script{
 			Source: []byte(fmt.Sprintf(
@@ -1211,11 +1225,19 @@ func TestRuntimeStorageSaveCapability(t *testing.T) {
 				storagePath2,
 			)),
 		},
-		context,
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
 	)
 	require.NoError(t, err)
 
-	value, err := rt.ReadStored(signer, storagePath1, context)
+	value, err := rt.ReadStored(signer, storagePath1, Context{
+		Interface: runtimeInterface,
+		Location:  nextTransactionLocation(),
+		UseVM:     *compile,
+	})
 	require.NoError(t, err)
 
 	expected := cadence.NewCapability(
@@ -1231,7 +1253,7 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	signerAddress := common.MustBytesToAddress([]byte{0x42})
 
@@ -1317,6 +1339,7 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -1327,7 +1350,7 @@ func TestRuntimeStorageReferenceDowncast(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	signerAddress := common.MustBytesToAddress([]byte{0x42})
 
@@ -1384,6 +1407,8 @@ func TestRuntimeStorageReferenceDowncast(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: contract deployment with VM
+			// UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1414,6 +1439,7 @@ func TestRuntimeStorageReferenceDowncast(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -1425,7 +1451,7 @@ func TestRuntimeStorageNonStorable(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
@@ -1474,6 +1500,7 @@ func TestRuntimeStorageNonStorable(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					UseVM:     *compile,
 				},
 			)
 			RequireError(t, err)
@@ -1487,7 +1514,7 @@ func TestRuntimeStorageRecursiveReference(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
@@ -1517,6 +1544,7 @@ func TestRuntimeStorageRecursiveReference(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)
@@ -1528,7 +1556,7 @@ func TestRuntimeStorageTransfer(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	address1 := common.MustBytesToAddress([]byte{0x1})
 	address2 := common.MustBytesToAddress([]byte{0x2})
@@ -1565,6 +1593,7 @@ func TestRuntimeStorageTransfer(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1592,6 +1621,7 @@ func TestRuntimeStorageTransfer(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1618,7 +1648,7 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 
 	config := DefaultTestInterpreterConfig
 	config.ResourceOwnerChangeHandlerEnabled = true
-	rt := NewTestInterpreterRuntimeWithConfig(config)
+	rt := NewTestRuntimeWithConfig(config)
 
 	address1 := common.MustBytesToAddress([]byte{0x1})
 	address2 := common.MustBytesToAddress([]byte{0x2})
@@ -1706,6 +1736,8 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: contract deployment with VM
+			// UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1731,6 +1763,8 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: requires support for resource owner changes in VM
+			//UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1760,6 +1794,8 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: requires support for resource owner changes in VM
+			//UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1834,7 +1870,7 @@ func TestRuntimeStorageUsed(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	ledger := NewTestLedger(nil, nil)
 
@@ -1844,6 +1880,8 @@ func TestRuntimeStorageUsed(t *testing.T) {
 			return 1, nil
 		},
 	}
+
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	// NOTE: do NOT change the contents of this script,
 	// it matters how the array is constructed,
@@ -1890,7 +1928,8 @@ func TestRuntimeStorageUsed(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -2048,7 +2087,7 @@ transaction {
 }
 `
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	testAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -2097,6 +2136,8 @@ transaction {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: contract deployment with VM
+			// UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -2110,6 +2151,7 @@ transaction {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -2177,7 +2219,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
           }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		accountCodes := map[Location][]byte{}
 
@@ -2231,6 +2273,8 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2249,6 +2293,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -2305,7 +2350,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
           }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		testAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -2356,6 +2401,8 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2369,6 +2416,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -2435,7 +2483,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
           }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		testAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -2489,6 +2537,8 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2502,6 +2552,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -2558,7 +2609,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
           }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		testAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -2612,6 +2663,8 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2625,6 +2678,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -2680,7 +2734,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
           }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		testAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -2734,6 +2788,8 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2747,6 +2803,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -2770,7 +2827,7 @@ func TestRuntimeNoAtreeSendOnClosedChannelDuringCommit(t *testing.T) {
 
 		for i := 0; i < 1000; i++ {
 
-			rt := NewTestInterpreterRuntime()
+			rt := NewTestRuntime()
 
 			address := common.MustBytesToAddress([]byte{0x1})
 
@@ -2800,6 +2857,7 @@ func TestRuntimeNoAtreeSendOnClosedChannelDuringCommit(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					UseVM:     *compile,
 				},
 			)
 			RequireError(t, err)
@@ -2815,7 +2873,7 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
@@ -2909,6 +2967,8 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: contract deployment with VM
+			//UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -2956,6 +3016,7 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -2974,7 +3035,7 @@ func TestRuntimeStorageReadNoImplicitWrite(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	address, err := common.HexToAddress("0x1")
 	require.NoError(t, err)
@@ -3002,6 +3063,7 @@ func TestRuntimeStorageReadNoImplicitWrite(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.TransactionLocation{},
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -3011,7 +3073,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
@@ -3072,6 +3134,8 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: contract deployment with VM
+			// UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -3097,6 +3161,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -3155,7 +3220,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 		address := common.MustBytesToAddress([]byte{0x1})
 		accountCodes := map[common.Location][]byte{}
 		ledger := NewTestLedger(nil, nil)
@@ -3210,6 +3275,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3238,6 +3305,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: requires support for handling broken contracts in VM
+				//UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3272,6 +3341,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: requires support for handling broken contracts in VM
+				//UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3283,7 +3354,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 		address := common.MustBytesToAddress([]byte{0x1})
 		accountCodes := map[common.Location][]byte{}
 		ledger := NewTestLedger(nil, nil)
@@ -3334,6 +3405,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3375,6 +3448,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: requires support for handling broken contracts in VM
+				//UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3407,6 +3482,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: requires support for handling broken contracts in VM
+				//UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3416,7 +3493,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 		address := common.MustBytesToAddress([]byte{0x1})
 		accountCodes := map[common.Location][]byte{}
 		ledger := NewTestLedger(nil, nil)
@@ -3468,6 +3545,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3508,6 +3587,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: requires support for handling broken contracts in VM
+				//UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3539,6 +3620,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: requires support for handling broken contracts in VM
+				//UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3548,7 +3631,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 		address := common.MustBytesToAddress([]byte{0x1})
 		accountCodes := map[common.Location][]byte{}
 		ledger := NewTestLedger(nil, nil)
@@ -3600,6 +3683,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3640,6 +3725,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: requires support for handling broken contracts in VM
+				//UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3684,6 +3771,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: requires support for handling broken contracts in VM
+				//UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3693,7 +3782,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 		address := common.MustBytesToAddress([]byte{0x1})
 		accountCodes := map[common.Location][]byte{}
 		ledger := NewTestLedger(nil, nil)
@@ -3762,6 +3851,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3775,6 +3866,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3808,6 +3901,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: requires support for handling broken contracts in VM
+				//UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3851,6 +3946,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: requires support for handling broken contracts in VM
+				//UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3880,6 +3977,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: requires support for handling broken contracts in VM
+				//UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3889,7 +3988,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 		address := common.MustBytesToAddress([]byte{0x1})
 		accountCodes := map[common.Location][]byte{}
 		ledger := NewTestLedger(nil, nil)
@@ -3962,6 +4061,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3975,6 +4076,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4006,6 +4109,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4052,6 +4156,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: requires support for handling broken contracts in VM
+				//UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4084,6 +4190,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: requires support for handling broken contracts in VM
+				//UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4095,7 +4203,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		test := func(brokenType bool, t *testing.T) {
 
-			rt := NewTestInterpreterRuntime()
+			rt := NewTestRuntime()
 			address := common.MustBytesToAddress([]byte{0x1})
 			accountCodes := map[common.Location][]byte{}
 			ledger := NewTestLedger(nil, nil)
@@ -4169,6 +4277,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					// TODO: contract deployment with VM
+					// UseVM:     *compile,
 				},
 			)
 			require.NoError(t, err)
@@ -4182,6 +4292,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					// TODO: contract deployment with VM
+					// UseVM:     *compile,
 				},
 			)
 			require.NoError(t, err)
@@ -4213,6 +4325,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					// TODO: requires support for handling broken contracts in VM
+					//UseVM:     *compile,
 				},
 			)
 			require.NoError(t, err)
@@ -4257,6 +4371,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					// TODO: requires support for handling broken contracts in VM
+					//UseVM:     *compile,
 				},
 			)
 			require.NoError(t, err)
@@ -4274,11 +4390,13 @@ func TestRuntimeStorageIteration(t *testing.T) {
 	t.Run("box and convert arguments, forEachStored", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
 		}
+
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		const script = `
           access(all)
@@ -4306,7 +4424,9 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
+				// TODO: requires support for handling broken contracts in VM
+				//UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4320,7 +4440,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 	t.Run("box and convert arguments, forEachPublic", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
@@ -4328,6 +4448,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
 				return nil
 			},
 		}
+
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		const script = `
           access(all)
@@ -4356,7 +4478,9 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
+				// TODO: requires support for handling broken contracts in VM
+				//UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4374,8 +4498,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	newRuntime := func() (TestInterpreterRuntime, *TestRuntimeInterface) {
-		rt := NewTestInterpreterRuntime()
+	newRuntime := func() (TestRuntime, *TestRuntimeInterface) {
+		rt := NewTestRuntime()
 		accountCodes := map[common.Location][]byte{}
 
 		runtimeInterface := &TestRuntimeInterface{
@@ -4408,17 +4532,17 @@ func TestRuntimeStorageIteration2(t *testing.T) {
           contract Test {
               access(all)
               fun saveStorage() {
-                  self.account.storage.save(0, to:/storage/foo)
+                  self.account.storage.save(0, to: /storage/foo)
               }
 
               access(all)
               fun saveOtherStorage() {
-                  self.account.storage.save(0, to:/storage/bar)
+                  self.account.storage.save(0, to: /storage/bar)
               }
 
               access(all)
               fun loadStorage() {
-                  self.account.storage.load<Int>(from:/storage/foo)
+                  self.account.storage.load<Int>(from: /storage/foo)
               }
 
               access(all)
@@ -4461,6 +4585,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4471,7 +4597,10 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 				name,
 				nil,
 				nil,
-				Context{Interface: runtimeInterface},
+				Context{
+					Interface: runtimeInterface,
+					UseVM:     *compile,
+				},
 			)
 		}
 
@@ -4593,6 +4722,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 
 		rt, runtimeInterface := newRuntime()
 
+		nextScriptLocation := NewScriptLocationGenerator()
+
 		const script = `
           access(all)
           struct S {
@@ -4640,7 +4771,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4657,6 +4789,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 		t.Parallel()
 
 		rt, runtimeInterface := newRuntime()
+
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		const script = `
           access(all)
@@ -4703,7 +4837,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4720,6 +4855,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 		t.Parallel()
 
 		rt, runtimeInterface := newRuntime()
+
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		const script = `
           access(all)
@@ -4768,7 +4905,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4785,6 +4923,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 		t.Parallel()
 
 		rt, runtimeInterface := newRuntime()
+
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		const script = `
           access(all)
@@ -4825,7 +4965,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4871,6 +5012,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4896,6 +5038,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4911,6 +5054,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 		t.Parallel()
 
 		rt, runtimeInterface := newRuntime()
+
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		const script = `
           access(all)
@@ -4962,7 +5107,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4979,6 +5125,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 		t.Parallel()
 
 		rt, runtimeInterface := newRuntime()
+
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		const script = `
           access(all)
@@ -5028,7 +5176,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		RequireError(t, err)
@@ -5042,6 +5191,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 		t.Parallel()
 
 		rt, runtimeInterface := newRuntime()
+
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		const script = `
           access(all)
@@ -5090,7 +5241,8 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -5109,8 +5261,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	newRuntime := func() (TestInterpreterRuntime, *TestRuntimeInterface) {
-		rt := NewTestInterpreterRuntime()
+	newRuntime := func() (TestRuntime, *TestRuntimeInterface) {
+		rt := NewTestRuntime()
 		accountCodes := map[common.Location][]byte{}
 
 		runtimeInterface := &TestRuntimeInterface{
@@ -5141,6 +5293,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 
 			rt, runtimeInterface := newRuntime()
 
+			nextScriptLocation := NewScriptLocationGenerator()
+
 			script := fmt.Sprintf(
 				`
                   access(all)
@@ -5170,7 +5324,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  common.ScriptLocation{},
+					Location:  nextScriptLocation(),
+					UseVM:     *compile,
 				},
 			)
 
@@ -5188,6 +5343,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 			t.Parallel()
 
 			rt, runtimeInterface := newRuntime()
+
+			nextScriptLocation := NewScriptLocationGenerator()
 
 			script := fmt.Sprintf(
 				`
@@ -5223,7 +5380,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  common.ScriptLocation{},
+					Location:  nextScriptLocation(),
+					UseVM:     *compile,
 				},
 			)
 
@@ -5242,6 +5400,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 
 			rt, runtimeInterface := newRuntime()
 
+			nextScriptLocation := NewScriptLocationGenerator()
+
 			script := fmt.Sprintf(
 				`
                   access(all)
@@ -5278,7 +5438,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  common.ScriptLocation{},
+					Location:  nextScriptLocation(),
+					UseVM:     *compile,
 				},
 			)
 
@@ -5297,6 +5458,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 
 			rt, runtimeInterface := newRuntime()
 
+			nextScriptLocation := NewScriptLocationGenerator()
+
 			script := fmt.Sprintf(
 				`
                   access(all)
@@ -5336,7 +5499,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  common.ScriptLocation{},
+					Location:  nextScriptLocation(),
+					UseVM:     *compile,
 				},
 			)
 
@@ -5354,6 +5518,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 			t.Parallel()
 
 			rt, runtimeInterface := newRuntime()
+
+			nextScriptLocation := NewScriptLocationGenerator()
 
 			script := fmt.Sprintf(
 				`
@@ -5384,7 +5550,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  common.ScriptLocation{},
+					Location:  nextScriptLocation(),
+					UseVM:     *compile,
 				},
 			)
 			if continueAfterMutation {
@@ -5401,6 +5568,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 			t.Parallel()
 
 			rt, runtimeInterface := newRuntime()
+
+			nextScriptLocation := NewScriptLocationGenerator()
 
 			script := fmt.Sprintf(
 				`
@@ -5433,7 +5602,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  common.ScriptLocation{},
+					Location:  nextScriptLocation(),
+					UseVM:     *compile,
 				},
 			)
 			if continueAfterMutation {
@@ -5450,6 +5620,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 			t.Parallel()
 
 			rt, runtimeInterface := newRuntime()
+
+			nextScriptLocation := NewScriptLocationGenerator()
 
 			script := fmt.Sprintf(
 				`
@@ -5482,7 +5654,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  common.ScriptLocation{},
+					Location:  nextScriptLocation(),
+					UseVM:     *compile,
 				},
 			)
 			if continueAfterMutation {
@@ -5499,6 +5672,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 			t.Parallel()
 
 			rt, runtimeInterface := newRuntime()
+
+			nextScriptLocation := NewScriptLocationGenerator()
 
 			// Deploy contract
 
@@ -5522,6 +5697,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  common.TransactionLocation{},
+					// TODO: contract deployment with VM
+					// UseVM:     *compile,
 				},
 			)
 			require.NoError(t, err)
@@ -5558,7 +5735,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  common.ScriptLocation{},
+					Location:  nextScriptLocation(),
+					UseVM:     *compile,
 				},
 			)
 			if continueAfterMutation {
@@ -5579,6 +5757,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 		t.Parallel()
 
 		rt, runtimeInterface := newRuntime()
+
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		const script = `
           access(all)
@@ -5611,7 +5791,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -5621,6 +5802,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 		t.Parallel()
 
 		rt, runtimeInterface := newRuntime()
+
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		const script = `
           access(all)
@@ -5642,7 +5825,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -5652,6 +5836,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 		t.Parallel()
 
 		rt, runtimeInterface := newRuntime()
+
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		const script = `
           access(all)
@@ -5678,7 +5864,8 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -5691,8 +5878,8 @@ func TestRuntimeTypeOrderInsignificance(t *testing.T) {
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	newRuntime := func() (TestInterpreterRuntime, *TestRuntimeInterface) {
-		rt := NewTestInterpreterRuntime()
+	newRuntime := func() (TestRuntime, *TestRuntimeInterface) {
+		rt := NewTestRuntime()
 		accountCodes := map[common.Location][]byte{}
 
 		runtimeInterface := &TestRuntimeInterface{
@@ -5782,6 +5969,8 @@ func TestRuntimeTypeOrderInsignificance(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					// TODO: contract deployment with VM
+					// UseVM:     *compile,
 				},
 			)
 			require.NoError(t, err)
@@ -5854,6 +6043,8 @@ func TestRuntimeTypeOrderInsignificance(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					// TODO: contract deployment with VM
+					// UseVM:     *compile,
 				},
 			)
 			require.NoError(t, err)
@@ -5867,7 +6058,7 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 
 	t.Run("resource", func(t *testing.T) {
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		signerAddress := common.MustBytesToAddress([]byte{0x42})
 
@@ -5922,6 +6113,8 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -5956,6 +6149,8 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: requires support for resource bound functions in VM
+				//UseVM:     *compile,
 			},
 		)
 
@@ -5967,7 +6162,7 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 	t.Run("struct", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		tx := []byte(`
             transaction {
@@ -6010,6 +6205,8 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: requires support for resource bound functions in VM
+				//UseVM:     *compile,
 			})
 
 		RequireError(t, err)
@@ -6019,7 +6216,7 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 
 	t.Run("replace resource", func(t *testing.T) {
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		signerAddress := common.MustBytesToAddress([]byte{0x42})
 
@@ -6082,6 +6279,8 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -6120,6 +6319,8 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: requires support for resource bound functions in VM
+				//UseVM:     *compile,
 			},
 		)
 
@@ -6134,7 +6335,7 @@ func TestRuntimeStorageReferenceAccess(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
@@ -6194,6 +6395,8 @@ func TestRuntimeStorageReferenceAccess(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: contract deployment with VM
+			// UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -6221,6 +6424,7 @@ func TestRuntimeStorageReferenceAccess(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		RequireError(t, err)
@@ -6251,6 +6455,7 @@ func TestRuntimeStorageReferenceAccess(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		RequireError(t, err)
@@ -6313,7 +6518,7 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 	//  - account register
 	//  - account storage map
 	//  - zero or more non-inlined domain storage map
-	// migration: no migraiton for new account.
+	// migration: no migration for new account.
 	createDomainTestCases := []struct {
 		name                  string
 		newDomains            []common.StorageDomain
@@ -8434,7 +8639,7 @@ func createAndWriteAccountStorageMap(
 		require.NotNil(t, domainStorageMap)
 		require.Equal(t, uint64(0), domainStorageMap.Count())
 
-		// Write to to domain storage map
+		// Write to domain storage map
 		accountValues[domain] = writeToDomainStorageMap(inter, domainStorageMap, count, random)
 	}
 

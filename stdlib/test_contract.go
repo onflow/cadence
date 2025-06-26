@@ -1010,8 +1010,8 @@ func newTestContractType() *TestContractType {
 	}
 
 	activation := sema.NewVariableActivation(sema.BaseValueActivation)
-	activation.DeclareValue(AssertFunction)
-	activation.DeclareValue(PanicFunction)
+	activation.DeclareValue(InterpreterAssertFunction)
+	activation.DeclareValue(InterpreterPanicFunction)
 
 	checker, err := sema.NewChecker(
 		program,

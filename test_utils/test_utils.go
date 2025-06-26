@@ -27,13 +27,17 @@ import (
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/pretty"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	"github.com/onflow/cadence/test_utils/sema_utils"
+
+	"github.com/onflow/cadence/bbq/compiler"
+	. "github.com/onflow/cadence/bbq/test_utils"
+	"github.com/onflow/cadence/bbq/vm"
+	compilerUtils "github.com/onflow/cadence/bbq/vm/test"
 )
 
 type ParseCheckAndInterpretOptions struct {
@@ -42,49 +46,56 @@ type ParseCheckAndInterpretOptions struct {
 	HandleCheckerError func(error)
 }
 
-//type VMInvokable struct {
-//	vmInstance *vm.VM
-//	*vm.Context
-//	elaboration *compiler.DesugaredElaboration
-//}
-//
-//var _ Invokable = &VMInvokable{}
-//
-//func NewVMInvokable(
-//	vmInstance *vm.VM,
-//	elaboration *compiler.DesugaredElaboration,
-//) *VMInvokable {
-//	return &VMInvokable{
-//		vmInstance:  vmInstance,
-//		Context:     vmInstance.Context(),
-//		elaboration: elaboration,
-//	}
-//}
-//
-//func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error) {
-//	value, err = v.vmInstance.InvokeExternally(functionName, arguments...)
-//
-//	// Reset the VM after a function invocation,
-//	// so the same vm can be re-used for subsequent invocation.
-//	v.vmInstance.Reset()
-//
-//	return
-//}
-//
-//func (v *VMInvokable) GetGlobal(name string) interpreter.Value {
-//	return v.vmInstance.Global(name)
-//}
-//
-//func (v *VMInvokable) GetGlobalType(name string) (*sema.Variable, bool) {
-//	return v.elaboration.GetGlobalType(name)
-//}
-//
-//func (v *VMInvokable) InitializeContract(arguments ...interpreter.Value) (*interpreter.CompositeValue, error) {
-//	return v.vmInstance.InitializeContract(arguments...)
-//}
-//func (v *VMInvokable) InitializeContract(contractName string, arguments ...interpreter.Value) (*interpreter.CompositeValue, error) {
-//	return v.vmInstance.InitializeContract(contractName, arguments...)
-//}
+type VMInvokable struct {
+	vmInstance *vm.VM
+	*vm.Context
+	elaboration *compiler.DesugaredElaboration
+}
+
+var _ Invokable = &VMInvokable{}
+
+func NewVMInvokable(
+	vmInstance *vm.VM,
+	elaboration *compiler.DesugaredElaboration,
+) *VMInvokable {
+	return &VMInvokable{
+		vmInstance:  vmInstance,
+		Context:     vmInstance.Context(),
+		elaboration: elaboration,
+	}
+}
+
+func (v *VMInvokable) Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error) {
+	value, err = v.vmInstance.InvokeExternally(functionName, arguments...)
+
+	// Reset the VM after a function invocation,
+	// so the same vm can be re-used for subsequent invocation.
+	v.vmInstance.Reset()
+
+	return
+}
+
+func (v *VMInvokable) InvokeTransaction(arguments []interpreter.Value, signers ...interpreter.Value) (err error) {
+	err = v.vmInstance.InvokeTransaction(arguments, signers...)
+
+	// Reset the VM after a function invocation,
+	// so the same vm can be re-used for subsequent invocation.
+	v.vmInstance.Reset()
+
+	return
+}
+
+func (v *VMInvokable) GetGlobal(name string) interpreter.Value {
+	return v.vmInstance.Global(name)
+}
+
+func (v *VMInvokable) GetGlobalType(name string) (*sema.Variable, bool) {
+	return v.elaboration.GetGlobalType(name)
+}
+
+func (v *VMInvokable) InitializeContract(contractName string, arguments ...interpreter.Value) (*interpreter.CompositeValue, error) {
+	return v.vmInstance.InitializeContract(contractName, arguments...)
+}
 
 func ParseCheckAndPrepare(tb testing.TB, code string, compile bool) Invokable {
 	tb.Helper()
@@ -144,6 +155,59 @@ func ParseCheckAndPrepareWithEvents(tb testing.TB, code string, compile bool) (
 	return invokable, getEvents, err
 }
 
+func ParseCheckAndPrepareWithLogs(
+	tb testing.TB,
+	code string,
+	compile bool,
+) (
+	invokable Invokable,
+	getLogs func() []string,
+	err error,
+) {
+
+	var logs []string
+
+	valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
+		"log",
+		stdlib.LogFunctionType,
+		"",
+		func(invocation interpreter.Invocation) interpreter.Value {
+			value := invocation.Arguments[0]
+			logs = append(logs, value.String())
+			return interpreter.Void
+		},
+	)
+
+	baseValueActivation := sema.NewVariableActivation(nil)
+	baseValueActivation.DeclareValue(valueDeclaration)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, valueDeclaration)
+
+	invokable, err = ParseCheckAndPrepareWithOptions(tb,
+		code,
+		ParseCheckAndInterpretOptions{
+			CheckerConfig: &sema.Config{
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
+			},
+			Config: &interpreter.Config{
+				BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+			},
+		},
+		compile,
+	)
+
+	getLogs = func() []string {
+		return logs
+	}
+
+	return invokable, getLogs, err
+}
+
 func ParseCheckAndPrepareWithOptions(
 	tb testing.TB,
 	code string,
@@ -159,125 +223,210 @@ func ParseCheckAndPrepareWithOptions(
 		return ParseCheckAndInterpretWithOptions(tb, code, options)
 	}
 
-	//interpreterConfig := options.Config
-	//
-	//var storage interpreter.Storage
-	//if interpreterConfig != nil {
-	//	storage = interpreterConfig.Storage
-	//}
-	//
-	//programs := CompiledPrograms{}
-	//var compilerConfig *compiler.Config
-	//
-	//vmConfig := vm.NewConfig(storage).
-	//	WithDebugEnabled()
-	//
-	//vmConfig.TypeLoader = compilerUtils.CompiledProgramsTypeLoader(programs)
-	//
-	//if interpreterConfig != nil {
-	//	vmConfig.MemoryGauge = interpreterConfig.MemoryGauge
-	//	vmConfig.ComputationGauge = interpreterConfig.ComputationGauge
-	//	vmConfig.CapabilityCheckHandler = interpreterConfig.CapabilityCheckHandler
-	//	vmConfig.CapabilityBorrowHandler = interpreterConfig.CapabilityBorrowHandler
-	//	vmConfig.ValidateAccountCapabilitiesGetHandler = interpreterConfig.ValidateAccountCapabilitiesGetHandler
-	//	vmConfig.ValidateAccountCapabilitiesPublishHandler = interpreterConfig.ValidateAccountCapabilitiesPublishHandler
-	//	vmConfig.OnEventEmitted = interpreterConfig.OnEventEmitted
-	//	vmConfig.AccountHandlerFunc = interpreterConfig.AccountHandler
-	//	vmConfig.InjectedCompositeFieldsHandler = interpreterConfig.InjectedCompositeFieldsHandler
-	//	vmConfig.UUIDHandler = interpreterConfig.UUIDHandler
-	//
-	//	// If there are builtin functions provided externally (e.g: for tests),
-	//	// then convert them to corresponding functions in compiler and in vm.
-	//	if interpreterConfig.BaseActivationHandler != nil {
-	//		baseActivation := interpreterConfig.BaseActivationHandler(nil)
-	//		baseActivationVariables := baseActivation.ValuesInFunction()
-	//
-	//		vmConfig.BuiltinGlobalsProvider = func() map[string]*vm.Variable {
-	//			builtinGlobals := vm.NativeFunctions()
-	//
-	//			// Add the given built-in values.
-	//			// Convert the externally provided `interpreter.HostFunctionValue`s into `vm.NativeFunctionValue`s.
-	//			for name, variable := range baseActivationVariables { //nolint:maprange
-	//
-	//				if builtinGlobals[name] != nil {
-	//					continue
-	//				}
-	//
-	//				value := variable.GetValue(nil)
-	//
-	//				if functionValue, ok := value.(*interpreter.HostFunctionValue); ok {
-	//					value = vm.NewNativeFunctionValue(
-	//						name,
-	//						functionValue.Type,
-	//						func(context *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-	//							invocation := interpreter.NewInvocation(
-	//								context,
-	//								nil,
-	//								nil,
-	//								arguments,
-	//								nil,
-	//								// TODO: provide these if they are needed for tests.
-	//								nil,
-	//								interpreter.EmptyLocationRange,
-	//							)
-	//							return functionValue.Function(invocation)
-	//						},
-	//					)
-	//
-	//				}
-	//
-	//				vmVariable := &vm.Variable{}
-	//				vmVariable.InitializeWithValue(value)
-	//
-	//				builtinGlobals[name] = vmVariable
-	//			}
-	//
-	//			return builtinGlobals
-	//		}
-	//
-	//		// Register externally provided globals in compiler.
-	//		compilerConfig = &compiler.Config{
-	//			BuiltinGlobalsProvider: func() map[string]*compiler.Global {
-	//				globals := compiler.NativeFunctions()
-	//				for name := range baseActivationVariables { //nolint:maprange
-	//					if globals[name] != nil {
-	//						continue
-	//					}
-	//					globals[name] = &compiler.Global{
-	//						Name: name,
-	//					}
-	//				}
-	//
-	//				return globals
-	//			},
-	//		}
-	//	}
-	//}
-	//
-	//parseAndCheckOptions := &sema_utils.ParseAndCheckOptions{
-	//	Config: options.CheckerConfig,
-	//}
-	//
-	//vmInstance := compilerUtils.CompileAndPrepareToInvoke(
-	//	tb,
-	//	code,
-	//	compilerUtils.CompilerAndVMOptions{
-	//		VMConfig: vmConfig,
-	//		ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
-	//			ParseAndCheckOptions: parseAndCheckOptions,
-	//			CompilerConfig:       compilerConfig,
-	//			CheckerErrorHandler:  options.HandleCheckerError,
-	//		},
-	//		Programs: programs,
-	//	},
-	//)
-	//
-	//elaboration := programs[parseAndCheckOptions.Location].DesugaredElaboration
-	//
-	//return NewVMInvokable(vmInstance, elaboration), nil
+	interpreterConfig := options.Config
 
-	// Unsupported for now
-	panic(errors.NewUnreachableError())
+	var storage interpreter.Storage
+	if interpreterConfig != nil {
+		storage = interpreterConfig.Storage
+	}
+
+	programs := CompiledPrograms{}
+	var compilerConfig *compiler.Config
+
+	vmConfig := vm.NewConfig(storage).
+		WithDebugEnabled()
+
+	typeLoader := compilerUtils.CompiledProgramsTypeLoader(programs)
+
+	if options.CheckerConfig != nil {
+		typeActivationHandler := options.CheckerConfig.BaseTypeActivationHandler
+		if typeActivationHandler != nil {
+			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+				activation := typeActivationHandler(location)
+				typeName := location.QualifiedIdentifier(typeID)
+				variable := activation.Find(typeName)
+				if variable != nil {
+					return variable.Type.(sema.ContainedType)
+				}
+
+				return typeLoader(location, typeID)
+			}
+		}
+	}
+
+	if interpreterConfig != nil {
+		vmConfig.MemoryGauge = interpreterConfig.MemoryGauge
+		vmConfig.ComputationGauge = interpreterConfig.ComputationGauge
+		vmConfig.CapabilityCheckHandler = interpreterConfig.CapabilityCheckHandler
+		vmConfig.CapabilityBorrowHandler = interpreterConfig.CapabilityBorrowHandler
+		vmConfig.ValidateAccountCapabilitiesGetHandler = interpreterConfig.ValidateAccountCapabilitiesGetHandler
+		vmConfig.ValidateAccountCapabilitiesPublishHandler = interpreterConfig.ValidateAccountCapabilitiesPublishHandler
+		vmConfig.OnEventEmitted = interpreterConfig.OnEventEmitted
+		vmConfig.AccountHandlerFunc = interpreterConfig.AccountHandler
+		vmConfig.InjectedCompositeFieldsHandler = interpreterConfig.InjectedCompositeFieldsHandler
+		vmConfig.UUIDHandler = interpreterConfig.UUIDHandler
+		vmConfig.AtreeValueValidationEnabled = interpreterConfig.AtreeValueValidationEnabled
+		vmConfig.AtreeStorageValidationEnabled = interpreterConfig.AtreeStorageValidationEnabled
+
+		// If there are builtin functions provided externally (e.g: for tests),
+		// then convert them to corresponding functions in compiler and in vm.
+		if interpreterConfig.BaseActivationHandler != nil {
+			interpreterBaseActivation := interpreterConfig.BaseActivationHandler(nil)
+
+			// Only iterate through values defined at the current-level.
+			// Do not get the values defined in the parent activation/scope.
+			// (i.e: only get the values that were added externally for tests)
+			interpreterBaseActivationVariables := interpreterBaseActivation.ValuesInCurrentLevel()
+
+			vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[vm.Variable] {
+
+				activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+
+				panicVariable := interpreter.NewVariableWithValue(
+					nil,
+					stdlib.VMPanicFunction.Value,
+				)
+				activation.Set(stdlib.PanicFunctionName, panicVariable)
+
+				// Add the given built-in values.
+				// Convert the externally provided `interpreter.HostFunctionValue`s into `vm.NativeFunctionValue`s.
+				for name, variable := range interpreterBaseActivationVariables { //nolint:maprange
+
+					value := variable.GetValue(nil)
+
+					if functionValue, ok := value.(*interpreter.HostFunctionValue); ok {
+						value = vm.NewNativeFunctionValue(
+							name,
+							functionValue.Type,
+							func(context *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+								invocation := interpreter.NewInvocation(
+									context,
+									nil,
+									nil,
+									arguments,
+									nil,
+									// TODO: provide these if they are needed for tests.
+									nil,
+									interpreter.EmptyLocationRange,
+								)
+								return functionValue.Function(invocation)
+							},
+						)
+
+					}
+
+					vmVariable := interpreter.NewVariableWithValue(
+						nil,
+						value,
+					)
+
+					activation.Set(name, vmVariable)
+				}
+
+				return activation
+			}
+
+			// Register externally provided globals in compiler.
+			compilerConfig = &compiler.Config{
+				BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
+					baseActivation := compiler.DefaultBuiltinGlobals()
+					activation := activations.NewActivation(nil, baseActivation)
+					for name := range interpreterBaseActivationVariables { //nolint:maprange
+						existing := activation.Find(name)
+						if existing != (compiler.GlobalImport{}) {
+							continue
+						}
+						activation.Set(
+							name,
+							compiler.GlobalImport{
+								Name: name,
+							},
+						)
+					}
+					return activation
+				},
+			}
+		}
+
+		if interpreterConfig.ImportLocationHandler != nil {
+			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+				impt := interpreterConfig.ImportLocationHandler(nil, location)
+				switch impt := impt.(type) {
+				case interpreter.VirtualImport:
+					return impt.Elaboration.CompositeType(typeID)
+				case interpreter.InterpreterImport:
+					return impt.Interpreter.Program.Elaboration.CompositeType(typeID)
+				}
+
+				return typeLoader(location, typeID)
+			}
+		}
+	}
+
+	if vmConfig.TypeLoader == nil {
+		vmConfig.TypeLoader = typeLoader
+	}
+
+	if vmConfig.BuiltinGlobalsProvider == nil {
+		vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[vm.Variable] {
+			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+
+			panicVariable := interpreter.NewVariableWithValue(
+				nil,
+				stdlib.VMPanicFunction.Value,
+			)
+			activation.Set(stdlib.PanicFunctionName, panicVariable)
+
+			return activation
+		}
+	}
+
+	parseAndCheckOptions := &sema_utils.ParseAndCheckOptions{
+		Config: options.CheckerConfig,
+	}
+
+	vmInstance := compilerUtils.CompileAndPrepareToInvoke(
+		tb,
+		code,
+		compilerUtils.CompilerAndVMOptions{
+			VMConfig: vmConfig,
+			ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+				ParseAndCheckOptions: parseAndCheckOptions,
+				CompilerConfig:       compilerConfig,
+				CheckerErrorHandler:  options.HandleCheckerError,
+			},
+			Programs: programs,
+		},
+	)
+
+	elaboration := programs[parseAndCheckOptions.Location].DesugaredElaboration
+
+	return NewVMInvokable(vmInstance, elaboration), nil
+}
+
+func ParseCheckAndPrepareWithAtreeValidationsDisabled(
+	tb testing.TB,
+	code string,
+	options ParseCheckAndInterpretOptions,
+	compile bool,
+) (Invokable, error) {
+	tb.Helper()
+
+	if !compile {
+		return ParseCheckAndInterpretWithAtreeValidationsDisabled(tb, code, options)
+	}
+
+	interpreterConfig := options.Config
+	if interpreterConfig == nil {
+		interpreterConfig = &interpreter.Config{}
+		options.Config = interpreterConfig
+	}
+
+	interpreterConfig.AtreeStorageValidationEnabled = false
+	interpreterConfig.AtreeValueValidationEnabled = false
+
+	invokable, err := ParseCheckAndPrepareWithOptions(tb, code, options, compile)
+	return invokable, err
 }
 
 // Below helper functions were copied as-is from `misc_test.go`.
@@ -318,73 +467,6 @@ func ParseCheckAndInterpretWithAtreeValidationsDisabled(
 	)
 }
 
-func ParseCheckAndInterpretWithLogs(
-	tb testing.TB,
-	code string,
-) (
-	inter *interpreter.Interpreter,
-	getLogs func() []string,
-	err error,
-) {
-	var logs []string
-
-	logFunction := stdlib.NewStandardLibraryStaticFunction(
-		"log",
-		&sema.FunctionType{
-			Parameters: []sema.Parameter{
-				{
-					Label:          sema.ArgumentLabelNotRequired,
-					Identifier:     "value",
-					TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
-				},
-			},
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(
-				sema.VoidType,
-			),
-		},
-		``,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			message := invocation.Arguments[0].MeteredString(
-				invocation.InvocationContext,
-				interpreter.SeenReferences{},
-				invocation.LocationRange,
-			)
-			logs = append(logs, message)
-			return interpreter.Void
-		},
-	)
-
-	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(logFunction)
-
-	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, logFunction)
-
-	result, err := ParseCheckAndInterpretWithOptions(
-		tb,
-		code,
-		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
-				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
-					return baseActivation
-				},
-			},
-			CheckerConfig: &sema.Config{
-				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-					return baseValueActivation
-				},
-			},
-			HandleCheckerError: nil,
-		},
-	)
-
-	getLogs = func() []string {
-		return logs
-	}
-
-	return result, getLogs, err
-}
-
 func ParseCheckAndInterpretWithMemoryMetering(
 	t testing.TB,
 	code string,
@@ -392,7 +474,7 @@ func ParseCheckAndInterpretWithMemoryMetering(
 ) *interpreter.Interpreter {
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.PanicFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterPanicFunction)
 
 	inter, err := ParseCheckAndInterpretWithOptionsAndMemoryMetering(
 		t,
@@ -532,43 +614,4 @@ func parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
 type TestEvent struct {
 	EventType   *sema.CompositeType
 	EventFields []interpreter.Value
-}
-
-func ParseCheckAndInterpretWithEvents(tb testing.TB, code string) (
-	inter *interpreter.Interpreter,
-	getEvents func() []TestEvent,
-	err error,
-) {
-	var events []TestEvent
-
-	inter, err = ParseCheckAndInterpretWithOptions(tb,
-		code,
-		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
-				OnEventEmitted: func(
-					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
-					eventType *sema.CompositeType,
-					eventFields []interpreter.Value,
-				) error {
-					events = append(
-						events,
-						TestEvent{
-							EventType:   eventType,
-							EventFields: eventFields,
-						},
-					)
-					return nil
-				},
-			},
-		},
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	getEvents = func() []TestEvent {
-		return events
-	}
-	return inter, getEvents, nil
 }

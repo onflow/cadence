@@ -60,8 +60,8 @@ func newTestContractInterpreterWithTestFramework(
 	require.NoError(t, err)
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(AssertFunction)
-	baseValueActivation.DeclareValue(PanicFunction)
+	baseValueActivation.DeclareValue(InterpreterAssertFunction)
+	baseValueActivation.DeclareValue(InterpreterPanicFunction)
 
 	checker, err := sema.NewChecker(
 		program,
@@ -103,8 +103,8 @@ func newTestContractInterpreterWithTestFramework(
 	var uuid uint64 = 0
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, AssertFunction)
-	interpreter.Declare(baseActivation, PanicFunction)
+	interpreter.Declare(baseActivation, InterpreterAssertFunction)
+	interpreter.Declare(baseActivation, InterpreterPanicFunction)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),

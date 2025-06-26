@@ -55,7 +55,7 @@ func parseCheckAndPrepareWithConditionLogs(
 
 	var logs []string
 
-	valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
+	valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
 		"conditionLog",
 		conditionLogFunctionType,
 		"",

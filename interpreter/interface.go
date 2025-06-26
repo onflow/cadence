@@ -120,8 +120,8 @@ type ValueTransferContext interface {
 		newOwner common.Address,
 	)
 
-	WithMutationPrevention(valueID atree.ValueID, f func())
-	ValidateMutation(valueID atree.ValueID, locationRange LocationRange)
+	WithContainerMutationPrevention(valueID atree.ValueID, f func())
+	ValidateContainerMutation(valueID atree.ValueID, locationRange LocationRange)
 
 	EnforceNotResourceDestruction(
 		valueID atree.ValueID,
@@ -389,6 +389,7 @@ type ResourceDestructionContext interface {
 	InvocationContext
 
 	GetResourceDestructionContextForLocation(location common.Location) ResourceDestructionContext
+	DefaultDestroyEvents(resourceValue *CompositeValue, locationRange LocationRange) []*CompositeValue
 }
 
 var _ ResourceDestructionContext = &Interpreter{}
@@ -537,11 +538,11 @@ func (ctx NoOpStringContext) MeterComputation(_ common.ComputationUsage) error {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) WithMutationPrevention(_ atree.ValueID, f func()) {
+func (ctx NoOpStringContext) WithContainerMutationPrevention(_ atree.ValueID, f func()) {
 	f()
 }
 
-func (ctx NoOpStringContext) ValidateMutation(_ atree.ValueID, _ LocationRange) {
+func (ctx NoOpStringContext) ValidateContainerMutation(_ atree.ValueID, _ LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 

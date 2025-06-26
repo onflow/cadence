@@ -50,10 +50,10 @@ func TestInclusiveRange(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterInclusiveRangeConstructor)
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, stdlib.InclusiveRangeConstructorFunction)
+	interpreter.Declare(baseActivation, stdlib.InterpreterInclusiveRangeConstructor)
 
 	unsignedContainsTestCases := []containsTestCase{
 		{
@@ -498,10 +498,10 @@ func TestInclusiveRangeConstructionInvalid(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterInclusiveRangeConstructor)
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, stdlib.InclusiveRangeConstructorFunction)
+	interpreter.Declare(baseActivation, stdlib.InterpreterInclusiveRangeConstructor)
 
 	runInvalidCase := func(t *testing.T, label, code string, expectedError error, expectedMessage string) {
 		t.Run(label, func(t *testing.T) {

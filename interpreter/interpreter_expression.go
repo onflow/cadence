@@ -330,6 +330,20 @@ func (interpreter *Interpreter) checkMemberAccess(
 	memberInfo, _ := interpreter.Program.Elaboration.MemberExpressionMemberAccessInfo(memberExpression)
 	expectedType := memberInfo.AccessedType
 
+	CheckMemberAccessTargetType(
+		interpreter,
+		target,
+		expectedType,
+		locationRange,
+	)
+}
+
+func CheckMemberAccessTargetType(
+	context ValueStaticTypeContext,
+	target Value,
+	expectedType sema.Type,
+	locationRange LocationRange,
+) {
 	switch expectedType := expectedType.(type) {
 	case *sema.TransactionType:
 		// TODO: maybe also check transactions.
@@ -359,11 +373,11 @@ func (interpreter *Interpreter) checkMemberAccess(
 		return
 	}
 
-	targetStaticType := target.StaticType(interpreter)
+	targetStaticType := target.StaticType(context)
 
 	if _, ok := expectedType.(*sema.OptionalType); ok {
 		if _, ok := targetStaticType.(*OptionalStaticType); !ok {
-			targetSemaType := MustConvertStaticToSemaType(targetStaticType, interpreter)
+			targetSemaType := MustConvertStaticToSemaType(targetStaticType, context)
 
 			panic(&MemberAccessTypeError{
 				ExpectedType:  expectedType,
@@ -373,8 +387,8 @@ func (interpreter *Interpreter) checkMemberAccess(
 		}
 	}
 
-	if !IsSubTypeOfSemaType(interpreter, targetStaticType, expectedType) {
-		targetSemaType := MustConvertStaticToSemaType(targetStaticType, interpreter)
+	if !IsSubTypeOfSemaType(context, targetStaticType, expectedType) {
+		targetSemaType := MustConvertStaticToSemaType(targetStaticType, context)
 
 		panic(&MemberAccessTypeError{
 			ExpectedType:  expectedType,
@@ -923,26 +937,29 @@ func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpr
 	return NewUnmeteredStringValue(expression.Value)
 }
 
-func (interpreter *Interpreter) VisitStringTemplateExpression(expression *ast.StringTemplateExpression) Value {
-	values := interpreter.visitExpressionsNonCopying(expression.Expressions)
-
+func BuildStringTemplate(values []string, exprs []Value) Value {
 	var builder strings.Builder
-	for i, str := range expression.Values {
+	for i, str := range values {
 		builder.WriteString(str)
-		if i < len(values) {
+		if i < len(exprs) {
 			// switch on value instead of type
-			switch value := values[i].(type) {
+			switch expr := exprs[i].(type) {
 			case *StringValue:
-				builder.WriteString(value.Str)
+				builder.WriteString(expr.Str)
 			case CharacterValue:
-				builder.WriteString(value.Str)
+				builder.WriteString(expr.Str)
 			default:
-				builder.WriteString(value.String())
+				builder.WriteString(expr.String())
 			}
 		}
 	}
-
 	return NewUnmeteredStringValue(builder.String())
+}
+
+func (interpreter *Interpreter) VisitStringTemplateExpression(expression *ast.StringTemplateExpression) Value {
+	exprs := interpreter.visitExpressionsNonCopying(expression.Expressions)
+
+	return BuildStringTemplate(expression.Values, exprs)
 }
 
 func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpression) Value {

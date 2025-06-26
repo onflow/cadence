@@ -28,13 +28,20 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/bbq/compiler"
+	. "github.com/onflow/cadence/bbq/test_utils"
+	"github.com/onflow/cadence/bbq/vm"
+	compilerUtils "github.com/onflow/cadence/bbq/vm/test"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 type storageKey struct {
@@ -579,7 +586,7 @@ func testAccountWithErrorHandlerWithCompiler(
 		authAccountValueDeclaration,
 		pubAccountValueDeclaration,
 		accountValueDeclaration,
-		stdlib.InclusiveRangeConstructorFunction,
+		stdlib.InterpreterInclusiveRangeConstructor,
 	}
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -601,67 +608,71 @@ func testAccountWithErrorHandlerWithCompiler(
 	var storage interpreter.Storage
 
 	if compilerEnabled && *compile {
+		vmConfig := &vm.Config{
+			BuiltinGlobalsProvider: func() *activations.Activation[vm.Variable] {
+				baseActivation := vm.DefaultBuiltinGlobals()
+				activation := activations.NewActivation[vm.Variable](nil, baseActivation)
+				variable := &interpreter.SimpleVariable{}
+				variable.InitializeWithValue(accountValueDeclaration.Value)
+				activation.Set(accountValueDeclaration.Name, variable)
+				return activation
+			},
+		}
 
-		// TODO: Uncomment once the compiler branch is merged to master.
-		//vmConfig := &vm.Config{
-		//	BuiltinGlobalsProvider: func() map[string]*vm.Variable {
-		//		funcs := vm.NativeFunctions()
-		//		variable := &interpreter.SimpleVariable{}
-		//		variable.InitializeWithValue(accountValueDeclaration.Value)
-		//		funcs[accountValueDeclaration.Name] = variable
-		//		return funcs
-		//	},
-		//}
-		//
-		//programs := map[common.Location]*CompiledProgram{}
-		//parseAndCheckOptions := &ParseAndCheckOptions{
-		//	Config: &sema.Config{
-		//		LocationHandler: NewSingleIdentifierLocationResolver(t),
-		//		BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-		//			return baseValueActivation
-		//		},
-		//	},
-		//}
-		//
-		//vmInstance := compilerUtils.CompileAndPrepareToInvoke(
-		//	t,
-		//	code,
-		//	compilerUtils.CompilerAndVMOptions{
-		//		ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
-		//			ParseAndCheckOptions: parseAndCheckOptions,
-		//			CompilerConfig: &compiler.Config{
-		//				BuiltinGlobalsProvider: func() map[string]*compiler.Global {
-		//					builtins := compiler.NativeFunctions()
-		//					for _, valueDeclaration := range valueDeclarations {
-		//						name := valueDeclaration.Name
-		//						builtins[name] = &compiler.Global{
-		//							Name: name,
-		//						}
-		//					}
-		//					return builtins
-		//				},
-		//			},
-		//		},
-		//		VMConfig: vmConfig,
-		//		Programs: programs,
-		//	},
-		//)
-		//
-		//var uuid uint64
-		//uuidHandler := func() (uint64, error) {
-		//	uuid++
-		//	return uuid, nil
-		//}
-		//
-		//vmConfig.UUIDHandler = uuidHandler
-		//
-		//elaboration := programs[parseAndCheckOptions.Location].DesugaredElaboration
-		//
-		//invokable = test_utils.NewVMInvokable(vmInstance, elaboration)
-		//storage = vmConfig.Storage()
+		programs := map[common.Location]*CompiledProgram{}
+		parseAndCheckOptions := &ParseAndCheckOptions{
+			Config: &sema.Config{
+				LocationHandler: NewSingleIdentifierLocationResolver(t),
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
+			},
+		}
 
-		// Not supported for now
-		panic(errors.NewUnreachableError())
+		vmInstance := compilerUtils.CompileAndPrepareToInvoke(
+			t,
+			code,
+			compilerUtils.CompilerAndVMOptions{
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					ParseAndCheckOptions: parseAndCheckOptions,
+					CompilerConfig: &compiler.Config{
+						BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
+							baseActivation := compiler.DefaultBuiltinGlobals()
+							activation := activations.NewActivation[compiler.GlobalImport](nil, baseActivation)
+							for _, valueDeclaration := range valueDeclarations {
+								name := valueDeclaration.Name
+								existing := activation.Find(name)
+								if existing != (compiler.GlobalImport{}) {
+									continue
+								}
+								activation.Set(
+									name,
+									compiler.GlobalImport{
+										Name: name,
+									},
+								)
+							}
+							return activation
+						},
+					},
+				},
+				VMConfig: vmConfig,
+				Programs: programs,
+			},
+		)
+
+		var uuid uint64
+		uuidHandler := func() (uint64, error) {
+			uuid++
+			return uuid, nil
+		}
+
+		vmConfig.UUIDHandler = uuidHandler
+
+		elaboration := programs[parseAndCheckOptions.Location].DesugaredElaboration
+
+		invokable = test_utils.NewVMInvokable(vmInstance, elaboration)
+		storage = vmConfig.Storage()
 	} else {
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
