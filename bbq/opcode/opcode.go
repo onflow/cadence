@@ -129,9 +129,9 @@ const (
 	SetIndex
 	GetIndex
 	RemoveIndex
-	_
-	_
-	_
+	GetTypeKey
+	SetTypeKey
+	RemoveTypeKey
 	_
 	_
 	_

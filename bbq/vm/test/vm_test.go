@@ -8900,14 +8900,15 @@ func TestCompileAttachments(t *testing.T) {
 
 		result, err := CompileAndInvoke(t, `
 			struct S {}
-			attachment A for S {
-				fun foo(): Int { return 3 }
-			}
-			fun test(): Int {
-				var s = S()
-				s = attach A() to s
-				return s[A]?.foo()!
-			}
+        attachment A for S {
+            fun foo(): Int { return 3 }
+        }
+        fun test(): Int {
+            var s = S()
+            s = attach A() to s
+            let ref = &s as &S
+            return ref[A]?.foo()!
+        }
 		`, "test")
 		require.NoError(t, err)
 

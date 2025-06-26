@@ -429,3 +429,7 @@ func (e *DesugaredElaboration) AttachTypes(expression *ast.AttachExpression) sem
 func (e *DesugaredElaboration) AttachmentAccessTypes(expression *ast.IndexExpression) (ty sema.Type, ok bool) {
 	return e.elaboration.AttachmentAccessTypes(expression)
 }
+
+func (e *DesugaredElaboration) AttachmentRemoveTypes(statement *ast.RemoveStatement) (ty sema.Type) {
+	return e.elaboration.AttachmentRemoveTypes(statement)
+}

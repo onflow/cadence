@@ -1413,6 +1413,56 @@ func opStringTemplate(vm *VM, ins opcode.InstructionTemplateString) {
 	vm.push(interpreter.BuildStringTemplate(valuesStr, expressions))
 }
 
+func opGetTypeKey(vm *VM, ins opcode.InstructionGetTypeKey) {
+	target := vm.pop()
+
+	// get attachment type
+	typeIndex := ins.Type
+	staticType := vm.loadType(typeIndex)
+	typ := interpreter.MustConvertStaticToSemaType(staticType, vm.context)
+
+	compositeValue := target.(interpreter.TypeIndexableValue)
+	value := compositeValue.GetTypeKey(
+		vm.context,
+		EmptyLocationRange,
+		typ,
+	)
+	vm.push(value)
+}
+
+func opSetTypeKey(vm *VM, ins opcode.InstructionSetTypeKey) {
+	target, fieldValue := vm.pop2()
+
+	// get attachment type
+	typeIndex := ins.Type
+	staticType := vm.loadType(typeIndex)
+	typ := interpreter.MustConvertStaticToSemaType(staticType, vm.context)
+
+	compositeValue := target.(interpreter.TypeIndexableValue)
+	compositeValue.SetTypeKey(
+		vm.context,
+		EmptyLocationRange,
+		typ,
+		fieldValue,
+	)
+}
+
+func opRemoveTypeKey(vm *VM, ins opcode.InstructionRemoveTypeKey) {
+	target := vm.pop()
+
+	// get attachment type
+	typeIndex := ins.Type
+	staticType := vm.loadType(typeIndex)
+	typ := interpreter.MustConvertStaticToSemaType(staticType, vm.context)
+
+	compositeValue := target.(interpreter.TypeIndexableValue)
+	compositeValue.RemoveTypeKey(
+		vm.context,
+		EmptyLocationRange,
+		typ,
+	)
+}
+
 func (vm *VM) run() {
 
 	defer func() {
@@ -1603,6 +1653,12 @@ func (vm *VM) run() {
 			opStatement(vm)
 		case opcode.InstructionTemplateString:
 			opStringTemplate(vm, ins)
+		case opcode.InstructionGetTypeKey:
+			opGetTypeKey(vm, ins)
+		case opcode.InstructionSetTypeKey:
+			opSetTypeKey(vm, ins)
+		case opcode.InstructionRemoveTypeKey:
+			opRemoveTypeKey(vm, ins)
 		default:
 			panic(errors.NewUnexpectedError("cannot execute instruction of type %T", ins))
 		}

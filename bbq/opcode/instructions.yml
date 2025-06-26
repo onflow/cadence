@@ -918,3 +918,49 @@
     push:
       - name: "string"
         type: "string"
+
+# Attachment instructions
+
+- name: "getTypeKey"
+  description:
+    Pops a value off the stack, the target,
+    and then pushes the value of the field at the given index onto the stack.
+  operands:
+    - name: "type"
+      type: "typeIndex"
+  valueEffects:
+    pop:
+      - name: "target"
+        type: "value"
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "removeTypeKey"
+  description:
+    Pops a value off the stack, the target.
+    Remove the value of the given field from the target, and pushes it onto the stack.
+  operands:
+    - name: "type"
+      type: "typeIndex"
+  valueEffects:
+    pop:
+      - name: "target"
+        type: "value"
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "setTypeKey"
+  description:
+    Pops two values off the stack, the target and the value,
+    and then sets the field at the given index of the target to the value.
+  operands:
+    - name: "type"
+      type: "typeIndex"
+  valueEffects:
+    pop:
+      - name: "target"
+        type: "value"
+      - name: "value"
+        type: "value"

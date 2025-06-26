@@ -2508,13 +2508,8 @@ func (c *Compiler[_, _]) VisitIndexExpression(expression *ast.IndexExpression) (
 	c.compileExpression(expression.TargetExpression)
 
 	if attachmentType, ok := c.DesugaredElaboration.AttachmentAccessTypes(expression); ok {
-		// see getAttachmentValue() in interpreter
-		identifier := interpreter.AttachmentMemberName(string(attachmentType.ID()))
-
-		constant := c.addStringConst(identifier)
-
-		c.emit(opcode.InstructionGetField{
-			FieldName: constant.index,
+		c.emit(opcode.InstructionGetTypeKey{
+			Type: c.getOrAddType(attachmentType),
 		})
 	} else {
 		c.compileExpression(expression.IndexingExpression)
@@ -3320,9 +3315,15 @@ func (c *Compiler[_, _]) VisitEntitlementMappingDeclaration(_ *ast.EntitlementMa
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler[_, _]) VisitRemoveStatement(_ *ast.RemoveStatement) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler[_, _]) VisitRemoveStatement(statement *ast.RemoveStatement) (_ struct{}) {
+	// base on stack
+	c.compileExpression(statement.Value)
+	// remove attachment from base
+	nominalType := c.DesugaredElaboration.AttachmentRemoveTypes(statement)
+	c.emit(opcode.InstructionRemoveTypeKey{
+		Type: c.getOrAddType(nominalType),
+	})
+	return
 }
 
 func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression) (_ struct{}) {
@@ -3340,10 +3341,8 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 	// 	     put back on stack
 
 	// add attachment value as a member of base
-	identifier := interpreter.AttachmentMemberName(string(attachmentType.ID()))
-	constant := c.addStringConst(identifier)
-	c.emit(opcode.InstructionSetField{
-		FieldName: constant.index,
+	c.emit(opcode.InstructionSetTypeKey{
+		Type: c.getOrAddType(attachmentType),
 	})
 	// need base back on stack as return value
 	c.compileExpression(expression.Base)

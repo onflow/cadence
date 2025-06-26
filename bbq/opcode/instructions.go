@@ -2582,6 +2582,138 @@ func DecodeTemplateString(ip *uint16, code []byte) (i InstructionTemplateString)
 	return i
 }
 
+// InstructionGetTypeKey
+//
+// Pops a value off the stack, the target, and then pushes the value of the field at the given index onto the stack.
+type InstructionGetTypeKey struct {
+	Type uint16
+}
+
+var _ Instruction = InstructionGetTypeKey{}
+
+func (InstructionGetTypeKey) Opcode() Opcode {
+	return GetTypeKey
+}
+
+func (i InstructionGetTypeKey) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
+}
+
+func (i InstructionGetTypeKey) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
+}
+
+func (i InstructionGetTypeKey) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
+}
+
+func (i InstructionGetTypeKey) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.Type)
+}
+
+func DecodeGetTypeKey(ip *uint16, code []byte) (i InstructionGetTypeKey) {
+	i.Type = decodeUint16(ip, code)
+	return i
+}
+
+// InstructionRemoveTypeKey
+//
+// Pops a value off the stack, the target. Remove the value of the given field from the target, and pushes it onto the stack.
+type InstructionRemoveTypeKey struct {
+	Type uint16
+}
+
+var _ Instruction = InstructionRemoveTypeKey{}
+
+func (InstructionRemoveTypeKey) Opcode() Opcode {
+	return RemoveTypeKey
+}
+
+func (i InstructionRemoveTypeKey) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
+}
+
+func (i InstructionRemoveTypeKey) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
+}
+
+func (i InstructionRemoveTypeKey) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
+}
+
+func (i InstructionRemoveTypeKey) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.Type)
+}
+
+func DecodeRemoveTypeKey(ip *uint16, code []byte) (i InstructionRemoveTypeKey) {
+	i.Type = decodeUint16(ip, code)
+	return i
+}
+
+// InstructionSetTypeKey
+//
+// Pops two values off the stack, the target and the value, and then sets the field at the given index of the target to the value.
+type InstructionSetTypeKey struct {
+	Type uint16
+}
+
+var _ Instruction = InstructionSetTypeKey{}
+
+func (InstructionSetTypeKey) Opcode() Opcode {
+	return SetTypeKey
+}
+
+func (i InstructionSetTypeKey) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
+}
+
+func (i InstructionSetTypeKey) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
+}
+
+func (i InstructionSetTypeKey) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
+}
+
+func (i InstructionSetTypeKey) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.Type)
+}
+
+func DecodeSetTypeKey(ip *uint16, code []byte) (i InstructionSetTypeKey) {
+	i.Type = decodeUint16(ip, code)
+	return i
+}
+
 func DecodeInstruction(ip *uint16, code []byte) Instruction {
 	switch Opcode(decodeByte(ip, code)) {
 	case Unknown:
@@ -2724,6 +2856,12 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionStatement{}
 	case TemplateString:
 		return DecodeTemplateString(ip, code)
+	case GetTypeKey:
+		return DecodeGetTypeKey(ip, code)
+	case RemoveTypeKey:
+		return DecodeRemoveTypeKey(ip, code)
+	case SetTypeKey:
+		return DecodeSetTypeKey(ip, code)
 	}
 
 	panic(errors.NewUnreachableError())
