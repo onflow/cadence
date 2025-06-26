@@ -2330,7 +2330,7 @@ func TestInterpretResourceInterfaceDefaultDestroyEvent(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
             resource interface I {
                 let id: Int
@@ -2416,7 +2416,7 @@ func TestInterpretResourceInterfaceDefaultDestroyEventMultipleInheritance(t *tes
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t, `
+	inter, err := parseCheckAndPrepareWithOptions(t, `
             resource interface I {
                 let id: Int
 
@@ -2492,7 +2492,7 @@ func TestInterpretResourceInterfaceDefaultDestroyEventIndirectInheritance(t *tes
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
             resource interface I {
                 let id: Int
@@ -2569,7 +2569,7 @@ func TestInterpretResourceInterfaceDefaultDestroyEventNoCompositeEvent(t *testin
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
             resource interface I {
                 let id: Int
@@ -2777,7 +2777,7 @@ func TestInterpretDefaultDestroyEventArgumentScoping(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
             let x = 1
 
@@ -2835,7 +2835,7 @@ func TestInterpretVariableDeclarationEvaluationOrder(t *testing.T) {
 
 	t.Parallel()
 
-	inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
+	inter, getLogs, err := parseCheckAndPrepareWithLogs(t, `
       // Necessary helper interface,
       // as AnyResource does not provide a uuid field,
       // and AnyResource must be used in collect
@@ -2912,7 +2912,7 @@ func TestInterpretNestedSwap(t *testing.T) {
 
 	t.Parallel()
 
-	inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
+	inter, getLogs, err := parseCheckAndPrepareWithConditionLogs(t, `
         resource NFT {
             var name: String
             init(name: String) {
@@ -2932,8 +2932,8 @@ func TestInterpretNestedSwap(t *testing.T) {
             }
 
             fun logContents() {
-                log("Current contents of the Company (should have a High-value NFT):")
-                log(self.equity[0].name)
+                conditionLog("Current contents of the Company (should have a High-value NFT):")
+                conditionLog(self.equity[0].name)
             }
         }
 
@@ -2952,39 +2952,39 @@ func TestInterpretNestedSwap(t *testing.T) {
             fun callback(): Int {
                 var x: @[NFT] <- []
 
-                log("before inner")
-                log(&self.arr as &AnyResource)
-                log(&x as &AnyResource)
+                conditionLog("before inner")
+                conditionLog(&self.arr as &AnyResource)
+                conditionLog(&x as &AnyResource)
 
                 self.arr <-> x
 
-                log("after inner")
-                log(&self.arr as &AnyResource)
-                log(&x as &AnyResource)
+                conditionLog("after inner")
+                conditionLog(&self.arr as &AnyResource)
+                conditionLog(&x as &AnyResource)
 
                 // We hand over the array to the Company object after the swap
                 // has already been "scheduled"
                 self.company <-! create Company(incorporationEquityCollection: <- x)
 
-                log("end callback")
+                conditionLog("end callback")
 
                 return 0
             }
 
             fun doMagic() {
-                log("before outer")
-                log(&self.arr as &AnyResource)
-                log(&self.trashNFT as &AnyResource)
+                conditionLog("before outer")
+                conditionLog(&self.arr as &AnyResource)
+                conditionLog(&self.trashNFT as &AnyResource)
 
                 self.trashNFT <-> self.arr[self.callback()]
 
-                log("after outer")
-                log(&self.arr as &AnyResource)
-                log(&self.trashNFT as &AnyResource)
+                conditionLog("after outer")
+                conditionLog(&self.arr as &AnyResource)
+                conditionLog(&self.trashNFT as &AnyResource)
 
                 self.company?.logContents()
-                log("Look what I pickpocketd:")
-                log(self.trashNFT.name)
+                conditionLog("Look what I pickpocketd:")
+                conditionLog(self.trashNFT.name)
             }
         }
 
@@ -3108,7 +3108,7 @@ func TestInterpretResourceLoss(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         resource R {
             let id: String
 
@@ -3250,7 +3250,7 @@ func TestInterpretResourceSelfSwap(t *testing.T) {
 	t.Run("resource", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R{}
 
             fun main() {
@@ -3269,7 +3269,7 @@ func TestInterpretResourceSelfSwap(t *testing.T) {
 	t.Run("optional resource", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R{}
 
             fun main() {
@@ -3288,7 +3288,7 @@ func TestInterpretResourceSelfSwap(t *testing.T) {
 	t.Run("resource array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun main() {
                 var v: @[AnyResource] <- []
                 v <-> v
@@ -3305,7 +3305,7 @@ func TestInterpretResourceSelfSwap(t *testing.T) {
 	t.Run("resource dictionary", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun main() {
                 var v: @{String: AnyResource} <- {}
                 v <-> v
@@ -3324,7 +3324,7 @@ func TestInterpretInvalidatingLoopedReference(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         // Victim code starts here:
         resource VictimCompany {
 
@@ -3623,7 +3623,7 @@ func TestInterpretResourceReferenceInvalidation(t *testing.T) {
 	t.Run("invalid reference logged in array", func(t *testing.T) {
 		t.Parallel()
 
-		inter, _, err := parseCheckAndInterpretWithLogs(t, `
+		inter, _, err := parseCheckAndPrepareWithLogs(t, `
 			resource R {}
 
 			fun main() {
@@ -3652,7 +3652,7 @@ func TestInterpretResourceReferenceInvalidation(t *testing.T) {
 	t.Run("invalid optional reference logged in array", func(t *testing.T) {
 		t.Parallel()
 
-		inter, _, err := parseCheckAndInterpretWithLogs(t, `
+		inter, _, err := parseCheckAndPrepareWithLogs(t, `
 			resource R {}
 
 			fun main() {
@@ -3685,7 +3685,7 @@ func TestInterpretResourceReferenceInvalidation(t *testing.T) {
 	t.Run("invalid reference logged in dict", func(t *testing.T) {
 		t.Parallel()
 
-		inter, _, err := parseCheckAndInterpretWithLogs(t, `
+		inter, _, err := parseCheckAndPrepareWithLogs(t, `
 			resource R {}
 
 			fun main() {
@@ -3712,7 +3712,7 @@ func TestInterpretResourceReferenceInvalidation(t *testing.T) {
 	t.Run("invalid reference logged in composite", func(t *testing.T) {
 		t.Parallel()
 
-		inter, _, err := parseCheckAndInterpretWithLogs(t, `
+		inter, _, err := parseCheckAndPrepareWithLogs(t, `
 			struct S {
 				let foo: &R
 				init(_ ref: &R) {
@@ -3752,7 +3752,7 @@ func TestInterpretInvalidNilCoalescingResourceDuplication(t *testing.T) {
 
 		t.Parallel()
 
-		inter, err := parseCheckAndInterpretWithAtreeValidationsDisabled(t,
+		inter, err := parseCheckAndPrepareWithAtreeValidationsDisabled(t,
 			`
           resource R {
                let answer: Int
@@ -3795,7 +3795,7 @@ func TestInterpretInvalidNilCoalescingResourceDuplication(t *testing.T) {
 
 		t.Parallel()
 
-		inter, err := parseCheckAndInterpretWithAtreeValidationsDisabled(t,
+		inter, err := parseCheckAndPrepareWithAtreeValidationsDisabled(t,
 			`
               resource R {
                    let answer: Int

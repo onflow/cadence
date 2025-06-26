@@ -36,10 +36,6 @@ type interpretFunc func(inter *interpreter.Interpreter) (interpreter.Value, erro
 type Environment interface {
 	ArgumentDecoder
 
-	SetCompositeValueFunctionsHandler(
-		typeID common.TypeID,
-		handler stdlib.CompositeValueFunctionsHandler,
-	)
 	DeclareValue(
 		valueDeclaration stdlib.StandardLibraryValue,
 		location common.Location,
@@ -152,7 +148,7 @@ func (e *InterpreterEnvironment) NewInterpreterConfig() *interpreter.Config {
 		// NOTE: ignore e.config.AtreeValidationEnabled here,
 		// and disable storage validation after each value modification.
 		// Instead, storage is validated after commits (if validation is enabled),
-		// see interpreterEnvironment.commitStorage
+		// see InterpreterEnvironment.commitStorage
 		AtreeStorageValidationEnabled:             false,
 		Debugger:                                  e.config.Debugger,
 		OnStatement:                               e.newOnStatementHandler(),
@@ -167,15 +163,15 @@ func (e *InterpreterEnvironment) NewInterpreterConfig() *interpreter.Config {
 
 func NewBaseInterpreterEnvironment(config Config) *InterpreterEnvironment {
 	env := NewInterpreterEnvironment(config)
-	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(env) {
+	for _, valueDeclaration := range stdlib.InterpreterDefaultStandardLibraryValues(env) {
 		env.DeclareValue(valueDeclaration, nil)
 	}
 	return env
 }
 
-func NewScriptInterpreterEnvironment(config Config) Environment {
+func NewScriptInterpreterEnvironment(config Config) *InterpreterEnvironment {
 	env := NewInterpreterEnvironment(config)
-	for _, valueDeclaration := range stdlib.DefaultScriptStandardLibraryValues(env) {
+	for _, valueDeclaration := range stdlib.InterpreterDefaultScriptStandardLibraryValues(env) {
 		env.DeclareValue(valueDeclaration, nil)
 	}
 	return env
@@ -222,7 +218,7 @@ func (e *InterpreterEnvironment) interpreterBaseActivationFor(
 
 	baseActivation := e.baseActivationsByLocation[location]
 	if baseActivation == nil {
-		baseActivation = activations.NewActivation[interpreter.Variable](nil, defaultBaseActivation)
+		baseActivation = activations.NewActivation(nil, defaultBaseActivation)
 		if e.baseActivationsByLocation == nil {
 			e.baseActivationsByLocation = map[common.Location]*interpreter.VariableActivation{}
 		}

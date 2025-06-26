@@ -2550,10 +2550,10 @@ func TestInterpretBuiltinCompositeAttachment(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	for _, valueDeclaration := range []stdlib.StandardLibraryValue{
-		stdlib.NewPublicKeyConstructor(
+		stdlib.NewInterpreterPublicKeyConstructor(
 			assumeValidPublicKeyValidator{},
 		),
-		stdlib.SignatureAlgorithmConstructor,
+		stdlib.InterpreterSignatureAlgorithmConstructor,
 	} {
 		baseValueActivation.DeclareValue(valueDeclaration)
 		interpreter.Declare(baseActivation, valueDeclaration)

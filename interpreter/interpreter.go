@@ -512,6 +512,11 @@ func InvokeFunction(errorHandler ErrorHandler, function FunctionValue, invocatio
 		err = internalErr
 	})
 
+	common.UseComputation(
+		invocation.InvocationContext,
+		common.FunctionInvocationComputationUsage,
+	)
+
 	value = function.Invoke(invocation)
 	return
 }
@@ -1682,6 +1687,8 @@ func EnumLookupFunction(
 		gauge,
 		functionType,
 		func(invocation Invocation) Value {
+			inter := invocation.InvocationContext
+
 			rawValue, ok := invocation.Arguments[0].(IntegerValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -1694,7 +1701,7 @@ func EnumLookupFunction(
 				return Nil
 			}
 
-			return NewSomeValueNonCopying(invocation.InvocationContext, caseValue)
+			return NewSomeValueNonCopying(inter, caseValue)
 		},
 	)
 
@@ -4366,11 +4373,9 @@ func AccountStorageIterate(
 	}
 	storageIterator := storageMap.Iterator(invocationContext)
 
-	inIteration := invocationContext.InStorageIteration()
+	wasInIteration := invocationContext.InStorageIteration()
 	invocationContext.SetInStorageIteration(true)
-	defer func() {
-		invocationContext.SetInStorageIteration(inIteration)
-	}()
+	defer invocationContext.SetInStorageIteration(wasInIteration)
 
 	for key, value := storageIterator.Next(); key != nil && value != nil; key, value = storageIterator.Next() {
 
@@ -5841,14 +5846,14 @@ func capabilityBorrowFunction(
 			locationRange := invocation.LocationRange
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
 
-			var typeParameter sema.Type
+			var typeArgument sema.Type
 			if typeParameterPair != nil {
-				typeParameter = typeParameterPair.Value
+				typeArgument = typeParameterPair.Value
 			}
 
 			return CapabilityBorrow(
 				invocationContext,
-				typeParameter,
+				typeArgument,
 				addressValue,
 				capabilityID,
 				capabilityBorrowType,
@@ -5860,7 +5865,7 @@ func capabilityBorrowFunction(
 
 func CapabilityBorrow(
 	invocationContext InvocationContext,
-	typeParameter sema.Type,
+	typeArgument sema.Type,
 	addressValue AddressValue,
 	capabilityID UInt64Value,
 	capabilityBorrowType *sema.ReferenceType,
@@ -5871,9 +5876,9 @@ func CapabilityBorrow(
 	}
 
 	var wantedBorrowType *sema.ReferenceType
-	if typeParameter != nil {
+	if typeArgument != nil {
 		var ok bool
-		wantedBorrowType, ok = typeParameter.(*sema.ReferenceType)
+		wantedBorrowType, ok = typeArgument.(*sema.ReferenceType)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
@@ -5909,42 +5914,62 @@ func capabilityCheckFunction(
 		sema.CapabilityTypeCheckFunctionType(capabilityBorrowType),
 		func(_ CapabilityValue, invocation Invocation) Value {
 
-			if capabilityID == InvalidCapabilityID {
-				return FalseValue
-			}
-
 			invocationContext := invocation.InvocationContext
 			locationRange := invocation.LocationRange
-
-			// NOTE: if a type argument is provided for the function,
-			// use it *instead* of the type of the value (if any)
-
-			var wantedBorrowType *sema.ReferenceType
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+
+			var typeArgument sema.Type
 			if typeParameterPair != nil {
-				ty := typeParameterPair.Value
-				var ok bool
-				wantedBorrowType, ok = ty.(*sema.ReferenceType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
+				typeArgument = typeParameterPair.Value
 			}
 
-			capabilityCheckHandler := invocationContext.GetCapabilityCheckHandler()
-
-			return capabilityCheckHandler(
+			return CapabilityCheck(
 				invocationContext,
-				locationRange,
+				typeArgument,
 				addressValue,
 				capabilityID,
-				wantedBorrowType,
 				capabilityBorrowType,
+				locationRange,
 			)
 		},
 	)
 }
 
-func (interpreter *Interpreter) ValidateMutation(valueID atree.ValueID, locationRange LocationRange) {
+func CapabilityCheck(
+	invocationContext InvocationContext,
+	typeArgument sema.Type,
+	addressValue AddressValue,
+	capabilityID UInt64Value,
+	capabilityBorrowType *sema.ReferenceType,
+	locationRange LocationRange,
+) Value {
+
+	if capabilityID == InvalidCapabilityID {
+		return FalseValue
+	}
+
+	var wantedBorrowType *sema.ReferenceType
+	if typeArgument != nil {
+		var ok bool
+		wantedBorrowType, ok = typeArgument.(*sema.ReferenceType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+	}
+
+	checkHandler := invocationContext.GetCapabilityCheckHandler()
+
+	return checkHandler(
+		invocationContext,
+		locationRange,
+		addressValue,
+		capabilityID,
+		wantedBorrowType,
+		capabilityBorrowType,
+	)
+}
+
+func (interpreter *Interpreter) ValidateContainerMutation(valueID atree.ValueID, locationRange LocationRange) {
 	_, present := interpreter.SharedState.containerValueIteration[valueID]
 	if !present {
 		return
@@ -5954,7 +5979,7 @@ func (interpreter *Interpreter) ValidateMutation(valueID atree.ValueID, location
 	})
 }
 
-func (interpreter *Interpreter) WithMutationPrevention(valueID atree.ValueID, f func()) {
+func (interpreter *Interpreter) WithContainerMutationPrevention(valueID atree.ValueID, f func()) {
 	if interpreter == nil {
 		f()
 		return
@@ -6137,4 +6162,11 @@ func (interpreter *Interpreter) GetGlobal(name string) Value {
 
 func (interpreter *Interpreter) GetGlobalType(name string) (*sema.Variable, bool) {
 	return interpreter.Program.Elaboration.GetGlobalType(name)
+}
+
+func (interpreter *Interpreter) DefaultDestroyEvents(
+	resourceValue *CompositeValue,
+	locationRange LocationRange,
+) []*CompositeValue {
+	return resourceValue.DefaultDestroyEvents(interpreter, locationRange)
 }

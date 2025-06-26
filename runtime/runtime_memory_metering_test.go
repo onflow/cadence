@@ -81,7 +81,7 @@ func TestRuntimeInterpreterAddressLocationMetering(t *testing.T) {
 			},
 		}
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -129,7 +129,7 @@ func TestRuntimeInterpreterElaborationImportMetering(t *testing.T) {
 				script = importExpressions[j] + script
 			}
 
-			runtime := NewTestInterpreterRuntime()
+			runtime := NewTestRuntime()
 
 			meter := newTestMemoryGauge()
 
@@ -220,7 +220,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			},
 		}
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -254,7 +254,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			},
 		}
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		largeBigInt := &big.Int{}
 		largeBigInt.Exp(big.NewInt(2<<33), big.NewInt(6), nil)
@@ -293,7 +293,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			},
 		}
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -327,7 +327,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			},
 		}
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -361,7 +361,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			},
 		}
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -395,7 +395,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			},
 		}
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -429,7 +429,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			},
 		}
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -463,7 +463,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			},
 		}
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -499,7 +499,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			},
 		}
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -533,7 +533,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			},
 		}
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -562,7 +562,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			OnMeterMemory: meter.MeterMemory,
 		}
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -591,7 +591,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			OnMeterMemory: meter.MeterMemory,
 		}
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -620,7 +620,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			OnMeterMemory: meter.MeterMemory,
 		}
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -649,7 +649,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			OnMeterMemory: meter.MeterMemory,
 		}
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -678,7 +678,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			OnMeterMemory: meter.MeterMemory,
 		}
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -707,7 +707,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			OnMeterMemory: meter.MeterMemory,
 		}
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -759,7 +759,7 @@ func TestRuntimeLogFunctionStringConversionMetering(t *testing.T) {
 			},
 		}
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -821,7 +821,7 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 			},
 		}
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -859,7 +859,7 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 			OnMeterMemory: meter.MeterMemory,
 		}
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -913,7 +913,7 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 			},
 		}
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -938,7 +938,7 @@ func TestRuntimeMemoryMeteringErrors(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	type memoryMeter map[common.MemoryKind]uint64
 
@@ -1050,7 +1050,7 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 
 		config := DefaultTestInterpreterConfig
 		config.AtreeValidationEnabled = false
-		rt := NewTestInterpreterRuntimeWithConfig(config)
+		rt := NewTestRuntimeWithConfig(config)
 
 		address := common.MustBytesToAddress([]byte{0x1})
 		storage := NewTestLedger(nil, nil)
@@ -1099,7 +1099,7 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 
 		config := DefaultTestInterpreterConfig
 		config.AtreeValidationEnabled = false
-		rt := NewTestInterpreterRuntimeWithConfig(config)
+		rt := NewTestRuntimeWithConfig(config)
 
 		address := common.MustBytesToAddress([]byte{0x1})
 		storage := NewTestLedger(nil, nil)
@@ -1153,7 +1153,7 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 
 		config := DefaultTestInterpreterConfig
 		config.AtreeValidationEnabled = false
-		rt := NewTestInterpreterRuntimeWithConfig(config)
+		rt := NewTestRuntimeWithConfig(config)
 
 		address := common.MustBytesToAddress([]byte{0x1})
 		storage := NewTestLedger(nil, nil)
@@ -1196,8 +1196,9 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 		)
 		require.NoError(t, err)
 
+		// Scripts should not perform any encoding
 		assert.Equal(t,
-			uint64(58362),
+			uint64(0),
 			meter.getMemory(common.MemoryKindBytes),
 		)
 	})

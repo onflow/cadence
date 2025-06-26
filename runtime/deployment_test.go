@@ -148,7 +148,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			argumentCode,
 		))
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		var accountCode []byte
 		var events []cadence.Event
@@ -178,6 +178,8 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.TransactionLocation{},
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		exportedEventType := ExportType(

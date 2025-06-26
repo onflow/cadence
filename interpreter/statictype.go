@@ -1056,6 +1056,9 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 
 	case *sema.FunctionType:
 		return NewFunctionStaticType(memoryGauge, t)
+
+	case *sema.TransactionType:
+		return ConvertSemaTransactionToStaticTransactionType(memoryGauge, t)
 	}
 
 	return nil
@@ -1161,6 +1164,18 @@ func ConvertSemaInterfaceTypeToStaticInterfaceType(
 		memoryGauge,
 		t.Location,
 		t.QualifiedIdentifier(),
+		t.ID(),
+	)
+}
+
+func ConvertSemaTransactionToStaticTransactionType(
+	memoryGauge common.MemoryGauge,
+	t *sema.TransactionType,
+) *CompositeStaticType {
+	return NewCompositeStaticType(
+		memoryGauge,
+		t.Location,
+		t.QualifiedString(),
 		t.ID(),
 	)
 }

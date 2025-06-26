@@ -138,7 +138,7 @@ func NewAccountStorageValue(
 		methodsGetter,
 		nil,
 		stringer,
-	).WithPrivateField(accountTypePrivateAddressFieldName, address)
+	).WithPrivateField(AccountTypePrivateAddressFieldName, address)
 
 	return storageValue
 }

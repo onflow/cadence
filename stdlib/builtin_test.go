@@ -96,7 +96,7 @@ func TestCheckAssert(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(AssertFunction)
+	baseValueActivation.DeclareValue(InterpreterAssertFunction)
 
 	parseAndCheck := func(t *testing.T, code string) (*sema.Checker, error) {
 		return ParseAndCheckWithOptions(t,
@@ -170,7 +170,7 @@ func TestInterpretAssert(t *testing.T) {
 
 	inter := newInterpreter(t,
 		`access(all) let test = assert`,
-		AssertFunction,
+		InterpreterAssertFunction,
 	)
 
 	_, err := inter.Invoke(
@@ -214,7 +214,7 @@ func TestCheckPanic(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(PanicFunction)
+	baseValueActivation.DeclareValue(InterpreterPanicFunction)
 
 	parseAndCheck := func(t *testing.T, code string) (*sema.Checker, error) {
 		return ParseAndCheckWithOptions(t,
@@ -268,7 +268,7 @@ func TestInterpretPanic(t *testing.T) {
 
 	inter := newInterpreter(t,
 		`access(all) let test = panic`,
-		PanicFunction,
+		InterpreterPanicFunction,
 	)
 
 	_, err := inter.Invoke("test", interpreter.NewUnmeteredStringValue("oops"))

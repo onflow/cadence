@@ -340,7 +340,7 @@ func TestInterpretTransactions(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             enum Alpha: Int {
                 case A
                 case B
@@ -459,7 +459,7 @@ func TestInterpretInvalidRecursiveTransferInExecute(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             transaction {
                 var arr: @[AnyResource]
 
@@ -482,7 +482,7 @@ func TestInterpretInvalidRecursiveTransferInExecute(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             transaction {
                 var dict: @{String: AnyResource}
 
@@ -505,7 +505,7 @@ func TestInterpretInvalidRecursiveTransferInExecute(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R {
                 fun foo(_ r: @R) {
                     destroy r

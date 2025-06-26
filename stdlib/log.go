@@ -19,9 +19,13 @@
 package stdlib
 
 import (
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
+
+const LogFunctionName = "log"
 
 var LogFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityImpure,
@@ -44,21 +48,48 @@ type Logger interface {
 	ProgramLog(message string, locationRange interpreter.LocationRange) error
 }
 
-func NewLogFunction(logger Logger) StandardLibraryValue {
-	return NewStandardLibraryStaticFunction(
-		"log",
+type FunctionLogger func(
+	message string,
+	locationRange interpreter.LocationRange,
+) error
+
+var _ Logger = FunctionLogger(nil)
+
+func (f FunctionLogger) ProgramLog(message string, locationRange interpreter.LocationRange) error {
+	return f(message, locationRange)
+}
+
+func NewInterpreterLogFunction(logger Logger) StandardLibraryValue {
+	return NewInterpreterStandardLibraryStaticFunction(
+		LogFunctionName,
 		LogFunctionType,
 		logFunctionDocString,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			value := invocation.Arguments[0]
-			locationRange := invocation.LocationRange
 			invocationContext := invocation.InvocationContext
-
+			locationRange := invocation.LocationRange
+			value := invocation.Arguments[0]
 			return Log(
 				invocationContext,
 				logger,
 				value,
 				locationRange,
+			)
+		},
+	)
+}
+
+func NewVMLogFunction(logger Logger) StandardLibraryValue {
+	return NewVMStandardLibraryStaticFunction(
+		LogFunctionName,
+		LogFunctionType,
+		logFunctionDocString,
+		func(context *vm.Context, _ []bbq.StaticType, arguments ...interpreter.Value) interpreter.Value {
+			value := arguments[0]
+			return Log(
+				context,
+				logger,
+				value,
+				interpreter.EmptyLocationRange,
 			)
 		},
 	)

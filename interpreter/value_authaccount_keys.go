@@ -102,7 +102,7 @@ func NewAccountKeysValue(
 		methodsGetter,
 		nil,
 		stringer,
-	)
+	).WithPrivateField(AccountTypePrivateAddressFieldName, address)
 
 	return accountKeys
 }

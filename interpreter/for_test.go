@@ -335,8 +335,7 @@ func TestInterpretForStatementCapturing(t *testing.T) {
 
 	t.Parallel()
 
-	// TODO: Use compiler (parseCheckAndPrepare)
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        fun test(): [Int] {
            let fs: [fun(): Int] = []
            for x in [1, 2, 3] {
@@ -548,8 +547,7 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 	t.Run("Mutating reference to resource array", func(t *testing.T) {
 		t.Parallel()
 
-		// TODO: Use compiler (need mutation-while-iterating validation)
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource Foo{
                 fun sayHello() {}
             }
@@ -582,8 +580,7 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 	t.Run("Mutating reference to struct array", func(t *testing.T) {
 		t.Parallel()
 
-		// TODO: Use compiler (need mutation-while-iterating validation)
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct Foo{
                 fun sayHello() {}
             }
@@ -790,10 +787,10 @@ func TestInclusiveRangeForInLoop(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterInclusiveRangeConstructor)
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, stdlib.InclusiveRangeConstructorFunction)
+	interpreter.Declare(baseActivation, stdlib.InterpreterInclusiveRangeConstructor)
 
 	unsignedTestCases := []inclusiveRangeForInLoopTest{
 		{

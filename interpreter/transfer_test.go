@@ -67,7 +67,7 @@ func TestInterpretTransferCheck(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               fun test() {
                   let alsoFruit: Fruit = fruit
@@ -102,7 +102,7 @@ func TestInterpretTransferCheck(t *testing.T) {
 
 		t.Parallel()
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
 		      contract interface CI {
 		          resource interface RI {}
@@ -139,7 +139,7 @@ func TestInterpretTransferCheck(t *testing.T) {
 
 		t.Parallel()
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
 		      contract interface CI {
 		          resource interface RI {}

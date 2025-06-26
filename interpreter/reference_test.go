@@ -2052,7 +2052,7 @@ func TestInterpretDereference(t *testing.T) {
 			}
 
 			t.Run(fmt.Sprintf("[%s]", typString), func(t *testing.T) {
-				inter := parseCheckAndInterpret(
+				inter := parseCheckAndPrepare(
 					t,
 					fmt.Sprintf(
 						`
@@ -2470,7 +2470,7 @@ func TestInterpretDereference(t *testing.T) {
 			}
 
 			t.Run(fmt.Sprintf("[%s]", typString), func(t *testing.T) {
-				inter := parseCheckAndInterpret(
+				inter := parseCheckAndPrepare(
 					t,
 					fmt.Sprintf(
 						`

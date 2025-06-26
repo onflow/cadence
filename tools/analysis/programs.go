@@ -131,7 +131,7 @@ func (programs *Programs) check(
 	error,
 ) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	for _, value := range stdlib.DefaultScriptStandardLibraryValues(nil) {
+	for _, value := range stdlib.InterpreterDefaultStandardLibraryValues(nil) {
 		baseValueActivation.DeclareValue(value)
 	}
 

@@ -51,12 +51,12 @@ func cryptoAlgorithmEnumLookupType[T sema.CryptoAlgorithm](
 
 type enumCaseConstructor func(rawValue interpreter.UInt8Value) interpreter.MemberAccessibleValue
 
-func cryptoAlgorithmEnumValueAndCaseValues[T sema.CryptoAlgorithm](
+func interpreterCryptoAlgorithmEnumValueAndCaseValues[T sema.CryptoAlgorithm](
 	functionType *sema.FunctionType,
 	enumCases []T,
 	caseConstructor enumCaseConstructor,
 ) (
-	value interpreter.Value,
+	functionValue interpreter.FunctionValue,
 	cases map[interpreter.UInt8Value]interpreter.MemberAccessibleValue,
 ) {
 
@@ -77,7 +77,7 @@ func cryptoAlgorithmEnumValueAndCaseValues[T sema.CryptoAlgorithm](
 			interpreter.NewVariableWithValue(nil, caseValue)
 	}
 
-	value = interpreter.EnumLookupFunction(
+	functionValue = interpreter.EnumLookupFunction(
 		nil,
 		functionType,
 		caseValues,

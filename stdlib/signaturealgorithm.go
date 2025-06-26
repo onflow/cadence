@@ -19,6 +19,9 @@
 package stdlib
 
 import (
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/commons"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -53,15 +56,52 @@ var signatureAlgorithmLookupType = cryptoAlgorithmEnumLookupType(
 	sema.SignatureAlgorithms,
 )
 
-var signatureAlgorithmConstructorValue, SignatureAlgorithmCaseValues = cryptoAlgorithmEnumValueAndCaseValues(
+var interpreterSignatureAlgorithmConstructorValue, SignatureAlgorithmCaseValues = interpreterCryptoAlgorithmEnumValueAndCaseValues(
 	signatureAlgorithmLookupType,
 	sema.SignatureAlgorithms,
 	NewSignatureAlgorithmCase,
 )
 
-var SignatureAlgorithmConstructor = StandardLibraryValue{
+var InterpreterSignatureAlgorithmConstructor = StandardLibraryValue{
 	Name:  sema.SignatureAlgorithmTypeName,
 	Type:  signatureAlgorithmLookupType,
-	Value: signatureAlgorithmConstructorValue,
+	Value: interpreterSignatureAlgorithmConstructorValue,
 	Kind:  common.DeclarationKindEnum,
 }
+
+var vmSignatureAlgorithmConstructorValue = vm.NewNativeFunctionValue(
+	sema.SignatureAlgorithmTypeName,
+	signatureAlgorithmLookupType,
+	func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
+		rawValue := args[0].(interpreter.UInt8Value)
+
+		caseValue, ok := SignatureAlgorithmCaseValues[rawValue]
+		if !ok {
+			return interpreter.Nil
+		}
+
+		return interpreter.NewSomeValueNonCopying(context, caseValue)
+	},
+)
+
+var VMSignatureAlgorithmConstructor = StandardLibraryValue{
+	Name:  sema.SignatureAlgorithmTypeName,
+	Type:  signatureAlgorithmLookupType,
+	Value: vmSignatureAlgorithmConstructorValue,
+	Kind:  common.DeclarationKindEnum,
+}
+
+var VMSignatureAlgorithmCaseValues = func() []VMValue {
+	values := make([]VMValue, len(sema.SignatureAlgorithms))
+	for i, signatureAlgorithm := range sema.SignatureAlgorithms {
+		rawValue := interpreter.UInt8Value(signatureAlgorithm.RawValue())
+		values[i] = VMValue{
+			Name: commons.TypeQualifiedName(
+				sema.SignatureAlgorithmType,
+				signatureAlgorithm.Name(),
+			),
+			Value: SignatureAlgorithmCaseValues[rawValue],
+		}
+	}
+	return values
+}()

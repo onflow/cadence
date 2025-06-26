@@ -690,7 +690,7 @@ func TestCheckGenericFunctionSubtyping(t *testing.T) {
 			TypeBound: boundType1,
 		}
 
-		function1 := stdlib.NewStandardLibraryStaticFunction(
+		function1 := stdlib.NewInterpreterStandardLibraryStaticFunction(
 			"foo",
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
@@ -707,7 +707,7 @@ func TestCheckGenericFunctionSubtyping(t *testing.T) {
 			TypeBound: boundType2,
 		}
 
-		function2 := stdlib.NewStandardLibraryStaticFunction(
+		function2 := stdlib.NewInterpreterStandardLibraryStaticFunction(
 			"bar",
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
@@ -879,7 +879,7 @@ func TestCheckGenericFunctionSubtyping(t *testing.T) {
 			Name: "T",
 		}
 
-		function1 := stdlib.NewStandardLibraryStaticFunction(
+		function1 := stdlib.NewInterpreterStandardLibraryStaticFunction(
 			"foo",
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
@@ -895,7 +895,7 @@ func TestCheckGenericFunctionSubtyping(t *testing.T) {
 			Name: "T",
 		}
 
-		function2 := stdlib.NewStandardLibraryStaticFunction(
+		function2 := stdlib.NewInterpreterStandardLibraryStaticFunction(
 			"bar",
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{

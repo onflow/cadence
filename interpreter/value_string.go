@@ -1146,6 +1146,10 @@ func (i *StringValueIterator) HasNext() bool {
 	return *i.hasNext
 }
 
+func (*StringValueIterator) ValueID() (atree.ValueID, bool) {
+	return atree.ValueID{}, false
+}
+
 func stringFunctionEncodeHex(invocation Invocation) Value {
 	argument, ok := invocation.Arguments[0].(*ArrayValue)
 	if !ok {

@@ -24,14 +24,14 @@ import (
 	"github.com/onflow/cadence/runtime"
 )
 
-type TestInterpreterRuntime struct {
+type TestRuntime struct {
 	runtime.Runtime
 }
 
-var _ runtime.Runtime = TestInterpreterRuntime{}
+var _ runtime.Runtime = TestRuntime{}
 
-func NewTestInterpreterRuntimeWithConfig(config runtime.Config) TestInterpreterRuntime {
-	return TestInterpreterRuntime{
+func NewTestRuntimeWithConfig(config runtime.Config) TestRuntime {
+	return TestRuntime{
 		Runtime: runtime.NewRuntime(config),
 	}
 }
@@ -40,17 +40,17 @@ var DefaultTestInterpreterConfig = runtime.Config{
 	AtreeValidationEnabled: true,
 }
 
-func NewTestInterpreterRuntime() TestInterpreterRuntime {
-	return NewTestInterpreterRuntimeWithConfig(DefaultTestInterpreterConfig)
+func NewTestRuntime() TestRuntime {
+	return NewTestRuntimeWithConfig(DefaultTestInterpreterConfig)
 }
 
-func (r TestInterpreterRuntime) ExecuteTransaction(script runtime.Script, context runtime.Context) error {
+func (r TestRuntime) ExecuteTransaction(script runtime.Script, context runtime.Context) error {
 	i := context.Interface.(*TestRuntimeInterface)
 	i.onTransactionExecutionStart()
 	return r.Runtime.ExecuteTransaction(script, context)
 }
 
-func (r TestInterpreterRuntime) ExecuteScript(script runtime.Script, context runtime.Context) (cadence.Value, error) {
+func (r TestRuntime) ExecuteScript(script runtime.Script, context runtime.Context) (cadence.Value, error) {
 	i := context.Interface.(*TestRuntimeInterface)
 	i.onScriptExecutionStart()
 	value, err := r.Runtime.ExecuteScript(script, context)

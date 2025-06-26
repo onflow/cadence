@@ -33,8 +33,7 @@ import (
 
 type Program struct {
 	interpreterProgram *interpreter.Program
-	// TODO: enable once feature branch is merged
-	//compiledProgram    *compiledProgram
+	compiledProgram    *compiledProgram
 }
 
 type Script struct {

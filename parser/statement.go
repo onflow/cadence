@@ -842,15 +842,16 @@ func parseSwitchCase(p *parser, hasExpression bool) (*ast.SwitchCase, error) {
 		endPos = statements[lastStatementIndex].EndPosition(p.memoryGauge)
 	}
 
-	return &ast.SwitchCase{
-		Expression: expression,
-		Statements: statements,
-		Range: ast.NewRange(
+	return ast.NewSwitchCase(
+		p.memoryGauge,
+		expression,
+		statements,
+		ast.NewRange(
 			p.memoryGauge,
 			startPos,
 			endPos,
 		),
-	}, nil
+	), nil
 }
 
 func parseRemoveStatement(

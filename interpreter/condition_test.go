@@ -1377,3 +1377,293 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, checkCalled)
 }
+
+func TestInterpretInnerFunctionPreConditions(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("fail", func(t *testing.T) {
+
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t,
+			`
+              fun main(x: Int): Int {
+
+                  fun foo(_ y: Int): Int {
+                      pre {
+                          y == 0
+                      }
+                      return y
+                  }
+
+                  return foo(x)
+              }
+            `,
+		)
+
+		_, err := invokable.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(3))
+		assertConditionError(t, err, ast.ConditionKindPre)
+	})
+
+	t.Run("in nested local function, fail", func(t *testing.T) {
+
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t,
+			`
+              fun main(x: Int): Int {
+
+                  if true {
+                      if true {
+                          fun foo(_ y: Int): Int {
+                              pre {
+                                  y == 0
+                              }
+                              return y
+                          }
+                          return foo(x)
+                      }
+                  }
+
+                  return 0
+              }
+            `,
+		)
+
+		_, err := invokable.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(3))
+		assertConditionError(t, err, ast.ConditionKindPre)
+	})
+
+	t.Run("in local function, pass", func(t *testing.T) {
+
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t,
+			`
+              fun main(x: Int): Int {
+
+                  fun foo(_ y: Int): Int {
+                      pre {
+                          y != 0
+                      }
+                      return y
+                  }
+
+                  return foo(x)
+              }
+            `,
+		)
+
+		result, err := invokable.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(3))
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			result,
+		)
+	})
+}
+
+func TestInterpretInnerFunctionPostConditions(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("fail", func(t *testing.T) {
+
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t,
+			`
+              fun main(x: Int): Int {
+
+                  fun foo(_ y: Int): Int {
+                      post {
+                          y == 0
+                      }
+                      return y
+                  }
+
+                  return foo(x)
+              }
+            `,
+		)
+
+		_, err := invokable.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(3))
+		assertConditionError(t, err, ast.ConditionKindPost)
+	})
+
+	t.Run("in nested local function, fail", func(t *testing.T) {
+
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t,
+			`
+              fun main(x: Int): Int {
+
+                  if true {
+                      if true {
+                          fun foo(_ y: Int): Int {
+                              post {
+                                  y == 0
+                              }
+                              return y
+                          }
+                          return foo(x)
+                      }
+                  }
+
+                  return 0
+              }
+            `,
+		)
+
+		_, err := invokable.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(3))
+		assertConditionError(t, err, ast.ConditionKindPost)
+	})
+
+	t.Run("in local function, pass", func(t *testing.T) {
+
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t,
+			`
+              fun main(x: Int): Int {
+
+                  fun foo(_ y: Int): Int {
+                      post {
+                          y != 0
+                      }
+                      return y
+                  }
+
+                  return foo(x)
+              }
+            `,
+		)
+
+		result, err := invokable.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(3))
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			result,
+		)
+	})
+}
+
+func TestInterpretFunctionExpressionPreConditions(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("fail", func(t *testing.T) {
+
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t,
+			`
+              fun main(x: Int): Int {
+
+                  var foo = fun(_ y: Int): Int {
+                      pre {
+                          y == 0
+                      }
+                      return y
+                  }
+
+                  return foo(x)
+              }
+            `,
+		)
+
+		_, err := invokable.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(3))
+		assertConditionError(t, err, ast.ConditionKindPre)
+	})
+
+	t.Run("pass", func(t *testing.T) {
+
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t,
+			`
+              fun main(x: Int): Int {
+
+                  var foo = fun(_ y: Int): Int {
+                      pre {
+                          y != 0
+                      }
+                      return y
+                  }
+
+                  return foo(x)
+              }
+            `,
+		)
+
+		result, err := invokable.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(3))
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			result,
+		)
+	})
+}
+
+func TestInterpretFunctionExpressionPostConditions(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("fail", func(t *testing.T) {
+
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t,
+			`
+              fun main(x: Int): Int {
+
+                  var foo = fun(_ y: Int): Int {
+                      post {
+                          y == 0
+                      }
+                      return y
+                  }
+
+                  return foo(x)
+              }
+            `,
+		)
+
+		_, err := invokable.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(3))
+		assertConditionError(t, err, ast.ConditionKindPost)
+	})
+
+	t.Run("pass", func(t *testing.T) {
+
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t,
+			`
+              fun main(x: Int): Int {
+
+                  var foo = fun(_ y: Int): Int {
+                      post {
+                          y != 0
+                      }
+                      return y
+                  }
+
+                  return foo(x)
+              }
+            `,
+		)
+
+		result, err := invokable.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(3))
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			result,
+		)
+	})
+}

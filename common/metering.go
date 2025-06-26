@@ -121,6 +121,7 @@ var (
 	TransferMemoryUsage          = NewConstantMemoryUsage(MemoryKindTransfer)
 	TypeAnnotationMemoryUsage    = NewConstantMemoryUsage(MemoryKindTypeAnnotation)
 	DictionaryEntryMemoryUsage   = NewConstantMemoryUsage(MemoryKindDictionaryEntry)
+	SwitchCaseMemoryUsage        = NewConstantMemoryUsage(MemoryKindSwitchCase)
 
 	// AST Declarations
 
@@ -338,6 +339,12 @@ var (
 	IntersectionStaticTypeStringMemoryUsage          = NewRawStringMemoryUsage(2)  // {}
 	IntersectionStaticTypeSeparatorStringMemoryUsage = NewRawStringMemoryUsage(2)  // ,
 	InclusiveRangeStaticTypeStringMemoryUsage        = NewRawStringMemoryUsage(16) // InclusiveRange<>
+
+	// Compiler
+
+	CompilerMemoryUsage         = NewConstantMemoryUsage(MemoryKindCompiler)
+	CompilerGlobalMemoryUsage   = NewConstantMemoryUsage(MemoryKindCompilerGlobal)
+	CompilerConstantMemoryUsage = NewConstantMemoryUsage(MemoryKindCompilerConstant)
 )
 
 func NewConstantMemoryUsage(kind MemoryKind) MemoryUsage {
@@ -909,5 +916,12 @@ func NewAtreeEncodedSlabMemoryUsage(slabsCount uint) MemoryUsage {
 	return MemoryUsage{
 		Kind:   MemoryKindAtreeEncodedSlab,
 		Amount: uint64(slabsCount),
+	}
+}
+
+func NewGoSliceMemoryUsages(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindGoSliceLength,
+		Amount: uint64(length),
 	}
 }

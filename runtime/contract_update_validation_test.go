@@ -88,7 +88,7 @@ func newContractDeploymentTransactor(t *testing.T, config Config) func(code stri
 
 func newContractDeploymentTransactorWithVersion(t *testing.T, config Config, version string) func(code string) error {
 
-	rt := NewTestInterpreterRuntimeWithConfig(config)
+	rt := NewTestRuntimeWithConfig(config)
 
 	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
@@ -667,7 +667,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	testWithValidators(t, "change imported field nominal type location", func(t *testing.T, config Config) {
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		makeDeployTransaction := func(name, code string) []byte {
 			return []byte(fmt.Sprintf(
@@ -831,7 +831,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	testWithValidators(t, "change imported non-field nominal type location", func(t *testing.T, config Config) {
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		makeDeployTransaction := func(name, code string) []byte {
 			return []byte(fmt.Sprintf(
@@ -987,7 +987,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	testWithValidators(t, "change imported field nominal type location implicitly", func(t *testing.T, config Config) {
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		makeDeployTransaction := func(name, code string) []byte {
 			return []byte(fmt.Sprintf(
@@ -2864,7 +2864,7 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
           }
         `
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		contractLocation := common.AddressLocation{
 			Address: address,
@@ -2942,7 +2942,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		programGets locationAccessCounts,
 		programSets locationAccessCounts,
 	) {
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		accountCodes := map[Location][]byte{}
 		var events []cadence.Event
@@ -3615,7 +3615,7 @@ func TestRuntimeContractUpdateErrorsInOldProgram(t *testing.T) {
 
 	testWithValidators(t, "invalid old program", func(t *testing.T, config Config) {
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		var events []cadence.Event
 
