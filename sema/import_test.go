@@ -1008,15 +1008,8 @@ func TestCheckImportAlias(t *testing.T) {
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
-			access(all) contract Foo {
-				access(all) let x: [Int]
-				access(all) fun answer(): Int {
-					return 42
-				}
-				access(all) struct Bar {}
-				init() {
-					self.x = []
-				}
+			access(all) fun a(): Int {
+				return 42
 			}
 			`,
 			ParseAndCheckOptions{
