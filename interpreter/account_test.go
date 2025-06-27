@@ -477,6 +477,11 @@ func (n NoOpReferenceCreationContext) IsTypeInfoRecovered(location common.Locati
 	return false
 }
 
+func (n NoOpReferenceCreationContext) SemaTypeFromStaticType(staticType interpreter.StaticType) sema.Type {
+	// NO-OP
+	return nil
+}
+
 type NoOpFunctionCreationContext struct {
 	//Just to make the compiler happy
 	interpreter.ResourceDestructionContext

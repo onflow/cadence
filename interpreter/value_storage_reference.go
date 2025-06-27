@@ -144,7 +144,7 @@ func (v *StorageReferenceValue) dereference(context ValueStaticTypeContext, loca
 		staticType := referenced.StaticType(context)
 
 		if !IsSubTypeOfSemaType(context, staticType, v.BorrowedType) {
-			semaType := MustConvertStaticToSemaType(staticType, context)
+			semaType := context.SemaTypeFromStaticType(staticType)
 
 			return nil, &ForceCastTypeMismatchError{
 				ExpectedType:  v.BorrowedType,
@@ -239,7 +239,7 @@ func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, locat
 			v.Authorization,
 			v.TargetStorageAddress,
 			v.TargetPath,
-			MustConvertStaticToSemaType(referencedValueStaticType, context),
+			context.SemaTypeFromStaticType(referencedValueStaticType),
 		)
 		return boundFunction
 	}

@@ -628,8 +628,12 @@ outer:
 }
 
 func (t *IntersectionStaticType) ID() TypeID {
-	var interfaceTypeIDs []TypeID
 	typeCount := len(t.Types)
+	if typeCount == 1 {
+		return sema.FormatIntersectionTypeIDWithSingleInterface(t.Types[0].ID())
+	}
+
+	var interfaceTypeIDs []TypeID
 	if typeCount > 0 {
 		interfaceTypeIDs = make([]TypeID, 0, typeCount)
 		for _, ty := range t.Types {
