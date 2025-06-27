@@ -1762,6 +1762,10 @@ func (s staticTypeConversionHandler) MeterMemory(_ common.MemoryUsage) error {
 	return nil
 }
 
+func (s staticTypeConversionHandler) SemaTypeFromStaticType(staticType StaticType) sema.Type {
+	return MustConvertStaticToSemaType(staticType, s)
+}
+
 func TestIntersectionStaticType_ID(t *testing.T) {
 	t.Parallel()
 

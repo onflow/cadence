@@ -429,6 +429,8 @@ func compiledFTTransfer(tb testing.TB) {
 		require.NoError(tb, err)
 		require.Equal(tb, 0, tokenTransferTxVM.StackSize())
 
+		tokenTransferTxVM.Reset()
+
 		transferCount++
 	}
 

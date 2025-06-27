@@ -31,6 +31,7 @@ import (
 type TypeConverter interface {
 	common.MemoryGauge
 	StaticTypeConversionHandler
+	SemaTypeFromStaticType(staticType StaticType) sema.Type
 }
 
 var _ TypeConverter = &Interpreter{}
@@ -74,7 +75,6 @@ type ValueStaticTypeContext interface {
 	StorageReader
 	TypeConverter
 	IsTypeInfoRecovered(location common.Location) bool
-	SemaTypeFromStaticType(staticType StaticType) sema.Type
 }
 
 var _ ValueStaticTypeContext = &Interpreter{}

@@ -89,16 +89,7 @@ func NewVM(
 	}
 
 	// Delegate the function invocations to the vm.
-	context.invokeFunction = func(function Value, arguments []Value) (Value, error) {
-		// invokeExternally runs the VM, which is incorrect for native functions.
-		if function, ok := function.(*NativeFunctionValue); ok {
-			result := function.Function(vm.context, nil, arguments...)
-			return result, nil
-		}
-
-		return vm.invokeExternally(function, arguments)
-	}
-
+	context.invokeFunction = vm.invokeFunction
 	context.lookupFunction = vm.maybeLookupFunction
 
 	// Link global variables and functions.
@@ -1854,6 +1845,16 @@ func (vm *VM) loadType(index uint16) bbq.StaticType {
 	return staticType
 }
 
+func (vm *VM) invokeFunction(function Value, arguments []Value) (Value, error) {
+	// invokeExternally runs the VM, which is incorrect for native functions.
+	if function, ok := function.(*NativeFunctionValue); ok {
+		result := function.Function(vm.context, nil, arguments...)
+		return result, nil
+	}
+
+	return vm.invokeExternally(function, arguments)
+}
+
 func (vm *VM) maybeLookupFunction(location common.Location, name string) FunctionValue {
 	funcValue, ok := vm.lookupFunction(location, name)
 	if !ok {
@@ -1908,6 +1909,11 @@ func (vm *VM) Reset() {
 	vm.locals = vm.locals[:0]
 	vm.callstack = vm.callstack[:0]
 	vm.ipStack = vm.ipStack[:0]
+
+	context := NewContext(vm.context.Config)
+	context.invokeFunction = vm.invokeFunction
+	context.lookupFunction = vm.maybeLookupFunction
+	vm.context = context
 }
 
 func (vm *VM) initializeGlobalVariables(program *bbq.InstructionProgram) {
