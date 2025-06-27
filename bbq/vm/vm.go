@@ -1119,11 +1119,13 @@ func checkMemberAccessTargetType(
 ) {
 	accessedType := vm.loadType(accessedTypeIndex)
 
+	context := vm.context
+
 	// TODO: Avoid sema type conversion.
-	accessedSemaType := interpreter.MustConvertStaticToSemaType(accessedType, vm.context)
+	accessedSemaType := context.SemaTypeFromStaticType(accessedType)
 
 	interpreter.CheckMemberAccessTargetType(
-		vm.context,
+		context,
 		accessedValue,
 		accessedSemaType,
 		EmptyLocationRange,
@@ -1164,8 +1166,8 @@ func opTransferAndConvert(vm *VM, ins opcode.InstructionTransferAndConvert) {
 	transferredValue := interpreter.TransferAndConvert(
 		context,
 		value,
-		interpreter.MustConvertStaticToSemaType(valueType, context),
-		interpreter.MustConvertStaticToSemaType(targetType, context),
+		context.SemaTypeFromStaticType(valueType),
+		context.SemaTypeFromStaticType(targetType),
 		EmptyLocationRange,
 	)
 
@@ -1255,14 +1257,16 @@ func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 	typeIndex := ins.Type
 	targetType := vm.loadType(typeIndex)
 
-	value, valueType := castValueAndValueType(vm.context, targetType, value)
+	context := vm.context
 
-	isSubType := vm.context.IsSubType(valueType, targetType)
+	value, valueType := castValueAndValueType(context, targetType, value)
+
+	isSubType := context.IsSubType(valueType, targetType)
 
 	var result Value
 	if !isSubType {
-		targetSemaType := interpreter.MustConvertStaticToSemaType(targetType, vm.context)
-		valueSemaType := interpreter.MustConvertStaticToSemaType(valueType, vm.context)
+		targetSemaType := context.SemaTypeFromStaticType(targetType)
+		valueSemaType := context.SemaTypeFromStaticType(valueType)
 
 		panic(&interpreter.ForceCastTypeMismatchError{
 			ExpectedType:  targetSemaType,
@@ -1394,10 +1398,12 @@ func opNewRef(vm *VM, ins opcode.InstructionNewRef) {
 	borrowedType := vm.loadType(typeIndex)
 	value := vm.pop()
 
-	semaBorrowedType := interpreter.MustConvertStaticToSemaType(borrowedType, vm.context)
+	context := vm.context
+
+	semaBorrowedType := context.SemaTypeFromStaticType(borrowedType)
 
 	ref := interpreter.CreateReferenceValue(
-		vm.context,
+		context,
 		semaBorrowedType,
 		value,
 		EmptyLocationRange,
@@ -1666,7 +1672,7 @@ func opEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
 
 	typeIndex := ins.Type
 	eventStaticType := vm.loadType(typeIndex).(*interpreter.CompositeStaticType)
-	eventSemaType := interpreter.MustConvertStaticToSemaType(eventStaticType, context).(*sema.CompositeType)
+	eventSemaType := context.SemaTypeFromStaticType(eventStaticType).(*sema.CompositeType)
 
 	eventFields := vm.popN(int(ins.ArgCount))
 

@@ -8271,9 +8271,21 @@ func formatIntersectionType[T ~string](separator string, interfaceStrings []T) s
 	return result.String()
 }
 
+func formatIntersectionTypeWithSingleInterface[T ~string](interfaceString T) string {
+	var result strings.Builder
+	result.WriteByte('{')
+	result.WriteString(string(interfaceString))
+	result.WriteByte('}')
+	return result.String()
+}
+
 func FormatIntersectionTypeID[T ~string](interfaceTypeIDs []T) T {
 	slices.Sort(interfaceTypeIDs)
 	return T(formatIntersectionType("", interfaceTypeIDs))
+}
+
+func FormatIntersectionTypeIDWithSingleInterface[T ~string](interfaceTypeID T) T {
+	return T(formatIntersectionTypeWithSingleInterface(interfaceTypeID))
 }
 
 func (t *IntersectionType) string(separator string, typeFormatter func(Type) string) string {

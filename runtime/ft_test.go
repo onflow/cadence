@@ -950,10 +950,9 @@ func TestRuntimeFungibleTokenTransferInterpreter(t *testing.T) {
 	testRuntimeFungibleTokenTransfer(t, false)
 }
 
-// TODO:
-//func TestRuntimeFungibleTokenTransferVM(t *testing.T) {
-//	testRuntimeFungibleTokenTransfer(t, true)
-//}
+func TestRuntimeFungibleTokenTransferVM(t *testing.T) {
+	testRuntimeFungibleTokenTransfer(t, true)
+}
 
 func BenchmarkRuntimeFungibleTokenTransferInterpreter(b *testing.B) {
 	testRuntimeFungibleTokenTransfer(b, false)

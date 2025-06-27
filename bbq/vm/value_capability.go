@@ -37,7 +37,7 @@ func init() {
 			sema.CapabilityTypeBorrowFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				capability := receiver.(*interpreter.IDCapabilityValue)
-				borrowType := interpreter.MustConvertStaticToSemaType(capability.BorrowType, context).(*sema.ReferenceType)
+				borrowType := context.SemaTypeFromStaticType(capability.BorrowType).(*sema.ReferenceType)
 				return sema.CapabilityTypeBorrowFunctionType(borrowType)
 			},
 			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
@@ -63,11 +63,11 @@ func init() {
 					return interpreter.Nil
 				}
 
-				capabilityBorrowType := interpreter.MustConvertStaticToSemaType(idCapabilityValue.BorrowType, context).(*sema.ReferenceType)
+				capabilityBorrowType := context.SemaTypeFromStaticType(idCapabilityValue.BorrowType).(*sema.ReferenceType)
 
 				var typeParameter sema.Type
 				if len(typeArguments) > 0 {
-					typeParameter = interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
+					typeParameter = context.SemaTypeFromStaticType(typeArguments[0])
 				}
 
 				address := idCapabilityValue.Address()
@@ -91,7 +91,7 @@ func init() {
 			sema.CapabilityTypeCheckFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				capability := receiver.(*interpreter.IDCapabilityValue)
-				borrowType := interpreter.MustConvertStaticToSemaType(capability.BorrowType, context).(*sema.ReferenceType)
+				borrowType := context.SemaTypeFromStaticType(capability.BorrowType).(*sema.ReferenceType)
 				return sema.CapabilityTypeCheckFunctionType(borrowType)
 			},
 			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
@@ -118,11 +118,11 @@ func init() {
 					return interpreter.FalseValue
 				}
 
-				capabilityBorrowType := interpreter.MustConvertStaticToSemaType(idCapabilityValue.BorrowType, context).(*sema.ReferenceType)
+				capabilityBorrowType := context.SemaTypeFromStaticType(idCapabilityValue.BorrowType).(*sema.ReferenceType)
 
 				var typeParameter sema.Type
 				if len(typeArguments) > 0 {
-					typeParameter = interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
+					typeParameter = context.SemaTypeFromStaticType(typeArguments[0])
 				}
 
 				address := idCapabilityValue.Address()

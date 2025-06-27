@@ -6170,3 +6170,7 @@ func (interpreter *Interpreter) DefaultDestroyEvents(
 ) []*CompositeValue {
 	return resourceValue.DefaultDestroyEvents(interpreter, locationRange)
 }
+
+func (interpreter *Interpreter) SemaTypeFromStaticType(staticType StaticType) sema.Type {
+	return MustConvertStaticToSemaType(staticType, interpreter)
+}
