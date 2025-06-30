@@ -68,7 +68,7 @@ func init() {
 				arguments := args[TypeBoundFunctionArgumentOffset:]
 
 				borrowType := typeArguments[0]
-				semaBorrowType := interpreter.MustConvertStaticToSemaType(borrowType, context)
+				semaBorrowType := context.SemaTypeFromStaticType(borrowType)
 
 				return interpreter.AccountStorageBorrow(
 					context,
@@ -166,7 +166,7 @@ func init() {
 				arguments := args[TypeBoundFunctionArgumentOffset:]
 
 				borrowType := typeArguments[0]
-				semaBorrowType := interpreter.MustConvertStaticToSemaType(borrowType, context)
+				semaBorrowType := context.SemaTypeFromStaticType(borrowType)
 
 				return interpreter.AccountStorageRead(
 					context,
@@ -193,7 +193,7 @@ func init() {
 				arguments := args[TypeBoundFunctionArgumentOffset:]
 
 				borrowType := typeArguments[0]
-				semaBorrowType := interpreter.MustConvertStaticToSemaType(borrowType, context)
+				semaBorrowType := context.SemaTypeFromStaticType(borrowType)
 
 				return interpreter.AccountStorageRead(
 					context,
@@ -220,7 +220,7 @@ func init() {
 				arguments := args[TypeBoundFunctionArgumentOffset:]
 
 				borrowType := typeArguments[0]
-				semaBorrowType := interpreter.MustConvertStaticToSemaType(borrowType, context)
+				semaBorrowType := context.SemaTypeFromStaticType(borrowType)
 
 				return interpreter.AccountStorageCheck(
 					context,

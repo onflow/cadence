@@ -289,7 +289,7 @@ func (executor *contractFunctionExecutor) executeWithVM(
 	}
 
 	staticType := contractValue.StaticType(context)
-	semaType := interpreter.MustConvertStaticToSemaType(staticType, context)
+	semaType := context.SemaTypeFromStaticType(staticType)
 	qualifiedFuncName := commons.TypeQualifiedName(semaType, executor.functionName)
 
 	value, err := executor.vm.InvokeMethodExternally(

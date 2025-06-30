@@ -89,16 +89,7 @@ func NewVM(
 	}
 
 	// Delegate the function invocations to the vm.
-	context.invokeFunction = func(function Value, arguments []Value) (Value, error) {
-		// invokeExternally runs the VM, which is incorrect for native functions.
-		if function, ok := function.(*NativeFunctionValue); ok {
-			result := function.Function(vm.context, nil, arguments...)
-			return result, nil
-		}
-
-		return vm.invokeExternally(function, arguments)
-	}
-
+	context.invokeFunction = vm.invokeFunction
 	context.lookupFunction = vm.maybeLookupFunction
 
 	// Link global variables and functions.
@@ -1119,11 +1110,13 @@ func checkMemberAccessTargetType(
 ) {
 	accessedType := vm.loadType(accessedTypeIndex)
 
+	context := vm.context
+
 	// TODO: Avoid sema type conversion.
-	accessedSemaType := interpreter.MustConvertStaticToSemaType(accessedType, vm.context)
+	accessedSemaType := context.SemaTypeFromStaticType(accessedType)
 
 	interpreter.CheckMemberAccessTargetType(
-		vm.context,
+		context,
 		accessedValue,
 		accessedSemaType,
 		EmptyLocationRange,
@@ -1164,8 +1157,8 @@ func opTransferAndConvert(vm *VM, ins opcode.InstructionTransferAndConvert) {
 	transferredValue := interpreter.TransferAndConvert(
 		context,
 		value,
-		interpreter.MustConvertStaticToSemaType(valueType, context),
-		interpreter.MustConvertStaticToSemaType(targetType, context),
+		context.SemaTypeFromStaticType(valueType),
+		context.SemaTypeFromStaticType(targetType),
 		EmptyLocationRange,
 	)
 
@@ -1255,14 +1248,16 @@ func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 	typeIndex := ins.Type
 	targetType := vm.loadType(typeIndex)
 
-	value, valueType := castValueAndValueType(vm.context, targetType, value)
+	context := vm.context
 
-	isSubType := vm.context.IsSubType(valueType, targetType)
+	value, valueType := castValueAndValueType(context, targetType, value)
+
+	isSubType := context.IsSubType(valueType, targetType)
 
 	var result Value
 	if !isSubType {
-		targetSemaType := interpreter.MustConvertStaticToSemaType(targetType, vm.context)
-		valueSemaType := interpreter.MustConvertStaticToSemaType(valueType, vm.context)
+		targetSemaType := context.SemaTypeFromStaticType(targetType)
+		valueSemaType := context.SemaTypeFromStaticType(valueType)
 
 		panic(&interpreter.ForceCastTypeMismatchError{
 			ExpectedType:  targetSemaType,
@@ -1394,10 +1389,12 @@ func opNewRef(vm *VM, ins opcode.InstructionNewRef) {
 	borrowedType := vm.loadType(typeIndex)
 	value := vm.pop()
 
-	semaBorrowedType := interpreter.MustConvertStaticToSemaType(borrowedType, vm.context)
+	context := vm.context
+
+	semaBorrowedType := context.SemaTypeFromStaticType(borrowedType)
 
 	ref := interpreter.CreateReferenceValue(
-		vm.context,
+		context,
 		semaBorrowedType,
 		value,
 		EmptyLocationRange,
@@ -1666,7 +1663,7 @@ func opEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
 
 	typeIndex := ins.Type
 	eventStaticType := vm.loadType(typeIndex).(*interpreter.CompositeStaticType)
-	eventSemaType := interpreter.MustConvertStaticToSemaType(eventStaticType, context).(*sema.CompositeType)
+	eventSemaType := context.SemaTypeFromStaticType(eventStaticType).(*sema.CompositeType)
 
 	eventFields := vm.popN(int(ins.ArgCount))
 
@@ -1848,6 +1845,16 @@ func (vm *VM) loadType(index uint16) bbq.StaticType {
 	return staticType
 }
 
+func (vm *VM) invokeFunction(function Value, arguments []Value) (Value, error) {
+	// invokeExternally runs the VM, which is incorrect for native functions.
+	if function, ok := function.(*NativeFunctionValue); ok {
+		result := function.Function(vm.context, nil, arguments...)
+		return result, nil
+	}
+
+	return vm.invokeExternally(function, arguments)
+}
+
 func (vm *VM) maybeLookupFunction(location common.Location, name string) FunctionValue {
 	funcValue, ok := vm.lookupFunction(location, name)
 	if !ok {
@@ -1902,6 +1909,11 @@ func (vm *VM) Reset() {
 	vm.locals = vm.locals[:0]
 	vm.callstack = vm.callstack[:0]
 	vm.ipStack = vm.ipStack[:0]
+
+	context := NewContext(vm.context.Config)
+	context.invokeFunction = vm.invokeFunction
+	context.lookupFunction = vm.maybeLookupFunction
+	vm.context = context
 }
 
 func (vm *VM) initializeGlobalVariables(program *bbq.InstructionProgram) {
