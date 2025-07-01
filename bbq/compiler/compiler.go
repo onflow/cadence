@@ -2959,6 +2959,24 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		},
 	)
 
+	// self in attachments is a reference
+	// see declareNonEnumCompositeValue in interpreter
+	var returnLocalIndex uint16
+	if kind == common.CompositeKindAttachment {
+		// dup so we can return it later
+		c.emit(opcode.InstructionDup{})
+		// store return value
+		returnLocalIndex = c.currentFunction.generateLocalIndex()
+		c.emitSetLocal(returnLocalIndex)
+		// set self to be a ref
+		c.emit(opcode.InstructionNewRef{
+			Type:       typeIndex,
+			IsImplicit: false,
+		})
+
+		// TODO: set base?
+	}
+
 	if kind == common.CompositeKindContract {
 		// During contract init, update the global variable with the newly initialized contract value.
 		// So accessing the contract through the global variable while initializing itself, would work.
@@ -2989,8 +3007,13 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		enclosingType,
 	)
 
-	// Constructor should return the created the struct. i.e: return `self`
-	c.emitGetLocal(self.index)
+	if kind == common.CompositeKindAttachment {
+		// attachments have self as a reference which is not the return value
+		c.emitGetLocal(returnLocalIndex)
+	} else {
+		// Constructor should return the created the struct. i.e: return `self`
+		c.emitGetLocal(self.index)
+	}
 
 	// No need to transfer, since the type is same as the constructed value, for initializers.
 	c.emit(opcode.InstructionReturnValue{})
@@ -3318,9 +3341,7 @@ func (c *Compiler[_, _]) VisitAttachmentDeclaration(declaration *ast.AttachmentD
 		c.compileDeclaration(specialFunc)
 	}
 
-	// If the initializer is not declared, generate
-	// - a synthetic initializer for enum types, otherwise
-	// - an empty initializer
+	// If the initializer is not declared, generate an empty initializer
 	if !hasInit {
 		c.generateEmptyInit()
 	}

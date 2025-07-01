@@ -8938,12 +8938,16 @@ func TestCompileAttachments(t *testing.T) {
 		checker, err := ParseAndCheck(t, `
 			resource R {}
        attachment A for R {
-          fun foo(): Int { return 3 }
+          let x: Int
+          init(x: Int) {
+            self.x = x
+          }
+          fun foo(): Int { return self.x }
        }
        fun test(): Int {
            let r <- create R()
-           let r2 <- attach A() to <-r
-           destroy r2
+           let r2 <- attach A(x: 4) to <-r
+		   destroy r2
            return 3
        }
 		`)
@@ -8958,21 +8962,9 @@ func TestCompileAttachments(t *testing.T) {
 		functions := program.Functions
 		require.Len(t, functions, 8)
 
-		// globals
-		const (
-			testFunctionIndex = iota
-			sConstructorIndex
-			sGetTypeIndex
-			sIsInstanceIndex
-			aConstructorIndex
-			aGetTypeIndex
-			aIsInstanceIndex
-			aFooIndex
-		)
-
 		assert.Equal(t,
 			[]opcode.Instruction{},
-			functions[0].Code,
+			functions[4].Code,
 		)
 	})
 }

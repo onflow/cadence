@@ -1008,6 +1008,12 @@ func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
 func maybeDereference(context interpreter.ValueStaticTypeContext, value Value) Value {
 	switch typedValue := value.(type) {
 	case *interpreter.EphemeralReferenceValue:
+		// don't reference attachments
+		if val, ok := typedValue.Value.(*interpreter.CompositeValue); ok {
+			if val.Kind == common.CompositeKindAttachment {
+				return value
+			}
+		}
 		return typedValue.Value
 	case *interpreter.StorageReferenceValue:
 		referencedValue := typedValue.ReferencedValue(

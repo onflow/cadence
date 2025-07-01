@@ -9010,13 +9010,19 @@ func TestAttachments(t *testing.T) {
 		result, err := CompileAndInvoke(t, `
 		resource R {}
        attachment A for R {
-          fun foo(): Int { return 3 }
+          let x: Int
+          init(x: Int) {
+            self.x = x
+          }
+          fun foo(): Int { return self.x }
        }
        fun test(): Int {
            let r <- create R()
-           let r2 <- attach A() to <-r
-           let i = r2[A]?.foo()!
-           destroy r2
+           let r2 <- attach A(x: 4) to <-r
+           remove A from r2
+           let r3 <- attach A(x: 3) to <-r2
+           let i = r3[A]?.foo()!
+           destroy r3
            return i
        }
 		`, "test")
