@@ -241,7 +241,7 @@ func ParseCheckAndPrepareWithOptions(
 	if options.CheckerConfig != nil {
 		typeActivationHandler := options.CheckerConfig.BaseTypeActivationHandler
 		if typeActivationHandler != nil {
-			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
 				activation := typeActivationHandler(location)
 				typeName := location.QualifiedIdentifier(typeID)
 				variable := activation.Find(typeName)
@@ -328,7 +328,7 @@ func ParseCheckAndPrepareWithOptions(
 
 			// Register externally provided globals in compiler.
 			compilerConfig = &compiler.Config{
-				BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
+				BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
 					baseActivation := compiler.DefaultBuiltinGlobals()
 					activation := activations.NewActivation(nil, baseActivation)
 					for name := range interpreterBaseActivationVariables { //nolint:maprange
@@ -349,7 +349,7 @@ func ParseCheckAndPrepareWithOptions(
 		}
 
 		if interpreterConfig.ImportLocationHandler != nil {
-			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
 				impt := interpreterConfig.ImportLocationHandler(nil, location)
 				switch impt := impt.(type) {
 				case interpreter.VirtualImport:

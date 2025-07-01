@@ -59,6 +59,11 @@ type vmEnvironment struct {
 	defaultCompilerBuiltinGlobals *activations.Activation[compiler.GlobalImport]
 	defaultVMBuiltinGlobals       *activations.Activation[vm.Variable]
 
+	compilerBuiltinGlobalsByLocation map[common.Location]*activations.Activation[compiler.GlobalImport]
+	vmInjectedGlobalsByLocation      map[common.Location]*vm.InjectedGlobals
+
+	allDeclaredTypes map[common.TypeID]sema.Type
+
 	*stdlib.SimpleContractAdditionTracker
 }
 
@@ -109,6 +114,9 @@ func newVMEnvironment(config Config) *vmEnvironment {
 
 func NewBaseVMEnvironment(config Config) *vmEnvironment {
 	env := newVMEnvironment(config)
+	for _, typeDeclaration := range stdlib.DefaultStandardLibraryTypes {
+		env.DeclareType(typeDeclaration, nil)
+	}
 	for _, valueDeclaration := range stdlib.VMDefaultStandardLibraryValues(env) {
 		env.DeclareValue(valueDeclaration, nil)
 	}
@@ -117,6 +125,9 @@ func NewBaseVMEnvironment(config Config) *vmEnvironment {
 
 func NewScriptVMEnvironment(config Config) Environment {
 	env := newVMEnvironment(config)
+	for _, typeDeclaration := range stdlib.DefaultStandardLibraryTypes {
+		env.DeclareType(typeDeclaration, nil)
+	}
 	for _, valueDeclaration := range stdlib.VMDefaultScriptStandardLibraryValues(env) {
 		env.DeclareValue(valueDeclaration, nil)
 	}
@@ -137,6 +148,7 @@ func (e *vmEnvironment) newVMConfig() *vm.Config {
 		OnEventEmitted:                 newOnEventEmittedHandler(&e.Interface),
 		CapabilityBorrowHandler:        newCapabilityBorrowHandler(e),
 		CapabilityCheckHandler:         newCapabilityCheckHandler(e),
+		InjectedGlobalsHandler:         e.vmInjectedGlobals,
 	}
 }
 
@@ -205,37 +217,85 @@ func (e *vmEnvironment) Configure(
 func (e *vmEnvironment) DeclareValue(valueDeclaration stdlib.StandardLibraryValue, location common.Location) {
 	e.checkingEnvironment.declareValue(valueDeclaration, location)
 
-	// TODO: add support for non-nil location
-	if location != nil {
-		panic(errors.NewUnreachableError())
-	}
+	e.declareCompilerValue(valueDeclaration, location)
 
-	// Define the value in the compiler builtin globals
+	e.declareVMValue(valueDeclaration, location)
+}
 
-	compilerBuiltinGlobals := e.defaultCompilerBuiltinGlobals
+func (e *vmEnvironment) declareCompilerValue(valueDeclaration stdlib.StandardLibraryValue, location common.Location) {
+	compilerBuiltinGlobals := e.getOrCreateCompilerBuiltinGlobals(location)
 
 	name := valueDeclaration.Name
 
 	compilerBuiltinGlobals.Set(
 		name,
 		compiler.GlobalImport{
-			Name: name,
+			Location: location,
+			Name:     name,
 		},
 	)
-
-	// Define the value in the VM builtin globals
-
-	variable := interpreter.NewVariableWithValue(
-		nil,
-		valueDeclaration.Value,
-	)
-
-	vmBuiltinGlobals := e.defaultVMBuiltinGlobals
-	vmBuiltinGlobals.Set(name, variable)
 }
 
+func (e *vmEnvironment) declareVMValue(valueDeclaration stdlib.StandardLibraryValue, location common.Location) {
+	name := valueDeclaration.Name
+
+	if location == nil {
+		// Define the value in the VM builtin globals
+
+		variable := interpreter.NewVariableWithValue(
+			nil,
+			valueDeclaration.Value,
+		)
+
+		vmBuiltinGlobals := e.defaultVMBuiltinGlobals
+		vmBuiltinGlobals.Set(name, variable)
+	} else {
+		injectedGlobals := e.getOrCreateVMInjectedGlobals(location)
+
+		switch valueDeclaration.Kind {
+		case common.DeclarationKindFunction:
+
+			functionValue, ok := valueDeclaration.Value.(interpreter.FunctionValue)
+			if !ok {
+				panic(errors.NewUnexpectedError(
+					"expected function value for function declaration, got %T",
+					valueDeclaration.Value,
+				))
+			}
+			injectedGlobals.Functions = append(
+				injectedGlobals.Functions,
+				functionValue,
+			)
+
+		case common.DeclarationKindVariable,
+			common.DeclarationKindConstant:
+
+			injectedGlobals.Variables = append(
+				injectedGlobals.Variables,
+				valueDeclaration.Value,
+			)
+
+		case common.DeclarationKindContract:
+
+			injectedGlobals.Contracts = append(
+				injectedGlobals.Contracts,
+				valueDeclaration.Value,
+			)
+
+		default:
+			panic(errors.NewUnexpectedError(
+				"unsupported declaration kind: %s",
+				valueDeclaration.Kind,
+			))
+		}
+	}
+}
 func (e *vmEnvironment) DeclareType(typeDeclaration stdlib.StandardLibraryType, location common.Location) {
 	e.checkingEnvironment.declareType(typeDeclaration, location)
+	if e.allDeclaredTypes == nil {
+		e.allDeclaredTypes = map[common.TypeID]sema.Type{}
+	}
+	e.allDeclaredTypes[typeDeclaration.Type.ID()] = typeDeclaration.Type
 }
 
 func (e *vmEnvironment) CommitStorageTemporarily(context interpreter.ValueTransferContext) error {
@@ -365,9 +425,10 @@ func (e *vmEnvironment) loadDesugaredElaboration(location common.Location) (*com
 }
 
 // TODO: Maybe split this to four separate methods like in the interpreter.
-func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-	if location == nil {
-		return stdlib.StandardLibraryTypes[typeID]
+func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.TypeID) sema.Type {
+	ty := e.allDeclaredTypes[typeID]
+	if ty != nil {
+		return ty
 	}
 
 	if _, ok := location.(stdlib.FlowLocation); ok {
@@ -452,11 +513,59 @@ func (e *vmEnvironment) newVM(
 }
 
 func (e *vmEnvironment) vmBuiltinGlobals() *activations.Activation[vm.Variable] {
-	// TODO: add support for per-location VM builtin globals
 	return e.defaultVMBuiltinGlobals
 }
 
-func (e *vmEnvironment) compilerBuiltinGlobals() *activations.Activation[compiler.GlobalImport] {
-	// TODO: add support for per-location compiler builtin globals
-	return e.defaultCompilerBuiltinGlobals
+func (e *vmEnvironment) getOrCreateCompilerBuiltinGlobals(
+	location common.Location,
+) *activations.Activation[compiler.GlobalImport] {
+	defaultBaseActivation := e.defaultCompilerBuiltinGlobals
+	if location == nil {
+		return defaultBaseActivation
+	}
+
+	globals := e.compilerBuiltinGlobalsByLocation[location]
+	if globals == nil {
+		globals = activations.NewActivation(nil, defaultBaseActivation)
+		if e.compilerBuiltinGlobalsByLocation == nil {
+			e.compilerBuiltinGlobalsByLocation = map[common.Location]*activations.Activation[compiler.GlobalImport]{}
+		}
+		e.compilerBuiltinGlobalsByLocation[location] = globals
+	}
+	return globals
+}
+
+func (e *vmEnvironment) compilerBuiltinGlobals(
+	location common.Location,
+) (
+	globals *activations.Activation[compiler.GlobalImport],
+) {
+	globals = e.compilerBuiltinGlobalsByLocation[location]
+	if globals == nil {
+		globals = e.defaultCompilerBuiltinGlobals
+	}
+	return
+}
+
+func (e *vmEnvironment) getOrCreateVMInjectedGlobals(
+	location common.Location,
+) *vm.InjectedGlobals {
+
+	injectedGlobals := e.vmInjectedGlobalsByLocation[location]
+	if injectedGlobals == nil {
+		injectedGlobals = &vm.InjectedGlobals{}
+		if e.vmInjectedGlobalsByLocation == nil {
+			e.vmInjectedGlobalsByLocation = map[common.Location]*vm.InjectedGlobals{}
+		}
+		e.vmInjectedGlobalsByLocation[location] = injectedGlobals
+	}
+	return injectedGlobals
+}
+
+func (e *vmEnvironment) vmInjectedGlobals(location common.Location) vm.InjectedGlobals {
+	injectedGlobals := e.vmInjectedGlobalsByLocation[location]
+	if injectedGlobals == nil {
+		return vm.InjectedGlobals{}
+	}
+	return *injectedGlobals
 }
