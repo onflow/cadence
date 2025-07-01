@@ -8929,4 +8929,48 @@ func TestCompileAttachments(t *testing.T) {
 			functions[0].Code,
 		)
 	})
+
+	t.Run("test", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			resource R {}
+       attachment A for R {
+          fun foo(): Int { return 3 }
+       }
+       fun test(): Int {
+           let r <- create R()
+           let r2 <- attach A() to <-r
+           destroy r2
+           return 3
+       }
+		`)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 8)
+
+		// globals
+		const (
+			testFunctionIndex = iota
+			sConstructorIndex
+			sGetTypeIndex
+			sIsInstanceIndex
+			aConstructorIndex
+			aGetTypeIndex
+			aIsInstanceIndex
+			aFooIndex
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{},
+			functions[0].Code,
+		)
+	})
 }

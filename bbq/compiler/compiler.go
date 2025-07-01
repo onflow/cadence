@@ -2102,7 +2102,7 @@ func (c *Compiler[_, _]) emitVariableStore(name string) {
 	})
 }
 
-func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(expression *ast.InvocationExpression, implicitArg *ast.Expression, implicitArgType sema.Type) (_ struct{}) {
+func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(expression *ast.InvocationExpression, implicitArgIndex uint16, implicitArgType sema.Type) (_ struct{}) {
 	// TODO: copy
 
 	invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(expression)
@@ -2146,13 +2146,14 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(expressio
 	c.compileArguments(expression.Arguments, invocationTypes)
 
 	typeArgs := c.loadTypeArguments(invocationTypes)
-	if implicitArg != nil {
+	if implicitArgType != nil {
 		typeArgs = append(typeArgs, c.getOrAddType(implicitArgType))
 		argumentCount += 1
 		if argumentCount >= math.MaxUint16 {
 			panic(errors.NewDefaultUserError("invalid number of arguments"))
 		}
-		c.compileExpression(*implicitArg)
+		// retrieve base again
+		c.emitGetLocal(implicitArgIndex)
 	}
 
 	c.emit(opcode.InstructionInvoke{
@@ -2163,7 +2164,7 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(expressio
 }
 
 func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExpression) (_ struct{}) {
-	c.visitInvocationExpressionWithImplicitArgument(expression, nil, nil)
+	c.visitInvocationExpressionWithImplicitArgument(expression, 0, nil)
 
 	return
 }
@@ -3331,30 +3332,35 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 	baseType := types.BaseType
 	attachmentType := types.AttachType
 
-	// is this the best way to have base on stack
+	// base on stack
 	c.compileExpression(expression.Base)
-	// copy of base
-	c.emitTransfer()
-	// store it locally
-	targetLocalIndex := c.currentFunction.generateLocalIndex()
-	c.emitSetLocal(targetLocalIndex)
-	// retrieve base again
-	c.emitGetLocal(targetLocalIndex)
-	// we want base to be a reference?
+	// store base locally
+	baseLocalIndex := c.currentFunction.generateLocalIndex()
+	c.emitSetLocal(baseLocalIndex)
+	// get base back on stack
+	c.emitGetLocal(baseLocalIndex)
+	// create reference to base
+	c.emit(opcode.InstructionNewRef{
+		Type:       c.getOrAddType(baseType),
+		IsImplicit: false,
+	})
+	refLocalIndex := c.currentFunction.generateLocalIndex()
+	c.emitSetLocal(refLocalIndex)
 
-	// create the attachment
-	c.visitInvocationExpressionWithImplicitArgument(expression.Attachment, &expression.Base, baseType)
+	// create the attachment, pass in base ref as local index
+	c.visitInvocationExpressionWithImplicitArgument(expression.Attachment, refLocalIndex, baseType)
 	// attachment on stack
 
-	// TODO: pop and set base to be reference to base here
-	// 	     put back on stack
+	// base back on stack
+	c.emitGetLocal(baseLocalIndex)
+	// TODO: do attachment.setbaseValue(...)
+	// copy of base
+	c.emitTransfer()
 
-	// add attachment value as a member of base
+	// add attachment value as a member of base copy
 	c.emit(opcode.InstructionSetTypeKey{
 		Type: c.getOrAddType(attachmentType),
 	})
-	// retrieve attached copy of base
-	c.emitGetLocal(targetLocalIndex)
 	return
 }
 

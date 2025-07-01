@@ -1431,7 +1431,7 @@ func opGetTypeKey(vm *VM, ins opcode.InstructionGetTypeKey) {
 }
 
 func opSetTypeKey(vm *VM, ins opcode.InstructionSetTypeKey) {
-	target, fieldValue := vm.pop2()
+	fieldValue, target := vm.pop2()
 
 	// get attachment type
 	typeIndex := ins.Type
@@ -1445,6 +1445,7 @@ func opSetTypeKey(vm *VM, ins opcode.InstructionSetTypeKey) {
 		typ,
 		fieldValue,
 	)
+	vm.push(compositeValue)
 }
 
 func opRemoveTypeKey(vm *VM, ins opcode.InstructionRemoveTypeKey) {

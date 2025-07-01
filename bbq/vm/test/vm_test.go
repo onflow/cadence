@@ -8891,7 +8891,7 @@ func TestStringTemplate(t *testing.T) {
 	})
 }
 
-func TestCompileAttachments(t *testing.T) {
+func TestAttachments(t *testing.T) {
 
 	t.Parallel()
 
@@ -8899,16 +8899,17 @@ func TestCompileAttachments(t *testing.T) {
 		t.Parallel()
 
 		result, err := CompileAndInvoke(t, `
-			struct S {}
-        attachment A for S {
-            fun foo(): Int { return 3 }
-        }
-        fun test(): Int {
-            var s = S()
-            s = attach A() to s
-            let ref = &s as &S
-            return ref[A]?.foo()!
-        }
+		resource R {}
+       attachment A for R {
+          fun foo(): Int { return 3 }
+       }
+       fun test(): Int {
+           let r <- create R()
+           let r2 <- attach A() to <-r
+           let i = r2[A]?.foo()!
+           destroy r2
+           return i
+       }
 		`, "test")
 		require.NoError(t, err)
 

@@ -260,7 +260,7 @@ func TestInterpretAttachmentResource(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {}
        attachment A for R {
           fun foo(): Int { return 3 }
