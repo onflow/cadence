@@ -3173,7 +3173,12 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location)
 
 	// Recursively add transitive imports.
 	for _, impt := range importedProgram.Imports {
-		c.addGlobalsFromImportedProgram(impt.Location)
+		// Handle self imports for injected globals
+		if impt.Location == location {
+			c.addImportedGlobal(impt.Location, impt.Name)
+		} else {
+			c.addGlobalsFromImportedProgram(impt.Location)
+		}
 	}
 }
 
