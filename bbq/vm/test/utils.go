@@ -383,7 +383,7 @@ func CompileAndInvoke(
 	)
 }
 
-func CompilerDefaultBuiltinGlobalsWithDefaultsAndLog() *activations.Activation[compiler.GlobalImport] {
+func CompilerDefaultBuiltinGlobalsWithDefaultsAndLog(_ common.Location) *activations.Activation[compiler.GlobalImport] {
 	activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 
 	activation.Set(
@@ -396,7 +396,7 @@ func CompilerDefaultBuiltinGlobalsWithDefaultsAndLog() *activations.Activation[c
 	return activation
 }
 
-func CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog() *activations.Activation[compiler.GlobalImport] {
+func CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog(_ common.Location) *activations.Activation[compiler.GlobalImport] {
 	activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 
 	activation.Set(
@@ -674,8 +674,8 @@ func contractValueHandler(contractName string, arguments ...vm.Value) vm.Contrac
 
 func CompiledProgramsTypeLoader(
 	programs CompiledPrograms,
-) func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-	return func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+) func(location common.Location, typeID interpreter.TypeID) sema.Type {
+	return func(location common.Location, typeID interpreter.TypeID) sema.Type {
 		program, ok := programs[location]
 		if !ok {
 			return nil

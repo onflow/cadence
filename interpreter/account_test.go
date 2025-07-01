@@ -641,7 +641,7 @@ func testAccountWithErrorHandlerWithCompiler(
 				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
 					ParseAndCheckOptions: parseAndCheckOptions,
 					CompilerConfig: &compiler.Config{
-						BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
+						BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
 							baseActivation := compiler.DefaultBuiltinGlobals()
 							activation := activations.NewActivation[compiler.GlobalImport](nil, baseActivation)
 							for _, valueDeclaration := range valueDeclarations {
