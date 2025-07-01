@@ -3939,7 +3939,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 					},
 				},
 				CompilerConfig: &compiler.Config{
-					BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
+					BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
 						activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 						activation.Set(
 							stdlib.LogFunctionName,
@@ -7617,7 +7617,7 @@ func TestCompileOptionalArgument(t *testing.T) {
 		require.NoError(t, err)
 
 		config := &compiler.Config{
-			BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
+			BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
 				activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 				activation.Set(
 					stdlib.AssertFunctionName,

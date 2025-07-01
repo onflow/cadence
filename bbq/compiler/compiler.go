@@ -154,7 +154,7 @@ func newCompiler[E, T any](
 
 	var globalImports *activations.Activation[GlobalImport]
 	if config.BuiltinGlobalsProvider != nil {
-		globalImports = config.BuiltinGlobalsProvider()
+		globalImports = config.BuiltinGlobalsProvider(location)
 	} else {
 		globalImports = DefaultBuiltinGlobals()
 	}
