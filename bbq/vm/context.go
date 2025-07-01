@@ -48,6 +48,13 @@ type Context struct {
 	containerValueIteration       map[atree.ValueID]int
 	destroyedResources            map[atree.ValueID]struct{}
 
+	// semaTypes is a cache-alike for temporary storing sema-types by their ID,
+	// to avoid repeated conversions from static-types to sema-types.
+	// This cache-alike is maintained per execution.
+	// TODO: Re-use the conversions from the compiler.
+	// TODO: Maybe extend/share this between executions.
+	semaTypes map[sema.TypeID]sema.Type
+
 	// TODO: stack-trace, location, etc.
 }
 
@@ -66,6 +73,7 @@ func NewContext(config *Config) *Context {
 		mutationDuringCapabilityControllerIteration: false,
 		referencedResourceKindedValues:              ReferencedResourceKindedValues{},
 		destroyedResources:                          make(map[atree.ValueID]struct{}),
+		semaTypes:                                   make(map[sema.TypeID]sema.Type),
 	}
 }
 
@@ -263,8 +271,7 @@ func (c *Context) GetMethod(
 ) interpreter.FunctionValue {
 	staticType := value.StaticType(c)
 
-	// TODO: avoid the sema-type conversion
-	semaType := interpreter.MustConvertStaticToSemaType(staticType, c)
+	semaType := c.SemaTypeFromStaticType(staticType)
 
 	var location common.Location
 	if locatedType, ok := semaType.(sema.LocatedType); ok {
@@ -287,7 +294,7 @@ func (c *Context) GetMethod(
 		return method
 	}
 
-	return NewBoundFunctionPointerValue(
+	return NewBoundFunctionValue(
 		c,
 		value,
 		method,
@@ -341,4 +348,18 @@ func (c *Context) DefaultDestroyEvents(
 	)
 
 	return eventValues
+}
+
+func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema.Type {
+	typeID := staticType.ID()
+	semaType, ok := c.semaTypes[typeID]
+	if ok {
+		return semaType
+	}
+
+	// TODO: avoid the sema-type conversion
+	semaType = interpreter.MustConvertStaticToSemaType(staticType, c)
+
+	c.semaTypes[typeID] = semaType
+	return semaType
 }

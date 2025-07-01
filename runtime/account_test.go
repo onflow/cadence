@@ -72,6 +72,7 @@ func TestRuntimeAccountKeyConstructor(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)
@@ -190,6 +191,7 @@ func TestRuntimeStoreAccountAPITypes(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -649,6 +651,7 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 		Context{
 			Location:  nextTransactionLocation(),
 			Interface: runtimeInterface,
+			UseVM:     *compile,
 		},
 	)
 
@@ -1093,6 +1096,7 @@ func TestRuntimeHashAlgorithm(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1168,6 +1172,7 @@ func TestRuntimeSignatureAlgorithm(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1416,6 +1421,7 @@ func (test accountKeyTestCase) executeTransaction(
 		Context{
 			Interface: runtimeInterface,
 			Location:  location,
+			UseVM:     *compile,
 		},
 	)
 	return err
@@ -1436,6 +1442,7 @@ func (test accountKeyTestCase) executeScript(
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
+			UseVM:     *compile,
 		},
 	)
 
@@ -1472,6 +1479,7 @@ func TestRuntimePublicKey(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -1854,6 +1862,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -1896,6 +1905,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -1948,6 +1958,8 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1969,6 +1981,8 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1991,6 +2005,8 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: requires support for contract interface imports
+				//UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2041,6 +2057,8 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2060,6 +2078,8 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2082,6 +2102,8 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: requires support for contract interface imports
+				//UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2132,6 +2154,8 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2153,6 +2177,8 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2178,6 +2204,8 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: requires support for contract interface imports
+				//UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2234,6 +2262,8 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// TODO: contract deployment with VM
+				// UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2256,6 +2286,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.ErrorContains(t, err, "cannot borrow a reference with an authorization")
@@ -2292,6 +2323,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2334,6 +2366,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -2372,6 +2405,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -2414,6 +2448,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -2461,6 +2496,7 @@ func TestRuntimePublicAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -2517,6 +2553,7 @@ func TestRuntimePublicAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -2555,6 +2592,7 @@ func TestRuntimePublicAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 

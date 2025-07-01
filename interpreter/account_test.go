@@ -477,6 +477,11 @@ func (n NoOpReferenceCreationContext) IsTypeInfoRecovered(location common.Locati
 	return false
 }
 
+func (n NoOpReferenceCreationContext) SemaTypeFromStaticType(staticType interpreter.StaticType) sema.Type {
+	// NO-OP
+	return nil
+}
+
 type NoOpFunctionCreationContext struct {
 	//Just to make the compiler happy
 	interpreter.ResourceDestructionContext
@@ -609,9 +614,9 @@ func testAccountWithErrorHandlerWithCompiler(
 
 	if compilerEnabled && *compile {
 		vmConfig := &vm.Config{
-			BuiltinGlobalsProvider: func() *activations.Activation[*vm.Variable] {
+			BuiltinGlobalsProvider: func() *activations.Activation[vm.Variable] {
 				baseActivation := vm.DefaultBuiltinGlobals()
-				activation := activations.NewActivation[*vm.Variable](nil, baseActivation)
+				activation := activations.NewActivation[vm.Variable](nil, baseActivation)
 				variable := &interpreter.SimpleVariable{}
 				variable.InitializeWithValue(accountValueDeclaration.Value)
 				activation.Set(accountValueDeclaration.Name, variable)

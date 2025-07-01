@@ -35,7 +35,7 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-type Variable = interpreter.SimpleVariable
+type Variable = interpreter.Variable
 
 type VM struct {
 	stack  []Value
@@ -48,7 +48,7 @@ type VM struct {
 	ip      uint16
 
 	context            *Context
-	globals            *activations.Activation[*Variable]
+	globals            *activations.Activation[Variable]
 	linkedGlobalsCache map[common.Location]LinkedGlobals
 }
 
@@ -89,16 +89,7 @@ func NewVM(
 	}
 
 	// Delegate the function invocations to the vm.
-	context.invokeFunction = func(function Value, arguments []Value) (Value, error) {
-		// invokeExternally runs the VM, which is incorrect for native functions.
-		if function, ok := function.(*NativeFunctionValue); ok {
-			result := function.Function(vm.context, nil, arguments...)
-			return result, nil
-		}
-
-		return vm.invokeExternally(function, arguments)
-	}
-
+	context.invokeFunction = vm.invokeFunction
 	context.lookupFunction = vm.maybeLookupFunction
 
 	// Link global variables and functions.
@@ -350,7 +341,7 @@ func (vm *VM) InvokeMethodExternally(
 		}
 	}
 
-	boundFunction := NewBoundFunctionPointerValue(context, receiver, functionValue)
+	boundFunction := NewBoundFunctionValue(context, receiver, functionValue)
 
 	return vm.validateAndInvokeExternally(boundFunction, arguments)
 }
@@ -369,7 +360,7 @@ func (vm *VM) validateAndInvokeExternally(functionValue FunctionValue, arguments
 		return nil, err
 	}
 
-	if boundFunction, ok := functionValue.(*BoundFunctionPointerValue); ok {
+	if boundFunction, ok := functionValue.(*BoundFunctionValue); ok {
 		receiver := boundFunction.Receiver(vm.context)
 		preparedArguments = append([]Value{receiver}, preparedArguments...)
 	}
@@ -502,7 +493,7 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.CompositeValue, 
 
 	prepareValue := prepareVariable.GetValue(context)
 	prepareFunction := prepareValue.(FunctionValue)
-	boundPrepareFunction := NewBoundFunctionPointerValue(
+	boundPrepareFunction := NewBoundFunctionValue(
 		context,
 		transaction,
 		prepareFunction,
@@ -526,7 +517,7 @@ func (vm *VM) InvokeTransactionExecute(transaction *interpreter.CompositeValue) 
 
 	executeValue := executeVariable.GetValue(context)
 	executeFunction := executeValue.(FunctionValue)
-	boundExecuteFunction := NewBoundFunctionPointerValue(
+	boundExecuteFunction := NewBoundFunctionValue(
 		context,
 		transaction,
 		executeFunction,
@@ -885,7 +876,7 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	functionValue := vm.pop()
 
 	// If the function is a pointer to an object-method, then the receiver is implicitly captured.
-	if boundFunction, isBoundFUnction := functionValue.(*BoundFunctionPointerValue); isBoundFUnction {
+	if boundFunction, isBoundFUnction := functionValue.(*BoundFunctionValue); isBoundFUnction {
 		functionValue = boundFunction.Method
 		receiver := boundFunction.Receiver(vm.context)
 		arguments = append([]Value{receiver}, arguments...)
@@ -899,17 +890,37 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	)
 }
 
+func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
+	globalIndex := ins.Method
+	globals := vm.callFrame.function.Executable.Globals
+
+	variable := globals[globalIndex]
+	method := variable.GetValue(vm.context).(FunctionValue)
+
+	receiver := vm.pop()
+
+	boundFunction := NewBoundFunctionValue(
+		vm.context,
+		receiver,
+		method,
+	)
+
+	vm.push(boundFunction)
+}
+
 func opInvokeMethodStatic(vm *VM, ins opcode.InstructionInvokeMethodStatic) {
 	// Load type arguments
 	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 
 	// Load arguments
 	arguments := vm.popN(int(ins.ArgCount))
-	receiver := arguments[ReceiverIndex]
-	arguments[ReceiverIndex] = maybeDereference(vm.context, receiver)
 
 	// Load the invoked value
-	functionValue := vm.pop()
+	boundFunction := vm.pop().(*BoundFunctionValue)
+
+	functionValue := boundFunction.Method
+	receiver := boundFunction.Receiver(vm.context)
+	arguments = append([]Value{receiver}, arguments...)
 
 	invokeFunction(
 		vm,
@@ -962,7 +973,7 @@ func invokeFunction(
 
 	// Handle all function types in a single place, so this can be re-used everywhere.
 
-	if boundFunction, ok := functionValue.(*BoundFunctionPointerValue); ok {
+	if boundFunction, ok := functionValue.(*BoundFunctionValue); ok {
 		functionValue = boundFunction.Method
 	}
 
@@ -1050,6 +1061,12 @@ func opNew(vm *VM, ins opcode.InstructionNew) {
 func opSetField(vm *VM, ins opcode.InstructionSetField) {
 	target, fieldValue := vm.pop2()
 
+	checkMemberAccessTargetType(
+		vm,
+		ins.AccessedType,
+		target,
+	)
+
 	// VM assumes the field name is always a string.
 	fieldNameIndex := ins.FieldName
 	fieldName := getStringConstant(vm, fieldNameIndex)
@@ -1066,6 +1083,12 @@ func opSetField(vm *VM, ins opcode.InstructionSetField) {
 func opGetField(vm *VM, ins opcode.InstructionGetField) {
 	memberAccessibleValue := vm.pop().(interpreter.MemberAccessibleValue)
 
+	checkMemberAccessTargetType(
+		vm,
+		ins.AccessedType,
+		memberAccessibleValue,
+	)
+
 	// VM assumes the field name is always a string.
 	fieldNameIndex := ins.FieldName
 	fieldName := getStringConstant(vm, fieldNameIndex)
@@ -1078,6 +1101,26 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 	}
 
 	vm.push(fieldValue)
+}
+
+func checkMemberAccessTargetType(
+	vm *VM,
+	accessedTypeIndex uint16,
+	accessedValue interpreter.Value,
+) {
+	accessedType := vm.loadType(accessedTypeIndex)
+
+	context := vm.context
+
+	// TODO: Avoid sema type conversion.
+	accessedSemaType := context.SemaTypeFromStaticType(accessedType)
+
+	interpreter.CheckMemberAccessTargetType(
+		context,
+		accessedValue,
+		accessedSemaType,
+		EmptyLocationRange,
+	)
 }
 
 func opRemoveField(vm *VM, ins opcode.InstructionRemoveField) {
@@ -1114,8 +1157,8 @@ func opTransferAndConvert(vm *VM, ins opcode.InstructionTransferAndConvert) {
 	transferredValue := interpreter.TransferAndConvert(
 		context,
 		value,
-		interpreter.MustConvertStaticToSemaType(valueType, context),
-		interpreter.MustConvertStaticToSemaType(targetType, context),
+		context.SemaTypeFromStaticType(valueType),
+		context.SemaTypeFromStaticType(targetType),
 		EmptyLocationRange,
 	)
 
@@ -1205,14 +1248,16 @@ func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 	typeIndex := ins.Type
 	targetType := vm.loadType(typeIndex)
 
-	value, valueType := castValueAndValueType(vm.context, targetType, value)
+	context := vm.context
 
-	isSubType := vm.context.IsSubType(valueType, targetType)
+	value, valueType := castValueAndValueType(context, targetType, value)
+
+	isSubType := context.IsSubType(valueType, targetType)
 
 	var result Value
 	if !isSubType {
-		targetSemaType := interpreter.MustConvertStaticToSemaType(targetType, vm.context)
-		valueSemaType := interpreter.MustConvertStaticToSemaType(valueType, vm.context)
+		targetSemaType := context.SemaTypeFromStaticType(targetType)
+		valueSemaType := context.SemaTypeFromStaticType(valueType)
 
 		panic(&interpreter.ForceCastTypeMismatchError{
 			ExpectedType:  targetSemaType,
@@ -1344,10 +1389,12 @@ func opNewRef(vm *VM, ins opcode.InstructionNewRef) {
 	borrowedType := vm.loadType(typeIndex)
 	value := vm.pop()
 
-	semaBorrowedType := interpreter.MustConvertStaticToSemaType(borrowedType, vm.context)
+	context := vm.context
+
+	semaBorrowedType := context.SemaTypeFromStaticType(borrowedType)
 
 	ref := interpreter.CreateReferenceValue(
-		vm.context,
+		context,
 		semaBorrowedType,
 		value,
 		EmptyLocationRange,
@@ -1584,6 +1631,8 @@ func (vm *VM) run() {
 			opGetIndex(vm)
 		case opcode.InstructionRemoveIndex:
 			opRemoveIndex(vm)
+		case opcode.InstructionGetMethod:
+			opGetMethod(vm, ins)
 		case opcode.InstructionInvoke:
 			opInvoke(vm, ins)
 		case opcode.InstructionInvokeMethodStatic:
@@ -1671,7 +1720,7 @@ func opEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
 
 	typeIndex := ins.Type
 	eventStaticType := vm.loadType(typeIndex).(*interpreter.CompositeStaticType)
-	eventSemaType := interpreter.MustConvertStaticToSemaType(eventStaticType, context).(*sema.CompositeType)
+	eventSemaType := context.SemaTypeFromStaticType(eventStaticType).(*sema.CompositeType)
 
 	eventFields := vm.popN(int(ins.ArgCount))
 
@@ -1853,6 +1902,16 @@ func (vm *VM) loadType(index uint16) bbq.StaticType {
 	return staticType
 }
 
+func (vm *VM) invokeFunction(function Value, arguments []Value) (Value, error) {
+	// invokeExternally runs the VM, which is incorrect for native functions.
+	if function, ok := function.(*NativeFunctionValue); ok {
+		result := function.Function(vm.context, nil, arguments...)
+		return result, nil
+	}
+
+	return vm.invokeExternally(function, arguments)
+}
+
 func (vm *VM) maybeLookupFunction(location common.Location, name string) FunctionValue {
 	funcValue, ok := vm.lookupFunction(location, name)
 	if !ok {
@@ -1907,6 +1966,11 @@ func (vm *VM) Reset() {
 	vm.locals = vm.locals[:0]
 	vm.callstack = vm.callstack[:0]
 	vm.ipStack = vm.ipStack[:0]
+
+	context := NewContext(vm.context.Config)
+	context.invokeFunction = vm.invokeFunction
+	context.lookupFunction = vm.maybeLookupFunction
+	vm.context = context
 }
 
 func (vm *VM) initializeGlobalVariables(program *bbq.InstructionProgram) {

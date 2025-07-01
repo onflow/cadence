@@ -195,7 +195,7 @@ func (executor *transactionExecutor) preprocess() (err error) {
 	}
 
 	switch environment := environment.(type) {
-	case *interpreterEnvironment:
+	case *InterpreterEnvironment:
 		executor.interpret = executor.transactionExecutionFunction()
 
 	case *vmEnvironment:
@@ -233,7 +233,7 @@ func (executor *transactionExecutor) execute() (err error) {
 	)
 
 	switch environment := environment.(type) {
-	case *interpreterEnvironment:
+	case *InterpreterEnvironment:
 		err = executor.executeWithInterpreter(environment)
 
 	case *vmEnvironment:
@@ -249,9 +249,9 @@ func (executor *transactionExecutor) execute() (err error) {
 }
 
 func (executor *transactionExecutor) executeWithInterpreter(
-	environment *interpreterEnvironment,
+	environment *InterpreterEnvironment,
 ) error {
-	_, inter, err := environment.interpret(
+	_, inter, err := environment.Interpret(
 		executor.context.Location,
 		executor.program,
 		executor.interpret,

@@ -1876,7 +1876,7 @@ func TestCompileMember(t *testing.T) {
 				opcode.InstructionGetLocal{Local: selfIndex},
 				opcode.InstructionGetLocal{Local: valueIndex},
 				opcode.InstructionTransferAndConvert{Type: 2},
-				opcode.InstructionSetField{FieldName: 0},
+				opcode.InstructionSetField{FieldName: 0, AccessedType: 1},
 
 				// return self
 				opcode.InstructionGetLocal{Local: selfIndex},
@@ -1894,7 +1894,7 @@ func TestCompileMember(t *testing.T) {
 			[]opcode.Instruction{
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: selfIndex},
-				opcode.InstructionGetField{FieldName: 0},
+				opcode.InstructionGetField{FieldName: 0, AccessedType: 1},
 				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionReturnValue{},
 			},
@@ -2784,7 +2784,6 @@ func TestCompileMethodInvocation(t *testing.T) {
 		const (
 			// fooIndex is the index of the local variable `foo`, which is the first local variable
 			fooIndex = iota
-			tempIndex
 		)
 
 		assert.Equal(t,
@@ -2799,14 +2798,12 @@ func TestCompileMethodInvocation(t *testing.T) {
 				// foo.f(true)
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: fooIndex},
-				opcode.InstructionSetLocal{Local: tempIndex},
-				opcode.InstructionGetGlobal{Global: fFuncIndex},
-				opcode.InstructionGetLocal{Local: tempIndex},
+				opcode.InstructionGetMethod{Method: fFuncIndex},
 				opcode.InstructionTrue{},
 				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionInvokeMethodStatic{
 					TypeArgs: nil,
-					ArgCount: 2,
+					ArgCount: 1,
 				},
 				opcode.InstructionDrop{},
 
@@ -3249,22 +3246,18 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	const (
 		selfIndex = iota
-		tempIndex
 	)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
 			opcode.InstructionStatement{},
 
-			opcode.InstructionGetLocal{Local: selfIndex},
-			opcode.InstructionSetLocal{Local: tempIndex},
-
 			// self.test()
-			opcode.InstructionGetGlobal{Global: interfaceFunctionIndex}, // must be interface method's index
-			opcode.InstructionGetLocal{Local: tempIndex},
+			opcode.InstructionGetLocal{Local: selfIndex},
+			opcode.InstructionGetMethod{Method: interfaceFunctionIndex}, // must be interface method's index
 			opcode.InstructionInvokeMethodStatic{
 				TypeArgs: nil,
-				ArgCount: 1,
+				ArgCount: 0,
 			},
 
 			// return
@@ -4045,7 +4038,6 @@ func TestCompileFunctionConditions(t *testing.T) {
 		// Local var indexes
 		const (
 			selfIndex = iota
-			tempIndex
 		)
 
 		// Constant indexes
@@ -4075,20 +4067,15 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionGetGlobal{Global: 9},
 				opcode.InstructionInvoke{ArgCount: 0},
 
-				// Store in temp index
-				opcode.InstructionSetLocal{Local: tempIndex},
-
 				// Get function value `A.TestStruct.test()`
-				opcode.InstructionGetGlobal{Global: 10},
-				// Load receiver at the temp index, as the first argument.
-				opcode.InstructionGetLocal{Local: tempIndex},
+				opcode.InstructionGetMethod{Method: 10},
 				opcode.InstructionInvokeMethodStatic{
-					ArgCount: 1,
+					ArgCount: 0,
 				},
 
 				// if !<condition>
 				opcode.InstructionNot{},
-				opcode.InstructionJumpIfFalse{Target: 15},
+				opcode.InstructionJumpIfFalse{Target: 13},
 
 				// panic("pre/post condition failed")
 				opcode.InstructionStatement{},
@@ -4103,7 +4090,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// return self.balance
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: selfIndex},
-				opcode.InstructionGetField{FieldName: 0},
+				opcode.InstructionGetField{FieldName: 0, AccessedType: 6},
 				opcode.InstructionTransferAndConvert{Type: 5},
 				opcode.InstructionReturnValue{},
 			},
@@ -4860,7 +4847,7 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionGetLocal{Local: selfIndex},
 			opcode.InstructionGetConstant{Constant: const2Index},
 			opcode.InstructionTransferAndConvert{Type: 4},
-			opcode.InstructionSetField{FieldName: constFieldNameIndex},
+			opcode.InstructionSetField{FieldName: constFieldNameIndex, AccessedType: 1},
 
 			// return
 			opcode.InstructionReturn{},
@@ -4897,7 +4884,7 @@ func TestCompileTransaction(t *testing.T) {
 			// `self.count == 2`
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: selfIndex},
-			opcode.InstructionGetField{FieldName: constFieldNameIndex},
+			opcode.InstructionGetField{FieldName: constFieldNameIndex, AccessedType: 1},
 			opcode.InstructionGetConstant{Constant: const2Index},
 			opcode.InstructionEqual{},
 
@@ -4920,13 +4907,13 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionGetLocal{Local: selfIndex},
 			opcode.InstructionGetConstant{Constant: const10Index},
 			opcode.InstructionTransferAndConvert{Type: 4},
-			opcode.InstructionSetField{FieldName: constFieldNameIndex},
+			opcode.InstructionSetField{FieldName: constFieldNameIndex, AccessedType: 1},
 
 			// Post condition
 			// `self.count == 10`
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: selfIndex},
-			opcode.InstructionGetField{FieldName: constFieldNameIndex},
+			opcode.InstructionGetField{FieldName: constFieldNameIndex, AccessedType: 1},
 			opcode.InstructionGetConstant{Constant: const10Index},
 			opcode.InstructionEqual{},
 
@@ -6679,19 +6666,25 @@ func TestCompileImports(t *testing.T) {
 
 		// Deploy a second contract.
 
-		bContract := fmt.Sprintf(`
-          import A from %[1]s
+		bContract := fmt.Sprintf(
+			`
+              import A from %[1]s
 
-          contract B {
-              fun test() {
-                  return A.test()
+              contract B {
+                  fun test() {
+                      return A.test()
+                  }
               }
-          }
-        `,
+            `,
 			contractsAddress.HexWithPrefix(),
 		)
 
-		bProgram := ParseCheckAndCompile(t, bContract, bLocation, programs)
+		bProgram := ParseCheckAndCompile(
+			t,
+			bContract,
+			bLocation,
+			programs,
+		)
 
 		// Should have import for contract value `A` and the method `A.test`.
 		assert.Equal(
@@ -6880,14 +6873,14 @@ func TestCompileOptionalChaining(t *testing.T) {
 				opcode.InstructionUnwrap{},
 
 				// foo.bar
-				opcode.InstructionGetField{FieldName: 0},
+				opcode.InstructionGetField{FieldName: 0, AccessedType: 2},
 				opcode.InstructionJump{Target: 14},
 
 				// If `foo == nil`
 				opcode.InstructionNil{},
 
 				// Return value
-				opcode.InstructionTransferAndConvert{Type: 2},
+				opcode.InstructionTransferAndConvert{Type: 3},
 				opcode.InstructionReturnValue{},
 			},
 			functions[0].Code,
@@ -6952,20 +6945,17 @@ func TestCompileOptionalChaining(t *testing.T) {
 
 				// Nil check
 				opcode.InstructionGetLocal{Local: optionalValueTempIndex},
-				opcode.InstructionJumpIfNil{Target: 16},
+				opcode.InstructionJumpIfNil{Target: 14},
 
 				// If `foo != nil`
-				// Unwrap the optional
+				// Unwrap the optional. (Loads receiver)
 				opcode.InstructionGetLocal{Local: optionalValueTempIndex},
 				opcode.InstructionUnwrap{},
-				opcode.InstructionSetLocal{Local: unwrappedValueTempIndex},
 
 				// Load `Foo.bar` function
-				opcode.InstructionGetGlobal{Global: 4},
-				// Load receiver
-				opcode.InstructionGetLocal{Local: unwrappedValueTempIndex},
-				opcode.InstructionInvokeMethodStatic{ArgCount: 1},
-				opcode.InstructionJump{Target: 17},
+				opcode.InstructionGetMethod{Method: 4},
+				opcode.InstructionInvokeMethodStatic{ArgCount: 0},
+				opcode.InstructionJump{Target: 15},
 
 				// If `foo == nil`
 				opcode.InstructionNil{},
@@ -7224,7 +7214,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				opcode.InstructionGetLocal{Local: yIndex},
 				opcode.InstructionGetLocal{Local: xIndex},
 				opcode.InstructionTransferAndConvert{Type: 1},
-				opcode.InstructionSetField{FieldName: 0},
+				opcode.InstructionSetField{FieldName: 0, AccessedType: 2},
 
 				// Store the transferred y-value above (already on stack), to z.
 				// z <- y.bar
@@ -7426,7 +7416,7 @@ func TestCompileEnum(t *testing.T) {
 				// let self = Test()
 				opcode.InstructionNew{
 					Kind: common.CompositeKindEnum,
-					Type: 3,
+					Type: 1,
 				},
 				opcode.InstructionSetLocal{Local: selfIndex},
 
@@ -7434,8 +7424,8 @@ func TestCompileEnum(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: selfIndex},
 				opcode.InstructionGetLocal{Local: rawValueIndex},
-				opcode.InstructionTransferAndConvert{Type: 1},
-				opcode.InstructionSetField{FieldName: 0},
+				opcode.InstructionTransferAndConvert{Type: 2},
+				opcode.InstructionSetField{FieldName: 0, AccessedType: 1},
 
 				// return self
 				opcode.InstructionGetLocal{Local: selfIndex},
@@ -7519,8 +7509,8 @@ func TestCompileEnum(t *testing.T) {
 		[]opcode.Instruction{
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: testBGlobalIndex},
-			opcode.InstructionGetField{FieldName: 0},
-			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionGetField{FieldName: 0, AccessedType: 1},
+			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionReturnValue{},
 		},
 		functions[testFuncIndex].Code,
@@ -7535,7 +7525,7 @@ func TestCompileEnum(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: testLookupGlobalIndex},
 				opcode.InstructionGetLocal{Local: rawValueIndex},
-				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionInvoke{ArgCount: 1},
 				opcode.InstructionDrop{},
 				opcode.InstructionReturn{},
@@ -7549,7 +7539,7 @@ func TestCompileEnum(t *testing.T) {
 			opcode.InstructionGetGlobal{Global: testConstructorGlobalIndex},
 			opcode.InstructionGetConstant{Constant: 1},
 			opcode.InstructionInvoke{ArgCount: 1},
-			opcode.InstructionTransferAndConvert{Type: 3},
+			opcode.InstructionTransferAndConvert{Type: 1},
 			opcode.InstructionReturnValue{},
 		},
 		variables[testAVarIndex].Getter.Code,
@@ -7560,7 +7550,7 @@ func TestCompileEnum(t *testing.T) {
 			opcode.InstructionGetGlobal{Global: testConstructorGlobalIndex},
 			opcode.InstructionGetConstant{Constant: 2},
 			opcode.InstructionInvoke{ArgCount: 1},
-			opcode.InstructionTransferAndConvert{Type: 3},
+			opcode.InstructionTransferAndConvert{Type: 1},
 			opcode.InstructionReturnValue{},
 		},
 		variables[testBVarIndex].Getter.Code,
@@ -7571,7 +7561,7 @@ func TestCompileEnum(t *testing.T) {
 			opcode.InstructionGetGlobal{Global: testConstructorGlobalIndex},
 			opcode.InstructionGetConstant{Constant: 3},
 			opcode.InstructionInvoke{ArgCount: 1},
-			opcode.InstructionTransferAndConvert{Type: 3},
+			opcode.InstructionTransferAndConvert{Type: 1},
 			opcode.InstructionReturnValue{},
 		},
 		variables[testCVarIndex].Getter.Code,
@@ -7718,22 +7708,34 @@ func TestCompileOptionalArgument(t *testing.T) {
 		assert.Equal(t,
 			[]opcode.Instruction{
 				opcode.InstructionStatement{},
-				opcode.InstructionGetLocal{Local: 0x0},
-				opcode.InstructionGetField{FieldName: 0x0},
-				opcode.InstructionGetField{FieldName: 0x1},
-				opcode.InstructionNewRef{Type: 0x4, IsImplicit: true},
-				opcode.InstructionSetLocal{Local: 0x1},
-				opcode.InstructionGetGlobal{Global: 0x5},
-				opcode.InstructionGetLocal{Local: 0x1},
-				opcode.InstructionGetConstant{Constant: 0x2},
-				opcode.InstructionTransferAndConvert{Type: 0x5},
-				opcode.InstructionGetConstant{Constant: 0x3},
-				opcode.InstructionGetField{FieldName: 0x4},
-				opcode.InstructionTransferAndConvert{Type: 0x6},
-				opcode.InstructionGetConstant{Constant: 0x5},
+
+				// Load receiver `self.account.contracts`.
+				opcode.InstructionGetLocal{Local: 0},
+				opcode.InstructionGetField{FieldName: 0, AccessedType: 1},
+				opcode.InstructionGetField{FieldName: 1, AccessedType: 4},
+				opcode.InstructionNewRef{Type: 5, IsImplicit: true},
+
+				// Load function value `add()`
+				opcode.InstructionGetMethod{Method: 5},
+
+				// Load arguments.
+
+				// Name: "Foo",
+				opcode.InstructionGetConstant{Constant: 2},
+				opcode.InstructionTransferAndConvert{Type: 6},
+
+				// Contract code
+				opcode.InstructionGetConstant{Constant: 3},
+				opcode.InstructionGetField{FieldName: 4, AccessedType: 6},
+				opcode.InstructionTransferAndConvert{Type: 7},
+
+				// Message: "Optional arg"
+				opcode.InstructionGetConstant{Constant: 5},
 				opcode.InstructionTransfer{},
-				opcode.InstructionInvokeMethodStatic{TypeArgs: []uint16(nil), ArgCount: 0x4},
+
+				opcode.InstructionInvokeMethodStatic{ArgCount: 3},
 				opcode.InstructionDrop{},
+
 				opcode.InstructionReturn{}},
 			functions[3].Code,
 		)
@@ -7918,22 +7920,22 @@ func TestCompileSwapMembers(t *testing.T) {
 			opcode.InstructionSetLocal{Local: tempIndex2},
 
 			opcode.InstructionGetLocal{Local: tempIndex1},
-			opcode.InstructionGetField{FieldName: 0},
+			opcode.InstructionGetField{FieldName: 0, AccessedType: 1},
 			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionSetLocal{Local: tempIndex3},
 
 			opcode.InstructionGetLocal{Local: tempIndex2},
-			opcode.InstructionGetField{FieldName: 1},
+			opcode.InstructionGetField{FieldName: 1, AccessedType: 1},
 			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionSetLocal{Local: tempIndex4},
 
 			opcode.InstructionGetLocal{Local: tempIndex1},
 			opcode.InstructionGetLocal{Local: tempIndex4},
-			opcode.InstructionSetField{FieldName: 0},
+			opcode.InstructionSetField{FieldName: 0, AccessedType: 1},
 
 			opcode.InstructionGetLocal{Local: tempIndex2},
 			opcode.InstructionGetLocal{Local: tempIndex3},
-			opcode.InstructionSetField{FieldName: 1},
+			opcode.InstructionSetField{FieldName: 1, AccessedType: 1},
 
 			// Return
 			opcode.InstructionReturn{},
@@ -8973,4 +8975,68 @@ func TestCompileAttachments(t *testing.T) {
 			functions[0].Code,
 		)
 	})
+}
+
+func TestCompileImportEnumCase(t *testing.T) {
+
+	t.Parallel()
+
+	aContract := `
+        contract A {
+            enum E: UInt8 {
+                case X
+            }
+        }
+    `
+
+	programs := CompiledPrograms{}
+
+	contractsAddress := common.MustBytesToAddress([]byte{0x1})
+
+	aLocation := common.NewAddressLocation(nil, contractsAddress, "A")
+	bLocation := common.NewAddressLocation(nil, contractsAddress, "B")
+
+	aProgram := ParseCheckAndCompile(
+		t,
+		aContract,
+		aLocation,
+		programs,
+	)
+
+	// Should have no imports
+	assert.Empty(t, aProgram.Imports)
+
+	// Deploy a second contract.
+
+	bContract := fmt.Sprintf(
+		`
+          import A from %[1]s
+
+          contract B {
+              fun test(): A.E {
+                  return A.E.X
+              }
+          }
+        `,
+		contractsAddress.HexWithPrefix(),
+	)
+
+	bProgram := ParseCheckAndCompile(
+		t,
+		bContract,
+		bLocation,
+		programs,
+	)
+
+	// Should have import for the enum case `A.E.X`.
+	assert.Equal(
+		t,
+		[]bbq.Import{
+			{
+				Location: aLocation,
+				Name:     "A.E.X",
+			},
+		},
+		bProgram.Imports,
+	)
 }

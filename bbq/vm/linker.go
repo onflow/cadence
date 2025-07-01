@@ -34,7 +34,7 @@ type LinkedGlobals struct {
 	executable *ExecutableProgram
 
 	// globals defined in the program, indexed by name.
-	indexedGlobals *activations.Activation[*Variable]
+	indexedGlobals *activations.Activation[Variable]
 }
 
 // LinkGlobals performs the linking of global functions and variables for a given program.
@@ -46,7 +46,7 @@ func LinkGlobals(
 	linkedGlobalsCache map[common.Location]LinkedGlobals,
 ) LinkedGlobals {
 
-	var importedGlobals []*Variable
+	var importedGlobals []Variable
 
 	for _, programImport := range program.Imports {
 		importLocation := programImport.Location
@@ -67,12 +67,41 @@ func LinkGlobals(
 			linkedGlobalsCache[importLocation] = linkedGlobals
 		}
 
-		importedGlobal := linkedGlobals.indexedGlobals.Find(programImport.Name)
-		if importedGlobal == nil {
+		global := linkedGlobals.indexedGlobals.Find(programImport.Name)
+		if global == nil {
 			panic(LinkerError{
 				Message: fmt.Sprintf("cannot find import '%s'", programImport.Name),
 			})
 		}
+
+		importedGlobal := global
+
+		if global.Kind() == interpreter.VariableKindContract {
+			// If the variable is a contract value, then import it as a reference.
+			// This must be done at the type of importing, rather than when declaring the contract value.
+			importedGlobal = interpreter.NewContractVariableWithGetter(
+				memoryGauge,
+				func() interpreter.Value {
+					// TODO: Is this the right context?
+					contractValue := global.GetValue(context)
+
+					staticType := contractValue.StaticType(context)
+					semaType, err := interpreter.ConvertStaticToSemaType(context, staticType)
+					if err != nil {
+						panic(err)
+					}
+
+					return interpreter.NewEphemeralReferenceValue(
+						context,
+						interpreter.UnauthorizedAccess,
+						contractValue,
+						semaType,
+						EmptyLocationRange,
+					)
+				},
+			)
+		}
+
 		importedGlobals = append(importedGlobals, importedGlobal)
 	}
 
@@ -80,16 +109,18 @@ func LinkGlobals(
 
 	globalsLen := len(program.Contracts) + len(program.Variables) + len(program.Functions) + len(importedGlobals)
 
-	globals := make([]*Variable, 0, globalsLen)
-	indexedGlobals := activations.NewActivation[*Variable](memoryGauge, nil)
+	globals := make([]Variable, 0, globalsLen)
+	indexedGlobals := activations.NewActivation[Variable](memoryGauge, nil)
 
 	// NOTE: ensure both the context and the mapping are updated
 
 	for _, contract := range program.Contracts {
-		contractVariable := &interpreter.SimpleVariable{}
-		contractVariable.InitializeWithGetter(func() interpreter.Value {
-			return loadContractValue(contract, context)
-		})
+		contractVariable := interpreter.NewContractVariableWithGetter(
+			memoryGauge,
+			func() interpreter.Value {
+				return loadContractValue(contract, context)
+			},
+		)
 
 		globals = append(globals, contractVariable)
 		indexedGlobals.Set(contract.Name, contractVariable)
@@ -183,19 +214,5 @@ func loadContractValue(contract *bbq.Contract, context *Context) Value {
 		contract.Name,
 	)
 
-	var contractValue interpreter.Value = context.ContractValueHandler(context, location)
-
-	staticType := contractValue.StaticType(context)
-	semaType, err := interpreter.ConvertStaticToSemaType(context, staticType)
-	if err != nil {
-		panic(err)
-	}
-
-	return interpreter.NewEphemeralReferenceValue(
-		context,
-		interpreter.UnauthorizedAccess,
-		contractValue,
-		semaType,
-		EmptyLocationRange,
-	)
+	return context.ContractValueHandler(context, location)
 }

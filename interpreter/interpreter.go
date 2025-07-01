@@ -1687,6 +1687,8 @@ func EnumLookupFunction(
 		gauge,
 		functionType,
 		func(invocation Invocation) Value {
+			inter := invocation.InvocationContext
+
 			rawValue, ok := invocation.Arguments[0].(IntegerValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -1699,7 +1701,7 @@ func EnumLookupFunction(
 				return Nil
 			}
 
-			return NewSomeValueNonCopying(invocation.InvocationContext, caseValue)
+			return NewSomeValueNonCopying(inter, caseValue)
 		},
 	)
 
@@ -1921,7 +1923,7 @@ func TransferAndConvert(
 	if targetType != nil &&
 		!IsSubTypeOfSemaType(context, resultStaticType, targetType) {
 
-		resultSemaType := MustConvertStaticToSemaType(resultStaticType, context)
+		resultSemaType := context.SemaTypeFromStaticType(resultStaticType)
 
 		panic(&ValueTransferTypeError{
 			ExpectedType:  targetType,
@@ -2199,7 +2201,7 @@ func convert(
 				return value
 			}
 
-			targetElementType := MustConvertStaticToSemaType(arrayStaticType.ElementType(), context)
+			targetElementType := context.SemaTypeFromStaticType(arrayStaticType.ElementType())
 
 			array := arrayValue.array
 
@@ -2223,7 +2225,7 @@ func convert(
 					}
 
 					value := MustConvertStoredValue(context, element)
-					valueType := MustConvertStaticToSemaType(value.StaticType(context), context)
+					valueType := context.SemaTypeFromStaticType(value.StaticType(context))
 					return convert(context, value, valueType, targetElementType, locationRange)
 				},
 			)
@@ -2239,8 +2241,8 @@ func convert(
 				return value
 			}
 
-			targetKeyType := MustConvertStaticToSemaType(dictStaticType.KeyType, context)
-			targetValueType := MustConvertStaticToSemaType(dictStaticType.ValueType, context)
+			targetKeyType := context.SemaTypeFromStaticType(dictStaticType.KeyType)
+			targetValueType := context.SemaTypeFromStaticType(dictStaticType.ValueType)
 
 			dictionary := dictValue.dictionary
 
@@ -2269,8 +2271,8 @@ func convert(
 					key := MustConvertStoredValue(context, k)
 					value := MustConvertStoredValue(context, v)
 
-					keyType := MustConvertStaticToSemaType(key.StaticType(context), context)
-					valueType := MustConvertStaticToSemaType(value.StaticType(context), context)
+					keyType := context.SemaTypeFromStaticType(key.StaticType(context))
+					valueType := context.SemaTypeFromStaticType(value.StaticType(context))
 
 					convertedKey := convert(context, key, keyType, targetKeyType, locationRange)
 					convertedValue := convert(context, value, valueType, targetValueType, locationRange)
@@ -4213,7 +4215,7 @@ func IsSubType(typeConverter TypeConverter, subType StaticType, superType Static
 		return true
 	}
 
-	semaType := MustConvertStaticToSemaType(superType, typeConverter)
+	semaType := typeConverter.SemaTypeFromStaticType(superType)
 
 	return IsSubTypeOfSemaType(typeConverter, subType, semaType)
 }
@@ -4240,7 +4242,7 @@ func IsSubTypeOfSemaType(typeConverter TypeConverter, staticSubType StaticType, 
 		return superType == sema.AnyStructType
 	}
 
-	semaSubType := MustConvertStaticToSemaType(staticSubType, typeConverter)
+	semaSubType := typeConverter.SemaTypeFromStaticType(staticSubType)
 
 	return sema.IsSubType(semaSubType, superType)
 }
@@ -5402,7 +5404,7 @@ func ExpectType(
 	valueStaticType := value.StaticType(context)
 
 	if !IsSubTypeOfSemaType(context, valueStaticType, expectedType) {
-		valueSemaType := MustConvertStaticToSemaType(valueStaticType, context)
+		valueSemaType := context.SemaTypeFromStaticType(valueStaticType)
 
 		panic(TypeMismatchError{
 			ExpectedType:  expectedType,
@@ -6167,4 +6169,8 @@ func (interpreter *Interpreter) DefaultDestroyEvents(
 	locationRange LocationRange,
 ) []*CompositeValue {
 	return resourceValue.DefaultDestroyEvents(interpreter, locationRange)
+}
+
+func (interpreter *Interpreter) SemaTypeFromStaticType(staticType StaticType) sema.Type {
+	return MustConvertStaticToSemaType(staticType, interpreter)
 }

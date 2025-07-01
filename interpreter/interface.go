@@ -31,6 +31,7 @@ import (
 type TypeConverter interface {
 	common.MemoryGauge
 	StaticTypeConversionHandler
+	SemaTypeFromStaticType(staticType StaticType) sema.Type
 }
 
 var _ TypeConverter = &Interpreter{}
@@ -723,5 +724,9 @@ func (ctx NoOpStringContext) GetCompositeType(_ common.Location, _ string, _ Typ
 }
 
 func (ctx NoOpStringContext) IsTypeInfoRecovered(_ common.Location) bool {
+	panic(errors.NewUnreachableError())
+}
+
+func (ctx NoOpStringContext) SemaTypeFromStaticType(staticType StaticType) sema.Type {
 	panic(errors.NewUnreachableError())
 }

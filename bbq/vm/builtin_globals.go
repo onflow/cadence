@@ -37,11 +37,11 @@ const (
 // It's always nil.
 var BuiltInLocation common.Location = nil
 
-type BuiltinGlobalsProvider func() *activations.Activation[*Variable]
+type BuiltinGlobalsProvider func() *activations.Activation[Variable]
 
-var defaultBuiltinGlobals = activations.NewActivation[*Variable](nil, nil)
+var defaultBuiltinGlobals = activations.NewActivation[Variable](nil, nil)
 
-func DefaultBuiltinGlobals() *activations.Activation[*Variable] {
+func DefaultBuiltinGlobals() *activations.Activation[Variable] {
 	return defaultBuiltinGlobals
 }
 
@@ -56,7 +56,7 @@ func RegisterBuiltinFunction(functionValue *NativeFunctionValue) {
 func registerGlobalFunction(
 	functionName string,
 	functionValue *NativeFunctionValue,
-	activation *activations.Activation[*Variable],
+	activation *activations.Activation[Variable],
 ) {
 	existing := activation.Find(functionName)
 	if existing != nil {

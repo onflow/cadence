@@ -79,6 +79,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.TransactionLocation{},
+				UseVM:     *compile,
 			},
 		)
 		RequireError(t, err)
@@ -126,6 +127,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		RequireError(t, err)

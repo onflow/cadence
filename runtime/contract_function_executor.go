@@ -133,7 +133,7 @@ func (executor *contractFunctionExecutor) preprocess() (err error) {
 	executor.environment = environment
 
 	switch environment := environment.(type) {
-	case *interpreterEnvironment:
+	case *InterpreterEnvironment:
 		// NO-OP
 
 	case *vmEnvironment:
@@ -166,7 +166,7 @@ func (executor *contractFunctionExecutor) execute() (val cadence.Value, err erro
 	)
 
 	switch environment := environment.(type) {
-	case *interpreterEnvironment:
+	case *InterpreterEnvironment:
 		value, err := executor.executeWithInterpreter(environment)
 		if err != nil {
 			return nil, newError(err, executor.context.Location, codesAndPrograms)
@@ -186,13 +186,13 @@ func (executor *contractFunctionExecutor) execute() (val cadence.Value, err erro
 }
 
 func (executor *contractFunctionExecutor) executeWithInterpreter(
-	environment *interpreterEnvironment,
+	environment *InterpreterEnvironment,
 ) (val cadence.Value, err error) {
 
 	location := executor.context.Location
 
 	// create interpreter
-	_, inter, err := environment.interpret(
+	_, inter, err := environment.Interpret(
 		location,
 		nil,
 		nil,
@@ -289,7 +289,7 @@ func (executor *contractFunctionExecutor) executeWithVM(
 	}
 
 	staticType := contractValue.StaticType(context)
-	semaType := interpreter.MustConvertStaticToSemaType(staticType, context)
+	semaType := context.SemaTypeFromStaticType(staticType)
 	qualifiedFuncName := commons.TypeQualifiedName(semaType, executor.functionName)
 
 	value, err := executor.vm.InvokeMethodExternally(

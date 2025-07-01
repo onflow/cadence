@@ -330,6 +330,20 @@ func (interpreter *Interpreter) checkMemberAccess(
 	memberInfo, _ := interpreter.Program.Elaboration.MemberExpressionMemberAccessInfo(memberExpression)
 	expectedType := memberInfo.AccessedType
 
+	CheckMemberAccessTargetType(
+		interpreter,
+		target,
+		expectedType,
+		locationRange,
+	)
+}
+
+func CheckMemberAccessTargetType(
+	context ValueStaticTypeContext,
+	target Value,
+	expectedType sema.Type,
+	locationRange LocationRange,
+) {
 	switch expectedType := expectedType.(type) {
 	case *sema.TransactionType:
 		// TODO: maybe also check transactions.
@@ -359,11 +373,11 @@ func (interpreter *Interpreter) checkMemberAccess(
 		return
 	}
 
-	targetStaticType := target.StaticType(interpreter)
+	targetStaticType := target.StaticType(context)
 
 	if _, ok := expectedType.(*sema.OptionalType); ok {
 		if _, ok := targetStaticType.(*OptionalStaticType); !ok {
-			targetSemaType := MustConvertStaticToSemaType(targetStaticType, interpreter)
+			targetSemaType := MustConvertStaticToSemaType(targetStaticType, context)
 
 			panic(&MemberAccessTypeError{
 				ExpectedType:  expectedType,
@@ -373,8 +387,8 @@ func (interpreter *Interpreter) checkMemberAccess(
 		}
 	}
 
-	if !IsSubTypeOfSemaType(interpreter, targetStaticType, expectedType) {
-		targetSemaType := MustConvertStaticToSemaType(targetStaticType, interpreter)
+	if !IsSubTypeOfSemaType(context, targetStaticType, expectedType) {
+		targetSemaType := MustConvertStaticToSemaType(targetStaticType, context)
 
 		panic(&MemberAccessTypeError{
 			ExpectedType:  expectedType,

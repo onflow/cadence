@@ -23,16 +23,26 @@ import (
 	"github.com/onflow/cadence/errors"
 )
 
+type VariableKind uint8
+
+const (
+	VariableKindSimple VariableKind = iota
+	VariableKindSelf
+	VariableKindContract
+)
+
 type Variable interface {
 	GetValue(ValueStaticTypeContext) Value
 	SetValue(context ValueStaticTypeContext, locationRange LocationRange, value Value)
 	InitializeWithValue(value Value)
 	InitializeWithGetter(getter func() Value)
+	Kind() VariableKind
 }
 
 type SimpleVariable struct {
 	value  Value
 	getter func() Value
+	kind   VariableKind
 }
 
 var _ Variable = &SimpleVariable{}
@@ -63,6 +73,10 @@ func (v *SimpleVariable) SetValue(context ValueStaticTypeContext, locationRange 
 	v.value = value
 }
 
+func (v *SimpleVariable) Kind() VariableKind {
+	return v.kind
+}
+
 var variableMemoryUsage = common.NewConstantMemoryUsage(common.MemoryKindVariable)
 
 func NewVariableWithValue(gauge common.MemoryGauge, value Value) Variable {
@@ -76,6 +90,14 @@ func NewVariableWithGetter(gauge common.MemoryGauge, getter func() Value) Variab
 	common.UseMemory(gauge, variableMemoryUsage)
 	return &SimpleVariable{
 		getter: getter,
+	}
+}
+
+func NewContractVariableWithGetter(gauge common.MemoryGauge, getter func() Value) Variable {
+	common.UseMemory(gauge, variableMemoryUsage)
+	return &SimpleVariable{
+		getter: getter,
+		kind:   VariableKindContract,
 	}
 }
 
@@ -120,4 +142,8 @@ func (v *SelfVariable) GetValue(context ValueStaticTypeContext) Value {
 func (v *SelfVariable) SetValue(ValueStaticTypeContext, LocationRange, Value) {
 	// self variable cannot be updated.
 	panic(errors.NewUnreachableError())
+}
+
+func (*SelfVariable) Kind() VariableKind {
+	return VariableKindSelf
 }

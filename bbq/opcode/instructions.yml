@@ -91,6 +91,8 @@
   operands:
     - name: "fieldName"
       type: "constantIndex"
+    - name: "accessedType"
+      type: "typeIndex"
   valueEffects:
     pop:
       - name: "target"
@@ -121,6 +123,8 @@
   operands:
     - name: "fieldName"
       type: "constantIndex"
+    - name: "accessedType"
+      type: "typeIndex"
   valueEffects:
     pop:
       - name: "target"
@@ -375,6 +379,21 @@
         type: "value"
   controlEffects:
     - call:
+
+- name: "getMethod"
+  description:
+    Pops a value off the stack, the receiver,
+    and then pushes the value of the function at the given index onto the stack.
+  operands:
+    - name: "method"
+      type: globalIndex
+  valueEffects:
+    pop:
+      - name: "receiver"
+        type: "value"
+    push:
+      - name: "method"
+        type: "function"
 
 # Value stack instructions
 

@@ -48,7 +48,7 @@ type vmEnvironmentReconfigured struct {
 type vmEnvironment struct {
 	vmEnvironmentReconfigured
 
-	checkingEnvironment *checkingEnvironment
+	checkingEnvironment *CheckingEnvironment
 
 	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
 
@@ -57,7 +57,7 @@ type vmEnvironment struct {
 	compilerConfig *compiler.Config
 
 	defaultCompilerBuiltinGlobals *activations.Activation[compiler.GlobalImport]
-	defaultVMBuiltinGlobals       *activations.Activation[*vm.Variable]
+	defaultVMBuiltinGlobals       *activations.Activation[vm.Variable]
 
 	*stdlib.SimpleContractAdditionTracker
 }
@@ -93,16 +93,15 @@ func newVMEnvironment(config Config) *vmEnvironment {
 
 	for _, vmFunction := range stdlib.VMFunctions(env) {
 		functionValue := vmFunction.FunctionValue
-		variable := &vm.Variable{}
-		variable.InitializeWithValue(functionValue)
 		qualifiedName := commons.TypeQualifiedName(
 			vmFunction.BaseType,
 			functionValue.Name,
 		)
-		env.defaultVMBuiltinGlobals.Set(
-			qualifiedName,
-			variable,
-		)
+		env.defineValue(qualifiedName, functionValue)
+	}
+
+	for _, vmValue := range stdlib.VMValues(env) {
+		env.defineValue(vmValue.Name, vmValue.Value)
 	}
 
 	return env
@@ -139,6 +138,21 @@ func (e *vmEnvironment) newVMConfig() *vm.Config {
 		CapabilityBorrowHandler:        newCapabilityBorrowHandler(e),
 		CapabilityCheckHandler:         newCapabilityCheckHandler(e),
 	}
+}
+
+func (e *vmEnvironment) defineValue(name string, value vm.Value) {
+
+	if e.defaultCompilerBuiltinGlobals.Find(name) == (compiler.GlobalImport{}) {
+		e.defaultCompilerBuiltinGlobals.Set(
+			name,
+			compiler.GlobalImport{
+				Name: name,
+			},
+		)
+	}
+
+	variable := interpreter.NewVariableWithValue(nil, value)
+	e.defaultVMBuiltinGlobals.Set(name, variable)
 }
 
 func (e *vmEnvironment) loadContractValue(
@@ -211,8 +225,10 @@ func (e *vmEnvironment) DeclareValue(valueDeclaration stdlib.StandardLibraryValu
 
 	// Define the value in the VM builtin globals
 
-	variable := &vm.Variable{}
-	variable.InitializeWithValue(valueDeclaration.Value)
+	variable := interpreter.NewVariableWithValue(
+		nil,
+		valueDeclaration.Value,
+	)
 
 	vmBuiltinGlobals := e.defaultVMBuiltinGlobals
 	vmBuiltinGlobals.Set(name, variable)
@@ -220,14 +236,6 @@ func (e *vmEnvironment) DeclareValue(valueDeclaration stdlib.StandardLibraryValu
 
 func (e *vmEnvironment) DeclareType(typeDeclaration stdlib.StandardLibraryType, location common.Location) {
 	e.checkingEnvironment.declareType(typeDeclaration, location)
-}
-
-func (e *vmEnvironment) SetCompositeValueFunctionsHandler(
-	typeID common.TypeID,
-	handler stdlib.CompositeValueFunctionsHandler,
-) {
-	// TODO:
-	panic(errors.NewUnreachableError())
 }
 
 func (e *vmEnvironment) CommitStorageTemporarily(context interpreter.ValueTransferContext) error {
@@ -356,7 +364,16 @@ func (e *vmEnvironment) loadDesugaredElaboration(location common.Location) (*com
 	return program.compiledProgram.desugaredElaboration, nil
 }
 
+// TODO: Maybe split this to four separate methods like in the interpreter.
 func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+	if location == nil {
+		return stdlib.StandardLibraryTypes[typeID]
+	}
+
+	if _, ok := location.(stdlib.FlowLocation); ok {
+		return stdlib.FlowEventTypes[typeID]
+	}
+
 	elaboration, err := e.loadDesugaredElaboration(location)
 	if err != nil {
 		panic(fmt.Errorf(
@@ -434,7 +451,7 @@ func (e *vmEnvironment) newVM(
 	)
 }
 
-func (e *vmEnvironment) vmBuiltinGlobals() *activations.Activation[*vm.Variable] {
+func (e *vmEnvironment) vmBuiltinGlobals() *activations.Activation[vm.Variable] {
 	// TODO: add support for per-location VM builtin globals
 	return e.defaultVMBuiltinGlobals
 }
