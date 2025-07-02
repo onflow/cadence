@@ -39,21 +39,29 @@ func init() {
 		NewNativeFunctionValue(
 			sema.Account_ContractsTypeAddFunctionName,
 			sema.Account_ContractsTypeAddFunctionType,
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				// TODO: implement Account.Contracts.add
-				// below is placeholder test code
-				nameValue, ok := arguments[1].(*interpreter.StringValue)
+			func(context *Context, _ []bbq.StaticType, args ...Value) Value {
+				// TODO: implement Account.Contracts.add, below is placeholder test code
+
+				var receiver interpreter.Value
+
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				receiver, args = args[ReceiverIndex], args[TypeBoundFunctionArgumentOffset:]
+
+				address := GetAccountTypePrivateAddressValue(receiver)
+
+				nameValue, ok := args[0].(*interpreter.StringValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
-				newCodeValue, ok := arguments[2].(*interpreter.ArrayValue)
+				newCodeValue, ok := args[1].(*interpreter.ArrayValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
-				return interpreter.NewDeployedContractValue(context,
-					interpreter.AddressValue{},
+				return interpreter.NewDeployedContractValue(
+					context,
+					address,
 					nameValue,
 					newCodeValue,
 				)
