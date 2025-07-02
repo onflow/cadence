@@ -51,37 +51,16 @@ func LinkGlobals(
 	for _, programImport := range program.Imports {
 		importLocation := programImport.Location
 
-		if location == importLocation {
-			// Self import loads injected globals
+		var indexedGlobals *activations.Activation[Variable]
 
-			injectedGlobals := context.InjectedGlobalsHandler(location)
-
-			for _, injectedContract := range injectedGlobals.Contracts {
-				importedGlobals = append(
-					importedGlobals,
-					// TODO: no need for getter, add NewContractVariableWithValue
-					interpreter.NewContractVariableWithGetter(
-						memoryGauge,
-						func() interpreter.Value {
-							return injectedContract
-						},
-					),
-				)
+		if importLocation == nil {
+			if context.BuiltinGlobalsProvider == nil {
+				indexedGlobals = DefaultBuiltinGlobals()
+			} else {
+				indexedGlobals = context.BuiltinGlobalsProvider(location)
 			}
-
-			for _, injectedVariable := range injectedGlobals.Variables {
-				variable := &interpreter.SimpleVariable{}
-				variable.InitializeWithValue(injectedVariable)
-				importedGlobals = append(importedGlobals, variable)
-			}
-
-			for _, injectedFunction := range injectedGlobals.Functions {
-				variable := &interpreter.SimpleVariable{}
-				variable.InitializeWithValue(injectedFunction)
-				importedGlobals = append(importedGlobals, variable)
-			}
-
 		} else {
+
 			linkedGlobals, ok := linkedGlobalsCache[importLocation]
 			if !ok {
 				importedProgram := context.ImportHandler(importLocation)
@@ -98,43 +77,45 @@ func LinkGlobals(
 				linkedGlobalsCache[importLocation] = linkedGlobals
 			}
 
-			global := linkedGlobals.indexedGlobals.Find(programImport.Name)
-			if global == nil {
-				panic(LinkerError{
-					Message: fmt.Sprintf("cannot find import '%s'", programImport.Name),
-				})
-			}
-
-			importedGlobal := global
-
-			if global.Kind() == interpreter.VariableKindContract {
-				// If the variable is a contract value, then import it as a reference.
-				// This must be done at the type of importing, rather than when declaring the contract value.
-				importedGlobal = interpreter.NewContractVariableWithGetter(
-					memoryGauge,
-					func() interpreter.Value {
-						// TODO: Is this the right context?
-						contractValue := global.GetValue(context)
-
-						staticType := contractValue.StaticType(context)
-						semaType, err := interpreter.ConvertStaticToSemaType(context, staticType)
-						if err != nil {
-							panic(err)
-						}
-
-						return interpreter.NewEphemeralReferenceValue(
-							context,
-							interpreter.UnauthorizedAccess,
-							contractValue,
-							semaType,
-							EmptyLocationRange,
-						)
-					},
-				)
-			}
-
-			importedGlobals = append(importedGlobals, importedGlobal)
+			indexedGlobals = linkedGlobals.indexedGlobals
 		}
+
+		global := indexedGlobals.Find(programImport.Name)
+		if global == nil {
+			panic(LinkerError{
+				Message: fmt.Sprintf("cannot find import '%s'", programImport.Name),
+			})
+		}
+
+		importedGlobal := global
+
+		if global.Kind() == interpreter.VariableKindContract {
+			// If the variable is a contract value, then import it as a reference.
+			// This must be done at the type of importing, rather than when declaring the contract value.
+			importedGlobal = interpreter.NewContractVariableWithGetter(
+				memoryGauge,
+				func() interpreter.Value {
+					// TODO: Is this the right context?
+					contractValue := global.GetValue(context)
+
+					staticType := contractValue.StaticType(context)
+					semaType, err := interpreter.ConvertStaticToSemaType(context, staticType)
+					if err != nil {
+						panic(err)
+					}
+
+					return interpreter.NewEphemeralReferenceValue(
+						context,
+						interpreter.UnauthorizedAccess,
+						contractValue,
+						semaType,
+						EmptyLocationRange,
+					)
+				},
+			)
+		}
+
+		importedGlobals = append(importedGlobals, importedGlobal)
 	}
 
 	executable := NewExecutableProgram(location, program, nil)

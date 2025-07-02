@@ -1893,7 +1893,7 @@ func TestNativeFunctions(t *testing.T) {
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{
-			BuiltinGlobalsProvider: func() *activations.Activation[vm.Variable] {
+			BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[vm.Variable] {
 				activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 				variable := &interpreter.SimpleVariable{}
 				variable.InitializeWithValue(stdlib.VMAssertFunction.Value)
@@ -8863,7 +8863,7 @@ func TestGetAuthAccount(t *testing.T) {
 
 		compilerConfig := &compiler.Config{
 			BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
-				activation := activations.NewActivation[compiler.GlobalImport](nil, compiler.DefaultBuiltinGlobals())
+				activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 				activation.Set(
 					stdlib.GetAuthAccountFunctionName,
 					compiler.GlobalImport{
@@ -8875,11 +8875,13 @@ func TestGetAuthAccount(t *testing.T) {
 		}
 
 		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
-		vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[vm.Variable] {
-			activation := activations.NewActivation[vm.Variable](nil, vm.DefaultBuiltinGlobals())
+		vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
+			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+
 			variable := &interpreter.SimpleVariable{}
 			variable.InitializeWithValue(stdlib.NewVMGetAuthAccountFunction(&testAccountHandler{}).Value)
 			activation.Set(stdlib.GetAuthAccountFunctionName, variable)
+
 			return activation
 		}
 
@@ -9017,7 +9019,6 @@ func TestInjectedContract(t *testing.T) {
 
 	bType := &sema.CompositeType{
 		Identifier: "B",
-		Location:   TestLocation,
 		Kind:       common.CompositeKindContract,
 	}
 
@@ -9067,49 +9068,52 @@ func TestInjectedContract(t *testing.T) {
 			activation.Set(
 				"B",
 				compiler.GlobalImport{
-					Name:     "B",
-					Location: TestLocation,
+					Name: "B",
 				},
 			)
 			activation.Set(
 				"B.c",
 				compiler.GlobalImport{
-					Name:     "B.c",
-					Location: TestLocation,
+					Name: "B.c",
 				},
 			)
 			return activation
 		},
 	}
 
+	cValue := vm.NewNativeFunctionValue(
+		"B.c",
+		cType,
+		func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
+			var receiver interpreter.Value
+
+			// arg[0] is the receiver. Actual arguments starts from 1.
+			receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+
+			assert.Same(t, bValue, receiver)
+
+			require.Len(t, args, 1)
+			require.IsType(t, interpreter.IntValue{}, args[0])
+			arg := args[0].(interpreter.IntValue)
+
+			return arg.Plus(context, arg, interpreter.EmptyLocationRange)
+		},
+	)
+
 	vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
-	vmConfig.InjectedGlobalsHandler = func(location common.Location) vm.InjectedGlobals {
+	vmConfig.BuiltinGlobalsProvider = func(location common.Location) *activations.Activation[vm.Variable] {
 		assert.Equal(t, TestLocation, location)
-		return vm.InjectedGlobals{
-			Contracts: []interpreter.Value{
-				bValue,
-			},
-			Functions: []interpreter.FunctionValue{
-				vm.NewNativeFunctionValue(
-					"B.c",
-					cType,
-					func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
-						var receiver interpreter.Value
+		activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
-						// arg[0] is the receiver. Actual arguments starts from 1.
-						receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+		bVariable := &interpreter.SimpleVariable{}
+		bVariable.InitializeWithValue(bValue)
+		activation.Set("B", bVariable)
 
-						assert.Same(t, bValue, receiver)
+		cVariable := &interpreter.SimpleVariable{}
+		cVariable.InitializeWithValue(cValue)
+		activation.Set("B.c", cVariable)
 
-						require.Len(t, args, 1)
-						require.IsType(t, interpreter.IntValue{}, args[0])
-						arg := args[0].(interpreter.IntValue)
-
-						return arg.Plus(context, arg, interpreter.EmptyLocationRange)
-					},
-				),
-			},
-		}
+		return activation
 	}
 
 	programs := map[common.Location]*CompiledProgram{}
@@ -9117,11 +9121,8 @@ func TestInjectedContract(t *testing.T) {
 	compiledProgramsTypeLoader := CompiledProgramsTypeLoader(programs)
 
 	vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
-		if location == TestLocation {
-			switch typeID {
-			case location.TypeID(nil, "B"):
-				return bType
-			}
+		if location == nil && typeID == "B" {
+			return bType
 		}
 
 		ty := compiledProgramsTypeLoader(location, typeID)

@@ -278,7 +278,7 @@ func ParseCheckAndPrepareWithOptions(
 			// (i.e: only get the values that were added externally for tests)
 			interpreterBaseActivationVariables := interpreterBaseActivation.ValuesInCurrentLevel()
 
-			vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[vm.Variable] {
+			vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
 
 				activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
@@ -368,7 +368,7 @@ func ParseCheckAndPrepareWithOptions(
 	}
 
 	if vmConfig.BuiltinGlobalsProvider == nil {
-		vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[vm.Variable] {
+		vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
 			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 			panicVariable := interpreter.NewVariableWithValue(

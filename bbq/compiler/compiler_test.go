@@ -8930,7 +8930,6 @@ func TestCompileInjectedContract(t *testing.T) {
 
 	bType := &sema.CompositeType{
 		Identifier: "B",
-		Location:   TestLocation,
 		Kind:       common.CompositeKindContract,
 	}
 
@@ -9000,15 +8999,13 @@ func TestCompileInjectedContract(t *testing.T) {
 			activation.Set(
 				"B",
 				compiler.GlobalImport{
-					Name:     "B",
-					Location: TestLocation,
+					Name: "B",
 				},
 			)
 			activation.Set(
 				"B.c",
 				compiler.GlobalImport{
-					Name:     "B.c",
-					Location: TestLocation,
+					Name: "B.c",
 				},
 			)
 			return activation
@@ -9064,12 +9061,10 @@ func TestCompileInjectedContract(t *testing.T) {
 	assert.Equal(t,
 		[]bbq.Import{
 			{
-				Location: TestLocation,
-				Name:     "B",
+				Name: "B",
 			},
 			{
-				Location: TestLocation,
-				Name:     "B.c",
+				Name: "B.c",
 			},
 		},
 		program.Imports,
