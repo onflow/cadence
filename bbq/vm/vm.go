@@ -1472,7 +1472,7 @@ func opGetTypeKey(vm *VM, ins opcode.InstructionGetTypeKey) {
 	// get attachment type
 	typeIndex := ins.Type
 	staticType := vm.loadType(typeIndex)
-	typ := interpreter.MustConvertStaticToSemaType(staticType, vm.context)
+	typ := vm.context.SemaTypeFromStaticType(staticType)
 
 	compositeValue := target.(interpreter.TypeIndexableValue)
 	value := compositeValue.GetTypeKey(
@@ -1489,7 +1489,7 @@ func opSetTypeKey(vm *VM, ins opcode.InstructionSetTypeKey) {
 	// get attachment type
 	typeIndex := ins.Type
 	staticType := vm.loadType(typeIndex)
-	typ := interpreter.MustConvertStaticToSemaType(staticType, vm.context)
+	typ := vm.context.SemaTypeFromStaticType(staticType)
 
 	compositeValue := target.(interpreter.TypeIndexableValue)
 	compositeValue.SetTypeKey(
@@ -1507,7 +1507,7 @@ func opRemoveTypeKey(vm *VM, ins opcode.InstructionRemoveTypeKey) {
 	// get attachment type
 	typeIndex := ins.Type
 	staticType := vm.loadType(typeIndex)
-	typ := interpreter.MustConvertStaticToSemaType(staticType, vm.context)
+	typ := vm.context.SemaTypeFromStaticType(staticType)
 
 	compositeValue := target.(interpreter.TypeIndexableValue)
 	compositeValue.RemoveTypeKey(
