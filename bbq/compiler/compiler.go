@@ -2181,7 +2181,7 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(expressio
 		if argumentCount >= math.MaxUint16 {
 			panic(errors.NewDefaultUserError("invalid number of arguments"))
 		}
-		// retrieve base again
+		// Load implicit argument from locals
 		c.emitGetLocal(implicitArgIndex)
 	}
 
@@ -2959,21 +2959,20 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		},
 	)
 
-	// self in attachments is a reference
-	// see declareNonEnumCompositeValue in interpreter
+	// `self` in attachments is a reference.
 	var returnLocalIndex uint16
 	if kind == common.CompositeKindAttachment {
-		// store return value
+		// Store the new composite as the return value.
 		returnLocalIndex = c.currentFunction.generateLocalIndex()
 		c.emitSetLocal(returnLocalIndex)
 		c.emitGetLocal(returnLocalIndex)
-		// set self to be a ref
+		// Set `self` to be a reference.
 		c.emit(opcode.InstructionNewRef{
 			Type:       typeIndex,
 			IsImplicit: false,
 		})
 
-		// TODO: set base?
+		// TODO: expose base, a reference to the attachment's base value
 	}
 
 	if kind == common.CompositeKindContract {
@@ -3007,7 +3006,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	)
 
 	if kind == common.CompositeKindAttachment {
-		// attachments have self as a reference which is not the return value
+		// Attachments have `self` as a reference, but the return value should be the created composite.
 		c.emitGetLocal(returnLocalIndex)
 	} else {
 		// Constructor should return the created the struct. i.e: return `self`
@@ -3323,7 +3322,7 @@ func (c *Compiler[_, _]) compileEnumCaseDeclaration(
 
 func (c *Compiler[_, _]) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) (_ struct{}) {
 	// Similar to VisitCompositeDeclaration
-	// not refactored because need to access fields not accessible in CompositeLikeDeclaration
+	// Not combined because need to access fields not accessible in CompositeLikeDeclaration
 	compositeType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
 
 	c.compositeTypeStack.push(compositeType)
@@ -3362,7 +3361,7 @@ func (c *Compiler[_, _]) VisitEntitlementMappingDeclaration(_ *ast.EntitlementMa
 }
 
 func (c *Compiler[_, _]) VisitRemoveStatement(statement *ast.RemoveStatement) (_ struct{}) {
-	// base on stack
+	// load base onto stack
 	c.compileExpression(statement.Value)
 	// remove attachment from base
 	nominalType := c.DesugaredElaboration.AttachmentRemoveTypes(statement)
@@ -3384,7 +3383,7 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 	c.emitSetLocal(baseLocalIndex)
 	// get base back on stack
 	c.emitGetLocal(baseLocalIndex)
-	// create reference to base
+	// create reference to base to pass as implicit arg
 	c.emit(opcode.InstructionNewRef{
 		Type:       c.getOrAddType(baseType),
 		IsImplicit: false,
@@ -3392,17 +3391,18 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 	refLocalIndex := c.currentFunction.generateLocalIndex()
 	c.emitSetLocal(refLocalIndex)
 
-	// create the attachment, pass in base ref as local index
+	// create the attachment
 	c.visitInvocationExpressionWithImplicitArgument(expression.Attachment, refLocalIndex, baseType)
 	// attachment on stack
 
 	// base back on stack
 	c.emitGetLocal(baseLocalIndex)
 	// TODO: do attachment.setbaseValue(...)
-	// copy of base
+	// base should now be transferred
 	c.emitTransfer()
 
-	// add attachment value as a member of base copy
+	// add attachment value as a member of transferred base
+	// returns the result
 	c.emit(opcode.InstructionSetTypeKey{
 		Type: c.getOrAddType(attachmentType),
 	})

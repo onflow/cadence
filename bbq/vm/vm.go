@@ -1008,7 +1008,7 @@ func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
 func maybeDereference(context interpreter.ValueStaticTypeContext, value Value) Value {
 	switch typedValue := value.(type) {
 	case *interpreter.EphemeralReferenceValue:
-		// don't reference attachments
+		// Do not dereference attachments, so that the receiver is a reference as expected.
 		if val, ok := typedValue.Value.(*interpreter.CompositeValue); ok {
 			if val.Kind == common.CompositeKindAttachment {
 				return value
@@ -1469,7 +1469,7 @@ func opStringTemplate(vm *VM, ins opcode.InstructionTemplateString) {
 func opGetTypeKey(vm *VM, ins opcode.InstructionGetTypeKey) {
 	target := vm.pop()
 
-	// get attachment type
+	// Get attachment type
 	typeIndex := ins.Type
 	staticType := vm.loadType(typeIndex)
 	typ := vm.context.SemaTypeFromStaticType(staticType)
@@ -1486,7 +1486,7 @@ func opGetTypeKey(vm *VM, ins opcode.InstructionGetTypeKey) {
 func opSetTypeKey(vm *VM, ins opcode.InstructionSetTypeKey) {
 	fieldValue, target := vm.pop2()
 
-	// get attachment type
+	// Get attachment type
 	typeIndex := ins.Type
 	staticType := vm.loadType(typeIndex)
 	typ := vm.context.SemaTypeFromStaticType(staticType)
@@ -1504,7 +1504,7 @@ func opSetTypeKey(vm *VM, ins opcode.InstructionSetTypeKey) {
 func opRemoveTypeKey(vm *VM, ins opcode.InstructionRemoveTypeKey) {
 	target := vm.pop()
 
-	// get attachment type
+	// Get attachment type
 	typeIndex := ins.Type
 	staticType := vm.loadType(typeIndex)
 	typ := vm.context.SemaTypeFromStaticType(staticType)

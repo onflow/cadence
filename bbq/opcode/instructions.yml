@@ -943,7 +943,7 @@
 - name: "getTypeKey"
   description:
     Pops a value off the stack, the target,
-    and then pushes the value of the field at the given index onto the stack.
+    and then pushes the value of the type key at the given index onto the stack.
   operands:
     - name: "type"
       type: "typeIndex"
@@ -958,7 +958,7 @@
 - name: "removeTypeKey"
   description:
     Pops a value off the stack, the target.
-    Remove the value of the given field from the target, and pushes it onto the stack.
+    Remove the value of the given type key from the target, and pushes it onto the stack.
   operands:
     - name: "type"
       type: "typeIndex"
@@ -973,7 +973,7 @@
 - name: "setTypeKey"
   description:
     Pops two values off the stack, the target and the value,
-    and then sets the field at the given index of the target to the value.
+    and then sets the type key at the given index of the target to the value, and pushes it onto the stack.
   operands:
     - name: "type"
       type: "typeIndex"
@@ -981,5 +981,8 @@
     pop:
       - name: "target"
         type: "value"
+      - name: "value"
+        type: "value"
+    push:
       - name: "value"
         type: "value"

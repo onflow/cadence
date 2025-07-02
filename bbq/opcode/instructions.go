@@ -2642,7 +2642,7 @@ func DecodeTemplateString(ip *uint16, code []byte) (i InstructionTemplateString)
 
 // InstructionGetTypeKey
 //
-// Pops a value off the stack, the target, and then pushes the value of the field at the given index onto the stack.
+// Pops a value off the stack, the target, and then pushes the value of the type key at the given index onto the stack.
 type InstructionGetTypeKey struct {
 	Type uint16
 }
@@ -2686,7 +2686,7 @@ func DecodeGetTypeKey(ip *uint16, code []byte) (i InstructionGetTypeKey) {
 
 // InstructionRemoveTypeKey
 //
-// Pops a value off the stack, the target. Remove the value of the given field from the target, and pushes it onto the stack.
+// Pops a value off the stack, the target. Remove the value of the given type key from the target, and pushes it onto the stack.
 type InstructionRemoveTypeKey struct {
 	Type uint16
 }
@@ -2730,7 +2730,7 @@ func DecodeRemoveTypeKey(ip *uint16, code []byte) (i InstructionRemoveTypeKey) {
 
 // InstructionSetTypeKey
 //
-// Pops two values off the stack, the target and the value, and then sets the field at the given index of the target to the value.
+// Pops two values off the stack, the target and the value, and then sets the type key at the given index of the target to the value, and pushes it onto the stack.
 type InstructionSetTypeKey struct {
 	Type uint16
 }

@@ -8877,18 +8877,6 @@ func TestCompileAttachments(t *testing.T) {
 		functions := program.Functions
 		require.Len(t, functions, 8)
 
-		// globals
-		const (
-			testFunctionIndex = iota
-			sConstructorIndex
-			sGetTypeIndex
-			sIsInstanceIndex
-			aConstructorIndex
-			aGetTypeIndex
-			aIsInstanceIndex
-			aFooIndex
-		)
-
 		assert.Equal(t,
 			[]opcode.Instruction{
 				// var s = S()
