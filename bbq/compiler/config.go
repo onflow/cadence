@@ -24,12 +24,16 @@ import (
 	"github.com/onflow/cadence/common"
 )
 
-type BuiltinGlobalsProvider func() *activations.Activation[GlobalImport]
+type BuiltinGlobalsProvider func(location common.Location) *activations.Activation[GlobalImport]
+
+type ElaborationResolver func(location common.Location) (*DesugaredElaboration, error)
 
 type Config struct {
-	MemoryGauge            common.MemoryGauge
-	ImportHandler          commons.ImportHandler
-	LocationHandler        commons.LocationHandler
-	ElaborationResolver    func(location common.Location) (*DesugaredElaboration, error)
+	MemoryGauge         common.MemoryGauge
+	ImportHandler       commons.ImportHandler
+	LocationHandler     commons.LocationHandler
+	ElaborationResolver ElaborationResolver
+	// BuiltinGlobalsProvider provides the built-in globals for a given location.
+	// NOTE: all global imports must be for location nil!
 	BuiltinGlobalsProvider BuiltinGlobalsProvider
 }

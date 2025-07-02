@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/json"
 	. "github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
 )
@@ -340,4 +341,45 @@ func TestRuntimeRLPDecodeList(t *testing.T) {
 	for _, testCase := range tests {
 		test(testCase)
 	}
+}
+
+func TestRuntimeRLPGetType(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestRuntime()
+
+	script := []byte(`
+
+	  access(all) fun main(): Type {
+		return RLP.getType()
+	  }
+	`)
+
+	runtimeInterface := &TestRuntimeInterface{}
+
+	result, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.ScriptLocation{},
+			// TODO: add support for getType and isInstance for stdlib values
+			//UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		cadence.TypeValue{
+			StaticType: cadence.NewContractType(
+				nil,
+				stdlib.RLPTypeName,
+				[]cadence.Field{},
+				nil,
+			),
+		},
+		result,
+	)
 }

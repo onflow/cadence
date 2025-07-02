@@ -614,12 +614,13 @@ func testAccountWithErrorHandlerWithCompiler(
 
 	if compilerEnabled && *compile {
 		vmConfig := &vm.Config{
-			BuiltinGlobalsProvider: func() *activations.Activation[vm.Variable] {
-				baseActivation := vm.DefaultBuiltinGlobals()
-				activation := activations.NewActivation[vm.Variable](nil, baseActivation)
+			BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[vm.Variable] {
+				activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+
 				variable := &interpreter.SimpleVariable{}
 				variable.InitializeWithValue(accountValueDeclaration.Value)
 				activation.Set(accountValueDeclaration.Name, variable)
+
 				return activation
 			},
 		}
@@ -641,9 +642,8 @@ func testAccountWithErrorHandlerWithCompiler(
 				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
 					ParseAndCheckOptions: parseAndCheckOptions,
 					CompilerConfig: &compiler.Config{
-						BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
-							baseActivation := compiler.DefaultBuiltinGlobals()
-							activation := activations.NewActivation[compiler.GlobalImport](nil, baseActivation)
+						BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
+							activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 							for _, valueDeclaration := range valueDeclarations {
 								name := valueDeclaration.Name
 								existing := activation.Find(name)

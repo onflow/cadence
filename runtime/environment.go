@@ -85,6 +85,8 @@ type InterpreterEnvironment struct {
 	// by DeclareValue / interpreterBaseActivationFor
 	baseActivationsByLocation map[common.Location]*interpreter.VariableActivation
 
+	allDeclaredTypes map[common.TypeID]sema.Type
+
 	InterpreterConfig *interpreter.Config
 
 	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
@@ -163,6 +165,9 @@ func (e *InterpreterEnvironment) NewInterpreterConfig() *interpreter.Config {
 
 func NewBaseInterpreterEnvironment(config Config) *InterpreterEnvironment {
 	env := NewInterpreterEnvironment(config)
+	for _, typeDeclaration := range stdlib.DefaultStandardLibraryTypes {
+		env.DeclareType(typeDeclaration, nil)
+	}
 	for _, valueDeclaration := range stdlib.InterpreterDefaultStandardLibraryValues(env) {
 		env.DeclareValue(valueDeclaration, nil)
 	}
@@ -171,6 +176,9 @@ func NewBaseInterpreterEnvironment(config Config) *InterpreterEnvironment {
 
 func NewScriptInterpreterEnvironment(config Config) *InterpreterEnvironment {
 	env := NewInterpreterEnvironment(config)
+	for _, typeDeclaration := range stdlib.DefaultStandardLibraryTypes {
+		env.DeclareType(typeDeclaration, nil)
+	}
 	for _, valueDeclaration := range stdlib.InterpreterDefaultScriptStandardLibraryValues(env) {
 		env.DeclareValue(valueDeclaration, nil)
 	}
@@ -206,6 +214,10 @@ func (e *InterpreterEnvironment) DeclareValue(valueDeclaration stdlib.StandardLi
 
 func (e *InterpreterEnvironment) DeclareType(typeDeclaration stdlib.StandardLibraryType, location common.Location) {
 	e.CheckingEnvironment.declareType(typeDeclaration, location)
+	if e.allDeclaredTypes == nil {
+		e.allDeclaredTypes = map[common.TypeID]sema.Type{}
+	}
+	e.allDeclaredTypes[typeDeclaration.Type.ID()] = typeDeclaration.Type
 }
 
 func (e *InterpreterEnvironment) interpreterBaseActivationFor(
@@ -431,21 +443,13 @@ func (e *InterpreterEnvironment) newImportLocationHandler() interpreter.ImportLo
 func (e *InterpreterEnvironment) newCompositeTypeHandler() interpreter.CompositeTypeHandlerFunc {
 	return func(location common.Location, typeID common.TypeID) *sema.CompositeType {
 
-		switch location.(type) {
-		case stdlib.FlowLocation:
+		ty := e.allDeclaredTypes[typeID]
+		if compositeType, ok := ty.(*sema.CompositeType); ok {
+			return compositeType
+		}
+
+		if _, ok := location.(stdlib.FlowLocation); ok {
 			return stdlib.FlowEventTypes[typeID]
-
-		case nil:
-			qualifiedIdentifier := string(typeID)
-			baseTypeActivation := e.CheckingEnvironment.getBaseTypeActivation(location)
-			ty := sema.TypeActivationNestedType(baseTypeActivation, qualifiedIdentifier)
-			if ty == nil {
-				return nil
-			}
-
-			if compositeType, ok := ty.(*sema.CompositeType); ok {
-				return compositeType
-			}
 		}
 
 		return nil
@@ -572,8 +576,7 @@ func (e *InterpreterEnvironment) getBaseActivation(
 ) {
 	// Use the base activation for the location, if any
 	// (previously implicitly created using DeclareValue)
-	baseActivationsByLocation := e.baseActivationsByLocation
-	baseActivation = baseActivationsByLocation[location]
+	baseActivation = e.baseActivationsByLocation[location]
 	if baseActivation == nil {
 		// If no base activation for the location exists
 		// (no value was previously, specifically declared for the location using DeclareValue),

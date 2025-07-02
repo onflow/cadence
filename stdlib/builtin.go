@@ -39,6 +39,19 @@ type StandardLibraryHandler interface {
 	Hasher
 }
 
+var DefaultStandardLibraryTypes = []StandardLibraryType{
+	{
+		Type: BLSType,
+		Name: BLSTypeName,
+		Kind: common.DeclarationKindContract,
+	},
+	{
+		Type: RLPType,
+		Name: RLPTypeName,
+		Kind: common.DeclarationKindContract,
+	},
+}
+
 func InterpreterDefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
 	return []StandardLibraryValue{
 		InterpreterAssertFunction,

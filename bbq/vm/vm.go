@@ -68,20 +68,12 @@ func NewVM(
 		context.storage = interpreter.NewInMemoryStorage(nil)
 	}
 
-	if context.BuiltinGlobalsProvider == nil {
-		context.BuiltinGlobalsProvider = DefaultBuiltinGlobals
-	}
-
 	if context.referencedResourceKindedValues == nil {
 		context.referencedResourceKindedValues = ReferencedResourceKindedValues{}
 	}
 
 	// linkedGlobalsCache is a local cache-alike that is being used to hold already linked imports.
-	linkedGlobalsCache := map[common.Location]LinkedGlobals{
-		BuiltInLocation: {
-			indexedGlobals: context.BuiltinGlobalsProvider(),
-		},
-	}
+	linkedGlobalsCache := map[common.Location]LinkedGlobals{}
 
 	vm := &VM{
 		linkedGlobalsCache: linkedGlobalsCache,
@@ -90,7 +82,7 @@ func NewVM(
 
 	// Delegate the function invocations to the vm.
 	context.invokeFunction = vm.invokeFunction
-	context.lookupFunction = vm.maybeLookupFunction
+	context.lookupFunction = vm.lookupFunction
 
 	// Link global variables and functions.
 	linkedGlobals := LinkGlobals(
@@ -1855,49 +1847,55 @@ func (vm *VM) invokeFunction(function Value, arguments []Value) (Value, error) {
 	return vm.invokeExternally(function, arguments)
 }
 
-func (vm *VM) maybeLookupFunction(location common.Location, name string) FunctionValue {
-	funcValue, ok := vm.lookupFunction(location, name)
-	if !ok {
-		return nil
-	}
-	return funcValue
-}
-
-func (vm *VM) lookupFunction(location common.Location, name string) (FunctionValue, bool) {
+func (vm *VM) lookupFunction(location common.Location, name string) FunctionValue {
 	context := vm.context
 
 	// First check in current program.
 	global := vm.globals.Find(name)
 	if global != nil {
 		value := global.GetValue(context)
-		return value.(FunctionValue), true
+		return value.(FunctionValue)
 	}
 
-	// If not found, check in already linked imported functions.
-	linkedGlobals, ok := vm.linkedGlobalsCache[location]
+	// If not found, check in already linked imported functions,
+	// or link the function now, dynamically.
 
-	// If not found, link the function now, dynamically.
-	if !ok {
-		// TODO: This currently link all functions in program, unnecessarily.
-		//   Link only the requested function.
-		program := context.ImportHandler(location)
+	var indexedGlobals *activations.Activation[Variable]
 
-		linkedGlobals = LinkGlobals(
-			context.MemoryGauge,
-			location,
-			program,
-			context,
-			vm.linkedGlobalsCache,
-		)
+	if location == nil {
+		if context.BuiltinGlobalsProvider == nil {
+			indexedGlobals = DefaultBuiltinGlobals()
+		} else {
+			indexedGlobals = context.BuiltinGlobalsProvider(location)
+		}
+	} else {
+
+		linkedGlobals, ok := vm.linkedGlobalsCache[location]
+
+		if !ok {
+			// TODO: This currently link all functions in program, unnecessarily.
+			//   Link only the requested function.
+			program := context.ImportHandler(location)
+
+			linkedGlobals = LinkGlobals(
+				context.MemoryGauge,
+				location,
+				program,
+				context,
+				vm.linkedGlobalsCache,
+			)
+		}
+
+		indexedGlobals = linkedGlobals.indexedGlobals
 	}
 
-	global = linkedGlobals.indexedGlobals.Find(name)
+	global = indexedGlobals.Find(name)
 	if global == nil {
-		return nil, false
+		return nil
 	}
 
 	value := global.GetValue(context)
-	return value.(FunctionValue), true
+	return value.(FunctionValue)
 }
 
 func (vm *VM) StackSize() int {
@@ -1912,7 +1910,7 @@ func (vm *VM) Reset() {
 
 	context := NewContext(vm.context.Config)
 	context.invokeFunction = vm.invokeFunction
-	context.lookupFunction = vm.maybeLookupFunction
+	context.lookupFunction = vm.lookupFunction
 	vm.context = context
 }
 
