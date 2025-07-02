@@ -2963,11 +2963,10 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	// see declareNonEnumCompositeValue in interpreter
 	var returnLocalIndex uint16
 	if kind == common.CompositeKindAttachment {
-		// dup so we can return it later
-		c.emit(opcode.InstructionDup{})
 		// store return value
 		returnLocalIndex = c.currentFunction.generateLocalIndex()
 		c.emitSetLocal(returnLocalIndex)
+		c.emitGetLocal(returnLocalIndex)
 		// set self to be a ref
 		c.emit(opcode.InstructionNewRef{
 			Type:       typeIndex,
