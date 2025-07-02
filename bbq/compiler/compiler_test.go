@@ -8848,6 +8848,80 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 
 }
 
+func TestCompileAttachments(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			struct S {}
+			attachment A for S {
+				fun foo(): Int { return 3 }
+			}
+			fun test(): Int {
+				var s = S()
+				s = attach A() to s
+				return s[A]?.foo()!
+			}
+		`)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 8)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// var s = S()
+				opcode.InstructionStatement{},
+				opcode.InstructionGetGlobal{Global: 0x1},
+				opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0x0},
+				opcode.InstructionTransferAndConvert{Type: 0x1},
+				opcode.InstructionSetLocal{Local: 0x0},
+				// s = attach A() to s
+				opcode.InstructionStatement{},
+				opcode.InstructionGetLocal{Local: 0x0},
+				opcode.InstructionSetLocal{Local: 0x1},
+				opcode.InstructionGetLocal{Local: 0x1},
+				opcode.InstructionNewRef{Type: 0x1, IsImplicit: false},
+				opcode.InstructionSetLocal{Local: 0x2},
+				opcode.InstructionGetGlobal{Global: 0x4},
+				opcode.InstructionGetLocal{Local: 0x2},
+				opcode.InstructionInvoke{TypeArgs: []uint16{0x1}, ArgCount: 0x1},
+				opcode.InstructionGetLocal{Local: 0x1},
+				opcode.InstructionTransfer{},
+				opcode.InstructionSetTypeKey{Type: 0x2},
+				opcode.InstructionTransferAndConvert{Type: 0x1},
+				opcode.InstructionSetLocal{Local: 0x0},
+				// return s[A]?.foo()!
+				opcode.InstructionStatement{},
+				opcode.InstructionGetLocal{Local: 0x0},
+				opcode.InstructionGetTypeKey{Type: 0x2},
+				opcode.InstructionSetLocal{Local: 0x3},
+				opcode.InstructionGetLocal{Local: 0x3},
+				opcode.InstructionJumpIfNil{Target: 0x1e},
+				opcode.InstructionGetLocal{Local: 0x3},
+				opcode.InstructionUnwrap{},
+				opcode.InstructionGetMethod{Method: 0x7},
+				opcode.InstructionInvokeMethodStatic{TypeArgs: []uint16(nil), ArgCount: 0x0},
+				opcode.InstructionJump{Target: 0x1f},
+				opcode.InstructionNil{},
+				opcode.InstructionUnwrap{},
+				opcode.InstructionTransferAndConvert{Type: 0x3},
+				opcode.InstructionReturnValue{},
+			},
+			functions[0].Code,
+		)
+	})
+}
+
 func TestCompileImportEnumCase(t *testing.T) {
 
 	t.Parallel()

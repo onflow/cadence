@@ -39,7 +39,7 @@ func TestInterpretAttachmentStruct(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         struct S {}
         attachment A for S {
             fun foo(): Int { return 3 }
@@ -61,7 +61,7 @@ func TestInterpretAttachmentStruct(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         struct S {}
         attachment A for S {
             fun foo(): Int { return 3 }
@@ -85,7 +85,7 @@ func TestInterpretAttachmentStruct(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         struct S {}
         attachment A for S {
             fun foo(): Int { return 3 }
@@ -107,7 +107,7 @@ func TestInterpretAttachmentStruct(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         struct S {}
         attachment A for S {
             fun foo(): Int { return 3 }
@@ -130,7 +130,7 @@ func TestInterpretAttachmentStruct(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         struct S {}
         attachment A for S {
             fun foo(): Int { return 3 }
@@ -153,7 +153,7 @@ func TestInterpretAttachmentStruct(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         struct S {}
         attachment B for S {}
         attachment A for S {
@@ -177,7 +177,7 @@ func TestInterpretAttachmentStruct(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         struct S {}
         attachment A for S {
             fun foo(): Int { return 3 }
@@ -234,7 +234,7 @@ func TestInterpretAttachmentStruct(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         struct S {}
         attachment A for S {
             fun foo(): Int { return 3 }
@@ -260,7 +260,7 @@ func TestInterpretAttachmentResource(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {}
        attachment A for R {
           fun foo(): Int { return 3 }
@@ -284,7 +284,7 @@ func TestInterpretAttachmentResource(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {}
        attachment A for R {
           fun foo(): Int { return 3 }
@@ -308,7 +308,7 @@ func TestInterpretAttachmentResource(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {}
        attachment A for R {
           let x: Int
@@ -338,7 +338,7 @@ func TestInterpretAttachmentResource(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {}
        attachment A for R {
           fun foo(): Int { return 3 }
@@ -363,7 +363,7 @@ func TestInterpretAttachmentResource(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {}
        attachment A for R {
           fun foo(): Int { return 3 }
@@ -388,7 +388,7 @@ func TestInterpretAttachmentResource(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {}
        attachment B for R {}
        attachment A for R {
@@ -414,7 +414,7 @@ func TestInterpretAttachmentResource(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {}
        attachment A for R {
           fun foo(): Int { return 3 }
@@ -912,7 +912,7 @@ func TestInterpretAttachmentSelfUse(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R { }
        attachment A for R {
           let y: Int
@@ -973,7 +973,7 @@ func TestInterpretAttachmentSelfUse(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 	            resource R { }
 	            attachment A for R {
 	                let self: &A
@@ -1001,7 +1001,7 @@ func TestInterpretAttachmentSelfUse(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R { }
             attachment A for R {
                 fun returnSelf(): &A {
@@ -1029,7 +1029,7 @@ func TestInterpretAttachmentSelfUse(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R { }
             attachment A for R {
                 fun selfFn(): Int {

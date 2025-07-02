@@ -130,9 +130,9 @@ const (
 	GetIndex
 	RemoveIndex
 	GetMethod
-	_
-	_
-	_
+	GetTypeKey
+	SetTypeKey
+	RemoveTypeKey
 	_
 	_
 	_

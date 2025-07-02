@@ -1557,7 +1557,20 @@ func CreateReferenceValue(
 
 		// Case (4): target type is non-optional, actual value is also non-optional.
 		return newEphemeralReference(context, value, typ, locationRange)
+	case *sema.CompositeType:
+		// The borrow type of attachments is not a reference type
+		// But still want to create a new reference
+		baseType := MustSemaTypeOfValue(value, context).(sema.EntitlementSupportingType)
+		baseAccess := baseType.SupportedEntitlements().Access()
+		auth := ConvertSemaAccessToStaticAuthorization(context, baseAccess)
 
+		return NewEphemeralReferenceValue(
+			context,
+			auth,
+			value,
+			MustSemaTypeOfValue(value, context).(*sema.CompositeType),
+			locationRange,
+		)
 	default:
 		panic(errors.NewUnreachableError())
 	}
@@ -1690,7 +1703,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	base.SetTypeKey(
 		interpreter,
 		locationRange,
-		attachmentType,
+		attachmentType.AttachType,
 		attachment,
 	)
 
