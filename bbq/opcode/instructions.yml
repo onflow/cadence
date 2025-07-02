@@ -958,16 +958,14 @@
 - name: "removeTypeKey"
   description:
     Pops a value off the stack, the target.
-    Remove the value of the given type key from the target, and pushes it onto the stack.
+    Remove the value of the given type key from the target.
+    Additionally destroy if removed type is resource. 
   operands:
     - name: "type"
       type: "typeIndex"
   valueEffects:
     pop:
       - name: "target"
-        type: "value"
-    push:
-      - name: "value"
         type: "value"
 
 - name: "setTypeKey"

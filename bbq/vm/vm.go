@@ -1510,11 +1510,25 @@ func opRemoveTypeKey(vm *VM, ins opcode.InstructionRemoveTypeKey) {
 	typ := vm.context.SemaTypeFromStaticType(staticType)
 
 	compositeValue := target.(interpreter.TypeIndexableValue)
-	compositeValue.RemoveTypeKey(
+	removed := compositeValue.RemoveTypeKey(
 		vm.context,
 		EmptyLocationRange,
 		typ,
 	)
+	// attachment not present on this base
+	if removed == nil {
+		return
+	}
+	attachment, ok := removed.(*interpreter.CompositeValue)
+	// we enforce this in the checker
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	if attachment.IsResourceKinded(vm.context) {
+		// this attachment is no longer attached to its base, but the `base` variable is still available in the destructor
+		// TODO: attachment.setBaseValue(base)
+		attachment.Destroy(vm.context, EmptyLocationRange)
+	}
 }
 
 func (vm *VM) run() {

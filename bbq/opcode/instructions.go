@@ -2686,7 +2686,7 @@ func DecodeGetTypeKey(ip *uint16, code []byte) (i InstructionGetTypeKey) {
 
 // InstructionRemoveTypeKey
 //
-// Pops a value off the stack, the target. Remove the value of the given type key from the target, and pushes it onto the stack.
+// Pops a value off the stack, the target. Remove the value of the given type key from the target. Additionally destroy if removed type is resource.
 type InstructionRemoveTypeKey struct {
 	Type uint16
 }
