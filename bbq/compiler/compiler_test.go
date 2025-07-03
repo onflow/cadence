@@ -8087,10 +8087,10 @@ func TestCompileStringTemplate(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-			fun test() {
-				let str = "2+2=\(2+2)"
-			}
-		`)
+            fun test() {
+                let str = "2+2=\(2+2)"
+            }
+        `)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(
@@ -8145,13 +8145,13 @@ func TestCompileStringTemplate(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-			fun test() {
-				let a = "A"
-				let b = "B"
-				let c = 4
-				let str = "\(a) + \(b) = \(c)"
-			}
-		`)
+            fun test() {
+                let a = "A"
+                let b = "B"
+                let c = 4
+                let str = "\(a) + \(b) = \(c)"
+            }
+        `)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(
@@ -8234,7 +8234,7 @@ func TestForStatementCapturing(t *testing.T) {
 	t.Parallel()
 
 	checker, err := ParseAndCheck(t, `
-	    fun test() {
+        fun test() {
            for i, x in [1, 2, 3] {
                let f = fun (): Int {
                    return x + i
@@ -8572,13 +8572,13 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-        fun test() {
-            fun foo(x: Int): Int {
-                pre {x > 0}
-                return 5
+            fun test() {
+                fun foo(x: Int): Int {
+                    pre {x > 0}
+                    return 5
+                }
             }
-        }
-    `)
+        `)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(
@@ -8655,13 +8655,13 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-        fun test() {
-            fun foo(x: Int): Int {
-                post {x > 0}
-                return 5
+            fun test() {
+                fun foo(x: Int): Int {
+                    post {x > 0}
+                    return 5
+                }
             }
-        }
-    `)
+        `)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(
@@ -8909,5 +8909,66 @@ func TestCompileImportEnumCase(t *testing.T) {
 			},
 		},
 		bProgram.Imports,
+	)
+}
+
+func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      struct interface SI {
+          fun answer(): Int
+      }
+
+      fun answer(_ si: {SI}?): Int? {
+          return si?.answer()
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 3)
+
+	const (
+		siIndex = iota
+		tempIndex
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: siIndex},
+			opcode.InstructionSetLocal{Local: tempIndex},
+			opcode.InstructionGetLocal{Local: tempIndex},
+			opcode.InstructionJumpIfNil{Target: 9},
+			opcode.InstructionGetLocal{Local: tempIndex},
+			opcode.InstructionUnwrap{},
+			opcode.InstructionInvokeMethodDynamic{
+				Name:     0,
+				ArgCount: 1,
+			},
+			opcode.InstructionJump{Target: 10},
+			opcode.InstructionNil{},
+			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionReturnValue{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]constant.Constant{
+			{
+				Data: []byte("answer"),
+				Kind: constant.String,
+			},
+		},
+		program.Constants,
 	)
 }
