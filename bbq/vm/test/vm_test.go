@@ -8443,145 +8443,91 @@ func TestEnumLookupFailure(t *testing.T) {
 	assert.Equal(t, interpreter.Nil, result)
 }
 
-func TestAccountMethodOptionalArgs(t *testing.T) {
+func TestFunctionInvocationWithOptionalArgs(t *testing.T) {
 
 	t.Parallel()
 
-	importLocation := common.NewAddressLocation(nil, common.Address{0x1}, "C")
+	const functionName = "foo"
 
-	importedChecker, err := ParseAndCheckWithOptions(t,
-		`
-			contract C {
-				fun test(): DeployedContract {
-					self.account.contracts.add(
-						name: "Bar",
-						code: "contract Bar { }".utf8,
-					)
-					return self.account.contracts.add(
-						name: "Foo",
-						code: "contract Foo { let message: String\n init(message:String) {self.message = message}\nfun test(): String {return self.message}}".utf8,
-						message: "Optional arg",
-					)
-				}
+	functionType := &sema.FunctionType{
+		Purity:               sema.FunctionPurityView,
+		ReturnTypeAnnotation: sema.IntTypeAnnotation,
+		Arity:                &sema.Arity{Min: 1, Max: -1},
+	}
+
+	activation := sema.NewVariableActivation(sema.BaseValueActivation)
+	activation.DeclareValue(stdlib.StandardLibraryValue{
+		Name: functionName,
+		Type: functionType,
+		Kind: common.DeclarationKindFunction,
+	})
+
+	compilerConfig := &compiler.Config{
+		BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
+			activation := activations.NewActivation[compiler.GlobalImport](nil, compiler.DefaultBuiltinGlobals())
+			activation.Set(
+				functionName,
+				compiler.GlobalImport{
+					Name: functionName,
+				},
+			)
+			return activation
+		},
+	}
+
+	functionValue := vm.NewNativeFunctionValue(
+		functionName,
+		functionType,
+		func(context *vm.Context, typeArguments []bbq.StaticType, arguments ...vm.Value) vm.Value {
+			require.GreaterOrEqual(t, len(arguments), 1)
+
+			require.IsType(t, interpreter.IntValue{}, arguments[0])
+			first := arguments[0].(interpreter.IntValue)
+
+			if len(arguments) < 2 {
+				return first
 			}
-        `,
-		ParseAndCheckOptions{
-			Location: importLocation,
-			Config: &sema.Config{
-				BaseValueActivationHandler: TestBaseValueActivation,
-			},
+
+			require.IsType(t, interpreter.IntValue{}, arguments[1])
+			second := arguments[1].(interpreter.IntValue)
+
+			return first.Plus(context, second, interpreter.EmptyLocationRange)
 		},
 	)
-	require.NoError(t, err)
 
-	importCompiler := compiler.NewInstructionCompiler(
-		interpreter.ProgramFromChecker(importedChecker),
-		importedChecker.Location,
-	)
-	importedProgram := importCompiler.Compile()
+	vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+	vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[vm.Variable] {
+		activation := activations.NewActivation[vm.Variable](nil, vm.DefaultBuiltinGlobals())
+		variable := &interpreter.SimpleVariable{}
+		variable.InitializeWithValue(functionValue)
+		activation.Set(functionName, variable)
+		return activation
+	}
 
-	_, importedContractValue := initializeContract(
+	result, err := CompileAndInvokeWithOptions(
 		t,
-		importLocation,
-		importedProgram,
-		nil,
-	)
-
-	checker, err := ParseAndCheckWithOptions(t,
 		`
-          import C from 0x1
-
-          fun test(): String {
-              return C.test().name
+          fun test(): Int {
+              return foo(2) + foo(5, 11)
           }
         `,
-		ParseAndCheckOptions{
-			Config: &sema.Config{
-				ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
-					return sema.ElaborationImport{
-						Elaboration: importedChecker.Elaboration,
-					}, nil
+		"test",
+		CompilerAndVMOptions{
+			ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+				CompilerConfig: compilerConfig,
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Config: &sema.Config{
+						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+							return activation
+						},
+					},
 				},
 			},
+			VMConfig: vmConfig,
 		},
 	)
 	require.NoError(t, err)
-
-	comp := compiler.NewInstructionCompiler(
-		interpreter.ProgramFromChecker(checker),
-		checker.Location,
-	)
-	comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
-		return importedProgram
-	}
-
-	program := comp.Compile()
-
-	addressValue := interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1})
-
-	var uuid uint64 = 42
-
-	vmConfig := &vm.Config{
-		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
-			return importedProgram
-		},
-		ContractValueHandler: func(*vm.Context, common.Location) *interpreter.CompositeValue {
-			return importedContractValue
-		},
-		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-			elaboration := importedChecker.Elaboration
-			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType
-			}
-
-			return elaboration.InterfaceType(typeID)
-		},
-	}
-
-	vmConfig.UUIDHandler = func() (uint64, error) {
-		uuid++
-		return uuid, nil
-	}
-
-	vmConfig.InjectedCompositeFieldsHandler = func(
-		context interpreter.AccountCreationContext,
-		_ common.Location,
-		_ string,
-		_ common.CompositeKind,
-	) map[string]interpreter.Value {
-
-		accountRef := stdlib.NewAccountReferenceValue(
-			context,
-			nil,
-			addressValue,
-			interpreter.FullyEntitledAccountAccess,
-			interpreter.EmptyLocationRange,
-		)
-
-		return map[string]interpreter.Value{
-			sema.ContractAccountFieldName: accountRef,
-		}
-	}
-
-	vmConfig.AccountHandlerFunc = func(
-		context interpreter.AccountCreationContext,
-		address interpreter.AddressValue,
-	) interpreter.Value {
-		return stdlib.NewAccountValue(context, nil, address)
-	}
-
-	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
-
-	result, err := vmInstance.InvokeExternally("test")
-	require.NoError(t, err)
-	require.Equal(t, 0, vmInstance.StackSize())
-
-	require.Equal(
-		t,
-		interpreter.NewUnmeteredStringValue("Foo"),
-		result,
-	)
+	require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(18), result)
 }
 
 type testMemoryGauge struct {

@@ -950,19 +950,17 @@ func TestRuntimeFungibleTokenTransferInterpreter(t *testing.T) {
 	testRuntimeFungibleTokenTransfer(t, false)
 }
 
-// TODO:
-//func TestRuntimeFungibleTokenTransferVM(t *testing.T) {
-//	testRuntimeFungibleTokenTransfer(t, true)
-//}
+func TestRuntimeFungibleTokenTransferVM(t *testing.T) {
+	testRuntimeFungibleTokenTransfer(t, true)
+}
 
 func BenchmarkRuntimeFungibleTokenTransferInterpreter(b *testing.B) {
 	testRuntimeFungibleTokenTransfer(b, false)
 }
 
-// TODO:
-//func BenchmarkRuntimeFungibleTokenTransferVM(b *testing.B) {
-//	testRuntimeFungibleTokenTransfer(b, false)
-//}
+func BenchmarkRuntimeFungibleTokenTransferVM(b *testing.B) {
+	testRuntimeFungibleTokenTransfer(b, false)
+}
 
 func getField(declaration *ast.CompositeDeclaration, name string) *ast.FieldDeclaration {
 	for _, fieldDeclaration := range declaration.Members.Fields() {
@@ -1101,6 +1099,7 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 			Interface:   runtimeInterface,
 			Location:    nextTransactionLocation(),
 			Environment: environment,
+			UseVM:       *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1234,6 +1233,7 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 			Interface:   runtimeInterface,
 			Location:    nextTransactionLocation(),
 			Environment: environment,
+			UseVM:       *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1271,6 +1271,7 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 			Interface:   runtimeInterface,
 			Location:    nextTransactionLocation(),
 			Environment: environment,
+			UseVM:       *compile,
 		},
 	)
 	RequireError(t, err)
@@ -1324,6 +1325,7 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 			Interface:   runtimeInterface,
 			Location:    nextTransactionLocation(),
 			Environment: environment,
+			UseVM:       *compile,
 		},
 	)
 	require.NoError(t, err)

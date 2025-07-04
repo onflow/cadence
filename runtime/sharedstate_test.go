@@ -130,6 +130,7 @@ func TestRuntimeSharedState(t *testing.T) {
 				Interface:   runtimeInterface,
 				Location:    nextTransactionLocation(),
 				Environment: environment,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -158,6 +159,7 @@ func TestRuntimeSharedState(t *testing.T) {
 			Interface:   runtimeInterface,
 			Location:    nextTransactionLocation(),
 			Environment: environment,
+			UseVM:       *compile,
 		},
 	)
 	require.NoError(t, err)

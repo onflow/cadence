@@ -411,23 +411,20 @@ func newAccountContractsValue(
 	return interpreter.NewAccountContractsValue(
 		context,
 		addressValue,
-		newAccountContractsChangeFunction(
+		newInterpreterAccountContractsChangeFunction(
 			context,
-			sema.Account_ContractsTypeAddFunctionType,
 			handler,
 			addressValue,
 			false,
 		),
-		newAccountContractsChangeFunction(
+		newInterpreterAccountContractsChangeFunction(
 			context,
-			sema.Account_ContractsTypeUpdateFunctionType,
 			handler,
 			addressValue,
 			true,
 		),
-		newAccountContractsTryUpdateFunction(
+		newInterpreterAccountContractsTryUpdateFunction(
 			context,
-			sema.Account_ContractsTypeUpdateFunctionType,
 			handler,
 			addressValue,
 		),
@@ -441,12 +438,12 @@ func newAccountContractsValue(
 			handler,
 			addressValue,
 		),
-		newAccountContractsRemoveFunction(
+		newInterpreterAccountContractsRemoveFunction(
 			context,
 			handler,
 			addressValue,
 		),
-		newAccountContractsGetNamesFunction(
+		newInterpreterAccountContractsGetNamesFunction(
 			handler,
 			addressValue,
 		),
@@ -1636,7 +1633,7 @@ type AccountContractNamesProvider interface {
 	GetAccountContractNames(address common.Address) ([]string, error)
 }
 
-func newAccountContractsGetNamesFunction(
+func newInterpreterAccountContractsGetNamesFunction(
 	provider AccountContractNamesProvider,
 	addressValue interpreter.AddressValue,
 ) func(
@@ -2003,25 +2000,86 @@ type AccountContractAdditionHandler interface {
 	TemporarilyRecordCode(location common.AddressLocation, code []byte)
 }
 
-// newAccountContractsChangeFunction called when e.g.
+// newInterpreterAccountContractsChangeFunction called when e.g.
 // - adding: `Account.contracts.add(name: "Foo", code: [...])` (isUpdate = false)
 // - updating: `Account.contracts.update(name: "Foo", code: [...])` (isUpdate = true)
-func newAccountContractsChangeFunction(
+func newInterpreterAccountContractsChangeFunction(
 	context interpreter.FunctionCreationContext,
-	functionType *sema.FunctionType,
 	handler AccountContractAdditionAndNamesHandler,
 	addressValue interpreter.AddressValue,
 	isUpdate bool,
 ) interpreter.BoundFunctionGenerator {
+
+	functionType := sema.Account_ContractsTypeAddFunctionType
+	if isUpdate {
+		functionType = sema.Account_ContractsTypeUpdateFunctionType
+	}
+
 	return func(accountContracts interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountContracts,
 			functionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-				return changeAccountContracts(invocation, handler, addressValue, isUpdate)
+				context := invocation.InvocationContext
+				return changeAccountContracts(
+					context,
+					invocation.Arguments,
+					invocation.ArgumentTypes,
+					addressValue,
+					invocation.LocationRange,
+					handler,
+					isUpdate,
+				)
 			},
 		)
+	}
+}
+
+func newVMAccountContractsChangeFunction(
+	handler AccountContractAdditionAndNamesHandler,
+	isUpdate bool,
+) VMFunction {
+
+	functionName := sema.Account_ContractsTypeAddFunctionName
+	functionType := sema.Account_ContractsTypeAddFunctionType
+	if isUpdate {
+		functionName = sema.Account_ContractsTypeUpdateFunctionName
+		functionType = sema.Account_ContractsTypeUpdateFunctionType
+	}
+
+	return VMFunction{
+		BaseType: sema.Account_ContractsType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			functionName,
+			functionType,
+			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
+
+				var receiver interpreter.Value
+
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+
+				address := vm.GetAccountTypePrivateAddressValue(receiver)
+
+				argumentTypes := make([]sema.Type, len(args))
+				// TODO: optimize
+				for i, arg := range args {
+					staticType := arg.StaticType(context)
+					argumentTypes[i] = interpreter.MustConvertStaticToSemaType(staticType, context)
+				}
+
+				return changeAccountContracts(
+					context,
+					args,
+					argumentTypes,
+					address,
+					interpreter.EmptyLocationRange,
+					handler,
+					isUpdate,
+				)
+			},
+		),
 	}
 }
 
@@ -2052,30 +2110,31 @@ func (e *OldProgramError) ImportLocation() common.Location {
 }
 
 func changeAccountContracts(
-	invocation interpreter.Invocation,
-	handler AccountContractAdditionAndNamesHandler,
+	context interpreter.InvocationContext,
+	arguments []interpreter.Value,
+	argumentTypes []sema.Type,
 	addressValue interpreter.AddressValue,
+	locationRange interpreter.LocationRange,
+	handler AccountContractAdditionAndNamesHandler,
 	isUpdate bool,
 ) interpreter.Value {
 
-	locationRange := invocation.LocationRange
-
 	const requiredArgumentCount = 2
 
-	nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
+	nameValue, ok := arguments[0].(*interpreter.StringValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	newCodeValue, ok := invocation.Arguments[1].(*interpreter.ArrayValue)
+	newCodeValue, ok := arguments[1].(*interpreter.ArrayValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	constructorArguments := invocation.Arguments[requiredArgumentCount:]
-	constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
+	constructorArguments := arguments[requiredArgumentCount:]
+	constructorArgumentTypes := argumentTypes[requiredArgumentCount:]
 
-	newCode, err := interpreter.ByteArrayValueToByteSlice(invocation.InvocationContext, newCodeValue, locationRange)
+	newCode, err := interpreter.ByteArrayValueToByteSlice(context, newCodeValue, locationRange)
 	if err != nil {
 		panic(errors.NewDefaultUserError("add requires the second argument to be an array"))
 	}
@@ -2092,7 +2151,7 @@ func changeAccountContracts(
 	}
 
 	address := addressValue.ToAddress()
-	location := common.NewAddressLocation(invocation.InvocationContext, address, contractName)
+	location := common.NewAddressLocation(context, address, contractName)
 
 	existingCode, err := handler.GetAccountContractCode(location)
 	if err != nil {
@@ -2230,15 +2289,12 @@ func changeAccountContracts(
 
 	// Validate the contract update
 
-	inter := invocation.InvocationContext
-
 	if isUpdate {
 		oldCode, err := handler.GetAccountContractCode(location)
 		handleContractUpdateError(err, newCode)
 
-		memoryGauge := invocation.InvocationContext
 		oldProgram, err := parser.ParseProgram(
-			memoryGauge,
+			context,
 			oldCode,
 			parser.Config{
 				IgnoreLeadingIdentifierEnabled: true,
@@ -2296,10 +2352,10 @@ func changeAccountContracts(
 		eventType = AccountContractAddedEventType
 	}
 
-	codeHashValue := CodeToHashValue(inter, newCode)
+	codeHashValue := CodeToHashValue(context, newCode)
 
 	handler.EmitEvent(
-		inter,
+		context,
 		locationRange,
 		eventType,
 		[]interpreter.Value{
@@ -2310,16 +2366,15 @@ func changeAccountContracts(
 	)
 
 	return interpreter.NewDeployedContractValue(
-		inter,
+		context,
 		addressValue,
 		nameValue,
 		newCodeValue,
 	)
 }
 
-func newAccountContractsTryUpdateFunction(
+func newInterpreterAccountContractsTryUpdateFunction(
 	context interpreter.FunctionCreationContext,
-	functionType *sema.FunctionType,
 	handler AccountContractAdditionAndNamesHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
@@ -2327,8 +2382,10 @@ func newAccountContractsTryUpdateFunction(
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountContracts,
-			functionType,
+			sema.Account_ContractsTypeTryUpdateFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) (deploymentResult interpreter.Value) {
+				context := invocation.InvocationContext
+
 				var deployedContract interpreter.Value
 
 				defer func() {
@@ -2354,13 +2411,21 @@ func newAccountContractsTryUpdateFunction(
 					if deployedContract == nil {
 						optionalDeployedContract = interpreter.NilOptionalValue
 					} else {
-						optionalDeployedContract = interpreter.NewSomeValueNonCopying(invocation.InvocationContext, deployedContract)
+						optionalDeployedContract = interpreter.NewSomeValueNonCopying(context, deployedContract)
 					}
 
 					deploymentResult = interpreter.NewDeploymentResultValue(context, optionalDeployedContract)
 				}()
 
-				deployedContract = changeAccountContracts(invocation, handler, addressValue, true)
+				deployedContract = changeAccountContracts(
+					context,
+					invocation.Arguments,
+					invocation.ArgumentTypes,
+					addressValue,
+					invocation.LocationRange,
+					handler,
+					true,
+				)
 				return
 			},
 		)
@@ -2616,7 +2681,7 @@ type AccountContractRemovalHandler interface {
 	RecordContractRemoval(location common.AddressLocation)
 }
 
-func newAccountContractsRemoveFunction(
+func newInterpreterAccountContractsRemoveFunction(
 	context interpreter.FunctionCreationContext,
 	handler AccountContractRemovalHandler,
 	addressValue interpreter.AddressValue,
