@@ -34,6 +34,7 @@ import (
 )
 
 type compiledProgram struct {
+	location             common.Location
 	program              *bbq.InstructionProgram
 	desugaredElaboration *compiler.DesugaredElaboration
 }
@@ -50,8 +51,6 @@ type vmEnvironment struct {
 
 	checkingEnvironment *CheckingEnvironment
 
-	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
-
 	config         Config
 	vmConfig       *vm.Config
 	compilerConfig *compiler.Config
@@ -60,6 +59,8 @@ type vmEnvironment struct {
 	defaultVMBuiltinGlobals       *activations.Activation[vm.Variable]
 
 	*stdlib.SimpleContractAdditionTracker
+
+	deployedContractProgram *compiledProgram
 }
 
 var _ Environment = &vmEnvironment{}
@@ -307,13 +308,24 @@ func (e *vmEnvironment) LoadContractValue(
 	contract *interpreter.CompositeValue,
 	err error,
 ) {
-	e.deployedContractConstructorInvocation = &invocation
+	compiledProgram := e.compileProgram(
+		program,
+		location,
+	)
+
+	// Temporarily hold on to the compiled program while initializing the contract,
+	// so that type loading in loadType is able to load types for the contract program.
+
+	e.deployedContractProgram = compiledProgram
 	defer func() {
-		e.deployedContractConstructorInvocation = nil
+		e.deployedContractProgram = nil
 	}()
 
-	// TODO:
-	panic(errors.NewUnreachableError())
+	vm := e.newVM(location, compiledProgram.program)
+
+	contract, err = vm.InitializeContract(name, invocation.ConstructorArguments...)
+
+	return
 }
 
 func (e *vmEnvironment) newAccountValue(
@@ -374,14 +386,23 @@ func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.Ty
 		return stdlib.FlowEventTypes[typeID]
 	}
 
-	elaboration, err := e.loadDesugaredElaboration(location)
-	if err != nil {
-		panic(fmt.Errorf(
-			"cannot load type %s: failed to load elaboration for location %s: %w",
-			typeID,
-			location,
-			err,
-		))
+	var elaboration *compiler.DesugaredElaboration
+
+	if e.deployedContractProgram != nil &&
+		location == e.deployedContractProgram.location {
+
+		elaboration = e.deployedContractProgram.desugaredElaboration
+	} else {
+		var err error
+		elaboration, err = e.loadDesugaredElaboration(location)
+		if err != nil {
+			panic(fmt.Errorf(
+				"cannot load type %s: failed to load elaboration for location %s: %w",
+				typeID,
+				location,
+				err,
+			))
+		}
 	}
 
 	compositeType := elaboration.CompositeType(typeID)
@@ -418,6 +439,7 @@ func (e *vmEnvironment) compileProgram(
 	)
 
 	return &compiledProgram{
+		location:             location,
 		program:              comp.Compile(),
 		desugaredElaboration: comp.DesugaredElaboration,
 	}

@@ -141,8 +141,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: contract deployment with VM
-			// UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -514,8 +513,7 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: contract deployment with VM
-			// UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -712,8 +710,7 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: contract deployment with VM
-			// UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -856,8 +853,7 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: contract deployment with VM
-			// UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -975,8 +971,7 @@ func TestRuntimeResourceDictionaryValues_Destruction(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: contract deployment with VM
-			// UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1119,8 +1114,7 @@ func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: contract deployment with VM
-			// UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1281,8 +1275,7 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: contract deployment with VM
-			// UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1422,8 +1415,7 @@ func BenchmarkRuntimeResourceDictionaryValues(b *testing.B) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: contract deployment with VM
-			// UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(b, err)

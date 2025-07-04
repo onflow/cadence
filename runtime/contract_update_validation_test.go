@@ -82,11 +82,24 @@ func newContractRemovalTransaction(contractName string) string {
 	)
 }
 
-func newContractDeploymentTransactor(t *testing.T, config Config) func(code string) error {
+func newContractDeploymentTransactor(
+	t *testing.T,
+	config Config,
+) func(
+	code string,
+	useVM bool,
+) error {
 	return newContractDeploymentTransactorWithVersion(t, config, "")
 }
 
-func newContractDeploymentTransactorWithVersion(t *testing.T, config Config, version string) func(code string) error {
+func newContractDeploymentTransactorWithVersion(
+	t *testing.T,
+	config Config,
+	version string,
+) func(
+	code string,
+	useVM bool,
+) error {
 
 	rt := NewTestRuntimeWithConfig(config)
 
@@ -123,7 +136,7 @@ func newContractDeploymentTransactorWithVersion(t *testing.T, config Config, ver
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
-	return func(code string) error {
+	return func(code string, useVM bool) error {
 		return rt.ExecuteTransaction(
 			Script{
 				Source: []byte(code),
@@ -131,6 +144,7 @@ func newContractDeploymentTransactorWithVersion(t *testing.T, config Config, ver
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     useVM,
 			},
 		)
 	}
@@ -151,20 +165,30 @@ func testDeployAndUpdateWithVersion(
 	version string,
 ) error {
 	executeTransaction := newContractDeploymentTransactorWithVersion(t, config, version)
-	err := executeTransaction(newContractAddTransaction(name, oldCode))
+	err := executeTransaction(
+		newContractAddTransaction(name, oldCode),
+		*compile,
+	)
 	require.NoError(t, err)
 
-	return executeTransaction(newContractUpdateTransaction(name, newCode))
+	return executeTransaction(
+		newContractUpdateTransaction(name, newCode),
+		*compile,
+	)
 }
 
 // testDeployAndRemove deploys a contract in one transaction,
 // then removes the contract in another transaction
 func testDeployAndRemove(t *testing.T, name string, code string, config Config) error {
 	executeTransaction := newContractDeploymentTransactor(t, config)
-	err := executeTransaction(newContractAddTransaction(name, code))
+	err := executeTransaction(
+		newContractAddTransaction(name, code),
+		*compile,
+	)
 	require.NoError(t, err)
 
-	return executeTransaction(newContractRemovalTransaction(name))
+	// TODO: add support for removing contracts in the VM
+	return executeTransaction(newContractRemovalTransaction(name), false)
 }
 
 func testWithValidators(t *testing.T, name string, testFunc func(t *testing.T, config Config)) {
@@ -618,7 +642,10 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 		executeTransaction := newContractDeploymentTransactor(t, config)
 
-		err := executeTransaction(newContractAddTransaction("TestImport", importCode))
+		err := executeTransaction(
+			newContractAddTransaction("TestImport", importCode),
+			*compile,
+		)
 		require.NoError(t, err)
 
 		const oldCode = `
@@ -655,10 +682,16 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
     	    	    }
     	    	`
 
-		err = executeTransaction(newContractAddTransaction("Test", oldCode))
+		err = executeTransaction(
+			newContractAddTransaction("Test", oldCode),
+			*compile,
+		)
 		require.NoError(t, err)
 
-		err = executeTransaction(newContractUpdateTransaction("Test", newCode))
+		err = executeTransaction(
+			newContractUpdateTransaction("Test", newCode),
+			*compile,
+		)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
@@ -739,6 +772,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -767,6 +801,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -793,6 +828,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -820,6 +856,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -903,6 +940,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -931,6 +969,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -955,6 +994,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -979,6 +1019,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -1082,6 +1123,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1110,6 +1152,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1136,6 +1179,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -1163,6 +1207,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -1761,7 +1806,10 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
     	    	`
 
 		executeTransaction := newContractDeploymentTransactor(t, config)
-		err := executeTransaction(newContractAddTransaction("TestImport", importCode))
+		err := executeTransaction(
+			newContractAddTransaction("TestImport", importCode),
+			*compile,
+		)
 		require.NoError(t, err)
 
 		const oldCode = `
@@ -1807,10 +1855,16 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
     	    	    }
     	    	`
 
-		err = executeTransaction(newContractAddTransaction("Test", oldCode))
+		err = executeTransaction(
+			newContractAddTransaction("Test", oldCode),
+			*compile,
+		)
 		require.NoError(t, err)
 
-		err = executeTransaction(newContractUpdateTransaction("Test", newCode))
+		err = executeTransaction(
+			newContractUpdateTransaction("Test", newCode),
+			*compile,
+		)
 		require.NoError(t, err)
 	})
 
@@ -2311,10 +2365,16 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 		executeTransaction := newContractDeploymentTransactor(t, config)
 
-		err := executeTransaction(newContractAddTransaction("Test", oldCode))
+		err := executeTransaction(
+			newContractAddTransaction("Test", oldCode),
+			*compile,
+		)
 		require.NoError(t, err)
 
-		err = executeTransaction(newContractUpdateTransaction("Test", updateCode1))
+		err = executeTransaction(
+			newContractUpdateTransaction("Test", updateCode1),
+			*compile,
+		)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
@@ -2333,7 +2393,10 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
     	    	    }
     	    	`
 
-		err = executeTransaction(newContractUpdateTransaction("Test", updateCode2))
+		err = executeTransaction(
+			newContractUpdateTransaction("Test", updateCode2),
+			*compile,
+		)
 		RequireError(t, err)
 
 		cause = getSingleContractUpdateErrorCause(t, err, "Test")
@@ -2911,6 +2974,7 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3017,6 +3081,8 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					// TODO: fix caching deployment/update in VM environment
+					//UseVM: *compile,
 				},
 			)
 		}
@@ -3673,6 +3739,7 @@ func TestRuntimeContractUpdateErrorsInOldProgram(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 

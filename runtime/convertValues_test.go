@@ -2103,6 +2103,7 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.TransactionLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.Error(t, err)
@@ -2184,6 +2185,7 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.TransactionLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.Error(t, err)

@@ -740,8 +740,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  transactionLocation(),
-					// TODO: contract deployment with VM
-					// UseVM:     *compile,
+					UseVM:     *compile,
 				},
 			)
 

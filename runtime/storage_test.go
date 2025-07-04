@@ -361,8 +361,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: contract deployment with VM
-			// UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -585,8 +584,7 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: contract deployment with VM
-			// UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -596,13 +594,12 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 			Source: DeploymentTransaction(
 				"TopShotShardedCollection",
 				[]byte(realTopShotShardedCollectionContract),
-				// TODO: contract deployment with VM
-				// UseVM:     *compile,
 			),
 		},
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -617,8 +614,7 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: contract deployment with VM
-			// UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -689,8 +685,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: contract deployment with VM
-			// UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -724,6 +719,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -756,6 +752,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -806,6 +803,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -952,8 +950,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: contract deployment with VM
-			// UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -981,6 +978,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1012,6 +1010,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -1062,6 +1061,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1308,6 +1308,7 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1407,8 +1408,7 @@ func TestRuntimeStorageReferenceDowncast(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: contract deployment with VM
-			// UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1736,8 +1736,8 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: contract deployment with VM
-			// UseVM:     *compile,
+			// TODO: requires support for resource owner changes in VM
+			//UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -2136,8 +2136,7 @@ transaction {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: contract deployment with VM
-			// UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -2273,8 +2272,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: contract deployment with VM
-				// UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2401,8 +2399,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: contract deployment with VM
-				// UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2537,8 +2534,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: contract deployment with VM
-				// UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2663,8 +2659,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: contract deployment with VM
-				// UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2788,8 +2783,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: contract deployment with VM
-				// UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2967,8 +2961,7 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: contract deployment with VM
-			//UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -2992,6 +2985,7 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -3134,8 +3128,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: contract deployment with VM
-			// UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -3275,8 +3268,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: contract deployment with VM
-				// UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3405,8 +3397,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: contract deployment with VM
-				// UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3545,8 +3536,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: contract deployment with VM
-				// UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3683,8 +3673,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: contract deployment with VM
-				// UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3851,8 +3840,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: contract deployment with VM
-				// UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -3866,8 +3854,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: contract deployment with VM
-				// UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4061,8 +4048,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: contract deployment with VM
-				// UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4076,8 +4062,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: contract deployment with VM
-				// UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -4277,8 +4262,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
-					// TODO: contract deployment with VM
-					// UseVM:     *compile,
+					UseVM:     *compile,
 				},
 			)
 			require.NoError(t, err)
@@ -4292,8 +4276,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
-					// TODO: contract deployment with VM
-					// UseVM:     *compile,
+					UseVM:     *compile,
 				},
 			)
 			require.NoError(t, err)
@@ -4585,8 +4568,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: contract deployment with VM
-				// UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -5697,8 +5679,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  common.TransactionLocation{},
-					// TODO: contract deployment with VM
-					// UseVM:     *compile,
+					UseVM:     *compile,
 				},
 			)
 			require.NoError(t, err)
@@ -5969,8 +5950,7 @@ func TestRuntimeTypeOrderInsignificance(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
-					// TODO: contract deployment with VM
-					// UseVM:     *compile,
+					UseVM:     *compile,
 				},
 			)
 			require.NoError(t, err)
@@ -6043,8 +6023,7 @@ func TestRuntimeTypeOrderInsignificance(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
-					// TODO: contract deployment with VM
-					// UseVM:     *compile,
+					UseVM:     *compile,
 				},
 			)
 			require.NoError(t, err)
@@ -6113,8 +6092,7 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: contract deployment with VM
-				// UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -6279,8 +6257,7 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: contract deployment with VM
-				// UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -6395,8 +6372,7 @@ func TestRuntimeStorageReferenceAccess(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: contract deployment with VM
-			// UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
