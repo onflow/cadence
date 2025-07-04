@@ -2688,92 +2688,145 @@ func newInterpreterAccountContractsRemoveFunction(
 ) interpreter.BoundFunctionGenerator {
 	return func(accountContracts interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 
-		// Converted addresses can be cached and don't have to be recomputed on each function invocation
-		address := addressValue.ToAddress()
-
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountContracts,
 			sema.Account_ContractsTypeRemoveFunctionType,
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
-				inter := invocation.InvocationContext
+				context := invocation.InvocationContext
+				locationRange := invocation.LocationRange
+
 				nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				name := nameValue.Str
-				location := common.NewAddressLocation(invocation.InvocationContext, address, name)
 
-				// Get the current code
-
-				code, err := handler.GetAccountContractCode(location)
-				if err != nil {
-					panic(err)
-				}
-
-				// Only remove the contract code, remove the contract value, and emit an event,
-				// if there is currently code deployed for the given contract name
-
-				if len(code) > 0 {
-					locationRange := invocation.LocationRange
-
-					// NOTE: *DO NOT* call setProgram – the program removal
-					// should not be effective during the execution, only after
-
-					existingProgram, err := parser.ParseProgram(inter, code, parser.Config{})
-
-					// If the existing code is not parsable (i.e: `err != nil`),
-					// that shouldn't be a reason to fail the contract removal.
-					// Therefore, validate only if the code is a valid one.
-					if err == nil && containsEnumsInProgram(existingProgram) {
-						panic(&ContractRemovalError{
-							Name:          name,
-							LocationRange: locationRange,
-						})
-					}
-
-					err = handler.RemoveAccountContractCode(location)
-					if err != nil {
-						panic(err)
-					}
-
-					// NOTE: the contract recording function delays the write
-					// until the end of the execution of the program
-
-					handler.RecordContractRemoval(location)
-
-					codeHashValue := CodeToHashValue(inter, code)
-
-					handler.EmitEvent(
-						inter,
-						locationRange,
-						AccountContractRemovedEventType,
-						[]interpreter.Value{
-							addressValue,
-							codeHashValue,
-							nameValue,
-						},
-					)
-
-					return interpreter.NewSomeValueNonCopying(
-						inter,
-						interpreter.NewDeployedContractValue(
-							inter,
-							addressValue,
-							nameValue,
-							interpreter.ByteSliceToByteArrayValue(
-								inter,
-								code,
-							),
-						),
-					)
-				} else {
-					return interpreter.Nil
-				}
+				return removeContract(
+					context,
+					addressValue,
+					nameValue,
+					handler,
+					locationRange,
+				)
 			},
 		)
 	}
+}
+
+func newVMAccountContractsRemoveFunction(
+	handler AccountContractRemovalHandler,
+) VMFunction {
+	return VMFunction{
+		BaseType: sema.Account_ContractsType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_ContractsTypeRemoveFunctionName,
+			sema.Account_ContractsTypeRemoveFunctionType,
+			func(context *vm.Context, _ []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
+				var receiver interpreter.Value
+
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+
+				// Get address field from the receiver
+				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver)
+
+				nameValue, ok := args[0].(*interpreter.StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return removeContract(
+					context,
+					accountAddress,
+					nameValue,
+					handler,
+					interpreter.EmptyLocationRange,
+				)
+			},
+		),
+	}
+}
+
+func removeContract(
+	context interpreter.InvocationContext,
+	addressValue interpreter.AddressValue,
+	nameValue *interpreter.StringValue,
+	handler AccountContractRemovalHandler,
+	locationRange interpreter.LocationRange,
+) interpreter.Value {
+	name := nameValue.Str
+
+	location := common.NewAddressLocation(
+		context,
+		addressValue.ToAddress(),
+		name,
+	)
+
+	// Get the current code
+
+	code, err := handler.GetAccountContractCode(location)
+	if err != nil {
+		panic(err)
+	}
+
+	// Only remove the contract code, remove the contract value, and emit an event,
+	// if there is currently code deployed for the given contract name
+
+	if len(code) == 0 {
+		return interpreter.Nil
+	}
+
+	// NOTE: *DO NOT* call setProgram – the program removal
+	// should not be effective during the execution, only after
+
+	existingProgram, err := parser.ParseProgram(context, code, parser.Config{})
+
+	// If the existing code is not parsable (i.e: `err != nil`),
+	// that shouldn't be a reason to fail the contract removal.
+	// Therefore, validate only if the code is a valid one.
+	if err == nil && containsEnumsInProgram(existingProgram) {
+		panic(&ContractRemovalError{
+			Name:          name,
+			LocationRange: locationRange,
+		})
+	}
+
+	err = handler.RemoveAccountContractCode(location)
+	if err != nil {
+		panic(err)
+	}
+
+	// NOTE: the contract recording function delays the write
+	// until the end of the execution of the program
+
+	handler.RecordContractRemoval(location)
+
+	codeHashValue := CodeToHashValue(context, code)
+
+	handler.EmitEvent(
+		context,
+		locationRange,
+		AccountContractRemovedEventType,
+		[]interpreter.Value{
+			addressValue,
+			codeHashValue,
+			nameValue,
+		},
+	)
+
+	return interpreter.NewSomeValueNonCopying(
+		context,
+		interpreter.NewDeployedContractValue(
+			context,
+			addressValue,
+			nameValue,
+			interpreter.ByteSliceToByteArrayValue(
+				context,
+				code,
+			),
+		),
+	)
 }
 
 // ContractRemovalError

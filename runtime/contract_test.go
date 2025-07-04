@@ -388,8 +388,7 @@ func TestRuntimeContract(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
-					// TODO: requires support for contract removal in VM
-					//UseVM: *compile,
+					UseVM:     *compile,
 				},
 			)
 			require.NoError(t, err)
@@ -490,8 +489,7 @@ func TestRuntimeContract(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
-					// TODO: requires support for contract removal in VM
-					//UseVM: *compile,
+					UseVM:     *compile,
 				},
 			)
 			RequireError(t, err)

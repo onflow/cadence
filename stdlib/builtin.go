@@ -104,7 +104,8 @@ func VMFunctions(handler StandardLibraryHandler) []VMFunction {
 
 		newVMAccountContractsChangeFunction(handler, true),
 		newVMAccountContractsChangeFunction(handler, false),
-		// TODO: tryUpdate, remove
+		// TODO: tryUpdate
+		newVMAccountContractsRemoveFunction(handler),
 
 		NewVMAccountStorageCapabilitiesGetControllersFunction(handler),
 		NewVMAccountStorageCapabilitiesGetControllerFunction(handler),
