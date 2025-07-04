@@ -2432,6 +2432,77 @@ func newInterpreterAccountContractsTryUpdateFunction(
 	}
 }
 
+func newVMAccountContractsTryUpdateFunction(
+	handler AccountContractAdditionAndNamesHandler,
+) VMFunction {
+
+	return VMFunction{
+		BaseType: sema.Account_ContractsType,
+		FunctionValue: vm.NewNativeFunctionValue(
+			sema.Account_ContractsTypeTryUpdateFunctionName,
+			sema.Account_ContractsTypeTryUpdateFunctionType,
+			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) (deploymentResult vm.Value) {
+
+				var receiver interpreter.Value
+
+				// arg[0] is the receiver. Actual arguments starts from 1.
+				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+
+				address := vm.GetAccountTypePrivateAddressValue(receiver)
+
+				var deployedContract interpreter.Value
+
+				defer func() {
+					if r := recover(); r != nil {
+						rootError := r
+						for {
+							switch err := r.(type) {
+							case errors.UserError, errors.ExternalError:
+								// Error is ignored for now.
+								// Simply return with a `nil` deployed-contract
+							case xerrors.Wrapper:
+								r = err.Unwrap()
+								continue
+							default:
+								panic(rootError)
+							}
+
+							break
+						}
+					}
+
+					var optionalDeployedContract interpreter.OptionalValue
+					if deployedContract == nil {
+						optionalDeployedContract = interpreter.NilOptionalValue
+					} else {
+						optionalDeployedContract = interpreter.NewSomeValueNonCopying(context, deployedContract)
+					}
+
+					deploymentResult = interpreter.NewDeploymentResultValue(context, optionalDeployedContract)
+				}()
+
+				argumentTypes := make([]sema.Type, len(args))
+				// TODO: optimize
+				for i, arg := range args {
+					staticType := arg.StaticType(context)
+					argumentTypes[i] = interpreter.MustConvertStaticToSemaType(staticType, context)
+				}
+
+				deployedContract = changeAccountContracts(
+					context,
+					args,
+					argumentTypes,
+					address,
+					interpreter.EmptyLocationRange,
+					handler,
+					true,
+				)
+				return
+			},
+		),
+	}
+}
+
 // InvalidContractDeploymentError
 type InvalidContractDeploymentError struct {
 	Err error

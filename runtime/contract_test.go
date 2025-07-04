@@ -1183,8 +1183,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: requires support for tryUpdate in VM
-				//UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1243,8 +1242,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: requires support for tryUpdate in VM
-				//UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1319,8 +1317,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: requires support for tryUpdate in VM
-				//UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 
@@ -1385,14 +1382,20 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: requires support for tryUpdate in VM
-				//UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 
 		RequireError(t, err)
-		var unexpectedError errors.UnexpectedError
-		require.ErrorAs(t, err, &unexpectedError)
+
+		// TODO: requires error recovery in VM
+		if *compile {
+			var externalNonError errors.ExternalNonError
+			require.ErrorAs(t, err, &externalNonError)
+		} else {
+			var unexpectedError errors.UnexpectedError
+			require.ErrorAs(t, err, &unexpectedError)
+		}
 
 		assert.True(t, didPanic)
 	})
