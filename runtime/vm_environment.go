@@ -385,6 +385,12 @@ func (e *vmEnvironment) loadProgram(location common.Location) (*Program, error) 
 }
 
 func (e *vmEnvironment) loadDesugaredElaboration(location common.Location) (*compiler.DesugaredElaboration, error) {
+	if e.deployedContractProgram != nil &&
+		location == e.deployedContractProgram.location {
+
+		return e.deployedContractProgram.desugaredElaboration, nil
+	}
+
 	program, err := e.loadProgram(location)
 	if err != nil {
 		return nil, err
@@ -404,23 +410,14 @@ func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.Ty
 		return stdlib.FlowEventTypes[typeID]
 	}
 
-	var elaboration *compiler.DesugaredElaboration
-
-	if e.deployedContractProgram != nil &&
-		location == e.deployedContractProgram.location {
-
-		elaboration = e.deployedContractProgram.desugaredElaboration
-	} else {
-		var err error
-		elaboration, err = e.loadDesugaredElaboration(location)
-		if err != nil {
-			panic(fmt.Errorf(
-				"cannot load type %s: failed to load elaboration for location %s: %w",
-				typeID,
-				location,
-				err,
-			))
-		}
+	elaboration, err := e.loadDesugaredElaboration(location)
+	if err != nil {
+		panic(fmt.Errorf(
+			"cannot load type %s: failed to load elaboration for location %s: %w",
+			typeID,
+			location,
+			err,
+		))
 	}
 
 	compositeType := elaboration.CompositeType(typeID)
