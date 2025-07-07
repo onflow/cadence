@@ -2180,7 +2180,9 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	isInterfaceInheritedFuncCall := c.DesugaredElaboration.IsInterfaceMethodStaticCall(expression)
 
 	// Any invocation on restricted-types must be dynamic
-	if !isInterfaceInheritedFuncCall && isDynamicMethodInvocation(memberInfo.AccessedType) {
+	if !isInterfaceInheritedFuncCall &&
+		isDynamicMethodInvocation(memberInfo.AccessedType) {
+
 		funcName = invokedExpr.Identifier.Identifier
 		if len(funcName) >= math.MaxUint16 {
 			panic(errors.NewDefaultUserError("invalid function name"))
@@ -2326,11 +2328,10 @@ func isDynamicMethodInvocation(accessedType sema.Type) bool {
 	switch typ := accessedType.(type) {
 	case *sema.ReferenceType:
 		return isDynamicMethodInvocation(typ.Type)
+	case *sema.OptionalType:
+		return isDynamicMethodInvocation(typ.Type)
 	case *sema.IntersectionType:
 		return true
-
-		// TODO: Optional type?
-
 	case *sema.InterfaceType:
 		return true
 	default:
