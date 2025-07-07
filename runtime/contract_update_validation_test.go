@@ -87,7 +87,6 @@ func newContractDeploymentTransactor(
 	config Config,
 ) func(
 	code string,
-	useVM bool,
 ) error {
 	return newContractDeploymentTransactorWithVersion(t, config, "")
 }
@@ -98,7 +97,6 @@ func newContractDeploymentTransactorWithVersion(
 	version string,
 ) func(
 	code string,
-	useVM bool,
 ) error {
 
 	rt := NewTestRuntimeWithConfig(config)
@@ -136,7 +134,7 @@ func newContractDeploymentTransactorWithVersion(
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
-	return func(code string, useVM bool) error {
+	return func(code string) error {
 		return rt.ExecuteTransaction(
 			Script{
 				Source: []byte(code),
@@ -144,7 +142,7 @@ func newContractDeploymentTransactorWithVersion(
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				UseVM:     useVM,
+				UseVM:     *compile,
 			},
 		)
 	}
@@ -165,30 +163,20 @@ func testDeployAndUpdateWithVersion(
 	version string,
 ) error {
 	executeTransaction := newContractDeploymentTransactorWithVersion(t, config, version)
-	err := executeTransaction(
-		newContractAddTransaction(name, oldCode),
-		*compile,
-	)
+	err := executeTransaction(newContractAddTransaction(name, oldCode))
 	require.NoError(t, err)
 
-	return executeTransaction(
-		newContractUpdateTransaction(name, newCode),
-		*compile,
-	)
+	return executeTransaction(newContractUpdateTransaction(name, newCode))
 }
 
 // testDeployAndRemove deploys a contract in one transaction,
 // then removes the contract in another transaction
 func testDeployAndRemove(t *testing.T, name string, code string, config Config) error {
 	executeTransaction := newContractDeploymentTransactor(t, config)
-	err := executeTransaction(
-		newContractAddTransaction(name, code),
-		*compile,
-	)
+	err := executeTransaction(newContractAddTransaction(name, code))
 	require.NoError(t, err)
 
-	// TODO: add support for removing contracts in the VM
-	return executeTransaction(newContractRemovalTransaction(name), false)
+	return executeTransaction(newContractRemovalTransaction(name))
 }
 
 func testWithValidators(t *testing.T, name string, testFunc func(t *testing.T, config Config)) {
@@ -642,10 +630,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 		executeTransaction := newContractDeploymentTransactor(t, config)
 
-		err := executeTransaction(
-			newContractAddTransaction("TestImport", importCode),
-			*compile,
-		)
+		err := executeTransaction(newContractAddTransaction("TestImport", importCode))
 		require.NoError(t, err)
 
 		const oldCode = `
@@ -682,16 +667,10 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
     	    	    }
     	    	`
 
-		err = executeTransaction(
-			newContractAddTransaction("Test", oldCode),
-			*compile,
-		)
+		err = executeTransaction(newContractAddTransaction("Test", oldCode))
 		require.NoError(t, err)
 
-		err = executeTransaction(
-			newContractUpdateTransaction("Test", newCode),
-			*compile,
-		)
+		err = executeTransaction(newContractUpdateTransaction("Test", newCode))
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
@@ -1806,10 +1785,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
     	    	`
 
 		executeTransaction := newContractDeploymentTransactor(t, config)
-		err := executeTransaction(
-			newContractAddTransaction("TestImport", importCode),
-			*compile,
-		)
+		err := executeTransaction(newContractAddTransaction("TestImport", importCode))
 		require.NoError(t, err)
 
 		const oldCode = `
@@ -1855,16 +1831,10 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
     	    	    }
     	    	`
 
-		err = executeTransaction(
-			newContractAddTransaction("Test", oldCode),
-			*compile,
-		)
+		err = executeTransaction(newContractAddTransaction("Test", oldCode))
 		require.NoError(t, err)
 
-		err = executeTransaction(
-			newContractUpdateTransaction("Test", newCode),
-			*compile,
-		)
+		err = executeTransaction(newContractUpdateTransaction("Test", newCode))
 		require.NoError(t, err)
 	})
 
@@ -2365,16 +2335,10 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 		executeTransaction := newContractDeploymentTransactor(t, config)
 
-		err := executeTransaction(
-			newContractAddTransaction("Test", oldCode),
-			*compile,
-		)
+		err := executeTransaction(newContractAddTransaction("Test", oldCode))
 		require.NoError(t, err)
 
-		err = executeTransaction(
-			newContractUpdateTransaction("Test", updateCode1),
-			*compile,
-		)
+		err = executeTransaction(newContractUpdateTransaction("Test", updateCode1))
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
@@ -2393,10 +2357,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
     	    	    }
     	    	`
 
-		err = executeTransaction(
-			newContractUpdateTransaction("Test", updateCode2),
-			*compile,
-		)
+		err = executeTransaction(newContractUpdateTransaction("Test", updateCode2))
 		RequireError(t, err)
 
 		cause = getSingleContractUpdateErrorCause(t, err, "Test")
