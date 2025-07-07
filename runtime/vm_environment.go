@@ -64,7 +64,7 @@ type vmEnvironment struct {
 
 	*stdlib.SimpleContractAdditionTracker
 
-	deployedContractProgram *compiledProgram
+	deployedContractProgram *Program
 }
 
 var _ Environment = &vmEnvironment{}
@@ -333,7 +333,10 @@ func (e *vmEnvironment) LoadContractValue(
 	// Temporarily hold on to the compiled program while initializing the contract,
 	// so that type loading in loadType is able to load types for the contract program.
 
-	e.deployedContractProgram = compiledProgram
+	e.deployedContractProgram = &Program{
+		interpreterProgram: program,
+		compiledProgram:    compiledProgram,
+	}
 	defer func() {
 		e.deployedContractProgram = nil
 	}()
@@ -362,6 +365,13 @@ func (e *vmEnvironment) ProgramLog(message string, _ interpreter.LocationRange) 
 }
 
 func (e *vmEnvironment) loadProgram(location common.Location) (*Program, error) {
+
+	if e.deployedContractProgram != nil &&
+		location == e.deployedContractProgram.compiledProgram.location {
+
+		return e.deployedContractProgram, nil
+	}
+
 	const getAndSetProgram = true
 	program, err := e.checkingEnvironment.GetProgram(
 		location,
@@ -385,12 +395,6 @@ func (e *vmEnvironment) loadProgram(location common.Location) (*Program, error) 
 }
 
 func (e *vmEnvironment) loadDesugaredElaboration(location common.Location) (*compiler.DesugaredElaboration, error) {
-	if e.deployedContractProgram != nil &&
-		location == e.deployedContractProgram.location {
-
-		return e.deployedContractProgram.desugaredElaboration, nil
-	}
-
 	program, err := e.loadProgram(location)
 	if err != nil {
 		return nil, err
