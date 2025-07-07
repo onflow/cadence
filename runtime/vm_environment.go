@@ -27,7 +27,6 @@ import (
 	"github.com/onflow/cadence/bbq/compiler"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
@@ -57,6 +56,11 @@ type vmEnvironment struct {
 
 	defaultCompilerBuiltinGlobals *activations.Activation[compiler.GlobalImport]
 	defaultVMBuiltinGlobals       *activations.Activation[vm.Variable]
+
+	compilerBuiltinGlobalsByLocation map[common.Location]*activations.Activation[compiler.GlobalImport]
+	vmBuiltinGlobalsByLocation       map[common.Location]*activations.Activation[vm.Variable]
+
+	allDeclaredTypes map[common.TypeID]sema.Type
 
 	*stdlib.SimpleContractAdditionTracker
 
@@ -110,6 +114,9 @@ func newVMEnvironment(config Config) *vmEnvironment {
 
 func NewBaseVMEnvironment(config Config) *vmEnvironment {
 	env := newVMEnvironment(config)
+	for _, typeDeclaration := range stdlib.DefaultStandardLibraryTypes {
+		env.DeclareType(typeDeclaration, nil)
+	}
 	for _, valueDeclaration := range stdlib.VMDefaultStandardLibraryValues(env) {
 		env.DeclareValue(valueDeclaration, nil)
 	}
@@ -118,6 +125,9 @@ func NewBaseVMEnvironment(config Config) *vmEnvironment {
 
 func NewScriptVMEnvironment(config Config) Environment {
 	env := newVMEnvironment(config)
+	for _, typeDeclaration := range stdlib.DefaultStandardLibraryTypes {
+		env.DeclareType(typeDeclaration, nil)
+	}
 	for _, valueDeclaration := range stdlib.VMDefaultScriptStandardLibraryValues(env) {
 		env.DeclareValue(valueDeclaration, nil)
 	}
@@ -206,14 +216,13 @@ func (e *vmEnvironment) Configure(
 func (e *vmEnvironment) DeclareValue(valueDeclaration stdlib.StandardLibraryValue, location common.Location) {
 	e.checkingEnvironment.declareValue(valueDeclaration, location)
 
-	// TODO: add support for non-nil location
-	if location != nil {
-		panic(errors.NewUnreachableError())
-	}
+	e.declareCompilerValue(valueDeclaration, location)
 
-	// Define the value in the compiler builtin globals
+	e.declareVMValue(valueDeclaration, location)
+}
 
-	compilerBuiltinGlobals := e.defaultCompilerBuiltinGlobals
+func (e *vmEnvironment) declareCompilerValue(valueDeclaration stdlib.StandardLibraryValue, location common.Location) {
+	compilerBuiltinGlobals := e.getOrCreateCompilerBuiltinGlobals(location)
 
 	name := valueDeclaration.Name
 
@@ -223,20 +232,28 @@ func (e *vmEnvironment) DeclareValue(valueDeclaration stdlib.StandardLibraryValu
 			Name: name,
 		},
 	)
+}
 
-	// Define the value in the VM builtin globals
+func (e *vmEnvironment) declareVMValue(valueDeclaration stdlib.StandardLibraryValue, location common.Location) {
+	vmBuiltinGlobals := e.getOrCreateVMBuiltinGlobals(location)
 
 	variable := interpreter.NewVariableWithValue(
 		nil,
 		valueDeclaration.Value,
 	)
 
-	vmBuiltinGlobals := e.defaultVMBuiltinGlobals
-	vmBuiltinGlobals.Set(name, variable)
-}
+	vmBuiltinGlobals.Set(
+		valueDeclaration.Name,
+		variable,
+	)
 
+}
 func (e *vmEnvironment) DeclareType(typeDeclaration stdlib.StandardLibraryType, location common.Location) {
 	e.checkingEnvironment.declareType(typeDeclaration, location)
+	if e.allDeclaredTypes == nil {
+		e.allDeclaredTypes = map[common.TypeID]sema.Type{}
+	}
+	e.allDeclaredTypes[typeDeclaration.Type.ID()] = typeDeclaration.Type
 }
 
 func (e *vmEnvironment) CommitStorageTemporarily(context interpreter.ValueTransferContext) error {
@@ -377,9 +394,10 @@ func (e *vmEnvironment) loadDesugaredElaboration(location common.Location) (*com
 }
 
 // TODO: Maybe split this to four separate methods like in the interpreter.
-func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-	if location == nil {
-		return stdlib.StandardLibraryTypes[typeID]
+func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.TypeID) sema.Type {
+	ty := e.allDeclaredTypes[typeID]
+	if ty != nil {
+		return ty
 	}
 
 	if _, ok := location.(stdlib.FlowLocation); ok {
@@ -473,12 +491,64 @@ func (e *vmEnvironment) newVM(
 	)
 }
 
-func (e *vmEnvironment) vmBuiltinGlobals() *activations.Activation[vm.Variable] {
-	// TODO: add support for per-location VM builtin globals
-	return e.defaultVMBuiltinGlobals
+func (e *vmEnvironment) getOrCreateCompilerBuiltinGlobals(
+	location common.Location,
+) *activations.Activation[compiler.GlobalImport] {
+	defaultBaseActivation := e.defaultCompilerBuiltinGlobals
+	if location == nil {
+		return defaultBaseActivation
+	}
+
+	globals := e.compilerBuiltinGlobalsByLocation[location]
+	if globals == nil {
+		globals = activations.NewActivation(nil, defaultBaseActivation)
+		if e.compilerBuiltinGlobalsByLocation == nil {
+			e.compilerBuiltinGlobalsByLocation = map[common.Location]*activations.Activation[compiler.GlobalImport]{}
+		}
+		e.compilerBuiltinGlobalsByLocation[location] = globals
+	}
+	return globals
 }
 
-func (e *vmEnvironment) compilerBuiltinGlobals() *activations.Activation[compiler.GlobalImport] {
-	// TODO: add support for per-location compiler builtin globals
-	return e.defaultCompilerBuiltinGlobals
+func (e *vmEnvironment) compilerBuiltinGlobals(
+	location common.Location,
+) (
+	globals *activations.Activation[compiler.GlobalImport],
+) {
+	globals = e.compilerBuiltinGlobalsByLocation[location]
+	if globals == nil {
+		globals = e.defaultCompilerBuiltinGlobals
+	}
+	return
+}
+
+func (e *vmEnvironment) getOrCreateVMBuiltinGlobals(
+	location common.Location,
+) *activations.Activation[vm.Variable] {
+	defaultBaseActivation := e.defaultVMBuiltinGlobals
+	if location == nil {
+		return defaultBaseActivation
+	}
+
+	globals := e.vmBuiltinGlobalsByLocation[location]
+	if globals == nil {
+		globals = activations.NewActivation(nil, defaultBaseActivation)
+		if e.vmBuiltinGlobalsByLocation == nil {
+			e.vmBuiltinGlobalsByLocation = map[common.Location]*activations.Activation[vm.Variable]{}
+		}
+		e.vmBuiltinGlobalsByLocation[location] = globals
+	}
+	return globals
+}
+
+func (e *vmEnvironment) vmBuiltinGlobals(
+	location common.Location,
+) (
+	globals *activations.Activation[vm.Variable],
+) {
+	globals = e.vmBuiltinGlobalsByLocation[location]
+	if globals == nil {
+		globals = e.defaultVMBuiltinGlobals
+	}
+	return
 }

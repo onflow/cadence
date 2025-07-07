@@ -37,6 +37,7 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -3939,7 +3940,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 					},
 				},
 				CompilerConfig: &compiler.Config{
-					BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
+					BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
 						activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 						activation.Set(
 							stdlib.LogFunctionName,
@@ -7617,7 +7618,7 @@ func TestCompileOptionalArgument(t *testing.T) {
 		require.NoError(t, err)
 
 		config := &compiler.Config{
-			BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
+			BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
 				activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 				activation.Set(
 					stdlib.AssertFunctionName,
@@ -8087,10 +8088,10 @@ func TestCompileStringTemplate(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-			fun test() {
-				let str = "2+2=\(2+2)"
-			}
-		`)
+            fun test() {
+                let str = "2+2=\(2+2)"
+            }
+        `)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(
@@ -8145,13 +8146,13 @@ func TestCompileStringTemplate(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-			fun test() {
-				let a = "A"
-				let b = "B"
-				let c = 4
-				let str = "\(a) + \(b) = \(c)"
-			}
-		`)
+            fun test() {
+                let a = "A"
+                let b = "B"
+                let c = 4
+                let str = "\(a) + \(b) = \(c)"
+            }
+        `)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(
@@ -8234,7 +8235,7 @@ func TestForStatementCapturing(t *testing.T) {
 	t.Parallel()
 
 	checker, err := ParseAndCheck(t, `
-	    fun test() {
+        fun test() {
            for i, x in [1, 2, 3] {
                let f = fun (): Int {
                    return x + i
@@ -8572,13 +8573,13 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-        fun test() {
-            fun foo(x: Int): Int {
-                pre {x > 0}
-                return 5
+            fun test() {
+                fun foo(x: Int): Int {
+                    pre {x > 0}
+                    return 5
+                }
             }
-        }
-    `)
+        `)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(
@@ -8655,13 +8656,13 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-        fun test() {
-            fun foo(x: Int): Int {
-                post {x > 0}
-                return 5
+            fun test() {
+                fun foo(x: Int): Int {
+                    post {x > 0}
+                    return 5
+                }
             }
-        }
-    `)
+        `)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(
@@ -8909,5 +8910,225 @@ func TestCompileImportEnumCase(t *testing.T) {
 			},
 		},
 		bProgram.Imports,
+	)
+}
+
+func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      struct interface SI {
+          fun answer(): Int
+      }
+
+      fun answer(_ si: {SI}?): Int? {
+          return si?.answer()
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 3)
+
+	const (
+		siIndex = iota
+		tempIndex
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: siIndex},
+			opcode.InstructionSetLocal{Local: tempIndex},
+			opcode.InstructionGetLocal{Local: tempIndex},
+			opcode.InstructionJumpIfNil{Target: 9},
+			opcode.InstructionGetLocal{Local: tempIndex},
+			opcode.InstructionUnwrap{},
+			opcode.InstructionInvokeMethodDynamic{
+				Name:     0,
+				ArgCount: 1,
+			},
+			opcode.InstructionJump{Target: 10},
+			opcode.InstructionNil{},
+			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionReturnValue{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]constant.Constant{
+			{
+				Data: []byte("answer"),
+				Kind: constant.String,
+			},
+		},
+		program.Constants,
+	)
+
+}
+
+func TestCompileInjectedContract(t *testing.T) {
+
+	t.Parallel()
+
+	cType := &sema.FunctionType{
+		Parameters: []sema.Parameter{
+			{
+				Label:          sema.ArgumentLabelNotRequired,
+				Identifier:     "n",
+				TypeAnnotation: sema.IntTypeAnnotation,
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+	}
+
+	bType := &sema.CompositeType{
+		Identifier: "B",
+		Kind:       common.CompositeKindContract,
+	}
+
+	bType.Members = sema.MembersAsMap([]*sema.Member{
+		sema.NewUnmeteredPublicFunctionMember(
+			bType,
+			"c",
+			cType,
+			"",
+		),
+		sema.NewUnmeteredPublicConstantFieldMember(
+			bType,
+			"d",
+			sema.IntType,
+			"",
+		),
+	})
+
+	bStaticType := interpreter.ConvertSemaCompositeTypeToStaticCompositeType(nil, bType)
+
+	bValue := interpreter.NewSimpleCompositeValue(
+		nil,
+		bType.ID(),
+		bStaticType,
+		[]string{"d"},
+		map[string]interpreter.Value{
+			"d": interpreter.NewUnmeteredIntValueFromInt64(1),
+		},
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.StandardLibraryValue{
+		Name:  bType.Identifier,
+		Type:  bType,
+		Value: bValue,
+		Kind:  common.DeclarationKindContract,
+	})
+
+	checker, err := ParseAndCheckWithOptions(t,
+		`
+          contract A {
+              fun test(): Int {
+                  return B.c(B.d)
+              }
+          }
+        `,
+		ParseAndCheckOptions{
+			Location: TestLocation,
+			Config: &sema.Config{
+				BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+					assert.Equal(t, TestLocation, location)
+					return baseValueActivation
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	config := &compiler.Config{
+		BuiltinGlobalsProvider: func(location common.Location) *activations.Activation[compiler.GlobalImport] {
+			assert.Equal(t, TestLocation, location)
+			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+			activation.Set(
+				"B",
+				compiler.GlobalImport{
+					Name: "B",
+				},
+			)
+			activation.Set(
+				"B.c",
+				compiler.GlobalImport{
+					Name: "B.c",
+				},
+			)
+			return activation
+		},
+	}
+
+	comp := compiler.NewInstructionCompilerWithConfig(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+		config,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 4)
+
+	aTestFunction := functions[3]
+
+	require.Equal(t, aTestFunction.Name, "A.test")
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// return B.c(B.d)
+			opcode.InstructionStatement{},
+			// B.c(...)
+			opcode.InstructionGetGlobal{Global: 5},
+			opcode.InstructionGetMethod{Method: 6},
+			// B.d
+			opcode.InstructionGetGlobal{Global: 5},
+			opcode.InstructionGetField{
+				FieldName:    0,
+				AccessedType: 5,
+			},
+			opcode.InstructionTransferAndConvert{Type: 6},
+			opcode.InstructionInvokeMethodStatic{ArgCount: 1},
+			opcode.InstructionTransferAndConvert{Type: 6},
+			// return
+			opcode.InstructionReturnValue{},
+		},
+		aTestFunction.Code,
+	)
+
+	assert.Equal(t,
+		[]constant.Constant{
+			{
+				Data: []byte("d"),
+				Kind: constant.String,
+			},
+		},
+		program.Constants,
+	)
+
+	assert.Equal(t,
+		[]bbq.Import{
+			{
+				Name: "B",
+			},
+			{
+				Name: "B.c",
+			},
+		},
+		program.Imports,
 	)
 }

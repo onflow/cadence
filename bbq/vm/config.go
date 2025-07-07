@@ -29,11 +29,13 @@ import (
 // It does not hold data specific to a single execution. i.e: No state is maintained.
 type Config struct {
 	Tracer
-	storage                interpreter.Storage
-	ImportHandler          commons.ImportHandler
-	ContractValueHandler   ContractValueHandler
+	storage              interpreter.Storage
+	ImportHandler        commons.ImportHandler
+	ContractValueHandler ContractValueHandler
+	// BuiltinGlobalsProvider provides the built-in globals for a given location.
+	// NOTE: all global must be defined for location nil!
 	BuiltinGlobalsProvider BuiltinGlobalsProvider
-	TypeLoader             func(location common.Location, typeID interpreter.TypeID) sema.ContainedType
+	TypeLoader             func(location common.Location, typeID interpreter.TypeID) sema.Type
 
 	MemoryGauge      common.MemoryGauge
 	ComputationGauge common.ComputationGauge

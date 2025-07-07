@@ -383,7 +383,7 @@ func CompileAndInvoke(
 	)
 }
 
-func CompilerDefaultBuiltinGlobalsWithDefaultsAndLog() *activations.Activation[compiler.GlobalImport] {
+func CompilerDefaultBuiltinGlobalsWithDefaultsAndLog(_ common.Location) *activations.Activation[compiler.GlobalImport] {
 	activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 
 	activation.Set(
@@ -396,7 +396,7 @@ func CompilerDefaultBuiltinGlobalsWithDefaultsAndLog() *activations.Activation[c
 	return activation
 }
 
-func CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog() *activations.Activation[compiler.GlobalImport] {
+func CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog(_ common.Location) *activations.Activation[compiler.GlobalImport] {
 	activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 
 	activation.Set(
@@ -409,7 +409,7 @@ func CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog() *activations.Act
 	return activation
 }
 
-func VMBuiltinGlobalsProviderWithDefaultsAndPanic() *activations.Activation[vm.Variable] {
+func VMBuiltinGlobalsProviderWithDefaultsAndPanic(_ common.Location) *activations.Activation[vm.Variable] {
 	activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 	panicFunctionVariable := &interpreter.SimpleVariable{}
@@ -445,8 +445,8 @@ func NewVMBuiltinGlobalsProviderWithDefaultsPanicAndLog(logs *[]string) vm.Built
 		),
 	)
 
-	return func() *activations.Activation[vm.Variable] {
-		activation := activations.NewActivation(nil, VMBuiltinGlobalsProviderWithDefaultsAndPanic())
+	return func(location common.Location) *activations.Activation[vm.Variable] {
+		activation := activations.NewActivation(nil, VMBuiltinGlobalsProviderWithDefaultsAndPanic(location))
 
 		logFunctionVariable := &interpreter.SimpleVariable{}
 		logFunctionVariable.InitializeWithValue(logFunction.Value)
@@ -460,8 +460,8 @@ func NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(logs *[]string)
 
 	conditionLogFunction := newConditionLogFunction(logs)
 
-	return func() *activations.Activation[vm.Variable] {
-		activation := activations.NewActivation(nil, VMBuiltinGlobalsProviderWithDefaultsAndPanic())
+	return func(location common.Location) *activations.Activation[vm.Variable] {
+		activation := activations.NewActivation(nil, VMBuiltinGlobalsProviderWithDefaultsAndPanic(location))
 
 		logFunctionVariable := &interpreter.SimpleVariable{}
 		logFunctionVariable.InitializeWithValue(conditionLogFunction.Value)
@@ -674,8 +674,8 @@ func contractValueHandler(contractName string, arguments ...vm.Value) vm.Contrac
 
 func CompiledProgramsTypeLoader(
 	programs CompiledPrograms,
-) func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-	return func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+) func(location common.Location, typeID interpreter.TypeID) sema.Type {
+	return func(location common.Location, typeID interpreter.TypeID) sema.Type {
 		program, ok := programs[location]
 		if !ok {
 			return nil
