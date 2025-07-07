@@ -9002,6 +9002,42 @@ func TestStringTemplate(t *testing.T) {
 	})
 }
 
+func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
+
+	t.Parallel()
+
+	actual, err := CompileAndInvoke(t,
+		`
+          struct interface SI {
+              fun answer(): Int
+          }
+
+          struct S: SI {
+              fun answer(): Int {
+                  return 42
+              }
+          }
+
+          fun answer(_ si: {SI}?): Int? {
+              return si?.answer()
+          }
+
+          fun test(): Int? {
+              return answer(S())
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	assert.Equal(
+		t,
+		interpreter.NewUnmeteredSomeValueNonCopying(
+			interpreter.NewUnmeteredIntValueFromInt64(42),
+		),
+		actual,
+	)
+}
+
 func TestInjectedContract(t *testing.T) {
 
 	t.Parallel()
