@@ -33,11 +33,7 @@ const (
 	TypeBoundFunctionArgumentOffset = 1
 )
 
-// BuiltInLocation is the location of built-in constructs.
-// It's always nil.
-var BuiltInLocation common.Location = nil
-
-type BuiltinGlobalsProvider func() *activations.Activation[Variable]
+type BuiltinGlobalsProvider func(location common.Location) *activations.Activation[Variable]
 
 var defaultBuiltinGlobals = activations.NewActivation[Variable](nil, nil)
 

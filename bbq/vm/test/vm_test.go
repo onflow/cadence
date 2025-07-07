@@ -547,7 +547,7 @@ func TestImport(t *testing.T) {
 		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
 			return importedProgram
 		},
-		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.Type {
 			elaboration := importedChecker.Elaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
@@ -658,7 +658,7 @@ func TestContractImport(t *testing.T) {
 			ContractValueHandler: func(*vm.Context, common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
-			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.Type {
 				elaboration := importedChecker.Elaboration
 				compositeType := elaboration.CompositeType(typeID)
 				if compositeType != nil {
@@ -720,7 +720,7 @@ func TestContractImport(t *testing.T) {
 			ContractValueHandler: func(*vm.Context, common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
-			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.Type {
 				elaboration := importedChecker.Elaboration
 				compositeType := elaboration.CompositeType(typeID)
 				if compositeType != nil {
@@ -824,7 +824,7 @@ func TestContractImport(t *testing.T) {
 				require.Equal(t, fooLocation, location)
 				return fooContractValue
 			},
-			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.Type {
 				require.Equal(t, fooLocation, location)
 
 				elaboration := fooChecker.Elaboration
@@ -974,7 +974,7 @@ func TestContractImport(t *testing.T) {
 					return nil
 				}
 			},
-			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.Type {
 
 				var elaboration *sema.Elaboration
 
@@ -1186,7 +1186,7 @@ func TestContractImport(t *testing.T) {
 					return nil
 				}
 			},
-			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.Type {
 
 				var elaboration *sema.Elaboration
 
@@ -1273,7 +1273,7 @@ func TestContractImport(t *testing.T) {
 			ContractValueHandler: func(*vm.Context, common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
-			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.Type {
 				elaboration := importedChecker.Elaboration
 				compositeType := elaboration.CompositeType(typeID)
 				if compositeType != nil {
@@ -1615,7 +1615,7 @@ func TestContractField(t *testing.T) {
 			ContractValueHandler: func(_ *vm.Context, _ common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
-			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.Type {
 				elaboration := importedChecker.Elaboration
 				compositeType := elaboration.CompositeType(typeID)
 				if compositeType != nil {
@@ -1709,7 +1709,7 @@ func TestContractField(t *testing.T) {
 			ContractValueHandler: func(_ *vm.Context, _ common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
-			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.Type {
 				elaboration := importedChecker.Elaboration
 				compositeType := elaboration.CompositeType(typeID)
 				if compositeType != nil {
@@ -1873,7 +1873,7 @@ func TestNativeFunctions(t *testing.T) {
 		require.NoError(t, err)
 
 		compConfig := &compiler.Config{
-			BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
+			BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
 				activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 				activation.Set(
 					stdlib.AssertFunctionName,
@@ -1893,7 +1893,7 @@ func TestNativeFunctions(t *testing.T) {
 		program := comp.Compile()
 
 		vmConfig := &vm.Config{
-			BuiltinGlobalsProvider: func() *activations.Activation[vm.Variable] {
+			BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[vm.Variable] {
 				activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 				variable := &interpreter.SimpleVariable{}
 				variable.InitializeWithValue(stdlib.VMAssertFunction.Value)
@@ -2430,7 +2430,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 			ContractValueHandler: func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 				return importedContractValue
 			},
-			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.Type {
 				elaboration := importedChecker.Elaboration
 				compositeType := elaboration.CompositeType(typeID)
 				if compositeType != nil {
@@ -2614,7 +2614,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 					return nil
 				}
 			},
-			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.Type {
 
 				var elaboration *sema.Elaboration
 
@@ -2707,7 +2707,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 					return nil
 				}
 			},
-			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.Type {
 				var elaboration *sema.Elaboration
 
 				switch location {
@@ -2816,7 +2816,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 					return nil
 				}
 			},
-			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.Type {
 
 				var elaboration *sema.Elaboration
 
@@ -3248,7 +3248,7 @@ func TestDefaultFunctions(t *testing.T) {
 			}
 			return contractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
 			elaboration := programs[location].DesugaredElaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
@@ -3379,7 +3379,7 @@ func TestDefaultFunctions(t *testing.T) {
 			}
 			return contractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
 			elaboration := programs[location].DesugaredElaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
@@ -3502,7 +3502,7 @@ func TestDefaultFunctions(t *testing.T) {
 			}
 			return contractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
 			elaboration := programs[location].DesugaredElaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
@@ -3873,7 +3873,7 @@ func TestFunctionPreConditions(t *testing.T) {
 			}
 			return contractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
 			elaboration := programs[location].DesugaredElaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
@@ -6086,7 +6086,7 @@ func TestContractAccount(t *testing.T) {
 		ContractValueHandler: func(*vm.Context, common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		},
-		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.Type {
 			elaboration := importedChecker.Elaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
@@ -6210,7 +6210,7 @@ func TestResourceOwner(t *testing.T) {
 		ContractValueHandler: func(*vm.Context, common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		},
-		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.Type {
 			elaboration := importedChecker.Elaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
@@ -6343,7 +6343,7 @@ func TestResourceUUID(t *testing.T) {
 		ContractValueHandler: func(*vm.Context, common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		},
-		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.Type {
 			elaboration := importedChecker.Elaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
@@ -6741,7 +6741,7 @@ func TestContractClosure(t *testing.T) {
 		ContractValueHandler: func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		},
-		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.Type {
 			elaboration := importedChecker.Elaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
@@ -6981,7 +6981,7 @@ func TestEmitInContract(t *testing.T) {
 			}
 			return contractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
 			elaboration := programs[location].DesugaredElaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
@@ -7122,7 +7122,7 @@ func TestInheritedConditions(t *testing.T) {
 			}
 			return contractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
 			elaboration := programs[location].DesugaredElaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
@@ -7281,7 +7281,7 @@ func TestInheritedConditions(t *testing.T) {
 			}
 			return contractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
 			elaboration := programs[location].DesugaredElaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
@@ -8528,7 +8528,7 @@ func TestAccountMethodOptionalArgs(t *testing.T) {
 		ContractValueHandler: func(*vm.Context, common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		},
-		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.Type {
 			elaboration := importedChecker.Elaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
@@ -8862,8 +8862,8 @@ func TestGetAuthAccount(t *testing.T) {
 		activation.DeclareValue(stdlib.NewVMGetAuthAccountFunction(nil))
 
 		compilerConfig := &compiler.Config{
-			BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
-				activation := activations.NewActivation[compiler.GlobalImport](nil, compiler.DefaultBuiltinGlobals())
+			BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
+				activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 				activation.Set(
 					stdlib.GetAuthAccountFunctionName,
 					compiler.GlobalImport{
@@ -8875,11 +8875,13 @@ func TestGetAuthAccount(t *testing.T) {
 		}
 
 		vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
-		vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[vm.Variable] {
-			activation := activations.NewActivation[vm.Variable](nil, vm.DefaultBuiltinGlobals())
+		vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
+			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+
 			variable := &interpreter.SimpleVariable{}
 			variable.InitializeWithValue(stdlib.NewVMGetAuthAccountFunction(&testAccountHandler{}).Value)
 			activation.Set(stdlib.GetAuthAccountFunctionName, variable)
+
 			return activation
 		}
 
@@ -9034,4 +9036,170 @@ func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
 		),
 		actual,
 	)
+}
+
+func TestInjectedContract(t *testing.T) {
+
+	t.Parallel()
+
+	cType := &sema.FunctionType{
+		Parameters: []sema.Parameter{
+			{
+				Label:          sema.ArgumentLabelNotRequired,
+				Identifier:     "n",
+				TypeAnnotation: sema.IntTypeAnnotation,
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+	}
+
+	bType := &sema.CompositeType{
+		Identifier: "B",
+		Kind:       common.CompositeKindContract,
+	}
+
+	bType.Members = sema.MembersAsMap([]*sema.Member{
+		sema.NewUnmeteredPublicFunctionMember(
+			bType,
+			"c",
+			cType,
+			"",
+		),
+		sema.NewUnmeteredPublicConstantFieldMember(
+			bType,
+			"d",
+			sema.IntType,
+			"",
+		),
+	})
+
+	bStaticType := interpreter.ConvertSemaCompositeTypeToStaticCompositeType(nil, bType)
+
+	bValue := interpreter.NewSimpleCompositeValue(
+		nil,
+		bType.ID(),
+		bStaticType,
+		[]string{"d"},
+		map[string]interpreter.Value{
+			"d": interpreter.NewUnmeteredIntValueFromInt64(1),
+		},
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.StandardLibraryValue{
+		Name:  bType.Identifier,
+		Type:  bType,
+		Value: bValue,
+		Kind:  common.DeclarationKindContract,
+	})
+
+	compilerConfig := &compiler.Config{
+		BuiltinGlobalsProvider: func(location common.Location) *activations.Activation[compiler.GlobalImport] {
+			assert.Equal(t, TestLocation, location)
+			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+			activation.Set(
+				"B",
+				compiler.GlobalImport{
+					Name: "B",
+				},
+			)
+			activation.Set(
+				"B.c",
+				compiler.GlobalImport{
+					Name: "B.c",
+				},
+			)
+			return activation
+		},
+	}
+
+	cValue := vm.NewNativeFunctionValue(
+		"B.c",
+		cType,
+		func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
+			var receiver interpreter.Value
+
+			// arg[0] is the receiver. Actual arguments starts from 1.
+			receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+
+			assert.Same(t, bValue, receiver)
+
+			require.Len(t, args, 1)
+			require.IsType(t, interpreter.IntValue{}, args[0])
+			arg := args[0].(interpreter.IntValue)
+
+			return arg.Plus(context, arg, interpreter.EmptyLocationRange)
+		},
+	)
+
+	vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+	vmConfig.BuiltinGlobalsProvider = func(location common.Location) *activations.Activation[vm.Variable] {
+		assert.Equal(t, TestLocation, location)
+		activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+
+		bVariable := &interpreter.SimpleVariable{}
+		bVariable.InitializeWithValue(bValue)
+		activation.Set("B", bVariable)
+
+		cVariable := &interpreter.SimpleVariable{}
+		cVariable.InitializeWithValue(cValue)
+		activation.Set("B.c", cVariable)
+
+		return activation
+	}
+
+	programs := map[common.Location]*CompiledProgram{}
+
+	compiledProgramsTypeLoader := CompiledProgramsTypeLoader(programs)
+
+	vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
+		if location == nil && typeID == "B" {
+			return bType
+		}
+
+		ty := compiledProgramsTypeLoader(location, typeID)
+		if ty != nil {
+			return ty
+		}
+
+		return nil
+	}
+
+	result, err := CompileAndInvokeWithOptions(
+		t,
+		`
+          contract A {
+              fun test(): Int {
+                  return B.c(B.d)
+              }
+          }
+
+          fun main(): Int {
+              return A.test()
+          }
+        `,
+		"main",
+		CompilerAndVMOptions{
+			ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+				CompilerConfig: compilerConfig,
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: TestLocation,
+					Config: &sema.Config{
+						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+							assert.Equal(t, TestLocation, location)
+							return baseValueActivation
+						},
+					},
+				},
+			},
+			VMConfig: vmConfig,
+			Programs: programs,
+		},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), result)
 }

@@ -93,7 +93,7 @@ func compiledFTTransfer(tb testing.TB) {
 			}
 			return imported.DesugaredElaboration, nil
 		},
-		BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
+		BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
 			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 
 			activation.Set(
@@ -223,7 +223,7 @@ func compiledFTTransfer(tb testing.TB) {
 		return contractValues[location]
 	}
 
-	vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[vm.Variable] {
+	vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
 		activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 		panicVariable := &interpreter.SimpleVariable{}
