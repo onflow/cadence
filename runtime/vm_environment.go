@@ -188,7 +188,7 @@ func (e *vmEnvironment) newCompilerConfig() *compiler.Config {
 		BuiltinGlobalsProvider: e.compilerBuiltinGlobals,
 		LocationHandler:        e.ResolveLocation,
 		ImportHandler:          e.importProgram,
-		ElaborationResolver:    e.resolveDesugaredElaboration,
+		ElaborationResolver:    e.loadDesugaredElaboration,
 	}
 }
 
@@ -458,15 +458,6 @@ func (e *vmEnvironment) compileProgram(
 		program:              comp.Compile(),
 		desugaredElaboration: comp.DesugaredElaboration,
 	}
-}
-
-func (e *vmEnvironment) resolveDesugaredElaboration(location common.Location) (*compiler.DesugaredElaboration, error) {
-	program, err := e.loadProgram(location)
-	if err != nil {
-		return nil, err
-	}
-
-	return program.compiledProgram.desugaredElaboration, nil
 }
 
 func (e *vmEnvironment) importProgram(location common.Location) *bbq.InstructionProgram {
