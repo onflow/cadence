@@ -1958,8 +1958,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: contract deployment with VM
-				// UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1981,8 +1980,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: contract deployment with VM
-				// UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2057,8 +2055,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: contract deployment with VM
-				// UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2078,8 +2075,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: contract deployment with VM
-				// UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2154,8 +2150,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: contract deployment with VM
-				// UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2177,8 +2172,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: contract deployment with VM
-				// UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2262,8 +2256,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: contract deployment with VM
-				// UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)

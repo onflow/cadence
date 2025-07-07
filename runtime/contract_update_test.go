@@ -150,6 +150,7 @@ func TestRuntimeContractUpdateWithDependencies(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -171,6 +172,7 @@ func TestRuntimeContractUpdateWithDependencies(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -188,6 +190,7 @@ func TestRuntimeContractUpdateWithDependencies(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -209,6 +212,7 @@ func TestRuntimeContractUpdateWithDependencies(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -288,6 +292,7 @@ func TestRuntimeContractUpdateWithPrecedingIdentifiers(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -392,6 +397,7 @@ func TestRuntimeContractRedeployInSameTransaction(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -462,6 +468,7 @@ func TestRuntimeNestedContractDeployment(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -527,6 +534,7 @@ func TestRuntimeNestedContractDeployment(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -602,6 +610,7 @@ func TestRuntimeNestedContractDeployment(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -661,6 +670,7 @@ func TestRuntimeContractRedeploymentInSeparateTransactions(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -676,6 +686,7 @@ func TestRuntimeContractRedeploymentInSeparateTransactions(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -788,6 +799,7 @@ func TestRuntimeContractUpdateWithOldProgramError(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)

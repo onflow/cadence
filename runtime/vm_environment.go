@@ -27,13 +27,13 @@ import (
 	"github.com/onflow/cadence/bbq/compiler"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 )
 
 type compiledProgram struct {
+	location             common.Location
 	program              *bbq.InstructionProgram
 	desugaredElaboration *compiler.DesugaredElaboration
 }
@@ -50,8 +50,6 @@ type vmEnvironment struct {
 
 	checkingEnvironment *CheckingEnvironment
 
-	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
-
 	config         Config
 	vmConfig       *vm.Config
 	compilerConfig *compiler.Config
@@ -65,6 +63,8 @@ type vmEnvironment struct {
 	allDeclaredTypes map[common.TypeID]sema.Type
 
 	*stdlib.SimpleContractAdditionTracker
+
+	deployedContractProgram *Program
 }
 
 var _ Environment = &vmEnvironment{}
@@ -188,7 +188,7 @@ func (e *vmEnvironment) newCompilerConfig() *compiler.Config {
 		BuiltinGlobalsProvider: e.compilerBuiltinGlobals,
 		LocationHandler:        e.ResolveLocation,
 		ImportHandler:          e.importProgram,
-		ElaborationResolver:    e.resolveDesugaredElaboration,
+		ElaborationResolver:    e.loadDesugaredElaboration,
 	}
 }
 
@@ -325,13 +325,27 @@ func (e *vmEnvironment) LoadContractValue(
 	contract *interpreter.CompositeValue,
 	err error,
 ) {
-	e.deployedContractConstructorInvocation = &invocation
+	compiledProgram := e.compileProgram(
+		program,
+		location,
+	)
+
+	// Temporarily hold on to the compiled program while initializing the contract,
+	// so that type loading in loadType is able to load types for the contract program.
+
+	e.deployedContractProgram = &Program{
+		interpreterProgram: program,
+		compiledProgram:    compiledProgram,
+	}
 	defer func() {
-		e.deployedContractConstructorInvocation = nil
+		e.deployedContractProgram = nil
 	}()
 
-	// TODO:
-	panic(errors.NewUnreachableError())
+	vm := e.newVM(location, compiledProgram.program)
+
+	contract, err = vm.InitializeContract(name, invocation.ConstructorArguments...)
+
+	return
 }
 
 func (e *vmEnvironment) newAccountValue(
@@ -351,6 +365,13 @@ func (e *vmEnvironment) ProgramLog(message string, _ interpreter.LocationRange) 
 }
 
 func (e *vmEnvironment) loadProgram(location common.Location) (*Program, error) {
+
+	if e.deployedContractProgram != nil &&
+		location == e.deployedContractProgram.compiledProgram.location {
+
+		return e.deployedContractProgram, nil
+	}
+
 	const getAndSetProgram = true
 	program, err := e.checkingEnvironment.GetProgram(
 		location,
@@ -437,18 +458,10 @@ func (e *vmEnvironment) compileProgram(
 	)
 
 	return &compiledProgram{
+		location:             location,
 		program:              comp.Compile(),
 		desugaredElaboration: comp.DesugaredElaboration,
 	}
-}
-
-func (e *vmEnvironment) resolveDesugaredElaboration(location common.Location) (*compiler.DesugaredElaboration, error) {
-	program, err := e.loadProgram(location)
-	if err != nil {
-		return nil, err
-	}
-
-	return program.compiledProgram.desugaredElaboration, nil
 }
 
 func (e *vmEnvironment) importProgram(location common.Location) *bbq.InstructionProgram {

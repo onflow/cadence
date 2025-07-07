@@ -174,6 +174,7 @@ func TestRuntimeCheckCyclicImportsAfterUpdate(t *testing.T) {
 				Interface:   runtimeInterface,
 				Location:    nextTransactionLocation(),
 				Environment: environment,
+				UseVM:       *compile,
 			},
 		)
 	}
@@ -291,6 +292,7 @@ func TestRuntimeCheckCyclicImportAddress(t *testing.T) {
 				Interface:   runtimeInterface,
 				Location:    nextTransactionLocation(),
 				Environment: environment,
+				UseVM:       *compile,
 			},
 		)
 	}
@@ -392,6 +394,7 @@ func TestRuntimeCheckCyclicImportToSelfDuringDeploy(t *testing.T) {
 				Interface:   runtimeInterface,
 				Location:    nextTransactionLocation(),
 				Environment: environment,
+				UseVM:       *compile,
 			},
 		)
 	}
@@ -485,6 +488,7 @@ func TestRuntimeContractImport(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
