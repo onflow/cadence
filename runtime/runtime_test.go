@@ -7498,13 +7498,14 @@ func TestRuntimeStackOverflow(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)
 
 	assertRuntimeErrorIsUserError(t, err)
 
-	var callStackLimitExceededErr CallStackLimitExceededError
+	var callStackLimitExceededErr *interpreter.CallStackLimitExceededError
 	require.ErrorAs(t, err, &callStackLimitExceededErr)
 }
 

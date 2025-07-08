@@ -2242,7 +2242,7 @@ func TestTransaction(t *testing.T) {
 		)
 
 		err := vmInstance.InvokeTransaction(nil)
-		require.Error(t, err)
+		RequireError(t, err)
 		assert.ErrorContains(t, err, "pre/post condition failed")
 
 		assert.Equal(t, []string{"2"}, logs)
@@ -2311,7 +2311,7 @@ func TestTransaction(t *testing.T) {
 		)
 
 		err := vmInstance.InvokeTransaction(nil)
-		require.Error(t, err)
+		RequireError(t, err)
 		assert.ErrorContains(t, err, "pre/post condition failed")
 
 		assert.Equal(t, []string{"2", "10"}, logs)
@@ -3621,7 +3621,7 @@ func TestFunctionPreConditions(t *testing.T) {
 			interpreter.NewUnmeteredIntValueFromInt64(3),
 		)
 
-		require.Error(t, err)
+		RequireError(t, err)
 		assert.ErrorContains(t, err, "pre/post condition failed")
 	})
 
@@ -3642,7 +3642,7 @@ func TestFunctionPreConditions(t *testing.T) {
 			interpreter.NewUnmeteredIntValueFromInt64(3),
 		)
 
-		require.Error(t, err)
+		RequireError(t, err)
 		assert.ErrorContains(t, err, "x must be zero")
 	})
 
@@ -3698,7 +3698,7 @@ func TestFunctionPreConditions(t *testing.T) {
 			interpreter.NewUnmeteredIntValueFromInt64(4),
 		)
 
-		require.Error(t, err)
+		RequireError(t, err)
 		assert.ErrorContains(t, err, "a must be larger than 10")
 	})
 
@@ -3733,7 +3733,7 @@ func TestFunctionPreConditions(t *testing.T) {
 			interpreter.NewUnmeteredIntValueFromInt64(4),
 		)
 
-		require.Error(t, err)
+		RequireError(t, err)
 		assert.ErrorContains(t, err, "a must be larger than 10")
 	})
 
@@ -3778,7 +3778,7 @@ func TestFunctionPreConditions(t *testing.T) {
 			interpreter.NewUnmeteredIntValueFromInt64(4),
 		)
 
-		require.Error(t, err)
+		RequireError(t, err)
 		assert.ErrorContains(t, err, "a must be larger than 10")
 	})
 
@@ -4073,7 +4073,7 @@ func TestFunctionPostConditions(t *testing.T) {
 			interpreter.NewUnmeteredIntValueFromInt64(3),
 		)
 
-		require.Error(t, err)
+		RequireError(t, err)
 		assert.ErrorContains(t, err, "pre/post condition failed")
 	})
 
@@ -4094,7 +4094,7 @@ func TestFunctionPostConditions(t *testing.T) {
 			interpreter.NewUnmeteredIntValueFromInt64(3),
 		)
 
-		require.Error(t, err)
+		RequireError(t, err)
 		assert.ErrorContains(t, err, "x must be zero")
 	})
 
@@ -4159,7 +4159,7 @@ func TestFunctionPostConditions(t *testing.T) {
 			interpreter.NewUnmeteredIntValueFromInt64(4),
 		)
 
-		require.Error(t, err)
+		RequireError(t, err)
 		assert.ErrorContains(t, err, "x must be 5")
 	})
 
@@ -4237,7 +4237,7 @@ func TestFunctionPostConditions(t *testing.T) {
 			interpreter.NewUnmeteredIntValueFromInt64(3),
 		)
 
-		require.Error(t, err)
+		RequireError(t, err)
 		assert.ErrorContains(t, err, "x must be zero")
 	})
 
@@ -4293,7 +4293,7 @@ func TestFunctionPostConditions(t *testing.T) {
 			interpreter.NewUnmeteredIntValueFromInt64(4),
 		)
 
-		require.Error(t, err)
+		RequireError(t, err)
 		assert.ErrorContains(t, err, "result must be larger than 10")
 	})
 
@@ -4350,7 +4350,7 @@ func TestFunctionPostConditions(t *testing.T) {
 			"main",
 		)
 
-		require.Error(t, err)
+		RequireError(t, err)
 		assert.ErrorContains(t, err, "pre/post condition failed")
 	})
 
@@ -4385,7 +4385,7 @@ func TestFunctionPostConditions(t *testing.T) {
 			interpreter.NewUnmeteredIntValueFromInt64(4),
 		)
 
-		require.Error(t, err)
+		RequireError(t, err)
 		assert.ErrorContains(t, err, "a must be larger than 10")
 	})
 }
@@ -4942,7 +4942,7 @@ func TestCasting(t *testing.T) {
 			"test",
 			interpreter.TrueValue,
 		)
-		require.Error(t, err)
+		RequireError(t, err)
 		assert.Equal(
 			t,
 			&interpreter.ForceCastTypeMismatchError{
@@ -5703,7 +5703,7 @@ func TestCompileForce(t *testing.T) {
 			"test",
 			interpreter.Nil,
 		)
-		require.Error(t, err)
+		RequireError(t, err)
 
 		var forceNilError *interpreter.ForceNilError
 		require.ErrorAs(t, err, &forceNilError)
@@ -5722,7 +5722,7 @@ func TestCompileForce(t *testing.T) {
 			"test",
 			interpreter.Nil,
 		)
-		require.Error(t, err)
+		RequireError(t, err)
 		var forceNilError *interpreter.ForceNilError
 		require.ErrorAs(t, err, &forceNilError)
 	})
@@ -9137,4 +9137,29 @@ func TestInjectedContract(t *testing.T) {
 	)
 	require.NoError(t, err)
 	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), result)
+}
+
+func TestStackDepthLimit(t *testing.T) {
+
+	t.Parallel()
+
+	vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+	vmConfig.StackDepthLimit = 10
+
+	_, err := CompileAndInvokeWithOptions(t,
+		`
+
+            fun test() {
+                test()
+            }
+        `,
+		"test",
+		CompilerAndVMOptions{
+			VMConfig: vmConfig,
+		},
+	)
+	RequireError(t, err)
+
+	var callStackLimitExceededErr *interpreter.CallStackLimitExceededError
+	require.ErrorAs(t, err, &callStackLimitExceededErr)
 }

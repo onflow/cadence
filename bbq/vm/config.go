@@ -19,6 +19,8 @@
 package vm
 
 import (
+	"math"
+
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
@@ -59,13 +61,16 @@ type Config struct {
 	AtreeStorageValidationEnabled bool
 	// AtreeValueValidationEnabled determines if the validation of atree values is enabled
 	AtreeValueValidationEnabled bool
+	// StackDepthLimit is the maximum depth of the call stack
+	StackDepthLimit uint64
 
 	debugEnabled bool
 }
 
 func NewConfig(storage interpreter.Storage) *Config {
 	return &Config{
-		storage: storage,
+		storage:         storage,
+		StackDepthLimit: math.MaxInt,
 	}
 }
 

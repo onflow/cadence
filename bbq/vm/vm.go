@@ -208,6 +208,12 @@ func fill(slice []Value, n int) []Value {
 }
 
 func (vm *VM) pushCallFrame(functionValue CompiledFunctionValue, arguments []Value) {
+	if uint64(len(vm.callstack)) == vm.context.StackDepthLimit {
+		panic(&interpreter.CallStackLimitExceededError{
+			Limit: vm.context.StackDepthLimit,
+		})
+	}
+
 	localsCount := functionValue.Function.LocalCount
 
 	vm.locals = append(vm.locals, arguments...)

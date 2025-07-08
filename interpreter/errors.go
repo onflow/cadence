@@ -1445,3 +1445,25 @@ func (e *GetCapabilityError) Error() string {
 func (e *GetCapabilityError) SetLocationRange(locationRange LocationRange) {
 	e.LocationRange = locationRange
 }
+
+// CallStackLimitExceededError
+
+type CallStackLimitExceededError struct {
+	Limit uint64
+	LocationRange
+}
+
+var _ errors.UserError = &CallStackLimitExceededError{}
+
+func (*CallStackLimitExceededError) IsUserError() {}
+
+func (e *CallStackLimitExceededError) Error() string {
+	return fmt.Sprintf(
+		"call stack limit exceeded: %d",
+		e.Limit,
+	)
+}
+
+func (e *CallStackLimitExceededError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
