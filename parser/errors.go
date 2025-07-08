@@ -298,11 +298,14 @@ func (e *MissingCommaInParameterListError) Error() string {
 // CustomDestructorError
 
 type CustomDestructorError struct {
-	Pos ast.Position
+	Pos   ast.Position
+	Range ast.Range
 }
 
 var _ ParseError = &CustomDestructorError{}
 var _ errors.UserError = &CustomDestructorError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &CustomDestructorError{}
+var _ errors.HasDocumentationLink = &CustomDestructorError{}
 
 func (*CustomDestructorError) isParseError() {}
 
@@ -317,11 +320,33 @@ func (e *CustomDestructorError) EndPosition(_ common.MemoryGauge) ast.Position {
 }
 
 func (e *CustomDestructorError) Error() string {
-	return "custom destructor definitions are no longer permitted"
+	return "custom destructor definitions are no longer permitted in Cadence 1.0+"
 }
 
 func (e *CustomDestructorError) SecondaryError() string {
 	return "remove the destructor definition"
+}
+
+func (e *CustomDestructorError) MigrationNote() string {
+	return "This is pre-Cadence 1.0 syntax. Custom destructors were removed to prevent resource leaks and improve security. Resources must be explicitly destroyed using the 'destroy' keyword. Custom cleanup logic should be moved to separate functions called before destruction."
+}
+
+func (e *CustomDestructorError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Remove the custom destructor. In Cadence 1.0+, custom destructors were removed to prevent resource leaks and improve security. Resources must be explicitly destroyed using the 'destroy' keyword. Move any cleanup logic to a separate function and call it before destruction.",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "",
+					Range:       e.Range,
+				},
+			},
+		},
+	}
+}
+
+func (e *CustomDestructorError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/cadence-migration-guide/improvements#-motivation-23"
 }
 
 // RestrictedTypeError

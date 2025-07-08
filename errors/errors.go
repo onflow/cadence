@@ -123,6 +123,11 @@ type SuggestedFix[T any] struct {
 	TextEdits []T
 }
 
+// HasDocumentationLink provides structured documentation links for LSP integration
+type HasDocumentationLink interface {
+	DocumentationLink() string
+}
+
 // MemoryMeteringError indicates a memory limit has reached and should end
 // the Cadence parsing, checking, or interpretation.
 type MemoryMeteringError struct {
