@@ -148,6 +148,7 @@ func (e *vmEnvironment) newVMConfig() *vm.Config {
 	conf.OnEventEmitted = newOnEventEmittedHandler(&e.Interface)
 	conf.CapabilityBorrowHandler = newCapabilityBorrowHandler(e)
 	conf.CapabilityCheckHandler = newCapabilityCheckHandler(e)
+	conf.StackDepthLimit = defaultStackDepthLimit
 	return conf
 }
 

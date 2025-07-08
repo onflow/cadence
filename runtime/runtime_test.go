@@ -36,6 +36,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/json"
 	runtimeErrors "github.com/onflow/cadence/errors"
@@ -7498,14 +7499,20 @@ func TestRuntimeStackOverflow(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)
 
 	assertRuntimeErrorIsUserError(t, err)
 
-	var callStackLimitExceededErr CallStackLimitExceededError
-	require.ErrorAs(t, err, &callStackLimitExceededErr)
+	if *compile {
+		var callStackLimitExceededErr vm.CallStackLimitExceededError
+		require.ErrorAs(t, err, &callStackLimitExceededErr)
+	} else {
+		var callStackLimitExceededErr CallStackLimitExceededError
+		require.ErrorAs(t, err, &callStackLimitExceededErr)
+	}
 }
 
 func TestRuntimeInternalErrors(t *testing.T) {
