@@ -548,7 +548,7 @@ func (interpreter *Interpreter) InvokeTransaction(arguments []Value, signers ...
 func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	if r := recover(); r != nil {
 		// Recover all errors, because interpreter can be directly invoked by FVM.
-		err := asCadenceError(r)
+		err := AsCadenceError(r)
 
 		// if the error is not yet an interpreter error, wrap it
 		if _, ok := err.(Error); !ok {
@@ -578,7 +578,7 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	}
 }
 
-func asCadenceError(r any) error {
+func AsCadenceError(r any) error {
 	err, isError := r.(error)
 	if !isError {
 		return errors.NewUnexpectedError("%s", r)
