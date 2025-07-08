@@ -135,20 +135,20 @@ func NewScriptVMEnvironment(config Config) Environment {
 }
 
 func (e *vmEnvironment) newVMConfig() *vm.Config {
-	return &vm.Config{
-		MemoryGauge:                    e,
-		ComputationGauge:               e,
-		TypeLoader:                     e.loadType,
-		BuiltinGlobalsProvider:         e.vmBuiltinGlobals,
-		ContractValueHandler:           e.loadContractValue,
-		ImportHandler:                  e.importProgram,
-		InjectedCompositeFieldsHandler: newInjectedCompositeFieldsHandler(e),
-		UUIDHandler:                    newUUIDHandler(&e.Interface),
-		AccountHandlerFunc:             e.newAccountValue,
-		OnEventEmitted:                 newOnEventEmittedHandler(&e.Interface),
-		CapabilityBorrowHandler:        newCapabilityBorrowHandler(e),
-		CapabilityCheckHandler:         newCapabilityCheckHandler(e),
-	}
+	conf := vm.NewConfig(nil)
+	conf.MemoryGauge = e
+	conf.ComputationGauge = e
+	conf.TypeLoader = e.loadType
+	conf.BuiltinGlobalsProvider = e.vmBuiltinGlobals
+	conf.ContractValueHandler = e.loadContractValue
+	conf.ImportHandler = e.importProgram
+	conf.InjectedCompositeFieldsHandler = newInjectedCompositeFieldsHandler(e)
+	conf.UUIDHandler = newUUIDHandler(&e.Interface)
+	conf.AccountHandlerFunc = e.newAccountValue
+	conf.OnEventEmitted = newOnEventEmittedHandler(&e.Interface)
+	conf.CapabilityBorrowHandler = newCapabilityBorrowHandler(e)
+	conf.CapabilityCheckHandler = newCapabilityCheckHandler(e)
+	return conf
 }
 
 func (e *vmEnvironment) defineValue(name string, value vm.Value) {

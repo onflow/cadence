@@ -57,16 +57,8 @@ func NewVM(
 	program *bbq.InstructionProgram,
 	config *Config,
 ) *VM {
-	// TODO: Remove initializing config. Following is for testing purpose only.
-	if config == nil {
-		config = &Config{}
-	}
 
 	context := NewContext(config)
-
-	if context.storage == nil {
-		context.storage = interpreter.NewInMemoryStorage(nil)
-	}
 
 	if context.referencedResourceKindedValues == nil {
 		context.referencedResourceKindedValues = ReferencedResourceKindedValues{}

@@ -70,10 +70,9 @@ func NewContext(config *Config) *Context {
 	return &Context{
 		Config:                         config,
 		CapabilityControllerIterations: make(map[interpreter.AddressPath]int),
-		mutationDuringCapabilityControllerIteration: false,
-		referencedResourceKindedValues:              ReferencedResourceKindedValues{},
-		destroyedResources:                          make(map[atree.ValueID]struct{}),
-		semaTypes:                                   make(map[sema.TypeID]sema.Type),
+		referencedResourceKindedValues: ReferencedResourceKindedValues{},
+		destroyedResources:             make(map[atree.ValueID]struct{}),
+		semaTypes:                      make(map[sema.TypeID]sema.Type),
 	}
 }
 

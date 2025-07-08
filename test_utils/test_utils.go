@@ -229,6 +229,9 @@ func ParseCheckAndPrepareWithOptions(
 	if interpreterConfig != nil {
 		storage = interpreterConfig.Storage
 	}
+	if storage == nil {
+		storage = interpreter.NewInMemoryStorage(nil)
+	}
 
 	programs := CompiledPrograms{}
 	var compilerConfig *compiler.Config
