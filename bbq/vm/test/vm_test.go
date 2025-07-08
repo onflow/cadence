@@ -9160,6 +9160,6 @@ func TestStackDepthLimit(t *testing.T) {
 	)
 	RequireError(t, err)
 
-	var callStackLimitExceededErr vm.CallStackLimitExceededError
+	var callStackLimitExceededErr *interpreter.CallStackLimitExceededError
 	require.ErrorAs(t, err, &callStackLimitExceededErr)
 }

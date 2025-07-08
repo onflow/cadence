@@ -50,20 +50,3 @@ func (UnknownFunctionError) IsUserError() {}
 func (e UnknownFunctionError) Error() string {
 	return fmt.Sprintf("unknown function `%s`", e.name)
 }
-
-// CallStackLimitExceededError
-
-type CallStackLimitExceededError struct {
-	Limit int
-}
-
-var _ errors.UserError = CallStackLimitExceededError{}
-
-func (CallStackLimitExceededError) IsUserError() {}
-
-func (e CallStackLimitExceededError) Error() string {
-	return fmt.Sprintf(
-		"call stack limit exceeded: %d",
-		e.Limit,
-	)
-}

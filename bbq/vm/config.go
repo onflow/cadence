@@ -62,7 +62,7 @@ type Config struct {
 	// AtreeValueValidationEnabled determines if the validation of atree values is enabled
 	AtreeValueValidationEnabled bool
 	// StackDepthLimit is the maximum depth of the call stack
-	StackDepthLimit int
+	StackDepthLimit uint64
 
 	debugEnabled bool
 }

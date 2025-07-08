@@ -208,8 +208,8 @@ func fill(slice []Value, n int) []Value {
 }
 
 func (vm *VM) pushCallFrame(functionValue CompiledFunctionValue, arguments []Value) {
-	if len(vm.callstack) == vm.context.StackDepthLimit {
-		panic(CallStackLimitExceededError{
+	if uint64(len(vm.callstack)) == vm.context.StackDepthLimit {
+		panic(&interpreter.CallStackLimitExceededError{
 			Limit: vm.context.StackDepthLimit,
 		})
 	}
