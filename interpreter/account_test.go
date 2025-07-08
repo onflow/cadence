@@ -613,16 +613,15 @@ func testAccountWithErrorHandlerWithCompiler(
 	var storage interpreter.Storage
 
 	if compilerEnabled && *compile {
-		vmConfig := &vm.Config{
-			BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[vm.Variable] {
-				activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+		vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
+			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
-				variable := &interpreter.SimpleVariable{}
-				variable.InitializeWithValue(accountValueDeclaration.Value)
-				activation.Set(accountValueDeclaration.Name, variable)
+			variable := &interpreter.SimpleVariable{}
+			variable.InitializeWithValue(accountValueDeclaration.Value)
+			activation.Set(accountValueDeclaration.Name, variable)
 
-				return activation
-			},
+			return activation
 		}
 
 		programs := map[common.Location]*CompiledProgram{}
