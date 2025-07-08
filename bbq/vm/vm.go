@@ -267,6 +267,13 @@ func (vm *VM) popCallFrame() {
 	}
 }
 
+func RecoverErrors(onError func(error)) {
+	if r := recover(); r != nil {
+		err := interpreter.AsCadenceError(r)
+		onError(err)
+	}
+}
+
 func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err error) {
 	functionVariable := vm.globals.Find(name)
 	if functionVariable == nil {
@@ -275,15 +282,9 @@ func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err er
 		}
 	}
 
-	defer func() {
-		recovered := recover()
-		if recovered == nil {
-			return
-		}
-
-		// TODO:
-		err, _ = recovered.(error)
-	}()
+	defer RecoverErrors(func(internalErr error) {
+		err = internalErr
+	})
 
 	function := functionVariable.GetValue(vm.context)
 
@@ -312,15 +313,9 @@ func (vm *VM) InvokeMethodExternally(
 		}
 	}
 
-	defer func() {
-		recovered := recover()
-		if recovered == nil {
-			return
-		}
-
-		// TODO:
-		err, _ = recovered.(error)
-	}()
+	defer RecoverErrors(func(internalErr error) {
+		err = internalErr
+	})
 
 	context := vm.context
 
@@ -393,15 +388,10 @@ func (vm *VM) InitializeContract(contractName string, arguments ...Value) (*inte
 }
 
 func (vm *VM) InvokeTransaction(arguments []Value, signers ...Value) (err error) {
-	defer func() {
-		recovered := recover()
-		if recovered == nil {
-			return
-		}
 
-		// TODO:
-		err, _ = recovered.(error)
-	}()
+	defer RecoverErrors(func(internalErr error) {
+		err = internalErr
+	})
 
 	// Create transaction value
 	transaction, err := vm.InvokeTransactionWrapper()

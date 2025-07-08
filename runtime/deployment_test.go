@@ -274,6 +274,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 		expectedErrorMessage := "Execution failed:\n" +
 			"error: cannot deploy invalid contract\n"
 
+		// TODO: additional info when using compiler/VM
 		if !*compile {
 			expectedErrorMessage +=
 				" --> 0000000000000000000000000000000000000000000000000000000000000000:5:22\n" +
@@ -313,6 +314,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 		expectedErrorMessage := "Execution failed:\n" +
 			"error: cannot deploy invalid contract\n"
 
+		// TODO: additional info when using compiler/VM
 		if !*compile {
 			expectedErrorMessage +=
 				" --> 0000000000000000000000000000000000000000000000000000000000000000:5:22\n" +
@@ -343,6 +345,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 		expectedErrorMessage := "Execution failed:\n" +
 			"error: cannot deploy invalid contract\n"
 
+		// TODO: additional info when using compiler/VM
 		if !*compile {
 			expectedErrorMessage +=
 				" --> 0000000000000000000000000000000000000000000000000000000000000000:5:22\n" +

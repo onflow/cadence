@@ -1388,14 +1388,8 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 
 		RequireError(t, err)
 
-		// TODO: requires error recovery in VM
-		if *compile {
-			var externalNonError errors.ExternalNonError
-			require.ErrorAs(t, err, &externalNonError)
-		} else {
-			var unexpectedError errors.UnexpectedError
-			require.ErrorAs(t, err, &unexpectedError)
-		}
+		var unexpectedError errors.UnexpectedError
+		require.ErrorAs(t, err, &unexpectedError)
 
 		assert.True(t, didPanic)
 	})
