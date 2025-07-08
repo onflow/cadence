@@ -503,7 +503,7 @@ var _ AccountContractCreationContext = &Interpreter{}
 
 type AccountContractBorrowContext interface {
 	FunctionCreationContext
-	GetContractValue(contractLocation common.AddressLocation) (*CompositeValue, error)
+	GetContractValue(contractLocation common.AddressLocation) *CompositeValue
 }
 
 var _ AccountContractBorrowContext = &Interpreter{}

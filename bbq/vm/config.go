@@ -212,11 +212,6 @@ func (c *Config) GetAccountHandlerFunc() interpreter.AccountHandlerFunc {
 	return c.AccountHandlerFunc
 }
 
-func (c *Config) GetContractValue(contractLocation common.AddressLocation) (*interpreter.CompositeValue, error) {
-	//TODO
-	return nil, nil
-}
-
 func (c *Config) GetValidateAccountCapabilitiesGetHandler() interpreter.ValidateAccountCapabilitiesGetHandlerFunc {
 	return c.ValidateAccountCapabilitiesGetHandler
 }
