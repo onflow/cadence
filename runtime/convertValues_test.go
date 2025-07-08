@@ -145,7 +145,7 @@ func TestRuntimeExportValue(t *testing.T) {
 	}
 
 	testFunctionType := cadence.NewFunctionType(
-		sema.FunctionPurityImpure,
+		cadence.FunctionPurityImpure,
 		nil,
 		nil,
 		cadence.VoidType,

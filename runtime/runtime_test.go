@@ -2320,7 +2320,7 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
                 `,
 				expected: cadence.Function{
 					FunctionType: &cadence.FunctionType{
-						Purity: sema.FunctionPurityView,
+						Purity: cadence.FunctionPurityView,
 						Parameters: []cadence.Parameter{
 							{
 								Label:      sema.ArgumentLabelNotRequired,

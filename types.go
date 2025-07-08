@@ -1475,7 +1475,7 @@ func (t *ContractInterfaceType) Equal(other Type) bool {
 type FunctionPurity int
 
 const (
-	FunctionPurityUnspecified FunctionPurity = iota
+	FunctionPurityImpure FunctionPurity = iota
 	FunctionPurityView
 
 	// DO NOT add item after maxFunctionPurity
@@ -1484,7 +1484,7 @@ const (
 
 func NewFunctionaryPurity(rawPurity int) (FunctionPurity, error) {
 	if rawPurity < 0 || rawPurity >= int(maxFunctionPurity) {
-		return FunctionPurityUnspecified, fmt.Errorf("failed to convert %d to FunctionPurity", rawPurity)
+		return FunctionPurityImpure, fmt.Errorf("failed to convert %d to FunctionPurity", rawPurity)
 	}
 	return FunctionPurity(rawPurity), nil
 }
