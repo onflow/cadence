@@ -365,8 +365,7 @@ func TestRuntimeRLPGetType(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
-			// TODO: add support for getType and isInstance for stdlib values
-			//UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)

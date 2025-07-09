@@ -233,6 +233,19 @@ func (e *vmEnvironment) declareCompilerValue(valueDeclaration stdlib.StandardLib
 			Name: name,
 		},
 	)
+
+	for _, function := range compiler.CommonBuiltinTypeBoundFunctions {
+		qualifiedFunctionName := commons.TypeQualifiedName(
+			valueDeclaration.Type,
+			function.Name,
+		)
+		compilerBuiltinGlobals.Set(
+			qualifiedFunctionName,
+			compiler.GlobalImport{
+				Name: qualifiedFunctionName,
+			},
+		)
+	}
 }
 
 func (e *vmEnvironment) declareVMValue(valueDeclaration stdlib.StandardLibraryValue, location common.Location) {
@@ -247,6 +260,21 @@ func (e *vmEnvironment) declareVMValue(valueDeclaration stdlib.StandardLibraryVa
 		valueDeclaration.Name,
 		variable,
 	)
+
+	for _, function := range vm.CommonBuiltinTypeBoundFunctions {
+		qualifiedFunctionName := commons.TypeQualifiedName(
+			valueDeclaration.Type,
+			function.Name,
+		)
+		variable := interpreter.NewVariableWithValue(
+			nil,
+			function,
+		)
+		vmBuiltinGlobals.Set(
+			qualifiedFunctionName,
+			variable,
+		)
+	}
 
 }
 func (e *vmEnvironment) DeclareType(typeDeclaration stdlib.StandardLibraryType, location common.Location) {

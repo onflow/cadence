@@ -71,7 +71,7 @@ func RegisterBuiltinTypeBoundFunction(typeName string, functionValue *NativeFunc
 	RegisterBuiltinFunction(functionValue)
 }
 
-func RegisterBuiltinTypeBoundCommonFunction(typeName string, functionValue *NativeFunctionValue) {
+func registerBuiltinTypeBoundCommonFunction(typeName string, functionValue *NativeFunctionValue) {
 	// Here the function value is common for many types.
 	// Hence, do not update the function name to be type-qualified.
 	// Only the key in the map is type-qualified.
@@ -337,7 +337,7 @@ func registerBuiltinCommonTypeBoundFunctions() {
 		registerBuiltinTypeBoundFunctions(typeQualifier)
 	}
 
-	for _, function := range commonBuiltinTypeBoundFunctions {
+	for _, function := range CommonBuiltinTypeBoundFunctions {
 		IndexedCommonBuiltinTypeBoundFunctions[function.Name] = function
 	}
 }
@@ -345,16 +345,16 @@ func registerBuiltinCommonTypeBoundFunctions() {
 func registerBuiltinTypeBoundFunctions(
 	typeQualifier string,
 ) {
-	for _, boundFunction := range commonBuiltinTypeBoundFunctions {
-		RegisterBuiltinTypeBoundCommonFunction(
+	for _, boundFunction := range CommonBuiltinTypeBoundFunctions {
+		registerBuiltinTypeBoundCommonFunction(
 			typeQualifier,
 			boundFunction,
 		)
 	}
 }
 
-// Built-in functions that are common to all the types.
-var commonBuiltinTypeBoundFunctions = []*NativeFunctionValue{
+// CommonBuiltinTypeBoundFunctions are the built-in functions that are common to all the types.
+var CommonBuiltinTypeBoundFunctions = []*NativeFunctionValue{
 
 	// `isInstance` function
 	NewNativeFunctionValue(
