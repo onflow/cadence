@@ -1159,6 +1159,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 
 }
 
+// NOTE: This feature is only supported by the interpreter environment, not the VM environment.
 func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
 
 	t.Parallel()
@@ -1274,8 +1275,8 @@ func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
 			Interface:   runtimeInterface,
 			Location:    common.ScriptLocation{},
 			Environment: scriptEnvironment,
-			// TODO: Need to inject the composite-type's method to compiler/vm.
-			//UseVM:       *compile,
+			// NOTE: not supported by VM environment
+			UseVM: false,
 		},
 	)
 	require.NoError(t, err)
