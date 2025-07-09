@@ -117,8 +117,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 				Interface:   runtimeInterface,
 				Location:    common.TransactionLocation{},
 				Environment: transactionEnvironment,
-				// TODO: contract deployment with VM
-				// UseVM:     *compile,
+				UseVM:       *compile,
 			},
 		)
 

@@ -502,6 +502,7 @@ func TestRuntimeContractImport(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)

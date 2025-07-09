@@ -1,0 +1,12 @@
+rules:
+- id: runtime-test-without-usevm
+  languages:
+    - go
+  severity: INFO
+  message: Runtime test not enabled to be run with compiler/VM
+  patterns:
+    - pattern: "Context{..., Location: $Y, ...}"
+    - pattern-not: "Context{..., UseVM: $X, ...}"
+  paths:
+    include:
+      - "runtime/*_test.go"

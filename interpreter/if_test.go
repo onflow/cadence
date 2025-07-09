@@ -39,7 +39,7 @@ func TestInterpretIfStatement(t *testing.T) {
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
-           access(all) fun testTrue(): Int {
+           fun testTrue(): Int {
                if true {
                    return 2
                } else {
@@ -48,7 +48,7 @@ func TestInterpretIfStatement(t *testing.T) {
                return 4
            }
 
-           access(all) fun testFalse(): Int {
+           fun testFalse(): Int {
                if false {
                    return 2
                } else {
@@ -57,14 +57,14 @@ func TestInterpretIfStatement(t *testing.T) {
                return 4
            }
 
-           access(all) fun testNoElse(): Int {
+           fun testNoElse(): Int {
                if true {
                    return 2
                }
                return 3
            }
 
-           access(all) fun testElseIf(): Int {
+           fun testElseIf(): Int {
                if false {
                    return 2
                } else if true {
@@ -73,7 +73,7 @@ func TestInterpretIfStatement(t *testing.T) {
                return 4
            }
            
-           access(all) fun testElseIfElse(): Int {
+           fun testElseIfElse(): Int {
                if false {
                    return 2
                } else if false {
@@ -124,7 +124,7 @@ func TestInterpretIfStatement(t *testing.T) {
 
 		inter := parseCheckAndPrepare(t,
 			`
-           access(all) fun testTrue(): Int {
+           fun testTrue(): Int {
                if true {
                    return 2
                } else {
@@ -132,7 +132,7 @@ func TestInterpretIfStatement(t *testing.T) {
                }
            }
 
-           access(all) fun testFalse(): Int {
+           fun testFalse(): Int {
                if false {
                    return 2
                } else {
@@ -140,14 +140,14 @@ func TestInterpretIfStatement(t *testing.T) {
                }
            }
 
-           access(all) fun testNoElse(): Int {
+           fun testNoElse(): Int {
                if true {
                    return 2
                }
                return 3
            }
 
-           access(all) fun testElseIf(): Int {
+           fun testElseIf(): Int {
                if false {
                    return 2
                } else if true {
@@ -156,7 +156,7 @@ func TestInterpretIfStatement(t *testing.T) {
                return 4
            }
            
-           access(all) fun testElseIfElse(): Int {
+           fun testElseIfElse(): Int {
                if false {
                    return 2
                } else if false {

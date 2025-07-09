@@ -1821,6 +1821,8 @@ func exportEventFromScript(t *testing.T, script string) cadence.Event {
 		Context{
 			Interface: inter,
 			Location:  common.ScriptLocation{},
+			// TODO: requires InclusiveRange support in the VM
+			//UseVM:     *compile,
 		},
 	)
 

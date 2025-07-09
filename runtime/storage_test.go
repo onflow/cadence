@@ -492,7 +492,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 				Identifier: "test",
 			},
 			Context{
-				Location:  TestLocation,
+				// NOTE: no location
 				Interface: runtimeInterface,
 			},
 		)
@@ -519,7 +519,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 				Identifier: "other",
 			},
 			Context{
-				Location:  TestLocation,
+				// NOTE: no location
 				Interface: runtimeInterface,
 			},
 		)
