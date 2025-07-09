@@ -271,7 +271,7 @@ func (c *Compiler[_, _]) addImportedGlobal(location common.Location, name string
 	)
 }
 
-func (c *Compiler[E, T]) addFunction(
+func (c *Compiler[E, _]) addFunction(
 	name string,
 	qualifiedName string,
 	parameterCount uint16,
@@ -287,7 +287,7 @@ func (c *Compiler[E, T]) addFunction(
 	return function
 }
 
-func (c *Compiler[E, T]) addGlobalVariableWithGetter(
+func (c *Compiler[E, _]) addGlobalVariableWithGetter(
 	name string,
 	functionType *sema.FunctionType,
 ) *globalVariable[E] {
@@ -308,7 +308,7 @@ func (c *Compiler[E, T]) addGlobalVariableWithGetter(
 	return globalVariable
 }
 
-func (c *Compiler[E, T]) addGlobalVariable(
+func (c *Compiler[E, _]) addGlobalVariable(
 	name string,
 ) *globalVariable[E] {
 	globalVariable := &globalVariable[E]{
@@ -320,7 +320,7 @@ func (c *Compiler[E, T]) addGlobalVariable(
 	return globalVariable
 }
 
-func (c *Compiler[E, T]) newFunction(
+func (c *Compiler[E, _]) newFunction(
 	name string,
 	qualifiedName string,
 	parameterCount uint16,
@@ -337,7 +337,7 @@ func (c *Compiler[E, T]) newFunction(
 	)
 }
 
-func (c *Compiler[E, T]) targetFunction(function *function[E]) {
+func (c *Compiler[E, _]) targetFunction(function *function[E]) {
 	c.currentFunction = function
 
 	var code *[]E
@@ -3318,7 +3318,7 @@ func (c *Compiler[_, _]) emitTransfer() {
 	c.emit(opcode.InstructionTransfer{})
 }
 
-func (c *Compiler[_, T]) getOrAddType(ty sema.Type) uint16 {
+func (c *Compiler[_, _]) getOrAddType(ty sema.Type) uint16 {
 	typeID := ty.ID()
 
 	// Optimization: Re-use types in the pool.
@@ -3345,7 +3345,7 @@ func (c *Compiler[_, T]) addCompiledType(ty sema.Type, data T) uint16 {
 	return uint16(count)
 }
 
-func (c *Compiler[E, T]) declareParameters(paramList *ast.ParameterList, declareReceiver bool) {
+func (c *Compiler[_, _]) declareParameters(paramList *ast.ParameterList, declareReceiver bool) {
 	if declareReceiver {
 		// Declare receiver as `self`.
 		// Receiver is always at the zero-th index of params.
