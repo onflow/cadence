@@ -159,7 +159,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct S {
                         let foo: Int
 
@@ -246,7 +246,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct interface SI {
                         var foo: Int
                     }
@@ -335,7 +335,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct interface SI {
                         let foo: Int
                     }
@@ -387,7 +387,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct S {
                         var foo: Int
 
@@ -432,7 +432,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct S {
                         var foo: Int
 
@@ -492,7 +492,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct S {
                         let foo: Int
 
@@ -535,7 +535,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct S {
                         let foo: Int
 

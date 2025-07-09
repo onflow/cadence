@@ -1082,8 +1082,6 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		},
 	}
 
-	environment := NewBaseInterpreterEnvironment(Config{})
-
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// Deploy Fungible Token contract
@@ -1096,10 +1094,9 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 			),
 		},
 		Context{
-			Interface:   runtimeInterface,
-			Location:    nextTransactionLocation(),
-			Environment: environment,
-			UseVM:       *compile,
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1230,10 +1227,9 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 			Source: []byte(transaction1),
 		},
 		Context{
-			Interface:   runtimeInterface,
-			Location:    nextTransactionLocation(),
-			Environment: environment,
-			UseVM:       *compile,
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1268,10 +1264,9 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 			Source: []byte(transaction2),
 		},
 		Context{
-			Interface:   runtimeInterface,
-			Location:    nextTransactionLocation(),
-			Environment: environment,
-			UseVM:       *compile,
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)
@@ -1322,10 +1317,9 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 			Source: []byte(transaction3),
 		},
 		Context{
-			Interface:   runtimeInterface,
-			Location:    nextTransactionLocation(),
-			Environment: environment,
-			UseVM:       *compile,
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)

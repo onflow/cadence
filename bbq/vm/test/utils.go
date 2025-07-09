@@ -19,6 +19,7 @@
 package test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -782,6 +783,17 @@ func PrepareVMConfig(
 
 	if config.BuiltinGlobalsProvider == nil {
 		config.BuiltinGlobalsProvider = VMBuiltinGlobalsProviderWithDefaultsAndPanic
+	}
+
+	if config.ElaborationResolver == nil {
+		config.ElaborationResolver = func(location common.Location) (*sema.Elaboration, error) {
+			imported, ok := programs[location]
+			if !ok {
+				return nil, fmt.Errorf("cannot find elaboration for %s", location)
+			}
+
+			return imported.DesugaredElaboration.OriginalElaboration(), nil
+		}
 	}
 
 	return config
