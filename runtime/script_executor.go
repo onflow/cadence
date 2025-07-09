@@ -126,6 +126,15 @@ func (executor *scriptExecutor) preprocess() (err error) {
 		}
 	}
 
+	if context.UseVM {
+		if _, ok := environment.(*vmEnvironment); !ok {
+			panic(errors.NewUnexpectedError(
+				"expected to run with the VM, but found an incompatible environment: %T",
+				environment,
+			))
+		}
+	}
+
 	environment.Configure(
 		runtimeInterface,
 		codesAndPrograms,

@@ -153,8 +153,6 @@ func TestRuntimeCheckCyclicImportsAfterUpdate(t *testing.T) {
 		},
 	}
 
-	environment := NewBaseInterpreterEnvironment(Config{})
-
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	deploy := func(name string, contract string, update bool) error {
@@ -173,7 +171,6 @@ func TestRuntimeCheckCyclicImportsAfterUpdate(t *testing.T) {
 			Context{
 				Interface:   runtimeInterface,
 				Location:    nextTransactionLocation(),
-				Environment: environment,
 				UseVM:       *compile,
 			},
 		)
@@ -271,8 +268,6 @@ func TestRuntimeCheckCyclicImportAddress(t *testing.T) {
 		},
 	}
 
-	environment := NewBaseInterpreterEnvironment(Config{})
-
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	deploy := func(name string, contract string, update bool) error {
@@ -291,7 +286,6 @@ func TestRuntimeCheckCyclicImportAddress(t *testing.T) {
 			Context{
 				Interface:   runtimeInterface,
 				Location:    nextTransactionLocation(),
-				Environment: environment,
 				UseVM:       *compile,
 			},
 		)
@@ -373,8 +367,6 @@ func TestRuntimeCheckCyclicImportToSelfDuringDeploy(t *testing.T) {
 		},
 	}
 
-	environment := NewBaseInterpreterEnvironment(Config{})
-
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	deploy := func(name string, contract string, update bool) error {
@@ -393,7 +385,6 @@ func TestRuntimeCheckCyclicImportToSelfDuringDeploy(t *testing.T) {
 			Context{
 				Interface:   runtimeInterface,
 				Location:    nextTransactionLocation(),
-				Environment: environment,
 				UseVM:       *compile,
 			},
 		)

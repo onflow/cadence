@@ -1082,8 +1082,6 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		},
 	}
 
-	environment := NewBaseInterpreterEnvironment(Config{})
-
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// Deploy Fungible Token contract
@@ -1098,8 +1096,8 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		Context{
 			Interface:   runtimeInterface,
 			Location:    nextTransactionLocation(),
-			Environment: environment,
-			UseVM:       *compile,
+			// TODO: Need the support for isRecovered (https://github.com/onflow/cadence/pull/4073)
+			//UseVM:       *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1232,8 +1230,8 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		Context{
 			Interface:   runtimeInterface,
 			Location:    nextTransactionLocation(),
-			Environment: environment,
-			UseVM:       *compile,
+			// TODO: Need the support for isRecovered (https://github.com/onflow/cadence/pull/4073)
+			//UseVM:       *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1270,8 +1268,8 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		Context{
 			Interface:   runtimeInterface,
 			Location:    nextTransactionLocation(),
-			Environment: environment,
-			UseVM:       *compile,
+			// TODO: Need the support for isRecovered (https://github.com/onflow/cadence/pull/4073)
+			//UseVM:       *compile,
 		},
 	)
 	RequireError(t, err)
@@ -1324,8 +1322,8 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		Context{
 			Interface:   runtimeInterface,
 			Location:    nextTransactionLocation(),
-			Environment: environment,
-			UseVM:       *compile,
+			// TODO: Need the support for isRecovered (https://github.com/onflow/cadence/pull/4073)
+			//UseVM:       *compile,
 		},
 	)
 	require.NoError(t, err)
