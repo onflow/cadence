@@ -334,7 +334,7 @@ func (e *CustomDestructorError) MigrationNote() string {
 func (e *CustomDestructorError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
-			Message: "Remove the custom destructor. In Cadence 1.0+, custom destructors were removed to prevent resource leaks and improve security. Resources must be explicitly destroyed using the 'destroy' keyword. Move any cleanup logic to a separate function and call it before destruction.",
+			Message: "Remove the deprecated custom destructor",
 			TextEdits: []ast.TextEdit{
 				{
 					Replacement: "",
