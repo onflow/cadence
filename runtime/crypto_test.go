@@ -466,7 +466,7 @@ func TestRuntimeBLSVerifyPoP(t *testing.T) {
 	assert.True(t, called)
 }
 
-func TestRuntimeBLSGetType(t *testing.T) {
+func TestRuntimeBLSGetTypeAndIsInstance(t *testing.T) {
 
 	t.Parallel()
 
@@ -475,6 +475,7 @@ func TestRuntimeBLSGetType(t *testing.T) {
 	script := []byte(`
 
 	  access(all) fun main(): Type {
+        assert(BLS.isInstance(Type<BLS>()))
 		return BLS.getType()
 	  }
 	`)

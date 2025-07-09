@@ -343,7 +343,7 @@ func TestRuntimeRLPDecodeList(t *testing.T) {
 	}
 }
 
-func TestRuntimeRLPGetType(t *testing.T) {
+func TestRuntimeRLPGetTypeAndIsInstance(t *testing.T) {
 
 	t.Parallel()
 
@@ -352,6 +352,7 @@ func TestRuntimeRLPGetType(t *testing.T) {
 	script := []byte(`
 
 	  access(all) fun main(): Type {
+        assert(RLP.isInstance(Type<RLP>()))
 		return RLP.getType()
 	  }
 	`)
