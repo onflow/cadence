@@ -169,9 +169,9 @@ func TestRuntimeCheckCyclicImportsAfterUpdate(t *testing.T) {
 				),
 			},
 			Context{
-				Interface:   runtimeInterface,
-				Location:    nextTransactionLocation(),
-				UseVM:       *compile,
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 	}
@@ -284,9 +284,9 @@ func TestRuntimeCheckCyclicImportAddress(t *testing.T) {
 				),
 			},
 			Context{
-				Interface:   runtimeInterface,
-				Location:    nextTransactionLocation(),
-				UseVM:       *compile,
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 	}
@@ -383,9 +383,9 @@ func TestRuntimeCheckCyclicImportToSelfDuringDeploy(t *testing.T) {
 				),
 			},
 			Context{
-				Interface:   runtimeInterface,
-				Location:    nextTransactionLocation(),
-				UseVM:       *compile,
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 	}

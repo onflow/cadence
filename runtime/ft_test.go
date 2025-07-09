@@ -1094,8 +1094,8 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 			),
 		},
 		Context{
-			Interface:   runtimeInterface,
-			Location:    nextTransactionLocation(),
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
 			// TODO: Need the support for isRecovered (https://github.com/onflow/cadence/pull/4073)
 			//UseVM:       *compile,
 		},
@@ -1228,8 +1228,8 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 			Source: []byte(transaction1),
 		},
 		Context{
-			Interface:   runtimeInterface,
-			Location:    nextTransactionLocation(),
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
 			// TODO: Need the support for isRecovered (https://github.com/onflow/cadence/pull/4073)
 			//UseVM:       *compile,
 		},
@@ -1266,8 +1266,8 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 			Source: []byte(transaction2),
 		},
 		Context{
-			Interface:   runtimeInterface,
-			Location:    nextTransactionLocation(),
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
 			// TODO: Need the support for isRecovered (https://github.com/onflow/cadence/pull/4073)
 			//UseVM:       *compile,
 		},
@@ -1320,8 +1320,8 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 			Source: []byte(transaction3),
 		},
 		Context{
-			Interface:   runtimeInterface,
-			Location:    nextTransactionLocation(),
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
 			// TODO: Need the support for isRecovered (https://github.com/onflow/cadence/pull/4073)
 			//UseVM:       *compile,
 		},
