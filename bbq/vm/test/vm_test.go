@@ -9163,3 +9163,21 @@ func TestStackDepthLimit(t *testing.T) {
 	var callStackLimitExceededErr *interpreter.CallStackLimitExceededError
 	require.ErrorAs(t, err, &callStackLimitExceededErr)
 }
+
+func TestNestedLoops(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := CompileAndInvoke(t,
+		`
+             fun test() {
+                 for x in [1, 2] {
+                     for y in [1] {}
+                 }
+             }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+
+}

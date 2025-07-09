@@ -148,6 +148,7 @@ func (e *vmEnvironment) newVMConfig() *vm.Config {
 	conf.OnEventEmitted = newOnEventEmittedHandler(&e.Interface)
 	conf.CapabilityBorrowHandler = newCapabilityBorrowHandler(e)
 	conf.CapabilityCheckHandler = newCapabilityCheckHandler(e)
+	conf.ElaborationResolver = e.resolveElaboration
 	conf.StackDepthLimit = defaultStackDepthLimit
 	return conf
 }
@@ -471,6 +472,21 @@ func (e *vmEnvironment) importProgram(location common.Location) *bbq.Instruction
 		panic(fmt.Errorf("failed to load program for imported location %s: %w", location, err))
 	}
 	return program.compiledProgram.program
+}
+
+func (e *vmEnvironment) resolveElaboration(location common.Location) (*sema.Elaboration, error) {
+	program, err := e.loadProgram(location)
+	if err != nil {
+		return nil,
+			fmt.Errorf(
+				"failed to load program for imported location %s: %w",
+				location,
+				err,
+			)
+	}
+
+	elaboration := program.compiledProgram.desugaredElaboration.OriginalElaboration()
+	return elaboration, nil
 }
 
 func (e *vmEnvironment) newVM(

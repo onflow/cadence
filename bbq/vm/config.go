@@ -33,6 +33,7 @@ type Config struct {
 	Tracer
 	storage              interpreter.Storage
 	ImportHandler        commons.ImportHandler
+	ElaborationResolver  ElaborationResolver
 	ContractValueHandler ContractValueHandler
 	// BuiltinGlobalsProvider provides the built-in globals for a given location.
 	// NOTE: all global must be defined for location nil!
@@ -268,3 +269,5 @@ type ContractValueHandler func(
 	context *Context,
 	location common.Location,
 ) *interpreter.CompositeValue
+
+type ElaborationResolver func(location common.Location) (*sema.Elaboration, error)

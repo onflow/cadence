@@ -9132,3 +9132,90 @@ func TestCompileInjectedContract(t *testing.T) {
 		program.Imports,
 	)
 }
+
+func TestNestedLoops(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+         fun test() {
+             for x in [1, 2] {
+                 for y in [1] {}
+             }
+         }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 1)
+
+	const (
+		outerIterIndex = iota
+		xIndex
+		innerIterIndex
+		yIndex
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// for x in [1, 2]
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0},
+			opcode.InstructionTransferAndConvert{Type: 2},
+			opcode.InstructionGetConstant{Constant: 1},
+			opcode.InstructionTransferAndConvert{Type: 2},
+			opcode.InstructionNewArray{
+				Type: 1,
+				Size: 2,
+			},
+			opcode.InstructionIterator{},
+			opcode.InstructionSetLocal{Local: outerIterIndex},
+			opcode.InstructionGetLocal{Local: outerIterIndex},
+			opcode.InstructionIteratorHasNext{},
+			opcode.InstructionJumpIfFalse{Target: 34},
+
+			opcode.InstructionLoop{},
+			opcode.InstructionGetLocal{Local: outerIterIndex},
+			opcode.InstructionIteratorNext{},
+			opcode.InstructionTransferAndConvert{Type: 2},
+			opcode.InstructionSetLocal{Local: xIndex},
+
+			// for y in [1]
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0},
+			opcode.InstructionTransferAndConvert{Type: 2},
+			opcode.InstructionNewArray{
+				Type: 1,
+				Size: 1,
+			},
+			opcode.InstructionIterator{},
+			opcode.InstructionSetLocal{Local: innerIterIndex},
+			opcode.InstructionGetLocal{Local: innerIterIndex},
+			opcode.InstructionIteratorHasNext{},
+			opcode.InstructionJumpIfFalse{Target: 31},
+
+			opcode.InstructionLoop{},
+			opcode.InstructionGetLocal{Local: innerIterIndex},
+			opcode.InstructionIteratorNext{},
+			opcode.InstructionTransferAndConvert{Type: 2},
+			opcode.InstructionSetLocal{Local: yIndex},
+
+			opcode.InstructionJump{Target: 22},
+			opcode.InstructionGetLocal{Local: innerIterIndex},
+			opcode.InstructionIteratorEnd{},
+
+			opcode.InstructionJump{Target: 8},
+			opcode.InstructionGetLocal{Local: outerIterIndex},
+			opcode.InstructionIteratorEnd{},
+
+			opcode.InstructionReturn{},
+		},
+		functions[0].Code,
+	)
+}
