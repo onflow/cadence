@@ -362,3 +362,7 @@ func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema
 	c.semaTypes[typeID] = semaType
 	return semaType
 }
+
+func (c *Context) GetContractValue(contractLocation common.AddressLocation) *interpreter.CompositeValue {
+	return c.ContractValueHandler(c, contractLocation)
+}
