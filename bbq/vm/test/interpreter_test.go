@@ -641,6 +641,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 		},
 	}
 
+	environment := runtime.NewBaseInterpreterEnvironment(runtime.Config{})
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// Deploy contract interfaces
@@ -667,8 +668,9 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 				),
 			},
 			runtime.Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Interface:   runtimeInterface,
+				Location:    nextTransactionLocation(),
+				Environment: environment,
 			},
 		)
 		require.NoError(b, err)
@@ -681,8 +683,9 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 			Source: DeploymentTransaction("FlowToken", []byte(realFlowContract)),
 		},
 		runtime.Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
 		},
 	)
 	require.NoError(b, err)
@@ -701,8 +704,9 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 				Source: []byte(realFlowTokenSetupAccountTransaction),
 			},
 			runtime.Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Interface:   runtimeInterface,
+				Location:    nextTransactionLocation(),
+				Environment: environment,
 			},
 		)
 		require.NoError(b, err)
@@ -726,8 +730,9 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 			}),
 		},
 		runtime.Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
 		},
 	)
 	require.NoError(b, err)
@@ -753,8 +758,9 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 				}),
 			},
 			runtime.Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Interface:   runtimeInterface,
+				Location:    nextTransactionLocation(),
+				Environment: environment,
 			},
 		)
 		require.NoError(b, err)
@@ -783,8 +789,9 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 				}),
 			},
 			runtime.Context{
-				Interface: runtimeInterface,
-				Location:  nextScriptLocation(),
+				Interface:   runtimeInterface,
+				Location:    nextScriptLocation(),
+				Environment: environment,
 			},
 		)
 		require.NoError(b, err)

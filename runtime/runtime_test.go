@@ -8081,6 +8081,8 @@ func BenchmarkRuntimeScriptNoop(b *testing.B) {
 		Source: []byte("access(all) fun main() {}"),
 	}
 
+	environment := newTransactionEnvironment()
+
 	nextScriptLocation := NewScriptLocationGenerator()
 
 	runtime := NewTestRuntime()
@@ -8092,9 +8094,10 @@ func BenchmarkRuntimeScriptNoop(b *testing.B) {
 		_, err := runtime.ExecuteScript(
 			script,
 			Context{
-				Interface: runtimeInterface,
-				Location:  nextScriptLocation(),
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    nextScriptLocation(),
+				Environment: environment,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(b, err)
@@ -9455,6 +9458,8 @@ func BenchmarkRuntimeResourceTracking(b *testing.B) {
 		},
 	}
 
+	environment := newTransactionEnvironment()
+
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// Deploy contract
@@ -9481,9 +9486,10 @@ func BenchmarkRuntimeResourceTracking(b *testing.B) {
 			),
 		},
 		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-			UseVM:     *compile,
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
+			UseVM:       *compile,
 		},
 	)
 	require.NoError(b, err)
@@ -9501,9 +9507,10 @@ func BenchmarkRuntimeResourceTracking(b *testing.B) {
             `),
 		},
 		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-			UseVM:     *compile,
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
+			UseVM:       *compile,
 		},
 	)
 	require.NoError(b, err)
@@ -9532,9 +9539,10 @@ func BenchmarkRuntimeResourceTracking(b *testing.B) {
             `),
 		},
 		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-			UseVM:     *compile,
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
+			UseVM:       *compile,
 		},
 	)
 	require.NoError(b, err)

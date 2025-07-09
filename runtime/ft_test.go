@@ -1082,6 +1082,8 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		},
 	}
 
+	environment := newTransactionEnvironment()
+
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// Deploy Fungible Token contract
@@ -1094,10 +1096,10 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 			),
 		},
 		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-			// TODO: Need the support for isRecovered (https://github.com/onflow/cadence/pull/4073)
-			//UseVM:       *compile,
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
+			UseVM:       *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1228,10 +1230,10 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 			Source: []byte(transaction1),
 		},
 		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-			// TODO: Need the support for isRecovered (https://github.com/onflow/cadence/pull/4073)
-			//UseVM:       *compile,
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
+			UseVM:       *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1266,10 +1268,10 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 			Source: []byte(transaction2),
 		},
 		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-			// TODO: Need the support for isRecovered (https://github.com/onflow/cadence/pull/4073)
-			//UseVM:       *compile,
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
+			UseVM:       *compile,
 		},
 	)
 	RequireError(t, err)
@@ -1320,10 +1322,10 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 			Source: []byte(transaction3),
 		},
 		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-			// TODO: Need the support for isRecovered (https://github.com/onflow/cadence/pull/4073)
-			//UseVM:       *compile,
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
+			UseVM:       *compile,
 		},
 	)
 	require.NoError(t, err)
