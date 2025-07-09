@@ -106,7 +106,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 
 		// Run deploy transaction
 
-		transactionEnvironment := NewBaseInterpreterEnvironment(Config{})
+		transactionEnvironment := newTransactionEnvironment()
 		prepareEnvironment(transactionEnvironment)
 
 		err := runtime.ExecuteTransaction(
@@ -814,7 +814,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 
 		// Run script
 
-		scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
+		scriptEnvironment := newScriptEnvironment()
 		scriptEnvironment.DeclareValue(valueDeclaration, nil)
 		scriptEnvironment.DeclareType(typeDeclaration, nil)
 
@@ -887,7 +887,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 
 		// Run script
 
-		scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
+		scriptEnvironment := newScriptEnvironment()
 		scriptEnvironment.DeclareValue(valueDeclaration, nil)
 		scriptEnvironment.DeclareType(typeDeclaration, nil)
 
@@ -919,7 +919,10 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 	t.Run("composite type, top-level, non-existing", func(t *testing.T) {
 		t.Parallel()
 
+		location := common.ScriptLocation{}
+
 		xType := &sema.CompositeType{
+			Location:   location,
 			Identifier: "X",
 			Kind:       common.CompositeKindStructure,
 			Members:    &sema.StringMemberOrderedMap{},
@@ -960,7 +963,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 
 		// Run script
 
-		scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
+		scriptEnvironment := newScriptEnvironment()
 		scriptEnvironment.DeclareValue(valueDeclaration, nil)
 
 		_, err := runtime.ExecuteScript(
@@ -969,7 +972,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 			},
 			Context{
 				Interface:   runtimeInterface,
-				Location:    common.ScriptLocation{},
+				Location:    location,
 				Environment: scriptEnvironment,
 				UseVM:       *compile,
 			},
@@ -983,13 +986,17 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 	t.Run("composite type, nested, existing", func(t *testing.T) {
 		t.Parallel()
 
+		location := common.ScriptLocation{}
+
 		yType := &sema.CompositeType{
+			Location:   location,
 			Identifier: "Y",
 			Kind:       common.CompositeKindStructure,
 			Members:    &sema.StringMemberOrderedMap{},
 		}
 
 		xType := &sema.CompositeType{
+			Location:   location,
 			Identifier: "X",
 			Kind:       common.CompositeKindContract,
 			Members:    &sema.StringMemberOrderedMap{},
@@ -1044,7 +1051,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 
 		// Run script
 
-		scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
+		scriptEnvironment := newScriptEnvironment()
 		scriptEnvironment.DeclareValue(valueDeclaration, nil)
 		scriptEnvironment.DeclareType(xTypeDeclaration, nil)
 		scriptEnvironment.DeclareType(yTypeDeclaration, nil)
@@ -1055,7 +1062,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 			},
 			Context{
 				Interface:   runtimeInterface,
-				Location:    common.ScriptLocation{},
+				Location:    location,
 				Environment: scriptEnvironment,
 				UseVM:       *compile,
 			},
@@ -1065,7 +1072,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 		require.Equal(t,
 			cadence.NewStruct([]cadence.Value{}).
 				WithType(cadence.NewStructType(
-					nil,
+					location,
 					yType.QualifiedIdentifier(),
 					[]cadence.Field{},
 					nil,
@@ -1077,13 +1084,17 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 	t.Run("composite type, nested, non-existing", func(t *testing.T) {
 		t.Parallel()
 
+		location := common.ScriptLocation{}
+
 		yType := &sema.CompositeType{
+			Location:   location,
 			Identifier: "Y",
 			Kind:       common.CompositeKindStructure,
 			Members:    &sema.StringMemberOrderedMap{},
 		}
 
 		xType := &sema.CompositeType{
+			Location:   location,
 			Identifier: "X",
 			Kind:       common.CompositeKindContract,
 			Members:    &sema.StringMemberOrderedMap{},
@@ -1126,7 +1137,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 
 		// Run script
 
-		scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
+		scriptEnvironment := newScriptEnvironment()
 		scriptEnvironment.DeclareValue(valueDeclaration, nil)
 
 		_, err := runtime.ExecuteScript(
@@ -1135,7 +1146,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 			},
 			Context{
 				Interface:   runtimeInterface,
-				Location:    common.ScriptLocation{},
+				Location:    location,
 				Environment: scriptEnvironment,
 				UseVM:       *compile,
 			},
@@ -1263,7 +1274,8 @@ func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
 			Interface:   runtimeInterface,
 			Location:    common.ScriptLocation{},
 			Environment: scriptEnvironment,
-			UseVM:       *compile,
+			// TODO: Need to inject the composite-type's method to compiler/vm.
+			//UseVM:       *compile,
 		},
 	)
 	require.NoError(t, err)

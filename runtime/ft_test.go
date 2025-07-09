@@ -1082,7 +1082,7 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		},
 	}
 
-	environment := NewBaseInterpreterEnvironment(Config{})
+	environment := newTransactionEnvironment()
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
