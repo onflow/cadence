@@ -37,6 +37,9 @@ func (c *Context) MaybeTrackReferencedResourceKindedValue(referenceValue *interp
 	values := c.referencedResourceKindedValues[id]
 	if values == nil {
 		values = map[*interpreter.EphemeralReferenceValue]struct{}{}
+		if c.referencedResourceKindedValues == nil {
+			c.referencedResourceKindedValues = make(ReferencedResourceKindedValues)
+		}
 		c.referencedResourceKindedValues[id] = values
 	}
 	values[referenceValue] = struct{}{}
