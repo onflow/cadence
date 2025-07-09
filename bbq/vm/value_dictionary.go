@@ -29,7 +29,7 @@ import (
 
 func init() {
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		commons.TypeQualifierDictionary,
 		NewNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeRemoveFunctionName,
@@ -46,7 +46,7 @@ func init() {
 		),
 	)
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		commons.TypeQualifierDictionary,
 		NewNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeInsertFunctionName,
@@ -70,7 +70,7 @@ func init() {
 		),
 	)
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		commons.TypeQualifierDictionary,
 		NewNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeContainsKeyFunctionName,
@@ -91,7 +91,7 @@ func init() {
 		),
 	)
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		commons.TypeQualifierDictionary,
 		NewNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeForEachKeyFunctionName,

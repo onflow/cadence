@@ -32,7 +32,7 @@ import (
 func init() {
 	storageCapabilityControllerTypeName := commons.TypeQualifier(sema.StorageCapabilityControllerType)
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		storageCapabilityControllerTypeName,
 		NewNativeFunctionValue(
 			sema.StorageCapabilityControllerTypeSetTagFunctionName,
@@ -58,7 +58,7 @@ func init() {
 		),
 	)
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		storageCapabilityControllerTypeName,
 		NewNativeFunctionValue(
 			sema.StorageCapabilityControllerTypeDeleteFunctionName,
@@ -81,7 +81,7 @@ func init() {
 		),
 	)
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		storageCapabilityControllerTypeName,
 		NewNativeFunctionValue(
 			sema.StorageCapabilityControllerTypeTargetFunctionName,
@@ -100,7 +100,7 @@ func init() {
 		),
 	)
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		storageCapabilityControllerTypeName,
 		NewNativeFunctionValue(
 			sema.StorageCapabilityControllerTypeRetargetFunctionName,

@@ -31,7 +31,7 @@ import (
 func init() {
 	accountCapabilityControllerTypeName := commons.TypeQualifier(sema.AccountCapabilityControllerType)
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		accountCapabilityControllerTypeName,
 		NewNativeFunctionValue(
 			sema.AccountCapabilityControllerTypeSetTagFunctionName,
@@ -57,7 +57,7 @@ func init() {
 		),
 	)
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		accountCapabilityControllerTypeName,
 		NewNativeFunctionValue(
 			sema.AccountCapabilityControllerTypeDeleteFunctionName,
