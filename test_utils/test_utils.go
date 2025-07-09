@@ -19,6 +19,7 @@
 package test_utils
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -362,6 +363,23 @@ func ParseCheckAndPrepareWithOptions(
 				}
 
 				return typeLoader(location, typeID)
+			}
+
+			vmConfig.ElaborationResolver = func(location common.Location) (*sema.Elaboration, error) {
+				impt := interpreterConfig.ImportLocationHandler(nil, location)
+
+				var elaboration *sema.Elaboration
+				switch impt := impt.(type) {
+				case interpreter.VirtualImport:
+					elaboration = impt.Elaboration
+				case interpreter.InterpreterImport:
+					elaboration = impt.Interpreter.Program.Elaboration
+				}
+				if elaboration == nil {
+					return nil, fmt.Errorf("cannot find elaboration for %s", location)
+				}
+
+				return elaboration, nil
 			}
 		}
 	}

@@ -158,8 +158,12 @@ func (c *Context) MaybeValidateAtreeStorage() {
 }
 
 func (c *Context) IsTypeInfoRecovered(location common.Location) bool {
-	//TODO
-	return false
+	elaboration, err := c.ElaborationResolver(location)
+	if err != nil {
+		return false
+	}
+
+	return elaboration.IsRecovered
 }
 
 func (c *Context) WithContainerMutationPrevention(valueID atree.ValueID, f func()) {

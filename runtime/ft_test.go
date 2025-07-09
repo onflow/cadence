@@ -1082,8 +1082,6 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		},
 	}
 
-	environment := NewBaseInterpreterEnvironment(Config{})
-
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// Deploy Fungible Token contract
@@ -1098,7 +1096,6 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		Context{
 			Interface:   runtimeInterface,
 			Location:    nextTransactionLocation(),
-			Environment: environment,
 			UseVM:       *compile,
 		},
 	)
@@ -1232,7 +1229,6 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		Context{
 			Interface:   runtimeInterface,
 			Location:    nextTransactionLocation(),
-			Environment: environment,
 			UseVM:       *compile,
 		},
 	)
@@ -1270,7 +1266,6 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		Context{
 			Interface:   runtimeInterface,
 			Location:    nextTransactionLocation(),
-			Environment: environment,
 			UseVM:       *compile,
 		},
 	)
@@ -1324,7 +1319,6 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		Context{
 			Interface:   runtimeInterface,
 			Location:    nextTransactionLocation(),
-			Environment: environment,
 			UseVM:       *compile,
 		},
 	)
