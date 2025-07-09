@@ -369,22 +369,6 @@ func ParseCheckAndPrepareWithOptions(
 
 				return nil
 			}
-		}
-
-		if interpreterConfig.CompositeTypeHandler != nil {
-			originalTypeLoader := vmConfig.TypeLoader
-			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
-				ty := interpreterConfig.CompositeTypeHandler(location, typeID)
-				if ty != nil {
-					return ty
-				}
-
-				if originalTypeLoader != nil {
-					return originalTypeLoader(location, typeID)
-				}
-
-				return nil
-			}
 
 			vmConfig.ElaborationResolver = func(location common.Location) (*sema.Elaboration, error) {
 				impt := interpreterConfig.ImportLocationHandler(nil, location)
@@ -401,6 +385,22 @@ func ParseCheckAndPrepareWithOptions(
 				}
 
 				return elaboration, nil
+			}
+		}
+
+		if interpreterConfig.CompositeTypeHandler != nil {
+			originalTypeLoader := vmConfig.TypeLoader
+			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
+				ty := interpreterConfig.CompositeTypeHandler(location, typeID)
+				if ty != nil {
+					return ty
+				}
+
+				if originalTypeLoader != nil {
+					return originalTypeLoader(location, typeID)
+				}
+
+				return nil
 			}
 		}
 	}
