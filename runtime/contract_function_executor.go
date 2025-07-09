@@ -125,15 +125,6 @@ func (executor *contractFunctionExecutor) preprocess() (err error) {
 		}
 	}
 
-	if context.UseVM {
-		if _, ok := environment.(*vmEnvironment); !ok {
-			panic(errors.NewUnexpectedError(
-				"expected to run with the VM, but found an incompatible environment: %T",
-				environment,
-			))
-		}
-	}
-
 	environment.Configure(
 		runtimeInterface,
 		codesAndPrograms,
@@ -144,9 +135,22 @@ func (executor *contractFunctionExecutor) preprocess() (err error) {
 
 	switch environment := environment.(type) {
 	case *InterpreterEnvironment:
+		if context.UseVM {
+			panic(errors.NewUnexpectedError(
+				"expected to run with the VM, but found an incompatible environment: %T",
+				environment,
+			))
+		}
+
 		// NO-OP
 
 	case *vmEnvironment:
+		if !context.UseVM {
+			panic(errors.NewUnexpectedError(
+				"expected to run with the interpreter, but found an incompatible environment: %T",
+				environment,
+			))
+		}
 		contractLocation := executor.contractLocation
 		program := environment.importProgram(contractLocation)
 		executor.vm = environment.newVM(contractLocation, program)
