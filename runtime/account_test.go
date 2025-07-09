@@ -2003,8 +2003,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: requires support for contract interface imports
-				//UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2098,8 +2097,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: requires support for contract interface imports
-				//UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2198,8 +2196,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: requires support for contract interface imports
-				//UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)

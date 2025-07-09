@@ -19,7 +19,6 @@
 package stdlib
 
 import (
-	goerrors "errors"
 	"fmt"
 
 	"golang.org/x/crypto/sha3"
@@ -1900,14 +1899,9 @@ func AccountContractsBorrow(
 
 	contractLocation := common.NewAddressLocation(invocationContext, address, name)
 
-	contractValue, err := invocationContext.GetContractValue(contractLocation)
-	if err != nil {
-		var notDeclaredErr interpreter.NotDeclaredError
-		if goerrors.As(err, &notDeclaredErr) {
-			return interpreter.Nil
-		}
-
-		panic(err)
+	contractValue := invocationContext.GetContractValue(contractLocation)
+	if contractValue == nil {
+		return interpreter.Nil
 	}
 
 	// Check the type

@@ -211,9 +211,12 @@ func (executor *contractFunctionExecutor) executeWithInterpreter(
 		return nil, err
 	}
 
-	contractValue, err := inter.GetContractComposite(executor.contractLocation)
-	if err != nil {
-		return nil, err
+	contractValue := inter.GetContractComposite(executor.contractLocation)
+	if contractValue == nil {
+		return nil, interpreter.NotDeclaredError{
+			ExpectedKind: common.DeclarationKindContract,
+			Name:         executor.contractLocation.Name,
+		}
 	}
 
 	var self interpreter.Value = contractValue
@@ -279,6 +282,12 @@ func (executor *contractFunctionExecutor) executeWithVM(
 		contractLocation,
 		environment.storage,
 	)
+	if contractValue == nil {
+		return nil, interpreter.NotDeclaredError{
+			ExpectedKind: common.DeclarationKindContract,
+			Name:         executor.contractLocation.Name,
+		}
+	}
 
 	// receiver + arguments
 	arguments := make([]interpreter.Value, 0, len(executor.arguments))
