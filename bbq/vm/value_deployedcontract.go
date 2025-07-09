@@ -35,7 +35,7 @@ func init() {
 
 	// Methods on `DeployedContract` value.
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		deployedContractTypeName,
 		NewNativeFunctionValue(
 			sema.DeployedContractTypePublicTypesFunctionName,
