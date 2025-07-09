@@ -700,8 +700,8 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 	// Add natively provided methods as globals.
 	// Only do it for user-defined types (i.e: `compositeTypeName` is not empty).
 	if enclosingType != nil {
-		for _, boundFunction := range commonBuiltinTypeBoundFunctions {
-			functionName := boundFunction.name
+		for _, boundFunction := range CommonBuiltinTypeBoundFunctions {
+			functionName := boundFunction.Name
 			qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
 			c.addGlobal(qualifiedName)
 		}
@@ -3102,14 +3102,14 @@ func (c *Compiler[_, _]) VisitInterfaceDeclaration(declaration *ast.InterfaceDec
 }
 
 func (c *Compiler[_, _]) addBuiltinMethods(typ sema.Type) {
-	for _, boundFunction := range commonBuiltinTypeBoundFunctions {
-		name := boundFunction.name
+	for _, boundFunction := range CommonBuiltinTypeBoundFunctions {
+		name := boundFunction.Name
 		qualifiedName := commons.TypeQualifiedName(typ, name)
 		c.addFunction(
 			name,
 			qualifiedName,
-			uint16(len(boundFunction.typ.Parameters)+1),
-			boundFunction.typ,
+			uint16(len(boundFunction.Type.Parameters)+1),
+			boundFunction.Type,
 		)
 	}
 }

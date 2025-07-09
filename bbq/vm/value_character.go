@@ -31,7 +31,7 @@ func init() {
 
 	typeName := commons.TypeQualifier(sema.CharacterType)
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValue(
 			sema.ToStringFunctionName,

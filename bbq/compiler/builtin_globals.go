@@ -32,26 +32,26 @@ func DefaultBuiltinGlobals() *activations.Activation[GlobalImport] {
 	return defaultBuiltinGlobals
 }
 
-type builtinFunction struct {
-	name string
-	typ  *sema.FunctionType
+type BuiltinFunction struct {
+	Name string
+	Type *sema.FunctionType
 }
 
-var commonBuiltinTypeBoundFunctions = []builtinFunction{
+var CommonBuiltinTypeBoundFunctions = []BuiltinFunction{
 	{
-		name: sema.GetTypeFunctionName,
-		typ:  sema.GetTypeFunctionType,
+		Name: sema.GetTypeFunctionName,
+		Type: sema.GetTypeFunctionType,
 	},
 	{
-		name: sema.IsInstanceFunctionName,
-		typ:  sema.IsInstanceFunctionType,
+		Name: sema.IsInstanceFunctionName,
+		Type: sema.IsInstanceFunctionType,
 	},
 }
 
-var valueConstructorFunctions = []builtinFunction{
+var valueConstructorFunctions = []BuiltinFunction{
 	{
-		name: sema.StringType.Name,
-		typ:  sema.StringFunctionType,
+		Name: sema.StringType.Name,
+		Type: sema.StringFunctionType,
 	},
 }
 
@@ -66,10 +66,10 @@ func init() {
 
 	for _, constructor := range valueConstructorFunctions {
 		// Register the constructor. e.g: `String()`
-		registerDefaultBuiltinGlobal(constructor.name)
+		registerDefaultBuiltinGlobal(constructor.Name)
 
 		// Register the members of the constructor/type. e.g: `String.join()`
-		registerBoundFunctions(constructor.typ)
+		registerBoundFunctions(constructor.Type)
 	}
 
 	// The panic function is needed for conditions.

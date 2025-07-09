@@ -29,7 +29,7 @@ import (
 
 func init() {
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		commons.TypeQualifierOptional,
 		NewNativeFunctionValueWithDerivedType(
 			sema.OptionalTypeMapFunctionName,
