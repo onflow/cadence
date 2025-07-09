@@ -153,7 +153,7 @@ func TestRuntimeCheckCyclicImportsAfterUpdate(t *testing.T) {
 		},
 	}
 
-	environment := NewBaseInterpreterEnvironment(Config{})
+	environment := newTransactionEnvironment()
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
@@ -271,7 +271,7 @@ func TestRuntimeCheckCyclicImportAddress(t *testing.T) {
 		},
 	}
 
-	environment := NewBaseInterpreterEnvironment(Config{})
+	environment := newTransactionEnvironment()
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
@@ -373,7 +373,7 @@ func TestRuntimeCheckCyclicImportToSelfDuringDeploy(t *testing.T) {
 		},
 	}
 
-	environment := NewBaseInterpreterEnvironment(Config{})
+	environment := newTransactionEnvironment()
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 

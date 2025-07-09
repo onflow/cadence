@@ -51,6 +51,22 @@ import (
 
 var compile = flag.Bool("compile", false, "Run tests using the compiler")
 
+func newScriptEnvironment() Environment {
+	if *compile {
+		return NewScriptVMEnvironment(Config{})
+	} else {
+		return NewScriptInterpreterEnvironment(Config{})
+	}
+}
+
+func newTransactionEnvironment() Environment {
+	if *compile {
+		return NewBaseVMEnvironment(Config{})
+	} else {
+		return NewBaseInterpreterEnvironment(Config{})
+	}
+}
+
 func TestRuntimeExecuteScript(t *testing.T) {
 
 	t.Parallel()
@@ -8065,7 +8081,7 @@ func BenchmarkRuntimeScriptNoop(b *testing.B) {
 		Source: []byte("access(all) fun main() {}"),
 	}
 
-	environment := NewScriptInterpreterEnvironment(Config{})
+	environment := newTransactionEnvironment()
 
 	nextScriptLocation := NewScriptLocationGenerator()
 
@@ -9442,7 +9458,7 @@ func BenchmarkRuntimeResourceTracking(b *testing.B) {
 		},
 	}
 
-	environment := NewBaseInterpreterEnvironment(Config{})
+	environment := newTransactionEnvironment()
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
