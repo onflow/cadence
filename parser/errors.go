@@ -328,7 +328,7 @@ func (e *CustomDestructorError) SecondaryError() string {
 }
 
 func (e *CustomDestructorError) MigrationNote() string {
-	return "This is pre-Cadence 1.0 syntax. Custom destructors were removed to prevent resource leaks and improve security. Resources must be explicitly destroyed using the 'destroy' keyword. Custom cleanup logic should be moved to separate functions called before destruction."
+	return "This is pre-Cadence 1.0 syntax. Support for custom destructors was removed. Custom cleanup logic should be moved to a separate function called before destruction."
 }
 
 func (e *CustomDestructorError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
