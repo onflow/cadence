@@ -1040,11 +1040,12 @@ func TestInterpretMetaTypeIsRecovered(t *testing.T) {
 
 		t.Parallel()
 
-		inter, err := parseCheckAndPrepareWithOptions(t, `
-	      fun test(_ type: Type): Bool {
-	          return type.isRecovered
-	      }
-	   `,
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+               fun test(_ type: Type): Bool {
+                   return type.isRecovered
+               }
+            `,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
 					ImportLocationHandler: func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
@@ -1080,11 +1081,12 @@ func TestInterpretMetaTypeIsRecovered(t *testing.T) {
 
 		importErr := errors.New("import failure")
 
-		inter, err := parseCheckAndPrepareWithOptions(t, `
-	      fun test(_ type: Type): Bool {
-	          return type.isRecovered
-	      }
-	   `,
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+              fun test(_ type: Type): Bool {
+                  return type.isRecovered
+              }
+           `,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
 					ImportLocationHandler: func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
