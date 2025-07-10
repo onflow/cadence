@@ -9258,3 +9258,200 @@ func TestNestedLoops(t *testing.T) {
 	require.NoError(t, err)
 
 }
+
+func TestInheritedDefaultDestroyEvent(t *testing.T) {
+	t.Parallel()
+
+	storage := interpreter.NewInMemoryStorage(nil)
+
+	programs := map[common.Location]*CompiledProgram{}
+	contractValues := map[common.Location]*interpreter.CompositeValue{}
+	var logs []string
+
+	vmConfig := vm.NewConfig(storage)
+	vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+		program, ok := programs[location]
+		if !ok {
+			assert.FailNow(t, "invalid location")
+		}
+		return program.Program
+	}
+	vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
+		contractValue, ok := contractValues[location]
+		if !ok {
+			assert.FailNow(t, "invalid location")
+		}
+		return contractValue
+	}
+	vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
+		elaboration := programs[location].DesugaredElaboration
+		compositeType := elaboration.CompositeType(typeID)
+		if compositeType != nil {
+			return compositeType
+		}
+
+		return elaboration.InterfaceType(typeID)
+	}
+
+	vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(&logs)
+
+	activation := sema.NewVariableActivation(sema.BaseValueActivation)
+	activation.DeclareValue(stdlib.VMPanicFunction)
+	activation.DeclareValue(newConditionLogFunction(nil))
+
+	contractsAddress := common.MustBytesToAddress([]byte{0x1})
+
+	barLocation := common.NewAddressLocation(nil, contractsAddress, "Bar")
+	fooLocation := common.NewAddressLocation(nil, contractsAddress, "Foo")
+
+	// Deploy interface contract
+
+	barContract := `
+        contract interface Bar {
+            resource interface XYZ {
+                var x: Int
+                event ResourceDestroyed(x: Int = self.x)
+            }
+        }
+        `
+
+	compilerConfig := &compiler.Config{
+		BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog,
+	}
+
+	// Only need to compile
+	_ = ParseCheckAndCompileCodeWithOptions(
+		t,
+		barContract,
+		barLocation,
+		ParseCheckAndCompileOptions{
+			CompilerConfig: compilerConfig,
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				Location: barLocation,
+				Config: &sema.Config{
+					LocationHandler: SingleIdentifierLocationResolver(t),
+					BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+						return activation
+					},
+				},
+			},
+		},
+		programs,
+	)
+
+	// Deploy contract with the implementation
+
+	fooContract := fmt.Sprintf(
+		`
+        import Bar from %[1]s
+
+        contract Foo {
+
+            resource ABC: Bar.XYZ {
+                var x: Int
+
+                init() {
+                    self.x = 6
+                }
+            }
+
+            fun createABC(): @ABC {
+                return <- create ABC()
+            }
+        }`,
+		contractsAddress.HexWithPrefix(),
+	)
+
+	fooProgram := ParseCheckAndCompileCodeWithOptions(
+		t,
+		fooContract,
+		fooLocation,
+		ParseCheckAndCompileOptions{
+			CompilerConfig: compilerConfig,
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				Location: fooLocation,
+				Config: &sema.Config{
+					LocationHandler: SingleIdentifierLocationResolver(t),
+					BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+						return activation
+					},
+				},
+			},
+		},
+		programs,
+	)
+
+	_, fooContractValue := initializeContract(
+		t,
+		fooLocation,
+		fooProgram,
+		vmConfig,
+	)
+	contractValues[fooLocation] = fooContractValue
+
+	// Run script
+
+	code := fmt.Sprintf(
+		`
+              import Foo from %[1]s
+
+              fun main() {
+                  let abc <- Foo.createABC()
+                  destroy abc
+              }
+            `,
+		contractsAddress.HexWithPrefix(),
+	)
+
+	location := common.ScriptLocation{0x1}
+
+	var eventEmitted bool
+
+	vmConfig.OnEventEmitted = func(
+		context interpreter.ValueExportContext,
+		locationRange interpreter.LocationRange,
+		eventType *sema.CompositeType,
+		eventFields []interpreter.Value,
+	) error {
+		require.False(t, eventEmitted)
+		eventEmitted = true
+
+		assert.Equal(t,
+			[]interpreter.Value{
+				interpreter.NewUnmeteredIntValueFromInt64(6),
+			},
+			eventFields,
+		)
+
+		assert.Equal(t,
+			barLocation.TypeID(nil, "Bar.XYZ.ResourceDestroyed"),
+			eventType.ID(),
+		)
+
+		return nil
+	}
+
+	_, err := compileAndInvokeWithOptionsAndPrograms(
+		t,
+		code,
+		"main",
+		CompilerAndVMOptions{
+			ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+				CompilerConfig: compilerConfig,
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: location,
+					Config: &sema.Config{
+						LocationHandler: SingleIdentifierLocationResolver(t),
+						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+							return activation
+						},
+					},
+				},
+			},
+			VMConfig: vmConfig,
+		},
+		programs,
+	)
+	require.NoError(t, err)
+	require.True(t, eventEmitted)
+}

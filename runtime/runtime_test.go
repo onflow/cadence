@@ -3972,6 +3972,7 @@ func TestRuntimeStorageLoadedDestructionConcreteTypeSameNamedInterface(t *testin
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -3983,6 +3984,7 @@ func TestRuntimeStorageLoadedDestructionConcreteTypeSameNamedInterface(t *testin
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -3994,6 +3996,7 @@ func TestRuntimeStorageLoadedDestructionConcreteTypeSameNamedInterface(t *testin
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -4005,6 +4008,7 @@ func TestRuntimeStorageLoadedDestructionConcreteTypeSameNamedInterface(t *testin
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
