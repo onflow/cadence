@@ -12138,7 +12138,7 @@ func TestInterpretCompositeTypeHandler(t *testing.T) {
 
 	testType := interpreter.NewCompositeStaticTypeComputeTypeID(nil, stdlib.FlowLocation{}, "AccountContractAdded")
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           fun test(): Type? {
               return CompositeType("flow.AccountContractAdded")
