@@ -3718,15 +3718,28 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 		runtimeInterface = newRuntimeInterface()
 
+		programs := map[common.Location]*Program{}
+
 		runtimeInterface.OnGetOrLoadProgram = func(
 			location Location,
 			load func() (*Program, error),
 		) (*Program, error) {
-			program, err := load()
-			if err != nil {
-				// Return a wrapped error
-				return nil, fmt.Errorf("failed to load program: %w", err)
+			// In VM environment, the program is requested twice:
+			// Once when parsing/checking and again when compiling.
+			// This second request which happens during the compilation
+			// relies on the previous parsing/checking results.
+			// So the program needs to be stored when it is loaded for the first time.
+			program, ok := programs[location]
+			if !ok {
+				program, err = load()
+				if err != nil {
+					// Return a wrapped error
+					return nil, fmt.Errorf("failed to load program: %w", err)
+				}
+
+				programs[location] = program
 			}
+
 			return program, nil
 		}
 
