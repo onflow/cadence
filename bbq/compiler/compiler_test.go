@@ -8848,6 +8848,95 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 
 }
 
+func TestCompileAttachments(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			struct S {}
+			attachment A for S {
+				fun foo(): Int { return 3 }
+			}
+			fun test(): Int {
+				var s = S()
+				s = attach A() to s
+				return s[A]?.foo()!
+			}
+		`)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 8)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// STATEMENT: var s = S()
+				opcode.InstructionStatement{},
+				opcode.InstructionGetGlobal{Global: 0x1},
+				opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0x0},
+				opcode.InstructionTransferAndConvert{Type: 0x1},
+				opcode.InstructionSetLocal{Local: 0x0},
+
+				// STATEMENT: s = attach A() to s
+				opcode.InstructionStatement{},
+				// get s on stack
+				opcode.InstructionGetLocal{Local: 0x0},
+				// store s in a separate local, put on stack
+				opcode.InstructionSetLocal{Local: 0x1},
+				opcode.InstructionGetLocal{Local: 0x1},
+				// create a reference to s and store locally
+				opcode.InstructionNewRef{Type: 0x1, IsImplicit: false},
+				opcode.InstructionSetLocal{Local: 0x2},
+				// get A constructor
+				opcode.InstructionGetGlobal{Global: 0x4},
+				// get s reference
+				opcode.InstructionGetLocal{Local: 0x2},
+				// invoke A constructor with &s as arg, puts A on stack
+				opcode.InstructionInvoke{TypeArgs: []uint16{0x1}, ArgCount: 0x1},
+				// get s back on stack
+				opcode.InstructionGetLocal{Local: 0x1},
+				// copy/transfer of s to attach to
+				opcode.InstructionTransfer{},
+				// attachment operation, attach A to s-copy
+				opcode.InstructionSetTypeIndex{Type: 0x2},
+				// return value is s-copy
+				opcode.InstructionTransferAndConvert{Type: 0x1},
+				// finish assignment of s
+				opcode.InstructionSetLocal{Local: 0x0},
+
+				// STATEMENT: return s[A]?.foo()!
+				opcode.InstructionStatement{},
+				opcode.InstructionGetLocal{Local: 0x0},
+				// access A on s: s[A], returns attachment reference as optional
+				opcode.InstructionGetTypeIndex{Type: 0x2},
+				opcode.InstructionSetLocal{Local: 0x3},
+				opcode.InstructionGetLocal{Local: 0x3},
+				opcode.InstructionJumpIfNil{Target: 0x1e},
+				opcode.InstructionGetLocal{Local: 0x3},
+				opcode.InstructionUnwrap{},
+				// call foo if not nil
+				opcode.InstructionGetMethod{Method: 0x7},
+				opcode.InstructionInvokeMethodStatic{TypeArgs: []uint16(nil), ArgCount: 0x0},
+				opcode.InstructionJump{Target: 0x1f},
+				opcode.InstructionNil{},
+				opcode.InstructionUnwrap{},
+				opcode.InstructionTransferAndConvert{Type: 0x3},
+				opcode.InstructionReturnValue{},
+			},
+			functions[0].Code,
+		)
+	})
+}
+
 func TestCompileImportEnumCase(t *testing.T) {
 
 	t.Parallel()
