@@ -303,12 +303,22 @@ func ParseCheckAndPrepareWithOptions(
 							name,
 							functionValue.Type,
 							func(context *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+
+								var argumentTypes []sema.Type
+								if len(arguments) > 0 {
+									argumentTypes = make([]sema.Type, len(arguments))
+									for i, argument := range arguments {
+										staticType := argument.StaticType(context)
+										argumentTypes[i] = interpreter.MustConvertStaticToSemaType(staticType, context)
+									}
+								}
+
 								invocation := interpreter.NewInvocation(
 									context,
 									nil,
 									nil,
 									arguments,
-									nil,
+									argumentTypes,
 									// TODO: provide these if they are needed for tests.
 									nil,
 									interpreter.EmptyLocationRange,
@@ -431,7 +441,7 @@ func ParseCheckAndPrepareWithOptions(
 		Config: options.CheckerConfig,
 	}
 
-	vmInstance := compilerUtils.CompileAndPrepareToInvoke(
+	vmInstance, err := compilerUtils.CompileAndPrepareToInvoke(
 		tb,
 		code,
 		compilerUtils.CompilerAndVMOptions{
@@ -444,6 +454,9 @@ func ParseCheckAndPrepareWithOptions(
 			Programs: programs,
 		},
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	elaboration := programs[parseAndCheckOptions.Location].DesugaredElaboration
 

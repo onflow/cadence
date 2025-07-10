@@ -76,7 +76,7 @@ func VMDefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLi
 		VMAssertFunction,
 		VMPanicFunction,
 		VMSignatureAlgorithmConstructor,
-		// TODO: InclusiveRangeConstructor
+		VMInclusiveRangeConstructor,
 		NewVMLogFunction(handler),
 		NewVMRevertibleRandomFunction(handler),
 		NewVMGetBlockFunction(handler),

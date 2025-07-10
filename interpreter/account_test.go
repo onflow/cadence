@@ -634,7 +634,7 @@ func testAccountWithErrorHandlerWithCompiler(
 			},
 		}
 
-		vmInstance := compilerUtils.CompileAndPrepareToInvoke(
+		vmInstance, err := compilerUtils.CompileAndPrepareToInvoke(
 			t,
 			code,
 			compilerUtils.CompilerAndVMOptions{
@@ -664,6 +664,7 @@ func testAccountWithErrorHandlerWithCompiler(
 				Programs: programs,
 			},
 		)
+		require.NoError(t, err)
 
 		var uuid uint64
 		uuidHandler := func() (uint64, error) {

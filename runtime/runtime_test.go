@@ -1883,8 +1883,7 @@ func TestRuntimeStorageMultipleTransactionsInclusiveRangeFunction(t *testing.T) 
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: requires support for InclusiveRange in the VM
-			//UseVM: *compile,
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)

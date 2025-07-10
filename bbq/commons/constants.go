@@ -47,4 +47,5 @@ const (
 	TypeQualifierDictionary         = "$Dictionary"
 	TypeQualifierFunction           = "$Function"
 	TypeQualifierOptional           = "$Optional"
+	TypeQualifierInclusiveRange     = "$InclusiveRange"
 )

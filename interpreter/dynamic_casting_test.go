@@ -1500,7 +1500,7 @@ func TestInterpretDynamicCastingInclusiveRange(t *testing.T) {
 		t.Run(operation.Symbol(), func(t *testing.T) {
 			t.Run("invalid cast", func(t *testing.T) {
 
-				inter, err := parseCheckAndInterpretWithOptions(t,
+				inter, err := parseCheckAndPrepareWithOptions(t,
 					fmt.Sprintf(
 						`
 							fun test(): InclusiveRange<UInt256>? {

@@ -392,7 +392,7 @@ func TestInclusiveRange(t *testing.T) {
 				)
 			}
 
-			inter, err := parseCheckAndInterpretWithOptions(t, code,
+			inter, err := parseCheckAndPrepareWithOptions(t, code,
 				ParseCheckAndInterpretOptions{
 					CheckerConfig: &sema.Config{
 						BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
@@ -444,7 +444,7 @@ func TestInclusiveRange(t *testing.T) {
 				t,
 				inter,
 				expectedRangeValue,
-				inter.Globals.Get("r").GetValue(inter),
+				inter.GetGlobal("r"),
 			)
 
 			// Check that contains returns correct information.
@@ -460,7 +460,7 @@ func TestInclusiveRange(t *testing.T) {
 					t,
 					inter,
 					expectedValue,
-					inter.Globals.Get(fmt.Sprintf("c_%d", i)).GetValue(inter),
+					inter.GetGlobal(fmt.Sprintf("c_%d", i)),
 				)
 			}
 		})
@@ -507,7 +507,7 @@ func TestInclusiveRangeConstructionInvalid(t *testing.T) {
 		t.Run(label, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := parseCheckAndInterpretWithOptions(t, code,
+			_, err := parseCheckAndPrepareWithOptions(t, code,
 				ParseCheckAndInterpretOptions{
 					CheckerConfig: &sema.Config{
 						BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {

@@ -615,7 +615,10 @@ func CompileAndInvokeWithOptions(
 	arguments ...vm.Value,
 ) (vm.Value, error) {
 
-	programVM := CompileAndPrepareToInvoke(t, code, options)
+	programVM, err := CompileAndPrepareToInvoke(t, code, options)
+	if err != nil {
+		return nil, err
+	}
 
 	result, err := programVM.InvokeExternally(funcName, arguments...)
 	if err == nil {
@@ -625,7 +628,7 @@ func CompileAndInvokeWithOptions(
 	return result, err
 }
 
-func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMOptions) *vm.VM {
+func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMOptions) (programVM *vm.VM, err error) {
 	programs := options.Programs
 	if programs == nil {
 		programs = map[common.Location]*CompiledProgram{}
@@ -664,13 +667,18 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 		}
 	}
 
-	programVM := vm.NewVM(
+	// recover panics from VM (e.g. global evaluation)
+	defer vm.RecoverErrors(func(internalErr error) {
+		err = internalErr
+	})
+
+	programVM = vm.NewVM(
 		location,
 		program,
 		vmConfig,
 	)
 
-	return programVM
+	return programVM, nil
 }
 
 func contractValueHandler(contractName string, arguments ...vm.Value) vm.ContractValueHandler {
