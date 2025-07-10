@@ -523,6 +523,22 @@ func (c *Compiler[_, _]) compileStatement(statement ast.Statement) {
 }
 
 func (c *Compiler[_, _]) compileExpression(expression ast.Expression) {
+	// Expressions could be inherited. e.g: Inherited default destroy event's default arguments.
+	// Therefore, check whether the expression is inherited.
+	// TODO: Optimization: Instead of checking for each expression in the map,
+	//  maybe introduce a new ast.Expression, (say, inherited Expression),
+	//  which also holds the corresponding elaboration.
+	//  Then in desugar, always wrap the inherited expression with this new ast-node.
+	inheritedElaboration, ok := c.DesugaredElaboration.inheritedCodeElaborations[expression]
+	if ok {
+		prevElaboration := c.DesugaredElaboration
+		c.DesugaredElaboration = inheritedElaboration
+
+		defer func() {
+			c.DesugaredElaboration = prevElaboration
+		}()
+	}
+
 	c.compileWithPositionInfo(
 		expression,
 		func() {
@@ -3406,7 +3422,7 @@ func (c *Compiler[_, _]) generateEnumLookup(enumType *sema.CompositeType, enumCa
 }
 
 func (c *Compiler[_, _]) compilePotentiallyInheritedCode(statement ast.Statement, f func()) {
-	stmtElaboration, ok := c.DesugaredElaboration.conditionsElaborations[statement]
+	stmtElaboration, ok := c.DesugaredElaboration.inheritedCodeElaborations[statement]
 	if ok {
 		prevElaboration := c.DesugaredElaboration
 		c.DesugaredElaboration = stmtElaboration

@@ -67,6 +67,7 @@ type inheritedEvent struct {
 	enclosingType    sema.Type
 	eventDeclaration *ast.CompositeDeclaration
 	eventType        *sema.CompositeType
+	elaboration      *DesugaredElaboration
 }
 
 var _ ast.DeclarationVisitor[ast.Declaration] = &Desugar{}
@@ -538,7 +539,7 @@ func (d *Desugar) desugarPostConditions(
 			rewrittenBeforeStatements := inheritedFunc.rewrittenConditions.BeforeStatements
 			beforeStatements = append(beforeStatements, rewrittenBeforeStatements...)
 			for _, statement := range rewrittenBeforeStatements {
-				d.elaboration.conditionsElaborations[statement] = inheritedFunc.elaboration
+				d.elaboration.inheritedCodeElaborations[statement] = inheritedFunc.elaboration
 			}
 
 			for _, condition := range inheritedFunc.rewrittenConditions.RewrittenPostConditions {
@@ -585,7 +586,7 @@ func (d *Desugar) desugarInheritedCondition(
 
 	// Elaboration to be used by the condition must be set in the current elaboration.
 	// (Not in the inherited function's elaboration)
-	d.elaboration.conditionsElaborations[desugaredCondition] = inheritedFunc.elaboration
+	d.elaboration.inheritedCodeElaborations[desugaredCondition] = inheritedFunc.elaboration
 
 	if len(functionParams.Parameters) > 0 {
 		paramBinding := make(map[string]string)
@@ -1060,6 +1061,7 @@ func (d *Desugar) inheritedFunctionsWithConditionsAndEvents(compositeType sema.C
 				enclosingType:    interfaceType,
 				eventDeclaration: defaultDestroyEvent,
 				eventType:        eventType,
+				elaboration:      elaboration,
 			})
 			inheritedEvents[compositeType] = events
 		}
@@ -2148,6 +2150,7 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 		eventDeclaration *ast.CompositeDeclaration,
 		eventType *sema.CompositeType,
 		enclosingType sema.Type,
+		elaboration *DesugaredElaboration,
 	) {
 		// Generate a constructor-invocation to construct an event-value.
 		// e.g: `R.ResourceDestroyed(a, ...)`
@@ -2160,13 +2163,18 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 		// Generate arguments.
 		arguments := make(ast.Arguments, 0, len(parameters))
 		for _, param := range parameters {
+			defaultArgument := param.DefaultArgument
 			arguments = append(
 				arguments,
 				ast.NewUnlabeledArgument(
 					d.memoryGauge,
-					param.DefaultArgument,
+					defaultArgument,
 				),
 			)
+
+			// Default-argument is an expression inherited from the interface.
+			// Store the elaboration corresponds to this inherited code.
+			d.elaboration.inheritedCodeElaborations[defaultArgument] = elaboration
 		}
 
 		endPos := eventDeclaration.EndPos
@@ -2215,7 +2223,8 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 			endPos,
 		)
 
-		eventConstructorFunctionType := d.elaboration.FunctionDeclarationFunctionType(eventConstructor)
+		// Important: Use the inherited/correct elaboration, not the current one.
+		eventConstructorFunctionType := elaboration.FunctionDeclarationFunctionType(eventConstructor)
 		paramTypes := eventConstructorFunctionType.ParameterTypes()
 
 		invocationTypes := sema.InvocationExpressionTypes{
@@ -2242,6 +2251,7 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 			defaultDestroyEventDeclaration,
 			eventType,
 			compositeType,
+			d.elaboration,
 		)
 	}
 
@@ -2253,6 +2263,7 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 			inheritedEvent.eventDeclaration,
 			inheritedEvent.eventType,
 			inheritedEvent.enclosingType,
+			inheritedEvent.elaboration,
 		)
 	}
 

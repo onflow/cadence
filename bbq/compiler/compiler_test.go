@@ -9221,3 +9221,118 @@ func TestNestedLoops(t *testing.T) {
 		functions[0].Code,
 	)
 }
+
+func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
+
+	t.Parallel()
+
+	// Deploy contract interface
+
+	barContract := `
+        contract interface Bar {
+            resource interface XYZ {
+                var x: Int
+                event ResourceDestroyed(x: Int = self.x)
+            }
+        }
+    `
+
+	programs := CompiledPrograms{}
+
+	contractsAddress := common.MustBytesToAddress([]byte{0x1})
+
+	barLocation := common.NewAddressLocation(nil, contractsAddress, "Bar")
+	fooLocation := common.NewAddressLocation(nil, contractsAddress, "Foo")
+
+	barProgram := ParseCheckAndCompile(
+		t,
+		barContract,
+		barLocation,
+		programs,
+	)
+
+	functions := barProgram.Functions
+	require.Len(t, functions, 7)
+
+	defaultDestroyEventConstructor := functions[4]
+	require.Equal(t, "Bar.XYZ.ResourceDestroyed", defaultDestroyEventConstructor.Name)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// Create a `Bar.XYZ.ResourceDestroyed` event value.
+			opcode.InstructionNew{Kind: 4, Type: 3},
+			opcode.InstructionSetLocal{Local: 1},
+			opcode.InstructionStatement{},
+
+			// Set the parameter to the field.
+			//  `self.x = x`
+			opcode.InstructionGetLocal{Local: 1},
+			opcode.InstructionGetLocal{Local: 0},
+			opcode.InstructionTransferAndConvert{Type: 4},
+			opcode.InstructionSetField{FieldName: 0, AccessedType: 3},
+
+			// Return the constructed event value.
+			opcode.InstructionGetLocal{Local: 1},
+			opcode.InstructionReturnValue{},
+		},
+		defaultDestroyEventConstructor.Code,
+	)
+
+	// Deploy contract implementation
+
+	fooContract := fmt.Sprintf(
+		`
+        import Bar from %[1]s
+
+        contract Foo {
+
+            resource ABC: Bar.XYZ {
+                var x: Int
+
+                init() {
+                    self.x = 6
+                }
+            }
+
+            fun createABC(): @ABC {
+                return <- create ABC()
+            }
+        }
+            `,
+		contractsAddress.HexWithPrefix(),
+	)
+
+	fooProgram := ParseCheckAndCompile(t, fooContract, fooLocation, programs)
+
+	functions = fooProgram.Functions
+	require.Len(t, functions, 8)
+
+	defaultDestroyEventEmittingFunction := functions[7]
+	require.Equal(t, "Foo.ABC.$ResourceDestroyed", defaultDestroyEventEmittingFunction.Name)
+
+	const inheritedEventConstructorIndex = 9
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionStatement{},
+
+			// Construct the inherited event
+			// Bar.XYZ.ResourceDestroyed(self.x)
+			opcode.InstructionGetGlobal{Global: inheritedEventConstructorIndex},
+			opcode.InstructionGetLocal{Local: 0},
+			opcode.InstructionGetField{FieldName: 1, AccessedType: 8},
+			opcode.InstructionTransferAndConvert{Type: 6},
+			opcode.InstructionInvoke{ArgCount: 1},
+
+			// Create the array with the above event.
+			// `[Bar.XYZ.ResourceDestroyed(self.x)]`
+			opcode.InstructionTransferAndConvert{Type: 9},
+			opcode.InstructionNewArray{Type: 7, Size: 1, IsResource: false},
+			opcode.InstructionTransferAndConvert{Type: 7},
+
+			// return the array
+			opcode.InstructionReturnValue{},
+		},
+		defaultDestroyEventEmittingFunction.Code,
+	)
+}
