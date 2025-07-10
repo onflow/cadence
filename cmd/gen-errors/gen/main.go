@@ -26,7 +26,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
@@ -388,10 +387,6 @@ func placeholderValue(t types.Type) dst.Expr {
 		log.Fatalf("unsupported field type: %s", t.String())
 		return nil
 	}
-}
-
-func varName(name string) string {
-	return strings.ToLower(string(name[0])) + name[1:]
 }
 
 func writeGoFile(writer io.Writer, decls []dst.Decl, packagePath string) {

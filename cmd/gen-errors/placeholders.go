@@ -113,7 +113,7 @@ var placeholderEntitlementType = &sema.EntitlementType{
 
 var placeholderSemaAccess = sema.PrimitiveAccess(ast.AccessAll)
 
-var placeholderError = fmt.Errorf("placeholder error")
+var placeholderError = fmt.Errorf("placeholder error") //nolint:staticcheck
 
 var placeholderOperandSide = common.OperandSideLeft
 
