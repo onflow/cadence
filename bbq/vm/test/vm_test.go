@@ -2243,7 +2243,19 @@ func TestTransaction(t *testing.T) {
 
 		err := vmInstance.InvokeTransaction(nil)
 		RequireError(t, err)
-		assert.ErrorContains(t, err, "pre/post condition failed")
+
+		var conditionError *interpreter.ConditionError
+		assert.ErrorAs(t, err, &conditionError)
+		assert.Equal(
+			t,
+			ast.ConditionKindPre,
+			conditionError.ConditionKind,
+		)
+		assert.Equal(
+			t,
+			"",
+			conditionError.Message,
+		)
 
 		assert.Equal(t, []string{"2"}, logs)
 	})
@@ -2312,7 +2324,19 @@ func TestTransaction(t *testing.T) {
 
 		err := vmInstance.InvokeTransaction(nil)
 		RequireError(t, err)
-		assert.ErrorContains(t, err, "pre/post condition failed")
+
+		var conditionError *interpreter.ConditionError
+		assert.ErrorAs(t, err, &conditionError)
+		assert.Equal(
+			t,
+			ast.ConditionKindPost,
+			conditionError.ConditionKind,
+		)
+		assert.Equal(
+			t,
+			"",
+			conditionError.Message,
+		)
 
 		assert.Equal(t, []string{"2", "10"}, logs)
 	})
@@ -3622,7 +3646,19 @@ func TestFunctionPreConditions(t *testing.T) {
 		)
 
 		RequireError(t, err)
-		assert.ErrorContains(t, err, "pre/post condition failed")
+
+		var conditionError *interpreter.ConditionError
+		assert.ErrorAs(t, err, &conditionError)
+		assert.Equal(
+			t,
+			ast.ConditionKindPre,
+			conditionError.ConditionKind,
+		)
+		assert.Equal(
+			t,
+			"",
+			conditionError.Message,
+		)
 	})
 
 	t.Run("failed with message", func(t *testing.T) {
@@ -3643,7 +3679,19 @@ func TestFunctionPreConditions(t *testing.T) {
 		)
 
 		RequireError(t, err)
-		assert.ErrorContains(t, err, "x must be zero")
+
+		var conditionError *interpreter.ConditionError
+		assert.ErrorAs(t, err, &conditionError)
+		assert.Equal(
+			t,
+			ast.ConditionKindPre,
+			conditionError.ConditionKind,
+		)
+		assert.Equal(
+			t,
+			"x must be zero",
+			conditionError.Message,
+		)
 	})
 
 	t.Run("passed", func(t *testing.T) {
@@ -4074,7 +4122,19 @@ func TestFunctionPostConditions(t *testing.T) {
 		)
 
 		RequireError(t, err)
-		assert.ErrorContains(t, err, "pre/post condition failed")
+
+		var conditionError *interpreter.ConditionError
+		assert.ErrorAs(t, err, &conditionError)
+		assert.Equal(
+			t,
+			ast.ConditionKindPost,
+			conditionError.ConditionKind,
+		)
+		assert.Equal(
+			t,
+			"",
+			conditionError.Message,
+		)
 	})
 
 	t.Run("failed with message", func(t *testing.T) {
@@ -4351,7 +4411,19 @@ func TestFunctionPostConditions(t *testing.T) {
 		)
 
 		RequireError(t, err)
-		assert.ErrorContains(t, err, "pre/post condition failed")
+
+		var conditionError *interpreter.ConditionError
+		assert.ErrorAs(t, err, &conditionError)
+		assert.Equal(
+			t,
+			ast.ConditionKindPost,
+			conditionError.ConditionKind,
+		)
+		assert.Equal(
+			t,
+			"",
+			conditionError.Message,
+		)
 	})
 
 	t.Run("inherited with different param names", func(t *testing.T) {
@@ -6714,13 +6786,18 @@ func TestContractClosure(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	comp := compiler.NewInstructionCompiler(
+	compConfig := &compiler.Config{
+		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
+			return importedProgram
+		},
+		BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndPanic,
+	}
+
+	comp := compiler.NewInstructionCompilerWithConfig(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
+		compConfig,
 	)
-	comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
-		return importedProgram
-	}
 
 	program := comp.Compile()
 

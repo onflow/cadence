@@ -3318,7 +3318,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		checker, err := ParseAndCheck(t, `
         fun test(x: Int): Int {
-            pre {x > 0}
+            pre { x > 0 }
             return 5
         }
     `)
@@ -3340,7 +3340,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		// Would be equivalent to:
 		// fun test(x: Int): Int {
 		//    if !(x > 0) {
-		//        panic("pre/post condition failed")
+		//        failPreCondition("")
 		//    }
 		//    return 5
 		// }
@@ -3357,7 +3357,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 12},
 
-				// panic("pre/post condition failed")
+				// failPreCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 1}, // error message
@@ -3382,7 +3382,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		checker, err := ParseAndCheck(t, `
         fun test(x: Int): Int {
-            post {x > 0}
+            post { x > 0 }
             return 5
         }
     `)
@@ -3409,7 +3409,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		//    $_result = 5
 		//    let result = $_result
 		//    if !(x > 0) {
-		//        panic("pre/post condition failed")
+		//        failPostCondition("")
 		//    }
 		//    return $_result
 		// }
@@ -3442,7 +3442,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 21},
 
-				// panic("pre/post condition failed")
+				// failPostCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 2}, // error message
@@ -3466,7 +3466,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		checker, err := ParseAndCheck(t, `
         fun test(x: @AnyResource?): @AnyResource? {
-            post {result != nil}
+            post { result != nil }
             return <- x
         }
     `)
@@ -3493,7 +3493,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		//    var $_result <-x
 		//    let result = &$_result
 		//    if !(result != nil) {
-		//        panic("pre/post condition failed")
+		//        failPostCondition("")
 		//    }
 		//    return <-$_result
 		//}
@@ -3529,7 +3529,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 23},
 
-				// panic("pre/post condition failed")
+				// failPostCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 0}, // error message
@@ -3553,8 +3553,8 @@ func TestCompileFunctionConditions(t *testing.T) {
 		checker, err := ParseAndCheck(t, `
             struct interface IA {
                 fun test(x: Int, y: Int): Int {
-                    pre {x > 0}
-                    post {y > 0}
+                    pre { x > 0 }
+                    post { y > 0 }
                 }
             }
 
@@ -3594,7 +3594,8 @@ func TestCompileFunctionConditions(t *testing.T) {
 			// Next two indexes are for builtin methods (i.e: getType, isInstance) for interface type
 			_
 			_
-			panicFunctionIndex
+			failPreConditionFunctionIndex
+			failPostConditionFunctionIndex
 		)
 
 		// 	`Test` type's constructor
@@ -3634,14 +3635,14 @@ func TestCompileFunctionConditions(t *testing.T) {
 		// ```
 		//     fun test(x: Int, y: Int): Int {
 		//        if !(x > 0) {
-		//            panic("pre/post condition failed")
+		//            failPreCondition("")
 		//        }
 		//
 		//        var $_result = 42
 		//        let result = $_result
 		//
 		//        if !(y > 0) {
-		//            panic("pre/post condition failed")
+		//            failPostCondition("")
 		//        }
 		//
 		//        return $_result
@@ -3662,9 +3663,9 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 12},
 
-				// panic("pre/post condition failed")
+				// failPreCondition("")
 				opcode.InstructionStatement{},
-				opcode.InstructionGetGlobal{Global: panicFunctionIndex},
+				opcode.InstructionGetGlobal{Global: failPreConditionFunctionIndex},
 				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
 				opcode.InstructionTransferAndConvert{Type: 5},
 				opcode.InstructionInvoke{ArgCount: 1},
@@ -3703,9 +3704,9 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 33},
 
-				// panic("pre/post condition failed")
+				// failPostCondition("")
 				opcode.InstructionStatement{},
-				opcode.InstructionGetGlobal{Global: panicFunctionIndex},
+				opcode.InstructionGetGlobal{Global: failPostConditionFunctionIndex},
 				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
 				opcode.InstructionTransferAndConvert{Type: 5},
 				opcode.InstructionInvoke{ArgCount: 1},
@@ -3727,7 +3728,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		checker, err := ParseAndCheck(t, `
             struct interface IA {
                 fun test(x: Int): Int {
-                    post {before(x) < x}
+                    post { before(x) < x }
                 }
             }
 
@@ -3767,7 +3768,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 			// Next two indexes are for builtin methods (i.e: getType, isInstance) for interface type
 			_
 			_
-			panicFunctionIndex
+			failPostConditionFunctionIndex
 		)
 
 		// 	`Test` type's constructor
@@ -3811,7 +3812,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		//        var $_result = 42
 		//        let result = $_result
 		//        if !($before_0 < x) {
-		//            panic("pre/post condition failed")
+		//            failPostCondition("")
 		//        }
 		//        return $_result
 		//    }
@@ -3859,9 +3860,9 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 25},
 
-				// panic("pre/post condition failed")
+				// failPostCondition("")
 				opcode.InstructionStatement{},
-				opcode.InstructionGetGlobal{Global: panicFunctionIndex},
+				opcode.InstructionGetGlobal{Global: failPostConditionFunctionIndex},
 				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
 				opcode.InstructionTransferAndConvert{Type: 6},
 				opcode.InstructionInvoke{ArgCount: 1},
@@ -4030,8 +4031,8 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		// Function indexes
 		const (
-			concreteTypeFunctionIndex = 7
-			panicFunctionIndex        = 11
+			concreteTypeFunctionIndex     = 7
+			failPreConditionFunctionIndex = 11
 		)
 
 		// `D.Vault` type's `getBalance` function.
@@ -4054,7 +4055,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		// ```
 		//  fun getBalance(): Int {
 		//	  if !A.TestStruct().test() {
-		//	    panic("pre/post condition failed")
+		//	    failPreCondition("")
 		//    }
 		//	  return self.balance
 		//  }
@@ -4078,9 +4079,9 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 13},
 
-				// panic("pre/post condition failed")
+				// failPreCondition("")
 				opcode.InstructionStatement{},
-				opcode.InstructionGetGlobal{Global: panicFunctionIndex},
+				opcode.InstructionGetGlobal{Global: failPreConditionFunctionIndex},
 				opcode.InstructionGetConstant{Constant: panicMessageIndex},
 				opcode.InstructionTransferAndConvert{Type: 9},
 				opcode.InstructionInvoke{ArgCount: 1},
@@ -4114,7 +4115,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				},
 				{
 					Location: nil,
-					Name:     "panic",
+					Name:     "failPreCondition",
 				},
 			},
 			dProgram.Imports,
@@ -4810,7 +4811,8 @@ func TestCompileTransaction(t *testing.T) {
 		_
 		prepareFunctionIndex
 		executeFunctionIndex
-		panicFunctionIndex
+		failPreConditionFunctionIndex
+		failPostConditionFunctionIndex
 	)
 
 	// Transaction constructor
@@ -4861,14 +4863,14 @@ func TestCompileTransaction(t *testing.T) {
 	// Would be equivalent to:
 	//    fun execute {
 	//        if !(self.count == 2) {
-	//            panic("pre/post condition failed")
+	//            failPreCondition("")
 	//        }
 	//
 	//        var $_result
 	//        self.count = 10
 	//
 	//        if !(self.count == 10) {
-	//            panic("pre/post condition failed")
+	//            failPostCondition("")
 	//        }
 	//        return
 	//    }
@@ -4893,9 +4895,9 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionNot{},
 			opcode.InstructionJumpIfFalse{Target: 13},
 
-			// panic("pre/post condition failed")
+			// failPreCondition("")
 			opcode.InstructionStatement{},
-			opcode.InstructionGetGlobal{Global: panicFunctionIndex},
+			opcode.InstructionGetGlobal{Global: failPreConditionFunctionIndex},
 			opcode.InstructionGetConstant{Constant: constErrorMsgIndex},
 			opcode.InstructionTransferAndConvert{Type: 5},
 			opcode.InstructionInvoke{ArgCount: 1},
@@ -4922,9 +4924,9 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionNot{},
 			opcode.InstructionJumpIfFalse{Target: 31},
 
-			// panic("pre/post condition failed")
+			// failPostCondition("")
 			opcode.InstructionStatement{},
-			opcode.InstructionGetGlobal{Global: panicFunctionIndex},
+			opcode.InstructionGetGlobal{Global: failPostConditionFunctionIndex},
 			opcode.InstructionGetConstant{Constant: constErrorMsgIndex},
 			opcode.InstructionTransferAndConvert{Type: 5},
 			opcode.InstructionInvoke{ArgCount: 1},
@@ -8383,7 +8385,7 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 		checker, err := ParseAndCheck(t, `
         fun test() {
             var foo = fun(x: Int): Int {
-                pre {x > 0}
+                pre { x > 0 }
                 return 5
             }
         }
@@ -8419,7 +8421,7 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 		// Function expression. Would be equivalent to:
 		// fun foo(x: Int): Int {
 		//    if !(x > 0) {
-		//        panic("pre/post condition failed")
+		//        failPreCondition("")
 		//    }
 		//    return 5
 		// }
@@ -8441,7 +8443,7 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 12},
 
-				// panic("pre/post condition failed")
+				// failPreCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 1}, // error message
@@ -8467,7 +8469,7 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 		checker, err := ParseAndCheck(t, `
         fun test() {
             var foo = fun(x: Int): Int {
-                post {x > 0}
+                post { x > 0 }
                 return 5
             }
         }
@@ -8512,7 +8514,7 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 		//    $_result = 5
 		//    let result = $_result
 		//    if !(x > 0) {
-		//        panic("pre/post condition failed")
+		//        failPostCondition("")
 		//    }
 		//    return $_result
 		// }
@@ -8545,7 +8547,7 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 21},
 
-				// panic("pre/post condition failed")
+				// failPostCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 2}, // error message
@@ -8575,7 +8577,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 		checker, err := ParseAndCheck(t, `
             fun test() {
                 fun foo(x: Int): Int {
-                    pre {x > 0}
+                    pre { x > 0 }
                     return 5
                 }
             }
@@ -8610,7 +8612,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 		// Function expression. Would be equivalent to:
 		// fun foo(x: Int): Int {
 		//    if !(x > 0) {
-		//        panic("pre/post condition failed")
+		//        failPreCondition("")
 		//    }
 		//    return 5
 		// }
@@ -8632,7 +8634,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 12},
 
-				// panic("pre/post condition failed")
+				// failPreCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 1}, // error message
@@ -8658,7 +8660,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 		checker, err := ParseAndCheck(t, `
             fun test() {
                 fun foo(x: Int): Int {
-                    post {x > 0}
+                    post { x > 0 }
                     return 5
                 }
             }
@@ -8702,7 +8704,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 		//    $_result = 5
 		//    let result = $_result
 		//    if !(x > 0) {
-		//        panic("pre/post condition failed")
+		//        failPostCondition("")
 		//    }
 		//    return $_result
 		// }
@@ -8735,7 +8737,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 21},
 
-				// panic("pre/post condition failed")
+				// failPostCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 2}, // error message
@@ -8762,7 +8764,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
             if true {
                 if true {
                     fun foo(x: Int): Int {
-                        pre {x > 0}
+                        pre { x > 0 }
                         return 5
                     }
                 }
@@ -8805,7 +8807,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 		// Function expression. Would be equivalent to:
 		// fun foo(x: Int): Int {
 		//    if !(x > 0) {
-		//        panic("pre/post condition failed")
+		//        failPreCondition("")
 		//    }
 		//    return 5
 		// }
@@ -8827,7 +8829,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 12},
 
-				// panic("pre/post condition failed")
+				// failPreCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 1}, // error message
