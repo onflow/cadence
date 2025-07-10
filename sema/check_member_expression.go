@@ -270,7 +270,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 				&NotDeclaredMemberError{
 					Type:          accessedType,
 					Name:          identifier,
-					suggestMember: checker.Config.SuggestionsEnabled,
+					SuggestMember: checker.Config.SuggestionsEnabled,
 					Expression:    expression,
 					Range: ast.NewRange(
 						checker.memoryGauge,
@@ -311,7 +311,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 				RestrictingAccess:   member.Access,
 				PossessedAccess:     possessedAccess,
 				DeclarationKind:     member.DeclarationKind,
-				suggestEntitlements: checker.Config.SuggestionsEnabled,
+				SuggestEntitlements: checker.Config.SuggestionsEnabled,
 				Range:               ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 			},
 		)
