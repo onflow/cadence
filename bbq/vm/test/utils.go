@@ -397,6 +397,19 @@ func CompilerDefaultBuiltinGlobalsWithDefaultsAndLog(_ common.Location) *activat
 	return activation
 }
 
+func CompilerDefaultBuiltinGlobalsWithDefaultsAndPanic(_ common.Location) *activations.Activation[compiler.GlobalImport] {
+	activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+
+	activation.Set(
+		stdlib.PanicFunctionName,
+		compiler.GlobalImport{
+			Name: stdlib.PanicFunctionName,
+		},
+	)
+
+	return activation
+}
+
 func CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog(_ common.Location) *activations.Activation[compiler.GlobalImport] {
 	activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 
@@ -414,10 +427,10 @@ func VMBuiltinGlobalsProviderWithDefaultsAndPanic(_ common.Location) *activation
 	activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 	panicFunctionVariable := &interpreter.SimpleVariable{}
-	activation.Set(commons.PanicFunctionName, panicFunctionVariable)
+	activation.Set(stdlib.PanicFunctionName, panicFunctionVariable)
 	panicFunctionVariable.InitializeWithValue(
 		vm.NewNativeFunctionValue(
-			commons.PanicFunctionName,
+			stdlib.PanicFunctionName,
 			stdlib.PanicFunctionType,
 			func(context *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 				messageValue, ok := arguments[0].(*interpreter.StringValue)

@@ -72,8 +72,9 @@ func init() {
 		registerBoundFunctions(constructor.Type)
 	}
 
-	// The panic function is needed for conditions.
-	registerDefaultBuiltinGlobal(commons.PanicFunctionName)
+	// The panic function is needed for pre/post conditions.
+	registerDefaultBuiltinGlobal(commons.FailPreConditionFunctionName)
+	registerDefaultBuiltinGlobal(commons.FailPostConditionFunctionName)
 
 	// Type constructors
 	for _, typeConstructor := range sema.RuntimeTypeConstructors {

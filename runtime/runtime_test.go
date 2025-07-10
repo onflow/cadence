@@ -4756,8 +4756,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 					Context{
 						Interface: runtimeInterface,
 						Location:  nextTransactionLocation(),
-						// TODO: requires support for ConditionError in the VM
-						//UseVM:     *compile,
+						UseVM:     *compile,
 					},
 				)
 

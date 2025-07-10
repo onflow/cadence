@@ -20,6 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
@@ -83,7 +84,49 @@ func registerBuiltinTypeBoundCommonFunction(typeName string, functionValue *Nati
 	)
 }
 
+var failConditionFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityView,
+	[]sema.Parameter{
+		{
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "message",
+			TypeAnnotation: sema.StringTypeAnnotation,
+		},
+	},
+	sema.NeverTypeAnnotation,
+)
+
 func init() {
+
+	// Pre/post condition failure functions
+
+	registerBuiltinFunction(
+		NewNativeFunctionValue(
+			commons.FailPreConditionFunctionName,
+			failConditionFunctionType,
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+				messageValue := arguments[0].(*interpreter.StringValue)
+				panic(&interpreter.ConditionError{
+					Message:       messageValue.Str,
+					ConditionKind: ast.ConditionKindPre,
+				})
+			},
+		),
+	)
+
+	registerBuiltinFunction(
+		NewNativeFunctionValue(
+			commons.FailPostConditionFunctionName,
+			failConditionFunctionType,
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+				messageValue := arguments[0].(*interpreter.StringValue)
+				panic(&interpreter.ConditionError{
+					Message:       messageValue.Str,
+					ConditionKind: ast.ConditionKindPost,
+				})
+			},
+		),
+	)
 
 	// Type constructors
 
@@ -91,7 +134,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.MetaTypeName,
 			sema.MetaTypeFunctionType,
-			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, typeArguments []bbq.StaticType, _ ...Value) Value {
 				return interpreter.NewTypeValue(
 					context.MemoryGauge,
 					typeArguments[0],
