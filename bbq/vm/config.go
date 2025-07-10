@@ -38,7 +38,7 @@ type Config struct {
 	// BuiltinGlobalsProvider provides the built-in globals for a given location.
 	// NOTE: all global must be defined for location nil!
 	BuiltinGlobalsProvider BuiltinGlobalsProvider
-	TypeLoader             func(location common.Location, typeID interpreter.TypeID) sema.Type
+	TypeLoader             func(location common.Location, typeID interpreter.TypeID) (sema.Type, error)
 
 	MemoryGauge      common.MemoryGauge
 	ComputationGauge common.ComputationGauge
@@ -106,7 +106,11 @@ func (c *Config) GetInterfaceType(
 		}
 	}
 
-	ty := c.TypeLoader(location, typeID)
+	ty, err := c.TypeLoader(location, typeID)
+	if err != nil {
+		return nil, err
+	}
+
 	interfaceType, ok := ty.(*sema.InterfaceType)
 	if !ok {
 		return nil, interpreter.TypeLoadingError{
@@ -130,7 +134,11 @@ func (c *Config) GetCompositeType(
 		}
 	}
 
-	ty := c.TypeLoader(location, typeID)
+	ty, err := c.TypeLoader(location, typeID)
+	if err != nil {
+		return nil, err
+	}
+
 	compositeType, ok := ty.(*sema.CompositeType)
 	if !ok {
 		return nil, interpreter.TypeLoadingError{
@@ -158,7 +166,11 @@ func (c *Config) GetEntitlementType(typeID interpreter.TypeID) (*sema.Entitlemen
 		return ty, nil
 	}
 
-	ty := c.TypeLoader(location, typeID)
+	ty, err := c.TypeLoader(location, typeID)
+	if err != nil {
+		return nil, err
+	}
+
 	entitlementType, ok := ty.(*sema.EntitlementType)
 	if !ok {
 		return nil, interpreter.TypeLoadingError{
@@ -186,7 +198,11 @@ func (c *Config) GetEntitlementMapType(typeID interpreter.TypeID) (*sema.Entitle
 		return ty, nil
 	}
 
-	ty := c.TypeLoader(location, typeID)
+	ty, err := c.TypeLoader(location, typeID)
+	if err != nil {
+		return nil, err
+	}
+
 	entitlementMapType, ok := ty.(*sema.EntitlementMapType)
 	if !ok {
 		return nil, interpreter.TypeLoadingError{
