@@ -478,7 +478,7 @@ func BenchmarkMethodCall(b *testing.B) {
 		vmConfig.ContractValueHandler = func(_ *vm.Context, _ common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error)  {
+		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 			elaboration := importedChecker.Elaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {

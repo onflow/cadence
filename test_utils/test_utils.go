@@ -392,7 +392,7 @@ func ParseCheckAndPrepareWithOptions(
 
 		if interpreterConfig.CompositeTypeHandler != nil {
 			originalTypeLoader := vmConfig.TypeLoader
-			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID)  (sema.Type, error) {
+			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 				ty := interpreterConfig.CompositeTypeHandler(location, typeID)
 				if ty != nil {
 					return ty, nil
