@@ -675,36 +675,40 @@ func contractValueHandler(contractName string, arguments ...vm.Value) vm.Contrac
 
 func CompiledProgramsTypeLoader(
 	programs CompiledPrograms,
-) func(location common.Location, typeID interpreter.TypeID) sema.Type {
-	return func(location common.Location, typeID interpreter.TypeID) sema.Type {
+) func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+	return func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 		program, ok := programs[location]
 		if !ok {
-			return nil
+			return nil, interpreter.TypeLoadingError{
+				TypeID: typeID,
+			}
 		}
 
 		elaboration := program.DesugaredElaboration
 
 		compositeType := elaboration.CompositeType(typeID)
 		if compositeType != nil {
-			return compositeType
+			return compositeType, nil
 		}
 
 		interfaceType := elaboration.InterfaceType(typeID)
 		if interfaceType != nil {
-			return interfaceType
+			return interfaceType, nil
 		}
 
 		entitlementType := elaboration.EntitlementType(typeID)
 		if entitlementType != nil {
-			return entitlementType
+			return entitlementType, nil
 		}
 
 		entitlementMapType := elaboration.EntitlementMapType(typeID)
 		if entitlementMapType != nil {
-			return entitlementMapType
+			return entitlementMapType, nil
 		}
 
-		return nil
+		return nil, interpreter.TypeLoadingError{
+			TypeID: typeID,
+		}
 	}
 }
 

@@ -402,51 +402,52 @@ func (e *vmEnvironment) loadDesugaredElaboration(location common.Location) (*com
 		return nil, err
 	}
 
+	if program == nil {
+		return nil, fmt.Errorf("cannot find elaboration for location %v", location)
+	}
+
 	return program.compiledProgram.desugaredElaboration, nil
 }
 
 // TODO: Maybe split this to four separate methods like in the interpreter.
-func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.TypeID) sema.Type {
+func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 	ty := e.allDeclaredTypes[typeID]
 	if ty != nil {
-		return ty
+		return ty, nil
 	}
 
 	if _, ok := location.(stdlib.FlowLocation); ok {
-		return stdlib.FlowEventTypes[typeID]
+		return stdlib.FlowEventTypes[typeID], nil
 	}
 
 	elaboration, err := e.loadDesugaredElaboration(location)
 	if err != nil {
-		panic(fmt.Errorf(
-			"cannot load type %s: failed to load elaboration for location %s: %w",
-			typeID,
-			location,
-			err,
-		))
+		return nil, err
 	}
 
 	compositeType := elaboration.CompositeType(typeID)
 	if compositeType != nil {
-		return compositeType
+		return compositeType, nil
 	}
 
 	interfaceType := elaboration.InterfaceType(typeID)
 	if interfaceType != nil {
-		return interfaceType
+		return interfaceType, nil
 	}
 
 	entitlementType := elaboration.EntitlementType(typeID)
 	if entitlementType != nil {
-		return entitlementType
+		return entitlementType, nil
 	}
 
 	entitlementMapType := elaboration.EntitlementMapType(typeID)
 	if entitlementMapType != nil {
-		return entitlementMapType
+		return entitlementMapType, nil
 	}
 
-	return nil
+	return nil, interpreter.TypeLoadingError{
+		TypeID: typeID,
+	}
 }
 
 func (e *vmEnvironment) compileProgram(

@@ -547,14 +547,14 @@ func TestImport(t *testing.T) {
 	vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 		return importedProgram
 	}
-	vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
+	vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 		elaboration := importedChecker.Elaboration
 		compositeType := elaboration.CompositeType(typeID)
 		if compositeType != nil {
-			return compositeType
+			return compositeType, nil
 		}
 
-		return elaboration.InterfaceType(typeID)
+		return elaboration.InterfaceType(typeID), nil
 	}
 
 	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
@@ -657,14 +657,14 @@ func TestContractImport(t *testing.T) {
 		vmConfig.ContractValueHandler = func(*vm.Context, common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
+		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 			elaboration := importedChecker.Elaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
-				return compositeType
+				return compositeType, nil
 			}
 
-			return elaboration.InterfaceType(typeID)
+			return elaboration.InterfaceType(typeID), nil
 		}
 
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
@@ -718,14 +718,14 @@ func TestContractImport(t *testing.T) {
 		vmConfig.ContractValueHandler = func(*vm.Context, common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
+		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 			elaboration := importedChecker.Elaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
-				return compositeType
+				return compositeType, nil
 			}
 
-			return elaboration.InterfaceType(typeID)
+			return elaboration.InterfaceType(typeID), nil
 		}
 
 		_, importedContractValue = initializeContract(
@@ -821,16 +821,16 @@ func TestContractImport(t *testing.T) {
 			require.Equal(t, fooLocation, location)
 			return fooContractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
+		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 			require.Equal(t, fooLocation, location)
 
 			elaboration := fooChecker.Elaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
-				return compositeType
+				return compositeType, nil
 			}
 
-			return elaboration.InterfaceType(typeID)
+			return elaboration.InterfaceType(typeID), nil
 		}
 
 		_, fooContractValue = initializeContract(
@@ -970,7 +970,7 @@ func TestContractImport(t *testing.T) {
 				return nil
 			}
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
+		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 
 			var elaboration *sema.Elaboration
 
@@ -985,10 +985,10 @@ func TestContractImport(t *testing.T) {
 
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
-				return compositeType
+				return compositeType, nil
 			}
 
-			return elaboration.InterfaceType(typeID)
+			return elaboration.InterfaceType(typeID), nil
 		}
 
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
@@ -1180,7 +1180,7 @@ func TestContractImport(t *testing.T) {
 				return nil
 			}
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
+		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 
 			var elaboration *sema.Elaboration
 
@@ -1193,10 +1193,10 @@ func TestContractImport(t *testing.T) {
 
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
-				return compositeType
+				return compositeType, nil
 			}
 
-			return elaboration.InterfaceType(typeID)
+			return elaboration.InterfaceType(typeID), nil
 		}
 		vmConfig.BuiltinGlobalsProvider = VMBuiltinGlobalsProviderWithDefaultsAndPanic
 
@@ -1266,14 +1266,14 @@ func TestContractImport(t *testing.T) {
 		vmConfig.ContractValueHandler = func(*vm.Context, common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
+		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 			elaboration := importedChecker.Elaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
-				return compositeType
+				return compositeType, nil
 			}
 
-			return elaboration.InterfaceType(typeID)
+			return elaboration.InterfaceType(typeID), nil
 		}
 		vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(&logs)
 
@@ -1614,14 +1614,14 @@ func TestContractField(t *testing.T) {
 		vmConfig.ContractValueHandler = func(_ *vm.Context, _ common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
+		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 			elaboration := importedChecker.Elaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
-				return compositeType
+				return compositeType, nil
 			}
 
-			return elaboration.InterfaceType(typeID)
+			return elaboration.InterfaceType(typeID), nil
 		}
 
 		_, importedContractValue = initializeContract(
@@ -1707,14 +1707,14 @@ func TestContractField(t *testing.T) {
 		vmConfig.ContractValueHandler = func(_ *vm.Context, _ common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
+		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 			elaboration := importedChecker.Elaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
-				return compositeType
+				return compositeType, nil
 			}
 
-			return elaboration.InterfaceType(typeID)
+			return elaboration.InterfaceType(typeID), nil
 		}
 
 		_, importedContractValue = initializeContract(
@@ -2427,14 +2427,14 @@ func TestInterfaceMethodCall(t *testing.T) {
 		vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
+		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 			elaboration := importedChecker.Elaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
-				return compositeType
+				return compositeType, nil
 			}
 
-			return elaboration.InterfaceType(typeID)
+			return elaboration.InterfaceType(typeID), nil
 		}
 
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
@@ -2610,7 +2610,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 				return nil
 			}
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
+		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 
 			var elaboration *sema.Elaboration
 
@@ -2625,10 +2625,10 @@ func TestInterfaceMethodCall(t *testing.T) {
 
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
-				return compositeType
+				return compositeType, nil
 			}
 
-			return elaboration.InterfaceType(typeID)
+			return elaboration.InterfaceType(typeID), nil
 		}
 
 		_, bazContractValue := initializeContract(
@@ -2702,7 +2702,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 				return nil
 			}
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
+		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 			var elaboration *sema.Elaboration
 
 			switch location {
@@ -2716,10 +2716,10 @@ func TestInterfaceMethodCall(t *testing.T) {
 
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
-				return compositeType
+				return compositeType, nil
 			}
 
-			return elaboration.InterfaceType(typeID)
+			return elaboration.InterfaceType(typeID), nil
 		}
 
 		scriptVM := vm.NewVM(scriptLocation(), program, vmConfig)
@@ -2810,7 +2810,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 				return nil
 			}
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
+		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 
 			var elaboration *sema.Elaboration
 
@@ -2827,10 +2827,10 @@ func TestInterfaceMethodCall(t *testing.T) {
 
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
-				return compositeType
+				return compositeType, nil
 			}
 
-			return elaboration.InterfaceType(typeID)
+			return elaboration.InterfaceType(typeID), nil
 		}
 
 		scriptVM = vm.NewVM(scriptLocation(), program, vmConfig)
@@ -3241,15 +3241,7 @@ func TestDefaultFunctions(t *testing.T) {
 			}
 			return contractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
-			elaboration := programs[location].DesugaredElaboration
-			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType
-			}
-
-			return elaboration.InterfaceType(typeID)
-		}
+		vmConfig.TypeLoader = CompiledProgramsTypeLoader(programs)
 
 		var uuid uint64 = 42
 		vmConfig.UUIDHandler = func() (uint64, error) {
@@ -3372,15 +3364,7 @@ func TestDefaultFunctions(t *testing.T) {
 			}
 			return contractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
-			elaboration := programs[location].DesugaredElaboration
-			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType
-			}
-
-			return elaboration.InterfaceType(typeID)
-		}
+		vmConfig.TypeLoader = CompiledProgramsTypeLoader(programs)
 
 		var uuid uint64 = 42
 		vmConfig.UUIDHandler = func() (uint64, error) {
@@ -3495,15 +3479,7 @@ func TestDefaultFunctions(t *testing.T) {
 			}
 			return contractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
-			elaboration := programs[location].DesugaredElaboration
-			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType
-			}
-
-			return elaboration.InterfaceType(typeID)
-		}
+		vmConfig.TypeLoader = CompiledProgramsTypeLoader(programs)
 
 		var uuid uint64 = 42
 		vmConfig.UUIDHandler = func() (uint64, error) {
@@ -3866,15 +3842,7 @@ func TestFunctionPreConditions(t *testing.T) {
 			}
 			return contractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
-			elaboration := programs[location].DesugaredElaboration
-			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType
-			}
-
-			return elaboration.InterfaceType(typeID)
-		}
+		vmConfig.TypeLoader = CompiledProgramsTypeLoader(programs)
 
 		vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(&logs)
 
@@ -6079,14 +6047,14 @@ func TestContractAccount(t *testing.T) {
 	vmConfig.ContractValueHandler = func(*vm.Context, common.Location) *interpreter.CompositeValue {
 		return importedContractValue
 	}
-	vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
+	vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 		elaboration := importedChecker.Elaboration
 		compositeType := elaboration.CompositeType(typeID)
 		if compositeType != nil {
-			return compositeType
+			return compositeType, nil
 		}
 
-		return elaboration.InterfaceType(typeID)
+		return elaboration.InterfaceType(typeID), nil
 	}
 
 	vmConfig.InjectedCompositeFieldsHandler = func(
@@ -6202,14 +6170,14 @@ func TestResourceOwner(t *testing.T) {
 	vmConfig.ContractValueHandler = func(*vm.Context, common.Location) *interpreter.CompositeValue {
 		return importedContractValue
 	}
-	vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
+	vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 		elaboration := importedChecker.Elaboration
 		compositeType := elaboration.CompositeType(typeID)
 		if compositeType != nil {
-			return compositeType
+			return compositeType, nil
 		}
 
-		return elaboration.InterfaceType(typeID)
+		return elaboration.InterfaceType(typeID), nil
 	}
 
 	vmConfig.UUIDHandler = func() (uint64, error) {
@@ -6334,14 +6302,14 @@ func TestResourceUUID(t *testing.T) {
 	vmConfig.ContractValueHandler = func(*vm.Context, common.Location) *interpreter.CompositeValue {
 		return importedContractValue
 	}
-	vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
+	vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 		elaboration := importedChecker.Elaboration
 		compositeType := elaboration.CompositeType(typeID)
 		if compositeType != nil {
-			return compositeType
+			return compositeType, nil
 		}
 
-		return elaboration.InterfaceType(typeID)
+		return elaboration.InterfaceType(typeID), nil
 	}
 
 	vmConfig.UUIDHandler = func() (uint64, error) {
@@ -6731,14 +6699,14 @@ func TestContractClosure(t *testing.T) {
 	vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 		return importedContractValue
 	}
-	vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
+	vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 		elaboration := importedChecker.Elaboration
 		compositeType := elaboration.CompositeType(typeID)
 		if compositeType != nil {
-			return compositeType
+			return compositeType, nil
 		}
 
-		return elaboration.InterfaceType(typeID)
+		return elaboration.InterfaceType(typeID), nil
 	}
 	vmConfig.BuiltinGlobalsProvider = VMBuiltinGlobalsProviderWithDefaultsAndPanic
 
@@ -6970,15 +6938,7 @@ func TestEmitInContract(t *testing.T) {
 			}
 			return contractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
-			elaboration := programs[location].DesugaredElaboration
-			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType
-			}
-
-			return elaboration.InterfaceType(typeID)
-		}
+		vmConfig.TypeLoader = CompiledProgramsTypeLoader(programs)
 
 		var uuid uint64 = 42
 		vmConfig.UUIDHandler = func() (uint64, error) {
@@ -7111,15 +7071,7 @@ func TestInheritedConditions(t *testing.T) {
 			}
 			return contractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
-			elaboration := programs[location].DesugaredElaboration
-			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType
-			}
-
-			return elaboration.InterfaceType(typeID)
-		}
+		vmConfig.TypeLoader = CompiledProgramsTypeLoader(programs)
 
 		var uuid uint64 = 42
 		vmConfig.UUIDHandler = func() (uint64, error) {
@@ -7270,15 +7222,7 @@ func TestInheritedConditions(t *testing.T) {
 			}
 			return contractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
-			elaboration := programs[location].DesugaredElaboration
-			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType
-			}
-
-			return elaboration.InterfaceType(typeID)
-		}
+		vmConfig.TypeLoader = CompiledProgramsTypeLoader(programs)
 
 		var uuid uint64 = 42
 		vmConfig.UUIDHandler = func() (uint64, error) {
@@ -9091,17 +9035,12 @@ func TestInjectedContract(t *testing.T) {
 
 	compiledProgramsTypeLoader := CompiledProgramsTypeLoader(programs)
 
-	vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
+	vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 		if location == nil && typeID == "B" {
-			return bType
+			return bType, nil
 		}
 
-		ty := compiledProgramsTypeLoader(location, typeID)
-		if ty != nil {
-			return ty
-		}
-
-		return nil
+		return compiledProgramsTypeLoader(location, typeID)
 	}
 
 	result, err := CompileAndInvokeWithOptions(
