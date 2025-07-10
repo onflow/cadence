@@ -245,12 +245,12 @@ func ParseCheckAndPrepareWithOptions(
 	if options.CheckerConfig != nil {
 		typeActivationHandler := options.CheckerConfig.BaseTypeActivationHandler
 		if typeActivationHandler != nil {
-			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
+			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 				activation := typeActivationHandler(location)
 				typeName := location.QualifiedIdentifier(typeID)
 				variable := activation.Find(typeName)
 				if variable != nil {
-					return variable.Type.(sema.ContainedType)
+					return variable.Type, nil
 				}
 
 				return typeLoader(location, typeID)
@@ -364,20 +364,22 @@ func ParseCheckAndPrepareWithOptions(
 
 		if interpreterConfig.ImportLocationHandler != nil {
 			originalTypeLoader := vmConfig.TypeLoader
-			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
+			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 				impt := interpreterConfig.ImportLocationHandler(nil, location)
 				switch impt := impt.(type) {
 				case interpreter.VirtualImport:
-					return impt.Elaboration.CompositeType(typeID)
+					return impt.Elaboration.CompositeType(typeID), nil
 				case interpreter.InterpreterImport:
-					return impt.Interpreter.Program.Elaboration.CompositeType(typeID)
+					return impt.Interpreter.Program.Elaboration.CompositeType(typeID), nil
 				}
 
 				if originalTypeLoader != nil {
 					return originalTypeLoader(location, typeID)
 				}
 
-				return nil
+				return nil, interpreter.TypeLoadingError{
+					TypeID: typeID,
+				}
 			}
 
 			vmConfig.ElaborationResolver = func(location common.Location) (*sema.Elaboration, error) {
@@ -400,17 +402,19 @@ func ParseCheckAndPrepareWithOptions(
 
 		if interpreterConfig.CompositeTypeHandler != nil {
 			originalTypeLoader := vmConfig.TypeLoader
-			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
+			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 				ty := interpreterConfig.CompositeTypeHandler(location, typeID)
 				if ty != nil {
-					return ty
+					return ty, nil
 				}
 
 				if originalTypeLoader != nil {
 					return originalTypeLoader(location, typeID)
 				}
 
-				return nil
+				return nil, interpreter.TypeLoadingError{
+					TypeID: typeID,
+				}
 			}
 		}
 	}
