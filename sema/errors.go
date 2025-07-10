@@ -1827,6 +1827,9 @@ type AlwaysFailingNonResourceCastingTypeError struct {
 
 var _ SemanticError = &AlwaysFailingNonResourceCastingTypeError{}
 var _ errors.UserError = &AlwaysFailingNonResourceCastingTypeError{}
+var _ errors.SecondaryError = &AlwaysFailingNonResourceCastingTypeError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &AlwaysFailingNonResourceCastingTypeError{}
+var _ errors.HasDocumentationLink = &AlwaysFailingNonResourceCastingTypeError{}
 
 func (*AlwaysFailingNonResourceCastingTypeError) isSemanticError() {}
 
@@ -1840,6 +1843,32 @@ func (e *AlwaysFailingNonResourceCastingTypeError) Error() string {
 	)
 }
 
+func (e *AlwaysFailingNonResourceCastingTypeError) SecondaryError() string {
+	return "resources cannot be cast to non-resource types. Consider using a different approach or checking the type first"
+}
+
+func (e *AlwaysFailingNonResourceCastingTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	// For resource casting errors, we suggest using type checking first
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "use type checking before casting",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "// Consider using type checking: if value is? TargetType { ... }\n",
+					Range: ast.Range{
+						StartPos: e.StartPos,
+						EndPos:   e.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *AlwaysFailingNonResourceCastingTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/operators/casting-operators"
+}
+
 // AlwaysFailingResourceCastingTypeError
 
 type AlwaysFailingResourceCastingTypeError struct {
@@ -1850,6 +1879,9 @@ type AlwaysFailingResourceCastingTypeError struct {
 
 var _ SemanticError = &AlwaysFailingResourceCastingTypeError{}
 var _ errors.UserError = &AlwaysFailingResourceCastingTypeError{}
+var _ errors.SecondaryError = &AlwaysFailingResourceCastingTypeError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &AlwaysFailingResourceCastingTypeError{}
+var _ errors.HasDocumentationLink = &AlwaysFailingResourceCastingTypeError{}
 
 func (*AlwaysFailingResourceCastingTypeError) isSemanticError() {}
 
@@ -1861,6 +1893,32 @@ func (e *AlwaysFailingResourceCastingTypeError) Error() string {
 		e.ValueType.QualifiedString(),
 		e.TargetType.QualifiedString(),
 	)
+}
+
+func (e *AlwaysFailingResourceCastingTypeError) SecondaryError() string {
+	return "non-resource types cannot be cast to resource types. Consider using a different approach or checking the type first"
+}
+
+func (e *AlwaysFailingResourceCastingTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	// For resource casting errors, we suggest using type checking first
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "use type checking before casting",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "// Consider using type checking: if value is? TargetType { ... }\n",
+					Range: ast.Range{
+						StartPos: e.StartPos,
+						EndPos:   e.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *AlwaysFailingResourceCastingTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/operators/casting-operators"
 }
 
 // UnsupportedOverloadingError
@@ -3745,6 +3803,9 @@ type AmbiguousIntersectionTypeError struct {
 
 var _ SemanticError = &AmbiguousIntersectionTypeError{}
 var _ errors.UserError = &AmbiguousIntersectionTypeError{}
+var _ errors.SecondaryError = &AmbiguousIntersectionTypeError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &AmbiguousIntersectionTypeError{}
+var _ errors.HasDocumentationLink = &AmbiguousIntersectionTypeError{}
 
 func (*AmbiguousIntersectionTypeError) isSemanticError() {}
 
@@ -3752,6 +3813,32 @@ func (*AmbiguousIntersectionTypeError) IsUserError() {}
 
 func (e *AmbiguousIntersectionTypeError) Error() string {
 	return "ambiguous intersection type"
+}
+
+func (e *AmbiguousIntersectionTypeError) SecondaryError() string {
+	return "empty intersection types like `{}` or `@{}` are ambiguous. specify the interfaces to intersect"
+}
+
+func (e *AmbiguousIntersectionTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	// For ambiguous intersection types, we suggest specifying the interfaces
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "specify the interfaces to intersect",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "// Example: {Interface1, Interface2} or @{Interface1, Interface2}\n",
+					Range: ast.Range{
+						StartPos: e.StartPos,
+						EndPos:   e.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *AmbiguousIntersectionTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
 }
 
 // InvalidPathDomainError
