@@ -141,11 +141,15 @@ func (e *SyntaxErrorWithSuggestedReplacement) SuggestFixes(_ string) []errors.Su
 // JuxtaposedUnaryOperatorsError
 
 type JuxtaposedUnaryOperatorsError struct {
-	Pos ast.Position
+	Pos   ast.Position
+	Range ast.Range
 }
 
 var _ ParseError = &JuxtaposedUnaryOperatorsError{}
 var _ errors.UserError = &JuxtaposedUnaryOperatorsError{}
+var _ errors.SecondaryError = &JuxtaposedUnaryOperatorsError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &JuxtaposedUnaryOperatorsError{}
+var _ errors.HasDocumentationLink = &JuxtaposedUnaryOperatorsError{}
 
 func (*JuxtaposedUnaryOperatorsError) isParseError() {}
 
@@ -163,6 +167,34 @@ func (e *JuxtaposedUnaryOperatorsError) Error() string {
 	return "unary operators must not be juxtaposed; parenthesize inner expression"
 }
 
+func (e *JuxtaposedUnaryOperatorsError) SecondaryError() string {
+	return "Add parentheses around the inner expression to clarify operator precedence"
+}
+
+func (e *JuxtaposedUnaryOperatorsError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
+	// For juxtaposed unary operators, we suggest adding parentheses
+	// around the inner expression to clarify precedence
+	if e.Range.StartPos.Offset < e.Range.EndPos.Offset && e.Range.EndPos.Offset <= len(code) {
+		innerExpression := code[e.Range.StartPos.Offset:e.Range.EndPos.Offset]
+		return []errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Add parentheses to clarify operator precedence",
+				TextEdits: []ast.TextEdit{
+					{
+						Replacement: fmt.Sprintf("(%s)", innerExpression),
+						Range:       e.Range,
+					},
+				},
+			},
+		}
+	}
+	return nil
+}
+
+func (e *JuxtaposedUnaryOperatorsError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/operators/prescedence-associativity"
+}
+
 // InvalidIntegerLiteralError
 
 type InvalidIntegerLiteralError struct {
@@ -175,6 +207,8 @@ type InvalidIntegerLiteralError struct {
 var _ ParseError = &InvalidIntegerLiteralError{}
 var _ errors.UserError = &InvalidIntegerLiteralError{}
 var _ errors.SecondaryError = &InvalidIntegerLiteralError{}
+var _ errors.HasDocumentationLink = &InvalidIntegerLiteralError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &InvalidIntegerLiteralError{}
 
 func (*InvalidIntegerLiteralError) isParseError() {}
 
@@ -183,14 +217,14 @@ func (*InvalidIntegerLiteralError) IsUserError() {}
 func (e *InvalidIntegerLiteralError) Error() string {
 	if e.IntegerLiteralKind == common.IntegerLiteralKindUnknown {
 		return fmt.Sprintf(
-			"invalid integer literal `%s`: %s",
+			"Invalid integer literal `%s`: %s",
 			e.Literal,
 			e.InvalidIntegerLiteralKind.Description(),
 		)
 	}
 
 	return fmt.Sprintf(
-		"invalid %s integer literal `%s`: %s",
+		"Invalid %s integer literal `%s`: %s",
 		e.IntegerLiteralKind.Name(),
 		e.Literal,
 		e.InvalidIntegerLiteralKind.Description(),
@@ -202,16 +236,69 @@ func (e *InvalidIntegerLiteralError) SecondaryError() string {
 	case InvalidNumberLiteralKindUnknown:
 		return ""
 	case InvalidNumberLiteralKindLeadingUnderscore:
-		return "remove the leading underscore"
+		return "Remove the leading underscore"
 	case InvalidNumberLiteralKindTrailingUnderscore:
-		return "remove the trailing underscore"
+		return "Remove the trailing underscore"
 	case InvalidNumberLiteralKindUnknownPrefix:
-		return "did you mean `0x` (hexadecimal), `0b` (binary), or `0o` (octal)?"
+		return "Did you mean `0x` (hexadecimal), `0b` (binary), or `0o` (octal)?"
 	case InvalidNumberLiteralKindMissingDigits:
-		return "consider adding a 0"
+		return "Consider adding a 0"
 	}
 
 	panic(errors.NewUnreachableError())
+}
+
+func (e *InvalidIntegerLiteralError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types/booleans-numlits-ints"
+}
+
+func (e *InvalidIntegerLiteralError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	switch e.InvalidIntegerLiteralKind {
+	case InvalidNumberLiteralKindLeadingUnderscore:
+		// Remove leading underscore
+		if len(e.Literal) > 1 && e.Literal[0] == '_' {
+			return []errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove leading underscore",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: e.Literal[1:],
+							Range:       e.Range,
+						},
+					},
+				},
+			}
+		}
+	case InvalidNumberLiteralKindTrailingUnderscore:
+		// Remove trailing underscore
+		if len(e.Literal) > 1 && e.Literal[len(e.Literal)-1] == '_' {
+			return []errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove trailing underscore",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: e.Literal[:len(e.Literal)-1],
+							Range:       e.Range,
+						},
+					},
+				},
+			}
+		}
+	case InvalidNumberLiteralKindMissingDigits:
+		// Add a 0 to make it a valid number
+		return []errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Add a digit to make this a valid number",
+				TextEdits: []ast.TextEdit{
+					{
+						Replacement: e.Literal + "0",
+						Range:       e.Range,
+					},
+				},
+			},
+		}
+	}
+	return nil
 }
 
 // ExpressionDepthLimitReachedError is reported when the expression depth limit was reached
@@ -221,6 +308,7 @@ type ExpressionDepthLimitReachedError struct {
 
 var _ ParseError = ExpressionDepthLimitReachedError{}
 var _ errors.UserError = ExpressionDepthLimitReachedError{}
+var _ errors.SecondaryError = ExpressionDepthLimitReachedError{}
 
 func (ExpressionDepthLimitReachedError) isParseError() {}
 
@@ -228,9 +316,13 @@ func (ExpressionDepthLimitReachedError) IsUserError() {}
 
 func (e ExpressionDepthLimitReachedError) Error() string {
 	return fmt.Sprintf(
-		"program too complex, reached max expression depth limit %d",
+		"expression too deeply nested, exceeded depth limit of %d",
 		expressionDepthLimit,
 	)
+}
+
+func (e ExpressionDepthLimitReachedError) SecondaryError() string {
+	return "Consider breaking the expression into smaller parts or using intermediate variables"
 }
 
 func (e ExpressionDepthLimitReachedError) StartPosition() ast.Position {
@@ -242,14 +334,14 @@ func (e ExpressionDepthLimitReachedError) EndPosition(_ common.MemoryGauge) ast.
 }
 
 // TypeDepthLimitReachedError is reported when the type depth limit was reached
-//
-
 type TypeDepthLimitReachedError struct {
 	Pos ast.Position
 }
 
 var _ ParseError = TypeDepthLimitReachedError{}
 var _ errors.UserError = TypeDepthLimitReachedError{}
+var _ errors.SecondaryError = TypeDepthLimitReachedError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = TypeDepthLimitReachedError{}
 
 func (TypeDepthLimitReachedError) isParseError() {}
 
@@ -257,10 +349,35 @@ func (TypeDepthLimitReachedError) IsUserError() {}
 
 func (e TypeDepthLimitReachedError) Error() string {
 	return fmt.Sprintf(
-		"program too complex, reached max type depth limit %d",
+		"type too deeply nested, exceeded depth limit of %d",
 		typeDepthLimit,
 	)
 }
+
+func (e TypeDepthLimitReachedError) SecondaryError() string {
+	return "consider breaking complex nested types into simpler components or using intermediate variables"
+}
+
+func (e TypeDepthLimitReachedError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	// For type depth limit errors, we suggest breaking down complex types
+	// Since type aliases are not yet available in Cadence
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "break down complex nested types into simpler components",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "// Consider breaking down complex nested types\n// Example: Use intermediate variables or simpler type structures\n",
+					Range: ast.Range{
+						StartPos: e.Pos,
+						EndPos:   e.Pos,
+					},
+				},
+			},
+		},
+	}
+}
+
+
 
 func (e TypeDepthLimitReachedError) StartPosition() ast.Position {
 	return e.Pos
@@ -278,6 +395,9 @@ type MissingCommaInParameterListError struct {
 
 var _ ParseError = &MissingCommaInParameterListError{}
 var _ errors.UserError = &MissingCommaInParameterListError{}
+var _ errors.SecondaryError = &MissingCommaInParameterListError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingCommaInParameterListError{}
+var _ errors.HasDocumentationLink = &MissingCommaInParameterListError{}
 
 func (*MissingCommaInParameterListError) isParseError() {}
 
@@ -293,6 +413,32 @@ func (e *MissingCommaInParameterListError) EndPosition(_ common.MemoryGauge) ast
 
 func (e *MissingCommaInParameterListError) Error() string {
 	return "missing comma after parameter"
+}
+
+func (e *MissingCommaInParameterListError) SecondaryError() string {
+	return "Add a comma to separate parameters in the parameter list"
+}
+
+func (e *MissingCommaInParameterListError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
+	// Insert a comma at the current position
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Add comma to separate parameters",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: ", ",
+					Range: ast.Range{
+						StartPos: e.Pos,
+						EndPos:   e.Pos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *MissingCommaInParameterListError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/functions#function-declarations"
 }
 
 // CustomDestructorError
@@ -355,13 +501,75 @@ type RestrictedTypeError struct {
 	ast.Range
 }
 
-var _ ParseError = &CustomDestructorError{}
-var _ errors.UserError = &CustomDestructorError{}
+var _ ParseError = &RestrictedTypeError{}
+var _ errors.UserError = &RestrictedTypeError{}
+var _ errors.SecondaryError = &RestrictedTypeError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &RestrictedTypeError{}
+var _ errors.HasDocumentationLink = &RestrictedTypeError{}
 
 func (*RestrictedTypeError) isParseError() {}
 
 func (*RestrictedTypeError) IsUserError() {}
 
+func (e *RestrictedTypeError) StartPosition() ast.Position {
+	return e.StartPos
+}
+
+func (e *RestrictedTypeError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.EndPos
+}
+
 func (e *RestrictedTypeError) Error() string {
-	return "restricted types have been removed; replace with the concrete type or an equivalent intersection type"
+	return "restricted types have been removed in Cadence 1.0+"
+}
+
+func (e *RestrictedTypeError) SecondaryError() string {
+	return "Replace with the concrete type or an equivalent intersection type"
+}
+
+func (e *RestrictedTypeError) MigrationNote() string {
+	return "This is pre-Cadence 1.0 syntax. Restricted types like `T{}` have been replaced with intersection types like `{T}`."
+}
+
+func (e *RestrictedTypeError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
+	// For restricted types, we suggest converting to intersection type syntax
+	// This is a simple replacement of the old syntax with the new syntax
+	if e.StartPos.Offset < e.EndPos.Offset && e.EndPos.Offset <= len(code) {
+		oldSyntax := code[e.StartPos.Offset:e.EndPos.Offset]
+		
+		// Convert T{} to {T} or T{U,V} to {U,V}
+		// This is a simplified suggestion - in practice, the exact conversion
+		// would depend on the specific restricted type being used
+		var newSyntax string
+		if strings.Contains(oldSyntax, "{") && strings.Contains(oldSyntax, "}") {
+			// Extract the content between braces and wrap in new intersection syntax
+			start := strings.Index(oldSyntax, "{")
+			end := strings.LastIndex(oldSyntax, "}")
+			if start != -1 && end != -1 && end > start {
+				content := oldSyntax[start+1 : end]
+				newSyntax = "{" + strings.TrimSpace(content) + "}"
+			} else {
+				newSyntax = "{}" // fallback
+			}
+		} else {
+			newSyntax = "{}" // fallback
+		}
+		
+		return []errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Convert to intersection type syntax",
+				TextEdits: []ast.TextEdit{
+					{
+						Replacement: newSyntax,
+						Range:       e.Range,
+					},
+				},
+			},
+		}
+	}
+	return nil
+}
+
+func (e *RestrictedTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/cadence-migration-guide/improvements#-motivation-12"
 }
