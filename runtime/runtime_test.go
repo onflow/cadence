@@ -380,6 +380,7 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  scriptLocation,
+				// NOTE: UseVM is ignored for parsing/checking
 			},
 		)
 		assert.NoError(t, err)
@@ -410,6 +411,7 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  scriptLocation,
+				// NOTE: UseVM is ignored for parsing/checking
 			},
 		)
 		assert.NoError(t, err)
@@ -434,6 +436,7 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  scriptLocation,
+				// NOTE: UseVM is ignored for parsing/checking
 			},
 		)
 		assert.NoError(t, err)
@@ -2214,6 +2217,7 @@ func TestRuntimeParseAndCheckProgram(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// NOTE: UseVM is ignored for parsing/checking
 			},
 		)
 		assert.NoError(t, err)
@@ -2232,6 +2236,7 @@ func TestRuntimeParseAndCheckProgram(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// NOTE: UseVM is ignored for parsing/checking
 			},
 		)
 		assert.NotNil(t, err)
@@ -2250,6 +2255,7 @@ func TestRuntimeParseAndCheckProgram(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				// NOTE: UseVM is ignored for parsing/checking
 			},
 		)
 		assert.NotNil(t, err)
@@ -6064,6 +6070,8 @@ func TestRuntimeContractWriteback(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: VM produces different writes
+			//UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -6222,6 +6230,8 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: VM produces different writes
+			//UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -6934,6 +6944,8 @@ func TestRuntimeProgramsHitForToplevelPrograms(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: VM produces different hits
+			//UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -6947,6 +6959,8 @@ func TestRuntimeProgramsHitForToplevelPrograms(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: VM produces different hits
+			//UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -6962,6 +6976,8 @@ func TestRuntimeProgramsHitForToplevelPrograms(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: VM produces different hits
+			//UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -7560,6 +7576,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -7637,6 +7654,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -7700,6 +7718,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -7717,6 +7736,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -7746,7 +7766,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				UseVM:     *compile,
+				// NOTE: UseVM is ignored for parsing/checking
 			},
 		)
 
@@ -7973,6 +7993,8 @@ func TestRuntimeComputationMetring(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					// TODO: VM has different computation metering
+					//UseVM:     *compile,
 				},
 			)
 			if testCase.ok {
@@ -8233,6 +8255,8 @@ func TestRuntimeImportTestStdlib(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextScriptLocation(),
+			// TODO: test framework is not supported in VM yet
+			//UseVM:     *compile,
 		},
 	)
 
@@ -8266,6 +8290,7 @@ func TestRuntimeGetCurrentBlockScript(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -8553,6 +8578,7 @@ func TestRuntimeAccountTypeEquality(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -9215,6 +9241,7 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -9264,6 +9291,7 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -9387,6 +9415,8 @@ func TestRuntimeWrappedErrorHandling(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: fix running with VM
+			//UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
