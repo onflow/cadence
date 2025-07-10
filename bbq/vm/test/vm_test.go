@@ -372,7 +372,7 @@ func TestNewStruct(t *testing.T) {
 
 	vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 
-	vmInstance := CompileAndPrepareToInvoke(t,
+	vmInstance, err := CompileAndPrepareToInvoke(t,
 		`
           struct Foo {
               var id : Int
@@ -397,6 +397,7 @@ func TestNewStruct(t *testing.T) {
 			VMConfig: vmConfig,
 		},
 	)
+	require.NoError(t, err)
 
 	result, err := vmInstance.InvokeExternally("test", interpreter.NewUnmeteredIntValueFromInt64(10))
 	require.NoError(t, err)
@@ -1916,7 +1917,7 @@ func TestTransaction(t *testing.T) {
 
 		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 
-		vmInstance := CompileAndPrepareToInvoke(
+		vmInstance, err := CompileAndPrepareToInvoke(
 			t,
 			`
               transaction {
@@ -1935,10 +1936,11 @@ func TestTransaction(t *testing.T) {
 				VMConfig: vmConfig,
 			},
 		)
+		require.NoError(t, err)
 
 		vmContext := vmInstance.Context()
 
-		err := vmInstance.InvokeTransaction(nil)
+		err = vmInstance.InvokeTransaction(nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -1982,7 +1984,7 @@ func TestTransaction(t *testing.T) {
 
 		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 
-		vmInstance := CompileAndPrepareToInvoke(
+		vmInstance, err := CompileAndPrepareToInvoke(
 			t,
 			`
                 transaction(param1: String, param2: String) {
@@ -2001,6 +2003,7 @@ func TestTransaction(t *testing.T) {
 				VMConfig: vmConfig,
 			},
 		)
+		require.NoError(t, err)
 
 		vmContext := vmInstance.Context()
 
@@ -2009,7 +2012,7 @@ func TestTransaction(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("Hello again!"),
 		}
 
-		err := vmInstance.InvokeTransaction(args)
+		err = vmInstance.InvokeTransaction(args)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -2077,7 +2080,7 @@ func TestTransaction(t *testing.T) {
 
 		vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(&logs)
 
-		vmInstance := CompileAndPrepareToInvoke(t,
+		vmInstance, err := CompileAndPrepareToInvoke(t,
 			`
               transaction {
                   var count: Int
@@ -2107,8 +2110,9 @@ func TestTransaction(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
-		err := vmInstance.InvokeTransaction(nil)
+		err = vmInstance.InvokeTransaction(nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -2145,7 +2149,7 @@ func TestTransaction(t *testing.T) {
 
 		vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(&logs)
 
-		vmInstance := CompileAndPrepareToInvoke(t,
+		vmInstance, err := CompileAndPrepareToInvoke(t,
 			`
               transaction {
                   var count: Int
@@ -2171,8 +2175,9 @@ func TestTransaction(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
-		err := vmInstance.InvokeTransaction(nil)
+		err = vmInstance.InvokeTransaction(nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
 
@@ -2209,7 +2214,7 @@ func TestTransaction(t *testing.T) {
 
 		vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(&logs)
 
-		vmInstance := CompileAndPrepareToInvoke(t,
+		vmInstance, err := CompileAndPrepareToInvoke(t,
 			`
               transaction {
                   var count: Int
@@ -2240,8 +2245,9 @@ func TestTransaction(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
-		err := vmInstance.InvokeTransaction(nil)
+		err = vmInstance.InvokeTransaction(nil)
 		RequireError(t, err)
 
 		var conditionError *interpreter.ConditionError
@@ -2290,7 +2296,7 @@ func TestTransaction(t *testing.T) {
 
 		vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(&logs)
 
-		vmInstance := CompileAndPrepareToInvoke(t,
+		vmInstance, err := CompileAndPrepareToInvoke(t,
 			`
               transaction {
                   var count: Int
@@ -2321,8 +2327,9 @@ func TestTransaction(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
-		err := vmInstance.InvokeTransaction(nil)
+		err = vmInstance.InvokeTransaction(nil)
 		RequireError(t, err)
 
 		var conditionError *interpreter.ConditionError
@@ -8195,7 +8202,7 @@ func TestGlobalVariables(t *testing.T) {
 
 		// Only prepare, do not invoke anything.
 
-		_ = CompileAndPrepareToInvoke(t,
+		_, err := CompileAndPrepareToInvoke(t,
 			`
               var a = initializeA()
               var b = initializeB()
@@ -8230,6 +8237,7 @@ func TestGlobalVariables(t *testing.T) {
 				VMConfig: vmConfig,
 			},
 		)
+		require.NoError(t, err)
 
 		assert.Equal(
 			t,
@@ -8715,25 +8723,27 @@ func TestSwapMembers(t *testing.T) {
 
 	t.Parallel()
 
-	vmInstance := CompileAndPrepareToInvoke(t, `
-        struct S {
-            var x: Int
-            var y: Int
+	vmInstance, err := CompileAndPrepareToInvoke(t,
+		`
+            struct S {
+                var x: Int
+                var y: Int
 
-            init() {
-                self.x = 1
-                self.y = 2
+                init() {
+                    self.x = 1
+                    self.y = 2
+                    }
             }
-        }
 
-        fun test(): [Int] {
-            let s = S()
-            s.x <-> s.y
-            return [s.x, s.y]
-        }
-    `,
+            fun test(): [Int] {
+                let s = S()
+                s.x <-> s.y
+                return [s.x, s.y]
+            }
+        `,
 		CompilerAndVMOptions{},
 	)
+	require.NoError(t, err)
 
 	result, err := vmInstance.InvokeExternally("test")
 	require.NoError(t, err)

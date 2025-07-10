@@ -29,41 +29,47 @@ import (
 // members
 
 func init() {
-	// Any member methods goes here
-	accountContractsTypeName := commons.TypeQualifier(sema.Account_ContractsType)
-
-	// Methods on `Account.Contracts` value.
 
 	registerBuiltinTypeBoundFunction(
-		accountContractsTypeName,
-		NewNativeFunctionValue(
-			sema.Account_ContractsTypeAddFunctionName,
-			sema.Account_ContractsTypeAddFunctionType,
+		commons.TypeQualifierInclusiveRange,
+		NewNativeFunctionValueWithDerivedType(
+			sema.InclusiveRangeTypeContainsFunctionName,
+			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+				rangeType, ok := receiver.StaticType(context).(interpreter.InclusiveRangeStaticType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				elementType := interpreter.MustConvertStaticToSemaType(rangeType.ElementType, context)
+				return sema.InclusiveRangeContainsFunctionType(elementType)
+			},
 			func(context *Context, _ []bbq.StaticType, args ...Value) Value {
-				// TODO: implement Account.Contracts.add, below is placeholder test code
 
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
 				receiver, args = args[ReceiverIndex], args[TypeBoundFunctionArgumentOffset:]
 
-				address := GetAccountTypePrivateAddressValue(receiver)
-
-				nameValue, ok := args[0].(*interpreter.StringValue)
+				rangeValue, ok := receiver.(*interpreter.CompositeValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
-				newCodeValue, ok := args[1].(*interpreter.ArrayValue)
+				needleInteger, ok := args[0].(interpreter.IntegerValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
-				return interpreter.NewDeployedContractValue(
+				rangeType, ok := rangeValue.StaticType(context).(interpreter.InclusiveRangeStaticType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return interpreter.InclusiveRangeContains(
+					rangeValue,
+					rangeType,
 					context,
-					address,
-					nameValue,
-					newCodeValue,
+					EmptyLocationRange,
+					needleInteger,
 				)
 			},
 		),
