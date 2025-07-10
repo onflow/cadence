@@ -3340,7 +3340,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		// Would be equivalent to:
 		// fun test(x: Int): Int {
 		//    if !(x > 0) {
-		//        failPreCondition("")
+		//        $failPreCondition("")
 		//    }
 		//    return 5
 		// }
@@ -3357,7 +3357,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 12},
 
-				// failPreCondition("")
+				// $failPreCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 1}, // error message
@@ -3409,7 +3409,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		//    $_result = 5
 		//    let result = $_result
 		//    if !(x > 0) {
-		//        failPostCondition("")
+		//       $failPostCondition("")
 		//    }
 		//    return $_result
 		// }
@@ -3442,7 +3442,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 21},
 
-				// failPostCondition("")
+				// $failPostCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 2}, // error message
@@ -3493,7 +3493,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		//    var $_result <-x
 		//    let result = &$_result
 		//    if !(result != nil) {
-		//        failPostCondition("")
+		//        $failPostCondition("")
 		//    }
 		//    return <-$_result
 		//}
@@ -3529,7 +3529,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 23},
 
-				// failPostCondition("")
+				// $failPostCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 0}, // error message
@@ -3635,14 +3635,14 @@ func TestCompileFunctionConditions(t *testing.T) {
 		// ```
 		//     fun test(x: Int, y: Int): Int {
 		//        if !(x > 0) {
-		//            failPreCondition("")
+		//            $failPreCondition("")
 		//        }
 		//
 		//        var $_result = 42
 		//        let result = $_result
 		//
 		//        if !(y > 0) {
-		//            failPostCondition("")
+		//            $failPostCondition("")
 		//        }
 		//
 		//        return $_result
@@ -3663,7 +3663,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 12},
 
-				// failPreCondition("")
+				// $failPreCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: failPreConditionFunctionIndex},
 				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
@@ -3704,7 +3704,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 33},
 
-				// failPostCondition("")
+				// $failPostCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: failPostConditionFunctionIndex},
 				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
@@ -3812,7 +3812,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		//        var $_result = 42
 		//        let result = $_result
 		//        if !($before_0 < x) {
-		//            failPostCondition("")
+		//            $failPostCondition("")
 		//        }
 		//        return $_result
 		//    }
@@ -3860,7 +3860,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 25},
 
-				// failPostCondition("")
+				// $failPostCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: failPostConditionFunctionIndex},
 				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
@@ -4055,7 +4055,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		// ```
 		//  fun getBalance(): Int {
 		//	  if !A.TestStruct().test() {
-		//	    failPreCondition("")
+		//	    $failPreCondition("")
 		//    }
 		//	  return self.balance
 		//  }
@@ -4079,7 +4079,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 13},
 
-				// failPreCondition("")
+				// $failPreCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: failPreConditionFunctionIndex},
 				opcode.InstructionGetConstant{Constant: panicMessageIndex},
@@ -4115,7 +4115,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				},
 				{
 					Location: nil,
-					Name:     "failPreCondition",
+					Name:     "$failPreCondition",
 				},
 			},
 			dProgram.Imports,
@@ -4863,14 +4863,14 @@ func TestCompileTransaction(t *testing.T) {
 	// Would be equivalent to:
 	//    fun execute {
 	//        if !(self.count == 2) {
-	//            failPreCondition("")
+	//            $failPreCondition("")
 	//        }
 	//
 	//        var $_result
 	//        self.count = 10
 	//
 	//        if !(self.count == 10) {
-	//            failPostCondition("")
+	//            $failPostCondition("")
 	//        }
 	//        return
 	//    }
@@ -4895,7 +4895,7 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionNot{},
 			opcode.InstructionJumpIfFalse{Target: 13},
 
-			// failPreCondition("")
+			// $failPreCondition("")
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: failPreConditionFunctionIndex},
 			opcode.InstructionGetConstant{Constant: constErrorMsgIndex},
@@ -4924,7 +4924,7 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionNot{},
 			opcode.InstructionJumpIfFalse{Target: 31},
 
-			// failPostCondition("")
+			// $failPostCondition("")
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: failPostConditionFunctionIndex},
 			opcode.InstructionGetConstant{Constant: constErrorMsgIndex},
@@ -8421,7 +8421,7 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 		// Function expression. Would be equivalent to:
 		// fun foo(x: Int): Int {
 		//    if !(x > 0) {
-		//        failPreCondition("")
+		//        $failPreCondition("")
 		//    }
 		//    return 5
 		// }
@@ -8443,7 +8443,7 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 12},
 
-				// failPreCondition("")
+				// $failPreCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 1}, // error message
@@ -8514,7 +8514,7 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 		//    $_result = 5
 		//    let result = $_result
 		//    if !(x > 0) {
-		//        failPostCondition("")
+		//        $failPostCondition("")
 		//    }
 		//    return $_result
 		// }
@@ -8547,7 +8547,7 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 21},
 
-				// failPostCondition("")
+				// $failPostCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 2}, // error message
@@ -8612,7 +8612,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 		// Function expression. Would be equivalent to:
 		// fun foo(x: Int): Int {
 		//    if !(x > 0) {
-		//        failPreCondition("")
+		//        $failPreCondition("")
 		//    }
 		//    return 5
 		// }
@@ -8634,7 +8634,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 12},
 
-				// failPreCondition("")
+				// $failPreCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 1}, // error message
@@ -8704,7 +8704,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 		//    $_result = 5
 		//    let result = $_result
 		//    if !(x > 0) {
-		//        failPostCondition("")
+		//        $failPostCondition("")
 		//    }
 		//    return $_result
 		// }
@@ -8737,7 +8737,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 21},
 
-				// failPostCondition("")
+				// $failPostCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 2}, // error message
@@ -8807,7 +8807,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 		// Function expression. Would be equivalent to:
 		// fun foo(x: Int): Int {
 		//    if !(x > 0) {
-		//        failPreCondition("")
+		//        $failPreCondition("")
 		//    }
 		//    return 5
 		// }
@@ -8829,7 +8829,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 12},
 
-				// failPreCondition("")
+				// $failPreCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 1}, // error message

@@ -28,9 +28,9 @@ const (
 	TransactionPrepareFunctionName  = "transaction.prepare"
 
 	// FailPreConditionFunctionName is the name of the function which is used for failing pre-conditions
-	FailPreConditionFunctionName = "failPreCondition"
+	FailPreConditionFunctionName = "$failPreCondition"
 	// FailPostConditionFunctionName is the name  of the function which is used for failing post-conditions
-	FailPostConditionFunctionName = "failPostCondition"
+	FailPostConditionFunctionName = "$failPostCondition"
 
 	GeneratedNameQualifier              = "$"
 	ResourceDestroyedEventsFunctionName = GeneratedNameQualifier + ast.ResourceDestructionDefaultEventName

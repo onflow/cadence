@@ -669,7 +669,7 @@ func (d *Desugar) desugarCondition(
 		// is converted to:
 		// ```
 		//   if !(x > 0) {
-		//     failPreCondition("x must be larger than zero")
+		//     $failPreCondition("x must be larger than zero")
 		//   }
 		// ```
 		//
@@ -681,7 +681,7 @@ func (d *Desugar) desugarCondition(
 		// is converted to:
 		// ```
 		//   if !(x > 0) {
-		//     failPreCondition("")
+		//     $failPreCondition("")
 		//   }
 		// ```
 
