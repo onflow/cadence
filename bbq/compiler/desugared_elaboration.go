@@ -439,7 +439,7 @@ func (e *DesugaredElaboration) DefaultDestroyDeclaration(declaration ast.Declara
 	return e.elaboration.DefaultDestroyDeclaration(declaration)
 }
 
-func (e *DesugaredElaboration) AttachTypes(expression *ast.AttachExpression) sema.AttachExprTypes {
+func (e *DesugaredElaboration) AttachTypes(expression *ast.AttachExpression) sema.AttachExpressionTypes {
 	return e.elaboration.AttachTypes(expression)
 }
 

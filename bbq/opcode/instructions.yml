@@ -940,7 +940,7 @@
 
 # Attachment instructions
 
-- name: "getTypeKey"
+- name: "getTypeIndex"
   description:
     Pops a value off the stack, the target,
     and then pushes the value of the type key at the given index onto the stack.
@@ -955,7 +955,7 @@
       - name: "value"
         type: "value"
 
-- name: "removeTypeKey"
+- name: "removeTypeIndex"
   description:
     Pops a value off the stack, the target.
     Remove the value of the given type key from the target.
@@ -968,7 +968,7 @@
       - name: "target"
         type: "value"
 
-- name: "setTypeKey"
+- name: "setTypeIndex"
   description:
     Pops two values off the stack, the target and the value,
     and then sets the type key at the given index of the target to the value, and pushes it onto the stack.

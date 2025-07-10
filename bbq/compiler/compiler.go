@@ -572,10 +572,10 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 	contracts := c.exportContracts()
 
 	compositeDeclarations := c.Program.CompositeDeclarations()
-	attachmentDeclarations := c.Program.AttachmentDeclarations()
 	variableDeclarations := c.Program.VariableDeclarations()
 	functionDeclarations := c.Program.FunctionDeclarations()
 	interfaceDeclarations := c.Program.InterfaceDeclarations()
+	attachmentDeclarations := c.Program.AttachmentDeclarations()
 
 	// Reserve globals for functions/types before visiting their implementations.
 	c.reserveGlobals(
@@ -639,7 +639,6 @@ func (c *Compiler[_, _]) reserveGlobals(
 		variableDecls,
 		nil,
 		compositeDecls,
-		attachmentDecls,
 	)
 
 	c.reserveFunctionGlobals(
@@ -657,7 +656,6 @@ func (c *Compiler[_, _]) reserveVariableGlobals(
 	variableDecls []*ast.VariableDeclaration,
 	enumCaseDecls []*ast.EnumCaseDeclaration,
 	compositeDecls []*ast.CompositeDeclaration,
-	attachmentDecls []*ast.AttachmentDeclaration,
 ) {
 	for _, declaration := range variableDecls {
 		variableName := declaration.Identifier.Identifier
@@ -683,22 +681,10 @@ func (c *Compiler[_, _]) reserveVariableGlobals(
 			nil,
 			members.EnumCases(),
 			members.Composites(),
-			members.Attachments(),
 		)
 	}
-	for _, declaration := range attachmentDecls {
-		compositeType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
 
-		members := declaration.Members
-
-		c.reserveVariableGlobals(
-			compositeType,
-			nil,
-			members.EnumCases(),
-			members.Composites(),
-			members.Attachments(),
-		)
-	}
+	// attachments will not have nested enum/composite declarations
 }
 
 func (c *Compiler[_, _]) reserveFunctionGlobals(
@@ -793,6 +779,22 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 		)
 	}
 
+	for _, declaration := range interfaceDecls {
+		// Don't need a global for the value-constructor for interfaces
+
+		members := declaration.Members
+		interfaceType := c.DesugaredElaboration.InterfaceDeclarationType(declaration)
+
+		c.reserveFunctionGlobals(
+			interfaceType,
+			members.SpecialFunctions(),
+			members.Functions(),
+			members.Composites(),
+			members.Interfaces(),
+			members.Attachments(),
+		)
+	}
+
 	for _, declaration := range attachmentDecls {
 		compositeType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
 		// Reserve a global for the constructor function.
@@ -804,22 +806,6 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 
 		c.reserveFunctionGlobals(
 			compositeType,
-			members.SpecialFunctions(),
-			members.Functions(),
-			members.Composites(),
-			members.Interfaces(),
-			members.Attachments(),
-		)
-	}
-
-	for _, declaration := range interfaceDecls {
-		// Don't need a global for the value-constructor for interfaces
-
-		members := declaration.Members
-		interfaceType := c.DesugaredElaboration.InterfaceDeclarationType(declaration)
-
-		c.reserveFunctionGlobals(
-			interfaceType,
 			members.SpecialFunctions(),
 			members.Functions(),
 			members.Composites(),
@@ -2131,7 +2117,11 @@ func (c *Compiler[_, _]) emitVariableStore(name string) {
 	})
 }
 
-func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(expression *ast.InvocationExpression, implicitArgIndex uint16, implicitArgType sema.Type) (_ struct{}) {
+func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
+	expression *ast.InvocationExpression,
+	implicitArgIndex uint16,
+	implicitArgType sema.Type,
+) (_ struct{}) {
 	// TODO: copy
 
 	invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(expression)
@@ -2176,6 +2166,10 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(expressio
 
 	typeArgs := c.loadTypeArguments(invocationTypes)
 	if implicitArgType != nil {
+		// Add the implicit argument to the end of the argument list, if it exists.
+		// Used in attachments, the attachment constructor/init expects an implicit argument:
+		// a reference to the base value used to set base.
+		// This hides the base argument away from the user.
 		typeArgs = append(typeArgs, c.getOrAddType(implicitArgType))
 		argumentCount += 1
 		if argumentCount >= math.MaxUint16 {
@@ -2530,7 +2524,7 @@ func (c *Compiler[_, _]) VisitIndexExpression(expression *ast.IndexExpression) (
 	c.compileExpression(expression.TargetExpression)
 
 	if attachmentType, ok := c.DesugaredElaboration.AttachmentAccessTypes(expression); ok {
-		c.emit(opcode.InstructionGetTypeKey{
+		c.emit(opcode.InstructionGetTypeIndex{
 			Type: c.getOrAddType(attachmentType),
 		})
 	} else {
@@ -2959,8 +2953,9 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		},
 	)
 
-	// `self` in attachments is a reference.
+	// stores the return value of the constructor
 	var returnLocalIndex uint16
+	// `self` in attachments is a reference.
 	if kind == common.CompositeKindAttachment {
 		// Store the new composite as the return value.
 		returnLocalIndex = c.currentFunction.generateLocalIndex()
@@ -2973,6 +2968,8 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		})
 
 		// TODO: expose base, a reference to the attachment's base value
+	} else {
+		returnLocalIndex = self.index
 	}
 
 	if kind == common.CompositeKindContract {
@@ -3005,13 +3002,8 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		enclosingType,
 	)
 
-	if kind == common.CompositeKindAttachment {
-		// Attachments have `self` as a reference, but the return value should be the created composite.
-		c.emitGetLocal(returnLocalIndex)
-	} else {
-		// Constructor should return the created the struct. i.e: return `self`
-		c.emitGetLocal(self.index)
-	}
+	// Constructor should return the created the struct. i.e: return `self`
+	c.emitGetLocal(returnLocalIndex)
 
 	// No need to transfer, since the type is same as the constructed value, for initializers.
 	c.emit(opcode.InstructionReturnValue{})
@@ -3365,7 +3357,7 @@ func (c *Compiler[_, _]) VisitRemoveStatement(statement *ast.RemoveStatement) (_
 	c.compileExpression(statement.Value)
 	// remove attachment from base
 	nominalType := c.DesugaredElaboration.AttachmentRemoveTypes(statement)
-	c.emit(opcode.InstructionRemoveTypeKey{
+	c.emit(opcode.InstructionRemoveTypeIndex{
 		Type: c.getOrAddType(nominalType),
 	})
 	return
@@ -3403,7 +3395,7 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 
 	// add attachment value as a member of transferred base
 	// returns the result
-	c.emit(opcode.InstructionSetTypeKey{
+	c.emit(opcode.InstructionSetTypeIndex{
 		Type: c.getOrAddType(attachmentType),
 	})
 	return

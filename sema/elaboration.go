@@ -116,7 +116,7 @@ type ForStatementTypes struct {
 	ValueVariableType Type
 }
 
-type AttachExprTypes struct {
+type AttachExpressionTypes struct {
 	AttachType Type
 	BaseType   Type
 }
@@ -170,7 +170,7 @@ type Elaboration struct {
 	indexExpressionTypes                map[*ast.IndexExpression]IndexExpressionTypes
 	attachmentAccessTypes               map[*ast.IndexExpression]Type
 	attachmentRemoveTypes               map[*ast.RemoveStatement]Type
-	attachTypes                         map[*ast.AttachExpression]AttachExprTypes
+	attachTypes                         map[*ast.AttachExpression]AttachExpressionTypes
 	forceExpressionTypes                map[*ast.ForceExpression]Type
 	staticCastTypes                     map[*ast.CastingExpression]CastTypes
 	expressionTypes                     map[ast.Expression]ExpressionTypes
@@ -1025,7 +1025,7 @@ func (e *Elaboration) SetAttachmentRemoveTypes(
 func (e *Elaboration) AttachTypes(
 	expr *ast.AttachExpression,
 ) (
-	ty AttachExprTypes,
+	ty AttachExpressionTypes,
 ) {
 	if e.attachTypes == nil {
 		return
@@ -1035,10 +1035,10 @@ func (e *Elaboration) AttachTypes(
 
 func (e *Elaboration) SetAttachTypes(
 	expr *ast.AttachExpression,
-	types AttachExprTypes,
+	types AttachExpressionTypes,
 ) {
 	if e.attachTypes == nil {
-		e.attachTypes = map[*ast.AttachExpression]AttachExprTypes{}
+		e.attachTypes = map[*ast.AttachExpression]AttachExpressionTypes{}
 	}
 	e.attachTypes[expr] = types
 }

@@ -2640,32 +2640,32 @@ func DecodeTemplateString(ip *uint16, code []byte) (i InstructionTemplateString)
 	return i
 }
 
-// InstructionGetTypeKey
+// InstructionGetTypeIndex
 //
 // Pops a value off the stack, the target, and then pushes the value of the type key at the given index onto the stack.
-type InstructionGetTypeKey struct {
+type InstructionGetTypeIndex struct {
 	Type uint16
 }
 
-var _ Instruction = InstructionGetTypeKey{}
+var _ Instruction = InstructionGetTypeIndex{}
 
-func (InstructionGetTypeKey) Opcode() Opcode {
-	return GetTypeKey
+func (InstructionGetTypeIndex) Opcode() Opcode {
+	return GetTypeIndex
 }
 
-func (i InstructionGetTypeKey) String() string {
+func (i InstructionGetTypeIndex) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
 	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionGetTypeKey) OperandsString(sb *strings.Builder, colorize bool) {
+func (i InstructionGetTypeIndex) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "type", i.Type, colorize)
 }
 
-func (i InstructionGetTypeKey) ResolvedOperandsString(sb *strings.Builder,
+func (i InstructionGetTypeIndex) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
 	functionNames []string,
@@ -2674,42 +2674,42 @@ func (i InstructionGetTypeKey) ResolvedOperandsString(sb *strings.Builder,
 	printfTypeArgument(sb, "type", types[i.Type], colorize)
 }
 
-func (i InstructionGetTypeKey) Encode(code *[]byte) {
+func (i InstructionGetTypeIndex) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 	emitUint16(code, i.Type)
 }
 
-func DecodeGetTypeKey(ip *uint16, code []byte) (i InstructionGetTypeKey) {
+func DecodeGetTypeIndex(ip *uint16, code []byte) (i InstructionGetTypeIndex) {
 	i.Type = decodeUint16(ip, code)
 	return i
 }
 
-// InstructionRemoveTypeKey
+// InstructionRemoveTypeIndex
 //
 // Pops a value off the stack, the target. Remove the value of the given type key from the target. Additionally destroy if removed type is resource.
-type InstructionRemoveTypeKey struct {
+type InstructionRemoveTypeIndex struct {
 	Type uint16
 }
 
-var _ Instruction = InstructionRemoveTypeKey{}
+var _ Instruction = InstructionRemoveTypeIndex{}
 
-func (InstructionRemoveTypeKey) Opcode() Opcode {
-	return RemoveTypeKey
+func (InstructionRemoveTypeIndex) Opcode() Opcode {
+	return RemoveTypeIndex
 }
 
-func (i InstructionRemoveTypeKey) String() string {
+func (i InstructionRemoveTypeIndex) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
 	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionRemoveTypeKey) OperandsString(sb *strings.Builder, colorize bool) {
+func (i InstructionRemoveTypeIndex) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "type", i.Type, colorize)
 }
 
-func (i InstructionRemoveTypeKey) ResolvedOperandsString(sb *strings.Builder,
+func (i InstructionRemoveTypeIndex) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
 	functionNames []string,
@@ -2718,42 +2718,42 @@ func (i InstructionRemoveTypeKey) ResolvedOperandsString(sb *strings.Builder,
 	printfTypeArgument(sb, "type", types[i.Type], colorize)
 }
 
-func (i InstructionRemoveTypeKey) Encode(code *[]byte) {
+func (i InstructionRemoveTypeIndex) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 	emitUint16(code, i.Type)
 }
 
-func DecodeRemoveTypeKey(ip *uint16, code []byte) (i InstructionRemoveTypeKey) {
+func DecodeRemoveTypeIndex(ip *uint16, code []byte) (i InstructionRemoveTypeIndex) {
 	i.Type = decodeUint16(ip, code)
 	return i
 }
 
-// InstructionSetTypeKey
+// InstructionSetTypeIndex
 //
 // Pops two values off the stack, the target and the value, and then sets the type key at the given index of the target to the value, and pushes it onto the stack.
-type InstructionSetTypeKey struct {
+type InstructionSetTypeIndex struct {
 	Type uint16
 }
 
-var _ Instruction = InstructionSetTypeKey{}
+var _ Instruction = InstructionSetTypeIndex{}
 
-func (InstructionSetTypeKey) Opcode() Opcode {
-	return SetTypeKey
+func (InstructionSetTypeIndex) Opcode() Opcode {
+	return SetTypeIndex
 }
 
-func (i InstructionSetTypeKey) String() string {
+func (i InstructionSetTypeIndex) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
 	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionSetTypeKey) OperandsString(sb *strings.Builder, colorize bool) {
+func (i InstructionSetTypeIndex) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "type", i.Type, colorize)
 }
 
-func (i InstructionSetTypeKey) ResolvedOperandsString(sb *strings.Builder,
+func (i InstructionSetTypeIndex) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
 	functionNames []string,
@@ -2762,12 +2762,12 @@ func (i InstructionSetTypeKey) ResolvedOperandsString(sb *strings.Builder,
 	printfTypeArgument(sb, "type", types[i.Type], colorize)
 }
 
-func (i InstructionSetTypeKey) Encode(code *[]byte) {
+func (i InstructionSetTypeIndex) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 	emitUint16(code, i.Type)
 }
 
-func DecodeSetTypeKey(ip *uint16, code []byte) (i InstructionSetTypeKey) {
+func DecodeSetTypeIndex(ip *uint16, code []byte) (i InstructionSetTypeIndex) {
 	i.Type = decodeUint16(ip, code)
 	return i
 }
@@ -2916,12 +2916,12 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionStatement{}
 	case TemplateString:
 		return DecodeTemplateString(ip, code)
-	case GetTypeKey:
-		return DecodeGetTypeKey(ip, code)
-	case RemoveTypeKey:
-		return DecodeRemoveTypeKey(ip, code)
-	case SetTypeKey:
-		return DecodeSetTypeKey(ip, code)
+	case GetTypeIndex:
+		return DecodeGetTypeIndex(ip, code)
+	case RemoveTypeIndex:
+		return DecodeRemoveTypeIndex(ip, code)
+	case SetTypeIndex:
+		return DecodeSetTypeIndex(ip, code)
 	}
 
 	panic(errors.NewUnreachableError())

@@ -66,9 +66,9 @@ func _() {
 	_ = x[GetIndex-82]
 	_ = x[RemoveIndex-83]
 	_ = x[GetMethod-84]
-	_ = x[GetTypeKey-85]
-	_ = x[SetTypeKey-86]
-	_ = x[RemoveTypeKey-87]
+	_ = x[GetTypeIndex-85]
+	_ = x[SetTypeIndex-86]
+	_ = x[RemoveTypeIndex-87]
 	_ = x[Invoke-91]
 	_ = x[InvokeMethodStatic-92]
 	_ = x[InvokeMethodDynamic-93]
@@ -92,7 +92,7 @@ const (
 	_Opcode_name_3 = "LessGreaterLessOrEqualGreaterOrEqualEqualNotEqualNot"
 	_Opcode_name_4 = "UnwrapDestroyTransferAndConvertSimpleCastFailableCastForceCastDerefTransfer"
 	_Opcode_name_5 = "TrueFalseVoidNilNewNewPathNewArrayNewDictionaryNewRefNewClosure"
-	_Opcode_name_6 = "GetConstantGetLocalSetLocalGetUpvalueSetUpvalueCloseUpvalueGetGlobalSetGlobalGetFieldRemoveFieldSetFieldSetIndexGetIndexRemoveIndexGetMethodGetTypeKeySetTypeKeyRemoveTypeKey"
+	_Opcode_name_6 = "GetConstantGetLocalSetLocalGetUpvalueSetUpvalueCloseUpvalueGetGlobalSetGlobalGetFieldRemoveFieldSetFieldSetIndexGetIndexRemoveIndexGetMethodGetTypeIndexSetTypeIndexRemoveTypeIndex"
 	_Opcode_name_7 = "InvokeInvokeMethodStaticInvokeMethodDynamic"
 	_Opcode_name_8 = "DropDup"
 	_Opcode_name_9 = "IteratorIteratorHasNextIteratorNextIteratorEndEmitEventLoopStatementTemplateStringOpcodeMax"
@@ -105,7 +105,7 @@ var (
 	_Opcode_index_3 = [...]uint8{0, 4, 11, 22, 36, 41, 49, 52}
 	_Opcode_index_4 = [...]uint8{0, 6, 13, 31, 41, 53, 62, 67, 75}
 	_Opcode_index_5 = [...]uint8{0, 4, 9, 13, 16, 19, 26, 34, 47, 53, 63}
-	_Opcode_index_6 = [...]uint8{0, 11, 19, 27, 37, 47, 59, 68, 77, 85, 96, 104, 112, 120, 131, 140, 150, 160, 173}
+	_Opcode_index_6 = [...]uint8{0, 11, 19, 27, 37, 47, 59, 68, 77, 85, 96, 104, 112, 120, 131, 140, 152, 164, 179}
 	_Opcode_index_7 = [...]uint8{0, 6, 24, 43}
 	_Opcode_index_8 = [...]uint8{0, 4, 7}
 	_Opcode_index_9 = [...]uint8{0, 8, 23, 35, 46, 55, 59, 68, 82, 91}
