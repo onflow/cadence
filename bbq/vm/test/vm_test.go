@@ -9222,15 +9222,7 @@ func TestInheritedDefaultDestroyEvent(t *testing.T) {
 		}
 		return contractValue
 	}
-	vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.Type {
-		elaboration := programs[location].DesugaredElaboration
-		compositeType := elaboration.CompositeType(typeID)
-		if compositeType != nil {
-			return compositeType
-		}
-
-		return elaboration.InterfaceType(typeID)
-	}
+	vmConfig.TypeLoader = CompiledProgramsTypeLoader(programs)
 
 	vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(&logs)
 
