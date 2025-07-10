@@ -29,7 +29,7 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
@@ -333,11 +333,11 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 
 	t.Parallel()
 
-	parseCheckAndInterpretWithGenericFunction := func(
+	parseCheckAndPrepareWithGenericFunction := func(
 		tt *testing.T,
 		code string,
 		boundType sema.Type,
-	) (common_utils.Invokable, error) {
+	) (Invokable, error) {
 
 		typeParameter := &sema.TypeParameter{
 			Name:      "T",
@@ -382,7 +382,7 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 	t.Run("generic function as non-generic function", func(t *testing.T) {
 		t.Parallel()
 
-		inter, err := parseCheckAndInterpretWithGenericFunction(t, `
+		inter, err := parseCheckAndPrepareWithGenericFunction(t, `
             fun test() {
                 var boxedFunc: AnyStruct = foo  // fun<T Integer>(): Void
 

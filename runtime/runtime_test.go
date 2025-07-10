@@ -2339,7 +2339,7 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
                 `,
 				expected: cadence.Function{
 					FunctionType: &cadence.FunctionType{
-						Purity: sema.FunctionPurityView,
+						Purity: cadence.FunctionPurityView,
 						Parameters: []cadence.Parameter{
 							{
 								Label:      sema.ArgumentLabelNotRequired,
@@ -4756,8 +4756,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 					Context{
 						Interface: runtimeInterface,
 						Location:  nextTransactionLocation(),
-						// TODO: requires support for ConditionError in the VM
-						//UseVM:     *compile,
+						UseVM:     *compile,
 					},
 				)
 

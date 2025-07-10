@@ -16,33 +16,32 @@
  * limitations under the License.
  */
 
-package vm
+package main
 
 import (
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/commons"
-	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/sema"
+	"encoding/csv"
+	"log"
+	"os"
 )
 
-// members
+type namedError struct {
+	name string
+	error
+}
 
-func init() {
+func main() {
+	w := csv.NewWriter(os.Stdout)
+	defer w.Flush()
 
-	typeName := commons.TypeQualifier(sema.CharacterType)
+	err := w.Write([]string{"name", "example"})
+	if err != nil {
+		log.Fatalf("Failed to write CSV header: %v", err)
+	}
 
-	registerBuiltinTypeBoundFunction(
-		typeName,
-		NewNativeFunctionValue(
-			sema.ToStringFunctionName,
-			sema.ToStringFunctionType,
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				address := arguments[ReceiverIndex].(interpreter.CharacterValue)
-				return interpreter.CharacterValueToString(
-					context,
-					address,
-				)
-			},
-		),
-	)
+	for _, namedErr := range generateErrors() {
+		err = w.Write([]string{namedErr.name, namedErr.Error()})
+		if err != nil {
+			log.Fatalf("Failed to write CSV row: %v", err)
+		}
+	}
 }

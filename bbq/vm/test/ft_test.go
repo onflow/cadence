@@ -110,6 +110,13 @@ func compiledFTTransfer(tb testing.TB) {
 				},
 			)
 
+			activation.Set(
+				stdlib.PanicFunctionName,
+				compiler.GlobalImport{
+					Name: stdlib.PanicFunctionName,
+				},
+			)
+
 			return activation
 		},
 	}

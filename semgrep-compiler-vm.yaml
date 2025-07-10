@@ -10,3 +10,21 @@ rules:
   paths:
     include:
       - "runtime/*_test.go"
+    exclude:
+      - runtime/attachments_test.go
+      - runtime/coverage_test.go
+      - runtime/sharedstate_test.go
+      - runtime/debugger_test.go
+
+- id: interpreter-test-without-vm
+  languages:
+    - go
+  severity: INFO
+  message: Interpreter test not enabled to be run with compiler/VM
+  patterns:
+    - pattern-regex: "parseCheckAndInterpret\\w*\\("
+  paths:
+    include:
+      - "interpreter/*_test.go"
+    exclude:
+      - interpreter/attachments_test.go
