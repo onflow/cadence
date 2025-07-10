@@ -377,8 +377,6 @@ func (e TypeDepthLimitReachedError) SuggestFixes(_ string) []errors.SuggestedFix
 	}
 }
 
-
-
 func (e TypeDepthLimitReachedError) StartPosition() ast.Position {
 	return e.Pos
 }
@@ -536,7 +534,7 @@ func (e *RestrictedTypeError) SuggestFixes(code string) []errors.SuggestedFix[as
 	// This is a simple replacement of the old syntax with the new syntax
 	if e.StartPos.Offset < e.EndPos.Offset && e.EndPos.Offset <= len(code) {
 		oldSyntax := code[e.StartPos.Offset:e.EndPos.Offset]
-		
+
 		// Convert T{} to {T} or T{U,V} to {U,V}
 		// This is a simplified suggestion - in practice, the exact conversion
 		// would depend on the specific restricted type being used
@@ -554,7 +552,7 @@ func (e *RestrictedTypeError) SuggestFixes(code string) []errors.SuggestedFix[as
 		} else {
 			newSyntax = "{}" // fallback
 		}
-		
+
 		return []errors.SuggestedFix[ast.TextEdit]{
 			{
 				Message: "Convert to intersection type syntax",
