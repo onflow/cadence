@@ -36,6 +36,7 @@ func TestInterpretFunctionInvocationCheckArgumentTypes(t *testing.T) {
 
 	t.Parallel()
 
+	// TODO: check argument types in the VM
 	inter := parseCheckAndInterpret(t, `
        fun test(_ x: Int): Int {
            return x
@@ -82,6 +83,8 @@ func TestInterpretSelfDeclaration(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, checkFunction)
 
+		// NOTE: test only applies to the interpreter,
+		// the VM does not provide a way to check the caller's self
 		inter, err := parseCheckAndInterpretWithOptions(
 			t,
 			code,

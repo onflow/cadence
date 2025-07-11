@@ -9430,6 +9430,8 @@ func TestRuntimeWrappedErrorHandling(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: fix running with VM
+			//UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -9446,6 +9448,8 @@ func TestRuntimeWrappedErrorHandling(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: fix running with VM
+			//UseVM:     *compile,
 		},
 	)
 
@@ -10922,6 +10926,8 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: fix VM
+			//UseVM: *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -10984,6 +10990,8 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: fix VM
+			//UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)
@@ -11073,43 +11081,45 @@ func TestRuntimeValueTransferResourceLoss(t *testing.T) {
 
 	nextScriptLocation := NewScriptLocationGenerator()
 
-	script := []byte(fmt.Sprintf(`
-        import Foo from %[1]s
+	script := []byte(fmt.Sprintf(
+		`
+          import Foo from %[1]s
 
-    access(all) struct IndexSwitcher {
-        access(self) var counter: Int
-        init() {
-            self.counter = 0
-        }
-        access(all) fun callback(): Int {
-            self.counter = self.counter + 1
-            if self.counter == 1 {
-                // Which key we want to be read?
-                // Let's point it to a non-existent key
-                return 123
-            } else {
-                // Which key we want to be assigned to?
-                // We point it to 0 to overwrite the victim value
-                return 0
-            }
-        }
-    }
+          access(all) struct IndexSwitcher {
+              access(self) var counter: Int
+              init() {
+                  self.counter = 0
+              }
+              access(all) fun callback(): Int {
+                  self.counter = self.counter + 1
+                  if self.counter == 1 {
+                      // Which key we want to be read?
+                      // Let's point it to a non-existent key
+                      return 123
+                  } else {
+                      // Which key we want to be assigned to?
+                      // We point it to 0 to overwrite the victim value
+                      return 0
+                  }
+              }
+          }
 
-    access(all) fun loseResource(victim: @Foo.R) {
-       var a <- Foo.createR("dummy resource")
-       var dict: @{Int: Foo.R} <- { 0: <- victim }
-       var indexSwitcher = IndexSwitcher()
-       
-       // this callback should only be evaluated once, rather than twice
-       var b <- dict[indexSwitcher.callback()] <- a
-       destroy b
-       destroy dict
-    }
+          access(all) fun loseResource(victim: @Foo.R) {
+             var a <- Foo.createR("dummy resource")
+             var dict: @{Int: Foo.R} <- { 0: <- victim }
+             var indexSwitcher = IndexSwitcher()
+             
+             // this callback should only be evaluated once, rather than twice
+             var b <- dict[indexSwitcher.callback()] <- a
+             destroy b
+             destroy dict
+          }
 
-    access(all) fun main(): Void {
-       var victim <- Foo.createR("victim resource")
-       loseResource(victim: <- victim)
-    }`,
+          access(all) fun main(): Void {
+             var victim <- Foo.createR("victim resource")
+             loseResource(victim: <- victim)
+          }
+        `,
 		address.HexWithPrefix(),
 	))
 
@@ -11120,6 +11130,8 @@ func TestRuntimeValueTransferResourceLoss(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextScriptLocation(),
+			// TODO: fix VM
+			//UseVM:     *compile,
 		},
 	)
 
@@ -13280,6 +13292,8 @@ func TestRuntimeStorageReferenceBoundFunctionConfusion(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			// TODO: fix VM
+			//UseVM:     *compile,
 		},
 	)
 
