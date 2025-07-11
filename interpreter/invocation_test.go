@@ -19,7 +19,6 @@
 package interpreter_test
 
 import (
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
