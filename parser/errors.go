@@ -141,7 +141,7 @@ func (e *SyntaxErrorWithSuggestedReplacement) SuggestFixes(_ string) []errors.Su
 // JuxtaposedUnaryOperatorsError
 
 type JuxtaposedUnaryOperatorsError struct {
-	Pos   ast.Position
+	Pos ast.Position
 	Range ast.Range
 }
 
