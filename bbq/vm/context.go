@@ -298,6 +298,7 @@ func (c *Context) GetMethod(
 		c,
 		value,
 		method,
+		nil,
 	)
 }
 

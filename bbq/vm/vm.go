@@ -341,7 +341,7 @@ func (vm *VM) InvokeMethodExternally(
 		}
 	}
 
-	boundFunction := NewBoundFunctionValue(context, receiver, functionValue)
+	boundFunction := NewBoundFunctionValue(context, receiver, functionValue, nil)
 
 	return vm.validateAndInvokeExternally(boundFunction, arguments)
 }
@@ -497,6 +497,7 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.CompositeValue, 
 		context,
 		transaction,
 		prepareFunction,
+		nil,
 	)
 
 	_, err := vm.validateAndInvokeExternally(boundPrepareFunction, signers)
@@ -521,6 +522,7 @@ func (vm *VM) InvokeTransactionExecute(transaction *interpreter.CompositeValue) 
 		context,
 		transaction,
 		executeFunction,
+		nil,
 	)
 
 	_, err := vm.validateAndInvokeExternally(boundExecuteFunction, nil)
@@ -899,10 +901,29 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 
 	receiver := vm.pop()
 
+	// TODO: Clean this up
+	var base *interpreter.EphemeralReferenceValue
+	if val, ok := receiver.(*interpreter.EphemeralReferenceValue); ok {
+		if refValue, ok := val.Value.(*interpreter.CompositeValue); ok {
+			if refValue.Kind == common.CompositeKindAttachment {
+				base = refValue.GetBaseValue(
+					vm.context,
+					interpreter.ConvertSemaAccessToStaticAuthorization(
+						vm.context,
+						sema.UnauthorizedAccess,
+					),
+					interpreter.EmptyLocationRange,
+				)
+			}
+
+		}
+	}
+
 	boundFunction := NewBoundFunctionValue(
 		vm.context,
 		receiver,
 		method,
+		base,
 	)
 
 	vm.push(boundFunction)
@@ -920,7 +941,13 @@ func opInvokeMethodStatic(vm *VM, ins opcode.InstructionInvokeMethodStatic) {
 
 	functionValue := boundFunction.Method
 	receiver := boundFunction.Receiver(vm.context)
-	arguments = append([]Value{receiver}, arguments...)
+	values := []Value{receiver}
+	base := boundFunction.Base
+	if base != nil {
+		values = append(values, base)
+	}
+
+	arguments = append(values, arguments...)
 
 	invokeFunction(
 		vm,
