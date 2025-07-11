@@ -1025,7 +1025,7 @@ func (v *CompositeValue) CompositeStaticTypeConformsToStaticType(
 	}
 
 	if compositeType.Kind == common.CompositeKindAttachment {
-		base := v.getBaseValue(context, UnauthorizedAccess, locationRange).Value
+		base := v.GetBaseValue(context, UnauthorizedAccess, locationRange).Value
 		if base == nil || !base.ConformsToStaticType(context, locationRange, results) {
 			return false
 		}
@@ -1656,7 +1656,7 @@ func NewEnumCaseValue(
 	return v
 }
 
-func (v *CompositeValue) getBaseValue(
+func (v *CompositeValue) GetBaseValue(
 	context StaticTypeAndReferenceContext,
 	functionAuthorization Authorization,
 	locationRange LocationRange,
@@ -1776,7 +1776,7 @@ func attachmentBaseAndSelfValues(
 ) (base *EphemeralReferenceValue, self *EphemeralReferenceValue) {
 	attachmentReferenceAuth := ConvertSemaAccessToStaticAuthorization(context, fnAccess)
 
-	base = v.getBaseValue(context, attachmentReferenceAuth, locationRange)
+	base = v.GetBaseValue(context, attachmentReferenceAuth, locationRange)
 	// in attachment functions, self is a reference value
 	self = NewEphemeralReferenceValue(
 		context,

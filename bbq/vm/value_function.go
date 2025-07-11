@@ -391,12 +391,14 @@ type BoundFunctionValue struct {
 
 	Method       FunctionValue
 	functionType *sema.FunctionType
+	Base         *interpreter.EphemeralReferenceValue
 }
 
 func NewBoundFunctionValue(
 	context interpreter.ReferenceCreationContext,
 	receiver interpreter.Value,
 	method FunctionValue,
+	base *interpreter.EphemeralReferenceValue,
 ) FunctionValue {
 
 	// Since 'self' work as an implicit reference, create an explicit one and hold it.
@@ -409,6 +411,7 @@ func NewBoundFunctionValue(
 		Method:              method,
 		receiverReference:   receiverRef,
 		receiverIsReference: receiverIsRef,
+		Base:                base,
 	}
 }
 

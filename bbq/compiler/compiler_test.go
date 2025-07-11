@@ -8858,11 +8858,15 @@ func TestCompileAttachments(t *testing.T) {
 		checker, err := ParseAndCheck(t, `
 			struct S {}
 			attachment A for S {
-				fun foo(): Int { return 3 }
+				let x: Int
+				init(x: Int) {
+					self.x = x
+				}
+				fun foo(): Int { return self.x }
 			}
 			fun test(): Int {
 				var s = S()
-				s = attach A() to s
+				s = attach A(x: 3) to s
 				return s[A]?.foo()!
 			}
 		`)
@@ -8877,6 +8881,7 @@ func TestCompileAttachments(t *testing.T) {
 		functions := program.Functions
 		require.Len(t, functions, 8)
 
+		// `test` function
 		assert.Equal(t,
 			[]opcode.Instruction{
 				// STATEMENT: var s = S()
@@ -8886,7 +8891,7 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.InstructionTransferAndConvert{Type: 0x1},
 				opcode.InstructionSetLocal{Local: 0x0},
 
-				// STATEMENT: s = attach A() to s
+				// STATEMENT: s = attach A(x:3) to s
 				opcode.InstructionStatement{},
 				// get s on stack
 				opcode.InstructionGetLocal{Local: 0x0},
@@ -8898,16 +8903,19 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.InstructionSetLocal{Local: 0x2},
 				// get A constructor
 				opcode.InstructionGetGlobal{Global: 0x4},
+				// get 3
+				opcode.InstructionGetConstant{Constant: 0x0},
+				opcode.InstructionTransferAndConvert{Type: 0x2},
 				// get s reference
 				opcode.InstructionGetLocal{Local: 0x2},
 				// invoke A constructor with &s as arg, puts A on stack
-				opcode.InstructionInvoke{TypeArgs: []uint16{0x1}, ArgCount: 0x1},
+				opcode.InstructionInvoke{TypeArgs: []uint16{0x1}, ArgCount: 0x2},
 				// get s back on stack
 				opcode.InstructionGetLocal{Local: 0x1},
 				// copy/transfer of s to attach to
 				opcode.InstructionTransfer{},
 				// attachment operation, attach A to s-copy
-				opcode.InstructionSetTypeIndex{Type: 0x2},
+				opcode.InstructionSetTypeIndex{Type: 0x3},
 				// return value is s-copy
 				opcode.InstructionTransferAndConvert{Type: 0x1},
 				// finish assignment of s
@@ -8917,22 +8925,51 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: 0x0},
 				// access A on s: s[A], returns attachment reference as optional
-				opcode.InstructionGetTypeIndex{Type: 0x2},
+				opcode.InstructionGetTypeIndex{Type: 0x3},
 				opcode.InstructionSetLocal{Local: 0x3},
 				opcode.InstructionGetLocal{Local: 0x3},
-				opcode.InstructionJumpIfNil{Target: 0x1e},
+				opcode.InstructionJumpIfNil{Target: 0x20},
 				opcode.InstructionGetLocal{Local: 0x3},
 				opcode.InstructionUnwrap{},
 				// call foo if not nil
 				opcode.InstructionGetMethod{Method: 0x7},
 				opcode.InstructionInvokeMethodStatic{TypeArgs: []uint16(nil), ArgCount: 0x0},
-				opcode.InstructionJump{Target: 0x1f},
+				opcode.InstructionJump{Target: 0x21},
 				opcode.InstructionNil{},
 				opcode.InstructionUnwrap{},
-				opcode.InstructionTransferAndConvert{Type: 0x3},
+				opcode.InstructionTransferAndConvert{Type: 0x2},
 				opcode.InstructionReturnValue{},
 			},
 			functions[0].Code,
+		)
+
+		// `A` init
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// create attachment
+				opcode.InstructionNew{Kind: 0x6, Type: 0x3},
+				// set returnLocalIndex to attachment
+				opcode.InstructionSetLocal{Local: 0x3},
+				// get a reference to attachment
+				opcode.InstructionGetLocal{Local: 0x3},
+				opcode.InstructionNewRef{Type: 0x3, IsImplicit: false},
+				// set self to be the reference
+				opcode.InstructionSetLocal{Local: 0x1},
+
+				// self.x = x
+				opcode.InstructionStatement{},
+				// get self
+				opcode.InstructionGetLocal{Local: 0x1},
+				// get x
+				opcode.InstructionGetLocal{Local: 0x0},
+				opcode.InstructionTransferAndConvert{Type: 0x2},
+				// set self.x = x
+				opcode.InstructionSetField{FieldName: 0x1, AccessedType: 0x8},
+				// return created attachment (returnLocalIndex)
+				opcode.InstructionGetLocal{Local: 0x3},
+				opcode.InstructionReturnValue{},
+			},
+			functions[4].Code,
 		)
 	})
 }

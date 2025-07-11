@@ -2755,7 +2755,7 @@ func (c *Compiler[_, _]) VisitFunctionExpression(expression *ast.FunctionExpress
 		c.targetFunction(function)
 		defer c.targetFunction(previousFunction)
 
-		c.declareParameters(parameterList, false)
+		c.declareParameters(parameterList, false, false)
 		c.compileFunctionBlock(
 			desugaredExpression.FunctionBlock,
 			common.DeclarationKindFunction,
@@ -2933,10 +2933,15 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	c.targetFunction(function)
 	defer c.targetFunction(previousFunction)
 
-	c.declareParameters(parameterList, false)
+	c.declareParameters(parameterList, false, false)
 
 	// Declare `self`
 	self := c.currentFunction.declareLocal(sema.SelfIdentifier)
+
+	if kind == common.CompositeKindAttachment {
+		// base is provided as an argument at the end implicitly
+		c.currentFunction.declareLocal(sema.BaseIdentifier)
+	}
 
 	// Initialize an empty struct and assign to `self`.
 	// i.e: `self = New()`
@@ -2967,6 +2972,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 			IsImplicit: false,
 		})
 
+		// get base from end of arguments...
 		// TODO: expose base, a reference to the attachment's base value
 	} else {
 		returnLocalIndex = self.index
@@ -3015,6 +3021,7 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 	var (
 		parameterCount int
 		isObjectMethod bool
+		isAttachment   bool
 		functionName   string
 	)
 
@@ -3037,6 +3044,13 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 
 			// Declare a receiver if this is an object method.
 			parameterCount++
+
+			if typ, ok := enclosingType.(*sema.CompositeType); ok {
+				if typ.Kind == common.CompositeKindAttachment {
+					parameterCount++
+					isAttachment = true
+				}
+			}
 		}
 
 		functionName = commons.TypeQualifiedName(enclosingType, identifier)
@@ -3075,7 +3089,7 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 		c.targetFunction(function)
 		defer c.targetFunction(previousFunction)
 
-		c.declareParameters(declaration.ParameterList, isObjectMethod)
+		c.declareParameters(declaration.ParameterList, isObjectMethod, isAttachment)
 
 		c.compileFunctionBlock(
 			declaration.FunctionBlock,
@@ -3315,9 +3329,8 @@ func (c *Compiler[_, _]) compileEnumCaseDeclaration(
 func (c *Compiler[_, _]) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) (_ struct{}) {
 	// Similar to VisitCompositeDeclaration
 	// Not combined because need to access fields not accessible in CompositeLikeDeclaration
-	compositeType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
-
-	c.compositeTypeStack.push(compositeType)
+	attachmentType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
+	c.compositeTypeStack.push(attachmentType)
 	defer func() {
 		c.compositeTypeStack.pop()
 	}()
@@ -3337,7 +3350,7 @@ func (c *Compiler[_, _]) VisitAttachmentDeclaration(declaration *ast.AttachmentD
 	}
 
 	// Visit members.
-	c.compileCompositeMembers(compositeType, declaration.Members)
+	c.compileCompositeMembers(attachmentType, declaration.Members)
 
 	return
 }
@@ -3491,11 +3504,17 @@ func (c *Compiler[_, T]) addCompiledType(ty sema.Type, data T) uint16 {
 	return uint16(count)
 }
 
-func (c *Compiler[E, T]) declareParameters(paramList *ast.ParameterList, declareReceiver bool) {
+func (c *Compiler[E, T]) declareParameters(paramList *ast.ParameterList, declareReceiver bool, declareBase bool) {
 	if declareReceiver {
 		// Declare receiver as `self`.
 		// Receiver is always at the zero-th index of params.
 		c.currentFunction.declareLocal(sema.SelfIdentifier)
+	}
+
+	if declareBase {
+		// Declare base receiver as `base`
+		// Always at index one of params.
+		c.currentFunction.declareLocal(sema.BaseIdentifier)
 	}
 
 	if paramList != nil {
