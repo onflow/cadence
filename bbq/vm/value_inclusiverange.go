@@ -21,7 +21,6 @@ package vm
 import (
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
-	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -30,53 +29,47 @@ import (
 // members
 
 func init() {
-	// Any member methods goes here
-	deployedContractTypeName := commons.TypeQualifier(sema.DeployedContractType)
-
-	// Methods on `DeployedContract` value.
 
 	registerBuiltinTypeBoundFunction(
-		deployedContractTypeName,
-		NewNativeFunctionValue(
-			sema.DeployedContractTypePublicTypesFunctionName,
-			sema.DeployedContractTypePublicTypesFunctionType,
+		commons.TypeQualifierInclusiveRange,
+		NewNativeFunctionValueWithDerivedType(
+			sema.InclusiveRangeTypeContainsFunctionName,
+			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+				rangeType, ok := receiver.StaticType(context).(interpreter.InclusiveRangeStaticType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				elementType := interpreter.MustConvertStaticToSemaType(rangeType.ElementType, context)
+				return sema.InclusiveRangeContainsFunctionType(elementType)
+			},
 			func(context *Context, _ []bbq.StaticType, args ...Value) Value {
 
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[ReceiverIndex], args[TypeBoundFunctionArgumentOffset:] // nolint:staticcheck
+				receiver, args = args[ReceiverIndex], args[TypeBoundFunctionArgumentOffset:]
 
-				deployedContract, ok := receiver.(*interpreter.SimpleCompositeValue)
+				rangeValue, ok := receiver.(*interpreter.CompositeValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
-				addressFieldValue := deployedContract.GetMember(
+				needleInteger, ok := args[0].(interpreter.IntegerValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				rangeType, ok := rangeValue.StaticType(context).(interpreter.InclusiveRangeStaticType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return interpreter.InclusiveRangeContains(
+					rangeValue,
+					rangeType,
 					context,
 					EmptyLocationRange,
-					sema.DeployedContractTypeAddressFieldName,
-				)
-				addressValue, ok := addressFieldValue.(interpreter.AddressValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				nameFieldValue := deployedContract.GetMember(
-					context,
-					EmptyLocationRange,
-					sema.DeployedContractTypeNameFieldName,
-				)
-
-				nameValue, ok := nameFieldValue.(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return interpreter.DeployedContractPublicTypes(
-					context,
-					common.Address(addressValue),
-					nameValue,
+					needleInteger,
 				)
 			},
 		),

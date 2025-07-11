@@ -27,13 +27,13 @@ import (
 	"github.com/onflow/cadence/bbq/compiler"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 )
 
 type compiledProgram struct {
+	location             common.Location
 	program              *bbq.InstructionProgram
 	desugaredElaboration *compiler.DesugaredElaboration
 }
@@ -50,8 +50,6 @@ type vmEnvironment struct {
 
 	checkingEnvironment *CheckingEnvironment
 
-	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
-
 	config         Config
 	vmConfig       *vm.Config
 	compilerConfig *compiler.Config
@@ -59,7 +57,14 @@ type vmEnvironment struct {
 	defaultCompilerBuiltinGlobals *activations.Activation[compiler.GlobalImport]
 	defaultVMBuiltinGlobals       *activations.Activation[vm.Variable]
 
+	compilerBuiltinGlobalsByLocation map[common.Location]*activations.Activation[compiler.GlobalImport]
+	vmBuiltinGlobalsByLocation       map[common.Location]*activations.Activation[vm.Variable]
+
+	allDeclaredTypes map[common.TypeID]sema.Type
+
 	*stdlib.SimpleContractAdditionTracker
+
+	deployedContractProgram *Program
 }
 
 var _ Environment = &vmEnvironment{}
@@ -109,6 +114,9 @@ func newVMEnvironment(config Config) *vmEnvironment {
 
 func NewBaseVMEnvironment(config Config) *vmEnvironment {
 	env := newVMEnvironment(config)
+	for _, typeDeclaration := range stdlib.DefaultStandardLibraryTypes {
+		env.DeclareType(typeDeclaration, nil)
+	}
 	for _, valueDeclaration := range stdlib.VMDefaultStandardLibraryValues(env) {
 		env.DeclareValue(valueDeclaration, nil)
 	}
@@ -117,6 +125,9 @@ func NewBaseVMEnvironment(config Config) *vmEnvironment {
 
 func NewScriptVMEnvironment(config Config) Environment {
 	env := newVMEnvironment(config)
+	for _, typeDeclaration := range stdlib.DefaultStandardLibraryTypes {
+		env.DeclareType(typeDeclaration, nil)
+	}
 	for _, valueDeclaration := range stdlib.VMDefaultScriptStandardLibraryValues(env) {
 		env.DeclareValue(valueDeclaration, nil)
 	}
@@ -124,20 +135,22 @@ func NewScriptVMEnvironment(config Config) Environment {
 }
 
 func (e *vmEnvironment) newVMConfig() *vm.Config {
-	return &vm.Config{
-		MemoryGauge:                    e,
-		ComputationGauge:               e,
-		TypeLoader:                     e.loadType,
-		BuiltinGlobalsProvider:         e.vmBuiltinGlobals,
-		ContractValueHandler:           e.loadContractValue,
-		ImportHandler:                  e.importProgram,
-		InjectedCompositeFieldsHandler: newInjectedCompositeFieldsHandler(e),
-		UUIDHandler:                    newUUIDHandler(&e.Interface),
-		AccountHandlerFunc:             e.newAccountValue,
-		OnEventEmitted:                 newOnEventEmittedHandler(&e.Interface),
-		CapabilityBorrowHandler:        newCapabilityBorrowHandler(e),
-		CapabilityCheckHandler:         newCapabilityCheckHandler(e),
-	}
+	conf := vm.NewConfig(nil)
+	conf.MemoryGauge = e
+	conf.ComputationGauge = e
+	conf.TypeLoader = e.loadType
+	conf.BuiltinGlobalsProvider = e.vmBuiltinGlobals
+	conf.ContractValueHandler = e.loadContractValue
+	conf.ImportHandler = e.importProgram
+	conf.InjectedCompositeFieldsHandler = newInjectedCompositeFieldsHandler(e)
+	conf.UUIDHandler = newUUIDHandler(&e.Interface)
+	conf.AccountHandlerFunc = e.newAccountValue
+	conf.OnEventEmitted = newOnEventEmittedHandler(&e.Interface)
+	conf.CapabilityBorrowHandler = newCapabilityBorrowHandler(e)
+	conf.CapabilityCheckHandler = newCapabilityCheckHandler(e)
+	conf.ElaborationResolver = e.resolveElaboration
+	conf.StackDepthLimit = defaultStackDepthLimit
+	return conf
 }
 
 func (e *vmEnvironment) defineValue(name string, value vm.Value) {
@@ -177,7 +190,7 @@ func (e *vmEnvironment) newCompilerConfig() *compiler.Config {
 		BuiltinGlobalsProvider: e.compilerBuiltinGlobals,
 		LocationHandler:        e.ResolveLocation,
 		ImportHandler:          e.importProgram,
-		ElaborationResolver:    e.resolveDesugaredElaboration,
+		ElaborationResolver:    e.loadDesugaredElaboration,
 	}
 }
 
@@ -205,14 +218,13 @@ func (e *vmEnvironment) Configure(
 func (e *vmEnvironment) DeclareValue(valueDeclaration stdlib.StandardLibraryValue, location common.Location) {
 	e.checkingEnvironment.declareValue(valueDeclaration, location)
 
-	// TODO: add support for non-nil location
-	if location != nil {
-		panic(errors.NewUnreachableError())
-	}
+	e.declareCompilerValue(valueDeclaration, location)
 
-	// Define the value in the compiler builtin globals
+	e.declareVMValue(valueDeclaration, location)
+}
 
-	compilerBuiltinGlobals := e.defaultCompilerBuiltinGlobals
+func (e *vmEnvironment) declareCompilerValue(valueDeclaration stdlib.StandardLibraryValue, location common.Location) {
+	compilerBuiltinGlobals := e.getOrCreateCompilerBuiltinGlobals(location)
 
 	name := valueDeclaration.Name
 
@@ -223,19 +235,55 @@ func (e *vmEnvironment) DeclareValue(valueDeclaration stdlib.StandardLibraryValu
 		},
 	)
 
-	// Define the value in the VM builtin globals
+	for _, function := range compiler.CommonBuiltinTypeBoundFunctions {
+		qualifiedFunctionName := commons.TypeQualifiedName(
+			valueDeclaration.Type,
+			function.Name,
+		)
+		compilerBuiltinGlobals.Set(
+			qualifiedFunctionName,
+			compiler.GlobalImport{
+				Name: qualifiedFunctionName,
+			},
+		)
+	}
+}
+
+func (e *vmEnvironment) declareVMValue(valueDeclaration stdlib.StandardLibraryValue, location common.Location) {
+	vmBuiltinGlobals := e.getOrCreateVMBuiltinGlobals(location)
 
 	variable := interpreter.NewVariableWithValue(
 		nil,
 		valueDeclaration.Value,
 	)
 
-	vmBuiltinGlobals := e.defaultVMBuiltinGlobals
-	vmBuiltinGlobals.Set(name, variable)
-}
+	vmBuiltinGlobals.Set(
+		valueDeclaration.Name,
+		variable,
+	)
 
+	for _, function := range vm.CommonBuiltinTypeBoundFunctions {
+		qualifiedFunctionName := commons.TypeQualifiedName(
+			valueDeclaration.Type,
+			function.Name,
+		)
+		variable := interpreter.NewVariableWithValue(
+			nil,
+			function,
+		)
+		vmBuiltinGlobals.Set(
+			qualifiedFunctionName,
+			variable,
+		)
+	}
+
+}
 func (e *vmEnvironment) DeclareType(typeDeclaration stdlib.StandardLibraryType, location common.Location) {
 	e.checkingEnvironment.declareType(typeDeclaration, location)
+	if e.allDeclaredTypes == nil {
+		e.allDeclaredTypes = map[common.TypeID]sema.Type{}
+	}
+	e.allDeclaredTypes[typeDeclaration.Type.ID()] = typeDeclaration.Type
 }
 
 func (e *vmEnvironment) CommitStorageTemporarily(context interpreter.ValueTransferContext) error {
@@ -307,13 +355,27 @@ func (e *vmEnvironment) LoadContractValue(
 	contract *interpreter.CompositeValue,
 	err error,
 ) {
-	e.deployedContractConstructorInvocation = &invocation
+	compiledProgram := e.compileProgram(
+		program,
+		location,
+	)
+
+	// Temporarily hold on to the compiled program while initializing the contract,
+	// so that type loading in loadType is able to load types for the contract program.
+
+	e.deployedContractProgram = &Program{
+		interpreterProgram: program,
+		compiledProgram:    compiledProgram,
+	}
 	defer func() {
-		e.deployedContractConstructorInvocation = nil
+		e.deployedContractProgram = nil
 	}()
 
-	// TODO:
-	panic(errors.NewUnreachableError())
+	vm := e.newVM(location, compiledProgram.program)
+
+	contract, err = vm.InitializeContract(name, invocation.ConstructorArguments...)
+
+	return
 }
 
 func (e *vmEnvironment) newAccountValue(
@@ -333,6 +395,13 @@ func (e *vmEnvironment) ProgramLog(message string, _ interpreter.LocationRange) 
 }
 
 func (e *vmEnvironment) loadProgram(location common.Location) (*Program, error) {
+
+	if e.deployedContractProgram != nil &&
+		location == e.deployedContractProgram.compiledProgram.location {
+
+		return e.deployedContractProgram, nil
+	}
+
 	const getAndSetProgram = true
 	program, err := e.checkingEnvironment.GetProgram(
 		location,
@@ -361,50 +430,52 @@ func (e *vmEnvironment) loadDesugaredElaboration(location common.Location) (*com
 		return nil, err
 	}
 
+	if program == nil {
+		return nil, fmt.Errorf("cannot find elaboration for location %v", location)
+	}
+
 	return program.compiledProgram.desugaredElaboration, nil
 }
 
 // TODO: Maybe split this to four separate methods like in the interpreter.
-func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-	if location == nil {
-		return stdlib.StandardLibraryTypes[typeID]
+func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+	ty := e.allDeclaredTypes[typeID]
+	if ty != nil {
+		return ty, nil
 	}
 
 	if _, ok := location.(stdlib.FlowLocation); ok {
-		return stdlib.FlowEventTypes[typeID]
+		return stdlib.FlowEventTypes[typeID], nil
 	}
 
 	elaboration, err := e.loadDesugaredElaboration(location)
 	if err != nil {
-		panic(fmt.Errorf(
-			"cannot load type %s: failed to load elaboration for location %s: %w",
-			typeID,
-			location,
-			err,
-		))
+		return nil, err
 	}
 
 	compositeType := elaboration.CompositeType(typeID)
 	if compositeType != nil {
-		return compositeType
+		return compositeType, nil
 	}
 
 	interfaceType := elaboration.InterfaceType(typeID)
 	if interfaceType != nil {
-		return interfaceType
+		return interfaceType, nil
 	}
 
 	entitlementType := elaboration.EntitlementType(typeID)
 	if entitlementType != nil {
-		return entitlementType
+		return entitlementType, nil
 	}
 
 	entitlementMapType := elaboration.EntitlementMapType(typeID)
 	if entitlementMapType != nil {
-		return entitlementMapType
+		return entitlementMapType, nil
 	}
 
-	return nil
+	return nil, interpreter.TypeLoadingError{
+		TypeID: typeID,
+	}
 }
 
 func (e *vmEnvironment) compileProgram(
@@ -418,18 +489,10 @@ func (e *vmEnvironment) compileProgram(
 	)
 
 	return &compiledProgram{
+		location:             location,
 		program:              comp.Compile(),
 		desugaredElaboration: comp.DesugaredElaboration,
 	}
-}
-
-func (e *vmEnvironment) resolveDesugaredElaboration(location common.Location) (*compiler.DesugaredElaboration, error) {
-	program, err := e.loadProgram(location)
-	if err != nil {
-		return nil, err
-	}
-
-	return program.compiledProgram.desugaredElaboration, nil
 }
 
 func (e *vmEnvironment) importProgram(location common.Location) *bbq.InstructionProgram {
@@ -438,6 +501,21 @@ func (e *vmEnvironment) importProgram(location common.Location) *bbq.Instruction
 		panic(fmt.Errorf("failed to load program for imported location %s: %w", location, err))
 	}
 	return program.compiledProgram.program
+}
+
+func (e *vmEnvironment) resolveElaboration(location common.Location) (*sema.Elaboration, error) {
+	program, err := e.loadProgram(location)
+	if err != nil {
+		return nil,
+			fmt.Errorf(
+				"failed to load program for imported location %s: %w",
+				location,
+				err,
+			)
+	}
+
+	elaboration := program.compiledProgram.desugaredElaboration.OriginalElaboration()
+	return elaboration, nil
 }
 
 func (e *vmEnvironment) newVM(
@@ -451,12 +529,64 @@ func (e *vmEnvironment) newVM(
 	)
 }
 
-func (e *vmEnvironment) vmBuiltinGlobals() *activations.Activation[vm.Variable] {
-	// TODO: add support for per-location VM builtin globals
-	return e.defaultVMBuiltinGlobals
+func (e *vmEnvironment) getOrCreateCompilerBuiltinGlobals(
+	location common.Location,
+) *activations.Activation[compiler.GlobalImport] {
+	defaultBaseActivation := e.defaultCompilerBuiltinGlobals
+	if location == nil {
+		return defaultBaseActivation
+	}
+
+	globals := e.compilerBuiltinGlobalsByLocation[location]
+	if globals == nil {
+		globals = activations.NewActivation(nil, defaultBaseActivation)
+		if e.compilerBuiltinGlobalsByLocation == nil {
+			e.compilerBuiltinGlobalsByLocation = map[common.Location]*activations.Activation[compiler.GlobalImport]{}
+		}
+		e.compilerBuiltinGlobalsByLocation[location] = globals
+	}
+	return globals
 }
 
-func (e *vmEnvironment) compilerBuiltinGlobals() *activations.Activation[compiler.GlobalImport] {
-	// TODO: add support for per-location compiler builtin globals
-	return e.defaultCompilerBuiltinGlobals
+func (e *vmEnvironment) compilerBuiltinGlobals(
+	location common.Location,
+) (
+	globals *activations.Activation[compiler.GlobalImport],
+) {
+	globals = e.compilerBuiltinGlobalsByLocation[location]
+	if globals == nil {
+		globals = e.defaultCompilerBuiltinGlobals
+	}
+	return
+}
+
+func (e *vmEnvironment) getOrCreateVMBuiltinGlobals(
+	location common.Location,
+) *activations.Activation[vm.Variable] {
+	defaultBaseActivation := e.defaultVMBuiltinGlobals
+	if location == nil {
+		return defaultBaseActivation
+	}
+
+	globals := e.vmBuiltinGlobalsByLocation[location]
+	if globals == nil {
+		globals = activations.NewActivation(nil, defaultBaseActivation)
+		if e.vmBuiltinGlobalsByLocation == nil {
+			e.vmBuiltinGlobalsByLocation = map[common.Location]*activations.Activation[vm.Variable]{}
+		}
+		e.vmBuiltinGlobalsByLocation[location] = globals
+	}
+	return globals
+}
+
+func (e *vmEnvironment) vmBuiltinGlobals(
+	location common.Location,
+) (
+	globals *activations.Activation[vm.Variable],
+) {
+	globals = e.vmBuiltinGlobalsByLocation[location]
+	if globals == nil {
+		globals = e.defaultVMBuiltinGlobals
+	}
+	return
 }

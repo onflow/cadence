@@ -241,12 +241,12 @@ func TestRuntimeContract(t *testing.T) {
 
 			err := runtime.ExecuteTransaction(
 				Script{
-					Source:    addTx,
-					Arguments: nil,
+					Source: addTx,
 				},
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					UseVM:     *compile,
 				},
 			)
 
@@ -313,6 +313,7 @@ func TestRuntimeContract(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					UseVM:     *compile,
 				},
 			)
 			RequireError(t, err)
@@ -342,6 +343,7 @@ func TestRuntimeContract(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					UseVM:     *compile,
 				},
 			)
 			require.NoError(t, err)
@@ -386,6 +388,7 @@ func TestRuntimeContract(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					UseVM:     *compile,
 				},
 			)
 			require.NoError(t, err)
@@ -426,6 +429,7 @@ func TestRuntimeContract(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					UseVM:     *compile,
 				},
 			)
 
@@ -485,6 +489,7 @@ func TestRuntimeContract(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					UseVM:     *compile,
 				},
 			)
 			RequireError(t, err)
@@ -715,6 +720,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			})
 		require.NoError(t, err)
 	}
@@ -739,6 +745,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -764,6 +771,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -789,6 +797,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -865,6 +874,7 @@ func TestRuntimeContractInterfaceEventEmission(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -876,6 +886,7 @@ func TestRuntimeContractInterfaceEventEmission(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -887,6 +898,7 @@ func TestRuntimeContractInterfaceEventEmission(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1011,6 +1023,7 @@ func TestRuntimeContractInterfaceConditionEventEmission(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1022,6 +1035,7 @@ func TestRuntimeContractInterfaceConditionEventEmission(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1033,6 +1047,7 @@ func TestRuntimeContractInterfaceConditionEventEmission(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1155,6 +1170,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1167,6 +1183,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1179,6 +1196,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1224,6 +1242,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1238,6 +1257,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		RequireError(t, err)
@@ -1282,6 +1302,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1296,6 +1317,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -1343,6 +1365,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1359,10 +1382,12 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
 		RequireError(t, err)
+
 		var unexpectedError errors.UnexpectedError
 		require.ErrorAs(t, err, &unexpectedError)
 

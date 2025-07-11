@@ -88,6 +88,8 @@ func TypeQualifier(typ sema.Type) string {
 		return TypeQualifier(typ.Types[0])
 	case *sema.CapabilityType:
 		return interpreter.PrimitiveStaticTypeCapability.String()
+	case *sema.InclusiveRangeType:
+		return TypeQualifierInclusiveRange
 	default:
 		return typ.QualifiedString()
 	}

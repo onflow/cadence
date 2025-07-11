@@ -20,6 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
@@ -33,11 +34,7 @@ const (
 	TypeBoundFunctionArgumentOffset = 1
 )
 
-// BuiltInLocation is the location of built-in constructs.
-// It's always nil.
-var BuiltInLocation common.Location = nil
-
-type BuiltinGlobalsProvider func() *activations.Activation[Variable]
+type BuiltinGlobalsProvider func(location common.Location) *activations.Activation[Variable]
 
 var defaultBuiltinGlobals = activations.NewActivation[Variable](nil, nil)
 
@@ -45,7 +42,7 @@ func DefaultBuiltinGlobals() *activations.Activation[Variable] {
 	return defaultBuiltinGlobals
 }
 
-func RegisterBuiltinFunction(functionValue *NativeFunctionValue) {
+func registerBuiltinFunction(functionValue *NativeFunctionValue) {
 	registerGlobalFunction(
 		functionValue.Name,
 		functionValue,
@@ -67,15 +64,15 @@ func registerGlobalFunction(
 	activation.Set(functionName, variable)
 }
 
-func RegisterBuiltinTypeBoundFunction(typeName string, functionValue *NativeFunctionValue) {
+func registerBuiltinTypeBoundFunction(typeName string, functionValue *NativeFunctionValue) {
 	// Update the name of the function to be type-qualified
 	qualifiedName := commons.QualifiedName(typeName, functionValue.Name)
 	functionValue.Name = qualifiedName
 
-	RegisterBuiltinFunction(functionValue)
+	registerBuiltinFunction(functionValue)
 }
 
-func RegisterBuiltinTypeBoundCommonFunction(typeName string, functionValue *NativeFunctionValue) {
+func registerBuiltinTypeBoundCommonFunction(typeName string, functionValue *NativeFunctionValue) {
 	// Here the function value is common for many types.
 	// Hence, do not update the function name to be type-qualified.
 	// Only the key in the map is type-qualified.
@@ -87,15 +84,57 @@ func RegisterBuiltinTypeBoundCommonFunction(typeName string, functionValue *Nati
 	)
 }
 
+var failConditionFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityView,
+	[]sema.Parameter{
+		{
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "message",
+			TypeAnnotation: sema.StringTypeAnnotation,
+		},
+	},
+	sema.NeverTypeAnnotation,
+)
+
 func init() {
+
+	// Pre/post condition failure functions
+
+	registerBuiltinFunction(
+		NewNativeFunctionValue(
+			commons.FailPreConditionFunctionName,
+			failConditionFunctionType,
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+				messageValue := arguments[0].(*interpreter.StringValue)
+				panic(&interpreter.ConditionError{
+					Message:       messageValue.Str,
+					ConditionKind: ast.ConditionKindPre,
+				})
+			},
+		),
+	)
+
+	registerBuiltinFunction(
+		NewNativeFunctionValue(
+			commons.FailPostConditionFunctionName,
+			failConditionFunctionType,
+			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+				messageValue := arguments[0].(*interpreter.StringValue)
+				panic(&interpreter.ConditionError{
+					Message:       messageValue.Str,
+					ConditionKind: ast.ConditionKindPost,
+				})
+			},
+		),
+	)
 
 	// Type constructors
 
-	RegisterBuiltinFunction(
+	registerBuiltinFunction(
 		NewNativeFunctionValue(
 			sema.MetaTypeName,
 			sema.MetaTypeFunctionType,
-			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, typeArguments []bbq.StaticType, _ ...Value) Value {
 				return interpreter.NewTypeValue(
 					context.MemoryGauge,
 					typeArguments[0],
@@ -104,7 +143,7 @@ func init() {
 		),
 	)
 
-	RegisterBuiltinFunction(
+	registerBuiltinFunction(
 		NewNativeFunctionValue(
 			sema.OptionalTypeFunctionName,
 			sema.OptionalTypeFunctionType,
@@ -117,7 +156,7 @@ func init() {
 		),
 	)
 
-	RegisterBuiltinFunction(
+	registerBuiltinFunction(
 		NewNativeFunctionValue(
 			sema.VariableSizedArrayTypeFunctionName,
 			sema.VariableSizedArrayTypeFunctionType,
@@ -133,7 +172,7 @@ func init() {
 		),
 	)
 
-	RegisterBuiltinFunction(
+	registerBuiltinFunction(
 		NewNativeFunctionValue(
 			sema.ConstantSizedArrayTypeFunctionName,
 			sema.ConstantSizedArrayTypeFunctionType,
@@ -152,7 +191,7 @@ func init() {
 		),
 	)
 
-	RegisterBuiltinFunction(
+	registerBuiltinFunction(
 		NewNativeFunctionValue(
 			sema.DictionaryTypeFunctionName,
 			sema.DictionaryTypeFunctionType,
@@ -170,7 +209,7 @@ func init() {
 		),
 	)
 
-	RegisterBuiltinFunction(
+	registerBuiltinFunction(
 		NewNativeFunctionValue(
 			sema.CompositeTypeFunctionName,
 			sema.CompositeTypeFunctionType,
@@ -183,7 +222,7 @@ func init() {
 		),
 	)
 
-	RegisterBuiltinFunction(
+	registerBuiltinFunction(
 		NewNativeFunctionValue(
 			sema.FunctionTypeFunctionName,
 			sema.FunctionTypeFunctionType,
@@ -202,7 +241,7 @@ func init() {
 		),
 	)
 
-	RegisterBuiltinFunction(
+	registerBuiltinFunction(
 		NewNativeFunctionValue(
 			sema.ReferenceTypeFunctionName,
 			sema.ReferenceTypeFunctionType,
@@ -221,7 +260,7 @@ func init() {
 		),
 	)
 
-	RegisterBuiltinFunction(
+	registerBuiltinFunction(
 		NewNativeFunctionValue(
 			sema.IntersectionTypeFunctionName,
 			sema.IntersectionTypeFunctionType,
@@ -238,7 +277,7 @@ func init() {
 		),
 	)
 
-	RegisterBuiltinFunction(
+	registerBuiltinFunction(
 		NewNativeFunctionValue(
 			sema.CapabilityTypeFunctionName,
 			sema.CapabilityTypeFunctionType,
@@ -251,7 +290,7 @@ func init() {
 		),
 	)
 
-	RegisterBuiltinFunction(
+	registerBuiltinFunction(
 		NewNativeFunctionValue(
 			sema.InclusiveRangeTypeFunctionName,
 			sema.InclusiveRangeTypeFunctionType,
@@ -282,7 +321,7 @@ func init() {
 				)
 			},
 		)
-		RegisterBuiltinFunction(function)
+		registerBuiltinFunction(function)
 
 		addMember := func(name string, value interpreter.Value) {
 			if function.fields == nil {
@@ -303,14 +342,14 @@ func init() {
 		}
 
 		if stringValueParser, ok := interpreter.StringValueParsers[declaration.Name]; ok {
-			RegisterBuiltinTypeBoundFunction(
+			registerBuiltinTypeBoundFunction(
 				commons.TypeQualifier(stringValueParser.ReceiverType),
 				newFromStringFunction(stringValueParser),
 			)
 		}
 
 		if bigEndianBytesConverter, ok := interpreter.BigEndianBytesConverters[declaration.Name]; ok {
-			RegisterBuiltinTypeBoundFunction(
+			registerBuiltinTypeBoundFunction(
 				commons.TypeQualifier(bigEndianBytesConverter.ReceiverType),
 				newFromBigEndianBytesFunction(bigEndianBytesConverter),
 			)
@@ -319,7 +358,7 @@ func init() {
 
 	// Value constructors
 
-	RegisterBuiltinFunction(
+	registerBuiltinFunction(
 		NewNativeFunctionValue(
 			sema.StringType.String(),
 			sema.StringFunctionType,
@@ -341,7 +380,7 @@ func registerBuiltinCommonTypeBoundFunctions() {
 		registerBuiltinTypeBoundFunctions(typeQualifier)
 	}
 
-	for _, function := range commonBuiltinTypeBoundFunctions {
+	for _, function := range CommonBuiltinTypeBoundFunctions {
 		IndexedCommonBuiltinTypeBoundFunctions[function.Name] = function
 	}
 }
@@ -349,16 +388,16 @@ func registerBuiltinCommonTypeBoundFunctions() {
 func registerBuiltinTypeBoundFunctions(
 	typeQualifier string,
 ) {
-	for _, boundFunction := range commonBuiltinTypeBoundFunctions {
-		RegisterBuiltinTypeBoundCommonFunction(
+	for _, boundFunction := range CommonBuiltinTypeBoundFunctions {
+		registerBuiltinTypeBoundCommonFunction(
 			typeQualifier,
 			boundFunction,
 		)
 	}
 }
 
-// Built-in functions that are common to all the types.
-var commonBuiltinTypeBoundFunctions = []*NativeFunctionValue{
+// CommonBuiltinTypeBoundFunctions are the built-in functions that are common to all the types.
+var CommonBuiltinTypeBoundFunctions = []*NativeFunctionValue{
 
 	// `isInstance` function
 	NewNativeFunctionValue(
@@ -408,7 +447,7 @@ func registerBuiltinTypeSaturatingArithmeticFunctions(t sema.SaturatingArithmeti
 		functionName string,
 		op func(context *Context, v, other interpreter.NumberValue) interpreter.NumberValue,
 	) {
-		RegisterBuiltinTypeBoundFunction(
+		registerBuiltinTypeBoundFunction(
 			commons.TypeQualifier(t),
 			NewNativeFunctionValue(
 				functionName,

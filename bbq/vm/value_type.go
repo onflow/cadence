@@ -31,7 +31,7 @@ import (
 func init() {
 	typeName := commons.TypeQualifier(sema.MetaType)
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValue(
 			sema.MetaTypeIsSubtypeFunctionName,

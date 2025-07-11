@@ -32,7 +32,7 @@ func init() {
 
 	typeName := commons.TypeQualifier(sema.TheAddressType)
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValue(
 			sema.ToStringFunctionName,
@@ -48,7 +48,7 @@ func init() {
 		),
 	)
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValue(
 			sema.AddressTypeToBytesFunctionName,
@@ -61,7 +61,7 @@ func init() {
 		),
 	)
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValue(
 			sema.AddressTypeFromBytesFunctionName,
@@ -77,7 +77,7 @@ func init() {
 		),
 	)
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValue(
 			sema.AddressTypeFromStringFunctionName,

@@ -548,7 +548,7 @@ func (interpreter *Interpreter) InvokeTransaction(arguments []Value, signers ...
 func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	if r := recover(); r != nil {
 		// Recover all errors, because interpreter can be directly invoked by FVM.
-		err := asCadenceError(r)
+		err := AsCadenceError(r)
 
 		// if the error is not yet an interpreter error, wrap it
 		if _, ok := err.(Error); !ok {
@@ -578,7 +578,7 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	}
 }
 
-func asCadenceError(r any) error {
+func AsCadenceError(r any) error {
 	err, isError := r.(error)
 	if !isError {
 		return errors.NewUnexpectedError("%s", r)
@@ -5066,31 +5066,24 @@ func (interpreter *Interpreter) AllElaborations() (elaborations map[common.Locat
 	return
 }
 
-func (interpreter *Interpreter) GetContractValue(contractLocation common.AddressLocation) (*CompositeValue, error) {
+func (interpreter *Interpreter) GetContractValue(contractLocation common.AddressLocation) *CompositeValue {
 	inter := interpreter.EnsureLoaded(contractLocation)
 	return inter.GetContractComposite(contractLocation)
 }
 
 // GetContractComposite gets the composite value of the contract at the address location.
-func (interpreter *Interpreter) GetContractComposite(contractLocation common.AddressLocation) (*CompositeValue, error) {
+func (interpreter *Interpreter) GetContractComposite(contractLocation common.AddressLocation) *CompositeValue {
 	contractGlobal := interpreter.Globals.Get(contractLocation.Name)
 	if contractGlobal == nil {
-		return nil, NotDeclaredError{
-			ExpectedKind: common.DeclarationKindContract,
-			Name:         contractLocation.Name,
-		}
+		return nil
 	}
 
-	// get contract value
 	contractValue, ok := contractGlobal.GetValue(interpreter).(*CompositeValue)
 	if !ok {
-		return nil, NotDeclaredError{
-			ExpectedKind: common.DeclarationKindContract,
-			Name:         contractLocation.Name,
-		}
+		return nil
 	}
 
-	return contractValue, nil
+	return contractValue
 }
 
 func GetNativeCompositeValueComputedFields(qualifiedIdentifier string) map[string]ComputedField {

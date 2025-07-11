@@ -16,38 +16,32 @@
  * limitations under the License.
  */
 
-package runtime
+package main
 
-import "github.com/onflow/cadence/interpreter"
+import (
+	"encoding/csv"
+	"log"
+	"os"
+)
 
-const defaultStackDepthLimit = 2000
-
-type stackDepthLimiter struct {
-	depth uint64
-	limit uint64
+type namedError struct {
+	name string
+	error
 }
 
-func newStackDepthLimiter(stackDepthLimit uint64) *stackDepthLimiter {
-	if stackDepthLimit == 0 {
-		stackDepthLimit = defaultStackDepthLimit
-	}
-	return &stackDepthLimiter{
-		limit: stackDepthLimit,
-	}
-}
+func main() {
+	w := csv.NewWriter(os.Stdout)
+	defer w.Flush()
 
-func (limiter *stackDepthLimiter) OnFunctionInvocation() {
-	limiter.depth++
-
-	if limiter.depth <= limiter.limit {
-		return
+	err := w.Write([]string{"name", "example"})
+	if err != nil {
+		log.Fatalf("Failed to write CSV header: %v", err)
 	}
 
-	panic(&interpreter.CallStackLimitExceededError{
-		Limit: limiter.limit,
-	})
-}
-
-func (limiter *stackDepthLimiter) OnInvokedFunctionReturn() {
-	limiter.depth--
+	for _, namedErr := range generateErrors() {
+		err = w.Write([]string{namedErr.name, namedErr.Error()})
+		if err != nil {
+			log.Fatalf("Failed to write CSV row: %v", err)
+		}
+	}
 }

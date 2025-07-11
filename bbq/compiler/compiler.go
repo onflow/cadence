@@ -154,7 +154,7 @@ func newCompiler[E, T any](
 
 	var globalImports *activations.Activation[GlobalImport]
 	if config.BuiltinGlobalsProvider != nil {
-		globalImports = config.BuiltinGlobalsProvider()
+		globalImports = config.BuiltinGlobalsProvider(location)
 	} else {
 		globalImports = DefaultBuiltinGlobals()
 	}
@@ -271,7 +271,7 @@ func (c *Compiler[_, _]) addImportedGlobal(location common.Location, name string
 	)
 }
 
-func (c *Compiler[E, T]) addFunction(
+func (c *Compiler[E, _]) addFunction(
 	name string,
 	qualifiedName string,
 	parameterCount uint16,
@@ -287,7 +287,7 @@ func (c *Compiler[E, T]) addFunction(
 	return function
 }
 
-func (c *Compiler[E, T]) addGlobalVariableWithGetter(
+func (c *Compiler[E, _]) addGlobalVariableWithGetter(
 	name string,
 	functionType *sema.FunctionType,
 ) *globalVariable[E] {
@@ -308,7 +308,7 @@ func (c *Compiler[E, T]) addGlobalVariableWithGetter(
 	return globalVariable
 }
 
-func (c *Compiler[E, T]) addGlobalVariable(
+func (c *Compiler[E, _]) addGlobalVariable(
 	name string,
 ) *globalVariable[E] {
 	globalVariable := &globalVariable[E]{
@@ -320,7 +320,7 @@ func (c *Compiler[E, T]) addGlobalVariable(
 	return globalVariable
 }
 
-func (c *Compiler[E, T]) newFunction(
+func (c *Compiler[E, _]) newFunction(
 	name string,
 	qualifiedName string,
 	parameterCount uint16,
@@ -337,7 +337,7 @@ func (c *Compiler[E, T]) newFunction(
 	)
 }
 
-func (c *Compiler[E, T]) targetFunction(function *function[E]) {
+func (c *Compiler[E, _]) targetFunction(function *function[E]) {
 	c.currentFunction = function
 
 	var code *[]E
@@ -523,6 +523,22 @@ func (c *Compiler[_, _]) compileStatement(statement ast.Statement) {
 }
 
 func (c *Compiler[_, _]) compileExpression(expression ast.Expression) {
+	// Expressions could be inherited. e.g: Inherited default destroy event's default arguments.
+	// Therefore, check whether the expression is inherited.
+	// TODO: Optimization: Instead of checking for each expression in the map,
+	//  maybe introduce a new ast.Expression, (say, inherited Expression),
+	//  which also holds the corresponding elaboration.
+	//  Then in desugar, always wrap the inherited expression with this new ast-node.
+	inheritedElaboration, ok := c.DesugaredElaboration.inheritedCodeElaborations[expression]
+	if ok {
+		prevElaboration := c.DesugaredElaboration
+		c.DesugaredElaboration = inheritedElaboration
+
+		defer func() {
+			c.DesugaredElaboration = prevElaboration
+		}()
+	}
+
 	c.compileWithPositionInfo(
 		expression,
 		func() {
@@ -700,8 +716,8 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 	// Add natively provided methods as globals.
 	// Only do it for user-defined types (i.e: `compositeTypeName` is not empty).
 	if enclosingType != nil {
-		for _, boundFunction := range commonBuiltinTypeBoundFunctions {
-			functionName := boundFunction.name
+		for _, boundFunction := range CommonBuiltinTypeBoundFunctions {
+			functionName := boundFunction.Name
 			qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
 			c.addGlobal(qualifiedName)
 		}
@@ -2180,7 +2196,9 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	isInterfaceInheritedFuncCall := c.DesugaredElaboration.IsInterfaceMethodStaticCall(expression)
 
 	// Any invocation on restricted-types must be dynamic
-	if !isInterfaceInheritedFuncCall && isDynamicMethodInvocation(memberInfo.AccessedType) {
+	if !isInterfaceInheritedFuncCall &&
+		isDynamicMethodInvocation(memberInfo.AccessedType) {
+
 		funcName = invokedExpr.Identifier.Identifier
 		if len(funcName) >= math.MaxUint16 {
 			panic(errors.NewDefaultUserError("invalid function name"))
@@ -2326,11 +2344,10 @@ func isDynamicMethodInvocation(accessedType sema.Type) bool {
 	switch typ := accessedType.(type) {
 	case *sema.ReferenceType:
 		return isDynamicMethodInvocation(typ.Type)
+	case *sema.OptionalType:
+		return isDynamicMethodInvocation(typ.Type)
 	case *sema.IntersectionType:
 		return true
-
-		// TODO: Optional type?
-
 	case *sema.InterfaceType:
 		return true
 	default:
@@ -3101,14 +3118,14 @@ func (c *Compiler[_, _]) VisitInterfaceDeclaration(declaration *ast.InterfaceDec
 }
 
 func (c *Compiler[_, _]) addBuiltinMethods(typ sema.Type) {
-	for _, boundFunction := range commonBuiltinTypeBoundFunctions {
-		name := boundFunction.name
+	for _, boundFunction := range CommonBuiltinTypeBoundFunctions {
+		name := boundFunction.Name
 		qualifiedName := commons.TypeQualifiedName(typ, name)
 		c.addFunction(
 			name,
 			qualifiedName,
-			uint16(len(boundFunction.typ.Parameters)+1),
-			boundFunction.typ,
+			uint16(len(boundFunction.Type.Parameters)+1),
+			boundFunction.Type,
 		)
 	}
 }
@@ -3317,7 +3334,7 @@ func (c *Compiler[_, _]) emitTransfer() {
 	c.emit(opcode.InstructionTransfer{})
 }
 
-func (c *Compiler[_, T]) getOrAddType(ty sema.Type) uint16 {
+func (c *Compiler[_, _]) getOrAddType(ty sema.Type) uint16 {
 	typeID := ty.ID()
 
 	// Optimization: Re-use types in the pool.
@@ -3344,7 +3361,7 @@ func (c *Compiler[_, T]) addCompiledType(ty sema.Type, data T) uint16 {
 	return uint16(count)
 }
 
-func (c *Compiler[E, T]) declareParameters(paramList *ast.ParameterList, declareReceiver bool) {
+func (c *Compiler[_, _]) declareParameters(paramList *ast.ParameterList, declareReceiver bool) {
 	if declareReceiver {
 		// Declare receiver as `self`.
 		// Receiver is always at the zero-th index of params.
@@ -3405,7 +3422,7 @@ func (c *Compiler[_, _]) generateEnumLookup(enumType *sema.CompositeType, enumCa
 }
 
 func (c *Compiler[_, _]) compilePotentiallyInheritedCode(statement ast.Statement, f func()) {
-	stmtElaboration, ok := c.DesugaredElaboration.conditionsElaborations[statement]
+	stmtElaboration, ok := c.DesugaredElaboration.inheritedCodeElaborations[statement]
 	if ok {
 		prevElaboration := c.DesugaredElaboration
 		c.DesugaredElaboration = stmtElaboration

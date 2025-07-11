@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	"github.com/onflow/cadence/test_utils/runtime_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 
@@ -50,7 +51,7 @@ func BenchmarkRecursionFib(b *testing.B) {
 	)
 	program := comp.Compile()
 
-	vmConfig := &vm.Config{}
+	vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 	argument := interpreter.NewUnmeteredIntValueFromInt64(14)
@@ -80,7 +81,7 @@ func BenchmarkImperativeFib(b *testing.B) {
 	)
 	program := comp.Compile()
 
-	vmConfig := &vm.Config{}
+	vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 	b.ReportAllocs()
@@ -119,7 +120,7 @@ func BenchmarkImperativeFibNewVM(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		vmConfig := &vm.Config{}
+		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		_, err := vmInstance.InvokeExternally("main")
@@ -149,7 +150,7 @@ func BenchmarkImperativeFibNewCompilerNewVM(b *testing.B) {
 		)
 		program := comp.Compile()
 
-		vmConfig := &vm.Config{}
+		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 		vmInstance := vm.NewVM(common.ScriptLocation{}, program, vmConfig)
 
 		_, err := vmInstance.InvokeExternally("main")
@@ -188,7 +189,7 @@ func BenchmarkNewStruct(b *testing.B) {
 	)
 	program := comp.Compile()
 
-	vmConfig := &vm.Config{}
+	vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 	b.ReportAllocs()
@@ -237,7 +238,7 @@ func BenchmarkNewResource(b *testing.B) {
 		)
 		program := comp.Compile()
 
-		vmConfig := &vm.Config{}
+		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 		_, err := vmInstance.InvokeExternally("test", value)
 		require.NoError(b, err)
@@ -330,13 +331,12 @@ func BenchmarkContractImport(b *testing.B) {
 		nil,
 	)
 
-	vmConfig := &vm.Config{
-		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
-			return importedProgram
-		},
-		ContractValueHandler: func(_ *vm.Context, _ common.Location) *interpreter.CompositeValue {
-			return importedContractValue
-		},
+	vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+	vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+		return importedProgram
+	}
+	vmConfig.ContractValueHandler = func(_ *vm.Context, _ common.Location) *interpreter.CompositeValue {
+		return importedContractValue
 	}
 
 	b.ResetTimer()
@@ -471,22 +471,21 @@ func BenchmarkMethodCall(b *testing.B) {
 
 		program := comp.Compile()
 
-		vmConfig := &vm.Config{
-			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
-				return importedProgram
-			},
-			ContractValueHandler: func(_ *vm.Context, _ common.Location) *interpreter.CompositeValue {
-				return importedContractValue
-			},
-			TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-				elaboration := importedChecker.Elaboration
-				compositeType := elaboration.CompositeType(typeID)
-				if compositeType != nil {
-					return compositeType
-				}
+		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			return importedProgram
+		}
+		vmConfig.ContractValueHandler = func(_ *vm.Context, _ common.Location) *interpreter.CompositeValue {
+			return importedContractValue
+		}
+		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+			elaboration := importedChecker.Elaboration
+			compositeType := elaboration.CompositeType(typeID)
+			if compositeType != nil {
+				return compositeType, nil
+			}
 
-				return elaboration.InterfaceType(typeID)
-			},
+			return elaboration.InterfaceType(typeID), nil
 		}
 
 		scriptLocation := runtime_utils.NewScriptLocationGenerator()
@@ -582,13 +581,12 @@ func BenchmarkMethodCall(b *testing.B) {
 
 		program := comp.Compile()
 
-		vmConfig := &vm.Config{
-			ImportHandler: func(location common.Location) *bbq.InstructionProgram {
-				return importedProgram
-			},
-			ContractValueHandler: func(_ *vm.Context, _ common.Location) *interpreter.CompositeValue {
-				return importedContractValue
-			},
+		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			return importedProgram
+		}
+		vmConfig.ContractValueHandler = func(_ *vm.Context, _ common.Location) *interpreter.CompositeValue {
+			return importedContractValue
 		}
 
 		scriptLocation := runtime_utils.NewScriptLocationGenerator()

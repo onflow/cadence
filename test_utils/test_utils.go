@@ -19,6 +19,7 @@
 package test_utils
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -229,6 +230,9 @@ func ParseCheckAndPrepareWithOptions(
 	if interpreterConfig != nil {
 		storage = interpreterConfig.Storage
 	}
+	if storage == nil {
+		storage = interpreter.NewInMemoryStorage(nil)
+	}
 
 	programs := CompiledPrograms{}
 	var compilerConfig *compiler.Config
@@ -241,12 +245,12 @@ func ParseCheckAndPrepareWithOptions(
 	if options.CheckerConfig != nil {
 		typeActivationHandler := options.CheckerConfig.BaseTypeActivationHandler
 		if typeActivationHandler != nil {
-			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 				activation := typeActivationHandler(location)
 				typeName := location.QualifiedIdentifier(typeID)
 				variable := activation.Find(typeName)
 				if variable != nil {
-					return variable.Type.(sema.ContainedType)
+					return variable.Type, nil
 				}
 
 				return typeLoader(location, typeID)
@@ -278,7 +282,7 @@ func ParseCheckAndPrepareWithOptions(
 			// (i.e: only get the values that were added externally for tests)
 			interpreterBaseActivationVariables := interpreterBaseActivation.ValuesInCurrentLevel()
 
-			vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[vm.Variable] {
+			vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
 
 				activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
@@ -299,12 +303,22 @@ func ParseCheckAndPrepareWithOptions(
 							name,
 							functionValue.Type,
 							func(context *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+
+								var argumentTypes []sema.Type
+								if len(arguments) > 0 {
+									argumentTypes = make([]sema.Type, len(arguments))
+									for i, argument := range arguments {
+										staticType := argument.StaticType(context)
+										argumentTypes[i] = interpreter.MustConvertStaticToSemaType(staticType, context)
+									}
+								}
+
 								invocation := interpreter.NewInvocation(
 									context,
 									nil,
 									nil,
 									arguments,
-									nil,
+									argumentTypes,
 									// TODO: provide these if they are needed for tests.
 									nil,
 									interpreter.EmptyLocationRange,
@@ -328,7 +342,7 @@ func ParseCheckAndPrepareWithOptions(
 
 			// Register externally provided globals in compiler.
 			compilerConfig = &compiler.Config{
-				BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
+				BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
 					baseActivation := compiler.DefaultBuiltinGlobals()
 					activation := activations.NewActivation(nil, baseActivation)
 					for name := range interpreterBaseActivationVariables { //nolint:maprange
@@ -349,16 +363,58 @@ func ParseCheckAndPrepareWithOptions(
 		}
 
 		if interpreterConfig.ImportLocationHandler != nil {
-			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+			originalTypeLoader := vmConfig.TypeLoader
+			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 				impt := interpreterConfig.ImportLocationHandler(nil, location)
 				switch impt := impt.(type) {
 				case interpreter.VirtualImport:
-					return impt.Elaboration.CompositeType(typeID)
+					return impt.Elaboration.CompositeType(typeID), nil
 				case interpreter.InterpreterImport:
-					return impt.Interpreter.Program.Elaboration.CompositeType(typeID)
+					return impt.Interpreter.Program.Elaboration.CompositeType(typeID), nil
 				}
 
-				return typeLoader(location, typeID)
+				if originalTypeLoader != nil {
+					return originalTypeLoader(location, typeID)
+				}
+
+				return nil, interpreter.TypeLoadingError{
+					TypeID: typeID,
+				}
+			}
+
+			vmConfig.ElaborationResolver = func(location common.Location) (*sema.Elaboration, error) {
+				impt := interpreterConfig.ImportLocationHandler(nil, location)
+
+				var elaboration *sema.Elaboration
+				switch impt := impt.(type) {
+				case interpreter.VirtualImport:
+					elaboration = impt.Elaboration
+				case interpreter.InterpreterImport:
+					elaboration = impt.Interpreter.Program.Elaboration
+				}
+				if elaboration == nil {
+					return nil, fmt.Errorf("cannot find elaboration for %s", location)
+				}
+
+				return elaboration, nil
+			}
+		}
+
+		if interpreterConfig.CompositeTypeHandler != nil {
+			originalTypeLoader := vmConfig.TypeLoader
+			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+				ty := interpreterConfig.CompositeTypeHandler(location, typeID)
+				if ty != nil {
+					return ty, nil
+				}
+
+				if originalTypeLoader != nil {
+					return originalTypeLoader(location, typeID)
+				}
+
+				return nil, interpreter.TypeLoadingError{
+					TypeID: typeID,
+				}
 			}
 		}
 	}
@@ -368,7 +424,7 @@ func ParseCheckAndPrepareWithOptions(
 	}
 
 	if vmConfig.BuiltinGlobalsProvider == nil {
-		vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[vm.Variable] {
+		vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
 			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 			panicVariable := interpreter.NewVariableWithValue(
@@ -385,7 +441,7 @@ func ParseCheckAndPrepareWithOptions(
 		Config: options.CheckerConfig,
 	}
 
-	vmInstance := compilerUtils.CompileAndPrepareToInvoke(
+	vmInstance, err := compilerUtils.CompileAndPrepareToInvoke(
 		tb,
 		code,
 		compilerUtils.CompilerAndVMOptions{
@@ -398,6 +454,9 @@ func ParseCheckAndPrepareWithOptions(
 			Programs: programs,
 		},
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	elaboration := programs[parseAndCheckOptions.Location].DesugaredElaboration
 

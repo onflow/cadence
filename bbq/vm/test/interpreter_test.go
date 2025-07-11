@@ -642,7 +642,6 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 	}
 
 	environment := runtime.NewBaseInterpreterEnvironment(runtime.Config{})
-
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// Deploy contract interfaces

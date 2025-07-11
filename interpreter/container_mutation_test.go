@@ -325,7 +325,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun test() {
                 let array: [AnyStruct] = [nil] as [(fun(AnyStruct):Void)?]
 
@@ -723,7 +723,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun test() {
                 let dict: {String: AnyStruct} = {}
 

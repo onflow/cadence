@@ -823,12 +823,12 @@ func TestInclusiveRangeForInLoop(t *testing.T) {
 			code := fmt.Sprintf(
 				`
 					fun test(): [%[1]s] {
-						let start : %[1]s = %[2]d
-						let end : %[1]s = %[3]d
-						let step : %[1]s = %[4]d
+						let start: %[1]s = %[2]d
+						let end: %[1]s = %[3]d
+						let step: %[1]s = %[4]d
 						let range: InclusiveRange<%[1]s> = InclusiveRange(start, end, step: step)
 
-						var elements : [%[1]s] = []
+						var elements: [%[1]s] = []
 						for element in range {
 							elements.append(element)
 						}
@@ -841,7 +841,7 @@ func TestInclusiveRangeForInLoop(t *testing.T) {
 				testCase.step,
 			)
 
-			inter, err := parseCheckAndInterpretWithOptions(t, code,
+			inter, err := parseCheckAndPrepareWithOptions(t, code,
 				ParseCheckAndInterpretOptions{
 					CheckerConfig: &sema.Config{
 						BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {

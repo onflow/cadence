@@ -466,6 +466,47 @@ func TestRuntimeBLSVerifyPoP(t *testing.T) {
 	assert.True(t, called)
 }
 
+func TestRuntimeBLSGetTypeAndIsInstance(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestRuntime()
+
+	script := []byte(`
+
+	  access(all) fun main(): Type {
+        assert(BLS.isInstance(Type<BLS>()))
+		return BLS.getType()
+	  }
+	`)
+
+	runtimeInterface := &TestRuntimeInterface{}
+
+	result, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.ScriptLocation{},
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		cadence.TypeValue{
+			StaticType: cadence.NewContractType(
+				nil,
+				stdlib.BLSTypeName,
+				[]cadence.Field{},
+				nil,
+			),
+		},
+		result,
+	)
+}
+
 func TestRuntimeBLSAggregateSignatures(t *testing.T) {
 
 	t.Parallel()
@@ -751,6 +792,7 @@ func TestRuntimeTraversingMerkleProof(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)

@@ -3847,14 +3847,14 @@ func TestInterpretInterfaceFieldUse(t *testing.T) {
 			continue
 		}
 
-		var setupCode, identifier string
+		var setupCode, identifier, teardownCode string
 		if compositeKind == common.CompositeKindContract {
 			identifier = "TestImpl"
 		} else {
 			interfaceType := "{Test}"
 
 			setupCode = fmt.Sprintf(
-				`access(all) let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,
+				`let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,
 				compositeKind.Annotation(),
 				interfaceType,
 				compositeKind.TransferOperator(),
@@ -3862,38 +3862,48 @@ func TestInterpretInterfaceFieldUse(t *testing.T) {
 				constructorArguments(compositeKind, "x: 1"),
 			)
 			identifier = "test"
+
+			if compositeKind == common.CompositeKindResource {
+				teardownCode = "destroy test"
+			}
 		}
 
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
-			inter, err := parseCheckAndInterpretWithOptions(t,
+			argument := interpreter.NewUnmeteredIntValueFromInt64(1)
+
+			invokable, err := parseCheckAndPrepareWithOptions(t,
 				fmt.Sprintf(
 					`
-                      access(all) %[1]s interface Test {
-                          access(all) x: Int
+                      %[1]s interface Test {
+                          x: Int
                       }
 
-                      access(all) %[1]s TestImpl: Test {
-                          access(all) var x: Int
+                      %[1]s TestImpl: Test {
+                          var x: Int
 
                           init(x: Int) {
                               self.x = x
                           }
                       }
 
-                      %[2]s
-
-                      access(all) let x = %[3]s.x
+                      fun getX(): Int {
+                          %[2]s
+                          let x = %[3]s.x
+                          %[4]s
+                          return x
+                      }
                     `,
 					compositeKind.Keyword(),
 					setupCode,
 					identifier,
+					teardownCode,
 				),
 				ParseCheckAndInterpretOptions{
 					Config: &interpreter.Config{
 						ContractValueHandler: makeContractValueHandler(
 							[]interpreter.Value{
-								interpreter.NewUnmeteredIntValueFromInt64(1),
+								argument,
 							},
 							[]sema.Type{
 								sema.IntType,
@@ -3907,11 +3917,22 @@ func TestInterpretInterfaceFieldUse(t *testing.T) {
 			)
 			require.NoError(t, err)
 
+			// Explicitly initialize the contract, if it's the VM.
+			if compositeKind == common.CompositeKindContract {
+				if vmInvokable, ok := invokable.(*test_utils.VMInvokable); ok {
+					_, err = vmInvokable.InitializeContract(identifier, argument)
+					require.NoError(t, err)
+				}
+			}
+
+			result, err := invokable.Invoke("getX")
+			require.NoError(t, err)
+
 			AssertValuesEqual(
 				t,
-				inter,
-				interpreter.NewUnmeteredIntValueFromInt64(1),
-				inter.GetGlobal("x"),
+				invokable,
+				argument,
+				result,
 			)
 		})
 	}
@@ -12138,7 +12159,7 @@ func TestInterpretCompositeTypeHandler(t *testing.T) {
 
 	testType := interpreter.NewCompositeStaticTypeComputeTypeID(nil, stdlib.FlowLocation{}, "AccountContractAdded")
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           fun test(): Type? {
               return CompositeType("flow.AccountContractAdded")

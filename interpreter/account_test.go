@@ -613,15 +613,15 @@ func testAccountWithErrorHandlerWithCompiler(
 	var storage interpreter.Storage
 
 	if compilerEnabled && *compile {
-		vmConfig := &vm.Config{
-			BuiltinGlobalsProvider: func() *activations.Activation[vm.Variable] {
-				baseActivation := vm.DefaultBuiltinGlobals()
-				activation := activations.NewActivation[vm.Variable](nil, baseActivation)
-				variable := &interpreter.SimpleVariable{}
-				variable.InitializeWithValue(accountValueDeclaration.Value)
-				activation.Set(accountValueDeclaration.Name, variable)
-				return activation
-			},
+		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+		vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
+			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+
+			variable := &interpreter.SimpleVariable{}
+			variable.InitializeWithValue(accountValueDeclaration.Value)
+			activation.Set(accountValueDeclaration.Name, variable)
+
+			return activation
 		}
 
 		programs := map[common.Location]*CompiledProgram{}
@@ -634,16 +634,15 @@ func testAccountWithErrorHandlerWithCompiler(
 			},
 		}
 
-		vmInstance := compilerUtils.CompileAndPrepareToInvoke(
+		vmInstance, err := compilerUtils.CompileAndPrepareToInvoke(
 			t,
 			code,
 			compilerUtils.CompilerAndVMOptions{
 				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
 					ParseAndCheckOptions: parseAndCheckOptions,
 					CompilerConfig: &compiler.Config{
-						BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
-							baseActivation := compiler.DefaultBuiltinGlobals()
-							activation := activations.NewActivation[compiler.GlobalImport](nil, baseActivation)
+						BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
+							activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 							for _, valueDeclaration := range valueDeclarations {
 								name := valueDeclaration.Name
 								existing := activation.Find(name)
@@ -665,6 +664,7 @@ func testAccountWithErrorHandlerWithCompiler(
 				Programs: programs,
 			},
 		)
+		require.NoError(t, err)
 
 		var uuid uint64
 		uuidHandler := func() (uint64, error) {

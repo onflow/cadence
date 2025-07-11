@@ -19,6 +19,7 @@
 package test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -383,7 +384,7 @@ func CompileAndInvoke(
 	)
 }
 
-func CompilerDefaultBuiltinGlobalsWithDefaultsAndLog() *activations.Activation[compiler.GlobalImport] {
+func CompilerDefaultBuiltinGlobalsWithDefaultsAndLog(_ common.Location) *activations.Activation[compiler.GlobalImport] {
 	activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 
 	activation.Set(
@@ -396,7 +397,20 @@ func CompilerDefaultBuiltinGlobalsWithDefaultsAndLog() *activations.Activation[c
 	return activation
 }
 
-func CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog() *activations.Activation[compiler.GlobalImport] {
+func CompilerDefaultBuiltinGlobalsWithDefaultsAndPanic(_ common.Location) *activations.Activation[compiler.GlobalImport] {
+	activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+
+	activation.Set(
+		stdlib.PanicFunctionName,
+		compiler.GlobalImport{
+			Name: stdlib.PanicFunctionName,
+		},
+	)
+
+	return activation
+}
+
+func CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog(_ common.Location) *activations.Activation[compiler.GlobalImport] {
 	activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 
 	activation.Set(
@@ -409,14 +423,14 @@ func CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog() *activations.Act
 	return activation
 }
 
-func VMBuiltinGlobalsProviderWithDefaultsAndPanic() *activations.Activation[vm.Variable] {
+func VMBuiltinGlobalsProviderWithDefaultsAndPanic(_ common.Location) *activations.Activation[vm.Variable] {
 	activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 	panicFunctionVariable := &interpreter.SimpleVariable{}
-	activation.Set(commons.PanicFunctionName, panicFunctionVariable)
+	activation.Set(stdlib.PanicFunctionName, panicFunctionVariable)
 	panicFunctionVariable.InitializeWithValue(
 		vm.NewNativeFunctionValue(
-			commons.PanicFunctionName,
+			stdlib.PanicFunctionName,
 			stdlib.PanicFunctionType,
 			func(context *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
 				messageValue, ok := arguments[0].(*interpreter.StringValue)
@@ -445,8 +459,8 @@ func NewVMBuiltinGlobalsProviderWithDefaultsPanicAndLog(logs *[]string) vm.Built
 		),
 	)
 
-	return func() *activations.Activation[vm.Variable] {
-		activation := activations.NewActivation(nil, VMBuiltinGlobalsProviderWithDefaultsAndPanic())
+	return func(location common.Location) *activations.Activation[vm.Variable] {
+		activation := activations.NewActivation(nil, VMBuiltinGlobalsProviderWithDefaultsAndPanic(location))
 
 		logFunctionVariable := &interpreter.SimpleVariable{}
 		logFunctionVariable.InitializeWithValue(logFunction.Value)
@@ -460,8 +474,8 @@ func NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(logs *[]string)
 
 	conditionLogFunction := newConditionLogFunction(logs)
 
-	return func() *activations.Activation[vm.Variable] {
-		activation := activations.NewActivation(nil, VMBuiltinGlobalsProviderWithDefaultsAndPanic())
+	return func(location common.Location) *activations.Activation[vm.Variable] {
+		activation := activations.NewActivation(nil, VMBuiltinGlobalsProviderWithDefaultsAndPanic(location))
 
 		logFunctionVariable := &interpreter.SimpleVariable{}
 		logFunctionVariable.InitializeWithValue(conditionLogFunction.Value)
@@ -601,7 +615,10 @@ func CompileAndInvokeWithOptions(
 	arguments ...vm.Value,
 ) (vm.Value, error) {
 
-	programVM := CompileAndPrepareToInvoke(t, code, options)
+	programVM, err := CompileAndPrepareToInvoke(t, code, options)
+	if err != nil {
+		return nil, err
+	}
 
 	result, err := programVM.InvokeExternally(funcName, arguments...)
 	if err == nil {
@@ -611,7 +628,7 @@ func CompileAndInvokeWithOptions(
 	return result, err
 }
 
-func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMOptions) *vm.VM {
+func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMOptions) (programVM *vm.VM, err error) {
 	programs := options.Programs
 	if programs == nil {
 		programs = map[common.Location]*CompiledProgram{}
@@ -650,13 +667,18 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 		}
 	}
 
-	programVM := vm.NewVM(
+	// recover panics from VM (e.g. global evaluation)
+	defer vm.RecoverErrors(func(internalErr error) {
+		err = internalErr
+	})
+
+	programVM = vm.NewVM(
 		location,
 		program,
 		vmConfig,
 	)
 
-	return programVM
+	return programVM, nil
 }
 
 func contractValueHandler(contractName string, arguments ...vm.Value) vm.ContractValueHandler {
@@ -674,36 +696,40 @@ func contractValueHandler(contractName string, arguments ...vm.Value) vm.Contrac
 
 func CompiledProgramsTypeLoader(
 	programs CompiledPrograms,
-) func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
-	return func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+) func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+	return func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 		program, ok := programs[location]
 		if !ok {
-			return nil
+			return nil, interpreter.TypeLoadingError{
+				TypeID: typeID,
+			}
 		}
 
 		elaboration := program.DesugaredElaboration
 
 		compositeType := elaboration.CompositeType(typeID)
 		if compositeType != nil {
-			return compositeType
+			return compositeType, nil
 		}
 
 		interfaceType := elaboration.InterfaceType(typeID)
 		if interfaceType != nil {
-			return interfaceType
+			return interfaceType, nil
 		}
 
 		entitlementType := elaboration.EntitlementType(typeID)
 		if entitlementType != nil {
-			return entitlementType
+			return entitlementType, nil
 		}
 
 		entitlementMapType := elaboration.EntitlementMapType(typeID)
 		if entitlementMapType != nil {
-			return entitlementMapType
+			return entitlementMapType, nil
 		}
 
-		return nil
+		return nil, interpreter.TypeLoadingError{
+			TypeID: typeID,
+		}
 	}
 }
 
@@ -782,6 +808,17 @@ func PrepareVMConfig(
 
 	if config.BuiltinGlobalsProvider == nil {
 		config.BuiltinGlobalsProvider = VMBuiltinGlobalsProviderWithDefaultsAndPanic
+	}
+
+	if config.ElaborationResolver == nil {
+		config.ElaborationResolver = func(location common.Location) (*sema.Elaboration, error) {
+			imported, ok := programs[location]
+			if !ok {
+				return nil, fmt.Errorf("cannot find elaboration for %s", location)
+			}
+
+			return imported.DesugaredElaboration.OriginalElaboration(), nil
+		}
 	}
 
 	return config

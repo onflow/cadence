@@ -210,13 +210,6 @@ func assertConditionError(
 ) {
 	RequireError(t, err)
 
-	if *compile {
-		var conditionErr stdlib.PanicError
-		require.ErrorAs(t, err, &conditionErr)
-		require.ErrorContains(t, err, "pre/post condition failed")
-		return
-	}
-
 	var conditionErr *interpreter.ConditionError
 	require.ErrorAs(t, err, &conditionErr)
 
@@ -233,13 +226,6 @@ func assertConditionErrorWithMessage(
 	message string,
 ) {
 	RequireError(t, err)
-
-	if *compile {
-		var conditionErr stdlib.PanicError
-		require.ErrorAs(t, err, &conditionErr)
-		require.ErrorContains(t, err, message)
-		return
-	}
 
 	var conditionErr *interpreter.ConditionError
 	require.ErrorAs(t, err, &conditionErr)

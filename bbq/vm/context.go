@@ -68,12 +68,7 @@ var _ interpreter.InvocationContext = &Context{}
 
 func NewContext(config *Config) *Context {
 	return &Context{
-		Config:                         config,
-		CapabilityControllerIterations: make(map[interpreter.AddressPath]int),
-		mutationDuringCapabilityControllerIteration: false,
-		referencedResourceKindedValues:              ReferencedResourceKindedValues{},
-		destroyedResources:                          make(map[atree.ValueID]struct{}),
-		semaTypes:                                   make(map[sema.TypeID]sema.Type),
+		Config: config,
 	}
 }
 
@@ -96,6 +91,9 @@ func (c *Context) SetInStorageIteration(inStorageIteration bool) {
 }
 
 func (c *Context) GetCapabilityControllerIterations() map[interpreter.AddressPath]int {
+	if c.CapabilityControllerIterations == nil {
+		c.CapabilityControllerIterations = make(map[interpreter.AddressPath]int)
+	}
 	return c.CapabilityControllerIterations
 }
 
@@ -160,8 +158,12 @@ func (c *Context) MaybeValidateAtreeStorage() {
 }
 
 func (c *Context) IsTypeInfoRecovered(location common.Location) bool {
-	//TODO
-	return false
+	elaboration, err := c.ElaborationResolver(location)
+	if err != nil {
+		return false
+	}
+
+	return elaboration.IsRecovered
 }
 
 func (c *Context) WithContainerMutationPrevention(valueID atree.ValueID, f func()) {
@@ -221,6 +223,9 @@ func (c *Context) GetMemberAccessContextForLocation(_ common.Location) interpret
 func (c *Context) WithResourceDestruction(valueID atree.ValueID, locationRange interpreter.LocationRange, f func()) {
 	c.EnforceNotResourceDestruction(valueID, locationRange)
 
+	if c.destroyedResources == nil {
+		c.destroyedResources = make(map[atree.ValueID]struct{})
+	}
 	c.destroyedResources[valueID] = struct{}{}
 
 	f()
@@ -360,6 +365,14 @@ func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema
 	// TODO: avoid the sema-type conversion
 	semaType = interpreter.MustConvertStaticToSemaType(staticType, c)
 
+	if c.semaTypes == nil {
+		c.semaTypes = make(map[sema.TypeID]sema.Type)
+	}
 	c.semaTypes[typeID] = semaType
+
 	return semaType
+}
+
+func (c *Context) GetContractValue(contractLocation common.AddressLocation) *interpreter.CompositeValue {
+	return c.ContractValueHandler(c, contractLocation)
 }
