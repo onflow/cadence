@@ -51,7 +51,7 @@ type vmEnvironment struct {
 	checkingEnvironment *CheckingEnvironment
 
 	config         Config
-	vmConfig       *vm.Config
+	VMConfig       *vm.Config
 	compilerConfig *compiler.Config
 
 	defaultCompilerBuiltinGlobals *activations.Activation[compiler.GlobalImport]
@@ -90,7 +90,7 @@ func newVMEnvironment(config Config) *vmEnvironment {
 		SimpleContractAdditionTracker: stdlib.NewSimpleContractAdditionTracker(),
 	}
 	env.checkingEnvironment = newCheckingEnvironment()
-	env.vmConfig = env.newVMConfig()
+	env.VMConfig = env.newVMConfig()
 	env.compilerConfig = env.newCompilerConfig()
 
 	env.defaultCompilerBuiltinGlobals = activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
@@ -204,7 +204,7 @@ func (e *vmEnvironment) Configure(
 ) {
 	e.Interface = runtimeInterface
 	e.storage = storage
-	e.vmConfig.SetStorage(storage)
+	e.VMConfig.SetStorage(storage)
 
 	e.checkingEnvironment.configure(
 		runtimeInterface,
@@ -527,7 +527,7 @@ func (e *vmEnvironment) newVM(
 	return vm.NewVM(
 		location,
 		program,
-		e.vmConfig,
+		e.VMConfig,
 	)
 }
 
