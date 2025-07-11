@@ -977,6 +977,7 @@ func TestInterpretReturns(t *testing.T) {
 
 	t.Parallel()
 
+	// NOTE: not enabled for the compiler, as it does not support unreachable statements
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
            access(all) fun returnEarly(): Int {
@@ -8604,6 +8605,9 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
     `
 
 	t.Run("with custom handler", func(t *testing.T) {
+
+		t.Parallel()
+
 		addressValue := interpreter.AddressValue(common.MustBytesToAddress([]byte{0x1}))
 
 		inter, err := parseCheckAndPrepareWithOptions(t,
@@ -8651,17 +8655,30 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 	})
 
 	t.Run("with default handler", func(t *testing.T) {
-		env := runtime.NewBaseInterpreterEnvironment(runtime.Config{})
-		_, err := parseCheckAndInterpretWithOptions(t, code,
+
+		t.Parallel()
+
+		var injectedCompositeFieldsHandler interpreter.InjectedCompositeFieldsHandlerFunc
+		if *compile {
+			env := runtime.NewBaseVMEnvironment(runtime.Config{})
+			injectedCompositeFieldsHandler = env.VMConfig.InjectedCompositeFieldsHandler
+		} else {
+			env := runtime.NewBaseInterpreterEnvironment(runtime.Config{})
+			injectedCompositeFieldsHandler = env.InterpreterConfig.InjectedCompositeFieldsHandler
+		}
+
+		_, err := parseCheckAndPrepareWithOptions(
+			t,
+			code,
 			ParseCheckAndInterpretOptions{
 				InterpreterConfig: &interpreter.Config{
 					ContractValueHandler:           makeContractValueHandler(nil, nil, nil),
-					InjectedCompositeFieldsHandler: env.InterpreterConfig.InjectedCompositeFieldsHandler,
+					InjectedCompositeFieldsHandler: injectedCompositeFieldsHandler,
 				},
 			},
 		)
 		RequireError(t, err)
-		assert.ErrorContains(t, err, "error: member `account` is used before it has been initialized")
+		assert.ErrorContains(t, err, "member `account` is used before it has been initialized")
 	})
 }
 
@@ -12241,6 +12258,7 @@ func TestInterpretSwapInSameArray(t *testing.T) {
 	t.Run("resources, different indices", func(t *testing.T) {
 		t.Parallel()
 
+		// TODO: requires improved swap in VM
 		inter := parseCheckAndInterpret(t, `
           resource R {
               let value: Int
@@ -12297,6 +12315,7 @@ func TestInterpretSwapInSameArray(t *testing.T) {
 
 		t.Parallel()
 
+		// TODO: requires improved swap in VM
 		inter := parseCheckAndInterpret(t, `
           resource R {
               let value: Int

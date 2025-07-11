@@ -415,7 +415,7 @@ func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
 
 		computationMeteredValues := make(map[common.ComputationKind]uint64)
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun main() {
                 let x = [1, 2, 3]
                 let y = x.reverse()
@@ -442,7 +442,7 @@ func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
 
 		computationMeteredValues := make(map[common.ComputationKind]uint64)
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun main() {
                 let x = [1, 2, 3, 4]
 			    let trueForEven = fun (_ x: Int): Bool {
@@ -472,7 +472,7 @@ func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
 
 		computationMeteredValues := make(map[common.ComputationKind]uint64)
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun main() {
                 let x = [1, 2, 3, 4, 5]
 			    let onlyEven = view fun (_ x: Int): Bool {
@@ -501,7 +501,7 @@ func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
 		t.Parallel()
 
 		computationMeteredValues := make(map[common.ComputationKind]uint64)
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun main() {
                 let x = [1, 2, 3, 4, 5, 6]
                 let y = x.slice(from: 1, upTo: 4)
@@ -527,7 +527,7 @@ func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
 		t.Parallel()
 
 		computationMeteredValues := make(map[common.ComputationKind]uint64)
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun main() {
                 let x = [1, 2, 3]
                 let y = x.concat([4, 5, 6])
@@ -561,7 +561,7 @@ func TestInterpretStdlibComputationMetering(t *testing.T) {
 
 		computationMeteredValues := make(map[common.ComputationKind]uint64)
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun main() {
                 let s = String.join(["one", "two", "three", "four"], separator: ", ")
             }`,
@@ -587,7 +587,7 @@ func TestInterpretStdlibComputationMetering(t *testing.T) {
 
 		computationMeteredValues := make(map[common.ComputationKind]uint64)
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun main() {
                 let s = "a b c".concat("1 2 3")
             }`,
@@ -613,7 +613,7 @@ func TestInterpretStdlibComputationMetering(t *testing.T) {
 
 		computationMeteredValues := make(map[common.ComputationKind]uint64)
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun main() {
                 let s = "abcadeaf".replaceAll(of: "a", with: "z")
             }`,
@@ -639,7 +639,7 @@ func TestInterpretStdlibComputationMetering(t *testing.T) {
 
 		computationMeteredValues := make(map[common.ComputationKind]uint64)
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun main() {
                 let s = "ABCdef".toLower()
             }`,
@@ -665,7 +665,7 @@ func TestInterpretStdlibComputationMetering(t *testing.T) {
 
 		computationMeteredValues := make(map[common.ComputationKind]uint64)
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun main() {
                 let s = "abc/d/ef//".split(separator: "/")
             }`,
