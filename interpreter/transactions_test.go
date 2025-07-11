@@ -403,6 +403,7 @@ func TestInterpretInvalidTransferInExecute(t *testing.T) {
 
 	t.Parallel()
 
+	// TODO: requires improved swap in VM
 	inter, _ := parseCheckAndInterpretWithOptions(t,
 		`
           resource Dummy {}
