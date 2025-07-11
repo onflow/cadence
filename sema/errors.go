@@ -249,6 +249,8 @@ type AssignmentToConstantError struct {
 var _ SemanticError = &AssignmentToConstantError{}
 var _ errors.UserError = &AssignmentToConstantError{}
 var _ errors.SecondaryError = &AssignmentToConstantError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &AssignmentToConstantError{}
+var _ errors.HasDocumentationLink = &AssignmentToConstantError{}
 
 func (*AssignmentToConstantError) isSemanticError() {}
 
@@ -260,6 +262,29 @@ func (e *AssignmentToConstantError) Error() string {
 
 func (e *AssignmentToConstantError) SecondaryError() string {
 	return fmt.Sprintf("consider changing the declaration of `%s` to be `var`", e.Name)
+}
+
+func (e *AssignmentToConstantError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
+	// For assignment to constant errors, we suggest changing 'let' to 'var'
+	// This is a simplified suggestion - in practice, we'd need to find the declaration
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "change constant declaration to variable",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "// Consider changing 'let' to 'var' for this declaration\n",
+					Range: ast.Range{
+						StartPos: e.StartPos,
+						EndPos:   e.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *AssignmentToConstantError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/constants-and-variables"
 }
 
 // TypeMismatchError
@@ -722,6 +747,8 @@ type ControlStatementError struct {
 var _ SemanticError = &ControlStatementError{}
 var _ errors.UserError = &ControlStatementError{}
 var _ errors.SecondaryError = &ControlStatementError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &ControlStatementError{}
+var _ errors.HasDocumentationLink = &ControlStatementError{}
 
 func (*ControlStatementError) isSemanticError() {}
 
@@ -744,6 +771,38 @@ func (e *ControlStatementError) SecondaryError() string {
 		e.ControlStatement.Symbol(),
 		validLocation,
 	)
+}
+
+func (e *ControlStatementError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	// For control statement errors, we suggest moving the statement to the correct context
+	var suggestion string
+	switch e.ControlStatement {
+	case common.ControlStatementBreak:
+		suggestion = "// Move this break statement inside a loop or switch statement\n"
+	case common.ControlStatementContinue:
+		suggestion = "// Move this continue statement inside a loop statement\n"
+	default:
+		suggestion = "// Move this control statement to the appropriate context\n"
+	}
+
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "move control statement to valid context",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: suggestion,
+					Range: ast.Range{
+						StartPos: e.StartPos,
+						EndPos:   e.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *ControlStatementError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/control-flow"
 }
 
 // InvalidAccessModifierError
@@ -1142,6 +1201,9 @@ type AssignmentToConstantMemberError struct {
 
 var _ SemanticError = &AssignmentToConstantMemberError{}
 var _ errors.UserError = &AssignmentToConstantMemberError{}
+var _ errors.SecondaryError = &AssignmentToConstantMemberError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &AssignmentToConstantMemberError{}
+var _ errors.HasDocumentationLink = &AssignmentToConstantMemberError{}
 
 func (*AssignmentToConstantMemberError) isSemanticError() {}
 
@@ -1149,6 +1211,32 @@ func (*AssignmentToConstantMemberError) IsUserError() {}
 
 func (e *AssignmentToConstantMemberError) Error() string {
 	return fmt.Sprintf("cannot assign to constant member: `%s`", e.Name)
+}
+
+func (e *AssignmentToConstantMemberError) SecondaryError() string {
+	return "constant members cannot be reassigned after initialization. Consider using a variable field (var) instead"
+}
+
+func (e *AssignmentToConstantMemberError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
+	// For assignment to constant member errors, we suggest using a variable field instead
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "change field declaration from 'let' to 'var'",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "// Consider changing field declaration from 'let' to 'var'\n",
+					Range: ast.Range{
+						StartPos: e.StartPos,
+						EndPos:   e.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *AssignmentToConstantMemberError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/functions#functions-are-values"
 }
 
 // FieldReinitializationError
@@ -1478,6 +1566,8 @@ type ConformanceError struct {
 var _ SemanticError = &ConformanceError{}
 var _ errors.UserError = &ConformanceError{}
 var _ errors.SecondaryError = &ConformanceError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &ConformanceError{}
+var _ errors.HasDocumentationLink = &ConformanceError{}
 
 func (*ConformanceError) isSemanticError() {}
 
@@ -1523,6 +1613,48 @@ func (e *ConformanceError) SecondaryError() string {
 	}
 
 	return builder.String()
+}
+
+func (e *ConformanceError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	// For conformance errors, we suggest implementing the missing members
+	var suggestions []string
+
+	if len(e.MissingMembers) > 0 {
+		suggestions = append(suggestions, "// Implement missing interface members:")
+		for _, member := range e.MissingMembers {
+			suggestions = append(suggestions, fmt.Sprintf("// - %s", member.Identifier.Identifier))
+		}
+	}
+
+	if len(e.MissingNestedCompositeTypes) > 0 {
+		suggestions = append(suggestions, "// Define missing nested types:")
+		for _, ty := range e.MissingNestedCompositeTypes {
+			suggestions = append(suggestions, fmt.Sprintf("// - %s", ty.QualifiedString()))
+		}
+	}
+
+	if len(suggestions) == 0 {
+		return nil
+	}
+
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "implement missing interface requirements",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: strings.Join(suggestions, "\n") + "\n",
+					Range: ast.Range{
+						StartPos: e.Pos,
+						EndPos:   e.Pos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *ConformanceError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/interfaces"
 }
 
 func (e *ConformanceError) StartPosition() ast.Position {
@@ -1578,6 +1710,9 @@ type DuplicateConformanceError struct {
 
 var _ SemanticError = &DuplicateConformanceError{}
 var _ errors.UserError = &DuplicateConformanceError{}
+var _ errors.SecondaryError = &DuplicateConformanceError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &DuplicateConformanceError{}
+var _ errors.HasDocumentationLink = &DuplicateConformanceError{}
 
 func (*DuplicateConformanceError) isSemanticError() {}
 
@@ -1593,6 +1728,32 @@ func (e *DuplicateConformanceError) Error() string {
 	)
 }
 
+func (e *DuplicateConformanceError) SecondaryError() string {
+	return "remove the duplicate conformance declaration. Each interface can only be conformed to once"
+}
+
+func (e *DuplicateConformanceError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	// For duplicate conformance errors, we suggest removing the duplicate declaration
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "remove duplicate conformance declaration",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "// Remove this duplicate conformance declaration\n",
+					Range: ast.Range{
+						StartPos: e.StartPos,
+						EndPos:   e.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *DuplicateConformanceError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/interfaces"
+}
+
 // CyclicConformanceError
 type CyclicConformanceError struct {
 	InterfaceType *InterfaceType
@@ -1601,6 +1762,9 @@ type CyclicConformanceError struct {
 
 var _ SemanticError = CyclicConformanceError{}
 var _ errors.UserError = CyclicConformanceError{}
+var _ errors.SecondaryError = CyclicConformanceError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = CyclicConformanceError{}
+var _ errors.HasDocumentationLink = CyclicConformanceError{}
 
 func (CyclicConformanceError) isSemanticError() {}
 
@@ -1611,6 +1775,32 @@ func (e CyclicConformanceError) Error() string {
 		"`%s` has a cyclic conformance to itself",
 		e.InterfaceType.QualifiedString(),
 	)
+}
+
+func (e CyclicConformanceError) SecondaryError() string {
+	return "interfaces cannot have circular dependencies. Break the cycle by removing one of the conformance declarations"
+}
+
+func (e CyclicConformanceError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	// For cyclic conformance errors, we suggest breaking the cycle
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "break the cyclic conformance",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "// Consider removing one of the conformance declarations to break the cycle\n",
+					Range: ast.Range{
+						StartPos: e.StartPos,
+						EndPos:   e.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e CyclicConformanceError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/interfaces"
 }
 
 // MultipleInterfaceDefaultImplementationsError
@@ -1953,6 +2143,8 @@ type CompositeKindMismatchError struct {
 var _ SemanticError = &CompositeKindMismatchError{}
 var _ errors.UserError = &CompositeKindMismatchError{}
 var _ errors.SecondaryError = &CompositeKindMismatchError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &CompositeKindMismatchError{}
+var _ errors.HasDocumentationLink = &CompositeKindMismatchError{}
 
 func (*CompositeKindMismatchError) isSemanticError() {}
 
@@ -1964,10 +2156,44 @@ func (e *CompositeKindMismatchError) Error() string {
 
 func (e *CompositeKindMismatchError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected `%s`, got `%s`",
+		"expected `%s`, got `%s`. Use the correct composite kind annotation for intersection types",
 		e.ExpectedKind.Name(),
 		e.ActualKind.Name(),
 	)
+}
+
+func (e *CompositeKindMismatchError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	// For composite kind mismatch errors, we suggest using the correct annotation
+	var suggestion string
+	switch e.ExpectedKind {
+	case common.CompositeKindResource:
+		suggestion = "// Use @{} for resource intersection types\n"
+	case common.CompositeKindStructure:
+		suggestion = "// Use {} for struct intersection types\n"
+	case common.CompositeKindContract:
+		suggestion = "// Use {} for contract intersection types\n"
+	default:
+		suggestion = "// Use the correct composite kind annotation\n"
+	}
+
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "use correct composite kind annotation",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: suggestion,
+					Range: ast.Range{
+						StartPos: e.StartPos,
+						EndPos:   e.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *CompositeKindMismatchError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
 }
 
 // InvalidIntegerLiteralRangeError
@@ -2575,6 +2801,9 @@ type EmitNonEventError struct {
 
 var _ SemanticError = &EmitNonEventError{}
 var _ errors.UserError = &EmitNonEventError{}
+var _ errors.SecondaryError = &EmitNonEventError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &EmitNonEventError{}
+var _ errors.HasDocumentationLink = &EmitNonEventError{}
 
 func (*EmitNonEventError) isSemanticError() {}
 
@@ -2587,6 +2816,32 @@ func (e *EmitNonEventError) Error() string {
 	)
 }
 
+func (e *EmitNonEventError) SecondaryError() string {
+	return "only event types can be emitted. Consider declaring an event or using a different approach"
+}
+
+func (e *EmitNonEventError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	// For emit non-event errors, we suggest declaring an event
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "declare an event type",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "// Consider declaring an event: event MyEvent()\n",
+					Range: ast.Range{
+						StartPos: e.StartPos,
+						EndPos:   e.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *EmitNonEventError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/events"
+}
+
 // EmitDefaultDestroyEventError
 
 type EmitDefaultDestroyEventError struct {
@@ -2595,6 +2850,9 @@ type EmitDefaultDestroyEventError struct {
 
 var _ SemanticError = &EmitDefaultDestroyEventError{}
 var _ errors.UserError = &EmitDefaultDestroyEventError{}
+var _ errors.SecondaryError = &EmitDefaultDestroyEventError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &EmitDefaultDestroyEventError{}
+var _ errors.HasDocumentationLink = &EmitDefaultDestroyEventError{}
 
 func (*EmitDefaultDestroyEventError) isSemanticError() {}
 
@@ -2602,6 +2860,32 @@ func (*EmitDefaultDestroyEventError) IsUserError() {}
 
 func (e *EmitDefaultDestroyEventError) Error() string {
 	return "default destruction events may not be explicitly emitted"
+}
+
+func (e *EmitDefaultDestroyEventError) SecondaryError() string {
+	return "ResourceDestroyed events are automatically emitted when resources are destroyed. Remove the explicit emit statement"
+}
+
+func (e *EmitDefaultDestroyEventError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	// For emit default destroy event errors, we suggest removing the emit statement
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "remove the explicit emit statement",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "// Remove this emit statement - ResourceDestroyed events are emitted automatically\n",
+					Range: ast.Range{
+						StartPos: e.StartPos,
+						EndPos:   e.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *EmitDefaultDestroyEventError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources#destroy-events"
 }
 
 // EmitImportedEventError
@@ -2613,6 +2897,9 @@ type EmitImportedEventError struct {
 
 var _ SemanticError = &EmitImportedEventError{}
 var _ errors.UserError = &EmitImportedEventError{}
+var _ errors.SecondaryError = &EmitImportedEventError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &EmitImportedEventError{}
+var _ errors.HasDocumentationLink = &EmitImportedEventError{}
 
 func (*EmitImportedEventError) isSemanticError() {}
 
@@ -2623,6 +2910,32 @@ func (e *EmitImportedEventError) Error() string {
 		"cannot emit imported event type: `%s`",
 		e.Type.QualifiedString(),
 	)
+}
+
+func (e *EmitImportedEventError) SecondaryError() string {
+	return "events can only be emitted from the contract where they are declared. Imported events cannot be emitted from other contracts"
+}
+
+func (e *EmitImportedEventError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	// For emit imported event errors, we suggest declaring a similar event locally
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "declare a similar event locally in this contract",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "// Consider declaring a similar event locally: event MyEvent()\n",
+					Range: ast.Range{
+						StartPos: e.StartPos,
+						EndPos:   e.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *EmitImportedEventError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/events"
 }
 
 // InvalidResourceAssignmentError
@@ -3574,6 +3887,8 @@ type DeclarationKindMismatchError struct {
 var _ SemanticError = &DeclarationKindMismatchError{}
 var _ errors.UserError = &DeclarationKindMismatchError{}
 var _ errors.SecondaryError = &DeclarationKindMismatchError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &DeclarationKindMismatchError{}
+var _ errors.HasDocumentationLink = &DeclarationKindMismatchError{}
 
 func (*DeclarationKindMismatchError) isSemanticError() {}
 
@@ -3589,6 +3904,28 @@ func (e *DeclarationKindMismatchError) SecondaryError() string {
 		e.ExpectedDeclarationKind.Name(),
 		e.ActualDeclarationKind.Name(),
 	)
+}
+
+func (e *DeclarationKindMismatchError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	// For declaration kind mismatch errors, we suggest using the correct declaration type
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: fmt.Sprintf("use %s declaration instead of %s", e.ExpectedDeclarationKind.Name(), e.ActualDeclarationKind.Name()),
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: fmt.Sprintf("// Consider using %s declaration instead of %s\n", e.ExpectedDeclarationKind.Name(), e.ActualDeclarationKind.Name()),
+					Range: ast.Range{
+						StartPos: e.StartPos,
+						EndPos:   e.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *DeclarationKindMismatchError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language"
 }
 
 // InvalidTopLevelDeclarationError
@@ -3689,6 +4026,8 @@ type ConstantSizedArrayLiteralSizeError struct {
 var _ SemanticError = &ConstantSizedArrayLiteralSizeError{}
 var _ errors.UserError = &ConstantSizedArrayLiteralSizeError{}
 var _ errors.SecondaryError = &ConstantSizedArrayLiteralSizeError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &ConstantSizedArrayLiteralSizeError{}
+var _ errors.HasDocumentationLink = &ConstantSizedArrayLiteralSizeError{}
 
 func (*ConstantSizedArrayLiteralSizeError) isSemanticError() {}
 
@@ -3704,6 +4043,35 @@ func (e *ConstantSizedArrayLiteralSizeError) SecondaryError() string {
 		e.ExpectedSize,
 		e.ActualSize,
 	)
+}
+
+func (e *ConstantSizedArrayLiteralSizeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	// For constant-sized array literal size errors, we suggest adjusting the array size or elements
+	var suggestion string
+	if e.ActualSize > e.ExpectedSize {
+		suggestion = fmt.Sprintf("// Remove %d element(s) or change array size to %d\n", e.ActualSize-e.ExpectedSize, e.ActualSize)
+	} else {
+		suggestion = fmt.Sprintf("// Add %d element(s) or change array size to %d\n", e.ExpectedSize-e.ActualSize, e.ActualSize)
+	}
+
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "adjust array size or number of elements",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: suggestion,
+					Range: ast.Range{
+						StartPos: e.StartPos,
+						EndPos:   e.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *ConstantSizedArrayLiteralSizeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types/arrays"
 }
 
 // InvalidIntersectedTypeError
@@ -4154,6 +4522,9 @@ type CyclicImportsError struct {
 
 var _ SemanticError = &CyclicImportsError{}
 var _ errors.UserError = &CyclicImportsError{}
+var _ errors.SecondaryError = &CyclicImportsError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &CyclicImportsError{}
+var _ errors.HasDocumentationLink = &CyclicImportsError{}
 
 func (*CyclicImportsError) isSemanticError() {}
 
@@ -4161,6 +4532,32 @@ func (*CyclicImportsError) IsUserError() {}
 
 func (e *CyclicImportsError) Error() string {
 	return fmt.Sprintf("cyclic import of `%s`", e.Location)
+}
+
+func (e *CyclicImportsError) SecondaryError() string {
+	return "circular dependencies between imports are not allowed. Break the cycle by removing one of the import statements"
+}
+
+func (e *CyclicImportsError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	// For cyclic import errors, we suggest removing the import to break the cycle
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "remove this import to break the circular dependency",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "// Consider removing this import to break the circular dependency\n",
+					Range: ast.Range{
+						StartPos: e.StartPos,
+						EndPos:   e.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *CyclicImportsError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/imports"
 }
 
 // SwitchDefaultPositionError
@@ -4445,6 +4842,9 @@ type DirectEntitlementAnnotationError struct {
 
 var _ SemanticError = &DirectEntitlementAnnotationError{}
 var _ errors.UserError = &DirectEntitlementAnnotationError{}
+var _ errors.SecondaryError = &DirectEntitlementAnnotationError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &DirectEntitlementAnnotationError{}
+var _ errors.HasDocumentationLink = &DirectEntitlementAnnotationError{}
 
 func (*DirectEntitlementAnnotationError) isSemanticError() {}
 
@@ -4452,6 +4852,32 @@ func (*DirectEntitlementAnnotationError) IsUserError() {}
 
 func (e *DirectEntitlementAnnotationError) Error() string {
 	return "cannot use an entitlement type outside of an `access` declaration or `auth` modifier"
+}
+
+func (e *DirectEntitlementAnnotationError) SecondaryError() string {
+	return "entitlements can only be used in access modifiers for struct/resource members or in auth expressions for reference access"
+}
+
+func (e *DirectEntitlementAnnotationError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	// For direct entitlement annotation errors, we suggest using the entitlement in the correct context
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "use entitlement in access modifier or auth expression",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "// Use in access modifier: access(entitlement) var field: Type\n// Or in auth expression: auth(entitlement) reference\n",
+					Range: ast.Range{
+						StartPos: e.StartPos,
+						EndPos:   e.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *DirectEntitlementAnnotationError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control#entitlements"
 }
 
 // UnrepresentableEntitlementMapOutputError
@@ -4522,6 +4948,9 @@ type DuplicateEntitlementMappingInclusionError struct {
 
 var _ SemanticError = &DuplicateEntitlementMappingInclusionError{}
 var _ errors.UserError = &DuplicateEntitlementMappingInclusionError{}
+var _ errors.SecondaryError = &DuplicateEntitlementMappingInclusionError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &DuplicateEntitlementMappingInclusionError{}
+var _ errors.HasDocumentationLink = &DuplicateEntitlementMappingInclusionError{}
 
 func (*DuplicateEntitlementMappingInclusionError) isSemanticError() {}
 
@@ -4535,6 +4964,32 @@ func (e *DuplicateEntitlementMappingInclusionError) Error() string {
 	)
 }
 
+func (e *DuplicateEntitlementMappingInclusionError) SecondaryError() string {
+	return "remove the duplicate include statement. Each entitlement map can only be included once in a mapping definition"
+}
+
+func (e *DuplicateEntitlementMappingInclusionError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	// For duplicate entitlement mapping inclusion errors, we suggest removing the duplicate include
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "remove the duplicate include statement",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "// Remove this duplicate include statement\n",
+					Range: ast.Range{
+						StartPos: e.StartPos,
+						EndPos:   e.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *DuplicateEntitlementMappingInclusionError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control#entitlements"
+}
+
 // CyclicEntitlementMappingError
 type CyclicEntitlementMappingError struct {
 	Map          *EntitlementMapType
@@ -4544,6 +4999,9 @@ type CyclicEntitlementMappingError struct {
 
 var _ SemanticError = &CyclicEntitlementMappingError{}
 var _ errors.UserError = &CyclicEntitlementMappingError{}
+var _ errors.SecondaryError = &CyclicEntitlementMappingError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &CyclicEntitlementMappingError{}
+var _ errors.HasDocumentationLink = &CyclicEntitlementMappingError{}
 
 func (*CyclicEntitlementMappingError) isSemanticError() {}
 
@@ -4555,6 +5013,32 @@ func (e *CyclicEntitlementMappingError) Error() string {
 		e.IncludedType.QualifiedIdentifier(),
 		e.Map.QualifiedIdentifier(),
 	)
+}
+
+func (e *CyclicEntitlementMappingError) SecondaryError() string {
+	return "entitlement mappings cannot have circular dependencies. Remove the include statement to break the cycle"
+}
+
+func (e *CyclicEntitlementMappingError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	// For cyclic entitlement mapping errors, we suggest removing the include statement
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "remove the include statement to break the cycle",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "// Consider removing this include statement to break the cyclical mapping\n",
+					Range: ast.Range{
+						StartPos: e.StartPos,
+						EndPos:   e.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *CyclicEntitlementMappingError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control#entitlements"
 }
 
 // InvalidBaseTypeError
@@ -4623,6 +5107,9 @@ type AttachNonAttachmentError struct {
 
 var _ SemanticError = &AttachNonAttachmentError{}
 var _ errors.UserError = &AttachNonAttachmentError{}
+var _ errors.SecondaryError = &AttachNonAttachmentError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &AttachNonAttachmentError{}
+var _ errors.HasDocumentationLink = &AttachNonAttachmentError{}
 
 func (*AttachNonAttachmentError) isSemanticError() {}
 
@@ -4635,6 +5122,32 @@ func (e *AttachNonAttachmentError) Error() string {
 	)
 }
 
+func (e *AttachNonAttachmentError) SecondaryError() string {
+	return "only attachment types can be used in attach expressions. Consider creating an attachment declaration instead"
+}
+
+func (e *AttachNonAttachmentError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	// For attach non-attachment errors, we suggest creating an attachment declaration
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "create an attachment declaration",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "// Consider creating an attachment: attachment MyAttachment for BaseType { ... }\n",
+					Range: ast.Range{
+						StartPos: e.StartPos,
+						EndPos:   e.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *AttachNonAttachmentError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/attachments"
+}
+
 // AttachToInvalidTypeError
 type AttachToInvalidTypeError struct {
 	Type Type
@@ -4643,6 +5156,9 @@ type AttachToInvalidTypeError struct {
 
 var _ SemanticError = &AttachToInvalidTypeError{}
 var _ errors.UserError = &AttachToInvalidTypeError{}
+var _ errors.SecondaryError = &AttachToInvalidTypeError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &AttachToInvalidTypeError{}
+var _ errors.HasDocumentationLink = &AttachToInvalidTypeError{}
 
 func (*AttachToInvalidTypeError) isSemanticError() {}
 
@@ -4653,6 +5169,32 @@ func (e *AttachToInvalidTypeError) Error() string {
 		"cannot attach attachment to type `%s`, as it is not valid for this base type",
 		e.Type.QualifiedString(),
 	)
+}
+
+func (e *AttachToInvalidTypeError) SecondaryError() string {
+	return "attachments can only be attached to composite types (structs, resources) that match the attachment's base type declaration"
+}
+
+func (e *AttachToInvalidTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	// For attach to invalid type errors, we suggest using a compatible composite type
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "use a compatible composite type",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "// Consider using a struct or resource that matches the attachment's base type\n",
+					Range: ast.Range{
+						StartPos: e.StartPos,
+						EndPos:   e.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *AttachToInvalidTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/attachments"
 }
 
 // InvalidAttachmentRemoveError
@@ -4755,6 +5297,9 @@ type DefaultDestroyEventInNonResourceError struct {
 
 var _ SemanticError = &DefaultDestroyEventInNonResourceError{}
 var _ errors.UserError = &DefaultDestroyEventInNonResourceError{}
+var _ errors.SecondaryError = &DefaultDestroyEventInNonResourceError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &DefaultDestroyEventInNonResourceError{}
+var _ errors.HasDocumentationLink = &DefaultDestroyEventInNonResourceError{}
 
 func (*DefaultDestroyEventInNonResourceError) isSemanticError() {}
 
@@ -4765,6 +5310,32 @@ func (e *DefaultDestroyEventInNonResourceError) Error() string {
 		"cannot declare default destruction event in %s",
 		e.Kind,
 	)
+}
+
+func (e *DefaultDestroyEventInNonResourceError) SecondaryError() string {
+	return "the ResourceDestroyed event can only be declared in resources and resource attachments"
+}
+
+func (e *DefaultDestroyEventInNonResourceError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	// For default destroy event in non-resource errors, we suggest using a regular event instead
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "use a regular event instead of ResourceDestroyed",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "// Consider using a regular event: event MyEvent()\n",
+					Range: ast.Range{
+						StartPos: e.StartPos,
+						EndPos:   e.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *DefaultDestroyEventInNonResourceError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/events"
 }
 
 type DefaultDestroyInvalidArgumentKind int
@@ -4785,6 +5356,9 @@ type DefaultDestroyInvalidArgumentError struct {
 
 var _ SemanticError = &DefaultDestroyInvalidArgumentError{}
 var _ errors.UserError = &DefaultDestroyInvalidArgumentError{}
+var _ errors.SecondaryError = &DefaultDestroyInvalidArgumentError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &DefaultDestroyInvalidArgumentError{}
+var _ errors.HasDocumentationLink = &DefaultDestroyInvalidArgumentError{}
 
 func (*DefaultDestroyInvalidArgumentError) isSemanticError() {}
 
@@ -4808,6 +5382,42 @@ func (e *DefaultDestroyInvalidArgumentError) SecondaryError() string {
 	return ""
 }
 
+func (e *DefaultDestroyInvalidArgumentError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	// For default destroy invalid argument errors, we suggest using valid argument types
+	var suggestion string
+	switch e.Kind {
+	case NonDictionaryIndexExpression:
+		suggestion = "// Use dictionary indexing instead of array indexing\n"
+	case ReferenceTypedMemberAccess:
+		suggestion = "// Access the value directly, not through a reference\n"
+	case InvalidIdentifier:
+		suggestion = "// Use only 'self' or 'base' identifiers in arguments\n"
+	case InvalidExpression:
+		suggestion = "// Use literals, member access on 'self'/'base', or dictionary indexing\n"
+	default:
+		suggestion = "// Use valid argument expressions for default destroy events\n"
+	}
+
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "use valid argument expressions",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: suggestion,
+					Range: ast.Range{
+						StartPos: e.StartPos,
+						EndPos:   e.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *DefaultDestroyInvalidArgumentError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources#destroy-events"
+}
+
 // DefaultDestroyInvalidParameterError
 
 type DefaultDestroyInvalidParameterError struct {
@@ -4817,6 +5427,9 @@ type DefaultDestroyInvalidParameterError struct {
 
 var _ SemanticError = &DefaultDestroyInvalidParameterError{}
 var _ errors.UserError = &DefaultDestroyInvalidParameterError{}
+var _ errors.SecondaryError = &DefaultDestroyInvalidParameterError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &DefaultDestroyInvalidParameterError{}
+var _ errors.HasDocumentationLink = &DefaultDestroyInvalidParameterError{}
 
 func (*DefaultDestroyInvalidParameterError) isSemanticError() {}
 
@@ -4824,6 +5437,32 @@ func (*DefaultDestroyInvalidParameterError) IsUserError() {}
 
 func (e *DefaultDestroyInvalidParameterError) Error() string {
 	return fmt.Sprintf("`%s` is not a valid parameter type for a default destroy event", e.ParamType.QualifiedString())
+}
+
+func (e *DefaultDestroyInvalidParameterError) SecondaryError() string {
+	return "default destroy events only support storable types as parameters. Consider using a concrete type instead of `Any`"
+}
+
+func (e *DefaultDestroyInvalidParameterError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	// For default destroy invalid parameter errors, we suggest using concrete types
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "use a concrete storable type instead of Any",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "// Consider using a concrete type like String, Int, Bool, or a specific struct/resource\n",
+					Range: ast.Range{
+						StartPos: e.StartPos,
+						EndPos:   e.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *DefaultDestroyInvalidParameterError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources#destroy-events"
 }
 
 // InvalidTypeParameterizedNonNativeFunctionError
