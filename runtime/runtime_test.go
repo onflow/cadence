@@ -11528,6 +11528,7 @@ func TestRuntimeForbidPublicEntitlementBorrow(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nexScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -11618,6 +11619,7 @@ func TestRuntimeForbidPublicEntitlementGet(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -11690,6 +11692,7 @@ func TestRuntimeForbidPublicEntitlementPublish(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -11806,6 +11809,7 @@ func TestRuntimeForbidPublicEntitlementPublish(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
