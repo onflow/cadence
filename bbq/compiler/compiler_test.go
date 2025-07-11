@@ -3934,7 +3934,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 			aLocation,
 			ParseCheckAndCompileOptions{
 				ParseAndCheckOptions: &ParseAndCheckOptions{
-					Config: &sema.Config{
+					CheckerConfig: &sema.Config{
 						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 							return baseValueActivation
 						},
@@ -7610,7 +7610,7 @@ func TestCompileOptionalArgument(t *testing.T) {
             }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
 						return baseValueActivation
 					},
@@ -9046,7 +9046,7 @@ func TestCompileInjectedContract(t *testing.T) {
         `,
 		ParseAndCheckOptions{
 			Location: TestLocation,
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 					assert.Equal(t, TestLocation, location)
 					return baseValueActivation

@@ -1947,7 +1947,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             }
         `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
 						return sema.ElaborationImport{
 							Elaboration: importedChecker.Elaboration,

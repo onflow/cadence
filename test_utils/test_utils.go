@@ -33,7 +33,7 @@ import (
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
-	"github.com/onflow/cadence/test_utils/sema_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 
 	"github.com/onflow/cadence/bbq/compiler"
 	. "github.com/onflow/cadence/bbq/test_utils"
@@ -42,9 +42,9 @@ import (
 )
 
 type ParseCheckAndInterpretOptions struct {
-	Config             *interpreter.Config
-	CheckerConfig      *sema.Config
-	HandleCheckerError func(error)
+	ParseAndCheckOptions *ParseAndCheckOptions
+	InterpreterConfig    *interpreter.Config
+	HandleCheckerError   func(error)
 }
 
 type VMInvokable struct {
@@ -138,7 +138,7 @@ func ParseCheckAndPrepareWithEvents(tb testing.TB, code string, compile bool) (
 	}
 
 	parseCheckAndInterpretOptions := ParseCheckAndInterpretOptions{
-		Config: interpreterConfig,
+		InterpreterConfig: interpreterConfig,
 	}
 
 	if !compile {
@@ -188,12 +188,14 @@ func ParseCheckAndPrepareWithLogs(
 	invokable, err = ParseCheckAndPrepareWithOptions(tb,
 		code,
 		ParseCheckAndInterpretOptions{
-			CheckerConfig: &sema.Config{
-				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-					return baseValueActivation
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 			},
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
 					return baseActivation
 				},
@@ -224,14 +226,22 @@ func ParseCheckAndPrepareWithOptions(
 		return ParseCheckAndInterpretWithOptions(tb, code, options)
 	}
 
-	interpreterConfig := options.Config
+	var memoryGauge common.MemoryGauge
+	if options.InterpreterConfig != nil {
+		memoryGauge = options.InterpreterConfig.MemoryGauge
+	}
+	if memoryGauge == nil && options.ParseAndCheckOptions != nil {
+		memoryGauge = options.ParseAndCheckOptions.MemoryGauge
+	}
+
+	interpreterConfig := options.InterpreterConfig
 
 	var storage interpreter.Storage
 	if interpreterConfig != nil {
 		storage = interpreterConfig.Storage
 	}
 	if storage == nil {
-		storage = interpreter.NewInMemoryStorage(nil)
+		storage = interpreter.NewInMemoryStorage(memoryGauge)
 	}
 
 	programs := CompiledPrograms{}
@@ -242,8 +252,8 @@ func ParseCheckAndPrepareWithOptions(
 
 	typeLoader := compilerUtils.CompiledProgramsTypeLoader(programs)
 
-	if options.CheckerConfig != nil {
-		typeActivationHandler := options.CheckerConfig.BaseTypeActivationHandler
+	if options.ParseAndCheckOptions != nil && options.ParseAndCheckOptions.CheckerConfig != nil {
+		typeActivationHandler := options.ParseAndCheckOptions.CheckerConfig.BaseTypeActivationHandler
 		if typeActivationHandler != nil {
 			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 				activation := typeActivationHandler(location)
@@ -437,17 +447,13 @@ func ParseCheckAndPrepareWithOptions(
 		}
 	}
 
-	parseAndCheckOptions := &sema_utils.ParseAndCheckOptions{
-		Config: options.CheckerConfig,
-	}
-
 	vmInstance, err := compilerUtils.CompileAndPrepareToInvoke(
 		tb,
 		code,
 		compilerUtils.CompilerAndVMOptions{
 			VMConfig: vmConfig,
 			ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
-				ParseAndCheckOptions: parseAndCheckOptions,
+				ParseAndCheckOptions: options.ParseAndCheckOptions,
 				CompilerConfig:       compilerConfig,
 				CheckerErrorHandler:  options.HandleCheckerError,
 			},
@@ -458,7 +464,18 @@ func ParseCheckAndPrepareWithOptions(
 		return nil, err
 	}
 
-	elaboration := programs[parseAndCheckOptions.Location].DesugaredElaboration
+	var location common.Location
+
+	parseAndCheckOptions := options.ParseAndCheckOptions
+	if parseAndCheckOptions != nil {
+		location = parseAndCheckOptions.Location
+	}
+
+	if location == nil {
+		location = TestLocation
+	}
+
+	elaboration := programs[location].DesugaredElaboration
 
 	return NewVMInvokable(vmInstance, elaboration), nil
 }
@@ -475,10 +492,10 @@ func ParseCheckAndPrepareWithAtreeValidationsDisabled(
 		return ParseCheckAndInterpretWithAtreeValidationsDisabled(tb, code, options)
 	}
 
-	interpreterConfig := options.Config
+	interpreterConfig := options.InterpreterConfig
 	if interpreterConfig == nil {
 		interpreterConfig = &interpreter.Config{}
-		options.Config = interpreterConfig
+		options.InterpreterConfig = interpreterConfig
 	}
 
 	interpreterConfig.AtreeStorageValidationEnabled = false
@@ -506,7 +523,12 @@ func ParseCheckAndInterpretWithOptions(
 	inter *interpreter.Interpreter,
 	err error,
 ) {
-	return ParseCheckAndInterpretWithOptionsAndMemoryMetering(t, code, options, nil)
+	// Atree validation should be disabled for memory metering tests.
+	// Otherwise, validation may also affect the memory consumption.
+	enableAtreeValidations := (options.ParseAndCheckOptions == nil || options.ParseAndCheckOptions.MemoryGauge == nil) &&
+		(options.InterpreterConfig == nil || options.InterpreterConfig.MemoryGauge == nil)
+
+	return parseCheckAndInterpretWithOptionsAndAtreeValidations(t, code, options, enableAtreeValidations)
 }
 
 func ParseCheckAndInterpretWithAtreeValidationsDisabled(
@@ -517,80 +539,40 @@ func ParseCheckAndInterpretWithAtreeValidationsDisabled(
 	inter *interpreter.Interpreter,
 	err error,
 ) {
-	return parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
+	return parseCheckAndInterpretWithOptionsAndAtreeValidations(
 		t,
 		code,
 		options,
-		nil,
 		false,
 	)
 }
 
-func ParseCheckAndInterpretWithMemoryMetering(
-	t testing.TB,
-	code string,
-	memoryGauge common.MemoryGauge,
-) *interpreter.Interpreter {
-
-	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.InterpreterPanicFunction)
-
-	inter, err := ParseCheckAndInterpretWithOptionsAndMemoryMetering(
-		t,
-		code,
-		ParseCheckAndInterpretOptions{
-			CheckerConfig: &sema.Config{
-				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-					return baseValueActivation
-				},
-			},
-		},
-		memoryGauge,
-	)
-	require.NoError(t, err)
-	return inter
-}
-
-func ParseCheckAndInterpretWithOptionsAndMemoryMetering(
+func parseCheckAndInterpretWithOptionsAndAtreeValidations(
 	t testing.TB,
 	code string,
 	options ParseCheckAndInterpretOptions,
-	memoryGauge common.MemoryGauge,
-) (
-	inter *interpreter.Interpreter,
-	err error,
-) {
-
-	// Atree validation should be disabled for memory metering tests.
-	// Otherwise, validation may also affect the memory consumption.
-	enableAtreeValidations := memoryGauge == nil
-
-	return parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
-		t,
-		code,
-		options,
-		memoryGauge,
-		enableAtreeValidations,
-	)
-}
-
-func parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
-	t testing.TB,
-	code string,
-	options ParseCheckAndInterpretOptions,
-	memoryGauge common.MemoryGauge,
 	enableAtreeValidations bool,
 ) (
 	inter *interpreter.Interpreter,
 	err error,
 ) {
 
-	checker, err := sema_utils.ParseAndCheckWithOptionsAndMemoryMetering(t,
+	var memoryGauge common.MemoryGauge
+	if options.InterpreterConfig != nil {
+		memoryGauge = options.InterpreterConfig.MemoryGauge
+	}
+	if memoryGauge == nil && options.ParseAndCheckOptions != nil {
+		memoryGauge = options.ParseAndCheckOptions.MemoryGauge
+	}
+
+	var parseAndCheckOptions ParseAndCheckOptions
+	if options.ParseAndCheckOptions != nil {
+		parseAndCheckOptions = *options.ParseAndCheckOptions
+	}
+
+	checker, err := ParseAndCheckWithOptions(t,
 		code,
-		sema_utils.ParseAndCheckOptions{
-			Config: options.CheckerConfig,
-		},
-		memoryGauge,
+		parseAndCheckOptions,
 	)
 
 	if options.HandleCheckerError != nil {
@@ -610,8 +592,8 @@ func parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
 	var uuid uint64 = 0
 
 	var config interpreter.Config
-	if options.Config != nil {
-		config = *options.Config
+	if options.InterpreterConfig != nil {
+		config = *options.InterpreterConfig
 	}
 
 	if enableAtreeValidations {
@@ -630,10 +612,6 @@ func parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
 	}
 	if config.Storage == nil {
 		config.Storage = interpreter.NewInMemoryStorage(memoryGauge)
-	}
-
-	if memoryGauge != nil && config.MemoryGauge == nil {
-		config.MemoryGauge = memoryGauge
 	}
 
 	inter, err = interpreter.NewInterpreter(

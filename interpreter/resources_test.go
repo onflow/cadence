@@ -2366,7 +2366,7 @@ func TestInterpretResourceInterfaceDefaultDestroyEvent(t *testing.T) {
             }
         `,
 		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
 					_ interpreter.LocationRange,
@@ -2445,7 +2445,7 @@ func TestInterpretResourceInterfaceDefaultDestroyEventMultipleInheritance(t *tes
             }
         `,
 		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
 					_ interpreter.LocationRange,
@@ -2522,7 +2522,7 @@ func TestInterpretResourceInterfaceDefaultDestroyEventIndirectInheritance(t *tes
             }
         `,
 		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
 					_ interpreter.LocationRange,
@@ -2595,7 +2595,7 @@ func TestInterpretResourceInterfaceDefaultDestroyEventNoCompositeEvent(t *testin
             }
         `,
 		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
 					_ interpreter.LocationRange,
@@ -2671,7 +2671,7 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
 						_ interpreter.LocationRange,
@@ -2737,7 +2737,7 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
 						_ interpreter.LocationRange,
@@ -2793,7 +2793,7 @@ func TestInterpretDefaultDestroyEventArgumentScoping(t *testing.T) {
             }
         `,
 		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
 					_ interpreter.LocationRange,
