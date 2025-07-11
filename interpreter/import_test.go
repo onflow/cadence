@@ -72,6 +72,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 		Type:            fooType,
 	})
 
+	// NOTE: virtual imports are not supported by the compiler/VM
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{

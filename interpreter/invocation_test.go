@@ -36,6 +36,7 @@ func TestInterpretFunctionInvocationCheckArgumentTypes(t *testing.T) {
 
 	t.Parallel()
 
+	// TODO: check argument types in the VM
 	inter := parseCheckAndInterpret(t, `
        fun test(_ x: Int): Int {
            return x
@@ -82,6 +83,8 @@ func TestInterpretSelfDeclaration(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, checkFunction)
 
+		// NOTE: test only applies to the interpreter,
+		// the VM does not provide a way to check the caller's self
 		inter, err := parseCheckAndInterpretWithOptions(
 			t,
 			code,
@@ -148,7 +151,7 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(n: Int?): Int? {
 		  return n.map(fun(n: Int): Int {
 			  return n + 1
@@ -170,13 +173,33 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 		interpreter.EmptyLocationRange,
 	)
 
-	_, err := interpreter.InvokeFunction(
-		inter,
-		test,
-		invocation,
-	)
-	RequireError(t, err)
+	if *compile {
+		func() {
+			defer func() {
+				recoverErr := recover()
+				require.IsType(t, &runtime.TypeAssertionError{}, recoverErr)
+				require.ErrorContains(
+					t,
+					recoverErr.(error),
+					"interface conversion: interpreter.UIntValue is not interpreter.OptionalValue",
+				)
+			}()
 
-	var memberAccessTypeError *interpreter.MemberAccessTypeError
-	require.ErrorAs(t, err, &memberAccessTypeError)
+			_, _ = interpreter.InvokeFunction(
+				inter,
+				test,
+				invocation,
+			)
+		}()
+	} else {
+		_, err := interpreter.InvokeFunction(
+			inter,
+			test,
+			invocation,
+		)
+		RequireError(t, err)
+
+		var memberAccessTypeError *interpreter.MemberAccessTypeError
+		require.ErrorAs(t, err, &memberAccessTypeError)
+	}
 }

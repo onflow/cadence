@@ -2638,6 +2638,7 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
 		var eventTypes []*sema.CompositeType
 		var eventsFields [][]interpreter.Value
 
+		// TODO: requires support for attachments in the VM
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
                 resource R {
@@ -2711,6 +2712,7 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
 		var eventTypes []*sema.CompositeType
 		var eventsFields [][]interpreter.Value
 
+		// TODO: requires support for attachments in the VM
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
                 contract base {
@@ -3434,6 +3436,7 @@ func TestInterpretInvalidatingAttachmentLoopedReference(t *testing.T) {
 
 	t.Parallel()
 
+	// TODO: requires support for attachments in the VM
 	inter := parseCheckAndInterpret(t, `
 		// Victim code starts
 		resource Vault {
