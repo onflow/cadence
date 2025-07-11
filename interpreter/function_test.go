@@ -365,12 +365,14 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 		return parseCheckAndPrepareWithOptions(t,
 			code,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},

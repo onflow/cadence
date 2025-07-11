@@ -102,7 +102,7 @@ func TestCheckAssert(t *testing.T) {
 		return ParseAndCheckWithOptions(t,
 			code,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 						return baseValueActivation
 					},
@@ -220,7 +220,7 @@ func TestCheckPanic(t *testing.T) {
 		return ParseAndCheckWithOptions(t,
 			code,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 						return baseValueActivation
 					},

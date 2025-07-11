@@ -415,7 +415,7 @@ func TestCheckTransactionExecuteScope(t *testing.T) {
           }
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				AccessCheckMode: sema.AccessCheckModeStrict,
 			},
 		},

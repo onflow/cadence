@@ -32,6 +32,7 @@ import (
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 type containsTestCase struct {
@@ -394,12 +395,14 @@ func TestInclusiveRange(t *testing.T) {
 
 			inter, err := parseCheckAndPrepareWithOptions(t, code,
 				ParseCheckAndInterpretOptions{
-					CheckerConfig: &sema.Config{
-						BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
-							return baseValueActivation
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						CheckerConfig: &sema.Config{
+							BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+								return baseValueActivation
+							},
 						},
 					},
-					Config: &interpreter.Config{
+					InterpreterConfig: &interpreter.Config{
 						BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
 							return baseActivation
 						},
@@ -509,12 +512,14 @@ func TestInclusiveRangeConstructionInvalid(t *testing.T) {
 
 			_, err := parseCheckAndPrepareWithOptions(t, code,
 				ParseCheckAndInterpretOptions{
-					CheckerConfig: &sema.Config{
-						BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
-							return baseValueActivation
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						CheckerConfig: &sema.Config{
+							BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+								return baseValueActivation
+							},
 						},
 					},
-					Config: &interpreter.Config{
+					InterpreterConfig: &interpreter.Config{
 						BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
 							return baseActivation
 						},

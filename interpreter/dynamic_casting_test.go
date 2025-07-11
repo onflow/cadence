@@ -34,6 +34,7 @@ import (
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 // dynamic casting operation -> returns optional
@@ -1483,12 +1484,14 @@ func TestInterpretDynamicCastingInclusiveRange(t *testing.T) {
 	interpreter.Declare(baseActivation, stdlib.InterpreterInclusiveRangeConstructor)
 
 	options := ParseCheckAndInterpretOptions{
-		CheckerConfig: &sema.Config{
-			BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
-				return baseValueActivation
+		ParseAndCheckOptions: &ParseAndCheckOptions{
+			CheckerConfig: &sema.Config{
+				BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
 			},
 		},
-		Config: &interpreter.Config{
+		InterpreterConfig: &interpreter.Config{
 			BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
 				return baseActivation
 			},
@@ -3457,12 +3460,14 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 			interpreter.Declare(baseActivation, capabilityValueDeclaration)
 
 			options := ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},

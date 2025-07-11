@@ -138,8 +138,8 @@ func compiledFTTransfer(tb testing.TB) {
 			location,
 			ParseCheckAndCompileOptions{
 				ParseAndCheckOptions: &ParseAndCheckOptions{
-					Location: location,
-					Config:   semaConfig,
+					Location:      location,
+					CheckerConfig: semaConfig,
 				},
 				CompilerConfig: compilerConfig,
 			},
@@ -307,8 +307,8 @@ func compiledFTTransfer(tb testing.TB) {
 			txLocation,
 			ParseCheckAndCompileOptions{
 				ParseAndCheckOptions: &ParseAndCheckOptions{
-					Location: txLocation,
-					Config:   semaConfig,
+					Location:      txLocation,
+					CheckerConfig: semaConfig,
 				},
 				CompilerConfig: compilerConfig,
 			},
@@ -339,8 +339,8 @@ func compiledFTTransfer(tb testing.TB) {
 		txLocation,
 		ParseCheckAndCompileOptions{
 			ParseAndCheckOptions: &ParseAndCheckOptions{
-				Location: txLocation,
-				Config:   semaConfig,
+				Location:      txLocation,
+				CheckerConfig: semaConfig,
 			},
 			CompilerConfig: compilerConfig,
 		},
@@ -387,8 +387,8 @@ func compiledFTTransfer(tb testing.TB) {
 		txLocation,
 		ParseCheckAndCompileOptions{
 			ParseAndCheckOptions: &ParseAndCheckOptions{
-				Location: txLocation,
-				Config:   semaConfig,
+				Location:      txLocation,
+				CheckerConfig: semaConfig,
 			},
 			CompilerConfig: compilerConfig,
 		},
@@ -459,8 +459,8 @@ func compiledFTTransfer(tb testing.TB) {
 			scriptLocation,
 			ParseCheckAndCompileOptions{
 				ParseAndCheckOptions: &ParseAndCheckOptions{
-					Location: scriptLocation,
-					Config:   semaConfig,
+					Location:      scriptLocation,
+					CheckerConfig: semaConfig,
 				},
 				CompilerConfig: compilerConfig,
 			},

@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -29,6 +30,7 @@ import (
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestInterpretFunctionInvocationCheckArgumentTypes(t *testing.T) {
@@ -81,20 +83,26 @@ func TestInterpretSelfDeclaration(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, checkFunction)
 
-		inter, err := parseCheckAndInterpretWithOptions(t, code, ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
-				Storage: newUnmeteredInMemoryStorage(),
-				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
-					return baseActivation
+		inter, err := parseCheckAndInterpretWithOptions(
+			t,
+			code,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+						AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
+					},
+				},
+				InterpreterConfig: &interpreter.Config{
+					Storage: newUnmeteredInMemoryStorage(),
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
-			CheckerConfig: &sema.Config{
-				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-					return baseValueActivation
-				},
-				AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
-			},
-		})
+		)
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
