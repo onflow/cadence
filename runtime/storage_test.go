@@ -70,7 +70,7 @@ func withWritesToStorage(
 		var slabIndex atree.SlabIndex
 		binary.BigEndian.PutUint32(slabIndex[:], randomIndex)
 
-		storage.AccountStorageV2.SetNewAccountStorageMapSlabIndex(address, slabIndex)
+		storage.AccountStorage.SetNewAccountStorageMapSlabIndex(address, slabIndex)
 	}
 
 	handler(storage, inter)
@@ -7307,13 +7307,10 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 		inter := NewTestInterpreterWithStorage(t, storage)
 
 		// Get non-existent domain storage map
-		const createIfNotExists = false
 		nonExistingDomain := common.PathDomainPublic.StorageDomain()
+		const createIfNotExists = false
 		domainStorageMap := storage.GetDomainStorageMap(inter, address, nonExistingDomain, createIfNotExists)
 		require.Nil(t, domainStorageMap)
-
-		// TODO: remove migration
-		// storage.ScheduleV2MigrationForModifiedAccounts()
 
 		// Commit changes
 		const commitContractUpdates = false
@@ -7361,18 +7358,13 @@ func TestRuntimeStorageForUnmigratedAccount(t *testing.T) {
 			inter := NewTestInterpreterWithStorage(t, storage)
 
 			// Read existing domain storage map
-			for domain, domainValues := range accountValues {
-				domainStorageMap := storage.GetDomainStorageMap(inter, address, domain, tc.createIfNotExists)
-				require.NotNil(t, domainStorageMap)
-				require.Equal(t, uint64(len(domainValues)), domainStorageMap.Count())
-
-				// Read elements to domain storage map
-				for k, expectedV := range domainValues {
-					v := domainStorageMap.ReadValue(nil, k)
-					ev, ok := v.(interpreter.EquatableValue)
-					require.True(t, ok)
-					require.True(t, ev.Equal(inter, interpreter.EmptyLocationRange, expectedV))
-				}
+			for domain := range accountValues {
+				require.PanicsWithValue(t,
+					AccountStorageFormatV1Error{Address: address},
+					func() {
+						storage.GetDomainStorageMap(inter, address, domain, tc.createIfNotExists)
+					},
+				)
 			}
 
 			// Commit changes
@@ -8083,20 +8075,29 @@ func TestGetDomainStorageMapRegisterReadsForV1Account(t *testing.T) {
 
 			inter := NewTestInterpreterWithStorage(t, storage)
 
-			domainStorageMap := storage.GetDomainStorageMap(inter, address, tc.domain, tc.createIfNotExists)
-			require.Equal(t, tc.expectedDomainStorageMapIsNil, domainStorageMap == nil)
-			require.Equal(t, tc.expectedReadsFor1stGetDomainStorageMapCall, ledgerReads)
+			perform := func() {
 
-			ledgerReads = ledgerReads[:0]
+				domainStorageMap := storage.GetDomainStorageMap(inter, address, tc.domain, tc.createIfNotExists)
+				require.Equal(t, tc.expectedDomainStorageMapIsNil, domainStorageMap == nil)
+				require.Equal(t, tc.expectedReadsFor1stGetDomainStorageMapCall, ledgerReads)
 
-			domainStorageMap = storage.GetDomainStorageMap(inter, address, tc.domain, tc.createIfNotExists)
-			require.Equal(t, tc.expectedDomainStorageMapIsNil, domainStorageMap == nil)
-			require.Equal(t, tc.expectedReadsFor2ndGetDomainStorageMapCall, ledgerReads)
+				ledgerReads = ledgerReads[:0]
 
-			// Check underlying ledger reads
-			require.Equal(t, len(ledgerReadsSet), len(tc.expectedReadsSet))
-			for k := range ledgerReadsSet {
-				require.Contains(t, tc.expectedReadsSet, k)
+				domainStorageMap = storage.GetDomainStorageMap(inter, address, tc.domain, tc.createIfNotExists)
+				require.Equal(t, tc.expectedDomainStorageMapIsNil, domainStorageMap == nil)
+				require.Equal(t, tc.expectedReadsFor2ndGetDomainStorageMapCall, ledgerReads)
+
+				// Check underlying ledger reads
+				require.Equal(t, len(ledgerReadsSet), len(tc.expectedReadsSet))
+				for k := range ledgerReadsSet {
+					require.Contains(t, tc.expectedReadsSet, k)
+				}
+			}
+
+			if !tc.createIfNotExists && tc.expectedDomainStorageMapIsNil {
+				perform()
+			} else {
+				require.PanicsWithValue(t, AccountStorageFormatV1Error{Address: address}, perform)
 			}
 		})
 	}
@@ -8365,227 +8366,6 @@ func TestGetDomainStorageMapRegisterReadsForV2Account(t *testing.T) {
 			require.Equal(t, len(ledgerReadsSet), len(tc.expectedReadsSet))
 			for k := range ledgerReadsSet {
 				require.Contains(t, tc.expectedReadsSet, k)
-			}
-		})
-	}
-}
-
-func TestAccountStorageFormatForNonExistingAccount(t *testing.T) {
-
-	t.Parallel()
-
-	address := common.MustBytesToAddress([]byte{0x1})
-
-	testCases := []struct {
-		name   string
-		format StorageFormat
-	}{
-		{
-			name:   "non-existing account",
-			format: StorageFormatUnknown,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			ledger := NewTestLedger(nil, nil)
-
-			storage := NewStorage(
-				ledger,
-				nil,
-				StorageConfig{},
-			)
-
-			for range 2 {
-				format := storage.AccountStorageFormat(address)
-				require.Equal(t, tc.format, format)
-			}
-		})
-	}
-}
-
-func TestAccountStorageFormatForV1Account(t *testing.T) {
-	t.Parallel()
-
-	address := common.MustBytesToAddress([]byte{0x1})
-
-	createV1AccountWithDomain := func(
-		address common.Address,
-		domain common.StorageDomain,
-	) (storedValues map[string][]byte, StorageIndices map[string]uint64) {
-		ledger := NewTestLedger(nil, nil)
-
-		persistentSlabStorage := NewPersistentSlabStorage(ledger, nil)
-
-		orderedMap, err := atree.NewMap(
-			persistentSlabStorage,
-			atree.Address(address),
-			atree.NewDefaultDigesterBuilder(),
-			interpreter.EmptyTypeInfo{},
-		)
-		require.NoError(t, err)
-
-		slabIndex := orderedMap.SlabID().Index()
-
-		for i := range 3 {
-
-			key := interpreter.StringStorageMapKey(strconv.Itoa(i))
-
-			value := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
-
-			existingStorable, err := orderedMap.Set(
-				key.AtreeValueCompare,
-				key.AtreeValueHashInput,
-				key.AtreeValue(),
-				value,
-			)
-			require.NoError(t, err)
-			require.Nil(t, existingStorable)
-		}
-
-		// Commit domain storage map
-		err = persistentSlabStorage.FastCommit(runtime.NumCPU())
-		require.NoError(t, err)
-
-		// Create domain register
-		err = ledger.SetValue(address[:], []byte(domain.Identifier()), slabIndex[:])
-		require.NoError(t, err)
-
-		return ledger.StoredValues, ledger.StorageIndices
-	}
-
-	testCases := []struct {
-		name   string
-		format StorageFormat
-	}{
-		{
-			name:   "v1 account",
-			format: StorageFormatV1,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-
-			storedValues, storedIndices := createV1AccountWithDomain(
-				address,
-				common.StorageDomainPathStorage,
-			)
-
-			ledger := NewTestLedgerWithData(nil, nil, storedValues, storedIndices)
-
-			storage := NewStorage(
-				ledger,
-				nil,
-				StorageConfig{},
-			)
-
-			for range 2 {
-				format := storage.AccountStorageFormat(address)
-				require.Equal(t, tc.format, format)
-			}
-		})
-	}
-}
-
-func TestAccountStorageFormatForV2Account(t *testing.T) {
-	t.Parallel()
-
-	address := common.MustBytesToAddress([]byte{0x1})
-
-	createV2AccountWithDomain := func(
-		address common.Address,
-		domain common.StorageDomain,
-	) (storedValues map[string][]byte, StorageIndices map[string]uint64) {
-		ledger := NewTestLedger(nil, nil)
-
-		persistentSlabStorage := NewPersistentSlabStorage(ledger, nil)
-
-		accountOrderedMap, err := atree.NewMap(
-			persistentSlabStorage,
-			atree.Address(address),
-			atree.NewDefaultDigesterBuilder(),
-			interpreter.EmptyTypeInfo{},
-		)
-		require.NoError(t, err)
-
-		slabIndex := accountOrderedMap.SlabID().Index()
-
-		domainOrderedMap, err := atree.NewMap(
-			persistentSlabStorage,
-			atree.Address(address),
-			atree.NewDefaultDigesterBuilder(),
-			interpreter.EmptyTypeInfo{},
-		)
-		require.NoError(t, err)
-
-		domainKey := interpreter.Uint64StorageMapKey(domain)
-
-		existingDomain, err := accountOrderedMap.Set(
-			domainKey.AtreeValueCompare,
-			domainKey.AtreeValueHashInput,
-			domainKey.AtreeValue(),
-			domainOrderedMap,
-		)
-		require.NoError(t, err)
-		require.Nil(t, existingDomain)
-
-		for i := range 3 {
-
-			key := interpreter.StringStorageMapKey(strconv.Itoa(i))
-
-			value := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
-
-			existingStorable, err := domainOrderedMap.Set(
-				key.AtreeValueCompare,
-				key.AtreeValueHashInput,
-				key.AtreeValue(),
-				value,
-			)
-			require.NoError(t, err)
-			require.Nil(t, existingStorable)
-		}
-
-		// Commit domain storage map
-		err = persistentSlabStorage.FastCommit(runtime.NumCPU())
-		require.NoError(t, err)
-
-		// Create account register
-		err = ledger.SetValue(address[:], []byte(AccountStorageKey), slabIndex[:])
-		require.NoError(t, err)
-
-		return ledger.StoredValues, ledger.StorageIndices
-	}
-
-	testCases := []struct {
-		name   string
-		format StorageFormat
-	}{
-		{
-			name:   "v2 account",
-			format: StorageFormatV2,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-
-			storedValues, storedIndices := createV2AccountWithDomain(
-				address,
-				common.StorageDomainPathStorage,
-			)
-
-			ledger := NewTestLedgerWithData(nil, nil, storedValues, storedIndices)
-
-			storage := NewStorage(
-				ledger,
-				nil,
-				StorageConfig{},
-			)
-
-			for range 2 {
-				format := storage.AccountStorageFormat(address)
-				require.Equal(t, tc.format, format)
 			}
 		})
 	}

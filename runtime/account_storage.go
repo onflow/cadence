@@ -28,7 +28,7 @@ import (
 	"github.com/onflow/cadence/interpreter"
 )
 
-type AccountStorageV2 struct {
+type AccountStorage struct {
 	ledger      atree.Ledger
 	slabStorage atree.SlabStorage
 	memoryGauge common.MemoryGauge
@@ -41,19 +41,19 @@ type AccountStorageV2 struct {
 	newAccountStorageMapSlabIndices map[common.Address]atree.SlabIndex
 }
 
-func NewAccountStorageV2(
+func NewAccountStorage(
 	ledger atree.Ledger,
 	slabStorage atree.SlabStorage,
 	memoryGauge common.MemoryGauge,
-) *AccountStorageV2 {
-	return &AccountStorageV2{
+) *AccountStorage {
+	return &AccountStorage{
 		ledger:      ledger,
 		slabStorage: slabStorage,
 		memoryGauge: memoryGauge,
 	}
 }
 
-func (s *AccountStorageV2) GetDomainStorageMap(
+func (s *AccountStorage) GetDomainStorageMap(
 	storageMutationTracker interpreter.StorageMutationTracker,
 	address common.Address,
 	domain common.StorageDomain,
@@ -80,7 +80,7 @@ func (s *AccountStorageV2) GetDomainStorageMap(
 }
 
 // getAccountStorageMap returns AccountStorageMap if exists, or nil otherwise.
-func (s *AccountStorageV2) getAccountStorageMap(
+func (s *AccountStorage) getAccountStorageMap(
 	address common.Address,
 ) (
 	accountStorageMap *interpreter.AccountStorageMap,
@@ -118,7 +118,7 @@ func (s *AccountStorageV2) getAccountStorageMap(
 	return
 }
 
-func (s *AccountStorageV2) cacheAccountStorageMap(
+func (s *AccountStorage) cacheAccountStorageMap(
 	address common.Address,
 	accountStorageMap *interpreter.AccountStorageMap,
 ) {
@@ -128,7 +128,7 @@ func (s *AccountStorageV2) cacheAccountStorageMap(
 	s.cachedAccountStorageMaps[address] = accountStorageMap
 }
 
-func (s *AccountStorageV2) storeNewAccountStorageMap(
+func (s *AccountStorage) storeNewAccountStorageMap(
 	address common.Address,
 ) *interpreter.AccountStorageMap {
 
@@ -153,7 +153,7 @@ func (s *AccountStorageV2) storeNewAccountStorageMap(
 	return accountStorageMap
 }
 
-func (s *AccountStorageV2) SetNewAccountStorageMapSlabIndex(
+func (s *AccountStorage) SetNewAccountStorageMapSlabIndex(
 	address common.Address,
 	slabIndex atree.SlabIndex,
 ) {
@@ -163,7 +163,7 @@ func (s *AccountStorageV2) SetNewAccountStorageMapSlabIndex(
 	s.newAccountStorageMapSlabIndices[address] = slabIndex
 }
 
-func (s *AccountStorageV2) commit() error {
+func (s *AccountStorage) commit() error {
 	switch len(s.newAccountStorageMapSlabIndices) {
 	case 0:
 		// Nothing to commit.
@@ -234,7 +234,7 @@ func (s *AccountStorageV2) commit() error {
 	return nil
 }
 
-func (s *AccountStorageV2) writeAccountStorageSlabIndex(
+func (s *AccountStorage) writeAccountStorageSlabIndex(
 	address common.Address,
 	slabIndex atree.SlabIndex,
 ) error {
@@ -303,7 +303,22 @@ func hasAccountStorageMap(
 	return registerExists, nil
 }
 
-func (s *AccountStorageV2) cachedRootSlabIDs() []atree.SlabID {
+// hasDomainRegister returns true if given account has given domain register.
+// NOTE: account storage format v1 has domain registers.
+func hasDomainRegister(ledger atree.Ledger, address common.Address, domain common.StorageDomain) (bool, error) {
+	_, domainExists, err := readSlabIndexFromRegister(
+		ledger,
+		address,
+		[]byte(domain.Identifier()),
+	)
+	if err != nil {
+		return false, err
+	}
+
+	return domainExists, nil
+}
+
+func (s *AccountStorage) cachedRootSlabIDs() []atree.SlabID {
 
 	var slabIDs []atree.SlabID
 
