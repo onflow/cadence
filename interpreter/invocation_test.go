@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	goruntime "runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -177,7 +178,7 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 		func() {
 			defer func() {
 				recoverErr := recover()
-				require.IsType(t, &runtime.TypeAssertionError{}, recoverErr)
+				require.IsType(t, &goruntime.TypeAssertionError{}, recoverErr)
 				require.ErrorContains(
 					t,
 					recoverErr.(error),
