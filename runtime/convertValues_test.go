@@ -1757,7 +1757,7 @@ func TestRuntimeExportEventValue(t *testing.T) {
 			nil,
 		)
 
-		actual := exportEventFromScript(t, script)
+		actual := exportEventFromScript(t, script, *compile)
 		expected := cadence.NewEvent([]cadence.Value{
 			cadence.NewInt(42),
 		}).WithType(fooEventType)
@@ -1793,7 +1793,7 @@ func TestRuntimeExportEventValue(t *testing.T) {
 			nil,
 		)
 
-		actual := exportEventFromScript(t, script)
+		actual := exportEventFromScript(t, script, *compile)
 		expected := cadence.NewEvent([]cadence.Value{
 			cadence.NewInt(42),
 		}).WithType(fooEventType)
@@ -1802,7 +1802,7 @@ func TestRuntimeExportEventValue(t *testing.T) {
 	})
 }
 
-func exportEventFromScript(t *testing.T, script string) cadence.Event {
+func exportEventFromScript(t *testing.T, script string, useVM bool) cadence.Event {
 	rt := NewTestRuntime()
 
 	var events []cadence.Event
@@ -1821,8 +1821,7 @@ func exportEventFromScript(t *testing.T, script string) cadence.Event {
 		Context{
 			Interface: inter,
 			Location:  common.ScriptLocation{},
-			// TODO: requires InclusiveRange support in the VM
-			//UseVM:     *compile,
+			UseVM:     useVM,
 		},
 	)
 
@@ -1844,8 +1843,7 @@ func exportValueFromScript(t *testing.T, script string) cadence.Value {
 		Context{
 			Interface: &TestRuntimeInterface{},
 			Location:  common.ScriptLocation{},
-			// TODO: requires InclusiveRange support in the VM
-			//UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 
@@ -2477,7 +2475,7 @@ var exportJsonDeterministicExpected string
 func TestRuntimeExportJsonDeterministic(t *testing.T) {
 	t.Parallel()
 
-	// exported order of field in a dictionary depends on the execution ,
+	// exported order of field in a dictionary depends on the execution,
 	// however the deterministic code should generate deterministic type
 
 	script := `
@@ -2515,7 +2513,8 @@ func TestRuntimeExportJsonDeterministic(t *testing.T) {
         }
     `
 
-	event := exportEventFromScript(t, script)
+	// TODO: investigate why execution with VM does not produce the same order
+	event := exportEventFromScript(t, script, false)
 
 	bytes, err := json.Encode(event)
 
@@ -2646,8 +2645,7 @@ func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
-			// TODO: requires InclusiveRange support in the VM
-			//UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 

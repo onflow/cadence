@@ -626,7 +626,7 @@ func testAccountWithErrorHandlerWithCompiler(
 
 		programs := map[common.Location]*CompiledProgram{}
 		parseAndCheckOptions := &ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				LocationHandler: NewSingleIdentifierLocationResolver(t),
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
@@ -680,11 +680,14 @@ func testAccountWithErrorHandlerWithCompiler(
 		storage = vmConfig.Storage()
 	} else {
 
+		// NOTE: test code for VM above
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			code,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &checkerConfig,
-				Config: &interpreter.Config{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &checkerConfig,
+				},
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},

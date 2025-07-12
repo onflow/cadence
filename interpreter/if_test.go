@@ -37,6 +37,8 @@ func TestInterpretIfStatement(t *testing.T) {
 	t.Run("with errors", func(t *testing.T) {
 		t.Parallel()
 
+		// NOTE: invalid code not supported by compiler,
+		// tests without errors are in the next subtest "without errors"
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
            fun testTrue(): Int {

@@ -663,7 +663,7 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 					tearDownCode,
 				),
 				ParseCheckAndInterpretOptions{
-					Config: &interpreter.Config{
+					InterpreterConfig: &interpreter.Config{
 						ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 						OnEventEmitted: func(
 							_ interpreter.ValueExportContext,
@@ -1235,7 +1235,7 @@ func TestInterpretIsInstanceCheckInPreCondition(t *testing.T) {
 				condition,
 			),
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 				},
 			},
@@ -1345,12 +1345,14 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
           }
         `,
 		ParseCheckAndInterpretOptions{
-			CheckerConfig: &sema.Config{
-				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-					return baseValueActivation
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 			},
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 					return baseActivation
 				},

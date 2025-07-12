@@ -461,7 +461,7 @@ func TestCheckNativeFunctionDeclaration(t *testing.T) {
 				ParseOptions: parser.Config{
 					NativeModifierEnabled: true,
 				},
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					AllowNativeDeclarations: false,
 				},
 			},
@@ -484,7 +484,7 @@ func TestCheckNativeFunctionDeclaration(t *testing.T) {
 				ParseOptions: parser.Config{
 					NativeModifierEnabled: true,
 				},
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					AllowNativeDeclarations: true,
 				},
 			},
@@ -507,7 +507,7 @@ func TestCheckNativeFunctionDeclaration(t *testing.T) {
 				ParseOptions: parser.Config{
 					NativeModifierEnabled: true,
 				},
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					AllowNativeDeclarations: true,
 				},
 			},
@@ -532,7 +532,7 @@ func TestCheckNativeFunctionDeclaration(t *testing.T) {
 				ParseOptions: parser.Config{
 					NativeModifierEnabled: true,
 				},
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					AllowNativeDeclarations: true,
 				},
 			},
@@ -726,7 +726,7 @@ func TestCheckGenericFunctionSubtyping(t *testing.T) {
 		return ParseAndCheckWithOptions(tt,
 			code,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 						return baseValueActivation
 					},
@@ -917,7 +917,7 @@ func TestCheckGenericFunctionSubtyping(t *testing.T) {
                 func = bar      // fun<T>(): Path
 		    }`,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 						return baseValueActivation
 					},

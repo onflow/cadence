@@ -44,7 +44,7 @@ func TestCheckErrorShortCircuiting(t *testing.T) {
               let x: Type<X<X<X>>>? = nil
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					ErrorShortCircuitingEnabled: true,
 				},
 			},
@@ -72,7 +72,7 @@ func TestCheckErrorShortCircuiting(t *testing.T) {
                let b = B
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					ErrorShortCircuitingEnabled: true,
 					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 
@@ -83,7 +83,7 @@ func TestCheckErrorShortCircuiting(t *testing.T) {
                             `,
 							ParseAndCheckOptions{
 								Location: ImportedLocation,
-								Config: &sema.Config{
+								CheckerConfig: &sema.Config{
 									ErrorShortCircuitingEnabled: true,
 								},
 							},

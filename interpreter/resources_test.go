@@ -2366,7 +2366,7 @@ func TestInterpretResourceInterfaceDefaultDestroyEvent(t *testing.T) {
             }
         `,
 		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
 					_ interpreter.LocationRange,
@@ -2445,7 +2445,7 @@ func TestInterpretResourceInterfaceDefaultDestroyEventMultipleInheritance(t *tes
             }
         `,
 		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
 					_ interpreter.LocationRange,
@@ -2522,7 +2522,7 @@ func TestInterpretResourceInterfaceDefaultDestroyEventIndirectInheritance(t *tes
             }
         `,
 		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
 					_ interpreter.LocationRange,
@@ -2595,7 +2595,7 @@ func TestInterpretResourceInterfaceDefaultDestroyEventNoCompositeEvent(t *testin
             }
         `,
 		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
 					_ interpreter.LocationRange,
@@ -2638,6 +2638,7 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
 		var eventTypes []*sema.CompositeType
 		var eventsFields [][]interpreter.Value
 
+		// TODO: requires support for attachments in the VM
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
                 resource R {
@@ -2671,7 +2672,7 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
 						_ interpreter.LocationRange,
@@ -2711,6 +2712,7 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
 		var eventTypes []*sema.CompositeType
 		var eventsFields [][]interpreter.Value
 
+		// TODO: requires support for attachments in the VM
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
                 contract base {
@@ -2737,7 +2739,7 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
 						_ interpreter.LocationRange,
@@ -2793,7 +2795,7 @@ func TestInterpretDefaultDestroyEventArgumentScoping(t *testing.T) {
             }
         `,
 		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
 					_ interpreter.LocationRange,
@@ -3434,6 +3436,7 @@ func TestInterpretInvalidatingAttachmentLoopedReference(t *testing.T) {
 
 	t.Parallel()
 
+	// TODO: requires support for attachments in the VM
 	inter := parseCheckAndInterpret(t, `
 		// Victim code starts
 		resource Vault {
