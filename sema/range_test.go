@@ -64,7 +64,7 @@ func TestCheckRange(t *testing.T) {
           resource _TEST_Baz {}
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				PositionInfoEnabled: true,
 			},
 		},

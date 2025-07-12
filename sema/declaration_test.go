@@ -473,7 +473,7 @@ func TestCheckTopLevelContractRestriction(t *testing.T) {
           contract C {}
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				ValidTopLevelDeclarationsHandler: func(_ common.Location) common.DeclarationKindSet {
 					return common.NewDeclarationKindSet(
 						common.DeclarationKindContract,
@@ -508,7 +508,7 @@ func TestCheckInvalidTopLevelContractRestriction(t *testing.T) {
 			_, err := ParseAndCheckWithOptions(t,
 				code,
 				ParseAndCheckOptions{
-					Config: &sema.Config{
+					CheckerConfig: &sema.Config{
 						ValidTopLevelDeclarationsHandler: func(_ common.Location) common.DeclarationKindSet {
 							return common.NewDeclarationKindSet(
 								common.DeclarationKindContractInterface,

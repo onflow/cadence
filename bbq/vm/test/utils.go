@@ -516,7 +516,7 @@ func CompileAndInvokeWithLogs(
 		CompilerAndVMOptions{
 			ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
 				ParseAndCheckOptions: &ParseAndCheckOptions{
-					Config: &sema.Config{
+					CheckerConfig: &sema.Config{
 						LocationHandler: SingleIdentifierLocationResolver(t),
 						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 							return activation
@@ -590,7 +590,7 @@ func CompileAndInvokeWithConditionLogs(
 		CompilerAndVMOptions{
 			ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
 				ParseAndCheckOptions: &ParseAndCheckOptions{
-					Config: &sema.Config{
+					CheckerConfig: &sema.Config{
 						LocationHandler: SingleIdentifierLocationResolver(t),
 						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 							return activation
