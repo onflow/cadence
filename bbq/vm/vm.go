@@ -837,7 +837,9 @@ func opRemoveIndex(vm *VM) {
 		EmptyLocationRange,
 		index,
 	)
-	containerValue.SetKey(
+
+	// Note: Must use `InsertKey` here, not `SetKey`.
+	containerValue.InsertKey(
 		context,
 		EmptyLocationRange,
 		index,
