@@ -1502,22 +1502,102 @@ func (c *Compiler[_, _]) VisitVariableDeclaration(declaration *ast.VariableDecla
 			return
 		}
 
-		// Compile the value expression *before* declaring the variable.
-		c.compileExpression(declaration.Value)
-
 		varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(declaration)
-		c.emitTransferAndConvert(varDeclTypes.TargetType)
+		targetType := varDeclTypes.TargetType
 
-		// Before declaring the variable, evaluate and assign the second value.
-		if declaration.SecondValue != nil {
-			c.compileAssignment(
-				declaration.Value,
-				declaration.SecondValue,
-				varDeclTypes.ValueType,
-			)
+		// No second value.
+		firstValue := declaration.Value
+		secondValue := declaration.SecondValue
+		if secondValue == nil {
+			// Compile the value expression *before* declaring the variable.
+			c.compileExpression(firstValue)
+			c.emitTransferAndConvert(targetType)
+
+			// Declare the variable *after* compiling the value expressions.
+			c.emitDeclareLocal(name)
+			return
 		}
 
-		// Declare the variable *after* compiling the value expressions.
+		// Also has a second value.
+		// The middle expression (i.e: the first value), and its sub expressions,
+		// must only be evaluated only once.
+
+		firstValueType := varDeclTypes.ValueType
+		switch firstValue := firstValue.(type) {
+		case *ast.IdentifierExpression:
+			// Evaluate and transfer first value.
+			c.compileExpression(firstValue)
+			c.emitTransferAndConvert(targetType)
+
+			// Evaluate and transfer second value.
+			c.compileExpression(secondValue)
+			c.emitTransferAndConvert(firstValueType)
+
+			// Store second value in first value's variable.
+			c.emitVariableStore(firstValue.Identifier.Identifier)
+
+		case *ast.MemberExpression:
+			// Evaluate the first value's parent once, and store in a temp-local.
+			c.compileExpression(firstValue.Expression)
+			memberExprParentLocal := c.currentFunction.generateLocalIndex()
+			c.emitSetLocal(memberExprParentLocal)
+
+			// Evaluate the first value. i.e: Get the member value.
+			// Transfer and leave it on the stack.
+			c.emitGetLocal(memberExprParentLocal)
+			c.compileMemberAccess(firstValue)
+			c.emitTransferAndConvert(targetType)
+
+			// Evaluate and transfer second value.
+			// The first value becomes the target.
+			c.emitGetLocal(memberExprParentLocal)
+			c.compileExpression(secondValue)
+			c.emitTransferAndConvert(firstValueType)
+
+			// Assign the second value to the first value's field.
+			memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(firstValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			memberAccessedTypeIndex := c.getOrAddType(memberAccessInfo.AccessedType)
+
+			constant := c.addStringConst(firstValue.Identifier.Identifier)
+			c.emit(opcode.InstructionSetField{
+				FieldName:    constant.index,
+				AccessedType: memberAccessedTypeIndex,
+			})
+
+		case *ast.IndexExpression:
+			// First evaluate the sub-expressions of index expression once, and store them in temp-locals.
+			c.compileExpression(firstValue.TargetExpression)
+			indexExprTargetLocal := c.currentFunction.generateLocalIndex()
+			c.emitSetLocal(indexExprTargetLocal)
+
+			c.compileExpression(firstValue.IndexingExpression)
+			indexExprIndexLocal := c.currentFunction.generateLocalIndex()
+			c.emitSetLocal(indexExprIndexLocal)
+
+			// Evaluate the first value . i.e: index expression.
+			// Transfer and leave it on the stack.
+			c.emitGetLocal(indexExprTargetLocal)
+			c.emitGetLocal(indexExprIndexLocal)
+			c.compileIndexAccess(firstValue)
+			c.emitTransferAndConvert(targetType)
+
+			// Evaluate and transfer second value.
+			// The first value becomes the target.
+			c.emitGetLocal(indexExprTargetLocal)
+			c.emitGetLocal(indexExprIndexLocal)
+			c.compileExpression(secondValue)
+			c.emitTransferAndConvert(firstValueType)
+			c.emit(opcode.InstructionSetIndex{})
+
+		default:
+			panic(errors.NewUnreachableError())
+		}
+
+		// Declare the variable *after* compiling both the value expressions.
+		// Assign the first value onto the variable.
 		c.emitDeclareLocal(name)
 	})
 
@@ -2443,6 +2523,8 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 	return
 }
 
+// compileMemberAccess assumes the member-expression's parent (i.e: `a.b` of an expression in the format `a.b.c`)
+// has evaluated and the value is pushed onto the stack.
 func (c *Compiler[_, _]) compileMemberAccess(expression *ast.MemberExpression) {
 
 	identifier := expression.Identifier.Identifier

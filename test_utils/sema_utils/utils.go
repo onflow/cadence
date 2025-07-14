@@ -40,8 +40,9 @@ func ParseAndCheck(t testing.TB, code string) (*sema.Checker, error) {
 }
 
 type ParseAndCheckOptions struct {
+	MemoryGauge      common.MemoryGauge
 	Location         common.Location
-	Config           *sema.Config
+	CheckerConfig    *sema.Config
 	ParseOptions     parser.Config
 	IgnoreParseError bool
 }
@@ -57,21 +58,12 @@ func ParseAndCheckWithOptions(
 	code string,
 	options ParseAndCheckOptions,
 ) (*sema.Checker, error) {
-	return ParseAndCheckWithOptionsAndMemoryMetering(t, code, options, nil)
-}
-
-func ParseAndCheckWithOptionsAndMemoryMetering(
-	t testing.TB,
-	code string,
-	options ParseAndCheckOptions,
-	memoryGauge common.MemoryGauge,
-) (*sema.Checker, error) {
 
 	if options.Location == nil {
 		options.Location = TestLocation
 	}
 
-	program, err := parser.ParseProgram(memoryGauge, []byte(code), options.ParseOptions)
+	program, err := parser.ParseProgram(options.MemoryGauge, []byte(code), options.ParseOptions)
 	if !options.IgnoreParseError && !assert.NoError(t, err) {
 		var sb strings.Builder
 		location := options.Location
@@ -86,7 +78,7 @@ func ParseAndCheckWithOptionsAndMemoryMetering(
 
 	check := func() (*sema.Checker, error) {
 
-		config := options.Config
+		config := options.CheckerConfig
 		if config == nil {
 			config = &sema.Config{}
 		}
@@ -99,7 +91,7 @@ func ParseAndCheckWithOptionsAndMemoryMetering(
 		checker, err := sema.NewChecker(
 			program,
 			options.Location,
-			memoryGauge,
+			options.MemoryGauge,
 			config,
 		)
 		if err != nil {

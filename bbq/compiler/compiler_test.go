@@ -3934,7 +3934,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 			aLocation,
 			ParseCheckAndCompileOptions{
 				ParseAndCheckOptions: &ParseAndCheckOptions{
-					Config: &sema.Config{
+					CheckerConfig: &sema.Config{
 						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 							return baseValueActivation
 						},
@@ -7087,6 +7087,8 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 		const (
 			xIndex = iota
 			yIndex
+			tempYIndex
+			tempIndexingValueIndex
 			zIndex
 		)
 
@@ -7114,17 +7116,27 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				opcode.InstructionStatement{},
 
 				// <- y["r"]
+
+				// Evaluate `y` and store in a temp local.
 				opcode.InstructionGetLocal{Local: yIndex},
+				opcode.InstructionSetLocal{Local: tempYIndex},
+
+				// evaluate "r", and store in a temp local.
 				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionSetLocal{Local: tempIndexingValueIndex},
+
+				// Evaluate the index expression, `y["r"]`, using temp locals.
+				opcode.InstructionGetLocal{Local: tempYIndex},
+				opcode.InstructionGetLocal{Local: tempIndexingValueIndex},
 				opcode.InstructionTransferAndConvert{Type: 3},
 				opcode.InstructionRemoveIndex{},
 				opcode.InstructionTransferAndConvert{Type: 4},
 
 				// Second value assignment.
 				// y["r"] <- x
-				opcode.InstructionGetLocal{Local: yIndex},
-				opcode.InstructionGetConstant{Constant: 0},
-				opcode.InstructionTransferAndConvert{Type: 3},
+				// `y` and "r" must be loaded from temp locals.
+				opcode.InstructionGetLocal{Local: tempYIndex},
+				opcode.InstructionGetLocal{Local: tempIndexingValueIndex},
 				opcode.InstructionGetLocal{Local: xIndex},
 				opcode.InstructionTransferAndConvert{Type: 4},
 				opcode.InstructionSetIndex{},
@@ -7186,6 +7198,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 		const (
 			xIndex = iota
 			yIndex
+			tempYIndex
 			zIndex
 		)
 
@@ -7208,13 +7221,20 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				opcode.InstructionStatement{},
 
 				// <- y.bar
+
+				// Evaluate `y` and store in a temp local.
 				opcode.InstructionGetLocal{Local: yIndex},
+				opcode.InstructionSetLocal{Local: tempYIndex},
+
+				// Evaluate the member access, `y.bar`, using temp local.
+				opcode.InstructionGetLocal{Local: tempYIndex},
 				opcode.InstructionRemoveField{FieldName: 0},
 				opcode.InstructionTransferAndConvert{Type: 1},
 
 				// Second value assignment.
-				// y.bar <- x
-				opcode.InstructionGetLocal{Local: yIndex},
+				//  `y.bar <- x`
+				// `y` must be loaded from the temp local.
+				opcode.InstructionGetLocal{Local: tempYIndex},
 				opcode.InstructionGetLocal{Local: xIndex},
 				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionSetField{FieldName: 0, AccessedType: 2},
@@ -7610,7 +7630,7 @@ func TestCompileOptionalArgument(t *testing.T) {
             }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
 						return baseValueActivation
 					},
@@ -9046,7 +9066,7 @@ func TestCompileInjectedContract(t *testing.T) {
         `,
 		ParseAndCheckOptions{
 			Location: TestLocation,
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 					assert.Equal(t, TestLocation, location)
 					return baseValueActivation

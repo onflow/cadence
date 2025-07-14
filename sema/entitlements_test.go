@@ -4408,7 +4408,7 @@ func TestCheckEntitlementConditions(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					SuggestionsEnabled: true,
 				},
 			},
@@ -4486,7 +4486,7 @@ func TestCheckEntitlementConditions(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					SuggestionsEnabled: true,
 				},
 			},
@@ -4926,7 +4926,7 @@ func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					SuggestionsEnabled: true,
 				},
 			},
@@ -5888,7 +5888,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
                 }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					SuggestionsEnabled: true,
 				},
 			},
@@ -5946,7 +5946,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					SuggestionsEnabled: true,
 				},
 			},
@@ -6005,7 +6005,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					SuggestionsEnabled: true,
 				},
 			},
@@ -6062,7 +6062,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					SuggestionsEnabled: true,
 				},
 			},
@@ -6118,7 +6118,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
                 }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					SuggestionsEnabled: true,
 				},
 			},

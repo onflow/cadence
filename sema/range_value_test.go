@@ -248,7 +248,7 @@ func TestCheckInclusiveRangeConstructionValid(t *testing.T) {
 
 			checker, err := ParseAndCheckWithOptions(t, code,
 				ParseAndCheckOptions{
-					Config: &sema.Config{
+					CheckerConfig: &sema.Config{
 						BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
 							return baseValueActivation
 						},
@@ -292,7 +292,7 @@ func TestCheckInclusiveRangeConstructionInvalid(t *testing.T) {
 
 			_, err := ParseAndCheckWithOptions(t, code,
 				ParseAndCheckOptions{
-					Config: &sema.Config{
+					CheckerConfig: &sema.Config{
 						BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
 							return baseValueActivation
 						},
@@ -424,7 +424,7 @@ func TestInclusiveRangeNonLeafIntegerTypes(t *testing.T) {
 		baseValueActivation.DeclareValue(stdlib.InterpreterInclusiveRangeConstructor)
 
 		return ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},

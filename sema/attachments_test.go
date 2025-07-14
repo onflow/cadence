@@ -3517,7 +3517,7 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 					destroy r
 				}
 				`,
-			ParseAndCheckOptions{Config: &sema.Config{
+			ParseAndCheckOptions{CheckerConfig: &sema.Config{
 				SuggestionsEnabled: true,
 			}},
 		)
@@ -3596,7 +3596,7 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 				}
 				
 				`,
-			ParseAndCheckOptions{Config: &sema.Config{
+			ParseAndCheckOptions{CheckerConfig: &sema.Config{
 				SuggestionsEnabled: true,
 			}},
 		)
@@ -3669,7 +3669,7 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 				}
 				
 				`,
-			ParseAndCheckOptions{Config: &sema.Config{
+			ParseAndCheckOptions{CheckerConfig: &sema.Config{
 				SuggestionsEnabled: true,
 			}},
 		)

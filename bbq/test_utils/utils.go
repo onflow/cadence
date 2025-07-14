@@ -80,9 +80,9 @@ type CompiledProgram struct {
 }
 
 type ParseCheckAndCompileOptions struct {
-	*ParseAndCheckOptions
-	CompilerConfig      *compiler.Config
-	CheckerErrorHandler func(error)
+	ParseAndCheckOptions *ParseAndCheckOptions
+	CompilerConfig       *compiler.Config
+	CheckerErrorHandler  func(error)
 }
 
 func ParseCheckAndCompile(
@@ -161,7 +161,7 @@ func parseAndCheckWithOptions(
 	} else {
 		parseAndCheckOptions = ParseAndCheckOptions{
 			Location: location,
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				LocationHandler:            SingleIdentifierLocationResolver(t),
 				BaseValueActivationHandler: TestBaseValueActivation,
 			},
@@ -170,10 +170,10 @@ func parseAndCheckWithOptions(
 
 	parseAndCheckOptions.Location = location
 
-	semaConfig := parseAndCheckOptions.Config
+	semaConfig := parseAndCheckOptions.CheckerConfig
 
 	if semaConfig != nil && semaConfig.ImportHandler == nil {
-		parseAndCheckOptions.Config.ImportHandler = func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+		parseAndCheckOptions.CheckerConfig.ImportHandler = func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
 			imported, ok := programs[location]
 			if !ok {
 				return nil, fmt.Errorf("cannot find contract in location %s", location)

@@ -31,6 +31,7 @@ import (
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	"github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 type noopReferenceTracker struct{}
@@ -96,19 +97,20 @@ func TestInterpretIDCapability(t *testing.T) {
 			t,
 			code,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+					},
+				},
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
 					CapabilityBorrowHandler: handlers.borrow,
 					CapabilityCheckHandler:  handlers.check,
 				},
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
-					},
-				},
-				HandleCheckerError: nil,
 			},
 		)
 	}
