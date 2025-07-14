@@ -11130,8 +11130,7 @@ func TestRuntimeValueTransferResourceLoss(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextScriptLocation(),
-			// TODO: fix VM
-			//UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 
