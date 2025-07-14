@@ -2961,9 +2961,15 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		returnLocalIndex = c.currentFunction.generateLocalIndex()
 		c.emitSetLocal(returnLocalIndex)
 		c.emitGetLocal(returnLocalIndex)
+		baseTyp := enclosingType.(sema.EntitlementSupportingType)
+		baseAccess := baseTyp.SupportedEntitlements().Access()
+		refType := &sema.ReferenceType{
+			Type:          baseTyp,
+			Authorization: baseAccess,
+		}
 		// Set `self` to be a reference.
 		c.emit(opcode.InstructionNewRef{
-			Type:       typeIndex,
+			Type:       c.getOrAddType(refType),
 			IsImplicit: false,
 		})
 
@@ -3369,9 +3375,15 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 	c.emitSetLocal(baseLocalIndex)
 	// get base back on stack
 	c.emitGetLocal(baseLocalIndex)
+	baseTyp := baseType.(sema.EntitlementSupportingType)
+	baseAccess := baseTyp.SupportedEntitlements().Access()
+	refType := &sema.ReferenceType{
+		Type:          baseTyp,
+		Authorization: baseAccess,
+	}
 	// create reference to base to pass as implicit arg
 	c.emit(opcode.InstructionNewRef{
-		Type:       c.getOrAddType(baseType),
+		Type:       c.getOrAddType(refType),
 		IsImplicit: false,
 	})
 	refLocalIndex := c.currentFunction.generateLocalIndex()
