@@ -1866,7 +1866,7 @@ func TestCompileMember(t *testing.T) {
 		assert.Equal(t,
 			[]opcode.Instruction{
 				// let self = Test()
-				opcode.InstructionNew{
+				opcode.InstructionNewComposite{
 					Kind: common.CompositeKindStructure,
 					Type: 1,
 				},
@@ -2822,7 +2822,7 @@ func TestCompileMethodInvocation(t *testing.T) {
 		assert.Equal(t,
 			[]opcode.Instruction{
 				// Foo()
-				opcode.InstructionNew{
+				opcode.InstructionNewComposite{
 					Kind: common.CompositeKindStructure,
 					Type: 1,
 				},
@@ -2911,7 +2911,7 @@ func TestCompileResourceCreateAndDestroy(t *testing.T) {
 		assert.Equal(t,
 			[]opcode.Instruction{
 				// Foo()
-				opcode.InstructionNew{
+				opcode.InstructionNewComposite{
 					Kind: common.CompositeKindResource,
 					Type: 1,
 				},
@@ -4044,7 +4044,8 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		// Constant indexes
 		const (
-			panicMessageIndex = 1
+			fieldNameIndex    = 1
+			panicMessageIndex = 2
 		)
 
 		const concreteTypeTestFuncName = "D.Vault.getBalance"
@@ -4092,7 +4093,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// return self.balance
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: selfIndex},
-				opcode.InstructionGetField{FieldName: 0, AccessedType: 6},
+				opcode.InstructionGetField{
+					FieldName:    fieldNameIndex,
+					AccessedType: 6,
+				},
 				opcode.InstructionTransferAndConvert{Type: 5},
 				opcode.InstructionReturnValue{},
 			},
@@ -7437,7 +7441,7 @@ func TestCompileEnum(t *testing.T) {
 		assert.Equal(t,
 			[]opcode.Instruction{
 				// let self = Test()
-				opcode.InstructionNew{
+				opcode.InstructionNewComposite{
 					Kind: common.CompositeKindEnum,
 					Type: 1,
 				},
@@ -7728,14 +7732,30 @@ func TestCompileOptionalArgument(t *testing.T) {
 		functions := program.Functions
 		require.Len(t, functions, 4)
 
+		const (
+			_ = iota
+			accountFieldNameIndex
+			contractsFieldNameIndex
+			contractNameIndex
+			contractCodeIndex
+			utf8FieldNameIndex
+			optionalArgIndex
+		)
+
 		assert.Equal(t,
 			[]opcode.Instruction{
 				opcode.InstructionStatement{},
 
 				// Load receiver `self.account.contracts`.
 				opcode.InstructionGetLocal{Local: 0},
-				opcode.InstructionGetField{FieldName: 0, AccessedType: 1},
-				opcode.InstructionGetField{FieldName: 1, AccessedType: 4},
+				opcode.InstructionGetField{
+					FieldName:    accountFieldNameIndex,
+					AccessedType: 1,
+				},
+				opcode.InstructionGetField{
+					FieldName:    contractsFieldNameIndex,
+					AccessedType: 4,
+				},
 				opcode.InstructionNewRef{Type: 5, IsImplicit: true},
 
 				// Load function value `add()`
@@ -7744,16 +7764,19 @@ func TestCompileOptionalArgument(t *testing.T) {
 				// Load arguments.
 
 				// Name: "Foo",
-				opcode.InstructionGetConstant{Constant: 2},
+				opcode.InstructionGetConstant{Constant: contractNameIndex},
 				opcode.InstructionTransferAndConvert{Type: 6},
 
 				// Contract code
-				opcode.InstructionGetConstant{Constant: 3},
-				opcode.InstructionGetField{FieldName: 4, AccessedType: 6},
+				opcode.InstructionGetConstant{Constant: contractCodeIndex},
+				opcode.InstructionGetField{
+					FieldName:    utf8FieldNameIndex,
+					AccessedType: 6,
+				},
 				opcode.InstructionTransferAndConvert{Type: 7},
 
 				// Message: "Optional arg"
-				opcode.InstructionGetConstant{Constant: 5},
+				opcode.InstructionGetConstant{Constant: optionalArgIndex},
 				opcode.InstructionTransfer{},
 
 				opcode.InstructionInvokeMethodStatic{ArgCount: 3},
@@ -7765,6 +7788,10 @@ func TestCompileOptionalArgument(t *testing.T) {
 
 		assert.Equal(t,
 			[]constant.Constant{
+				{
+					Data: []byte{0x1},
+					Kind: constant.Address,
+				},
 				{
 					Data: []byte("account"),
 					Kind: constant.String,
@@ -7794,6 +7821,89 @@ func TestCompileOptionalArgument(t *testing.T) {
 		)
 	})
 
+}
+
+func TestCompileContract(t *testing.T) {
+	t.Parallel()
+
+	aContract := `
+        contract A {
+            let x: Int
+
+            init() {
+                self.x = 1
+            }
+        }
+    `
+
+	programs := CompiledPrograms{}
+
+	contractsAddress := common.MustBytesToAddress([]byte{0x1})
+
+	aLocation := common.NewAddressLocation(nil, contractsAddress, "A")
+
+	program := ParseCheckAndCompile(
+		t,
+		aContract,
+		aLocation,
+		programs,
+	)
+
+	functions := program.Functions
+	require.Len(t, functions, 3)
+
+	const (
+		addressIndex = iota
+		oneIndex
+		xFieldNameIndex
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// let self = A()
+			opcode.InstructionNewCompositeAt{
+				Kind:    common.CompositeKindContract,
+				Type:    1,
+				Address: addressIndex,
+			},
+			opcode.InstructionDup{},
+			opcode.InstructionSetGlobal{Global: 0},
+			opcode.InstructionSetLocal{Local: 0},
+
+			// self.x = 1
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0},
+			opcode.InstructionGetConstant{Constant: oneIndex},
+			opcode.InstructionTransferAndConvert{Type: 2},
+			opcode.InstructionSetField{
+				FieldName:    xFieldNameIndex,
+				AccessedType: 1,
+			},
+
+			// return self
+			opcode.InstructionGetLocal{Local: 0},
+			opcode.InstructionReturnValue{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]constant.Constant{
+			{
+				Data: []byte{0x1},
+				Kind: constant.Address,
+			},
+			{
+				Data: []byte{1},
+				Kind: constant.Int,
+			},
+			{
+				Data: []byte("x"),
+				Kind: constant.String,
+			},
+		},
+		program.Constants,
+	)
 }
 
 func TestCompileSwapIdentifiers(t *testing.T) {
@@ -9277,22 +9387,30 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 	defaultDestroyEventConstructor := functions[4]
 	require.Equal(t, "Bar.XYZ.ResourceDestroyed", defaultDestroyEventConstructor.Name)
 
+	const (
+		xIndex = iota
+		selfIndex
+	)
+
 	assert.Equal(t,
 		[]opcode.Instruction{
 			// Create a `Bar.XYZ.ResourceDestroyed` event value.
-			opcode.InstructionNew{Kind: 4, Type: 3},
-			opcode.InstructionSetLocal{Local: 1},
+			opcode.InstructionNewComposite{Kind: 4, Type: 3},
+			opcode.InstructionSetLocal{Local: selfIndex},
 			opcode.InstructionStatement{},
 
 			// Set the parameter to the field.
 			//  `self.x = x`
-			opcode.InstructionGetLocal{Local: 1},
-			opcode.InstructionGetLocal{Local: 0},
+			opcode.InstructionGetLocal{Local: selfIndex},
+			opcode.InstructionGetLocal{Local: xIndex},
 			opcode.InstructionTransferAndConvert{Type: 4},
-			opcode.InstructionSetField{FieldName: 0, AccessedType: 3},
+			opcode.InstructionSetField{
+				FieldName:    0,
+				AccessedType: 3,
+			},
 
 			// Return the constructed event value.
-			opcode.InstructionGetLocal{Local: 1},
+			opcode.InstructionGetLocal{Local: selfIndex},
 			opcode.InstructionReturnValue{},
 		},
 		defaultDestroyEventConstructor.Code,
@@ -9340,7 +9458,7 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 			// Bar.XYZ.ResourceDestroyed(self.x)
 			opcode.InstructionGetGlobal{Global: inheritedEventConstructorIndex},
 			opcode.InstructionGetLocal{Local: 0},
-			opcode.InstructionGetField{FieldName: 1, AccessedType: 8},
+			opcode.InstructionGetField{FieldName: 2, AccessedType: 8},
 			opcode.InstructionTransferAndConvert{Type: 6},
 			opcode.InstructionInvoke{ArgCount: 1},
 
