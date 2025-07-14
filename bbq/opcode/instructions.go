@@ -697,35 +697,35 @@ func (i InstructionNil) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
-// InstructionNew
+// InstructionNewComposite
 //
-// Creates a new instance of the given kind and type and then pushes it onto the stack.
-type InstructionNew struct {
+// Creates a new instance of the given composite kind and type, at address 0x0, and then pushes it onto the stack.
+type InstructionNewComposite struct {
 	Kind common.CompositeKind
 	Type uint16
 }
 
-var _ Instruction = InstructionNew{}
+var _ Instruction = InstructionNewComposite{}
 
-func (InstructionNew) Opcode() Opcode {
-	return New
+func (InstructionNewComposite) Opcode() Opcode {
+	return NewComposite
 }
 
-func (i InstructionNew) String() string {
+func (i InstructionNewComposite) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
 	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionNew) OperandsString(sb *strings.Builder, colorize bool) {
+func (i InstructionNewComposite) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "kind", i.Kind, colorize)
 	sb.WriteByte(' ')
 	printfArgument(sb, "type", i.Type, colorize)
 }
 
-func (i InstructionNew) ResolvedOperandsString(sb *strings.Builder,
+func (i InstructionNewComposite) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
 	functionNames []string,
@@ -736,15 +736,73 @@ func (i InstructionNew) ResolvedOperandsString(sb *strings.Builder,
 	printfTypeArgument(sb, "type", types[i.Type], colorize)
 }
 
-func (i InstructionNew) Encode(code *[]byte) {
+func (i InstructionNewComposite) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 	emitCompositeKind(code, i.Kind)
 	emitUint16(code, i.Type)
 }
 
-func DecodeNew(ip *uint16, code []byte) (i InstructionNew) {
+func DecodeNewComposite(ip *uint16, code []byte) (i InstructionNewComposite) {
 	i.Kind = decodeCompositeKind(ip, code)
 	i.Type = decodeUint16(ip, code)
+	return i
+}
+
+// InstructionNewCompositeAt
+//
+// Creates a new instance of the given composite kind and type, at the given address, and then pushes it onto the stack.
+type InstructionNewCompositeAt struct {
+	Kind    common.CompositeKind
+	Type    uint16
+	Address uint16
+}
+
+var _ Instruction = InstructionNewCompositeAt{}
+
+func (InstructionNewCompositeAt) Opcode() Opcode {
+	return NewCompositeAt
+}
+
+func (i InstructionNewCompositeAt) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
+}
+
+func (i InstructionNewCompositeAt) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "kind", i.Kind, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "address", i.Address, colorize)
+}
+
+func (i InstructionNewCompositeAt) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "kind", i.Kind, colorize)
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	sb.WriteByte(' ')
+	printfConstantArgument(sb, "address", constants[i.Address], colorize)
+}
+
+func (i InstructionNewCompositeAt) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitCompositeKind(code, i.Kind)
+	emitUint16(code, i.Type)
+	emitUint16(code, i.Address)
+}
+
+func DecodeNewCompositeAt(ip *uint16, code []byte) (i InstructionNewCompositeAt) {
+	i.Kind = decodeCompositeKind(ip, code)
+	i.Type = decodeUint16(ip, code)
+	i.Address = decodeUint16(ip, code)
 	return i
 }
 
@@ -2678,8 +2736,10 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionFalse{}
 	case Nil:
 		return InstructionNil{}
-	case New:
-		return DecodeNew(ip, code)
+	case NewComposite:
+		return DecodeNewComposite(ip, code)
+	case NewCompositeAt:
+		return DecodeNewCompositeAt(ip, code)
 	case NewPath:
 		return DecodeNewPath(ip, code)
 	case NewArray:
