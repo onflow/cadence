@@ -2513,7 +2513,7 @@ func TestRuntimeExportJsonDeterministic(t *testing.T) {
         }
     `
 
-	event := exportEventFromScript(t, script, false)
+	event := exportEventFromScript(t, script, *compile)
 
 	bytes, err := json.Encode(event)
 
