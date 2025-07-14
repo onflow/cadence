@@ -3105,9 +3105,7 @@ func (c *Compiler[_, _]) VisitCompositeDeclaration(declaration *ast.CompositeDec
 	}
 
 	c.compositeTypeStack.push(compositeType)
-	defer func() {
-		c.compositeTypeStack.pop()
-	}()
+	defer c.compositeTypeStack.pop()
 
 	// Compile members
 	hasInit := false
@@ -3173,9 +3171,7 @@ func (c *Compiler[_, _]) compileCompositeMembers(
 func (c *Compiler[_, _]) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) (_ struct{}) {
 	interfaceType := c.DesugaredElaboration.InterfaceDeclarationType(declaration)
 	c.compositeTypeStack.push(interfaceType)
-	defer func() {
-		c.compositeTypeStack.pop()
-	}()
+	defer c.compositeTypeStack.pop()
 
 	// Visit members.
 	c.compileCompositeMembers(interfaceType, declaration.Members)
@@ -3318,9 +3314,7 @@ func (c *Compiler[_, _]) VisitAttachmentDeclaration(declaration *ast.AttachmentD
 	compositeType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
 
 	c.compositeTypeStack.push(compositeType)
-	defer func() {
-		c.compositeTypeStack.pop()
-	}()
+	defer c.compositeTypeStack.pop()
 
 	// Compile members
 	hasInit := false
