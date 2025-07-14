@@ -12258,8 +12258,7 @@ func TestInterpretSwapInSameArray(t *testing.T) {
 	t.Run("resources, different indices", func(t *testing.T) {
 		t.Parallel()
 
-		// TODO: requires improved swap in VM
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           resource R {
               let value: Int
 
@@ -12315,8 +12314,7 @@ func TestInterpretSwapInSameArray(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO: requires improved swap in VM
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           resource R {
               let value: Int
 
