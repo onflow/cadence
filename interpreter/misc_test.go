@@ -13465,3 +13465,257 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 
 	})
 }
+
+func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple index expr", func(t *testing.T) {
+		t.Parallel()
+
+		const key = "r"
+
+		getKeyInvocationsCount := 0
+
+		getKeyFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
+			"getKey",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{},
+				sema.TypeAnnotation{
+					Type: sema.StringType,
+				},
+			),
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				getKeyInvocationsCount++
+				return interpreter.NewUnmeteredStringValue(key)
+			},
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(getKeyFunction)
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, getKeyFunction)
+
+		inter, err := parseCheckAndPrepareWithOptions(
+			t,
+			fmt.Sprintf(`
+                resource R {
+                    let id: Int
+                    init(id: Int) {
+                        self.id = id
+                    }
+                }
+
+                fun test() {
+                    let x <- create R(id: 1)
+                    var y <- {"%s": <-create R(id: 2)}
+
+                    let z <- y[getKey()] <- x
+
+                    destroy y
+                    destroy z
+                }`,
+				key,
+			),
+
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+					},
+				},
+				InterpreterConfig: &interpreter.Config{
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, 0, getKeyInvocationsCount)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.Equal(t, 1, getKeyInvocationsCount)
+	})
+
+	t.Run("complex index expr", func(t *testing.T) {
+		t.Parallel()
+
+		const key = 0
+
+		getKey1InvocationsCount := 0
+		getKey2InvocationsCount := 0
+
+		getKey1Function := stdlib.NewInterpreterStandardLibraryStaticFunction(
+			"getKey1",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{},
+				sema.TypeAnnotation{
+					Type: sema.IntType,
+				},
+			),
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				getKey1InvocationsCount++
+				return interpreter.NewUnmeteredIntValueFromInt64(key)
+			},
+		)
+
+		getKey2Function := stdlib.NewInterpreterStandardLibraryStaticFunction(
+			"getKey2",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{},
+				sema.TypeAnnotation{
+					Type: sema.IntType,
+				},
+			),
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				getKey2InvocationsCount++
+				return interpreter.NewUnmeteredIntValueFromInt64(key)
+			},
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(getKey1Function)
+		baseValueActivation.DeclareValue(getKey2Function)
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, getKey1Function)
+		interpreter.Declare(baseActivation, getKey2Function)
+
+		inter, err := parseCheckAndPrepareWithOptions(
+			t,
+			`
+                resource R {
+                    let id: Int
+                    init(id: Int) {
+                        self.id = id
+                    }
+                }
+
+                fun test() {
+                    let x <- create R(id: 1)
+                    var y <- [ <- [<-create R(id: 2)]]
+
+                    let z <- y[getKey1()][getKey2()] <- x
+
+                    destroy y
+                    destroy z
+                }`,
+
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+					},
+				},
+				InterpreterConfig: &interpreter.Config{
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, 0, getKey1InvocationsCount)
+		assert.Equal(t, 0, getKey2InvocationsCount)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		// Target expression must be evaluated only once.
+		assert.Equal(t, 1, getKey1InvocationsCount)
+
+		// Indexing expression must be evaluated once.
+		assert.Equal(t, 1, getKey2InvocationsCount)
+	})
+
+	t.Run("member expr", func(t *testing.T) {
+		t.Parallel()
+
+		const key = 0
+
+		getKeyInvocationsCount := 0
+
+		getKeyFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
+			"getKey",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{},
+				sema.TypeAnnotation{
+					Type: sema.IntType,
+				},
+			),
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				getKeyInvocationsCount++
+				return interpreter.NewUnmeteredIntValueFromInt64(key)
+			},
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(getKeyFunction)
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, getKeyFunction)
+
+		inter, err := parseCheckAndPrepareWithOptions(
+			t,
+			`
+                resource R {
+                    var inner: @AnyResource?
+                    init() {
+                        self.inner <- nil
+                    }
+                }
+
+                fun test() {
+                    let x <- create R()
+                    var y <- [<-create R()]
+
+                    let z <- y[getKey()].inner <- x
+
+                    destroy y
+                    destroy z
+                }`,
+
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+					},
+				},
+				InterpreterConfig: &interpreter.Config{
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, 0, getKeyInvocationsCount)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		// Target expression must be evaluated only once.
+		assert.Equal(t, 1, getKeyInvocationsCount)
+	})
+}
