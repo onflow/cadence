@@ -13430,3 +13430,84 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 
 	})
 }
+
+func TestInterpretInvocationEvaluationAndTransferOrder(t *testing.T) {
+
+	t.Parallel()
+
+	// Not important this is a dictionary,
+	// just need a type that has a value ID
+	argumentType := sema.NewDictionaryType(nil, sema.StringType, sema.IntType)
+
+	valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
+		"f",
+		sema.NewSimpleFunctionType(
+			sema.FunctionPurityView,
+			[]sema.Parameter{
+				{
+					Label:          sema.ArgumentLabelNotRequired,
+					Identifier:     "a",
+					TypeAnnotation: sema.NewTypeAnnotation(argumentType),
+				},
+				{
+					Label:          sema.ArgumentLabelNotRequired,
+					Identifier:     "b",
+					TypeAnnotation: sema.NewTypeAnnotation(argumentType),
+				},
+			},
+			sema.VoidTypeAnnotation,
+		),
+		"",
+		func(invocation interpreter.Invocation) interpreter.Value {
+			arguments := invocation.Arguments
+			require.Len(t, arguments, 2)
+
+			require.IsType(t, &interpreter.DictionaryValue{}, arguments[0])
+			aDict := arguments[0].(*interpreter.DictionaryValue)
+			assert.Equal(t,
+				atree.ValueID{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+				aDict.ValueID(),
+			)
+
+			require.IsType(t, &interpreter.DictionaryValue{}, arguments[1])
+			bDict := arguments[1].(*interpreter.DictionaryValue)
+			assert.Equal(t,
+				atree.ValueID{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4},
+				bDict.ValueID(),
+			)
+
+			return interpreter.Void
+		},
+	)
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(valueDeclaration)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, valueDeclaration)
+
+	inter, err := parseCheckAndPrepareWithOptions(
+		t,
+		`
+          fun main() {
+              f({}, {})
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			CheckerConfig: &sema.Config{
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
+			},
+			Config: &interpreter.Config{
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	require.NoError(t, err)
+}
