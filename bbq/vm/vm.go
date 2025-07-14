@@ -878,7 +878,7 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	functionValue := vm.pop()
 
 	// If the function is a pointer to an object-method, then the receiver is implicitly captured.
-	if boundFunction, isBoundFUnction := functionValue.(*BoundFunctionValue); isBoundFUnction {
+	if boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue); isBoundFunction {
 		functionValue = boundFunction.Method
 		receiver := boundFunction.Receiver(vm.context)
 		arguments = append([]Value{receiver}, arguments...)

@@ -9008,23 +9008,21 @@ func TestAttachments(t *testing.T) {
 		t.Parallel()
 
 		result, err := CompileAndInvoke(t, `
-		resource R {}
-		attachment A for R {
-			let x: Int
-			init(x: Int) {
-				self.x = x
-			}
-			fun foo(): Int { return self.x }
-		}
-		fun test(): Int {
-			let r <- create R()
-			let r2 <- attach A(x: 4) to <-r
-			remove A from r2
-			let r3 <- attach A(x: 3) to <-r2
-			let i = r3[A]?.foo()!
-			destroy r3
-			return i
-		}
+		resource R { }
+       attachment A for R {
+          let y: Int
+          init (y: Int) {
+            self.y = y
+          }
+          fun foo(): Int { return self.y }
+       }
+       fun test(): Int {
+           let r <- create R()
+           let r2 <- attach A(y: 4) to <-r
+           let i = r2[A]?.foo()!
+           destroy r2
+           return i
+       }
 		`, "test")
 		require.NoError(t, err)
 

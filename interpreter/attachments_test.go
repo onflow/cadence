@@ -694,7 +694,7 @@ func TestInterpretAttachmentBaseUse(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {
           let x: Int
           init (x: Int) {

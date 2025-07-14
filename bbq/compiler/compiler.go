@@ -2933,15 +2933,17 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	c.targetFunction(function)
 	defer c.targetFunction(previousFunction)
 
+	// cannot declare base as parameter because it is at the end of the argument list
 	c.declareParameters(parameterList, false, false)
+
+	// must do this before declaring self
+	if kind == common.CompositeKindAttachment {
+		// base is provided as an argument at the end of the argument list implicitly
+		c.currentFunction.declareLocal(sema.BaseIdentifier)
+	}
 
 	// Declare `self`
 	self := c.currentFunction.declareLocal(sema.SelfIdentifier)
-
-	if kind == common.CompositeKindAttachment {
-		// base is provided as an argument at the end implicitly
-		c.currentFunction.declareLocal(sema.BaseIdentifier)
-	}
 
 	// Initialize an empty struct and assign to `self`.
 	// i.e: `self = New()`
