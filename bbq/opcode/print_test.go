@@ -177,7 +177,8 @@ func TestPrintInstruction(t *testing.T) {
 
 		"TransferAndConvert type:258": {byte(TransferAndConvert), 1, 2},
 
-		"New kind:CompositeKind(258) type:772": {byte(New), 1, 2, 3, 4},
+		"NewComposite kind:CompositeKind(258) type:772":                {byte(NewComposite), 1, 2, 3, 4},
+		"NewCompositeAt kind:CompositeKind(258) type:772 address:1286": {byte(NewCompositeAt), 1, 2, 3, 4, 5, 6},
 
 		"SimpleCast type:258":   {byte(SimpleCast), 1, 2, 3},
 		"FailableCast type:258": {byte(FailableCast), 1, 2, 3},
