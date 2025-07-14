@@ -8908,7 +8908,7 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.InstructionSetLocal{Local: sTmpLocalIndex},
 				opcode.InstructionGetLocal{Local: sTmpLocalIndex},
 				// create a reference to s and store locally
-				opcode.InstructionNewRef{Type: 1, IsImplicit: false},
+				opcode.InstructionNewRef{Type: 2, IsImplicit: false},
 				opcode.InstructionSetLocal{Local: sRefLocalIndex},
 				// get A constructor
 				opcode.InstructionGetGlobal{Global: aConstructorGlobalIndex},
@@ -8921,7 +8921,7 @@ func TestCompileAttachments(t *testing.T) {
 				// copy/transfer of s to attach to
 				opcode.InstructionTransfer{},
 				// attachment operation, attach A to s-copy
-				opcode.InstructionSetTypeIndex{Type: 2},
+				opcode.InstructionSetTypeIndex{Type: 3},
 				// return value is s-copy
 				opcode.InstructionTransferAndConvert{Type: 1},
 				// finish assignment of s
@@ -8931,7 +8931,7 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: sLocalIndex},
 				// access A on s: s[A], returns attachment reference as optional
-				opcode.InstructionGetTypeIndex{Type: 2},
+				opcode.InstructionGetTypeIndex{Type: 3},
 				opcode.InstructionSetLocal{Local: attachmentLocalIndex},
 				opcode.InstructionGetLocal{Local: attachmentLocalIndex},
 				opcode.InstructionJumpIfNil{Target: 30},
@@ -8943,7 +8943,7 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.InstructionJump{Target: 31},
 				opcode.InstructionNil{},
 				opcode.InstructionUnwrap{},
-				opcode.InstructionTransferAndConvert{Type: 3},
+				opcode.InstructionTransferAndConvert{Type: 4},
 				opcode.InstructionReturnValue{},
 			},
 			functions[0].Code,
