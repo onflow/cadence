@@ -3986,3 +3986,43 @@ func TestForceAssignment(t *testing.T) {
 		assert.ErrorAs(t, err, &resourceLossError)
 	})
 }
+
+func TestInterpretRecursiveTransfers(t *testing.T) {
+
+	t.Parallel()
+
+	inter, _ := parseCheckAndPrepareWithOptions(t,
+		`
+        resource Dummy {}
+
+        resource Wrapper {
+            var vaults: @[AnyResource]
+            init(_ vaults: @[AnyResource]) {
+                self.vaults <- vaults
+            }
+        }
+
+        fun main() {
+            var vaultsWrapper <- create Wrapper( <- [
+                <-create Dummy(),
+                <-create Dummy()
+            ])
+
+            var r <- vaultsWrapper.vaults[0] <- vaultsWrapper.vaults
+            destroy r
+            destroy vaultsWrapper
+        }
+        `,
+		ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(err error) {
+				errs := RequireCheckerErrors(t, err, 1)
+				require.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[0])
+			},
+		},
+	)
+
+	_, err := inter.Invoke("main")
+
+	var recursiveTransferError *interpreter.RecursiveTransferError
+	require.ErrorAs(t, err, &recursiveTransferError)
+}
