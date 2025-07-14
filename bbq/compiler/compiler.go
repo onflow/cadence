@@ -2966,9 +2966,15 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		returnLocalIndex = c.currentFunction.generateLocalIndex()
 		c.emitSetLocal(returnLocalIndex)
 		c.emitGetLocal(returnLocalIndex)
+		baseTyp := enclosingType.(sema.EntitlementSupportingType)
+		baseAccess := baseTyp.SupportedEntitlements().Access()
+		refType := &sema.ReferenceType{
+			Type:          baseTyp,
+			Authorization: baseAccess,
+		}
 		// Set `self` to be a reference.
 		c.emit(opcode.InstructionNewRef{
-			Type:       typeIndex,
+			Type:       c.getOrAddType(refType),
 			IsImplicit: false,
 		})
 
@@ -3119,9 +3125,7 @@ func (c *Compiler[_, _]) VisitCompositeDeclaration(declaration *ast.CompositeDec
 	}
 
 	c.compositeTypeStack.push(compositeType)
-	defer func() {
-		c.compositeTypeStack.pop()
-	}()
+	defer c.compositeTypeStack.pop()
 
 	// Compile members
 	hasInit := false
@@ -3187,9 +3191,7 @@ func (c *Compiler[_, _]) compileCompositeMembers(
 func (c *Compiler[_, _]) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) (_ struct{}) {
 	interfaceType := c.DesugaredElaboration.InterfaceDeclarationType(declaration)
 	c.compositeTypeStack.push(interfaceType)
-	defer func() {
-		c.compositeTypeStack.pop()
-	}()
+	defer c.compositeTypeStack.pop()
 
 	// Visit members.
 	c.compileCompositeMembers(interfaceType, declaration.Members)
@@ -3329,11 +3331,10 @@ func (c *Compiler[_, _]) compileEnumCaseDeclaration(
 func (c *Compiler[_, _]) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) (_ struct{}) {
 	// Similar to VisitCompositeDeclaration
 	// Not combined because need to access fields not accessible in CompositeLikeDeclaration
-	attachmentType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
-	c.compositeTypeStack.push(attachmentType)
-	defer func() {
-		c.compositeTypeStack.pop()
-	}()
+	compositeType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
+
+	c.compositeTypeStack.push(compositeType)
+	defer c.compositeTypeStack.pop()
 
 	// Compile members
 	hasInit := false
@@ -3350,7 +3351,7 @@ func (c *Compiler[_, _]) VisitAttachmentDeclaration(declaration *ast.AttachmentD
 	}
 
 	// Visit members.
-	c.compileCompositeMembers(attachmentType, declaration.Members)
+	c.compileCompositeMembers(compositeType, declaration.Members)
 
 	return
 }
@@ -3388,9 +3389,15 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 	c.emitSetLocal(baseLocalIndex)
 	// get base back on stack
 	c.emitGetLocal(baseLocalIndex)
+	baseTyp := baseType.(sema.EntitlementSupportingType)
+	baseAccess := baseTyp.SupportedEntitlements().Access()
+	refType := &sema.ReferenceType{
+		Type:          baseTyp,
+		Authorization: baseAccess,
+	}
 	// create reference to base to pass as implicit arg
 	c.emit(opcode.InstructionNewRef{
-		Type:       c.getOrAddType(baseType),
+		Type:       c.getOrAddType(refType),
 		IsImplicit: false,
 	})
 	refLocalIndex := c.currentFunction.generateLocalIndex()

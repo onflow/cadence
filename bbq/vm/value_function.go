@@ -561,5 +561,5 @@ func (v *BoundFunctionValue) Receiver(context interpreter.ValueStaticTypeContext
 		context,
 		EmptyLocationRange,
 	)
-	return maybeDereference(context, *receiver)
+	return maybeDereferenceReceiver(context, *receiver)
 }

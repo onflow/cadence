@@ -8881,63 +8881,76 @@ func TestCompileAttachments(t *testing.T) {
 		functions := program.Functions
 		require.Len(t, functions, 8)
 
-		// `test` function
+		// global functions
+		const (
+			sConstructorGlobalIndex = 1
+			aConstructorGlobalIndex = 4
+		)
+
+		// local variables
+		const (
+			sLocalIndex = iota
+			sTmpLocalIndex
+			sRefLocalIndex
+			attachmentLocalIndex
+		)
+
 		assert.Equal(t,
 			[]opcode.Instruction{
 				// STATEMENT: var s = S()
 				opcode.InstructionStatement{},
-				opcode.InstructionGetGlobal{Global: 0x1},
-				opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0x0},
-				opcode.InstructionTransferAndConvert{Type: 0x1},
-				opcode.InstructionSetLocal{Local: 0x0},
+				opcode.InstructionGetGlobal{Global: sConstructorGlobalIndex},
+				opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0},
+				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionSetLocal{Local: sLocalIndex},
 
 				// STATEMENT: s = attach A(x:3) to s
 				opcode.InstructionStatement{},
 				// get s on stack
-				opcode.InstructionGetLocal{Local: 0x0},
+				opcode.InstructionGetLocal{Local: sLocalIndex},
 				// store s in a separate local, put on stack
-				opcode.InstructionSetLocal{Local: 0x1},
-				opcode.InstructionGetLocal{Local: 0x1},
+				opcode.InstructionSetLocal{Local: sTmpLocalIndex},
+				opcode.InstructionGetLocal{Local: sTmpLocalIndex},
 				// create a reference to s and store locally
-				opcode.InstructionNewRef{Type: 0x1, IsImplicit: false},
-				opcode.InstructionSetLocal{Local: 0x2},
+				opcode.InstructionNewRef{Type: 2, IsImplicit: false},
+				opcode.InstructionSetLocal{Local: sRefLocalIndex},
 				// get A constructor
-				opcode.InstructionGetGlobal{Global: 0x4},
+				opcode.InstructionGetGlobal{Global: aConstructorGlobalIndex},
 				// get 3
 				opcode.InstructionGetConstant{Constant: 0x0},
 				opcode.InstructionTransferAndConvert{Type: 0x2},
 				// get s reference
-				opcode.InstructionGetLocal{Local: 0x2},
+				opcode.InstructionGetLocal{Local: sRefLocalIndex},
 				// invoke A constructor with &s as arg, puts A on stack
-				opcode.InstructionInvoke{TypeArgs: []uint16{0x1}, ArgCount: 0x2},
+				opcode.InstructionInvoke{TypeArgs: []uint16{1}, ArgCount: 1},
 				// get s back on stack
-				opcode.InstructionGetLocal{Local: 0x1},
+				opcode.InstructionGetLocal{Local: sTmpLocalIndex},
 				// copy/transfer of s to attach to
 				opcode.InstructionTransfer{},
 				// attachment operation, attach A to s-copy
-				opcode.InstructionSetTypeIndex{Type: 0x3},
+				opcode.InstructionSetTypeIndex{Type: 3},
 				// return value is s-copy
-				opcode.InstructionTransferAndConvert{Type: 0x1},
+				opcode.InstructionTransferAndConvert{Type: 1},
 				// finish assignment of s
-				opcode.InstructionSetLocal{Local: 0x0},
+				opcode.InstructionSetLocal{Local: sLocalIndex},
 
 				// STATEMENT: return s[A]?.foo()!
 				opcode.InstructionStatement{},
-				opcode.InstructionGetLocal{Local: 0x0},
+				opcode.InstructionGetLocal{Local: sLocalIndex},
 				// access A on s: s[A], returns attachment reference as optional
-				opcode.InstructionGetTypeIndex{Type: 0x3},
-				opcode.InstructionSetLocal{Local: 0x3},
-				opcode.InstructionGetLocal{Local: 0x3},
-				opcode.InstructionJumpIfNil{Target: 0x20},
-				opcode.InstructionGetLocal{Local: 0x3},
+				opcode.InstructionGetTypeIndex{Type: 3},
+				opcode.InstructionSetLocal{Local: attachmentLocalIndex},
+				opcode.InstructionGetLocal{Local: attachmentLocalIndex},
+				opcode.InstructionJumpIfNil{Target: 30},
+				opcode.InstructionGetLocal{Local: attachmentLocalIndex},
 				opcode.InstructionUnwrap{},
 				// call foo if not nil
-				opcode.InstructionGetMethod{Method: 0x7},
-				opcode.InstructionInvokeMethodStatic{TypeArgs: []uint16(nil), ArgCount: 0x0},
-				opcode.InstructionJump{Target: 0x21},
+				opcode.InstructionGetMethod{Method: 7},
+				opcode.InstructionInvokeMethodStatic{TypeArgs: []uint16(nil), ArgCount: 0},
+				opcode.InstructionJump{Target: 31},
 				opcode.InstructionNil{},
 				opcode.InstructionUnwrap{},
-				opcode.InstructionTransferAndConvert{Type: 0x2},
+				opcode.InstructionTransferAndConvert{Type: 4},
 				opcode.InstructionReturnValue{},
 			},
 			functions[0].Code,
