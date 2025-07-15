@@ -386,7 +386,7 @@ func (v *NativeFunctionValue) GetMethod(
 
 // BoundFunctionValue is a function-wrapper which captures the receivers of an object-method.
 type BoundFunctionValue struct {
-	receiverReference   interpreter.ReferenceValue
+	ReceiverReference   interpreter.ReferenceValue
 	receiverIsReference bool
 
 	Method       FunctionValue
@@ -407,7 +407,7 @@ func NewBoundFunctionValue(
 
 	return &BoundFunctionValue{
 		Method:              method,
-		receiverReference:   receiverRef,
+		ReceiverReference:   receiverRef,
 		receiverIsReference: receiverIsRef,
 	}
 }
@@ -553,7 +553,7 @@ func (v *BoundFunctionValue) Invoke(invocation interpreter.Invocation) interpret
 
 func (v *BoundFunctionValue) receiver(context interpreter.ValueStaticTypeContext) Value {
 	receiver := interpreter.GetReceiver(
-		v.receiverReference,
+		v.ReceiverReference,
 		v.receiverIsReference,
 		context,
 		EmptyLocationRange,
