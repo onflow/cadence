@@ -9378,6 +9378,8 @@ func TestRuntimeWrappedErrorHandling(t *testing.T) {
 
 	isContractBroken := false
 
+	programs := map[common.Location]*Program{}
+
 	runtimeInterface := &TestRuntimeInterface{
 		OnGetCode: func(_ Location) (bytes []byte, err error) {
 			return contractCode, nil
@@ -9402,11 +9404,42 @@ func TestRuntimeWrappedErrorHandling(t *testing.T) {
 			return nil
 		},
 		OnGetOrLoadProgram: func(location Location, load func() (*Program, error)) (*Program, error) {
-			program, err := load()
-			if err == nil {
+			switch location.(type) {
+			case common.TransactionLocation:
+				// Handle transaction locations normally,
+				// they are cached in the programs map.
+
+				// In VM environment, the program is requested twice:
+				// Once when parsing/checking and again when compiling.
+				// This second request which happens during the compilation
+				// relies on the previous parsing/checking results.
+				// So the program needs to be stored when it is loaded for the first time.
+				program, ok := programs[location]
+				if !ok {
+					var err error
+					program, err = load()
+					if err != nil {
+						// Return a wrapped error
+						return nil, fmt.Errorf("wrapped error: %w", err)
+					}
+
+					programs[location] = program
+				}
+
 				return program, nil
+
+			case common.AddressLocation:
+				// NOTE: Special handling for contracts
+
+				program, err := load()
+				if err == nil {
+					return program, nil
+				}
+				return program, fmt.Errorf("wrapped error: %w", err)
+
+			default:
+				panic(runtimeErrors.NewUnexpectedError("unexpected location type: %T", location))
 			}
-			return program, fmt.Errorf("wrapped error: %w", err)
 		},
 	}
 
@@ -9421,8 +9454,7 @@ func TestRuntimeWrappedErrorHandling(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: fix running with VM
-			//UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -9436,8 +9468,7 @@ func TestRuntimeWrappedErrorHandling(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: fix running with VM
-			//UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -9454,8 +9485,7 @@ func TestRuntimeWrappedErrorHandling(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: fix running with VM
-			//UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 

@@ -3731,6 +3731,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			// So the program needs to be stored when it is loaded for the first time.
 			program, ok := programs[location]
 			if !ok {
+				var err error
 				program, err = load()
 				if err != nil {
 					// Return a wrapped error
