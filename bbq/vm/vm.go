@@ -1493,7 +1493,7 @@ func opStringTemplate(vm *VM, ins opcode.InstructionTemplateString) {
 	vm.push(interpreter.BuildStringTemplate(valuesStr, expressions))
 }
 
-func opGetTypeKey(vm *VM, ins opcode.InstructionGetTypeIndex) {
+func opGetTypeIndex(vm *VM, ins opcode.InstructionGetTypeIndex) {
 	target := vm.pop()
 
 	// Get attachment type
@@ -1510,7 +1510,7 @@ func opGetTypeKey(vm *VM, ins opcode.InstructionGetTypeIndex) {
 	vm.push(value)
 }
 
-func opSetTypeKey(vm *VM, ins opcode.InstructionSetTypeIndex) {
+func opSetTypeIndex(vm *VM, ins opcode.InstructionSetTypeIndex) {
 	fieldValue, target := vm.pop2()
 
 	// Get attachment type
@@ -1528,7 +1528,7 @@ func opSetTypeKey(vm *VM, ins opcode.InstructionSetTypeIndex) {
 	vm.push(compositeValue)
 }
 
-func opRemoveTypeKey(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
+func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 	target := vm.pop()
 
 	// Get attachment type
@@ -1751,11 +1751,11 @@ func (vm *VM) run() {
 		case opcode.InstructionTemplateString:
 			opStringTemplate(vm, ins)
 		case opcode.InstructionGetTypeIndex:
-			opGetTypeKey(vm, ins)
+			opGetTypeIndex(vm, ins)
 		case opcode.InstructionSetTypeIndex:
-			opSetTypeKey(vm, ins)
+			opSetTypeIndex(vm, ins)
 		case opcode.InstructionRemoveTypeIndex:
-			opRemoveTypeKey(vm, ins)
+			opRemoveTypeIndex(vm, ins)
 		default:
 			panic(errors.NewUnexpectedError("cannot execute instruction of type %T", ins))
 		}
