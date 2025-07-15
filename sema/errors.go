@@ -1236,7 +1236,7 @@ func (e *AssignmentToConstantMemberError) SuggestFixes(code string) []errors.Sug
 }
 
 func (e *AssignmentToConstantMemberError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/functions#functions-are-values"
+	return "https://cadence-lang.org/docs/language/constants-and-variables"
 }
 
 // FieldReinitializationError
