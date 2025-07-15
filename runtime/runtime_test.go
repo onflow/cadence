@@ -6070,8 +6070,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: VM produces different writes
-			//UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -6230,8 +6229,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: VM produces different writes
-			//UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
