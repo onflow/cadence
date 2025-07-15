@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	goruntime "runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -29,12 +30,14 @@ import (
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestInterpretFunctionInvocationCheckArgumentTypes(t *testing.T) {
 
 	t.Parallel()
 
+	// TODO: check argument types in the VM
 	inter := parseCheckAndInterpret(t, `
        fun test(_ x: Int): Int {
            return x
@@ -81,20 +84,28 @@ func TestInterpretSelfDeclaration(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, checkFunction)
 
-		inter, err := parseCheckAndInterpretWithOptions(t, code, ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
-				Storage: newUnmeteredInMemoryStorage(),
-				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
-					return baseActivation
+		// NOTE: test only applies to the interpreter,
+		// the VM does not provide a way to check the caller's self
+		inter, err := parseCheckAndInterpretWithOptions(
+			t,
+			code,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+						AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
+					},
+				},
+				InterpreterConfig: &interpreter.Config{
+					Storage: newUnmeteredInMemoryStorage(),
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
-			CheckerConfig: &sema.Config{
-				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-					return baseValueActivation
-				},
-				AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
-			},
-		})
+		)
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
@@ -141,7 +152,7 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(n: Int?): Int? {
 		  return n.map(fun(n: Int): Int {
 			  return n + 1
@@ -163,13 +174,33 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 		interpreter.EmptyLocationRange,
 	)
 
-	_, err := interpreter.InvokeFunction(
-		inter,
-		test,
-		invocation,
-	)
-	RequireError(t, err)
+	if *compile {
+		func() {
+			defer func() {
+				recoverErr := recover()
+				require.IsType(t, &goruntime.TypeAssertionError{}, recoverErr)
+				require.ErrorContains(
+					t,
+					recoverErr.(error),
+					"interface conversion: interpreter.UIntValue is not interpreter.OptionalValue",
+				)
+			}()
 
-	var memberAccessTypeError *interpreter.MemberAccessTypeError
-	require.ErrorAs(t, err, &memberAccessTypeError)
+			_, _ = interpreter.InvokeFunction(
+				inter,
+				test,
+				invocation,
+			)
+		}()
+	} else {
+		_, err := interpreter.InvokeFunction(
+			inter,
+			test,
+			invocation,
+		)
+		RequireError(t, err)
+
+		var memberAccessTypeError *interpreter.MemberAccessTypeError
+		require.ErrorAs(t, err, &memberAccessTypeError)
+	}
 }

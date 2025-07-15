@@ -523,7 +523,7 @@ func TestImport(t *testing.T) {
           }
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
 					return sema.ElaborationImport{
 						Elaboration: importedChecker.Elaboration,
@@ -630,7 +630,7 @@ func TestContractImport(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
 						return sema.ElaborationImport{
 							Elaboration: importedChecker.Elaboration,
@@ -745,7 +745,7 @@ func TestContractImport(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
 						return sema.ElaborationImport{
 							Elaboration: importedChecker.Elaboration,
@@ -862,7 +862,7 @@ func TestContractImport(t *testing.T) {
             `,
 			ParseAndCheckOptions{
 				Location: barLocation,
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
 						require.Equal(t, fooLocation, location)
 						return sema.ElaborationImport{
@@ -905,7 +905,7 @@ func TestContractImport(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
 						require.IsType(t, common.AddressLocation{}, location)
 						addressLocation := location.(common.AddressLocation)
@@ -1056,7 +1056,7 @@ func TestContractImport(t *testing.T) {
             `,
 			ParseAndCheckOptions{
 				Location: barLocation,
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
 						require.Equal(t, fooLocation, location)
 						return sema.ElaborationImport{
@@ -1117,7 +1117,7 @@ func TestContractImport(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
 						require.IsType(t, common.AddressLocation{}, location)
 						addressLocation := location.(common.AddressLocation)
@@ -1241,7 +1241,7 @@ func TestContractImport(t *testing.T) {
             `,
 			ParseAndCheckOptions{
 				Location: importLocation,
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 						return activation
 					},
@@ -1296,7 +1296,7 @@ func TestContractImport(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
 						return sema.ElaborationImport{
 							Elaboration: importedChecker.Elaboration,
@@ -1641,7 +1641,7 @@ func TestContractField(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
 						return sema.ElaborationImport{
 							Elaboration: importedChecker.Elaboration,
@@ -1735,7 +1735,7 @@ func TestContractField(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
 						return sema.ElaborationImport{
 							Elaboration: importedChecker.Elaboration,
@@ -1789,7 +1789,7 @@ func TestNativeFunctions(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
 						return baseValueActivation
 					},
@@ -1861,7 +1861,7 @@ func TestNativeFunctions(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
 						return baseValueActivation
 					},
@@ -2062,7 +2062,7 @@ func TestTransaction(t *testing.T) {
 
 		parseAndCheckOptions := &ParseAndCheckOptions{
 			Location: location,
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				LocationHandler: SingleIdentifierLocationResolver(t),
 				BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 					return activation
@@ -2131,7 +2131,7 @@ func TestTransaction(t *testing.T) {
 
 		parseAndCheckOptions := &ParseAndCheckOptions{
 			Location: location,
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				LocationHandler: SingleIdentifierLocationResolver(t),
 				BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 					return activation
@@ -2196,7 +2196,7 @@ func TestTransaction(t *testing.T) {
 
 		parseAndCheckOptions := &ParseAndCheckOptions{
 			Location: location,
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				LocationHandler: SingleIdentifierLocationResolver(t),
 				BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 					return activation
@@ -2278,7 +2278,7 @@ func TestTransaction(t *testing.T) {
 
 		parseAndCheckOptions := &ParseAndCheckOptions{
 			Location: location,
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				LocationHandler: SingleIdentifierLocationResolver(t),
 				BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 					return activation
@@ -2428,7 +2428,7 @@ func TestInterfaceMethodCall(t *testing.T) {
             `,
 
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
 						return sema.ElaborationImport{
 							Elaboration: importedChecker.Elaboration,
@@ -2532,7 +2532,7 @@ func TestInterfaceMethodCall(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					LocationHandler: SingleIdentifierLocationResolver(t),
 				},
 				Location: barLocation,
@@ -2575,7 +2575,7 @@ func TestInterfaceMethodCall(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
 						var elaboration *sema.Elaboration
 						switch location {
@@ -2680,7 +2680,7 @@ func TestInterfaceMethodCall(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
 						var elaboration *sema.Elaboration
 						switch location {
@@ -2782,7 +2782,7 @@ func TestInterfaceMethodCall(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
 						var elaboration *sema.Elaboration
 						switch location {
@@ -3954,7 +3954,7 @@ func TestFunctionPreConditions(t *testing.T) {
 				CompilerConfig: compilerConfig,
 				ParseAndCheckOptions: &ParseAndCheckOptions{
 					Location: barLocation,
-					Config: &sema.Config{
+					CheckerConfig: &sema.Config{
 						LocationHandler: SingleIdentifierLocationResolver(t),
 						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 							return activation
@@ -4008,7 +4008,7 @@ func TestFunctionPreConditions(t *testing.T) {
 				CompilerConfig: compilerConfig,
 				ParseAndCheckOptions: &ParseAndCheckOptions{
 					Location: fooLocation,
-					Config: &sema.Config{
+					CheckerConfig: &sema.Config{
 						LocationHandler: SingleIdentifierLocationResolver(t),
 						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 							return activation
@@ -4058,7 +4058,7 @@ func TestFunctionPreConditions(t *testing.T) {
 					CompilerConfig: compilerConfig,
 					ParseAndCheckOptions: &ParseAndCheckOptions{
 						Location: location,
-						Config: &sema.Config{
+						CheckerConfig: &sema.Config{
 							LocationHandler: SingleIdentifierLocationResolver(t),
 							BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 								return activation
@@ -6096,7 +6096,7 @@ func TestContractAccount(t *testing.T) {
           }
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
 					return sema.ElaborationImport{
 						Elaboration: importedChecker.Elaboration,
@@ -6217,7 +6217,7 @@ func TestResourceOwner(t *testing.T) {
           }
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
 					return sema.ElaborationImport{
 						Elaboration: importedChecker.Elaboration,
@@ -6351,7 +6351,7 @@ func TestResourceUUID(t *testing.T) {
           }
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
 					return sema.ElaborationImport{
 						Elaboration: importedChecker.Elaboration,
@@ -6747,7 +6747,7 @@ func TestContractClosure(t *testing.T) {
           }
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
 					return sema.ElaborationImport{
 						Elaboration: importedChecker.Elaboration,
@@ -7509,7 +7509,7 @@ func TestInheritedConditions(t *testing.T) {
 			ParseCheckAndCompileOptions{
 				CompilerConfig: compilerConfig,
 				ParseAndCheckOptions: &ParseAndCheckOptions{
-					Config: &sema.Config{
+					CheckerConfig: &sema.Config{
 						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 							return baseValueActivation
 						},
@@ -8169,7 +8169,7 @@ func TestGlobalVariables(t *testing.T) {
 			CompilerAndVMOptions{
 				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
 					ParseAndCheckOptions: &ParseAndCheckOptions{
-						Config: &sema.Config{
+						CheckerConfig: &sema.Config{
 							LocationHandler: SingleIdentifierLocationResolver(t),
 							BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 								return activation
@@ -8534,7 +8534,7 @@ func TestFunctionInvocationWithOptionalArgs(t *testing.T) {
 			ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
 				CompilerConfig: compilerConfig,
 				ParseAndCheckOptions: &ParseAndCheckOptions{
-					Config: &sema.Config{
+					CheckerConfig: &sema.Config{
 						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 							return activation
 						},
@@ -8860,7 +8860,7 @@ func TestGetAuthAccount(t *testing.T) {
 					CompilerConfig: compilerConfig,
 					ParseAndCheckOptions: &ParseAndCheckOptions{
 						Location: location,
-						Config: &sema.Config{
+						CheckerConfig: &sema.Config{
 							LocationHandler: SingleIdentifierLocationResolver(t),
 							BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 								return activation
@@ -8913,7 +8913,7 @@ func TestGetAuthAccount(t *testing.T) {
 					CompilerConfig: compilerConfig,
 					ParseAndCheckOptions: &ParseAndCheckOptions{
 						Location: location,
-						Config: &sema.Config{
+						CheckerConfig: &sema.Config{
 							LocationHandler: SingleIdentifierLocationResolver(t),
 							BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 								return activation
@@ -9149,7 +9149,7 @@ func TestInjectedContract(t *testing.T) {
 				CompilerConfig: compilerConfig,
 				ParseAndCheckOptions: &ParseAndCheckOptions{
 					Location: TestLocation,
-					Config: &sema.Config{
+					CheckerConfig: &sema.Config{
 						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 							assert.Equal(t, TestLocation, location)
 							return baseValueActivation
@@ -9269,7 +9269,7 @@ func TestInheritedDefaultDestroyEvent(t *testing.T) {
 			CompilerConfig: compilerConfig,
 			ParseAndCheckOptions: &ParseAndCheckOptions{
 				Location: barLocation,
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					LocationHandler: SingleIdentifierLocationResolver(t),
 					BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 						return activation
@@ -9311,7 +9311,7 @@ func TestInheritedDefaultDestroyEvent(t *testing.T) {
 			CompilerConfig: compilerConfig,
 			ParseAndCheckOptions: &ParseAndCheckOptions{
 				Location: fooLocation,
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					LocationHandler: SingleIdentifierLocationResolver(t),
 					BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 						return activation
@@ -9381,7 +9381,7 @@ func TestInheritedDefaultDestroyEvent(t *testing.T) {
 				CompilerConfig: compilerConfig,
 				ParseAndCheckOptions: &ParseAndCheckOptions{
 					Location: location,
-					Config: &sema.Config{
+					CheckerConfig: &sema.Config{
 						LocationHandler: SingleIdentifierLocationResolver(t),
 						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 							return activation

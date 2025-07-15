@@ -51,7 +51,7 @@ type vmEnvironment struct {
 	checkingEnvironment *CheckingEnvironment
 
 	config         Config
-	vmConfig       *vm.Config
+	VMConfig       *vm.Config
 	compilerConfig *compiler.Config
 
 	defaultCompilerBuiltinGlobals *activations.Activation[compiler.GlobalImport]
@@ -90,7 +90,7 @@ func newVMEnvironment(config Config) *vmEnvironment {
 		SimpleContractAdditionTracker: stdlib.NewSimpleContractAdditionTracker(),
 	}
 	env.checkingEnvironment = newCheckingEnvironment()
-	env.vmConfig = env.newVMConfig()
+	env.VMConfig = env.newVMConfig()
 	env.compilerConfig = env.newCompilerConfig()
 
 	env.defaultCompilerBuiltinGlobals = activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
@@ -148,6 +148,8 @@ func (e *vmEnvironment) newVMConfig() *vm.Config {
 	conf.OnEventEmitted = newOnEventEmittedHandler(&e.Interface)
 	conf.CapabilityBorrowHandler = newCapabilityBorrowHandler(e)
 	conf.CapabilityCheckHandler = newCapabilityCheckHandler(e)
+	conf.ValidateAccountCapabilitiesGetHandler = newValidateAccountCapabilitiesGetHandler(&e.Interface)
+	conf.ValidateAccountCapabilitiesPublishHandler = newValidateAccountCapabilitiesPublishHandler(&e.Interface)
 	conf.ElaborationResolver = e.resolveElaboration
 	conf.StackDepthLimit = defaultStackDepthLimit
 	return conf
@@ -202,7 +204,7 @@ func (e *vmEnvironment) Configure(
 ) {
 	e.Interface = runtimeInterface
 	e.storage = storage
-	e.vmConfig.SetStorage(storage)
+	e.VMConfig.SetStorage(storage)
 
 	e.checkingEnvironment.configure(
 		runtimeInterface,
@@ -525,7 +527,7 @@ func (e *vmEnvironment) newVM(
 	return vm.NewVM(
 		location,
 		program,
-		e.vmConfig,
+		e.VMConfig,
 	)
 }
 

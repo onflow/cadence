@@ -408,9 +408,10 @@ func (vm *VM) InvokeTransaction(arguments []Value, signers ...Value) (err error)
 		return err
 	}
 
-	// TODO: Invoke pre/post conditions
-
 	// Invoke 'execute', if exists.
+	// NOTE: pre and post conditions of the transaction were already
+	// desugared into the execution function.
+	// If no `execute` function was defined, a synthetic one was created.
 	err = vm.InvokeTransactionExecute(transaction)
 	if err != nil {
 		return err
@@ -837,7 +838,9 @@ func opRemoveIndex(vm *VM) {
 		EmptyLocationRange,
 		index,
 	)
-	containerValue.SetKey(
+
+	// Note: Must use `InsertKey` here, not `SetKey`.
+	containerValue.InsertKey(
 		context,
 		EmptyLocationRange,
 		index,
