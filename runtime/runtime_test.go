@@ -49,7 +49,7 @@ import (
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
-var compile = flag.Bool("compile", false, "Run tests using the compiler")
+var compile = flag.Bool("compile", true, "Run tests using the compiler")
 
 func newScriptEnvironment() Environment {
 	if *compile {
@@ -10926,8 +10926,7 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: fix VM
-			//UseVM: *compile,
+			UseVM: *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -10947,7 +10946,7 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
                 access(all) var optional: @[Bar.Vault]?
 
                 init() {
-                    self.optional <- []
+                    self.optional <- nil
                 }
 
                 access(all) fun rugpullAndAssign(_ callback: fun(): Void, _ victim: @Bar.Vault) {
@@ -10990,10 +10989,10 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: fix VM
-			//UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
+
 	RequireError(t, err)
 
 	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
@@ -13295,11 +13294,11 @@ func TestRuntimeStorageReferenceBoundFunctionConfusion(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: fix VM
-			//UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 
+	require.NoError(t, err)
 	RequireError(t, err)
 
 	var dereferenceError *interpreter.DereferenceError

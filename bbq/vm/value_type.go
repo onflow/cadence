@@ -37,7 +37,7 @@ func init() {
 			sema.MetaTypeIsSubtypeFunctionName,
 			sema.MetaTypeIsSubtypeFunctionType,
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				typeValue := arguments[ReceiverIndex].(interpreter.TypeValue)
+				typeValue := getReceiver(context, arguments).(interpreter.TypeValue)
 
 				otherTypeValue, ok := arguments[TypeBoundFunctionArgumentOffset].(interpreter.TypeValue)
 				if !ok {

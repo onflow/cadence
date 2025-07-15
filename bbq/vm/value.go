@@ -42,3 +42,16 @@ func ConvertAndBox(
 		targetSemaType,
 	)
 }
+
+func getReceiver(context interpreter.ValueStaticTypeContext, args []Value) Value {
+	receiver := args[ReceiverIndex]
+	implicitReference := receiver.(*ImplicitReferenceValue)
+	return implicitReference.ReferencedValue(context)
+}
+
+func GetReceiverAndArgs(context interpreter.ValueStaticTypeContext, args []Value) (Value, []Value) {
+	receiver := args[ReceiverIndex]
+	implicitReference := receiver.(*ImplicitReferenceValue)
+
+	return implicitReference.ReferencedValue(context), args[TypeBoundFunctionArgumentOffset:]
+}

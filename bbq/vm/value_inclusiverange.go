@@ -47,7 +47,7 @@ func init() {
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[ReceiverIndex], args[TypeBoundFunctionArgumentOffset:]
+				receiver, args = GetReceiverAndArgs(context, args)
 
 				rangeValue, ok := receiver.(*interpreter.CompositeValue)
 				if !ok {
