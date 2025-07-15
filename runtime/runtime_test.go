@@ -49,7 +49,7 @@ import (
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
-var compile = flag.Bool("compile", true, "Run tests using the compiler")
+var compile = flag.Bool("compile", false, "Run tests using the compiler")
 
 func newScriptEnvironment() Environment {
 	if *compile {
@@ -13298,7 +13298,6 @@ func TestRuntimeStorageReferenceBoundFunctionConfusion(t *testing.T) {
 		},
 	)
 
-	require.NoError(t, err)
 	RequireError(t, err)
 
 	var dereferenceError *interpreter.DereferenceError

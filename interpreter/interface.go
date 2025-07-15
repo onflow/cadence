@@ -219,6 +219,7 @@ type MemberAccessibleContext interface {
 	GetMemberAccessContextForLocation(location common.Location) MemberAccessibleContext
 
 	GetMethod(value MemberAccessibleValue, name string, locationRange LocationRange) FunctionValue
+	MaybeUpdateStorageReferenceMemberReceiver(storageReference *StorageReferenceValue, referencedValue Value, member Value) Value
 }
 
 var _ MemberAccessibleContext = &Interpreter{}
