@@ -5440,7 +5440,7 @@ func (e *DefaultDestroyInvalidParameterError) Error() string {
 }
 
 func (e *DefaultDestroyInvalidParameterError) SecondaryError() string {
-	return "default destroy events only support storable types as parameters"
+	return "default destroy events only support primitive types as parameters"
 }
 
 func (e *DefaultDestroyInvalidParameterError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
