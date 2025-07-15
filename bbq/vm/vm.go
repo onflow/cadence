@@ -1056,7 +1056,6 @@ func newCompositeValue(
 	// decode location
 	staticType := vm.loadType(typeIndex)
 
-	// TODO: Support inclusive-range type
 	compositeStaticType := staticType.(*interpreter.CompositeStaticType)
 
 	config := vm.context
