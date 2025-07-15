@@ -3042,8 +3042,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
-					// TODO: fix caching deployment/update in VM environment
-					//UseVM: *compile,
+					UseVM:     *compile,
 				},
 			)
 		}
@@ -3081,7 +3080,12 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		require.NoError(t, err)
 		require.Nil(t, runtimeInterface1.Programs[contractLocation])
 
-		require.Equal(t, locationAccessCounts{}, programGets1)
+		expectedGets := locationAccessCounts{}
+		if *compile {
+			expectedGets[txLocation] = 2
+		}
+
+		require.Equal(t, expectedGets, programGets1)
 		// NOTE: deployed contract is *correctly* *NOT* set,
 		// as contract deployments and updates are delayed to the end of the transaction,
 		// so should not influence program storage
@@ -3092,7 +3096,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		err = executeTransaction2(addTx)
 		require.NoError(t, err)
 		require.Nil(t, runtimeInterface2.Programs[contractLocation])
-		require.Equal(t, locationAccessCounts{}, programGets2)
+		require.Equal(t, expectedGets, programGets2)
 		// See NOTE above
 		require.Equal(t, locationAccessCounts{txLocation: 1}, programSets2)
 	})
@@ -3125,10 +3129,15 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		// NOTE: program in cache of second
 		assert.NotNil(t, runtimeInterface2.Programs[contractLocation])
 
+		expectedGets := locationAccessCounts{
+			contractLocation: 1,
+		}
+		if *compile {
+			expectedGets[txLocation] = 2
+		}
+
 		assert.Equal(t,
-			locationAccessCounts{
-				contractLocation: 1,
-			},
+			expectedGets,
 			programGets2,
 		)
 
@@ -3161,8 +3170,13 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		// NOTE: the program was not available in the cache (no successful get).
 		// The old code is only parsed, and program does not need to be set.
 
+		expectedGets1 := locationAccessCounts{}
+		if *compile {
+			expectedGets1[txLocation1] = 2
+		}
+
 		assert.Equal(t,
-			locationAccessCounts{},
+			expectedGets1,
 			programGets1,
 		)
 		assert.Equal(
@@ -3181,8 +3195,12 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		// NOTE: the program was available in the cache (successful get).
 		// The old code is only parsed, and does not need to be set.
 
+		expectedGets2 := locationAccessCounts{}
+		if *compile {
+			expectedGets2[txLocation2] = 2
+		}
 		assert.Equal(t,
-			locationAccessCounts{},
+			expectedGets2,
 			programGets2,
 		)
 		assert.Equal(
