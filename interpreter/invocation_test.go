@@ -26,6 +26,7 @@ import (
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
@@ -33,22 +34,59 @@ import (
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
-func TestInterpretFunctionInvocationCheckArgumentTypes(t *testing.T) {
+func TestInterpretReturnType(t *testing.T) {
 
 	t.Parallel()
 
-	// TODO: check argument types in the VM
-	inter := parseCheckAndInterpret(t, `
-       fun test(_ x: Int): Int {
-           return x
-       }
-   `)
+	xValue := stdlib.StandardLibraryValue{
+		Name: "x",
+		Type: sema.IntType,
+		// NOTE: value with different type than declared type
+		Value: interpreter.TrueValue,
+	}
 
-	_, err := inter.Invoke("test", interpreter.TrueValue)
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(xValue)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, xValue)
+
+	inter, err := parseCheckAndPrepareWithOptions(
+		t,
+		`
+            fun test(): Int {
+                return x
+            }
+        `,
+		ParseCheckAndInterpretOptions{
+			InterpreterConfig: &interpreter.Config{
+				Storage: newUnmeteredInMemoryStorage(),
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+			},
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+					AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
 	RequireError(t, err)
 
-	var transferTypeError *interpreter.ValueTransferTypeError
-	require.ErrorAs(t, err, &transferTypeError)
+	if *compile {
+		var unexpectedErr errors.UnexpectedError
+		require.ErrorAs(t, err, &unexpectedErr)
+	} else {
+		var transferTypeError *interpreter.ValueTransferTypeError
+		require.ErrorAs(t, err, &transferTypeError)
+	}
 }
 
 func TestInterpretSelfDeclaration(t *testing.T) {
