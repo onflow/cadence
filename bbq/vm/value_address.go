@@ -38,7 +38,7 @@ func init() {
 			sema.ToStringFunctionName,
 			sema.ToStringFunctionType,
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				address := arguments[ReceiverIndex].(interpreter.AddressValue)
+				address := getReceiver(context, arguments).(interpreter.AddressValue)
 				return interpreter.AddressValueToStringFunction(
 					context,
 					address,
@@ -54,7 +54,7 @@ func init() {
 			sema.AddressTypeToBytesFunctionName,
 			sema.AddressTypeToBytesFunctionType,
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				addressValue := arguments[ReceiverIndex].(interpreter.AddressValue)
+				addressValue := getReceiver(context, arguments).(interpreter.AddressValue)
 				address := common.Address(addressValue)
 				return interpreter.ByteSliceToByteArrayValue(context, address[:])
 			},

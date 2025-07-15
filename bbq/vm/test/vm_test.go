@@ -6201,11 +6201,13 @@ func TestResourceOwner(t *testing.T) {
 	)
 	importedProgram := importCompiler.Compile()
 
+	vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+
 	_, importedContractValue := initializeContract(
 		t,
 		importLocation,
 		importedProgram,
-		nil,
+		vmConfig,
 	)
 
 	checker, err := ParseAndCheckWithOptions(t,
@@ -6242,7 +6244,6 @@ func TestResourceOwner(t *testing.T) {
 
 	var uuid uint64 = 42
 
-	vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 	vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 		return importedProgram
 	}
@@ -9090,7 +9091,7 @@ func TestInjectedContract(t *testing.T) {
 			var receiver interpreter.Value
 
 			// arg[0] is the receiver. Actual arguments starts from 1.
-			receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+			receiver, args = vm.GetReceiverAndArgs(context, args)
 
 			assert.Same(t, bValue, receiver)
 

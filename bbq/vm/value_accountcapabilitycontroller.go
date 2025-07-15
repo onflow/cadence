@@ -41,7 +41,7 @@ func init() {
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[ReceiverIndex], args[TypeBoundFunctionArgumentOffset:]
+				receiver, args = GetReceiverAndArgs(context, args)
 
 				newTagValue, ok := args[0].(*interpreter.StringValue)
 				if !ok {
@@ -67,7 +67,7 @@ func init() {
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[ReceiverIndex], args[TypeBoundFunctionArgumentOffset:] // nolint:staticcheck
+				receiver, args = GetReceiverAndArgs(context, args) // nolint:staticcheck
 
 				v := getCheckedAccountCapabilityControllerReceiver(receiver)
 

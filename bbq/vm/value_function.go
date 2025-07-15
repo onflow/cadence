@@ -530,7 +530,7 @@ func (v *BoundFunctionValue) initializeFunctionType(context interpreter.ValueSta
 	// Or would needs to be derived based on the receiver (e.g: `[Int8].append()`).
 	if method.HasGenericType() {
 		v.functionType = method.ResolvedFunctionType(
-			v.Receiver(context),
+			v.receiver(context),
 			context,
 		)
 	} else {
@@ -551,12 +551,18 @@ func (v *BoundFunctionValue) Invoke(invocation interpreter.Invocation) interpret
 	)
 }
 
-func (v *BoundFunctionValue) Receiver(context interpreter.ValueStaticTypeContext) Value {
+func (v *BoundFunctionValue) receiver(context interpreter.ValueStaticTypeContext) Value {
 	receiver := interpreter.GetReceiver(
 		v.receiverReference,
 		v.receiverIsReference,
 		context,
 		EmptyLocationRange,
 	)
+
 	return maybeDereference(context, *receiver)
+}
+
+func (v *BoundFunctionValue) Receiver(context interpreter.ReferenceCreationContext) Value {
+	receiverValue := v.receiver(context)
+	return NewImplicitReferenceValue(context, receiverValue)
 }

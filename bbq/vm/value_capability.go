@@ -41,7 +41,7 @@ func init() {
 				return sema.CapabilityTypeBorrowFunctionType(borrowType)
 			},
 			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
-				capabilityValue := args[ReceiverIndex]
+				capabilityValue := getReceiver(context, args)
 
 				var idCapabilityValue *interpreter.IDCapabilityValue
 
@@ -96,7 +96,7 @@ func init() {
 			},
 			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
 
-				capabilityValue := args[ReceiverIndex]
+				capabilityValue := getReceiver(context, args)
 
 				var idCapabilityValue *interpreter.IDCapabilityValue
 
