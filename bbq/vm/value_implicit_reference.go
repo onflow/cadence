@@ -21,6 +21,7 @@ package vm
 import (
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 )
@@ -32,9 +33,10 @@ type ImplicitReferenceValue struct {
 
 var _ Value = &ImplicitReferenceValue{}
 
+var implicitReferenceMemoryUsage = common.NewConstantMemoryUsage(common.MemoryKindImplicitReferenceVMValue)
+
 func NewImplicitReferenceValue(context interpreter.ReferenceCreationContext, value Value) *ImplicitReferenceValue {
-	// TODO:
-	//common.UseMemory(context, variableMemoryUsage)
+	common.UseMemory(context, implicitReferenceMemoryUsage)
 
 	semaType := interpreter.MustSemaTypeOfValue(value, context)
 
