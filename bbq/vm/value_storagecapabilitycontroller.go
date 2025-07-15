@@ -42,7 +42,7 @@ func init() {
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = GetReceiverAndArgs(context, args)
+				receiver, args = SplitReceiverAndArgs(context, args)
 
 				newTagValue, ok := args[0].(*interpreter.StringValue)
 				if !ok {
@@ -68,7 +68,7 @@ func init() {
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, _ = GetReceiverAndArgs(context, args)
+				receiver, _ = SplitReceiverAndArgs(context, args)
 
 				v := getCheckedStorageCapabilityControllerReceiver(receiver)
 
@@ -91,7 +91,7 @@ func init() {
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = GetReceiverAndArgs(context, args) // nolint:staticcheck
+				receiver, args = SplitReceiverAndArgs(context, args) // nolint:staticcheck
 
 				v := getCheckedStorageCapabilityControllerReceiver(receiver)
 
@@ -110,7 +110,7 @@ func init() {
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = GetReceiverAndArgs(context, args)
+				receiver, args = SplitReceiverAndArgs(context, args)
 
 				// Get path argument
 

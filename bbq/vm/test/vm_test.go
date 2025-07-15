@@ -9091,7 +9091,7 @@ func TestInjectedContract(t *testing.T) {
 			var receiver interpreter.Value
 
 			// arg[0] is the receiver. Actual arguments starts from 1.
-			receiver, args = vm.GetReceiverAndArgs(context, args)
+			receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 			assert.Same(t, bValue, receiver)
 

@@ -118,7 +118,7 @@ func NewVMHashAlgorithmHashFunction(
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.GetReceiverAndArgs(context, args)
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				hashAlgoValue, ok := receiver.(interpreter.MemberAccessibleValue)
 				if !ok {
@@ -191,7 +191,7 @@ func NewVMHashAlgorithmHashWithTagFunction(
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.GetReceiverAndArgs(context, args)
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				hashAlgoValue, ok := receiver.(interpreter.MemberAccessibleValue)
 				if !ok {
