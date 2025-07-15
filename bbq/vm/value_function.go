@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/opcode"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -393,11 +394,15 @@ type BoundFunctionValue struct {
 	functionType *sema.FunctionType
 }
 
+var boundFunctionMemoryUsage = common.NewConstantMemoryUsage(common.MemoryKindBoundFunctionVMValue)
+
 func NewBoundFunctionValue(
 	context interpreter.ReferenceCreationContext,
 	receiver interpreter.Value,
 	method FunctionValue,
 ) FunctionValue {
+
+	common.UseMemory(context, boundFunctionMemoryUsage)
 
 	// Since 'self' work as an implicit reference, create an explicit one and hold it.
 	// This reference is later used to check the validity of the referenced value/resource.
