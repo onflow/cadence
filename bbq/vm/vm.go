@@ -1020,7 +1020,6 @@ func opNew(vm *VM, ins opcode.InstructionNew) {
 	typeIndex := ins.Type
 	staticType := vm.loadType(typeIndex)
 
-	// TODO: Support inclusive-range type
 	compositeStaticType := staticType.(*interpreter.CompositeStaticType)
 
 	config := vm.context
