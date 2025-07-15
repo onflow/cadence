@@ -8848,6 +8848,109 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 
 }
 
+func TestCompileAttachments(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			struct S {}
+			attachment A for S {
+				fun foo(): Int { return 3 }
+			}
+			fun test(): Int {
+				var s = S()
+				s = attach A() to s
+				return s[A]?.foo()!
+			}
+		`)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 8)
+
+		// global functions
+		const (
+			sConstructorGlobalIndex = 1
+			aConstructorGlobalIndex = 4
+		)
+
+		// local variables
+		const (
+			sLocalIndex = iota
+			sTmpLocalIndex
+			sRefLocalIndex
+			attachmentLocalIndex
+		)
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// STATEMENT: var s = S()
+				opcode.InstructionStatement{},
+				opcode.InstructionGetGlobal{Global: sConstructorGlobalIndex},
+				opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0},
+				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionSetLocal{Local: sLocalIndex},
+
+				// STATEMENT: s = attach A() to s
+				opcode.InstructionStatement{},
+				// get s on stack
+				opcode.InstructionGetLocal{Local: sLocalIndex},
+				// store s in a separate local, put on stack
+				opcode.InstructionSetLocal{Local: sTmpLocalIndex},
+				opcode.InstructionGetLocal{Local: sTmpLocalIndex},
+				// create a reference to s and store locally
+				opcode.InstructionNewRef{Type: 2, IsImplicit: false},
+				opcode.InstructionSetLocal{Local: sRefLocalIndex},
+				// get A constructor
+				opcode.InstructionGetGlobal{Global: aConstructorGlobalIndex},
+				// get s reference
+				opcode.InstructionGetLocal{Local: sRefLocalIndex},
+				// invoke A constructor with &s as arg, puts A on stack
+				opcode.InstructionInvoke{TypeArgs: []uint16{1}, ArgCount: 1},
+				// get s back on stack
+				opcode.InstructionGetLocal{Local: sTmpLocalIndex},
+				// copy/transfer of s to attach to
+				opcode.InstructionTransfer{},
+				// attachment operation, attach A to s-copy
+				opcode.InstructionSetTypeIndex{Type: 3},
+				// return value is s-copy
+				opcode.InstructionTransferAndConvert{Type: 1},
+				// finish assignment of s
+				opcode.InstructionSetLocal{Local: sLocalIndex},
+
+				// STATEMENT: return s[A]?.foo()!
+				opcode.InstructionStatement{},
+				opcode.InstructionGetLocal{Local: sLocalIndex},
+				// access A on s: s[A], returns attachment reference as optional
+				opcode.InstructionGetTypeIndex{Type: 3},
+				opcode.InstructionSetLocal{Local: attachmentLocalIndex},
+				opcode.InstructionGetLocal{Local: attachmentLocalIndex},
+				opcode.InstructionJumpIfNil{Target: 30},
+				opcode.InstructionGetLocal{Local: attachmentLocalIndex},
+				opcode.InstructionUnwrap{},
+				// call foo if not nil
+				opcode.InstructionGetMethod{Method: 7},
+				opcode.InstructionInvokeMethodStatic{TypeArgs: []uint16(nil), ArgCount: 0},
+				opcode.InstructionJump{Target: 31},
+				opcode.InstructionNil{},
+				opcode.InstructionUnwrap{},
+				opcode.InstructionTransferAndConvert{Type: 4},
+				opcode.InstructionReturnValue{},
+			},
+			functions[0].Code,
+		)
+	})
+}
+
 func TestCompileImportEnumCase(t *testing.T) {
 
 	t.Parallel()
