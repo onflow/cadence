@@ -8985,6 +8985,43 @@ func TestCompileAttachments(t *testing.T) {
 			functions[4].Code,
 		)
 	})
+
+	t.Run("test", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			struct S {
+                fun bar(): Int? {
+                    return self[A]?.bar()
+                }
+            }
+            attachment A for S {
+                let x: Int?
+                fun foo(): Int? { return self.x }
+                fun bar(): Int { return 3 }
+                init() { self.x = base.bar() }
+            }
+            fun test(): Int? {
+                var s = S()
+                var s2 = attach A() to s
+                return s2[A]?.foo()!
+            }
+		`)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+
+		assert.Equal(t,
+			[]opcode.Instruction{},
+			functions[0].Code,
+		)
+	})
 }
 
 func TestCompileImportEnumCase(t *testing.T) {

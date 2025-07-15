@@ -3411,7 +3411,6 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 
 	// base back on stack
 	c.emitGetLocal(baseLocalIndex)
-	// TODO: do attachment.setbaseValue(...)
 	// base should now be transferred
 	c.emitTransfer()
 
