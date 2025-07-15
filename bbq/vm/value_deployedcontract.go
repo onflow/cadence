@@ -45,7 +45,7 @@ func init() {
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, _ = GetReceiverAndArgs(context, args)
+				receiver, _ = SplitReceiverAndArgs(context, args)
 
 				deployedContract, ok := receiver.(*interpreter.SimpleCompositeValue)
 				if !ok {

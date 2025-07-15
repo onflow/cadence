@@ -294,7 +294,7 @@ func NewVMPublicKeyVerifySignatureFunction(verifier PublicKeySignatureVerifier) 
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.GetReceiverAndArgs(context, args)
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				publicKeyValue, ok := receiver.(*interpreter.CompositeValue)
 				if !ok {
@@ -432,7 +432,7 @@ func NewVMPublicKeyVerifyPoPFunction(verifier BLSPoPVerifier) VMFunction {
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.GetReceiverAndArgs(context, args)
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				publicKeyValue, ok := receiver.(*interpreter.CompositeValue)
 				if !ok {

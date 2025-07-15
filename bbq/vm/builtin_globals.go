@@ -453,7 +453,7 @@ func registerBuiltinTypeSaturatingArithmeticFunctions(t sema.SaturatingArithmeti
 				functionName,
 				sema.SaturatingArithmeticTypeFunctionTypes[t],
 				func(context *Context, _ []bbq.StaticType, args ...Value) Value {
-					receiver, args := GetReceiverAndArgs(context, args)
+					receiver, args := SplitReceiverAndArgs(context, args)
 
 					v, ok := receiver.(interpreter.NumberValue)
 					if !ok {
