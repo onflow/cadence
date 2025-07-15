@@ -91,7 +91,7 @@ func init() {
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = SplitReceiverAndArgs(context, args) // nolint:staticcheck
+				receiver, _ = SplitReceiverAndArgs(context, args)
 
 				v := getCheckedStorageCapabilityControllerReceiver(receiver)
 

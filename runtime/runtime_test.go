@@ -10932,7 +10932,7 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			UseVM: *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
