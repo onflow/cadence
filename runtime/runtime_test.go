@@ -7876,7 +7876,14 @@ func TestRuntimeInternalErrors(t *testing.T) {
 
 }
 
-func TestRuntimeComputationMetring(t *testing.T) {
+func ifCompile[T any](a, b T) T {
+	if *compile {
+		return a
+	}
+	return b
+}
+
+func TestRuntimeComputationMetering(t *testing.T) {
 	t.Parallel()
 
 	type test struct {
@@ -7887,7 +7894,7 @@ func TestRuntimeComputationMetring(t *testing.T) {
 		intensity uint64
 	}
 
-	hitLimit := uint(6)
+	hitLimit := uint(8)
 
 	tests := []test{
 		{
@@ -7897,7 +7904,7 @@ func TestRuntimeComputationMetring(t *testing.T) {
             `,
 			ok:        false,
 			hits:      hitLimit,
-			intensity: 6,
+			intensity: uint64(hitLimit),
 		},
 		{
 			name: "Limited while loop",
@@ -7909,7 +7916,7 @@ func TestRuntimeComputationMetring(t *testing.T) {
             `,
 			ok:        false,
 			hits:      hitLimit,
-			intensity: 6,
+			intensity: uint64(hitLimit),
 		},
 		{
 			name: "statement + createArray + transferArray + too many for-in loop iterations",
@@ -7918,7 +7925,7 @@ func TestRuntimeComputationMetring(t *testing.T) {
             `,
 			ok:        false,
 			hits:      hitLimit,
-			intensity: 6,
+			intensity: uint64(hitLimit),
 		},
 		{
 			name: "statement + createArray + transferArray + two for-in loop iterations",
@@ -7926,8 +7933,8 @@ func TestRuntimeComputationMetring(t *testing.T) {
               for i in [1, 2] {}
             `,
 			ok:        true,
-			hits:      4,
-			intensity: 4,
+			hits:      ifCompile[uint](7, 4),
+			intensity: ifCompile[uint64](7, 4),
 		},
 		{
 			name: "statement + functionInvocation + encoding",
@@ -7935,8 +7942,8 @@ func TestRuntimeComputationMetring(t *testing.T) {
               acc.storage.save("A quick brown fox jumps over the lazy dog", to:/storage/some_path)
             `,
 			ok:        true,
-			hits:      3,
-			intensity: 108,
+			hits:      ifCompile[uint](6, 3),
+			intensity: ifCompile[uint64](111, 108),
 		},
 	}
 
@@ -7993,8 +8000,7 @@ func TestRuntimeComputationMetring(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
-					// TODO: VM has different computation metering
-					//UseVM:     *compile,
+					UseVM:     *compile,
 				},
 			)
 			if testCase.ok {
