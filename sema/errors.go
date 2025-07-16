@@ -4956,3 +4956,342 @@ func (e *InvalidTypeIndexingError) Error() string {
 		e.IndexingExpression.String(),
 	)
 }
+
+// InvalidAttachmentEntitlementError
+type InvalidAttachmentEntitlementError struct {
+	Attachment         *CompositeType
+	BaseType           Type
+	InvalidEntitlement *EntitlementType
+	Pos                ast.Position
+}
+
+var _ SemanticError = &InvalidAttachmentEntitlementError{}
+var _ errors.UserError = &InvalidAttachmentEntitlementError{}
+
+func (*InvalidAttachmentEntitlementError) isSemanticError() {}
+
+func (*InvalidAttachmentEntitlementError) IsUserError() {}
+
+func (e *InvalidAttachmentEntitlementError) Error() string {
+	entitlementDescription := "entitlements"
+	if e.InvalidEntitlement != nil {
+		entitlementDescription = fmt.Sprintf("`%s`", e.InvalidEntitlement.QualifiedIdentifier())
+	}
+
+	return fmt.Sprintf("cannot use %s in the access modifier for a member in `%s`",
+		entitlementDescription,
+		e.Attachment.QualifiedIdentifier())
+}
+
+func (e *InvalidAttachmentEntitlementError) SecondaryError() string {
+	return fmt.Sprintf("`%s` must appear in the base type `%s`",
+		e.InvalidEntitlement.QualifiedIdentifier(),
+		e.BaseType.String(),
+	)
+}
+
+func (e *InvalidAttachmentEntitlementError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidAttachmentEntitlementError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+// DefaultDestroyEventInNonResourceError
+
+type DefaultDestroyEventInNonResourceError struct {
+	Kind string
+	ast.Range
+}
+
+var _ SemanticError = &DefaultDestroyEventInNonResourceError{}
+var _ errors.UserError = &DefaultDestroyEventInNonResourceError{}
+var _ errors.SecondaryError = &DefaultDestroyEventInNonResourceError{}
+var _ errors.HasDocumentationLink = &DefaultDestroyEventInNonResourceError{}
+
+func (*DefaultDestroyEventInNonResourceError) isSemanticError() {}
+
+func (*DefaultDestroyEventInNonResourceError) IsUserError() {}
+
+func (e *DefaultDestroyEventInNonResourceError) Error() string {
+	return fmt.Sprintf(
+		"cannot declare default destruction event in %s",
+		e.Kind,
+	)
+}
+
+func (e *DefaultDestroyEventInNonResourceError) SecondaryError() string {
+	return "the ResourceDestroyed event can only be declared in resources and resource attachments"
+}
+
+func (e *DefaultDestroyEventInNonResourceError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/events"
+}
+
+type DefaultDestroyInvalidArgumentKind int
+
+const (
+	NonDictionaryIndexExpression DefaultDestroyInvalidArgumentKind = iota
+	ReferenceTypedMemberAccess
+	InvalidIdentifier
+	InvalidExpression
+)
+
+// DefaultDestroyInvalidArgumentError
+
+type DefaultDestroyInvalidArgumentError struct {
+	ast.Range
+	Kind DefaultDestroyInvalidArgumentKind
+}
+
+var _ SemanticError = &DefaultDestroyInvalidArgumentError{}
+var _ errors.UserError = &DefaultDestroyInvalidArgumentError{}
+var _ errors.SecondaryError = &DefaultDestroyInvalidArgumentError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &DefaultDestroyInvalidArgumentError{}
+var _ errors.HasDocumentationLink = &DefaultDestroyInvalidArgumentError{}
+
+func (*DefaultDestroyInvalidArgumentError) isSemanticError() {}
+
+func (*DefaultDestroyInvalidArgumentError) IsUserError() {}
+
+func (e *DefaultDestroyInvalidArgumentError) Error() string {
+	return "Invalid default destroy event argument"
+}
+
+func (e *DefaultDestroyInvalidArgumentError) SecondaryError() string {
+	switch e.Kind {
+	case NonDictionaryIndexExpression:
+		return "Indexed accesses may only be performed on dictionaries"
+	case ReferenceTypedMemberAccess:
+		return "Member accesses in arguments may not contain reference types"
+	case InvalidIdentifier:
+		return "Identifiers other than `self` or `base` may not appear in arguments"
+	case InvalidExpression:
+		return "Arguments must be literals, member access expressions on `self` or `base`, indexed access expressions on dictionaries, or attachment accesses"
+	}
+	return ""
+}
+
+func (e *DefaultDestroyInvalidArgumentError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	// For default destroy invalid argument errors, we suggest using valid argument types
+	var suggestion string
+	switch e.Kind {
+	case NonDictionaryIndexExpression:
+		suggestion = "// Use dictionary indexing instead of array indexing\n"
+	case ReferenceTypedMemberAccess:
+		suggestion = "// Access the value directly, not through a reference\n"
+	case InvalidIdentifier:
+		suggestion = "// Use only 'self' or 'base' identifiers in arguments\n"
+	case InvalidExpression:
+		suggestion = "// Use literals, member access on 'self'/'base', or dictionary indexing\n"
+	default:
+		suggestion = "// Use valid argument expressions for default destroy events\n"
+	}
+
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "use valid argument expressions",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: suggestion,
+					Range: ast.Range{
+						StartPos: e.StartPos,
+						EndPos:   e.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *DefaultDestroyInvalidArgumentError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources#destroy-events"
+}
+
+// DefaultDestroyInvalidParameterError
+
+type DefaultDestroyInvalidParameterError struct {
+	ParamType Type
+	ast.Range
+}
+
+var _ SemanticError = &DefaultDestroyInvalidParameterError{}
+var _ errors.UserError = &DefaultDestroyInvalidParameterError{}
+var _ errors.SecondaryError = &DefaultDestroyInvalidParameterError{}
+var _ errors.HasDocumentationLink = &DefaultDestroyInvalidParameterError{}
+
+func (*DefaultDestroyInvalidParameterError) isSemanticError() {}
+
+func (*DefaultDestroyInvalidParameterError) IsUserError() {}
+
+func (e *DefaultDestroyInvalidParameterError) Error() string {
+	return fmt.Sprintf("`%s` is not a valid parameter type for a default destroy event", e.ParamType.QualifiedString())
+}
+
+func (e *DefaultDestroyInvalidParameterError) SecondaryError() string {
+	return "default destroy events only support primitive types (like String, Int, Bool) as parameters"
+}
+
+func (e *DefaultDestroyInvalidParameterError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources#destroy-events"
+}
+
+// InvalidTypeParameterizedNonNativeFunctionError
+
+type InvalidTypeParameterizedNonNativeFunctionError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidTypeParameterizedNonNativeFunctionError{}
+var _ errors.UserError = &InvalidTypeParameterizedNonNativeFunctionError{}
+
+func (*InvalidTypeParameterizedNonNativeFunctionError) isSemanticError() {}
+
+func (*InvalidTypeParameterizedNonNativeFunctionError) IsUserError() {}
+
+func (e *InvalidTypeParameterizedNonNativeFunctionError) Error() string {
+	return "invalid type parameters in non-native function"
+}
+
+// NestedReferenceError
+type NestedReferenceError struct {
+	Type *ReferenceType
+	ast.Range
+}
+
+var _ SemanticError = &NestedReferenceError{}
+var _ errors.UserError = &NestedReferenceError{}
+
+func (*NestedReferenceError) isSemanticError() {}
+
+func (*NestedReferenceError) IsUserError() {}
+
+func (e *NestedReferenceError) Error() string {
+	return fmt.Sprintf("cannot create a nested reference to value of type %s", e.Type.QualifiedString())
+}
+
+// ResultVariableConflictError
+
+type ResultVariableConflictError struct {
+	Kind                common.DeclarationKind
+	Pos                 ast.Position
+	ReturnTypeRange     ast.Range
+	PostConditionsRange ast.Range
+}
+
+var _ SemanticError = &ResultVariableConflictError{}
+var _ errors.UserError = &ResultVariableConflictError{}
+var _ errors.SecondaryError = &ResultVariableConflictError{}
+
+func (*ResultVariableConflictError) isSemanticError() {}
+
+func (*ResultVariableConflictError) IsUserError() {}
+
+func (e *ResultVariableConflictError) Error() string {
+	return fmt.Sprintf(
+		"cannot declare %[1]s `%[2]s`: it conflicts with the `%[2]s` variable for the post-conditions",
+		e.Kind.Name(),
+		ResultIdentifier,
+	)
+}
+
+func (*ResultVariableConflictError) SecondaryError() string {
+	return "consider renaming the variable"
+}
+
+func (e *ResultVariableConflictError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *ResultVariableConflictError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
+	length := len(ResultIdentifier)
+	return e.Pos.Shifted(memoryGauge, length-1)
+}
+
+func (e *ResultVariableConflictError) ErrorNotes() []errors.ErrorNote {
+	return []errors.ErrorNote{
+		ResultVariableReturnTypeNote{
+			Range: e.ReturnTypeRange,
+		},
+		ResultVariablePostConditionsNote{
+			Range: e.PostConditionsRange,
+		},
+	}
+}
+
+// ResultVariableReturnTypeNote
+
+type ResultVariableReturnTypeNote struct {
+	ast.Range
+}
+
+var _ errors.ErrorNote = ResultVariableReturnTypeNote{}
+
+func (ResultVariableReturnTypeNote) Message() string {
+	return "non-Void return type declared here"
+}
+
+// ResultVariablePostConditionsNote
+
+type ResultVariablePostConditionsNote struct {
+	ast.Range
+}
+
+var _ errors.ErrorNote = ResultVariablePostConditionsNote{}
+
+func (ResultVariablePostConditionsNote) Message() string {
+	return "post-conditions declared here"
+}
+
+// InvocationTypeInferenceError
+
+type InvocationTypeInferenceError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvocationTypeInferenceError{}
+var _ errors.UserError = &InvocationTypeInferenceError{}
+
+func (e *InvocationTypeInferenceError) isSemanticError() {}
+
+func (*InvocationTypeInferenceError) IsUserError() {}
+
+func (e *InvocationTypeInferenceError) Error() string {
+	return "cannot infer type of invocation"
+}
+
+// UnconvertableTypeError
+
+type UnconvertableTypeError struct {
+	Type ast.Type
+	ast.Range
+}
+
+var _ SemanticError = &UnconvertableTypeError{}
+var _ errors.UserError = &UnconvertableTypeError{}
+
+func (e *UnconvertableTypeError) isSemanticError() {}
+
+func (*UnconvertableTypeError) IsUserError() {}
+
+func (e *UnconvertableTypeError) Error() string {
+	return fmt.Sprintf("cannot convert type `%s`", e.Type)
+}
+
+// InvalidMappingAuthorizationError
+
+type InvalidMappingAuthorizationError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidMappingAuthorizationError{}
+var _ errors.UserError = &InvalidMappingAuthorizationError{}
+
+func (*InvalidMappingAuthorizationError) isSemanticError() {}
+
+func (*InvalidMappingAuthorizationError) IsUserError() {}
+
+func (e *InvalidMappingAuthorizationError) Error() string {
+	return "auth(mapping ...) is not supported"
+}
