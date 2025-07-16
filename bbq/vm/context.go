@@ -327,10 +327,10 @@ func (c *Context) DefaultDestroyEvents(
 		return nil
 	}
 
-	// Always have the receiver as the first argument.
-	arguments := []Value{resourceValue}
+	//Always have the receiver as the first argument.
+	//arguments := []Value{resourceValue}
 
-	events := c.InvokeFunction(method, arguments)
+	events := c.InvokeFunction(method, nil)
 	eventsArray, ok := events.(*interpreter.ArrayValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
