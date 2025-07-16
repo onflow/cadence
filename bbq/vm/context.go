@@ -327,9 +327,7 @@ func (c *Context) DefaultDestroyEvents(
 		return nil
 	}
 
-	//Always have the receiver as the first argument.
-	//arguments := []Value{resourceValue}
-
+	// The generated function takes no arguments.
 	events := c.InvokeFunction(method, nil)
 	eventsArray, ok := events.(*interpreter.ArrayValue)
 	if !ok {

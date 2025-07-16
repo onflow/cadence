@@ -351,11 +351,6 @@ func (vm *VM) validateAndInvokeExternally(functionValue FunctionValue, arguments
 		return nil, err
 	}
 
-	//if boundFunction, ok := functionValue.(*BoundFunctionValue); ok {
-	//	receiver := boundFunction.Receiver(vm.context)
-	//	preparedArguments = append([]Value{receiver}, preparedArguments...)
-	//}
-
 	return vm.invokeExternally(functionValue, preparedArguments)
 }
 
