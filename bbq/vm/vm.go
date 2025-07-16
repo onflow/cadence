@@ -750,7 +750,7 @@ func opGetLocal(vm *VM, ins opcode.InstructionGetLocal) {
 
 	// Some local variables can be implicit references. e.g: receiver of a bound function.
 	// TODO: maybe perform this check only if `localIndex == 0`?
-	if implicitReference, ok := local.(*ImplicitReferenceValue); ok {
+	if implicitReference, ok := local.(ImplicitReferenceValue); ok {
 		local = implicitReference.ReferencedValue(vm.context)
 	}
 

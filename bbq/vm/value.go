@@ -45,7 +45,7 @@ func ConvertAndBox(
 
 func SplitReceiverAndArgs(context interpreter.ValueStaticTypeContext, args []Value) (Value, []Value) {
 	receiver := args[ReceiverIndex]
-	implicitReference := receiver.(*ImplicitReferenceValue)
+	implicitReference := receiver.(ImplicitReferenceValue)
 	return implicitReference.ReferencedValue(context), args[TypeBoundFunctionArgumentOffset:]
 }
 
