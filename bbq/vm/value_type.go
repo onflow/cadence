@@ -37,9 +37,9 @@ func init() {
 			sema.MetaTypeIsSubtypeFunctionName,
 			sema.MetaTypeIsSubtypeFunctionType,
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				typeValue := getReceiver(context, arguments).(interpreter.TypeValue)
+				typeValue, arguments := SplitTypedReceiverAndArgs[interpreter.TypeValue](context, arguments)
 
-				otherTypeValue, ok := arguments[TypeBoundFunctionArgumentOffset].(interpreter.TypeValue)
+				otherTypeValue, ok := arguments[0].(interpreter.TypeValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}

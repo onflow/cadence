@@ -37,10 +37,10 @@ func init() {
 			sema.ToStringFunctionName,
 			sema.ToStringFunctionType,
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				address := getReceiver(context, arguments).(interpreter.CharacterValue)
+				character, arguments := SplitTypedReceiverAndArgs[interpreter.CharacterValue](context, arguments) // nolint:ineffassign
 				return interpreter.CharacterValueToString(
 					context,
-					address,
+					character,
 				)
 			},
 		),
