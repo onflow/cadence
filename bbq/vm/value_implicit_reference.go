@@ -31,11 +31,11 @@ type ImplicitReferenceValue struct {
 	selfRef interpreter.ReferenceValue
 }
 
-var _ Value = &ImplicitReferenceValue{}
+var _ Value = ImplicitReferenceValue{}
 
 var implicitReferenceMemoryUsage = common.NewConstantMemoryUsage(common.MemoryKindImplicitReferenceVMValue)
 
-func NewImplicitReferenceValue(context interpreter.ReferenceCreationContext, value Value) *ImplicitReferenceValue {
+func NewImplicitReferenceValue(context interpreter.ReferenceCreationContext, value Value) ImplicitReferenceValue {
 	common.UseMemory(context, implicitReferenceMemoryUsage)
 
 	semaType := interpreter.MustSemaTypeOfValue(value, context)
@@ -50,40 +50,40 @@ func NewImplicitReferenceValue(context interpreter.ReferenceCreationContext, val
 		EmptyLocationRange,
 	)
 
-	return &ImplicitReferenceValue{
+	return ImplicitReferenceValue{
 		value:   value,
 		selfRef: selfRef,
 	}
 }
 
-func (v *ImplicitReferenceValue) IsValue() {}
+func (v ImplicitReferenceValue) IsValue() {}
 
-func (v *ImplicitReferenceValue) ReferencedValue(
+func (v ImplicitReferenceValue) ReferencedValue(
 	context interpreter.ValueStaticTypeContext,
 ) interpreter.Value {
 	interpreter.CheckInvalidatedResourceOrResourceReference(v.selfRef, EmptyLocationRange, context)
 	return v.value
 }
 
-func (v *ImplicitReferenceValue) GetAuthorization() interpreter.Authorization {
+func (v ImplicitReferenceValue) GetAuthorization() interpreter.Authorization {
 	// ImplicitReferenceValue is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
 }
 
-func (v *ImplicitReferenceValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v ImplicitReferenceValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	// ImplicitReferenceValue is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
 }
 
-func (v *ImplicitReferenceValue) String() string {
+func (v ImplicitReferenceValue) String() string {
 	// ImplicitReferenceValue is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
 }
 
-func (v *ImplicitReferenceValue) Accept(
+func (v ImplicitReferenceValue) Accept(
 	_ interpreter.ValueVisitContext,
 	_ interpreter.Visitor,
 	_ interpreter.LocationRange,
@@ -93,7 +93,7 @@ func (v *ImplicitReferenceValue) Accept(
 	panic(errors.NewUnreachableError())
 }
 
-func (v *ImplicitReferenceValue) Walk(
+func (v ImplicitReferenceValue) Walk(
 	_ interpreter.ValueWalkContext,
 	_ func(interpreter.Value),
 	_ interpreter.LocationRange,
@@ -103,13 +103,13 @@ func (v *ImplicitReferenceValue) Walk(
 	panic(errors.NewUnreachableError())
 }
 
-func (v *ImplicitReferenceValue) StaticType(_ interpreter.ValueStaticTypeContext) interpreter.StaticType {
+func (v ImplicitReferenceValue) StaticType(_ interpreter.ValueStaticTypeContext) interpreter.StaticType {
 	// ImplicitReferenceValue is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
 }
 
-func (v *ImplicitReferenceValue) ConformsToStaticType(
+func (v ImplicitReferenceValue) ConformsToStaticType(
 	_ interpreter.ValueStaticTypeConformanceContext,
 	_ interpreter.LocationRange,
 	_ interpreter.TypeConformanceResults,
@@ -119,13 +119,13 @@ func (v *ImplicitReferenceValue) ConformsToStaticType(
 	panic(errors.NewUnreachableError())
 }
 
-func (v *ImplicitReferenceValue) RecursiveString(_ interpreter.SeenReferences) string {
+func (v ImplicitReferenceValue) RecursiveString(_ interpreter.SeenReferences) string {
 	// ImplicitReferenceValue is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
 }
 
-func (v *ImplicitReferenceValue) MeteredString(
+func (v ImplicitReferenceValue) MeteredString(
 	_ interpreter.ValueStringContext,
 	_ interpreter.SeenReferences,
 	_ interpreter.LocationRange,
@@ -135,17 +135,17 @@ func (v *ImplicitReferenceValue) MeteredString(
 	panic(errors.NewUnreachableError())
 }
 
-func (v *ImplicitReferenceValue) IsResourceKinded(_ interpreter.ValueStaticTypeContext) bool {
+func (v ImplicitReferenceValue) IsResourceKinded(_ interpreter.ValueStaticTypeContext) bool {
 	return false
 }
 
-func (v *ImplicitReferenceValue) NeedsStoreTo(_ atree.Address) bool {
+func (v ImplicitReferenceValue) NeedsStoreTo(_ atree.Address) bool {
 	// Iterator is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
 }
 
-func (v *ImplicitReferenceValue) Transfer(
+func (v ImplicitReferenceValue) Transfer(
 	_ interpreter.ValueTransferContext,
 	_ interpreter.LocationRange,
 	_ atree.Address,
@@ -157,19 +157,19 @@ func (v *ImplicitReferenceValue) Transfer(
 	return v
 }
 
-func (v *ImplicitReferenceValue) DeepRemove(_ interpreter.ValueRemoveContext, _ bool) {
+func (v ImplicitReferenceValue) DeepRemove(_ interpreter.ValueRemoveContext, _ bool) {
 	// ImplicitReferenceValue is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
 }
 
-func (v *ImplicitReferenceValue) Clone(_ interpreter.ValueCloneContext) interpreter.Value {
+func (v ImplicitReferenceValue) Clone(_ interpreter.ValueCloneContext) interpreter.Value {
 	// ImplicitReferenceValue is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
 }
 
-func (v *ImplicitReferenceValue) IsImportable(_ interpreter.ValueImportableContext, _ interpreter.LocationRange) bool {
+func (v ImplicitReferenceValue) IsImportable(_ interpreter.ValueImportableContext, _ interpreter.LocationRange) bool {
 	// ImplicitReferenceValue is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
