@@ -52,7 +52,7 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 	p.next()
 
 	expectParameter := true
-
+	var commaToken lexer.Token
 	var atEnd bool
 	progress := p.newProgress()
 
@@ -71,6 +71,7 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 			if err != nil {
 				return nil, err
 			}
+			parameter.Comments.Leading = append(parameter.Comments.Leading, commaToken.Comments.Trailing...)
 
 			parameters = append(parameters, parameter)
 			expectParameter = false
@@ -83,6 +84,7 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 				)
 			}
 			// Skip the comma
+			commaToken = p.current
 			p.next()
 			expectParameter = true
 
