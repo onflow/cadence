@@ -6124,8 +6124,7 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: requires support for resource bound functions in VM
-				//UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 
@@ -6180,8 +6179,7 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: requires support for resource bound functions in VM
-				//UseVM:     *compile,
+				UseVM:     *compile,
 			})
 
 		RequireError(t, err)
@@ -6293,8 +6291,7 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
-				// TODO: requires support for resource bound functions in VM
-				//UseVM:     *compile,
+				UseVM:     *compile,
 			},
 		)
 
