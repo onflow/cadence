@@ -76,7 +76,7 @@ func init() {
 					return sema.ArrayReverseFunctionType(arrayType)
 				},
 				func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-					array, arguments := SplitTypedReceiverAndArgs[*interpreter.ArrayValue](context, arguments) // nolint:ineffassign
+					array, arguments := SplitTypedReceiverAndArgs[*interpreter.ArrayValue](context, arguments) // nolint:staticcheck,ineffassign
 					return array.Reverse(context, EmptyLocationRange)
 				},
 			),
@@ -233,7 +233,7 @@ func init() {
 				return sema.ArrayRemoveFirstFunctionType(elementType)
 			},
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				array, arguments := SplitTypedReceiverAndArgs[*interpreter.ArrayValue](context, arguments) // nolint:ineffassign
+				array, arguments := SplitTypedReceiverAndArgs[*interpreter.ArrayValue](context, arguments) // nolint:staticcheck,ineffassign
 				return array.RemoveFirst(context, EmptyLocationRange)
 			},
 		),
@@ -248,7 +248,7 @@ func init() {
 				return sema.ArrayRemoveLastFunctionType(elementType)
 			},
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				array, arguments := SplitTypedReceiverAndArgs[*interpreter.ArrayValue](context, arguments) // nolint:ineffassign
+				array, arguments := SplitTypedReceiverAndArgs[*interpreter.ArrayValue](context, arguments) // nolint:staticcheck,ineffassign
 				return array.RemoveLast(context, EmptyLocationRange)
 			},
 		),
@@ -285,7 +285,7 @@ func init() {
 				return sema.ArrayToConstantSizedFunctionType(elementType)
 			},
 			func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value {
-				array, arguments := SplitTypedReceiverAndArgs[*interpreter.ArrayValue](context, arguments) // nolint:ineffassign
+				array, arguments := SplitTypedReceiverAndArgs[*interpreter.ArrayValue](context, arguments) // nolint:staticcheck,ineffassign
 				constantSizedArrayType := typeArguments[0].(*interpreter.ConstantSizedStaticType)
 				return array.ToConstantSized(
 					context,
@@ -307,7 +307,7 @@ func init() {
 				return sema.ArrayToVariableSizedFunctionType(elementType)
 			},
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				array, arguments := SplitTypedReceiverAndArgs[*interpreter.ArrayValue](context, arguments) // nolint:ineffassign
+				array, arguments := SplitTypedReceiverAndArgs[*interpreter.ArrayValue](context, arguments) // nolint:staticcheck,ineffassign
 				return array.ToVariableSized(context, EmptyLocationRange)
 			},
 		),

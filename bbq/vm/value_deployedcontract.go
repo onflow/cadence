@@ -43,7 +43,7 @@ func init() {
 			func(context *Context, _ []bbq.StaticType, args ...Value) Value {
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				deployedContract, args := SplitTypedReceiverAndArgs[*interpreter.SimpleCompositeValue](context, args) // nolint:ineffassign
+				deployedContract, args := SplitTypedReceiverAndArgs[*interpreter.SimpleCompositeValue](context, args) // nolint:staticcheck,ineffassign
 
 				addressFieldValue := deployedContract.GetMember(
 					context,

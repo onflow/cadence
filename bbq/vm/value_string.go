@@ -109,7 +109,7 @@ func init() {
 			sema.StringTypeDecodeHexFunctionName,
 			sema.StringTypeDecodeHexFunctionType,
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				this, arguments := SplitTypedReceiverAndArgs[*interpreter.StringValue](context, arguments)
+				this, arguments := SplitTypedReceiverAndArgs[*interpreter.StringValue](context, arguments) // nolint:staticcheck,ineffassign
 				return this.DecodeHex(context, EmptyLocationRange)
 			},
 		),
@@ -121,7 +121,7 @@ func init() {
 			sema.StringTypeToLowerFunctionName,
 			sema.StringTypeToLowerFunctionType,
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				this, arguments := SplitTypedReceiverAndArgs[*interpreter.StringValue](context, arguments)
+				this, arguments := SplitTypedReceiverAndArgs[*interpreter.StringValue](context, arguments) // nolint:staticcheck,ineffassign
 				return this.ToLower(context)
 			},
 		),

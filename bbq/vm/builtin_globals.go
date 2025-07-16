@@ -420,7 +420,7 @@ var CommonBuiltinTypeBoundFunctions = []*NativeFunctionValue{
 		sema.GetTypeFunctionName,
 		sema.GetTypeFunctionType,
 		func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-			value, arguments := SplitReceiverAndArgs(context, arguments) // nolint:ineffassign
+			value, arguments := SplitReceiverAndArgs(context, arguments) // nolint:staticcheck,ineffassign
 			return interpreter.ValueGetType(context, value)
 		},
 	),

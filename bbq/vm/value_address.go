@@ -41,7 +41,7 @@ func init() {
 			sema.ToStringFunctionName,
 			sema.ToStringFunctionType,
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				addressValue, arguments := SplitTypedReceiverAndArgs[interpreter.AddressValue](context, arguments) // nolint:ineffassign
+				addressValue, arguments := SplitTypedReceiverAndArgs[interpreter.AddressValue](context, arguments) // nolint:staticcheck,ineffassign
 				return interpreter.AddressValueToStringFunction(
 					context,
 					addressValue,
@@ -57,7 +57,7 @@ func init() {
 			sema.AddressTypeToBytesFunctionName,
 			sema.AddressTypeToBytesFunctionType,
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				addressValue, arguments := SplitTypedReceiverAndArgs[interpreter.AddressValue](context, arguments) // nolint:ineffassign
+				addressValue, arguments := SplitTypedReceiverAndArgs[interpreter.AddressValue](context, arguments) // nolint:staticcheck,ineffassign
 				address := common.Address(addressValue)
 				return interpreter.ByteSliceToByteArrayValue(context, address[:])
 			},
