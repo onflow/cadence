@@ -1170,80 +1170,29 @@ func DecodeInvoke(ip *uint16, code []byte) (i InstructionInvoke) {
 	return i
 }
 
-// InstructionInvokeMethodStatic
+// InstructionInvokeDynamic
 //
-// Pops the method and arguments off the stack, invokes the method with the arguments, and then pushes the result back on to the stack. The first argument is the receiver of the method.
-type InstructionInvokeMethodStatic struct {
-	TypeArgs []uint16
-	ArgCount uint16
-}
-
-var _ Instruction = InstructionInvokeMethodStatic{}
-
-func (InstructionInvokeMethodStatic) Opcode() Opcode {
-	return InvokeMethodStatic
-}
-
-func (i InstructionInvokeMethodStatic) String() string {
-	var sb strings.Builder
-	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb, false)
-	return sb.String()
-}
-
-func (i InstructionInvokeMethodStatic) OperandsString(sb *strings.Builder, colorize bool) {
-	sb.WriteByte(' ')
-	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs, colorize)
-	sb.WriteByte(' ')
-	printfArgument(sb, "argCount", i.ArgCount, colorize)
-}
-
-func (i InstructionInvokeMethodStatic) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
-	types []interpreter.StaticType,
-	functionNames []string,
-	colorize bool) {
-	sb.WriteByte(' ')
-	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, types)
-	sb.WriteByte(' ')
-	printfArgument(sb, "argCount", i.ArgCount, colorize)
-}
-
-func (i InstructionInvokeMethodStatic) Encode(code *[]byte) {
-	emitOpcode(code, i.Opcode())
-	emitUint16Array(code, i.TypeArgs)
-	emitUint16(code, i.ArgCount)
-}
-
-func DecodeInvokeMethodStatic(ip *uint16, code []byte) (i InstructionInvokeMethodStatic) {
-	i.TypeArgs = decodeUint16Array(ip, code)
-	i.ArgCount = decodeUint16(ip, code)
-	return i
-}
-
-// InstructionInvokeMethodDynamic
-//
-// Pops the arguments off the stack, invokes the method with the given name and argument count, and then pushes the result back on to the stack. The first argument is the receiver of the method.
-type InstructionInvokeMethodDynamic struct {
+// Invokes a method with the given name dynamically. Pops the receiver and the arguments off the stack, invokes the function with the arguments, and then pushes the result back on to the stack.
+type InstructionInvokeDynamic struct {
 	Name     uint16
 	TypeArgs []uint16
 	ArgCount uint16
 }
 
-var _ Instruction = InstructionInvokeMethodDynamic{}
+var _ Instruction = InstructionInvokeDynamic{}
 
-func (InstructionInvokeMethodDynamic) Opcode() Opcode {
-	return InvokeMethodDynamic
+func (InstructionInvokeDynamic) Opcode() Opcode {
+	return InvokeDynamic
 }
 
-func (i InstructionInvokeMethodDynamic) String() string {
+func (i InstructionInvokeDynamic) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
 	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionInvokeMethodDynamic) OperandsString(sb *strings.Builder, colorize bool) {
+func (i InstructionInvokeDynamic) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "name", i.Name, colorize)
 	sb.WriteByte(' ')
@@ -1252,7 +1201,7 @@ func (i InstructionInvokeMethodDynamic) OperandsString(sb *strings.Builder, colo
 	printfArgument(sb, "argCount", i.ArgCount, colorize)
 }
 
-func (i InstructionInvokeMethodDynamic) ResolvedOperandsString(sb *strings.Builder,
+func (i InstructionInvokeDynamic) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
 	functionNames []string,
@@ -1265,14 +1214,14 @@ func (i InstructionInvokeMethodDynamic) ResolvedOperandsString(sb *strings.Build
 	printfArgument(sb, "argCount", i.ArgCount, colorize)
 }
 
-func (i InstructionInvokeMethodDynamic) Encode(code *[]byte) {
+func (i InstructionInvokeDynamic) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 	emitUint16(code, i.Name)
 	emitUint16Array(code, i.TypeArgs)
 	emitUint16(code, i.ArgCount)
 }
 
-func DecodeInvokeMethodDynamic(ip *uint16, code []byte) (i InstructionInvokeMethodDynamic) {
+func DecodeInvokeDynamic(ip *uint16, code []byte) (i InstructionInvokeDynamic) {
 	i.Name = decodeUint16(ip, code)
 	i.TypeArgs = decodeUint16Array(ip, code)
 	i.ArgCount = decodeUint16(ip, code)
@@ -2754,10 +2703,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return DecodeNewClosure(ip, code)
 	case Invoke:
 		return DecodeInvoke(ip, code)
-	case InvokeMethodStatic:
-		return DecodeInvokeMethodStatic(ip, code)
-	case InvokeMethodDynamic:
-		return DecodeInvokeMethodDynamic(ip, code)
+	case InvokeDynamic:
+		return DecodeInvokeDynamic(ip, code)
 	case GetMethod:
 		return DecodeGetMethod(ip, code)
 	case Dup:

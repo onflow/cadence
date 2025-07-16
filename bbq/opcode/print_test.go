@@ -189,11 +189,8 @@ func TestPrintInstruction(t *testing.T) {
 		"Invoke typeArgs:[772, 1286] argCount:1": {
 			byte(Invoke), 0, 2, 3, 4, 5, 6, 0, 1,
 		},
-		"InvokeMethodStatic typeArgs:[772, 1286] argCount:1": {
-			byte(InvokeMethodStatic), 0, 2, 3, 4, 5, 6, 0, 1,
-		},
-		`InvokeMethodDynamic name:1 typeArgs:[772, 1286] argCount:1800`: {
-			byte(InvokeMethodDynamic), 0, 1, 0, 2, 3, 4, 5, 6, 7, 8,
+		`InvokeDynamic name:1 typeArgs:[772, 1286] argCount:1800`: {
+			byte(InvokeDynamic), 0, 1, 0, 2, 3, 4, 5, 6, 7, 8,
 		},
 
 		"NewRef type:258 isImplicit:true": {byte(NewRef), 1, 2, 1},
