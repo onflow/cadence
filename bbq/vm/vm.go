@@ -207,7 +207,7 @@ func fill(slice []Value, n int) []Value {
 	return slice
 }
 
-func (vm *VM) pushCallFrame(functionValue CompiledFunctionValue, arguments []Value) {
+func (vm *VM) pushCallFrame(functionValue CompiledFunctionValue, receiver Value, arguments []Value) {
 	if uint64(len(vm.callstack)) == vm.context.StackDepthLimit {
 		panic(&interpreter.CallStackLimitExceededError{
 			Limit: vm.context.StackDepthLimit,
@@ -216,8 +216,14 @@ func (vm *VM) pushCallFrame(functionValue CompiledFunctionValue, arguments []Val
 
 	localsCount := functionValue.Function.LocalCount
 
+	passedInLocalsCount := len(arguments)
+	if receiver != nil {
+		vm.locals = append(vm.locals, receiver)
+		passedInLocalsCount++
+	}
+
 	vm.locals = append(vm.locals, arguments...)
-	vm.locals = fill(vm.locals, int(localsCount)-len(arguments))
+	vm.locals = fill(vm.locals, int(localsCount)-passedInLocalsCount)
 
 	// Calculate the offset for local variable for the new callframe.
 	// This is equal to: (local var offset + local var count) of previous callframe.
@@ -345,10 +351,10 @@ func (vm *VM) validateAndInvokeExternally(functionValue FunctionValue, arguments
 		return nil, err
 	}
 
-	if boundFunction, ok := functionValue.(*BoundFunctionValue); ok {
-		receiver := boundFunction.Receiver(vm.context)
-		preparedArguments = append([]Value{receiver}, preparedArguments...)
-	}
+	//if boundFunction, ok := functionValue.(*BoundFunctionValue); ok {
+	//	receiver := boundFunction.Receiver(vm.context)
+	//	preparedArguments = append([]Value{receiver}, preparedArguments...)
+	//}
 
 	return vm.invokeExternally(functionValue, preparedArguments)
 }
@@ -858,6 +864,7 @@ func opRemoveIndex(vm *VM) {
 }
 
 func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
+	// Load type arguments
 	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 
 	// Load arguments
@@ -865,13 +872,6 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 
 	// Load the invoked value
 	functionValue := vm.pop()
-
-	// If the function is a pointer to an object-method, then the receiver is implicitly captured.
-	if boundFunction, isBoundFUnction := functionValue.(*BoundFunctionValue); isBoundFUnction {
-		functionValue = boundFunction.Method
-		receiver := boundFunction.Receiver(vm.context)
-		arguments = append([]Value{receiver}, arguments...)
-	}
 
 	invokeFunction(
 		vm,
@@ -907,11 +907,7 @@ func opInvokeMethodStatic(vm *VM, ins opcode.InstructionInvokeMethodStatic) {
 	arguments := vm.popN(int(ins.ArgCount))
 
 	// Load the invoked value
-	boundFunction := vm.pop().(*BoundFunctionValue)
-
-	functionValue := boundFunction.Method
-	receiver := boundFunction.Receiver(vm.context)
-	arguments = append([]Value{receiver}, arguments...)
+	functionValue := vm.pop()
 
 	invokeFunction(
 		vm,
@@ -930,11 +926,9 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
 
 	// Load arguments
 	arguments := vm.popN(int(ins.ArgCount))
-	receiver := arguments[ReceiverIndex]
-	arguments[ReceiverIndex] = NewImplicitReferenceValue(
-		vm.context,
-		maybeDereference(vm.context, receiver),
-	)
+
+	// Load the invoked value
+	receiver := vm.pop()
 
 	// Get function
 	nameIndex := ins.Name
@@ -967,15 +961,22 @@ func invokeFunction(
 
 	// Handle all function types in a single place, so this can be re-used everywhere.
 
+	var receiver Value
 	if boundFunction, ok := functionValue.(*BoundFunctionValue); ok {
 		functionValue = boundFunction.Method
+		receiver = boundFunction.Receiver(vm.context)
 	}
 
 	switch functionValue := functionValue.(type) {
 	case CompiledFunctionValue:
-		vm.pushCallFrame(functionValue, arguments)
+		vm.pushCallFrame(functionValue, receiver, arguments)
 
 	case *NativeFunctionValue:
+		// TODO: pass the receiver separately.
+		if receiver != nil {
+			arguments = append([]Value{receiver}, arguments...)
+		}
+
 		result := functionValue.Function(context, typeArguments, arguments...)
 		vm.push(result)
 
