@@ -7773,7 +7773,7 @@ func TestParseDestructor(t *testing.T) {
 		[]error{
 			&CustomDestructorError{
 				Pos: ast.Position{Offset: 37, Line: 3, Column: 12},
-				Range: ast.Range{
+				DestructorRange: ast.Range{
 					StartPos: ast.Position{Offset: 37, Line: 3, Column: 12},
 					EndPos:   ast.Position{Offset: 48, Line: 3, Column: 23},
 				},
