@@ -9397,3 +9397,57 @@ func TestInheritedDefaultDestroyEvent(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, eventEmitted)
 }
+
+func TestFunctionInclusiveRangeConstruction(t *testing.T) {
+
+	t.Parallel()
+
+	activation := sema.NewVariableActivation(sema.BaseValueActivation)
+	activation.DeclareValue(stdlib.VMInclusiveRangeConstructor)
+
+	compilerConfig := &compiler.Config{
+		BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
+			activation := activations.NewActivation[compiler.GlobalImport](nil, compiler.DefaultBuiltinGlobals())
+			activation.Set(
+				stdlib.VMInclusiveRangeConstructor.Name,
+				compiler.GlobalImport{
+					Name: stdlib.VMInclusiveRangeConstructor.Name,
+				},
+			)
+			return activation
+		},
+	}
+	vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+	vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
+		activation := activations.NewActivation[vm.Variable](nil, vm.DefaultBuiltinGlobals())
+		variable := &interpreter.SimpleVariable{}
+		variable.InitializeWithValue(stdlib.VMInclusiveRangeConstructor.Value)
+		activation.Set(stdlib.VMInclusiveRangeConstructor.Name, variable)
+		return activation
+	}
+
+	result, err := CompileAndInvokeWithOptions(
+		t,
+		`
+          fun test(): InclusiveRange<Int> {
+              return InclusiveRange(5, 10)
+          }
+        `,
+		"test",
+		CompilerAndVMOptions{
+			ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+				CompilerConfig: compilerConfig,
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+							return activation
+						},
+					},
+				},
+			},
+			VMConfig: vmConfig,
+		},
+	)
+	require.NoError(t, err)
+	require.IsType(t, &interpreter.CompositeValue{}, result)
+}

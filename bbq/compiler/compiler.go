@@ -2984,12 +2984,30 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 
 	typeIndex := c.getOrAddType(enclosingType)
 
-	c.emit(
-		opcode.InstructionNew{
-			Kind: kind,
-			Type: typeIndex,
-		},
-	)
+	var address common.Address
+	if kind == common.CompositeKindContract {
+		if addressLocation, ok := enclosingType.GetLocation().(common.AddressLocation); ok {
+			address = addressLocation.Address
+		}
+	}
+
+	if address == common.ZeroAddress {
+		c.emit(
+			opcode.InstructionNewComposite{
+				Kind: kind,
+				Type: typeIndex,
+			},
+		)
+	} else {
+		addressConstant := c.addConstant(constant.Address, address.Bytes())
+		c.emit(
+			opcode.InstructionNewCompositeAt{
+				Kind:    kind,
+				Type:    typeIndex,
+				Address: addressConstant.index,
+			},
+		)
+	}
 
 	if kind == common.CompositeKindContract {
 		// During contract init, update the global variable with the newly initialized contract value.

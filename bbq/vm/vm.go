@@ -735,11 +735,12 @@ func opFalse(vm *VM) {
 
 func opGetConstant(vm *VM, ins opcode.InstructionGetConstant) {
 	constantIndex := ins.Constant
-	constant := vm.callFrame.function.Executable.Constants[constantIndex]
-	if constant == nil {
-		constant = vm.initializeConstant(constantIndex)
+	executable := vm.callFrame.function.Executable
+	c := executable.Constants[constantIndex]
+	if c == nil {
+		c = vm.initializeConstant(constantIndex)
 	}
-	vm.push(constant)
+	vm.push(c)
 }
 
 func opGetLocal(vm *VM, ins opcode.InstructionGetLocal) {
@@ -1023,32 +1024,53 @@ func opDup(vm *VM) {
 	vm.push(top)
 }
 
-func opNew(vm *VM, ins opcode.InstructionNew) {
-	compositeKind := ins.Kind
+func opNewComposite(vm *VM, ins opcode.InstructionNewComposite) {
+	compositeValue := newCompositeValue(
+		vm,
+		ins.Kind,
+		ins.Type,
+		common.ZeroAddress,
+	)
+	vm.push(compositeValue)
+}
 
+func opNewCompositeAt(vm *VM, ins opcode.InstructionNewCompositeAt) {
+	executable := vm.callFrame.function.Executable
+	c := executable.Program.Constants[ins.Address]
+
+	compositeValue := newCompositeValue(
+		vm,
+		ins.Kind,
+		ins.Type,
+		common.MustBytesToAddress(c.Data),
+	)
+	vm.push(compositeValue)
+}
+
+func newCompositeValue(
+	vm *VM,
+	compositeKind common.CompositeKind,
+	typeIndex uint16,
+	address common.Address,
+) *interpreter.CompositeValue {
 	// decode location
-	typeIndex := ins.Type
 	staticType := vm.loadType(typeIndex)
 
-	// TODO: Support inclusive-range type
 	compositeStaticType := staticType.(*interpreter.CompositeStaticType)
 
 	config := vm.context
 
 	compositeFields := newCompositeValueFields(config, compositeKind)
 
-	value := interpreter.NewCompositeValue(
+	return interpreter.NewCompositeValue(
 		config,
 		EmptyLocationRange,
 		compositeStaticType.Location,
 		compositeStaticType.QualifiedIdentifier,
 		compositeKind,
 		compositeFields,
-		// Newly created values are always on stack.
-		// Need to 'Transfer' if needed to be stored in an account.
-		common.ZeroAddress,
+		address,
 	)
-	vm.push(value)
 }
 
 func opSetField(vm *VM, ins opcode.InstructionSetField) {
@@ -1134,8 +1156,9 @@ func opRemoveField(vm *VM, ins opcode.InstructionRemoveField) {
 }
 
 func getStringConstant(vm *VM, index uint16) string {
-	constant := vm.callFrame.function.Executable.Program.Constants[index]
-	return string(constant.Data)
+	executable := vm.callFrame.function.Executable
+	c := executable.Program.Constants[index]
+	return string(c.Data)
 }
 
 func opTransferAndConvert(vm *VM, ins opcode.InstructionTransferAndConvert) {
@@ -1585,8 +1608,10 @@ func (vm *VM) run() {
 			opDrop(vm)
 		case opcode.InstructionDup:
 			opDup(vm)
-		case opcode.InstructionNew:
-			opNew(vm, ins)
+		case opcode.InstructionNewComposite:
+			opNewComposite(vm, ins)
+		case opcode.InstructionNewCompositeAt:
+			opNewCompositeAt(vm, ins)
 		case opcode.InstructionNewArray:
 			opNewArray(vm, ins)
 		case opcode.InstructionNewDictionary:
@@ -1734,8 +1759,8 @@ func opStatement(vm *VM) {
 
 func (vm *VM) initializeConstant(index uint16) (value Value) {
 	executable := vm.callFrame.function.Executable
-
 	c := executable.Program.Constants[index]
+
 	memoryGauge := vm.context.MemoryGauge
 
 	switch c.Kind {

@@ -97,7 +97,8 @@ const (
 	False
 	Void
 	Nil
-	New
+	NewComposite
+	NewCompositeAt
 	NewPath
 	NewArray
 	NewDictionary

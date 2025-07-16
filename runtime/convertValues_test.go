@@ -2513,8 +2513,7 @@ func TestRuntimeExportJsonDeterministic(t *testing.T) {
         }
     `
 
-	// TODO: investigate why execution with VM does not produce the same order
-	event := exportEventFromScript(t, script, false)
+	event := exportEventFromScript(t, script, *compile)
 
 	bytes, err := json.Encode(event)
 

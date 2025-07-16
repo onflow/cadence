@@ -6070,8 +6070,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: VM produces different writes
-			//UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -6230,8 +6229,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: VM produces different writes
-			//UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -6826,10 +6824,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 	)
 }
 
-func TestRuntimeProgramsHitForToplevelPrograms(t *testing.T) {
-
-	// We do not want to hit the stored programs for toplevel programs
-	// (scripts and transactions) until we have moved the caching layer to Cadence.
+func TestRuntimeOnGetOrLoadProgramHits(t *testing.T) {
 
 	t.Parallel()
 
@@ -6944,8 +6939,7 @@ func TestRuntimeProgramsHitForToplevelPrograms(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: VM produces different hits
-			//UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -6959,8 +6953,7 @@ func TestRuntimeProgramsHitForToplevelPrograms(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: VM produces different hits
-			//UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -6976,14 +6969,73 @@ func TestRuntimeProgramsHitForToplevelPrograms(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: VM produces different hits
-			//UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
 
-	require.Equal(t,
-		[]common.Location{
+	var expectedHits []common.Location
+	if *compile {
+		expectedHits = []common.Location{
+			common.TransactionLocation{
+				0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			},
+			common.TransactionLocation{
+				0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			},
+			common.TransactionLocation{
+				0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			},
+			common.TransactionLocation{
+				0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			},
+			common.TransactionLocation{
+				0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			},
+			common.TransactionLocation{
+				0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			},
+			common.TransactionLocation{
+				0x3, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			},
+			common.AddressLocation{
+				Address: Address{0x1},
+				Name:    "HelloWorld",
+			},
+			common.TransactionLocation{
+				0x3, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			},
+			common.AddressLocation{
+				Address: Address{0x1},
+				Name:    "HelloWorld",
+			},
+			common.AddressLocation{
+				Address: Address{0x1},
+				Name:    "HelloWorld",
+			},
+			common.TransactionLocation{
+				0x3, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			},
+			common.AddressLocation{
+				Address: Address{0x1},
+				Name:    "HelloWorld",
+			},
+			common.AddressLocation{
+				Address: Address{0x1},
+				Name:    "HelloWorld",
+			},
+		}
+	} else {
+		expectedHits = []common.Location{
 			common.TransactionLocation{
 				0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
 				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
@@ -7004,7 +7056,11 @@ func TestRuntimeProgramsHitForToplevelPrograms(t *testing.T) {
 				Address: Address{0x1},
 				Name:    "HelloWorld",
 			},
-		},
+		}
+	}
+
+	require.Equal(t,
+		expectedHits,
 		programsHits,
 	)
 }
@@ -9378,6 +9434,8 @@ func TestRuntimeWrappedErrorHandling(t *testing.T) {
 
 	isContractBroken := false
 
+	programs := map[common.Location]*Program{}
+
 	runtimeInterface := &TestRuntimeInterface{
 		OnGetCode: func(_ Location) (bytes []byte, err error) {
 			return contractCode, nil
@@ -9402,11 +9460,42 @@ func TestRuntimeWrappedErrorHandling(t *testing.T) {
 			return nil
 		},
 		OnGetOrLoadProgram: func(location Location, load func() (*Program, error)) (*Program, error) {
-			program, err := load()
-			if err == nil {
+			switch location.(type) {
+			case common.TransactionLocation:
+				// Handle transaction locations normally,
+				// they are cached in the programs map.
+
+				// In VM environment, the program is requested twice:
+				// Once when parsing/checking and again when compiling.
+				// This second request which happens during the compilation
+				// relies on the previous parsing/checking results.
+				// So the program needs to be stored when it is loaded for the first time.
+				program, ok := programs[location]
+				if !ok {
+					var err error
+					program, err = load()
+					if err != nil {
+						// Return a wrapped error
+						return nil, fmt.Errorf("wrapped error: %w", err)
+					}
+
+					programs[location] = program
+				}
+
 				return program, nil
+
+			case common.AddressLocation:
+				// NOTE: Special handling for contracts
+
+				program, err := load()
+				if err == nil {
+					return program, nil
+				}
+				return program, fmt.Errorf("wrapped error: %w", err)
+
+			default:
+				panic(runtimeErrors.NewUnexpectedError("unexpected location type: %T", location))
 			}
-			return program, fmt.Errorf("wrapped error: %w", err)
 		},
 	}
 
@@ -9421,8 +9510,7 @@ func TestRuntimeWrappedErrorHandling(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: fix running with VM
-			//UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -9436,8 +9524,7 @@ func TestRuntimeWrappedErrorHandling(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: fix running with VM
-			//UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -9454,8 +9541,7 @@ func TestRuntimeWrappedErrorHandling(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
-			// TODO: fix running with VM
-			//UseVM:     *compile,
+			UseVM:     *compile,
 		},
 	)
 
