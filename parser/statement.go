@@ -345,7 +345,7 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 			switch string(p.currentTokenSource()) {
 			case KeywordLet, KeywordVar:
 				variableDeclaration, err =
-					parseVariableDeclaration(p, ast.AccessNotSpecified, nil)
+					parseVariableDeclaration(p, ast.AccessNotSpecified, nil, nil)
 				if err != nil {
 					return nil, err
 				}

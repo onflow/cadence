@@ -109,7 +109,7 @@ func parseDeclaration(p *parser) (ast.Declaration, error) {
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for variable")
 				}
-				return parseVariableDeclaration(p, access, accessPos)
+				return parseVariableDeclaration(p, access, accessPos, startComments)
 
 			case KeywordFun:
 				return parseFunctionDeclaration(
@@ -522,6 +522,7 @@ func parseVariableDeclaration(
 	p *parser,
 	access ast.Access,
 	accessPos *ast.Position,
+	startComments []*ast.Comment,
 ) (*ast.VariableDeclaration, error) {
 
 	startToken := p.current
@@ -581,6 +582,12 @@ func parseVariableDeclaration(
 		}
 	}
 
+	var leadingComments []*ast.Comment
+	leadingComments = append(leadingComments, startComments...)
+	leadingComments = append(leadingComments, startToken.Comments.PackToList()...)
+	leadingComments = append(leadingComments, identifierToken.PackToList()...)
+	leadingComments = append(leadingComments, transferToken.PackToList()...)
+
 	variableDeclaration := ast.NewVariableDeclaration(
 		p.memoryGauge,
 		access,
@@ -593,10 +600,7 @@ func parseVariableDeclaration(
 		secondTransfer,
 		secondValue,
 		ast.Comments{
-			Leading: append(
-				append(startToken.PackToList(), identifierToken.PackToList()...),
-				transferToken.PackToList()...,
-			),
+			Leading: leadingComments,
 		},
 	)
 
@@ -1177,7 +1181,6 @@ func parseEntitlementMappingsAndInclusions(p *parser, endTokenType lexer.TokenTy
 		p.skipSpaceWithOptions(skipSpaceOptions{
 			skipNewlines: true,
 		})
-
 
 		switch p.current.Type {
 
