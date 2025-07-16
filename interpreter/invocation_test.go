@@ -212,32 +212,22 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 		interpreter.EmptyLocationRange,
 	)
 
+	_, err := interpreter.InvokeFunction(
+		inter,
+		test,
+		invocation,
+	)
+	RequireError(t, err)
+
 	if *compile {
-		func() {
-			defer func() {
-				recoverErr := recover()
-				require.IsType(t, &goruntime.TypeAssertionError{}, recoverErr)
-				require.ErrorContains(
-					t,
-					recoverErr.(error),
-					"interface conversion: interpreter.UIntValue is not interpreter.OptionalValue",
-				)
-			}()
-
-			_, _ = interpreter.InvokeFunction(
-				inter,
-				test,
-				invocation,
-			)
-		}()
-	} else {
-		_, err := interpreter.InvokeFunction(
-			inter,
-			test,
-			invocation,
+		var typeAssertionErr *goruntime.TypeAssertionError
+		require.ErrorAs(t, err, &typeAssertionErr)
+		require.ErrorContains(
+			t,
+			typeAssertionErr,
+			"interface conversion: interpreter.UIntValue is not interpreter.OptionalValue",
 		)
-		RequireError(t, err)
-
+	} else {
 		var memberAccessTypeError *interpreter.MemberAccessTypeError
 		require.ErrorAs(t, err, &memberAccessTypeError)
 	}
