@@ -341,7 +341,6 @@ type TypeDepthLimitReachedError struct {
 var _ ParseError = TypeDepthLimitReachedError{}
 var _ errors.UserError = TypeDepthLimitReachedError{}
 var _ errors.SecondaryError = TypeDepthLimitReachedError{}
-var _ errors.HasSuggestedFixes[ast.TextEdit] = TypeDepthLimitReachedError{}
 
 func (TypeDepthLimitReachedError) isParseError() {}
 
@@ -356,25 +355,6 @@ func (e TypeDepthLimitReachedError) Error() string {
 
 func (e TypeDepthLimitReachedError) SecondaryError() string {
 	return "consider breaking complex nested types into simpler components or using intermediate variables"
-}
-
-func (e TypeDepthLimitReachedError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
-	// For type depth limit errors, we suggest breaking down complex types
-	// Since type aliases are not yet available in Cadence
-	return []errors.SuggestedFix[ast.TextEdit]{
-		{
-			Message: "break down complex nested types into simpler components",
-			TextEdits: []ast.TextEdit{
-				{
-					Insertion: "// Consider breaking down complex nested types\n// Example: Use intermediate variables or simpler type structures\n",
-					Range: ast.Range{
-						StartPos: e.Pos,
-						EndPos:   e.Pos,
-					},
-				},
-			},
-		},
-	}
 }
 
 func (e TypeDepthLimitReachedError) StartPosition() ast.Position {
@@ -442,8 +422,8 @@ func (e *MissingCommaInParameterListError) DocumentationLink() string {
 // CustomDestructorError
 
 type CustomDestructorError struct {
-	Pos   ast.Position
-	Range ast.Range
+	Pos             ast.Position
+	DestructorRange ast.Range // Range of the entire destructor, used for suggested fix
 }
 
 var _ ParseError = &CustomDestructorError{}
@@ -482,7 +462,7 @@ func (e *CustomDestructorError) SuggestFixes(_ string) []errors.SuggestedFix[ast
 			TextEdits: []ast.TextEdit{
 				{
 					Replacement: "",
-					Range:       e.Range,
+					Range:       e.DestructorRange,
 				},
 			},
 		},
@@ -502,7 +482,6 @@ type RestrictedTypeError struct {
 var _ ParseError = &RestrictedTypeError{}
 var _ errors.UserError = &RestrictedTypeError{}
 var _ errors.SecondaryError = &RestrictedTypeError{}
-var _ errors.HasSuggestedFixes[ast.TextEdit] = &RestrictedTypeError{}
 var _ errors.HasDocumentationLink = &RestrictedTypeError{}
 
 func (*RestrictedTypeError) isParseError() {}
@@ -527,45 +506,6 @@ func (e *RestrictedTypeError) SecondaryError() string {
 
 func (e *RestrictedTypeError) MigrationNote() string {
 	return "This is pre-Cadence 1.0 syntax. Restricted types like `T{}` have been replaced with intersection types like `{T}`."
-}
-
-func (e *RestrictedTypeError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
-	// For restricted types, we suggest converting to intersection type syntax
-	// This is a simple replacement of the old syntax with the new syntax
-	if e.StartPos.Offset < e.EndPos.Offset && e.EndPos.Offset <= len(code) {
-		oldSyntax := code[e.StartPos.Offset:e.EndPos.Offset]
-
-		// Convert T{} to {T} or T{U,V} to {U,V}
-		// This is a simplified suggestion - in practice, the exact conversion
-		// would depend on the specific restricted type being used
-		var newSyntax string
-		if strings.Contains(oldSyntax, "{") && strings.Contains(oldSyntax, "}") {
-			// Extract the content between braces and wrap in new intersection syntax
-			start := strings.Index(oldSyntax, "{")
-			end := strings.LastIndex(oldSyntax, "}")
-			if start != -1 && end != -1 && end > start {
-				content := oldSyntax[start+1 : end]
-				newSyntax = "{" + strings.TrimSpace(content) + "}"
-			} else {
-				newSyntax = "{}" // fallback
-			}
-		} else {
-			newSyntax = "{}" // fallback
-		}
-
-		return []errors.SuggestedFix[ast.TextEdit]{
-			{
-				Message: "Convert to intersection type syntax",
-				TextEdits: []ast.TextEdit{
-					{
-						Replacement: newSyntax,
-						Range:       e.Range,
-					},
-				},
-			},
-		}
-	}
-	return nil
 }
 
 func (e *RestrictedTypeError) DocumentationLink() string {
