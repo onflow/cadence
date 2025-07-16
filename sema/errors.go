@@ -434,7 +434,7 @@ func (e *InsufficientArgumentsError) Error() string {
 
 func (e *InsufficientArgumentsError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected at least %d, got %d",
+		"Expected at least %d, got %d",
 		e.MinCount,
 		e.ActualCount,
 	)
@@ -462,7 +462,7 @@ func (e *ExcessiveArgumentsError) Error() string {
 
 func (e *ExcessiveArgumentsError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected up to %d, got %d",
+		"Expected up to %d, got %d",
 		e.MaxCount,
 		e.ActualCount,
 	)
@@ -536,7 +536,7 @@ func (e *IncorrectArgumentLabelError) SecondaryError() string {
 		expected = fmt.Sprintf("`%s`", e.ExpectedArgumentLabel)
 	}
 	return fmt.Sprintf(
-		"expected %s, got `%s`",
+		"Expected %s, got `%s`",
 		expected,
 		e.ActualArgumentLabel,
 	)
@@ -743,11 +743,11 @@ func (e *ControlStatementError) Error() string {
 func (e *ControlStatementError) SecondaryError() string {
 	switch e.ControlStatement {
 	case common.ControlStatementBreak:
-		return "`break` can only be used inside a loop or switch statement. Move this statement to a valid context."
+		return "`break` can only be used inside a loop or switch statement. move this statement to a valid context."
 	case common.ControlStatementContinue:
-		return "`continue` can only be used inside a loop statement. Move this statement to a valid context."
+		return "`continue` can only be used inside a loop statement. move this statement to a valid context."
 	default:
-		return fmt.Sprintf("`%s` can only be used within a valid control flow body. Move this statement to a valid context.", e.ControlStatement.Symbol())
+		return fmt.Sprintf("`%s` can only be used within a valid control flow body. move this statement to a valid context.", e.ControlStatement.Symbol())
 	}
 }
 
@@ -1405,7 +1405,7 @@ func (e *InvalidEnumRawTypeError) Error() string {
 }
 
 func (e *InvalidEnumRawTypeError) SecondaryError() string {
-	return "only integer types are currently supported for enums"
+	return "Only integer types are currently supported for enums"
 }
 
 // MissingEnumRawTypeError
@@ -1660,7 +1660,7 @@ func (e *DuplicateConformanceError) Error() string {
 }
 
 func (e *DuplicateConformanceError) SecondaryError() string {
-	return "remove the duplicate conformance declaration. Each interface can only be conformed to once"
+	return "Remove the duplicate conformance declaration. Each interface can only be conformed to once"
 }
 
 func (e *DuplicateConformanceError) DocumentationLink() string {
@@ -1704,7 +1704,7 @@ func (e CyclicConformanceError) Error() string {
 }
 
 func (e CyclicConformanceError) SecondaryError() string {
-	return "interfaces cannot have circular dependencies. Break the cycle by removing one of the conformance declarations"
+	return "Interfaces cannot have circular dependencies. Break the cycle by removing one of the conformance declarations"
 }
 
 func (e CyclicConformanceError) DocumentationLink() string {
@@ -2026,7 +2026,7 @@ func (e *CompositeKindMismatchError) Error() string {
 
 func (e *CompositeKindMismatchError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected `%s`, got `%s`. Use the correct composite kind annotation for intersection types",
+		"Expected `%s`, got `%s`. Use the correct composite kind annotation for intersection types",
 		e.ExpectedKind.Name(),
 		e.ActualKind.Name(),
 	)
@@ -2089,7 +2089,7 @@ func (e *InvalidIntegerLiteralRangeError) Error() string {
 
 func (e *InvalidIntegerLiteralRangeError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected `%s`, in range [%s, %s]",
+		"Expected `%s`, in range [%s, %s]",
 		e.ExpectedType.QualifiedString(),
 		e.ExpectedMinInt,
 		e.ExpectedMaxInt,
@@ -2138,7 +2138,7 @@ func (e *InvalidFixedPointLiteralRangeError) Error() string {
 
 func (e *InvalidFixedPointLiteralRangeError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected `%s`, in range [%s.%s, %s.%s]",
+		"Expected `%s`, in range [%s.%s, %s.%s]",
 		e.ExpectedType.QualifiedString(),
 		e.ExpectedMinInt,
 		e.ExpectedMinFractional,
@@ -2169,7 +2169,7 @@ func (e *InvalidFixedPointLiteralScaleError) Error() string {
 
 func (e *InvalidFixedPointLiteralScaleError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected `%s`, with maximum scale %d",
+		"Expected `%s`, with maximum scale %d",
 		e.ExpectedType.QualifiedString(),
 		e.ExpectedScale,
 	)
@@ -2354,7 +2354,7 @@ func (e *IncorrectTransferOperationError) Error() string {
 
 func (e *IncorrectTransferOperationError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected `%s`",
+		"Expected `%s`",
 		e.ExpectedOperation.Operator(),
 	)
 }
@@ -2686,7 +2686,7 @@ func (e *EmitNonEventError) Error() string {
 }
 
 func (e *EmitNonEventError) SecondaryError() string {
-	return "only event types can be emitted. Consider declaring an event: event MyEvent()"
+	return "Only event types can be emitted. Consider declaring an event: event MyEvent()"
 }
 
 func (e *EmitNonEventError) DocumentationLink() string {
@@ -2744,7 +2744,7 @@ func (e *EmitImportedEventError) Error() string {
 }
 
 func (e *EmitImportedEventError) SecondaryError() string {
-	return "events can only be emitted from the contract where they are declared. Imported events cannot be emitted from other contracts"
+	return "Events can only be emitted from the contract where they are declared. Imported events cannot be emitted from other contracts"
 }
 
 func (e *EmitImportedEventError) DocumentationLink() string {
@@ -2770,7 +2770,7 @@ func (e *InvalidResourceAssignmentError) Error() string {
 }
 
 func (e *InvalidResourceAssignmentError) SecondaryError() string {
-	return "consider force assigning (<-!) or swapping (<->)"
+	return "Consider force assigning (<-!) or swapping (<->)"
 }
 
 // ResourceFieldNotInvalidatedError
@@ -2859,7 +2859,7 @@ func (e *UnreachableStatementError) Error() string {
 }
 
 func (e *UnreachableStatementError) SecondaryError() string {
-	return "consider removing this code"
+	return "Consider removing this code"
 }
 
 // UninitializedUseError
@@ -2982,7 +2982,7 @@ func (e *NonReferenceTypeReferenceError) Error() string {
 
 func (e *NonReferenceTypeReferenceError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected reference type, got `%s`",
+		"Expected reference type, got `%s`",
 		e.ActualType.QualifiedString(),
 	)
 }
@@ -3008,7 +3008,7 @@ func (e *ReferenceToAnOptionalError) Error() string {
 
 func (e *ReferenceToAnOptionalError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected non-optional type, got `%s`. Consider taking a reference with type `%s`",
+		"Expected non-optional type, got `%s`. Consider taking a reference with type `%s`",
 		e.ReferencedOptionalType.QualifiedString(),
 
 		// Suggest taking the optional out of the reference type.
@@ -3065,7 +3065,7 @@ func (e *NonResourceTypeError) Error() string {
 
 func (e *NonResourceTypeError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected resource type, got `%s`",
+		"Expected resource type, got `%s`",
 		e.ActualType.QualifiedString(),
 	)
 }
@@ -3374,7 +3374,7 @@ func (e *InvalidCharacterLiteralError) Error() string {
 }
 
 func (e *InvalidCharacterLiteralError) SecondaryError() string {
-	return fmt.Sprintf("expected 1, got %d",
+	return fmt.Sprintf("Expected 1, got %d",
 		e.Length,
 	)
 }
@@ -3456,7 +3456,7 @@ func (e *InvalidTransactionBlockError) Error() string {
 
 func (e *InvalidTransactionBlockError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected `prepare` or `execute`, got `%s`",
+		"Expected `prepare` or `execute`, got `%s`",
 		e.Name,
 	)
 }
@@ -3713,7 +3713,7 @@ func (e *DeclarationKindMismatchError) Error() string {
 
 func (e *DeclarationKindMismatchError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected `%s`, got `%s`",
+		"Expected `%s`, got `%s`",
 		e.ExpectedDeclarationKind.Name(),
 		e.ActualDeclarationKind.Name(),
 	)
@@ -3852,7 +3852,7 @@ func (e *ConstantSizedArrayLiteralSizeError) Error() string {
 
 func (e *ConstantSizedArrayLiteralSizeError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected %d, got %d",
+		"Expected %d, got %d",
 		e.ExpectedSize,
 		e.ActualSize,
 	)
@@ -4043,7 +4043,7 @@ var validPathDomainDescription = func() string {
 
 func (e *InvalidPathDomainError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected one of %s; got `%s`",
+		"Expected one of %s; got `%s`",
 		validPathDomainDescription,
 		e.ActualDomain,
 	)
@@ -4071,7 +4071,7 @@ func (e *InvalidTypeArgumentCountError) Error() string {
 
 func (e *InvalidTypeArgumentCountError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected up to %d, got %d",
+		"Expected up to %d, got %d",
 		e.TypeParameterCount,
 		e.TypeArgumentCount,
 	)
@@ -4161,7 +4161,7 @@ func (e *InvalidConstantSizedTypeBaseError) Error() string {
 
 func (e *InvalidConstantSizedTypeBaseError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected %d, got %d",
+		"Expected %d, got %d",
 		e.ActualBase,
 		e.ExpectedBase,
 	)
@@ -4190,7 +4190,7 @@ func (e *InvalidConstantSizedTypeSizeError) Error() string {
 
 func (e *InvalidConstantSizedTypeSizeError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected value in range [%s, %s], got %s",
+		"Expected value in range [%s, %s], got %s",
 		e.ExpectedMinInt,
 		e.ExpectedMaxInt,
 		e.ActualSize,
@@ -4270,7 +4270,7 @@ func (e *UnparameterizedTypeInstantiationError) Error() string {
 
 func (e *UnparameterizedTypeInstantiationError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected no type arguments, got %d",
+		"Expected no type arguments, got %d",
 		e.ActualTypeArgumentCount,
 	)
 }
@@ -4388,7 +4388,7 @@ var _ errors.UserError = &MissingEntryPointError{}
 func (*MissingEntryPointError) IsUserError() {}
 
 func (e *MissingEntryPointError) Error() string {
-	return fmt.Sprintf("missing entry point: expected '%s'", e.Expected)
+	return fmt.Sprintf("missing entry point: Expected '%s'", e.Expected)
 }
 
 // InvalidEntryPointError
@@ -4721,7 +4721,7 @@ func (e *DuplicateEntitlementMappingInclusionError) Error() string {
 }
 
 func (e *DuplicateEntitlementMappingInclusionError) SecondaryError() string {
-	return "remove the duplicate include statement. Each entitlement map can only be included once in a mapping definition"
+	return "Remove the duplicate include statement. Each entitlement map can only be included once in a mapping definition"
 }
 
 func (e *DuplicateEntitlementMappingInclusionError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
@@ -4768,7 +4768,7 @@ func (e *CyclicEntitlementMappingError) Error() string {
 }
 
 func (e *CyclicEntitlementMappingError) SecondaryError() string {
-	return "entitlement mappings cannot have circular dependencies. Remove the include statement to break the cycle"
+	return "Entitlement mappings cannot have circular dependencies. Remove the include statement to break the cycle"
 }
 
 func (e *CyclicEntitlementMappingError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
@@ -4870,7 +4870,7 @@ func (e *AttachNonAttachmentError) Error() string {
 }
 
 func (e *AttachNonAttachmentError) SecondaryError() string {
-	return "only attachment types can be used in attach expressions. Consider creating an attachment declaration: attachment MyAttachment for BaseType { ... }"
+	return "Only attachment types can be used in attach expressions. Consider creating an attachment declaration: attachment MyAttachment for BaseType { ... }"
 }
 
 func (e *AttachNonAttachmentError) DocumentationLink() string {
@@ -5130,7 +5130,7 @@ func (e *DefaultDestroyInvalidParameterError) Error() string {
 }
 
 func (e *DefaultDestroyInvalidParameterError) SecondaryError() string {
-	return "default destroy events only support primitive types (like String, Int, Bool) as parameters"
+	return "Default destroy events only support primitive types (like String, Int, Bool) as parameters"
 }
 
 func (e *DefaultDestroyInvalidParameterError) DocumentationLink() string {
