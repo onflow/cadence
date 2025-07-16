@@ -68,7 +68,7 @@ func init() {
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, _ = SplitReceiverAndArgs(context, args)
+				receiver, args = SplitReceiverAndArgs(context, args) // nolint:ineffassign
 
 				v := getCheckedStorageCapabilityControllerReceiver(receiver)
 
@@ -91,7 +91,7 @@ func init() {
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, _ = SplitReceiverAndArgs(context, args)
+				receiver, args = SplitReceiverAndArgs(context, args) // nolint:ineffassign
 
 				v := getCheckedStorageCapabilityControllerReceiver(receiver)
 

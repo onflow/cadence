@@ -44,10 +44,10 @@ func init() {
 				sema.ToStringFunctionName,
 				sema.ToStringFunctionType,
 				func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-					address := getReceiver(context, arguments).(interpreter.PathValue)
+					path, arguments := SplitTypedReceiverAndArgs[interpreter.PathValue](context, arguments) // nolint:ineffassign
 					return interpreter.PathValueToStringFunction(
 						context,
-						address,
+						path,
 						EmptyLocationRange,
 					)
 				},

@@ -404,9 +404,9 @@ var CommonBuiltinTypeBoundFunctions = []*NativeFunctionValue{
 		sema.IsInstanceFunctionName,
 		sema.IsInstanceFunctionType,
 		func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-			value := getReceiver(context, arguments)
+			value, arguments := SplitReceiverAndArgs(context, arguments)
 
-			typeValue, ok := arguments[TypeBoundFunctionArgumentOffset].(interpreter.TypeValue)
+			typeValue, ok := arguments[0].(interpreter.TypeValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -420,7 +420,7 @@ var CommonBuiltinTypeBoundFunctions = []*NativeFunctionValue{
 		sema.GetTypeFunctionName,
 		sema.GetTypeFunctionType,
 		func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-			value := getReceiver(context, arguments)
+			value, arguments := SplitReceiverAndArgs(context, arguments) // nolint:ineffassign
 			return interpreter.ValueGetType(context, value)
 		},
 	),
@@ -453,19 +453,14 @@ func registerBuiltinTypeSaturatingArithmeticFunctions(t sema.SaturatingArithmeti
 				functionName,
 				sema.SaturatingArithmeticTypeFunctionTypes[t],
 				func(context *Context, _ []bbq.StaticType, args ...Value) Value {
-					receiver, args := SplitReceiverAndArgs(context, args)
-
-					v, ok := receiver.(interpreter.NumberValue)
-					if !ok {
-						panic(errors.NewUnreachableError())
-					}
+					receiver, args := SplitTypedReceiverAndArgs[interpreter.NumberValue](context, args)
 
 					other, ok := args[0].(interpreter.NumberValue)
 					if !ok {
 						panic(errors.NewUnreachableError())
 					}
 
-					return op(context, v, other)
+					return op(context, receiver, other)
 				},
 			),
 		)
