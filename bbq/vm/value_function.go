@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/opcode"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -386,18 +387,22 @@ func (v *NativeFunctionValue) GetMethod(
 
 // BoundFunctionValue is a function-wrapper which captures the receivers of an object-method.
 type BoundFunctionValue struct {
-	receiverReference   interpreter.ReferenceValue
+	ReceiverReference   interpreter.ReferenceValue
 	receiverIsReference bool
 
 	Method       FunctionValue
 	functionType *sema.FunctionType
 }
 
+var boundFunctionMemoryUsage = common.NewConstantMemoryUsage(common.MemoryKindBoundFunctionVMValue)
+
 func NewBoundFunctionValue(
 	context interpreter.ReferenceCreationContext,
 	receiver interpreter.Value,
 	method FunctionValue,
 ) FunctionValue {
+
+	common.UseMemory(context, boundFunctionMemoryUsage)
 
 	// Since 'self' work as an implicit reference, create an explicit one and hold it.
 	// This reference is later used to check the validity of the referenced value/resource.
@@ -407,7 +412,7 @@ func NewBoundFunctionValue(
 
 	return &BoundFunctionValue{
 		Method:              method,
-		receiverReference:   receiverRef,
+		ReceiverReference:   receiverRef,
 		receiverIsReference: receiverIsRef,
 	}
 }
@@ -530,7 +535,7 @@ func (v *BoundFunctionValue) initializeFunctionType(context interpreter.ValueSta
 	// Or would needs to be derived based on the receiver (e.g: `[Int8].append()`).
 	if method.HasGenericType() {
 		v.functionType = method.ResolvedFunctionType(
-			v.Receiver(context),
+			v.receiver(context),
 			context,
 		)
 	} else {
@@ -551,12 +556,18 @@ func (v *BoundFunctionValue) Invoke(invocation interpreter.Invocation) interpret
 	)
 }
 
-func (v *BoundFunctionValue) Receiver(context interpreter.ValueStaticTypeContext) Value {
+func (v *BoundFunctionValue) receiver(context interpreter.ValueStaticTypeContext) Value {
 	receiver := interpreter.GetReceiver(
-		v.receiverReference,
+		v.ReceiverReference,
 		v.receiverIsReference,
 		context,
 		EmptyLocationRange,
 	)
+
 	return maybeDereference(context, *receiver)
+}
+
+func (v *BoundFunctionValue) Receiver(context interpreter.ReferenceCreationContext) Value {
+	receiverValue := v.receiver(context)
+	return NewImplicitReferenceValue(context, receiverValue)
 }

@@ -747,6 +747,13 @@ func opGetLocal(vm *VM, ins opcode.InstructionGetLocal) {
 	localIndex := ins.Local
 	absoluteIndex := vm.callFrame.localsOffset + localIndex
 	local := vm.locals[absoluteIndex]
+
+	// Some local variables can be implicit references. e.g: receiver of a bound function.
+	// TODO: maybe perform this check only if `localIndex == 0`?
+	if implicitReference, ok := local.(ImplicitReferenceValue); ok {
+		local = implicitReference.ReferencedValue(vm.context)
+	}
+
 	vm.push(local)
 }
 
@@ -924,7 +931,10 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
 	// Load arguments
 	arguments := vm.popN(int(ins.ArgCount))
 	receiver := arguments[ReceiverIndex]
-	arguments[ReceiverIndex] = maybeDereference(vm.context, receiver)
+	arguments[ReceiverIndex] = NewImplicitReferenceValue(
+		vm.context,
+		maybeDereference(vm.context, receiver),
+	)
 
 	// Get function
 	nameIndex := ins.Name
