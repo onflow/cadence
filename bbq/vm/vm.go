@@ -899,25 +899,7 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 	vm.push(boundFunction)
 }
 
-func opInvokeMethodStatic(vm *VM, ins opcode.InstructionInvokeMethodStatic) {
-	// Load type arguments
-	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
-
-	// Load arguments
-	arguments := vm.popN(int(ins.ArgCount))
-
-	// Load the invoked value
-	functionValue := vm.pop()
-
-	invokeFunction(
-		vm,
-		functionValue,
-		arguments,
-		typeArguments,
-	)
-}
-
-func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
+func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
 	// TODO: This method is now equivalent to: `GetField` + `Invoke` instructions.
 	// See if it can be replaced. That will reduce the complexity of `invokeFunction` method below.
 
@@ -973,6 +955,7 @@ func invokeFunction(
 
 	case *NativeFunctionValue:
 		// TODO: pass the receiver separately.
+		//  That will reduce the argument confusion/mistakes in builtin functions.
 		if receiver != nil {
 			arguments = append([]Value{receiver}, arguments...)
 		}
@@ -1601,9 +1584,7 @@ func (vm *VM) run() {
 			opGetMethod(vm, ins)
 		case opcode.InstructionInvoke:
 			opInvoke(vm, ins)
-		case opcode.InstructionInvokeMethodStatic:
-			opInvokeMethodStatic(vm, ins)
-		case opcode.InstructionInvokeMethodDynamic:
+		case opcode.InstructionInvokeDynamic:
 			opInvokeMethodDynamic(vm, ins)
 		case opcode.InstructionDrop:
 			opDrop(vm)
