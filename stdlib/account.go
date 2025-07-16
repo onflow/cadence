@@ -694,7 +694,7 @@ func NewVMAccountKeysAddFunction(
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver)
@@ -844,7 +844,7 @@ func NewVMAccountKeysGetFunction(
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -947,7 +947,7 @@ func NewVMAccountKeysForEachFunction(
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -1115,7 +1115,7 @@ func NewVMAccountKeysRevokeFunction(
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				// Get address field from the receiver
 				addressValue := vm.GetAccountTypePrivateAddressValue(receiver)
@@ -1236,7 +1236,7 @@ func NewVMAccountInboxPublishFunction(
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				// Get address field from the receiver
 				providerValue := vm.GetAccountTypePrivateAddressValue(receiver)
@@ -1363,7 +1363,7 @@ func NewVMAccountInboxUnpublishFunction(
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				// Get address field from the receiver
 				providerValue := vm.GetAccountTypePrivateAddressValue(receiver)
@@ -1510,7 +1510,7 @@ func NewVMAccountInboxClaimFunction(
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				// Get address field from the receiver
 				recipientValue := vm.GetAccountTypePrivateAddressValue(receiver)
@@ -1727,7 +1727,7 @@ func NewVMAccountContractsGetFunction(provider AccountContractProvider) VMFuncti
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				// Get address field from the receiver
 				addressValue := vm.GetAccountTypePrivateAddressValue(receiver)
@@ -1838,7 +1838,7 @@ func NewVMAccountContractsBorrowFunction(handler AccountContractsHandler) VMFunc
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -2052,7 +2052,7 @@ func newVMAccountContractsChangeFunction(
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				address := vm.GetAccountTypePrivateAddressValue(receiver)
 
@@ -2440,7 +2440,7 @@ func newVMAccountContractsTryUpdateFunction(
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				address := vm.GetAccountTypePrivateAddressValue(receiver)
 
@@ -2791,7 +2791,7 @@ func newVMAccountContractsRemoveFunction(
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				// Get address field from the receiver
 				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver)
@@ -3144,7 +3144,7 @@ func NewVMAccountStorageCapabilitiesGetControllerFunction(
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				// Get address field from the receiver
 				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -3244,7 +3244,7 @@ func NewVMAccountStorageCapabilitiesGetControllersFunction(
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				// Get address field from the receiver
 				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -3380,7 +3380,7 @@ func NewVMAccountStorageCapabilitiesForEachControllerFunction(
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				// Get address field from the receiver
 				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -3552,7 +3552,7 @@ func NewVMAccountStorageCapabilitiesIssueFunction(
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				// Get address field from the receiver
 				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -3657,7 +3657,7 @@ func NewVMAccountStorageCapabilitiesIssueWithTypeFunction(
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				// Get address field from the receiver
 				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -3863,7 +3863,7 @@ func NewVMAccountAccountCapabilitiesIssueFunction(
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:] // nolint:staticcheck
+				receiver, _ = vm.SplitReceiverAndArgs(context, args)
 
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -3938,7 +3938,7 @@ func NewVMAccountAccountCapabilitiesIssueWithTypeFunction(
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -4630,7 +4630,7 @@ func NewVMAccountCapabilitiesPublishFunction(
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				// Get address field from the receiver
 				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver)
@@ -4823,7 +4823,7 @@ func NewVMAccountCapabilitiesUnpublishFunction(
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				// Get address field from the receiver
 				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver)
@@ -5164,7 +5164,7 @@ func NewVMAccountCapabilitiesGetFunction(
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver)
@@ -5402,7 +5402,7 @@ var VMAccountCapabilitiesExistsFunction = VMFunction{
 			var receiver interpreter.Value
 
 			// arg[0] is the receiver. Actual arguments starts from 1.
-			receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+			receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 			// Get address field from the receiver
 			accountAddress := vm.GetAccountTypePrivateAddressValue(receiver)
@@ -5529,7 +5529,7 @@ func NewVMAccountAccountCapabilitiesGetControllerFunction(
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -5607,7 +5607,7 @@ func NewVMAccountAccountCapabilitiesGetControllersFunction(
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:] // nolint:staticcheck
+				receiver, _ = vm.SplitReceiverAndArgs(context, args)
 
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -5737,7 +5737,7 @@ func NewVMAccountAccountCapabilitiesForEachControllerFunction(
 				var receiver interpreter.Value
 
 				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+				receiver, args = vm.SplitReceiverAndArgs(context, args)
 
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()

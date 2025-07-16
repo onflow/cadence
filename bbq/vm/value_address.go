@@ -32,16 +32,19 @@ func init() {
 
 	typeName := commons.TypeQualifier(sema.TheAddressType)
 
+	// Methods on `Address` value.
+	// Receiver is at 0-th index. Arguments starts from 1.
+
 	registerBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValue(
 			sema.ToStringFunctionName,
 			sema.ToStringFunctionType,
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				address := arguments[ReceiverIndex].(interpreter.AddressValue)
+				addressValue, arguments := SplitTypedReceiverAndArgs[interpreter.AddressValue](context, arguments) // nolint:staticcheck,ineffassign
 				return interpreter.AddressValueToStringFunction(
 					context,
-					address,
+					addressValue,
 					EmptyLocationRange,
 				)
 			},
@@ -54,12 +57,15 @@ func init() {
 			sema.AddressTypeToBytesFunctionName,
 			sema.AddressTypeToBytesFunctionType,
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				addressValue := arguments[ReceiverIndex].(interpreter.AddressValue)
+				addressValue, arguments := SplitTypedReceiverAndArgs[interpreter.AddressValue](context, arguments) // nolint:staticcheck,ineffassign
 				address := common.Address(addressValue)
 				return interpreter.ByteSliceToByteArrayValue(context, address[:])
 			},
 		),
 	)
+
+	// Methods on `Address` type.
+	// Arguments starts from 0-th index.
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
@@ -88,4 +94,5 @@ func init() {
 			},
 		),
 	)
+
 }

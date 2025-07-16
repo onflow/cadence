@@ -38,8 +38,8 @@ func init() {
 			sema.StringTypeConcatFunctionName,
 			sema.StringTypeConcatFunctionType,
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				this := arguments[ReceiverIndex].(*interpreter.StringValue)
-				other := arguments[TypeBoundFunctionArgumentOffset]
+				this, arguments := SplitTypedReceiverAndArgs[*interpreter.StringValue](context, arguments)
+				other := arguments[0]
 				return interpreter.StringConcat(
 					context,
 					this,
@@ -56,9 +56,9 @@ func init() {
 			sema.StringTypeSliceFunctionName,
 			sema.StringTypeSliceFunctionType,
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				this := arguments[ReceiverIndex].(*interpreter.StringValue)
-				from := arguments[1].(interpreter.IntValue)
-				to := arguments[2].(interpreter.IntValue)
+				this, arguments := SplitTypedReceiverAndArgs[*interpreter.StringValue](context, arguments)
+				from := arguments[0].(interpreter.IntValue)
+				to := arguments[1].(interpreter.IntValue)
 				return this.Slice(from, to, EmptyLocationRange)
 			},
 		),
@@ -70,8 +70,8 @@ func init() {
 			sema.StringTypeContainsFunctionName,
 			sema.StringTypeContainsFunctionType,
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				this := arguments[ReceiverIndex].(*interpreter.StringValue)
-				other := arguments[1].(*interpreter.StringValue)
+				this, arguments := SplitTypedReceiverAndArgs[*interpreter.StringValue](context, arguments)
+				other := arguments[0].(*interpreter.StringValue)
 				return this.Contains(context, other)
 			},
 		),
@@ -83,8 +83,8 @@ func init() {
 			sema.StringTypeIndexFunctionName,
 			sema.StringTypeIndexFunctionType,
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				this := arguments[ReceiverIndex].(*interpreter.StringValue)
-				other := arguments[1].(*interpreter.StringValue)
+				this, arguments := SplitTypedReceiverAndArgs[*interpreter.StringValue](context, arguments)
+				other := arguments[0].(*interpreter.StringValue)
 				return this.IndexOf(context, other)
 			},
 		),
@@ -96,8 +96,8 @@ func init() {
 			sema.StringTypeCountFunctionName,
 			sema.StringTypeCountFunctionType,
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				this := arguments[ReceiverIndex].(*interpreter.StringValue)
-				other := arguments[1].(*interpreter.StringValue)
+				this, arguments := SplitTypedReceiverAndArgs[*interpreter.StringValue](context, arguments)
+				other := arguments[0].(*interpreter.StringValue)
 				return this.Count(context, EmptyLocationRange, other)
 			},
 		),
@@ -109,7 +109,7 @@ func init() {
 			sema.StringTypeDecodeHexFunctionName,
 			sema.StringTypeDecodeHexFunctionType,
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				this := arguments[ReceiverIndex].(*interpreter.StringValue)
+				this, arguments := SplitTypedReceiverAndArgs[*interpreter.StringValue](context, arguments) // nolint:staticcheck,ineffassign
 				return this.DecodeHex(context, EmptyLocationRange)
 			},
 		),
@@ -121,7 +121,7 @@ func init() {
 			sema.StringTypeToLowerFunctionName,
 			sema.StringTypeToLowerFunctionType,
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				this := arguments[ReceiverIndex].(*interpreter.StringValue)
+				this, arguments := SplitTypedReceiverAndArgs[*interpreter.StringValue](context, arguments) // nolint:staticcheck,ineffassign
 				return this.ToLower(context)
 			},
 		),
@@ -133,8 +133,8 @@ func init() {
 			sema.StringTypeSplitFunctionName,
 			sema.StringTypeSplitFunctionType,
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				this := arguments[ReceiverIndex].(*interpreter.StringValue)
-				separator := arguments[1].(*interpreter.StringValue)
+				this, arguments := SplitTypedReceiverAndArgs[*interpreter.StringValue](context, arguments)
+				separator := arguments[0].(*interpreter.StringValue)
 				return this.Split(
 					context,
 					EmptyLocationRange,
@@ -150,9 +150,9 @@ func init() {
 			sema.StringTypeReplaceAllFunctionName,
 			sema.StringTypeReplaceAllFunctionType,
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				this := arguments[ReceiverIndex].(*interpreter.StringValue)
-				original := arguments[1].(*interpreter.StringValue)
-				replacement := arguments[2].(*interpreter.StringValue)
+				this, arguments := SplitTypedReceiverAndArgs[*interpreter.StringValue](context, arguments)
+				original := arguments[0].(*interpreter.StringValue)
+				replacement := arguments[1].(*interpreter.StringValue)
 				return this.ReplaceAll(
 					context,
 					EmptyLocationRange,

@@ -37,7 +37,7 @@ func init() {
 				sema.ToStringFunctionName,
 				sema.ToStringFunctionType,
 				func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-					number := arguments[ReceiverIndex].(interpreter.NumberValue)
+					number, arguments := SplitTypedReceiverAndArgs[interpreter.NumberValue](context, arguments) // nolint:staticcheck,ineffassign
 					return interpreter.NumberValueToString(
 						context,
 						number,
@@ -52,7 +52,7 @@ func init() {
 				sema.ToBigEndianBytesFunctionName,
 				sema.ToBigEndianBytesFunctionType,
 				func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-					number := arguments[ReceiverIndex].(interpreter.NumberValue)
+					number, arguments := SplitTypedReceiverAndArgs[interpreter.NumberValue](context, arguments) // nolint:staticcheck,ineffassign
 					return interpreter.ByteSliceToByteArrayValue(
 						context,
 						number.ToBigEndianBytes(),

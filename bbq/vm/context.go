@@ -231,8 +231,8 @@ func (c *Context) WithResourceDestruction(valueID atree.ValueID, locationRange i
 	f()
 }
 
-func (c *Context) RecoverErrors(onError func(error)) {
-	//TODO
+func (*Context) RecoverErrors(onError func(error)) {
+	RecoverErrors(onError)
 }
 
 func (c *Context) GetValueOfVariable(name string) interpreter.Value {
@@ -375,4 +375,21 @@ func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema
 
 func (c *Context) GetContractValue(contractLocation common.AddressLocation) *interpreter.CompositeValue {
 	return c.ContractValueHandler(c, contractLocation)
+}
+
+func (c *Context) MaybeUpdateStorageReferenceMemberReceiver(
+	storageReference *interpreter.StorageReferenceValue,
+	referencedValue Value,
+	member Value,
+) Value {
+	if boundFunction, isBoundFunction := member.(*BoundFunctionValue); isBoundFunction {
+		boundFunction.ReceiverReference = interpreter.StorageReference(
+			c,
+			storageReference,
+			referencedValue,
+		)
+		return boundFunction
+	}
+
+	return member
 }

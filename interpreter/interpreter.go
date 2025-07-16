@@ -6167,3 +6167,50 @@ func (interpreter *Interpreter) DefaultDestroyEvents(
 func (interpreter *Interpreter) SemaTypeFromStaticType(staticType StaticType) sema.Type {
 	return MustConvertStaticToSemaType(staticType, interpreter)
 }
+
+func (interpreter *Interpreter) MaybeUpdateStorageReferenceMemberReceiver(
+	storageReference *StorageReferenceValue,
+	referencedValue Value,
+	member Value,
+) Value {
+	if boundFunction, isBoundFunction := member.(BoundFunctionValue); isBoundFunction {
+		boundFunction.SelfReference = StorageReference(
+			interpreter,
+			storageReference,
+			referencedValue,
+		)
+		return boundFunction
+	}
+
+	return member
+}
+
+func StorageReference(
+	context ValueStaticTypeContext,
+	storageReference *StorageReferenceValue,
+	referencedValue Value,
+) *StorageReferenceValue {
+
+	// As also mentioned in `(StorageReference).GetMember` method,
+	// we cannot use the storage reference as-is here.
+	// This is because since we look up the member on the referenced value,
+	// we also must use its type as the borrowed type for the `SelfReference` type,
+	// because during invocation the bound function can only be invoked
+	// if the type of the dereferenced value at that time still matches
+	// the type of the dereferenced value at the time of binding (here).
+	//
+	// For example, imagine storing a value of type T (e.g. `String`),
+	// creating a reference with a supertype (e.g. `AnyStruct`),
+	// and then creating a bound function on it.
+	// Then, if we change the storage location to store a value of unrelated type U instead (e.g. `Int`),
+	// and invoke the bound function, the bound function is potentially invalid.
+
+	referencedValueStaticType := referencedValue.StaticType(context)
+	return NewStorageReferenceValue(
+		context,
+		storageReference.Authorization,
+		storageReference.TargetStorageAddress,
+		storageReference.TargetPath,
+		context.SemaTypeFromStaticType(referencedValueStaticType),
+	)
+}

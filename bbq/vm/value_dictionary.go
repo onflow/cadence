@@ -38,9 +38,8 @@ func init() {
 				return sema.DictionaryRemoveFunctionType(dictionaryType)
 			},
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				value := arguments[ReceiverIndex]
-				dictionary := value.(*interpreter.DictionaryValue)
-				key := arguments[1]
+				dictionary, arguments := SplitTypedReceiverAndArgs[*interpreter.DictionaryValue](context, arguments)
+				key := arguments[0]
 				return dictionary.Remove(context, EmptyLocationRange, key)
 			},
 		),
@@ -55,10 +54,9 @@ func init() {
 				return sema.DictionaryInsertFunctionType(dictionaryType)
 			},
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				value := arguments[ReceiverIndex]
-				dictionary := value.(*interpreter.DictionaryValue)
-				keyValue := arguments[1]
-				newValue := arguments[2]
+				dictionary, arguments := SplitTypedReceiverAndArgs[*interpreter.DictionaryValue](context, arguments)
+				keyValue := arguments[0]
+				newValue := arguments[1]
 
 				return dictionary.Insert(
 					context,
@@ -79,9 +77,8 @@ func init() {
 				return sema.DictionaryContainsKeyFunctionType(dictionaryType)
 			},
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				value := arguments[ReceiverIndex]
-				dictionary := value.(*interpreter.DictionaryValue)
-				key := arguments[1]
+				dictionary, arguments := SplitTypedReceiverAndArgs[*interpreter.DictionaryValue](context, arguments)
+				key := arguments[0]
 				return dictionary.ContainsKey(
 					context,
 					EmptyLocationRange,
@@ -101,9 +98,8 @@ func init() {
 				return sema.DictionaryRemoveFunctionType(dictionaryType)
 			},
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				value := arguments[ReceiverIndex]
-				dictionary := value.(*interpreter.DictionaryValue)
-				funcArgument := arguments[1].(FunctionValue)
+				dictionary, arguments := SplitTypedReceiverAndArgs[*interpreter.DictionaryValue](context, arguments)
+				funcArgument := arguments[0].(FunctionValue)
 				dictionary.ForEachKey(
 					context,
 					EmptyLocationRange,

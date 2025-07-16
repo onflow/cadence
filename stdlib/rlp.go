@@ -71,12 +71,11 @@ var VMRLPDecodeStringFunction = VMFunction{
 	FunctionValue: vm.NewNativeFunctionValue(
 		RLPTypeDecodeStringFunctionName,
 		RLPTypeDecodeStringFunctionType,
-		func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
+		func(context *vm.Context, _ []bbq.StaticType, arguments ...vm.Value) vm.Value {
 
-			// arg[0] is the receiver. Actual arguments starts from 1.
-			args = args[vm.TypeBoundFunctionArgumentOffset:]
+			_, arguments = vm.SplitReceiverAndArgs(context, arguments)
 
-			input, ok := args[0].(*interpreter.ArrayValue)
+			input, ok := arguments[0].(*interpreter.ArrayValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -167,12 +166,11 @@ var VMRLPDecodeListFunction = VMFunction{
 	FunctionValue: vm.NewNativeFunctionValue(
 		RLPTypeDecodeListFunctionName,
 		RLPTypeDecodeListFunctionType,
-		func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
+		func(context *vm.Context, _ []bbq.StaticType, arguments ...vm.Value) vm.Value {
 
-			// arg[0] is the receiver. Actual arguments starts from 1.
-			args = args[vm.TypeBoundFunctionArgumentOffset:]
+			_, arguments = vm.SplitReceiverAndArgs(context, arguments)
 
-			input, ok := args[0].(*interpreter.ArrayValue)
+			input, ok := arguments[0].(*interpreter.ArrayValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
