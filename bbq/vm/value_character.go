@@ -37,7 +37,7 @@ func init() {
 			sema.ToStringFunctionName,
 			sema.ToStringFunctionType,
 			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				character, arguments := SplitTypedReceiverAndArgs[interpreter.CharacterValue](context, arguments) // nolint:ineffassign
+				character, arguments := SplitTypedReceiverAndArgs[interpreter.CharacterValue](context, arguments) // nolint:staticcheck,ineffassign
 				return interpreter.CharacterValueToString(
 					context,
 					character,

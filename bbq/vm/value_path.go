@@ -44,7 +44,7 @@ func init() {
 				sema.ToStringFunctionName,
 				sema.ToStringFunctionType,
 				func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-					path, arguments := SplitTypedReceiverAndArgs[interpreter.PathValue](context, arguments) // nolint:ineffassign
+					path, arguments := SplitTypedReceiverAndArgs[interpreter.PathValue](context, arguments) // nolint:staticcheck,ineffassign
 					return interpreter.PathValueToStringFunction(
 						context,
 						path,
