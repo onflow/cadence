@@ -1966,8 +1966,8 @@ func parseSpecialFunctionDeclaration(
 			endPos = identifier.Pos // Fallback if no function block
 		}
 		p.report(&CustomDestructorError{
-			Pos:   identifier.Pos,
-			Range: ast.NewRange(p.memoryGauge, startPos, endPos),
+			Pos:             identifier.Pos,
+			DestructorRange: ast.NewRange(p.memoryGauge, startPos, endPos),
 		})
 
 	case KeywordPrepare:
