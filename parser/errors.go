@@ -168,7 +168,7 @@ func (e *JuxtaposedUnaryOperatorsError) Error() string {
 }
 
 func (e *JuxtaposedUnaryOperatorsError) SecondaryError() string {
-	return "Add parentheses around the inner expression to clarify operator precedence"
+	return "add parentheses around the inner expression to clarify operator precedence"
 }
 
 func (e *JuxtaposedUnaryOperatorsError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
@@ -236,13 +236,13 @@ func (e *InvalidIntegerLiteralError) SecondaryError() string {
 	case InvalidNumberLiteralKindUnknown:
 		return ""
 	case InvalidNumberLiteralKindLeadingUnderscore:
-		return "Remove the leading underscore"
+		return "remove the leading underscore"
 	case InvalidNumberLiteralKindTrailingUnderscore:
-		return "Remove the trailing underscore"
+		return "remove the trailing underscore"
 	case InvalidNumberLiteralKindUnknownPrefix:
-		return "Did you mean `0x` (hexadecimal), `0b` (binary), or `0o` (octal)?"
+		return "did you mean `0x` (hexadecimal), `0b` (binary), or `0o` (octal)?"
 	case InvalidNumberLiteralKindMissingDigits:
-		return "Consider adding a 0"
+		return "consider adding a 0"
 	}
 
 	panic(errors.NewUnreachableError())
@@ -354,7 +354,7 @@ func (e TypeDepthLimitReachedError) Error() string {
 }
 
 func (e TypeDepthLimitReachedError) SecondaryError() string {
-	return "consider breaking complex nested types into simpler components or using intermediate variables"
+	return "Consider breaking complex nested types into simpler components or using intermediate variables"
 }
 
 func (e TypeDepthLimitReachedError) StartPosition() ast.Position {
@@ -394,7 +394,7 @@ func (e *MissingCommaInParameterListError) Error() string {
 }
 
 func (e *MissingCommaInParameterListError) SecondaryError() string {
-	return "Add a comma to separate parameters in the parameter list"
+	return "add a comma to separate parameters in the parameter list"
 }
 
 func (e *MissingCommaInParameterListError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
@@ -501,7 +501,7 @@ func (e *RestrictedTypeError) Error() string {
 }
 
 func (e *RestrictedTypeError) SecondaryError() string {
-	return "Replace with the concrete type or an equivalent intersection type"
+	return "replace with the concrete type or an equivalent intersection type"
 }
 
 func (e *RestrictedTypeError) MigrationNote() string {
