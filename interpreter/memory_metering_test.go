@@ -1030,6 +1030,11 @@ func TestInterpretInterpretedFunctionMetering(t *testing.T) {
 func TestInterpretHostFunctionMetering(t *testing.T) {
 	t.Parallel()
 
+	// HostFunctionValue is only used in the interpreter, not the compiler/VM.
+	if *compile {
+		return
+	}
+
 	t.Run("top level function", func(t *testing.T) {
 		t.Parallel()
 
@@ -1043,6 +1048,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
+
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindHostFunctionValue))
 	})
 
@@ -1068,6 +1074,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
+
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindHostFunctionValue))
 	})
 
@@ -1089,11 +1096,8 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO: assert equivalent for compiler/VM
-		if !*compile {
-			// 1 for the struct method.
-			assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindHostFunctionValue))
-		}
+		// 1 for the struct method.
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindHostFunctionValue))
 	})
 
 	t.Run("struct init", func(t *testing.T) {
@@ -1114,11 +1118,8 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO: assert equivalent for compiler/VM
-		if !*compile {
-			// 1 for the struct init.
-			assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindHostFunctionValue))
-		}
+		// 1 for the struct init.
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindHostFunctionValue))
 	})
 
 	t.Run("builtin functions", func(t *testing.T) {
@@ -1163,8 +1164,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 			interpreter.Declare(baseActivation, valueDeclaration)
 		}
 
-		// TODO: requires standard library values for VM
-		inter, err := parseCheckAndInterpretWithOptions(
+		inter, err := parseCheckAndPrepareWithOptions(
 			t,
 			script,
 			ParseCheckAndInterpretOptions{
@@ -1218,8 +1218,8 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		}
 
 		meter := newTestMemoryGauge()
-		// TODO: requires standard library values for VM
-		inter, err := parseCheckAndInterpretWithOptions(
+
+		inter, err := parseCheckAndPrepareWithOptions(
 			t,
 			script,
 			ParseCheckAndInterpretOptions{
@@ -1278,8 +1278,8 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		}
 
 		meter := newTestMemoryGauge()
-		// TODO: requires standard library values for VM
-		inter, err := parseCheckAndInterpretWithOptions(
+
+		inter, err := parseCheckAndPrepareWithOptions(
 			t,
 			script,
 			ParseCheckAndInterpretOptions{
@@ -1311,6 +1311,11 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 
 func TestInterpretBoundFunctionMetering(t *testing.T) {
 	t.Parallel()
+
+	// BoundFunctionValue is only used in the interpreter, not the compiler/VM.
+	if *compile {
+		return
+	}
 
 	t.Run("struct method", func(t *testing.T) {
 		t.Parallel()
@@ -1379,12 +1384,9 @@ func TestInterpretBoundFunctionMetering(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		// TODO: assert equivalent for compiler/VM
-		if !*compile {
-			// 3 bound functions are created for the 3 invocations of 'bar()'.
-			// No bound functions are created for init invocation.
-			assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindBoundFunctionValue))
-		}
+		// 3 bound functions are created for the 3 invocations of 'bar()'.
+		// No bound functions are created for init invocation.
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindBoundFunctionValue))
 	})
 }
 
@@ -8526,7 +8528,7 @@ func TestInterpretFunctionStaticType(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, ifCompile[uint64](2, 3), meter.getMemory(common.MemoryKindFunctionStaticType))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindFunctionStaticType))
 	})
 }
 
@@ -9191,7 +9193,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, logFunction)
 
-		inter, err := parseCheckAndInterpretWithOptions(
+		inter, err := parseCheckAndPrepareWithOptions(
 			t,
 			script,
 			ParseCheckAndInterpretOptions{
@@ -9540,7 +9542,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, logFunction)
 
-		inter, err := parseCheckAndInterpretWithOptions(
+		inter, err := parseCheckAndPrepareWithOptions(
 			t,
 			script,
 			ParseCheckAndInterpretOptions{
