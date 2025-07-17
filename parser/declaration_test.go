@@ -7768,15 +7768,76 @@ func TestParseDestructor(t *testing.T) {
             destroy() {}
         }
 	`
+
+	// Define the positions once
+	destroyStartPos := ast.Position{Offset: 37, Line: 3, Column: 12}
+	destroyEndPos := ast.Position{Offset: 48, Line: 3, Column: 23}
+
 	_, errs := testParseDeclarations(code)
 	AssertEqualWithDiff(t,
 		[]error{
 			&CustomDestructorError{
-				Pos: ast.Position{Offset: 37, Line: 3, Column: 12},
+				Pos: destroyStartPos,
+				DestructorRange: ast.Range{
+					StartPos: destroyStartPos,
+					EndPos:   destroyEndPos,
+				},
 			},
 		},
 		errs,
 	)
+
+	// Direct unit test for SuggestFixes
+	t.Run("SuggestFixes", func(t *testing.T) {
+		err := &CustomDestructorError{
+			Pos: destroyStartPos,
+			DestructorRange: ast.Range{
+				StartPos: destroyStartPos,
+				EndPos:   destroyEndPos,
+			},
+		}
+		fixes := err.SuggestFixes("")
+		require.Len(t, fixes, 1)
+		fix := fixes[0]
+		assert.Equal(t, "Remove the deprecated custom destructor", fix.Message)
+		require.Len(t, fix.TextEdits, 1)
+		edit := fix.TextEdits[0]
+		assert.Equal(t, "", edit.Replacement)
+		assert.Equal(t, destroyStartPos, edit.Range.StartPos)
+		assert.Equal(t, destroyEndPos, edit.Range.EndPos)
+	})
+
+	// End-to-end test: apply suggested fix to code
+	t.Run("SuggestFixes apply edit to code", func(t *testing.T) {
+		// Note: This test uses a slightly different end position
+		destroyEndPosWithBrace := ast.Position{Offset: 49, Line: 3, Column: 24}
+
+		err := &CustomDestructorError{
+			Pos: destroyStartPos,
+			DestructorRange: ast.Range{
+				StartPos: destroyStartPos,
+				EndPos:   destroyEndPosWithBrace,
+			},
+		}
+		fixes := err.SuggestFixes("")
+		require.Len(t, fixes, 1)
+		edit := fixes[0].TextEdits[0]
+		updated := applyTextEdit(code, edit)
+		expected := `
+        resource Test {
+            
+        }
+	`
+		assert.Equal(t, expected, updated)
+	})
+}
+
+// Helper to apply a single ast.TextEdit to a string
+func applyTextEdit(code string, edit ast.TextEdit) string {
+	runes := []rune(code)
+	start := edit.Range.StartPos.Offset
+	end := edit.Range.EndPos.Offset
+	return string(runes[:start]) + edit.Replacement + string(runes[end:])
 }
 
 func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
