@@ -29,11 +29,6 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-const (
-	ReceiverIndex                   = 0
-	TypeBoundFunctionArgumentOffset = 1
-)
-
 type BuiltinGlobalsProvider func(location common.Location) *activations.Activation[Variable]
 
 var defaultBuiltinGlobals = activations.NewActivation[Variable](nil, nil)
