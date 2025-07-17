@@ -71,9 +71,7 @@ var VMRLPDecodeStringFunction = VMFunction{
 	FunctionValue: vm.NewNativeFunctionValue(
 		RLPTypeDecodeStringFunctionName,
 		RLPTypeDecodeStringFunctionType,
-		func(context *vm.Context, _ []bbq.StaticType, arguments ...vm.Value) vm.Value {
-
-			_, arguments = vm.SplitReceiverAndArgs(context, arguments)
+		func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
 
 			input, ok := arguments[0].(*interpreter.ArrayValue)
 			if !ok {
@@ -166,9 +164,7 @@ var VMRLPDecodeListFunction = VMFunction{
 	FunctionValue: vm.NewNativeFunctionValue(
 		RLPTypeDecodeListFunctionName,
 		RLPTypeDecodeListFunctionType,
-		func(context *vm.Context, _ []bbq.StaticType, arguments ...vm.Value) vm.Value {
-
-			_, arguments = vm.SplitReceiverAndArgs(context, arguments)
+		func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
 
 			input, ok := arguments[0].(*interpreter.ArrayValue)
 			if !ok {

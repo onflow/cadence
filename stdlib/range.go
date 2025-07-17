@@ -156,7 +156,7 @@ var VMInclusiveRangeConstructor = NewVMStandardLibraryStaticFunction(
 	"InclusiveRange",
 	inclusiveRangeConstructorFunctionType,
 	inclusiveRangeConstructorFunctionDocString,
-	func(context *vm.Context, typeArguments []bbq.StaticType, arguments ...vm.Value) vm.Value {
+	func(context *vm.Context, typeArguments []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
 
 		start, ok := arguments[0].(interpreter.IntegerValue)
 		if !ok {
