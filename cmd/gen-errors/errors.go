@@ -13,8 +13,8 @@ func generateErrors() []namedError {
 	return []namedError{
 		{"parser.CustomDestructorError",
 			&parser.CustomDestructorError{
-				Pos:   placeholderPosition,
-				Range: placeholderRange,
+				Pos:             placeholderPosition,
+				DestructorRange: placeholderRange,
 			},
 		},
 		{"parser.ExpressionDepthLimitReachedError",
