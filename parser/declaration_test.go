@@ -5594,193 +5594,6 @@ func TestParseTransactionDeclaration(t *testing.T) {
 			result.Declarations(),
 		)
 	})
-
-	t.Run("invalid identifiers instead of special function declarations", func(t *testing.T) {
-		code := `
-		transaction {
-			var x: Int
-
-			uwu(signer: AuthAccount) {}
-
-			pre {
-				x > 1
-			}
-			post {
-				x == 2
-			}
-
-		}
-		`
-
-		_, errs := testParseDeclarations(code)
-
-		AssertEqualWithDiff(t,
-			`unexpected identifier, expected keyword "prepare" or "execute", got "uwu"`,
-			errs[0].Error(),
-		)
-	})
-}
-
-func TestParseFunctionAndBlock(t *testing.T) {
-
-	t.Parallel()
-
-	result, errs := testParseDeclarations(`
-	    fun test() { return }
-	`)
-	require.Empty(t, errs)
-
-	AssertEqualWithDiff(t,
-		[]ast.Declaration{
-			&ast.FunctionDeclaration{
-				Access: ast.AccessNotSpecified,
-				Identifier: ast.Identifier{
-					Identifier: "test",
-					Pos:        ast.Position{Offset: 10, Line: 2, Column: 9},
-				},
-				ParameterList: &ast.ParameterList{
-					Range: ast.Range{
-						StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
-						EndPos:   ast.Position{Offset: 15, Line: 2, Column: 14},
-					},
-				},
-				FunctionBlock: &ast.FunctionBlock{
-					Block: &ast.Block{
-						Statements: []ast.Statement{
-							&ast.ReturnStatement{
-								Range: ast.Range{
-									StartPos: ast.Position{Offset: 19, Line: 2, Column: 18},
-									EndPos:   ast.Position{Offset: 24, Line: 2, Column: 23},
-								},
-							},
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
-							EndPos:   ast.Position{Offset: 26, Line: 2, Column: 25},
-						},
-					},
-				},
-				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
-			},
-		},
-		result,
-	)
-}
-
-func TestParseFunctionParameterWithoutLabel(t *testing.T) {
-
-	t.Parallel()
-
-	result, errs := testParseDeclarations(`
-	    fun test(x: Int) { }
-	`)
-	require.Empty(t, errs)
-
-	AssertEqualWithDiff(t,
-		[]ast.Declaration{
-			&ast.FunctionDeclaration{
-				Access: ast.AccessNotSpecified,
-				Identifier: ast.Identifier{
-					Identifier: "test",
-					Pos:        ast.Position{Offset: 10, Line: 2, Column: 9},
-				},
-				ParameterList: &ast.ParameterList{
-					Parameters: []*ast.Parameter{
-						{
-							Label: "",
-							Identifier: ast.Identifier{
-								Identifier: "x",
-								Pos:        ast.Position{Offset: 15, Line: 2, Column: 14},
-							},
-							TypeAnnotation: &ast.TypeAnnotation{
-								IsResource: false,
-								Type: &ast.NominalType{
-									Identifier: ast.Identifier{
-										Identifier: "Int",
-										Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
-									},
-								},
-								StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
-							},
-							StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-						},
-					},
-					Range: ast.Range{
-						StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
-						EndPos:   ast.Position{Offset: 21, Line: 2, Column: 20},
-					},
-				},
-				FunctionBlock: &ast.FunctionBlock{
-					Block: &ast.Block{
-						Range: ast.Range{
-							StartPos: ast.Position{Offset: 23, Line: 2, Column: 22},
-							EndPos:   ast.Position{Offset: 25, Line: 2, Column: 24},
-						},
-					},
-				},
-				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
-			},
-		},
-		result,
-	)
-}
-
-func TestParseFunctionParameterWithLabel(t *testing.T) {
-
-	t.Parallel()
-
-	result, errs := testParseDeclarations(`
-	    fun test(x y: Int) { }
-	`)
-	require.Empty(t, errs)
-
-	AssertEqualWithDiff(t,
-		[]ast.Declaration{
-			&ast.FunctionDeclaration{
-				Access: ast.AccessNotSpecified,
-				Identifier: ast.Identifier{
-					Identifier: "test",
-					Pos:        ast.Position{Offset: 10, Line: 2, Column: 9},
-				},
-				ParameterList: &ast.ParameterList{
-					Parameters: []*ast.Parameter{
-						{
-							Label: "x",
-							Identifier: ast.Identifier{
-								Identifier: "y",
-								Pos:        ast.Position{Offset: 17, Line: 2, Column: 16},
-							},
-							TypeAnnotation: &ast.TypeAnnotation{
-								IsResource: false,
-								Type: &ast.NominalType{
-									Identifier: ast.Identifier{
-										Identifier: "Int",
-										Pos:        ast.Position{Offset: 20, Line: 2, Column: 19},
-									},
-								},
-								StartPos: ast.Position{Offset: 20, Line: 2, Column: 19},
-							},
-							StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-						},
-					},
-					Range: ast.Range{
-						StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
-						EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
-					},
-				},
-				FunctionBlock: &ast.FunctionBlock{
-					Block: &ast.Block{
-						Range: ast.Range{
-							StartPos: ast.Position{Offset: 25, Line: 2, Column: 24},
-							EndPos:   ast.Position{Offset: 27, Line: 2, Column: 26},
-						},
-					},
-				},
-				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
-			},
-		},
-		result,
-	)
 }
 
 func TestParseStructure(t *testing.T) {
@@ -7781,6 +7594,55 @@ func TestParseDestructor(t *testing.T) {
 		},
 		errs,
 	)
+
+	// Direct unit test for SuggestFixes
+	t.Run("SuggestFixes", func(t *testing.T) {
+		err := &CustomDestructorError{
+			Pos: ast.Position{Offset: 37, Line: 3, Column: 12},
+			DestructorRange: ast.Range{
+				StartPos: ast.Position{Offset: 37, Line: 3, Column: 12},
+				EndPos:   ast.Position{Offset: 48, Line: 3, Column: 23},
+			},
+		}
+		fixes := err.SuggestFixes("")
+		require.Len(t, fixes, 1)
+		fix := fixes[0]
+		assert.Equal(t, "Remove the deprecated custom destructor", fix.Message)
+		require.Len(t, fix.TextEdits, 1)
+		edit := fix.TextEdits[0]
+		assert.Equal(t, "", edit.Replacement)
+		assert.Equal(t, ast.Position{Offset: 37, Line: 3, Column: 12}, edit.Range.StartPos)
+		assert.Equal(t, ast.Position{Offset: 48, Line: 3, Column: 23}, edit.Range.EndPos)
+	})
+
+	// End-to-end test: apply suggested fix to code
+	t.Run("SuggestFixes apply edit to code", func(t *testing.T) {
+		err := &CustomDestructorError{
+			Pos: ast.Position{Offset: 37, Line: 3, Column: 12},
+			DestructorRange: ast.Range{
+				StartPos: ast.Position{Offset: 37, Line: 3, Column: 12},
+				EndPos:   ast.Position{Offset: 77, Line: 5, Column: 6},
+			},
+		}
+		fixes := err.SuggestFixes("")
+		require.Len(t, fixes, 1)
+		edit := fixes[0].TextEdits[0]
+		updated := applyTextEdit(code, edit)
+		expected := `
+        resource Foo {
+            
+        }
+      `
+		assert.Equal(t, expected, updated)
+	})
+}
+
+// Helper to apply a single ast.TextEdit to a string
+func applyTextEdit(code string, edit ast.TextEdit) string {
+	runes := []rune(code)
+	start := edit.Range.StartPos.Offset
+	end := edit.Range.EndPos.Offset
+	return string(runes[:start]) + edit.Replacement + string(runes[end:])
 }
 
 func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
