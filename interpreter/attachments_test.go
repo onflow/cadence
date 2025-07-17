@@ -1866,6 +1866,7 @@ func TestInterpretAttachmentsRuntimeType(t *testing.T) {
 		a, err := inter.Invoke("test")
 		require.NoError(t, err)
 		require.IsType(t, interpreter.TypeValue{}, a)
+		// shouldn't this be &S.test.A?
 		require.Equal(t, "S.test.A", a.(interpreter.TypeValue).Type.String())
 	})
 }
@@ -2007,7 +2008,7 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 func TestInterpretAttachmentSelfAccessMembers(t *testing.T) {
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
             access(all) resource R{
                 access(all) fun baz() {}
             }

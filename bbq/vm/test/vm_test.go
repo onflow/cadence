@@ -9007,41 +9007,23 @@ func TestAttachments(t *testing.T) {
 	t.Run("supported", func(t *testing.T) {
 		t.Parallel()
 
-		var eventTypes []*sema.CompositeType
-
-		_, err := CompileAndInvokeWithOptions(t, `
-		resource R {
-                    event ResourceDestroyed()
-                }
-
-                attachment A for R {
-                    event ResourceDestroyed()
-                }
-
-                fun test(): @R {
-                    let r <- create R()
-                    let r2 <- attach A() to <-r
-                    remove A from r2
-                    return <-r2
-                }
-		`, "test",
-			CompilerAndVMOptions{
-				VMConfig: &vm.Config{
-					OnEventEmitted: func(
-						_ interpreter.ValueExportContext,
-						_ interpreter.LocationRange,
-						eventType *sema.CompositeType,
-						_ []interpreter.Value,
-					) error {
-						eventTypes = append(eventTypes, eventType)
-						return nil
-					},
-				},
-			})
+		a, err := CompileAndInvoke(t, `
+		resource R {}
+            attachment A for R {}
+            attachment B for R {}
+            attachment C for R {}
+            fun test(): Int {
+                var r <- attach C() to <- attach B() to <- attach A() to <- create R()
+                var i = 0
+                r.forEachAttachment(fun(attachmentRef: &AnyResourceAttachment) {
+                    i = i + 1
+                })
+                destroy r
+                return i
+            }
+		`, "test")
 		require.NoError(t, err)
 
-		require.Len(t, eventTypes, 2)
-		require.Equal(t, "A.ResourceDestroyed", eventTypes[0].QualifiedIdentifier())
-		require.Equal(t, "R.ResourceDestroyed", eventTypes[1].QualifiedIdentifier())
+		require.Equal(t, a, interpreter.NewUnmeteredIntValueFromInt64(3))
 	})
 }

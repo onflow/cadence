@@ -715,6 +715,12 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 			qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
 			c.addGlobal(qualifiedName)
 		}
+
+		if enclosingType.GetCompositeKind().SupportsAttachments() {
+			functionName := sema.CompositeForEachAttachmentFunctionName
+			qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
+			c.addGlobal(qualifiedName)
+		}
 	}
 
 	for _, declaration := range functionDecls {
@@ -3211,6 +3217,20 @@ func (c *Compiler[_, _]) addBuiltinMethods(typ sema.Type) {
 			uint16(len(boundFunction.typ.Parameters)+1),
 			boundFunction.typ,
 		)
+	}
+
+	if t, ok := typ.(sema.CompositeKindedType); ok {
+		if t.GetCompositeKind().SupportsAttachments() {
+			name := sema.CompositeForEachAttachmentFunctionName
+			qualifiedName := commons.TypeQualifiedName(typ, name)
+			functionType := sema.CompositeForEachAttachmentFunctionType(t.GetCompositeKind())
+			c.addFunction(
+				name,
+				qualifiedName,
+				uint16(len(functionType.Parameters)),
+				functionType,
+			)
+		}
 	}
 }
 
