@@ -191,9 +191,19 @@ type testMemoryGauge struct {
 	meter map[common.MemoryKind]uint64
 }
 
+func newTestMemoryGauge() *testMemoryGauge {
+	return &testMemoryGauge{
+		meter: map[common.MemoryKind]uint64{},
+	}
+}
+
 func (g *testMemoryGauge) MeterMemory(usage common.MemoryUsage) error {
 	g.meter[usage.Kind] += usage.Amount
 	return nil
+}
+
+func (g *testMemoryGauge) getMemory(kind common.MemoryKind) uint64 {
+	return g.meter[kind]
 }
 
 func BenchmarkParseFungibleToken(b *testing.B) {
@@ -213,9 +223,7 @@ func BenchmarkParseFungibleToken(b *testing.B) {
 	})
 
 	b.Run("With memory metering", func(b *testing.B) {
-		meter := &testMemoryGauge{
-			meter: make(map[common.MemoryKind]uint64),
-		}
+		meter := newTestMemoryGauge()
 
 		b.ReportAllocs()
 		b.ResetTimer()
