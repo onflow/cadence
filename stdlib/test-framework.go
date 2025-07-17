@@ -96,35 +96,29 @@ type Account struct {
 	Address   common.Address
 }
 
-// TODO: This is used by the test-framework.
-//
-//	Check and the functionalities needed.
 type TestFrameworkScriptExecutionContext interface {
+	interpreter.ValueExportContext
 }
 
 var _ TestFrameworkScriptExecutionContext = &interpreter.Interpreter{}
 
-// TODO: This is used by the test-framework.
-//
-//	Check and the functionalities needed.
 type TestFrameworkAddTransactionContext interface {
+	interpreter.ValueExportContext
 }
 
 var _ TestFrameworkAddTransactionContext = &interpreter.Interpreter{}
 
-// TODO: This is used by the test-framework.
-//
-//	Check and the functionalities needed.
 type TestFrameworkContractDeploymentContext interface {
+	interpreter.ValueExportContext
 }
 
 var _ TestFrameworkContractDeploymentContext = &interpreter.Interpreter{}
 
-// TODO: This is used by the test-framework.
-//
-//	Check and the functionalities needed.
 type TestFrameworkEventsContext interface {
+	common.MemoryGauge
 	interpreter.ArrayCreationContext
+	interpreter.ArrayCreationContext
+	interpreter.MemberAccessibleContext
 }
 
 var _ TestFrameworkEventsContext = &interpreter.Interpreter{}

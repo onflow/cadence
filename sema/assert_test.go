@@ -34,7 +34,7 @@ func TestCheckAssertWithoutMessage(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.AssertFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterAssertFunction)
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
@@ -43,7 +43,7 @@ func TestCheckAssertWithoutMessage(t *testing.T) {
             }
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},
@@ -59,7 +59,7 @@ func TestCheckAssertWithMessage(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.AssertFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterAssertFunction)
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
@@ -68,7 +68,7 @@ func TestCheckAssertWithMessage(t *testing.T) {
             }
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},

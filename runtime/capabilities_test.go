@@ -37,8 +37,8 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	newRuntime := func() (TestInterpreterRuntime, *TestRuntimeInterface) {
-		runtime := NewTestInterpreterRuntime()
+	newRuntime := func() (TestRuntime, *TestRuntimeInterface) {
+		runtime := NewTestRuntime()
 		accountCodes := map[common.Location][]byte{}
 
 		runtimeInterface := &TestRuntimeInterface{
@@ -325,6 +325,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -335,7 +336,10 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 				name,
 				nil,
 				nil,
-				Context{Interface: runtimeInterface},
+				Context{
+					Interface: runtimeInterface,
+					UseVM:     *compile,
+				},
 			)
 		}
 
@@ -374,7 +378,8 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 			_, err := invoke("testSwap")
 			RequireError(t, err)
 
-			require.ErrorAs(t, err, &interpreter.DereferenceError{})
+			var dereferenceError *interpreter.DereferenceError
+			require.ErrorAs(t, err, &dereferenceError)
 		})
 
 		t.Run("testRI", func(t *testing.T) {
@@ -647,6 +652,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -657,7 +663,10 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 				name,
 				nil,
 				nil,
-				Context{Interface: runtimeInterface},
+				Context{
+					Interface: runtimeInterface,
+					UseVM:     *compile,
+				},
 			)
 		}
 
@@ -696,7 +705,8 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 			_, err := invoke("testSwap")
 			RequireError(t, err)
 
-			require.ErrorAs(t, err, &interpreter.DereferenceError{})
+			var dereferenceError *interpreter.DereferenceError
+			require.ErrorAs(t, err, &dereferenceError)
 		})
 
 		t.Run("testSI", func(t *testing.T) {
@@ -786,6 +796,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -796,7 +807,10 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 				name,
 				nil,
 				nil,
-				Context{Interface: runtimeInterface},
+				Context{
+					Interface: runtimeInterface,
+					UseVM:     *compile,
+				},
 			)
 		}
 

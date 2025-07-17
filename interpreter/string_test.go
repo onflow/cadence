@@ -34,7 +34,7 @@ func TestInterpretRecursiveValueString(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(): AnyStruct {
           let map: {String: AnyStruct} = {}
           let mapRef = &map as auth(Mutate) &{String: AnyStruct}
@@ -64,7 +64,7 @@ func TestInterpretStringFunction(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(): String {
           return String()
       }
@@ -89,7 +89,7 @@ func TestInterpretStringDecodeHex(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           fun test(): [UInt8] {
               return "01CADE".decodeHex()
           }
@@ -121,7 +121,7 @@ func TestInterpretStringDecodeHex(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           fun test(): [UInt8] {
               return "0x".decodeHex()
           }
@@ -130,7 +130,7 @@ func TestInterpretStringDecodeHex(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var typedErr interpreter.InvalidHexByteError
+		var typedErr *interpreter.InvalidHexByteError
 		require.ErrorAs(t, err, &typedErr)
 		require.Equal(t, byte('x'), typedErr.Byte)
 	})
@@ -139,7 +139,7 @@ func TestInterpretStringDecodeHex(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           fun test(): [UInt8] {
               return "0".decodeHex()
           }
@@ -148,7 +148,7 @@ func TestInterpretStringDecodeHex(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var typedErr interpreter.InvalidHexLengthError
+		var typedErr *interpreter.InvalidHexLengthError
 		require.ErrorAs(t, err, &typedErr)
 	})
 }
@@ -157,7 +157,7 @@ func TestInterpretStringEncodeHex(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(): String {
           return String.encodeHex([1, 2, 3, 0xCA, 0xDE])
       }
@@ -200,13 +200,22 @@ func TestInterpretStringFromUtf8(t *testing.T) {
 
 	for _, testCase := range testCases {
 
-		code := fmt.Sprintf(`
-			fun testString(): String? {
-				return String.fromUTF8(%s)
-			}
-		`, testCase.expr)
+		code := fmt.Sprintf(
+			`
+              fun testString(): String? {
+                  let a = String.fromUTF8(%[1]s)
+                  let f = String.fromUTF8
+                  let b = f(%[1]s)
+                  if a != b {
+                      return nil
+                  }
+                  return b
+              }
+            `,
+			testCase.expr,
+		)
 
-		inter := parseCheckAndInterpret(t, code)
+		inter := parseCheckAndPrepare(t, code)
 
 		var expected interpreter.Value
 		strValue, ok := testCase.expected.(string)
@@ -234,11 +243,18 @@ func TestInterpretStringFromCharacters(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(): String {
-          return String.fromCharacters(["👪", "❤️"])
+          let characters: [Character] = ["👪", "❤️"]
+          let a = String.fromCharacters(characters)
+          let f = String.fromCharacters
+          let b = f(characters)
+          if a != b {
+              return ""
+          }
+          return b
       }
-	`)
+    `)
 
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
@@ -255,7 +271,7 @@ func TestInterpretStringUtf8Field(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(): [UInt8] {
           return "Flowers \u{1F490} are beautiful".utf8
       }
@@ -313,7 +329,7 @@ func TestInterpretStringToLower(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       fun test(): String {
           return "Flowers".toLower()
       }
@@ -332,7 +348,7 @@ func TestInterpretStringAccess(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
     fun test(): Type {
         let c: Character = "x"[0]
         return c.getType() 
@@ -352,7 +368,7 @@ func TestInterpretCharacterLiteralType(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
     fun test(): Type {
         let c: Character = "x"
         return c.getType() 
@@ -372,7 +388,7 @@ func TestInterpretOneCharacterStringLiteralType(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
     fun test(): Type {
         let c: String = "x"
         return c.getType() 
@@ -392,7 +408,7 @@ func TestInterpretCharacterLiteralTypeNoAnnotation(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
     fun test(): Type {
         let c = "x"
         return c.getType() 
@@ -412,7 +428,7 @@ func TestInterpretConvertCharacterToString(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
     fun test(): String {
         let c: Character = "x"
         return c.toString()
@@ -432,7 +448,7 @@ func TestInterpretCompareCharacters(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         let a: Character = "ü"
         let b: Character = "\u{FC}"
         let c: Character = "\u{75}\u{308}"
@@ -446,21 +462,21 @@ func TestInterpretCompareCharacters(t *testing.T) {
 		t,
 		inter,
 		interpreter.TrueValue,
-		inter.Globals.Get("x").GetValue(inter),
+		inter.GetGlobal("x"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.TrueValue,
-		inter.Globals.Get("y").GetValue(inter),
+		inter.GetGlobal("y"),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.FalseValue,
-		inter.Globals.Get("z").GetValue(inter),
+		inter.GetGlobal("z"),
 	)
 }
 
@@ -468,19 +484,26 @@ func TestInterpretStringJoin(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
-		fun test(): String {
-			return String.join(["👪", "❤️"], separator: "//")
-		}
+	inter := parseCheckAndPrepare(t, `
+        fun test(): String {
+            let parts = ["👪", "❤️"]
+            let a = String.join(parts, separator: "//")
+            let f = String.join
+            let b = f(parts, separator: "//")
+            if a != b {
+                return ""
+            }
+            return b
+        }
 
-		fun testEmptyArray(): String {
-			return String.join([], separator: "//")
-		}
+        fun testEmptyArray(): String {
+            return String.join([], separator: "//")
+        }
 
-		fun testSingletonArray(): String {
-			return String.join(["pqrS"], separator: "//")
-		}
-	`)
+        fun testSingletonArray(): String {
+            return String.join(["pqrS"], separator: "//")
+        }
+    `)
 
 	testCase := func(t *testing.T, funcName string, expected *interpreter.StringValue) {
 		t.Run(funcName, func(t *testing.T) {
@@ -574,7 +597,7 @@ func TestInterpretStringSplit(t *testing.T) {
 
 			t.Parallel()
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       fun test(): [String] {
@@ -684,7 +707,7 @@ func TestInterpretStringReplaceAll(t *testing.T) {
 
 			t.Parallel()
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       fun test(): String {
@@ -767,7 +790,7 @@ func TestInterpretStringContains(t *testing.T) {
 
 			t.Parallel()
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       fun test(): Bool {
@@ -848,7 +871,7 @@ func TestInterpretStringIndex(t *testing.T) {
 
 			t.Parallel()
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       fun test(): Int {
@@ -911,7 +934,7 @@ func TestInterpretStringCount(t *testing.T) {
 
 			t.Parallel()
 
-			inter := parseCheckAndInterpret(t,
+			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
 					`
                       fun test(): Int {

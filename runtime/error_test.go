@@ -30,7 +30,6 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
 )
 
@@ -42,7 +41,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		script := []byte(`X`)
 
@@ -57,10 +56,11 @@ func TestRuntimeError(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  location,
+				UseVM:     *compile,
 			},
 		)
 
-		require.EqualError(
+		require.ErrorContains(
 			t,
 			err,
 			"Execution failed:\n"+
@@ -76,7 +76,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		script := []byte(`fun test() {}`)
 
@@ -91,9 +91,10 @@ func TestRuntimeError(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  location,
+				UseVM:     *compile,
 			},
 		)
-		require.EqualError(
+		require.ErrorContains(
 			t,
 			err,
 			"Execution failed:\n"+
@@ -109,7 +110,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		script := []byte(`
             access(all) fun main() {
@@ -131,9 +132,10 @@ func TestRuntimeError(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  location,
+				UseVM:     *compile,
 			},
 		)
-		require.EqualError(
+		require.ErrorContains(
 			t,
 			err,
 			"Execution failed:\n"+
@@ -149,7 +151,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		script := []byte(`
 			access(all) fun main() {
@@ -169,9 +171,10 @@ func TestRuntimeError(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  location,
+				UseVM:     *compile,
 			},
 		)
-		require.EqualError(
+		require.ErrorContains(
 			t,
 			err,
 			"Execution failed:\n"+
@@ -187,7 +190,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		script := []byte(`
 			access(all) resource Resource {
@@ -218,36 +221,46 @@ func TestRuntimeError(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  location,
+				UseVM:     *compile,
 			},
 		)
 
-		require.EqualError(t, err,
-			"Execution failed:\n"+
-				"  --> 0100000000000000000000000000000000000000000000000000000000000000:15:12\n"+
-				"   |\n"+
-				"15 | 				destroy createResource()\n"+
-				"   | 				        ^^^^^^^^^^^^^^^^\n"+
-				"\n"+
-				"  --> 0100000000000000000000000000000000000000000000000000000000000000:9:21\n"+
-				"   |\n"+
-				" 9 | 				return <- create Resource(\n"+
-				"10 | 					s: \"argument\"\n"+
-				"11 | 				)\n"+
-				"   | 				^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"+
-				"\n"+
-				"error: panic: 42\n"+
-				" --> 0100000000000000000000000000000000000000000000000000000000000000:4:5\n"+
-				"  |\n"+
-				"4 | 					panic(\"42\")\n"+
-				"  | 					^^^^^^^^^^^\n",
-		)
+		// TODO: improve error locations in the VM
+		if *compile {
+			require.ErrorContains(t, err,
+				"Execution failed:\n"+
+					"error: panic: 42\n"+
+					" --> 0100000000000000000000000000000000000000000000000000000000000000:0:0\n",
+			)
+		} else {
+			require.ErrorContains(t, err,
+				"Execution failed:\n"+
+					"  --> 0100000000000000000000000000000000000000000000000000000000000000:15:12\n"+
+					"   |\n"+
+					"15 | 				destroy createResource()\n"+
+					"   | 				        ^^^^^^^^^^^^^^^^\n"+
+					"\n"+
+					"  --> 0100000000000000000000000000000000000000000000000000000000000000:9:21\n"+
+					"   |\n"+
+					" 9 | 				return <- create Resource(\n"+
+					"10 | 					s: \"argument\"\n"+
+					"11 | 				)\n"+
+					"   | 				^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"+
+					"\n"+
+					"error: panic: 42\n"+
+					" --> 0100000000000000000000000000000000000000000000000000000000000000:4:5\n"+
+					"  |\n"+
+					"4 | 					panic(\"42\")\n"+
+					"  | 					^^^^^^^^^^^\n",
+			)
+		}
 	})
 
 	t.Run("parse error in import", func(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		importedScript := []byte(`X`)
 
@@ -273,9 +286,10 @@ func TestRuntimeError(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  location,
+				UseVM:     *compile,
 			},
 		)
-		require.EqualError(
+		require.ErrorContains(
 			t,
 			err,
 			"Execution failed:\nerror: unexpected token: identifier\n"+
@@ -290,7 +304,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		importedScript := []byte(`fun test() {}`)
 
@@ -316,9 +330,10 @@ func TestRuntimeError(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  location,
+				UseVM:     *compile,
 			},
 		)
-		require.EqualError(
+		require.ErrorContains(
 			t,
 			err,
 			"Execution failed:\n"+
@@ -334,7 +349,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		importedScript := []byte(`
             access(all) fun add() {
@@ -373,24 +388,41 @@ func TestRuntimeError(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  location,
+				UseVM:     *compile,
 			},
 		)
-		require.EqualError(
-			t,
-			err,
-			"Execution failed:\n"+
-				" --> 0100000000000000000000000000000000000000000000000000000000000000:5:16\n"+
-				"  |\n"+
-				"5 |                 add()\n"+
-				"  |                 ^^^^^\n"+
-				"\n"+
-				"error: overflow\n"+
-				" --> imported:6:16\n"+
-				"  |\n"+
-				"6 |                 a + b\n"+
-				"  |                 ^^^^^\n"+
-				"",
-		)
+
+		// TODO: improve error locations in the VM
+		if *compile {
+			require.ErrorContains(
+				t,
+				err,
+				"Execution failed:\n"+
+					"error: overflow\n"+
+					" --> imported:6:16\n"+
+					"  |\n"+
+					"6 |                 a + b\n"+
+					"  |                 ^^^^^\n"+
+					"",
+			)
+		} else {
+			require.ErrorContains(
+				t,
+				err,
+				"Execution failed:\n"+
+					" --> 0100000000000000000000000000000000000000000000000000000000000000:5:16\n"+
+					"  |\n"+
+					"5 |                 add()\n"+
+					"  |                 ^^^^^\n"+
+					"\n"+
+					"error: overflow\n"+
+					" --> imported:6:16\n"+
+					"  |\n"+
+					"6 |                 a + b\n"+
+					"  |                 ^^^^^\n"+
+					"",
+			)
+		}
 	})
 
 	t.Run("nested errors", func(t *testing.T) {
@@ -446,7 +478,7 @@ func TestRuntimeError(t *testing.T) {
 			},
 		}
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(codes[location]),
@@ -454,9 +486,10 @@ func TestRuntimeError(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  location,
+				UseVM:     *compile,
 			},
 		)
-		require.EqualError(t, err,
+		require.ErrorContains(t, err,
 			"Execution failed:\n"+
 				"error: function declarations are not valid at the top-level\n"+
 				" --> 0000000000000002.B:3:30\n"+
@@ -489,7 +522,7 @@ func TestRuntimeError(t *testing.T) {
 func TestRuntimeMultipleInterfaceDefaultImplementationsError(t *testing.T) {
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	makeDeployTransaction := func(name, code string) []byte {
 		return []byte(fmt.Sprintf(
@@ -581,6 +614,7 @@ func TestRuntimeMultipleInterfaceDefaultImplementationsError(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -593,19 +627,14 @@ func TestRuntimeMultipleInterfaceDefaultImplementationsError(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "access(all) resource R: TestInterfaces.A, TestInterfaces.B {}")
 
-	var errType *sema.CheckerError
-	require.ErrorAs(t, err, &errType)
-
-	checkerErr := err.(Error).
-		Err.(interpreter.Error).
-		Err.(*stdlib.InvalidContractDeploymentError).
-		Err.(*ParsingCheckingError).
-		Err.(*sema.CheckerError)
+	var checkerErr *sema.CheckerError
+	require.ErrorAs(t, err, &checkerErr)
 
 	var specificErrType *sema.MultipleInterfaceDefaultImplementationsError
 	require.ErrorAs(t, checkerErr.Errors[0], &specificErrType)

@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 type testComputationGauge struct {
@@ -86,7 +87,7 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
                 let y = x.reverse()
             }`,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					ComputationGauge: computationGauge,
 				},
 			},
@@ -134,7 +135,7 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
                 let y = x.map(trueForEven)
             }`,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					ComputationGauge: computationGauge,
 				},
 			},
@@ -184,7 +185,7 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
                 let y = x.filter(onlyEven)
             }`,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					ComputationGauge: computationGauge,
 				},
 			},
@@ -239,7 +240,7 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
                 let y = x.slice(from: 1, upTo: 4)
             }`,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					ComputationGauge: computationGauge,
 				},
 			},
@@ -282,7 +283,7 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
                 let y = x.concat([4, 5, 6])
             }`,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					ComputationGauge: computationGauge,
 				},
 			},
@@ -304,9 +305,9 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 3},
 
 				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
-				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 3},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 3},
@@ -336,7 +337,7 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
                 let s = String.join(["one", "two", "three", "four"], separator: ", ")
             }`,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					ComputationGauge: computationGauge,
 				},
 			},
@@ -349,9 +350,9 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
 		assert.Equal(t,
 			[]common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
-				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 4},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 4},
@@ -378,7 +379,7 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
                 let s = "a b c".concat("1 2 3")
             }`,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					ComputationGauge: computationGauge,
 				},
 			},
@@ -408,7 +409,7 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
                 let s = "abcadeaf".replaceAll(of: "a", with: "z")
             }`,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					ComputationGauge: computationGauge,
 				},
 			},
@@ -502,7 +503,7 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
                 let s = "ABCdef".toLower()
             }`,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					ComputationGauge: computationGauge,
 				},
 			},
@@ -532,7 +533,7 @@ func TestInterpretComputationMeteringStdlib(t *testing.T) {
                 let s = "abc/d/ef//".split(separator: "/")
             }`,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					ComputationGauge: computationGauge,
 				},
 			},
@@ -675,7 +676,7 @@ func TestInterpretComputationMeteringStatements(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -719,7 +720,7 @@ func TestInterpretComputationMeteringStatements(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -752,7 +753,7 @@ func TestInterpretComputationMeteringStatements(t *testing.T) {
               let y = 3 * 4
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -793,7 +794,7 @@ func TestInterpretComputationMeteringLoopIteration(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -849,7 +850,7 @@ func TestInterpretComputationMeteringLoopIteration(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -913,7 +914,7 @@ func TestInterpretComputationMeteringFunctionInvocation(t *testing.T) {
           }
         `,
 		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				Storage:          storage,
 				ComputationGauge: computationGauge,
 			},
@@ -975,7 +976,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
               let x = [1, 2, 3]
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -1012,7 +1013,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -1050,7 +1051,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
                let x = [1, 2, 3][1]
              `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -1083,7 +1084,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -1120,7 +1121,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
               let x = [1, 2, 3].append(4)
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -1151,7 +1152,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
               let x = [1, 2, 3].insert(at: 1, 1)
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -1182,7 +1183,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
               let x = [1, 2, 3].remove(at: 1)
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -1213,7 +1214,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
               let x = [1, 2, 3].contains(4)
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -1251,7 +1252,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
                }
              `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -1267,9 +1268,9 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
-				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 2},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 2},
@@ -1295,7 +1296,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
                }
              `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -1334,7 +1335,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
                }
              `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -1350,9 +1351,9 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 				{Kind: common.ComputationKindStatement, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
-				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 2},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 2},
@@ -1377,7 +1378,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
                }
              `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -1415,7 +1416,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
                }
              `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -1456,7 +1457,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
                }
              `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -1499,7 +1500,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
                }
              `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -1545,7 +1546,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
               let x = {"a": 1, "b": 2, "c": 3}
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -1594,7 +1595,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -1635,7 +1636,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
               let x = {"a": 1, "b": 2}["b"]
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -1671,7 +1672,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
               let x = {"a": 1, "b": 2}.containsKey("b")
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -1711,7 +1712,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -1753,7 +1754,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
               let x= {"a": 1}.remove(key: "a")
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -1789,7 +1790,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -1831,7 +1832,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -1875,7 +1876,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -1930,7 +1931,7 @@ func TestInterpretComputationMeteringComposite(t *testing.T) {
               let s = S()
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -1970,7 +1971,7 @@ func TestInterpretComputationMeteringComposite(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -2015,7 +2016,7 @@ func TestInterpretComputationMeteringComposite(t *testing.T) {
               let x = S().x
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -2058,7 +2059,7 @@ func TestInterpretComputationMeteringComposite(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -2099,7 +2100,7 @@ func TestInterpretComputationMeteringString(t *testing.T) {
              let x = "abc"[2]
            `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -2134,7 +2135,7 @@ func TestInterpretComputationMeteringString(t *testing.T) {
              let x = "abc".length
            `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -2165,7 +2166,7 @@ func TestInterpretComputationMeteringString(t *testing.T) {
              let x = "abc".toLower()
            `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -2194,7 +2195,7 @@ func TestInterpretComputationMeteringString(t *testing.T) {
              let x = "abcd".slice(from: 1, upTo: 3)
            `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -2230,7 +2231,7 @@ func TestInterpretComputationMeteringString(t *testing.T) {
              }
            `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -2266,7 +2267,7 @@ func TestInterpretComputationMeteringString(t *testing.T) {
              }
            `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -2318,12 +2319,14 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
              }
            `,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
@@ -2340,9 +2343,9 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
-				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 4},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 4},
@@ -2378,12 +2381,14 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
              }
            `,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
@@ -2400,9 +2405,9 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]common.ComputationUsage{
 				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
-				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 2},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 2},
@@ -2436,7 +2441,7 @@ func TestInterpretComputationMeteringIntegerParsing(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -2470,7 +2475,7 @@ func TestInterpretComputationMeteringIntegerParsing(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},
@@ -2504,7 +2509,7 @@ func TestInterpretComputationMeteringIntegerParsing(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					Storage:          storage,
 					ComputationGauge: computationGauge,
 				},

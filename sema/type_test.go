@@ -1979,7 +1979,7 @@ func TestIsPrimitive(t *testing.T) {
 
 		for _, ty := range []Type{
 			&GenericType{TypeParameter: &TypeParameter{Name: "T"}},
-			&TransactionType{},
+			&TransactionType{Location: common.NewTransactionLocation(nil, []byte{42})},
 		} {
 			tests = append(tests, testCase{
 				expectedIsPrimitive: false,

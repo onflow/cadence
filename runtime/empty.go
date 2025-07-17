@@ -46,7 +46,7 @@ func (EmptyRuntimeInterface) ResolveLocation(_ []Identifier, _ Location) ([]Reso
 	panic("unexpected call to ResolveLocation")
 }
 
-func (EmptyRuntimeInterface) GetOrLoadProgram(_ Location, _ func() (*interpreter.Program, error)) (*interpreter.Program, error) {
+func (EmptyRuntimeInterface) GetOrLoadProgram(_ Location, _ func() (*Program, error)) (*Program, error) {
 	panic("unexpected call to GetOrLoadProgram")
 }
 
@@ -73,14 +73,6 @@ func (EmptyRuntimeInterface) InteractionUsed() (uint64, error) {
 
 func (EmptyRuntimeInterface) GetCode(_ Location) ([]byte, error) {
 	panic("unexpected call to GetCode")
-}
-
-func (EmptyRuntimeInterface) SetInterpreterSharedState(_ *interpreter.SharedState) {
-	panic("unexpected call to SetInterpreterSharedState")
-}
-
-func (EmptyRuntimeInterface) GetInterpreterSharedState() *interpreter.SharedState {
-	panic("unexpected call to GetInterpreterSharedState")
 }
 
 func (EmptyRuntimeInterface) GetValue(_, _ []byte) (value []byte, err error) {

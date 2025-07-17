@@ -37,7 +37,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInTransaction(t *testing.
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	accountCodes := map[common.Location][]byte{}
 
@@ -86,6 +86,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInTransaction(t *testing.
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -99,6 +100,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInTransaction(t *testing.
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -139,6 +141,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInTransaction(t *testing.
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -193,11 +196,12 @@ func TestRuntimeResourceDuplicationWithContractTransferInTransaction(t *testing.
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)
 
-	var forceNilError interpreter.ForceNilError
+	var forceNilError *interpreter.ForceNilError
 	require.ErrorAs(t, err, &forceNilError)
 }
 
@@ -205,7 +209,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInSameContract(t *testing
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	accountCodes := map[common.Location][]byte{}
 
@@ -254,6 +258,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInSameContract(t *testing
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -267,6 +272,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInSameContract(t *testing
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -339,6 +345,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInSameContract(t *testing
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)

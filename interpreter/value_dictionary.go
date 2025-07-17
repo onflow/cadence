@@ -134,7 +134,7 @@ func NewDictionaryValueWithAddress(
 		// then we need to prevent a resource loss
 		if _, ok := existingValue.(*SomeValue); ok {
 			if v.IsResourceKinded(context) {
-				panic(DuplicateKeyInResourceDictionaryError{
+				panic(&DuplicateKeyInResourceDictionaryError{
 					LocationRange: locationRange,
 				})
 			}
@@ -344,7 +344,7 @@ func (v *DictionaryValue) iterateKeys(
 		}
 	}
 
-	interpreter.WithMutationPrevention(v.ValueID(), iterate)
+	interpreter.WithContainerMutationPrevention(v.ValueID(), iterate)
 }
 
 func (v *DictionaryValue) IterateReadOnly(
@@ -412,8 +412,8 @@ func (v *DictionaryValue) iterate(
 			keyValue := MustConvertStoredValue(context, key)
 			valueValue := MustConvertStoredValue(context, value)
 
-			checkInvalidatedResourceOrResourceReference(keyValue, locationRange, context)
-			checkInvalidatedResourceOrResourceReference(valueValue, locationRange, context)
+			CheckInvalidatedResourceOrResourceReference(keyValue, locationRange, context)
+			CheckInvalidatedResourceOrResourceReference(valueValue, locationRange, context)
 
 			resume = f(
 				keyValue,
@@ -427,7 +427,7 @@ func (v *DictionaryValue) iterate(
 		}
 	}
 
-	context.WithMutationPrevention(v.ValueID(), iterate)
+	context.WithContainerMutationPrevention(v.ValueID(), iterate)
 }
 
 func (v *DictionaryValue) Iterator(gauge common.MemoryGauge) DictionaryKeyIterator {
@@ -588,7 +588,7 @@ func (v *DictionaryValue) ForEachKey(
 		}
 	}
 
-	context.WithMutationPrevention(v.ValueID(), iterate)
+	context.WithContainerMutationPrevention(v.ValueID(), iterate)
 }
 
 func (v *DictionaryValue) ContainsKey(
@@ -662,7 +662,7 @@ func (v *DictionaryValue) GetKey(context ContainerReadContext, locationRange Loc
 }
 
 func (v *DictionaryValue) SetKey(context ContainerMutationContext, locationRange LocationRange, keyValue Value, value Value) {
-	context.ValidateMutation(v.ValueID(), locationRange)
+	context.ValidateContainerMutation(v.ValueID(), locationRange)
 
 	checkContainerMutation(context, v.Type.KeyType, keyValue, locationRange)
 	checkContainerMutation(
@@ -683,7 +683,7 @@ func (v *DictionaryValue) SetKey(context ContainerMutationContext, locationRange
 	case NilValue:
 		existingValue = v.Remove(context, locationRange, keyValue)
 
-	case placeholderValue:
+	case PlaceholderValue:
 		// NO-OP
 
 	default:
@@ -691,7 +691,7 @@ func (v *DictionaryValue) SetKey(context ContainerMutationContext, locationRange
 	}
 
 	if existingValue != nil {
-		checkResourceLoss(context, existingValue, locationRange)
+		CheckResourceLoss(context, existingValue, locationRange)
 	}
 }
 
@@ -977,7 +977,7 @@ func (v *DictionaryValue) RemoveWithoutTransfer(
 	existingValueStorable atree.Storable,
 ) {
 
-	context.ValidateMutation(v.ValueID(), locationRange)
+	context.ValidateContainerMutation(v.ValueID(), locationRange)
 
 	valueComparator := newValueComparator(context, locationRange)
 	hashInputProvider := newHashInputProvider(context, locationRange)
@@ -1058,7 +1058,7 @@ func (v *DictionaryValue) InsertWithoutTransfer(
 	keyValue, value atree.Value,
 ) (existingValueStorable atree.Storable) {
 
-	context.ValidateMutation(v.ValueID(), locationRange)
+	context.ValidateContainerMutation(v.ValueID(), locationRange)
 
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(v.dictionary.Count(), v.elementSize, false)
@@ -1404,7 +1404,7 @@ func (v *DictionaryValue) Transfer(
 	if preventTransfer == nil {
 		preventTransfer = map[atree.ValueID]struct{}{}
 	} else if _, ok := preventTransfer[currentValueID]; ok {
-		panic(RecursiveTransferError{
+		panic(&RecursiveTransferError{
 			LocationRange: locationRange,
 		})
 	}
@@ -1691,6 +1691,14 @@ func (v *DictionaryValue) SetType(staticType *DictionaryStaticType) {
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+}
+
+func (v *DictionaryValue) AtreeMap() *atree.OrderedMap {
+	return v.dictionary
+}
+
+func (v *DictionaryValue) ElementSize() uint {
+	return v.elementSize
 }
 
 func (v *DictionaryValue) Inlined() bool {

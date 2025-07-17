@@ -60,8 +60,8 @@ func newTestContractInterpreterWithTestFramework(
 	require.NoError(t, err)
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(AssertFunction)
-	baseValueActivation.DeclareValue(PanicFunction)
+	baseValueActivation.DeclareValue(InterpreterAssertFunction)
+	baseValueActivation.DeclareValue(InterpreterPanicFunction)
 
 	checker, err := sema.NewChecker(
 		program,
@@ -103,8 +103,8 @@ func newTestContractInterpreterWithTestFramework(
 	var uuid uint64 = 0
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, AssertFunction)
-	interpreter.Declare(baseActivation, PanicFunction)
+	interpreter.Declare(baseActivation, InterpreterAssertFunction)
+	interpreter.Declare(baseActivation, InterpreterPanicFunction)
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
@@ -222,7 +222,9 @@ func TestTestNewMatcher(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
-		assert.ErrorAs(t, err, &interpreter.TypeMismatchError{})
+
+		var typeMismatchError *interpreter.TypeMismatchError
+		require.ErrorAs(t, err, &typeMismatchError)
 	})
 
 	t.Run("custom resource matcher", func(t *testing.T) {
@@ -368,7 +370,8 @@ func TestTestNewMatcher(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
-		assert.ErrorAs(t, err, &interpreter.TypeMismatchError{})
+		var typeMismatchError *interpreter.TypeMismatchError
+		require.ErrorAs(t, err, &typeMismatchError)
 	})
 }
 
@@ -1895,7 +1898,8 @@ func TestTestExpect(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
-		assert.ErrorAs(t, err, &interpreter.TypeMismatchError{})
+		var typeMismatchError *interpreter.TypeMismatchError
+		require.ErrorAs(t, err, &typeMismatchError)
 	})
 
 	t.Run("with explicit types", func(t *testing.T) {

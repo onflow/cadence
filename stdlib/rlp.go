@@ -23,6 +23,8 @@ package stdlib
 import (
 	"fmt"
 
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -44,8 +46,8 @@ func (e RLPDecodeStringError) Error() string {
 
 const rlpErrMsgInputContainsExtraBytes = "input data is expected to be RLP-encoded of a single string or a single list but it seems it contains extra trailing bytes."
 
-// rlpDecodeStringFunction is a static function
-var rlpDecodeStringFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
+// interpreterRLPDecodeStringFunction is a static function
+var interpreterRLPDecodeStringFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
 	RLPTypeDecodeStringFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		context := invocation.InvocationContext
@@ -56,40 +58,73 @@ var rlpDecodeStringFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
 			panic(errors.NewUnreachableError())
 		}
 
-		convertedInput, err := interpreter.ByteArrayValueToByteSlice(context, input, locationRange)
-		if err != nil {
-			panic(RLPDecodeStringError{
-				Msg:           err.Error(),
-				LocationRange: locationRange,
-			})
-		}
-
-		common.UseComputation(
+		return RLPDecodeString(
+			input,
 			context,
-			common.ComputationUsage{
-				Kind:      common.ComputationKindSTDLIBRLPDecodeString,
-				Intensity: uint64(input.Count()),
-			},
+			locationRange,
 		)
-
-		output, bytesRead, err := rlp.DecodeString(convertedInput, 0)
-		if err != nil {
-			panic(RLPDecodeStringError{
-				Msg:           err.Error(),
-				LocationRange: locationRange,
-			})
-		}
-
-		if bytesRead != len(convertedInput) {
-			panic(RLPDecodeStringError{
-				Msg:           rlpErrMsgInputContainsExtraBytes,
-				LocationRange: locationRange,
-			})
-		}
-
-		return interpreter.ByteSliceToByteArrayValue(context, output)
 	},
 )
+
+var VMRLPDecodeStringFunction = VMFunction{
+	BaseType: RLPType,
+	FunctionValue: vm.NewNativeFunctionValue(
+		RLPTypeDecodeStringFunctionName,
+		RLPTypeDecodeStringFunctionType,
+		func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
+
+			input, ok := arguments[0].(*interpreter.ArrayValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			return RLPDecodeString(
+				input,
+				context,
+				interpreter.EmptyLocationRange,
+			)
+		},
+	),
+}
+
+func RLPDecodeString(
+	input *interpreter.ArrayValue,
+	context interpreter.InvocationContext,
+	locationRange interpreter.LocationRange,
+) interpreter.Value {
+	convertedInput, err := interpreter.ByteArrayValueToByteSlice(context, input, locationRange)
+	if err != nil {
+		panic(RLPDecodeStringError{
+			Msg:           err.Error(),
+			LocationRange: locationRange,
+		})
+	}
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindSTDLIBRLPDecodeString,
+			Intensity: uint64(input.Count()),
+		},
+	)
+
+	output, bytesRead, err := rlp.DecodeString(convertedInput, 0)
+	if err != nil {
+		panic(RLPDecodeStringError{
+			Msg:           err.Error(),
+			LocationRange: locationRange,
+		})
+	}
+
+	if bytesRead != len(convertedInput) {
+		panic(RLPDecodeStringError{
+			Msg:           rlpErrMsgInputContainsExtraBytes,
+			LocationRange: locationRange,
+		})
+	}
+
+	return interpreter.ByteSliceToByteArrayValue(context, output)
+}
 
 type RLPDecodeListError struct {
 	interpreter.LocationRange
@@ -104,8 +139,8 @@ func (e RLPDecodeListError) Error() string {
 	return fmt.Sprintf("failed to RLP-decode list: %s", e.Msg)
 }
 
-// rlpDecodeListFunction is a static function
-var rlpDecodeListFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
+// interpreterRLPDecodeListFunction is a static function
+var interpreterRLPDecodeListFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
 	RLPTypeDecodeListFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		context := invocation.InvocationContext
@@ -116,64 +151,97 @@ var rlpDecodeListFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
 			panic(errors.NewUnreachableError())
 		}
 
-		convertedInput, err := interpreter.ByteArrayValueToByteSlice(context, input, locationRange)
-		if err != nil {
-			panic(RLPDecodeListError{
-				Msg:           err.Error(),
-				LocationRange: locationRange,
-			})
-		}
-
-		common.UseComputation(
+		return RLPDecodeList(
+			input,
 			context,
-			common.ComputationUsage{
-				Kind:      common.ComputationKindSTDLIBRLPDecodeList,
-				Intensity: uint64(input.Count()),
-			},
-		)
-
-		output, bytesRead, err := rlp.DecodeList(convertedInput, 0)
-
-		if err != nil {
-			panic(RLPDecodeListError{
-				Msg:           err.Error(),
-				LocationRange: locationRange,
-			})
-		}
-
-		if bytesRead != len(convertedInput) {
-			panic(RLPDecodeListError{
-				Msg:           rlpErrMsgInputContainsExtraBytes,
-				LocationRange: locationRange,
-			})
-		}
-
-		outputLength := len(output)
-
-		var index int
-		return interpreter.NewArrayValueWithIterator(
-			context,
-			interpreter.NewVariableSizedStaticType(
-				context,
-				interpreter.ByteArrayStaticType,
-			),
-			common.ZeroAddress,
-			uint64(outputLength),
-			func() interpreter.Value {
-				if index >= outputLength {
-					return nil
-				}
-				result := interpreter.ByteSliceToByteArrayValue(context, output[index])
-				index++
-				return result
-			},
+			locationRange,
 		)
 	},
 )
 
+var VMRLPDecodeListFunction = VMFunction{
+	BaseType: RLPType,
+	FunctionValue: vm.NewNativeFunctionValue(
+		RLPTypeDecodeListFunctionName,
+		RLPTypeDecodeListFunctionType,
+		func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
+
+			input, ok := arguments[0].(*interpreter.ArrayValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			return RLPDecodeList(
+				input,
+				context,
+				interpreter.EmptyLocationRange,
+			)
+		},
+	),
+}
+
+func RLPDecodeList(
+	input *interpreter.ArrayValue,
+	context interpreter.InvocationContext,
+	locationRange interpreter.LocationRange,
+) interpreter.Value {
+	convertedInput, err := interpreter.ByteArrayValueToByteSlice(context, input, locationRange)
+	if err != nil {
+		panic(RLPDecodeListError{
+			Msg:           err.Error(),
+			LocationRange: locationRange,
+		})
+	}
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindSTDLIBRLPDecodeList,
+			Intensity: uint64(input.Count()),
+		},
+	)
+
+	output, bytesRead, err := rlp.DecodeList(convertedInput, 0)
+
+	if err != nil {
+		panic(RLPDecodeListError{
+			Msg:           err.Error(),
+			LocationRange: locationRange,
+		})
+	}
+
+	if bytesRead != len(convertedInput) {
+		panic(RLPDecodeListError{
+			Msg:           rlpErrMsgInputContainsExtraBytes,
+			LocationRange: locationRange,
+		})
+	}
+
+	outputLength := len(output)
+
+	var index int
+	return interpreter.NewArrayValueWithIterator(
+		context,
+		interpreter.NewVariableSizedStaticType(
+			context,
+			interpreter.ByteArrayStaticType,
+		),
+		common.ZeroAddress,
+		uint64(outputLength),
+		func() interpreter.Value {
+			if index >= outputLength {
+				return nil
+			}
+			result := interpreter.ByteSliceToByteArrayValue(context, output[index])
+			index++
+			return result
+		},
+	)
+}
+
 var rlpContractFields = map[string]interpreter.Value{
-	RLPTypeDecodeListFunctionName:   rlpDecodeListFunction,
-	RLPTypeDecodeStringFunctionName: rlpDecodeStringFunction,
+	RLPTypeDecodeListFunctionName:   interpreterRLPDecodeListFunction,
+	RLPTypeDecodeStringFunctionName: interpreterRLPDecodeStringFunction,
 }
 
 var RLPTypeStaticType = interpreter.ConvertSemaToStaticType(nil, RLPType)

@@ -26,7 +26,6 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/json"
-	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
@@ -36,7 +35,7 @@ import (
 func TestRuntimeContractUpdateWithDependencies(t *testing.T) {
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 	accountCodes := map[common.Location][]byte{}
 	signerAccount := common.MustBytesToAddress([]byte{0x1})
 	fooLocation := common.AddressLocation{
@@ -45,7 +44,7 @@ func TestRuntimeContractUpdateWithDependencies(t *testing.T) {
 	}
 	var checkGetAndSetProgram, getProgramCalled bool
 
-	programs := map[Location]*interpreter.Program{}
+	programs := map[Location]*Program{}
 	clearPrograms := func() {
 		for l := range programs {
 			delete(programs, l)
@@ -74,11 +73,11 @@ func TestRuntimeContractUpdateWithDependencies(t *testing.T) {
 		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(nil, b)
 		},
-		OnGetAndSetProgram: func(
+		OnGetOrLoadProgram: func(
 			location Location,
-			load func() (*interpreter.Program, error),
+			load func() (*Program, error),
 		) (
-			program *interpreter.Program,
+			program *Program,
 			err error,
 		) {
 			_, isTransactionLocation := location.(common.TransactionLocation)
@@ -151,6 +150,7 @@ func TestRuntimeContractUpdateWithDependencies(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -172,6 +172,7 @@ func TestRuntimeContractUpdateWithDependencies(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -189,6 +190,7 @@ func TestRuntimeContractUpdateWithDependencies(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -210,6 +212,7 @@ func TestRuntimeContractUpdateWithDependencies(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -218,7 +221,7 @@ func TestRuntimeContractUpdateWithDependencies(t *testing.T) {
 func TestRuntimeContractUpdateWithPrecedingIdentifiers(t *testing.T) {
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	signerAccount := common.MustBytesToAddress([]byte{0x1})
 
@@ -289,6 +292,7 @@ func TestRuntimeContractUpdateWithPrecedingIdentifiers(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -348,7 +352,7 @@ func TestRuntimeContractRedeployInSameTransaction(t *testing.T) {
             }
         `)
 
-		runtime := NewTestInterpreterRuntimeWithConfig(Config{
+		runtime := NewTestRuntimeWithConfig(Config{
 			AtreeValidationEnabled: false,
 		})
 
@@ -393,6 +397,7 @@ func TestRuntimeContractRedeployInSameTransaction(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -423,7 +428,7 @@ func TestRuntimeNestedContractDeployment(t *testing.T) {
             }
         `)
 
-		runtime := NewTestInterpreterRuntimeWithConfig(Config{
+		runtime := NewTestRuntimeWithConfig(Config{
 			AtreeValidationEnabled: false,
 		})
 
@@ -463,6 +468,7 @@ func TestRuntimeNestedContractDeployment(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -488,7 +494,7 @@ func TestRuntimeNestedContractDeployment(t *testing.T) {
             }
         `)
 
-		runtime := NewTestInterpreterRuntimeWithConfig(Config{
+		runtime := NewTestRuntimeWithConfig(Config{
 			AtreeValidationEnabled: false,
 		})
 
@@ -528,6 +534,7 @@ func TestRuntimeNestedContractDeployment(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -562,7 +569,7 @@ func TestRuntimeNestedContractDeployment(t *testing.T) {
             }
         `)
 
-		runtime := NewTestInterpreterRuntimeWithConfig(Config{
+		runtime := NewTestRuntimeWithConfig(Config{
 			AtreeValidationEnabled: false,
 		})
 
@@ -603,6 +610,7 @@ func TestRuntimeNestedContractDeployment(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -621,7 +629,7 @@ func TestRuntimeContractRedeploymentInSeparateTransactions(t *testing.T) {
             }
         `)
 
-	runtime := NewTestInterpreterRuntimeWithConfig(Config{
+	runtime := NewTestRuntimeWithConfig(Config{
 		AtreeValidationEnabled: false,
 	})
 
@@ -662,6 +670,7 @@ func TestRuntimeContractRedeploymentInSeparateTransactions(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -677,6 +686,7 @@ func TestRuntimeContractRedeploymentInSeparateTransactions(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -685,7 +695,7 @@ func TestRuntimeContractRedeploymentInSeparateTransactions(t *testing.T) {
 func TestRuntimeContractUpdateWithOldProgramError(t *testing.T) {
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	accountCodes := map[common.Location][]byte{}
 	signerAccount := common.MustBytesToAddress([]byte{0x1})
@@ -695,7 +705,7 @@ func TestRuntimeContractUpdateWithOldProgramError(t *testing.T) {
 	}
 	var checkGetAndSetProgram, getProgramCalled bool
 
-	programs := map[Location]*interpreter.Program{}
+	programs := map[Location]*Program{}
 	clearPrograms := func() {
 		for l := range programs {
 			delete(programs, l)
@@ -727,11 +737,11 @@ func TestRuntimeContractUpdateWithOldProgramError(t *testing.T) {
 		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(nil, b)
 		},
-		OnGetAndSetProgram: func(
+		OnGetOrLoadProgram: func(
 			location Location,
-			load func() (*interpreter.Program, error),
+			load func() (*Program, error),
 		) (
-			program *interpreter.Program,
+			program *Program,
 			err error,
 		) {
 			_, isTransactionLocation := location.(common.TransactionLocation)
@@ -789,6 +799,7 @@ func TestRuntimeContractUpdateWithOldProgramError(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)

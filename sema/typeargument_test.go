@@ -61,14 +61,14 @@ func TestCheckTypeArguments(t *testing.T) {
 		t.Parallel()
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+		baseValueActivation.DeclareValue(stdlib.InterpreterInclusiveRangeConstructor)
 
 		_, err := ParseAndCheckWithOptions(t,
 			`
               let inclusiveRange: InclusiveRange<Int, String> = InclusiveRange(1, 10)
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 						return baseValueActivation
 					},
@@ -167,9 +167,9 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 	test := func(t *testing.T, code string) error {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+		baseValueActivation.DeclareValue(stdlib.InterpreterInclusiveRangeConstructor)
 		options := ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},
@@ -822,7 +822,7 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 		})
 
 		options := ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseTypeActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseTypeActivation
 				},

@@ -72,10 +72,20 @@ func TestInterpretVirtualImport(t *testing.T) {
 		Type:            fooType,
 	})
 
+	// NOTE: virtual imports are not supported by the compiler/VM
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.VirtualImport{
+							ValueElements: valueElements,
+						}, nil
+					},
+				},
+			},
+			InterpreterConfig: &interpreter.Config{
 				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 
 					assert.Equal(t,
@@ -121,13 +131,6 @@ func TestInterpretVirtualImport(t *testing.T) {
 						},
 						Elaboration: elaboration,
 					}
-				},
-			},
-			CheckerConfig: &sema.Config{
-				ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
-					return sema.VirtualImport{
-						ValueElements: valueElements,
-					}, nil
 				},
 			},
 		},
@@ -206,7 +209,7 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
           }
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				LocationHandler: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
 
 					require.Equal(t,
@@ -339,7 +342,7 @@ func TestInterpretResourceConstructionThroughIndirectImport(t *testing.T) {
           }
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 					require.IsType(t, common.AddressLocation{}, importedLocation)
 					addressLocation := importedLocation.(common.AddressLocation)
@@ -393,7 +396,7 @@ func TestInterpretResourceConstructionThroughIndirectImport(t *testing.T) {
 	_, err = inter.Invoke("test", rConstructor)
 	RequireError(t, err)
 
-	var resourceConstructionError interpreter.ResourceConstructionError
+	var resourceConstructionError *interpreter.ResourceConstructionError
 	require.ErrorAs(t, err, &resourceConstructionError)
 
 	assert.Equal(t,

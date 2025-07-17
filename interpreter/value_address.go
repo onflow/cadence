@@ -173,19 +173,13 @@ func (v AddressValue) GetMethod(
 			v,
 			sema.ToStringFunctionType,
 			func(v AddressValue, invocation Invocation) Value {
-				interpreter := invocation.InvocationContext
+				invocationContext := invocation.InvocationContext
 				locationRange := invocation.LocationRange
 
-				memoryUsage := common.NewStringMemoryUsage(
-					safeMul(common.AddressLength, 2, locationRange),
-				)
-
-				return NewStringValue(
-					interpreter,
-					memoryUsage,
-					func() string {
-						return v.String()
-					},
+				return AddressValueToStringFunction(
+					invocationContext,
+					v,
+					locationRange,
 				)
 			},
 		)
@@ -204,6 +198,22 @@ func (v AddressValue) GetMethod(
 	}
 
 	return nil
+}
+
+func AddressValueToStringFunction(
+	invocationContext InvocationContext,
+	v AddressValue,
+	locationRange LocationRange,
+) Value {
+	memoryUsage := common.NewStringMemoryUsage(
+		safeMul(common.AddressLength, 2, locationRange),
+	)
+
+	return NewStringValue(
+		invocationContext,
+		memoryUsage,
+		v.String,
+	)
 }
 
 func (AddressValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
@@ -275,33 +285,20 @@ func (AddressValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func AddressFromBytes(invocation Invocation) Value {
-	argument, ok := invocation.Arguments[0].(*ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	inter := invocation.InvocationContext
-
-	bytes, err := ByteArrayValueToByteSlice(inter, argument, invocation.LocationRange)
+func AddressValueFromByteArray(context ContainerMutationContext, byteArray *ArrayValue, locationRange LocationRange) AddressValue {
+	bytes, err := ByteArrayValueToByteSlice(context, byteArray, locationRange)
 	if err != nil {
 		panic(err)
 	}
 
-	return NewAddressValue(invocation.InvocationContext, common.MustBytesToAddress(bytes))
+	return NewAddressValue(context, common.MustBytesToAddress(bytes))
 }
 
-func AddressFromString(invocation Invocation) Value {
-	argument, ok := invocation.Arguments[0].(*StringValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	addr, err := common.HexToAddressAssertPrefix(argument.Str)
+func AddressValueFromString(gauge common.MemoryGauge, string *StringValue) Value {
+	addr, err := common.HexToAddressAssertPrefix(string.Str)
 	if err != nil {
 		return Nil
 	}
 
-	inter := invocation.InvocationContext
-	return NewSomeValueNonCopying(inter, NewAddressValue(inter, addr))
+	return NewSomeValueNonCopying(gauge, NewAddressValue(gauge, addr))
 }

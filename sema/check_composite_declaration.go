@@ -852,7 +852,12 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 
 			if ast.IsResourceDestructionDefaultEvent(identifier.Identifier) {
 				// Find the default event's type declaration
-				checker.Elaboration.SetDefaultDestroyDeclaration(declaration, nestedCompositeDeclaration)
+				compositeDecl, ok := nestedCompositeDeclaration.(*ast.CompositeDeclaration)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				checker.Elaboration.SetDefaultDestroyDeclaration(declaration, compositeDecl)
 				defaultEventType :=
 					checker.typeActivations.Find(identifier.Identifier)
 				defaultEventComposite, ok := defaultEventType.Type.(*CompositeType)
@@ -1060,21 +1065,23 @@ func (checker *Checker) declareEnumConstructor(
 		constructorOrigins = make(map[string]*Origin, len(enumCases))
 	}
 
-	constructorType := EnumConstructorType(compositeType)
+	enumLookupFunctionType := EnumLookupFunctionType(compositeType)
+
+	checker.Elaboration.SetEnumLookupFunctionType(compositeType, enumLookupFunctionType)
 
 	memberCaseTypeAnnotation := NewTypeAnnotation(compositeType)
 
 	for _, enumCase := range enumCases {
 		caseName := enumCase.Identifier.Identifier
 
-		if constructorType.Members.Contains(caseName) {
+		if enumLookupFunctionType.Members.Contains(caseName) {
 			continue
 		}
 
-		constructorType.Members.Set(
+		enumLookupFunctionType.Members.Set(
 			caseName,
 			&Member{
-				ContainerType: constructorType,
+				ContainerType: enumLookupFunctionType,
 				// enum cases are always public
 				Access:          PrimitiveAccess(ast.AccessAll),
 				Identifier:      enumCase.Identifier,
@@ -1082,7 +1089,8 @@ func (checker *Checker) declareEnumConstructor(
 				DeclarationKind: common.DeclarationKindField,
 				VariableKind:    ast.VariableKindConstant,
 				DocString:       enumCase.DocString,
-			})
+			},
+		)
 
 		if checker.PositionInfo != nil && constructorOrigins != nil {
 			constructorOrigins[caseName] =
@@ -1095,12 +1103,12 @@ func (checker *Checker) declareEnumConstructor(
 	}
 
 	if checker.PositionInfo != nil {
-		checker.PositionInfo.recordMemberOrigins(constructorType, constructorOrigins)
+		checker.PositionInfo.recordMemberOrigins(enumLookupFunctionType, constructorOrigins)
 	}
 
 	_, err := checker.valueActivations.declare(variableDeclaration{
 		identifier: declaration.Identifier.Identifier,
-		ty:         constructorType,
+		ty:         enumLookupFunctionType,
 		docString:  declaration.DocString,
 		// NOTE: enums are always public
 		access:         PrimitiveAccess(ast.AccessAll),
@@ -1112,7 +1120,7 @@ func (checker *Checker) declareEnumConstructor(
 	checker.report(err)
 }
 
-func EnumConstructorType(compositeType *CompositeType) *FunctionType {
+func EnumLookupFunctionType(compositeType *CompositeType) *FunctionType {
 	return &FunctionType{
 		Purity:        FunctionPurityView,
 		IsConstructor: true,
@@ -1127,7 +1135,8 @@ func EnumConstructorType(compositeType *CompositeType) *FunctionType {
 				Type: compositeType,
 			},
 		),
-		Members: &StringMemberOrderedMap{},
+		Members:          &StringMemberOrderedMap{},
+		TypeFunctionType: compositeType,
 	}
 }
 

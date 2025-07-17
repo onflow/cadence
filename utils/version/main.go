@@ -88,7 +88,7 @@ func main() {
 		_ = f.Close()
 	}()
 
-	_, err = f.WriteString(fmt.Sprintf(template, goGenerateComment, variableName, version))
+	_, err = fmt.Fprintf(f, template, goGenerateComment, variableName, version)
 	if err != nil {
 		panic(fmt.Errorf("could not write to %s: %w\n", target, err))
 	}

@@ -31,6 +31,7 @@ import (
 type TypeConverter interface {
 	common.MemoryGauge
 	StaticTypeConversionHandler
+	SemaTypeFromStaticType(staticType StaticType) sema.Type
 }
 
 var _ TypeConverter = &Interpreter{}
@@ -103,7 +104,6 @@ var _ StorageContext = &Interpreter{}
 type ReferenceTracker interface {
 	ClearReferencedResourceKindedValues(valueID atree.ValueID)
 	ReferencedResourceKindedValues(valueID atree.ValueID) map[*EphemeralReferenceValue]struct{}
-	CheckInvalidatedResourceOrResourceReference(value Value, locationRange LocationRange)
 	MaybeTrackReferencedResourceKindedValue(ref *EphemeralReferenceValue)
 }
 
@@ -121,8 +121,8 @@ type ValueTransferContext interface {
 		newOwner common.Address,
 	)
 
-	WithMutationPrevention(valueID atree.ValueID, f func())
-	ValidateMutation(valueID atree.ValueID, locationRange LocationRange)
+	WithContainerMutationPrevention(valueID atree.ValueID, f func())
+	ValidateContainerMutation(valueID atree.ValueID, locationRange LocationRange)
 
 	EnforceNotResourceDestruction(
 		valueID atree.ValueID,
@@ -206,7 +206,7 @@ type IterableValueForeachContext interface {
 var _ IterableValueForeachContext = &Interpreter{}
 
 type AccountHandlerContext interface {
-	AccountHandler() AccountHandlerFunc
+	GetAccountHandlerFunc() AccountHandlerFunc
 }
 
 var _ AccountHandlerContext = &Interpreter{}
@@ -220,10 +220,11 @@ type MemberAccessibleContext interface {
 	AccountContractBorrowContext
 	AttachmentContext
 
-	InjectedCompositeFieldsHandler() InjectedCompositeFieldsHandlerFunc
+	GetInjectedCompositeFieldsHandler() InjectedCompositeFieldsHandlerFunc
 	GetMemberAccessContextForLocation(location common.Location) MemberAccessibleContext
 
 	GetMethod(value MemberAccessibleValue, name string, locationRange LocationRange) FunctionValue
+	MaybeUpdateStorageReferenceMemberReceiver(storageReference *StorageReferenceValue, referencedValue Value, member Value) Value
 }
 
 var _ MemberAccessibleContext = &Interpreter{}
@@ -358,9 +359,9 @@ type BorrowCapabilityControllerContext interface {
 var _ BorrowCapabilityControllerContext = &Interpreter{}
 
 type CapabilityHandlers interface {
-	ValidateAccountCapabilitiesGetHandler() ValidateAccountCapabilitiesGetHandlerFunc
-	ValidateAccountCapabilitiesPublishHandler() ValidateAccountCapabilitiesPublishHandlerFunc
-	CapabilityBorrowHandler() CapabilityBorrowHandlerFunc
+	GetValidateAccountCapabilitiesGetHandler() ValidateAccountCapabilitiesGetHandlerFunc
+	GetValidateAccountCapabilitiesPublishHandler() ValidateAccountCapabilitiesPublishHandlerFunc
+	GetCapabilityBorrowHandler() CapabilityBorrowHandlerFunc
 }
 
 var _ CapabilityHandlers = &Interpreter{}
@@ -395,6 +396,7 @@ type ResourceDestructionContext interface {
 	InvocationContext
 
 	GetResourceDestructionContextForLocation(location common.Location) ResourceDestructionContext
+	DefaultDestroyEvents(resourceValue *CompositeValue, locationRange LocationRange) []*CompositeValue
 }
 
 var _ ResourceDestructionContext = &Interpreter{}
@@ -454,8 +456,6 @@ type InvocationContext interface {
 	InvokeFunction(
 		fn FunctionValue,
 		arguments []Value,
-		invocationArgumentTypes []sema.Type,
-		locationRange LocationRange,
 	) Value
 }
 
@@ -509,7 +509,7 @@ var _ AccountContractCreationContext = &Interpreter{}
 
 type AccountContractBorrowContext interface {
 	FunctionCreationContext
-	GetContractValue(contractLocation common.AddressLocation) (*CompositeValue, error)
+	GetContractValue(contractLocation common.AddressLocation) *CompositeValue
 }
 
 var _ AccountContractBorrowContext = &Interpreter{}
@@ -545,11 +545,11 @@ func (ctx NoOpStringContext) MeterComputation(_ common.ComputationUsage) error {
 	return nil
 }
 
-func (ctx NoOpStringContext) WithMutationPrevention(_ atree.ValueID, f func()) {
+func (ctx NoOpStringContext) WithContainerMutationPrevention(_ atree.ValueID, f func()) {
 	f()
 }
 
-func (ctx NoOpStringContext) ValidateMutation(_ atree.ValueID, _ LocationRange) {
+func (ctx NoOpStringContext) ValidateContainerMutation(_ atree.ValueID, _ LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -730,5 +730,9 @@ func (ctx NoOpStringContext) GetCompositeType(_ common.Location, _ string, _ Typ
 }
 
 func (ctx NoOpStringContext) IsTypeInfoRecovered(_ common.Location) bool {
+	panic(errors.NewUnreachableError())
+}
+
+func (ctx NoOpStringContext) SemaTypeFromStaticType(staticType StaticType) sema.Type {
 	panic(errors.NewUnreachableError())
 }

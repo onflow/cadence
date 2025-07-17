@@ -148,7 +148,7 @@ type Elaboration struct {
 	nestedResourceMoveExpressions       map[ast.Expression]struct{}
 	compositeNestedDeclarations         map[ast.CompositeLikeDeclaration]map[string]ast.Declaration
 	interfaceNestedDeclarations         map[*ast.InterfaceDeclaration]map[string]ast.Declaration
-	defaultDestroyDeclarations          map[ast.Declaration]ast.CompositeLikeDeclaration
+	defaultDestroyDeclarations          map[ast.Declaration]*ast.CompositeDeclaration
 	postConditionsRewrites              map[*ast.Conditions]PostConditionsRewrite
 	emitStatementEventTypes             map[*ast.EmitStatement]*CompositeType
 	compositeTypes                      map[TypeID]*CompositeType
@@ -172,6 +172,8 @@ type Elaboration struct {
 	TransactionTypes                    []*TransactionType
 	semanticAccesses                    map[ast.Access]Access
 	resultVariableTypes                 map[ast.Element]Type
+	moveExpressionTypes                 map[*ast.UnaryExpression]Type
+	enumLookupFunctionTypes             map[*CompositeType]*FunctionType
 	isChecking                          bool
 	// IsRecovered is true if the program was recovered (see runtime.Interface.RecoverProgram)
 	IsRecovered bool
@@ -739,7 +741,7 @@ func (e *Elaboration) SetInterfaceNestedDeclarations(
 	e.interfaceNestedDeclarations[declaration] = nestedDeclaration
 }
 
-func (e *Elaboration) DefaultDestroyDeclaration(declaration ast.Declaration) ast.CompositeLikeDeclaration {
+func (e *Elaboration) DefaultDestroyDeclaration(declaration ast.Declaration) *ast.CompositeDeclaration {
 	if e.defaultDestroyDeclarations == nil {
 		return nil
 	}
@@ -748,10 +750,10 @@ func (e *Elaboration) DefaultDestroyDeclaration(declaration ast.Declaration) ast
 
 func (e *Elaboration) SetDefaultDestroyDeclaration(
 	declaration ast.Declaration,
-	eventDeclaration ast.CompositeLikeDeclaration,
+	eventDeclaration *ast.CompositeDeclaration,
 ) {
 	if e.defaultDestroyDeclarations == nil {
-		e.defaultDestroyDeclarations = map[ast.Declaration]ast.CompositeLikeDeclaration{}
+		e.defaultDestroyDeclarations = map[ast.Declaration]*ast.CompositeDeclaration{}
 	}
 	e.defaultDestroyDeclarations[declaration] = eventDeclaration
 }
@@ -1093,4 +1095,32 @@ func (e *Elaboration) ResultVariableType(declaration ast.Element) (typ Type, exi
 	}
 	typ, exist = e.resultVariableTypes[declaration]
 	return
+}
+
+func (e *Elaboration) SetMoveExpressionTypes(expression *ast.UnaryExpression, targetType Type) {
+	if e.moveExpressionTypes == nil {
+		e.moveExpressionTypes = map[*ast.UnaryExpression]Type{}
+	}
+	e.moveExpressionTypes[expression] = targetType
+}
+
+func (e *Elaboration) MoveExpressionTypes(expression *ast.UnaryExpression) Type {
+	if e.moveExpressionTypes == nil {
+		return nil
+	}
+	return e.moveExpressionTypes[expression]
+}
+
+func (e *Elaboration) SetEnumLookupFunctionType(enumType *CompositeType, functionType *FunctionType) {
+	if e.enumLookupFunctionTypes == nil {
+		e.enumLookupFunctionTypes = map[*CompositeType]*FunctionType{}
+	}
+	e.enumLookupFunctionTypes[enumType] = functionType
+}
+
+func (e *Elaboration) EnumLookupFunctionType(enumType *CompositeType) (functionType *FunctionType) {
+	if e.enumLookupFunctionTypes == nil {
+		return
+	}
+	return e.enumLookupFunctionTypes[enumType]
 }

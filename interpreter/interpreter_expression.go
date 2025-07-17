@@ -99,11 +99,11 @@ func (interpreter *Interpreter) typeIndexExpressionGetterSetter(
 	return getterSetter{
 		target: target,
 		get: func(_ bool) Value {
-			checkInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
+			CheckInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
 			return target.GetTypeKey(interpreter, locationRange, attachmentType)
 		},
 		set: func(_ Value) {
-			checkInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
+			CheckInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
 			// writing to composites with indexing syntax is not supported
 			panic(errors.NewUnreachableError())
 		},
@@ -198,14 +198,14 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 
 	if isNestedResourceMove {
 		get = func(_ bool) Value {
-			checkInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
+			CheckInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
 			value := target.RemoveKey(interpreter, locationRange, transferredIndexingValue)
 			target.InsertKey(interpreter, locationRange, transferredIndexingValue, placeholder)
 			return value
 		}
 	} else {
 		get = func(_ bool) Value {
-			checkInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
+			CheckInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
 			value := target.GetKey(interpreter, locationRange, transferredIndexingValue)
 
 			// If the indexing value is a reference, then return a reference for the resulting value.
@@ -217,7 +217,7 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 		target: target,
 		get:    get,
 		set: func(value Value) {
-			checkInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
+			CheckInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
 			target.SetKey(interpreter, locationRange, transferredIndexingValue, value)
 		},
 	}
@@ -269,7 +269,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(
 			}
 
 			if resultValue == nil && !allowMissing {
-				panic(UseBeforeInitializationError{
+				panic(&UseBeforeInitializationError{
 					Name:          identifier,
 					LocationRange: locationRange,
 				})
@@ -325,11 +325,25 @@ func (interpreter *Interpreter) checkMemberAccess(
 	locationRange LocationRange,
 ) {
 
-	checkInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
+	CheckInvalidatedResourceOrResourceReference(target, locationRange, interpreter)
 
 	memberInfo, _ := interpreter.Program.Elaboration.MemberExpressionMemberAccessInfo(memberExpression)
 	expectedType := memberInfo.AccessedType
 
+	CheckMemberAccessTargetType(
+		interpreter,
+		target,
+		expectedType,
+		locationRange,
+	)
+}
+
+func CheckMemberAccessTargetType(
+	context ValueStaticTypeContext,
+	target Value,
+	expectedType sema.Type,
+	locationRange LocationRange,
+) {
 	switch expectedType := expectedType.(type) {
 	case *sema.TransactionType:
 		// TODO: maybe also check transactions.
@@ -359,13 +373,13 @@ func (interpreter *Interpreter) checkMemberAccess(
 		return
 	}
 
-	targetStaticType := target.StaticType(interpreter)
+	targetStaticType := target.StaticType(context)
 
 	if _, ok := expectedType.(*sema.OptionalType); ok {
 		if _, ok := targetStaticType.(*OptionalStaticType); !ok {
-			targetSemaType := MustConvertStaticToSemaType(targetStaticType, interpreter)
+			targetSemaType := MustConvertStaticToSemaType(targetStaticType, context)
 
-			panic(MemberAccessTypeError{
+			panic(&MemberAccessTypeError{
 				ExpectedType:  expectedType,
 				ActualType:    targetSemaType,
 				LocationRange: locationRange,
@@ -373,10 +387,10 @@ func (interpreter *Interpreter) checkMemberAccess(
 		}
 	}
 
-	if !IsSubTypeOfSemaType(interpreter, targetStaticType, expectedType) {
-		targetSemaType := MustConvertStaticToSemaType(targetStaticType, interpreter)
+	if !IsSubTypeOfSemaType(context, targetStaticType, expectedType) {
+		targetSemaType := MustConvertStaticToSemaType(targetStaticType, context)
 
-		panic(MemberAccessTypeError{
+		panic(&MemberAccessTypeError{
 			ExpectedType:  expectedType,
 			ActualType:    targetSemaType,
 			LocationRange: locationRange,
@@ -400,7 +414,7 @@ func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value 
 		Location:    interpreter.Location,
 		HasPosition: expression,
 	}
-	checkInvalidatedResourceOrResourceReference(
+	CheckInvalidatedResourceOrResourceReference(
 		result,
 		locationRange,
 		interpreter,
@@ -408,7 +422,7 @@ func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value 
 	return result
 }
 
-func checkInvalidatedResourceOrResourceReference(
+func CheckInvalidatedResourceOrResourceReference(
 	value Value,
 	locationRange LocationRange,
 	context ValueStaticTypeContext,
@@ -423,13 +437,13 @@ func checkInvalidatedResourceOrResourceReference(
 	switch value := value.(type) {
 	case ResourceKindedValue:
 		if value.isInvalidatedResource(context) {
-			panic(InvalidatedResourceError{
+			panic(&InvalidatedResourceError{
 				LocationRange: locationRange,
 			})
 		}
 	case *EphemeralReferenceValue:
 		if value.Value == nil {
-			panic(InvalidatedResourceReferenceError{
+			panic(&InvalidatedResourceReferenceError{
 				LocationRange: locationRange,
 			})
 		} else {
@@ -437,7 +451,7 @@ func checkInvalidatedResourceOrResourceReference(
 			// This step is not really needed, since reference tracking is supposed to clear the
 			// `value.Value` if the referenced-value was moved/deleted.
 			// However, have this as a second layer of defensive.
-			checkInvalidatedResourceOrResourceReference(
+			CheckInvalidatedResourceOrResourceReference(
 				value.Value,
 				locationRange,
 				context,
@@ -461,7 +475,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 	}
 
 	error := func(right Value) {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     expression.Operation,
 			LeftType:      leftValue.StaticType(interpreter),
 			RightType:     right.StaticType(interpreter),
@@ -679,7 +693,7 @@ func (interpreter *Interpreter) testComparison(left, right Value, expression *as
 	rightComparable, rightOk := right.(ComparableValue)
 
 	if !leftOk || !rightOk {
-		panic(InvalidOperandsError{
+		panic(&InvalidOperandsError{
 			Operation:     expression.Operation,
 			LeftType:      left.StaticType(interpreter),
 			RightType:     right.StaticType(interpreter),
@@ -750,33 +764,12 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 		)
 
 	case ast.OperationMul:
-
-		if _, ok := value.(NilValue); ok {
-			return Nil
-		}
-
 		locationRange := LocationRange{
 			Location:    interpreter.Location,
 			HasPosition: expression,
 		}
-		var isOptional bool
 
-		if someValue, ok := value.(*SomeValue); ok {
-			isOptional = true
-			value = someValue.InnerValue()
-		}
-
-		referenceValue, ok := value.(ReferenceValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		dereferencedValue := DereferenceValue(interpreter, locationRange, referenceValue)
-		if isOptional {
-			return NewSomeValueNonCopying(interpreter, dereferencedValue)
-		} else {
-			return dereferencedValue
-		}
+		return DereferenceValue(interpreter, locationRange, value)
 
 	case ast.OperationMove:
 		interpreter.invalidateResource(value)
@@ -944,49 +937,69 @@ func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpr
 	return NewUnmeteredStringValue(expression.Value)
 }
 
-func (interpreter *Interpreter) VisitStringTemplateExpression(expression *ast.StringTemplateExpression) Value {
-	values := interpreter.visitExpressionsNonCopying(expression.Expressions)
-
+func BuildStringTemplate(values []string, exprs []Value) Value {
 	var builder strings.Builder
-	for i, str := range expression.Values {
+	for i, str := range values {
 		builder.WriteString(str)
-		if i < len(values) {
+		if i < len(exprs) {
 			// switch on value instead of type
-			switch value := values[i].(type) {
+			switch expr := exprs[i].(type) {
 			case *StringValue:
-				builder.WriteString(value.Str)
+				builder.WriteString(expr.Str)
 			case CharacterValue:
-				builder.WriteString(value.Str)
+				builder.WriteString(expr.Str)
 			default:
-				builder.WriteString(value.String())
+				builder.WriteString(expr.String())
 			}
 		}
 	}
-
 	return NewUnmeteredStringValue(builder.String())
 }
 
-func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpression) Value {
-	values := interpreter.visitExpressionsNonCopying(expression.Values)
+func (interpreter *Interpreter) VisitStringTemplateExpression(expression *ast.StringTemplateExpression) Value {
 
+	var values []Value
+	if len(expression.Expressions) > 0 {
+		// TODO: optimize: avoid allocation
+		values = make([]Value, 0, len(expression.Expressions))
+
+		for _, expr := range expression.Expressions {
+			value := interpreter.evalExpression(expr)
+			values = append(values, value)
+		}
+	}
+
+	return BuildStringTemplate(expression.Values, values)
+}
+
+func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpression) Value {
 	arrayExpressionTypes := interpreter.Program.Elaboration.ArrayExpressionTypes(expression)
 	argumentTypes := arrayExpressionTypes.ArgumentTypes
 	arrayType := arrayExpressionTypes.ArrayType
 	elementType := arrayType.ElementType(false)
 
-	var copies []Value
+	var values []Value
 
-	count := len(values)
+	count := len(expression.Values)
 	if count > 0 {
-		copies = make([]Value, count)
-		for i, argument := range values {
+
+		// TODO: optimize: avoid allocation, use NewArrayValueWithIterator
+		values = make([]Value, count)
+
+		for i, valueExpression := range expression.Values {
 			argumentType := argumentTypes[i]
-			argumentExpression := expression.Values[i]
-			locationRange := LocationRange{
-				Location:    interpreter.Location,
-				HasPosition: argumentExpression,
-			}
-			copies[i] = TransferAndConvert(interpreter, argument, argumentType, elementType, locationRange)
+			value := interpreter.evalExpression(valueExpression)
+
+			values[i] = TransferAndConvert(
+				interpreter,
+				value,
+				argumentType,
+				elementType,
+				LocationRange{
+					Location:    interpreter.Location,
+					HasPosition: valueExpression,
+				},
+			)
 		}
 	}
 
@@ -1003,50 +1016,60 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 		locationRange,
 		arrayStaticType,
 		common.ZeroAddress,
-		copies...,
+		values...,
 	)
 }
 
 func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.DictionaryExpression) Value {
-	values := interpreter.visitEntries(expression.Entries)
 
 	dictionaryExpressionTypes := interpreter.Program.Elaboration.DictionaryExpressionTypes(expression)
 	entryTypes := dictionaryExpressionTypes.EntryTypes
 	dictionaryType := dictionaryExpressionTypes.DictionaryType
 
 	var keyValuePairs []Value
+	if len(expression.Entries) > 0 {
 
-	for i, dictionaryEntryValues := range values {
-		entryType := entryTypes[i]
-		entry := expression.Entries[i]
+		// TODO: optimize: avoid allocation, use newDictionaryValueWithIterator
+		keyValuePairs = make([]Value, 0, len(expression.Entries)*2)
 
-		key := TransferAndConvert(
-			interpreter,
-			dictionaryEntryValues.Key,
-			entryType.KeyType,
-			dictionaryType.KeyType,
-			LocationRange{
-				Location:    interpreter.Location,
-				HasPosition: entry.Key,
-			},
-		)
+		keyType := dictionaryType.KeyType
+		valueType := dictionaryType.ValueType
 
-		value := TransferAndConvert(
-			interpreter,
-			dictionaryEntryValues.Value,
-			entryType.ValueType,
-			dictionaryType.ValueType,
-			LocationRange{
-				Location:    interpreter.Location,
-				HasPosition: entry.Value,
-			},
-		)
+		for i, entry := range expression.Entries {
+			entryType := entryTypes[i]
 
-		keyValuePairs = append(
-			keyValuePairs,
-			key,
-			value,
-		)
+			key := interpreter.evalExpression(entry.Key)
+
+			key = TransferAndConvert(
+				interpreter,
+				key,
+				entryType.KeyType,
+				keyType,
+				LocationRange{
+					Location:    interpreter.Location,
+					HasPosition: entry.Key,
+				},
+			)
+
+			value := interpreter.evalExpression(entry.Value)
+
+			value = TransferAndConvert(
+				interpreter,
+				value,
+				entryType.ValueType,
+				valueType,
+				LocationRange{
+					Location:    interpreter.Location,
+					HasPosition: entry.Value,
+				},
+			)
+
+			keyValuePairs = append(
+				keyValuePairs,
+				key,
+				value,
+			)
+		}
 	}
 
 	dictionaryStaticType := ConvertSemaDictionaryTypeToStaticDictionaryType(interpreter, dictionaryType)
@@ -1149,7 +1172,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 	return interpreter.visitInvocationExpressionWithImplicitArgument(invocationExpression, nil)
 }
 
-func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(invocationExpression *ast.InvocationExpression, implicitArg *Value) Value {
+func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(invocationExpression *ast.InvocationExpression, implicitArg Value) Value {
 	config := interpreter.SharedState.Config
 
 	// tracing
@@ -1208,8 +1231,6 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 		}
 	}
 
-	arguments := interpreter.visitExpressionsNonCopying(argumentExpressions)
-
 	elaboration := interpreter.Program.Elaboration
 
 	invocationExpressionTypes := elaboration.InvocationExpressionTypes(invocationExpression)
@@ -1219,19 +1240,16 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 	parameterTypes := invocationExpressionTypes.ParameterTypes
 	returnType := invocationExpressionTypes.ReturnType
 
-	// add the implicit argument to the end of the argument list, if it exists
-	if implicitArg != nil {
-		arguments = append(arguments, *implicitArg)
-		argumentType := MustSemaTypeOfValue(*implicitArg, interpreter)
-		argumentTypes = append(argumentTypes, argumentType)
-	}
-
 	interpreter.reportFunctionInvocation()
 
-	resultValue := invokeFunctionValue(
+	resultValue := invokeFunctionValueWithEval(
 		interpreter,
 		function,
-		arguments,
+		argumentExpressions,
+		func(expression ast.Expression) Value {
+			return interpreter.evalExpression(expression)
+		},
+		implicitArg,
 		argumentExpressions,
 		argumentTypes,
 		parameterTypes,
@@ -1249,45 +1267,6 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 	}
 
 	return resultValue
-}
-
-func (interpreter *Interpreter) visitExpressionsNonCopying(expressions []ast.Expression) []Value {
-	var values []Value
-
-	count := len(expressions)
-	if count > 0 {
-		values = make([]Value, 0, count)
-		for _, expression := range expressions {
-			value := interpreter.evalExpression(expression)
-			values = append(values, value)
-		}
-	}
-
-	return values
-}
-
-func (interpreter *Interpreter) visitEntries(entries []ast.DictionaryEntry) []DictionaryEntryValues {
-	var values []DictionaryEntryValues
-
-	count := len(entries)
-	if count > 0 {
-		values = make([]DictionaryEntryValues, 0, count)
-
-		for _, entry := range entries {
-			key := interpreter.evalExpression(entry.Key)
-			value := interpreter.evalExpression(entry.Value)
-
-			values = append(
-				values,
-				DictionaryEntryValues{
-					Key:   key,
-					Value: value,
-				},
-			)
-		}
-	}
-
-	return values
 }
 
 func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.FunctionExpression) Value {
@@ -1394,7 +1373,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 					HasPosition: expression.Expression,
 				}
 
-				panic(ForceCastTypeMismatchError{
+				panic(&ForceCastTypeMismatchError{
 					ExpectedType:  expectedType,
 					ActualType:    valueSemaType,
 					LocationRange: locationRange,
@@ -1531,7 +1510,7 @@ func CreateReferenceValue(
 		case NilValue:
 			// Case (3.b) value is nil.
 			// Since the resulting type can NOT accommodate a nil (non-optional reference), error-out.
-			panic(NonOptionalReferenceToNilError{
+			panic(&NonOptionalReferenceToNilError{
 				ReferenceType: typ,
 				LocationRange: locationRange,
 			})
@@ -1546,7 +1525,7 @@ func CreateReferenceValue(
 				// result reference type is unauthorized
 				staticType := value.StaticType(context)
 				if typ.Authorization != sema.UnauthorizedAccess || !IsSubTypeOfSemaType(context, staticType, typ) {
-					panic(InvalidMemberReferenceError{
+					panic(&InvalidMemberReferenceError{
 						ExpectedType:  typ,
 						ActualType:    MustConvertStaticToSemaType(staticType, context),
 						LocationRange: locationRange,
@@ -1594,7 +1573,7 @@ func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpres
 
 	case NilValue:
 		panic(
-			ForceNilError{
+			&ForceNilError{
 				LocationRange: LocationRange{
 					Location:    interpreter.Location,
 					HasPosition: expression,
@@ -1632,14 +1611,14 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 
 	// we enforce this in the checker, but check defensively anyway
 	if !ok || !base.Kind.SupportsAttachments() {
-		panic(InvalidAttachmentOperationTargetError{
+		panic(&InvalidAttachmentOperationTargetError{
 			Value:         attachTarget,
 			LocationRange: locationRange,
 		})
 	}
 
 	if inIteration := interpreter.SharedState.inAttachmentIteration(base); inIteration {
-		panic(AttachmentIterationMutationError{
+		panic(&AttachmentIterationMutationError{
 			Value:         base,
 			LocationRange: locationRange,
 		})
@@ -1657,7 +1636,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 
 	attachmentType := interpreter.Program.Elaboration.AttachTypes(attachExpression)
 
-	var baseValue Value = NewEphemeralReferenceValue(
+	baseValue := NewEphemeralReferenceValue(
 		interpreter,
 		auth,
 		base,
@@ -1667,7 +1646,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 
 	attachment, ok := interpreter.visitInvocationExpressionWithImplicitArgument(
 		attachExpression.Attachment,
-		&baseValue,
+		baseValue,
 	).(*CompositeValue)
 	// attached expressions must be composite constructors, as enforced in the checker
 	if !ok {

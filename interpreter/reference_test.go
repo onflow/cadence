@@ -37,7 +37,7 @@ func TestInterpretResourceReferenceInstanceOf(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         resource R {}
 
         fun test(): Bool {
@@ -64,7 +64,7 @@ func TestInterpretResourceReferenceFieldComparison(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         resource R {
             let n: Int
             init() {
@@ -100,7 +100,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           struct S1 {
               access(all) fun getSecret(): Int {
                   return 0
@@ -127,7 +127,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var containerMutationErr interpreter.ContainerMutationError
+		var containerMutationErr *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationErr)
 	})
 
@@ -135,7 +135,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           struct S1 {
               access(all) fun getSecret(): Int {
                   return 0
@@ -161,7 +161,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var containerMutationErr interpreter.ContainerMutationError
+		var containerMutationErr *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationErr)
 	})
 
@@ -169,7 +169,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
          struct S1 {
              var value: Int
 
@@ -200,7 +200,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var containerMutationError interpreter.ContainerMutationError
+		var containerMutationError *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
 	})
 
@@ -208,7 +208,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
          struct S1 {
              var value: Int
 
@@ -238,7 +238,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var containerMutationError interpreter.ContainerMutationError
+		var containerMutationError *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
 	})
 
@@ -246,7 +246,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           struct S1 {
               var value: Int
 
@@ -282,7 +282,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var containerMutationError interpreter.ContainerMutationError
+		var containerMutationError *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
 	})
 
@@ -290,7 +290,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           struct S1 {
               var value: Int
 
@@ -324,7 +324,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var containerMutationError interpreter.ContainerMutationError
+		var containerMutationError *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
 	})
 
@@ -332,7 +332,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           struct S1 {}
 
           struct S2 {}
@@ -352,7 +352,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var containerMutationError interpreter.ContainerMutationError
+		var containerMutationError *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
 	})
 
@@ -360,7 +360,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           fun f1(): Int {
               return 0
           }
@@ -382,7 +382,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var containerMutationError interpreter.ContainerMutationError
+		var containerMutationError *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
 	})
 
@@ -390,7 +390,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           fun f(_ value: [UInt8]) {}
 
           fun test() {
@@ -406,7 +406,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var containerMutationError interpreter.ContainerMutationError
+		var containerMutationError *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
 	})
 
@@ -414,7 +414,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           fun f(_ value: [UInt8]) {}
 
           fun test() {
@@ -430,7 +430,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var containerMutationError interpreter.ContainerMutationError
+		var containerMutationError *interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
 	})
 }
@@ -443,14 +443,14 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           resource R {}
 
           let r: @R? <- create R()
           let ref = &r as &R?
         `)
 
-		value := inter.Globals.Get("ref").GetValue(inter)
+		value := inter.GetGlobal("ref")
 		require.IsType(t, &interpreter.SomeValue{}, value)
 
 		innerValue := value.(*interpreter.SomeValue).InnerValue()
@@ -461,14 +461,14 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           struct S {}
 
           let s: S? = S()
           let ref = &s as &S?
         `)
 
-		value := inter.Globals.Get("ref").GetValue(inter)
+		value := inter.GetGlobal("ref")
 		require.IsType(t, &interpreter.SomeValue{}, value)
 
 		innerValue := value.(*interpreter.SomeValue).InnerValue()
@@ -479,12 +479,12 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let i: Int? = 1
           let ref = &i as &Int?
         `)
 
-		value := inter.Globals.Get("ref").GetValue(inter)
+		value := inter.GetGlobal("ref")
 		require.IsType(t, &interpreter.SomeValue{}, value)
 
 		innerValue := value.(*interpreter.SomeValue).InnerValue()
@@ -495,12 +495,12 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let i: Int? = 1
           let ref = &i as &Int?
         `)
 
-		value := inter.Globals.Get("ref").GetValue(inter)
+		value := inter.GetGlobal("ref")
 		require.IsType(t, &interpreter.SomeValue{}, value)
 
 		innerValue := value.(*interpreter.SomeValue).InnerValue()
@@ -511,12 +511,12 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let i: Int? = nil
           let ref = &i as &Int?
         `)
 
-		value := inter.Globals.Get("ref").GetValue(inter)
+		value := inter.GetGlobal("ref")
 		require.IsType(t, interpreter.Nil, value)
 	})
 }
@@ -565,7 +565,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("stack to account readonly", func(t *testing.T) {
@@ -596,14 +597,15 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("account to stack", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R {
                 access(all) var id: Int
 
@@ -662,14 +664,15 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("test", arrayRef)
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("stack to stack", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter, err := parseCheckAndInterpretWithOptions(
+		inter, err := parseCheckAndPrepareWithOptions(
 			t,
 			`
             resource R {
@@ -705,14 +708,15 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("one account to another account", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R {
                 access(all) var id: Int
 
@@ -795,14 +799,15 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("test", arrayRef1, arrayRef2)
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("account to stack to same account", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R {
                 access(all) var id: Int
 
@@ -868,7 +873,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("test", arrayRef)
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("account to stack storage reference", func(t *testing.T) {
@@ -904,14 +910,15 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.DereferenceError{})
+		var dereferenceError *interpreter.DereferenceError
+		require.ErrorAs(t, err, &dereferenceError)
 	})
 
 	t.Run("multiple references with moves", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             resource R {
                 access(all) var id: Int
 
@@ -998,12 +1005,13 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		// First reference must be invalid
 		_, err = inter.Invoke("getRef1Id")
 		RequireError(t, err)
-		assert.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		assert.ErrorAs(t, err, &invalidatedResourceReferenceError)
 
 		// Second reference must be invalid
 		_, err = inter.Invoke("getRef2Id")
 		RequireError(t, err)
-		assert.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		assert.ErrorAs(t, err, &invalidatedResourceReferenceError)
 
 		// Third reference must be valid
 		result, err := inter.Invoke("getRef3Id")
@@ -1020,7 +1028,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(
+		inter := parseCheckAndPrepare(
 			t,
 			`
             access(all) fun test() {
@@ -1058,14 +1066,15 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("ref target is field", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(
+		inter := parseCheckAndPrepare(
 			t,
 			`
             access(all) fun test() {
@@ -1102,14 +1111,15 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("resource is array element", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(
+		inter := parseCheckAndPrepare(
 			t,
 			`
             resource R {
@@ -1141,14 +1151,15 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("resource is dictionary entry", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(
+		inter := parseCheckAndPrepare(
 			t,
 			`
             resource R {
@@ -1180,13 +1191,14 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("nested resource in composite", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource Foo {
                 let id: UInt8  // non resource typed field
                 let bar: @Bar   // resource typed field
@@ -1234,13 +1246,14 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("nested resource in dictionary", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource Foo {}
 
             fun main() {
@@ -1267,13 +1280,14 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("nested resource in array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource Foo {}
 
             fun main() {
@@ -1300,13 +1314,14 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("nested optional resource", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource Foo {
                 let optionalBar: @Bar?
                 init() {
@@ -1345,13 +1360,14 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("reference created by field access", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource Foo {
                 let bar: @Bar
                 init() {
@@ -1391,13 +1407,14 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("reference created by index access", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource Foo {
                 let id: UInt8
                 init() {
@@ -1430,13 +1447,14 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("reference created by field and index access", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
              resource Foo {
                 let bar: @Bar
                 init() {
@@ -1476,13 +1494,14 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("downcasted reference", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
              resource Foo {
                 let id: UInt8
                 init() {
@@ -1511,7 +1530,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 }
 
@@ -1558,14 +1578,15 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("ref source is field", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(
+		inter := parseCheckAndPrepare(
 			t,
 			`
             access(all) fun test() {
@@ -1601,7 +1622,8 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 
 	})
 }
@@ -1609,7 +1631,7 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 func TestInterpretReferenceTrackingOnInvocation(t *testing.T) {
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       access(all) resource Foo {
 
           access(all) let id: UInt8
@@ -1647,14 +1669,15 @@ func TestInterpretReferenceTrackingOnInvocation(t *testing.T) {
 	_, err := inter.Invoke("main")
 	RequireError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+	require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 }
 
 func TestInterpretInvalidReferenceToOptionalConfusion(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       struct S {
          fun foo() {}
       }
@@ -1671,7 +1694,8 @@ func TestInterpretInvalidReferenceToOptionalConfusion(t *testing.T) {
 	_, err := inter.Invoke("main")
 	RequireError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.NonOptionalReferenceToNilError{})
+	var referenceToNilError *interpreter.NonOptionalReferenceToNilError
+	require.ErrorAs(t, err, &referenceToNilError)
 }
 
 func TestInterpretReferenceToOptional(t *testing.T) {
@@ -1681,7 +1705,7 @@ func TestInterpretReferenceToOptional(t *testing.T) {
 	t.Run("nil in AnyStruct", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun main(): &AnyStruct {
                 let y: AnyStruct = nil
                 return &y
@@ -1690,13 +1714,14 @@ func TestInterpretReferenceToOptional(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.NonOptionalReferenceToNilError{})
+		var referenceToNilError *interpreter.NonOptionalReferenceToNilError
+		require.ErrorAs(t, err, &referenceToNilError)
 	})
 
 	t.Run("nil in optional", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun main(): &Int? {
                 let y: Int? = nil
                 return &y
@@ -1719,7 +1744,7 @@ func TestInterpretReferenceToOptional(t *testing.T) {
 func TestInterpretInvalidatedReferenceToOptional(t *testing.T) {
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         resource Foo {}
 
         fun main(): AnyStruct {
@@ -1742,7 +1767,8 @@ func TestInterpretInvalidatedReferenceToOptional(t *testing.T) {
 	_, err := inter.Invoke("main")
 	RequireError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+	require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 }
 
 func TestInterpretReferenceToReference(t *testing.T) {
@@ -1752,7 +1778,7 @@ func TestInterpretReferenceToReference(t *testing.T) {
 
 		t.Parallel()
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun main() {
                 let x = &1 as &Int
                 let y = &x as & &Int
@@ -1768,14 +1794,15 @@ func TestInterpretReferenceToReference(t *testing.T) {
 		_, err = inter.Invoke("main")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+		var nestedReferenceError *interpreter.NestedReferenceError
+		require.ErrorAs(t, err, &nestedReferenceError)
 	})
 
 	t.Run("upcast to anystruct", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun main() {
                 let x = &1 as &Int as AnyStruct
                 let y = &x as &AnyStruct
@@ -1785,14 +1812,15 @@ func TestInterpretReferenceToReference(t *testing.T) {
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+		var nestedReferenceError *interpreter.NestedReferenceError
+		require.ErrorAs(t, err, &nestedReferenceError)
 	})
 
 	t.Run("optional", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun main() {
                 let x: (&Int)? = &1 as &Int
                 let y: (&(&Int))? = &x 
@@ -1808,14 +1836,15 @@ func TestInterpretReferenceToReference(t *testing.T) {
 		_, err = inter.Invoke("main")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+		var nestedReferenceError *interpreter.NestedReferenceError
+		require.ErrorAs(t, err, &nestedReferenceError)
 	})
 
 	t.Run("upcast to optional anystruct", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun main() {
                 let x = &1 as &Int as AnyStruct?
                 let y = &x as &AnyStruct?
@@ -1825,7 +1854,8 @@ func TestInterpretReferenceToReference(t *testing.T) {
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+		var nestedReferenceError *interpreter.NestedReferenceError
+		require.ErrorAs(t, err, &nestedReferenceError)
 	})
 
 	t.Run("reference to storage reference", func(t *testing.T) {
@@ -1850,13 +1880,14 @@ func TestInterpretReferenceToReference(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+		var nestedReferenceError *interpreter.NestedReferenceError
+		require.ErrorAs(t, err, &nestedReferenceError)
 	})
 
 	t.Run("nested optional reference as AnyStruct", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun main() {
                 var array: [Foo] = []
                 var optionalArrayRef: (&[Foo])? = &array as &[Foo]
@@ -1869,7 +1900,8 @@ func TestInterpretReferenceToReference(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+		var nestedReferenceError *interpreter.NestedReferenceError
+		require.ErrorAs(t, err, &nestedReferenceError)
 	})
 }
 
@@ -1879,12 +1911,12 @@ func TestInterpretDereference(t *testing.T) {
 	runTestCase := func(
 		t *testing.T,
 		name, code string,
-		expectedValueFunc func(*interpreter.Interpreter) interpreter.Value,
+		expectedValueFunc func() interpreter.Value,
 	) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			inter := parseCheckAndInterpret(t, code)
+			inter := parseCheckAndPrepare(t, code)
 
 			value, err := inter.Invoke("main")
 			require.NoError(t, err)
@@ -1892,7 +1924,7 @@ func TestInterpretDereference(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				expectedValueFunc(inter),
+				expectedValueFunc(),
 				value,
 			)
 		})
@@ -1946,7 +1978,7 @@ func TestInterpretDereference(t *testing.T) {
                     `,
 					integerType,
 				),
-				func(_ *interpreter.Interpreter) interpreter.Value {
+				func() interpreter.Value {
 					return expectedValues[integerType]
 				},
 			)
@@ -1983,7 +2015,7 @@ func TestInterpretDereference(t *testing.T) {
                     `,
 					fixedPointType,
 				),
-				func(_ *interpreter.Interpreter) interpreter.Value {
+				func() interpreter.Value {
 					return expectedValues[fixedPointType]
 				},
 			)
@@ -2004,12 +2036,12 @@ func TestInterpretDereference(t *testing.T) {
 			typString := typ.QualifiedString()
 
 			createArrayValue := func(
-				inter *interpreter.Interpreter,
+				context interpreter.ArrayCreationContext,
 				innerStaticType interpreter.StaticType,
 				values ...interpreter.Value,
 			) interpreter.Value {
 				return interpreter.NewArrayValue(
-					inter,
+					context,
 					interpreter.EmptyLocationRange,
 					&interpreter.VariableSizedStaticType{
 						Type: innerStaticType,
@@ -2020,7 +2052,7 @@ func TestInterpretDereference(t *testing.T) {
 			}
 
 			t.Run(fmt.Sprintf("[%s]", typString), func(t *testing.T) {
-				inter := parseCheckAndInterpret(
+				inter := parseCheckAndPrepare(
 					t,
 					fmt.Sprintf(
 						`
@@ -2401,7 +2433,7 @@ func TestInterpretDereference(t *testing.T) {
 					t,
 					inter,
 					expectedOriginalValue,
-					inter.Globals.Get("originalArray").GetValue(inter),
+					inter.GetGlobal("originalArray"),
 				)
 			})
 		}
@@ -2421,12 +2453,12 @@ func TestInterpretDereference(t *testing.T) {
 			typString := typ.QualifiedString()
 
 			createArrayValue := func(
-				inter *interpreter.Interpreter,
+				context interpreter.ArrayCreationContext,
 				innerStaticType interpreter.StaticType,
 				values ...interpreter.Value,
 			) interpreter.Value {
 				return interpreter.NewArrayValue(
-					inter,
+					context,
 					interpreter.EmptyLocationRange,
 					&interpreter.ConstantSizedStaticType{
 						Type: innerStaticType,
@@ -2438,7 +2470,7 @@ func TestInterpretDereference(t *testing.T) {
 			}
 
 			t.Run(fmt.Sprintf("[%s]", typString), func(t *testing.T) {
-				inter := parseCheckAndInterpret(
+				inter := parseCheckAndPrepare(
 					t,
 					fmt.Sprintf(
 						`
@@ -2796,7 +2828,7 @@ func TestInterpretDereference(t *testing.T) {
 					t,
 					inter,
 					expectedOriginalValue,
-					inter.Globals.Get("originalArray").GetValue(inter),
+					inter.GetGlobal("originalArray"),
 				)
 			})
 		}
@@ -2806,7 +2838,7 @@ func TestInterpretDereference(t *testing.T) {
 		t.Parallel()
 
 		t.Run("{Int: String}", func(t *testing.T) {
-			inter := parseCheckAndInterpret(
+			inter := parseCheckAndPrepare(
 				t,
 				`
                     fun main(): {Int: String} {
@@ -2840,7 +2872,7 @@ func TestInterpretDereference(t *testing.T) {
 		})
 
 		t.Run("{Int: [String]}", func(t *testing.T) {
-			inter := parseCheckAndInterpret(
+			inter := parseCheckAndPrepare(
 				t,
 				`
                     fun main(): {Int: [String]} {
@@ -2906,7 +2938,7 @@ func TestInterpretDereference(t *testing.T) {
                     return *x
                 }
             `,
-			func(_ *interpreter.Interpreter) interpreter.Value {
+			func() interpreter.Value {
 				return interpreter.NewUnmeteredCharacterValue("S")
 			},
 		)
@@ -2925,7 +2957,7 @@ func TestInterpretDereference(t *testing.T) {
                     return *x
                 }
             `,
-			func(_ *interpreter.Interpreter) interpreter.Value {
+			func() interpreter.Value {
 				return interpreter.NewUnmeteredStringValue("STxy")
 			},
 		)
@@ -2941,7 +2973,7 @@ func TestInterpretDereference(t *testing.T) {
                 return *x
             }
         `,
-		func(_ *interpreter.Interpreter) interpreter.Value {
+		func() interpreter.Value {
 			return interpreter.BoolValue(true)
 		},
 	)
@@ -2959,7 +2991,7 @@ func TestInterpretDereference(t *testing.T) {
                 return *x
             }
         `,
-		func(_ *interpreter.Interpreter) interpreter.Value {
+		func() interpreter.Value {
 			return interpreter.NewAddressValue(nil, address)
 		},
 	)
@@ -2977,7 +3009,7 @@ func TestInterpretDereference(t *testing.T) {
                     return *x
                 }
             `,
-			func(_ *interpreter.Interpreter) interpreter.Value {
+			func() interpreter.Value {
 				return interpreter.NewUnmeteredPathValue(common.PathDomainPrivate, "temp")
 			},
 		)
@@ -2992,7 +3024,7 @@ func TestInterpretDereference(t *testing.T) {
                     return *x
                 }
             `,
-			func(_ *interpreter.Interpreter) interpreter.Value {
+			func() interpreter.Value {
 				return interpreter.NewUnmeteredPathValue(common.PathDomainPublic, "temp")
 			},
 		)
@@ -3010,7 +3042,7 @@ func TestInterpretDereference(t *testing.T) {
                   return *ref
               }
             `,
-			func(_ *interpreter.Interpreter) interpreter.Value {
+			func() interpreter.Value {
 				return interpreter.Nil
 			},
 		)
@@ -3024,7 +3056,7 @@ func TestInterpretDereference(t *testing.T) {
                   return *ref
               }
             `,
-			func(_ *interpreter.Interpreter) interpreter.Value {
+			func() interpreter.Value {
 				return interpreter.NewUnmeteredSomeValueNonCopying(
 					interpreter.NewIntValueFromInt64(nil, 42),
 				)
@@ -3038,7 +3070,7 @@ func TestInterpretDereference(t *testing.T) {
 		t.Run("direct", func(t *testing.T) {
 			t.Parallel()
 
-			inter, err := parseCheckAndInterpretWithOptions(t,
+			inter, err := parseCheckAndPrepareWithOptions(t,
 				`
                   resource R {}
 
@@ -3063,13 +3095,14 @@ func TestInterpretDereference(t *testing.T) {
 			_, err = inter.Invoke("main")
 			RequireError(t, err)
 
-			require.ErrorAs(t, err, &interpreter.ResourceReferenceDereferenceError{})
+			var dereferenceError *interpreter.ResourceReferenceDereferenceError
+			require.ErrorAs(t, err, &dereferenceError)
 		})
 
 		t.Run("array", func(t *testing.T) {
 			t.Parallel()
 
-			inter, err := parseCheckAndInterpretWithOptions(t,
+			inter, err := parseCheckAndPrepareWithOptions(t,
 				`
                   resource R {}
 
@@ -3094,7 +3127,8 @@ func TestInterpretDereference(t *testing.T) {
 			_, err = inter.Invoke("main")
 			RequireError(t, err)
 
-			require.ErrorAs(t, err, &interpreter.ResourceReferenceDereferenceError{})
+			var dereferenceError *interpreter.ResourceReferenceDereferenceError
+			require.ErrorAs(t, err, &dereferenceError)
 		})
 	})
 
@@ -3106,7 +3140,7 @@ func TestInterpretOptionalReference(t *testing.T) {
 
 	t.Run("present", func(t *testing.T) {
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           fun present(): &Int {
               let x: Int? = 1
               let y = &x as &Int?
@@ -3131,7 +3165,7 @@ func TestInterpretOptionalReference(t *testing.T) {
 	t.Run("absent", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           fun absent(): &Int {
               let x: Int? = nil
               let y = &x as &Int?
@@ -3142,14 +3176,14 @@ func TestInterpretOptionalReference(t *testing.T) {
 		_, err := inter.Invoke("absent")
 		RequireError(t, err)
 
-		var forceNilError interpreter.ForceNilError
+		var forceNilError *interpreter.ForceNilError
 		require.ErrorAs(t, err, &forceNilError)
 	})
 
 	t.Run("nested optional reference", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun main() {
                 var dict: {String: Foo?} = {}
                 var ref: (&Foo)?? = &dict["foo"] as &Foo??
@@ -3170,7 +3204,7 @@ func TestInterpretHostFunctionReferenceInvalidation(t *testing.T) {
 	t.Run("resource array host function", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun main() {
                 var array: @[R] <- []
                 var arrayRef: auth(Mutate) &[R] = &array as auth(Mutate) &[R]
@@ -3190,14 +3224,14 @@ func TestInterpretHostFunctionReferenceInvalidation(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		invalidatedRefError := interpreter.InvalidatedResourceReferenceError{}
+		var invalidatedRefError *interpreter.InvalidatedResourceReferenceError
 		assert.ErrorAs(t, err, &invalidatedRefError)
 	})
 
 	t.Run("struct array host function", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun main(): [S] {
                 var array: [S] = []
                 var arrayRef: auth(Mutate) &[S] = &array as auth(Mutate) &[S]
@@ -3246,7 +3280,7 @@ func TestInterpretHostFunctionReferenceInvalidation(t *testing.T) {
 	t.Run("resource dictionary host function", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun main() {
                 var dictionary: @{String:R} <- {}
                 var dictionaryRef: auth(Mutate) &{String:R} = &dictionary as auth(Mutate) &{String:R}
@@ -3266,14 +3300,14 @@ func TestInterpretHostFunctionReferenceInvalidation(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		invalidatedRefError := interpreter.InvalidatedResourceReferenceError{}
+		var invalidatedRefError *interpreter.InvalidatedResourceReferenceError
 		assert.ErrorAs(t, err, &invalidatedRefError)
 	})
 
 	t.Run("struct host function", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun main(): Type {
                 var s = S()
 
@@ -3440,6 +3474,37 @@ func TestInterpretStorageReferenceBoundFunction(t *testing.T) {
 			value,
 		)
 	})
+
+	t.Run("on a type-changed value", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, nil, `
+          fun test(): AnyStruct {
+              account.storage.save(["abc"] as [String], to: /storage/x)
+
+              let arrayRef = account.storage.borrow<auth(Mutate) &[AnyStruct]>(from: /storage/x)!
+
+              // Up-cast the function to return a super-type
+              var removeFunc = arrayRef.remove as! (fun(Int): AnyStruct)
+
+              // Replace with a new value with a different type
+              account.storage.load<[String]>(from:/storage/x)!
+              account.storage.save([123], to:/storage/x)
+
+              // Invoke the function pointer.
+              return removeFunc(0)
+          }
+        `, sema.Config{})
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var dereferenceError *interpreter.DereferenceError
+		require.ErrorAs(t, err, &dereferenceError)
+	})
 }
 
 func TestInterpretCreatingCircularDependentResource(t *testing.T) {
@@ -3449,7 +3514,7 @@ func TestInterpretCreatingCircularDependentResource(t *testing.T) {
 	t.Run("resource container field", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             access(all) resource A {
                 access(mapping Identity) var b: @[B]
                 init() {
@@ -3474,13 +3539,14 @@ func TestInterpretCreatingCircularDependentResource(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		assert.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		assert.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("resource field", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             access(all) resource A {
                 access(self) var b: @B?
                 init() {
@@ -3508,6 +3574,7 @@ func TestInterpretCreatingCircularDependentResource(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		assert.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		assert.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 }

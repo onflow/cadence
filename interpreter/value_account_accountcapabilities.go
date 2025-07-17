@@ -95,7 +95,7 @@ func NewAccountAccountCapabilitiesValue(
 		methodGetter,
 		nil,
 		stringer,
-	).WithPrivateField(accountTypePrivateAddressFieldName, address)
+	).WithPrivateField(AccountTypePrivateAddressFieldName, address)
 
 	return accountCapabilities
 }

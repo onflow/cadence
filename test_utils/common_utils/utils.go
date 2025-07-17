@@ -42,6 +42,7 @@ type Invokable interface {
 	interpreter.ValueComparisonContext
 	interpreter.InvocationContext
 	Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error)
+	InvokeTransaction(arguments []interpreter.Value, signers ...interpreter.Value) error
 	GetGlobal(name string) interpreter.Value
 
 	GlobalTypeGetter

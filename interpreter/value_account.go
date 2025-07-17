@@ -25,7 +25,7 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-const accountTypePrivateAddressFieldName = "address"
+const AccountTypePrivateAddressFieldName = "address"
 
 // Account
 

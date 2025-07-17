@@ -85,12 +85,8 @@ test-tools:
 
 .PHONY: test-with-compiler
 test-with-compiler:
-	#(go test -parallel 8 ./interpreter/... -compile=true)
-
-
-.PHONY: lint-github-actions
-lint-github-actions: build-linter
-	tools/golangci-lint/golangci-lint run --out-format=colored-line-number,github-actions --timeout=5m  -v ./...
+	(go test -parallel 8 ./interpreter/... -compile=true)
+	(go test -parallel 8 ./runtime/... -compile=true)
 
 .PHONY: lint
 lint: build-linter

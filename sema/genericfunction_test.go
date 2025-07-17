@@ -45,7 +45,7 @@ func parseAndCheckWithTestValue(t *testing.T, code string, ty sema.Type) (*sema.
 	return ParseAndCheckWithOptions(t,
 		code,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},
@@ -928,7 +928,7 @@ func TestCheckGenericFunctionDeclaration(t *testing.T) {
               let x: Int? = head([1, 2, 3])
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					AllowNativeDeclarations: false,
 				},
 				ParseOptions: parser.Config{
@@ -953,7 +953,7 @@ func TestCheckGenericFunctionDeclaration(t *testing.T) {
               let x: Int? = head([1, 2, 3])
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					AllowNativeDeclarations: true,
 				},
 				ParseOptions: parser.Config{
@@ -978,7 +978,7 @@ func TestCheckGenericFunctionDeclaration(t *testing.T) {
 	          let x: Int? = S().head([1, 2, 3])
 	        `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					AllowNativeDeclarations: false,
 				},
 				ParseOptions: parser.Config{
@@ -1005,7 +1005,7 @@ func TestCheckGenericFunctionDeclaration(t *testing.T) {
 	          let x: Int? = S().head([1, 2, 3])
 	        `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					AllowNativeDeclarations: true,
 				},
 				ParseOptions: parser.Config{
@@ -1029,7 +1029,7 @@ func TestCheckGenericFunctionDeclaration(t *testing.T) {
 	          let x = test<Int, Bool>()
 	        `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					AllowNativeDeclarations: true,
 				},
 				ParseOptions: parser.Config{
@@ -1055,7 +1055,7 @@ func TestCheckGenericFunctionDeclaration(t *testing.T) {
 	          let x = test<Int>()
 	        `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					AllowNativeDeclarations: true,
 				},
 				ParseOptions: parser.Config{
@@ -1079,7 +1079,7 @@ func TestCheckGenericFunctionDeclaration(t *testing.T) {
 	          native fun test<T, U: T>(_ u: U): U {}
 	        `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					AllowNativeDeclarations: true,
 				},
 				ParseOptions: parser.Config{
@@ -1105,7 +1105,7 @@ func TestCheckGenericFunctionDeclaration(t *testing.T) {
 	          let x = test<Int>()
 	        `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					AllowNativeDeclarations: true,
 				},
 				ParseOptions: parser.Config{

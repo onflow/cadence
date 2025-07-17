@@ -29,7 +29,6 @@ import (
 	_ "github.com/onflow/cadence/sema/gen/testdata/composite_type_pragma"
 	"github.com/onflow/cadence/sema/gen/testdata/constructor"
 	"github.com/onflow/cadence/sema/gen/testdata/contract"
-	_ "github.com/onflow/cadence/sema/gen/testdata/contract"
 	_ "github.com/onflow/cadence/sema/gen/testdata/docstrings"
 	_ "github.com/onflow/cadence/sema/gen/testdata/entitlement"
 	_ "github.com/onflow/cadence/sema/gen/testdata/equatable"
@@ -62,7 +61,7 @@ func TestConstructor(t *testing.T) {
           let x = Foo(bar: 1)
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},
@@ -88,7 +87,7 @@ func TestContract(t *testing.T) {
           let x = Test.Foo(bar: 1)
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},

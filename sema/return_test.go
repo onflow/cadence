@@ -210,7 +210,7 @@ func testExits(t *testing.T, test exitTest) {
 		t,
 		code,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},
@@ -420,7 +420,7 @@ func TestCheckNeverInvocationExits(t *testing.T) {
 	t.Parallel()
 
 	valueDeclarations := []sema.ValueDeclaration{
-		stdlib.PanicFunction,
+		stdlib.InterpreterPanicFunction,
 	}
 
 	t.Run("expression statement", func(t *testing.T) {

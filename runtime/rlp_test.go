@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/json"
 	. "github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
 )
@@ -36,7 +37,7 @@ func TestRuntimeRLPDecodeString(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	script := []byte(`
 
@@ -147,6 +148,7 @@ func TestRuntimeRLPDecodeString(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  common.ScriptLocation{},
+					UseVM:     *compile,
 				},
 			)
 			if len(test.expectedErrMsg) > 0 {
@@ -176,7 +178,7 @@ func TestRuntimeRLPDecodeList(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	script := []byte(`
 
@@ -303,6 +305,7 @@ func TestRuntimeRLPDecodeList(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  common.ScriptLocation{},
+					UseVM:     *compile,
 				},
 			)
 			if len(test.expectedErrMsg) > 0 {
@@ -338,4 +341,45 @@ func TestRuntimeRLPDecodeList(t *testing.T) {
 	for _, testCase := range tests {
 		test(testCase)
 	}
+}
+
+func TestRuntimeRLPGetTypeAndIsInstance(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestRuntime()
+
+	script := []byte(`
+
+	  access(all) fun main(): Type {
+        assert(RLP.isInstance(Type<RLP>()))
+		return RLP.getType()
+	  }
+	`)
+
+	runtimeInterface := &TestRuntimeInterface{}
+
+	result, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.ScriptLocation{},
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		cadence.TypeValue{
+			StaticType: cadence.NewContractType(
+				nil,
+				stdlib.RLPTypeName,
+				[]cadence.Field{},
+				nil,
+			),
+		},
+		result,
+	)
 }

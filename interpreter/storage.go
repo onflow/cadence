@@ -85,7 +85,7 @@ func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, err
 			), nil
 
 		case CompositeTypeInfo:
-			return newCompositeValueFromAtreeMap(
+			return NewCompositeValueFromAtreeMap(
 				gauge,
 				staticType,
 				value,

@@ -49,22 +49,25 @@ func TestRuntimeDeployedContracts(t *testing.T) {
 				let deployedContract = signer.contracts.get(name: "Test")
 				assert(deployedContract!.name == "Test")
 
-				let expected: {String: Void} =
-					{ "A.2a00000000000000.Test.A": ()
-					, "A.2a00000000000000.Test.B": ()
-					, "A.2a00000000000000.Test.C": ()
-					}
+				let expected: {String: Void} = {
+                    "A.2a00000000000000.Test.A": (),
+					"A.2a00000000000000.Test.B": (),
+					"A.2a00000000000000.Test.C": ()
+				}
 				let types = deployedContract!.publicTypes()
 				assert(types.length == 3)
 
 				for type in types {
-					assert(expected[type.identifier] != nil, message: type.identifier)
+					assert(
+                        expected[type.identifier] != nil,
+                        message: type.identifier
+                    )
 				}
 			}
 		}
 		`
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	runtimeInterface := &TestRuntimeInterface{
@@ -96,16 +99,17 @@ func TestRuntimeDeployedContracts(t *testing.T) {
 	}
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
-	newContext := func() Context {
-		return Context{Interface: runtimeInterface, Location: nextTransactionLocation()}
-	}
 
 	// deploy the contract
 	err := rt.ExecuteTransaction(
 		Script{
 			Source: DeploymentTransaction("Test", []byte(contractCode)),
 		},
-		newContext(),
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
 	)
 	require.NoError(t, err)
 
@@ -114,7 +118,11 @@ func TestRuntimeDeployedContracts(t *testing.T) {
 		Script{
 			Source: []byte(script),
 		},
-		newContext(),
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
 	)
 
 	require.NoError(t, err)

@@ -28,13 +28,20 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/bbq/compiler"
+	. "github.com/onflow/cadence/bbq/test_utils"
+	"github.com/onflow/cadence/bbq/vm"
+	compilerUtils "github.com/onflow/cadence/bbq/vm/test"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/runtime_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 type storageKey struct {
@@ -470,6 +477,11 @@ func (n NoOpReferenceCreationContext) IsTypeInfoRecovered(location common.Locati
 	return false
 }
 
+func (n NoOpReferenceCreationContext) SemaTypeFromStaticType(staticType interpreter.StaticType) sema.Type {
+	// NO-OP
+	return nil
+}
+
 type NoOpFunctionCreationContext struct {
 	//Just to make the compiler happy
 	interpreter.ResourceDestructionContext
@@ -579,7 +591,7 @@ func testAccountWithErrorHandlerWithCompiler(
 		authAccountValueDeclaration,
 		pubAccountValueDeclaration,
 		accountValueDeclaration,
-		stdlib.InclusiveRangeConstructorFunction,
+		stdlib.InterpreterInclusiveRangeConstructor,
 	}
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -601,69 +613,81 @@ func testAccountWithErrorHandlerWithCompiler(
 	var storage interpreter.Storage
 
 	if compilerEnabled && *compile {
-		// TODO: Uncomment once the compiler branch is merged to master.
-		//vmConfig := &vm.Config{
-		//	NativeFunctionsProvider: func() map[string]*vm.Variable {
-		//		funcs := vm.NativeFunctions()
-		//		variable := &interpreter.SimpleVariable{}
-		//		variable.InitializeWithValue(accountValueDeclaration.Value)
-		//		funcs[accountValueDeclaration.Name] = variable
-		//		return funcs
-		//	},
-		//}
-		//
-		//programs := map[common.Location]*CompiledProgram{}
-		//parseAndCheckOptions := &ParseAndCheckOptions{
-		//	Config: &sema.Config{
-		//		LocationHandler: NewSingleIdentifierLocationResolver(t),
-		//		BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-		//			return baseValueActivation
-		//		},
-		//	},
-		//}
-		//
-		//vmInstance := compilerUtils.CompileAndPrepareToInvoke(
-		//	t,
-		//	code,
-		//	compilerUtils.CompilerAndVMOptions{
-		//		ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
-		//			ParseAndCheckOptions: parseAndCheckOptions,
-		//			CompilerConfig: &compiler.Config{
-		//				BuiltinGlobalsProvider: func() map[string]*compiler.Global {
-		//					builtins := compiler.NativeFunctions()
-		//					for _, valueDeclaration := range valueDeclarations {
-		//						name := valueDeclaration.Name
-		//						builtins[name] = &compiler.Global{
-		//							Name: name,
-		//						}
-		//					}
-		//					return builtins
-		//				},
-		//			},
-		//		},
-		//		VMConfig: vmConfig,
-		//		Programs: programs,
-		//	},
-		//)
-		//
-		//vmConfig.WithInterpreterConfig(&interpreter.Config{
-		//	UUIDHandler: uuidHandler,
-		//})
-		//
-		//elaboration := programs[parseAndCheckOptions.Location].DesugaredElaboration
-		//
-		//invokable = test_utils.NewVMInvokable(vmInstance, elaboration)
-		//storage = vmConfig.Storage()
+		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+		vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
+			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
-		// Not supported for now
-		panic(errors.NewUnreachableError())
+			variable := &interpreter.SimpleVariable{}
+			variable.InitializeWithValue(accountValueDeclaration.Value)
+			activation.Set(accountValueDeclaration.Name, variable)
+
+			return activation
+		}
+
+		programs := map[common.Location]*CompiledProgram{}
+		parseAndCheckOptions := &ParseAndCheckOptions{
+			CheckerConfig: &sema.Config{
+				LocationHandler: NewSingleIdentifierLocationResolver(t),
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
+			},
+		}
+
+		vmInstance, err := compilerUtils.CompileAndPrepareToInvoke(
+			t,
+			code,
+			compilerUtils.CompilerAndVMOptions{
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					ParseAndCheckOptions: parseAndCheckOptions,
+					CompilerConfig: &compiler.Config{
+						BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
+							activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+							for _, valueDeclaration := range valueDeclarations {
+								name := valueDeclaration.Name
+								existing := activation.Find(name)
+								if existing != (compiler.GlobalImport{}) {
+									continue
+								}
+								activation.Set(
+									name,
+									compiler.GlobalImport{
+										Name: name,
+									},
+								)
+							}
+							return activation
+						},
+					},
+				},
+				VMConfig: vmConfig,
+				Programs: programs,
+			},
+		)
+		require.NoError(t, err)
+
+		var uuid uint64
+		uuidHandler := func() (uint64, error) {
+			uuid++
+			return uuid, nil
+		}
+
+		vmConfig.UUIDHandler = uuidHandler
+
+		elaboration := programs[parseAndCheckOptions.Location].DesugaredElaboration
+
+		invokable = test_utils.NewVMInvokable(vmInstance, elaboration)
+		storage = vmConfig.Storage()
 	} else {
 
+		// NOTE: test code for VM above
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			code,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &checkerConfig,
-				Config: &interpreter.Config{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &checkerConfig,
+				},
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -745,7 +769,8 @@ func TestInterpretAccountStorageSave(t *testing.T) {
 			_, err := inter.Invoke("test")
 			RequireError(t, err)
 
-			require.ErrorAs(t, err, &interpreter.OverwriteError{})
+			var overwriteError *interpreter.OverwriteError
+			require.ErrorAs(t, err, &overwriteError)
 		})
 	})
 
@@ -786,7 +811,8 @@ func TestInterpretAccountStorageSave(t *testing.T) {
 			_, err := inter.Invoke("test")
 			RequireError(t, err)
 
-			require.ErrorAs(t, err, &interpreter.OverwriteError{})
+			var overwriteError *interpreter.OverwriteError
+			require.ErrorAs(t, err, &overwriteError)
 		})
 	})
 }
@@ -943,7 +969,8 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 			_, err = inter.Invoke("loadR2")
 			RequireError(t, err)
 
-			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+			require.ErrorAs(t, err, &forceCastTypeMismatchError)
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, getAccountValues(), 1)
@@ -1020,7 +1047,8 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 			_, err = inter.Invoke("loadS2")
 			RequireError(t, err)
 
-			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+			require.ErrorAs(t, err, &forceCastTypeMismatchError)
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, getAccountValues(), 1)
@@ -1106,7 +1134,8 @@ func TestInterpretAccountStorageCopy(t *testing.T) {
 		_, err = inter.Invoke("copyS2")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 
 		// NOTE: check loaded value was *not* removed from storage
 		require.Len(t, getAccountValues(), 1)
@@ -1266,7 +1295,8 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			_, err = inter.Invoke("borrowR2")
 			RequireError(t, err)
 
-			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+			require.ErrorAs(t, err, &forceCastTypeMismatchError)
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, getAccountValues(), 1)
@@ -1277,7 +1307,8 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			_, err := inter.Invoke("changeAfterBorrow")
 			RequireError(t, err)
 
-			require.ErrorAs(t, err, &interpreter.DereferenceError{})
+			var derefError *interpreter.DereferenceError
+			require.ErrorAs(t, err, &derefError)
 		})
 
 		t.Run("check R2 with wrong path", func(t *testing.T) {
@@ -1444,7 +1475,8 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			_, err = inter.Invoke("borrowS2")
 			RequireError(t, err)
 
-			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+			require.ErrorAs(t, err, &forceCastTypeMismatchError)
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, getAccountValues(), 1)
@@ -1455,14 +1487,16 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 			_, err := inter.Invoke("changeAfterBorrow")
 			RequireError(t, err)
 
-			require.ErrorAs(t, err, &interpreter.DereferenceError{})
+			var dereferenceError *interpreter.DereferenceError
+			require.ErrorAs(t, err, &dereferenceError)
 		})
 
 		t.Run("borrow as invalid type", func(t *testing.T) {
 			_, err = inter.Invoke("invalidBorrowS")
 			RequireError(t, err)
 
-			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+			require.ErrorAs(t, err, &forceCastTypeMismatchError)
 		})
 	})
 }

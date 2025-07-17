@@ -58,7 +58,7 @@ jobs:
       - name: Run Tests
         run: |
           make ci
-          make lint-github-actions
+          make lint
 
       - name: Config git
         run: |

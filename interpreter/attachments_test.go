@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 
 	"github.com/stretchr/testify/require"
 )
@@ -99,7 +100,8 @@ func TestInterpretAttachmentStruct(t *testing.T) {
     `)
 
 		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.DuplicateAttachmentError{})
+		var duplicateAttachmentError *interpreter.DuplicateAttachmentError
+		require.ErrorAs(t, err, &duplicateAttachmentError)
 	})
 
 	t.Run("reference", func(t *testing.T) {
@@ -299,7 +301,8 @@ func TestInterpretAttachmentResource(t *testing.T) {
     `)
 
 		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.DuplicateAttachmentError{})
+		var duplicateAttachmentError *interpreter.DuplicateAttachmentError
+		require.ErrorAs(t, err, &duplicateAttachmentError)
 	})
 
 	t.Run("attach and remove", func(t *testing.T) {
@@ -829,7 +832,8 @@ func TestInterpretAttachmentBaseUse(t *testing.T) {
 	    `)
 
 		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("return from function", func(t *testing.T) {
@@ -990,7 +994,8 @@ func TestInterpretAttachmentSelfUse(t *testing.T) {
 	    `)
 
 		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("return from function", func(t *testing.T) {
@@ -1257,7 +1262,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
 						_ interpreter.LocationRange,
@@ -1311,7 +1316,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
 						_ interpreter.LocationRange,
@@ -1358,7 +1363,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
 						_ interpreter.LocationRange,
@@ -1412,7 +1417,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
 						_ interpreter.LocationRange,
@@ -1470,7 +1475,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
 						_ interpreter.LocationRange,
@@ -1539,7 +1544,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
 						_ interpreter.LocationRange,
@@ -1620,7 +1625,8 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 		)
 
 		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("destroyed", func(t *testing.T) {
@@ -1649,7 +1655,8 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 		)
 
 		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("nested", func(t *testing.T) {
@@ -1699,7 +1706,8 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 		)
 
 		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("base reference", func(t *testing.T) {
@@ -1744,7 +1752,8 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 		)
 
 		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("nested destroyed", func(t *testing.T) {
@@ -1782,7 +1791,8 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 		)
 
 		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("self reference", func(t *testing.T) {
@@ -1826,7 +1836,8 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 		)
 
 		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 }
 
@@ -1877,7 +1888,8 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 		})
 
 		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.InvalidAttachmentOperationTargetError{})
+		var attachmentError *interpreter.InvalidAttachmentOperationTargetError
+		require.ErrorAs(t, err, &attachmentError)
 	})
 
 	t.Run("reference remove", func(t *testing.T) {
@@ -1897,7 +1909,8 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 		})
 
 		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.InvalidAttachmentOperationTargetError{})
+		var attachmentError *interpreter.InvalidAttachmentOperationTargetError
+		require.ErrorAs(t, err, &attachmentError)
 	})
 
 	t.Run("array attach", func(t *testing.T) {
@@ -1916,7 +1929,8 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 		})
 
 		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.InvalidAttachmentOperationTargetError{})
+		var attachmentError *interpreter.InvalidAttachmentOperationTargetError
+		require.ErrorAs(t, err, &attachmentError)
 	})
 
 	t.Run("array remove", func(t *testing.T) {
@@ -1935,7 +1949,8 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 		})
 
 		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.InvalidAttachmentOperationTargetError{})
+		var attachmentError *interpreter.InvalidAttachmentOperationTargetError
+		require.ErrorAs(t, err, &attachmentError)
 	})
 
 	t.Run("enum attach", func(t *testing.T) {
@@ -1958,7 +1973,8 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 		})
 
 		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.InvalidAttachmentOperationTargetError{})
+		var attachmentError *interpreter.InvalidAttachmentOperationTargetError
+		require.ErrorAs(t, err, &attachmentError)
 	})
 
 	t.Run("enum remove", func(t *testing.T) {
@@ -1981,7 +1997,8 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 		})
 
 		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.InvalidAttachmentOperationTargetError{})
+		var attachmentError *interpreter.InvalidAttachmentOperationTargetError
+		require.ErrorAs(t, err, &attachmentError)
 	})
 }
 
@@ -2317,7 +2334,8 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.AttachmentIterationMutationError{})
+		var attachmentError *interpreter.AttachmentIterationMutationError
+		require.ErrorAs(t, err, &attachmentError)
 	})
 
 	t.Run("basic remove", func(t *testing.T) {
@@ -2339,7 +2357,8 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.AttachmentIterationMutationError{})
+		var attachmentError *interpreter.AttachmentIterationMutationError
+		require.ErrorAs(t, err, &attachmentError)
 	})
 
 	t.Run("attach to other", func(t *testing.T) {
@@ -2406,7 +2425,8 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.AttachmentIterationMutationError{})
+		var attachmentError *interpreter.AttachmentIterationMutationError
+		require.ErrorAs(t, err, &attachmentError)
 	})
 
 	t.Run("nested iteration of same", func(t *testing.T) {
@@ -2429,7 +2449,8 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.AttachmentIterationMutationError{})
+		var attachmentError *interpreter.AttachmentIterationMutationError
+		require.ErrorAs(t, err, &attachmentError)
 	})
 
 	t.Run("nested iteration ok", func(t *testing.T) {
@@ -2530,10 +2551,10 @@ func TestInterpretBuiltinCompositeAttachment(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	for _, valueDeclaration := range []stdlib.StandardLibraryValue{
-		stdlib.NewPublicKeyConstructor(
+		stdlib.NewInterpreterPublicKeyConstructor(
 			assumeValidPublicKeyValidator{},
 		),
-		stdlib.SignatureAlgorithmConstructor,
+		stdlib.InterpreterSignatureAlgorithmConstructor,
 	} {
 		baseValueActivation.DeclareValue(valueDeclaration)
 		interpreter.Declare(baseActivation, valueDeclaration)
@@ -2557,12 +2578,14 @@ func TestInterpretBuiltinCompositeAttachment(t *testing.T) {
           }
         `,
 		ParseCheckAndInterpretOptions{
-			CheckerConfig: &sema.Config{
-				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-					return baseValueActivation
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 			},
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 					return baseActivation
 				},
@@ -2607,6 +2630,7 @@ func TestInterpretAttachmentSelfInvalidationInIteration(t *testing.T) {
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 }

@@ -95,7 +95,7 @@ func NewAccountStorageCapabilitiesValue(
 		methodsGetter,
 		nil,
 		stringer,
-	).WithPrivateField(accountTypePrivateAddressFieldName, address)
+	).WithPrivateField(AccountTypePrivateAddressFieldName, address)
 
 	return storageCapabilities
 }

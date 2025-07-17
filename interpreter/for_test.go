@@ -32,6 +32,7 @@ import (
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestInterpretForStatement(t *testing.T) {
@@ -335,8 +336,7 @@ func TestInterpretForStatementCapturing(t *testing.T) {
 
 	t.Parallel()
 
-	// TODO: Use compiler (parseCheckAndPrepare)
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        fun test(): [Int] {
            let fs: [fun(): Int] = []
            for x in [1, 2, 3] {
@@ -460,7 +460,8 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
+		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
 
 	t.Run("Auth ref", func(t *testing.T) {
@@ -547,8 +548,7 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 	t.Run("Mutating reference to resource array", func(t *testing.T) {
 		t.Parallel()
 
-		// TODO: Use compiler (need mutation-while-iterating validation)
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource Foo{
                 fun sayHello() {}
             }
@@ -574,14 +574,14 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+		var containerMutationError *interpreter.ContainerMutatedDuringIterationError
+		require.ErrorAs(t, err, &containerMutationError)
 	})
 
 	t.Run("Mutating reference to struct array", func(t *testing.T) {
 		t.Parallel()
 
-		// TODO: Use compiler (need mutation-while-iterating validation)
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct Foo{
                 fun sayHello() {}
             }
@@ -602,7 +602,8 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
-		assert.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+		var containerMutationError *interpreter.ContainerMutatedDuringIterationError
+		require.ErrorAs(t, err, &containerMutationError)
 	})
 
 	t.Run("String ref", func(t *testing.T) {
@@ -773,7 +774,8 @@ func TestInterpretStorageReferencesInForLoop(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.DereferenceError{})
+		var dereferenceError *interpreter.DereferenceError
+		require.ErrorAs(t, err, &dereferenceError)
 	})
 }
 
@@ -786,10 +788,10 @@ func TestInclusiveRangeForInLoop(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterInclusiveRangeConstructor)
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, stdlib.InclusiveRangeConstructorFunction)
+	interpreter.Declare(baseActivation, stdlib.InterpreterInclusiveRangeConstructor)
 
 	unsignedTestCases := []inclusiveRangeForInLoopTest{
 		{
@@ -822,12 +824,12 @@ func TestInclusiveRangeForInLoop(t *testing.T) {
 			code := fmt.Sprintf(
 				`
 					fun test(): [%[1]s] {
-						let start : %[1]s = %[2]d
-						let end : %[1]s = %[3]d
-						let step : %[1]s = %[4]d
+						let start: %[1]s = %[2]d
+						let end: %[1]s = %[3]d
+						let step: %[1]s = %[4]d
 						let range: InclusiveRange<%[1]s> = InclusiveRange(start, end, step: step)
 
-						var elements : [%[1]s] = []
+						var elements: [%[1]s] = []
 						for element in range {
 							elements.append(element)
 						}
@@ -840,14 +842,16 @@ func TestInclusiveRangeForInLoop(t *testing.T) {
 				testCase.step,
 			)
 
-			inter, err := parseCheckAndInterpretWithOptions(t, code,
+			inter, err := parseCheckAndPrepareWithOptions(t, code,
 				ParseCheckAndInterpretOptions{
-					CheckerConfig: &sema.Config{
-						BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
-							return baseValueActivation
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						CheckerConfig: &sema.Config{
+							BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+								return baseValueActivation
+							},
 						},
 					},
-					Config: &interpreter.Config{
+					InterpreterConfig: &interpreter.Config{
 						BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
 							return baseActivation
 						},
