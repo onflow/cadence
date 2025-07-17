@@ -2295,13 +2295,11 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 
 				funcNameConst := c.addStringConst(funcName)
 
-				argsCountWithReceiver := argumentCount + 1
-
 				c.emit(
-					opcode.InstructionInvokeMethodDynamic{
+					opcode.InstructionInvokeDynamic{
 						Name:     funcNameConst.index,
 						TypeArgs: typeArgs,
-						ArgCount: argsCountWithReceiver,
+						ArgCount: argumentCount,
 					},
 				)
 			},
@@ -2353,7 +2351,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 				// Compile arguments
 				c.compileArguments(expression.Arguments, invocationTypes)
 
-				c.emit(opcode.InstructionInvokeMethodStatic{
+				c.emit(opcode.InstructionInvoke{
 					TypeArgs: typeArgs,
 
 					// Argument count does not include the receiver,

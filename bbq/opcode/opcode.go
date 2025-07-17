@@ -141,8 +141,8 @@ const (
 	// Invocations
 
 	Invoke
-	InvokeMethodStatic
-	InvokeMethodDynamic
+	InvokeDynamic
+	_
 	_
 	_
 	_
@@ -189,8 +189,7 @@ func (i Opcode) IsControlFlow() bool {
 		JumpIfTrue,
 		JumpIfNil,
 		Invoke,
-		InvokeMethodStatic,
-		InvokeMethodDynamic:
+		InvokeDynamic:
 
 		return true
 

@@ -2802,7 +2802,7 @@ func TestCompileMethodInvocation(t *testing.T) {
 				opcode.InstructionGetMethod{Method: fFuncIndex},
 				opcode.InstructionTrue{},
 				opcode.InstructionTransferAndConvert{Type: 2},
-				opcode.InstructionInvokeMethodStatic{
+				opcode.InstructionInvoke{
 					TypeArgs: nil,
 					ArgCount: 1,
 				},
@@ -3256,7 +3256,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 			// self.test()
 			opcode.InstructionGetLocal{Local: selfIndex},
 			opcode.InstructionGetMethod{Method: interfaceFunctionIndex}, // must be interface method's index
-			opcode.InstructionInvokeMethodStatic{
+			opcode.InstructionInvoke{
 				TypeArgs: nil,
 				ArgCount: 0,
 			},
@@ -4072,7 +4072,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// Get function value `A.TestStruct.test()`
 				opcode.InstructionGetMethod{Method: 10},
-				opcode.InstructionInvokeMethodStatic{
+				opcode.InstructionInvoke{
 					ArgCount: 0,
 				},
 
@@ -6961,7 +6961,7 @@ func TestCompileOptionalChaining(t *testing.T) {
 
 				// Load `Foo.bar` function
 				opcode.InstructionGetMethod{Method: 4},
-				opcode.InstructionInvokeMethodStatic{ArgCount: 0},
+				opcode.InstructionInvoke{ArgCount: 0},
 				opcode.InstructionJump{Target: 15},
 
 				// If `foo == nil`
@@ -7779,7 +7779,7 @@ func TestCompileOptionalArgument(t *testing.T) {
 				opcode.InstructionGetConstant{Constant: optionalArgIndex},
 				opcode.InstructionTransfer{},
 
-				opcode.InstructionInvokeMethodStatic{ArgCount: 3},
+				opcode.InstructionInvoke{ArgCount: 3},
 				opcode.InstructionDrop{},
 
 				opcode.InstructionReturn{}},
@@ -9083,9 +9083,9 @@ func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
 			opcode.InstructionJumpIfNil{Target: 9},
 			opcode.InstructionGetLocal{Local: tempIndex},
 			opcode.InstructionUnwrap{},
-			opcode.InstructionInvokeMethodDynamic{
+			opcode.InstructionInvokeDynamic{
 				Name:     0,
-				ArgCount: 1,
+				ArgCount: 0,
 			},
 			opcode.InstructionJump{Target: 10},
 			opcode.InstructionNil{},
@@ -9234,7 +9234,7 @@ func TestCompileInjectedContract(t *testing.T) {
 				AccessedType: 5,
 			},
 			opcode.InstructionTransferAndConvert{Type: 6},
-			opcode.InstructionInvokeMethodStatic{ArgCount: 1},
+			opcode.InstructionInvoke{ArgCount: 1},
 			opcode.InstructionTransferAndConvert{Type: 6},
 			// return
 			opcode.InstructionReturnValue{},
