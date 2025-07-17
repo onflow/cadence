@@ -72,9 +72,7 @@ func NewVMBLSAggregatePublicKeysFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			BLSTypeAggregatePublicKeysFunctionName,
 			BLSTypeAggregatePublicKeysFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, arguments ...vm.Value) vm.Value {
-
-				_, arguments = vm.SplitReceiverAndArgs(context, arguments)
+			func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
 
 				publicKeysValue, ok := arguments[0].(*interpreter.ArrayValue)
 				if !ok {
@@ -189,9 +187,7 @@ func NewVMBLSAggregateSignaturesFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			BLSTypeAggregateSignaturesFunctionName,
 			BLSTypeAggregateSignaturesFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, arguments ...vm.Value) vm.Value {
-
-				_, arguments = vm.SplitReceiverAndArgs(context, arguments)
+			func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
 
 				signaturesValue, ok := arguments[0].(*interpreter.ArrayValue)
 				if !ok {

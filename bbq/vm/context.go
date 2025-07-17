@@ -251,8 +251,6 @@ func (c *Context) CallStack() []interpreter.Invocation {
 }
 
 // InvokeFunction function invokes a given function value with the given arguments.
-// For bound functions, it expects the first argument to be the receiver.
-// i.e: The caller is responsible for preparing the arguments.
 func (c *Context) InvokeFunction(
 	fn interpreter.FunctionValue,
 	arguments []interpreter.Value,

@@ -938,24 +938,28 @@ func invokeFunction(
 
 	// Handle all function types in a single place, so this can be re-used everywhere.
 
-	var receiver Value
-	if boundFunction, ok := functionValue.(*BoundFunctionValue); ok {
+	boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue)
+	if isBoundFunction {
 		functionValue = boundFunction.Method
-		receiver = boundFunction.Receiver(vm.context)
 	}
+
+	var receiver Value
 
 	switch functionValue := functionValue.(type) {
 	case CompiledFunctionValue:
+		if isBoundFunction {
+			// For compiled functions, pass the receiver as an implicit-reference.
+			// Because the `self` value can be accessed by user-code.
+			receiver = boundFunction.Receiver(vm.context)
+		}
 		vm.pushCallFrame(functionValue, receiver, arguments)
 
 	case *NativeFunctionValue:
-		// TODO: pass the receiver separately.
-		//  That will reduce the argument confusion/mistakes in builtin functions.
-		if receiver != nil {
-			arguments = append([]Value{receiver}, arguments...)
+		if isBoundFunction {
+			// For built-in functions, pass the dereferenced receiver.
+			receiver = boundFunction.DereferencedReceiver(vm.context)
 		}
-
-		result := functionValue.Function(context, typeArguments, arguments...)
+		result := functionValue.Function(context, typeArguments, receiver, arguments...)
 		vm.push(result)
 
 	default:
@@ -1842,9 +1846,14 @@ func (vm *VM) loadType(index uint16) bbq.StaticType {
 
 func (vm *VM) invokeFunction(function Value, arguments []Value) (Value, error) {
 	// invokeExternally runs the VM, which is incorrect for native functions.
-	if function, ok := function.(*NativeFunctionValue); ok {
-		result := function.Function(vm.context, nil, arguments...)
-		return result, nil
+	if functionValue, ok := function.(*NativeFunctionValue); ok {
+		invokeFunction(
+			vm,
+			functionValue,
+			arguments,
+			nil,
+		)
+		return vm.pop(), nil
 	}
 
 	return vm.invokeExternally(function, arguments)
