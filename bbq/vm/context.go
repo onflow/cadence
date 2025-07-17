@@ -231,8 +231,8 @@ func (c *Context) WithResourceDestruction(valueID atree.ValueID, locationRange i
 	f()
 }
 
-func (c *Context) RecoverErrors(onError func(error)) {
-	//TODO
+func (*Context) RecoverErrors(onError func(error)) {
+	RecoverErrors(onError)
 }
 
 func (c *Context) GetValueOfVariable(name string) interpreter.Value {
