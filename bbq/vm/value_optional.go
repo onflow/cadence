@@ -41,8 +41,8 @@ func init() {
 					innerValueType,
 				)
 			},
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				optionalValue, arguments := SplitTypedReceiverAndArgs[interpreter.OptionalValue](context, arguments)
+			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
+				optionalValue := receiver.(interpreter.OptionalValue)
 				innerValueType := optionalValue.InnerValueType(context)
 
 				transformFunction := arguments[0].(FunctionValue)

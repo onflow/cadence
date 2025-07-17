@@ -37,12 +37,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.StorageCapabilityControllerTypeSetTagFunctionName,
 			sema.StorageCapabilityControllerTypeSetTagFunctionType,
-			func(context *Context, _ []bbq.StaticType, args ...Value) Value {
-
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = SplitReceiverAndArgs(context, args)
+			func(context *Context, _ []bbq.StaticType, receiver Value, args ...Value) Value {
 
 				newTagValue, ok := args[0].(*interpreter.StringValue)
 				if !ok {
@@ -63,12 +58,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.StorageCapabilityControllerTypeDeleteFunctionName,
 			sema.StorageCapabilityControllerTypeDeleteFunctionType,
-			func(context *Context, _ []bbq.StaticType, args ...Value) Value {
-
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = SplitReceiverAndArgs(context, args) // nolint:staticcheck,ineffassign
+			func(context *Context, _ []bbq.StaticType, receiver Value, args ...Value) Value {
 
 				v := getCheckedStorageCapabilityControllerReceiver(receiver)
 
@@ -86,12 +76,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.StorageCapabilityControllerTypeTargetFunctionName,
 			sema.StorageCapabilityControllerTypeTargetFunctionType,
-			func(context *Context, _ []bbq.StaticType, args ...Value) Value {
-
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = SplitReceiverAndArgs(context, args) // nolint:staticcheck,ineffassign
+			func(context *Context, _ []bbq.StaticType, receiver Value, args ...Value) Value {
 
 				v := getCheckedStorageCapabilityControllerReceiver(receiver)
 
@@ -105,12 +90,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.StorageCapabilityControllerTypeRetargetFunctionName,
 			sema.StorageCapabilityControllerTypeRetargetFunctionType,
-			func(context *Context, _ []bbq.StaticType, args ...Value) Value {
-
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = SplitReceiverAndArgs(context, args)
+			func(context *Context, _ []bbq.StaticType, receiver Value, args ...Value) Value {
 
 				// Get path argument
 

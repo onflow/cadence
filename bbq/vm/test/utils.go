@@ -432,7 +432,7 @@ func VMBuiltinGlobalsProviderWithDefaultsAndPanic(_ common.Location) *activation
 		vm.NewNativeFunctionValue(
 			stdlib.PanicFunctionName,
 			stdlib.PanicFunctionType,
-			func(context *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+			func(context *vm.Context, _ []interpreter.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
 				messageValue, ok := arguments[0].(*interpreter.StringValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -552,7 +552,7 @@ func newConditionLogFunction(logs *[]string) stdlib.StandardLibraryValue {
 		conditionLogFunctionName,
 		conditionLogFunctionType,
 		"",
-		func(_ *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+		func(_ *vm.Context, _ []interpreter.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
 			message := arguments[0].String()
 			*logs = append(*logs, message)
 			return interpreter.TrueValue

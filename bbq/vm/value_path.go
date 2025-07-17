@@ -43,8 +43,8 @@ func init() {
 			NewNativeFunctionValue(
 				sema.ToStringFunctionName,
 				sema.ToStringFunctionType,
-				func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-					path, arguments := SplitTypedReceiverAndArgs[interpreter.PathValue](context, arguments) // nolint:staticcheck,ineffassign
+				func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
+					path := receiver.(interpreter.PathValue)
 					return interpreter.PathValueToStringFunction(
 						context,
 						path,

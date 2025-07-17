@@ -74,7 +74,7 @@ var VMPanicFunction = NewVMStandardLibraryStaticFunction(
 	PanicFunctionName,
 	PanicFunctionType,
 	panicFunctionDocString,
-	func(context *vm.Context, _ []bbq.StaticType, arguments ...interpreter.Value) interpreter.Value {
+	func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...interpreter.Value) interpreter.Value {
 		message := arguments[0]
 		return PanicWithError(message, interpreter.EmptyLocationRange)
 	},

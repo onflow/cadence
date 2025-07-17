@@ -37,8 +37,8 @@ func init() {
 		NewNativeFunctionValue(
 			sema.StringTypeConcatFunctionName,
 			sema.StringTypeConcatFunctionType,
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				this, arguments := SplitTypedReceiverAndArgs[*interpreter.StringValue](context, arguments)
+			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
+				this := receiver.(*interpreter.StringValue)
 				other := arguments[0]
 				return interpreter.StringConcat(
 					context,
@@ -55,8 +55,8 @@ func init() {
 		NewNativeFunctionValue(
 			sema.StringTypeSliceFunctionName,
 			sema.StringTypeSliceFunctionType,
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				this, arguments := SplitTypedReceiverAndArgs[*interpreter.StringValue](context, arguments)
+			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
+				this := receiver.(*interpreter.StringValue)
 				from := arguments[0].(interpreter.IntValue)
 				to := arguments[1].(interpreter.IntValue)
 				return this.Slice(from, to, EmptyLocationRange)
@@ -69,8 +69,8 @@ func init() {
 		NewNativeFunctionValue(
 			sema.StringTypeContainsFunctionName,
 			sema.StringTypeContainsFunctionType,
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				this, arguments := SplitTypedReceiverAndArgs[*interpreter.StringValue](context, arguments)
+			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
+				this := receiver.(*interpreter.StringValue)
 				other := arguments[0].(*interpreter.StringValue)
 				return this.Contains(context, other)
 			},
@@ -82,8 +82,8 @@ func init() {
 		NewNativeFunctionValue(
 			sema.StringTypeIndexFunctionName,
 			sema.StringTypeIndexFunctionType,
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				this, arguments := SplitTypedReceiverAndArgs[*interpreter.StringValue](context, arguments)
+			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
+				this := receiver.(*interpreter.StringValue)
 				other := arguments[0].(*interpreter.StringValue)
 				return this.IndexOf(context, other)
 			},
@@ -95,8 +95,8 @@ func init() {
 		NewNativeFunctionValue(
 			sema.StringTypeCountFunctionName,
 			sema.StringTypeCountFunctionType,
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				this, arguments := SplitTypedReceiverAndArgs[*interpreter.StringValue](context, arguments)
+			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
+				this := receiver.(*interpreter.StringValue)
 				other := arguments[0].(*interpreter.StringValue)
 				return this.Count(context, EmptyLocationRange, other)
 			},
@@ -108,8 +108,8 @@ func init() {
 		NewNativeFunctionValue(
 			sema.StringTypeDecodeHexFunctionName,
 			sema.StringTypeDecodeHexFunctionType,
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				this, arguments := SplitTypedReceiverAndArgs[*interpreter.StringValue](context, arguments) // nolint:staticcheck,ineffassign
+			func(context *Context, _ []bbq.StaticType, receiver Value, _ ...Value) Value {
+				this := receiver.(*interpreter.StringValue)
 				return this.DecodeHex(context, EmptyLocationRange)
 			},
 		),
@@ -120,8 +120,8 @@ func init() {
 		NewNativeFunctionValue(
 			sema.StringTypeToLowerFunctionName,
 			sema.StringTypeToLowerFunctionType,
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				this, arguments := SplitTypedReceiverAndArgs[*interpreter.StringValue](context, arguments) // nolint:staticcheck,ineffassign
+			func(context *Context, _ []bbq.StaticType, receiver Value, _ ...Value) Value {
+				this := receiver.(*interpreter.StringValue)
 				return this.ToLower(context)
 			},
 		),
@@ -132,8 +132,8 @@ func init() {
 		NewNativeFunctionValue(
 			sema.StringTypeSplitFunctionName,
 			sema.StringTypeSplitFunctionType,
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				this, arguments := SplitTypedReceiverAndArgs[*interpreter.StringValue](context, arguments)
+			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
+				this := receiver.(*interpreter.StringValue)
 				separator := arguments[0].(*interpreter.StringValue)
 				return this.Split(
 					context,
@@ -149,8 +149,8 @@ func init() {
 		NewNativeFunctionValue(
 			sema.StringTypeReplaceAllFunctionName,
 			sema.StringTypeReplaceAllFunctionType,
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				this, arguments := SplitTypedReceiverAndArgs[*interpreter.StringValue](context, arguments)
+			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
+				this := receiver.(*interpreter.StringValue)
 				original := arguments[0].(*interpreter.StringValue)
 				replacement := arguments[1].(*interpreter.StringValue)
 				return this.ReplaceAll(
@@ -164,13 +164,14 @@ func init() {
 	)
 
 	// Methods on `String` type.
+	// No receiver.
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValue(
 			sema.StringTypeEncodeHexFunctionName,
 			sema.StringTypeEncodeHexFunctionType,
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
 				byteArray := arguments[0].(*interpreter.ArrayValue)
 				return interpreter.StringFunctionEncodeHex(
 					context,
@@ -186,7 +187,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.StringTypeFromUtf8FunctionName,
 			sema.StringTypeFromUtf8FunctionType,
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
 				byteArray := arguments[0].(*interpreter.ArrayValue)
 				return interpreter.StringFunctionFromUtf8(
 					context,
@@ -202,7 +203,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.StringTypeFromCharactersFunctionName,
 			sema.StringTypeFromCharactersFunctionType,
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
 				charactersArray := arguments[0].(*interpreter.ArrayValue)
 				return interpreter.StringFunctionFromCharacters(
 					context,
@@ -218,7 +219,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.StringTypeJoinFunctionName,
 			sema.StringTypeJoinFunctionType,
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
 				stringArray := arguments[0].(*interpreter.ArrayValue)
 				separator := arguments[1].(*interpreter.StringValue)
 

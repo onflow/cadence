@@ -72,7 +72,7 @@ var InterpreterSignatureAlgorithmConstructor = StandardLibraryValue{
 var vmSignatureAlgorithmConstructorValue = vm.NewNativeFunctionValue(
 	sema.SignatureAlgorithmTypeName,
 	signatureAlgorithmLookupType,
-	func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
+	func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, args ...vm.Value) vm.Value {
 		rawValue := args[0].(interpreter.UInt8Value)
 
 		caseValue, ok := SignatureAlgorithmCaseValues[rawValue]

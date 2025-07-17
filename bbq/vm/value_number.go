@@ -36,8 +36,8 @@ func init() {
 			NewNativeFunctionValue(
 				sema.ToStringFunctionName,
 				sema.ToStringFunctionType,
-				func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-					number, arguments := SplitTypedReceiverAndArgs[interpreter.NumberValue](context, arguments) // nolint:staticcheck,ineffassign
+				func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
+					number := receiver.(interpreter.NumberValue)
 					return interpreter.NumberValueToString(
 						context,
 						number,
@@ -51,8 +51,8 @@ func init() {
 			NewNativeFunctionValue(
 				sema.ToBigEndianBytesFunctionName,
 				sema.ToBigEndianBytesFunctionType,
-				func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-					number, arguments := SplitTypedReceiverAndArgs[interpreter.NumberValue](context, arguments) // nolint:staticcheck,ineffassign
+				func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
+					number := receiver.(interpreter.NumberValue)
 					return interpreter.ByteSliceToByteArrayValue(
 						context,
 						number.ToBigEndianBytes(),

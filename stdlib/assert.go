@@ -88,7 +88,7 @@ var VMAssertFunction = NewVMStandardLibraryStaticFunction(
 	AssertFunctionName,
 	AssertFunctionType,
 	assertFunctionDocString,
-	func(context *vm.Context, _ []bbq.StaticType, arguments ...interpreter.Value) interpreter.Value {
+	func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...interpreter.Value) interpreter.Value {
 		result, ok := arguments[0].(interpreter.BoolValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
