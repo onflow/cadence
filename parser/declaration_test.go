@@ -5778,6 +5778,8 @@ func TestParseStructure(t *testing.T) {
 											},
 										},
 									},
+									PreConditions:  nil,
+									PostConditions: nil,
 								},
 								Identifier: ast.Identifier{
 									Identifier: "init",
@@ -7588,7 +7590,7 @@ func TestParseDestructor(t *testing.T) {
 				Pos: ast.Position{Offset: 37, Line: 3, Column: 12},
 				DestructorRange: ast.Range{
 					StartPos: ast.Position{Offset: 37, Line: 3, Column: 12},
-					EndPos:   ast.Position{Offset: 48, Line: 3, Column: 23},
+					EndPos:   ast.Position{Offset: 49, Line: 3, Column: 24},
 				},
 			},
 		},
@@ -7601,7 +7603,7 @@ func TestParseDestructor(t *testing.T) {
 			Pos: ast.Position{Offset: 37, Line: 3, Column: 12},
 			DestructorRange: ast.Range{
 				StartPos: ast.Position{Offset: 37, Line: 3, Column: 12},
-				EndPos:   ast.Position{Offset: 48, Line: 3, Column: 23},
+				EndPos:   ast.Position{Offset: 49, Line: 3, Column: 24},
 			},
 		}
 		fixes := err.SuggestFixes("")
@@ -7612,7 +7614,7 @@ func TestParseDestructor(t *testing.T) {
 		edit := fix.TextEdits[0]
 		assert.Equal(t, "", edit.Replacement)
 		assert.Equal(t, ast.Position{Offset: 37, Line: 3, Column: 12}, edit.Range.StartPos)
-		assert.Equal(t, ast.Position{Offset: 48, Line: 3, Column: 23}, edit.Range.EndPos)
+		assert.Equal(t, ast.Position{Offset: 49, Line: 3, Column: 24}, edit.Range.EndPos)
 	})
 
 	// End-to-end test: apply suggested fix to code
@@ -7621,7 +7623,7 @@ func TestParseDestructor(t *testing.T) {
 			Pos: ast.Position{Offset: 37, Line: 3, Column: 12},
 			DestructorRange: ast.Range{
 				StartPos: ast.Position{Offset: 37, Line: 3, Column: 12},
-				EndPos:   ast.Position{Offset: 77, Line: 5, Column: 6},
+				EndPos:   ast.Position{Offset: 49, Line: 3, Column: 24},
 			},
 		}
 		fixes := err.SuggestFixes("")
@@ -7629,10 +7631,10 @@ func TestParseDestructor(t *testing.T) {
 		edit := fixes[0].TextEdits[0]
 		updated := applyTextEdit(code, edit)
 		expected := `
-        resource Foo {
+        resource Test {
             
         }
-      `
+	`
 		assert.Equal(t, expected, updated)
 	})
 }

@@ -1961,9 +1961,10 @@ func parseSpecialFunctionDeclaration(
 		startPos := ast.EarliestPosition(identifier.Pos, accessPos, purityPos, staticPos, nativePos)
 		var endPos ast.Position
 		if functionBlock != nil {
-			endPos = functionBlock.EndPosition(p.memoryGauge)
+			// Add 1 to include the closing brace in the range
+			endPos = functionBlock.EndPosition(p.memoryGauge).Shifted(p.memoryGauge, 1)
 		} else {
-			endPos = identifier.Pos // Fallback if no function block
+			endPos = identifier.Pos // fallback
 		}
 		p.report(&CustomDestructorError{
 			Pos:             identifier.Pos,
