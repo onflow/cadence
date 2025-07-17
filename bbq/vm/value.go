@@ -42,17 +42,3 @@ func ConvertAndBox(
 		targetSemaType,
 	)
 }
-
-func SplitReceiverAndArgs(context interpreter.ValueStaticTypeContext, args []Value) (Value, []Value) {
-	receiver := args[ReceiverIndex]
-	implicitReference := receiver.(ImplicitReferenceValue)
-	return implicitReference.ReferencedValue(context), args[TypeBoundFunctionArgumentOffset:]
-}
-
-func SplitTypedReceiverAndArgs[ReceiverType Value](
-	context interpreter.ValueStaticTypeContext,
-	args []Value,
-) (ReceiverType, []Value) {
-	receiver, args := SplitReceiverAndArgs(context, args)
-	return receiver.(ReceiverType), args
-}
