@@ -834,6 +834,7 @@ func parseNominalTypeInvocationRemainder(p *parser) (*ast.InvocationExpression, 
 	var invokedExpression ast.Expression = ast.NewIdentifierExpression(
 		p.memoryGauge,
 		ty.Identifier,
+		ty.Comments,
 	)
 
 	for _, nestedIdentifier := range ty.NestedIdentifiers {

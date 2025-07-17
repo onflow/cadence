@@ -76,7 +76,7 @@ func (e *BeforeExtractor) ExtractInvocation(
 				ast.EmptyPosition,
 			)
 
-			newExpression := ast.NewIdentifierExpression(e.memoryGauge, newIdentifier)
+			newExpression := ast.NewIdentifierExpression(e.memoryGauge, newIdentifier, ast.Comments{})
 
 			extractedExpressions = append(extractedExpressions,
 				ast.ExtractedExpression{

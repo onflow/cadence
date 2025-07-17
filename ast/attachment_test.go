@@ -210,6 +210,7 @@ func TestAttachExpressionMarshallJSON(t *testing.T) {
 				"foo",
 				Position{Offset: 1, Line: 2, Column: 3},
 			),
+			Comments{},
 		),
 		Attachment: NewInvocationExpression(
 			nil,
@@ -220,6 +221,7 @@ func TestAttachExpressionMarshallJSON(t *testing.T) {
 					"bar",
 					Position{Offset: 1, Line: 2, Column: 3},
 				),
+				Comments{},
 			),
 			[]*TypeAnnotation{},
 			Arguments{},
@@ -285,6 +287,7 @@ func TestAttachExpression_Doc(t *testing.T) {
 				"foo",
 				Position{Offset: 1, Line: 2, Column: 3},
 			),
+			Comments{},
 		),
 		Attachment: NewInvocationExpression(
 			nil,
@@ -295,6 +298,7 @@ func TestAttachExpression_Doc(t *testing.T) {
 					"bar",
 					Position{Offset: 1, Line: 2, Column: 3},
 				),
+				Comments{},
 			),
 			[]*TypeAnnotation{},
 			Arguments{},
@@ -345,6 +349,7 @@ func TestRemoveStatement_MarshallJSON(t *testing.T) {
 				"baz",
 				Position{Offset: 1, Line: 2, Column: 3},
 			),
+			Comments{},
 		),
 		StartPos: Position{Offset: 1, Line: 2, Column: 3},
 	}
@@ -406,6 +411,7 @@ func TestRemoveStatement_Doc(t *testing.T) {
 				"baz",
 				Position{Offset: 1, Line: 2, Column: 3},
 			),
+			Comments{},
 		),
 		StartPos: Position{Offset: 1, Line: 2, Column: 3},
 	}

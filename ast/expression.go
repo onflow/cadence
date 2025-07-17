@@ -671,6 +671,7 @@ func (e DictionaryEntry) Doc() prettier.Doc {
 
 type IdentifierExpression struct {
 	Identifier Identifier
+	Comments   Comments
 }
 
 var _ Element = &IdentifierExpression{}
@@ -679,11 +680,13 @@ var _ Expression = &IdentifierExpression{}
 func NewIdentifierExpression(
 	gauge common.MemoryGauge,
 	identifier Identifier,
+	comments Comments,
 ) *IdentifierExpression {
 	common.UseMemory(gauge, common.IdentifierExpressionMemoryUsage)
 
 	return &IdentifierExpression{
 		Identifier: identifier,
+		Comments:   comments,
 	}
 }
 
