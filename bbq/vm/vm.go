@@ -354,7 +354,7 @@ func (vm *VM) validateAndInvokeExternally(functionValue FunctionValue, arguments
 	return vm.invokeExternally(functionValue, preparedArguments)
 }
 
-func (vm *VM) invokeExternally(functionValue Value, arguments []Value) (Value, error) {
+func (vm *VM) invokeExternally(functionValue FunctionValue, arguments []Value) (Value, error) {
 	invokeFunction(
 		vm,
 		functionValue,
@@ -362,10 +362,13 @@ func (vm *VM) invokeExternally(functionValue Value, arguments []Value) (Value, e
 		nil,
 	)
 
-	vm.run()
+	// Runs the VM for compiled functions.
+	if !functionValue.IsNative() {
+		vm.run()
 
-	if len(vm.stack) == 0 {
-		return nil, nil
+		if len(vm.stack) == 0 {
+			return nil, nil
+		}
 	}
 
 	return vm.pop(), nil
@@ -965,9 +968,6 @@ func invokeFunction(
 	default:
 		panic(errors.NewUnreachableError())
 	}
-
-	// We do not need to drop the receiver explicitly,
-	// as the `explicitArgumentsCount` already includes it.
 }
 
 func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
@@ -1845,18 +1845,8 @@ func (vm *VM) loadType(index uint16) bbq.StaticType {
 }
 
 func (vm *VM) invokeFunction(function Value, arguments []Value) (Value, error) {
-	// invokeExternally runs the VM, which is incorrect for native functions.
-	if functionValue, ok := function.(*NativeFunctionValue); ok {
-		invokeFunction(
-			vm,
-			functionValue,
-			arguments,
-			nil,
-		)
-		return vm.pop(), nil
-	}
-
-	return vm.invokeExternally(function, arguments)
+	functionValue := function.(FunctionValue)
+	return vm.invokeExternally(functionValue, arguments)
 }
 
 func (vm *VM) lookupFunction(location common.Location, name string) FunctionValue {

@@ -46,6 +46,8 @@ type FunctionValue interface {
 	// if the function has a generic type. This would panic if the function is not a generic function.
 	// Use `HasGenericType` to determine whether this method should be called or not.
 	ResolvedFunctionType(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType
+
+	IsNative() bool
 }
 
 type CompiledFunctionValue struct {
@@ -163,6 +165,10 @@ func (v CompiledFunctionValue) Invoke(invocation interpreter.Invocation) interpr
 		v,
 		invocation.Arguments,
 	)
+}
+
+func (v CompiledFunctionValue) IsNative() bool {
+	return false
 }
 
 type NativeFunction func(
@@ -390,6 +396,10 @@ func (v *NativeFunctionValue) GetMethod(
 	panic(errors.NewUnreachableError())
 }
 
+func (v *NativeFunctionValue) IsNative() bool {
+	return true
+}
+
 // BoundFunctionValue is a function-wrapper which captures the receivers of an object-method.
 type BoundFunctionValue struct {
 	ReceiverReference   interpreter.ReferenceValue
@@ -551,8 +561,7 @@ func (v *BoundFunctionValue) initializeFunctionType(context interpreter.ValueSta
 func (v *BoundFunctionValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
 	context := invocation.InvocationContext
 
-	arguments := make([]Value, 0, 1+len(invocation.Arguments))
-	arguments = append(arguments, v.Receiver(context))
+	arguments := make([]Value, 0, len(invocation.Arguments))
 	arguments = append(arguments, invocation.Arguments...)
 
 	return context.InvokeFunction(
@@ -575,4 +584,8 @@ func (v *BoundFunctionValue) DereferencedReceiver(context interpreter.ValueStati
 func (v *BoundFunctionValue) Receiver(context interpreter.ReferenceCreationContext) ImplicitReferenceValue {
 	receiverValue := v.DereferencedReceiver(context)
 	return NewImplicitReferenceValue(context, receiverValue)
+}
+
+func (v *BoundFunctionValue) IsNative() bool {
+	return v.Method.IsNative()
 }
