@@ -64,18 +64,8 @@ func getNumberValueFunctionMember(
 			v,
 			sema.ToStringFunctionType,
 			func(v NumberValue, invocation Invocation) Value {
-				interpreter := invocation.InvocationContext
-
-				memoryUsage := common.NewStringMemoryUsage(
-					OverEstimateNumberStringLength(interpreter, v),
-				)
-				return NewStringValue(
-					interpreter,
-					memoryUsage,
-					func() string {
-						return v.String()
-					},
-				)
+				invocationContext := invocation.InvocationContext
+				return NumberValueToString(invocationContext, v)
 			},
 		)
 
@@ -170,6 +160,20 @@ func getNumberValueFunctionMember(
 	}
 
 	return nil
+}
+
+func NumberValueToString(
+	memoryGauge common.MemoryGauge,
+	v NumberValue,
+) *StringValue {
+	memoryUsage := common.NewStringMemoryUsage(
+		OverEstimateNumberStringLength(memoryGauge, v),
+	)
+	return NewStringValue(
+		memoryGauge,
+		memoryUsage,
+		v.String,
+	)
 }
 
 type IntegerValue interface {

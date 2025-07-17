@@ -1570,7 +1570,7 @@ func TestTypeEquality(t *testing.T) {
 				},
 			}
 			target := &FunctionType{
-				Purity:     FunctionPurityUnspecified, // default
+				Purity:     FunctionPurityImpure, // default
 				ReturnType: StringType,
 				Parameters: []Parameter{
 					{

@@ -32,7 +32,7 @@ import (
 func TestOverwriteError_Error(t *testing.T) {
 
 	require.EqualError(t,
-		OverwriteError{
+		&OverwriteError{
 			Address: NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 			Path: PathValue{
 				Domain:     common.PathDomainStorage,
@@ -48,7 +48,7 @@ func TestErrorOutputIncludesLocationRage(t *testing.T) {
 	require.Equal(t,
 		Error{
 			Location: TestLocation,
-			Err: DereferenceError{
+			Err: &DereferenceError{
 				Cause: "the value being referenced has been destroyed or moved",
 				LocationRange: LocationRange{
 					Location: TestLocation,
@@ -59,6 +59,6 @@ func TestErrorOutputIncludesLocationRage(t *testing.T) {
 				},
 			},
 		}.Error(),
-		"Execution failed:\nerror: dereference failed\n --> test:0:0\n",
+		"Execution failed:\nerror: dereference failed\n --> test:0:0\n\nWas this error unhelpful?\nConsider suggesting an improvement here: https://github.com/onflow/cadence/issues.\n",
 	)
 }

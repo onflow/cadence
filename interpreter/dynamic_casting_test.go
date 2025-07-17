@@ -34,6 +34,7 @@ import (
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 // dynamic casting operation -> returns optional
@@ -94,7 +95,7 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 
 							t.Run(fmt.Sprintf("valid: from %s to %s", fromType, targetType), func(t *testing.T) {
 
-								inter := parseCheckAndInterpret(t,
+								inter := parseCheckAndPrepare(t,
 									fmt.Sprintf(
 										`
                                           let x: %[1]s = %[2]s
@@ -142,7 +143,7 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 
 							t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
 
-								inter := parseCheckAndInterpret(t,
+								inter := parseCheckAndPrepare(t,
 									fmt.Sprintf(
 										`
                                           fun test(): %[4]s? {
@@ -172,7 +173,8 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 								} else {
 									RequireError(t, err)
 
-									require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+									var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+									require.ErrorAs(t, err, &forceCastTypeMismatchError)
 								}
 							})
 						}
@@ -270,7 +272,8 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 						} else {
 							RequireError(t, err)
 
-							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+							var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+							require.ErrorAs(t, err, &forceCastTypeMismatchError)
 						}
 					})
 				}
@@ -363,7 +366,8 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 						} else {
 							RequireError(t, err)
 
-							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+							var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+							require.ErrorAs(t, err, &forceCastTypeMismatchError)
 						}
 					})
 				}
@@ -456,7 +460,8 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 						} else {
 							RequireError(t, err)
 
-							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+							var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+							require.ErrorAs(t, err, &forceCastTypeMismatchError)
 						}
 					})
 				}
@@ -554,7 +559,8 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 						} else {
 							RequireError(t, err)
 
-							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+							var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+							require.ErrorAs(t, err, &forceCastTypeMismatchError)
 						}
 					})
 				}
@@ -645,7 +651,8 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 					} else {
 						RequireError(t, err)
 
-						require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+						var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+						require.ErrorAs(t, err, &forceCastTypeMismatchError)
 					}
 				})
 
@@ -688,7 +695,8 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 						} else {
 							RequireError(t, err)
 
-							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+							var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+							require.ErrorAs(t, err, &forceCastTypeMismatchError)
 						}
 					})
 				}
@@ -794,7 +802,8 @@ func testResourceCastInvalid(t *testing.T, types, fromType, targetType string, o
 	case ast.OperationForceCast:
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -939,7 +948,8 @@ func testStructCastInvalid(t *testing.T, types, fromType, targetType string, ope
 	case ast.OperationForceCast:
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -1151,7 +1161,8 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 						} else {
 							RequireError(t, err)
 
-							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+							var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+							require.ErrorAs(t, err, &forceCastTypeMismatchError)
 						}
 					})
 				}
@@ -1259,7 +1270,8 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 						} else {
 							RequireError(t, err)
 
-							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+							var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+							require.ErrorAs(t, err, &forceCastTypeMismatchError)
 						}
 					})
 				}
@@ -1293,7 +1305,8 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 				} else {
 					RequireError(t, err)
 
-					require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+					var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+					require.ErrorAs(t, err, &forceCastTypeMismatchError)
 				}
 			})
 		})
@@ -1311,7 +1324,8 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 
 		RequireError(t, err)
 
-		assert.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 }
 
@@ -1417,7 +1431,8 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 						} else {
 							RequireError(t, err)
 
-							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+							var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+							require.ErrorAs(t, err, &forceCastTypeMismatchError)
 						}
 					})
 				}
@@ -1450,7 +1465,8 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 				} else {
 					RequireError(t, err)
 
-					require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+					var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+					require.ErrorAs(t, err, &forceCastTypeMismatchError)
 				}
 			})
 		})
@@ -1462,18 +1478,20 @@ func TestInterpretDynamicCastingInclusiveRange(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterInclusiveRangeConstructor)
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, stdlib.InclusiveRangeConstructorFunction)
+	interpreter.Declare(baseActivation, stdlib.InterpreterInclusiveRangeConstructor)
 
 	options := ParseCheckAndInterpretOptions{
-		CheckerConfig: &sema.Config{
-			BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
-				return baseValueActivation
+		ParseAndCheckOptions: &ParseAndCheckOptions{
+			CheckerConfig: &sema.Config{
+				BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
 			},
 		},
-		Config: &interpreter.Config{
+		InterpreterConfig: &interpreter.Config{
 			BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
 				return baseActivation
 			},
@@ -1485,7 +1503,7 @@ func TestInterpretDynamicCastingInclusiveRange(t *testing.T) {
 		t.Run(operation.Symbol(), func(t *testing.T) {
 			t.Run("invalid cast", func(t *testing.T) {
 
-				inter, err := parseCheckAndInterpretWithOptions(t,
+				inter, err := parseCheckAndPrepareWithOptions(t,
 					fmt.Sprintf(
 						`
 							fun test(): InclusiveRange<UInt256>? {
@@ -1512,7 +1530,8 @@ func TestInterpretDynamicCastingInclusiveRange(t *testing.T) {
 				} else {
 					RequireError(t, err)
 
-					require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+					var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+					require.ErrorAs(t, err, &forceCastTypeMismatchError)
 				}
 			})
 		})
@@ -2334,7 +2353,8 @@ func testReferenceCastInvalid(t *testing.T, types, fromType, targetType string, 
 	case ast.OperationForceCast:
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -3440,12 +3460,14 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 			interpreter.Declare(baseActivation, capabilityValueDeclaration)
 
 			options := ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -3461,7 +3483,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 
 							t.Run(fmt.Sprintf("valid: from %s to %s", fromType, targetType), func(t *testing.T) {
 
-								inter, err := parseCheckAndInterpretWithOptions(t,
+								inter, err := parseCheckAndPrepareWithOptions(t,
 									fmt.Sprintf(
 										`
                                   struct S {}
@@ -3502,7 +3524,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 
 							t.Run(fmt.Sprintf("invalid: from %s to Capability<&%s>", fromType, otherType), func(t *testing.T) {
 
-								inter, err := parseCheckAndInterpretWithOptions(t,
+								inter, err := parseCheckAndPrepareWithOptions(t,
 									fmt.Sprintf(
 										`
                                   struct S {}
@@ -3533,7 +3555,8 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 								} else {
 									RequireError(t, err)
 
-									require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+									var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+									require.ErrorAs(t, err, &forceCastTypeMismatchError)
 								}
 							})
 						}
@@ -3642,7 +3665,8 @@ func TestInterpretDynamicCastingFunctionType(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 
 	t.Run("return type covariance", func(t *testing.T) {
@@ -3681,7 +3705,8 @@ func TestInterpretDynamicCastingFunctionType(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 
 	t.Run("bound function casting", func(t *testing.T) {
@@ -3753,7 +3778,8 @@ func TestInterpretDynamicCastingReferenceCasting(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		assert.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 
 	t.Run("nested in dictionary", func(t *testing.T) {
@@ -3776,7 +3802,8 @@ func TestInterpretDynamicCastingReferenceCasting(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		assert.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 
 	t.Run("use of storage reference", func(t *testing.T) {
@@ -3842,7 +3869,7 @@ func TestInterpretDynamicCastingReferenceCasting(t *testing.T) {
 
 				// StorageReferenceValue.ReferencedValue turns the ForceCastTypeMismatchError
 				// of the failed dereference into a DereferenceError
-				var dereferenceError interpreter.DereferenceError
+				var dereferenceError *interpreter.DereferenceError
 				require.ErrorAs(t, err, &dereferenceError)
 
 				assert.Equal(t, 22, dereferenceError.LocationRange.StartPosition().Line)
@@ -3974,7 +4001,19 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		assert.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		startPos := forceCastTypeMismatchError.LocationRange.StartPosition()
+		assert.Equal(
+			t,
+			ast.Position{
+				Offset: 56,
+				Line:   4,
+				Column: 17,
+			},
+			startPos,
+		)
 	})
 
 	t.Run("string as!", func(t *testing.T) {

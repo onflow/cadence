@@ -110,7 +110,7 @@ func NewAccountContractsValue(
 		methodGetter,
 		nil,
 		stringer,
-	)
+	).WithPrivateField(AccountTypePrivateAddressFieldName, address)
 
 	return accountContracts
 }

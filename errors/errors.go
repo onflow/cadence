@@ -32,6 +32,8 @@ func NewUnreachableError() InternalError {
 
 const InternalErrorMessagePrefix = "internal error:"
 
+const ErrorPrompt = "\nWas this error unhelpful?\nConsider suggesting an improvement here: https://github.com/onflow/cadence/issues.\n"
+
 // InternalError is an implementation error, e.g: an unreachable code path (UnreachableError).
 // A program should never throw an InternalError in an ideal world.
 //

@@ -28,13 +28,15 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+	"github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestInterpretPathCapability(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(t *testing.T, code string) (*interpreter.Interpreter, error) {
+	test := func(t *testing.T, code string) (common_utils.Invokable, error) {
 		borrowType := &sema.ReferenceType{
 			Type:          sema.StringType,
 			Authorization: sema.UnauthorizedAccess,
@@ -64,21 +66,22 @@ func TestInterpretPathCapability(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, value)
 
-		return parseCheckAndInterpretWithOptions(
+		return parseCheckAndPrepareWithOptions(
 			t,
 			code,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+					},
+				},
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
 				},
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
-					},
-				},
-				HandleCheckerError: nil,
 			},
 		)
 	}

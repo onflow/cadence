@@ -17074,7 +17074,7 @@ func TestDecodeFunctionTypeBackwardCompatibility(t *testing.T) {
 			TypeParameters: []cadence.TypeParameter{},
 			Parameters:     []cadence.Parameter{},
 			ReturnType:     cadence.VoidType,
-			Purity:         cadence.FunctionPurityUnspecified,
+			Purity:         cadence.FunctionPurityImpure,
 		},
 	}
 
@@ -17146,7 +17146,7 @@ func TestEncodeEventWithAttachment(t *testing.T) {
 }
 
 func exportEventFromScript(t *testing.T, script string) cadence.Event {
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var events []cadence.Event
 

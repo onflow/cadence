@@ -78,7 +78,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct S {
                         var foo: Int
 
@@ -113,12 +113,12 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				_, err = inter.Invoke("get", value)
 				RequireError(t, err)
 
-				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
+				var memberAccessTypeError *interpreter.MemberAccessTypeError
+				require.ErrorAs(t, err, &memberAccessTypeError)
 
 				_, err = inter.Invoke("set", value)
 				RequireError(t, err)
-
-				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
+				require.ErrorAs(t, err, &memberAccessTypeError)
 			})
 		})
 
@@ -159,7 +159,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct S {
                         let foo: Int
 
@@ -193,7 +193,8 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				)
 				RequireError(t, err)
 
-				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
+				var memberAccessTypeError *interpreter.MemberAccessTypeError
+				require.ErrorAs(t, err, &memberAccessTypeError)
 			})
 		})
 	})
@@ -245,7 +246,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct interface SI {
                         var foo: Int
                     }
@@ -284,12 +285,12 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				_, err = inter.Invoke("get", value)
 				RequireError(t, err)
 
-				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
+				var memberAccessTypeError *interpreter.MemberAccessTypeError
+				require.ErrorAs(t, err, &memberAccessTypeError)
 
 				_, err = inter.Invoke("set", value)
 				RequireError(t, err)
-
-				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
+				require.ErrorAs(t, err, &memberAccessTypeError)
 			})
 		})
 
@@ -334,7 +335,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct interface SI {
                         let foo: Int
                     }
@@ -372,7 +373,8 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				)
 				RequireError(t, err)
 
-				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
+				var memberAccessTypeError *interpreter.MemberAccessTypeError
+				require.ErrorAs(t, err, &memberAccessTypeError)
 			})
 		})
 	})
@@ -385,7 +387,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct S {
                         var foo: Int
 
@@ -430,7 +432,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct S {
                         var foo: Int
 
@@ -475,12 +477,12 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				_, err = inter.Invoke("get", ref)
 				RequireError(t, err)
 
-				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
+				var memberAccessTypeError *interpreter.MemberAccessTypeError
+				require.ErrorAs(t, err, &memberAccessTypeError)
 
 				_, err = inter.Invoke("set", ref)
 				RequireError(t, err)
-
-				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
+				require.ErrorAs(t, err, &memberAccessTypeError)
 			})
 		})
 
@@ -490,7 +492,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct S {
                         let foo: Int
 
@@ -533,7 +535,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct S {
                         let foo: Int
 
@@ -579,7 +581,8 @@ func TestInterpretMemberAccessType(t *testing.T) {
 				)
 				RequireError(t, err)
 
-				require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
+				var memberAccessTypeError *interpreter.MemberAccessTypeError
+				require.ErrorAs(t, err, &memberAccessTypeError)
 			})
 		})
 	})
@@ -725,7 +728,9 @@ func TestInterpretMemberAccess(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.NonOptionalReferenceToNilError{})
+
+		var referenceToNilError *interpreter.NonOptionalReferenceToNilError
+		require.ErrorAs(t, err, &referenceToNilError)
 	})
 
 	t.Run("composite reference, primitive field", func(t *testing.T) {
@@ -1059,6 +1064,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("resource reference, attachment", func(t *testing.T) {
 		t.Parallel()
 
+		// TODO: requires support for attachments in the VM
 		inter := parseCheckAndInterpret(t, `
             resource R {}
 
@@ -1080,6 +1086,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("attachment nested member", func(t *testing.T) {
 		t.Parallel()
 
+		// TODO: requires support for attachments in the VM
 		inter := parseCheckAndInterpret(t, `
             resource R {}
 
@@ -1120,7 +1127,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("anystruct swap on reference", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct Foo {
                 var array: [Int]
                 init() {
@@ -1251,7 +1258,8 @@ func TestInterpretNestedReferenceMemberAccess(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.InvalidMemberReferenceError{})
+		var invalidMemberReferenceError *interpreter.InvalidMemberReferenceError
+		require.ErrorAs(t, err, &invalidMemberReferenceError)
 	})
 
 	t.Run("field", func(t *testing.T) {
@@ -1277,7 +1285,8 @@ func TestInterpretNestedReferenceMemberAccess(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.InvalidMemberReferenceError{})
+		var invalidMemberReferenceError *interpreter.InvalidMemberReferenceError
+		require.ErrorAs(t, err, &invalidMemberReferenceError)
 	})
 
 	t.Run("referenceArray", func(t *testing.T) {

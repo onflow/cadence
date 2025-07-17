@@ -127,25 +127,36 @@ func (v PathValue) GetMethod(
 			v,
 			sema.ToStringFunctionType,
 			func(v PathValue, invocation Invocation) Value {
-				interpreter := invocation.InvocationContext
-
-				domainLength := len(v.Domain.Identifier())
-				identifierLength := len(v.Identifier)
-
-				memoryUsage := common.NewStringMemoryUsage(
-					safeAdd(domainLength, identifierLength, locationRange),
-				)
-
-				return NewStringValue(
-					interpreter,
-					memoryUsage,
-					v.String,
+				invocationContext := invocation.InvocationContext
+				return PathValueToStringFunction(
+					invocationContext,
+					v,
+					locationRange,
 				)
 			},
 		)
 	}
 
 	return nil
+}
+
+func PathValueToStringFunction(
+	memoryGauge common.MemoryGauge,
+	v PathValue,
+	locationRange LocationRange,
+) Value {
+	domainLength := len(v.Domain.Identifier())
+	identifierLength := len(v.Identifier)
+
+	memoryUsage := common.NewStringMemoryUsage(
+		safeAdd(domainLength, identifierLength, locationRange),
+	)
+
+	return NewStringValue(
+		memoryGauge,
+		memoryUsage,
+		v.String,
+	)
 }
 
 func (PathValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {

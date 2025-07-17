@@ -32,6 +32,7 @@ import (
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestInterpretMetaTypeEquality(t *testing.T) {
@@ -42,7 +43,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
            let result = Type<Int>() == Type<Int>()
         `)
 
@@ -50,7 +51,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.TrueValue,
-			inter.Globals.Get("result").GetValue(inter),
+			inter.GetGlobal("result"),
 		)
 	})
 
@@ -58,7 +59,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
            let result = Type<Int>() == Type<String>()
         `)
 
@@ -66,7 +67,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.FalseValue,
-			inter.Globals.Get("result").GetValue(inter),
+			inter.GetGlobal("result"),
 		)
 	})
 
@@ -74,7 +75,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
            let result = Type<Int>() == Type<Int?>()
         `)
 
@@ -82,7 +83,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.FalseValue,
-			inter.Globals.Get("result").GetValue(inter),
+			inter.GetGlobal("result"),
 		)
 	})
 
@@ -90,7 +91,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
            let result = Type<&Int>() == Type<&Int>()
         `)
 
@@ -98,7 +99,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.TrueValue,
-			inter.Globals.Get("result").GetValue(inter),
+			inter.GetGlobal("result"),
 		)
 	})
 
@@ -106,7 +107,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
            let result = Type<&Int>() == Type<&String>()
         `)
 
@@ -114,7 +115,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.FalseValue,
-			inter.Globals.Get("result").GetValue(inter),
+			inter.GetGlobal("result"),
 		)
 	})
 
@@ -137,17 +138,19 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               let result = Type<Int>() == unknownType
             `,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -160,7 +163,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.FalseValue,
-			inter.Globals.Get("result").GetValue(inter),
+			inter.GetGlobal("result"),
 		)
 	})
 
@@ -197,17 +200,19 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			interpreter.Declare(baseActivation, valueDeclaration)
 		}
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               let result = unknownType1 == unknownType2
             `,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -220,7 +225,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			t,
 			inter,
 			interpreter.FalseValue,
-			inter.Globals.Get("result").GetValue(inter),
+			inter.GetGlobal("result"),
 		)
 	})
 }
@@ -233,7 +238,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let type = Type<[Int]>()
           let identifier = type.identifier
         `)
@@ -242,7 +247,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("[Int]"),
-			inter.Globals.Get("identifier").GetValue(inter),
+			inter.GetGlobal("identifier"),
 		)
 	})
 
@@ -250,7 +255,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           struct S {}
 
           let type = Type<S>()
@@ -261,7 +266,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("S.test.S"),
-			inter.Globals.Get("identifier").GetValue(inter),
+			inter.GetGlobal("identifier"),
 		)
 	})
 
@@ -290,17 +295,19 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			interpreter.Declare(baseActivation, valueDeclaration)
 		}
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
               let identifier = unknownType.identifier
             `,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -313,7 +320,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue(""),
-			inter.Globals.Get("identifier").GetValue(inter),
+			inter.GetGlobal("identifier"),
 		)
 	})
 
@@ -323,7 +330,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 
 		// TypeValue.GetMember for `identifier` should not load the program
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
            fun test(_ type: Type): String {
                return type.identifier
            }
@@ -451,25 +458,30 @@ func TestInterpretIsInstance(t *testing.T) {
 
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
-			inter, err := parseCheckAndInterpretWithOptions(t, testCase.code, ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+			inter, err := parseCheckAndPrepareWithOptions(t,
+				testCase.code,
+				ParseCheckAndInterpretOptions{
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						CheckerConfig: &sema.Config{
+							BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+								return baseValueActivation
+							},
+						},
+					},
+					InterpreterConfig: &interpreter.Config{
+						BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+							return baseActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
-					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
-						return baseActivation
-					},
-				},
-			})
+			)
 			require.NoError(t, err)
 
 			AssertValuesEqual(
 				t,
 				inter,
 				interpreter.BoolValue(testCase.result),
-				inter.Globals.Get("result").GetValue(inter),
+				inter.GetGlobal("result"),
 			)
 		})
 	}
@@ -595,23 +607,28 @@ func TestInterpretMetaTypeIsSubtype(t *testing.T) {
 
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
-			inter, err := parseCheckAndInterpretWithOptions(t, testCase.code, ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+			inter, err := parseCheckAndPrepareWithOptions(t,
+				testCase.code,
+				ParseCheckAndInterpretOptions{
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						CheckerConfig: &sema.Config{
+							BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+								return baseValueActivation
+							},
+						},
+					},
+					InterpreterConfig: &interpreter.Config{
+						BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+							return baseActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
-					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
-						return baseActivation
-					},
-				},
-			})
+			)
 			require.NoError(t, err)
 
 			assert.Equal(t,
 				interpreter.BoolValue(testCase.result),
-				inter.Globals.Get("result").GetValue(inter),
+				inter.GetGlobal("result"),
 			)
 		})
 	}
@@ -867,7 +884,7 @@ func TestInterpretMetaTypeHashInput(t *testing.T) {
 
 	// TypeValue.HashInput should not load the program
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
        fun test(_ type: Type) {
            {type: 1}
        }
@@ -886,7 +903,7 @@ func TestInterpretBrokenMetaTypeUsage(t *testing.T) {
 
 	t.Parallel()
 
-	inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
+	inter, getLogs, err := parseCheckAndPrepareWithLogs(t, `
        fun test(type1: Type, type2: Type): [Type] {
            let dict = {type1: "a", type2: "b"}
            log(dict.keys.length)
@@ -946,7 +963,7 @@ func TestInterpretMetaTypeIsRecovered(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let type = Type<Int>()
           let isRecovered = type.isRecovered
         `)
@@ -955,7 +972,7 @@ func TestInterpretMetaTypeIsRecovered(t *testing.T) {
 			t,
 			inter,
 			interpreter.FalseValue,
-			inter.Globals.Get("isRecovered").GetValue(inter),
+			inter.GetGlobal("isRecovered"),
 		)
 	})
 
@@ -963,7 +980,7 @@ func TestInterpretMetaTypeIsRecovered(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           struct S {}
 
           let type = Type<S>()
@@ -974,7 +991,7 @@ func TestInterpretMetaTypeIsRecovered(t *testing.T) {
 			t,
 			inter,
 			interpreter.FalseValue,
-			inter.Globals.Get("isRecovered").GetValue(inter),
+			inter.GetGlobal("isRecovered"),
 		)
 	})
 
@@ -1003,17 +1020,19 @@ func TestInterpretMetaTypeIsRecovered(t *testing.T) {
 			interpreter.Declare(baseActivation, valueDeclaration)
 		}
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
 	         let isRecovered = unknownType.isRecovered
 	       `,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -1026,7 +1045,7 @@ func TestInterpretMetaTypeIsRecovered(t *testing.T) {
 			t,
 			inter,
 			interpreter.FalseValue,
-			inter.Globals.Get("isRecovered").GetValue(inter),
+			inter.GetGlobal("isRecovered"),
 		)
 	})
 
@@ -1034,20 +1053,25 @@ func TestInterpretMetaTypeIsRecovered(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
-	      fun test(_ type: Type): Bool {
-	          return type.isRecovered
-	      }
-	   `)
-
-		inter.SharedState.Config.ImportLocationHandler =
-			func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
-				elaboration := sema.NewElaboration(nil)
-				elaboration.IsRecovered = true
-				return interpreter.VirtualImport{
-					Elaboration: elaboration,
-				}
-			}
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+               fun test(_ type: Type): Bool {
+                   return type.isRecovered
+               }
+            `,
+			ParseCheckAndInterpretOptions{
+				InterpreterConfig: &interpreter.Config{
+					ImportLocationHandler: func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
+						elaboration := sema.NewElaboration(nil)
+						elaboration.IsRecovered = true
+						return interpreter.VirtualImport{
+							Elaboration: elaboration,
+						}
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
 
 		location := common.NewAddressLocation(nil, common.MustBytesToAddress([]byte{0x1}), "Foo")
 		staticType := interpreter.NewCompositeStaticTypeComputeTypeID(nil, location, "Foo.Bar")
@@ -1068,24 +1092,30 @@ func TestInterpretMetaTypeIsRecovered(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
-	      fun test(_ type: Type): Bool {
-	          return type.isRecovered
-	      }
-	   `)
-
 		importErr := errors.New("import failure")
 
-		inter.SharedState.Config.ImportLocationHandler =
-			func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
-				panic(importErr)
-			}
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+              fun test(_ type: Type): Bool {
+                  return type.isRecovered
+              }
+           `,
+			ParseCheckAndInterpretOptions{
+				InterpreterConfig: &interpreter.Config{
+					ImportLocationHandler: func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
+						panic(importErr)
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
 
 		location := common.NewAddressLocation(nil, common.MustBytesToAddress([]byte{0x1}), "Foo")
 		staticType := interpreter.NewCompositeStaticTypeComputeTypeID(nil, location, "Foo.Bar")
 		typeValue := interpreter.NewUnmeteredTypeValue(staticType)
 
-		_, err := inter.Invoke("test", typeValue)
+		_, err = inter.Invoke("test", typeValue)
+		require.Error(t, err)
 		require.ErrorIs(t, err, importErr)
 	})
 }
@@ -1098,7 +1128,7 @@ func TestInterpretMetaTypeAddress(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let type = Type<Int>()
           let address = type.address
         `)
@@ -1107,7 +1137,7 @@ func TestInterpretMetaTypeAddress(t *testing.T) {
 			t,
 			inter,
 			interpreter.Nil,
-			inter.Globals.Get("address").GetValue(inter),
+			inter.GetGlobal("address"),
 		)
 	})
 
@@ -1115,32 +1145,36 @@ func TestInterpretMetaTypeAddress(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
-          fun test(): Address? {
-              let type = CompositeType("A.0000000000000001.X.Y")!
-              return type.address
-          }
-        `)
-
 		addressLocation := common.AddressLocation{
 			Address: common.MustBytesToAddress([]byte{0x1}),
 			Name:    "X",
 		}
 
-		inter.SharedState.Config.ImportLocationHandler =
-			func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
-				elaboration := sema.NewElaboration(nil)
-				elaboration.SetCompositeType(
-					addressLocation.TypeID(nil, "X.Y"),
-					&sema.CompositeType{
-						Location: addressLocation,
-						Kind:     common.CompositeKindStructure,
+		inter, err := parseCheckAndPrepareWithOptions(t, `
+              fun test(): Address? {
+                  let type = CompositeType("A.0000000000000001.X.Y")!
+                  return type.address
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				InterpreterConfig: &interpreter.Config{
+					ImportLocationHandler: func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
+						elaboration := sema.NewElaboration(nil)
+						elaboration.SetCompositeType(
+							addressLocation.TypeID(nil, "X.Y"),
+							&sema.CompositeType{
+								Location: addressLocation,
+								Kind:     common.CompositeKindStructure,
+							},
+						)
+						return interpreter.VirtualImport{
+							Elaboration: elaboration,
+						}
 					},
-				)
-				return interpreter.VirtualImport{
-					Elaboration: elaboration,
-				}
-			}
+				},
+			},
+		)
+		require.NoError(t, err)
 
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -1159,29 +1193,33 @@ func TestInterpretMetaTypeAddress(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
-          fun test(): Address? {
-		      let type = CompositeType("S.test2.X.Y")!
-              return type.address
-          }
-        `)
-
 		stringLocation := common.StringLocation("test2")
 
-		inter.SharedState.Config.ImportLocationHandler =
-			func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
-				elaboration := sema.NewElaboration(nil)
-				elaboration.SetCompositeType(
-					stringLocation.TypeID(nil, "X.Y"),
-					&sema.CompositeType{
-						Location: stringLocation,
-						Kind:     common.CompositeKindStructure,
+		inter, err := parseCheckAndPrepareWithOptions(t, `
+              fun test(): Address? {
+		          let type = CompositeType("S.test2.X.Y")!
+                  return type.address
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				InterpreterConfig: &interpreter.Config{
+					ImportLocationHandler: func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
+						elaboration := sema.NewElaboration(nil)
+						elaboration.SetCompositeType(
+							stringLocation.TypeID(nil, "X.Y"),
+							&sema.CompositeType{
+								Location: stringLocation,
+								Kind:     common.CompositeKindStructure,
+							},
+						)
+						return interpreter.VirtualImport{
+							Elaboration: elaboration,
+						}
 					},
-				)
-				return interpreter.VirtualImport{
-					Elaboration: elaboration,
-				}
-			}
+				},
+			},
+		)
+		require.NoError(t, err)
 
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -1219,17 +1257,19 @@ func TestInterpretMetaTypeAddress(t *testing.T) {
 			interpreter.Declare(baseActivation, valueDeclaration)
 		}
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
 	         let address = unknownType.address
 	       `,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -1242,7 +1282,7 @@ func TestInterpretMetaTypeAddress(t *testing.T) {
 			t,
 			inter,
 			interpreter.Nil,
-			inter.Globals.Get("address").GetValue(inter),
+			inter.GetGlobal("address"),
 		)
 	})
 }
@@ -1255,7 +1295,7 @@ func TestInterpretMetaTypeContractName(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
           let type = Type<Int>()
           let contractName = type.contractName
         `)
@@ -1264,20 +1304,13 @@ func TestInterpretMetaTypeContractName(t *testing.T) {
 			t,
 			inter,
 			interpreter.Nil,
-			inter.Globals.Get("contractName").GetValue(inter),
+			inter.GetGlobal("contractName"),
 		)
 	})
 
 	t.Run("address location", func(t *testing.T) {
 
 		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-          fun test(): String? {
-              let type = CompositeType("A.0000000000000001.X.Y")!
-              return type.contractName
-          }
-        `)
 
 		addressLocation := common.AddressLocation{
 			Address: common.MustBytesToAddress([]byte{0x1}),
@@ -1297,21 +1330,32 @@ func TestInterpretMetaTypeContractName(t *testing.T) {
 		xType.SetNestedType("Y", yType)
 		yType.SetContainerType(xType)
 
-		inter.SharedState.Config.ImportLocationHandler =
-			func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
-				elaboration := sema.NewElaboration(nil)
-				elaboration.SetCompositeType(
-					addressLocation.TypeID(nil, "X"),
-					xType,
-				)
-				elaboration.SetCompositeType(
-					addressLocation.TypeID(nil, "X.Y"),
-					yType,
-				)
-				return interpreter.VirtualImport{
-					Elaboration: elaboration,
-				}
-			}
+		inter, err := parseCheckAndPrepareWithOptions(t, `
+              fun test(): String? {
+                  let type = CompositeType("A.0000000000000001.X.Y")!
+                  return type.contractName
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				InterpreterConfig: &interpreter.Config{
+					ImportLocationHandler: func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
+						elaboration := sema.NewElaboration(nil)
+						elaboration.SetCompositeType(
+							addressLocation.TypeID(nil, "X"),
+							xType,
+						)
+						elaboration.SetCompositeType(
+							addressLocation.TypeID(nil, "X.Y"),
+							yType,
+						)
+						return interpreter.VirtualImport{
+							Elaboration: elaboration,
+						}
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
 
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -1330,13 +1374,6 @@ func TestInterpretMetaTypeContractName(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
-          fun test(): String? {
-		      let type = CompositeType("S.test2.X.Y")!
-              return type.contractName
-          }
-        `)
-
 		stringLocation := common.StringLocation("test2")
 
 		yType := &sema.CompositeType{
@@ -1352,21 +1389,32 @@ func TestInterpretMetaTypeContractName(t *testing.T) {
 		xType.SetNestedType("Y", yType)
 		yType.SetContainerType(xType)
 
-		inter.SharedState.Config.ImportLocationHandler =
-			func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
-				elaboration := sema.NewElaboration(nil)
-				elaboration.SetCompositeType(
-					stringLocation.TypeID(nil, "X"),
-					xType,
-				)
-				elaboration.SetCompositeType(
-					stringLocation.TypeID(nil, "X.Y"),
-					yType,
-				)
-				return interpreter.VirtualImport{
-					Elaboration: elaboration,
-				}
-			}
+		inter, err := parseCheckAndPrepareWithOptions(t, `
+          fun test(): String? {
+		      let type = CompositeType("S.test2.X.Y")!
+              return type.contractName
+          }
+        `,
+			ParseCheckAndInterpretOptions{
+				InterpreterConfig: &interpreter.Config{
+					ImportLocationHandler: func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
+						elaboration := sema.NewElaboration(nil)
+						elaboration.SetCompositeType(
+							stringLocation.TypeID(nil, "X"),
+							xType,
+						)
+						elaboration.SetCompositeType(
+							stringLocation.TypeID(nil, "X.Y"),
+							yType,
+						)
+						return interpreter.VirtualImport{
+							Elaboration: elaboration,
+						}
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
 
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -1406,17 +1454,19 @@ func TestInterpretMetaTypeContractName(t *testing.T) {
 			interpreter.Declare(baseActivation, valueDeclaration)
 		}
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
 	         let contractName = unknownType.contractName
 	       `,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -1429,7 +1479,7 @@ func TestInterpretMetaTypeContractName(t *testing.T) {
 			t,
 			inter,
 			interpreter.Nil,
-			inter.Globals.Get("contractName").GetValue(inter),
+			inter.GetGlobal("contractName"),
 		)
 	})
 }

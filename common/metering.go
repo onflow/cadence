@@ -135,6 +135,7 @@ var (
 	TransferMemoryUsage          = NewConstantMemoryUsage(MemoryKindTransfer)
 	TypeAnnotationMemoryUsage    = NewConstantMemoryUsage(MemoryKindTypeAnnotation)
 	DictionaryEntryMemoryUsage   = NewConstantMemoryUsage(MemoryKindDictionaryEntry)
+	SwitchCaseMemoryUsage        = NewConstantMemoryUsage(MemoryKindSwitchCase)
 
 	// AST Declarations
 
@@ -352,6 +353,12 @@ var (
 	IntersectionStaticTypeStringMemoryUsage          = NewRawStringMemoryUsage(2)  // {}
 	IntersectionStaticTypeSeparatorStringMemoryUsage = NewRawStringMemoryUsage(2)  // ,
 	InclusiveRangeStaticTypeStringMemoryUsage        = NewRawStringMemoryUsage(16) // InclusiveRange<>
+
+	// Compiler
+
+	CompilerMemoryUsage         = NewConstantMemoryUsage(MemoryKindCompiler)
+	CompilerGlobalMemoryUsage   = NewConstantMemoryUsage(MemoryKindCompilerGlobal)
+	CompilerConstantMemoryUsage = NewConstantMemoryUsage(MemoryKindCompilerConstant)
 )
 
 func NewConstantMemoryUsage(kind MemoryKind) MemoryUsage {
@@ -937,5 +944,12 @@ func NewBigIntsWordSliceOperation(v *big.Int, o *big.Int) ComputationUsage {
 	return ComputationUsage{
 		Kind:      ComputationKindWordSliceOperation,
 		Intensity: uint64(minSliceLength(v.Bits(), o.Bits())),
+	}
+}
+
+func NewGoSliceMemoryUsages(length int) MemoryUsage {
+	return MemoryUsage{
+		Kind:   MemoryKindGoSliceLength,
+		Amount: uint64(length),
 	}
 }

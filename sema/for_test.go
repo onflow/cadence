@@ -86,7 +86,7 @@ func TestCheckForInclusiveRange(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterInclusiveRangeConstructor)
 
 	test := func(typ sema.Type) {
 		t.Run(typ.String(), func(t *testing.T) {
@@ -110,7 +110,7 @@ func TestCheckForInclusiveRange(t *testing.T) {
 
 			_, err := ParseAndCheckWithOptions(t, code,
 				ParseAndCheckOptions{
-					Config: &sema.Config{
+					CheckerConfig: &sema.Config{
 						BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
 							return baseValueActivation
 						},

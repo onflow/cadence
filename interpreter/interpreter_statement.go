@@ -374,7 +374,7 @@ func (interpreter *Interpreter) EmitEvent(
 
 	onEventEmitted := config.OnEventEmitted
 	if onEventEmitted == nil {
-		panic(EventEmissionUnavailableError{
+		panic(&EventEmissionUnavailableError{
 			LocationRange: locationRange,
 		})
 	}
@@ -447,14 +447,14 @@ func (interpreter *Interpreter) VisitRemoveStatement(removeStatement *ast.Remove
 
 	// we enforce this in the checker, but check defensively anyways
 	if !ok || !base.Kind.SupportsAttachments() {
-		panic(InvalidAttachmentOperationTargetError{
+		panic(&InvalidAttachmentOperationTargetError{
 			Value:         removeTarget,
 			LocationRange: locationRange,
 		})
 	}
 
 	if inIteration := interpreter.SharedState.inAttachmentIteration(base); inIteration {
-		panic(AttachmentIterationMutationError{
+		panic(&AttachmentIterationMutationError{
 			Value:         base,
 			LocationRange: locationRange,
 		})
@@ -635,10 +635,10 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) Stat
 	// Set right value to left target,
 	// and left value to right target
 
-	checkInvalidatedResourceOrResourceReference(rightValue, rightLocationRange, interpreter)
+	CheckInvalidatedResourceOrResourceReference(rightValue, rightLocationRange, interpreter)
 	transferredRightValue := TransferAndConvert(interpreter, rightValue, rightType, leftType, rightLocationRange)
 
-	checkInvalidatedResourceOrResourceReference(leftValue, leftLocationRange, interpreter)
+	CheckInvalidatedResourceOrResourceReference(leftValue, leftLocationRange, interpreter)
 	transferredLeftValue := TransferAndConvert(interpreter, leftValue, leftType, rightType, leftLocationRange)
 
 	leftGetterSetter.set(transferredRightValue)
@@ -653,7 +653,7 @@ func (interpreter *Interpreter) checkSwapValue(value Value, expression ast.Expre
 	}
 
 	if expression, ok := expression.(*ast.MemberExpression); ok {
-		panic(UseBeforeInitializationError{
+		panic(&UseBeforeInitializationError{
 			Name: expression.Identifier.Identifier,
 			LocationRange: LocationRange{
 				Location:    interpreter.Location,

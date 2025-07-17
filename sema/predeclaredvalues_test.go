@@ -35,7 +35,7 @@ func TestCheckPredeclaredValues(t *testing.T) {
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 
-	valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
+	valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
 		"foo",
 		&sema.FunctionType{
 			ReturnTypeAnnotation: sema.VoidTypeAnnotation,
@@ -52,7 +52,7 @@ func TestCheckPredeclaredValues(t *testing.T) {
             }
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},

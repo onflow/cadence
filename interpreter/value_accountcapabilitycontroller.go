@@ -215,13 +215,15 @@ func (v *AccountCapabilityControllerValue) GetMember(context MemberAccessibleCon
 		switch typedResult := result.(type) {
 		case deletionCheckedFunctionValue:
 			result = typedResult.FunctionValue
-		case FunctionValue:
+		case BoundFunctionValue,
+			*HostFunctionValue,
+			*InterpretedFunctionValue:
 			panic(errors.NewUnexpectedError("functions need to check deletion. Use newHostFunctionValue"))
 		}
 	}()
 
 	// NOTE: check if controller is already deleted
-	v.checkDeleted()
+	v.CheckDeleted()
 
 	switch name {
 	case sema.AccountCapabilityControllerTypeTagFieldName:
@@ -246,7 +248,7 @@ func (v *AccountCapabilityControllerValue) GetMethod(
 	name string,
 ) FunctionValue {
 	// NOTE: check if controller is already deleted
-	v.checkDeleted()
+	v.CheckDeleted()
 
 	switch name {
 	case sema.AccountCapabilityControllerTypeSetTagFunctionName:
@@ -261,7 +263,7 @@ func (v *AccountCapabilityControllerValue) GetMethod(
 		}
 		return v.deleteFunction
 
-		// NOTE: when adding new functions, ensure checkDeleted is called,
+		// NOTE: when adding new functions, ensure CheckDeleted is called,
 		// by e.g. using AccountCapabilityControllerValue.newHostFunction
 	}
 
@@ -280,7 +282,7 @@ func (v *AccountCapabilityControllerValue) SetMember(
 	value Value,
 ) bool {
 	// NOTE: check if controller is already deleted
-	v.checkDeleted()
+	v.CheckDeleted()
 
 	switch identifier {
 	case sema.AccountCapabilityControllerTypeTagFieldName:
@@ -306,7 +308,7 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 	locationRange LocationRange,
 ) ReferenceValue {
 
-	accountHandler := context.AccountHandler()
+	accountHandler := context.GetAccountHandlerFunc()
 	account := accountHandler(context, AddressValue(capabilityAddress))
 
 	// Account must be of `Account` type.
@@ -330,9 +332,9 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 	)
 }
 
-// checkDeleted checks if the controller is deleted,
+// CheckDeleted checks if the controller is deleted,
 // and panics if it is.
-func (v *AccountCapabilityControllerValue) checkDeleted() {
+func (v *AccountCapabilityControllerValue) CheckDeleted() {
 	if v.deleted {
 		panic(errors.NewDefaultUserError("controller is deleted"))
 	}
@@ -350,7 +352,7 @@ func (v *AccountCapabilityControllerValue) newHostFunctionValue(
 			funcType,
 			func(v *AccountCapabilityControllerValue, invocation Invocation) Value {
 				// NOTE: check if controller is already deleted
-				v.checkDeleted()
+				v.CheckDeleted()
 
 				return f(invocation)
 			},
@@ -396,4 +398,8 @@ func (v *AccountCapabilityControllerValue) newSetTagFunction(
 			return Void
 		},
 	)
+}
+
+func (v *AccountCapabilityControllerValue) SetDeleted() {
+	v.deleted = true
 }

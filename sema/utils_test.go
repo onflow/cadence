@@ -30,12 +30,12 @@ import (
 func ParseAndCheckWithPanic(t *testing.T, code string) (*sema.Checker, error) {
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.PanicFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterPanicFunction)
 
 	return ParseAndCheckWithOptions(t,
 		code,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},
@@ -56,7 +56,7 @@ func ParseAndCheckWithAny(t *testing.T, code string) (*sema.Checker, error) {
 	return ParseAndCheckWithOptions(t,
 		code,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseTypeActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseTypeActivation
 				},

@@ -1804,6 +1804,44 @@ func TestLexBlockComment(t *testing.T) {
 			},
 		)
 	})
+
+	t.Run("empty", func(t *testing.T) {
+		testLex(t,
+			`/**/`,
+			[]token{
+				{
+					Token: Token{
+						Type: TokenBlockCommentStart,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
+					},
+					Source: "/*",
+				},
+				{
+					Token: Token{
+						Type: TokenBlockCommentEnd,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
+					},
+					Source: "*/",
+				},
+				{
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+				},
+			},
+		)
+	})
+
 }
 
 func TestLexIntegerLiterals(t *testing.T) {
@@ -3094,4 +3132,21 @@ func TestLimit(t *testing.T) {
 
 	_, err := Lex([]byte(code), nil)
 	require.ErrorAs(t, err, &TokenLimitReachedError{})
+}
+
+func TestLexInvalidRune(t *testing.T) {
+
+	t.Parallel()
+
+	code := `"\(FFFF\`
+
+	tokens, err := Lex([]byte(code), nil)
+	require.NoError(t, err)
+
+	for {
+		token := tokens.Next()
+		if token.Type == TokenEOF {
+			break
+		}
+	}
 }

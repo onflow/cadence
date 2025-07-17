@@ -315,7 +315,7 @@ func TestCheckMemberNotDeclaredSecondaryError(t *testing.T) {
             let test: Test = Test()
             let x = test.foop()
         `, ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				SuggestionsEnabled: true,
 			},
 		})
@@ -361,7 +361,7 @@ func TestCheckMemberNotDeclaredSecondaryError(t *testing.T) {
             let test: Test = Test()
             let x = test.foop()
         `, ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				SuggestionsEnabled: true,
 			},
 		})
@@ -385,7 +385,7 @@ func TestCheckMemberNotDeclaredSecondaryError(t *testing.T) {
             let test: Test = Test()
             let x = test.foop()
         `, ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				SuggestionsEnabled: true,
 			},
 		})
@@ -409,7 +409,7 @@ func TestCheckMemberNotDeclaredSecondaryError(t *testing.T) {
             let test: Test = Test()
             let x = test.foop()
         `, ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				SuggestionsEnabled: true,
 			},
 		})

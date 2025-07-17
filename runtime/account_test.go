@@ -46,7 +46,7 @@ func TestRuntimeAccountKeyConstructor(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	script := []byte(`
         access(all) fun main(): AccountKey {
@@ -72,6 +72,7 @@ func TestRuntimeAccountKeyConstructor(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)
@@ -91,7 +92,7 @@ func TestRuntimeReturnPublicAccount(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	script := []byte(`
         access(all) fun main(): &Account {
@@ -108,13 +109,16 @@ func TestRuntimeReturnPublicAccount(t *testing.T) {
 		Storage:                      NewTestLedger(nil, nil),
 	}
 
+	nextScriptLocation := NewScriptLocationGenerator()
+
 	_, err := rt.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -124,7 +128,7 @@ func TestRuntimeReturnAuthAccount(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	script := []byte(`
         access(all) fun main(): auth(Storage) &Account {
@@ -141,13 +145,16 @@ func TestRuntimeReturnAuthAccount(t *testing.T) {
 		Storage:                      NewTestLedger(nil, nil),
 	}
 
+	nextScriptLocation := NewScriptLocationGenerator()
+
 	_, err := rt.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -164,7 +171,7 @@ func TestRuntimeStoreAccountAPITypes(t *testing.T) {
 		sema.PublicKeyType,
 	} {
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(fmt.Sprintf(`
             transaction {
@@ -184,6 +191,7 @@ func TestRuntimeStoreAccountAPITypes(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -229,7 +237,7 @@ type accountTestEnvironment struct {
 
 func newAccountTestEnv() accountTestEnvironment {
 	storage := newTestAccountKeyStorage()
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	rtInterface := newAccountKeyTestRuntimeInterface(storage)
 
 	addPublicKeyValidation(rtInterface, nil)
@@ -353,7 +361,8 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		)
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.OverflowError{})
+		var overflowError *interpreter.OverflowError
+		require.ErrorAs(t, err, &overflowError)
 	})
 
 	t.Run("get index overflow", func(t *testing.T) {
@@ -381,7 +390,8 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		)
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.OverflowError{})
+		var overflowError *interpreter.OverflowError
+		require.ErrorAs(t, err, &overflowError)
 	})
 
 	t.Run("revoke existing key", func(t *testing.T) {
@@ -553,7 +563,8 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		)
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.OverflowError{})
+		var overflowError *interpreter.OverflowError
+		require.ErrorAs(t, err, &overflowError)
 	})
 
 	t.Run("revoke index overflow", func(t *testing.T) {
@@ -581,7 +592,8 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		)
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.OverflowError{})
+		var overflowError *interpreter.OverflowError
+		require.ErrorAs(t, err, &overflowError)
 	})
 
 }
@@ -590,7 +602,7 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	pubKey1 := []byte{1, 2, 3}
 	pubKey1Value := newBytesValue(pubKey1)
@@ -639,6 +651,7 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 		Context{
 			Location:  nextTransactionLocation(),
 			Interface: runtimeInterface,
+			UseVM:     *compile,
 		},
 	)
 
@@ -897,7 +910,8 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 		_, err := test.executeScript(testEnv.runtime, testEnv.runtimeInterface)
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.OverflowError{})
+		var overflowError *interpreter.OverflowError
+		require.ErrorAs(t, err, &overflowError)
 	})
 
 	t.Run("get index overflow", func(t *testing.T) {
@@ -919,7 +933,8 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 		_, err := test.executeScript(testEnv.runtime, testEnv.runtimeInterface)
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.OverflowError{})
+		var overflowError *interpreter.OverflowError
+		require.ErrorAs(t, err, &overflowError)
 	})
 
 	t.Run("get revoked key", func(t *testing.T) {
@@ -1055,7 +1070,7 @@ func TestRuntimeHashAlgorithm(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	script := []byte(`
         access(all) fun main(): [HashAlgorithm?] {
@@ -1081,6 +1096,7 @@ func TestRuntimeHashAlgorithm(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1130,7 +1146,7 @@ func TestRuntimeSignatureAlgorithm(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	script := []byte(`
         access(all) fun main(): [SignatureAlgorithm?] {
@@ -1156,6 +1172,7 @@ func TestRuntimeSignatureAlgorithm(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1404,6 +1421,7 @@ func (test accountKeyTestCase) executeTransaction(
 		Context{
 			Interface: runtimeInterface,
 			Location:  location,
+			UseVM:     *compile,
 		},
 	)
 	return err
@@ -1424,6 +1442,7 @@ func (test accountKeyTestCase) executeScript(
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
+			UseVM:     *compile,
 		},
 	)
 
@@ -1451,7 +1470,7 @@ func TestRuntimePublicKey(t *testing.T) {
 	t.Parallel()
 
 	executeScript := func(code string, runtimeInterface Interface) (cadence.Value, error) {
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		value, err := rt.ExecuteScript(
 			Script{
@@ -1460,6 +1479,7 @@ func TestRuntimePublicKey(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -1563,7 +1583,9 @@ func TestRuntimePublicKey(t *testing.T) {
 				RequireError(t, err)
 
 				assert.ErrorAs(t, err, &errorToReturn)
-				assert.ErrorAs(t, err, &interpreter.InvalidPublicKeyError{})
+
+				var publicKeyError *interpreter.InvalidPublicKeyError
+				assert.ErrorAs(t, err, &publicKeyError)
 			}
 		}
 	})
@@ -1808,7 +1830,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 	t.Run("get existing contract", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             transaction {
@@ -1840,6 +1862,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -1850,7 +1873,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 	t.Run("get non-existing contract", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             transaction {
@@ -1882,6 +1905,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -1892,7 +1916,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 	t.Run("borrow existing contract", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		accountCodes := map[Location][]byte{}
 		var events []cadence.Event
@@ -1934,6 +1958,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1955,6 +1980,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1977,6 +2003,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1985,7 +2012,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 	t.Run("borrow existing contract with incorrect type", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		accountCodes := map[Location][]byte{}
 		var events []cadence.Event
@@ -2027,6 +2054,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2046,6 +2074,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2068,6 +2097,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2076,7 +2106,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 	t.Run("borrow existing contract interface", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		accountCodes := map[Location][]byte{}
 		var events []cadence.Event
@@ -2118,6 +2148,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2139,6 +2170,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2164,6 +2196,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2172,7 +2205,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 	t.Run("borrow existing contract with entitlement authorization", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		accountCodes := map[Location][]byte{}
 		var events []cadence.Event
@@ -2220,6 +2253,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2242,6 +2276,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.ErrorContains(t, err, "cannot borrow a reference with an authorization")
@@ -2250,7 +2285,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 	t.Run("borrow non-existing contract", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
@@ -2278,6 +2313,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -2286,7 +2322,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 	t.Run("get names", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             transaction {
@@ -2320,6 +2356,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -2330,7 +2367,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 	t.Run("update names", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             transaction {
@@ -2358,6 +2395,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -2369,7 +2407,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 	t.Run("update names through reference", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             transaction {
@@ -2400,6 +2438,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -2417,7 +2456,7 @@ func TestRuntimePublicAccountContracts(t *testing.T) {
 	t.Run("get existing contract", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             access(all) fun main(): [AnyStruct] {
@@ -2447,6 +2486,7 @@ func TestRuntimePublicAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -2475,7 +2515,7 @@ func TestRuntimePublicAccountContracts(t *testing.T) {
 	t.Run("get non-existing contract", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             access(all) fun main() {
@@ -2503,6 +2543,7 @@ func TestRuntimePublicAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -2513,7 +2554,7 @@ func TestRuntimePublicAccountContracts(t *testing.T) {
 	t.Run("get names", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             access(all) fun main(): &[String] {
@@ -2541,6 +2582,7 @@ func TestRuntimePublicAccountContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -2563,11 +2605,11 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 	t.Run("script", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             access(all) fun main(): UInt64 {
-                let acc = getAccount(0x02)
+                let acc = getAuthAccount<&Account>(0x02)
                 return acc.storage.used
             }
         `)
@@ -2578,13 +2620,16 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 			},
 		}
 
+		nextScriptLocation := NewScriptLocationGenerator()
+
 		result, err := rt.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{0x1},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -2595,7 +2640,7 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 	t.Run("incorrect arg type", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             access(all) fun main() {
@@ -2605,13 +2650,16 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 
 		runtimeInterface := &TestRuntimeInterface{}
 
+		nextScriptLocation := NewScriptLocationGenerator()
+
 		_, err := rt.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{0x1},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -2623,7 +2671,7 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 	t.Run("no args", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             access(all) fun main() {
@@ -2633,13 +2681,16 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 
 		runtimeInterface := &TestRuntimeInterface{}
 
+		nextScriptLocation := NewScriptLocationGenerator()
+
 		_, err := rt.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{0x1},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -2651,7 +2702,7 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 	t.Run("too many args", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             access(all) fun main() {
@@ -2661,13 +2712,16 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 
 		runtimeInterface := &TestRuntimeInterface{}
 
+		nextScriptLocation := NewScriptLocationGenerator()
+
 		_, err := rt.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{0x1},
+				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 		errs := RequireCheckerErrors(t, err, 1)
@@ -2678,7 +2732,7 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 	t.Run("transaction", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		script := []byte(`
             transaction {
@@ -2695,13 +2749,16 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 			},
 		}
 
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
 		err := rt.ExecuteTransaction(
 			Script{
 				Source: script,
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.TransactionLocation{0x1},
+				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 

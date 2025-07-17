@@ -119,9 +119,9 @@ func (e ExternalInterface) GetCode(location Location) (code []byte, err error) {
 
 func (e ExternalInterface) GetOrLoadProgram(
 	location Location,
-	load func() (*interpreter.Program, error),
+	load func() (*Program, error),
 ) (
-	program *interpreter.Program,
+	program *Program,
 	err error,
 ) {
 	errors.WrapPanic(func() {
@@ -130,21 +130,6 @@ func (e ExternalInterface) GetOrLoadProgram(
 	if err != nil {
 		err = interpreter.WrappedExternalError(err)
 	}
-	return
-}
-
-func (e ExternalInterface) SetInterpreterSharedState(state *interpreter.SharedState) {
-	errors.WrapPanic(func() {
-		e.Interface.SetInterpreterSharedState(state)
-	})
-	// No error to wrap
-}
-
-func (e ExternalInterface) GetInterpreterSharedState() (state *interpreter.SharedState) {
-	errors.WrapPanic(func() {
-		state = e.Interface.GetInterpreterSharedState()
-	})
-	// No error to wrap
 	return
 }
 

@@ -52,7 +52,7 @@ func NewUnmeteredEphemeralReferenceValue(
 	locationRange LocationRange,
 ) *EphemeralReferenceValue {
 	if reference, isReference := value.(ReferenceValue); isReference {
-		panic(NestedReferenceError{
+		panic(&NestedReferenceError{
 			Value:         reference,
 			LocationRange: locationRange,
 		})
@@ -355,20 +355,29 @@ func (v *EphemeralReferenceValue) Iterator(context ValueStaticTypeContext, locat
 	}
 
 	return &ReferenceValueIterator{
-		iterator: referencedIterable.Iterator(context, locationRange),
+		reference: v,
+		iterator:  referencedIterable.Iterator(context, locationRange),
 	}
 }
 
 type ReferenceValueIterator struct {
-	iterator ValueIterator
+	reference Value
+	iterator  ValueIterator
 }
 
 var _ ValueIterator = &ReferenceValueIterator{}
 
 func (i *ReferenceValueIterator) Next(context ValueIteratorContext, locationRange LocationRange) Value {
+	// Iterator implicitly captures the reference.
+	// Therefore, check whether the reference is valid, everytime the iterator is used.
+	CheckInvalidatedResourceOrResourceReference(i.reference, locationRange, context)
 	return i.iterator.Next(context, locationRange)
 }
 
 func (i *ReferenceValueIterator) HasNext(context ValueIteratorContext) bool {
 	return i.iterator.HasNext(context)
+}
+
+func (i *ReferenceValueIterator) ValueID() (atree.ValueID, bool) {
+	return i.iterator.ValueID()
 }

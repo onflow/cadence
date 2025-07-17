@@ -210,14 +210,7 @@ func assertConditionError(
 ) {
 	RequireError(t, err)
 
-	if *compile {
-		var conditionErr stdlib.PanicError
-		require.ErrorAs(t, err, &conditionErr)
-		require.ErrorContains(t, err, "pre/post condition failed")
-		return
-	}
-
-	var conditionErr interpreter.ConditionError
+	var conditionErr *interpreter.ConditionError
 	require.ErrorAs(t, err, &conditionErr)
 
 	assert.Equal(t,
@@ -234,14 +227,7 @@ func assertConditionErrorWithMessage(
 ) {
 	RequireError(t, err)
 
-	if *compile {
-		var conditionErr stdlib.PanicError
-		require.ErrorAs(t, err, &conditionErr)
-		require.ErrorContains(t, err, message)
-		return
-	}
-
-	var conditionErr interpreter.ConditionError
+	var conditionErr *interpreter.ConditionError
 	require.ErrorAs(t, err, &conditionErr)
 
 	assert.Equal(
@@ -677,7 +663,7 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 					tearDownCode,
 				),
 				ParseCheckAndInterpretOptions{
-					Config: &interpreter.Config{
+					InterpreterConfig: &interpreter.Config{
 						ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 						OnEventEmitted: func(
 							_ interpreter.ValueExportContext,
@@ -796,9 +782,9 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 		err    error
 		events int
 	}{
-		0: {interpreter.ConditionError{}, 0},
+		0: {&interpreter.ConditionError{}, 0},
 		1: {nil, 2},
-		2: {interpreter.ConditionError{}, 1},
+		2: {&interpreter.ConditionError{}, 1},
 	}
 
 	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
@@ -1249,7 +1235,7 @@ func TestInterpretIsInstanceCheckInPreCondition(t *testing.T) {
 				condition,
 			),
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 				},
 			},
@@ -1359,12 +1345,14 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
           }
         `,
 		ParseCheckAndInterpretOptions{
-			CheckerConfig: &sema.Config{
-				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-					return baseValueActivation
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 			},
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 					return baseActivation
 				},
@@ -1376,4 +1364,294 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 	_, err = inter.Invoke("test")
 	require.NoError(t, err)
 	require.True(t, checkCalled)
+}
+
+func TestInterpretInnerFunctionPreConditions(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("fail", func(t *testing.T) {
+
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t,
+			`
+              fun main(x: Int): Int {
+
+                  fun foo(_ y: Int): Int {
+                      pre {
+                          y == 0
+                      }
+                      return y
+                  }
+
+                  return foo(x)
+              }
+            `,
+		)
+
+		_, err := invokable.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(3))
+		assertConditionError(t, err, ast.ConditionKindPre)
+	})
+
+	t.Run("in nested local function, fail", func(t *testing.T) {
+
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t,
+			`
+              fun main(x: Int): Int {
+
+                  if true {
+                      if true {
+                          fun foo(_ y: Int): Int {
+                              pre {
+                                  y == 0
+                              }
+                              return y
+                          }
+                          return foo(x)
+                      }
+                  }
+
+                  return 0
+              }
+            `,
+		)
+
+		_, err := invokable.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(3))
+		assertConditionError(t, err, ast.ConditionKindPre)
+	})
+
+	t.Run("in local function, pass", func(t *testing.T) {
+
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t,
+			`
+              fun main(x: Int): Int {
+
+                  fun foo(_ y: Int): Int {
+                      pre {
+                          y != 0
+                      }
+                      return y
+                  }
+
+                  return foo(x)
+              }
+            `,
+		)
+
+		result, err := invokable.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(3))
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			result,
+		)
+	})
+}
+
+func TestInterpretInnerFunctionPostConditions(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("fail", func(t *testing.T) {
+
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t,
+			`
+              fun main(x: Int): Int {
+
+                  fun foo(_ y: Int): Int {
+                      post {
+                          y == 0
+                      }
+                      return y
+                  }
+
+                  return foo(x)
+              }
+            `,
+		)
+
+		_, err := invokable.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(3))
+		assertConditionError(t, err, ast.ConditionKindPost)
+	})
+
+	t.Run("in nested local function, fail", func(t *testing.T) {
+
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t,
+			`
+              fun main(x: Int): Int {
+
+                  if true {
+                      if true {
+                          fun foo(_ y: Int): Int {
+                              post {
+                                  y == 0
+                              }
+                              return y
+                          }
+                          return foo(x)
+                      }
+                  }
+
+                  return 0
+              }
+            `,
+		)
+
+		_, err := invokable.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(3))
+		assertConditionError(t, err, ast.ConditionKindPost)
+	})
+
+	t.Run("in local function, pass", func(t *testing.T) {
+
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t,
+			`
+              fun main(x: Int): Int {
+
+                  fun foo(_ y: Int): Int {
+                      post {
+                          y != 0
+                      }
+                      return y
+                  }
+
+                  return foo(x)
+              }
+            `,
+		)
+
+		result, err := invokable.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(3))
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			result,
+		)
+	})
+}
+
+func TestInterpretFunctionExpressionPreConditions(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("fail", func(t *testing.T) {
+
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t,
+			`
+              fun main(x: Int): Int {
+
+                  var foo = fun(_ y: Int): Int {
+                      pre {
+                          y == 0
+                      }
+                      return y
+                  }
+
+                  return foo(x)
+              }
+            `,
+		)
+
+		_, err := invokable.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(3))
+		assertConditionError(t, err, ast.ConditionKindPre)
+	})
+
+	t.Run("pass", func(t *testing.T) {
+
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t,
+			`
+              fun main(x: Int): Int {
+
+                  var foo = fun(_ y: Int): Int {
+                      pre {
+                          y != 0
+                      }
+                      return y
+                  }
+
+                  return foo(x)
+              }
+            `,
+		)
+
+		result, err := invokable.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(3))
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			result,
+		)
+	})
+}
+
+func TestInterpretFunctionExpressionPostConditions(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("fail", func(t *testing.T) {
+
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t,
+			`
+              fun main(x: Int): Int {
+
+                  var foo = fun(_ y: Int): Int {
+                      post {
+                          y == 0
+                      }
+                      return y
+                  }
+
+                  return foo(x)
+              }
+            `,
+		)
+
+		_, err := invokable.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(3))
+		assertConditionError(t, err, ast.ConditionKindPost)
+	})
+
+	t.Run("pass", func(t *testing.T) {
+
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t,
+			`
+              fun main(x: Int): Int {
+
+                  var foo = fun(_ y: Int): Int {
+                      post {
+                          y != 0
+                      }
+                      return y
+                  }
+
+                  return foo(x)
+              }
+            `,
+		)
+
+		result, err := invokable.Invoke("main", interpreter.NewUnmeteredIntValueFromInt64(3))
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			result,
+		)
+	})
 }

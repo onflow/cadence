@@ -52,9 +52,9 @@ func TestRuntimeContract(t *testing.T) {
 	}
 
 	runTest := func(t *testing.T, tc testCase) {
-		config := DefaultTestInterpreterConfig
+		t.Parallel()
 
-		runtime := NewTestInterpreterRuntimeWithConfig(config)
+		runtime := NewTestRuntime()
 
 		var loggedMessages []string
 
@@ -241,12 +241,12 @@ func TestRuntimeContract(t *testing.T) {
 
 			err := runtime.ExecuteTransaction(
 				Script{
-					Source:    addTx,
-					Arguments: nil,
+					Source: addTx,
 				},
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					UseVM:     *compile,
 				},
 			)
 
@@ -313,6 +313,7 @@ func TestRuntimeContract(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					UseVM:     *compile,
 				},
 			)
 			RequireError(t, err)
@@ -342,6 +343,7 @@ func TestRuntimeContract(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					UseVM:     *compile,
 				},
 			)
 			require.NoError(t, err)
@@ -386,6 +388,7 @@ func TestRuntimeContract(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					UseVM:     *compile,
 				},
 			)
 			require.NoError(t, err)
@@ -426,6 +429,7 @@ func TestRuntimeContract(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					UseVM:     *compile,
 				},
 			)
 
@@ -485,6 +489,7 @@ func TestRuntimeContract(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  nextTransactionLocation(),
+					UseVM:     *compile,
 				},
 			)
 			RequireError(t, err)
@@ -522,8 +527,6 @@ func TestRuntimeContract(t *testing.T) {
 	}
 
 	t.Run("valid contract, correct name", func(t *testing.T) {
-		t.Parallel()
-
 		runTest(t, testCase{
 			name:        "Test",
 			code:        `access(all) contract Test {}`,
@@ -534,8 +537,6 @@ func TestRuntimeContract(t *testing.T) {
 	})
 
 	t.Run("valid contract interface, correct name", func(t *testing.T) {
-		t.Parallel()
-
 		runTest(t, testCase{
 			name:        "Test",
 			code:        `access(all) contract interface Test {}`,
@@ -546,8 +547,6 @@ func TestRuntimeContract(t *testing.T) {
 	})
 
 	t.Run("valid contract, wrong name", func(t *testing.T) {
-		t.Parallel()
-
 		runTest(t, testCase{
 			name:        "XYZ",
 			code:        `access(all) contract Test {}`,
@@ -557,8 +556,6 @@ func TestRuntimeContract(t *testing.T) {
 	})
 
 	t.Run("valid contract interface, wrong name", func(t *testing.T) {
-		t.Parallel()
-
 		runTest(t, testCase{
 			name:        "XYZ",
 			code:        `access(all) contract interface Test {}`,
@@ -568,8 +565,6 @@ func TestRuntimeContract(t *testing.T) {
 	})
 
 	t.Run("invalid code", func(t *testing.T) {
-		t.Parallel()
-
 		runTest(t, testCase{
 			name:        "Test",
 			code:        `foo`,
@@ -579,8 +574,6 @@ func TestRuntimeContract(t *testing.T) {
 	})
 
 	t.Run("missing contract or contract interface", func(t *testing.T) {
-		t.Parallel()
-
 		runTest(t, testCase{
 			name:        "Test",
 			code:        ``,
@@ -590,8 +583,6 @@ func TestRuntimeContract(t *testing.T) {
 	})
 
 	t.Run("two contracts", func(t *testing.T) {
-		t.Parallel()
-
 		runTest(t, testCase{
 			name: "Test",
 			code: `
@@ -605,8 +596,6 @@ func TestRuntimeContract(t *testing.T) {
 	})
 
 	t.Run("two contract interfaces", func(t *testing.T) {
-		t.Parallel()
-
 		runTest(t, testCase{
 			name: "Test",
 			code: `
@@ -620,8 +609,6 @@ func TestRuntimeContract(t *testing.T) {
 	})
 
 	t.Run("contract and contract interface", func(t *testing.T) {
-		t.Parallel()
-
 		runTest(t, testCase{
 			name: "Test",
 			code: `
@@ -716,7 +703,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 		},
 	}
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
@@ -733,6 +720,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			})
 		require.NoError(t, err)
 	}
@@ -757,6 +745,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -782,6 +771,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -807,6 +797,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -817,7 +808,7 @@ func TestRuntimeContractInterfaceEventEmission(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployInterfaceTx := DeploymentTransaction("TestInterface", []byte(`
@@ -883,6 +874,7 @@ func TestRuntimeContractInterfaceEventEmission(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -894,6 +886,7 @@ func TestRuntimeContractInterfaceEventEmission(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -905,6 +898,7 @@ func TestRuntimeContractInterfaceEventEmission(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -953,7 +947,7 @@ func TestRuntimeContractInterfaceConditionEventEmission(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployInterfaceTx := DeploymentTransaction("TestInterface", []byte(`
@@ -1029,6 +1023,7 @@ func TestRuntimeContractInterfaceConditionEventEmission(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1040,6 +1035,7 @@ func TestRuntimeContractInterfaceConditionEventEmission(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1051,6 +1047,7 @@ func TestRuntimeContractInterfaceConditionEventEmission(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1130,7 +1127,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		deployTx := DeploymentTransaction("Foo", []byte(`access(all) contract Foo {}`))
 
@@ -1173,6 +1170,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1185,6 +1183,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1197,6 +1196,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1206,7 +1206,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		updateTx := []byte(`
 			transaction {
@@ -1242,6 +1242,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1256,6 +1257,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		RequireError(t, err)
@@ -1269,7 +1271,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		deployTx := DeploymentTransaction("Foo", []byte(`access(all) contract Foo {}`))
 
@@ -1300,6 +1302,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1314,6 +1317,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -1324,7 +1328,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 
 		t.Parallel()
 
-		rt := NewTestInterpreterRuntime()
+		rt := NewTestRuntime()
 
 		deployTx := DeploymentTransaction("Foo", []byte(`access(all) contract Foo {}`))
 
@@ -1361,6 +1365,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1377,10 +1382,12 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
 		RequireError(t, err)
+
 		var unexpectedError errors.UnexpectedError
 		require.ErrorAs(t, err, &unexpectedError)
 

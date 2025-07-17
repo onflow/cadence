@@ -501,11 +501,11 @@ const FromStringFunctionName = "fromString"
 func FromStringFunctionDocstring(ty Type) string {
 
 	builder := new(strings.Builder)
-	builder.WriteString(
-		fmt.Sprintf(
-			"Attempts to parse %s from a string. Returns `nil` on overflow or invalid input. Whitespace or invalid digits will return a nil value.\n",
-			ty.String(),
-		))
+	_, _ = fmt.Fprintf(
+		builder,
+		"Attempts to parse %s from a string. Returns `nil` on overflow or invalid input. Whitespace or invalid digits will return a nil value.\n",
+		ty.String(),
+	)
 
 	if IsSameTypeKind(ty, FixedPointType) {
 		builder.WriteString(
@@ -665,7 +665,14 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 }
 
 func HasToStringFunction(ty Type) bool {
-	return IsSubType(ty, NumberType) || IsSubType(ty, TheAddressType) || IsSubType(ty, PathType)
+	switch ty {
+	case CharacterType:
+		return true
+	default:
+		return IsSubType(ty, NumberType) ||
+			IsSubType(ty, TheAddressType) ||
+			IsSubType(ty, PathType)
+	}
 }
 
 // OptionalType represents the optional variant of another type
@@ -2050,8 +2057,10 @@ const (
 	UFix64TypeSize  uint = 8
 	Int128TypeSize  uint = 16
 	UInt128TypeSize uint = 16
+	Word128TypeSize uint = 16
 	Int256TypeSize  uint = 32
 	UInt256TypeSize uint = 32
+	Word256TypeSize uint = 32
 )
 
 const Fix64Scale = fixedpoint.Fix64Scale
@@ -3145,6 +3154,7 @@ var arrayDictionaryEntitlements = func() *EntitlementSet {
 	set.Add(MutateType)
 	set.Add(InsertType)
 	set.Add(RemoveType)
+	set.Minimize()
 	return set
 }()
 
@@ -3573,7 +3583,7 @@ func (arity *Arity) Equal(other *Arity) bool {
 type FunctionPurity int
 
 const (
-	FunctionPurityImpure = iota
+	FunctionPurityImpure FunctionPurity = iota
 	FunctionPurityView
 )
 
@@ -3598,6 +3608,11 @@ type FunctionType struct {
 	memberResolvers          map[string]MemberResolver
 	memberResolversOnce      sync.Once
 	IsConstructor            bool
+	// TypeFunctionType indicates that this function type is a "type function",
+	// a function that can have members (in a sense, "static" fields and functions).
+	// This is used for built-in functions like `Int`, `UInt8`, `String`, etc.
+	// which have members like `Int.fromString`, `UInt8.min`, `String.join`, etc.
+	TypeFunctionType Type
 }
 
 func NewSimpleFunctionType(
@@ -4468,7 +4483,8 @@ func init() {
 
 func NumberConversionFunctionType(numberType Type) *FunctionType {
 	return &FunctionType{
-		Purity: FunctionPurityView,
+		Purity:           FunctionPurityView,
+		TypeFunctionType: numberType,
 		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -4502,7 +4518,8 @@ func baseFunctionVariable(name string, ty *FunctionType, docString string) *Vari
 }
 
 var AddressConversionFunctionType = &FunctionType{
-	Purity: FunctionPurityView,
+	Purity:           FunctionPurityView,
+	TypeFunctionType: TheAddressType,
 	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -4713,11 +4730,6 @@ func init() {
 }
 
 // CompositeType
-
-type EnumInfo struct {
-	RawType Type
-	Cases   []string
-}
 
 type Conformance struct {
 	InterfaceType        *InterfaceType
@@ -5187,7 +5199,7 @@ func (t *CompositeType) isTypeIndexableType() bool {
 }
 
 func (t *CompositeType) TypeIndexingElementType(indexingType Type, _ func() ast.Range) (Type, error) {
-	var access Access = UnauthorizedAccess
+	var access = UnauthorizedAccess
 	switch attachment := indexingType.(type) {
 	case *CompositeType:
 		// when accessed on an owned value, the produced attachment reference is entitled to all the
@@ -7125,7 +7137,7 @@ func (t *ReferenceType) TypeIndexingElementType(indexingType Type, _ func() ast.
 		return nil, nil
 	}
 
-	var access Access = UnauthorizedAccess
+	var access = UnauthorizedAccess
 	switch indexingType.(type) {
 	case *CompositeType:
 		// attachment access on a composite reference yields a reference to the attachment entitled to the same
@@ -8032,7 +8044,10 @@ func IsNilType(ty Type) bool {
 	return true
 }
 
+const TransactionTypeName = "transaction"
+
 type TransactionType struct {
+	Location            common.Location
 	Fields              []string
 	PrepareParameters   []Parameter
 	Parameters          []Parameter
@@ -8077,15 +8092,15 @@ func (t *TransactionType) Tag() TypeTag {
 }
 
 func (*TransactionType) String() string {
-	return "Transaction"
+	return TransactionTypeName
 }
 
 func (*TransactionType) QualifiedString() string {
-	return "Transaction"
+	return TransactionTypeName
 }
 
-func (*TransactionType) ID() TypeID {
-	return "Transaction"
+func (t *TransactionType) ID() TypeID {
+	return t.Location.TypeID(nil, TransactionTypeName)
 }
 
 func (*TransactionType) Equal(other Type) bool {
@@ -8256,9 +8271,21 @@ func formatIntersectionType[T ~string](separator string, interfaceStrings []T) s
 	return result.String()
 }
 
+func formatIntersectionTypeWithSingleInterface[T ~string](interfaceString T) string {
+	var result strings.Builder
+	result.WriteByte('{')
+	result.WriteString(string(interfaceString))
+	result.WriteByte('}')
+	return result.String()
+}
+
 func FormatIntersectionTypeID[T ~string](interfaceTypeIDs []T) T {
 	slices.Sort(interfaceTypeIDs)
 	return T(formatIntersectionType("", interfaceTypeIDs))
+}
+
+func FormatIntersectionTypeIDWithSingleInterface[T ~string](interfaceTypeID T) T {
+	return T(formatIntersectionTypeWithSingleInterface(interfaceTypeID))
 }
 
 func (t *IntersectionType) string(separator string, typeFormatter func(Type) string) string {
@@ -8469,7 +8496,7 @@ func (t *IntersectionType) isTypeIndexableType() bool {
 }
 
 func (t *IntersectionType) TypeIndexingElementType(indexingType Type, _ func() ast.Range) (Type, error) {
-	var access Access = UnauthorizedAccess
+	var access = UnauthorizedAccess
 	switch attachment := indexingType.(type) {
 	case *CompositeType:
 		// when accessed on an owned value, the produced attachment reference is entitled to all the
@@ -8911,7 +8938,7 @@ var AccountKeyTypeAnnotation = NewTypeAnnotation(AccountKeyType)
 
 const PublicKeyTypeName = "PublicKey"
 const PublicKeyTypePublicKeyFieldName = "publicKey"
-const PublicKeyTypeSignAlgoFieldName = "signatureAlgorithm"
+const PublicKeyTypeSignatureAlgorithmFieldName = "signatureAlgorithm"
 const PublicKeyTypeVerifyFunctionName = "verify"
 const PublicKeyTypeVerifyPoPFunctionName = "verifyPoP"
 
@@ -8923,12 +8950,12 @@ const publicKeySignAlgoFieldDocString = `
 The signature algorithm to be used with the key
 `
 
-const publicKeyVerifyFunctionDocString = `
+const publicKeyTypeVerifyFunctionDocString = `
 Verifies a signature. Checks whether the signature was produced by signing
 the given tag and data, using this public key and the given hash algorithm
 `
 
-const publicKeyVerifyPoPFunctionDocString = `
+const publicKeyTypeVerifyPoPFunctionDocString = `
 Verifies the proof of possession of the private key.
 This function is only implemented if the signature algorithm
 of the public key is BLS (BLS_BLS12_381).
@@ -8954,21 +8981,21 @@ var PublicKeyType = func() *CompositeType {
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			publicKeyType,
-			PublicKeyTypeSignAlgoFieldName,
+			PublicKeyTypeSignatureAlgorithmFieldName,
 			SignatureAlgorithmType,
 			publicKeySignAlgoFieldDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			publicKeyType,
 			PublicKeyTypeVerifyFunctionName,
-			PublicKeyVerifyFunctionType,
-			publicKeyVerifyFunctionDocString,
+			PublicKeyTypeVerifyFunctionType,
+			publicKeyTypeVerifyFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			publicKeyType,
 			PublicKeyTypeVerifyPoPFunctionName,
-			PublicKeyVerifyPoPFunctionType,
-			publicKeyVerifyPoPFunctionDocString,
+			PublicKeyTypeVerifyPoPFunctionType,
+			publicKeyTypeVerifyPoPFunctionDocString,
 		),
 	}
 
@@ -8986,7 +9013,7 @@ var PublicKeyArrayType = &VariableSizedType{
 
 var PublicKeyArrayTypeAnnotation = NewTypeAnnotation(PublicKeyArrayType)
 
-var PublicKeyVerifyFunctionType = NewSimpleFunctionType(
+var PublicKeyTypeVerifyFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]Parameter{
 		{
@@ -9009,7 +9036,7 @@ var PublicKeyVerifyFunctionType = NewSimpleFunctionType(
 	BoolTypeAnnotation,
 )
 
-var PublicKeyVerifyPoPFunctionType = NewSimpleFunctionType(
+var PublicKeyTypeVerifyPoPFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]Parameter{
 		{

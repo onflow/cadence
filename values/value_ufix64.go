@@ -81,7 +81,7 @@ func (v UFix64Value) String() string {
 	return format.UFix64(uint64(v))
 }
 
-func (v UFix64Value) Negate(gauge common.Gauge) UFix64Value {
+func (v UFix64Value) Negate(_ common.Gauge) UFix64Value {
 	panic(errors.NewUnreachableError())
 }
 
@@ -182,14 +182,19 @@ func (v UFix64Value) Div(gauge common.Gauge, other UFix64Value) (UFix64Value, er
 		result := new(big.Int).Mul(a, sema.Fix64FactorBig)
 		result.Div(result, b)
 
+		if !result.IsUint64() {
+			return 0, OverflowError{}
+		}
+
 		return result.Uint64(), nil
 	}
 
 	return NewUFix64Value(gauge, valueGetter)
 }
 
-func (v UFix64Value) SaturatingDiv(gauge common.Gauge, other UFix64Value) (UFix64Value, error) {
-	return v.Div(gauge, other)
+func (v UFix64Value) SaturatingDiv(_ common.Gauge, _ UFix64Value) (UFix64Value, error) {
+	// UFix64 does not have a saturating division operation, see sema.UFix64Type
+	panic(errors.NewUnreachableError())
 }
 
 func (v UFix64Value) Mod(gauge common.Gauge, other UFix64Value) (UFix64Value, error) {

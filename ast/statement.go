@@ -554,14 +554,14 @@ var _ Statement = &AssignmentStatement{}
 
 func NewAssignmentStatement(
 	gauge common.MemoryGauge,
-	expression Expression,
+	target Expression,
 	transfer *Transfer,
 	value Expression,
 ) *AssignmentStatement {
 	common.UseMemory(gauge, common.AssignmentStatementMemoryUsage)
 
 	return &AssignmentStatement{
-		Target:   expression,
+		Target:   target,
 		Transfer: transfer,
 		Value:    value,
 	}
@@ -840,6 +840,20 @@ type SwitchCase struct {
 	Expression Expression
 	Statements []Statement
 	Range
+}
+
+func NewSwitchCase(
+	gauge common.MemoryGauge,
+	expression Expression,
+	statements []Statement,
+	astRange Range,
+) *SwitchCase {
+	common.UseMemory(gauge, common.SwitchCaseMemoryUsage)
+	return &SwitchCase{
+		Expression: expression,
+		Statements: statements,
+		Range:      astRange,
+	}
 }
 
 func (s *SwitchCase) MarshalJSON() ([]byte, error) {

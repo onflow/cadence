@@ -41,7 +41,7 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 	t.Parallel()
 
 	executeScript := func(code string, inter Interface) (cadence.Value, error) {
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 		return runtime.ExecuteScript(
 			Script{
 				Source: []byte(code),
@@ -49,6 +49,7 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 			Context{
 				Interface: inter,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 	}
@@ -166,7 +167,7 @@ func TestRuntimeHashingAlgorithmExport(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 	runtimeInterface := &TestRuntimeInterface{}
 	nextScriptLocation := NewScriptLocationGenerator()
 
@@ -186,6 +187,7 @@ func TestRuntimeHashingAlgorithmExport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -211,7 +213,7 @@ func TestRuntimeSignatureAlgorithmExport(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 	runtimeInterface := &TestRuntimeInterface{}
 	nextScriptLocation := NewScriptLocationGenerator()
 
@@ -231,6 +233,7 @@ func TestRuntimeSignatureAlgorithmExport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -256,7 +259,7 @@ func TestRuntimeSignatureAlgorithmImport(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 	runtimeInterface := &TestRuntimeInterface{
 		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(nil, b)
@@ -296,6 +299,7 @@ func TestRuntimeSignatureAlgorithmImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -333,7 +337,7 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 
 		storage := NewTestLedger(nil, nil)
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: storage,
 			OnHash: func(data []byte, tag string, hashAlgorithm HashAlgorithm) ([]byte, error) {
@@ -377,6 +381,7 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -405,7 +410,7 @@ func TestRuntimeBLSVerifyPoP(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	script := []byte(`
 
@@ -448,6 +453,7 @@ func TestRuntimeBLSVerifyPoP(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -460,11 +466,52 @@ func TestRuntimeBLSVerifyPoP(t *testing.T) {
 	assert.True(t, called)
 }
 
+func TestRuntimeBLSGetTypeAndIsInstance(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestRuntime()
+
+	script := []byte(`
+
+	  access(all) fun main(): Type {
+        assert(BLS.isInstance(Type<BLS>()))
+		return BLS.getType()
+	  }
+	`)
+
+	runtimeInterface := &TestRuntimeInterface{}
+
+	result, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.ScriptLocation{},
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		cadence.TypeValue{
+			StaticType: cadence.NewContractType(
+				nil,
+				stdlib.BLSTypeName,
+				[]cadence.Field{},
+				nil,
+			),
+		},
+		result,
+	)
+}
+
 func TestRuntimeBLSAggregateSignatures(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	script := []byte(`
 
@@ -498,13 +545,16 @@ func TestRuntimeBLSAggregateSignatures(t *testing.T) {
 		},
 	}
 
+	nextScriptLocation := NewScriptLocationGenerator()
+
 	result, err := runtime.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -529,7 +579,7 @@ func TestRuntimeBLSAggregatePublicKeys(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	script := []byte(`
 
@@ -574,13 +624,16 @@ func TestRuntimeBLSAggregatePublicKeys(t *testing.T) {
 	}
 	addPublicKeyValidation(runtimeInterface, nil)
 
+	nextScriptLocation := NewScriptLocationGenerator()
+
 	result, err := runtime.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -624,7 +677,7 @@ func TestRuntimeTraversingMerkleProof(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	script := []byte(`
         access(all) fun main(rootHash: [UInt8], address: [UInt8], accountProof: [[UInt8]]){
@@ -739,6 +792,7 @@ func TestRuntimeTraversingMerkleProof(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)

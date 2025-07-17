@@ -238,7 +238,7 @@ func TestCheckInvalidInvocationFunctionReturnType(t *testing.T) {
           let res = [f].reverse()
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},
@@ -273,7 +273,7 @@ func TestCheckInvalidTypeDefensiveCheck(t *testing.T) {
                   let res = invalid
                 `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 						return baseValueActivation
 					},

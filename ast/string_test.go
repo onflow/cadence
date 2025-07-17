@@ -20,12 +20,10 @@ package ast_test
 
 import (
 	"testing"
-	"testing/quick"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/parser"
 )
 
 func TestQuoteString(t *testing.T) {
@@ -72,28 +70,4 @@ func TestQuoteString(t *testing.T) {
 		`"\""`,
 		ast.QuoteString(`"`),
 	)
-}
-
-func TestStringQuick(t *testing.T) {
-
-	t.Parallel()
-
-	f := func(text string) bool {
-		res, errs := parser.ParseExpression(
-			nil,
-			[]byte(ast.QuoteString(text)),
-			parser.Config{},
-		)
-		if len(errs) > 0 {
-			return false
-		}
-		literal, ok := res.(*ast.StringExpression)
-		if !ok {
-			return false
-		}
-		return literal.Value == text
-	}
-	if err := quick.Check(f, nil); err != nil {
-		t.Error(err)
-	}
 }

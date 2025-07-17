@@ -134,7 +134,7 @@ func (v *StorageReferenceValue) dereference(context ValueStaticTypeContext, loca
 	}
 
 	if reference, isReference := referenced.(ReferenceValue); isReference {
-		panic(NestedReferenceError{
+		panic(&NestedReferenceError{
 			Value:         reference,
 			LocationRange: locationRange,
 		})
@@ -144,9 +144,9 @@ func (v *StorageReferenceValue) dereference(context ValueStaticTypeContext, loca
 		staticType := referenced.StaticType(context)
 
 		if !IsSubTypeOfSemaType(context, staticType, v.BorrowedType) {
-			semaType := MustConvertStaticToSemaType(staticType, context)
+			semaType := context.SemaTypeFromStaticType(staticType)
 
-			return nil, ForceCastTypeMismatchError{
+			return nil, &ForceCastTypeMismatchError{
 				ExpectedType:  v.BorrowedType,
 				ActualType:    semaType,
 				LocationRange: locationRange,
@@ -166,10 +166,10 @@ func (v *StorageReferenceValue) ReferencedValue(
 	if err == nil {
 		return referencedValue
 	}
-	if forceCastErr, ok := err.(ForceCastTypeMismatchError); ok {
+	if forceCastErr, ok := err.(*ForceCastTypeMismatchError); ok {
 		if errorOnFailedDereference {
 			// relay the type mismatch error with a dereference error context
-			panic(DereferenceError{
+			panic(&DereferenceError{
 				ExpectedType:  forceCastErr.ExpectedType,
 				ActualType:    forceCastErr.ActualType,
 				LocationRange: locationRange,
@@ -186,7 +186,7 @@ func (v *StorageReferenceValue) mustReferencedValue(
 ) Value {
 	referencedValue := v.ReferencedValue(context, locationRange, true)
 	if referencedValue == nil {
-		panic(DereferenceError{
+		panic(&DereferenceError{
 			Cause:         "no value is stored at this path",
 			LocationRange: locationRange,
 		})
@@ -210,17 +210,31 @@ func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, locat
 	}
 
 	// If the member is a function, it is always a bound-function.
-	// By default, bound functions create and hold an ephemeral reference (`SelfReference`).
-	// For storage references, replace this default one with the actual storage reference.
+	// By default, bound functions create and hold an ephemeral reference
+	// (in `BoundFunctionValue.SelfReference`).
+	// For storage references, replace this default one with a storage reference.
+	//
+	// However, we cannot use the storage reference as-is:
+	// Because we look up the member on the referenced value,
+	// we also must use its type as the borrowed type for the `SelfReference` type,
+	// because during invocation the bound function can only be invoked
+	// if the type of the dereferenced value at that time still matches
+	// the type of the dereferenced value at the time of binding (here).
+	//
+	// For example, imagine storing a value of type T (e.g. `String`),
+	// creating a reference with a supertype (e.g. `AnyStruct`),
+	// and then creating a bound function on it.
+	// Then, if we change the storage location to store a value of unrelated type U instead (e.g. `Int`),
+	// and invoke the bound function, the bound function is potentially invalid.
+	//
 	// It is not possible (or a lot of work), to create the bound function with the storage reference
 	// when it was created originally, because `getMember(referencedValue, ...)` doesn't know
 	// whether the member was accessed directly, or via a reference.
-	if boundFunction, isBoundFunction := member.(BoundFunctionValue); isBoundFunction {
-		boundFunction.SelfReference = v
-		return boundFunction
-	}
-
-	return member
+	return context.MaybeUpdateStorageReferenceMemberReceiver(
+		v,
+		referencedValue,
+		member,
+	)
 }
 
 func (v *StorageReferenceValue) GetMethod(
@@ -450,7 +464,7 @@ func forEachReference(
 		// The loop dereference the reference once, and hold onto that referenced-value.
 		// But the reference could get invalidated during the iteration, making that referenced-value invalid.
 		// So check the validity of the reference, before each iteration.
-		checkInvalidatedResourceOrResourceReference(reference, locationRange, context)
+		CheckInvalidatedResourceOrResourceReference(reference, locationRange, context)
 
 		if isResultReference {
 			value = getReferenceValue(

@@ -44,7 +44,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		script := []byte(`
           transaction(value: AnyStruct) {}
@@ -79,6 +79,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.TransactionLocation{},
+				UseVM:     *compile,
 			},
 		)
 		RequireError(t, err)
@@ -91,7 +92,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		script := []byte(`
           access(all) fun main(value: AnyStruct) {}
@@ -126,6 +127,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		RequireError(t, err)
