@@ -206,7 +206,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 			function = vm.NewNativeFunctionValue(
 				"bar",
 				functionType,
-				func(context *vm.Context, _ []bbq.StaticType, _ ...vm.Value) vm.Value {
+				func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, _ ...vm.Value) vm.Value {
 					return interpreter.NewUnmeteredIntValueFromInt64(2)
 				},
 			)
@@ -370,7 +370,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 			function = vm.NewNativeFunctionValue(
 				"bar",
 				functionType,
-				func(context *vm.Context, _ []bbq.StaticType, _ ...vm.Value) vm.Value {
+				func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, _ ...vm.Value) vm.Value {
 					return interpreter.NewUnmeteredIntValueFromInt64(2)
 				},
 			)
@@ -440,7 +440,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 			function = vm.NewNativeFunctionValue(
 				"bar",
 				functionType,
-				func(context *vm.Context, _ []bbq.StaticType, _ ...vm.Value) vm.Value {
+				func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, _ ...vm.Value) vm.Value {
 					return interpreter.NewUnmeteredIntValueFromInt64(2)
 				},
 			)
@@ -555,12 +555,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 			function = vm.NewNativeFunctionValue(
 				"B.c",
 				cType,
-				func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
-					var receiver interpreter.Value
-
-					// arg[0] is the receiver. Actual arguments starts from 1.
-					receiver, args = vm.SplitReceiverAndArgs(context, args)
-
+				func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
 					assert.Same(t, bValue, receiver)
 
 					require.Len(t, args, 1)
@@ -691,7 +686,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 			function = vm.NewNativeFunctionValue(
 				"B.c",
 				cType,
-				func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
+				func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, args ...vm.Value) vm.Value {
 					require.Fail(t, "function should have not been called")
 					return nil
 				},

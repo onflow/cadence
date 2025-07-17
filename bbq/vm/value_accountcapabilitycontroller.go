@@ -36,12 +36,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.AccountCapabilityControllerTypeSetTagFunctionName,
 			sema.AccountCapabilityControllerTypeSetTagFunctionType,
-			func(context *Context, _ []bbq.StaticType, args ...Value) Value {
-
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = SplitReceiverAndArgs(context, args)
+			func(context *Context, _ []bbq.StaticType, receiver Value, args ...Value) Value {
 
 				newTagValue, ok := args[0].(*interpreter.StringValue)
 				if !ok {
@@ -62,12 +57,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.AccountCapabilityControllerTypeDeleteFunctionName,
 			sema.AccountCapabilityControllerTypeDeleteFunctionType,
-			func(context *Context, _ []bbq.StaticType, args ...Value) Value {
-
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = SplitReceiverAndArgs(context, args) // nolint:staticcheck,ineffassign
+			func(context *Context, _ []bbq.StaticType, receiver Value, _ ...Value) Value {
 
 				v := getCheckedAccountCapabilityControllerReceiver(receiver)
 

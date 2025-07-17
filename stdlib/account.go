@@ -141,7 +141,7 @@ func NewVMAccountConstructor(creator AccountCreator) StandardLibraryValue {
 		accountFunctionName,
 		accountFunctionType,
 		accountFunctionDocString,
-		func(context *vm.Context, _ []bbq.StaticType, arguments ...interpreter.Value) interpreter.Value {
+		func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...interpreter.Value) interpreter.Value {
 
 			payer, ok := arguments[0].(interpreter.MemberAccessibleValue)
 			if !ok {
@@ -302,7 +302,7 @@ func NewVMGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
 		GetAuthAccountFunctionName,
 		GetAuthAccountFunctionType,
 		getAuthAccountFunctionDocString,
-		func(context *vm.Context, typeArguments []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
+		func(context *vm.Context, typeArguments []bbq.StaticType, receiver vm.Value, args ...vm.Value) interpreter.Value {
 			accountAddress, ok := args[0].(interpreter.AddressValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -690,11 +690,7 @@ func NewVMAccountKeysAddFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_KeysTypeAddFunctionName,
 			sema.Account_KeysTypeAddFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.SplitReceiverAndArgs(context, args)
+			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
 
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver)
@@ -840,11 +836,7 @@ func NewVMAccountKeysGetFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_KeysTypeGetFunctionName,
 			sema.Account_KeysTypeGetFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.SplitReceiverAndArgs(context, args)
+			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
 
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -943,11 +935,7 @@ func NewVMAccountKeysForEachFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_KeysTypeForEachFunctionName,
 			sema.Account_KeysTypeForEachFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.SplitReceiverAndArgs(context, args)
+			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
 
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -1111,11 +1099,7 @@ func NewVMAccountKeysRevokeFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_KeysTypeRevokeFunctionName,
 			sema.Account_KeysTypeRevokeFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.SplitReceiverAndArgs(context, args)
+			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
 
 				// Get address field from the receiver
 				addressValue := vm.GetAccountTypePrivateAddressValue(receiver)
@@ -1232,11 +1216,7 @@ func NewVMAccountInboxPublishFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_InboxTypePublishFunctionName,
 			sema.Account_InboxTypePublishFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.SplitReceiverAndArgs(context, args)
+			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
 
 				// Get address field from the receiver
 				providerValue := vm.GetAccountTypePrivateAddressValue(receiver)
@@ -1359,11 +1339,7 @@ func NewVMAccountInboxUnpublishFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_InboxTypeUnpublishFunctionName,
 			sema.Account_InboxTypeUnpublishFunctionType,
-			func(context *vm.Context, typeArguments []bbq.StaticType, args ...vm.Value) vm.Value {
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.SplitReceiverAndArgs(context, args)
+			func(context *vm.Context, typeArguments []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
 
 				// Get address field from the receiver
 				providerValue := vm.GetAccountTypePrivateAddressValue(receiver)
@@ -1506,11 +1482,7 @@ func NewVMAccountInboxClaimFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_InboxTypeClaimFunctionName,
 			sema.Account_InboxTypeClaimFunctionType,
-			func(context *vm.Context, typeArguments []bbq.StaticType, args ...vm.Value) vm.Value {
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.SplitReceiverAndArgs(context, args)
+			func(context *vm.Context, typeArguments []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
 
 				// Get address field from the receiver
 				recipientValue := vm.GetAccountTypePrivateAddressValue(receiver)
@@ -1723,11 +1695,7 @@ func NewVMAccountContractsGetFunction(provider AccountContractProvider) VMFuncti
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_ContractsTypeGetFunctionName,
 			sema.Account_ContractsTypeGetFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.SplitReceiverAndArgs(context, args)
+			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
 
 				// Get address field from the receiver
 				addressValue := vm.GetAccountTypePrivateAddressValue(receiver)
@@ -1833,12 +1801,7 @@ func NewVMAccountContractsBorrowFunction(handler AccountContractsHandler) VMFunc
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_ContractsTypeBorrowFunctionName,
 			sema.Account_ContractsTypeBorrowFunctionType,
-			func(context *vm.Context, typeArguments []bbq.StaticType, args ...vm.Value) vm.Value {
-
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.SplitReceiverAndArgs(context, args)
+			func(context *vm.Context, typeArguments []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
 
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -2047,12 +2010,7 @@ func newVMAccountContractsChangeFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			functionName,
 			functionType,
-			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
-
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.SplitReceiverAndArgs(context, args)
+			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
 
 				address := vm.GetAccountTypePrivateAddressValue(receiver)
 
@@ -2435,12 +2393,7 @@ func newVMAccountContractsTryUpdateFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_ContractsTypeTryUpdateFunctionName,
 			sema.Account_ContractsTypeTryUpdateFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) (deploymentResult vm.Value) {
-
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.SplitReceiverAndArgs(context, args)
+			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) (deploymentResult vm.Value) {
 
 				address := vm.GetAccountTypePrivateAddressValue(receiver)
 
@@ -2787,11 +2740,7 @@ func newVMAccountContractsRemoveFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_ContractsTypeRemoveFunctionName,
 			sema.Account_ContractsTypeRemoveFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.SplitReceiverAndArgs(context, args)
+			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) interpreter.Value {
 
 				// Get address field from the receiver
 				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver)
@@ -2957,7 +2906,7 @@ func NewVMGetAccountFunction(handler AccountHandler) StandardLibraryValue {
 		GetAccountFunctionName,
 		GetAccountFunctionType,
 		getAccountFunctionDocString,
-		func(context *vm.Context, _ []bbq.StaticType, arguments ...interpreter.Value) interpreter.Value {
+		func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...interpreter.Value) interpreter.Value {
 			address, ok := arguments[0].(interpreter.AddressValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -3140,11 +3089,7 @@ func NewVMAccountStorageCapabilitiesGetControllerFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeGetControllerFunctionName,
 			sema.Account_StorageCapabilitiesTypeGetControllerFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.SplitReceiverAndArgs(context, args)
+			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) interpreter.Value {
 
 				// Get address field from the receiver
 				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -3240,11 +3185,7 @@ func NewVMAccountStorageCapabilitiesGetControllersFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeGetControllersFunctionName,
 			sema.Account_StorageCapabilitiesTypeGetControllersFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.SplitReceiverAndArgs(context, args)
+			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) interpreter.Value {
 
 				// Get address field from the receiver
 				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -3376,11 +3317,7 @@ func NewVMAccountStorageCapabilitiesForEachControllerFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionName,
 			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.SplitReceiverAndArgs(context, args)
+			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) interpreter.Value {
 
 				// Get address field from the receiver
 				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -3548,11 +3485,7 @@ func NewVMAccountStorageCapabilitiesIssueFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeIssueFunctionName,
 			sema.Account_StorageCapabilitiesTypeIssueFunctionType,
-			func(context *vm.Context, typeArguments []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.SplitReceiverAndArgs(context, args)
+			func(context *vm.Context, typeArguments []bbq.StaticType, receiver vm.Value, args ...vm.Value) interpreter.Value {
 
 				// Get address field from the receiver
 				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -3653,11 +3586,7 @@ func NewVMAccountStorageCapabilitiesIssueWithTypeFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionName,
 			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.SplitReceiverAndArgs(context, args)
+			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) interpreter.Value {
 
 				// Get address field from the receiver
 				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -3859,11 +3788,7 @@ func NewVMAccountAccountCapabilitiesIssueFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_AccountCapabilitiesTypeIssueFunctionName,
 			sema.Account_AccountCapabilitiesTypeIssueFunctionType,
-			func(context *vm.Context, typeArguments []bbq.StaticType, args ...vm.Value) vm.Value {
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, _ = vm.SplitReceiverAndArgs(context, args)
+			func(context *vm.Context, typeArguments []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
 
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -3934,11 +3859,7 @@ func NewVMAccountAccountCapabilitiesIssueWithTypeFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_AccountCapabilitiesTypeIssueWithTypeFunctionName,
 			sema.Account_AccountCapabilitiesTypeIssueWithTypeFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.SplitReceiverAndArgs(context, args)
+			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
 
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -4626,11 +4547,7 @@ func NewVMAccountCapabilitiesPublishFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_CapabilitiesTypePublishFunctionName,
 			sema.Account_CapabilitiesTypePublishFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.SplitReceiverAndArgs(context, args)
+			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) interpreter.Value {
 
 				// Get address field from the receiver
 				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver)
@@ -4819,11 +4736,7 @@ func NewVMAccountCapabilitiesUnpublishFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_CapabilitiesTypeUnpublishFunctionName,
 			sema.Account_CapabilitiesTypeUnpublishFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.SplitReceiverAndArgs(context, args)
+			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) interpreter.Value {
 
 				// Get address field from the receiver
 				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver)
@@ -5160,11 +5073,7 @@ func NewVMAccountCapabilitiesGetFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			funcName,
 			funcType,
-			func(context *vm.Context, typeArguments []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.SplitReceiverAndArgs(context, args)
+			func(context *vm.Context, typeArguments []bbq.StaticType, receiver vm.Value, args ...vm.Value) interpreter.Value {
 
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver)
@@ -5398,11 +5307,7 @@ var VMAccountCapabilitiesExistsFunction = VMFunction{
 	FunctionValue: vm.NewNativeFunctionValue(
 		sema.Account_CapabilitiesTypeExistsFunctionName,
 		sema.Account_CapabilitiesTypeExistsFunctionType,
-		func(context *vm.Context, _ []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
-			var receiver interpreter.Value
-
-			// arg[0] is the receiver. Actual arguments starts from 1.
-			receiver, args = vm.SplitReceiverAndArgs(context, args)
+		func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) interpreter.Value {
 
 			// Get address field from the receiver
 			accountAddress := vm.GetAccountTypePrivateAddressValue(receiver)
@@ -5525,11 +5430,7 @@ func NewVMAccountAccountCapabilitiesGetControllerFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_AccountCapabilitiesTypeGetControllerFunctionName,
 			sema.Account_AccountCapabilitiesTypeGetControllerFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.SplitReceiverAndArgs(context, args)
+			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) interpreter.Value {
 
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -5602,12 +5503,7 @@ func NewVMAccountAccountCapabilitiesGetControllersFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_AccountCapabilitiesTypeGetControllersFunctionName,
 			sema.Account_AccountCapabilitiesTypeGetControllersFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
-
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, _ = vm.SplitReceiverAndArgs(context, args)
+			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) interpreter.Value {
 
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
@@ -5733,11 +5629,7 @@ func NewVMAccountAccountCapabilitiesForEachControllerFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_AccountCapabilitiesTypeForEachControllerFunctionName,
 			sema.Account_AccountCapabilitiesTypeForEachControllerFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, args ...interpreter.Value) interpreter.Value {
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = vm.SplitReceiverAndArgs(context, args)
+			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) interpreter.Value {
 
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()

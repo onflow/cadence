@@ -40,10 +40,9 @@ func init() {
 		NewNativeFunctionValue(
 			sema.DeployedContractTypePublicTypesFunctionName,
 			sema.DeployedContractTypePublicTypesFunctionType,
-			func(context *Context, _ []bbq.StaticType, args ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, receiver Value, _ ...Value) Value {
 
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				deployedContract, args := SplitTypedReceiverAndArgs[*interpreter.SimpleCompositeValue](context, args) // nolint:staticcheck,ineffassign
+				deployedContract := receiver.(*interpreter.SimpleCompositeValue)
 
 				addressFieldValue := deployedContract.GetMember(
 					context,

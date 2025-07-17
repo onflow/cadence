@@ -37,8 +37,8 @@ func init() {
 				dictionaryType := dictionaryType(receiver, context)
 				return sema.DictionaryRemoveFunctionType(dictionaryType)
 			},
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				dictionary, arguments := SplitTypedReceiverAndArgs[*interpreter.DictionaryValue](context, arguments)
+			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
+				dictionary := receiver.(*interpreter.DictionaryValue)
 				key := arguments[0]
 				return dictionary.Remove(context, EmptyLocationRange, key)
 			},
@@ -53,8 +53,8 @@ func init() {
 				dictionaryType := dictionaryType(receiver, context)
 				return sema.DictionaryInsertFunctionType(dictionaryType)
 			},
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				dictionary, arguments := SplitTypedReceiverAndArgs[*interpreter.DictionaryValue](context, arguments)
+			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
+				dictionary := receiver.(*interpreter.DictionaryValue)
 				keyValue := arguments[0]
 				newValue := arguments[1]
 
@@ -76,8 +76,8 @@ func init() {
 				dictionaryType := dictionaryType(receiver, context)
 				return sema.DictionaryContainsKeyFunctionType(dictionaryType)
 			},
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				dictionary, arguments := SplitTypedReceiverAndArgs[*interpreter.DictionaryValue](context, arguments)
+			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
+				dictionary := receiver.(*interpreter.DictionaryValue)
 				key := arguments[0]
 				return dictionary.ContainsKey(
 					context,
@@ -97,8 +97,8 @@ func init() {
 				dictionaryType := dictionaryValue.SemaType(context)
 				return sema.DictionaryRemoveFunctionType(dictionaryType)
 			},
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				dictionary, arguments := SplitTypedReceiverAndArgs[*interpreter.DictionaryValue](context, arguments)
+			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
+				dictionary := receiver.(*interpreter.DictionaryValue)
 				funcArgument := arguments[0].(FunctionValue)
 				dictionary.ForEachKey(
 					context,

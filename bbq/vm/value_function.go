@@ -165,7 +165,12 @@ func (v CompiledFunctionValue) Invoke(invocation interpreter.Invocation) interpr
 	)
 }
 
-type NativeFunction func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value
+type NativeFunction func(
+	context *Context,
+	typeArguments []bbq.StaticType,
+	receiver Value,
+	arguments ...Value,
+) Value
 
 type NativeFunctionValue struct {
 	Name     string
@@ -535,7 +540,7 @@ func (v *BoundFunctionValue) initializeFunctionType(context interpreter.ValueSta
 	// Or would needs to be derived based on the receiver (e.g: `[Int8].append()`).
 	if method.HasGenericType() {
 		v.functionType = method.ResolvedFunctionType(
-			v.receiver(context),
+			v.DereferencedReceiver(context),
 			context,
 		)
 	} else {
@@ -556,7 +561,7 @@ func (v *BoundFunctionValue) Invoke(invocation interpreter.Invocation) interpret
 	)
 }
 
-func (v *BoundFunctionValue) receiver(context interpreter.ValueStaticTypeContext) Value {
+func (v *BoundFunctionValue) DereferencedReceiver(context interpreter.ValueStaticTypeContext) Value {
 	receiver := interpreter.GetReceiver(
 		v.ReceiverReference,
 		v.receiverIsReference,
@@ -567,7 +572,7 @@ func (v *BoundFunctionValue) receiver(context interpreter.ValueStaticTypeContext
 	return maybeDereference(context, *receiver)
 }
 
-func (v *BoundFunctionValue) Receiver(context interpreter.ReferenceCreationContext) Value {
-	receiverValue := v.receiver(context)
+func (v *BoundFunctionValue) Receiver(context interpreter.ReferenceCreationContext) ImplicitReferenceValue {
+	receiverValue := v.DereferencedReceiver(context)
 	return NewImplicitReferenceValue(context, receiverValue)
 }
