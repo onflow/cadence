@@ -1962,7 +1962,7 @@ func parseSpecialFunctionDeclaration(
 		var endPos ast.Position
 		if functionBlock != nil {
 			// Add 1 to include the closing brace in the range
-			endPos = functionBlock.EndPosition(p.memoryGauge).Shifted(p.memoryGauge, 1)
+			endPos = functionBlock.EndPosition(p.memoryGauge)
 		} else {
 			endPos = identifier.Pos // fallback
 		}
