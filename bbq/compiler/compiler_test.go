@@ -8858,11 +8858,15 @@ func TestCompileAttachments(t *testing.T) {
 		checker, err := ParseAndCheck(t, `
 			struct S {}
 			attachment A for S {
-				fun foo(): Int { return 3 }
+				let x: Int
+				init(x: Int) {
+					self.x = x
+				}
+				fun foo(): Int { return self.x }
 			}
 			fun test(): Int {
 				var s = S()
-				s = attach A() to s
+				s = attach A(x: 3) to s
 				return s[A]?.foo()!
 			}
 		`)
@@ -8900,7 +8904,7 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionSetLocal{Local: sLocalIndex},
 
-				// STATEMENT: s = attach A() to s
+				// STATEMENT: s = attach A(x:3) to s
 				opcode.InstructionStatement{},
 				// get s on stack
 				opcode.InstructionGetLocal{Local: sLocalIndex},
@@ -8912,6 +8916,9 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.InstructionSetLocal{Local: sRefLocalIndex},
 				// get A constructor
 				opcode.InstructionGetGlobal{Global: aConstructorGlobalIndex},
+				// get 3
+				opcode.InstructionGetConstant{Constant: 0x0},
+				opcode.InstructionTransferAndConvert{Type: 0x2},
 				// get s reference
 				opcode.InstructionGetLocal{Local: sRefLocalIndex},
 				// invoke A constructor with &s as arg, puts A on stack
@@ -8946,6 +8953,72 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.InstructionTransferAndConvert{Type: 4},
 				opcode.InstructionReturnValue{},
 			},
+			functions[0].Code,
+		)
+
+		// `A` init
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// create attachment
+				opcode.InstructionNew{Kind: 0x6, Type: 0x3},
+				// set returnLocalIndex to attachment
+				opcode.InstructionSetLocal{Local: 0x3},
+				// get a reference to attachment
+				opcode.InstructionGetLocal{Local: 0x3},
+				opcode.InstructionNewRef{Type: 0x3, IsImplicit: false},
+				// set self to be the reference
+				opcode.InstructionSetLocal{Local: 0x1},
+
+				// self.x = x
+				opcode.InstructionStatement{},
+				// get self
+				opcode.InstructionGetLocal{Local: 0x1},
+				// get x
+				opcode.InstructionGetLocal{Local: 0x0},
+				opcode.InstructionTransferAndConvert{Type: 0x2},
+				// set self.x = x
+				opcode.InstructionSetField{FieldName: 0x1, AccessedType: 0x8},
+				// return created attachment (returnLocalIndex)
+				opcode.InstructionGetLocal{Local: 0x3},
+				opcode.InstructionReturnValue{},
+			},
+			functions[4].Code,
+		)
+	})
+
+	t.Run("test", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			struct S {
+                fun bar(): Int? {
+                    return self[A]?.bar()
+                }
+            }
+            attachment A for S {
+                let x: Int?
+                fun foo(): Int? { return self.x }
+                fun bar(): Int { return 3 }
+                init() { self.x = base.bar() }
+            }
+            fun test(): Int? {
+                var s = S()
+                var s2 = attach A() to s
+                return s2[A]?.foo()!
+            }
+		`)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+
+		assert.Equal(t,
+			[]opcode.Instruction{},
 			functions[0].Code,
 		)
 	})

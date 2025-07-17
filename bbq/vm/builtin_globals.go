@@ -344,6 +344,10 @@ func registerBuiltinCommonTypeBoundFunctions() {
 	for _, function := range commonBuiltinTypeBoundFunctions {
 		IndexedCommonBuiltinTypeBoundFunctions[function.Name] = function
 	}
+
+	for _, function := range compositeBuiltInFunctions {
+		IndexedCommonBuiltinTypeBoundFunctions[function.Name] = function
+	}
 }
 
 func registerBuiltinTypeBoundFunctions(
@@ -355,6 +359,34 @@ func registerBuiltinTypeBoundFunctions(
 			boundFunction,
 		)
 	}
+}
+
+// Build-in functions for composites
+var compositeBuiltInFunctions = []*NativeFunctionValue{
+	// `forEachAttachment` function
+	NewNativeFunctionValueWithDerivedType(
+		sema.CompositeForEachAttachmentFunctionName,
+		func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+			compositeValue := receiver.(*interpreter.CompositeValue)
+			compositeType := interpreter.MustSemaTypeOfValue(compositeValue, context).(*sema.CompositeType)
+
+			return sema.CompositeForEachAttachmentFunctionType(
+				compositeType.GetCompositeKind(),
+			)
+		},
+		func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
+			value := args[ReceiverIndex]
+			compositeValue := value.(*interpreter.CompositeValue)
+
+			functionValue, ok := args[1].(FunctionValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			compositeValue.ForEachAttachment(context, EmptyLocationRange, functionValue)
+			return interpreter.Void
+		},
+	),
 }
 
 // Built-in functions that are common to all the types.
