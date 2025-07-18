@@ -1072,7 +1072,6 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 	if expression != nil {
 		// (1) Return with a value
 
-		// TODO: copy
 		c.compileExpression(expression)
 
 		// End active iterators *after* the expression is compiled.
@@ -1189,8 +1188,6 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 			elseJump = c.emitUndefinedJumpIfFalse()
 
 		case *ast.VariableDeclaration:
-			// TODO: second value
-
 			// Compile the value expression *before* declaring the variable
 			c.compileExpression(test.Value)
 
@@ -2183,8 +2180,6 @@ func (c *Compiler[_, _]) emitVariableStore(name string) {
 }
 
 func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExpression) (_ struct{}) {
-	// TODO: copy
-
 	invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(expression)
 
 	argumentCount := len(expression.Arguments)
@@ -2648,7 +2643,6 @@ func (c *Compiler[_, _]) VisitUnaryExpression(expression *ast.UnaryExpression) (
 
 func (c *Compiler[_, _]) VisitBinaryExpression(expression *ast.BinaryExpression) (_ struct{}) {
 	c.compileExpression(expression.Left)
-	// TODO: add support for other types
 
 	switch expression.Operation {
 	case ast.OperationNilCoalesce:
@@ -2921,7 +2915,6 @@ func (c *Compiler[_, _]) VisitSpecialFunctionDeclaration(declaration *ast.Specia
 	case common.DeclarationKindDestructorLegacy, common.DeclarationKindPrepare:
 		c.compileDeclaration(declaration.FunctionDeclaration)
 	default:
-		// TODO: support other special functions
 		panic(errors.NewUnreachableError())
 	}
 	return
@@ -3275,14 +3268,6 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location)
 
 	for _, function := range importedProgram.Functions {
 		name := function.QualifiedName
-
-		//// TODO: Skip the contract initializer.
-		//// It should never be able to invoked within the code.
-		//if isContract && name == commons.InitFunctionName {
-		//	continue
-		//}
-
-		// TODO: Filter-in only public functions
 		c.addImportedGlobal(location, name)
 	}
 
@@ -3293,12 +3278,14 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location)
 }
 
 func (c *Compiler[_, _]) VisitTransactionDeclaration(_ *ast.TransactionDeclaration) (_ struct{}) {
-	// TODO
+	// Transaction declaration are desugared to composite declarations.
+	// So this should never reach.
 	panic(errors.NewUnreachableError())
 }
 
 func (c *Compiler[_, _]) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) (_ struct{}) {
-	// TODO
+	// Enum cases are desugared to variable declarations.
+	// So this should never reach.
 	panic(errors.NewUnreachableError())
 }
 
