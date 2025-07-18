@@ -663,7 +663,7 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 	if vmConfig.ContractValueHandler == nil {
 		// TODO: generalize this
 		if len(program.Contracts) == 1 {
-			vmConfig.ContractValueHandler = contractValueHandler(program.Contracts[0].Name)
+			vmConfig.ContractValueHandler = ContractValueHandler(program.Contracts[0].Name)
 		}
 	}
 
@@ -681,7 +681,7 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 	return programVM, nil
 }
 
-func contractValueHandler(contractName string, arguments ...vm.Value) vm.ContractValueHandler {
+func ContractValueHandler(contractName string, arguments ...vm.Value) vm.ContractValueHandler {
 	return func(context *vm.Context, location common.Location) *interpreter.CompositeValue {
 		contractInitializerName := commons.QualifiedName(contractName, commons.InitFunctionName)
 		contractInitializer := context.GetFunction(location, contractInitializerName)

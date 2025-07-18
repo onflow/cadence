@@ -27,6 +27,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -67,22 +68,29 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 	t.Run("SomeValue(SomeValue(ArrayValue(...)))", func(t *testing.T) {
 		storage := newUnmeteredInMemoryStorage()
 
-		inter, err := interpreter.NewInterpreter(
-			&interpreter.Program{
-				Program:     ast.NewProgram(nil, []ast.Declaration{}),
-				Elaboration: sema.NewElaboration(nil),
-			},
-			TestLocation,
-			&interpreter.Config{
-				Storage: storage,
-				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-					return interpreter.VirtualImport{
-						Elaboration: inter.Program.Elaboration,
-					}
+		var context interpreter.MemberAccessibleContext
+
+		if *compile {
+			context = vm.NewContext(vm.NewConfig(storage))
+		} else {
+			var err error
+			context, err = interpreter.NewInterpreter(
+				&interpreter.Program{
+					Program:     ast.NewProgram(nil, []ast.Declaration{}),
+					Elaboration: sema.NewElaboration(nil),
 				},
-			},
-		)
-		require.NoError(t, err)
+				TestLocation,
+				&interpreter.Config{
+					Storage: storage,
+					ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+						return interpreter.VirtualImport{
+							Elaboration: inter.Program.Elaboration,
+						}
+					},
+				},
+			)
+			require.NoError(t, err)
+		}
 
 		address := common.Address{'A'}
 
@@ -92,7 +100,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 		}
 
 		array := interpreter.NewArrayValue(
-			inter,
+			context,
 			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -123,22 +131,29 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 	t.Run("SomeValue(SomeValue(DictionaryValue(...)))", func(t *testing.T) {
 		storage := newUnmeteredInMemoryStorage()
 
-		inter, err := interpreter.NewInterpreter(
-			&interpreter.Program{
-				Program:     ast.NewProgram(nil, []ast.Declaration{}),
-				Elaboration: sema.NewElaboration(nil),
-			},
-			TestLocation,
-			&interpreter.Config{
-				Storage: storage,
-				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-					return interpreter.VirtualImport{
-						Elaboration: inter.Program.Elaboration,
-					}
+		var context interpreter.MemberAccessibleContext
+
+		if *compile {
+			context = vm.NewContext(vm.NewConfig(storage))
+		} else {
+			var err error
+			context, err = interpreter.NewInterpreter(
+				&interpreter.Program{
+					Program:     ast.NewProgram(nil, []ast.Declaration{}),
+					Elaboration: sema.NewElaboration(nil),
 				},
-			},
-		)
-		require.NoError(t, err)
+				TestLocation,
+				&interpreter.Config{
+					Storage: storage,
+					ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+						return interpreter.VirtualImport{
+							Elaboration: inter.Program.Elaboration,
+						}
+					},
+				},
+			)
+			require.NoError(t, err)
+		}
 
 		address := common.Address{'A'}
 
@@ -150,7 +165,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 		}
 
 		dict := interpreter.NewDictionaryValueWithAddress(
-			inter,
+			context,
 			interpreter.EmptyLocationRange,
 			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
@@ -178,17 +193,17 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 			atreeValue atree.Value,
 			otherStorable atree.Storable,
 		) (bool, error) {
-			value := interpreter.MustConvertStoredValue(inter, atreeValue)
-			otherValue := interpreter.StoredValue(inter, otherStorable, storage)
-			return value.(interpreter.EquatableValue).Equal(inter, interpreter.EmptyLocationRange, otherValue), nil
+			value := interpreter.MustConvertStoredValue(context, atreeValue)
+			otherValue := interpreter.StoredValue(context, otherStorable, storage)
+			return value.(interpreter.EquatableValue).Equal(context, interpreter.EmptyLocationRange, otherValue), nil
 		}
 
 		hashInputProvider := func(
 			value atree.Value,
 			scratch []byte,
 		) ([]byte, error) {
-			hashInput := interpreter.MustConvertStoredValue(inter, value).(interpreter.HashableValue).
-				HashInput(inter, interpreter.EmptyLocationRange, scratch)
+			hashInput := interpreter.MustConvertStoredValue(context, value).(interpreter.HashableValue).
+				HashInput(context, interpreter.EmptyLocationRange, scratch)
 			return hashInput, nil
 		}
 
@@ -209,22 +224,29 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 	t.Run("SomeValue(SomeValue(CompositeValue(...)))", func(t *testing.T) {
 		storage := newUnmeteredInMemoryStorage()
 
-		inter, err := interpreter.NewInterpreter(
-			&interpreter.Program{
-				Program:     ast.NewProgram(nil, []ast.Declaration{}),
-				Elaboration: sema.NewElaboration(nil),
-			},
-			TestLocation,
-			&interpreter.Config{
-				Storage: storage,
-				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-					return interpreter.VirtualImport{
-						Elaboration: inter.Program.Elaboration,
-					}
+		var context interpreter.MemberAccessibleContext
+
+		if *compile {
+			context = vm.NewContext(vm.NewConfig(storage))
+		} else {
+			var err error
+			context, err = interpreter.NewInterpreter(
+				&interpreter.Program{
+					Program:     ast.NewProgram(nil, []ast.Declaration{}),
+					Elaboration: sema.NewElaboration(nil),
 				},
-			},
-		)
-		require.NoError(t, err)
+				TestLocation,
+				&interpreter.Config{
+					Storage: storage,
+					ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+						return interpreter.VirtualImport{
+							Elaboration: inter.Program.Elaboration,
+						}
+					},
+				},
+			)
+			require.NoError(t, err)
+		}
 
 		address := common.Address{'A'}
 
@@ -249,7 +271,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 		}
 
 		composite := interpreter.NewCompositeValue(
-			inter,
+			context,
 			interpreter.EmptyLocationRange,
 			location,
 			identifier,
