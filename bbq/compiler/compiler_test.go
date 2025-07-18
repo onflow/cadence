@@ -823,6 +823,7 @@ func TestCompileIfLet(t *testing.T) {
 
 			// let y' = x
 			opcode.InstructionGetLocal{Local: xIndex},
+			opcode.InstructionTransferAndConvert{Type: 1},
 			opcode.InstructionSetLocal{Local: tempYIndex},
 
 			// if nil
@@ -832,20 +833,19 @@ func TestCompileIfLet(t *testing.T) {
 			// let y = y'
 			opcode.InstructionGetLocal{Local: tempYIndex},
 			opcode.InstructionUnwrap{},
-			opcode.InstructionTransferAndConvert{Type: 1},
 			opcode.InstructionSetLocal{Local: yIndex},
 
 			// then { return y }
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: yIndex},
-			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionReturnValue{},
 			opcode.InstructionJump{Target: 18},
 
 			// else { return 2 }
 			opcode.InstructionStatement{},
 			opcode.InstructionGetConstant{Constant: 0},
-			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionReturnValue{},
 
 			opcode.InstructionReturn{},
@@ -921,6 +921,7 @@ func TestCompileIfLetScope(t *testing.T) {
 			// if let x = y
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: yIndex},
+			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionSetLocal{Local: tempIfLetIndex},
 
 			opcode.InstructionGetLocal{Local: tempIfLetIndex},
@@ -929,7 +930,6 @@ func TestCompileIfLetScope(t *testing.T) {
 			// then
 			opcode.InstructionGetLocal{Local: tempIfLetIndex},
 			opcode.InstructionUnwrap{},
-			opcode.InstructionTransferAndConvert{Type: 1},
 			opcode.InstructionSetLocal{Local: x2Index},
 
 			// z = x
@@ -7031,7 +7031,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 
 				opcode.InstructionStatement{},
 
-				// <- y
+				// Load `y` onto the stack.
 				opcode.InstructionGetLocal{Local: yIndex},
 				opcode.InstructionTransferAndConvert{Type: 2},
 
@@ -7041,7 +7041,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionSetLocal{Local: yIndex},
 
-				// Store the transferred y-value above, to z.
+				// Transfer and store the loaded y-value above, to z.
 				// z <- y
 				opcode.InstructionSetLocal{Local: zIndex},
 
@@ -7320,25 +7320,24 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 
 				// store y in temp index for nil check
 				opcode.InstructionGetLocal{Local: yIndex},
-				opcode.InstructionSetLocal{Local: tempIndex},
+				opcode.InstructionTransferAndConvert{Type: 2},
 
-				// nil check on temp y
-				opcode.InstructionGetLocal{Local: tempIndex},
-				opcode.InstructionJumpIfNil{Target: 29},
-
-				// If not-nil, transfer the temp y (i.e: <- y)
-				opcode.InstructionGetLocal{Local: tempIndex},
-				opcode.InstructionUnwrap{},
-				opcode.InstructionTransferAndConvert{Type: 1},
-
-				// Second value assignment.
+				// Second value assignment. Store `x` in `y`.
 				// y <- x
 				opcode.InstructionGetLocal{Local: xIndex},
 				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionSetLocal{Local: yIndex},
 
-				// Store the transferred y-value above, to z.
-				// z <- y
+				// Store the previously loaded `y`s old value on the temp local.
+				opcode.InstructionSetLocal{Local: tempIndex},
+
+				// nil check on temp y.
+				opcode.InstructionGetLocal{Local: tempIndex},
+				opcode.InstructionJumpIfNil{Target: 29},
+
+				// If not-nil, transfer the temp `y` and store in `z` (i.e: y <- y)
+				opcode.InstructionGetLocal{Local: tempIndex},
+				opcode.InstructionUnwrap{},
 				opcode.InstructionSetLocal{Local: zIndex},
 
 				// let res: @R <- z
