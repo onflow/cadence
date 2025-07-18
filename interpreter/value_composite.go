@@ -589,7 +589,7 @@ func (v *CompositeValue) GetMethod(context MemberAccessibleContext, locationRang
 	var base *EphemeralReferenceValue
 	var self Value = v
 	if v.Kind == common.CompositeKindAttachment {
-		functionAccess := getAccessOfMember(context, v, name)
+		functionAccess := GetAccessOfMember(context, v, name)
 
 		// with respect to entitlements, any access inside an attachment that is not an entitlement access
 		// does not provide any entitlements to base and self

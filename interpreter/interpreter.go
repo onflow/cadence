@@ -5285,7 +5285,7 @@ func (interpreter *Interpreter) reportInvokedFunctionReturn() {
 	onInvokedFunctionReturn(interpreter)
 }
 
-func getAccessOfMember(context ValueStaticTypeContext, self Value, identifier string) sema.Access {
+func GetAccessOfMember(context ValueStaticTypeContext, self Value, identifier string) sema.Access {
 	typ, err := ConvertStaticToSemaType(context, self.StaticType(context))
 	// some values (like transactions) do not have types that can be looked up this way. These types
 	// do not support entitled members, so their access is always unauthorized

@@ -1590,7 +1590,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
             resource R {}
             attachment A for R {
                 access(all) var id: UInt8
@@ -1614,7 +1614,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 var r3 <- r2
                 let a2 = r3[A]!
                 a2.setID(5)
-                authAccount.storage.save(<-r3, to: /storage/foo)
+                account.storage.save(<-r3, to: /storage/foo)
 
                 // Access the attachment filed from the previous reference.
                 return a.id
@@ -1637,7 +1637,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
             resource R {}
             attachment A for R {
                 fun foo(): Int { return 3 }
@@ -1667,7 +1667,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
             resource R {}
             resource R2 {
                 let r: @R
@@ -1695,7 +1695,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 var r3 <- r2
                 let a2 = r3.r[A]!
                 a2.setID(5)
-                authAccount.storage.save(<-r3, to: /storage/foo)
+                account.storage.save(<-r3, to: /storage/foo)
 
                 // Access the attachment filed from the previous reference.
                 return a.id
@@ -1718,7 +1718,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
             access(all) resource R {
                 access(all) var id: UInt8
 
@@ -1747,7 +1747,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
                 var r2 <- r
                 r2.setID(5)
-                authAccount.storage.save(<-r2, to: /storage/foo)
+                account.storage.save(<-r2, to: /storage/foo)
                 return ref!.id
             }`,
 			sema.Config{},
@@ -1764,7 +1764,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
             resource R {}
 
             resource R2 {
@@ -1803,7 +1803,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil, `
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil, `
             access(all) resource R {}
 
             var ref: &A? = nil
@@ -1831,7 +1831,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 var r2 <- r
                 let a = r2[A]!
                 a.setID(5)
-                authAccount.storage.save(<-r2, to: /storage/foo)
+                account.storage.save(<-r2, to: /storage/foo)
                 return ref!.id
             }`,
 			sema.Config{},
@@ -2052,7 +2052,7 @@ func TestInterpretForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R {}
             attachment A for R {}
             attachment B for R {}
@@ -2078,7 +2078,7 @@ func TestInterpretForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct S {}
             attachment A for S {}
             attachment B for S {}
@@ -2103,7 +2103,7 @@ func TestInterpretForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct S {}
             attachment A for S {
                 fun foo(_ x: Int): Int { return 7 + x }
@@ -2140,7 +2140,7 @@ func TestInterpretForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement F
             entitlement Y
             struct S {
@@ -2183,7 +2183,7 @@ func TestInterpretForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement F
 
             access(all) struct S {
@@ -2226,7 +2226,7 @@ func TestInterpretForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource Sub {
                 let name: String
                 init(_ name: String) {
@@ -2275,7 +2275,7 @@ func TestInterpretForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R {}
 
             attachment A for R {

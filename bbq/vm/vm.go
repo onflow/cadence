@@ -906,12 +906,34 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 	if val, ok := receiver.(*interpreter.EphemeralReferenceValue); ok {
 		if refValue, ok := val.Value.(*interpreter.CompositeValue); ok {
 			if refValue.Kind == common.CompositeKindAttachment {
+				// CompositeValue.GetMethod, as in the interpreter we need an authorized reference to base
+				compiledFunctionValue := method.(CompiledFunctionValue)
+				qualifiedName := compiledFunctionValue.Function.Name
+				unqualifiedName := strings.Split(qualifiedName, ".")[1]
+
+				fnAccess := interpreter.GetAccessOfMember(vm.context, refValue, unqualifiedName)
+				// with respect to entitlements, any access inside an attachment that is not an entitlement access
+				// does not provide any entitlements to base and self
+				// E.g. consider:
+				//
+				//    access(E) fun foo() {}
+				//    access(self) fun bar() {
+				//        self.foo()
+				//    }
+				//    access(all) fun baz() {
+				//        self.bar()
+				//    }
+				//
+				// clearly `bar` should be callable within `baz`, but we cannot allow `foo`
+				// to be callable within `bar`, or it will be possible to access `E` entitled
+				// methods on `base`
+				if fnAccess.IsPrimitiveAccess() {
+					fnAccess = sema.UnauthorizedAccess
+				}
+				attachmentReferenceAuth := interpreter.ConvertSemaAccessToStaticAuthorization(vm.context, fnAccess)
 				base = refValue.GetBaseValue(
 					vm.context,
-					interpreter.ConvertSemaAccessToStaticAuthorization(
-						vm.context,
-						sema.UnauthorizedAccess,
-					),
+					attachmentReferenceAuth,
 					interpreter.EmptyLocationRange,
 				)
 			}

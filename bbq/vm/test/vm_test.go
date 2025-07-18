@@ -9007,23 +9007,21 @@ func TestAttachments(t *testing.T) {
 	t.Run("supported", func(t *testing.T) {
 		t.Parallel()
 
-		a, err := CompileAndInvoke(t, `
+		value, err := CompileAndInvoke(t, `
 		resource R {}
-            attachment A for R {}
-            attachment B for R {}
-            attachment C for R {}
-            fun test(): Int {
-                var r <- attach C() to <- attach B() to <- attach A() to <- create R()
-                var i = 0
-                r.forEachAttachment(fun(attachmentRef: &AnyResourceAttachment) {
-                    i = i + 1
-                })
-                destroy r
-                return i
-            }
+       attachment A for R {
+          fun foo(): Int { return 3 }
+       }
+       fun test(): Int {
+           let r <- create R()
+           let r2 <- attach A() to <-r
+           let i = r2[A]?.foo()!
+           destroy r2
+           return i
+       }
 		`, "test")
 		require.NoError(t, err)
 
-		require.Equal(t, a, interpreter.NewUnmeteredIntValueFromInt64(3))
+		require.Equal(t, value.(*interpreter.EphemeralReferenceValue).Value, interpreter.NewUnmeteredIntValueFromInt64(3))
 	})
 }
