@@ -2606,7 +2606,7 @@ func TestInterpretAttachmentSelfInvalidationInIteration(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             access(all) resource R{
                 init() {}
             }
