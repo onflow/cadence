@@ -3505,34 +3505,6 @@ func (e *InvalidNonEnumCaseError) Error() string {
 	)
 }
 
-// DeclarationKindMismatchError
-
-type DeclarationKindMismatchError struct {
-	ExpectedDeclarationKind common.DeclarationKind
-	ActualDeclarationKind   common.DeclarationKind
-	ast.Range
-}
-
-var _ SemanticError = &DeclarationKindMismatchError{}
-var _ errors.UserError = &DeclarationKindMismatchError{}
-var _ errors.SecondaryError = &DeclarationKindMismatchError{}
-
-func (*DeclarationKindMismatchError) isSemanticError() {}
-
-func (*DeclarationKindMismatchError) IsUserError() {}
-
-func (e *DeclarationKindMismatchError) Error() string {
-	return "mismatched declarations"
-}
-
-func (e *DeclarationKindMismatchError) SecondaryError() string {
-	return fmt.Sprintf(
-		"expected `%s`, got `%s`",
-		e.ExpectedDeclarationKind.Name(),
-		e.ActualDeclarationKind.Name(),
-	)
-}
-
 // InvalidTopLevelDeclarationError
 
 type InvalidTopLevelDeclarationError struct {

@@ -157,13 +157,6 @@ func generateErrors() []namedError {
 				Range:    placeholderRange,
 			},
 		},
-		{"sema.DeclarationKindMismatchError",
-			&sema.DeclarationKindMismatchError{
-				ExpectedDeclarationKind: placeholderDeclarationKind,
-				ActualDeclarationKind:   placeholderDeclarationKind,
-				Range:                   placeholderRange,
-			},
-		},
 		{"sema.DefaultDestroyEventInNonResourceError",
 			&sema.DefaultDestroyEventInNonResourceError{
 				Kind:  placeholderString,
