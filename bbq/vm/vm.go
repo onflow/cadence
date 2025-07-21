@@ -1541,15 +1541,40 @@ func opSetTypeIndex(vm *VM, ins opcode.InstructionSetTypeIndex) {
 	typ := vm.context.SemaTypeFromStaticType(staticType)
 	attachment := fieldValue.(*interpreter.CompositeValue)
 
-	compositeValue := target.(*interpreter.CompositeValue)
-	compositeValue.SetTypeKey(
+	base := target.(*interpreter.CompositeValue)
+
+	for k := range vm.context.attachmentIterationMap {
+		print(k)
+		print(base)
+	}
+
+	if inIteration := vm.context.inAttachmentIteration(base); inIteration {
+		panic(&interpreter.AttachmentIterationMutationError{
+			Value:         base,
+			LocationRange: EmptyLocationRange,
+		})
+	}
+
+	// transfer here instead of in compiler
+	// so we can check attachment iteration properly
+	base = base.Transfer(
+		vm.context,
+		EmptyLocationRange,
+		atree.Address{},
+		false,
+		nil,
+		nil,
+		true, // base is standalone,
+	).(*interpreter.CompositeValue)
+
+	base.SetTypeKey(
 		vm.context,
 		EmptyLocationRange,
 		typ,
 		fieldValue,
 	)
-	attachment.SetBaseValue(compositeValue)
-	vm.push(compositeValue)
+	attachment.SetBaseValue(base)
+	vm.push(base)
 }
 
 func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
@@ -1560,8 +1585,14 @@ func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 	staticType := vm.loadType(typeIndex)
 	typ := vm.context.SemaTypeFromStaticType(staticType)
 
-	compositeValue := target.(*interpreter.CompositeValue)
-	removed := compositeValue.RemoveTypeKey(
+	base := target.(*interpreter.CompositeValue)
+	if inIteration := vm.context.inAttachmentIteration(base); inIteration {
+		panic(&interpreter.AttachmentIterationMutationError{
+			Value:         base,
+			LocationRange: EmptyLocationRange,
+		})
+	}
+	removed := base.RemoveTypeKey(
 		vm.context,
 		EmptyLocationRange,
 		typ,
@@ -1577,7 +1608,7 @@ func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 	}
 	if attachment.IsResourceKinded(vm.context) {
 		// this attachment is no longer attached to its base, but the `base` variable is still available in the destructor
-		attachment.SetBaseValue(compositeValue)
+		attachment.SetBaseValue(base)
 		attachment.Destroy(vm.context, EmptyLocationRange)
 	}
 }

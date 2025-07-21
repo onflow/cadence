@@ -55,6 +55,8 @@ type Context struct {
 	// TODO: Maybe extend/share this between executions.
 	semaTypes map[sema.TypeID]sema.Type
 
+	attachmentIterationMap map[*interpreter.CompositeValue]bool
+
 	// TODO: stack-trace, location, etc.
 }
 
@@ -95,6 +97,10 @@ func (c *Context) SetInStorageIteration(inStorageIteration bool) {
 	c.inStorageIteration = inStorageIteration
 }
 
+func (c *Context) inAttachmentIteration(base *interpreter.CompositeValue) bool {
+	return c.attachmentIterationMap[base]
+}
+
 func (c *Context) GetCapabilityControllerIterations() map[interpreter.AddressPath]int {
 	return c.CapabilityControllerIterations
 }
@@ -108,8 +114,12 @@ func (c *Context) MutationDuringCapabilityControllerIteration() bool {
 }
 
 func (c *Context) SetAttachmentIteration(composite *interpreter.CompositeValue, state bool) bool {
-	//TODO
-	return false
+	oldState := c.inAttachmentIteration(composite)
+	if c.attachmentIterationMap == nil {
+		c.attachmentIterationMap = map[*interpreter.CompositeValue]bool{}
+	}
+	c.attachmentIterationMap[composite] = state
+	return oldState
 }
 
 func (c *Context) ReadStored(

@@ -2322,7 +2322,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct S {}
             attachment A for S {}
             attachment B for S {}
@@ -2345,7 +2345,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct S {}
             attachment A for S {}
             attachment B for S {}
@@ -2368,7 +2368,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct S {}
             attachment A for S {}
             attachment B for S {}
@@ -2389,7 +2389,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct S {}
             attachment A for S {}
             attachment B for S {}
@@ -2410,7 +2410,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct S {}
             attachment A for S {}
             attachment B for S {}
@@ -2436,7 +2436,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct S {}
             attachment A for S {}
             attachment B for S {}
@@ -2460,7 +2460,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct S {}
             attachment A for S {}
             attachment B for S {}
@@ -2488,7 +2488,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct S {}
             attachment A for S {}
             attachment B for S {}
@@ -2516,7 +2516,7 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             access(all) resource R {
                 let foo: Int
                 init() {
