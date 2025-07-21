@@ -2985,9 +2985,6 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 			Type:       c.getOrAddType(refType),
 			IsImplicit: false,
 		})
-
-		// get base from end of arguments...
-		// TODO: expose base, a reference to the attachment's base value
 	} else {
 		returnLocalIndex = self.index
 	}
@@ -3219,6 +3216,7 @@ func (c *Compiler[_, _]) addBuiltinMethods(typ sema.Type) {
 		)
 	}
 
+	// add native function .forEachAttachment for composite types supporting attachments
 	if t, ok := typ.(sema.CompositeKindedType); ok {
 		if t.GetCompositeKind().SupportsAttachments() {
 			name := sema.CompositeForEachAttachmentFunctionName
