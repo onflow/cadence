@@ -7796,7 +7796,7 @@ func TestParseDestructor(t *testing.T) {
 				EndPos:   destroyEndPos,
 			},
 		}
-		fixes := err.SuggestFixes("")
+		fixes := err.SuggestFixes(code)
 		require.Len(t, fixes, 1)
 		fix := fixes[0]
 		assert.Equal(t, "Remove the deprecated custom destructor", fix.Message)
