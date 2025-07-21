@@ -2744,7 +2744,7 @@ func (e *EmitImportedEventError) Error() string {
 }
 
 func (e *EmitImportedEventError) SecondaryError() string {
-	return "Events can only be emitted from the contract where they are declared. Imported events cannot be emitted from other contracts"
+	return "Events can only be emitted from the contract where they are declared. Imported events cannot be emitted elsewhere, e.g. from other contracts or transactions"
 }
 
 func (e *EmitImportedEventError) DocumentationLink() string {
