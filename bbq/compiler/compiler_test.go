@@ -3317,11 +3317,11 @@ func TestCompileFunctionConditions(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-        fun test(x: Int): Int {
-            pre { x > 0 }
-            return 5
-        }
-    `)
+            fun test(x: Int): Int {
+                pre { x > 0 }
+                return 5
+            }
+        `)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(
@@ -3381,11 +3381,11 @@ func TestCompileFunctionConditions(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-        fun test(x: Int): Int {
-            post { x > 0 }
-            return 5
-        }
-    `)
+            fun test(x: Int): Int {
+                post { x > 0 }
+                return 5
+            }
+        `)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(
@@ -3465,11 +3465,11 @@ func TestCompileFunctionConditions(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-        fun test(x: @AnyResource?): @AnyResource? {
-            post { result != nil }
-            return <- x
-        }
-    `)
+            fun test(x: @AnyResource?): @AnyResource? {
+                post { result != nil }
+                return <- x
+            }
+        `)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(
