@@ -4043,6 +4043,7 @@ func TestInterpretImport(t *testing.T) {
 	)
 }
 
+// Note: Corresponding compiler/vm test is `TestImportError` in `vm_test.go`.
 func TestInterpretImportError(t *testing.T) {
 
 	t.Parallel()
