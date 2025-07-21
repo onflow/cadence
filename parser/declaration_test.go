@@ -7797,14 +7797,20 @@ func TestParseDestructor(t *testing.T) {
 			},
 		}
 		fixes := err.SuggestFixes(code)
-		require.Len(t, fixes, 1)
-		fix := fixes[0]
-		assert.Equal(t, "Remove the deprecated custom destructor", fix.Message)
-		require.Len(t, fix.TextEdits, 1)
-		edit := fix.TextEdits[0]
-		assert.Equal(t, "", edit.Replacement)
-		assert.Equal(t, destroyStartPos, edit.Range.StartPos)
-		assert.Equal(t, destroyEndPos, edit.Range.EndPos)
+		assert.Equal(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove the deprecated custom destructor",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "",
+							Range:       ...,
+						},
+					},
+				},
+			},
+			fixes,
+		)
 	})
 
 	// End-to-end test: apply suggested fix to code
