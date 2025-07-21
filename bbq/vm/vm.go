@@ -1226,10 +1226,6 @@ func opFailableCast(vm *VM, ins opcode.InstructionFailableCast) {
 		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
 		result = ConvertAndBox(vm.context, value, valueType, targetType)
 
-		// TODO:
-		// Failable casting is a resource invalidation
-		//interpreter.invalidateResource(value)
-
 		result = interpreter.NewSomeValueNonCopying(
 			vm.context.MemoryGauge,
 			result,
@@ -1280,10 +1276,6 @@ func castValueAndValueType(context *Context, targetType bbq.StaticType, value Va
 	// thus this is the only place where it becomes necessary to "instantiate" the result of a map to its
 	// concrete outputs. In other places (e.g. interface conformance checks) we want to leave maps generic,
 	// so we don't substitute them.
-
-	// TODO: Substitute entitlements
-	//valueSemaType := interpreter.SubstituteMappedEntitlements(interpreter.MustSemaTypeOfValue(value))
-	//valueType = ConvertSemaToStaticType(interpreter, valueSemaType)
 
 	// If the target is `AnyStruct` or `AnyResource` we want to preserve optionals
 	unboxedExpectedType := UnwrapOptionalType(targetType)
