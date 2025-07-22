@@ -8966,30 +8966,38 @@ func TestCompileAttachments(t *testing.T) {
 			functions[0].Code,
 		)
 
+		// local variables
+		const (
+			xLocalIndex = iota
+			baseLocalIndex
+			selfLocalIndex
+			returnLocalIndex
+		)
+
 		// `A` init
 		assert.Equal(t,
 			[]opcode.Instruction{
 				// create attachment
 				opcode.InstructionNew{Kind: 6, Type: 4},
 				// set returnLocalIndex to attachment
-				opcode.InstructionSetLocal{Local: 3},
+				opcode.InstructionSetLocal{Local: returnLocalIndex},
 				// get a reference to attachment
-				opcode.InstructionGetLocal{Local: 3},
+				opcode.InstructionGetLocal{Local: returnLocalIndex},
 				opcode.InstructionNewRef{Type: 10, IsImplicit: false},
 				// set self to be the reference
-				opcode.InstructionSetLocal{Local: 2},
+				opcode.InstructionSetLocal{Local: selfLocalIndex},
 
 				// self.x = x
 				opcode.InstructionStatement{},
 				// get self
-				opcode.InstructionGetLocal{Local: 2},
+				opcode.InstructionGetLocal{Local: selfLocalIndex},
 				// get x
-				opcode.InstructionGetLocal{Local: 0},
+				opcode.InstructionGetLocal{Local: xLocalIndex},
 				opcode.InstructionTransferAndConvert{Type: 3},
 				// set self.x = x
 				opcode.InstructionSetField{FieldName: 1, AccessedType: 10},
 				// return created attachment (returnLocalIndex)
-				opcode.InstructionGetLocal{Local: 3},
+				opcode.InstructionGetLocal{Local: returnLocalIndex},
 				opcode.InstructionReturnValue{},
 			},
 			functions[5].Code,

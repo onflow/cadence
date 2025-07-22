@@ -330,20 +330,14 @@ func (c *Context) DefaultDestroyEvents(
 		semaType := interpreter.MustConvertStaticToSemaType(staticType, c)
 		arguments = []Value{
 			interpreter.NewEphemeralReferenceValue(c,
-				interpreter.ConvertSemaAccessToStaticAuthorization(
-					c,
-					sema.UnauthorizedAccess,
-				),
+				interpreter.UnauthorizedAccess,
 				resourceValue,
 				semaType,
 				EmptyLocationRange,
 			),
 			resourceValue.GetBaseValue(
 				c,
-				interpreter.ConvertSemaAccessToStaticAuthorization(
-					c,
-					sema.UnauthorizedAccess,
-				),
+				interpreter.UnauthorizedAccess,
 				EmptyLocationRange,
 			),
 		}

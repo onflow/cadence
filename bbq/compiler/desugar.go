@@ -2304,6 +2304,8 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 	case *ast.AttachmentDeclaration:
 		astRange = v.Range
 		startPos = v.StartPos
+	default:
+		panic(errors.NewUnreachableError())
 	}
 
 	// Put all the events in an array.

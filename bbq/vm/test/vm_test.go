@@ -9024,6 +9024,6 @@ func TestAttachments(t *testing.T) {
 		`, "test")
 		require.NoError(t, err)
 
-		require.Equal(t, a, interpreter.NewUnmeteredIntValueFromInt64(3))
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), a)
 	})
 }
