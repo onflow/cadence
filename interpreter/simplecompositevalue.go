@@ -158,7 +158,7 @@ func (v *SimpleCompositeValue) GetMember(context MemberAccessibleContext, locati
 
 func (v *SimpleCompositeValue) GetMethod(
 	context MemberAccessibleContext,
-	locationRange LocationRange,
+	_ LocationRange,
 	name string,
 ) FunctionValue {
 	if v.FunctionMemberGetter == nil {

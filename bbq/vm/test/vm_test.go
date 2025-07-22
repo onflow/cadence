@@ -2065,6 +2065,11 @@ func TestTransaction(t *testing.T) {
             `,
 			CompilerAndVMOptions{
 				VMConfig: vmConfig,
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						Location: common.TransactionLocation{},
+					},
+				},
 			},
 		)
 		require.NoError(t, err)
@@ -2132,6 +2137,11 @@ func TestTransaction(t *testing.T) {
             `,
 			CompilerAndVMOptions{
 				VMConfig: vmConfig,
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						Location: common.TransactionLocation{},
+					},
+				},
 			},
 		)
 		require.NoError(t, err)

@@ -424,13 +424,13 @@ func (vm *VM) InvokeTransaction(arguments []Value, signers ...Value) (err error)
 	return nil
 }
 
-func (vm *VM) InvokeTransactionWrapper() (*interpreter.CompositeValue, error) {
+func (vm *VM) InvokeTransactionWrapper() (*interpreter.SimpleCompositeValue, error) {
 	wrapperResult, err := vm.InvokeExternally(commons.TransactionWrapperCompositeName)
 	if err != nil {
 		return nil, err
 	}
 
-	transaction := wrapperResult.(*interpreter.CompositeValue)
+	transaction := wrapperResult.(*interpreter.SimpleCompositeValue)
 
 	return transaction, nil
 }
@@ -461,7 +461,7 @@ func (vm *VM) InvokeTransactionInit(transactionArgs []Value) error {
 	return nil
 }
 
-func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.CompositeValue, signers []Value) error {
+func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.SimpleCompositeValue, signers []Value) error {
 	context := vm.context
 
 	prepareVariable := vm.globals.Find(commons.TransactionPrepareFunctionName)
@@ -492,7 +492,7 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.CompositeValue, 
 	return nil
 }
 
-func (vm *VM) InvokeTransactionExecute(transaction *interpreter.CompositeValue) error {
+func (vm *VM) InvokeTransactionExecute(transaction *interpreter.SimpleCompositeValue) error {
 	context := vm.context
 
 	executeVariable := vm.globals.Find(commons.TransactionExecuteFunctionName)
@@ -1005,6 +1005,28 @@ func opDrop(vm *VM) {
 func opDup(vm *VM) {
 	top := vm.peek()
 	vm.push(top)
+}
+
+func opNewSimpleComposite(vm *VM, ins opcode.InstructionNewSimpleComposite) {
+	staticType := vm.loadType(ins.Type)
+
+	compositeStaticType := staticType.(*interpreter.CompositeStaticType)
+
+	config := vm.context
+
+	compositeValue := interpreter.NewSimpleCompositeValue(
+		config,
+		compositeStaticType.TypeID,
+		compositeStaticType,
+		nil,
+		map[string]Value{},
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+
+	vm.push(compositeValue)
 }
 
 func opNewComposite(vm *VM, ins opcode.InstructionNewComposite) {
@@ -1581,6 +1603,8 @@ func (vm *VM) run() {
 			opDrop(vm)
 		case opcode.InstructionDup:
 			opDup(vm)
+		case opcode.InstructionNewSimpleComposite:
+			opNewSimpleComposite(vm, ins)
 		case opcode.InstructionNewComposite:
 			opNewComposite(vm, ins)
 		case opcode.InstructionNewCompositeAt:

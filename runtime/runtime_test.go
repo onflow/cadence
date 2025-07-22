@@ -8005,8 +8005,8 @@ func TestRuntimeComputationMetering(t *testing.T) {
               for i in [1, 2] {}
             `,
 			ok:        true,
-			hits:      ifCompile[uint](7, 4),
-			intensity: ifCompile[uint64](7, 4),
+			hits:      ifCompile[uint](6, 4),
+			intensity: ifCompile[uint64](6, 4),
 		},
 		{
 			name: "statement + functionInvocation + encoding",
@@ -8014,8 +8014,8 @@ func TestRuntimeComputationMetering(t *testing.T) {
               acc.storage.save("A quick brown fox jumps over the lazy dog", to:/storage/some_path)
             `,
 			ok:        true,
-			hits:      ifCompile[uint](6, 3),
-			intensity: ifCompile[uint64](111, 108),
+			hits:      ifCompile[uint](5, 3),
+			intensity: ifCompile[uint64](110, 108),
 		},
 	}
 
