@@ -7329,6 +7329,8 @@ func TestInterpretEmitEvent(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
+	storage := NewUnmeteredInMemoryStorage()
+
 	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           event Transfer(to: Int, from: Int)
@@ -7342,6 +7344,7 @@ func TestInterpretEmitEvent(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			InterpreterConfig: &interpreter.Config{
+				Storage: storage,
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
 					_ interpreter.LocationRange,
@@ -7385,6 +7388,19 @@ func TestInterpretEmitEvent(t *testing.T) {
 			},
 		},
 		eventsFields,
+	)
+
+	// Explicit event emission should not create composite values (allocate slab IDs)
+
+	nextStackSlabID, err := storage.GenerateSlabID(atree.AddressUndefined)
+	require.NoError(t, err)
+	assert.Equal(
+		t,
+		atree.NewSlabID(
+			atree.AddressUndefined,
+			atree.SlabIndex{0, 0, 0, 0, 0, 0, 0, 1},
+		),
+		nextStackSlabID,
 	)
 }
 

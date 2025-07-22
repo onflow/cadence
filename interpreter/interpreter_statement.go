@@ -387,9 +387,15 @@ func (interpreter *Interpreter) EmitEvent(
 
 func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement) StatementResult {
 
-	event, ok := interpreter.evalExpression(statement.InvocationExpression).(*CompositeValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
+	arguments := statement.InvocationExpression.Arguments
+
+	var eventFields []Value
+	if len(arguments) > 0 {
+		eventFields = make([]Value, len(arguments))
+
+		for i, argument := range arguments {
+			eventFields[i] = interpreter.evalExpression(argument.Expression)
+		}
 	}
 
 	eventType := interpreter.Program.Elaboration.EmitStatementEventType(statement)
@@ -398,8 +404,6 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 		Location:    interpreter.Location,
 		HasPosition: statement,
 	}
-
-	eventFields := extractEventFields(interpreter, event, eventType)
 
 	interpreter.EmitEvent(
 		interpreter,
