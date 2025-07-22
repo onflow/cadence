@@ -1349,9 +1349,10 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 
 	forStmtTypes := c.DesugaredElaboration.ForStatementType(statement)
 	loopVarType := forStmtTypes.ValueVariableType
-	_, isResultReference := sema.MaybeReferenceType(loopVarType)
+	_, isContainerReference := sema.MaybeReferenceType(forStmtTypes.ContainerType)
+	_, isValueReference := sema.MaybeReferenceType(loopVarType)
 
-	if isResultReference {
+	if isContainerReference && isValueReference {
 		index := c.getOrAddType(loopVarType)
 		c.emit(opcode.InstructionNewRef{
 			Type:       index,
