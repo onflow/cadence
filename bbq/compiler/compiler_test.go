@@ -4766,27 +4766,32 @@ func TestCompileTransaction(t *testing.T) {
 
 	t.Parallel()
 
-	checker, err := ParseAndCheck(t, `
-        transaction {
-            var count: Int
+	checker, err := ParseAndCheckWithOptions(t,
+		`
+            transaction {
+                var count: Int
 
-            prepare() {
-                self.count = 2
-            }
+                prepare() {
+                    self.count = 2
+                }
 
-            pre {
-                self.count == 2
-            }
+                pre {
+                    self.count == 2
+                }
 
-            execute {
-                self.count = 10
-            }
+                execute {
+                    self.count = 10
+                }
 
-            post {
-                self.count == 10
+                post {
+                    self.count == 10
+                }
             }
-        }
-    `)
+        `,
+		ParseAndCheckOptions{
+			Location: common.TransactionLocation{},
+		},
+	)
 	require.NoError(t, err)
 
 	comp := compiler.NewInstructionCompilerWithConfig(
@@ -4822,10 +4827,29 @@ func TestCompileTransaction(t *testing.T) {
 	// Transaction constructor
 	// Not interested in the content of the constructor.
 	constructor := program.Functions[transactionInitFunctionIndex]
-	require.Equal(t, commons.TransactionWrapperCompositeName, constructor.QualifiedName)
+	require.Equal(t,
+		commons.TransactionWrapperCompositeName,
+		constructor.QualifiedName,
+	)
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, transactionInitFunctionIndex, comp.Globals[commons.TransactionWrapperCompositeName].Index)
+	assert.Equal(t,
+		transactionInitFunctionIndex,
+		comp.Globals[commons.TransactionWrapperCompositeName].Index,
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionNewSimpleComposite{
+				Kind: common.CompositeKindStructure,
+				Type: 1,
+			},
+			opcode.InstructionSetLocal{Local: 0},
+			opcode.InstructionGetLocal{Local: 0},
+			opcode.InstructionReturnValue{},
+		},
+		constructor.Code,
+	)
 
 	// constant indexes
 	const (
@@ -4842,10 +4866,16 @@ func TestCompileTransaction(t *testing.T) {
 	)
 
 	prepareFunction := program.Functions[prepareFunctionIndex]
-	require.Equal(t, commons.TransactionPrepareFunctionName, prepareFunction.QualifiedName)
+	require.Equal(t,
+		commons.TransactionPrepareFunctionName,
+		prepareFunction.QualifiedName,
+	)
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, prepareFunctionIndex, comp.Globals[commons.TransactionPrepareFunctionName].Index)
+	assert.Equal(t,
+		prepareFunctionIndex,
+		comp.Globals[commons.TransactionPrepareFunctionName].Index,
+	)
 
 	assert.Equal(t,
 		[]opcode.Instruction{

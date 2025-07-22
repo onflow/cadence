@@ -2991,7 +2991,11 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	}
 
 	if address == common.ZeroAddress {
-		if typeName == commons.TransactionWrapperCompositeName {
+
+		// Transaction wrapper composite values are simple composite values.
+		if _, ok := enclosingType.GetLocation().(common.TransactionLocation); ok &&
+			typeName == commons.TransactionWrapperCompositeName {
+
 			c.emit(
 				opcode.InstructionNewSimpleComposite{
 					Kind: kind,
