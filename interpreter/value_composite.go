@@ -609,7 +609,7 @@ func (v *CompositeValue) GetMethod(context MemberAccessibleContext, locationRang
 		if functionAccess.IsPrimitiveAccess() {
 			functionAccess = sema.UnauthorizedAccess
 		}
-		base, self = attachmentBaseAndSelfValues(context, functionAccess, v, locationRange)
+		base, self = AttachmentBaseAndSelfValues(context, functionAccess, v, locationRange)
 	}
 
 	// If the function is already a bound function, then do not re-wrap.
@@ -1025,7 +1025,7 @@ func (v *CompositeValue) CompositeStaticTypeConformsToStaticType(
 	}
 
 	if compositeType.Kind == common.CompositeKindAttachment {
-		base := v.GetBaseValue(context, UnauthorizedAccess, locationRange).Value
+		base := v.getBaseValue(context, UnauthorizedAccess, locationRange).Value
 		if base == nil || !base.ConformsToStaticType(context, locationRange, results) {
 			return false
 		}
@@ -1656,7 +1656,7 @@ func NewEnumCaseValue(
 	return v
 }
 
-func (v *CompositeValue) GetBaseValue(
+func (v *CompositeValue) getBaseValue(
 	context StaticTypeAndReferenceContext,
 	functionAuthorization Authorization,
 	locationRange LocationRange,
@@ -1672,6 +1672,13 @@ func (v *CompositeValue) GetBaseValue(
 		baseType, _ = ty.RewriteWithIntersectionTypes()
 	default:
 		baseType = ty
+	}
+
+	// during initialization of an attachment in the compiler, base is not set yet
+	// any method which needs base will request again after initialization
+	// so we can safely return nil
+	if v.base == nil {
+		return nil
 	}
 
 	return NewEphemeralReferenceValue(context, functionAuthorization, v.base, baseType, locationRange)
@@ -1776,7 +1783,7 @@ func (v *CompositeValue) ForEachAttachment(
 
 }
 
-func attachmentBaseAndSelfValues(
+func AttachmentBaseAndSelfValues(
 	context StaticTypeAndReferenceContext,
 	fnAccess sema.Access,
 	v *CompositeValue,
@@ -1784,7 +1791,7 @@ func attachmentBaseAndSelfValues(
 ) (base *EphemeralReferenceValue, self *EphemeralReferenceValue) {
 	attachmentReferenceAuth := ConvertSemaAccessToStaticAuthorization(context, fnAccess)
 
-	base = v.GetBaseValue(context, attachmentReferenceAuth, locationRange)
+	base = v.getBaseValue(context, attachmentReferenceAuth, locationRange)
 	// in attachment functions, self is a reference value
 	self = NewEphemeralReferenceValue(
 		context,

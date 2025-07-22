@@ -881,7 +881,12 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	if boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue); isBoundFunction {
 		functionValue = boundFunction.Method
 		receiver := boundFunction.Receiver(vm.context)
-		arguments = append([]Value{receiver}, arguments...)
+		values := []Value{receiver}
+		base := boundFunction.Base
+		if base != nil {
+			values = append(values, base)
+		}
+		arguments = append(values, arguments...)
 	}
 
 	invokeFunction(
@@ -930,14 +935,8 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 				if fnAccess.IsPrimitiveAccess() {
 					fnAccess = sema.UnauthorizedAccess
 				}
-				attachmentReferenceAuth := interpreter.ConvertSemaAccessToStaticAuthorization(vm.context, fnAccess)
-				base = refValue.GetBaseValue(
-					vm.context,
-					attachmentReferenceAuth,
-					interpreter.EmptyLocationRange,
-				)
+				base, receiver = interpreter.AttachmentBaseAndSelfValues(vm.context, fnAccess, refValue, EmptyLocationRange)
 			}
-
 		}
 	}
 

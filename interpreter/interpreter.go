@@ -1097,7 +1097,7 @@ func (interpreter *Interpreter) evaluateDefaultDestroyEvent(
 		}
 		supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
 		access := supportedEntitlements.Access()
-		base, self = attachmentBaseAndSelfValues(
+		base, self = AttachmentBaseAndSelfValues(
 			declarationInterpreter,
 			access,
 			containingResourceComposite,
