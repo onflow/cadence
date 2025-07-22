@@ -488,7 +488,6 @@ func (*RestrictedTypeError) isParseError() {}
 
 func (*RestrictedTypeError) IsUserError() {}
 
-
 func (e *RestrictedTypeError) Error() string {
 	return "restricted types have been removed in Cadence 1.0+"
 }
