@@ -1700,7 +1700,7 @@ func (v *ArrayValue) Filter(
 	procedure FunctionValue,
 ) Value {
 
-	elementType := v.semaType.ElementType(false)
+	elementType := v.SemaType(context).ElementType(false)
 
 	argumentTypes := []sema.Type{elementType}
 
@@ -1787,7 +1787,7 @@ func (v *ArrayValue) Map(
 	procedure FunctionValue,
 ) Value {
 
-	elementType := v.semaType.ElementType(false)
+	elementType := v.SemaType(context).ElementType(false)
 
 	argumentTypes := []sema.Type{elementType}
 
