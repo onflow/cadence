@@ -2117,11 +2117,9 @@ func simpleFunctionDeclaration(
 
 func (d *Desugar) transactionCompositeType() *sema.CompositeType {
 	return &sema.CompositeType{
-		Location:    d.location,
-		Identifier:  commons.TransactionWrapperCompositeName,
-		Kind:        common.CompositeKindStructure,
-		NestedTypes: &sema.StringTypeOrderedMap{},
-		Members:     &sema.StringMemberOrderedMap{},
+		Location:   d.location,
+		Identifier: commons.TransactionWrapperCompositeName,
+		Kind:       common.CompositeKindStructure,
 	}
 }
 

@@ -2991,12 +2991,21 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	}
 
 	if address == common.ZeroAddress {
-		c.emit(
-			opcode.InstructionNewComposite{
-				Kind: kind,
-				Type: typeIndex,
-			},
-		)
+		if typeName == commons.TransactionWrapperCompositeName {
+			c.emit(
+				opcode.InstructionNewSimpleComposite{
+					Kind: kind,
+					Type: typeIndex,
+				},
+			)
+		} else {
+			c.emit(
+				opcode.InstructionNewComposite{
+					Kind: kind,
+					Type: typeIndex,
+				},
+			)
+		}
 	} else {
 		addressConstant := c.addConstant(constant.Address, address.Bytes())
 		c.emit(

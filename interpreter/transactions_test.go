@@ -448,21 +448,8 @@ func TestInterpretInvalidTransferInExecute(t *testing.T) {
 
 	err := inter.InvokeTransaction(nil, signer1)
 
-	// The interpreter gives a InvalidatedResourceError, because there, transaction
-	// gets created as a SimpleCompositeValue.
-	// Thus getting `self.vaults` twice (in LHS and RHS of the assignment) would return the same value instance.
-	// So moving the RHS would automatically invalidate the LHS.
-	// But in compiler/vm, transactions are created as a `CompositeValue`.
-	// There, given the composite-value is backed by atree, the two values returned for `self.vaults`,
-	// are two different instances (which is correct).
-	// Thus, moving one of them wouldn't invalidate the other.
-	if *compile {
-		var recursiveTransferError *interpreter.RecursiveTransferError
-		require.ErrorAs(t, err, &recursiveTransferError)
-	} else {
-		var invalidatedResourceError *interpreter.InvalidatedResourceError
-		require.ErrorAs(t, err, &invalidatedResourceError)
-	}
+	var invalidatedResourceError *interpreter.InvalidatedResourceError
+	require.ErrorAs(t, err, &invalidatedResourceError)
 }
 
 func TestInterpretInvalidRecursiveTransferInExecute(t *testing.T) {
