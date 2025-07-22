@@ -29,6 +29,7 @@ import (
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
@@ -7796,21 +7797,18 @@ func TestParseDestructor(t *testing.T) {
 				EndPos:   destroyEndPos,
 			},
 		}
-		fixes := err.SuggestFixes(code)
-		assert.Equal(t,
-			[]errors.SuggestedFix[ast.TextEdit]{
-				{
-					Message: "Remove the deprecated custom destructor",
-					TextEdits: []ast.TextEdit{
-						{
-							Replacement: "",
-							Range:       ...,
-						},
+		assert.Equal(t, []errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Remove the deprecated custom destructor",
+				TextEdits: []ast.TextEdit{{
+					Replacement: "",
+					Range: ast.Range{
+						StartPos: destroyStartPos,
+						EndPos:   destroyEndPos,
 					},
-				},
+				}},
 			},
-			fixes,
-		)
+		}, err.SuggestFixes(code))
 	})
 
 	// End-to-end test: apply suggested fix to code
