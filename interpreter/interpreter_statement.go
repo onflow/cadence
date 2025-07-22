@@ -387,23 +387,41 @@ func (interpreter *Interpreter) EmitEvent(
 
 func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement) StatementResult {
 
-	arguments := statement.InvocationExpression.Arguments
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: statement,
+	}
+
+	invocationExpression := statement.InvocationExpression
+	arguments := invocationExpression.Arguments
 
 	var eventFields []Value
 	if len(arguments) > 0 {
 		eventFields = make([]Value, len(arguments))
 
+		elaboration := interpreter.Program.Elaboration
+		invocationExpressionTypes := elaboration.InvocationExpressionTypes(invocationExpression)
+
+		argumentTypes := invocationExpressionTypes.ArgumentTypes
+		parameterTypes := invocationExpressionTypes.ParameterTypes
+
 		for i, argument := range arguments {
-			eventFields[i] = interpreter.evalExpression(argument.Expression)
+			value := interpreter.evalExpression(argument.Expression)
+
+			argumentType := argumentTypes[i]
+			parameterType := parameterTypes[i]
+
+			eventFields[i] = TransferAndConvert(
+				interpreter,
+				value,
+				argumentType,
+				parameterType,
+				locationRange,
+			)
 		}
 	}
 
 	eventType := interpreter.Program.Elaboration.EmitStatementEventType(statement)
-
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: statement,
-	}
 
 	interpreter.EmitEvent(
 		interpreter,
