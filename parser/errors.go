@@ -488,13 +488,6 @@ func (*RestrictedTypeError) isParseError() {}
 
 func (*RestrictedTypeError) IsUserError() {}
 
-func (e *RestrictedTypeError) StartPosition() ast.Position {
-	return e.StartPos
-}
-
-func (e *RestrictedTypeError) EndPosition(_ common.MemoryGauge) ast.Position {
-	return e.EndPos
-}
 
 func (e *RestrictedTypeError) Error() string {
 	return "restricted types have been removed in Cadence 1.0+"
