@@ -7329,19 +7329,24 @@ func TestInterpretEmitEvent(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
+	storage := NewUnmeteredInMemoryStorage()
+
 	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           event Transfer(to: Int, from: Int)
           event TransferAmount(to: Int, from: Int, amount: Int)
+          event TransferOptional(to: Int?, from: Int?)
 
           fun test() {
               emit Transfer(to: 1, from: 2)
               emit Transfer(to: 3, from: 4)
               emit TransferAmount(to: 1, from: 2, amount: 100)
+              emit TransferOptional(to: nil, from: 2)
           }
         `,
 		ParseCheckAndInterpretOptions{
 			InterpreterConfig: &interpreter.Config{
+				Storage: storage,
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
 					_ interpreter.LocationRange,
@@ -7362,11 +7367,13 @@ func TestInterpretEmitEvent(t *testing.T) {
 
 	transferEventType := RequireGlobalType(t, inter, "Transfer")
 	transferAmountEventType := RequireGlobalType(t, inter, "TransferAmount")
+	transferOptionalEventType := RequireGlobalType(t, inter, "TransferOptional")
 
-	require.Len(t, eventTypes, 3)
+	require.Len(t, eventTypes, 4)
 	require.Equal(t, TestLocation.QualifiedIdentifier(transferEventType.ID()), eventTypes[0].QualifiedIdentifier())
 	require.Equal(t, TestLocation.QualifiedIdentifier(transferEventType.ID()), eventTypes[1].QualifiedIdentifier())
 	require.Equal(t, TestLocation.QualifiedIdentifier(transferAmountEventType.ID()), eventTypes[2].QualifiedIdentifier())
+	require.Equal(t, TestLocation.QualifiedIdentifier(transferOptionalEventType.ID()), eventTypes[3].QualifiedIdentifier())
 
 	require.Equal(t,
 		[][]interpreter.Value{
@@ -7383,8 +7390,27 @@ func TestInterpretEmitEvent(t *testing.T) {
 				interpreter.NewUnmeteredIntValueFromInt64(2),
 				interpreter.NewUnmeteredIntValueFromInt64(100),
 			},
+			{
+				interpreter.NilValue{},
+				interpreter.NewUnmeteredSomeValueNonCopying(
+					interpreter.NewUnmeteredIntValueFromInt64(2),
+				),
+			},
 		},
 		eventsFields,
+	)
+
+	// Explicit event emission should not create composite values (allocate slab IDs)
+
+	nextStackSlabID, err := storage.GenerateSlabID(atree.AddressUndefined)
+	require.NoError(t, err)
+	assert.Equal(
+		t,
+		atree.NewSlabID(
+			atree.AddressUndefined,
+			atree.SlabIndex{0, 0, 0, 0, 0, 0, 0, 1},
+		),
+		nextStackSlabID,
 	)
 }
 
