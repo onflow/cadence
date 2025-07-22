@@ -3218,10 +3218,11 @@ func (c *Compiler[_, _]) addBuiltinMethods(typ sema.Type) {
 
 	// add native function .forEachAttachment for composite types supporting attachments
 	if t, ok := typ.(sema.CompositeKindedType); ok {
-		if t.GetCompositeKind().SupportsAttachments() {
+		kind := t.GetCompositeKind()
+		if kind.SupportsAttachments() {
 			name := sema.CompositeForEachAttachmentFunctionName
 			qualifiedName := commons.TypeQualifiedName(typ, name)
-			functionType := sema.CompositeForEachAttachmentFunctionType(t.GetCompositeKind())
+			functionType := sema.CompositeForEachAttachmentFunctionType(kind)
 			c.addFunction(
 				name,
 				qualifiedName,
