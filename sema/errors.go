@@ -2656,7 +2656,7 @@ func (e *EmitNonEventError) Error() string {
 }
 
 func (e *EmitNonEventError) SecondaryError() string {
-	return "Only event types can be emitted. Consider declaring an event: event MyEvent()"
+	return "Only event types can be emitted. Consider declaring the type as an event"
 }
 
 func (e *EmitNonEventError) DocumentationLink() string {
