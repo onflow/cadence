@@ -1741,11 +1741,6 @@ func assertErrorPosition(
 	err ast.HasPosition,
 	expectedStartPos int,
 ) {
-	if *compile {
-		// TODO: position info not supported yet
-		return
-	}
-
 	assert.Equal(
 		t,
 		expectedStartPos,

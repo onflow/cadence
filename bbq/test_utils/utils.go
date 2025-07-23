@@ -36,10 +36,7 @@ import (
 	"github.com/onflow/cadence/bbq/compiler"
 )
 
-func SingleIdentifierLocationResolver(t testing.TB) func(
-	identifiers []ast.Identifier,
-	location common.Location,
-) ([]commons.ResolvedLocation, error) {
+func SingleIdentifierLocationResolver(t testing.TB) sema.LocationHandlerFunc {
 	return func(identifiers []ast.Identifier, location common.Location) ([]commons.ResolvedLocation, error) {
 		require.Len(t, identifiers, 1)
 		require.IsType(t, common.AddressLocation{}, location)

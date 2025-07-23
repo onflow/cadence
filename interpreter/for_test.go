@@ -375,262 +375,510 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 
 	t.Parallel()
 
+	prepare := func(t *testing.T, code string, check func(interpreter.Value)) Invokable {
+		valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
+			"check",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{
+					{
+						Label:          sema.ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: sema.NewTypeAnnotation(sema.AnyType),
+					},
+				},
+				sema.VoidTypeAnnotation,
+			),
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				check(invocation.Arguments[0])
+				return interpreter.Void
+			},
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(valueDeclaration)
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
+
+		inter, err := parseCheckAndPrepareWithOptions(
+			t,
+			code,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+					},
+				},
+				InterpreterConfig: &interpreter.Config{
+					BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		return inter
+	}
+
 	t.Run("Primitive array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndPrepare(t, `
-            fun main() {
-                let array = ["Hello", "World", "Foo", "Bar"]
-                let arrayRef = &array as &[String]
+		var checks int
 
-                for element in arrayRef {
-                    let e: String = element
+		invokable := prepare(t,
+			`
+                fun main() {
+                    let array = ["Hello", "World", "Foo", "Bar"]
+                    let arrayRef = &array as &[String]
+
+                    for element in arrayRef {
+                        check(element)
+                        let e: String = element
+                    }
                 }
-            }
-        `)
+            `,
+			func(value interpreter.Value) {
+				require.IsType(t, &interpreter.StringValue{}, value)
+				checks++
+			},
+		)
 
-		_, err := inter.Invoke("main")
+		_, err := invokable.Invoke("main")
 		require.NoError(t, err)
+
+		require.Equal(t, 4, checks)
 	})
 
 	t.Run("Struct array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndPrepare(t, `
-            struct Foo{}
+		var checks int
 
-            fun main() {
-                let array = [Foo(), Foo()]
-                let arrayRef = &array as &[Foo]
+		invokable := prepare(t,
+			`
+                struct Foo {}
 
-                for element in arrayRef {
-                    let e: &Foo = element
+                fun main() {
+                    let array = [Foo(), Foo()]
+                    let arrayRef = &array as &[Foo]
+
+                    for element in arrayRef {
+                        check(element)
+                        let e: &Foo = element
+                    }
                 }
-            }
-        `)
+            `,
+			func(value interpreter.Value) {
+				require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+				checks++
+			},
+		)
 
-		_, err := inter.Invoke("main")
+		_, err := invokable.Invoke("main")
 		require.NoError(t, err)
+
+		require.Equal(t, 2, checks)
 	})
 
 	t.Run("Resource array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndPrepare(t, `
-            resource Foo{}
+		var checks int
 
-            fun main() {
-                let array <- [ <- create Foo(), <- create Foo()]
-                let arrayRef = &array as &[Foo]
+		invokable := prepare(t,
+			`
+                resource Foo {}
 
-                for element in arrayRef {
-                    let e: &Foo = element
+                fun main() {
+                    let array <- [ <- create Foo(), <- create Foo()]
+                    let arrayRef = &array as &[Foo]
+
+                    for element in arrayRef {
+                        check(element)
+                        let e: &Foo = element
+                    }
+
+                    destroy array
                 }
+            `,
+			func(value interpreter.Value) {
+				require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+				checks++
+			},
+		)
 
-                destroy array
-            }
-        `)
-
-		_, err := inter.Invoke("main")
+		_, err := invokable.Invoke("main")
 		require.NoError(t, err)
+
+		require.Equal(t, 2, checks)
 	})
 
 	t.Run("Moved resource array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndPrepare(t, `
-            resource Foo{}
+		var checks int
 
-            fun main() {
-                let array <- [ <- create Foo(), <- create Foo()]
-                let arrayRef = returnSameRef(&array as &[Foo])
-                let movedArray <- array
+		invokable := prepare(t,
+			`
+                resource Foo {}
 
-                for element in arrayRef {
-                    let e: &Foo = element
+                fun main() {
+                    let array <- [ <- create Foo(), <- create Foo()]
+                    let arrayRef = returnSameRef(&array as &[Foo])
+                    let movedArray <- array
+
+                    for element in arrayRef {
+                        check(element)
+                        let e: &Foo = element
+                    }
+
+                    destroy movedArray
                 }
 
-                destroy movedArray
-            }
+                fun returnSameRef(_ ref: &[Foo]): &[Foo] {
+                    return ref
+                }
+            `,
+			func(value interpreter.Value) {
+				require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+				checks++
+			},
+		)
 
-            fun returnSameRef(_ ref: &[Foo]): &[Foo] {
-                return ref
-            }
-        `)
-
-		_, err := inter.Invoke("main")
+		_, err := invokable.Invoke("main")
 		RequireError(t, err)
+
 		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
 		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
+
+		require.Equal(t, 0, checks)
 	})
 
 	t.Run("Auth ref", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndPrepare(t, `
-            struct Foo{}
+		var checks int
 
-            fun main() {
-                let array = [Foo(), Foo()]
-                let arrayRef = &array as auth(Mutate) &[Foo]
+		invokable := prepare(t,
+			`
+                struct Foo {}
 
-                for element in arrayRef {
-                    let e: &Foo = element    // Should be non-auth
+                fun main() {
+                    let array = [Foo(), Foo()]
+                    let arrayRef = &array as auth(Mutate) &[Foo]
+
+                    for element in arrayRef {
+                        check(element)
+                        let e: &Foo = element    // Should be non-auth
+                    }
                 }
-            }
-        `)
+            `,
+			func(value interpreter.Value) {
+				require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
 
-		_, err := inter.Invoke("main")
+				ref := value.(*interpreter.EphemeralReferenceValue)
+				require.Equal(t, interpreter.UnauthorizedAccess, ref.Authorization)
+
+				checks++
+			},
+		)
+
+		_, err := invokable.Invoke("main")
 		require.NoError(t, err)
+
+		require.Equal(t, 2, checks)
 	})
 
 	t.Run("Optional array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndPrepare(t, `
-            struct Foo{}
+		var checks int
 
-            fun main() {
-                let array: [Foo?] = [Foo(), Foo()]
-                let arrayRef = &array as &[Foo?]
+		invokable := prepare(t,
+			`
+                struct Foo {}
 
-                for element in arrayRef {
-                    let e: &Foo? = element    // Should be an optional reference
+                fun main() {
+                    let array: [Foo?] = [Foo(), Foo()]
+                    let arrayRef = &array as &[Foo?]
+
+                    for element in arrayRef {
+                        check(element)
+                        let e: &Foo? = element    // Should be an optional reference
+                    }
                 }
-            }
-        `)
+            `,
+			func(value interpreter.Value) {
+				require.IsType(t, &interpreter.SomeValue{}, value)
+				someValue := value.(*interpreter.SomeValue)
 
-		_, err := inter.Invoke("main")
+				require.IsType(t, &interpreter.EphemeralReferenceValue{}, someValue.InnerValue())
+
+				checks++
+			},
+		)
+
+		_, err := invokable.Invoke("main")
 		require.NoError(t, err)
+
+		require.Equal(t, 2, checks)
 	})
 
 	t.Run("Nil array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndPrepare(t, `
-            struct Foo{}
+		var checks int
 
-            fun main() {
-                let array: [Foo?] = [nil, nil]
-                let arrayRef = &array as &[Foo?]
+		invokable := prepare(t,
+			`
+                struct Foo {}
 
-                for element in arrayRef {
-                    let e: &Foo? = element    // Should be an optional reference
+                fun main() {
+                    let array: [Foo?] = [nil, nil]
+                    let arrayRef = &array as &[Foo?]
+
+                    for element in arrayRef {
+                        check(element)
+                        let e: &Foo? = element    // Should be an optional reference
+                    }
                 }
-            }
-        `)
+            `,
+			func(value interpreter.Value) {
+				require.IsType(t, interpreter.NilValue{}, value)
+				checks++
+			},
+		)
 
-		_, err := inter.Invoke("main")
+		_, err := invokable.Invoke("main")
 		require.NoError(t, err)
+
+		require.Equal(t, 2, checks)
 	})
 
 	t.Run("Reference array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndPrepare(t, `
-            struct Foo{}
+		var checks int
 
-            fun main() {
-                let elementRef = &Foo() as &Foo
-                let array: [&Foo] = [elementRef, elementRef]
-                let arrayRef = &array as &[&Foo]
+		invokable := prepare(t,
+			`
+                struct Foo {}
 
-                for element in arrayRef {
-                    let e: &Foo = element
+                fun main() {
+                    let elementRef = &Foo() as &Foo
+                    let array: [&Foo] = [elementRef, elementRef]
+                    let arrayRef = &array as &[&Foo]
+
+                    for element in arrayRef {
+                        check(element)
+                        let e: &Foo = element
+                    }
                 }
-            }
-        `)
+            `,
+			func(value interpreter.Value) {
+				require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+				checks++
+			},
+		)
 
-		_, err := inter.Invoke("main")
+		_, err := invokable.Invoke("main")
 		require.NoError(t, err)
+
+		require.Equal(t, 2, checks)
+	})
+
+	t.Run("Array of unauthorized references", func(t *testing.T) {
+		t.Parallel()
+
+		var checks int
+
+		invokable := prepare(t,
+			`
+                struct Foo {}
+
+                fun main() {
+                    let elementRef = &Foo() as &Foo
+                    let array: [&Foo] = [elementRef, elementRef]
+
+                    for element in array {
+                        check(element)
+                        let e: &Foo = element
+                    }
+                }
+            `,
+			func(value interpreter.Value) {
+				require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+				checks++
+			},
+		)
+
+		_, err := invokable.Invoke("main")
+		require.NoError(t, err)
+
+		require.Equal(t, 2, checks)
+	})
+
+	t.Run("Array of authorized references", func(t *testing.T) {
+		t.Parallel()
+
+		var checks int
+
+		invokable := prepare(t,
+			`
+                struct Foo {}
+
+                fun main() {
+                    let elementRef = &Foo() as auth(Mutate) &Foo
+                    let array: [auth(Mutate) &Foo] = [elementRef, elementRef]
+
+                    for element in array {
+                        check(element)
+                        let e: auth(Mutate) &Foo = element
+                    }
+                }
+            `,
+			func(value interpreter.Value) {
+				require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+
+				ref := value.(*interpreter.EphemeralReferenceValue)
+				require.IsType(t, interpreter.EntitlementSetAuthorization{}, ref.Authorization)
+
+				checks++
+			},
+		)
+
+		_, err := invokable.Invoke("main")
+		require.NoError(t, err)
+
+		require.Equal(t, 2, checks)
 	})
 
 	t.Run("Mutating reference to resource array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndPrepare(t, `
-            resource Foo{
-                fun sayHello() {}
-            }
+		var checks int
 
-            fun main() {
-                let array <- [ <- create Foo()]
-                let arrayRef = &array as auth(Mutate) &[Foo]
-
-                for element in arrayRef {
-                    // Move the actual element
-                    // This mutation should fail.
-                    let oldElement <- arrayRef.remove(at: 0)
-
-                    // Use the element reference
-                    element.sayHello()
-
-                    destroy oldElement
+		invokable := prepare(t,
+			`
+                resource Foo {
+                    fun sayHello() {}
                 }
 
-                destroy array
-            }
-        `)
+                fun main() {
+                    let array <- [ <- create Foo()]
+                    let arrayRef = &array as auth(Mutate) &[Foo]
 
-		_, err := inter.Invoke("main")
+                    for element in arrayRef {
+                        check(element)
+
+                        // Move the actual element
+                        // This mutation should fail.
+                        let oldElement <- arrayRef.remove(at: 0)
+
+                        // Use the element reference
+                        element.sayHello()
+
+                        destroy oldElement
+                    }
+
+                    destroy array
+                }
+            `,
+			func(value interpreter.Value) {
+				require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+				checks++
+			},
+		)
+
+		_, err := invokable.Invoke("main")
 		RequireError(t, err)
+
 		var containerMutationError *interpreter.ContainerMutatedDuringIterationError
 		require.ErrorAs(t, err, &containerMutationError)
+
+		require.Equal(t, 1, checks)
 	})
 
 	t.Run("Mutating reference to struct array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndPrepare(t, `
-            struct Foo{
-                fun sayHello() {}
-            }
+		var checks int
 
-            fun main() {
-                let array = [Foo()]
-                let arrayRef = &array as auth(Mutate) &[Foo]
-
-                for element in arrayRef {
-                    // Move the actual element
-                    let oldElement = arrayRef.remove(at: 0)
-
-                    // Use the element reference
-                    element.sayHello()
+		invokable := prepare(t,
+			`
+                struct Foo {
+                    fun sayHello() {}
                 }
-            }
-        `)
 
-		_, err := inter.Invoke("main")
+                fun main() {
+                    let array = [Foo()]
+                    let arrayRef = &array as auth(Mutate) &[Foo]
+
+                    for element in arrayRef {
+                        check(element)
+
+                        // Move the actual element
+                        let oldElement = arrayRef.remove(at: 0)
+
+                        // Use the element reference
+                        element.sayHello()
+                    }
+                }
+            `,
+			func(value interpreter.Value) {
+				require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+				checks++
+			},
+		)
+
+		_, err := invokable.Invoke("main")
 		RequireError(t, err)
+
 		var containerMutationError *interpreter.ContainerMutatedDuringIterationError
 		require.ErrorAs(t, err, &containerMutationError)
+
+		require.Equal(t, 1, checks)
 	})
 
 	t.Run("String ref", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndPrepare(t, `
-            fun main(): [Character] {
-                let s = "Hello"
-                let sRef = &s as &String
-                let characters: [Character] = []
+		var checks int
 
-                for char in sRef {
-                    characters.append(char)
+		invokable := prepare(t,
+			`
+                fun main(): [Character] {
+                    let s = "Hello"
+                    let sRef = &s as &String
+                    let characters: [Character] = []
+
+                    for char in sRef {
+                        check(char)
+                        characters.append(char)
+                    }
+
+                    return characters
                 }
+            `,
+			func(value interpreter.Value) {
+				require.IsType(t, interpreter.CharacterValue{}, value)
+				checks++
+			},
+		)
 
-                return characters
-            }
-        `)
-
-		value, err := inter.Invoke("main")
+		value, err := invokable.Invoke("main")
 		require.NoError(t, err)
 
 		RequireValuesEqual(
 			t,
-			inter,
+			invokable,
 			interpreter.NewArrayValue(
-				inter,
+				invokable,
 				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeCharacter,
@@ -644,37 +892,50 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 			),
 			value,
 		)
+
+		require.Equal(t, 5, checks)
 	})
 
 	t.Run("Resource array, use after loop", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndPrepare(t, `
-            resource Foo{
-                fun bar() {}
-            }
+		var checks int
 
-            fun main() {
-                let array <- [ <- create Foo(), <- create Foo()]
-
-                // Take a reference to an element.
-                let arrayElementRef = &array[0] as &Foo
-
-                let arrayRef = &array as &[Foo]
-                for element in arrayRef {
-                    let e: &Foo = element
+		invokable := prepare(t,
+			`
+                resource Foo {
+                    fun bar() {}
                 }
 
-                // Reference should stay valid, even after looping.
-                // i.e: Loop should not move-out the elements.
-                arrayElementRef.bar()
+                fun main() {
+                    let array <- [ <- create Foo(), <- create Foo()]
 
-                destroy array
-            }
-        `)
+                    // Take a reference to an element.
+                    let arrayElementRef = &array[0] as &Foo
 
-		_, err := inter.Invoke("main")
+                    let arrayRef = &array as &[Foo]
+                    for element in arrayRef {
+                        check(element)
+                        let e: &Foo = element
+                    }
+
+                    // Reference should stay valid, even after looping.
+                    // i.e: Loop should not move-out the elements.
+                    arrayElementRef.bar()
+
+                    destroy array
+                }
+            `,
+			func(value interpreter.Value) {
+				require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+				checks++
+			},
+		)
+
+		_, err := invokable.Invoke("main")
 		require.NoError(t, err)
+
+		require.Equal(t, 2, checks)
 	})
 }
 
@@ -709,7 +970,7 @@ func TestInterpretStorageReferencesInForLoop(t *testing.T) {
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, _ := testAccount(t, address, true, nil, `
-            struct Foo{}
+            struct Foo {}
 
             fun test() {
                 let array = [Foo(), Foo()]
@@ -732,7 +993,7 @@ func TestInterpretStorageReferencesInForLoop(t *testing.T) {
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, _ := testAccount(t, address, true, nil, `
-            resource Foo{}
+            resource Foo {}
 
             fun test() {
                 let array <- [ <- create Foo(), <- create Foo()]
@@ -755,7 +1016,7 @@ func TestInterpretStorageReferencesInForLoop(t *testing.T) {
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
 		inter, _ := testAccount(t, address, true, nil, `
-            resource Foo{}
+            resource Foo {}
 
             fun test() {
                 let array <- [ <- create Foo(), <- create Foo()]

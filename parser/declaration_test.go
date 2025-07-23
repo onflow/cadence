@@ -9866,3 +9866,34 @@ func TestRestrictedTypeError_HasMigrationNote(t *testing.T) {
 	note := noteProvider.MigrationNote()
 	assert.Equal(t, note, "This is pre-Cadence 1.0 syntax. Restricted types like `T{}` have been replaced with intersection types like `{T}`.")
 }
+
+func TestParseStructNamedTransaction(t *testing.T) {
+	t.Parallel()
+
+	code := `
+        struct transaction {}
+
+        fun test(): transaction {
+            return transaction()
+        }
+    `
+
+	_, errs := testParseProgram(code)
+
+	// The compiler relies on the type-name `transaction`,
+	// to distinguish between constructing a transaction value vs any other composite value.
+	// So defining composite types with the name `transaction` must not be allwoed.
+	AssertEqualWithDiff(
+		t,
+		Error{
+			Code: []uint8(code),
+			Errors: []error{
+				&SyntaxError{
+					Pos:     ast.Position{Line: 2, Column: 15, Offset: 16},
+					Message: "expected identifier following struct declaration, got keyword transaction",
+				},
+			},
+		},
+		errs,
+	)
+}

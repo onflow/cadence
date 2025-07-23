@@ -35,7 +35,6 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/parser"
 	"github.com/onflow/cadence/pretty"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
@@ -1772,9 +1771,6 @@ func TestInterpretHostFunction(t *testing.T) {
 	const code = `
       access(all) let a = test(1, 2)
     `
-	program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
-
-	require.NoError(t, err)
 
 	testFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
 		"test",
@@ -1805,40 +1801,29 @@ func TestInterpretHostFunction(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(testFunction)
 
-	checker, err := sema.NewChecker(
-		program,
-		TestLocation,
-		nil,
-		&sema.Config{
-			BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-				return baseValueActivation
-			},
-			AccessCheckMode: sema.AccessCheckModeStrict,
-		},
-	)
-	require.NoError(t, err)
-
-	err = checker.Check()
-	require.NoError(t, err)
-
-	storage := newUnmeteredInMemoryStorage()
-
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, testFunction)
 
-	inter, err := interpreter.NewInterpreter(
-		interpreter.ProgramFromChecker(checker),
-		checker.Location,
-		&interpreter.Config{
-			Storage: storage,
-			BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
-				return baseActivation
+	inter, err := parseCheckAndPrepareWithOptions(t,
+		code,
+		ParseCheckAndInterpretOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+			InterpreterConfig: &interpreter.Config{
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+				AccountHandler: func(context interpreter.AccountCreationContext, address interpreter.AddressValue) interpreter.Value {
+					return stdlib.NewAccountValue(context, nil, address)
+				},
 			},
 		},
 	)
-	require.NoError(t, err)
-
-	err = inter.Interpret()
 	require.NoError(t, err)
 
 	AssertValuesEqual(
@@ -1856,9 +1841,6 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 	const code = `
       access(all) let nothing = test(1, true, "test")
     `
-	program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
-
-	require.NoError(t, err)
 
 	called := false
 
@@ -1916,40 +1898,29 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(testFunction)
 
-	checker, err := sema.NewChecker(
-		program,
-		TestLocation,
-		nil,
-		&sema.Config{
-			BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-				return baseValueActivation
-			},
-			AccessCheckMode: sema.AccessCheckModeStrict,
-		},
-	)
-	require.NoError(t, err)
-
-	err = checker.Check()
-	require.NoError(t, err)
-
-	storage := newUnmeteredInMemoryStorage()
-
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, testFunction)
 
-	inter, err := interpreter.NewInterpreter(
-		interpreter.ProgramFromChecker(checker),
-		checker.Location,
-		&interpreter.Config{
-			Storage: storage,
-			BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
-				return baseActivation
+	_, err := parseCheckAndPrepareWithOptions(t,
+		code,
+		ParseCheckAndInterpretOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+			InterpreterConfig: &interpreter.Config{
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+				AccountHandler: func(context interpreter.AccountCreationContext, address interpreter.AddressValue) interpreter.Value {
+					return stdlib.NewAccountValue(context, nil, address)
+				},
 			},
 		},
 	)
-	require.NoError(t, err)
-
-	err = inter.Interpret()
 	require.NoError(t, err)
 
 	assert.True(t, called)
@@ -1962,9 +1933,6 @@ func TestInterpretHostFunctionWithOptionalArguments(t *testing.T) {
 	const code = `
       access(all) let nothing = test(1, true, "test")
     `
-	program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
-
-	require.NoError(t, err)
 
 	called := false
 
@@ -2024,40 +1992,29 @@ func TestInterpretHostFunctionWithOptionalArguments(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(testFunction)
 
-	checker, err := sema.NewChecker(
-		program,
-		TestLocation,
-		nil,
-		&sema.Config{
-			BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-				return baseValueActivation
-			},
-			AccessCheckMode: sema.AccessCheckModeStrict,
-		},
-	)
-	require.NoError(t, err)
-
-	err = checker.Check()
-	require.NoError(t, err)
-
-	storage := newUnmeteredInMemoryStorage()
-
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, testFunction)
 
-	inter, err := interpreter.NewInterpreter(
-		interpreter.ProgramFromChecker(checker),
-		checker.Location,
-		&interpreter.Config{
-			Storage: storage,
-			BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
-				return baseActivation
+	_, err := parseCheckAndPrepareWithOptions(t,
+		code,
+		ParseCheckAndInterpretOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+			InterpreterConfig: &interpreter.Config{
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+				AccountHandler: func(context interpreter.AccountCreationContext, address interpreter.AddressValue) interpreter.Value {
+					return stdlib.NewAccountValue(context, nil, address)
+				},
 			},
 		},
 	)
-	require.NoError(t, err)
-
-	err = inter.Interpret()
 	require.NoError(t, err)
 
 	assert.True(t, called)
@@ -4003,6 +3960,7 @@ func TestInterpretInterfaceFunctionUse(t *testing.T) {
 	}
 }
 
+// Note: Corresponding compiler/vm test is `TestImport` in `vm_test.go`.
 func TestInterpretImport(t *testing.T) {
 
 	t.Parallel()
@@ -4085,6 +4043,7 @@ func TestInterpretImport(t *testing.T) {
 	)
 }
 
+// Note: Corresponding compiler/vm test is `TestImportError` in `vm_test.go`.
 func TestInterpretImportError(t *testing.T) {
 
 	t.Parallel()
@@ -6869,6 +6828,8 @@ func TestInterpretAssignmentAfterClosureInnerFunction(t *testing.T) {
 // TestInterpretCompositeFunctionInvocationFromImportingProgram checks
 // that member functions of imported composites can be invoked from an importing program.
 // See https://github.com/dapperlabs/flow-go/issues/838
+//
+// Note: Corresponding compiler/vm tests are `TestImport`/`TestContractImport` in `vm_test.go`.
 func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
 
 	t.Parallel()
@@ -7368,19 +7329,24 @@ func TestInterpretEmitEvent(t *testing.T) {
 	var eventTypes []*sema.CompositeType
 	var eventsFields [][]interpreter.Value
 
+	storage := NewUnmeteredInMemoryStorage()
+
 	inter, err := parseCheckAndPrepareWithOptions(t,
 		`
           event Transfer(to: Int, from: Int)
           event TransferAmount(to: Int, from: Int, amount: Int)
+          event TransferOptional(to: Int?, from: Int?)
 
           fun test() {
               emit Transfer(to: 1, from: 2)
               emit Transfer(to: 3, from: 4)
               emit TransferAmount(to: 1, from: 2, amount: 100)
+              emit TransferOptional(to: nil, from: 2)
           }
         `,
 		ParseCheckAndInterpretOptions{
 			InterpreterConfig: &interpreter.Config{
+				Storage: storage,
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
 					_ interpreter.LocationRange,
@@ -7401,11 +7367,13 @@ func TestInterpretEmitEvent(t *testing.T) {
 
 	transferEventType := RequireGlobalType(t, inter, "Transfer")
 	transferAmountEventType := RequireGlobalType(t, inter, "TransferAmount")
+	transferOptionalEventType := RequireGlobalType(t, inter, "TransferOptional")
 
-	require.Len(t, eventTypes, 3)
+	require.Len(t, eventTypes, 4)
 	require.Equal(t, TestLocation.QualifiedIdentifier(transferEventType.ID()), eventTypes[0].QualifiedIdentifier())
 	require.Equal(t, TestLocation.QualifiedIdentifier(transferEventType.ID()), eventTypes[1].QualifiedIdentifier())
 	require.Equal(t, TestLocation.QualifiedIdentifier(transferAmountEventType.ID()), eventTypes[2].QualifiedIdentifier())
+	require.Equal(t, TestLocation.QualifiedIdentifier(transferOptionalEventType.ID()), eventTypes[3].QualifiedIdentifier())
 
 	require.Equal(t,
 		[][]interpreter.Value{
@@ -7422,8 +7390,27 @@ func TestInterpretEmitEvent(t *testing.T) {
 				interpreter.NewUnmeteredIntValueFromInt64(2),
 				interpreter.NewUnmeteredIntValueFromInt64(100),
 			},
+			{
+				interpreter.NilValue{},
+				interpreter.NewUnmeteredSomeValueNonCopying(
+					interpreter.NewUnmeteredIntValueFromInt64(2),
+				),
+			},
 		},
 		eventsFields,
+	)
+
+	// Explicit event emission should not create composite values (allocate slab IDs)
+
+	nextStackSlabID, err := storage.GenerateSlabID(atree.AddressUndefined)
+	require.NoError(t, err)
+	assert.Equal(
+		t,
+		atree.NewSlabID(
+			atree.AddressUndefined,
+			atree.SlabIndex{0, 0, 0, 0, 0, 0, 0, 1},
+		),
+		nextStackSlabID,
 	)
 }
 
@@ -8682,6 +8669,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 	})
 }
 
+// Note: Corresponding compiler/vm test is at `TestInterfaceMethodCall` in `vm_test.go`.
 func TestInterpretConformToImportedInterface(t *testing.T) {
 
 	t.Parallel()
@@ -13689,6 +13677,182 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 
                     destroy y
                     destroy z
+                }`,
+
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+					},
+				},
+				InterpreterConfig: &interpreter.Config{
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, 0, getKeyInvocationsCount)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		// Target expression must be evaluated only once.
+		assert.Equal(t, 1, getKeyInvocationsCount)
+	})
+
+	t.Run("index expr in if-statement", func(t *testing.T) {
+		t.Parallel()
+
+		const key = 0
+
+		getKey1InvocationsCount := 0
+		getKey2InvocationsCount := 0
+
+		getKey1Function := stdlib.NewInterpreterStandardLibraryStaticFunction(
+			"getKey1",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{},
+				sema.TypeAnnotation{
+					Type: sema.IntType,
+				},
+			),
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				getKey1InvocationsCount++
+				return interpreter.NewUnmeteredIntValueFromInt64(key)
+			},
+		)
+
+		getKey2Function := stdlib.NewInterpreterStandardLibraryStaticFunction(
+			"getKey2",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{},
+				sema.TypeAnnotation{
+					Type: sema.IntType,
+				},
+			),
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				getKey2InvocationsCount++
+				return interpreter.NewUnmeteredIntValueFromInt64(key)
+			},
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(getKey1Function)
+		baseValueActivation.DeclareValue(getKey2Function)
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, getKey1Function)
+		interpreter.Declare(baseActivation, getKey2Function)
+
+		inter, err := parseCheckAndPrepareWithOptions(
+			t,
+			`
+                resource R {
+                    let id: Int
+                    init(id: Int) {
+                        self.id = id
+                    }
+                }
+
+                fun test() {
+                    let x <- create R(id: 1)
+                    var y: @[[R?]] <- [ <- [<-create R(id: 2)]]
+
+                    if let z <- y[getKey1()][getKey2()] <- x {
+                        destroy z
+                    }
+
+                    destroy y
+
+                }`,
+
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+					},
+				},
+				InterpreterConfig: &interpreter.Config{
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, 0, getKey1InvocationsCount)
+		assert.Equal(t, 0, getKey2InvocationsCount)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		// Target expression must be evaluated only once.
+		assert.Equal(t, 1, getKey1InvocationsCount)
+
+		// Indexing expression must be evaluated once.
+		assert.Equal(t, 1, getKey2InvocationsCount)
+	})
+
+	t.Run("member expr in if-statement", func(t *testing.T) {
+		t.Parallel()
+
+		const key = 0
+
+		getKeyInvocationsCount := 0
+
+		getKeyFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
+			"getKey",
+			sema.NewSimpleFunctionType(
+				sema.FunctionPurityView,
+				[]sema.Parameter{},
+				sema.TypeAnnotation{
+					Type: sema.IntType,
+				},
+			),
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				getKeyInvocationsCount++
+				return interpreter.NewUnmeteredIntValueFromInt64(key)
+			},
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(getKeyFunction)
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, getKeyFunction)
+
+		inter, err := parseCheckAndPrepareWithOptions(
+			t,
+			`
+                resource R {
+                    var inner: @AnyResource?
+                    init() {
+                        self.inner <- nil
+                    }
+                }
+
+                fun test() {
+                    let x <- create R()
+                    var y <- [<-create R()]
+
+                    if let z <- y[getKey()].inner <- x {
+                        destroy z
+                    }
+
+                    destroy y
                 }`,
 
 			ParseCheckAndInterpretOptions{

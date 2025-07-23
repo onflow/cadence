@@ -823,6 +823,7 @@ func TestCompileIfLet(t *testing.T) {
 
 			// let y' = x
 			opcode.InstructionGetLocal{Local: xIndex},
+			opcode.InstructionTransferAndConvert{Type: 1},
 			opcode.InstructionSetLocal{Local: tempYIndex},
 
 			// if nil
@@ -832,20 +833,19 @@ func TestCompileIfLet(t *testing.T) {
 			// let y = y'
 			opcode.InstructionGetLocal{Local: tempYIndex},
 			opcode.InstructionUnwrap{},
-			opcode.InstructionTransferAndConvert{Type: 1},
 			opcode.InstructionSetLocal{Local: yIndex},
 
 			// then { return y }
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: yIndex},
-			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionReturnValue{},
 			opcode.InstructionJump{Target: 18},
 
 			// else { return 2 }
 			opcode.InstructionStatement{},
 			opcode.InstructionGetConstant{Constant: 0},
-			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionReturnValue{},
 
 			opcode.InstructionReturn{},
@@ -921,6 +921,7 @@ func TestCompileIfLetScope(t *testing.T) {
 			// if let x = y
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: yIndex},
+			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionSetLocal{Local: tempIfLetIndex},
 
 			opcode.InstructionGetLocal{Local: tempIfLetIndex},
@@ -929,7 +930,6 @@ func TestCompileIfLetScope(t *testing.T) {
 			// then
 			opcode.InstructionGetLocal{Local: tempIfLetIndex},
 			opcode.InstructionUnwrap{},
-			opcode.InstructionTransferAndConvert{Type: 1},
 			opcode.InstructionSetLocal{Local: x2Index},
 
 			// z = x
@@ -3317,11 +3317,11 @@ func TestCompileFunctionConditions(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-        fun test(x: Int): Int {
-            pre { x > 0 }
-            return 5
-        }
-    `)
+            fun test(x: Int): Int {
+                pre { x > 0 }
+                return 5
+            }
+        `)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(
@@ -3381,11 +3381,11 @@ func TestCompileFunctionConditions(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-        fun test(x: Int): Int {
-            post { x > 0 }
-            return 5
-        }
-    `)
+            fun test(x: Int): Int {
+                post { x > 0 }
+                return 5
+            }
+        `)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(
@@ -3465,11 +3465,11 @@ func TestCompileFunctionConditions(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-        fun test(x: @AnyResource?): @AnyResource? {
-            post { result != nil }
-            return <- x
-        }
-    `)
+            fun test(x: @AnyResource?): @AnyResource? {
+                post { result != nil }
+                return <- x
+            }
+        `)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(
@@ -4766,27 +4766,32 @@ func TestCompileTransaction(t *testing.T) {
 
 	t.Parallel()
 
-	checker, err := ParseAndCheck(t, `
-        transaction {
-            var count: Int
+	checker, err := ParseAndCheckWithOptions(t,
+		`
+            transaction {
+                var count: Int
 
-            prepare() {
-                self.count = 2
-            }
+                prepare() {
+                    self.count = 2
+                }
 
-            pre {
-                self.count == 2
-            }
+                pre {
+                    self.count == 2
+                }
 
-            execute {
-                self.count = 10
-            }
+                execute {
+                    self.count = 10
+                }
 
-            post {
-                self.count == 10
+                post {
+                    self.count == 10
+                }
             }
-        }
-    `)
+        `,
+		ParseAndCheckOptions{
+			Location: common.TransactionLocation{},
+		},
+	)
 	require.NoError(t, err)
 
 	comp := compiler.NewInstructionCompilerWithConfig(
@@ -4822,10 +4827,29 @@ func TestCompileTransaction(t *testing.T) {
 	// Transaction constructor
 	// Not interested in the content of the constructor.
 	constructor := program.Functions[transactionInitFunctionIndex]
-	require.Equal(t, commons.TransactionWrapperCompositeName, constructor.QualifiedName)
+	require.Equal(t,
+		commons.TransactionWrapperCompositeName,
+		constructor.QualifiedName,
+	)
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, transactionInitFunctionIndex, comp.Globals[commons.TransactionWrapperCompositeName].Index)
+	assert.Equal(t,
+		transactionInitFunctionIndex,
+		comp.Globals[commons.TransactionWrapperCompositeName].Index,
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionNewSimpleComposite{
+				Kind: common.CompositeKindStructure,
+				Type: 1,
+			},
+			opcode.InstructionSetLocal{Local: 0},
+			opcode.InstructionGetLocal{Local: 0},
+			opcode.InstructionReturnValue{},
+		},
+		constructor.Code,
+	)
 
 	// constant indexes
 	const (
@@ -4842,10 +4866,16 @@ func TestCompileTransaction(t *testing.T) {
 	)
 
 	prepareFunction := program.Functions[prepareFunctionIndex]
-	require.Equal(t, commons.TransactionPrepareFunctionName, prepareFunction.QualifiedName)
+	require.Equal(t,
+		commons.TransactionPrepareFunctionName,
+		prepareFunction.QualifiedName,
+	)
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, prepareFunctionIndex, comp.Globals[commons.TransactionPrepareFunctionName].Index)
+	assert.Equal(t,
+		prepareFunctionIndex,
+		comp.Globals[commons.TransactionPrepareFunctionName].Index,
+	)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -7031,7 +7061,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 
 				opcode.InstructionStatement{},
 
-				// <- y
+				// Load `y` onto the stack.
 				opcode.InstructionGetLocal{Local: yIndex},
 				opcode.InstructionTransferAndConvert{Type: 2},
 
@@ -7041,7 +7071,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionSetLocal{Local: yIndex},
 
-				// Store the transferred y-value above, to z.
+				// Transfer and store the loaded y-value above, to z.
 				// z <- y
 				opcode.InstructionSetLocal{Local: zIndex},
 
@@ -7320,25 +7350,24 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 
 				// store y in temp index for nil check
 				opcode.InstructionGetLocal{Local: yIndex},
-				opcode.InstructionSetLocal{Local: tempIndex},
+				opcode.InstructionTransferAndConvert{Type: 2},
 
-				// nil check on temp y
-				opcode.InstructionGetLocal{Local: tempIndex},
-				opcode.InstructionJumpIfNil{Target: 29},
-
-				// If not-nil, transfer the temp y (i.e: <- y)
-				opcode.InstructionGetLocal{Local: tempIndex},
-				opcode.InstructionUnwrap{},
-				opcode.InstructionTransferAndConvert{Type: 1},
-
-				// Second value assignment.
+				// Second value assignment. Store `x` in `y`.
 				// y <- x
 				opcode.InstructionGetLocal{Local: xIndex},
 				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionSetLocal{Local: yIndex},
 
-				// Store the transferred y-value above, to z.
-				// z <- y
+				// Store the previously loaded `y`s old value on the temp local.
+				opcode.InstructionSetLocal{Local: tempIndex},
+
+				// nil check on temp y.
+				opcode.InstructionGetLocal{Local: tempIndex},
+				opcode.InstructionJumpIfNil{Target: 29},
+
+				// If not-nil, transfer the temp `y` and store in `z` (i.e: y <- y)
+				opcode.InstructionGetLocal{Local: tempIndex},
+				opcode.InstructionUnwrap{},
 				opcode.InstructionSetLocal{Local: zIndex},
 
 				// let res: @R <- z

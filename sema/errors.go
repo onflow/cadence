@@ -3689,8 +3689,6 @@ func (e *InvalidNonEnumCaseError) Error() string {
 	)
 }
 
-// DeclarationKindMismatchError
-
 type DeclarationKindMismatchError struct {
 	ExpectedDeclarationKind common.DeclarationKind
 	ActualDeclarationKind   common.DeclarationKind

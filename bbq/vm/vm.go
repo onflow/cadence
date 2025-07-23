@@ -354,7 +354,7 @@ func (vm *VM) validateAndInvokeExternally(functionValue FunctionValue, arguments
 	return vm.invokeExternally(functionValue, preparedArguments)
 }
 
-func (vm *VM) invokeExternally(functionValue Value, arguments []Value) (Value, error) {
+func (vm *VM) invokeExternally(functionValue FunctionValue, arguments []Value) (Value, error) {
 	invokeFunction(
 		vm,
 		functionValue,
@@ -362,10 +362,13 @@ func (vm *VM) invokeExternally(functionValue Value, arguments []Value) (Value, e
 		nil,
 	)
 
-	vm.run()
+	// Runs the VM for compiled functions.
+	if !functionValue.IsNative() {
+		vm.run()
 
-	if len(vm.stack) == 0 {
-		return nil, nil
+		if len(vm.stack) == 0 {
+			return nil, nil
+		}
 	}
 
 	return vm.pop(), nil
@@ -421,13 +424,13 @@ func (vm *VM) InvokeTransaction(arguments []Value, signers ...Value) (err error)
 	return nil
 }
 
-func (vm *VM) InvokeTransactionWrapper() (*interpreter.CompositeValue, error) {
+func (vm *VM) InvokeTransactionWrapper() (*interpreter.SimpleCompositeValue, error) {
 	wrapperResult, err := vm.InvokeExternally(commons.TransactionWrapperCompositeName)
 	if err != nil {
 		return nil, err
 	}
 
-	transaction := wrapperResult.(*interpreter.CompositeValue)
+	transaction := wrapperResult.(*interpreter.SimpleCompositeValue)
 
 	return transaction, nil
 }
@@ -458,7 +461,7 @@ func (vm *VM) InvokeTransactionInit(transactionArgs []Value) error {
 	return nil
 }
 
-func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.CompositeValue, signers []Value) error {
+func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.SimpleCompositeValue, signers []Value) error {
 	context := vm.context
 
 	prepareVariable := vm.globals.Find(commons.TransactionPrepareFunctionName)
@@ -489,7 +492,7 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.CompositeValue, 
 	return nil
 }
 
-func (vm *VM) InvokeTransactionExecute(transaction *interpreter.CompositeValue) error {
+func (vm *VM) InvokeTransactionExecute(transaction *interpreter.SimpleCompositeValue) error {
 	context := vm.context
 
 	executeVariable := vm.globals.Find(commons.TransactionExecuteFunctionName)
@@ -965,9 +968,6 @@ func invokeFunction(
 	default:
 		panic(errors.NewUnreachableError())
 	}
-
-	// We do not need to drop the receiver explicitly,
-	// as the `explicitArgumentsCount` already includes it.
 }
 
 func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
@@ -1005,6 +1005,28 @@ func opDrop(vm *VM) {
 func opDup(vm *VM) {
 	top := vm.peek()
 	vm.push(top)
+}
+
+func opNewSimpleComposite(vm *VM, ins opcode.InstructionNewSimpleComposite) {
+	staticType := vm.loadType(ins.Type)
+
+	compositeStaticType := staticType.(*interpreter.CompositeStaticType)
+
+	config := vm.context
+
+	compositeValue := interpreter.NewSimpleCompositeValue(
+		config,
+		compositeStaticType.TypeID,
+		compositeStaticType,
+		nil,
+		map[string]Value{},
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+
+	vm.push(compositeValue)
 }
 
 func opNewComposite(vm *VM, ins opcode.InstructionNewComposite) {
@@ -1226,10 +1248,6 @@ func opFailableCast(vm *VM, ins opcode.InstructionFailableCast) {
 		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
 		result = ConvertAndBox(vm.context, value, valueType, targetType)
 
-		// TODO:
-		// Failable casting is a resource invalidation
-		//interpreter.invalidateResource(value)
-
 		result = interpreter.NewSomeValueNonCopying(
 			vm.context.MemoryGauge,
 			result,
@@ -1280,10 +1298,6 @@ func castValueAndValueType(context *Context, targetType bbq.StaticType, value Va
 	// thus this is the only place where it becomes necessary to "instantiate" the result of a map to its
 	// concrete outputs. In other places (e.g. interface conformance checks) we want to leave maps generic,
 	// so we don't substitute them.
-
-	// TODO: Substitute entitlements
-	//valueSemaType := interpreter.SubstituteMappedEntitlements(interpreter.MustSemaTypeOfValue(value))
-	//valueType = ConvertSemaToStaticType(interpreter, valueSemaType)
 
 	// If the target is `AnyStruct` or `AnyResource` we want to preserve optionals
 	unboxedExpectedType := UnwrapOptionalType(targetType)
@@ -1589,6 +1603,8 @@ func (vm *VM) run() {
 			opDrop(vm)
 		case opcode.InstructionDup:
 			opDup(vm)
+		case opcode.InstructionNewSimpleComposite:
+			opNewSimpleComposite(vm, ins)
 		case opcode.InstructionNewComposite:
 			opNewComposite(vm, ins)
 		case opcode.InstructionNewCompositeAt:
@@ -1845,18 +1861,8 @@ func (vm *VM) loadType(index uint16) bbq.StaticType {
 }
 
 func (vm *VM) invokeFunction(function Value, arguments []Value) (Value, error) {
-	// invokeExternally runs the VM, which is incorrect for native functions.
-	if functionValue, ok := function.(*NativeFunctionValue); ok {
-		invokeFunction(
-			vm,
-			functionValue,
-			arguments,
-			nil,
-		)
-		return vm.pop(), nil
-	}
-
-	return vm.invokeExternally(function, arguments)
+	functionValue := function.(FunctionValue)
+	return vm.invokeExternally(functionValue, arguments)
 }
 
 func (vm *VM) lookupFunction(location common.Location, name string) FunctionValue {

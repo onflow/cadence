@@ -27,7 +27,7 @@ import (
 
 type ImportHandler func(location common.Location) *bbq.InstructionProgram
 
-type LocationHandler func(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error)
+type LocationHandler = sema.LocationHandlerFunc
 
 type ResolvedLocation = sema.ResolvedLocation
 

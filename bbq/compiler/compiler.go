@@ -1072,7 +1072,6 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 	if expression != nil {
 		// (1) Return with a value
 
-		// TODO: copy
 		c.compileExpression(expression)
 
 		// End active iterators *after* the expression is compiled.
@@ -1189,10 +1188,9 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 			elseJump = c.emitUndefinedJumpIfFalse()
 
 		case *ast.VariableDeclaration:
-			// TODO: second value
 
-			// Compile the value expression *before* declaring the variable
-			c.compileExpression(test.Value)
+			varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(test)
+			c.compileVariableDeclaration(test, varDeclTypes, true)
 
 			tempIndex := c.currentFunction.generateLocalIndex()
 			c.emitSetLocal(tempIndex)
@@ -1205,17 +1203,6 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 			// Then branch: unwrap the optional and declare the variable
 			c.emitGetLocal(tempIndex)
 			c.emit(opcode.InstructionUnwrap{})
-			varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(test)
-			c.emitTransferAndConvert(varDeclTypes.TargetType)
-
-			// Before declaring the variable, evaluate and assign the second value.
-			if test.SecondValue != nil {
-				c.compileAssignment(
-					test.Value,
-					test.SecondValue,
-					varDeclTypes.ValueType,
-				)
-			}
 
 			// Declare the variable *after* unwrapping the optional,
 			// in a new scope
@@ -1362,9 +1349,10 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 
 	forStmtTypes := c.DesugaredElaboration.ForStatementType(statement)
 	loopVarType := forStmtTypes.ValueVariableType
-	_, isResultReference := sema.MaybeReferenceType(loopVarType)
+	_, isContainerReference := sema.MaybeReferenceType(forStmtTypes.ContainerType)
+	_, isValueReference := sema.MaybeReferenceType(loopVarType)
 
-	if isResultReference {
+	if isContainerReference && isValueReference {
 		index := c.getOrAddType(loopVarType)
 		c.emit(opcode.InstructionNewRef{
 			Type:       index,
@@ -1503,98 +1491,7 @@ func (c *Compiler[_, _]) VisitVariableDeclaration(declaration *ast.VariableDecla
 		}
 
 		varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(declaration)
-		targetType := varDeclTypes.TargetType
-
-		// No second value.
-		firstValue := declaration.Value
-		secondValue := declaration.SecondValue
-		if secondValue == nil {
-			// Compile the value expression *before* declaring the variable.
-			c.compileExpression(firstValue)
-			c.emitTransferAndConvert(targetType)
-
-			// Declare the variable *after* compiling the value expressions.
-			c.emitDeclareLocal(name)
-			return
-		}
-
-		// Also has a second value.
-		// The middle expression (i.e: the first value), and its sub expressions,
-		// must only be evaluated only once.
-
-		firstValueType := varDeclTypes.ValueType
-		switch firstValue := firstValue.(type) {
-		case *ast.IdentifierExpression:
-			// Evaluate and transfer first value.
-			c.compileExpression(firstValue)
-			c.emitTransferAndConvert(targetType)
-
-			// Evaluate and transfer second value.
-			c.compileExpression(secondValue)
-			c.emitTransferAndConvert(firstValueType)
-
-			// Store second value in first value's variable.
-			c.emitVariableStore(firstValue.Identifier.Identifier)
-
-		case *ast.MemberExpression:
-			// Evaluate the first value's parent once, and store in a temp-local.
-			c.compileExpression(firstValue.Expression)
-			memberExprParentLocal := c.currentFunction.generateLocalIndex()
-			c.emitSetLocal(memberExprParentLocal)
-
-			// Evaluate the first value. i.e: Get the member value.
-			// Transfer and leave it on the stack.
-			c.emitGetLocal(memberExprParentLocal)
-			c.compileMemberAccess(firstValue)
-			c.emitTransferAndConvert(targetType)
-
-			// Evaluate and transfer second value.
-			// The first value becomes the target.
-			c.emitGetLocal(memberExprParentLocal)
-			c.compileExpression(secondValue)
-			c.emitTransferAndConvert(firstValueType)
-
-			// Assign the second value to the first value's field.
-			memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(firstValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-			memberAccessedTypeIndex := c.getOrAddType(memberAccessInfo.AccessedType)
-
-			constant := c.addStringConst(firstValue.Identifier.Identifier)
-			c.emit(opcode.InstructionSetField{
-				FieldName:    constant.index,
-				AccessedType: memberAccessedTypeIndex,
-			})
-
-		case *ast.IndexExpression:
-			// First evaluate the sub-expressions of index expression once, and store them in temp-locals.
-			c.compileExpression(firstValue.TargetExpression)
-			indexExprTargetLocal := c.currentFunction.generateLocalIndex()
-			c.emitSetLocal(indexExprTargetLocal)
-
-			c.compileExpression(firstValue.IndexingExpression)
-			indexExprIndexLocal := c.currentFunction.generateLocalIndex()
-			c.emitSetLocal(indexExprIndexLocal)
-
-			// Evaluate the first value . i.e: index expression.
-			// Transfer and leave it on the stack.
-			c.emitGetLocal(indexExprTargetLocal)
-			c.emitGetLocal(indexExprIndexLocal)
-			c.compileIndexAccess(firstValue)
-			c.emitTransferAndConvert(targetType)
-
-			// Evaluate and transfer second value.
-			// The first value becomes the target.
-			c.emitGetLocal(indexExprTargetLocal)
-			c.emitGetLocal(indexExprIndexLocal)
-			c.compileExpression(secondValue)
-			c.emitTransferAndConvert(firstValueType)
-			c.emit(opcode.InstructionSetIndex{})
-
-		default:
-			panic(errors.NewUnreachableError())
-		}
+		c.compileVariableDeclaration(declaration, varDeclTypes, false)
 
 		// Declare the variable *after* compiling both the value expressions.
 		// Assign the first value onto the variable.
@@ -1602,6 +1499,114 @@ func (c *Compiler[_, _]) VisitVariableDeclaration(declaration *ast.VariableDecla
 	})
 
 	return
+}
+
+func (c *Compiler[_, _]) compileVariableDeclaration(
+	declaration *ast.VariableDeclaration,
+	varDeclTypes sema.VariableDeclarationTypes,
+	isOptionalBinding bool,
+) {
+	firstValue := declaration.Value
+	secondValue := declaration.SecondValue
+
+	firstValueTransferType := varDeclTypes.TargetType
+	if isOptionalBinding {
+		// In optional binding, the first-value is optional-typed.
+		firstValueTransferType = &sema.OptionalType{
+			Type: firstValueTransferType,
+		}
+	}
+
+	// No second value.
+	if secondValue == nil {
+		c.compileExpression(firstValue)
+		c.emitTransferAndConvert(firstValueTransferType)
+		return
+	}
+
+	// Also has a second value.
+	// The middle expression (i.e: the first value), and its sub expressions,
+	// must only be evaluated only once.
+
+	firstValueType := varDeclTypes.ValueType
+	switch firstValue := firstValue.(type) {
+	case *ast.IdentifierExpression:
+		c.compileExpression(firstValue)
+
+		// Need to transfer the value "out",
+		// before the second value is being assigned
+		c.emitTransferAndConvert(firstValueTransferType)
+
+		// Evaluate and transfer second value.
+		c.compileExpression(secondValue)
+		c.emitTransferAndConvert(firstValueType)
+
+		// Store second value in first value's variable.
+		c.emitVariableStore(firstValue.Identifier.Identifier)
+
+	case *ast.MemberExpression:
+		// Evaluate the first value's parent once, and store in a temp-local.
+		c.compileExpression(firstValue.Expression)
+		memberExprParentLocal := c.currentFunction.generateLocalIndex()
+		c.emitSetLocal(memberExprParentLocal)
+
+		// Evaluate the first value. i.e: Get the member value.
+		// Transfer and leave it on the stack.
+		c.emitGetLocal(memberExprParentLocal)
+		c.compileMemberAccess(firstValue)
+		// Need to transfer the value "out",
+		// before the second value is being assigned
+		c.emitTransferAndConvert(firstValueTransferType)
+
+		// Evaluate and transfer second value.
+		// The first value becomes the target.
+		c.emitGetLocal(memberExprParentLocal)
+		c.compileExpression(secondValue)
+		c.emitTransferAndConvert(firstValueType)
+
+		// Assign the second value to the first value's field.
+		memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(firstValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		memberAccessedTypeIndex := c.getOrAddType(memberAccessInfo.AccessedType)
+
+		constant := c.addStringConst(firstValue.Identifier.Identifier)
+		c.emit(opcode.InstructionSetField{
+			FieldName:    constant.index,
+			AccessedType: memberAccessedTypeIndex,
+		})
+
+	case *ast.IndexExpression:
+		// First evaluate the sub-expressions of index expression once, and store them in temp-locals.
+		c.compileExpression(firstValue.TargetExpression)
+		indexExprTargetLocal := c.currentFunction.generateLocalIndex()
+		c.emitSetLocal(indexExprTargetLocal)
+
+		c.compileExpression(firstValue.IndexingExpression)
+		indexExprIndexLocal := c.currentFunction.generateLocalIndex()
+		c.emitSetLocal(indexExprIndexLocal)
+
+		// Evaluate the first value . i.e: index expression.
+		// Transfer and leave it on the stack.
+		c.emitGetLocal(indexExprTargetLocal)
+		c.emitGetLocal(indexExprIndexLocal)
+		c.compileIndexAccess(firstValue)
+		// Need to transfer the value "out",
+		// before the second value is being assigned
+		c.emitTransferAndConvert(firstValueTransferType)
+
+		// Evaluate and transfer second value.
+		// The first value becomes the target.
+		c.emitGetLocal(indexExprTargetLocal)
+		c.emitGetLocal(indexExprIndexLocal)
+		c.compileExpression(secondValue)
+		c.emitTransferAndConvert(firstValueType)
+		c.emit(opcode.InstructionSetIndex{})
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func (c *Compiler[_, _]) compileGlobalVariable(declaration *ast.VariableDeclaration, variableName string) {
@@ -2183,8 +2188,6 @@ func (c *Compiler[_, _]) emitVariableStore(name string) {
 }
 
 func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExpression) (_ struct{}) {
-	// TODO: copy
-
 	invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(expression)
 
 	argumentCount := len(expression.Arguments)
@@ -2648,7 +2651,6 @@ func (c *Compiler[_, _]) VisitUnaryExpression(expression *ast.UnaryExpression) (
 
 func (c *Compiler[_, _]) VisitBinaryExpression(expression *ast.BinaryExpression) (_ struct{}) {
 	c.compileExpression(expression.Left)
-	// TODO: add support for other types
 
 	switch expression.Operation {
 	case ast.OperationNilCoalesce:
@@ -2921,7 +2923,6 @@ func (c *Compiler[_, _]) VisitSpecialFunctionDeclaration(declaration *ast.Specia
 	case common.DeclarationKindDestructorLegacy, common.DeclarationKindPrepare:
 		c.compileDeclaration(declaration.FunctionDeclaration)
 	default:
-		// TODO: support other special functions
 		panic(errors.NewUnreachableError())
 	}
 	return
@@ -2990,12 +2991,25 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	}
 
 	if address == common.ZeroAddress {
-		c.emit(
-			opcode.InstructionNewComposite{
-				Kind: kind,
-				Type: typeIndex,
-			},
-		)
+
+		// Transaction wrapper composite values are simple composite values.
+		if _, ok := enclosingType.GetLocation().(common.TransactionLocation); ok &&
+			typeName == commons.TransactionWrapperCompositeName {
+
+			c.emit(
+				opcode.InstructionNewSimpleComposite{
+					Kind: kind,
+					Type: typeIndex,
+				},
+			)
+		} else {
+			c.emit(
+				opcode.InstructionNewComposite{
+					Kind: kind,
+					Type: typeIndex,
+				},
+			)
+		}
 	} else {
 		addressConstant := c.addConstant(constant.Address, address.Bytes())
 		c.emit(
@@ -3275,14 +3289,6 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location)
 
 	for _, function := range importedProgram.Functions {
 		name := function.QualifiedName
-
-		//// TODO: Skip the contract initializer.
-		//// It should never be able to invoked within the code.
-		//if isContract && name == commons.InitFunctionName {
-		//	continue
-		//}
-
-		// TODO: Filter-in only public functions
 		c.addImportedGlobal(location, name)
 	}
 
@@ -3293,12 +3299,14 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location)
 }
 
 func (c *Compiler[_, _]) VisitTransactionDeclaration(_ *ast.TransactionDeclaration) (_ struct{}) {
-	// TODO
+	// Transaction declaration are desugared to composite declarations.
+	// So this should never reach.
 	panic(errors.NewUnreachableError())
 }
 
 func (c *Compiler[_, _]) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) (_ struct{}) {
-	// TODO
+	// Enum cases are desugared to variable declarations.
+	// So this should never reach.
 	panic(errors.NewUnreachableError())
 }
 

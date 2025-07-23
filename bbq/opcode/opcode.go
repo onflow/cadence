@@ -97,6 +97,7 @@ const (
 	False
 	Void
 	Nil
+	NewSimpleComposite
 	NewComposite
 	NewCompositeAt
 	NewPath
@@ -104,7 +105,6 @@ const (
 	NewDictionary
 	NewRef
 	NewClosure
-	_
 	_
 	_
 	_
