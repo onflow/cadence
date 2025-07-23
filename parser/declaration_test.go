@@ -7834,6 +7834,15 @@ func TestParseDestructor(t *testing.T) {
 	`
 		assert.Equal(t, expected, updated)
 	})
+
+	// Test that CustomDestructorError implements errors.HasMigrationNote and returns the expected migration note
+	t.Run("CustomDestructorError_HasMigrationNote", func(t *testing.T) {
+		err := &CustomDestructorError{}
+		noteProvider, ok := interface{}(err).(errors.HasMigrationNote)
+		require.True(t, ok, "CustomDestructorError should implement errors.HasMigrationNote")
+		note := noteProvider.MigrationNote()
+		assert.Equal(t, note, "This is pre-Cadence 1.0 syntax. Support for custom destructors was removed. Custom cleanup logic should be moved to a separate function called before destruction.")
+	})
 }
 
 // Helper to apply a single ast.TextEdit to a string
@@ -9848,4 +9857,12 @@ func TestParseKeywordsAsFieldNames(t *testing.T) {
 			require.Empty(t, errs)
 		})
 	}
+}
+
+func TestRestrictedTypeError_HasMigrationNote(t *testing.T) {
+	err := &RestrictedTypeError{}
+	noteProvider, ok := interface{}(err).(errors.HasMigrationNote)
+	require.True(t, ok, "RestrictedTypeError should implement errors.HasMigrationNote")
+	note := noteProvider.MigrationNote()
+	assert.Equal(t, note, "This is pre-Cadence 1.0 syntax. Restricted types like `T{}` have been replaced with intersection types like `{T}`.")
 }

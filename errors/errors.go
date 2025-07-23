@@ -128,6 +128,11 @@ type HasDocumentationLink interface {
 	DocumentationLink() string
 }
 
+// HasMigrationNote provides structured migration notes for LSP integration
+type HasMigrationNote interface {
+	MigrationNote() string
+}
+
 // MemoryMeteringError indicates a memory limit has reached and should end
 // the Cadence parsing, checking, or interpretation.
 type MemoryMeteringError struct {

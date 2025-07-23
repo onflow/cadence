@@ -354,7 +354,7 @@ func (e TypeDepthLimitReachedError) Error() string {
 }
 
 func (e TypeDepthLimitReachedError) SecondaryError() string {
-	return "Consider breaking complex nested types into simpler components or using intermediate variables"
+	return "Refactor the type so that the depth of nesting is less than the limit"
 }
 
 func (e TypeDepthLimitReachedError) StartPosition() ast.Position {
@@ -430,6 +430,7 @@ var _ ParseError = &CustomDestructorError{}
 var _ errors.UserError = &CustomDestructorError{}
 var _ errors.HasSuggestedFixes[ast.TextEdit] = &CustomDestructorError{}
 var _ errors.HasDocumentationLink = &CustomDestructorError{}
+var _ errors.HasMigrationNote = &CustomDestructorError{}
 
 func (*CustomDestructorError) isParseError() {}
 
@@ -483,6 +484,7 @@ var _ ParseError = &RestrictedTypeError{}
 var _ errors.UserError = &RestrictedTypeError{}
 var _ errors.SecondaryError = &RestrictedTypeError{}
 var _ errors.HasDocumentationLink = &RestrictedTypeError{}
+var _ errors.HasMigrationNote = &RestrictedTypeError{}
 
 func (*RestrictedTypeError) isParseError() {}
 
