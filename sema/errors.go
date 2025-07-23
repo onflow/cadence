@@ -2026,7 +2026,7 @@ func (e *CompositeKindMismatchError) Error() string {
 
 func (e *CompositeKindMismatchError) SecondaryError() string {
 	return fmt.Sprintf(
-		"Expected `%s`, got `%s`. Use the correct composite kind annotation for intersection types",
+		"Expected `%s`, got `%s`",
 		e.ExpectedKind.Name(),
 		e.ActualKind.Name(),
 	)
