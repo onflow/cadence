@@ -33,6 +33,14 @@ import (
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
+// Helper to apply a single ast.TextEdit to a string
+func applyTextEdit(code string, edit ast.TextEdit) string {
+	runes := []rune(code)
+	start := edit.Range.StartPos.Offset
+	end := edit.Range.EndPos.Offset
+	return string(runes[:start]) + edit.Replacement + string(runes[end:])
+}
+
 func TestParseVariableDeclaration(t *testing.T) {
 
 	t.Parallel()
@@ -1652,7 +1660,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			errs,
 		)
 	})
-
 }
 
 func TestParseAccess(t *testing.T) {
@@ -7845,14 +7852,6 @@ func TestParseDestructor(t *testing.T) {
 	})
 }
 
-// Helper to apply a single ast.TextEdit to a string
-func applyTextEdit(code string, edit ast.TextEdit) string {
-	runes := []rune(code)
-	start := edit.Range.StartPos.Offset
-	end := edit.Range.EndPos.Offset
-	return string(runes[:start]) + edit.Replacement + string(runes[end:])
-}
-
 func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 
 	t.Parallel()
@@ -9833,6 +9832,72 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 			},
 			errs,
 		)
+	})
+}
+
+func TestJuxtaposedUnaryOperatorsError(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+		fun test() {
+			!1 + 2
+		}
+	`
+
+	pos := ast.Position{Offset: 1, Line: 1, Column: 1}
+	errorRange := ast.Range{StartPos: pos, EndPos: pos}
+
+	_, errs := testParseDeclarations(code)
+	AssertEqualWithDiff(t,
+		Error{
+			Code: []uint8(code),
+			Errors: []error{
+				&JuxtaposedUnaryOperatorsError{
+					Pos:   pos,
+					Range: errorRange,
+				},
+			},
+		},
+		errs,
+	)
+
+	// Direct unit test for SuggestFixes
+	t.Run("SuggestFixes", func(t *testing.T) {
+		err := &JuxtaposedUnaryOperatorsError{
+			Pos:   pos,
+			Range: errorRange,
+		}
+		innerExpression := code[errorRange.StartPos.Offset:errorRange.EndPos.Offset]
+		assert.Equal(t, []errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "add parentheses around the inner expression to clarify operator precedence",
+				TextEdits: []ast.TextEdit{
+					{
+						Replacement: fmt.Sprintf("(%s)", innerExpression),
+						Range:       errorRange,
+					},
+				},
+			},
+		}, err.SuggestFixes(code))
+	})
+
+	// End-to-end test: apply suggested fix to code
+	t.Run("SuggestedFixes", func(t *testing.T) {
+		err := &JuxtaposedUnaryOperatorsError{
+			Pos:   pos,
+			Range: errorRange,
+		}
+		fixes := err.SuggestFixes(code)
+		require.Len(t, fixes, 1)
+		edits := fixes[0].TextEdits[0]
+		updated := applyTextEdit(code, edits)
+		expected := `
+		fun test() {
+			!(1 + 2)
+		}
+		`
+		assert.Equal(t, expected, updated)
 	})
 }
 
