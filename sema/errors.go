@@ -4722,7 +4722,7 @@ func (e *CyclicEntitlementMappingError) SecondaryError() string {
 func (e *CyclicEntitlementMappingError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
-			Message: "remove the include statement to break the cyclical mapping (review to ensure this is correct for your use case)",
+			Message: "remove the include statement",
 			TextEdits: []ast.TextEdit{
 				{
 					Replacement: "",
