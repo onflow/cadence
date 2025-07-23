@@ -511,9 +511,6 @@ func TestInterpretAttachExecutionOrdering(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO: is this an error in the interpreter?
-		// why is self.x wrapped in another optional?
-		// should the force ! of foo succeed or error
 		inter := parseCheckAndInterpret(t, `
             struct S {
                 fun bar(): Int? {
@@ -1866,7 +1863,6 @@ func TestInterpretAttachmentsRuntimeType(t *testing.T) {
 		a, err := inter.Invoke("test")
 		require.NoError(t, err)
 		require.IsType(t, interpreter.TypeValue{}, a)
-		// shouldn't this be &S.test.A?
 		require.Equal(t, "S.test.A", a.(interpreter.TypeValue).Type.String())
 	})
 }

@@ -345,6 +345,8 @@ func registerBuiltinCommonTypeBoundFunctions() {
 		IndexedCommonBuiltinTypeBoundFunctions[function.Name] = function
 	}
 
+	// this only available for Composites which support attachments
+	// as enforced in the compiler
 	for _, function := range compositeBuiltInFunctions {
 		IndexedCommonBuiltinTypeBoundFunctions[function.Name] = function
 	}
@@ -361,7 +363,7 @@ func registerBuiltinTypeBoundFunctions(
 	}
 }
 
-// Build-in functions for composites
+// Built-in functions for composites
 var compositeBuiltInFunctions = []*NativeFunctionValue{
 	// `forEachAttachment` function
 	NewNativeFunctionValueWithDerivedType(

@@ -9030,7 +9030,7 @@ func TestAttachments(t *testing.T) {
 		`, "test")
 		require.NoError(t, err)
 
-		require.Equal(t, value.(*interpreter.EphemeralReferenceValue).Value, interpreter.NewUnmeteredIntValueFromInt64(3))
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), value)
 	})
 
 	t.Run("built-in type", func(t *testing.T) {
