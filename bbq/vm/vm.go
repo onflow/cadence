@@ -341,7 +341,7 @@ func (vm *VM) InvokeMethodExternally(
 		}
 	}
 
-	boundFunction := NewBoundFunctionValue(context, receiver, functionValue)
+	boundFunction := NewBoundFunctionValue(context, receiver, functionValue, nil)
 
 	return vm.validateAndInvokeExternally(boundFunction, arguments)
 }
@@ -497,6 +497,7 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.CompositeValue, 
 		context,
 		transaction,
 		prepareFunction,
+		nil,
 	)
 
 	_, err := vm.validateAndInvokeExternally(boundPrepareFunction, signers)
@@ -521,6 +522,7 @@ func (vm *VM) InvokeTransactionExecute(transaction *interpreter.CompositeValue) 
 		context,
 		transaction,
 		executeFunction,
+		nil,
 	)
 
 	_, err := vm.validateAndInvokeExternally(boundExecuteFunction, nil)
@@ -876,7 +878,7 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	functionValue := vm.pop()
 
 	// If the function is a pointer to an object-method, then the receiver is implicitly captured.
-	if boundFunction, isBoundFUnction := functionValue.(*BoundFunctionValue); isBoundFUnction {
+	if boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue); isBoundFunction {
 		functionValue = boundFunction.Method
 		receiver := boundFunction.Receiver(vm.context)
 		arguments = append([]Value{receiver}, arguments...)
@@ -899,10 +901,29 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 
 	receiver := vm.pop()
 
+	// TODO: Clean this up
+	var base *interpreter.EphemeralReferenceValue
+	if val, ok := receiver.(*interpreter.EphemeralReferenceValue); ok {
+		if refValue, ok := val.Value.(*interpreter.CompositeValue); ok {
+			if refValue.Kind == common.CompositeKindAttachment {
+				base = refValue.GetBaseValue(
+					vm.context,
+					interpreter.ConvertSemaAccessToStaticAuthorization(
+						vm.context,
+						sema.UnauthorizedAccess,
+					),
+					interpreter.EmptyLocationRange,
+				)
+			}
+
+		}
+	}
+
 	boundFunction := NewBoundFunctionValue(
 		vm.context,
 		receiver,
 		method,
+		base,
 	)
 
 	vm.push(boundFunction)
@@ -920,7 +941,13 @@ func opInvokeMethodStatic(vm *VM, ins opcode.InstructionInvokeMethodStatic) {
 
 	functionValue := boundFunction.Method
 	receiver := boundFunction.Receiver(vm.context)
-	arguments = append([]Value{receiver}, arguments...)
+	values := []Value{receiver}
+	base := boundFunction.Base
+	if base != nil {
+		values = append(values, base)
+	}
+
+	arguments = append(values, arguments...)
 
 	invokeFunction(
 		vm,
@@ -1490,14 +1517,16 @@ func opSetTypeIndex(vm *VM, ins opcode.InstructionSetTypeIndex) {
 	typeIndex := ins.Type
 	staticType := vm.loadType(typeIndex)
 	typ := vm.context.SemaTypeFromStaticType(staticType)
+	attachment := fieldValue.(*interpreter.CompositeValue)
 
-	compositeValue := target.(interpreter.TypeIndexableValue)
+	compositeValue := target.(*interpreter.CompositeValue)
 	compositeValue.SetTypeKey(
 		vm.context,
 		EmptyLocationRange,
 		typ,
 		fieldValue,
 	)
+	attachment.SetBaseValue(compositeValue)
 	vm.push(compositeValue)
 }
 
@@ -1509,7 +1538,7 @@ func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 	staticType := vm.loadType(typeIndex)
 	typ := vm.context.SemaTypeFromStaticType(staticType)
 
-	compositeValue := target.(interpreter.TypeIndexableValue)
+	compositeValue := target.(*interpreter.CompositeValue)
 	removed := compositeValue.RemoveTypeKey(
 		vm.context,
 		EmptyLocationRange,
@@ -1526,7 +1555,7 @@ func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 	}
 	if attachment.IsResourceKinded(vm.context) {
 		// this attachment is no longer attached to its base, but the `base` variable is still available in the destructor
-		// TODO: attachment.setBaseValue(base)
+		attachment.SetBaseValue(compositeValue)
 		attachment.Destroy(vm.context, EmptyLocationRange)
 	}
 }

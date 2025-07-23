@@ -298,6 +298,7 @@ func (c *Context) GetMethod(
 		c,
 		value,
 		method,
+		nil,
 	)
 }
 
@@ -322,8 +323,28 @@ func (c *Context) DefaultDestroyEvents(
 		return nil
 	}
 
-	// Always have the receiver as the first argument.
-	arguments := []Value{resourceValue}
+	var arguments []Value
+
+	if resourceValue.Kind == common.CompositeKindAttachment {
+		staticType := resourceValue.StaticType(c)
+		semaType := interpreter.MustConvertStaticToSemaType(staticType, c)
+		arguments = []Value{
+			interpreter.NewEphemeralReferenceValue(c,
+				interpreter.UnauthorizedAccess,
+				resourceValue,
+				semaType,
+				EmptyLocationRange,
+			),
+			resourceValue.GetBaseValue(
+				c,
+				interpreter.UnauthorizedAccess,
+				EmptyLocationRange,
+			),
+		}
+	} else {
+		// Always have the receiver as the first argument.
+		arguments = []Value{resourceValue}
+	}
 
 	events := c.InvokeFunction(method, arguments)
 	eventsArray, ok := events.(*interpreter.ArrayValue)
