@@ -7830,7 +7830,7 @@ func TestParseDestructor(t *testing.T) {
 				EndPos:   destroyEndPosWithBrace,
 			},
 		}
-		fixes := err.SuggestFixes("")
+		fixes := err.SuggestFixes(code)
 		require.Len(t, fixes, 1)
 		edit := fixes[0].TextEdits[0]
 		updated := applyTextEdit(code, edit)
@@ -9895,6 +9895,279 @@ func TestJuxtaposedUnaryOperatorsError(t *testing.T) {
 		expected := `
 		fun test() {
 			!(1 + 2)
+		}
+		`
+		assert.Equal(t, expected, updated)
+	})
+}
+
+func TestInvalidIntegerLiteralError(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("LeadingUnderscore", func(t *testing.T) {
+		const code = `
+			fun test() {
+				let x = _123
+			}
+		`
+
+		pos := ast.Position{Offset: 1, Line: 1, Column: 1}
+		errorRange := ast.Range{StartPos: pos, EndPos: pos}
+
+		_, errs := testParseDeclarations(code)
+		AssertEqualWithDiff(t,
+			Error{
+				Code: []uint8(code),
+				Errors: []error{
+					&InvalidIntegerLiteralError{
+						Literal:                   "_123",
+						IntegerLiteralKind:        common.IntegerLiteralKindUnknown,
+						InvalidIntegerLiteralKind: InvalidNumberLiteralKindLeadingUnderscore,
+						Range:                     errorRange,
+					},
+				},
+			},
+			errs,
+		)
+
+		// Direct unit test for SuggestFixes
+		t.Run("SuggestFixes", func(t *testing.T) {
+			err := &InvalidIntegerLiteralError{
+				Literal:                   "_123",
+				IntegerLiteralKind:        common.IntegerLiteralKindUnknown,
+				InvalidIntegerLiteralKind: InvalidNumberLiteralKindLeadingUnderscore,
+				Range:                     errorRange,
+			}
+			assert.Equal(t, []errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove leading underscore",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "123",
+							Range:       errorRange,
+						},
+					},
+				},
+			}, err.SuggestFixes(code))
+		})
+
+		// End-to-end test: apply suggested fix to code
+		t.Run("ApplySuggestedFix", func(t *testing.T) {
+			err := &InvalidIntegerLiteralError{
+				Literal:                   "_123",
+				IntegerLiteralKind:        common.IntegerLiteralKindUnknown,
+				InvalidIntegerLiteralKind: InvalidNumberLiteralKindLeadingUnderscore,
+				Range:                     errorRange,
+			}
+			fixes := err.SuggestFixes(code)
+			require.Len(t, fixes, 1)
+			edits := fixes[0].TextEdits[0]
+			updated := applyTextEdit(code, edits)
+			expected := `
+			fun test() {
+				let x = 123
+			}
+			`
+			assert.Equal(t, expected, updated)
+		})
+	})
+
+	t.Run("TrailingUnderscore", func(t *testing.T) {
+		const code = `
+			fun test() {
+				let x = 123_
+			}
+		`
+
+		pos := ast.Position{Offset: 1, Line: 1, Column: 1}
+		errorRange := ast.Range{StartPos: pos, EndPos: pos}
+
+		_, errs := testParseDeclarations(code)
+		AssertEqualWithDiff(t,
+			Error{
+				Code: []uint8(code),
+				Errors: []error{
+					&InvalidIntegerLiteralError{
+						Literal:                   "123_",
+						IntegerLiteralKind:        common.IntegerLiteralKindUnknown,
+						InvalidIntegerLiteralKind: InvalidNumberLiteralKindTrailingUnderscore,
+						Range:                     errorRange,
+					},
+				},
+			},
+			errs,
+		)
+
+		// Direct unit test for SuggestFixes
+		t.Run("SuggestFixes", func(t *testing.T) {
+			err := &InvalidIntegerLiteralError{
+				Literal:                   "123_",
+				IntegerLiteralKind:        common.IntegerLiteralKindUnknown,
+				InvalidIntegerLiteralKind: InvalidNumberLiteralKindTrailingUnderscore,
+				Range:                     errorRange,
+			}
+			assert.Equal(t, []errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove trailing underscore",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "123",
+							Range:       errorRange,
+						},
+					},
+				},
+			}, err.SuggestFixes(code))
+		})
+
+		// End-to-end test: apply suggested fix to code
+		t.Run("ApplySuggestedFix", func(t *testing.T) {
+			err := &InvalidIntegerLiteralError{
+				Literal:                   "123_",
+				IntegerLiteralKind:        common.IntegerLiteralKindUnknown,
+				InvalidIntegerLiteralKind: InvalidNumberLiteralKindTrailingUnderscore,
+				Range:                     errorRange,
+			}
+			fixes := err.SuggestFixes(code)
+			require.Len(t, fixes, 1)
+			edits := fixes[0].TextEdits[0]
+			updated := applyTextEdit(code, edits)
+			expected := `
+			fun test() {
+				let x = 123
+			}
+			`
+			assert.Equal(t, expected, updated)
+		})
+	})
+
+	t.Run("MissingDigits", func(t *testing.T) {
+		const code = `
+			fun test() {
+				let x = 0b
+			}
+		`
+
+		pos := ast.Position{Offset: 1, Line: 1, Column: 1}
+		errorRange := ast.Range{StartPos: pos, EndPos: pos}
+
+		_, errs := testParseDeclarations(code)
+		AssertEqualWithDiff(t,
+			Error{
+				Code: []uint8(code),
+				Errors: []error{
+					&InvalidIntegerLiteralError{
+						Literal:                   "0b",
+						IntegerLiteralKind:        common.IntegerLiteralKindBinary,
+						InvalidIntegerLiteralKind: InvalidNumberLiteralKindMissingDigits,
+						Range:                     errorRange,
+					},
+				},
+			},
+			errs,
+		)
+
+		// Direct unit test for SuggestFixes
+		t.Run("SuggestFixes", func(t *testing.T) {
+			err := &InvalidIntegerLiteralError{
+				Literal:                   "0b",
+				IntegerLiteralKind:        common.IntegerLiteralKindBinary,
+				InvalidIntegerLiteralKind: InvalidNumberLiteralKindMissingDigits,
+				Range:                     errorRange,
+			}
+			assert.Equal(t, []errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Add a digit to make this a valid number",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "0b0",
+							Range:       errorRange,
+						},
+					},
+				},
+			}, err.SuggestFixes(code))
+		})
+
+		// End-to-end test: apply suggested fix to code
+		t.Run("ApplySuggestedFix", func(t *testing.T) {
+			err := &InvalidIntegerLiteralError{
+				Literal:                   "0b",
+				IntegerLiteralKind:        common.IntegerLiteralKindBinary,
+				InvalidIntegerLiteralKind: InvalidNumberLiteralKindMissingDigits,
+				Range:                     errorRange,
+			}
+			fixes := err.SuggestFixes(code)
+			require.Len(t, fixes, 1)
+			edits := fixes[0].TextEdits[0]
+			updated := applyTextEdit(code, edits)
+			expected := `
+			fun test() {
+				let x = 0b0
+			}
+			`
+			assert.Equal(t, expected, updated)
+		})
+	})
+}
+
+func TestMissingCommaInParameterListError(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+		fun test(a: Int b: Int) {
+			return a + b
+		}
+	`
+
+	pos := ast.Position{Offset: 14, Line: 1, Column: 14}
+
+	_, errs := testParseDeclarations(code)
+	AssertEqualWithDiff(t,
+		Error{
+			Code: []uint8(code),
+			Errors: []error{
+				&MissingCommaInParameterListError{
+					Pos: pos,
+				},
+			},
+		},
+		errs,
+	)
+
+	// Direct unit test for SuggestFixes
+	t.Run("SuggestFixes", func(t *testing.T) {
+		err := &MissingCommaInParameterListError{
+			Pos: pos,
+		}
+		assert.Equal(t, []errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Add comma to separate parameters",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: ", ",
+						Range: ast.Range{
+							StartPos: pos,
+							EndPos:   pos,
+						},
+					},
+				},
+			},
+		}, err.SuggestFixes(code))
+	})
+
+	// End-to-end test: apply suggested fix to code
+	t.Run("ApplySuggestedFix", func(t *testing.T) {
+		err := &MissingCommaInParameterListError{
+			Pos: pos,
+		}
+		fixes := err.SuggestFixes(code)
+		require.Len(t, fixes, 1)
+		edits := fixes[0].TextEdits[0]
+		updated := applyTextEdit(code, edits)
+		expected := `
+		fun test(a: Int, b: Int) {
+			return a + b
 		}
 		`
 		assert.Equal(t, expected, updated)
