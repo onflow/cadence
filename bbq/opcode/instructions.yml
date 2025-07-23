@@ -454,6 +454,17 @@
       - name: "value"
         type: "value"
 
+- name: "wrap"
+  description:
+    Pops a value off the stack, wrap it with an optional, and pushes back onto the stack.
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+    push:
+      - name: "optional"
+        type: "value"
+
 # Conversion instructions
 
 - name: "transfer"

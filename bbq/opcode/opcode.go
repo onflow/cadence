@@ -77,6 +77,7 @@ const (
 	_
 	_
 	_
+	Wrap
 	Unwrap
 	Destroy
 	TransferAndConvert
@@ -85,7 +86,6 @@ const (
 	ForceCast
 	Deref
 	Transfer
-	_
 	_
 	_
 	_
