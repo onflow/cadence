@@ -2638,7 +2638,7 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
 		var eventTypes []*sema.CompositeType
 		var eventsFields [][]interpreter.Value
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                 resource R {
                     var i: Int
@@ -2711,7 +2711,7 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
 		var eventTypes []*sema.CompositeType
 		var eventsFields [][]interpreter.Value
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                 contract base {
                     var i: Int
@@ -3434,7 +3434,7 @@ func TestInterpretInvalidatingAttachmentLoopedReference(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
 		// Victim code starts
 		resource Vault {
 			var balance: UFix64
