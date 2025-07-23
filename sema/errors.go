@@ -3689,56 +3689,6 @@ func (e *InvalidNonEnumCaseError) Error() string {
 	)
 }
 
-type DeclarationKindMismatchError struct {
-	ExpectedDeclarationKind common.DeclarationKind
-	ActualDeclarationKind   common.DeclarationKind
-	ast.Range
-}
-
-var _ SemanticError = &DeclarationKindMismatchError{}
-var _ errors.UserError = &DeclarationKindMismatchError{}
-var _ errors.SecondaryError = &DeclarationKindMismatchError{}
-var _ errors.HasSuggestedFixes[ast.TextEdit] = &DeclarationKindMismatchError{}
-var _ errors.HasDocumentationLink = &DeclarationKindMismatchError{}
-
-func (*DeclarationKindMismatchError) isSemanticError() {}
-
-func (*DeclarationKindMismatchError) IsUserError() {}
-
-func (e *DeclarationKindMismatchError) Error() string {
-	return "mismatched declarations"
-}
-
-func (e *DeclarationKindMismatchError) SecondaryError() string {
-	return fmt.Sprintf(
-		"Expected `%s`, got `%s`",
-		e.ExpectedDeclarationKind.Name(),
-		e.ActualDeclarationKind.Name(),
-	)
-}
-
-func (e *DeclarationKindMismatchError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
-	// For declaration kind mismatch errors, we suggest using the correct declaration type
-	return []errors.SuggestedFix[ast.TextEdit]{
-		{
-			Message: fmt.Sprintf("use %s declaration instead of %s", e.ExpectedDeclarationKind.Name(), e.ActualDeclarationKind.Name()),
-			TextEdits: []ast.TextEdit{
-				{
-					Insertion: fmt.Sprintf("// Consider using %s declaration instead of %s\n", e.ExpectedDeclarationKind.Name(), e.ActualDeclarationKind.Name()),
-					Range: ast.Range{
-						StartPos: e.StartPos,
-						EndPos:   e.StartPos,
-					},
-				},
-			},
-		},
-	}
-}
-
-func (e *DeclarationKindMismatchError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language"
-}
-
 // InvalidTopLevelDeclarationError
 
 type InvalidTopLevelDeclarationError struct {
