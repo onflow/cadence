@@ -1878,6 +1878,8 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 
 		t.Parallel()
 
+		// TODO: this defensive check causes an error in the compiler
+		// but not the same one
 		inter, _ := parseCheckAndInterpretWithOptions(t, `
         struct S {}
         attachment A for S {}
@@ -1899,7 +1901,7 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 
 		t.Parallel()
 
-		inter, _ := parseCheckAndInterpretWithOptions(t, `
+		inter, _ := parseCheckAndPrepareWithOptions(t, `
         struct S {}
         attachment A for S {}
         fun test() {
@@ -1920,6 +1922,8 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 
 		t.Parallel()
 
+		// TODO: this defensive check causes an error in the compiler
+		// but not the same one
 		inter, _ := parseCheckAndInterpretWithOptions(t, `
         struct S {}
         attachment A for S {}
@@ -1940,7 +1944,7 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 
 		t.Parallel()
 
-		inter, _ := parseCheckAndInterpretWithOptions(t, `
+		inter, _ := parseCheckAndPrepareWithOptions(t, `
         struct S {}
         attachment A for S {}
         fun test() {
@@ -1960,6 +1964,8 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 
 		t.Parallel()
 
+		// TODO: this defensive check causes an error in the compiler
+		// but not the same one
 		inter, _ := parseCheckAndInterpretWithOptions(t, `
         struct S {}
         attachment A for S {}
@@ -1984,7 +1990,7 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 
 		t.Parallel()
 
-		inter, _ := parseCheckAndInterpretWithOptions(t, `
+		inter, _ := parseCheckAndPrepareWithOptions(t, `
         struct S {}
         attachment A for S {}
         enum E: UInt8 {
@@ -2563,6 +2569,8 @@ func TestInterpretBuiltinCompositeAttachment(t *testing.T) {
 		interpreter.Declare(baseActivation, valueDeclaration)
 	}
 
+	// This test is adapted and available in vm_test.go
+	// TestAttachments/build-in type
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
           attachment A for AnyStruct {

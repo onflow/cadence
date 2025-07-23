@@ -9000,6 +9000,14 @@ func TestStringTemplate(t *testing.T) {
 	})
 }
 
+type assumeValidPublicKeyValidator struct{}
+
+var _ stdlib.PublicKeyValidator = assumeValidPublicKeyValidator{}
+
+func (assumeValidPublicKeyValidator) ValidatePublicKey(_ *stdlib.PublicKey) error {
+	return nil
+}
+
 func TestAttachments(t *testing.T) {
 
 	t.Parallel()
@@ -9023,5 +9031,113 @@ func TestAttachments(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t, value.(*interpreter.EphemeralReferenceValue).Value, interpreter.NewUnmeteredIntValueFromInt64(3))
+	})
+
+	t.Run("built-in type", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+          attachment A for AnyStruct {
+              fun foo(): Int {
+                  return 42
+              }
+          }
+
+          fun main(): Int {
+              var key = PublicKey(
+                  publicKey: "0102".decodeHex(),
+                  signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+              )
+			  key = attach A() to key
+              return key[A]!.foo()
+          }
+        `
+
+		validator := stdlib.NewVMPublicKeyConstructor(
+			assumeValidPublicKeyValidator{},
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		for _, valueDeclaration := range []stdlib.StandardLibraryValue{
+			validator,
+			stdlib.InterpreterSignatureAlgorithmConstructor,
+		} {
+			baseValueActivation.DeclareValue(valueDeclaration)
+		}
+
+		compilerConfig := &compiler.Config{
+			BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
+				activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+				activation.Set(
+					stdlib.VMSignatureAlgorithmConstructor.Name,
+					compiler.GlobalImport{
+						Name: stdlib.VMSignatureAlgorithmConstructor.Name,
+					},
+				)
+				activation.Set(
+					validator.Name,
+					compiler.GlobalImport{
+						Name: validator.Name,
+					},
+				)
+				for _, v := range stdlib.VMSignatureAlgorithmCaseValues {
+					activation.Set(
+						v.Name,
+						compiler.GlobalImport{
+							Name: v.Name,
+						},
+					)
+				}
+				return activation
+			},
+		}
+
+		storage := interpreter.NewInMemoryStorage(nil)
+
+		vmConfig := vm.NewConfig(storage)
+
+		vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[vm.Variable] {
+			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+			signatureVar := &interpreter.SimpleVariable{}
+			signatureVar.InitializeWithValue(stdlib.VMSignatureAlgorithmConstructor.Value)
+			activation.Set(
+				stdlib.VMSignatureAlgorithmConstructor.Name,
+				signatureVar,
+			)
+
+			publicKeyVar := &interpreter.SimpleVariable{}
+			publicKeyVar.InitializeWithValue(validator.Value)
+			activation.Set(
+				validator.Name,
+				publicKeyVar,
+			)
+
+			for _, v := range stdlib.VMSignatureAlgorithmCaseValues {
+				variable := interpreter.NewVariableWithValue(nil, v.Value)
+				activation.Set(v.Name, variable)
+			}
+			return activation
+		}
+
+		_, err := CompileAndInvokeWithOptions(
+			t,
+			code,
+			"main",
+			CompilerAndVMOptions{
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					CompilerConfig: compilerConfig,
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						Config: &sema.Config{
+							LocationHandler: SingleIdentifierLocationResolver(t),
+							BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+								return baseValueActivation
+							},
+						},
+					},
+				},
+				VMConfig: vmConfig,
+			},
+		)
+		require.NoError(t, err)
 	})
 }

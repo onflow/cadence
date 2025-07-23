@@ -1584,10 +1584,17 @@ func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 	staticType := vm.loadType(typeIndex)
 	typ := vm.context.SemaTypeFromStaticType(staticType)
 
-	base := target.(*interpreter.CompositeValue)
+	base, ok := target.(*interpreter.CompositeValue)
 	if inIteration := vm.context.inAttachmentIteration(base); inIteration {
 		panic(&interpreter.AttachmentIterationMutationError{
 			Value:         base,
+			LocationRange: EmptyLocationRange,
+		})
+	}
+	// we enforce this in the checker, but check defensively anyways
+	if !ok || !base.Kind.SupportsAttachments() {
+		panic(&interpreter.InvalidAttachmentOperationTargetError{
+			Value:         target,
 			LocationRange: EmptyLocationRange,
 		})
 	}
