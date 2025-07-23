@@ -2032,36 +2032,6 @@ func (e *CompositeKindMismatchError) SecondaryError() string {
 	)
 }
 
-func (e *CompositeKindMismatchError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
-	// For composite kind mismatch errors, we suggest using the correct annotation
-	var suggestion string
-	switch e.ExpectedKind {
-	case common.CompositeKindResource:
-		suggestion = "// Use @{} for resource intersection types\n"
-	case common.CompositeKindStructure:
-		suggestion = "// Use {} for struct intersection types\n"
-	case common.CompositeKindContract:
-		suggestion = "// Use {} for contract intersection types\n"
-	default:
-		suggestion = "// Use the correct composite kind annotation\n"
-	}
-
-	return []errors.SuggestedFix[ast.TextEdit]{
-		{
-			Message: "use correct composite kind annotation",
-			TextEdits: []ast.TextEdit{
-				{
-					Insertion: suggestion,
-					Range: ast.Range{
-						StartPos: e.StartPos,
-						EndPos:   e.StartPos,
-					},
-				},
-			},
-		},
-	}
-}
-
 func (e *CompositeKindMismatchError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
 }
