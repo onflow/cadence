@@ -1012,10 +1012,10 @@ func opNewSimpleComposite(vm *VM, ins opcode.InstructionNewSimpleComposite) {
 
 	compositeStaticType := staticType.(*interpreter.CompositeStaticType)
 
-	config := vm.context
+	context := vm.context
 
 	compositeValue := interpreter.NewSimpleCompositeValue(
-		config,
+		context,
 		compositeStaticType.TypeID,
 		compositeStaticType,
 		nil,
@@ -1063,12 +1063,12 @@ func newCompositeValue(
 
 	compositeStaticType := staticType.(*interpreter.CompositeStaticType)
 
-	config := vm.context
+	context := vm.context
 
-	compositeFields := newCompositeValueFields(config, compositeKind)
+	compositeFields := newCompositeValueFields(context, compositeKind)
 
 	return interpreter.NewCompositeValue(
-		config,
+		context,
 		EmptyLocationRange,
 		compositeStaticType.Location,
 		compositeStaticType.QualifiedIdentifier,
