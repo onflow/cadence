@@ -912,9 +912,14 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 		if refValue, ok := val.Value.(*interpreter.CompositeValue); ok {
 			if refValue.Kind == common.CompositeKindAttachment {
 				// CompositeValue.GetMethod, as in the interpreter we need an authorized reference to base
-				compiledFunctionValue := method.(CompiledFunctionValue)
-				qualifiedName := compiledFunctionValue.Function.Name
-				unqualifiedName := strings.Split(qualifiedName, ".")[1]
+				var unqualifiedName string
+				switch functionValue := method.(type) {
+				case CompiledFunctionValue:
+					parts := strings.Split(functionValue.Function.Name, ".")
+					unqualifiedName = parts[len(parts)-1]
+				case *NativeFunctionValue:
+					unqualifiedName = functionValue.Name
+				}
 
 				fnAccess := interpreter.GetAccessOfMember(vm.context, refValue, unqualifiedName)
 				// with respect to entitlements, any access inside an attachment that is not an entitlement access

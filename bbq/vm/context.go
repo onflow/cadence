@@ -311,9 +311,14 @@ func (c *Context) GetMethod(
 	if v, ok := value.(*interpreter.CompositeValue); ok {
 		if v.Kind == common.CompositeKindAttachment {
 			// CompositeValue.GetMethod, as in the interpreter we need an authorized reference to self
-			compiledFunctionValue := method.(CompiledFunctionValue)
-			qualifiedName := compiledFunctionValue.Function.Name
-			unqualifiedName := strings.Split(qualifiedName, ".")[1]
+			var unqualifiedName string
+			switch functionValue := method.(type) {
+			case CompiledFunctionValue:
+				parts := strings.Split(functionValue.Function.Name, ".")
+				unqualifiedName = parts[len(parts)-1]
+			case *NativeFunctionValue:
+				unqualifiedName = functionValue.Name
+			}
 
 			fnAccess := interpreter.GetAccessOfMember(c, v, unqualifiedName)
 			// with respect to entitlements, any access inside an attachment that is not an entitlement access
