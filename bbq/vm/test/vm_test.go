@@ -9012,21 +9012,21 @@ func TestAttachments(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("supported", func(t *testing.T) {
+	t.Run("basic", func(t *testing.T) {
 		t.Parallel()
 
 		value, err := CompileAndInvoke(t, `
 		resource R {}
-       attachment A for R {
-          fun foo(): Int { return 3 }
-       }
-       fun test(): Int {
-           let r <- create R()
-           let r2 <- attach A() to <-r
-           let i = r2[A]?.foo()!
-           destroy r2
-           return i
-       }
+		attachment A for R {
+			fun foo(): Int { return 3 }
+		}
+		fun test(): Int {
+			let r <- create R()
+			let r2 <- attach A() to <-r
+			let i = r2[A]?.foo()!
+			destroy r2
+			return i
+		}
 		`, "test")
 		require.NoError(t, err)
 
@@ -9037,20 +9037,20 @@ func TestAttachments(t *testing.T) {
 		t.Parallel()
 
 		code := `
-          attachment A for AnyStruct {
-              fun foo(): Int {
-                  return 42
-              }
-          }
+			attachment A for AnyStruct {
+				fun foo(): Int {
+					return 42
+				}
+			}
 
-          fun main(): Int {
-              var key = PublicKey(
-                  publicKey: "0102".decodeHex(),
-                  signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
-              )
-			  key = attach A() to key
-              return key[A]!.foo()
-          }
+			fun main(): Int {
+				var key = PublicKey(
+					publicKey: "0102".decodeHex(),
+					signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+				)
+				key = attach A() to key
+				return key[A]!.foo()
+			}
         `
 
 		validator := stdlib.NewVMPublicKeyConstructor(
@@ -9119,7 +9119,7 @@ func TestAttachments(t *testing.T) {
 			return activation
 		}
 
-		_, err := CompileAndInvokeWithOptions(
+		value, err := CompileAndInvokeWithOptions(
 			t,
 			code,
 			"main",
@@ -9139,5 +9139,7 @@ func TestAttachments(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
+
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(42), value)
 	})
 }

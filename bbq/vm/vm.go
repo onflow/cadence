@@ -1547,11 +1547,6 @@ func opSetTypeIndex(vm *VM, ins opcode.InstructionSetTypeIndex) {
 
 	base := target.(*interpreter.CompositeValue)
 
-	for k := range vm.context.attachmentIterationMap {
-		print(k)
-		print(base)
-	}
-
 	if inIteration := vm.context.inAttachmentIteration(base); inIteration {
 		panic(&interpreter.AttachmentIterationMutationError{
 			Value:         base,

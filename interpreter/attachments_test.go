@@ -1874,8 +1874,9 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO: this defensive check causes an error in the compiler
-		// but not the same one
+		// this defensive check requires changing opGetTypeIndex to take on the work that
+		// previous instructions in VisitAttachExpression do which is not ideal
+		// same goes for all below attach defensive checks
 		inter, _ := parseCheckAndInterpretWithOptions(t, `
         struct S {}
         attachment A for S {}
@@ -1918,8 +1919,6 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO: this defensive check causes an error in the compiler
-		// but not the same one
 		inter, _ := parseCheckAndInterpretWithOptions(t, `
         struct S {}
         attachment A for S {}
@@ -1960,8 +1959,6 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO: this defensive check causes an error in the compiler
-		// but not the same one
 		inter, _ := parseCheckAndInterpretWithOptions(t, `
         struct S {}
         attachment A for S {}
