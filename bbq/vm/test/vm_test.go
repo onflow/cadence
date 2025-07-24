@@ -689,7 +689,7 @@ func TestImportError(t *testing.T) {
 	_, err = vmInstance.InvokeExternally("test")
 	RequireError(t, err)
 
-	var panicErr stdlib.PanicError
+	var panicErr *stdlib.PanicError
 	require.ErrorAs(t, err, &panicErr)
 
 	assert.Equal(t,
@@ -2033,7 +2033,7 @@ func TestNativeFunctions(t *testing.T) {
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		_, err = vmInstance.InvokeExternally("test")
-		require.EqualError(t, err, "assertion failed: hello")
+		require.ErrorContains(t, err, "assertion failed: hello")
 		require.Equal(t, 0, vmInstance.StackSize())
 	})
 }

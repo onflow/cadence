@@ -609,6 +609,10 @@ func (interpreter *Interpreter) CallStack() []Invocation {
 
 func (interpreter *Interpreter) CallStackLocations() []LocationRange {
 	callstack := interpreter.CallStack()
+	if len(callstack) == 0 {
+		return nil
+	}
+
 	locationRanges := make([]LocationRange, 0, len(callstack))
 	for _, invocation := range callstack {
 		locationRanges = append(locationRanges, invocation.LocationRange)

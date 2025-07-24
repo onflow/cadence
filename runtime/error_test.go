@@ -240,6 +240,7 @@ func TestRuntimeError(t *testing.T) {
 11 | 				)
    | 				^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+error: panic: 42
  --> 0100000000000000000000000000000000000000000000000000000000000000:4:5
   |
 4 | 					panic("42")
@@ -406,38 +407,20 @@ func TestRuntimeError(t *testing.T) {
 			},
 		)
 
-		if *compile {
-			require.ErrorContains(t, err,
-				`Execution failed:
+		errorString := `Execution failed:
  --> 0100000000000000000000000000000000000000000000000000000000000000:5:16
   |
 5 |                 add()
   |                 ^^^^^
 
+error: overflow
  --> imported:6:16
   |
 6 |                 a + b
   |                 ^^^^^
-`,
-			)
-		} else {
-			require.ErrorContains(
-				t,
-				err,
-				"Execution failed:\n"+
-					" --> 0100000000000000000000000000000000000000000000000000000000000000:5:16\n"+
-					"  |\n"+
-					"5 |                 add()\n"+
-					"  |                 ^^^^^\n"+
-					"\n"+
-					"error: overflow\n"+
-					" --> imported:6:16\n"+
-					"  |\n"+
-					"6 |                 a + b\n"+
-					"  |                 ^^^^^\n"+
-					"",
-			)
-		}
+`
+
+		require.ErrorContains(t, err, errorString)
 	})
 
 	t.Run("nested errors", func(t *testing.T) {

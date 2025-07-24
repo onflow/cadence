@@ -438,7 +438,7 @@ func VMBuiltinGlobalsProviderWithDefaultsAndPanic(_ common.Location) *activation
 					panic(errors.NewUnreachableError())
 				}
 
-				panic(stdlib.PanicError{
+				panic(&stdlib.PanicError{
 					Message: messageValue.Str,
 				})
 			},

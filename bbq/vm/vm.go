@@ -1486,13 +1486,14 @@ func (vm *VM) run() {
 			// Recover all errors, because VM can be directly invoked by FVM.
 			cadenceError := interpreter.AsCadenceError(r)
 
+			currentLocation := vm.LocationRange()
+
 			if locatedError, ok := cadenceError.(interpreter.HasLocationRange); ok {
-				locatedError.SetLocationRange(vm.LocationRange())
+				locatedError.SetLocationRange(currentLocation)
 			}
 
 			// if the error is not yet an interpreter error, wrap it
 			if _, ok := cadenceError.(interpreter.Error); !ok {
-				currentLocation := vm.LocationRange()
 				cadenceError = interpreter.Error{
 					Err:      cadenceError,
 					Location: currentLocation.Location,
@@ -1994,13 +1995,16 @@ func locationRangeOfInstruction(function CompiledFunctionValue, instructionIndex
 }
 
 func (vm *VM) callStackLocations() []interpreter.LocationRange {
+	// Skip the current level. It is already included in the parent error.
+	callstack := vm.callstack[:len(vm.callstack)-1]
+
+	if len(callstack) == 0 {
+		return nil
+	}
+
 	locationRanges := make([]interpreter.LocationRange, 0, len(vm.stack))
 
-	// Update the current ip, for the current stackframe.
-	// We don't update it for every instruction.(only update it when needed)
-	vm.ipStack[len(vm.ipStack)-1] = vm.ip
-
-	for index, stackFrame := range vm.callstack {
+	for index, stackFrame := range callstack {
 		function := stackFrame.function
 		ip := vm.ipStack[index]
 		locationRange := locationRangeOfInstruction(function, ip)
