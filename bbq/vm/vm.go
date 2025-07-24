@@ -993,7 +993,6 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
 	// Load arguments
 	arguments := vm.popN(int(ins.ArgCount))
 	receiver := arguments[ReceiverIndex]
-	arguments[ReceiverIndex] = maybeDereferenceReceiver(vm.context, receiver)
 
 	// Get function
 	nameIndex := ins.Name
@@ -1006,6 +1005,9 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
 		EmptyLocationRange,
 		funcName,
 	)
+
+	_, ok := functionValue.(*NativeFunctionValue)
+	arguments[ReceiverIndex] = maybeDereferenceReceiver(vm.context, receiver, ok)
 
 	invokeFunction(
 		vm,
@@ -1058,11 +1060,12 @@ func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
 	return typeArguments
 }
 
-func maybeDereferenceReceiver(context interpreter.ValueStaticTypeContext, value Value) Value {
+func maybeDereferenceReceiver(context interpreter.ValueStaticTypeContext, value Value, isNative bool) Value {
 	switch typedValue := value.(type) {
 	case *interpreter.EphemeralReferenceValue:
 		// Do not dereference attachments, so that the receiver is a reference as expected.
-		if val, ok := typedValue.Value.(*interpreter.CompositeValue); ok {
+		// Exception: Native function receiver needs to be dereferenced to match interpreter.
+		if val, ok := typedValue.Value.(*interpreter.CompositeValue); ok && !isNative {
 			if val.Kind == common.CompositeKindAttachment {
 				return value
 			}

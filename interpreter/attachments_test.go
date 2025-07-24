@@ -511,6 +511,7 @@ func TestInterpretAttachExecutionOrdering(t *testing.T) {
 
 		t.Parallel()
 
+		// TODO: enable after merging master in
 		inter := parseCheckAndInterpret(t, `
             struct S {
                 fun bar(): Int? {
@@ -1848,7 +1849,7 @@ func TestInterpretAttachmentsRuntimeType(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R {}
             attachment A for R {}
             fun test(): Type {
@@ -1864,6 +1865,27 @@ func TestInterpretAttachmentsRuntimeType(t *testing.T) {
 		require.NoError(t, err)
 		require.IsType(t, interpreter.TypeValue{}, a)
 		require.Equal(t, "S.test.A", a.(interpreter.TypeValue).Type.String())
+	})
+
+	t.Run("isInstance()", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            resource R {}
+            attachment A for R {}
+            fun test(): Bool {
+                let r <- create R()
+                let r2 <- attach A() to <-r
+                let a: Bool = r2[A]!.isInstance(Type<&A>())
+                destroy r2
+                return a
+            }
+        `)
+
+		a, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, interpreter.BoolValue(false), a)
 	})
 }
 

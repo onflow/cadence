@@ -561,5 +561,6 @@ func (v *BoundFunctionValue) Receiver(context interpreter.ValueStaticTypeContext
 		context,
 		EmptyLocationRange,
 	)
-	return maybeDereferenceReceiver(context, *receiver)
+	_, ok := v.Method.(*NativeFunctionValue)
+	return maybeDereferenceReceiver(context, *receiver, ok)
 }
