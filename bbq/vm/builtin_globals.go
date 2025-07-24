@@ -401,7 +401,7 @@ var commonBuiltinTypeBoundFunctions = []*NativeFunctionValue{
 		func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
 			value := arguments[ReceiverIndex]
 
-			typeValue, ok := arguments[TypeBoundFunctionArgumentOffset].(interpreter.TypeValue)
+			typeValue, ok := arguments[len(arguments)-1].(interpreter.TypeValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
