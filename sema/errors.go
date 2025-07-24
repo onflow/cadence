@@ -434,7 +434,7 @@ func (e *InsufficientArgumentsError) Error() string {
 
 func (e *InsufficientArgumentsError) SecondaryError() string {
 	return fmt.Sprintf(
-		"Expected at least %d, got %d",
+		"expected at least %d, got %d",
 		e.MinCount,
 		e.ActualCount,
 	)
@@ -462,7 +462,7 @@ func (e *ExcessiveArgumentsError) Error() string {
 
 func (e *ExcessiveArgumentsError) SecondaryError() string {
 	return fmt.Sprintf(
-		"Expected up to %d, got %d",
+		"expected up to %d, got %d",
 		e.MaxCount,
 		e.ActualCount,
 	)
@@ -536,7 +536,7 @@ func (e *IncorrectArgumentLabelError) SecondaryError() string {
 		expected = fmt.Sprintf("`%s`", e.ExpectedArgumentLabel)
 	}
 	return fmt.Sprintf(
-		"Expected %s, got `%s`",
+		"expected %s, got `%s`",
 		expected,
 		e.ActualArgumentLabel,
 	)
@@ -1405,7 +1405,7 @@ func (e *InvalidEnumRawTypeError) Error() string {
 }
 
 func (e *InvalidEnumRawTypeError) SecondaryError() string {
-	return "Only integer types are currently supported for enums"
+	return "only integer types are currently supported for enums"
 }
 
 // MissingEnumRawTypeError
@@ -1704,7 +1704,7 @@ func (e CyclicConformanceError) Error() string {
 }
 
 func (e CyclicConformanceError) SecondaryError() string {
-	return "Interfaces cannot have circular dependencies. Break the cycle by removing one of the conformance declarations"
+	return "interfaces cannot have circular dependencies; break the cycle by removing one of the conformance declarations"
 }
 
 func (e CyclicConformanceError) DocumentationLink() string {
@@ -2025,7 +2025,7 @@ func (e *CompositeKindMismatchError) Error() string {
 
 func (e *CompositeKindMismatchError) SecondaryError() string {
 	return fmt.Sprintf(
-		"Expected `%s`, got `%s`",
+		"expected `%s`, got `%s`",
 		e.ExpectedKind.Name(),
 		e.ActualKind.Name(),
 	)
@@ -2058,7 +2058,7 @@ func (e *InvalidIntegerLiteralRangeError) Error() string {
 
 func (e *InvalidIntegerLiteralRangeError) SecondaryError() string {
 	return fmt.Sprintf(
-		"Expected `%s`, in range [%s, %s]",
+		"expected `%s`, in range [%s, %s]",
 		e.ExpectedType.QualifiedString(),
 		e.ExpectedMinInt,
 		e.ExpectedMaxInt,
@@ -2107,7 +2107,7 @@ func (e *InvalidFixedPointLiteralRangeError) Error() string {
 
 func (e *InvalidFixedPointLiteralRangeError) SecondaryError() string {
 	return fmt.Sprintf(
-		"Expected `%s`, in range [%s.%s, %s.%s]",
+		"expected `%s`, in range [%s.%s, %s.%s]",
 		e.ExpectedType.QualifiedString(),
 		e.ExpectedMinInt,
 		e.ExpectedMinFractional,
@@ -2138,7 +2138,7 @@ func (e *InvalidFixedPointLiteralScaleError) Error() string {
 
 func (e *InvalidFixedPointLiteralScaleError) SecondaryError() string {
 	return fmt.Sprintf(
-		"Expected `%s`, with maximum scale %d",
+		"expected `%s`, with maximum scale %d",
 		e.ExpectedType.QualifiedString(),
 		e.ExpectedScale,
 	)
@@ -2323,7 +2323,7 @@ func (e *IncorrectTransferOperationError) Error() string {
 
 func (e *IncorrectTransferOperationError) SecondaryError() string {
 	return fmt.Sprintf(
-		"Expected `%s`",
+		"expected `%s`",
 		e.ExpectedOperation.Operator(),
 	)
 }
@@ -2655,7 +2655,7 @@ func (e *EmitNonEventError) Error() string {
 }
 
 func (e *EmitNonEventError) SecondaryError() string {
-	return "Only event types can be emitted. Consider declaring the type as an event"
+	return "only event types can be emitted; consider declaring the type as an event"
 }
 
 func (e *EmitNonEventError) DocumentationLink() string {
@@ -2739,7 +2739,7 @@ func (e *InvalidResourceAssignmentError) Error() string {
 }
 
 func (e *InvalidResourceAssignmentError) SecondaryError() string {
-	return "Consider force assigning (<-!) or swapping (<->)"
+	return "consider force assigning (<-!) or swapping (<->)"
 }
 
 // ResourceFieldNotInvalidatedError
@@ -2828,7 +2828,7 @@ func (e *UnreachableStatementError) Error() string {
 }
 
 func (e *UnreachableStatementError) SecondaryError() string {
-	return "Consider removing this code"
+	return "consider removing this code"
 }
 
 // UninitializedUseError
@@ -2977,7 +2977,7 @@ func (e *ReferenceToAnOptionalError) Error() string {
 
 func (e *ReferenceToAnOptionalError) SecondaryError() string {
 	return fmt.Sprintf(
-		"Expected non-optional type, got `%s`. Consider taking a reference with type `%s`",
+		"expected non-optional type, got `%s`; consider taking a reference with type `%s`",
 		e.ReferencedOptionalType.QualifiedString(),
 
 		// Suggest taking the optional out of the reference type.
@@ -3034,7 +3034,7 @@ func (e *NonResourceTypeError) Error() string {
 
 func (e *NonResourceTypeError) SecondaryError() string {
 	return fmt.Sprintf(
-		"Expected resource type, got `%s`",
+		"expected resource type, got `%s`",
 		e.ActualType.QualifiedString(),
 	)
 }
@@ -3343,7 +3343,7 @@ func (e *InvalidCharacterLiteralError) Error() string {
 }
 
 func (e *InvalidCharacterLiteralError) SecondaryError() string {
-	return fmt.Sprintf("Expected 1, got %d",
+	return fmt.Sprintf("expected 1, got %d",
 		e.Length,
 	)
 }
@@ -3425,7 +3425,7 @@ func (e *InvalidTransactionBlockError) Error() string {
 
 func (e *InvalidTransactionBlockError) SecondaryError() string {
 	return fmt.Sprintf(
-		"Expected `prepare` or `execute`, got `%s`",
+		"expected `prepare` or `execute`, got `%s`",
 		e.Name,
 	)
 }
@@ -3988,7 +3988,7 @@ func (e *InvalidTypeArgumentCountError) Error() string {
 
 func (e *InvalidTypeArgumentCountError) SecondaryError() string {
 	return fmt.Sprintf(
-		"Expected up to %d, got %d",
+		"expected up to %d, got %d",
 		e.TypeParameterCount,
 		e.TypeArgumentCount,
 	)
@@ -4638,7 +4638,7 @@ func (e *DuplicateEntitlementMappingInclusionError) Error() string {
 }
 
 func (e *DuplicateEntitlementMappingInclusionError) SecondaryError() string {
-	return "Remove the duplicate include statement. Each entitlement map can only be included once in a mapping definition"
+	return "remove the duplicate include statement; each entitlement map can only be included once in a mapping definition"
 }
 
 func (e *DuplicateEntitlementMappingInclusionError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
@@ -4787,7 +4787,7 @@ func (e *AttachNonAttachmentError) Error() string {
 }
 
 func (e *AttachNonAttachmentError) SecondaryError() string {
-	return "Only attachment types can be used in attach expressions. Consider creating an attachment declaration: attachment MyAttachment for BaseType { ... }"
+	return "only attachment types can be used in attach expressions; consider creating an attachment declaration: attachment MyAttachment for BaseType { ... }"
 }
 
 func (e *AttachNonAttachmentError) DocumentationLink() string {
