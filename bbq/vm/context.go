@@ -54,8 +54,6 @@ type Context struct {
 	// TODO: Re-use the conversions from the compiler.
 	// TODO: Maybe extend/share this between executions.
 	semaTypes map[sema.TypeID]sema.Type
-
-	// TODO: stack-trace, location, etc.
 }
 
 var _ interpreter.ReferenceTracker = &Context{}

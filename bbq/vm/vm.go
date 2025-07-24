@@ -1483,9 +1483,24 @@ func (vm *VM) run() {
 
 	defer func() {
 		if r := recover(); r != nil {
-			if locatedError, ok := r.(interpreter.HasLocationRange); ok {
-				locatedError.SetLocationRange(vm.LocationRange())
+			// Recover all errors, because VM can be directly invoked by FVM.
+			cadenceError := interpreter.AsCadenceError(r)
+
+			// if the error is not yet an interpreter error, wrap it
+			if _, ok := cadenceError.(interpreter.Error); !ok {
+
+				currentLocation := vm.LocationRange()
+
+				cadenceError = interpreter.Error{
+					Err:      cadenceError,
+					Location: currentLocation.Location,
+				}
 			}
+
+			err := cadenceError.(interpreter.Error)
+			err.StackTrace = vm.callStackLocations()
+
+			// For debug purpose only
 
 			if vm.context.debugEnabled {
 				switch r.(type) {
@@ -1500,7 +1515,7 @@ func (vm *VM) run() {
 				}
 			}
 
-			panic(r)
+			panic(err)
 		}
 	}()
 
@@ -1959,17 +1974,39 @@ func (vm *VM) Global(name string) Value {
 // This is an expensive operation and must be only used on-demand.
 func (vm *VM) LocationRange() interpreter.LocationRange {
 	currentFunction := vm.callFrame.function
-	lineNumbers := currentFunction.Function.LineNumbers
 
 	// `vm.ip` always points to the next instruction.
 	lastInstructionIndex := vm.ip - 1
 
-	position := lineNumbers.GetSourcePosition(lastInstructionIndex)
+	return locationRangeOfInstruction(currentFunction, lastInstructionIndex)
+}
+
+func locationRangeOfInstruction(function CompiledFunctionValue, instructionIndex uint16) interpreter.LocationRange {
+	lineNumbers := function.Function.LineNumbers
+	position := lineNumbers.GetSourcePosition(instructionIndex)
 
 	return interpreter.LocationRange{
-		Location:    currentFunction.Executable.Location,
+		Location:    function.Executable.Location,
 		HasPosition: position,
 	}
+}
+
+func (vm *VM) callStackLocations() []interpreter.LocationRange {
+	locationRanges := make([]interpreter.LocationRange, 0, len(vm.stack))
+
+	// Update the current ip, for the current stackframe.
+	// We don't update it for every instruction.(only update it when needed)
+	vm.ipStack[len(vm.ipStack)-1] = vm.ip
+
+	for index, stackFrame := range vm.callstack {
+		function := stackFrame.function
+		ip := vm.ipStack[index]
+		locationRange := locationRangeOfInstruction(function, ip)
+
+		locationRanges = append(locationRanges, locationRange)
+	}
+
+	return locationRanges
 }
 
 func printInstructionError(

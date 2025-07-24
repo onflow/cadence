@@ -5131,6 +5131,10 @@ func TestCasting(t *testing.T) {
 			interpreter.TrueValue,
 		)
 		RequireError(t, err)
+
+		castingError := &interpreter.ForceCastTypeMismatchError{}
+		require.ErrorAs(t, err, &castingError)
+
 		assert.Equal(
 			t,
 			&interpreter.ForceCastTypeMismatchError{
@@ -5152,7 +5156,7 @@ func TestCasting(t *testing.T) {
 					},
 				},
 			},
-			err,
+			castingError,
 		)
 	})
 

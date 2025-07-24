@@ -225,12 +225,26 @@ func TestRuntimeError(t *testing.T) {
 			},
 		)
 
-		// TODO: improve error locations in the VM
 		if *compile {
 			require.ErrorContains(t, err,
-				"Execution failed:\n"+
-					"error: panic: 42\n"+
-					" --> 0100000000000000000000000000000000000000000000000000000000000000:0:0\n",
+				`Execution failed:
+  --> 0100000000000000000000000000000000000000000000000000000000000000:15:4
+   |
+15 | 				destroy createResource()
+   | 				^^^^^^^^^^^^^^^^^^^^^^^^
+
+  --> 0100000000000000000000000000000000000000000000000000000000000000:9:21
+   |
+ 9 | 				return <- create Resource(
+10 | 					s: "argument"
+11 | 				)
+   | 				^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+ --> 0100000000000000000000000000000000000000000000000000000000000000:4:5
+  |
+4 | 					panic("42")
+  | 					^^^^^^^^^^^
+`,
 			)
 		} else {
 			require.ErrorContains(t, err,
@@ -392,19 +406,20 @@ func TestRuntimeError(t *testing.T) {
 			},
 		)
 
+		expectedErrorStr := `Execution failed:
+ --> 0100000000000000000000000000000000000000000000000000000000000000:5:16
+  |
+5 |                 add()
+  |                 ^^^^^
+
+ --> imported:6:16
+  |
+6 |                 a + b
+  |                 ^^^^^
+`
 		// TODO: improve error locations in the VM
 		if *compile {
-			require.ErrorContains(
-				t,
-				err,
-				"Execution failed:\n"+
-					"error: overflow\n"+
-					" --> imported:6:16\n"+
-					"  |\n"+
-					"6 |                 a + b\n"+
-					"  |                 ^^^^^\n"+
-					"",
-			)
+			require.ErrorContains(t, err, expectedErrorStr)
 		} else {
 			require.ErrorContains(
 				t,
