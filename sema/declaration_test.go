@@ -25,7 +25,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
@@ -713,4 +715,69 @@ func TestCheckSetToDictWithType(t *testing.T) {
 
 	_, err := ParseAndCheck(t, "var j={0.0:Type}")
 	assert.Nil(t, err)
+}
+
+func TestIncorrectArgumentLabelError(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+		fun test(x: Int): Int {
+			return x
+		}
+
+		fun main(): Int {
+			return test(y: 1)
+		}
+	`
+
+	_, err := ParseAndCheck(t, code)
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[0])
+
+	// Direct unit test for SuggestFixes
+	t.Run("SuggestFixes", func(t *testing.T) {
+		incorrectError := errs[0].(*sema.IncorrectArgumentLabelError)
+		assert.Equal(t, "x", incorrectError.ExpectedArgumentLabel)
+		assert.Equal(t, "y", incorrectError.ActualArgumentLabel)
+
+		fixes := incorrectError.SuggestFixes(code)
+		assert.Equal(t, []errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "replace argument label",
+				TextEdits: []ast.TextEdit{
+					{
+						Replacement: "x",
+						Range:       incorrectError.Range,
+					},
+				},
+			},
+		}, fixes)
+	})
+
+	// End-to-end test: apply suggested fix to code
+	t.Run("ApplySuggestedFix", func(t *testing.T) {
+		incorrectError := errs[0].(*sema.IncorrectArgumentLabelError)
+		fixes := incorrectError.SuggestFixes(code)
+		require.Len(t, fixes, 1)
+		edits := fixes[0].TextEdits[0]
+
+		// Apply the text edit
+		runes := []rune(code)
+		start := edits.Range.StartPos.Offset
+		end := edits.Range.EndPos.Offset
+		updated := string(runes[:start]) + edits.Replacement + string(runes[end:])
+
+		expected := `
+		fun test(x: Int): Int {
+			return x
+		}
+
+		fun main(): Int {
+			return test(x: 1)
+		}
+	`
+		assert.Equal(t, expected, updated)
+	})
 }

@@ -549,7 +549,7 @@ func (e *IncorrectArgumentLabelError) SuggestFixes(code string) []errors.Suggest
 				Message: "replace argument label",
 				TextEdits: []ast.TextEdit{
 					{
-						Replacement: fmt.Sprintf("%s:", e.ExpectedArgumentLabel),
+						Replacement: e.ExpectedArgumentLabel,
 						Range:       e.Range,
 					},
 				},

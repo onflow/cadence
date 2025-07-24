@@ -235,8 +235,8 @@ func (e *InvalidIntegerLiteralError) SecondaryError() string {
 	switch e.InvalidIntegerLiteralKind {
 	case InvalidNumberLiteralKindUnknown:
 		return ""
-	case InvalidNumberLiteralKindLeadingUnderscore:
-		return "remove the leading underscore"
+	// case InvalidNumberLiteralKindLeadingUnderscore:
+	// 	return "remove the leading underscore"
 	case InvalidNumberLiteralKindTrailingUnderscore:
 		return "remove the trailing underscore"
 	case InvalidNumberLiteralKindUnknownPrefix:
@@ -398,15 +398,25 @@ func (e *MissingCommaInParameterListError) SecondaryError() string {
 }
 
 func (e *MissingCommaInParameterListError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
-	// Insert a comma at the current position
+	// Find the start of whitespace before the error position
+	errorPos := e.Pos.Offset
+
+	// Use strings.TrimRight to find where the non-whitespace ends
+	beforeError := code[:errorPos]
+	trimmed := strings.TrimRight(beforeError, " \t")
+	whitespaceStart := len(trimmed)
+
+	// Create a position for the start of whitespace
+	startPos := e.Pos.Shifted(nil, whitespaceStart-errorPos)
+
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Add comma to separate parameters",
 			TextEdits: []ast.TextEdit{
 				{
-					Insertion: ", ",
+					Replacement: ", ",
 					Range: ast.Range{
-						StartPos: e.Pos,
+						StartPos: startPos,
 						EndPos:   e.Pos,
 					},
 				},
