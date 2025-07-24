@@ -138,63 +138,6 @@ func (e *SyntaxErrorWithSuggestedReplacement) SuggestFixes(_ string) []errors.Su
 	}
 }
 
-// JuxtaposedUnaryOperatorsError
-
-type JuxtaposedUnaryOperatorsError struct {
-	Pos   ast.Position
-	Range ast.Range
-}
-
-var _ ParseError = &JuxtaposedUnaryOperatorsError{}
-var _ errors.UserError = &JuxtaposedUnaryOperatorsError{}
-var _ errors.SecondaryError = &JuxtaposedUnaryOperatorsError{}
-var _ errors.HasSuggestedFixes[ast.TextEdit] = &JuxtaposedUnaryOperatorsError{}
-var _ errors.HasDocumentationLink = &JuxtaposedUnaryOperatorsError{}
-
-func (*JuxtaposedUnaryOperatorsError) isParseError() {}
-
-func (*JuxtaposedUnaryOperatorsError) IsUserError() {}
-
-func (e *JuxtaposedUnaryOperatorsError) StartPosition() ast.Position {
-	return e.Pos
-}
-
-func (e *JuxtaposedUnaryOperatorsError) EndPosition(_ common.MemoryGauge) ast.Position {
-	return e.Pos
-}
-
-func (e *JuxtaposedUnaryOperatorsError) Error() string {
-	return "unary operators must not be juxtaposed; parenthesize inner expression"
-}
-
-func (e *JuxtaposedUnaryOperatorsError) SecondaryError() string {
-	return "add parentheses around the inner expression to clarify operator precedence"
-}
-
-func (e *JuxtaposedUnaryOperatorsError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
-	// For juxtaposed unary operators, we suggest adding parentheses
-	// around the inner expression to clarify precedence
-	if e.Range.StartPos.Offset < e.Range.EndPos.Offset && e.Range.EndPos.Offset <= len(code) {
-		innerExpression := code[e.Range.StartPos.Offset:e.Range.EndPos.Offset]
-		return []errors.SuggestedFix[ast.TextEdit]{
-			{
-				Message: "Add parentheses to clarify operator precedence",
-				TextEdits: []ast.TextEdit{
-					{
-						Replacement: fmt.Sprintf("(%s)", innerExpression),
-						Range:       e.Range,
-					},
-				},
-			},
-		}
-	}
-	return nil
-}
-
-func (e *JuxtaposedUnaryOperatorsError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/operators/prescedence-associativity"
-}
-
 // InvalidIntegerLiteralError
 
 type InvalidIntegerLiteralError struct {
@@ -234,6 +177,8 @@ func (e *InvalidIntegerLiteralError) SecondaryError() string {
 	switch e.InvalidIntegerLiteralKind {
 	case InvalidNumberLiteralKindUnknown:
 		return ""
+	case InvalidNumberLiteralKindLeadingUnderscore:
+		return "remove the leading underscore"
 	case InvalidNumberLiteralKindTrailingUnderscore:
 		return "remove the trailing underscore"
 	case InvalidNumberLiteralKindUnknownPrefix:

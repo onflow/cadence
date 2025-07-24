@@ -30,12 +30,6 @@ func generateErrors() []namedError {
 				Range:                     placeholderRange,
 			},
 		},
-		{"parser.JuxtaposedUnaryOperatorsError",
-			&parser.JuxtaposedUnaryOperatorsError{
-				Pos:   placeholderPosition,
-				Range: placeholderRange,
-			},
-		},
 		{"parser.MissingCommaInParameterListError",
 			&parser.MissingCommaInParameterListError{
 				Pos: placeholderPosition,
