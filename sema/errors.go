@@ -4557,7 +4557,6 @@ type DuplicateEntitlementMappingInclusionError struct {
 var _ SemanticError = &DuplicateEntitlementMappingInclusionError{}
 var _ errors.UserError = &DuplicateEntitlementMappingInclusionError{}
 var _ errors.SecondaryError = &DuplicateEntitlementMappingInclusionError{}
-var _ errors.HasSuggestedFixes[ast.TextEdit] = &DuplicateEntitlementMappingInclusionError{}
 var _ errors.HasDocumentationLink = &DuplicateEntitlementMappingInclusionError{}
 
 func (*DuplicateEntitlementMappingInclusionError) isSemanticError() {}
@@ -4574,20 +4573,6 @@ func (e *DuplicateEntitlementMappingInclusionError) Error() string {
 
 func (e *DuplicateEntitlementMappingInclusionError) SecondaryError() string {
 	return "remove the duplicate include statement; each entitlement map can only be included once in a mapping definition"
-}
-
-func (e *DuplicateEntitlementMappingInclusionError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
-	return []errors.SuggestedFix[ast.TextEdit]{
-		{
-			Message: "remove the duplicate include statement",
-			TextEdits: []ast.TextEdit{
-				{
-					Replacement: "",
-					Range:       e.Range,
-				},
-			},
-		},
-	}
 }
 
 func (e *DuplicateEntitlementMappingInclusionError) DocumentationLink() string {
