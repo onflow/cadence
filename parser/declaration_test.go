@@ -7804,22 +7804,20 @@ func TestParseDestructor(t *testing.T) {
 
 	// Direct unit test for SuggestFixes
 	t.Run("SuggestFixes", func(t *testing.T) {
+		destructorRange := ast.Range{
+			StartPos: destroyStartPos,
+			EndPos:   destroyEndPos,
+		}
 		err := &CustomDestructorError{
-			Pos: destroyStartPos,
-			DestructorRange: ast.Range{
-				StartPos: destroyStartPos,
-				EndPos:   destroyEndPos,
-			},
+			Pos:             destroyStartPos,
+			DestructorRange: destructorRange,
 		}
 		assert.Equal(t, []errors.SuggestedFix[ast.TextEdit]{
 			{
 				Message: "Remove the deprecated custom destructor",
 				TextEdits: []ast.TextEdit{{
 					Replacement: "",
-					Range: ast.Range{
-						StartPos: destroyStartPos,
-						EndPos:   destroyEndPos,
-					},
+					Range:       destructorRange,
 				}},
 			},
 		}, err.SuggestFixes(code))
