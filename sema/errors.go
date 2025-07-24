@@ -1497,7 +1497,6 @@ type ConformanceError struct {
 var _ SemanticError = &ConformanceError{}
 var _ errors.UserError = &ConformanceError{}
 var _ errors.SecondaryError = &ConformanceError{}
-var _ errors.HasSuggestedFixes[ast.TextEdit] = &ConformanceError{}
 var _ errors.HasDocumentationLink = &ConformanceError{}
 
 func (*ConformanceError) isSemanticError() {}
@@ -1544,44 +1543,6 @@ func (e *ConformanceError) SecondaryError() string {
 	}
 
 	return builder.String()
-}
-
-func (e *ConformanceError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
-	// For conformance errors, we suggest implementing the missing members
-	var suggestions []string
-
-	if len(e.MissingMembers) > 0 {
-		suggestions = append(suggestions, "// Implement missing interface members:")
-		for _, member := range e.MissingMembers {
-			suggestions = append(suggestions, fmt.Sprintf("// - %s", member.Identifier.Identifier))
-		}
-	}
-
-	if len(e.MissingNestedCompositeTypes) > 0 {
-		suggestions = append(suggestions, "// Define missing nested types:")
-		for _, ty := range e.MissingNestedCompositeTypes {
-			suggestions = append(suggestions, fmt.Sprintf("// - %s", ty.QualifiedString()))
-		}
-	}
-
-	if len(suggestions) == 0 {
-		return nil
-	}
-
-	return []errors.SuggestedFix[ast.TextEdit]{
-		{
-			Message: "implement missing interface requirements",
-			TextEdits: []ast.TextEdit{
-				{
-					Insertion: strings.Join(suggestions, "\n") + "\n",
-					Range: ast.Range{
-						StartPos: e.Pos,
-						EndPos:   e.Pos,
-					},
-				},
-			},
-		},
-	}
 }
 
 func (e *ConformanceError) DocumentationLink() string {
@@ -1643,7 +1604,6 @@ var _ SemanticError = &DuplicateConformanceError{}
 var _ errors.UserError = &DuplicateConformanceError{}
 var _ errors.SecondaryError = &DuplicateConformanceError{}
 var _ errors.HasDocumentationLink = &DuplicateConformanceError{}
-var _ errors.HasSuggestedFixes[ast.TextEdit] = &DuplicateConformanceError{}
 
 func (*DuplicateConformanceError) isSemanticError() {}
 
@@ -1665,20 +1625,6 @@ func (e *DuplicateConformanceError) SecondaryError() string {
 
 func (e *DuplicateConformanceError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/interfaces"
-}
-
-func (e *DuplicateConformanceError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
-	return []errors.SuggestedFix[ast.TextEdit]{
-		{
-			Message: "remove the duplicate conformance declaration",
-			TextEdits: []ast.TextEdit{
-				{
-					Replacement: "",
-					Range:       e.Range,
-				},
-			},
-		},
-	}
 }
 
 // CyclicConformanceError
@@ -2671,6 +2617,7 @@ type EmitDefaultDestroyEventError struct {
 var _ SemanticError = &EmitDefaultDestroyEventError{}
 var _ errors.UserError = &EmitDefaultDestroyEventError{}
 var _ errors.SecondaryError = &EmitDefaultDestroyEventError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &EmitDefaultDestroyEventError{}
 var _ errors.HasDocumentationLink = &EmitDefaultDestroyEventError{}
 
 func (*EmitDefaultDestroyEventError) isSemanticError() {}
@@ -2683,6 +2630,20 @@ func (e *EmitDefaultDestroyEventError) Error() string {
 
 func (e *EmitDefaultDestroyEventError) SecondaryError() string {
 	return "ResourceDestroyed events are automatically emitted when resources are destroyed. Remove the explicit emit statement"
+}
+
+func (e *EmitDefaultDestroyEventError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "remove explicit emit statement",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "",
+					Range:       e.Range,
+				},
+			},
+		},
+	}
 }
 
 func (e *EmitDefaultDestroyEventError) DocumentationLink() string {
