@@ -3756,7 +3756,6 @@ type ConstantSizedArrayLiteralSizeError struct {
 var _ SemanticError = &ConstantSizedArrayLiteralSizeError{}
 var _ errors.UserError = &ConstantSizedArrayLiteralSizeError{}
 var _ errors.SecondaryError = &ConstantSizedArrayLiteralSizeError{}
-var _ errors.HasSuggestedFixes[ast.TextEdit] = &ConstantSizedArrayLiteralSizeError{}
 var _ errors.HasDocumentationLink = &ConstantSizedArrayLiteralSizeError{}
 
 func (*ConstantSizedArrayLiteralSizeError) isSemanticError() {}
@@ -3773,31 +3772,6 @@ func (e *ConstantSizedArrayLiteralSizeError) SecondaryError() string {
 		e.ExpectedSize,
 		e.ActualSize,
 	)
-}
-
-func (e *ConstantSizedArrayLiteralSizeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
-	// For constant-sized array literal size errors, we suggest adjusting the array size or elements
-	var suggestion string
-	if e.ActualSize > e.ExpectedSize {
-		suggestion = fmt.Sprintf("// Remove %d element(s) or change array size to %d\n", e.ActualSize-e.ExpectedSize, e.ActualSize)
-	} else {
-		suggestion = fmt.Sprintf("// Add %d element(s) or change array size to %d\n", e.ExpectedSize-e.ActualSize, e.ActualSize)
-	}
-
-	return []errors.SuggestedFix[ast.TextEdit]{
-		{
-			Message: "adjust array size or number of elements",
-			TextEdits: []ast.TextEdit{
-				{
-					Insertion: suggestion,
-					Range: ast.Range{
-						StartPos: e.StartPos,
-						EndPos:   e.StartPos,
-					},
-				},
-			},
-		},
-	}
 }
 
 func (e *ConstantSizedArrayLiteralSizeError) DocumentationLink() string {
