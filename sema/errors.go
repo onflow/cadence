@@ -2951,7 +2951,7 @@ func (e *NonReferenceTypeReferenceError) Error() string {
 
 func (e *NonReferenceTypeReferenceError) SecondaryError() string {
 	return fmt.Sprintf(
-		"Expected reference type, got `%s`",
+		"expected reference type, got `%s`",
 		e.ActualType.QualifiedString(),
 	)
 }
@@ -3769,7 +3769,7 @@ func (e *ConstantSizedArrayLiteralSizeError) Error() string {
 
 func (e *ConstantSizedArrayLiteralSizeError) SecondaryError() string {
 	return fmt.Sprintf(
-		"Expected %d, got %d",
+		"expected %d, got %d",
 		e.ExpectedSize,
 		e.ActualSize,
 	)
@@ -3960,7 +3960,7 @@ var validPathDomainDescription = func() string {
 
 func (e *InvalidPathDomainError) SecondaryError() string {
 	return fmt.Sprintf(
-		"Expected one of %s; got `%s`",
+		"expected one of %s; got `%s`",
 		validPathDomainDescription,
 		e.ActualDomain,
 	)
@@ -4078,7 +4078,7 @@ func (e *InvalidConstantSizedTypeBaseError) Error() string {
 
 func (e *InvalidConstantSizedTypeBaseError) SecondaryError() string {
 	return fmt.Sprintf(
-		"Expected %d, got %d",
+		"expected %d, got %d",
 		e.ActualBase,
 		e.ExpectedBase,
 	)
@@ -4107,7 +4107,7 @@ func (e *InvalidConstantSizedTypeSizeError) Error() string {
 
 func (e *InvalidConstantSizedTypeSizeError) SecondaryError() string {
 	return fmt.Sprintf(
-		"Expected value in range [%s, %s], got %s",
+		"expected value in range [%s, %s], got %s",
 		e.ExpectedMinInt,
 		e.ExpectedMaxInt,
 		e.ActualSize,
@@ -4187,7 +4187,7 @@ func (e *UnparameterizedTypeInstantiationError) Error() string {
 
 func (e *UnparameterizedTypeInstantiationError) SecondaryError() string {
 	return fmt.Sprintf(
-		"Expected no type arguments, got %d",
+		"expected no type arguments, got %d",
 		e.ActualTypeArgumentCount,
 	)
 }
@@ -4305,7 +4305,7 @@ var _ errors.UserError = &MissingEntryPointError{}
 func (*MissingEntryPointError) IsUserError() {}
 
 func (e *MissingEntryPointError) Error() string {
-	return fmt.Sprintf("missing entry point: Expected '%s'", e.Expected)
+	return fmt.Sprintf("missing entry point: expected '%s'", e.Expected)
 }
 
 // InvalidEntryPointError
@@ -5047,7 +5047,7 @@ func (e *DefaultDestroyInvalidParameterError) Error() string {
 }
 
 func (e *DefaultDestroyInvalidParameterError) SecondaryError() string {
-	return "Default destroy events only support primitive types (like String, Int, Bool) as parameters"
+	return "default destroy events only support primitive types (like String, Int, Bool) as parameters"
 }
 
 func (e *DefaultDestroyInvalidParameterError) DocumentationLink() string {
