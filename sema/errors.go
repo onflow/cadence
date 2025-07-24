@@ -1920,7 +1920,7 @@ func (e *AlwaysFailingResourceCastingTypeError) Error() string {
 }
 
 func (e *AlwaysFailingResourceCastingTypeError) SecondaryError() string {
-	return "non-resource types cannot be cast to resource types. Consider using type checking: if value is? TargetType { ... }"
+	return "non-resource types cannot be cast to resource types."
 }
 
 func (e *AlwaysFailingResourceCastingTypeError) DocumentationLink() string {
