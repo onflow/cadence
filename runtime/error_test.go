@@ -406,7 +406,9 @@ func TestRuntimeError(t *testing.T) {
 			},
 		)
 
-		expectedErrorStr := `Execution failed:
+		if *compile {
+			require.ErrorContains(t, err,
+				`Execution failed:
  --> 0100000000000000000000000000000000000000000000000000000000000000:5:16
   |
 5 |                 add()
@@ -416,10 +418,8 @@ func TestRuntimeError(t *testing.T) {
   |
 6 |                 a + b
   |                 ^^^^^
-`
-		// TODO: improve error locations in the VM
-		if *compile {
-			require.ErrorContains(t, err, expectedErrorStr)
+`,
+			)
 		} else {
 			require.ErrorContains(
 				t,

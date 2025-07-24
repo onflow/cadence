@@ -1492,9 +1492,7 @@ func (vm *VM) run() {
 
 			// if the error is not yet an interpreter error, wrap it
 			if _, ok := cadenceError.(interpreter.Error); !ok {
-
 				currentLocation := vm.LocationRange()
-
 				cadenceError = interpreter.Error{
 					Err:      cadenceError,
 					Location: currentLocation.Location,
