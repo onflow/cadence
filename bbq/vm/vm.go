@@ -1486,6 +1486,10 @@ func (vm *VM) run() {
 			// Recover all errors, because VM can be directly invoked by FVM.
 			cadenceError := interpreter.AsCadenceError(r)
 
+			if locatedError, ok := cadenceError.(interpreter.HasLocationRange); ok {
+				locatedError.SetLocationRange(vm.LocationRange())
+			}
+
 			// if the error is not yet an interpreter error, wrap it
 			if _, ok := cadenceError.(interpreter.Error); !ok {
 
