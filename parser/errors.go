@@ -208,7 +208,6 @@ var _ ParseError = &InvalidIntegerLiteralError{}
 var _ errors.UserError = &InvalidIntegerLiteralError{}
 var _ errors.SecondaryError = &InvalidIntegerLiteralError{}
 var _ errors.HasDocumentationLink = &InvalidIntegerLiteralError{}
-var _ errors.HasSuggestedFixes[ast.TextEdit] = &InvalidIntegerLiteralError{}
 
 func (*InvalidIntegerLiteralError) isParseError() {}
 
@@ -235,8 +234,6 @@ func (e *InvalidIntegerLiteralError) SecondaryError() string {
 	switch e.InvalidIntegerLiteralKind {
 	case InvalidNumberLiteralKindUnknown:
 		return ""
-	// case InvalidNumberLiteralKindLeadingUnderscore:
-	// 	return "remove the leading underscore"
 	case InvalidNumberLiteralKindTrailingUnderscore:
 		return "remove the trailing underscore"
 	case InvalidNumberLiteralKindUnknownPrefix:
@@ -250,55 +247,6 @@ func (e *InvalidIntegerLiteralError) SecondaryError() string {
 
 func (e *InvalidIntegerLiteralError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/values-and-types/booleans-numlits-ints"
-}
-
-func (e *InvalidIntegerLiteralError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
-	switch e.InvalidIntegerLiteralKind {
-	case InvalidNumberLiteralKindLeadingUnderscore:
-		// Remove leading underscore
-		if len(e.Literal) > 1 && e.Literal[0] == '_' {
-			return []errors.SuggestedFix[ast.TextEdit]{
-				{
-					Message: "Remove leading underscore",
-					TextEdits: []ast.TextEdit{
-						{
-							Replacement: e.Literal[1:],
-							Range:       e.Range,
-						},
-					},
-				},
-			}
-		}
-	case InvalidNumberLiteralKindTrailingUnderscore:
-		// Remove trailing underscore
-		if len(e.Literal) > 1 && e.Literal[len(e.Literal)-1] == '_' {
-			return []errors.SuggestedFix[ast.TextEdit]{
-				{
-					Message: "Remove trailing underscore",
-					TextEdits: []ast.TextEdit{
-						{
-							Replacement: e.Literal[:len(e.Literal)-1],
-							Range:       e.Range,
-						},
-					},
-				},
-			}
-		}
-	case InvalidNumberLiteralKindMissingDigits:
-		// Add a 0 to make it a valid number
-		return []errors.SuggestedFix[ast.TextEdit]{
-			{
-				Message: "Add a digit to make this a valid number",
-				TextEdits: []ast.TextEdit{
-					{
-						Replacement: e.Literal + "0",
-						Range:       e.Range,
-					},
-				},
-			},
-		}
-	}
-	return nil
 }
 
 // ExpressionDepthLimitReachedError is reported when the expression depth limit was reached
