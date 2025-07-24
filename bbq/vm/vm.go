@@ -1359,6 +1359,12 @@ func opUnwrap(vm *VM) {
 	}
 }
 
+func opWrap(vm *VM) {
+	value := vm.peek()
+	optional := interpreter.NewSomeValueNonCopying(vm.context, value)
+	vm.replaceTop(optional)
+}
+
 func opNewArray(vm *VM, ins opcode.InstructionNewArray) {
 	typeIndex := ins.Type
 	typ := vm.loadType(typeIndex).(interpreter.ArrayStaticType)
@@ -1645,6 +1651,8 @@ func (vm *VM) run() {
 			opNotEqual(vm)
 		case opcode.InstructionNot:
 			opNot(vm)
+		case opcode.InstructionWrap:
+			opWrap(vm)
 		case opcode.InstructionUnwrap:
 			opUnwrap(vm)
 		case opcode.InstructionEmitEvent:
