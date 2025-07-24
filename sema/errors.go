@@ -4589,7 +4589,6 @@ type CyclicEntitlementMappingError struct {
 var _ SemanticError = &CyclicEntitlementMappingError{}
 var _ errors.UserError = &CyclicEntitlementMappingError{}
 var _ errors.SecondaryError = &CyclicEntitlementMappingError{}
-var _ errors.HasSuggestedFixes[ast.TextEdit] = &CyclicEntitlementMappingError{}
 var _ errors.HasDocumentationLink = &CyclicEntitlementMappingError{}
 
 func (*CyclicEntitlementMappingError) isSemanticError() {}
@@ -4606,20 +4605,6 @@ func (e *CyclicEntitlementMappingError) Error() string {
 
 func (e *CyclicEntitlementMappingError) SecondaryError() string {
 	return "Entitlement mappings cannot have circular dependencies. Remove the include statement to break the cycle"
-}
-
-func (e *CyclicEntitlementMappingError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
-	return []errors.SuggestedFix[ast.TextEdit]{
-		{
-			Message: "remove the include statement",
-			TextEdits: []ast.TextEdit{
-				{
-					Replacement: "",
-					Range:       e.Range,
-				},
-			},
-		},
-	}
 }
 
 func (e *CyclicEntitlementMappingError) DocumentationLink() string {
@@ -4885,7 +4870,6 @@ type DefaultDestroyInvalidArgumentError struct {
 var _ SemanticError = &DefaultDestroyInvalidArgumentError{}
 var _ errors.UserError = &DefaultDestroyInvalidArgumentError{}
 var _ errors.SecondaryError = &DefaultDestroyInvalidArgumentError{}
-var _ errors.HasSuggestedFixes[ast.TextEdit] = &DefaultDestroyInvalidArgumentError{}
 var _ errors.HasDocumentationLink = &DefaultDestroyInvalidArgumentError{}
 
 func (*DefaultDestroyInvalidArgumentError) isSemanticError() {}
@@ -4908,38 +4892,6 @@ func (e *DefaultDestroyInvalidArgumentError) SecondaryError() string {
 		return "Arguments must be literals, member access expressions on `self` or `base`, indexed access expressions on dictionaries, or attachment accesses"
 	}
 	return ""
-}
-
-func (e *DefaultDestroyInvalidArgumentError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
-	// For default destroy invalid argument errors, we suggest using valid argument types
-	var suggestion string
-	switch e.Kind {
-	case NonDictionaryIndexExpression:
-		suggestion = "// Use dictionary indexing instead of array indexing\n"
-	case ReferenceTypedMemberAccess:
-		suggestion = "// Access the value directly, not through a reference\n"
-	case InvalidIdentifier:
-		suggestion = "// Use only 'self' or 'base' identifiers in arguments\n"
-	case InvalidExpression:
-		suggestion = "// Use literals, member access on 'self'/'base', or dictionary indexing\n"
-	default:
-		suggestion = "// Use valid argument expressions for default destroy events\n"
-	}
-
-	return []errors.SuggestedFix[ast.TextEdit]{
-		{
-			Message: "use valid argument expressions",
-			TextEdits: []ast.TextEdit{
-				{
-					Insertion: suggestion,
-					Range: ast.Range{
-						StartPos: e.StartPos,
-						EndPos:   e.StartPos,
-					},
-				},
-			},
-		},
-	}
 }
 
 func (e *DefaultDestroyInvalidArgumentError) DocumentationLink() string {
