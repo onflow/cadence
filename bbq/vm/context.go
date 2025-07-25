@@ -43,6 +43,7 @@ type Context struct {
 
 	invokeFunction                func(function Value, arguments []Value) (Value, error)
 	lookupFunction                func(location common.Location, name string) FunctionValue
+	recoverErrors                 func(onError func(error))
 	inStorageIteration            bool
 	storageMutatedDuringIteration bool
 	containerValueIteration       map[atree.ValueID]int
@@ -229,8 +230,8 @@ func (c *Context) WithResourceDestruction(valueID atree.ValueID, locationRange i
 	f()
 }
 
-func (*Context) RecoverErrors(onError func(error)) {
-	RecoverErrors(onError)
+func (c *Context) RecoverErrors(onError func(error)) {
+	c.recoverErrors(onError)
 }
 
 func (c *Context) GetValueOfVariable(name string) interpreter.Value {
@@ -239,11 +240,6 @@ func (c *Context) GetValueOfVariable(name string) interpreter.Value {
 }
 
 func (c *Context) GetLocation() common.Location {
-	//TODO
-	return nil
-}
-
-func (c *Context) CallStack() []interpreter.Invocation {
 	//TODO
 	return nil
 }

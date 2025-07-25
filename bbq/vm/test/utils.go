@@ -667,10 +667,13 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 		}
 	}
 
-	// recover panics from VM (e.g. global evaluation)
-	defer vm.RecoverErrors(func(internalErr error) {
-		err = internalErr
-	})
+	// recover panics from VM (e.g. globals evaluation)
+	defer func() {
+		if r := recover(); r != nil {
+			internalErr := interpreter.AsCadenceError(r)
+			err = internalErr
+		}
+	}()
 
 	programVM = vm.NewVM(
 		location,
