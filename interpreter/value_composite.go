@@ -146,12 +146,12 @@ func NewCompositeValue(
 				return
 			}
 
-			owner := v.GetOwner().String()
+			valueID := v.ValueID().String()
 			typeID := string(v.TypeID())
 			kind := v.Kind.String()
 
 			context.ReportCompositeValueConstructTrace(
-				owner,
+				valueID,
 				typeID,
 				kind,
 				time.Since(startTime),
@@ -348,14 +348,14 @@ func (v *CompositeValue) Destroy(context ResourceDestructionContext, locationRan
 	if context.TracingEnabled() {
 		startTime := time.Now()
 
-		owner := v.GetOwner().String()
+		valueID := v.ValueID().String()
 		typeID := string(v.TypeID())
 		kind := v.Kind.String()
 
 		defer func() {
 
 			context.ReportCompositeValueDestroyTrace(
-				owner,
+				valueID,
 				typeID,
 				kind,
 				time.Since(startTime),
@@ -468,13 +468,13 @@ func (v *CompositeValue) GetMember(context MemberAccessibleContext, locationRang
 	if context.TracingEnabled() {
 		startTime := time.Now()
 
-		owner := v.GetOwner().String()
+		valueID := v.ValueID().String()
 		typeID := string(v.TypeID())
 		kind := v.Kind.String()
 
 		defer func() {
 			context.ReportCompositeValueGetMemberTrace(
-				owner,
+				valueID,
 				typeID,
 				kind,
 				name,
@@ -656,13 +656,13 @@ func (v *CompositeValue) RemoveMember(
 	if context.TracingEnabled() {
 		startTime := time.Now()
 
-		owner := v.GetOwner().String()
+		valueID := v.ValueID().String()
 		typeID := string(v.TypeID())
 		kind := v.Kind.String()
 
 		defer func() {
 			context.ReportCompositeValueRemoveMemberTrace(
-				owner,
+				valueID,
 				typeID,
 				kind,
 				name,
@@ -723,13 +723,13 @@ func (v *CompositeValue) SetMemberWithoutTransfer(
 	if context.TracingEnabled() {
 		startTime := time.Now()
 
-		owner := v.GetOwner().String()
+		valueID := v.ValueID().String()
 		typeID := string(v.TypeID())
 		kind := v.Kind.String()
 
 		defer func() {
 			context.ReportCompositeValueSetMemberTrace(
-				owner,
+				valueID,
 				typeID,
 				kind,
 				name,
@@ -979,13 +979,13 @@ func (v *CompositeValue) ConformsToStaticType(
 	if context.TracingEnabled() {
 		startTime := time.Now()
 
-		owner := v.GetOwner().String()
+		valueID := v.ValueID().String()
 		typeID := string(v.TypeID())
 		kind := v.Kind.String()
 
 		defer func() {
 			context.ReportCompositeValueConformsToStaticTypeTrace(
-				owner,
+				valueID,
 				typeID,
 				kind,
 				time.Since(startTime),
@@ -1198,13 +1198,13 @@ func (v *CompositeValue) Transfer(
 	if context.TracingEnabled() {
 		startTime := time.Now()
 
-		owner := v.GetOwner().String()
+		valueID := v.ValueID().String()
 		typeID := string(v.TypeID())
 		kind := v.Kind.String()
 
 		defer func() {
 			context.ReportCompositeValueTransferTrace(
-				owner,
+				valueID,
 				typeID,
 				kind,
 				time.Since(startTime),
@@ -1441,13 +1441,13 @@ func (v *CompositeValue) DeepRemove(context ValueRemoveContext, hasNoParentConta
 	if context.TracingEnabled() {
 		startTime := time.Now()
 
-		owner := v.GetOwner().String()
+		valueID := v.ValueID().String()
 		typeID := string(v.TypeID())
 		kind := v.Kind.String()
 
 		defer func() {
 			context.ReportCompositeValueDeepRemoveTrace(
-				owner,
+				valueID,
 				typeID,
 				kind,
 				time.Since(startTime),

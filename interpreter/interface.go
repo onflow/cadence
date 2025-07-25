@@ -19,8 +19,6 @@
 package interpreter
 
 import (
-	"time"
-
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/common"
@@ -528,7 +526,9 @@ var _ VariableResolver = &Interpreter{}
 //
 // TODO: Ideally, Value.RecursiveString shouldn't need the full ValueTransferContext.
 // But that would require refactoring the iterator methods for arrays and dictionaries.
-type NoOpStringContext struct{}
+type NoOpStringContext struct {
+	NoOpTracer
+}
 
 var _ ValueStringContext = NoOpStringContext{}
 
@@ -604,90 +604,6 @@ func (ctx NoOpStringContext) ReferencedResourceKindedValues(_ atree.ValueID) map
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) TracingEnabled() bool {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportArrayValueDeepRemoveTrace(_ string, _ int, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportArrayValueTransferTrace(_ string, _ int, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportArrayValueDestroyTrace(_ string, _ int, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportArrayValueConstructTrace(_ string, _ int, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportDictionaryValueTransferTrace(_ string, _ int, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportArrayValueConformsToStaticTypeTrace(_ string, _ int, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportDictionaryValueDestroyTrace(_ string, _ int, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportDictionaryValueDeepRemoveTrace(_ string, _ int, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportCompositeValueDeepRemoveTrace(_ string, _ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportDictionaryValueGetMemberTrace(_ string, _ int, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportDictionaryValueConstructTrace(_ string, _ int, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportDictionaryValueConformsToStaticTypeTrace(_ string, _ int, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportCompositeValueTransferTrace(_ string, _ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportCompositeValueSetMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportCompositeValueDestroyTrace(_ string, _ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportCompositeValueGetMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportCompositeValueConstructTrace(_ string, _ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportCompositeValueConformsToStaticTypeTrace(_ string, _ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportCompositeValueRemoveMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ReportDomainStorageMapDeepRemoveTrace(_ string, _ int, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
-
 func (ctx NoOpStringContext) OnResourceOwnerChange(_ *CompositeValue, _ common.Address, _ common.Address) {
 	panic(errors.NewUnreachableError())
 }
@@ -728,6 +644,6 @@ func (ctx NoOpStringContext) IsTypeInfoRecovered(_ common.Location) bool {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) SemaTypeFromStaticType(staticType StaticType) sema.Type {
+func (ctx NoOpStringContext) SemaTypeFromStaticType(_ StaticType) sema.Type {
 	panic(errors.NewUnreachableError())
 }

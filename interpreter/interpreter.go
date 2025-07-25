@@ -82,7 +82,6 @@ type OnInvokedFunctionReturnFunc func(inter *Interpreter)
 
 // OnRecordTraceFunc is a function that records a trace.
 type OnRecordTraceFunc func(
-	inter *Interpreter,
 	operationName string,
 	duration time.Duration,
 	attrs []attribute.KeyValue,
@@ -247,6 +246,7 @@ type Interpreter struct {
 	activations  *VariableActivations
 	Transactions []*HostFunctionValue
 	interpreted  bool
+	Tracer
 }
 
 var _ common.MemoryGauge = &Interpreter{}
@@ -283,10 +283,16 @@ func NewInterpreterWithSharedState(
 	sharedState *SharedState,
 ) (*Interpreter, error) {
 
+	var tracer Tracer
+	if sharedState.Config.TracingEnabled {
+		tracer = CallbackTracer(sharedState.Config.OnRecordTrace)
+	}
+
 	interpreter := &Interpreter{
 		Program:     program,
 		Location:    location,
 		SharedState: sharedState,
+		Tracer:      tracer,
 	}
 
 	// Register self
@@ -6052,7 +6058,7 @@ func (interpreter *Interpreter) OnResourceOwnerChange(resource *CompositeValue, 
 }
 
 func (interpreter *Interpreter) TracingEnabled() bool {
-	return interpreter.SharedState.Config.TracingEnabled
+	return interpreter.Tracer != nil
 }
 
 func (interpreter *Interpreter) IsTypeInfoRecovered(location common.Location) bool {
