@@ -772,6 +772,8 @@ type InvalidAccessModifierError struct {
 
 var _ SemanticError = &InvalidAccessModifierError{}
 var _ errors.UserError = &InvalidAccessModifierError{}
+var _ errors.SecondaryError = &InvalidAccessModifierError{}
+var _ errors.HasDocumentationLink = &InvalidAccessModifierError{}
 
 func (*InvalidAccessModifierError) isSemanticError() {}
 
@@ -780,7 +782,7 @@ func (*InvalidAccessModifierError) IsUserError() {}
 func (e *InvalidAccessModifierError) Error() string {
 	var explanation string
 	if e.Explanation != "" {
-		explanation = fmt.Sprintf(". %s", e.Explanation)
+		explanation = fmt.Sprintf(": %s", e.Explanation)
 	}
 
 	if e.Access.Equal(PrimitiveAccess(ast.AccessNotSpecified)) {
@@ -797,6 +799,14 @@ func (e *InvalidAccessModifierError) Error() string {
 			explanation,
 		)
 	}
+}
+
+func (e *InvalidAccessModifierError) SecondaryError() string {
+	return "use a valid access modifier"
+}
+
+func (e *InvalidAccessModifierError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control"
 }
 
 func (e *InvalidAccessModifierError) StartPosition() ast.Position {
@@ -1484,6 +1494,8 @@ type InvalidAttachmentConformancesError struct {
 
 var _ SemanticError = &InvalidAttachmentConformancesError{}
 var _ errors.UserError = &InvalidAttachmentConformancesError{}
+var _ errors.SecondaryError = &InvalidAttachmentConformancesError{}
+var _ errors.HasDocumentationLink = &InvalidAttachmentConformancesError{}
 
 func (*InvalidAttachmentConformancesError) isSemanticError() {}
 
@@ -1491,6 +1503,14 @@ func (*InvalidAttachmentConformancesError) IsUserError() {}
 
 func (e *InvalidAttachmentConformancesError) Error() string {
 	return "attachments cannot conform to interfaces"
+}
+
+func (e *InvalidAttachmentConformancesError) SecondaryError() string {
+	return "Attachment types are a special kind of composite type and cannot conform to interfaces."
+}
+
+func (e *InvalidAttachmentConformancesError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/attachments"
 }
 
 // ConformanceError
@@ -2015,13 +2035,23 @@ type InvalidAddressLiteralError struct {
 
 var _ SemanticError = &InvalidAddressLiteralError{}
 var _ errors.UserError = &InvalidAddressLiteralError{}
+var _ errors.SecondaryError = &InvalidAddressLiteralError{}
+var _ errors.HasDocumentationLink = &InvalidAddressLiteralError{}
 
 func (*InvalidAddressLiteralError) isSemanticError() {}
 
 func (*InvalidAddressLiteralError) IsUserError() {}
 
 func (e *InvalidAddressLiteralError) Error() string {
-	return "invalid address"
+	return "invalid address literal"
+}
+
+func (e *InvalidAddressLiteralError) SecondaryError() string {
+	return "address literals must be hexadecimal (e.g., 0x1, 0x123) and fit within a 64-bit range"
+}
+
+func (e *InvalidAddressLiteralError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types#address"
 }
 
 // InvalidFixedPointLiteralRangeError
@@ -2982,6 +3012,8 @@ type InvalidAssignmentTargetError struct {
 
 var _ SemanticError = &InvalidAssignmentTargetError{}
 var _ errors.UserError = &InvalidAssignmentTargetError{}
+var _ errors.SecondaryError = &InvalidAssignmentTargetError{}
+var _ errors.HasDocumentationLink = &InvalidAssignmentTargetError{}
 
 func (*InvalidAssignmentTargetError) isSemanticError() {}
 
@@ -2989,6 +3021,14 @@ func (*InvalidAssignmentTargetError) IsUserError() {}
 
 func (e *InvalidAssignmentTargetError) Error() string {
 	return "cannot assign to unassignable expression"
+}
+
+func (e *InvalidAssignmentTargetError) SecondaryError() string {
+	return "only variables, array elements, and struct fields can be assigned to; function calls and literals cannot be assigned to"
+}
+
+func (e *InvalidAssignmentTargetError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/operators/assign-move-force-swap"
 }
 
 // ResourceMethodBindingError
@@ -3088,6 +3128,8 @@ type InvalidAccessError struct {
 
 var _ SemanticError = &InvalidAccessError{}
 var _ errors.UserError = &InvalidAccessError{}
+var _ errors.SecondaryError = &InvalidAccessError{}
+var _ errors.HasDocumentationLink = &InvalidAccessError{}
 
 func (*InvalidAccessError) isSemanticError() {}
 
@@ -3107,7 +3149,7 @@ func (e *InvalidAccessError) Error() string {
 	}
 
 	return fmt.Sprintf(
-		"cannot access `%s`: %s requires `%s` authorization%s",
+		"access denied: cannot access `%s` because %s requires `%s` authorization%s",
 		e.Name,
 		e.DeclarationKind.Name(),
 		e.RestrictingAccess.String(),
@@ -3115,12 +3157,16 @@ func (e *InvalidAccessError) Error() string {
 	)
 }
 
+func (e *InvalidAccessError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control"
+}
+
 // When e.PossessedAccess is a conjunctive entitlement set, we can suggest
 // which additional entitlements it would need to be given in order to have
 // e.RequiredAccess.
 func (e *InvalidAccessError) SecondaryError() string {
 	if !e.SuggestEntitlements || e.PossessedAccess == nil || e.RestrictingAccess == nil {
-		return ""
+		return "ensure your reference has the required authorization by using the appropriate access modifier or entitlement"
 	}
 	possessedEntitlements, possessedOk := e.PossessedAccess.(EntitlementSetAccess)
 	requiredEntitlements, requiredOk := e.RestrictingAccess.(EntitlementSetAccess)
@@ -3130,7 +3176,7 @@ func (e *InvalidAccessError) SecondaryError() string {
 		possessedEntitlements = NewEntitlementSetAccess(nil, Conjunction)
 	}
 	if !possessedOk || !requiredOk || possessedEntitlements.SetKind != Conjunction {
-		return ""
+		return "ensure your reference has the required authorization by using the appropriate access modifier or entitlement"
 	}
 
 	var sb strings.Builder
@@ -3161,17 +3207,18 @@ func (e *InvalidAccessError) SecondaryError() string {
 		})
 		missingLen := missingEntitlements.Len()
 		if missingLen == 1 {
-			fmt.Fprint(&sb, "reference needs entitlement ")
+			fmt.Fprint(&sb, "add entitlement ")
 			fmt.Fprintf(&sb, "`%s`", missingEntitlements.Newest().Key.QualifiedString())
+			fmt.Fprint(&sb, " to your reference")
 		} else {
-			fmt.Fprint(&sb, "reference needs all of entitlements ")
+			fmt.Fprint(&sb, "add all of these entitlements to your reference: ")
 			missingEntitlements.ForeachWithIndex(enumerateEntitlements(missingLen, "and"))
 		}
 
 	case Disjunction:
 		// when both `required` is a disjunction, we know `possessed` has none of the entitlements in it:
 		// suggest adding one of those entitlements
-		fmt.Fprint(&sb, "reference needs one of entitlements ")
+		fmt.Fprint(&sb, "add one of these entitlements to your reference: ")
 		requiredEntitlementsSet := requiredEntitlements.Entitlements
 		requiredLen := requiredEntitlementsSet.Len()
 		// singleton-1 sets are always conjunctions
@@ -3197,6 +3244,7 @@ type InvalidAssignmentAccessError struct {
 var _ SemanticError = &InvalidAssignmentAccessError{}
 var _ errors.UserError = &InvalidAssignmentAccessError{}
 var _ errors.SecondaryError = &InvalidAssignmentAccessError{}
+var _ errors.HasDocumentationLink = &InvalidAssignmentAccessError{}
 
 func (*InvalidAssignmentAccessError) isSemanticError() {}
 
@@ -3213,9 +3261,14 @@ func (e *InvalidAssignmentAccessError) Error() string {
 
 func (e *InvalidAssignmentAccessError) SecondaryError() string {
 	return fmt.Sprintf(
-		"consider adding a setter function to %s",
+		"fields with `%s` access cannot be directly assigned to; consider adding a setter function to %s or using a different access modifier",
+		e.RestrictingAccess.String(),
 		e.ContainerType.QualifiedString(),
 	)
+}
+
+func (e *InvalidAssignmentAccessError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control"
 }
 
 // UnauthorizedReferenceAssignmentError
@@ -4585,6 +4638,8 @@ type InvalidAttachmentAnnotationError struct {
 
 var _ SemanticError = &InvalidAttachmentAnnotationError{}
 var _ errors.UserError = &InvalidAttachmentAnnotationError{}
+var _ errors.SecondaryError = &InvalidAttachmentAnnotationError{}
+var _ errors.HasDocumentationLink = &InvalidAttachmentAnnotationError{}
 
 func (*InvalidAttachmentAnnotationError) isSemanticError() {}
 
@@ -4592,6 +4647,14 @@ func (*InvalidAttachmentAnnotationError) IsUserError() {}
 
 func (e *InvalidAttachmentAnnotationError) Error() string {
 	return "cannot refer directly to attachment type"
+}
+
+func (e *InvalidAttachmentAnnotationError) SecondaryError() string {
+	return "attachment types must be used in reference types (e.g., `&T` or `[&T]`) rather than directly; they cannot be stored or passed as values"
+}
+
+func (e *InvalidAttachmentAnnotationError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/attachments"
 }
 
 // InvalidAttachmentConstructorError
@@ -4712,6 +4775,7 @@ type InvalidAttachmentEntitlementError struct {
 
 var _ SemanticError = &InvalidAttachmentEntitlementError{}
 var _ errors.UserError = &InvalidAttachmentEntitlementError{}
+var _ errors.HasDocumentationLink = &InvalidAttachmentEntitlementError{}
 
 func (*InvalidAttachmentEntitlementError) isSemanticError() {}
 
@@ -4729,10 +4793,14 @@ func (e *InvalidAttachmentEntitlementError) Error() string {
 }
 
 func (e *InvalidAttachmentEntitlementError) SecondaryError() string {
-	return fmt.Sprintf("`%s` must appear in the base type `%s`",
+	return fmt.Sprintf("Attachments can only use entitlements supported by the base type; `%s` must be declared in `%s` to be used in attachment member access modifiers",
 		e.InvalidEntitlement.QualifiedIdentifier(),
 		e.BaseType.String(),
 	)
+}
+
+func (e *InvalidAttachmentEntitlementError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/attachments"
 }
 
 func (e *InvalidAttachmentEntitlementError) StartPosition() ast.Position {
