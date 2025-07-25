@@ -455,14 +455,12 @@ func (e ExternalInterface) GetAccountContractNames(address Address) (names []str
 
 func (e ExternalInterface) RecordTrace(
 	operation string,
-	location Location,
 	duration time.Duration,
 	attrs []attribute.KeyValue,
 ) {
 	errors.WrapPanic(func() {
 		e.Interface.RecordTrace(
 			operation,
-			location,
 			duration,
 			attrs,
 		)

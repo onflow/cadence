@@ -1173,14 +1173,12 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 }
 
 func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(invocationExpression *ast.InvocationExpression, implicitArg Value) Value {
-	config := interpreter.SharedState.Config
-
 	// tracing
-	if config.TracingEnabled {
+	if interpreter.TracingEnabled() {
 		startTime := time.Now()
 		invokedExpression := invocationExpression.InvokedExpression.String()
 		defer func() {
-			interpreter.reportFunctionTrace(
+			interpreter.ReportFunctionTrace(
 				invokedExpression,
 				time.Since(startTime),
 			)

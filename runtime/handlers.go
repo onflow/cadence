@@ -138,14 +138,12 @@ func configureVersionedFeatures(i Interface) {
 
 func newOnRecordTraceHandler(i *Interface) interpreter.OnRecordTraceFunc {
 	return func(
-		interpreter *interpreter.Interpreter,
 		functionName string,
 		duration time.Duration,
 		attrs []attribute.KeyValue,
 	) {
 		(*i).RecordTrace(
 			functionName,
-			interpreter.Location,
 			duration,
 			attrs,
 		)

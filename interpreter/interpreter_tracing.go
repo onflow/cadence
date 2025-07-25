@@ -22,6 +22,8 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
+
+	"github.com/onflow/cadence/errors"
 )
 
 const (
@@ -30,10 +32,9 @@ const (
 	tracingImportPrefix   = "import."
 
 	// type prefixes
-	tracingArrayPrefix            = "array."
-	tracingDictionaryPrefix       = "dictionary."
-	tracingCompositePrefix        = "composite."
-	tracingDomainStorageMapPrefix = "domainstoragemap."
+	tracingArrayPrefix      = "array."
+	tracingDictionaryPrefix = "dictionary."
+	tracingCompositePrefix  = "composite."
 
 	// Value operation postfixes
 	tracingConstructPostfix            = "construct"
@@ -51,344 +52,441 @@ const (
 type Tracer interface {
 	TracingEnabled() bool
 
-	ReportArrayValueDeepRemoveTrace(typeInfo string, count int, duration time.Duration)
-	ReportArrayValueTransferTrace(info string, count int, since time.Duration)
-	ReportArrayValueConstructTrace(typeInfo string, count int, duration time.Duration)
-	ReportArrayValueDestroyTrace(info string, count int, since time.Duration)
-	ReportArrayValueConformsToStaticTypeTrace(info string, count int, since time.Duration)
+	ReportFunctionTrace(functionName string, duration time.Duration)
+	ReportImportTrace(importPath string, duration time.Duration)
 
-	ReportDictionaryValueTransferTrace(info string, count int, since time.Duration)
-	ReportDictionaryValueDeepRemoveTrace(info string, count int, since time.Duration)
-	ReportDictionaryValueGetMemberTrace(info string, count int, name string, since time.Duration)
-	ReportDictionaryValueConstructTrace(info string, count int, since time.Duration)
-	ReportDictionaryValueDestroyTrace(info string, count int, since time.Duration)
-	ReportDictionaryValueConformsToStaticTypeTrace(info string, count int, since time.Duration)
+	ReportArrayValueConstructTrace(valueID string, typeID string, duration time.Duration)
+	ReportArrayValueTransferTrace(valueID string, typeID string, since time.Duration)
+	ReportArrayValueDeepRemoveTrace(valueID string, typeID string, duration time.Duration)
+	ReportArrayValueDestroyTrace(valueID string, typeID string, since time.Duration)
+	ReportArrayValueConformsToStaticTypeTrace(valueID string, typeID string, since time.Duration)
 
-	ReportCompositeValueDeepRemoveTrace(owner string, id string, kind string, since time.Duration)
-	ReportCompositeValueTransferTrace(owner string, id string, kind string, since time.Duration)
-	ReportCompositeValueSetMemberTrace(owner string, id string, kind string, name string, since time.Duration)
-	ReportCompositeValueGetMemberTrace(owner string, typeID string, kind string, name string, duration time.Duration)
-	ReportCompositeValueConstructTrace(owner string, id string, kind string, since time.Duration)
-	ReportCompositeValueDestroyTrace(owner string, id string, kind string, since time.Duration)
-	ReportCompositeValueConformsToStaticTypeTrace(owner string, id string, kind string, since time.Duration)
-	ReportCompositeValueRemoveMemberTrace(owner string, id string, kind string, name string, since time.Duration)
+	ReportDictionaryValueConstructTrace(valueID string, typeID string, since time.Duration)
+	ReportDictionaryValueTransferTrace(valueID string, typeID string, since time.Duration)
+	ReportDictionaryValueDeepRemoveTrace(valueID string, typeID string, since time.Duration)
+	ReportDictionaryValueDestroyTrace(valueID string, typeID string, since time.Duration)
+	ReportDictionaryValueConformsToStaticTypeTrace(valueID string, typeID string, since time.Duration)
 
-	ReportDomainStorageMapDeepRemoveTrace(info string, i int, since time.Duration)
+	ReportCompositeValueConstructTrace(valueID string, typeID string, kind string, since time.Duration)
+	ReportCompositeValueTransferTrace(valueID string, typeID string, kind string, since time.Duration)
+	ReportCompositeValueDeepRemoveTrace(valueID string, typeID string, kind string, since time.Duration)
+	ReportCompositeValueDestroyTrace(valueID string, typeID string, kind string, since time.Duration)
+	ReportCompositeValueConformsToStaticTypeTrace(valueID string, typeID string, kind string, since time.Duration)
+	ReportCompositeValueGetMemberTrace(valueID string, typeID string, kind string, name string, duration time.Duration)
+	ReportCompositeValueSetMemberTrace(valueID string, typeID string, kind string, name string, since time.Duration)
+	ReportCompositeValueRemoveMemberTrace(valueID string, typeID string, kind string, name string, since time.Duration)
 }
 
-func (interpreter *Interpreter) reportFunctionTrace(functionName string, duration time.Duration) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(interpreter, tracingFunctionPrefix+functionName, duration, nil)
+type CallbackTracer OnRecordTraceFunc
+
+var _ Tracer = CallbackTracer(nil)
+
+func (t CallbackTracer) TracingEnabled() bool {
+	return t != nil
 }
 
-func (interpreter *Interpreter) reportImportTrace(importPath string, duration time.Duration) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(interpreter, tracingImportPrefix+importPath, duration, nil)
+func (t CallbackTracer) ReportFunctionTrace(functionName string, duration time.Duration) {
+	t(
+		tracingFunctionPrefix+functionName,
+		duration,
+		nil,
+	)
 }
 
-func prepareArrayAndMapValueTraceAttrs(typeInfo string, count int) []attribute.KeyValue {
+func (t CallbackTracer) ReportImportTrace(importPath string, duration time.Duration) {
+	t(
+		tracingImportPrefix+importPath,
+		duration,
+		nil,
+	)
+}
+
+func prepareContainerValueTraceAttrs(valueID string, typeID string) []attribute.KeyValue {
 	return []attribute.KeyValue{
-		attribute.Int("count", count),
-		attribute.String("type", typeInfo),
+		attribute.String("value", valueID),
+		attribute.String("type", typeID),
 	}
 }
 
-func (interpreter *Interpreter) ReportArrayValueConstructTrace(
-	typeInfo string,
-	count int,
+func (t CallbackTracer) reportContainerTrace(
+	traceName string,
+	valueID string,
+	typeID string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	t(
+		traceName,
+		duration,
+		prepareContainerValueTraceAttrs(valueID, typeID),
+	)
+}
+
+func (t CallbackTracer) ReportArrayValueConstructTrace(
+	valueID string,
+	typeID string,
+	duration time.Duration,
+) {
+	t.reportContainerTrace(
 		tracingArrayPrefix+tracingConstructPostfix,
+		valueID,
+		typeID,
 		duration,
-		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
 	)
 }
 
-func (interpreter *Interpreter) ReportArrayValueDeepRemoveTrace(
-	typeInfo string,
-	count int,
+func (t CallbackTracer) ReportArrayValueDeepRemoveTrace(
+	valueID string,
+	typeID string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	t.reportContainerTrace(
 		tracingArrayPrefix+tracingDeepRemovePostfix,
+		valueID,
+		typeID,
 		duration,
-		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
 	)
 }
 
-func (interpreter *Interpreter) ReportArrayValueDestroyTrace(
-	typeInfo string,
-	count int,
+func (t CallbackTracer) ReportArrayValueDestroyTrace(
+	valueID string,
+	typeID string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	t.reportContainerTrace(
 		tracingArrayPrefix+tracingDestroyPostfix,
+		valueID,
+		typeID,
 		duration,
-		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
 	)
 }
 
-func (interpreter *Interpreter) ReportArrayValueTransferTrace(
-	typeInfo string,
-	count int,
+func (t CallbackTracer) ReportArrayValueTransferTrace(
+	valueID string,
+	typeID string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	t.reportContainerTrace(
 		tracingArrayPrefix+tracingTransferPostfix,
+		valueID,
+		typeID,
 		duration,
-		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
 	)
 }
 
-func (interpreter *Interpreter) ReportArrayValueConformsToStaticTypeTrace(
-	typeInfo string,
-	count int,
+func (t CallbackTracer) ReportArrayValueConformsToStaticTypeTrace(
+	valueID string,
+	typeID string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	t.reportContainerTrace(
 		tracingArrayPrefix+tracingConformsToStaticTypePostfix,
+		valueID,
+		typeID,
 		duration,
-		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
 	)
 }
 
-func (interpreter *Interpreter) ReportDictionaryValueConstructTrace(
-	typeInfo string,
-	count int,
+func (t CallbackTracer) ReportDictionaryValueConstructTrace(
+	valueID string,
+	typeID string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	t.reportContainerTrace(
 		tracingDictionaryPrefix+tracingConstructPostfix,
+		valueID,
+		typeID,
 		duration,
-		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
 	)
 }
 
-func (interpreter *Interpreter) ReportDictionaryValueDeepRemoveTrace(
-	typeInfo string,
-	count int,
+func (t CallbackTracer) ReportDictionaryValueDeepRemoveTrace(
+	valueID string,
+	typeID string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	t.reportContainerTrace(
 		tracingDictionaryPrefix+tracingDeepRemovePostfix,
+		valueID,
+		typeID,
 		duration,
-		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
 	)
 }
 
-func (interpreter *Interpreter) ReportDomainStorageMapDeepRemoveTrace(
-	typeInfo string,
-	count int,
+func (t CallbackTracer) ReportDictionaryValueDestroyTrace(
+	valueID string,
+	typeID string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
-		tracingDomainStorageMapPrefix+tracingDeepRemovePostfix,
-		duration,
-		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
-	)
-}
-
-func (interpreter *Interpreter) ReportDictionaryValueDestroyTrace(
-	typeInfo string,
-	count int,
-	duration time.Duration,
-) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	t.reportContainerTrace(
 		tracingDictionaryPrefix+tracingDestroyPostfix,
+		valueID,
+		typeID,
 		duration,
-		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
 	)
 }
 
-func (interpreter *Interpreter) ReportDictionaryValueTransferTrace(
-	typeInfo string,
-	count int,
+func (t CallbackTracer) ReportDictionaryValueTransferTrace(
+	valueID string,
+	typeID string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	t.reportContainerTrace(
 		tracingDictionaryPrefix+tracingTransferPostfix,
+		valueID,
+		typeID,
 		duration,
-		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
 	)
 }
 
-func (interpreter *Interpreter) ReportDictionaryValueConformsToStaticTypeTrace(
-	typeInfo string,
-	count int,
+func (t CallbackTracer) ReportDictionaryValueConformsToStaticTypeTrace(
+	valueID string,
+	typeID string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	t.reportContainerTrace(
 		tracingDictionaryPrefix+tracingConformsToStaticTypePostfix,
+		valueID,
+		typeID,
 		duration,
-		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
 	)
 }
 
-func (interpreter *Interpreter) ReportDictionaryValueGetMemberTrace(
-	typeInfo string,
-	count int,
-	name string,
-	duration time.Duration,
-) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
-		tracingDictionaryPrefix+tracingGetMemberPrefix+name,
-		duration,
-		prepareArrayAndMapValueTraceAttrs(typeInfo, count),
-	)
-}
-
-func prepareCompositeValueTraceAttrs(owner, typeID, kind string) []attribute.KeyValue {
-	return []attribute.KeyValue{
-		attribute.String("owner", owner),
-		attribute.String("typeID", typeID),
+func prepareCompositeValueTraceAttrs(valueID string, typeID string, kind string) []attribute.KeyValue {
+	return append(
+		prepareContainerValueTraceAttrs(valueID, typeID),
 		attribute.String("kind", kind),
-	}
+	)
 }
 
-func (interpreter *Interpreter) ReportCompositeValueConstructTrace(
+func (t CallbackTracer) reportCompositeTrace(
+	traceName string,
+	valueID string,
+	typeID string,
+	kind string,
+	duration time.Duration,
+) {
+	t(
+		traceName,
+		duration,
+		prepareCompositeValueTraceAttrs(valueID, typeID, kind),
+	)
+}
+
+func (t CallbackTracer) ReportCompositeValueConstructTrace(
 	owner string,
 	typeID string,
 	kind string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	t.reportCompositeTrace(
 		tracingCompositePrefix+tracingConstructPostfix,
+		owner,
+		typeID,
+		kind,
 		duration,
-		prepareCompositeValueTraceAttrs(owner, typeID, kind),
 	)
 }
 
-func (interpreter *Interpreter) ReportCompositeValueDeepRemoveTrace(
+func (t CallbackTracer) ReportCompositeValueDeepRemoveTrace(
 	owner string,
 	typeID string,
 	kind string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	t.reportCompositeTrace(
 		tracingCompositePrefix+tracingDeepRemovePostfix,
+		owner,
+		typeID,
+		kind,
 		duration,
-		prepareCompositeValueTraceAttrs(owner, typeID, kind),
 	)
 }
 
-func (interpreter *Interpreter) ReportCompositeValueDestroyTrace(
+func (t CallbackTracer) ReportCompositeValueDestroyTrace(
 	owner string,
 	typeID string,
 	kind string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	t.reportCompositeTrace(
 		tracingCompositePrefix+tracingDestroyPostfix,
+		owner,
+		typeID,
+		kind,
 		duration,
-		prepareCompositeValueTraceAttrs(owner, typeID, kind),
 	)
 }
 
-func (interpreter *Interpreter) ReportCompositeValueTransferTrace(
+func (t CallbackTracer) ReportCompositeValueTransferTrace(
 	owner string,
 	typeID string,
 	kind string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	t.reportCompositeTrace(
 		tracingCompositePrefix+tracingTransferPostfix,
+		owner,
+		typeID,
+		kind,
 		duration,
-		prepareCompositeValueTraceAttrs(owner, typeID, kind),
 	)
 }
 
-func (interpreter *Interpreter) ReportCompositeValueConformsToStaticTypeTrace(
+func (t CallbackTracer) ReportCompositeValueConformsToStaticTypeTrace(
 	owner string,
 	typeID string,
 	kind string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	t.reportCompositeTrace(
 		tracingCompositePrefix+tracingConformsToStaticTypePostfix,
+		owner,
+		typeID,
+		kind,
 		duration,
-		prepareCompositeValueTraceAttrs(owner, typeID, kind),
 	)
 }
 
-func (interpreter *Interpreter) ReportCompositeValueGetMemberTrace(
+func (t CallbackTracer) ReportCompositeValueGetMemberTrace(
 	owner string,
 	typeID string,
 	kind string,
 	name string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	t.reportCompositeTrace(
 		tracingCompositePrefix+tracingGetMemberPrefix+name,
+		owner,
+		typeID,
+		kind,
 		duration,
-		prepareCompositeValueTraceAttrs(owner, typeID, kind),
 	)
 }
 
-func (interpreter *Interpreter) ReportCompositeValueSetMemberTrace(
+func (t CallbackTracer) ReportCompositeValueSetMemberTrace(
 	owner string,
 	typeID string,
 	kind string,
 	name string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	t.reportCompositeTrace(
 		tracingCompositePrefix+tracingSetMemberPrefix+name,
+		owner,
+		typeID,
+		kind,
 		duration,
-		prepareCompositeValueTraceAttrs(owner, typeID, kind),
 	)
 }
 
-func (interpreter *Interpreter) ReportCompositeValueRemoveMemberTrace(
+func (t CallbackTracer) ReportCompositeValueRemoveMemberTrace(
 	owner string,
 	typeID string,
 	kind string,
 	name string,
 	duration time.Duration,
 ) {
-	config := interpreter.SharedState.Config
-	config.OnRecordTrace(
-		interpreter,
+	t.reportCompositeTrace(
 		tracingCompositePrefix+tracingRemoveMemberPrefix+name,
+		owner,
+		typeID,
+		kind,
 		duration,
-		prepareCompositeValueTraceAttrs(owner, typeID, kind),
 	)
+}
+
+type NoOpTracer struct{}
+
+var _ Tracer = NoOpTracer{}
+
+func (NoOpTracer) TracingEnabled() bool {
+	return false
+}
+
+func (NoOpTracer) ReportFunctionTrace(_ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportImportTrace(_ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportArrayValueDeepRemoveTrace(_ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportArrayValueTransferTrace(_ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportArrayValueDestroyTrace(_ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportArrayValueConstructTrace(_ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportDictionaryValueTransferTrace(_ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportArrayValueConformsToStaticTypeTrace(_ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportDictionaryValueDestroyTrace(_ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportDictionaryValueDeepRemoveTrace(_ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportCompositeValueDeepRemoveTrace(_ string, _ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportDictionaryValueGetMemberTrace(_ string, _ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportDictionaryValueConstructTrace(_ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportDictionaryValueConformsToStaticTypeTrace(_ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportCompositeValueTransferTrace(_ string, _ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportCompositeValueSetMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportCompositeValueDestroyTrace(_ string, _ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportCompositeValueGetMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportCompositeValueConstructTrace(_ string, _ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportCompositeValueConformsToStaticTypeTrace(_ string, _ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportCompositeValueRemoveMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportDomainStorageMapDeepRemoveTrace(_ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
 }

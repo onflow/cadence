@@ -104,7 +104,6 @@ type TestRuntimeInterface struct {
 	OnGetAccountContractNames    func(address runtime.Address) ([]string, error)
 	OnRecordTrace                func(
 		operation string,
-		location runtime.Location,
 		duration time.Duration,
 		attrs []attribute.KeyValue,
 	)
@@ -540,14 +539,13 @@ func (i *TestRuntimeInterface) GenerateAccountID(address common.Address) (uint64
 
 func (i *TestRuntimeInterface) RecordTrace(
 	operation string,
-	location runtime.Location,
 	duration time.Duration,
 	attrs []attribute.KeyValue,
 ) {
 	if i.OnRecordTrace == nil {
 		return
 	}
-	i.OnRecordTrace(operation, location, duration, attrs)
+	i.OnRecordTrace(operation, duration, attrs)
 }
 
 func (i *TestRuntimeInterface) MeterMemory(usage common.MemoryUsage) error {
