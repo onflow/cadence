@@ -104,7 +104,11 @@ func TestInterpretSelfDeclaration(t *testing.T) {
 			func(invocation interpreter.Invocation) interpreter.Value {
 				// Check that the *caller's* self
 
-				callStack := invocation.InvocationContext.CallStack()
+				// This is an interpreter-only test.
+				// So the `InvocationContext` is an interpreter instance.
+				inter := invocation.InvocationContext.(*interpreter.Interpreter)
+
+				callStack := inter.CallStack()
 				parentInvocation := callStack[len(callStack)-1]
 
 				if expectSelf {

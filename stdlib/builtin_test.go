@@ -274,7 +274,7 @@ func TestInterpretPanic(t *testing.T) {
 	_, err := inter.Invoke("test", interpreter.NewUnmeteredStringValue("oops"))
 	assert.Equal(t,
 		interpreter.Error{
-			Err: PanicError{
+			Err: &PanicError{
 				Message: "oops",
 			},
 			Location: TestLocation,
