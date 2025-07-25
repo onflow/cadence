@@ -13,7 +13,8 @@ func generateErrors() []namedError {
 	return []namedError{
 		{"parser.CustomDestructorError",
 			&parser.CustomDestructorError{
-				Pos: placeholderPosition,
+				Pos:             placeholderPosition,
+				DestructorRange: placeholderRange,
 			},
 		},
 		{"parser.ExpressionDepthLimitReachedError",
@@ -27,11 +28,6 @@ func generateErrors() []namedError {
 				IntegerLiteralKind:        placeholderIntegerLiteralKind,
 				InvalidIntegerLiteralKind: placeholderInvalidNumberLiteralKind,
 				Range:                     placeholderRange,
-			},
-		},
-		{"parser.JuxtaposedUnaryOperatorsError",
-			&parser.JuxtaposedUnaryOperatorsError{
-				Pos: placeholderPosition,
 			},
 		},
 		{"parser.MissingCommaInParameterListError",

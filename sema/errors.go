@@ -249,6 +249,7 @@ type AssignmentToConstantError struct {
 var _ SemanticError = &AssignmentToConstantError{}
 var _ errors.UserError = &AssignmentToConstantError{}
 var _ errors.SecondaryError = &AssignmentToConstantError{}
+var _ errors.HasDocumentationLink = &AssignmentToConstantError{}
 
 func (*AssignmentToConstantError) isSemanticError() {}
 
@@ -260,6 +261,10 @@ func (e *AssignmentToConstantError) Error() string {
 
 func (e *AssignmentToConstantError) SecondaryError() string {
 	return fmt.Sprintf("consider changing the declaration of `%s` to be `var`", e.Name)
+}
+
+func (e *AssignmentToConstantError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/constants-and-variables"
 }
 
 // TypeMismatchError
@@ -544,7 +549,7 @@ func (e *IncorrectArgumentLabelError) SuggestFixes(code string) []errors.Suggest
 				Message: "replace argument label",
 				TextEdits: []ast.TextEdit{
 					{
-						Replacement: fmt.Sprintf("%s:", e.ExpectedArgumentLabel),
+						Replacement: e.ExpectedArgumentLabel,
 						Range:       e.Range,
 					},
 				},
@@ -722,6 +727,7 @@ type ControlStatementError struct {
 var _ SemanticError = &ControlStatementError{}
 var _ errors.UserError = &ControlStatementError{}
 var _ errors.SecondaryError = &ControlStatementError{}
+var _ errors.HasDocumentationLink = &ControlStatementError{}
 
 func (*ControlStatementError) isSemanticError() {}
 
@@ -729,21 +735,24 @@ func (*ControlStatementError) IsUserError() {}
 
 func (e *ControlStatementError) Error() string {
 	return fmt.Sprintf(
-		"invalid control statement: `%s`",
+		"invalid control statement placement: `%s`",
 		e.ControlStatement.Symbol(),
 	)
 }
 
 func (e *ControlStatementError) SecondaryError() string {
-	validLocation := "a loop "
-	if e.ControlStatement == common.ControlStatementBreak {
-		validLocation += " or switch statement"
+	switch e.ControlStatement {
+	case common.ControlStatementBreak:
+		return "`break` can only be used inside a loop or switch statement. move this statement to a valid context."
+	case common.ControlStatementContinue:
+		return "`continue` can only be used inside a loop statement. move this statement to a valid context."
+	default:
+		return fmt.Sprintf("`%s` can only be used within a valid control flow body. move this statement to a valid context.", e.ControlStatement.Symbol())
 	}
-	return fmt.Sprintf(
-		"`%s` can only be used within %s body",
-		e.ControlStatement.Symbol(),
-		validLocation,
-	)
+}
+
+func (e *ControlStatementError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/control-flow"
 }
 
 // InvalidAccessModifierError
@@ -1142,6 +1151,8 @@ type AssignmentToConstantMemberError struct {
 
 var _ SemanticError = &AssignmentToConstantMemberError{}
 var _ errors.UserError = &AssignmentToConstantMemberError{}
+var _ errors.SecondaryError = &AssignmentToConstantMemberError{}
+var _ errors.HasDocumentationLink = &AssignmentToConstantMemberError{}
 
 func (*AssignmentToConstantMemberError) isSemanticError() {}
 
@@ -1149,6 +1160,14 @@ func (*AssignmentToConstantMemberError) IsUserError() {}
 
 func (e *AssignmentToConstantMemberError) Error() string {
 	return fmt.Sprintf("cannot assign to constant member: `%s`", e.Name)
+}
+
+func (e *AssignmentToConstantMemberError) SecondaryError() string {
+	return "constant members cannot be reassigned after initialization. Consider using a variable field (var) instead"
+}
+
+func (e *AssignmentToConstantMemberError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/constants-and-variables"
 }
 
 // FieldReinitializationError
@@ -1478,6 +1497,7 @@ type ConformanceError struct {
 var _ SemanticError = &ConformanceError{}
 var _ errors.UserError = &ConformanceError{}
 var _ errors.SecondaryError = &ConformanceError{}
+var _ errors.HasDocumentationLink = &ConformanceError{}
 
 func (*ConformanceError) isSemanticError() {}
 
@@ -1523,6 +1543,10 @@ func (e *ConformanceError) SecondaryError() string {
 	}
 
 	return builder.String()
+}
+
+func (e *ConformanceError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/interfaces"
 }
 
 func (e *ConformanceError) StartPosition() ast.Position {
@@ -1578,6 +1602,8 @@ type DuplicateConformanceError struct {
 
 var _ SemanticError = &DuplicateConformanceError{}
 var _ errors.UserError = &DuplicateConformanceError{}
+var _ errors.SecondaryError = &DuplicateConformanceError{}
+var _ errors.HasDocumentationLink = &DuplicateConformanceError{}
 
 func (*DuplicateConformanceError) isSemanticError() {}
 
@@ -1593,6 +1619,14 @@ func (e *DuplicateConformanceError) Error() string {
 	)
 }
 
+func (e *DuplicateConformanceError) SecondaryError() string {
+	return "Remove the duplicate conformance declaration. Each interface can only be conformed to once"
+}
+
+func (e *DuplicateConformanceError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/interfaces"
+}
+
 // CyclicConformanceError
 type CyclicConformanceError struct {
 	InterfaceType *InterfaceType
@@ -1601,6 +1635,8 @@ type CyclicConformanceError struct {
 
 var _ SemanticError = CyclicConformanceError{}
 var _ errors.UserError = CyclicConformanceError{}
+var _ errors.SecondaryError = CyclicConformanceError{}
+var _ errors.HasDocumentationLink = CyclicConformanceError{}
 
 func (CyclicConformanceError) isSemanticError() {}
 
@@ -1611,6 +1647,14 @@ func (e CyclicConformanceError) Error() string {
 		"`%s` has a cyclic conformance to itself",
 		e.InterfaceType.QualifiedString(),
 	)
+}
+
+func (e CyclicConformanceError) SecondaryError() string {
+	return "interfaces cannot have circular dependencies; break the cycle by removing one of the conformance declarations"
+}
+
+func (e CyclicConformanceError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/interfaces"
 }
 
 // MultipleInterfaceDefaultImplementationsError
@@ -1827,6 +1871,8 @@ type AlwaysFailingNonResourceCastingTypeError struct {
 
 var _ SemanticError = &AlwaysFailingNonResourceCastingTypeError{}
 var _ errors.UserError = &AlwaysFailingNonResourceCastingTypeError{}
+var _ errors.SecondaryError = &AlwaysFailingNonResourceCastingTypeError{}
+var _ errors.HasDocumentationLink = &AlwaysFailingNonResourceCastingTypeError{}
 
 func (*AlwaysFailingNonResourceCastingTypeError) isSemanticError() {}
 
@@ -1840,6 +1886,14 @@ func (e *AlwaysFailingNonResourceCastingTypeError) Error() string {
 	)
 }
 
+func (e *AlwaysFailingNonResourceCastingTypeError) SecondaryError() string {
+	return "resources cannot be cast to non-resource types."
+}
+
+func (e *AlwaysFailingNonResourceCastingTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/operators/casting-operators"
+}
+
 // AlwaysFailingResourceCastingTypeError
 
 type AlwaysFailingResourceCastingTypeError struct {
@@ -1850,6 +1904,8 @@ type AlwaysFailingResourceCastingTypeError struct {
 
 var _ SemanticError = &AlwaysFailingResourceCastingTypeError{}
 var _ errors.UserError = &AlwaysFailingResourceCastingTypeError{}
+var _ errors.SecondaryError = &AlwaysFailingResourceCastingTypeError{}
+var _ errors.HasDocumentationLink = &AlwaysFailingResourceCastingTypeError{}
 
 func (*AlwaysFailingResourceCastingTypeError) isSemanticError() {}
 
@@ -1861,6 +1917,14 @@ func (e *AlwaysFailingResourceCastingTypeError) Error() string {
 		e.ValueType.QualifiedString(),
 		e.TargetType.QualifiedString(),
 	)
+}
+
+func (e *AlwaysFailingResourceCastingTypeError) SecondaryError() string {
+	return "non-resource types cannot be cast to resource types."
+}
+
+func (e *AlwaysFailingResourceCastingTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/operators/casting-operators"
 }
 
 // UnsupportedOverloadingError
@@ -1895,6 +1959,7 @@ type CompositeKindMismatchError struct {
 var _ SemanticError = &CompositeKindMismatchError{}
 var _ errors.UserError = &CompositeKindMismatchError{}
 var _ errors.SecondaryError = &CompositeKindMismatchError{}
+var _ errors.HasDocumentationLink = &CompositeKindMismatchError{}
 
 func (*CompositeKindMismatchError) isSemanticError() {}
 
@@ -1910,6 +1975,10 @@ func (e *CompositeKindMismatchError) SecondaryError() string {
 		e.ExpectedKind.Name(),
 		e.ActualKind.Name(),
 	)
+}
+
+func (e *CompositeKindMismatchError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
 }
 
 // InvalidIntegerLiteralRangeError
@@ -2517,6 +2586,8 @@ type EmitNonEventError struct {
 
 var _ SemanticError = &EmitNonEventError{}
 var _ errors.UserError = &EmitNonEventError{}
+var _ errors.SecondaryError = &EmitNonEventError{}
+var _ errors.HasDocumentationLink = &EmitNonEventError{}
 
 func (*EmitNonEventError) isSemanticError() {}
 
@@ -2529,6 +2600,14 @@ func (e *EmitNonEventError) Error() string {
 	)
 }
 
+func (e *EmitNonEventError) SecondaryError() string {
+	return "only event types can be emitted; consider declaring the type as an event"
+}
+
+func (e *EmitNonEventError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/events"
+}
+
 // EmitDefaultDestroyEventError
 
 type EmitDefaultDestroyEventError struct {
@@ -2537,6 +2616,9 @@ type EmitDefaultDestroyEventError struct {
 
 var _ SemanticError = &EmitDefaultDestroyEventError{}
 var _ errors.UserError = &EmitDefaultDestroyEventError{}
+var _ errors.SecondaryError = &EmitDefaultDestroyEventError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &EmitDefaultDestroyEventError{}
+var _ errors.HasDocumentationLink = &EmitDefaultDestroyEventError{}
 
 func (*EmitDefaultDestroyEventError) isSemanticError() {}
 
@@ -2544,6 +2626,28 @@ func (*EmitDefaultDestroyEventError) IsUserError() {}
 
 func (e *EmitDefaultDestroyEventError) Error() string {
 	return "default destruction events may not be explicitly emitted"
+}
+
+func (e *EmitDefaultDestroyEventError) SecondaryError() string {
+	return "ResourceDestroyed events are automatically emitted when resources are destroyed. Remove the explicit emit statement"
+}
+
+func (e *EmitDefaultDestroyEventError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "remove explicit emit statement",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "",
+					Range:       e.Range,
+				},
+			},
+		},
+	}
+}
+
+func (e *EmitDefaultDestroyEventError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources#destroy-events"
 }
 
 // EmitImportedEventError
@@ -2555,6 +2659,8 @@ type EmitImportedEventError struct {
 
 var _ SemanticError = &EmitImportedEventError{}
 var _ errors.UserError = &EmitImportedEventError{}
+var _ errors.SecondaryError = &EmitImportedEventError{}
+var _ errors.HasDocumentationLink = &EmitImportedEventError{}
 
 func (*EmitImportedEventError) isSemanticError() {}
 
@@ -2565,6 +2671,14 @@ func (e *EmitImportedEventError) Error() string {
 		"cannot emit imported event type: `%s`",
 		e.Type.QualifiedString(),
 	)
+}
+
+func (e *EmitImportedEventError) SecondaryError() string {
+	return "Events can only be emitted from the contract where they are declared. Imported events cannot be emitted elsewhere, e.g. from other contracts or transactions"
+}
+
+func (e *EmitImportedEventError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/events"
 }
 
 // InvalidResourceAssignmentError
@@ -2824,7 +2938,7 @@ func (e *ReferenceToAnOptionalError) Error() string {
 
 func (e *ReferenceToAnOptionalError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected non-optional type, got `%s`. Consider taking a reference with type `%s`",
+		"expected non-optional type, got `%s`; consider taking a reference with type `%s`",
 		e.ReferencedOptionalType.QualifiedString(),
 
 		// Suggest taking the optional out of the reference type.
@@ -3603,6 +3717,7 @@ type ConstantSizedArrayLiteralSizeError struct {
 var _ SemanticError = &ConstantSizedArrayLiteralSizeError{}
 var _ errors.UserError = &ConstantSizedArrayLiteralSizeError{}
 var _ errors.SecondaryError = &ConstantSizedArrayLiteralSizeError{}
+var _ errors.HasDocumentationLink = &ConstantSizedArrayLiteralSizeError{}
 
 func (*ConstantSizedArrayLiteralSizeError) isSemanticError() {}
 
@@ -3618,6 +3733,10 @@ func (e *ConstantSizedArrayLiteralSizeError) SecondaryError() string {
 		e.ExpectedSize,
 		e.ActualSize,
 	)
+}
+
+func (e *ConstantSizedArrayLiteralSizeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types/arrays"
 }
 
 // InvalidIntersectedTypeError
@@ -3717,6 +3836,8 @@ type AmbiguousIntersectionTypeError struct {
 
 var _ SemanticError = &AmbiguousIntersectionTypeError{}
 var _ errors.UserError = &AmbiguousIntersectionTypeError{}
+var _ errors.SecondaryError = &AmbiguousIntersectionTypeError{}
+var _ errors.HasDocumentationLink = &AmbiguousIntersectionTypeError{}
 
 func (*AmbiguousIntersectionTypeError) isSemanticError() {}
 
@@ -3724,6 +3845,14 @@ func (*AmbiguousIntersectionTypeError) IsUserError() {}
 
 func (e *AmbiguousIntersectionTypeError) Error() string {
 	return "ambiguous intersection type"
+}
+
+func (e *AmbiguousIntersectionTypeError) SecondaryError() string {
+	return "empty intersection types like `{}` or `@{}` are ambiguous. specify the interfaces to intersect. example: {Interface1, Interface2} or @{Interface1, Interface2}"
+}
+
+func (e *AmbiguousIntersectionTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
 }
 
 // InvalidPathDomainError
@@ -4039,6 +4168,8 @@ type CyclicImportsError struct {
 
 var _ SemanticError = &CyclicImportsError{}
 var _ errors.UserError = &CyclicImportsError{}
+var _ errors.SecondaryError = &CyclicImportsError{}
+var _ errors.HasDocumentationLink = &CyclicImportsError{}
 
 func (*CyclicImportsError) isSemanticError() {}
 
@@ -4046,6 +4177,14 @@ func (*CyclicImportsError) IsUserError() {}
 
 func (e *CyclicImportsError) Error() string {
 	return fmt.Sprintf("cyclic import of `%s`", e.Location)
+}
+
+func (e *CyclicImportsError) SecondaryError() string {
+	return "circular dependencies between imports are not allowed. Break the cycle by removing one of the import statements"
+}
+
+func (e *CyclicImportsError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/imports"
 }
 
 // SwitchDefaultPositionError
@@ -4330,6 +4469,8 @@ type DirectEntitlementAnnotationError struct {
 
 var _ SemanticError = &DirectEntitlementAnnotationError{}
 var _ errors.UserError = &DirectEntitlementAnnotationError{}
+var _ errors.SecondaryError = &DirectEntitlementAnnotationError{}
+var _ errors.HasDocumentationLink = &DirectEntitlementAnnotationError{}
 
 func (*DirectEntitlementAnnotationError) isSemanticError() {}
 
@@ -4337,6 +4478,14 @@ func (*DirectEntitlementAnnotationError) IsUserError() {}
 
 func (e *DirectEntitlementAnnotationError) Error() string {
 	return "cannot use an entitlement type outside of an `access` declaration or `auth` modifier"
+}
+
+func (e *DirectEntitlementAnnotationError) SecondaryError() string {
+	return "entitlements can only be used in access modifiers for struct/resource members or in auth expressions for reference access"
+}
+
+func (e *DirectEntitlementAnnotationError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control#entitlements"
 }
 
 // UnrepresentableEntitlementMapOutputError
@@ -4407,6 +4556,8 @@ type DuplicateEntitlementMappingInclusionError struct {
 
 var _ SemanticError = &DuplicateEntitlementMappingInclusionError{}
 var _ errors.UserError = &DuplicateEntitlementMappingInclusionError{}
+var _ errors.SecondaryError = &DuplicateEntitlementMappingInclusionError{}
+var _ errors.HasDocumentationLink = &DuplicateEntitlementMappingInclusionError{}
 
 func (*DuplicateEntitlementMappingInclusionError) isSemanticError() {}
 
@@ -4420,6 +4571,14 @@ func (e *DuplicateEntitlementMappingInclusionError) Error() string {
 	)
 }
 
+func (e *DuplicateEntitlementMappingInclusionError) SecondaryError() string {
+	return "remove the duplicate include statement; each entitlement map can only be included once in a mapping definition"
+}
+
+func (e *DuplicateEntitlementMappingInclusionError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control#entitlements"
+}
+
 // CyclicEntitlementMappingError
 type CyclicEntitlementMappingError struct {
 	Map          *EntitlementMapType
@@ -4429,6 +4588,8 @@ type CyclicEntitlementMappingError struct {
 
 var _ SemanticError = &CyclicEntitlementMappingError{}
 var _ errors.UserError = &CyclicEntitlementMappingError{}
+var _ errors.SecondaryError = &CyclicEntitlementMappingError{}
+var _ errors.HasDocumentationLink = &CyclicEntitlementMappingError{}
 
 func (*CyclicEntitlementMappingError) isSemanticError() {}
 
@@ -4440,6 +4601,14 @@ func (e *CyclicEntitlementMappingError) Error() string {
 		e.IncludedType.QualifiedIdentifier(),
 		e.Map.QualifiedIdentifier(),
 	)
+}
+
+func (e *CyclicEntitlementMappingError) SecondaryError() string {
+	return "Entitlement mappings cannot have circular dependencies. Remove the include statement to break the cycle"
+}
+
+func (e *CyclicEntitlementMappingError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control#entitlements"
 }
 
 // InvalidBaseTypeError
@@ -4508,6 +4677,8 @@ type AttachNonAttachmentError struct {
 
 var _ SemanticError = &AttachNonAttachmentError{}
 var _ errors.UserError = &AttachNonAttachmentError{}
+var _ errors.SecondaryError = &AttachNonAttachmentError{}
+var _ errors.HasDocumentationLink = &AttachNonAttachmentError{}
 
 func (*AttachNonAttachmentError) isSemanticError() {}
 
@@ -4520,6 +4691,14 @@ func (e *AttachNonAttachmentError) Error() string {
 	)
 }
 
+func (e *AttachNonAttachmentError) SecondaryError() string {
+	return "only attachment types can be used in attach expressions; consider creating an attachment declaration: attachment MyAttachment for BaseType { ... }"
+}
+
+func (e *AttachNonAttachmentError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/attachments"
+}
+
 // AttachToInvalidTypeError
 type AttachToInvalidTypeError struct {
 	Type Type
@@ -4528,6 +4707,8 @@ type AttachToInvalidTypeError struct {
 
 var _ SemanticError = &AttachToInvalidTypeError{}
 var _ errors.UserError = &AttachToInvalidTypeError{}
+var _ errors.SecondaryError = &AttachToInvalidTypeError{}
+var _ errors.HasDocumentationLink = &AttachToInvalidTypeError{}
 
 func (*AttachToInvalidTypeError) isSemanticError() {}
 
@@ -4538,6 +4719,14 @@ func (e *AttachToInvalidTypeError) Error() string {
 		"cannot attach attachment to type `%s`, as it is not valid for this base type",
 		e.Type.QualifiedString(),
 	)
+}
+
+func (e *AttachToInvalidTypeError) SecondaryError() string {
+	return "attachments can only be attached to composite types (structs, resources) that match the attachment's base type declaration"
+}
+
+func (e *AttachToInvalidTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/attachments"
 }
 
 // InvalidAttachmentRemoveError
@@ -4640,6 +4829,8 @@ type DefaultDestroyEventInNonResourceError struct {
 
 var _ SemanticError = &DefaultDestroyEventInNonResourceError{}
 var _ errors.UserError = &DefaultDestroyEventInNonResourceError{}
+var _ errors.SecondaryError = &DefaultDestroyEventInNonResourceError{}
+var _ errors.HasDocumentationLink = &DefaultDestroyEventInNonResourceError{}
 
 func (*DefaultDestroyEventInNonResourceError) isSemanticError() {}
 
@@ -4650,6 +4841,14 @@ func (e *DefaultDestroyEventInNonResourceError) Error() string {
 		"cannot declare default destruction event in %s",
 		e.Kind,
 	)
+}
+
+func (e *DefaultDestroyEventInNonResourceError) SecondaryError() string {
+	return "the ResourceDestroyed event can only be declared in resources and resource attachments"
+}
+
+func (e *DefaultDestroyEventInNonResourceError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/events"
 }
 
 type DefaultDestroyInvalidArgumentKind int
@@ -4670,6 +4869,8 @@ type DefaultDestroyInvalidArgumentError struct {
 
 var _ SemanticError = &DefaultDestroyInvalidArgumentError{}
 var _ errors.UserError = &DefaultDestroyInvalidArgumentError{}
+var _ errors.SecondaryError = &DefaultDestroyInvalidArgumentError{}
+var _ errors.HasDocumentationLink = &DefaultDestroyInvalidArgumentError{}
 
 func (*DefaultDestroyInvalidArgumentError) isSemanticError() {}
 
@@ -4693,6 +4894,10 @@ func (e *DefaultDestroyInvalidArgumentError) SecondaryError() string {
 	return ""
 }
 
+func (e *DefaultDestroyInvalidArgumentError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources#destroy-events"
+}
+
 // DefaultDestroyInvalidParameterError
 
 type DefaultDestroyInvalidParameterError struct {
@@ -4702,6 +4907,8 @@ type DefaultDestroyInvalidParameterError struct {
 
 var _ SemanticError = &DefaultDestroyInvalidParameterError{}
 var _ errors.UserError = &DefaultDestroyInvalidParameterError{}
+var _ errors.SecondaryError = &DefaultDestroyInvalidParameterError{}
+var _ errors.HasDocumentationLink = &DefaultDestroyInvalidParameterError{}
 
 func (*DefaultDestroyInvalidParameterError) isSemanticError() {}
 
@@ -4709,6 +4916,14 @@ func (*DefaultDestroyInvalidParameterError) IsUserError() {}
 
 func (e *DefaultDestroyInvalidParameterError) Error() string {
 	return fmt.Sprintf("`%s` is not a valid parameter type for a default destroy event", e.ParamType.QualifiedString())
+}
+
+func (e *DefaultDestroyInvalidParameterError) SecondaryError() string {
+	return "default destroy events only support primitive types (like String, Int, Bool) as parameters"
+}
+
+func (e *DefaultDestroyInvalidParameterError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources#destroy-events"
 }
 
 // InvalidTypeParameterizedNonNativeFunctionError

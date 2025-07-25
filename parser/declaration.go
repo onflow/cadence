@@ -1957,7 +1957,18 @@ func parseSpecialFunctionDeclaration(
 		declarationKind = common.DeclarationKindInitializer
 
 	case KeywordDestroy:
-		p.report(&CustomDestructorError{Pos: identifier.Pos})
+		// Calculate the full range of the destructor function
+		startPos := ast.EarliestPosition(identifier.Pos, accessPos, purityPos, staticPos, nativePos)
+		var endPos ast.Position
+		if functionBlock != nil {
+			endPos = functionBlock.EndPosition(p.memoryGauge)
+		} else {
+			endPos = identifier.Pos // fallback
+		}
+		p.report(&CustomDestructorError{
+			Pos:             identifier.Pos,
+			DestructorRange: ast.NewRange(p.memoryGauge, startPos, endPos),
+		})
 
 	case KeywordPrepare:
 		declarationKind = common.DeclarationKindPrepare
