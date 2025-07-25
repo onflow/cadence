@@ -418,7 +418,6 @@ type InsufficientArgumentsError struct {
 var _ SemanticError = &InsufficientArgumentsError{}
 var _ errors.UserError = &InsufficientArgumentsError{}
 var _ errors.SecondaryError = &InsufficientArgumentsError{}
-var _ errors.HasSuggestedFixes[ast.TextEdit] = &InsufficientArgumentsError{}
 var _ errors.HasDocumentationLink = &InsufficientArgumentsError{}
 
 func (*InsufficientArgumentsError) isSemanticError() {}
@@ -431,29 +430,10 @@ func (e *InsufficientArgumentsError) Error() string {
 
 func (e *InsufficientArgumentsError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected at least %d, got %d. Add the missing arguments to match the function signature",
+		"expected at least %d, got %d; add the missing arguments to match the function signature",
 		e.MinCount,
 		e.ActualCount,
 	)
-}
-
-func (e *InsufficientArgumentsError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
-	// For insufficient arguments, we suggest adding the missing arguments
-	// This is a general suggestion since we don't know which specific arguments to add
-	return []errors.SuggestedFix[ast.TextEdit]{
-		{
-			Message: "add missing arguments",
-			TextEdits: []ast.TextEdit{
-				{
-					Insertion: "// Add missing arguments to match function signature\n",
-					Range: ast.Range{
-						StartPos: e.StartPos,
-						EndPos:   e.StartPos,
-					},
-				},
-			},
-		},
-	}
 }
 
 func (e *InsufficientArgumentsError) DocumentationLink() string {
@@ -471,7 +451,6 @@ type ExcessiveArgumentsError struct {
 var _ SemanticError = &ExcessiveArgumentsError{}
 var _ errors.UserError = &ExcessiveArgumentsError{}
 var _ errors.SecondaryError = &ExcessiveArgumentsError{}
-var _ errors.HasSuggestedFixes[ast.TextEdit] = &ExcessiveArgumentsError{}
 var _ errors.HasDocumentationLink = &ExcessiveArgumentsError{}
 
 func (*ExcessiveArgumentsError) isSemanticError() {}
@@ -484,29 +463,10 @@ func (e *ExcessiveArgumentsError) Error() string {
 
 func (e *ExcessiveArgumentsError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected up to %d, got %d. Remove the extra arguments to match the function signature",
+		"expected up to %d, got %d; remove the extra arguments to match the function signature",
 		e.MaxCount,
 		e.ActualCount,
 	)
-}
-
-func (e *ExcessiveArgumentsError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
-	// For excessive arguments, we suggest removing the extra arguments
-	// This is a general suggestion since we don't know which specific arguments to remove
-	return []errors.SuggestedFix[ast.TextEdit]{
-		{
-			Message: "remove extra arguments",
-			TextEdits: []ast.TextEdit{
-				{
-					Insertion: "// Remove extra arguments to match function signature\n",
-					Range: ast.Range{
-						StartPos: e.StartPos,
-						EndPos:   e.StartPos,
-					},
-				},
-			},
-		},
-	}
 }
 
 func (e *ExcessiveArgumentsError) DocumentationLink() string {
@@ -1215,7 +1175,6 @@ type FieldReinitializationError struct {
 var _ SemanticError = &FieldReinitializationError{}
 var _ errors.UserError = &FieldReinitializationError{}
 var _ errors.SecondaryError = &FieldReinitializationError{}
-var _ errors.HasSuggestedFixes[ast.TextEdit] = &FieldReinitializationError{}
 var _ errors.HasDocumentationLink = &FieldReinitializationError{}
 
 func (*FieldReinitializationError) isSemanticError() {}
@@ -1228,23 +1187,6 @@ func (e *FieldReinitializationError) Error() string {
 
 func (e *FieldReinitializationError) SecondaryError() string {
 	return "fields can only be initialized once. Remove the duplicate initialization or use assignment instead"
-}
-
-func (e *FieldReinitializationError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
-	return []errors.SuggestedFix[ast.TextEdit]{
-		{
-			Message: "remove duplicate field initialization",
-			TextEdits: []ast.TextEdit{
-				{
-					Insertion: "// Remove duplicate initialization - use assignment instead\n",
-					Range: ast.Range{
-						StartPos: e.StartPos,
-						EndPos:   e.StartPos,
-					},
-				},
-			},
-		},
-	}
 }
 
 func (e *FieldReinitializationError) DocumentationLink() string {
@@ -1261,7 +1203,6 @@ type FieldUninitializedError struct {
 var _ SemanticError = &FieldUninitializedError{}
 var _ errors.UserError = &FieldUninitializedError{}
 var _ errors.SecondaryError = &FieldUninitializedError{}
-var _ errors.HasSuggestedFixes[ast.TextEdit] = &FieldUninitializedError{}
 var _ errors.HasDocumentationLink = &FieldUninitializedError{}
 
 func (*FieldUninitializedError) isSemanticError() {}
@@ -1277,24 +1218,7 @@ func (e *FieldUninitializedError) Error() string {
 }
 
 func (e *FieldUninitializedError) SecondaryError() string {
-	return "all fields must be initialized when creating a composite type. Add an initializer or provide a default value"
-}
-
-func (e *FieldUninitializedError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
-	return []errors.SuggestedFix[ast.TextEdit]{
-		{
-			Message: "initialize the field",
-			TextEdits: []ast.TextEdit{
-				{
-					Insertion: "// Add field initialization: fieldName: value\n",
-					Range: ast.Range{
-						StartPos: e.Pos,
-						EndPos:   e.Pos,
-					},
-				},
-			},
-		},
-	}
+	return "all fields must be initialized when creating a composite type; add an initializer or provide a default value"
 }
 
 func (e *FieldUninitializedError) DocumentationLink() string {
@@ -1329,7 +1253,6 @@ type FieldTypeNotStorableError struct {
 var _ SemanticError = &FieldTypeNotStorableError{}
 var _ errors.UserError = &FieldTypeNotStorableError{}
 var _ errors.SecondaryError = &FieldTypeNotStorableError{}
-var _ errors.HasSuggestedFixes[ast.TextEdit] = &FieldTypeNotStorableError{}
 var _ errors.HasDocumentationLink = &FieldTypeNotStorableError{}
 
 func (*FieldTypeNotStorableError) isSemanticError() {}
@@ -1345,24 +1268,7 @@ func (e *FieldTypeNotStorableError) Error() string {
 }
 
 func (e *FieldTypeNotStorableError) SecondaryError() string {
-	return "all contract fields must be storable. Use concrete types like `String`, `Int`, `Bool`, or specific struct/resource types instead of `Any` or function types"
-}
-
-func (e *FieldTypeNotStorableError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
-	return []errors.SuggestedFix[ast.TextEdit]{
-		{
-			Message: "use a storable type",
-			TextEdits: []ast.TextEdit{
-				{
-					Insertion: "// Replace with a concrete storable type like String, Int, Bool, or a specific struct/resource\n",
-					Range: ast.Range{
-						StartPos: e.Pos,
-						EndPos:   e.Pos,
-					},
-				},
-			},
-		},
-	}
+	return "all contract fields must be storable; remove the non-storable type"
 }
 
 func (e *FieldTypeNotStorableError) DocumentationLink() string {
@@ -1387,7 +1293,6 @@ type FunctionExpressionInConditionError struct {
 var _ SemanticError = &FunctionExpressionInConditionError{}
 var _ errors.UserError = &FunctionExpressionInConditionError{}
 var _ errors.SecondaryError = &FunctionExpressionInConditionError{}
-var _ errors.HasSuggestedFixes[ast.TextEdit] = &FunctionExpressionInConditionError{}
 var _ errors.HasDocumentationLink = &FunctionExpressionInConditionError{}
 
 func (*FunctionExpressionInConditionError) isSemanticError() {}
@@ -1399,24 +1304,7 @@ func (e *FunctionExpressionInConditionError) Error() string {
 }
 
 func (e *FunctionExpressionInConditionError) SecondaryError() string {
-	return "conditions must evaluate to a boolean value. Call the function to get its return value"
-}
-
-func (e *FunctionExpressionInConditionError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
-	return []errors.SuggestedFix[ast.TextEdit]{
-		{
-			Message: "call the function to get its return value",
-			TextEdits: []ast.TextEdit{
-				{
-					Insertion: "// Add () to call the function: functionName()\n",
-					Range: ast.Range{
-						StartPos: e.StartPos,
-						EndPos:   e.StartPos,
-					},
-				},
-			},
-		},
-	}
+	return "conditions must evaluate to a boolean value; call the function to get its return value"
 }
 
 func (e *FunctionExpressionInConditionError) DocumentationLink() string {
@@ -1837,7 +1725,6 @@ type InterfaceMemberConflictError struct {
 var _ SemanticError = &InterfaceMemberConflictError{}
 var _ errors.UserError = &InterfaceMemberConflictError{}
 var _ errors.SecondaryError = &InterfaceMemberConflictError{}
-var _ errors.HasSuggestedFixes[ast.TextEdit] = &InterfaceMemberConflictError{}
 var _ errors.HasDocumentationLink = &InterfaceMemberConflictError{}
 
 func (*InterfaceMemberConflictError) isSemanticError() {}
@@ -1856,24 +1743,7 @@ func (e *InterfaceMemberConflictError) Error() string {
 }
 
 func (e *InterfaceMemberConflictError) SecondaryError() string {
-	return "interface members must have unique names. Rename one of the conflicting members to resolve the conflict"
-}
-
-func (e *InterfaceMemberConflictError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
-	return []errors.SuggestedFix[ast.TextEdit]{
-		{
-			Message: "rename the conflicting member",
-			TextEdits: []ast.TextEdit{
-				{
-					Insertion: "// Rename this member to avoid conflict with the other interface\n",
-					Range: ast.Range{
-						StartPos: e.StartPos,
-						EndPos:   e.StartPos,
-					},
-				},
-			},
-		},
-	}
+	return "interface members must have unique names; rename one of the conflicting members to resolve the conflict"
 }
 
 func (e *InterfaceMemberConflictError) DocumentationLink() string {
@@ -1979,7 +1849,6 @@ var _ SemanticError = &ImportedProgramError{}
 var _ errors.UserError = &ImportedProgramError{}
 var _ errors.ParentError = &ImportedProgramError{}
 var _ errors.SecondaryError = &ImportedProgramError{}
-var _ errors.HasSuggestedFixes[ast.TextEdit] = &ImportedProgramError{}
 var _ errors.HasDocumentationLink = &ImportedProgramError{}
 
 func (*ImportedProgramError) isSemanticError() {}
@@ -1994,24 +1863,7 @@ func (e *ImportedProgramError) Error() string {
 }
 
 func (e *ImportedProgramError) SecondaryError() string {
-	return "the imported program (smart contract) contains errors that must be fixed before it can be used. Check the imported program for syntax or semantic errors"
-}
-
-func (e *ImportedProgramError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
-	return []errors.SuggestedFix[ast.TextEdit]{
-		{
-			Message: "fix errors in the imported program (smart contract)",
-			TextEdits: []ast.TextEdit{
-				{
-					Insertion: "// Fix errors in the imported program (smart contract) before using it\n",
-					Range: ast.Range{
-						StartPos: e.StartPos,
-						EndPos:   e.StartPos,
-					},
-				},
-			},
-		},
-	}
+	return fmt.Sprintf("check that %s is in flow.json or at a valid local path and has no errors", e.Location)
 }
 
 func (e *ImportedProgramError) DocumentationLink() string {
@@ -2402,7 +2254,8 @@ type IncorrectTransferOperationError struct {
 var _ SemanticError = &IncorrectTransferOperationError{}
 var _ errors.UserError = &IncorrectTransferOperationError{}
 var _ errors.SecondaryError = &IncorrectTransferOperationError{}
-var _ errors.HasSuggestedFixes[ast.TextEdit] = &IncorrectTransferOperationError{}
+
+// var _ errors.HasSuggestedFixes[ast.TextEdit] = &IncorrectTransferOperationError{}
 var _ errors.HasDocumentationLink = &IncorrectTransferOperationError{}
 
 func (*IncorrectTransferOperationError) isSemanticError() {}
@@ -2415,24 +2268,26 @@ func (e *IncorrectTransferOperationError) Error() string {
 
 func (e *IncorrectTransferOperationError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected `%s`. Transfer operations must match the expected operation for the context (e.g., `<-` for move, `<-!` for force move)",
+		"expected `%s`; transfer operations must match the expected operation for the context (e.g., `<-` for move, `<-!` for force move)",
 		e.ExpectedOperation.Operator(),
 	)
 }
 
-func (e *IncorrectTransferOperationError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
-	return []errors.SuggestedFix[ast.TextEdit]{
-		{
-			Message: "use the correct transfer operation",
-			TextEdits: []ast.TextEdit{
-				{
-					Replacement: e.ExpectedOperation.Operator(),
-					Range:       e.Range,
-				},
-			},
-		},
-	}
-}
+// TODO: add tests and enable
+
+// func (e *IncorrectTransferOperationError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+// 	return []errors.SuggestedFix[ast.TextEdit]{
+// 		{
+// 			Message: "use the correct transfer operation",
+// 			TextEdits: []ast.TextEdit{
+// 				{
+// 					Replacement: e.ExpectedOperation.Operator(),
+// 					Range:       e.Range,
+// 				},
+// 			},
+// 		},
+// 	}
+// }
 
 func (e *IncorrectTransferOperationError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/resources"
@@ -3885,7 +3740,6 @@ type IntersectionCompositeKindMismatchError struct {
 var _ SemanticError = &IntersectionCompositeKindMismatchError{}
 var _ errors.UserError = &IntersectionCompositeKindMismatchError{}
 var _ errors.SecondaryError = &IntersectionCompositeKindMismatchError{}
-var _ errors.HasSuggestedFixes[ast.TextEdit] = &IntersectionCompositeKindMismatchError{}
 var _ errors.HasDocumentationLink = &IntersectionCompositeKindMismatchError{}
 
 func (*IntersectionCompositeKindMismatchError) isSemanticError() {}
@@ -3902,23 +3756,6 @@ func (e *IntersectionCompositeKindMismatchError) SecondaryError() string {
 		e.PreviousCompositeKind.Name(),
 		e.CompositeKind.Name(),
 	)
-}
-
-func (e *IntersectionCompositeKindMismatchError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
-	return []errors.SuggestedFix[ast.TextEdit]{
-		{
-			Message: "ensure all interfaces have the same composite kind",
-			TextEdits: []ast.TextEdit{
-				{
-					Insertion: "// All interfaces in intersection types must have the same composite kind\n",
-					Range: ast.Range{
-						StartPos: e.StartPos,
-						EndPos:   e.StartPos,
-					},
-				},
-			},
-		},
-	}
 }
 
 func (e *IntersectionCompositeKindMismatchError) DocumentationLink() string {
@@ -3958,7 +3795,6 @@ type IntersectionMemberClashError struct {
 var _ SemanticError = &IntersectionMemberClashError{}
 var _ errors.UserError = &IntersectionMemberClashError{}
 var _ errors.SecondaryError = &IntersectionMemberClashError{}
-var _ errors.HasSuggestedFixes[ast.TextEdit] = &IntersectionMemberClashError{}
 var _ errors.HasDocumentationLink = &IntersectionMemberClashError{}
 
 func (*IntersectionMemberClashError) isSemanticError() {}
@@ -3974,28 +3810,11 @@ func (e *IntersectionMemberClashError) Error() string {
 
 func (e *IntersectionMemberClashError) SecondaryError() string {
 	return fmt.Sprintf(
-		"member `%s` is declared in both `%s` and `%s`. Intersection types cannot have conflicting member declarations with the same name",
+		"member `%s` is declared in both `%s` and `%s`; intersection types cannot have conflicting member declarations with the same name",
 		e.Name,
 		e.OriginalDeclaringType.QualifiedString(),
 		e.RedeclaringType.QualifiedString(),
 	)
-}
-
-func (e *IntersectionMemberClashError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
-	return []errors.SuggestedFix[ast.TextEdit]{
-		{
-			Message: "resolve member name conflict in intersection types",
-			TextEdits: []ast.TextEdit{
-				{
-					Insertion: "// Rename conflicting member or remove one of the declarations\n",
-					Range: ast.Range{
-						StartPos: e.StartPos,
-						EndPos:   e.StartPos,
-					},
-				},
-			},
-		},
-	}
 }
 
 func (e *IntersectionMemberClashError) DocumentationLink() string {
