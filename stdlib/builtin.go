@@ -39,6 +39,19 @@ type StandardLibraryHandler interface {
 	Hasher
 }
 
+var DefaultStandardLibraryTypes = []StandardLibraryType{
+	{
+		Type: BLSType,
+		Name: BLSTypeName,
+		Kind: common.DeclarationKindContract,
+	},
+	{
+		Type: RLPType,
+		Name: RLPTypeName,
+		Kind: common.DeclarationKindContract,
+	},
+}
+
 func InterpreterDefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
 	return []StandardLibraryValue{
 		InterpreterAssertFunction,
@@ -63,7 +76,7 @@ func VMDefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLi
 		VMAssertFunction,
 		VMPanicFunction,
 		VMSignatureAlgorithmConstructor,
-		// TODO: InclusiveRangeConstructor
+		VMInclusiveRangeConstructor,
 		NewVMLogFunction(handler),
 		NewVMRevertibleRandomFunction(handler),
 		NewVMGetBlockFunction(handler),
@@ -101,6 +114,11 @@ func VMFunctions(handler StandardLibraryHandler) []VMFunction {
 
 		NewVMAccountContractsGetFunction(handler),
 		NewVMAccountContractsBorrowFunction(handler),
+
+		newVMAccountContractsChangeFunction(handler, true),
+		newVMAccountContractsChangeFunction(handler, false),
+		newVMAccountContractsTryUpdateFunction(handler),
+		newVMAccountContractsRemoveFunction(handler),
 
 		NewVMAccountStorageCapabilitiesGetControllersFunction(handler),
 		NewVMAccountStorageCapabilitiesGetControllerFunction(handler),

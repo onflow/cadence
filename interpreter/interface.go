@@ -31,6 +31,7 @@ import (
 type TypeConverter interface {
 	common.MemoryGauge
 	StaticTypeConversionHandler
+	SemaTypeFromStaticType(staticType StaticType) sema.Type
 }
 
 var _ TypeConverter = &Interpreter{}
@@ -218,6 +219,7 @@ type MemberAccessibleContext interface {
 	GetMemberAccessContextForLocation(location common.Location) MemberAccessibleContext
 
 	GetMethod(value MemberAccessibleValue, name string, locationRange LocationRange) FunctionValue
+	MaybeUpdateStorageReferenceMemberReceiver(storageReference *StorageReferenceValue, referencedValue Value, member Value) Value
 }
 
 var _ MemberAccessibleContext = &Interpreter{}
@@ -444,7 +446,6 @@ type InvocationContext interface {
 	VariableResolver
 
 	GetLocation() common.Location
-	CallStack() []Invocation
 
 	InvokeFunction(
 		fn FunctionValue,
@@ -502,7 +503,7 @@ var _ AccountContractCreationContext = &Interpreter{}
 
 type AccountContractBorrowContext interface {
 	FunctionCreationContext
-	GetContractValue(contractLocation common.AddressLocation) (*CompositeValue, error)
+	GetContractValue(contractLocation common.AddressLocation) *CompositeValue
 }
 
 var _ AccountContractBorrowContext = &Interpreter{}
@@ -723,5 +724,9 @@ func (ctx NoOpStringContext) GetCompositeType(_ common.Location, _ string, _ Typ
 }
 
 func (ctx NoOpStringContext) IsTypeInfoRecovered(_ common.Location) bool {
+	panic(errors.NewUnreachableError())
+}
+
+func (ctx NoOpStringContext) SemaTypeFromStaticType(staticType StaticType) sema.Type {
 	panic(errors.NewUnreachableError())
 }

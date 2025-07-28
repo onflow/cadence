@@ -68,7 +68,7 @@ func TestCheckRepeatedImport(t *testing.T) {
            import y from "imported"
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 					return sema.ElaborationImport{
 						Elaboration: importedChecker.Elaboration,
@@ -126,7 +126,7 @@ func TestCheckRepeatedImportResolution(t *testing.T) {
            import y from 0x1
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				LocationHandler: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
 					for _, identifier := range identifiers {
 						result = append(result, sema.ResolvedLocation{
@@ -182,7 +182,7 @@ func TestCheckInvalidRepeatedImport(t *testing.T) {
            import x from "imported"
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 					return sema.ElaborationImport{
 						Elaboration: importedChecker.Elaboration,
@@ -242,7 +242,7 @@ func TestCheckImportResolutionSplit(t *testing.T) {
            import x, y from 0x1
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				LocationHandler: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
 					for _, identifier := range identifiers {
 						result = append(result, sema.ResolvedLocation{
@@ -301,7 +301,7 @@ func TestCheckImportAll(t *testing.T) {
           access(all) let x = answer()
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 					return sema.ElaborationImport{
 						Elaboration: importedChecker.Elaboration,
@@ -336,7 +336,7 @@ func TestCheckInvalidImportUnexported(t *testing.T) {
            access(all) let x = answer()
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 					return sema.ElaborationImport{
 						Elaboration: importedChecker.Elaboration,
@@ -377,7 +377,7 @@ func TestCheckImportSome(t *testing.T) {
           access(all) let x = answer()
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 					return sema.ElaborationImport{
 						Elaboration: importedChecker.Elaboration,
@@ -406,7 +406,7 @@ func TestCheckInvalidImportedError(t *testing.T) {
            import x from "imported"
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 					return nil, importedErr
 				},
@@ -477,7 +477,7 @@ func TestCheckImportTypes(t *testing.T) {
 					useCode,
 				),
 				ParseAndCheckOptions{
-					Config: &sema.Config{
+					CheckerConfig: &sema.Config{
 						ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 							return sema.ElaborationImport{
 								Elaboration: importedChecker.Elaboration,
@@ -526,7 +526,7 @@ func TestCheckInvalidImportCycleSelf(t *testing.T) {
 			code,
 			ParseAndCheckOptions{
 				Location: location,
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 
 						elaboration, ok := elaborations[importedLocation]
@@ -617,7 +617,7 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
 		codeEven,
 		ParseAndCheckOptions{
 			Location: common.StringLocation("even"),
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 					importedProgram := getProgram(importedLocation)
 
@@ -705,7 +705,7 @@ func TestCheckImportVirtual(t *testing.T) {
 	_, err := ParseAndCheckWithOptions(t,
 		code,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 					return sema.VirtualImport{
 						ValueElements: valueElements,
@@ -757,7 +757,7 @@ func TestCheckImportContract(t *testing.T) {
             }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 						return sema.ElaborationImport{
 							Elaboration: importedChecker.Elaboration,
@@ -804,7 +804,7 @@ func TestCheckImportContract(t *testing.T) {
             }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 						return sema.ElaborationImport{
 							Elaboration: importedChecker.Elaboration,

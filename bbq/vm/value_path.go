@@ -38,16 +38,16 @@ func init() {
 	} {
 		typeName := commons.TypeQualifier(pathType)
 
-		RegisterBuiltinTypeBoundFunction(
+		registerBuiltinTypeBoundFunction(
 			typeName,
 			NewNativeFunctionValue(
 				sema.ToStringFunctionName,
 				sema.ToStringFunctionType,
-				func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-					address := arguments[ReceiverIndex].(interpreter.PathValue)
+				func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
+					path := receiver.(interpreter.PathValue)
 					return interpreter.PathValueToStringFunction(
 						context,
-						address,
+						path,
 						EmptyLocationRange,
 					)
 				},

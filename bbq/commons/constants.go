@@ -26,8 +26,11 @@ const (
 	TransactionWrapperCompositeName = "transaction"
 	TransactionExecuteFunctionName  = "transaction.execute"
 	TransactionPrepareFunctionName  = "transaction.prepare"
-	// PanicFunctionName is the name of the panic function, which is needed for conditions
-	PanicFunctionName = "panic"
+
+	// FailPreConditionFunctionName is the name of the function which is used for failing pre-conditions
+	FailPreConditionFunctionName = "$failPreCondition"
+	// FailPostConditionFunctionName is the name  of the function which is used for failing post-conditions
+	FailPostConditionFunctionName = "$failPostCondition"
 
 	GeneratedNameQualifier              = "$"
 	ResourceDestroyedEventsFunctionName = GeneratedNameQualifier + ast.ResourceDestructionDefaultEventName
@@ -44,4 +47,5 @@ const (
 	TypeQualifierDictionary         = "$Dictionary"
 	TypeQualifierFunction           = "$Function"
 	TypeQualifierOptional           = "$Optional"
+	TypeQualifierInclusiveRange     = "$InclusiveRange"
 )

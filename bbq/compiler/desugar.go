@@ -67,6 +67,7 @@ type inheritedEvent struct {
 	enclosingType    sema.Type
 	eventDeclaration *ast.CompositeDeclaration
 	eventType        *sema.CompositeType
+	elaboration      *DesugaredElaboration
 }
 
 var _ ast.DeclarationVisitor[ast.Declaration] = &Desugar{}
@@ -445,6 +446,7 @@ func (d *Desugar) desugarPreConditions(
 		for _, condition := range inheritedPreConditions.Conditions {
 			desugaredCondition := d.desugarInheritedCondition(
 				condition,
+				ast.ConditionKindPre,
 				parameterList,
 				inheritedFunc,
 			)
@@ -458,7 +460,7 @@ func (d *Desugar) desugarPreConditions(
 		conditions = funcBlock.PreConditions
 
 		for _, condition := range conditions.Conditions {
-			desugaredCondition := d.desugarCondition(condition, nil)
+			desugaredCondition := d.desugarCondition(condition, ast.ConditionKindPre, nil)
 			desugaredConditions = append(desugaredConditions, desugaredCondition)
 		}
 	}
@@ -500,7 +502,7 @@ func (d *Desugar) desugarPostConditions(
 		beforeStatements = postConditionsRewrite.BeforeStatements
 
 		for _, condition := range conditionsList {
-			desugaredCondition := d.desugarCondition(condition, nil)
+			desugaredCondition := d.desugarCondition(condition, ast.ConditionKindPost, nil)
 			desugaredConditions = append(desugaredConditions, desugaredCondition)
 		}
 	}
@@ -537,12 +539,13 @@ func (d *Desugar) desugarPostConditions(
 			rewrittenBeforeStatements := inheritedFunc.rewrittenConditions.BeforeStatements
 			beforeStatements = append(beforeStatements, rewrittenBeforeStatements...)
 			for _, statement := range rewrittenBeforeStatements {
-				d.elaboration.conditionsElaborations[statement] = inheritedFunc.elaboration
+				d.elaboration.inheritedCodeElaborations[statement] = inheritedFunc.elaboration
 			}
 
 			for _, condition := range inheritedFunc.rewrittenConditions.RewrittenPostConditions {
 				desugaredCondition := d.desugarInheritedCondition(
 					condition,
+					ast.ConditionKindPost,
 					parameterList,
 					inheritedFunc,
 				)
@@ -566,6 +569,7 @@ func (d *Desugar) desugarPostConditions(
 
 func (d *Desugar) desugarInheritedCondition(
 	condition ast.Condition,
+	conditionKind ast.ConditionKind,
 	functionParams *ast.ParameterList,
 	inheritedFunc *inheritedFunction,
 ) ast.Statement {
@@ -573,12 +577,16 @@ func (d *Desugar) desugarInheritedCondition(
 	prevElaboration := d.elaboration
 	d.elaboration = inheritedFunc.elaboration
 
-	desugaredCondition := d.desugarCondition(condition, inheritedFunc.interfaceType)
+	desugaredCondition := d.desugarCondition(
+		condition,
+		conditionKind,
+		inheritedFunc.interfaceType,
+	)
 	d.elaboration = prevElaboration
 
 	// Elaboration to be used by the condition must be set in the current elaboration.
 	// (Not in the inherited function's elaboration)
-	d.elaboration.conditionsElaborations[desugaredCondition] = inheritedFunc.elaboration
+	d.elaboration.inheritedCodeElaborations[desugaredCondition] = inheritedFunc.elaboration
 
 	if len(functionParams.Parameters) > 0 {
 		paramBinding := make(map[string]string)
@@ -604,7 +612,7 @@ func (d *Desugar) includeConditions(conditions *ast.Conditions) bool {
 		d.enclosingInterfaceType == nil
 }
 
-var conditionFailedMessage = ast.NewStringExpression(nil, "pre/post condition failed", ast.EmptyRange)
+var emptyStringExpression = ast.NewStringExpression(nil, "", ast.EmptyRange)
 
 var panicFuncInvocationTypes = sema.InvocationExpressionTypes{
 	ArgumentTypes: []sema.Type{
@@ -616,7 +624,11 @@ var panicFuncInvocationTypes = sema.InvocationExpressionTypes{
 	ReturnType: sema.NeverType,
 }
 
-func (d *Desugar) desugarCondition(condition ast.Condition, inheritedFrom *sema.InterfaceType) ast.Statement {
+func (d *Desugar) desugarCondition(
+	condition ast.Condition,
+	conditionKind ast.ConditionKind,
+	inheritedFrom *sema.InterfaceType,
+) ast.Statement {
 
 	// If the conditions are inherited, they could be referring to the imports of their original program.
 	// i.e: transitive dependencies of the concrete type.
@@ -651,21 +663,47 @@ func (d *Desugar) desugarCondition(condition ast.Condition, inheritedFrom *sema.
 	case *ast.TestCondition:
 
 		// Desugar a test-condition to an if-statement. i.e:
+		//
 		// ```
-		//   pre{ x > 0: "x must be larger than zero"}
+		//   pre { x > 0: "x must be larger than zero"}
 		// ```
 		// is converted to:
 		// ```
 		//   if !(x > 0) {
-		//     panic("x must be larger than zero")
+		//     $failPreCondition("x must be larger than zero")
 		//   }
 		// ```
+		//
+		// If the message is not provided, then use an empty string. i.e:
+		//
+		// ```
+		//   pre { x > 0 }
+		// ```
+		// is converted to:
+		// ```
+		//   if !(x > 0) {
+		//     $failPreCondition("")
+		//   }
+		// ```
+
 		message := condition.Message
 		if message == nil {
-			message = conditionFailedMessage
+			message = emptyStringExpression
 		}
 
 		startPos := condition.StartPosition()
+
+		var functionName string
+		switch conditionKind {
+		case ast.ConditionKindPre:
+			functionName = commons.FailPreConditionFunctionName
+
+		case ast.ConditionKindPost:
+			functionName = commons.FailPostConditionFunctionName
+
+		default:
+			panic(errors.NewUnreachableError())
+		}
 
 		panicFuncInvocation := ast.NewInvocationExpression(
 			d.memoryGauge,
@@ -673,7 +711,7 @@ func (d *Desugar) desugarCondition(condition ast.Condition, inheritedFrom *sema.
 				d.memoryGauge,
 				ast.NewIdentifier(
 					d.memoryGauge,
-					commons.PanicFunctionName,
+					functionName,
 					startPos,
 				),
 			),
@@ -713,6 +751,7 @@ func (d *Desugar) desugarCondition(condition ast.Condition, inheritedFrom *sema.
 		)
 
 		return ifStmt
+
 	case *ast.EmitCondition:
 		emitStmt := (*ast.EmitStatement)(condition)
 
@@ -813,6 +852,7 @@ func (d *Desugar) desugarCondition(condition ast.Condition, inheritedFrom *sema.
 		d.elaboration.SetMemberExpressionMemberAccessInfo(memberExpression, memberAccessInfo)
 
 		return newEmitStmt
+
 	default:
 		panic(errors.NewUnreachableError())
 	}
@@ -1021,6 +1061,7 @@ func (d *Desugar) inheritedFunctionsWithConditionsAndEvents(compositeType sema.C
 				enclosingType:    interfaceType,
 				eventDeclaration: defaultDestroyEvent,
 				eventType:        eventType,
+				elaboration:      elaboration,
 			})
 			inheritedEvents[compositeType] = events
 		}
@@ -2077,11 +2118,9 @@ func simpleFunctionDeclaration(
 
 func (d *Desugar) transactionCompositeType() *sema.CompositeType {
 	return &sema.CompositeType{
-		Location:    d.location,
-		Identifier:  commons.TransactionWrapperCompositeName,
-		Kind:        common.CompositeKindStructure,
-		NestedTypes: &sema.StringTypeOrderedMap{},
-		Members:     &sema.StringMemberOrderedMap{},
+		Location:   d.location,
+		Identifier: commons.TransactionWrapperCompositeName,
+		Kind:       common.CompositeKindStructure,
 	}
 }
 
@@ -2110,6 +2149,7 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 		eventDeclaration *ast.CompositeDeclaration,
 		eventType *sema.CompositeType,
 		enclosingType sema.Type,
+		elaboration *DesugaredElaboration,
 	) {
 		// Generate a constructor-invocation to construct an event-value.
 		// e.g: `R.ResourceDestroyed(a, ...)`
@@ -2122,13 +2162,18 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 		// Generate arguments.
 		arguments := make(ast.Arguments, 0, len(parameters))
 		for _, param := range parameters {
+			defaultArgument := param.DefaultArgument
 			arguments = append(
 				arguments,
 				ast.NewUnlabeledArgument(
 					d.memoryGauge,
-					param.DefaultArgument,
+					defaultArgument,
 				),
 			)
+
+			// Default-argument is an expression inherited from the interface.
+			// Store the elaboration corresponds to this inherited code.
+			d.elaboration.inheritedCodeElaborations[defaultArgument] = elaboration
 		}
 
 		endPos := eventDeclaration.EndPos
@@ -2177,7 +2222,8 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 			endPos,
 		)
 
-		eventConstructorFunctionType := d.elaboration.FunctionDeclarationFunctionType(eventConstructor)
+		// Important: Use the inherited/correct elaboration, not the current one.
+		eventConstructorFunctionType := elaboration.FunctionDeclarationFunctionType(eventConstructor)
 		paramTypes := eventConstructorFunctionType.ParameterTypes()
 
 		invocationTypes := sema.InvocationExpressionTypes{
@@ -2204,6 +2250,7 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 			defaultDestroyEventDeclaration,
 			eventType,
 			compositeType,
+			d.elaboration,
 		)
 	}
 
@@ -2215,6 +2262,7 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 			inheritedEvent.eventDeclaration,
 			inheritedEvent.eventType,
 			inheritedEvent.enclosingType,
+			inheritedEvent.elaboration,
 		)
 	}
 

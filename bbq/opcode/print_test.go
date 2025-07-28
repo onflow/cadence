@@ -177,7 +177,9 @@ func TestPrintInstruction(t *testing.T) {
 
 		"TransferAndConvert type:258": {byte(TransferAndConvert), 1, 2},
 
-		"New kind:CompositeKind(258) type:772": {byte(New), 1, 2, 3, 4},
+		"NewSimpleComposite kind:CompositeKind(258) type:772":          {byte(NewSimpleComposite), 1, 2, 3, 4},
+		"NewComposite kind:CompositeKind(258) type:772":                {byte(NewComposite), 1, 2, 3, 4},
+		"NewCompositeAt kind:CompositeKind(258) type:772 address:1286": {byte(NewCompositeAt), 1, 2, 3, 4, 5, 6},
 
 		"SimpleCast type:258":   {byte(SimpleCast), 1, 2, 3},
 		"FailableCast type:258": {byte(FailableCast), 1, 2, 3},
@@ -188,11 +190,8 @@ func TestPrintInstruction(t *testing.T) {
 		"Invoke typeArgs:[772, 1286] argCount:1": {
 			byte(Invoke), 0, 2, 3, 4, 5, 6, 0, 1,
 		},
-		"InvokeMethodStatic typeArgs:[772, 1286] argCount:1": {
-			byte(InvokeMethodStatic), 0, 2, 3, 4, 5, 6, 0, 1,
-		},
-		`InvokeMethodDynamic name:1 typeArgs:[772, 1286] argCount:1800`: {
-			byte(InvokeMethodDynamic), 0, 1, 0, 2, 3, 4, 5, 6, 7, 8,
+		`InvokeDynamic name:1 typeArgs:[772, 1286] argCount:1800`: {
+			byte(InvokeDynamic), 0, 1, 0, 2, 3, 4, 5, 6, 7, 8,
 		},
 
 		"NewRef type:258 isImplicit:true": {byte(NewRef), 1, 2, 1},
@@ -224,6 +223,7 @@ func TestPrintInstruction(t *testing.T) {
 		"Equal":    {byte(Equal)},
 		"NotEqual": {byte(NotEqual)},
 
+		"Wrap":    {byte(Wrap)},
 		"Unwrap":  {byte(Unwrap)},
 		"Destroy": {byte(Destroy)},
 		"True":    {byte(True)},

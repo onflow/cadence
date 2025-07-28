@@ -1023,7 +1023,7 @@ type NotDeclaredMemberError struct {
 	Expression *ast.MemberExpression
 	Name       string
 	ast.Range
-	suggestMember bool
+	SuggestMember bool
 }
 
 var _ SemanticError = &NotDeclaredMemberError{}
@@ -1097,7 +1097,7 @@ func (e *NotDeclaredMemberError) SuggestFixes(_ string) []errors.SuggestedFix[as
 // and finds the name with the smallest edit distance from the member the user
 // tried to access. In cases of typos, this should provide a helpful hint.
 func (e *NotDeclaredMemberError) findClosestMember() (closestMember string) {
-	if !e.suggestMember {
+	if !e.SuggestMember {
 		return
 	}
 
@@ -2994,7 +2994,7 @@ type InvalidAccessError struct {
 	RestrictingAccess   Access
 	PossessedAccess     Access
 	DeclarationKind     common.DeclarationKind
-	suggestEntitlements bool
+	SuggestEntitlements bool
 	ast.Range
 }
 
@@ -3031,7 +3031,7 @@ func (e *InvalidAccessError) Error() string {
 // which additional entitlements it would need to be given in order to have
 // e.RequiredAccess.
 func (e *InvalidAccessError) SecondaryError() string {
-	if !e.suggestEntitlements || e.PossessedAccess == nil || e.RestrictingAccess == nil {
+	if !e.SuggestEntitlements || e.PossessedAccess == nil || e.RestrictingAccess == nil {
 		return ""
 	}
 	possessedEntitlements, possessedOk := e.PossessedAccess.(EntitlementSetAccess)
@@ -3502,34 +3502,6 @@ func (e *InvalidNonEnumCaseError) Error() string {
 	return fmt.Sprintf(
 		"%s declaration only allows enum cases",
 		e.ContainerDeclarationKind.Name(),
-	)
-}
-
-// DeclarationKindMismatchError
-
-type DeclarationKindMismatchError struct {
-	ExpectedDeclarationKind common.DeclarationKind
-	ActualDeclarationKind   common.DeclarationKind
-	ast.Range
-}
-
-var _ SemanticError = &DeclarationKindMismatchError{}
-var _ errors.UserError = &DeclarationKindMismatchError{}
-var _ errors.SecondaryError = &DeclarationKindMismatchError{}
-
-func (*DeclarationKindMismatchError) isSemanticError() {}
-
-func (*DeclarationKindMismatchError) IsUserError() {}
-
-func (e *DeclarationKindMismatchError) Error() string {
-	return "mismatched declarations"
-}
-
-func (e *DeclarationKindMismatchError) SecondaryError() string {
-	return fmt.Sprintf(
-		"expected `%s`, got `%s`",
-		e.ExpectedDeclarationKind.Name(),
-		e.ActualDeclarationKind.Name(),
 	)
 }
 

@@ -154,7 +154,7 @@ func newCompiler[E, T any](
 
 	var globalImports *activations.Activation[GlobalImport]
 	if config.BuiltinGlobalsProvider != nil {
-		globalImports = config.BuiltinGlobalsProvider()
+		globalImports = config.BuiltinGlobalsProvider(location)
 	} else {
 		globalImports = DefaultBuiltinGlobals()
 	}
@@ -271,7 +271,7 @@ func (c *Compiler[_, _]) addImportedGlobal(location common.Location, name string
 	)
 }
 
-func (c *Compiler[E, T]) addFunction(
+func (c *Compiler[E, _]) addFunction(
 	name string,
 	qualifiedName string,
 	parameterCount uint16,
@@ -287,7 +287,7 @@ func (c *Compiler[E, T]) addFunction(
 	return function
 }
 
-func (c *Compiler[E, T]) addGlobalVariableWithGetter(
+func (c *Compiler[E, _]) addGlobalVariableWithGetter(
 	name string,
 	functionType *sema.FunctionType,
 ) *globalVariable[E] {
@@ -308,7 +308,7 @@ func (c *Compiler[E, T]) addGlobalVariableWithGetter(
 	return globalVariable
 }
 
-func (c *Compiler[E, T]) addGlobalVariable(
+func (c *Compiler[E, _]) addGlobalVariable(
 	name string,
 ) *globalVariable[E] {
 	globalVariable := &globalVariable[E]{
@@ -320,7 +320,7 @@ func (c *Compiler[E, T]) addGlobalVariable(
 	return globalVariable
 }
 
-func (c *Compiler[E, T]) newFunction(
+func (c *Compiler[E, _]) newFunction(
 	name string,
 	qualifiedName string,
 	parameterCount uint16,
@@ -337,7 +337,7 @@ func (c *Compiler[E, T]) newFunction(
 	)
 }
 
-func (c *Compiler[E, T]) targetFunction(function *function[E]) {
+func (c *Compiler[E, _]) targetFunction(function *function[E]) {
 	c.currentFunction = function
 
 	var code *[]E
@@ -523,6 +523,22 @@ func (c *Compiler[_, _]) compileStatement(statement ast.Statement) {
 }
 
 func (c *Compiler[_, _]) compileExpression(expression ast.Expression) {
+	// Expressions could be inherited. e.g: Inherited default destroy event's default arguments.
+	// Therefore, check whether the expression is inherited.
+	// TODO: Optimization: Instead of checking for each expression in the map,
+	//  maybe introduce a new ast.Expression, (say, inherited Expression),
+	//  which also holds the corresponding elaboration.
+	//  Then in desugar, always wrap the inherited expression with this new ast-node.
+	inheritedElaboration, ok := c.DesugaredElaboration.inheritedCodeElaborations[expression]
+	if ok {
+		prevElaboration := c.DesugaredElaboration
+		c.DesugaredElaboration = inheritedElaboration
+
+		defer func() {
+			c.DesugaredElaboration = prevElaboration
+		}()
+	}
+
 	c.compileWithPositionInfo(
 		expression,
 		func() {
@@ -700,8 +716,8 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 	// Add natively provided methods as globals.
 	// Only do it for user-defined types (i.e: `compositeTypeName` is not empty).
 	if enclosingType != nil {
-		for _, boundFunction := range commonBuiltinTypeBoundFunctions {
-			functionName := boundFunction.name
+		for _, boundFunction := range CommonBuiltinTypeBoundFunctions {
+			functionName := boundFunction.Name
 			qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
 			c.addGlobal(qualifiedName)
 		}
@@ -1056,7 +1072,6 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 	if expression != nil {
 		// (1) Return with a value
 
-		// TODO: copy
 		c.compileExpression(expression)
 
 		// End active iterators *after* the expression is compiled.
@@ -1173,10 +1188,9 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 			elseJump = c.emitUndefinedJumpIfFalse()
 
 		case *ast.VariableDeclaration:
-			// TODO: second value
 
-			// Compile the value expression *before* declaring the variable
-			c.compileExpression(test.Value)
+			varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(test)
+			c.compileVariableDeclaration(test, varDeclTypes, true)
 
 			tempIndex := c.currentFunction.generateLocalIndex()
 			c.emitSetLocal(tempIndex)
@@ -1189,17 +1203,6 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 			// Then branch: unwrap the optional and declare the variable
 			c.emitGetLocal(tempIndex)
 			c.emit(opcode.InstructionUnwrap{})
-			varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(test)
-			c.emitTransferAndConvert(varDeclTypes.TargetType)
-
-			// Before declaring the variable, evaluate and assign the second value.
-			if test.SecondValue != nil {
-				c.compileAssignment(
-					test.Value,
-					test.SecondValue,
-					varDeclTypes.ValueType,
-				)
-			}
 
 			// Declare the variable *after* unwrapping the optional,
 			// in a new scope
@@ -1346,9 +1349,10 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 
 	forStmtTypes := c.DesugaredElaboration.ForStatementType(statement)
 	loopVarType := forStmtTypes.ValueVariableType
-	_, isResultReference := sema.MaybeReferenceType(loopVarType)
+	_, isContainerReference := sema.MaybeReferenceType(forStmtTypes.ContainerType)
+	_, isValueReference := sema.MaybeReferenceType(loopVarType)
 
-	if isResultReference {
+	if isContainerReference && isValueReference {
 		index := c.getOrAddType(loopVarType)
 		c.emit(opcode.InstructionNewRef{
 			Type:       index,
@@ -1486,26 +1490,123 @@ func (c *Compiler[_, _]) VisitVariableDeclaration(declaration *ast.VariableDecla
 			return
 		}
 
-		// Compile the value expression *before* declaring the variable.
-		c.compileExpression(declaration.Value)
-
 		varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(declaration)
-		c.emitTransferAndConvert(varDeclTypes.TargetType)
+		c.compileVariableDeclaration(declaration, varDeclTypes, false)
 
-		// Before declaring the variable, evaluate and assign the second value.
-		if declaration.SecondValue != nil {
-			c.compileAssignment(
-				declaration.Value,
-				declaration.SecondValue,
-				varDeclTypes.ValueType,
-			)
-		}
-
-		// Declare the variable *after* compiling the value expressions.
+		// Declare the variable *after* compiling both the value expressions.
+		// Assign the first value onto the variable.
 		c.emitDeclareLocal(name)
 	})
 
 	return
+}
+
+func (c *Compiler[_, _]) compileVariableDeclaration(
+	declaration *ast.VariableDeclaration,
+	varDeclTypes sema.VariableDeclarationTypes,
+	isOptionalBinding bool,
+) {
+	firstValue := declaration.Value
+	secondValue := declaration.SecondValue
+
+	firstValueTransferType := varDeclTypes.TargetType
+	if isOptionalBinding {
+		// In optional binding, the first-value is optional-typed.
+		firstValueTransferType = &sema.OptionalType{
+			Type: firstValueTransferType,
+		}
+	}
+
+	// No second value.
+	if secondValue == nil {
+		c.compileExpression(firstValue)
+		c.emitTransferAndConvert(firstValueTransferType)
+		return
+	}
+
+	// Also has a second value.
+	// The middle expression (i.e: the first value), and its sub expressions,
+	// must only be evaluated only once.
+
+	firstValueType := varDeclTypes.ValueType
+	switch firstValue := firstValue.(type) {
+	case *ast.IdentifierExpression:
+		c.compileExpression(firstValue)
+
+		// Need to transfer the value "out",
+		// before the second value is being assigned
+		c.emitTransferAndConvert(firstValueTransferType)
+
+		// Evaluate and transfer second value.
+		c.compileExpression(secondValue)
+		c.emitTransferAndConvert(firstValueType)
+
+		// Store second value in first value's variable.
+		c.emitVariableStore(firstValue.Identifier.Identifier)
+
+	case *ast.MemberExpression:
+		// Evaluate the first value's parent once, and store in a temp-local.
+		c.compileExpression(firstValue.Expression)
+		memberExprParentLocal := c.currentFunction.generateLocalIndex()
+		c.emitSetLocal(memberExprParentLocal)
+
+		// Evaluate the first value. i.e: Get the member value.
+		// Transfer and leave it on the stack.
+		c.emitGetLocal(memberExprParentLocal)
+		c.compileMemberAccess(firstValue)
+		// Need to transfer the value "out",
+		// before the second value is being assigned
+		c.emitTransferAndConvert(firstValueTransferType)
+
+		// Evaluate and transfer second value.
+		// The first value becomes the target.
+		c.emitGetLocal(memberExprParentLocal)
+		c.compileExpression(secondValue)
+		c.emitTransferAndConvert(firstValueType)
+
+		// Assign the second value to the first value's field.
+		memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(firstValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		memberAccessedTypeIndex := c.getOrAddType(memberAccessInfo.AccessedType)
+
+		constant := c.addStringConst(firstValue.Identifier.Identifier)
+		c.emit(opcode.InstructionSetField{
+			FieldName:    constant.index,
+			AccessedType: memberAccessedTypeIndex,
+		})
+
+	case *ast.IndexExpression:
+		// First evaluate the sub-expressions of index expression once, and store them in temp-locals.
+		c.compileExpression(firstValue.TargetExpression)
+		indexExprTargetLocal := c.currentFunction.generateLocalIndex()
+		c.emitSetLocal(indexExprTargetLocal)
+
+		c.compileExpression(firstValue.IndexingExpression)
+		indexExprIndexLocal := c.currentFunction.generateLocalIndex()
+		c.emitSetLocal(indexExprIndexLocal)
+
+		// Evaluate the first value . i.e: index expression.
+		// Transfer and leave it on the stack.
+		c.emitGetLocal(indexExprTargetLocal)
+		c.emitGetLocal(indexExprIndexLocal)
+		c.compileIndexAccess(firstValue)
+		// Need to transfer the value "out",
+		// before the second value is being assigned
+		c.emitTransferAndConvert(firstValueTransferType)
+
+		// Evaluate and transfer second value.
+		// The first value becomes the target.
+		c.emitGetLocal(indexExprTargetLocal)
+		c.emitGetLocal(indexExprIndexLocal)
+		c.compileExpression(secondValue)
+		c.emitTransferAndConvert(firstValueType)
+		c.emit(opcode.InstructionSetIndex{})
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func (c *Compiler[_, _]) compileGlobalVariable(declaration *ast.VariableDeclaration, variableName string) {
@@ -2087,8 +2188,6 @@ func (c *Compiler[_, _]) emitVariableStore(name string) {
 }
 
 func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExpression) (_ struct{}) {
-	// TODO: copy
-
 	invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(expression)
 
 	argumentCount := len(expression.Arguments)
@@ -2180,7 +2279,9 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	isInterfaceInheritedFuncCall := c.DesugaredElaboration.IsInterfaceMethodStaticCall(expression)
 
 	// Any invocation on restricted-types must be dynamic
-	if !isInterfaceInheritedFuncCall && isDynamicMethodInvocation(memberInfo.AccessedType) {
+	if !isInterfaceInheritedFuncCall &&
+		isDynamicMethodInvocation(memberInfo.AccessedType) {
+
 		funcName = invokedExpr.Identifier.Identifier
 		if len(funcName) >= math.MaxUint16 {
 			panic(errors.NewDefaultUserError("invalid function name"))
@@ -2197,16 +2298,15 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 
 				funcNameConst := c.addStringConst(funcName)
 
-				argsCountWithReceiver := argumentCount + 1
-
 				c.emit(
-					opcode.InstructionInvokeMethodDynamic{
+					opcode.InstructionInvokeDynamic{
 						Name:     funcNameConst.index,
 						TypeArgs: typeArgs,
-						ArgCount: argsCountWithReceiver,
+						ArgCount: argumentCount,
 					},
 				)
 			},
+			true,
 		)
 
 		return
@@ -2255,7 +2355,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 				// Compile arguments
 				c.compileArguments(expression.Arguments, invocationTypes)
 
-				c.emit(opcode.InstructionInvokeMethodStatic{
+				c.emit(opcode.InstructionInvoke{
 					TypeArgs: typeArgs,
 
 					// Argument count does not include the receiver,
@@ -2263,6 +2363,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 					ArgCount: argumentCount,
 				})
 			},
+			true,
 		)
 	}
 }
@@ -2275,10 +2376,17 @@ func (c *Compiler[_, _]) withOptionalChaining(
 	targetExpression ast.Expression,
 	isOptional bool,
 	ifNotNil func(),
+	isMethodInvocation bool,
 ) {
 	nilJump := c.compileOptionalChainingNilJump(targetExpression, isOptional)
+
 	ifNotNil()
-	c.patchOptionalChainingNilJump(isOptional, nilJump)
+
+	c.patchOptionalChainingNilJump(
+		isOptional,
+		isMethodInvocation,
+		nilJump,
+	)
 }
 
 // compileOptionalChainingNilJump compiles the nil-check for optional chaining.
@@ -2307,12 +2415,20 @@ func (c *Compiler[_, _]) compileOptionalChainingNilJump(
 	return nilJump
 }
 
-func (c *Compiler[_, _]) patchOptionalChainingNilJump(isOptional bool, nilJump int) {
+func (c *Compiler[_, _]) patchOptionalChainingNilJump(
+	isOptional bool,
+	isMethodInvocation bool,
+	nilJump int,
+) {
 	if !isOptional {
 		return
 	}
 
-	// TODO: Need to wrap the result back with an optional, if `memberAccessInfo.IsOptional`
+	if isMethodInvocation {
+		// Wrap the result back with an optional, if `memberAccessInfo.IsOptional`
+		c.emit(opcode.InstructionWrap{})
+	}
+
 	// Jump to the end to skip the nil returning instructions.
 	jumpToEnd := c.emitUndefinedJump()
 
@@ -2326,11 +2442,10 @@ func isDynamicMethodInvocation(accessedType sema.Type) bool {
 	switch typ := accessedType.(type) {
 	case *sema.ReferenceType:
 		return isDynamicMethodInvocation(typ.Type)
+	case *sema.OptionalType:
+		return isDynamicMethodInvocation(typ.Type)
 	case *sema.IntersectionType:
 		return true
-
-		// TODO: Optional type?
-
 	case *sema.InterfaceType:
 		return true
 	default:
@@ -2421,11 +2536,14 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 
 			c.compileMemberAccess(expression)
 		},
+		false,
 	)
 
 	return
 }
 
+// compileMemberAccess assumes the member-expression's parent (i.e: `a.b` of an expression in the format `a.b.c`)
+// has evaluated and the value is pushed onto the stack.
 func (c *Compiler[_, _]) compileMemberAccess(expression *ast.MemberExpression) {
 
 	identifier := expression.Identifier.Identifier
@@ -2551,7 +2669,6 @@ func (c *Compiler[_, _]) VisitUnaryExpression(expression *ast.UnaryExpression) (
 
 func (c *Compiler[_, _]) VisitBinaryExpression(expression *ast.BinaryExpression) (_ struct{}) {
 	c.compileExpression(expression.Left)
-	// TODO: add support for other types
 
 	switch expression.Operation {
 	case ast.OperationNilCoalesce:
@@ -2824,7 +2941,6 @@ func (c *Compiler[_, _]) VisitSpecialFunctionDeclaration(declaration *ast.Specia
 	case common.DeclarationKindDestructorLegacy, common.DeclarationKindPrepare:
 		c.compileDeclaration(declaration.FunctionDeclaration)
 	default:
-		// TODO: support other special functions
 		panic(errors.NewUnreachableError())
 	}
 	return
@@ -2885,12 +3001,43 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 
 	typeIndex := c.getOrAddType(enclosingType)
 
-	c.emit(
-		opcode.InstructionNew{
-			Kind: kind,
-			Type: typeIndex,
-		},
-	)
+	var address common.Address
+	if kind == common.CompositeKindContract {
+		if addressLocation, ok := enclosingType.GetLocation().(common.AddressLocation); ok {
+			address = addressLocation.Address
+		}
+	}
+
+	if address == common.ZeroAddress {
+
+		// Transaction wrapper composite values are simple composite values.
+		if _, ok := enclosingType.GetLocation().(common.TransactionLocation); ok &&
+			typeName == commons.TransactionWrapperCompositeName {
+
+			c.emit(
+				opcode.InstructionNewSimpleComposite{
+					Kind: kind,
+					Type: typeIndex,
+				},
+			)
+		} else {
+			c.emit(
+				opcode.InstructionNewComposite{
+					Kind: kind,
+					Type: typeIndex,
+				},
+			)
+		}
+	} else {
+		addressConstant := c.addConstant(constant.Address, address.Bytes())
+		c.emit(
+			opcode.InstructionNewCompositeAt{
+				Kind:    kind,
+				Type:    typeIndex,
+				Address: addressConstant.index,
+			},
+		)
+	}
 
 	if kind == common.CompositeKindContract {
 		// During contract init, update the global variable with the newly initialized contract value.
@@ -3101,14 +3248,14 @@ func (c *Compiler[_, _]) VisitInterfaceDeclaration(declaration *ast.InterfaceDec
 }
 
 func (c *Compiler[_, _]) addBuiltinMethods(typ sema.Type) {
-	for _, boundFunction := range commonBuiltinTypeBoundFunctions {
-		name := boundFunction.name
+	for _, boundFunction := range CommonBuiltinTypeBoundFunctions {
+		name := boundFunction.Name
 		qualifiedName := commons.TypeQualifiedName(typ, name)
 		c.addFunction(
 			name,
 			qualifiedName,
-			uint16(len(boundFunction.typ.Parameters)+1),
-			boundFunction.typ,
+			uint16(len(boundFunction.Type.Parameters)+1),
+			boundFunction.Type,
 		)
 	}
 }
@@ -3160,14 +3307,6 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location)
 
 	for _, function := range importedProgram.Functions {
 		name := function.QualifiedName
-
-		//// TODO: Skip the contract initializer.
-		//// It should never be able to invoked within the code.
-		//if isContract && name == commons.InitFunctionName {
-		//	continue
-		//}
-
-		// TODO: Filter-in only public functions
 		c.addImportedGlobal(location, name)
 	}
 
@@ -3178,12 +3317,14 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location)
 }
 
 func (c *Compiler[_, _]) VisitTransactionDeclaration(_ *ast.TransactionDeclaration) (_ struct{}) {
-	// TODO
+	// Transaction declaration are desugared to composite declarations.
+	// So this should never reach.
 	panic(errors.NewUnreachableError())
 }
 
 func (c *Compiler[_, _]) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) (_ struct{}) {
-	// TODO
+	// Enum cases are desugared to variable declarations.
+	// So this should never reach.
 	panic(errors.NewUnreachableError())
 }
 
@@ -3317,7 +3458,7 @@ func (c *Compiler[_, _]) emitTransfer() {
 	c.emit(opcode.InstructionTransfer{})
 }
 
-func (c *Compiler[_, T]) getOrAddType(ty sema.Type) uint16 {
+func (c *Compiler[_, _]) getOrAddType(ty sema.Type) uint16 {
 	typeID := ty.ID()
 
 	// Optimization: Re-use types in the pool.
@@ -3344,7 +3485,7 @@ func (c *Compiler[_, T]) addCompiledType(ty sema.Type, data T) uint16 {
 	return uint16(count)
 }
 
-func (c *Compiler[E, T]) declareParameters(paramList *ast.ParameterList, declareReceiver bool) {
+func (c *Compiler[_, _]) declareParameters(paramList *ast.ParameterList, declareReceiver bool) {
 	if declareReceiver {
 		// Declare receiver as `self`.
 		// Receiver is always at the zero-th index of params.
@@ -3405,7 +3546,7 @@ func (c *Compiler[_, _]) generateEnumLookup(enumType *sema.CompositeType, enumCa
 }
 
 func (c *Compiler[_, _]) compilePotentiallyInheritedCode(statement ast.Statement, f func()) {
-	stmtElaboration, ok := c.DesugaredElaboration.conditionsElaborations[statement]
+	stmtElaboration, ok := c.DesugaredElaboration.inheritedCodeElaborations[statement]
 	if ok {
 		prevElaboration := c.DesugaredElaboration
 		c.DesugaredElaboration = stmtElaboration

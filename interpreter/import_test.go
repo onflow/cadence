@@ -72,10 +72,20 @@ func TestInterpretVirtualImport(t *testing.T) {
 		Type:            fooType,
 	})
 
+	// NOTE: virtual imports are not supported by the compiler/VM
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.VirtualImport{
+							ValueElements: valueElements,
+						}, nil
+					},
+				},
+			},
+			InterpreterConfig: &interpreter.Config{
 				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 
 					assert.Equal(t,
@@ -123,13 +133,6 @@ func TestInterpretVirtualImport(t *testing.T) {
 					}
 				},
 			},
-			CheckerConfig: &sema.Config{
-				ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
-					return sema.VirtualImport{
-						ValueElements: valueElements,
-					}, nil
-				},
-			},
 		},
 	)
 	require.NoError(t, err)
@@ -149,6 +152,10 @@ func TestInterpretVirtualImport(t *testing.T) {
 // can be imported from the same location (address location `0x1`).
 // The single location (address location `0x1`) is resolved to two locations (address locations `0x1.a` and `0x1.b`).
 // Each requested declaration is so imported from a separate program.
+//
+// NOTE: Testing this "synthetic" scenario in compiler/VM is not possible,
+// Because the compiler/vm's linking logic is not configurable.
+// (i.e: to link one function form one program, and the other function from the other program).
 func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 
 	t.Parallel()
@@ -206,7 +213,7 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
           }
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				LocationHandler: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
 
 					require.Equal(t,
@@ -339,7 +346,7 @@ func TestInterpretResourceConstructionThroughIndirectImport(t *testing.T) {
           }
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 					require.IsType(t, common.AddressLocation{}, importedLocation)
 					addressLocation := importedLocation.(common.AddressLocation)

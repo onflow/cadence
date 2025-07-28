@@ -144,7 +144,7 @@ func (v *StorageReferenceValue) dereference(context ValueStaticTypeContext, loca
 		staticType := referenced.StaticType(context)
 
 		if !IsSubTypeOfSemaType(context, staticType, v.BorrowedType) {
-			semaType := MustConvertStaticToSemaType(staticType, context)
+			semaType := context.SemaTypeFromStaticType(staticType)
 
 			return nil, &ForceCastTypeMismatchError{
 				ExpectedType:  v.BorrowedType,
@@ -230,21 +230,11 @@ func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, locat
 	// It is not possible (or a lot of work), to create the bound function with the storage reference
 	// when it was created originally, because `getMember(referencedValue, ...)` doesn't know
 	// whether the member was accessed directly, or via a reference.
-
-	if boundFunction, isBoundFunction := member.(BoundFunctionValue); isBoundFunction {
-		referencedValueStaticType := referencedValue.StaticType(context)
-
-		boundFunction.SelfReference = NewStorageReferenceValue(
-			context,
-			v.Authorization,
-			v.TargetStorageAddress,
-			v.TargetPath,
-			MustConvertStaticToSemaType(referencedValueStaticType, context),
-		)
-		return boundFunction
-	}
-
-	return member
+	return context.MaybeUpdateStorageReferenceMemberReceiver(
+		v,
+		referencedValue,
+		member,
+	)
 }
 
 func (v *StorageReferenceValue) GetMethod(

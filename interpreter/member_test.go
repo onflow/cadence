@@ -159,7 +159,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct S {
                         let foo: Int
 
@@ -246,7 +246,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct interface SI {
                         var foo: Int
                     }
@@ -335,7 +335,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct interface SI {
                         let foo: Int
                     }
@@ -387,7 +387,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct S {
                         var foo: Int
 
@@ -432,7 +432,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct S {
                         var foo: Int
 
@@ -492,7 +492,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct S {
                         let foo: Int
 
@@ -535,7 +535,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				t.Parallel()
 
-				inter := parseCheckAndInterpret(t, `
+				inter := parseCheckAndPrepare(t, `
                     struct S {
                         let foo: Int
 
@@ -1064,6 +1064,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("resource reference, attachment", func(t *testing.T) {
 		t.Parallel()
 
+		// TODO: requires support for attachments in the VM
 		inter := parseCheckAndInterpret(t, `
             resource R {}
 
@@ -1085,6 +1086,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("attachment nested member", func(t *testing.T) {
 		t.Parallel()
 
+		// TODO: requires support for attachments in the VM
 		inter := parseCheckAndInterpret(t, `
             resource R {}
 
@@ -1310,5 +1312,59 @@ func TestInterpretNestedReferenceMemberAccess(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
+	})
+}
+
+func TestInterpretOptionalChaining(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("method call", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            var x: Int? = nil
+
+            struct S {
+                fun getX(): Int? {
+                   return x
+                }
+            }
+
+            fun test(): Int? {
+                var s: S? = S()
+                return s?.getX()!
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+		AssertValuesEqual(t, inter, interpreter.Nil, value)
+	})
+
+	t.Run("field", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {
+                var x: Int?
+
+                init() {
+                   self.x = nil
+                }
+            }
+
+            fun test(): Int {
+                var s: S? = S()
+                return s?.x!
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+		forceNilError := &interpreter.ForceNilError{}
+		require.ErrorAs(t, err, &forceNilError)
 	})
 }

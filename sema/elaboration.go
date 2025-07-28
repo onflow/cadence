@@ -114,6 +114,7 @@ type ExpressionTypes struct {
 type ForStatementTypes struct {
 	IndexVariableType Type
 	ValueVariableType Type
+	ContainerType     Type
 }
 
 type Elaboration struct {

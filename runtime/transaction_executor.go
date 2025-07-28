@@ -196,9 +196,23 @@ func (executor *transactionExecutor) preprocess() (err error) {
 
 	switch environment := environment.(type) {
 	case *InterpreterEnvironment:
+		if context.UseVM {
+			panic(errors.NewUnexpectedError(
+				"expected to run with the VM, but found an incompatible environment: %T",
+				environment,
+			))
+		}
+
 		executor.interpret = executor.transactionExecutionFunction()
 
 	case *vmEnvironment:
+		if !context.UseVM {
+			panic(errors.NewUnexpectedError(
+				"expected to run with the interpreter, but found an incompatible environment: %T",
+				environment,
+			))
+		}
+
 		var program *Program
 		program, err = environment.loadProgram(location)
 		if err != nil {

@@ -83,7 +83,7 @@ func NewVMLogFunction(logger Logger) StandardLibraryValue {
 		LogFunctionName,
 		LogFunctionType,
 		logFunctionDocString,
-		func(context *vm.Context, _ []bbq.StaticType, arguments ...interpreter.Value) interpreter.Value {
+		func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...interpreter.Value) interpreter.Value {
 			value := arguments[0]
 			return Log(
 				context,

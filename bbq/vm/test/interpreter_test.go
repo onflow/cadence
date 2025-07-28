@@ -23,6 +23,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/onflow/cadence/pretty"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
@@ -38,16 +39,15 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/pretty"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 )
 
 type ParseCheckAndInterpretOptions struct {
-	Config             *interpreter.Config
-	CheckerConfig      *sema.Config
-	HandleCheckerError func(error)
+	ParseAndCheckOptions *ParseAndCheckOptions
+	InterpreterConfig    *interpreter.Config
+	HandleCheckerError   func(error)
 }
 
 func parseCheckAndInterpretWithOptions(
@@ -59,27 +59,26 @@ func parseCheckAndInterpretWithOptions(
 	inter *interpreter.Interpreter,
 	err error,
 ) {
-	return parseCheckAndInterpretWithOptionsAndMemoryMetering(t, code, location, options, nil)
-}
 
-func parseCheckAndInterpretWithOptionsAndMemoryMetering(
-	t testing.TB,
-	code string,
-	location common.Location,
-	options ParseCheckAndInterpretOptions,
-	memoryGauge common.MemoryGauge,
-) (
-	inter *interpreter.Interpreter,
-	err error,
-) {
+	var memoryGauge common.MemoryGauge
+	if options.InterpreterConfig != nil {
+		memoryGauge = options.InterpreterConfig.MemoryGauge
+	}
+	if memoryGauge == nil && options.ParseAndCheckOptions != nil {
+		memoryGauge = options.ParseAndCheckOptions.MemoryGauge
+	}
 
-	checker, err := ParseAndCheckWithOptionsAndMemoryMetering(t,
+	var parseAndCheckOptions ParseAndCheckOptions
+	if options.ParseAndCheckOptions != nil {
+		parseAndCheckOptions = *options.ParseAndCheckOptions
+	}
+	if parseAndCheckOptions.Location == nil {
+		parseAndCheckOptions.Location = location
+	}
+
+	checker, err := ParseAndCheckWithOptions(t,
 		code,
-		ParseAndCheckOptions{
-			Location: location,
-			Config:   options.CheckerConfig,
-		},
-		memoryGauge,
+		parseAndCheckOptions,
 	)
 
 	if options.HandleCheckerError != nil {
@@ -99,8 +98,8 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 	var uuid uint64 = 0
 
 	var config interpreter.Config
-	if options.Config != nil {
-		config = *options.Config
+	if options.InterpreterConfig != nil {
+		config = *options.InterpreterConfig
 	}
 
 	if config.UUIDHandler == nil {
@@ -111,10 +110,6 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 	}
 	if config.Storage == nil {
 		config.Storage = interpreter.NewInMemoryStorage(memoryGauge)
-	}
-
-	if memoryGauge != nil && config.MemoryGauge == nil {
-		config.MemoryGauge = memoryGauge
 	}
 
 	inter, err = interpreter.NewInterpreter(
@@ -375,8 +370,10 @@ func interpreterFTTransfer(tb testing.TB) {
 			code,
 			location,
 			ParseCheckAndInterpretOptions{
-				Config:        interConfig,
-				CheckerConfig: checkerConfig,
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: checkerConfig,
+				},
+				InterpreterConfig: interConfig,
 			},
 		)
 
@@ -642,7 +639,6 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 	}
 
 	environment := runtime.NewBaseInterpreterEnvironment(runtime.Config{})
-
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// Deploy contract interfaces
@@ -823,8 +819,6 @@ func TestInterpreterImperativeFib(t *testing.T) {
 
 	t.Parallel()
 
-	scriptLocation := NewScriptLocationGenerator()
-
 	inter, err := parseCheckAndInterpretWithOptions(
 		t,
 		imperativeFib,
@@ -833,7 +827,7 @@ func TestInterpreterImperativeFib(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	var value interpreter.Value = interpreter.NewUnmeteredIntValueFromInt64(7)
+	value := interpreter.NewUnmeteredIntValueFromInt64(7)
 
 	result, err := inter.Invoke("fib", value)
 	require.NoError(t, err)
@@ -841,8 +835,6 @@ func TestInterpreterImperativeFib(t *testing.T) {
 }
 
 func BenchmarkInterpreterImperativeFib(b *testing.B) {
-
-	scriptLocation := NewScriptLocationGenerator()
 
 	inter, err := parseCheckAndInterpretWithOptions(
 		b,
@@ -852,7 +844,7 @@ func BenchmarkInterpreterImperativeFib(b *testing.B) {
 	)
 	require.NoError(b, err)
 
-	var value interpreter.Value = interpreter.NewUnmeteredIntValueFromInt64(14)
+	value := interpreter.NewUnmeteredIntValueFromInt64(14)
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -865,26 +857,25 @@ func BenchmarkInterpreterImperativeFib(b *testing.B) {
 
 func BenchmarkInterpreterNewStruct(b *testing.B) {
 
-	scriptLocation := NewScriptLocationGenerator()
-
 	inter, err := parseCheckAndInterpretWithOptions(
 		b,
 		`
-        struct Foo {
-            var id : Int
+          struct Foo {
+              var id : Int
 
-            init(_ id: Int) {
-                self.id = id
-            }
-        }
+              init(_ id: Int) {
+                  self.id = id
+              }
+          }
 
-        fun test(count: Int) {
-            var i = 0
-            while i < count {
-                Foo(i)
-                i = i + 1
-            }
-        }`,
+          fun test(count: Int) {
+              var i = 0
+              while i < count {
+                  Foo(i)
+                  i = i + 1
+              }
+          }
+        `,
 		scriptLocation(),
 		ParseCheckAndInterpretOptions{},
 	)

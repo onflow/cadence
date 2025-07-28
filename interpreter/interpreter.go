@@ -548,7 +548,7 @@ func (interpreter *Interpreter) InvokeTransaction(arguments []Value, signers ...
 func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	if r := recover(); r != nil {
 		// Recover all errors, because interpreter can be directly invoked by FVM.
-		err := asCadenceError(r)
+		err := AsCadenceError(r)
 
 		// if the error is not yet an interpreter error, wrap it
 		if _, ok := err.(Error); !ok {
@@ -572,13 +572,13 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 		}
 
 		interpreterErr := err.(Error)
-		interpreterErr.StackTrace = interpreter.CallStack()
+		interpreterErr.StackTrace = interpreter.CallStackLocations()
 
 		onError(interpreterErr)
 	}
 }
 
-func asCadenceError(r any) error {
+func AsCadenceError(r any) error {
 	err, isError := r.(error)
 	if !isError {
 		return errors.NewUnexpectedError("%s", r)
@@ -605,6 +605,19 @@ func asCadenceError(r any) error {
 
 func (interpreter *Interpreter) CallStack() []Invocation {
 	return interpreter.SharedState.callStack.Invocations[:]
+}
+
+func (interpreter *Interpreter) CallStackLocations() []LocationRange {
+	callstack := interpreter.CallStack()
+	if len(callstack) == 0 {
+		return nil
+	}
+
+	locationRanges := make([]LocationRange, 0, len(callstack))
+	for _, invocation := range callstack {
+		locationRanges = append(locationRanges, invocation.LocationRange)
+	}
+	return locationRanges
 }
 
 func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
@@ -1923,7 +1936,7 @@ func TransferAndConvert(
 	if targetType != nil &&
 		!IsSubTypeOfSemaType(context, resultStaticType, targetType) {
 
-		resultSemaType := MustConvertStaticToSemaType(resultStaticType, context)
+		resultSemaType := context.SemaTypeFromStaticType(resultStaticType)
 
 		panic(&ValueTransferTypeError{
 			ExpectedType:  targetType,
@@ -2201,7 +2214,7 @@ func convert(
 				return value
 			}
 
-			targetElementType := MustConvertStaticToSemaType(arrayStaticType.ElementType(), context)
+			targetElementType := context.SemaTypeFromStaticType(arrayStaticType.ElementType())
 
 			array := arrayValue.array
 
@@ -2225,7 +2238,7 @@ func convert(
 					}
 
 					value := MustConvertStoredValue(context, element)
-					valueType := MustConvertStaticToSemaType(value.StaticType(context), context)
+					valueType := context.SemaTypeFromStaticType(value.StaticType(context))
 					return convert(context, value, valueType, targetElementType, locationRange)
 				},
 			)
@@ -2241,8 +2254,8 @@ func convert(
 				return value
 			}
 
-			targetKeyType := MustConvertStaticToSemaType(dictStaticType.KeyType, context)
-			targetValueType := MustConvertStaticToSemaType(dictStaticType.ValueType, context)
+			targetKeyType := context.SemaTypeFromStaticType(dictStaticType.KeyType)
+			targetValueType := context.SemaTypeFromStaticType(dictStaticType.ValueType)
 
 			dictionary := dictValue.dictionary
 
@@ -2271,8 +2284,8 @@ func convert(
 					key := MustConvertStoredValue(context, k)
 					value := MustConvertStoredValue(context, v)
 
-					keyType := MustConvertStaticToSemaType(key.StaticType(context), context)
-					valueType := MustConvertStaticToSemaType(value.StaticType(context), context)
+					keyType := context.SemaTypeFromStaticType(key.StaticType(context))
+					valueType := context.SemaTypeFromStaticType(value.StaticType(context))
 
 					convertedKey := convert(context, key, keyType, targetKeyType, locationRange)
 					convertedValue := convert(context, value, valueType, targetValueType, locationRange)
@@ -4215,7 +4228,7 @@ func IsSubType(typeConverter TypeConverter, subType StaticType, superType Static
 		return true
 	}
 
-	semaType := MustConvertStaticToSemaType(superType, typeConverter)
+	semaType := typeConverter.SemaTypeFromStaticType(superType)
 
 	return IsSubTypeOfSemaType(typeConverter, subType, semaType)
 }
@@ -4242,7 +4255,7 @@ func IsSubTypeOfSemaType(typeConverter TypeConverter, staticSubType StaticType, 
 		return superType == sema.AnyStructType
 	}
 
-	semaSubType := MustConvertStaticToSemaType(staticSubType, typeConverter)
+	semaSubType := typeConverter.SemaTypeFromStaticType(staticSubType)
 
 	return sema.IsSubType(semaSubType, superType)
 }
@@ -5066,31 +5079,24 @@ func (interpreter *Interpreter) AllElaborations() (elaborations map[common.Locat
 	return
 }
 
-func (interpreter *Interpreter) GetContractValue(contractLocation common.AddressLocation) (*CompositeValue, error) {
+func (interpreter *Interpreter) GetContractValue(contractLocation common.AddressLocation) *CompositeValue {
 	inter := interpreter.EnsureLoaded(contractLocation)
 	return inter.GetContractComposite(contractLocation)
 }
 
 // GetContractComposite gets the composite value of the contract at the address location.
-func (interpreter *Interpreter) GetContractComposite(contractLocation common.AddressLocation) (*CompositeValue, error) {
+func (interpreter *Interpreter) GetContractComposite(contractLocation common.AddressLocation) *CompositeValue {
 	contractGlobal := interpreter.Globals.Get(contractLocation.Name)
 	if contractGlobal == nil {
-		return nil, NotDeclaredError{
-			ExpectedKind: common.DeclarationKindContract,
-			Name:         contractLocation.Name,
-		}
+		return nil
 	}
 
-	// get contract value
 	contractValue, ok := contractGlobal.GetValue(interpreter).(*CompositeValue)
 	if !ok {
-		return nil, NotDeclaredError{
-			ExpectedKind: common.DeclarationKindContract,
-			Name:         contractLocation.Name,
-		}
+		return nil
 	}
 
-	return contractValue, nil
+	return contractValue
 }
 
 func GetNativeCompositeValueComputedFields(qualifiedIdentifier string) map[string]ComputedField {
@@ -5404,7 +5410,7 @@ func ExpectType(
 	valueStaticType := value.StaticType(context)
 
 	if !IsSubTypeOfSemaType(context, valueStaticType, expectedType) {
-		valueSemaType := MustConvertStaticToSemaType(valueStaticType, context)
+		valueSemaType := context.SemaTypeFromStaticType(valueStaticType)
 
 		panic(TypeMismatchError{
 			ExpectedType:  expectedType,
@@ -6169,4 +6175,55 @@ func (interpreter *Interpreter) DefaultDestroyEvents(
 	locationRange LocationRange,
 ) []*CompositeValue {
 	return resourceValue.DefaultDestroyEvents(interpreter, locationRange)
+}
+
+func (interpreter *Interpreter) SemaTypeFromStaticType(staticType StaticType) sema.Type {
+	return MustConvertStaticToSemaType(staticType, interpreter)
+}
+
+func (interpreter *Interpreter) MaybeUpdateStorageReferenceMemberReceiver(
+	storageReference *StorageReferenceValue,
+	referencedValue Value,
+	member Value,
+) Value {
+	if boundFunction, isBoundFunction := member.(BoundFunctionValue); isBoundFunction {
+		boundFunction.SelfReference = StorageReference(
+			interpreter,
+			storageReference,
+			referencedValue,
+		)
+		return boundFunction
+	}
+
+	return member
+}
+
+func StorageReference(
+	context ValueStaticTypeContext,
+	storageReference *StorageReferenceValue,
+	referencedValue Value,
+) *StorageReferenceValue {
+
+	// As also mentioned in `(StorageReference).GetMember` method,
+	// we cannot use the storage reference as-is here.
+	// This is because since we look up the member on the referenced value,
+	// we also must use its type as the borrowed type for the `SelfReference` type,
+	// because during invocation the bound function can only be invoked
+	// if the type of the dereferenced value at that time still matches
+	// the type of the dereferenced value at the time of binding (here).
+	//
+	// For example, imagine storing a value of type T (e.g. `String`),
+	// creating a reference with a supertype (e.g. `AnyStruct`),
+	// and then creating a bound function on it.
+	// Then, if we change the storage location to store a value of unrelated type U instead (e.g. `Int`),
+	// and invoke the bound function, the bound function is potentially invalid.
+
+	referencedValueStaticType := referencedValue.StaticType(context)
+	return NewStorageReferenceValue(
+		context,
+		storageReference.Authorization,
+		storageReference.TargetStorageAddress,
+		storageReference.TargetPath,
+		context.SemaTypeFromStaticType(referencedValueStaticType),
+	)
 }

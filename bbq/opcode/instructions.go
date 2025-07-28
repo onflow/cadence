@@ -697,35 +697,35 @@ func (i InstructionNil) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
-// InstructionNew
+// InstructionNewSimpleComposite
 //
-// Creates a new instance of the given kind and type and then pushes it onto the stack.
-type InstructionNew struct {
+// Creates a new instance of a simple composite value of given kind and type, at address 0x0, and then pushes it onto the stack.
+type InstructionNewSimpleComposite struct {
 	Kind common.CompositeKind
 	Type uint16
 }
 
-var _ Instruction = InstructionNew{}
+var _ Instruction = InstructionNewSimpleComposite{}
 
-func (InstructionNew) Opcode() Opcode {
-	return New
+func (InstructionNewSimpleComposite) Opcode() Opcode {
+	return NewSimpleComposite
 }
 
-func (i InstructionNew) String() string {
+func (i InstructionNewSimpleComposite) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
 	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionNew) OperandsString(sb *strings.Builder, colorize bool) {
+func (i InstructionNewSimpleComposite) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "kind", i.Kind, colorize)
 	sb.WriteByte(' ')
 	printfArgument(sb, "type", i.Type, colorize)
 }
 
-func (i InstructionNew) ResolvedOperandsString(sb *strings.Builder,
+func (i InstructionNewSimpleComposite) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
 	functionNames []string,
@@ -736,15 +736,124 @@ func (i InstructionNew) ResolvedOperandsString(sb *strings.Builder,
 	printfTypeArgument(sb, "type", types[i.Type], colorize)
 }
 
-func (i InstructionNew) Encode(code *[]byte) {
+func (i InstructionNewSimpleComposite) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 	emitCompositeKind(code, i.Kind)
 	emitUint16(code, i.Type)
 }
 
-func DecodeNew(ip *uint16, code []byte) (i InstructionNew) {
+func DecodeNewSimpleComposite(ip *uint16, code []byte) (i InstructionNewSimpleComposite) {
 	i.Kind = decodeCompositeKind(ip, code)
 	i.Type = decodeUint16(ip, code)
+	return i
+}
+
+// InstructionNewComposite
+//
+// Creates a new instance of the given composite kind and type, at address 0x0, and then pushes it onto the stack.
+type InstructionNewComposite struct {
+	Kind common.CompositeKind
+	Type uint16
+}
+
+var _ Instruction = InstructionNewComposite{}
+
+func (InstructionNewComposite) Opcode() Opcode {
+	return NewComposite
+}
+
+func (i InstructionNewComposite) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
+}
+
+func (i InstructionNewComposite) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "kind", i.Kind, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
+}
+
+func (i InstructionNewComposite) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "kind", i.Kind, colorize)
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
+}
+
+func (i InstructionNewComposite) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitCompositeKind(code, i.Kind)
+	emitUint16(code, i.Type)
+}
+
+func DecodeNewComposite(ip *uint16, code []byte) (i InstructionNewComposite) {
+	i.Kind = decodeCompositeKind(ip, code)
+	i.Type = decodeUint16(ip, code)
+	return i
+}
+
+// InstructionNewCompositeAt
+//
+// Creates a new instance of the given composite kind and type, at the given address, and then pushes it onto the stack.
+type InstructionNewCompositeAt struct {
+	Kind    common.CompositeKind
+	Type    uint16
+	Address uint16
+}
+
+var _ Instruction = InstructionNewCompositeAt{}
+
+func (InstructionNewCompositeAt) Opcode() Opcode {
+	return NewCompositeAt
+}
+
+func (i InstructionNewCompositeAt) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
+}
+
+func (i InstructionNewCompositeAt) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "kind", i.Kind, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "address", i.Address, colorize)
+}
+
+func (i InstructionNewCompositeAt) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "kind", i.Kind, colorize)
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
+	sb.WriteByte(' ')
+	printfConstantArgument(sb, "address", constants[i.Address], colorize)
+}
+
+func (i InstructionNewCompositeAt) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitCompositeKind(code, i.Kind)
+	emitUint16(code, i.Type)
+	emitUint16(code, i.Address)
+}
+
+func DecodeNewCompositeAt(ip *uint16, code []byte) (i InstructionNewCompositeAt) {
+	i.Kind = decodeCompositeKind(ip, code)
+	i.Type = decodeUint16(ip, code)
+	i.Address = decodeUint16(ip, code)
 	return i
 }
 
@@ -1112,80 +1221,29 @@ func DecodeInvoke(ip *uint16, code []byte) (i InstructionInvoke) {
 	return i
 }
 
-// InstructionInvokeMethodStatic
+// InstructionInvokeDynamic
 //
-// Pops the method and arguments off the stack, invokes the method with the arguments, and then pushes the result back on to the stack. The first argument is the receiver of the method.
-type InstructionInvokeMethodStatic struct {
-	TypeArgs []uint16
-	ArgCount uint16
-}
-
-var _ Instruction = InstructionInvokeMethodStatic{}
-
-func (InstructionInvokeMethodStatic) Opcode() Opcode {
-	return InvokeMethodStatic
-}
-
-func (i InstructionInvokeMethodStatic) String() string {
-	var sb strings.Builder
-	sb.WriteString(i.Opcode().String())
-	i.OperandsString(&sb, false)
-	return sb.String()
-}
-
-func (i InstructionInvokeMethodStatic) OperandsString(sb *strings.Builder, colorize bool) {
-	sb.WriteByte(' ')
-	printfUInt16ArrayArgument(sb, "typeArgs", i.TypeArgs, colorize)
-	sb.WriteByte(' ')
-	printfArgument(sb, "argCount", i.ArgCount, colorize)
-}
-
-func (i InstructionInvokeMethodStatic) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
-	types []interpreter.StaticType,
-	functionNames []string,
-	colorize bool) {
-	sb.WriteByte(' ')
-	printfTypeArrayArgument(sb, "typeArgs", i.TypeArgs, colorize, types)
-	sb.WriteByte(' ')
-	printfArgument(sb, "argCount", i.ArgCount, colorize)
-}
-
-func (i InstructionInvokeMethodStatic) Encode(code *[]byte) {
-	emitOpcode(code, i.Opcode())
-	emitUint16Array(code, i.TypeArgs)
-	emitUint16(code, i.ArgCount)
-}
-
-func DecodeInvokeMethodStatic(ip *uint16, code []byte) (i InstructionInvokeMethodStatic) {
-	i.TypeArgs = decodeUint16Array(ip, code)
-	i.ArgCount = decodeUint16(ip, code)
-	return i
-}
-
-// InstructionInvokeMethodDynamic
-//
-// Pops the arguments off the stack, invokes the method with the given name and argument count, and then pushes the result back on to the stack. The first argument is the receiver of the method.
-type InstructionInvokeMethodDynamic struct {
+// Invokes a method with the given name dynamically. Pops the receiver and the arguments off the stack, invokes the function with the arguments, and then pushes the result back on to the stack.
+type InstructionInvokeDynamic struct {
 	Name     uint16
 	TypeArgs []uint16
 	ArgCount uint16
 }
 
-var _ Instruction = InstructionInvokeMethodDynamic{}
+var _ Instruction = InstructionInvokeDynamic{}
 
-func (InstructionInvokeMethodDynamic) Opcode() Opcode {
-	return InvokeMethodDynamic
+func (InstructionInvokeDynamic) Opcode() Opcode {
+	return InvokeDynamic
 }
 
-func (i InstructionInvokeMethodDynamic) String() string {
+func (i InstructionInvokeDynamic) String() string {
 	var sb strings.Builder
 	sb.WriteString(i.Opcode().String())
 	i.OperandsString(&sb, false)
 	return sb.String()
 }
 
-func (i InstructionInvokeMethodDynamic) OperandsString(sb *strings.Builder, colorize bool) {
+func (i InstructionInvokeDynamic) OperandsString(sb *strings.Builder, colorize bool) {
 	sb.WriteByte(' ')
 	printfArgument(sb, "name", i.Name, colorize)
 	sb.WriteByte(' ')
@@ -1194,7 +1252,7 @@ func (i InstructionInvokeMethodDynamic) OperandsString(sb *strings.Builder, colo
 	printfArgument(sb, "argCount", i.ArgCount, colorize)
 }
 
-func (i InstructionInvokeMethodDynamic) ResolvedOperandsString(sb *strings.Builder,
+func (i InstructionInvokeDynamic) ResolvedOperandsString(sb *strings.Builder,
 	constants []constant.Constant,
 	types []interpreter.StaticType,
 	functionNames []string,
@@ -1207,14 +1265,14 @@ func (i InstructionInvokeMethodDynamic) ResolvedOperandsString(sb *strings.Build
 	printfArgument(sb, "argCount", i.ArgCount, colorize)
 }
 
-func (i InstructionInvokeMethodDynamic) Encode(code *[]byte) {
+func (i InstructionInvokeDynamic) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 	emitUint16(code, i.Name)
 	emitUint16Array(code, i.TypeArgs)
 	emitUint16(code, i.ArgCount)
 }
 
-func DecodeInvokeMethodDynamic(ip *uint16, code []byte) (i InstructionInvokeMethodDynamic) {
+func DecodeInvokeDynamic(ip *uint16, code []byte) (i InstructionInvokeDynamic) {
 	i.Name = decodeUint16(ip, code)
 	i.TypeArgs = decodeUint16Array(ip, code)
 	i.ArgCount = decodeUint16(ip, code)
@@ -1378,6 +1436,35 @@ func (i InstructionUnwrap) ResolvedOperandsString(sb *strings.Builder,
 }
 
 func (i InstructionUnwrap) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
+// InstructionWrap
+//
+// Pops a value off the stack, wrap it with an optional, and pushes back onto the stack.
+type InstructionWrap struct {
+}
+
+var _ Instruction = InstructionWrap{}
+
+func (InstructionWrap) Opcode() Opcode {
+	return Wrap
+}
+
+func (i InstructionWrap) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionWrap) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionWrap) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
+func (i InstructionWrap) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
@@ -2678,8 +2765,12 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionFalse{}
 	case Nil:
 		return InstructionNil{}
-	case New:
-		return DecodeNew(ip, code)
+	case NewSimpleComposite:
+		return DecodeNewSimpleComposite(ip, code)
+	case NewComposite:
+		return DecodeNewComposite(ip, code)
+	case NewCompositeAt:
+		return DecodeNewCompositeAt(ip, code)
 	case NewPath:
 		return DecodeNewPath(ip, code)
 	case NewArray:
@@ -2694,10 +2785,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return DecodeNewClosure(ip, code)
 	case Invoke:
 		return DecodeInvoke(ip, code)
-	case InvokeMethodStatic:
-		return DecodeInvokeMethodStatic(ip, code)
-	case InvokeMethodDynamic:
-		return DecodeInvokeMethodDynamic(ip, code)
+	case InvokeDynamic:
+		return DecodeInvokeDynamic(ip, code)
 	case GetMethod:
 		return DecodeGetMethod(ip, code)
 	case Dup:
@@ -2708,6 +2797,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionDestroy{}
 	case Unwrap:
 		return InstructionUnwrap{}
+	case Wrap:
+		return InstructionWrap{}
 	case Transfer:
 		return InstructionTransfer{}
 	case TransferAndConvert:

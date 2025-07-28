@@ -308,7 +308,7 @@ func TestCheckEmitEvent(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 						return sema.ElaborationImport{
 							Elaboration: importedChecker.Elaboration,

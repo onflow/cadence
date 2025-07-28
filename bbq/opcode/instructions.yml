@@ -206,13 +206,45 @@
       - name: "value"
         type: "value"
 
-- name: "new"
-  description: Creates a new instance of the given kind and type and then pushes it onto the stack.
+- name: "newSimpleComposite"
+  description:
+    Creates a new instance of a simple composite value of given kind and type, at address 0x0,
+    and then pushes it onto the stack.
   operands:
     - name: "kind"
       type: "compositeKind"
     - name: "type"
       type: "typeIndex"
+  valueEffects:
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "newComposite"
+  description:
+    Creates a new instance of the given composite kind and type, at address 0x0,
+    and then pushes it onto the stack.
+  operands:
+    - name: "kind"
+      type: "compositeKind"
+    - name: "type"
+      type: "typeIndex"
+  valueEffects:
+    push:
+      - name: "value"
+        type: "value"
+
+- name: "newCompositeAt"
+  description:
+    Creates a new instance of the given composite kind and type, at the given address,
+    and then pushes it onto the stack.
+  operands:
+    - name: "kind"
+      type: "compositeKind"
+    - name: "type"
+      type: "typeIndex"
+    - name: "address"
+      type: "constantIndex"
   valueEffects:
     push:
       - name: "value"
@@ -336,33 +368,11 @@
   controlEffects:
     - call:
 
-- name: "invokeMethodStatic"
+- name: "invokeDynamic"
   description:
-    Pops the method and arguments off the stack, invokes the method with the arguments,
+    Invokes a method with the given name dynamically. 
+    Pops the receiver and the arguments off the stack, invokes the function with the arguments,
     and then pushes the result back on to the stack.
-    The first argument is the receiver of the method.
-  operands:
-    - name: "typeArgs"
-      type: "typeIndices"
-    - name: "argCount"
-      type: "size"
-  valueEffects:
-    pop:
-      - name: "arguments"
-        # TODO: count
-      - name: "method"
-        type: "function"
-    push:
-      - name: "result"
-        type: "value"
-  controlEffects:
-    - call:
-
-- name: "invokeMethodDynamic"
-  description:
-    Pops the arguments off the stack, invokes the method with the given name and argument count,
-    and then pushes the result back on to the stack.
-    The first argument is the receiver of the method.
   operands:
     - name: "name"
       type: "constantIndex"
@@ -442,6 +452,17 @@
         type: "value"
     push:
       - name: "value"
+        type: "value"
+
+- name: "wrap"
+  description:
+    Pops a value off the stack, wrap it with an optional, and pushes back onto the stack.
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+    push:
+      - name: "optional"
         type: "value"
 
 # Conversion instructions

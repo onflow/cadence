@@ -27,10 +27,13 @@ import (
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/bbq/vm"
+	compilerUtils "github.com/onflow/cadence/bbq/vm/test"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
@@ -210,13 +213,6 @@ func assertConditionError(
 ) {
 	RequireError(t, err)
 
-	if *compile {
-		var conditionErr stdlib.PanicError
-		require.ErrorAs(t, err, &conditionErr)
-		require.ErrorContains(t, err, "pre/post condition failed")
-		return
-	}
-
 	var conditionErr *interpreter.ConditionError
 	require.ErrorAs(t, err, &conditionErr)
 
@@ -233,13 +229,6 @@ func assertConditionErrorWithMessage(
 	message string,
 ) {
 	RequireError(t, err)
-
-	if *compile {
-		var conditionErr stdlib.PanicError
-		require.ErrorAs(t, err, &conditionErr)
-		require.ErrorContains(t, err, message)
-		return
-	}
 
 	var conditionErr *interpreter.ConditionError
 	require.ErrorAs(t, err, &conditionErr)
@@ -677,7 +666,7 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 					tearDownCode,
 				),
 				ParseCheckAndInterpretOptions{
-					Config: &interpreter.Config{
+					InterpreterConfig: &interpreter.Config{
 						ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 						OnEventEmitted: func(
 							_ interpreter.ValueExportContext,
@@ -839,9 +828,8 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 							)
 					}
 
-					checker, err := ParseAndCheck(t,
-						fmt.Sprintf(
-							`
+					code := fmt.Sprintf(
+						`
                                  access(all)
                                  event Foo(x: Int)
 
@@ -867,38 +855,12 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 
 					             %[2]s
 					           `,
-							compositeKind.Keyword(),
-							testFunction,
-						),
+						compositeKind.Keyword(),
+						testFunction,
 					)
-					require.NoError(t, err)
 
 					var events []testEvent
-
-					check := func(err error) {
-						if expectedResult.err == nil {
-							require.NoError(t, err)
-						} else {
-							require.IsType(t,
-								interpreter.Error{},
-								err,
-							)
-							err = err.(interpreter.Error).Unwrap()
-
-							require.IsType(t,
-								expectedResult.err,
-								err,
-							)
-						}
-
-						require.Len(t, events, expectedResult.events)
-					}
-
-					uuidHandler := func() (uint64, error) {
-						return 0, nil
-					}
-
-					onEventEmitted := func(
+					onEmitEvents := func(
 						_ interpreter.ValueExportContext,
 						_ interpreter.LocationRange,
 						eventType *sema.CompositeType,
@@ -911,57 +873,78 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 						return nil
 					}
 
-					if compositeKind == common.CompositeKindContract {
+					var invokable Invokable
+					var err error
 
-						storage := newUnmeteredInMemoryStorage()
+					if *compile {
+						vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+						vmConfig.ContractValueHandler = compilerUtils.ContractValueHandler(
+							"TestImpl",
+							interpreter.NewUnmeteredIntValueFromInt64(value),
+						)
+						vmConfig.OnEventEmitted = onEmitEvents
 
-						inter, err := interpreter.NewInterpreter(
-							interpreter.ProgramFromChecker(checker),
-							checker.Location,
-							&interpreter.Config{
-								Storage: storage,
-								ContractValueHandler: makeContractValueHandler(
-									[]interpreter.Value{
-										interpreter.NewUnmeteredIntValueFromInt64(value),
-									},
-									[]sema.Type{
-										sema.IntType,
-									},
-									[]sema.Type{
-										sema.IntType,
-									},
-								),
-								UUIDHandler:    uuidHandler,
-								OnEventEmitted: onEventEmitted,
+						var vmInstance *vm.VM
+						vmInstance, err = compilerUtils.CompileAndPrepareToInvoke(
+							t,
+							code,
+							compilerUtils.CompilerAndVMOptions{
+								VMConfig: vmConfig,
 							},
 						)
-						require.NoError(t, err)
 
-						err = inter.Interpret()
-						require.NoError(t, err)
-
-						_, err = inter.Invoke("test")
-						check(err)
+						invokable = test_utils.NewVMInvokable(vmInstance, nil)
 					} else {
-						storage := newUnmeteredInMemoryStorage()
-
-						inter, err := interpreter.NewInterpreter(
-							interpreter.ProgramFromChecker(checker),
-							checker.Location,
-							&interpreter.Config{
-								Storage:        storage,
-								UUIDHandler:    uuidHandler,
-								OnEventEmitted: onEventEmitted,
+						invokable, err = parseCheckAndInterpretWithOptions(t,
+							code,
+							ParseCheckAndInterpretOptions{
+								InterpreterConfig: &interpreter.Config{
+									ContractValueHandler: makeContractValueHandler(
+										[]interpreter.Value{
+											interpreter.NewUnmeteredIntValueFromInt64(value),
+										},
+										[]sema.Type{
+											sema.IntType,
+										},
+										[]sema.Type{
+											sema.IntType,
+										},
+									),
+									OnEventEmitted: onEmitEvents,
+									UUIDHandler: func() (uint64, error) {
+										return 0, nil
+									},
+								},
 							},
 						)
-						require.NoError(t, err)
-
-						err = inter.Interpret()
-						require.NoError(t, err)
-
-						_, err = inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(value))
-						check(err)
 					}
+
+					if compositeKind == common.CompositeKindContract {
+						if *compile {
+							require.NoError(t, err)
+							_, err = invokable.Invoke("test")
+						}
+
+						// parseCheckAndInterpretWithOptions already loads the contract value.
+						// So no need to explicitly call the `test` method.
+					} else {
+						require.NoError(t, err)
+						_, err = invokable.Invoke(
+							"test",
+							interpreter.NewUnmeteredIntValueFromInt64(value),
+						)
+					}
+
+					if expectedResult.err == nil {
+						require.NoError(t, err)
+					} else {
+						RequireError(t, err)
+
+						expectedError := expectedResult.err
+						require.ErrorAs(t, err, &expectedError)
+					}
+
+					require.Len(t, events, expectedResult.events)
 				})
 			}
 		})
@@ -1249,7 +1232,7 @@ func TestInterpretIsInstanceCheckInPreCondition(t *testing.T) {
 				condition,
 			),
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 				},
 			},
@@ -1359,12 +1342,14 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
           }
         `,
 		ParseCheckAndInterpretOptions{
-			CheckerConfig: &sema.Config{
-				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-					return baseValueActivation
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 			},
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 					return baseActivation
 				},

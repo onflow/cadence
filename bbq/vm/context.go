@@ -43,12 +43,18 @@ type Context struct {
 
 	invokeFunction                func(function Value, arguments []Value) (Value, error)
 	lookupFunction                func(location common.Location, name string) FunctionValue
+	recoverErrors                 func(onError func(error))
 	inStorageIteration            bool
 	storageMutatedDuringIteration bool
 	containerValueIteration       map[atree.ValueID]int
 	destroyedResources            map[atree.ValueID]struct{}
 
-	// TODO: stack-trace, location, etc.
+	// semaTypes is a cache-alike for temporary storing sema-types by their ID,
+	// to avoid repeated conversions from static-types to sema-types.
+	// This cache-alike is maintained per execution.
+	// TODO: Re-use the conversions from the compiler.
+	// TODO: Maybe extend/share this between executions.
+	semaTypes map[sema.TypeID]sema.Type
 }
 
 var _ interpreter.ReferenceTracker = &Context{}
@@ -61,11 +67,7 @@ var _ interpreter.InvocationContext = &Context{}
 
 func NewContext(config *Config) *Context {
 	return &Context{
-		Config:                         config,
-		CapabilityControllerIterations: make(map[interpreter.AddressPath]int),
-		mutationDuringCapabilityControllerIteration: false,
-		referencedResourceKindedValues:              ReferencedResourceKindedValues{},
-		destroyedResources:                          make(map[atree.ValueID]struct{}),
+		Config: config,
 	}
 }
 
@@ -88,6 +90,9 @@ func (c *Context) SetInStorageIteration(inStorageIteration bool) {
 }
 
 func (c *Context) GetCapabilityControllerIterations() map[interpreter.AddressPath]int {
+	if c.CapabilityControllerIterations == nil {
+		c.CapabilityControllerIterations = make(map[interpreter.AddressPath]int)
+	}
 	return c.CapabilityControllerIterations
 }
 
@@ -152,8 +157,12 @@ func (c *Context) MaybeValidateAtreeStorage() {
 }
 
 func (c *Context) IsTypeInfoRecovered(location common.Location) bool {
-	//TODO
-	return false
+	elaboration, err := c.ElaborationResolver(location)
+	if err != nil {
+		return false
+	}
+
+	return elaboration.IsRecovered
 }
 
 func (c *Context) WithContainerMutationPrevention(valueID atree.ValueID, f func()) {
@@ -213,13 +222,16 @@ func (c *Context) GetMemberAccessContextForLocation(_ common.Location) interpret
 func (c *Context) WithResourceDestruction(valueID atree.ValueID, locationRange interpreter.LocationRange, f func()) {
 	c.EnforceNotResourceDestruction(valueID, locationRange)
 
+	if c.destroyedResources == nil {
+		c.destroyedResources = make(map[atree.ValueID]struct{})
+	}
 	c.destroyedResources[valueID] = struct{}{}
 
 	f()
 }
 
 func (c *Context) RecoverErrors(onError func(error)) {
-	//TODO
+	c.recoverErrors(onError)
 }
 
 func (c *Context) GetValueOfVariable(name string) interpreter.Value {
@@ -232,14 +244,7 @@ func (c *Context) GetLocation() common.Location {
 	return nil
 }
 
-func (c *Context) CallStack() []interpreter.Invocation {
-	//TODO
-	return nil
-}
-
 // InvokeFunction function invokes a given function value with the given arguments.
-// For bound functions, it expects the first argument to be the receiver.
-// i.e: The caller is responsible for preparing the arguments.
 func (c *Context) InvokeFunction(
 	fn interpreter.FunctionValue,
 	arguments []interpreter.Value,
@@ -263,8 +268,7 @@ func (c *Context) GetMethod(
 ) interpreter.FunctionValue {
 	staticType := value.StaticType(c)
 
-	// TODO: avoid the sema-type conversion
-	semaType := interpreter.MustConvertStaticToSemaType(staticType, c)
+	semaType := c.SemaTypeFromStaticType(staticType)
 
 	var location common.Location
 	if locatedType, ok := semaType.(sema.LocatedType); ok {
@@ -315,10 +319,8 @@ func (c *Context) DefaultDestroyEvents(
 		return nil
 	}
 
-	// Always have the receiver as the first argument.
-	arguments := []Value{resourceValue}
-
-	events := c.InvokeFunction(method, arguments)
+	// The generated function takes no arguments.
+	events := c.InvokeFunction(method, nil)
 	eventsArray, ok := events.(*interpreter.ArrayValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -341,4 +343,43 @@ func (c *Context) DefaultDestroyEvents(
 	)
 
 	return eventValues
+}
+
+func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema.Type {
+	typeID := staticType.ID()
+	semaType, ok := c.semaTypes[typeID]
+	if ok {
+		return semaType
+	}
+
+	// TODO: avoid the sema-type conversion
+	semaType = interpreter.MustConvertStaticToSemaType(staticType, c)
+
+	if c.semaTypes == nil {
+		c.semaTypes = make(map[sema.TypeID]sema.Type)
+	}
+	c.semaTypes[typeID] = semaType
+
+	return semaType
+}
+
+func (c *Context) GetContractValue(contractLocation common.AddressLocation) *interpreter.CompositeValue {
+	return c.ContractValueHandler(c, contractLocation)
+}
+
+func (c *Context) MaybeUpdateStorageReferenceMemberReceiver(
+	storageReference *interpreter.StorageReferenceValue,
+	referencedValue Value,
+	member Value,
+) Value {
+	if boundFunction, isBoundFunction := member.(*BoundFunctionValue); isBoundFunction {
+		boundFunction.ReceiverReference = interpreter.StorageReference(
+			c,
+			storageReference,
+			referencedValue,
+		)
+		return boundFunction
+	}
+
+	return member
 }

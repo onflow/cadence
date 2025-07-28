@@ -42,7 +42,7 @@ func TestInterpretContractWithNestedDeclaration(t *testing.T) {
 	      }
 	    `,
 		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 			},
 		},
