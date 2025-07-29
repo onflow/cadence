@@ -975,6 +975,17 @@ func invokeFunction(
 			receiver = boundFunction.DereferencedReceiver(vm.context)
 		}
 		result := functionValue.Function(context, typeArguments, receiver, arguments...)
+
+		if vm.context.TracingEnabled() {
+			context := vm.context
+			defer func() {
+				context.ReportFunctionTrace(
+					functionValue.Name,
+					time.Duration(0),
+				)
+			}()
+		}
+
 		vm.push(result)
 
 	default:
