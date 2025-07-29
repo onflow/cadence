@@ -21,6 +21,7 @@ package vm
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/onflow/atree"
 
@@ -249,6 +250,17 @@ func (vm *VM) pushCallFrame(functionValue CompiledFunctionValue, receiver Value,
 }
 
 func (vm *VM) popCallFrame() {
+	if vm.context.TracingEnabled() {
+		context := vm.context
+		functionName := vm.callFrame.function.Function.QualifiedName
+		defer func() {
+			context.ReportFunctionTrace(
+				functionName,
+				time.Duration(0),
+			)
+		}()
+	}
+
 	// Close all open upvalues before popping the locals.
 	// The order of the closing does not matter
 	for absoluteLocalsIndex, upvalue := range vm.callFrame.openUpvalues { //nolint:maprange

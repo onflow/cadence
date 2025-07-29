@@ -20,9 +20,13 @@ package runtime_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/ast"
@@ -595,6 +599,8 @@ func testRuntimeFungibleTokenTransfer(tb testing.TB, useVM bool) {
 
 	signerAccount := contractsAddress
 
+	enablePrintTrace := false
+
 	runtimeInterface := &TestRuntimeInterface{
 		OnGetCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
@@ -618,13 +624,23 @@ func testRuntimeFungibleTokenTransfer(tb testing.TB, useVM bool) {
 		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(nil, b)
 		},
+
+		OnRecordTrace: func(operation string, duration time.Duration, attrs []attribute.KeyValue) {
+			if enablePrintTrace {
+				printTrace(operation, duration, attrs)
+			}
+		},
 	}
 
 	var environment Environment
 	if useVM {
-		environment = NewBaseVMEnvironment(Config{})
+		environment = NewBaseVMEnvironment(Config{
+			TracingEnabled: true,
+		})
 	} else {
-		environment = NewBaseInterpreterEnvironment(Config{})
+		environment = NewBaseInterpreterEnvironment(Config{
+			TracingEnabled: true,
+		})
 	}
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
@@ -736,6 +752,8 @@ func testRuntimeFungibleTokenTransfer(tb testing.TB, useVM bool) {
 		}
 	}
 
+	enablePrintTrace = true
+
 	for loop() {
 
 		err = runtime.ExecuteTransaction(
@@ -757,6 +775,8 @@ func testRuntimeFungibleTokenTransfer(tb testing.TB, useVM bool) {
 
 		transferCount++
 	}
+
+	enablePrintTrace = false
 
 	if b != nil {
 		b.StopTimer()
@@ -799,6 +819,38 @@ func testRuntimeFungibleTokenTransfer(tb testing.TB, useVM bool) {
 	}
 
 	RequireValuesEqual(tb, nil, mintAmountValue, sum)
+}
+
+func printTrace(
+	operationName string,
+	_ time.Duration,
+	attrs []attribute.KeyValue,
+) {
+	sb := strings.Builder{}
+	sb.WriteString(operationName)
+
+	attributesLength := len(attrs)
+
+	if attributesLength > 0 {
+		sb.WriteString(": ")
+		for i, attr := range attrs {
+
+			key := string(attr.Key)
+			if key == "value" {
+				continue
+			}
+
+			sb.WriteString(string(attr.Key))
+			sb.WriteString(":")
+			sb.WriteString(attr.Value.AsString())
+
+			if i < attributesLength-1 {
+				sb.WriteString(", ")
+			}
+		}
+	}
+
+	fmt.Println(sb.String())
 }
 
 const oldExampleToken = `
@@ -959,7 +1011,7 @@ func BenchmarkRuntimeFungibleTokenTransferInterpreter(b *testing.B) {
 }
 
 func BenchmarkRuntimeFungibleTokenTransferVM(b *testing.B) {
-	testRuntimeFungibleTokenTransfer(b, false)
+	testRuntimeFungibleTokenTransfer(b, true)
 }
 
 func getField(declaration *ast.CompositeDeclaration, name string) *ast.FieldDeclaration {

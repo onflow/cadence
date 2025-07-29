@@ -22,6 +22,9 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
+
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence/pretty"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
@@ -269,6 +272,8 @@ func interpreterFTTransfer(tb testing.TB) {
 		LocationHandler:            newSingleAddressOrStringLocationHandler(tb, contractsAddress),
 	}
 
+	enablePrintTrace := false
+
 	interConfig := &interpreter.Config{
 		Storage: storage,
 		BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
@@ -357,6 +362,12 @@ func interpreterFTTransfer(tb testing.TB) {
 		},
 		AccountHandler: func(context interpreter.AccountCreationContext, address interpreter.AddressValue) interpreter.Value {
 			return stdlib.NewAccountValue(context, nil, address)
+		},
+		TracingEnabled: true,
+		OnRecordTrace: func(operationName string, duration time.Duration, attrs []attribute.KeyValue) {
+			if enablePrintTrace {
+				printTrace(operationName, duration, attrs)
+			}
 		},
 	}
 
@@ -530,6 +541,8 @@ func interpreterFTTransfer(tb testing.TB) {
 		}
 	}
 
+	enablePrintTrace = true
+
 	for loop() {
 
 		err = inter.InvokeTransaction(
@@ -547,6 +560,8 @@ func interpreterFTTransfer(tb testing.TB) {
 	if b != nil {
 		b.StopTimer()
 	}
+
+	enablePrintTrace = false
 
 	// Run validation scripts
 
