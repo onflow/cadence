@@ -2047,11 +2047,27 @@ var (
 	Fix64TypeMinFractionalBig = fixedpoint.Fix64TypeMinFractionalBig
 	Fix64TypeMaxFractionalBig = fixedpoint.Fix64TypeMaxFractionalBig
 
-	Fix128TypeMinIntBig = Int128TypeMinIntBig.Div(Int128TypeMinIntBig, fixedpoint.Fix128FactorIntBig)
-	Fix128TypeMaxIntBig = Int128TypeMaxIntBig.Div(Int128TypeMaxIntBig, fixedpoint.Fix128FactorIntBig)
+	Fix128TypeMinIntBig = func() *big.Int {
+		fix128TypeMin := new(big.Int)
+		fix128TypeMin.Div(Int128TypeMinIntBig, fixedpoint.Fix128FactorIntBig)
+		return fix128TypeMin
+	}()
+	Fix128TypeMaxIntBig = func() *big.Int {
+		fix128TypeMax := new(big.Int)
+		fix128TypeMax.Div(Int128TypeMaxIntBig, fixedpoint.Fix128FactorIntBig)
+		return fix128TypeMax
+	}()
 
-	Fix128TypeMinFractionalBig = Int128TypeMinIntBig.Mod(Int128TypeMinIntBig, fixedpoint.Fix128FactorIntBig)
-	Fix128TypeMaxFractionalBig = Int128TypeMaxIntBig.Mod(Int128TypeMaxIntBig, fixedpoint.Fix128FactorIntBig)
+	Fix128TypeMinFractionalBig = func() *big.Int {
+		fix128TypeMinFractional := new(big.Int)
+		fix128TypeMinFractional.Mod(Int128TypeMaxIntBig, fixedpoint.Fix128FactorIntBig)
+		return fix128TypeMinFractional
+	}()
+	Fix128TypeMaxFractionalBig = func() *big.Int {
+		fix128TypeMaxFractional := new(big.Int)
+		fix128TypeMaxFractional.Mod(Int128TypeMaxIntBig, fixedpoint.Fix128FactorIntBig)
+		return fix128TypeMaxFractional
+	}()
 
 	UFix64TypeMinIntBig = fixedpoint.UFix64TypeMinIntBig
 	UFix64TypeMaxIntBig = fixedpoint.UFix64TypeMaxIntBig

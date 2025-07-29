@@ -65,6 +65,10 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 		switch fixedPointType {
 		case sema.FixedPointType, sema.SignedFixedPointType:
 			continue
+
+		// TODO: Remove once Fix128 type is supported in the interpreter
+		case sema.Fix128Type:
+			continue
 		}
 
 		if _, ok := tests[fixedPointType.String()]; !ok {
@@ -122,6 +126,10 @@ func init() {
 		// Only test leaf types
 		switch fixedPointType {
 		case sema.FixedPointType, sema.SignedFixedPointType:
+			continue
+
+		// TODO: Remove once Fix128 type is supported in the interpreter
+		case sema.Fix128Type:
 			continue
 		}
 
@@ -586,6 +594,10 @@ func TestInterpretFixedPointMinMax(t *testing.T) {
 		// Only test leaf types
 		switch ty {
 		case sema.FixedPointType, sema.SignedFixedPointType:
+			continue
+
+		// TODO: Remove once Fix128 type is supported in the interpreter
+		case sema.Fix128Type:
 			continue
 		}
 

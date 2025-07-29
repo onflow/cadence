@@ -1998,6 +1998,10 @@ func TestInterpretDereference(t *testing.T) {
 			switch typ {
 			case sema.FixedPointType, sema.SignedFixedPointType:
 				continue
+
+			// TODO: Remove once Fix128 type is supported in the interpreter
+			case sema.Fix128Type:
+				continue
 			}
 
 			fixedPointType := typ

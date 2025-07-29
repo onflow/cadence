@@ -3532,7 +3532,7 @@ func init() {
 			sema.FixedPointType, sema.SignedFixedPointType:
 			continue
 
-		// TODO: Remove once interpreter support is added
+		// TODO: Remove once Fix128 type is supported in the interpreter
 		case sema.Fix128Type:
 			continue
 

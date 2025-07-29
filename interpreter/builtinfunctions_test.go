@@ -79,6 +79,12 @@ func TestInterpretToString(t *testing.T) {
 
 	for _, ty := range sema.AllFixedPointTypes {
 
+		switch ty {
+		// TODO: Remove once Fix128 type is supported in the interpreter
+		case sema.Fix128Type:
+			continue
+		}
+
 		t.Run(ty.String(), func(t *testing.T) {
 
 			var literal string
@@ -577,6 +583,10 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 			sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType,
 			sema.FixedPointType, sema.SignedFixedPointType:
 			continue
+
+		// TODO: Remove once Fix128 type is supported in the interpreter
+		case sema.Fix128Type:
+			continue
 		}
 
 		if _, ok := typeTests[integerType.String()]; !ok {
@@ -911,6 +921,10 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 		case sema.NumberType, sema.SignedNumberType,
 			sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType,
 			sema.FixedPointType, sema.SignedFixedPointType:
+			continue
+
+		// TODO: Remove once Fix128 type is supported in the interpreter
+		case sema.Fix128Type:
 			continue
 		}
 

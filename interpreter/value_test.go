@@ -4050,6 +4050,10 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 			switch ty {
 			case sema.FixedPointType, sema.SignedFixedPointType:
 				continue
+
+			// TODO: Remove once Fix128 type is supported in the interpreter
+			case sema.Fix128Type:
+				continue
 			}
 
 			_, ok := testCases[ty.(*sema.FixedPointNumericType)]

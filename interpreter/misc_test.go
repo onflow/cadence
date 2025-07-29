@@ -6333,6 +6333,11 @@ func TestInterpretDictionaryKeyTypes(t *testing.T) {
 	}
 
 	for _, fixedPointType := range sema.AllFixedPointTypes {
+		switch fixedPointType {
+		// TODO: Remove once Fix128 type is supported in the interpreter
+		case sema.Fix128Type:
+			continue
+		}
 
 		var literal string
 
@@ -7668,6 +7673,10 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 		switch fixedPointType {
 		case sema.FixedPointType, sema.SignedFixedPointType:
+			continue
+
+		// TODO: Remove once Fix128 type is supported in the interpreter
+		case sema.Fix128Type:
 			continue
 		}
 

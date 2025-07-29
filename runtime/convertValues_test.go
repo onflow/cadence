@@ -1276,6 +1276,11 @@ func TestRuntimeExportFixedPointValuesFromScript(t *testing.T) {
 	}
 
 	for _, fixedPointType := range sema.AllFixedPointTypes {
+		switch fixedPointType {
+		// TODO: Remove once Fix128 type is supported in the interpreter
+		case sema.Fix128Type:
+			continue
+		}
 
 		var literal string
 		if sema.IsSubType(fixedPointType, sema.SignedFixedPointType) {

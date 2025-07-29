@@ -112,7 +112,15 @@ func TestInterpretPassBuiltinByValue(t *testing.T) {
 	// Check built-ins have a static type, so value transfer check works
 
 	_ = sema.BaseValueActivation.ForEach(
-		func(name string, _ *sema.Variable) error {
+		func(name string, variable *sema.Variable) error {
+
+			// TODO: Remove once Fix128 type is supported in the interpreter
+			if funcType, ok := variable.Type.(*sema.FunctionType); ok {
+				typ := funcType.TypeFunctionType
+				if typ != nil && typ.Equal(sema.Fix128Type) {
+					return nil
+				}
+			}
 
 			t.Run(name, func(t *testing.T) {
 

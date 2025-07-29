@@ -729,6 +729,12 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 		sema.AllSignedFixedPointTypes,
 	) {
 
+		switch ty {
+		// TODO: Remove once Fix128 type is supported in the interpreter
+		case sema.Fix128Type:
+			continue
+		}
+
 		testCase, ok := testCases[ty]
 
 		if ty == sema.IntType {
@@ -754,6 +760,12 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 		sema.AllUnsignedIntegerTypes,
 		sema.AllUnsignedFixedPointTypes,
 	) {
+
+		switch ty {
+		// TODO: Remove once Fix128 type is supported in the interpreter
+		case sema.Fix128Type:
+			continue
+		}
 
 		if strings.HasPrefix(ty.String(), "Word") {
 			continue
