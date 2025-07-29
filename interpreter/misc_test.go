@@ -4190,7 +4190,7 @@ func TestInterpretImportError(t *testing.T) {
 	)
 	RequireError(t, err)
 
-	var panicErr stdlib.PanicError
+	var panicErr *stdlib.PanicError
 	require.ErrorAs(t, err, &panicErr)
 
 	assert.Equal(t,

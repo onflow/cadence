@@ -1439,6 +1439,35 @@ func (i InstructionUnwrap) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
+// InstructionWrap
+//
+// Pops a value off the stack, wrap it with an optional, and pushes back onto the stack.
+type InstructionWrap struct {
+}
+
+var _ Instruction = InstructionWrap{}
+
+func (InstructionWrap) Opcode() Opcode {
+	return Wrap
+}
+
+func (i InstructionWrap) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionWrap) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionWrap) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
+func (i InstructionWrap) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
 // InstructionTransfer
 //
 // Pops a value off the stack, calls transfer, and then pushes it back on to the stack.
@@ -2768,6 +2797,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionDestroy{}
 	case Unwrap:
 		return InstructionUnwrap{}
+	case Wrap:
+		return InstructionWrap{}
 	case Transfer:
 		return InstructionTransfer{}
 	case TransferAndConvert:

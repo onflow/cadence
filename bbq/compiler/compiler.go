@@ -2306,6 +2306,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 					},
 				)
 			},
+			true,
 		)
 
 		return
@@ -2362,6 +2363,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 					ArgCount: argumentCount,
 				})
 			},
+			true,
 		)
 	}
 }
@@ -2374,10 +2376,17 @@ func (c *Compiler[_, _]) withOptionalChaining(
 	targetExpression ast.Expression,
 	isOptional bool,
 	ifNotNil func(),
+	isMethodInvocation bool,
 ) {
 	nilJump := c.compileOptionalChainingNilJump(targetExpression, isOptional)
+
 	ifNotNil()
-	c.patchOptionalChainingNilJump(isOptional, nilJump)
+
+	c.patchOptionalChainingNilJump(
+		isOptional,
+		isMethodInvocation,
+		nilJump,
+	)
 }
 
 // compileOptionalChainingNilJump compiles the nil-check for optional chaining.
@@ -2406,12 +2415,20 @@ func (c *Compiler[_, _]) compileOptionalChainingNilJump(
 	return nilJump
 }
 
-func (c *Compiler[_, _]) patchOptionalChainingNilJump(isOptional bool, nilJump int) {
+func (c *Compiler[_, _]) patchOptionalChainingNilJump(
+	isOptional bool,
+	isMethodInvocation bool,
+	nilJump int,
+) {
 	if !isOptional {
 		return
 	}
 
-	// TODO: Need to wrap the result back with an optional, if `memberAccessInfo.IsOptional`
+	if isMethodInvocation {
+		// Wrap the result back with an optional, if `memberAccessInfo.IsOptional`
+		c.emit(opcode.InstructionWrap{})
+	}
+
 	// Jump to the end to skip the nil returning instructions.
 	jumpToEnd := c.emitUndefinedJump()
 
@@ -2519,6 +2536,7 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 
 			c.compileMemberAccess(expression)
 		},
+		false,
 	)
 
 	return

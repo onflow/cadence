@@ -6982,7 +6982,7 @@ func TestCompileOptionalChaining(t *testing.T) {
 
 				// Nil check
 				opcode.InstructionGetLocal{Local: optionalValueTempIndex},
-				opcode.InstructionJumpIfNil{Target: 14},
+				opcode.InstructionJumpIfNil{Target: 15},
 
 				// If `foo != nil`
 				// Unwrap the optional. (Loads receiver)
@@ -6992,7 +6992,8 @@ func TestCompileOptionalChaining(t *testing.T) {
 				// Load `Foo.bar` function
 				opcode.InstructionGetMethod{Method: 4},
 				opcode.InstructionInvoke{ArgCount: 0},
-				opcode.InstructionJump{Target: 15},
+				opcode.InstructionWrap{},
+				opcode.InstructionJump{Target: 16},
 
 				// If `foo == nil`
 				opcode.InstructionNil{},
@@ -9109,14 +9110,15 @@ func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
 			opcode.InstructionGetLocal{Local: siIndex},
 			opcode.InstructionSetLocal{Local: tempIndex},
 			opcode.InstructionGetLocal{Local: tempIndex},
-			opcode.InstructionJumpIfNil{Target: 9},
+			opcode.InstructionJumpIfNil{Target: 10},
 			opcode.InstructionGetLocal{Local: tempIndex},
 			opcode.InstructionUnwrap{},
 			opcode.InstructionInvokeDynamic{
 				Name:     0,
 				ArgCount: 0,
 			},
-			opcode.InstructionJump{Target: 10},
+			opcode.InstructionWrap{},
+			opcode.InstructionJump{Target: 11},
 			opcode.InstructionNil{},
 			opcode.InstructionTransferAndConvert{Type: 1},
 			opcode.InstructionReturnValue{},

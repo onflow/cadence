@@ -223,6 +223,7 @@ func TestPrintInstruction(t *testing.T) {
 		"Equal":    {byte(Equal)},
 		"NotEqual": {byte(NotEqual)},
 
+		"Wrap":    {byte(Wrap)},
 		"Unwrap":  {byte(Unwrap)},
 		"Destroy": {byte(Destroy)},
 		"True":    {byte(True)},

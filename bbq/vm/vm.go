@@ -76,6 +76,8 @@ func NewVM(
 	context.invokeFunction = vm.invokeFunction
 	context.lookupFunction = vm.lookupFunction
 
+	context.recoverErrors = vm.RecoverErrors
+
 	// Link global variables and functions.
 	linkedGlobals := LinkGlobals(
 		config.MemoryGauge,
@@ -271,13 +273,6 @@ func (vm *VM) popCallFrame() {
 	}
 }
 
-func RecoverErrors(onError func(error)) {
-	if r := recover(); r != nil {
-		err := interpreter.AsCadenceError(r)
-		onError(err)
-	}
-}
-
 func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err error) {
 	functionVariable := vm.globals.Find(name)
 	if functionVariable == nil {
@@ -286,7 +281,7 @@ func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err er
 		}
 	}
 
-	defer RecoverErrors(func(internalErr error) {
+	defer vm.RecoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
@@ -317,7 +312,7 @@ func (vm *VM) InvokeMethodExternally(
 		}
 	}
 
-	defer RecoverErrors(func(internalErr error) {
+	defer vm.RecoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
@@ -391,7 +386,7 @@ func (vm *VM) InitializeContract(contractName string, arguments ...Value) (*inte
 
 func (vm *VM) InvokeTransaction(arguments []Value, signers ...Value) (err error) {
 
-	defer RecoverErrors(func(internalErr error) {
+	defer vm.RecoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
@@ -1012,10 +1007,10 @@ func opNewSimpleComposite(vm *VM, ins opcode.InstructionNewSimpleComposite) {
 
 	compositeStaticType := staticType.(*interpreter.CompositeStaticType)
 
-	config := vm.context
+	context := vm.context
 
 	compositeValue := interpreter.NewSimpleCompositeValue(
-		config,
+		context,
 		compositeStaticType.TypeID,
 		compositeStaticType,
 		nil,
@@ -1063,12 +1058,12 @@ func newCompositeValue(
 
 	compositeStaticType := staticType.(*interpreter.CompositeStaticType)
 
-	config := vm.context
+	context := vm.context
 
-	compositeFields := newCompositeValueFields(config, compositeKind)
+	compositeFields := newCompositeValueFields(context, compositeKind)
 
 	return interpreter.NewCompositeValue(
-		config,
+		context,
 		EmptyLocationRange,
 		compositeStaticType.Location,
 		compositeStaticType.QualifiedIdentifier,
@@ -1359,6 +1354,12 @@ func opUnwrap(vm *VM) {
 	}
 }
 
+func opWrap(vm *VM) {
+	value := vm.peek()
+	optional := interpreter.NewSomeValueNonCopying(vm.context, value)
+	vm.replaceTop(optional)
+}
+
 func opNewArray(vm *VM, ins opcode.InstructionNewArray) {
 	typeIndex := ins.Type
 	typ := vm.loadType(typeIndex).(interpreter.ArrayStaticType)
@@ -1474,29 +1475,6 @@ func opStringTemplate(vm *VM, ins opcode.InstructionTemplateString) {
 }
 
 func (vm *VM) run() {
-
-	defer func() {
-		if r := recover(); r != nil {
-			if locatedError, ok := r.(interpreter.HasLocationRange); ok {
-				locatedError.SetLocationRange(vm.LocationRange())
-			}
-
-			if vm.context.debugEnabled {
-				switch r.(type) {
-				case errors.UserError, errors.ExternalError:
-					// do nothing
-				default:
-					printInstructionError(
-						vm.callFrame.function.Function,
-						int(vm.ip),
-						r,
-					)
-				}
-			}
-
-			panic(r)
-		}
-	}()
 
 	entryPointCallStackSize := len(vm.callstack)
 
@@ -1645,6 +1623,8 @@ func (vm *VM) run() {
 			opNotEqual(vm)
 		case opcode.InstructionNot:
 			opNot(vm)
+		case opcode.InstructionWrap:
+			opWrap(vm)
 		case opcode.InstructionUnwrap:
 			opUnwrap(vm)
 		case opcode.InstructionEmitEvent:
@@ -1950,17 +1930,90 @@ func (vm *VM) Global(name string) Value {
 // LocationRange returns the location of the currently executing instruction.
 // This is an expensive operation and must be only used on-demand.
 func (vm *VM) LocationRange() interpreter.LocationRange {
+	// If the error occurs even before the VM starts executing,
+	// e.g: computation/memory metering errors,
+	// then use an empty-location-range, which points to the start of the program.
+	if vm.callFrame == nil {
+		return EmptyLocationRange
+	}
+
 	currentFunction := vm.callFrame.function
-	lineNumbers := currentFunction.Function.LineNumbers
 
 	// `vm.ip` always points to the next instruction.
 	lastInstructionIndex := vm.ip - 1
 
-	position := lineNumbers.GetSourcePosition(lastInstructionIndex)
+	return locationRangeOfInstruction(currentFunction, lastInstructionIndex)
+}
+
+func locationRangeOfInstruction(function CompiledFunctionValue, instructionIndex uint16) interpreter.LocationRange {
+	lineNumbers := function.Function.LineNumbers
+	position := lineNumbers.GetSourcePosition(instructionIndex)
 
 	return interpreter.LocationRange{
-		Location:    currentFunction.Executable.Location,
+		Location:    function.Executable.Location,
 		HasPosition: position,
+	}
+}
+
+func (vm *VM) callStackLocations() []interpreter.LocationRange {
+	if len(vm.callstack) <= 1 {
+		return nil
+	}
+
+	// Skip the current level. It is already included in the parent error.
+	callstack := vm.callstack[:len(vm.callstack)-1]
+
+	locationRanges := make([]interpreter.LocationRange, 0, len(vm.stack))
+
+	for index, stackFrame := range callstack {
+		function := stackFrame.function
+		ip := vm.ipStack[index]
+		locationRange := locationRangeOfInstruction(function, ip)
+
+		locationRanges = append(locationRanges, locationRange)
+	}
+
+	return locationRanges
+}
+
+func (vm *VM) RecoverErrors(onError func(error)) {
+	if r := recover(); r != nil {
+		// Recover all errors, because VM can be directly invoked by FVM.
+		cadenceError := interpreter.AsCadenceError(r)
+
+		currentLocation := vm.LocationRange()
+
+		if locatedError, ok := cadenceError.(interpreter.HasLocationRange); ok {
+			locatedError.SetLocationRange(currentLocation)
+		}
+
+		// if the error is not yet an interpreter error, wrap it
+		if _, ok := cadenceError.(interpreter.Error); !ok {
+			cadenceError = interpreter.Error{
+				Err:      cadenceError,
+				Location: currentLocation.Location,
+			}
+		}
+
+		err := cadenceError.(interpreter.Error)
+		err.StackTrace = vm.callStackLocations()
+
+		// For debug purpose only
+
+		if vm.context.debugEnabled {
+			switch r.(type) {
+			case errors.UserError, errors.ExternalError:
+				// do nothing
+			default:
+				printInstructionError(
+					vm.callFrame.function.Function,
+					int(vm.ip),
+					r,
+				)
+			}
+		}
+
+		onError(err)
 	}
 }
 
