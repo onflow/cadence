@@ -172,8 +172,8 @@ const (
 	_ // future: Fix16
 	_ // future: Fix32
 	fix64TypeMask
-	_ // future: Fix128
-	_ // future: Fix256
+	fix128TypeMask // future: Fix128
+	_              // future: Fix256
 
 	_ // future: UFix8
 	_ // future: UFix16
@@ -268,7 +268,8 @@ var (
 			Or(UnsignedIntegerTypeTag)
 
 	SignedFixedPointTypeTag = newTypeTagFromLowerMask(signedFixedPointTypeMask).
-				Or(Fix64TypeTag)
+				Or(Fix64TypeTag).
+				Or(Fix128TypeTag)
 
 	UnsignedFixedPointTypeTag = newTypeTagFromLowerMask(unsignedFixedPointTypeMask).
 					Or(UFix64TypeTag)
@@ -310,6 +311,7 @@ var (
 	Word256TypeTag = newTypeTagFromLowerMask(word256TypeMask)
 
 	Fix64TypeTag  = newTypeTagFromLowerMask(fix64TypeMask)
+	Fix128TypeTag = newTypeTagFromLowerMask(fix128TypeMask)
 	UFix64TypeTag = newTypeTagFromLowerMask(ufix64TypeMask)
 
 	StringTypeTag           = newTypeTagFromLowerMask(stringTypeMask)
@@ -598,6 +600,8 @@ func findSuperTypeFromLowerMask(joinedTypeTag TypeTag, types []Type) Type {
 
 	case fix64TypeMask:
 		return Fix64Type
+	case fix128TypeMask:
+		return Fix128Type
 	case ufix64TypeMask:
 		return UFix64Type
 

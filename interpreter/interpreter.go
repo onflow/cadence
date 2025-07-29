@@ -3531,6 +3531,11 @@ func init() {
 			sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType,
 			sema.FixedPointType, sema.SignedFixedPointType:
 			continue
+
+		// TODO: Remove once interpreter support is added
+		case sema.Fix128Type:
+			continue
+
 		}
 
 		// todo use TypeID's here?

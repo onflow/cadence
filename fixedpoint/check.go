@@ -40,6 +40,14 @@ const Fix64TypeMaxFractional = math.MaxInt64 % Fix64Factor
 var Fix64TypeMinFractionalBig = new(big.Int).SetInt64(Fix64TypeMinFractional)
 var Fix64TypeMaxFractionalBig = new(big.Int).SetInt64(Fix64TypeMaxFractional)
 
+// Fix128
+
+// TOD0:
+const Fix128Scale = 8
+const Fix128Factor = 100_000_000
+
+var Fix128FactorIntBig = new(big.Int).SetInt64(Fix128Factor)
+
 // UFix64
 
 const UFix64TypeMinInt = 0

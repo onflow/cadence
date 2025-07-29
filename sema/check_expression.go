@@ -291,7 +291,8 @@ func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpr
 	if IsSameTypeKind(expectedType, FixedPointType) {
 		actualType = expectedType
 	} else if expression.Negative {
-		actualType = Fix64Type
+		// If the type is not provided, always assume the type with the largest range.
+		actualType = Fix128Type
 	} else {
 		actualType = UFix64Type
 	}

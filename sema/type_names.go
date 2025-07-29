@@ -51,5 +51,6 @@ const (
 	Word256TypeName = "Word256"
 
 	Fix64TypeName  = "Fix64"
+	Fix128TypeName = "Fix128"
 	UFix64TypeName = "UFix64"
 )

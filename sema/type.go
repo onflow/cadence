@@ -1899,6 +1899,21 @@ var Fix64Type = NewFixedPointNumericType(Fix64TypeName).
 	})
 var Fix64TypeAnnotation = NewTypeAnnotation(Fix64Type)
 
+// Fix128Type represents the 128-bit signed decimal fixed-point type `Fix128`
+// which has a scale of Fix128Scale, and checks for overflow and underflow.
+var Fix128Type = NewFixedPointNumericType(Fix128TypeName).
+	WithTag(Fix128TypeTag).
+	WithIntRange(Fix128TypeMinIntBig, Fix128TypeMaxIntBig).
+	WithFractionalRange(Fix128TypeMinFractionalBig, Fix128TypeMaxFractionalBig).
+	WithScale(Fix128Scale).
+	WithSaturatingFunctions(SaturatingArithmeticSupport{
+		Add:      true,
+		Subtract: true,
+		Multiply: true,
+		Divide:   true,
+	})
+var Fix128TypeAnnotation = NewTypeAnnotation(Fix128Type)
+
 // UFix64Type represents the 64-bit unsigned decimal fixed-point type `UFix64`
 // which has a scale of 1E9, and checks for overflow and underflow
 var UFix64Type = NewFixedPointNumericType(UFix64TypeName).
@@ -2032,6 +2047,12 @@ var (
 	Fix64TypeMinFractionalBig = fixedpoint.Fix64TypeMinFractionalBig
 	Fix64TypeMaxFractionalBig = fixedpoint.Fix64TypeMaxFractionalBig
 
+	Fix128TypeMinIntBig = Int128TypeMinIntBig.Div(Int128TypeMinIntBig, fixedpoint.Fix128FactorIntBig)
+	Fix128TypeMaxIntBig = Int128TypeMaxIntBig.Div(Int128TypeMaxIntBig, fixedpoint.Fix128FactorIntBig)
+
+	Fix128TypeMinFractionalBig = Int128TypeMinIntBig.Mod(Int128TypeMinIntBig, fixedpoint.Fix128FactorIntBig)
+	Fix128TypeMaxFractionalBig = Int128TypeMaxIntBig.Mod(Int128TypeMaxIntBig, fixedpoint.Fix128FactorIntBig)
+
 	UFix64TypeMinIntBig = fixedpoint.UFix64TypeMinIntBig
 	UFix64TypeMaxIntBig = fixedpoint.UFix64TypeMaxIntBig
 
@@ -2071,6 +2092,8 @@ const Fix64TypeMaxInt = fixedpoint.Fix64TypeMaxInt
 
 const Fix64TypeMinFractional = fixedpoint.Fix64TypeMinFractional
 const Fix64TypeMaxFractional = fixedpoint.Fix64TypeMaxFractional
+
+const Fix128Scale = fixedpoint.Fix128Scale
 
 const UFix64TypeMinInt = fixedpoint.UFix64TypeMinInt
 const UFix64TypeMaxInt = fixedpoint.UFix64TypeMaxInt
@@ -4274,6 +4297,7 @@ var BaseValueActivation = NewVariableActivation(nil)
 
 var AllSignedFixedPointTypes = []Type{
 	Fix64Type,
+	Fix128Type,
 }
 
 var AllUnsignedFixedPointTypes = []Type{
@@ -7568,7 +7592,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 	case FixedPointType:
 		switch subType {
-		case FixedPointType, SignedFixedPointType,
+		case FixedPointType,
+			SignedFixedPointType,
 			UFix64Type:
 
 			return true
@@ -7579,7 +7604,9 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 	case SignedFixedPointType:
 		switch subType {
-		case SignedFixedPointType, Fix64Type:
+		case SignedFixedPointType,
+			Fix64Type,
+			Fix128Type:
 			return true
 
 		default:
