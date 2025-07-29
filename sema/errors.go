@@ -895,6 +895,8 @@ type InvalidNativeModifierError struct {
 
 var _ SemanticError = &InvalidNativeModifierError{}
 var _ errors.UserError = &InvalidNativeModifierError{}
+var _ errors.SecondaryError = &InvalidNativeModifierError{}
+var _ errors.HasDocumentationLink = &InvalidNativeModifierError{}
 
 func (*InvalidNativeModifierError) isSemanticError() {}
 
@@ -902,6 +904,14 @@ func (*InvalidNativeModifierError) IsUserError() {}
 
 func (e *InvalidNativeModifierError) Error() string {
 	return "invalid native modifier for declaration"
+}
+
+func (e *InvalidNativeModifierError) SecondaryError() string {
+	return "the native modifier can only be used on function declarations; remove the native modifier or use a function declaration"
+}
+
+func (*InvalidNativeModifierError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax#reserved-identifiers"
 }
 
 // NativeFunctionWithImplementationError
@@ -2255,6 +2265,8 @@ type InvalidNestedResourceMoveError struct {
 
 var _ SemanticError = &InvalidNestedResourceMoveError{}
 var _ errors.UserError = &InvalidNestedResourceMoveError{}
+var _ errors.SecondaryError = &InvalidNestedResourceMoveError{}
+var _ errors.HasDocumentationLink = &InvalidNestedResourceMoveError{}
 
 func (*InvalidNestedResourceMoveError) isSemanticError() {}
 
@@ -2262,6 +2274,14 @@ func (*InvalidNestedResourceMoveError) IsUserError() {}
 
 func (e *InvalidNestedResourceMoveError) Error() string {
 	return "cannot move nested resource"
+}
+
+func (e *InvalidNestedResourceMoveError) SecondaryError() string {
+	return "nested resources cannot be moved independently; move the containing resource instead"
+}
+
+func (*InvalidNestedResourceMoveError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources#nested-resources"
 }
 
 // InvalidInterfaceConditionResourceInvalidationError
@@ -3764,7 +3784,7 @@ func (e *InvalidNestedDeclarationError) SecondaryError() string {
 }
 
 func (*InvalidNestedDeclarationError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/"
+	return "https://cadence-lang.org/docs/language/types-and-type-system/composite-types"
 }
 
 // InvalidNestedTypeError
@@ -3775,6 +3795,8 @@ type InvalidNestedTypeError struct {
 
 var _ SemanticError = &InvalidNestedTypeError{}
 var _ errors.UserError = &InvalidNestedTypeError{}
+var _ errors.SecondaryError = &InvalidNestedTypeError{}
+var _ errors.HasDocumentationLink = &InvalidNestedTypeError{}
 
 func (*InvalidNestedTypeError) isSemanticError() {}
 
@@ -3785,6 +3807,14 @@ func (e *InvalidNestedTypeError) Error() string {
 		"type does not support nested types: `%s`",
 		e.Type,
 	)
+}
+
+func (e *InvalidNestedTypeError) SecondaryError() string {
+	return fmt.Sprintf("only composite types (struct, resource, contract, enum) can contain nested type declarations; the type `%s` is not a composite type", e.Type)
+}
+
+func (*InvalidNestedTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/composite-types"
 }
 
 func (e *InvalidNestedTypeError) StartPosition() ast.Position {
@@ -4739,11 +4769,14 @@ func (e *InvalidMappingAccessMemberTypeError) EndPosition(_ common.MemoryGauge) 
 
 // InvalidNonEntitlementAccessError
 type InvalidNonEntitlementAccessError struct {
+	Type Type
 	ast.Range
 }
 
 var _ SemanticError = &InvalidNonEntitlementAccessError{}
 var _ errors.UserError = &InvalidNonEntitlementAccessError{}
+var _ errors.SecondaryError = &InvalidNonEntitlementAccessError{}
+var _ errors.HasDocumentationLink = &InvalidNonEntitlementAccessError{}
 
 func (*InvalidNonEntitlementAccessError) isSemanticError() {}
 
@@ -4751,6 +4784,14 @@ func (*InvalidNonEntitlementAccessError) IsUserError() {}
 
 func (e *InvalidNonEntitlementAccessError) Error() string {
 	return "only entitlements may be used in access modifiers"
+}
+
+func (e *InvalidNonEntitlementAccessError) SecondaryError() string {
+	return fmt.Sprintf("`%s` is a %s, not an entitlement", e.Type.QualifiedString(), e.Type.String())
+}
+
+func (*InvalidNonEntitlementAccessError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control#entitlements"
 }
 
 // MappingAccessMissingKeywordError

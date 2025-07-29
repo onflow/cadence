@@ -2072,6 +2072,7 @@ func (checker *Checker) accessFromAstAccess(access ast.Access) (result Access) {
 					} else {
 						checker.report(
 							&InvalidNonEntitlementAccessError{
+								Type:  nominalType,
 								Range: ast.NewRangeFromPositioned(checker.memoryGauge, entitlement),
 							},
 						)

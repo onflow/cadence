@@ -481,7 +481,8 @@ func generateErrors() []namedError {
 		},
 		{"sema.InvalidEventUsageError",
 			&sema.InvalidEventUsageError{
-				Range: placeholderRange,
+				EventName: placeholderString,
+				Range:     placeholderRange,
 			},
 		},
 		{"sema.InvalidFailableResourceDowncastOutsideOptionalBindingError",
@@ -608,6 +609,7 @@ func generateErrors() []namedError {
 		},
 		{"sema.InvalidNonEntitlementAccessError",
 			&sema.InvalidNonEntitlementAccessError{
+				Type:  placeholderSemaType,
 				Range: placeholderRange,
 			},
 		},
