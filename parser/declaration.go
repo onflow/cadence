@@ -1958,7 +1958,6 @@ func parseSpecialFunctionDeclaration(
 
 	case KeywordDestroy:
 		// Calculate the full range of the destructor function
-		startPos := ast.EarliestPosition(identifier.Pos, accessPos, purityPos, staticPos, nativePos)
 		var endPos ast.Position
 		if functionBlock != nil {
 			endPos = functionBlock.EndPosition(p.memoryGauge)
