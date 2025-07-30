@@ -7805,7 +7805,7 @@ func TestParseDestructor(t *testing.T) {
 	// Direct unit test for SuggestFixes
 	t.Run("SuggestFixes", func(t *testing.T) {
 		t.Parallel()
-		
+
 		destructorRange := ast.Range{
 			StartPos: destroyStartPos,
 			EndPos:   destroyEndPos,
@@ -7827,6 +7827,8 @@ func TestParseDestructor(t *testing.T) {
 
 	// End-to-end test: apply suggested fix to code
 	t.Run("SuggestFixes apply edit to code", func(t *testing.T) {
+		t.Parallel()
+
 		// Note: This test uses a slightly different end position
 		destroyEndPosWithBrace := ast.Position{Offset: 49, Line: 3, Column: 24}
 
@@ -7851,11 +7853,13 @@ func TestParseDestructor(t *testing.T) {
 
 	// Test that CustomDestructorError implements errors.HasMigrationNote and returns the expected migration note
 	t.Run("CustomDestructorError_HasMigrationNote", func(t *testing.T) {
+		t.Parallel()
+
 		err := &CustomDestructorError{}
 		noteProvider, ok := interface{}(err).(errors.HasMigrationNote)
 		require.True(t, ok, "CustomDestructorError should implement errors.HasMigrationNote")
 		note := noteProvider.MigrationNote()
-		assert.Equal(t, note, "This is pre-Cadence 1.0 syntax. Support for custom destructors was removed. Custom cleanup logic should be moved to a separate function called before destruction.")
+		assert.Equal(t, note, "This is pre-Cadence 1.0 syntax. Support for custom destructors was removed. Any custom cleanup logic should be moved to a separate function, and must be explicitly called before the destruction.")
 	})
 }
 
