@@ -296,7 +296,7 @@ func (e *MissingCommaInParameterListError) SuggestFixes(code string) []errors.Su
 
 	// Use strings.TrimRight to find where the non-whitespace ends
 	beforeError := code[:errorPos]
-	trimmed := strings.TrimRight(beforeError, " \t")
+	trimmed := strings.TrimRightFunc(beforeError, unicode.IsSpace)
 	whitespaceStart := len(trimmed)
 
 	// Create a position for the start of whitespace
