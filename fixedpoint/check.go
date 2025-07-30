@@ -42,11 +42,13 @@ var Fix64TypeMaxFractionalBig = new(big.Int).SetInt64(Fix64TypeMaxFractional)
 
 // Fix128
 
-// TOD0:
-const Fix128Scale = 8
-const Fix128Factor = 100_000_000
+const Fix128Scale = 24
 
-var Fix128FactorIntBig = new(big.Int).SetInt64(Fix128Factor)
+var Fix128FactorIntBig = new(big.Int).Exp(
+	big.NewInt(10),
+	big.NewInt(Fix128Scale),
+	nil,
+)
 
 // UFix64
 
