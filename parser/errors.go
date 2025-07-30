@@ -21,6 +21,7 @@ package parser
 import (
 	"fmt"
 	"strings"
+	"unicode"
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
@@ -159,14 +160,14 @@ func (*InvalidIntegerLiteralError) IsUserError() {}
 func (e *InvalidIntegerLiteralError) Error() string {
 	if e.IntegerLiteralKind == common.IntegerLiteralKindUnknown {
 		return fmt.Sprintf(
-			"Invalid integer literal `%s`: %s",
+			"invalid integer literal `%s`: %s",
 			e.Literal,
 			e.InvalidIntegerLiteralKind.Description(),
 		)
 	}
 
 	return fmt.Sprintf(
-		"Invalid %s integer literal `%s`: %s",
+		"invalid %s integer literal `%s`: %s",
 		e.IntegerLiteralKind.Name(),
 		e.Literal,
 		e.InvalidIntegerLiteralKind.Description(),

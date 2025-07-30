@@ -547,7 +547,7 @@ func (e *IncorrectArgumentLabelError) SecondaryError() string {
 		expected = fmt.Sprintf("`%s`", e.ExpectedArgumentLabel)
 	}
 	return fmt.Sprintf(
-		"expected %s, got `%s`. Function calls must use the exact argument labels defined in the function signature",
+		"expected %s, got `%s`; function calls must use the exact argument labels defined in the function signature",
 		expected,
 		e.ActualArgumentLabel,
 	)
