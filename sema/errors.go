@@ -722,7 +722,12 @@ func (e *InvalidBinaryOperandsError) Error() string {
 func (e *InvalidBinaryOperandsError) SecondaryError() string {
 	switch e.Operation {
 	case ast.OperationOr, ast.OperationAnd:
-		return fmt.Sprintf("Logical operators `%s` require boolean operands; both operands must be of type `Bool`, but got `%s` and `%s`", e.Operation.Symbol(), e.LeftType.QualifiedString(), e.RightType.QualifiedString())
+		return fmt.Sprintf(
+			"Logical operator `%s` requires both operands to be of type `Bool`, but got `%s` and `%s`",
+			e.Operation.Symbol(),
+			e.LeftType.QualifiedString(),
+			e.RightType.QualifiedString(),
+		)
 	case ast.OperationPlus, ast.OperationMinus, ast.OperationMul, ast.OperationDiv, ast.OperationMod:
 		return fmt.Sprintf("Arithmetic operators require numeric operands of the same type; got `%s` and `%s` which are incompatible", e.LeftType.QualifiedString(), e.RightType.QualifiedString())
 	case ast.OperationBitwiseOr, ast.OperationBitwiseAnd, ast.OperationBitwiseXor, ast.OperationBitwiseLeftShift, ast.OperationBitwiseRightShift:
