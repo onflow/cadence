@@ -348,7 +348,7 @@ func (e *CustomDestructorError) EndPosition(_ common.MemoryGauge) ast.Position {
 }
 
 func (e *CustomDestructorError) Error() string {
-	return "custom destructor definitions are no longer permitted in Cadence 1.0+"
+	return "custom destructor definitions are no longer permitted since Cadence v1.0"
 }
 
 func (e *CustomDestructorError) SecondaryError() string {
