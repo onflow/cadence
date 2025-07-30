@@ -327,7 +327,7 @@ func (e *MissingCommaInParameterListError) DocumentationLink() string {
 
 type CustomDestructorError struct {
 	Pos             ast.Position
-	DestructorRange ast.Range
+	ast.Range
 }
 
 var _ ParseError = &CustomDestructorError{}
