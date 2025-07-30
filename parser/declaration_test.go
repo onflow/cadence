@@ -7793,7 +7793,7 @@ func TestParseDestructor(t *testing.T) {
 		[]error{
 			&CustomDestructorError{
 				Pos: destroyStartPos,
-				DestructorRange: ast.Range{
+				Range: ast.Range{
 					StartPos: destroyStartPos,
 					EndPos:   destroyEndPos,
 				},
@@ -7811,8 +7811,8 @@ func TestParseDestructor(t *testing.T) {
 			EndPos:   destroyEndPos,
 		}
 		err := &CustomDestructorError{
-			Pos:             destroyStartPos,
-			DestructorRange: destructorRange,
+			Pos:   destroyStartPos,
+			Range: destructorRange,
 		}
 		assert.Equal(t, []errors.SuggestedFix[ast.TextEdit]{
 			{
@@ -7834,7 +7834,7 @@ func TestParseDestructor(t *testing.T) {
 
 		err := &CustomDestructorError{
 			Pos: destroyStartPos,
-			DestructorRange: ast.Range{
+			Range: ast.Range{
 				StartPos: destroyStartPos,
 				EndPos:   destroyEndPosWithBrace,
 			},

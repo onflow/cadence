@@ -326,7 +326,7 @@ func (e *MissingCommaInParameterListError) DocumentationLink() string {
 // CustomDestructorError
 
 type CustomDestructorError struct {
-	Pos             ast.Position
+	Pos ast.Position
 	ast.Range
 }
 
@@ -367,7 +367,7 @@ func (e *CustomDestructorError) SuggestFixes(_ string) []errors.SuggestedFix[ast
 			TextEdits: []ast.TextEdit{
 				{
 					Replacement: "",
-					Range:       e.DestructorRange,
+					Range:       e.Range,
 				},
 			},
 		},
