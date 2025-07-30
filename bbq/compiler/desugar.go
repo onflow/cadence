@@ -1388,6 +1388,7 @@ func (d *Desugar) addImport(location common.Location) {
 				[]ast.Identifier{
 					ast.NewIdentifier(d.memoryGauge, location.Name, ast.EmptyPosition),
 				},
+				map[string]string{},
 				location,
 				ast.EmptyRange,
 				ast.EmptyPosition,
