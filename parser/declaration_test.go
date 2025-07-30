@@ -7804,6 +7804,8 @@ func TestParseDestructor(t *testing.T) {
 
 	// Direct unit test for SuggestFixes
 	t.Run("SuggestFixes", func(t *testing.T) {
+		t.Parallel()
+		
 		destructorRange := ast.Range{
 			StartPos: destroyStartPos,
 			EndPos:   destroyEndPos,
