@@ -215,7 +215,7 @@ func (e ExpressionDepthLimitReachedError) Error() string {
 }
 
 func (e ExpressionDepthLimitReachedError) SecondaryError() string {
-	return "Consider breaking the expression into smaller parts or using intermediate variables"
+	return "Consider extracting the sub-expressions out and storing the intermediate results in local variables"
 }
 
 func (e ExpressionDepthLimitReachedError) StartPosition() ast.Position {
