@@ -286,13 +286,13 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 					" --> 2a00000000000000.Test:4:18\n" +
 					"  |\n" +
 					"4 |               fun testCase() {}\n" +
-					"  |                   ^^^^^^^^\n" +
+					"  |                   ^^^^^^^^ move the declaration inside a contract or function\n" +
 					"\n" +
 					"error: missing access modifier for function\n" +
 					" --> 2a00000000000000.Test:4:14\n" +
 					"  |\n" +
 					"4 |               fun testCase() {}\n" +
-					"  |               ^\n"
+					"  |               ^ add an access modifier like `access(all)`, `access(contract)`, or `access(self)`\n"
 		}
 
 		test(t, testCase{

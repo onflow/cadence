@@ -809,6 +809,6 @@ func TestRuntimeContractUpdateWithOldProgramError(t *testing.T) {
 
 	require.ErrorContains(t,
 		err,
-		"pub contract Foo {\n  | \t\t^^^\n\nerror: `pub` is no longer a valid access keyword",
+		"pub contract Foo {\n  | \t\t^^^ use `access(all)` instead\n\nerror: `pub` is no longer a valid access keyword",
 	)
 }

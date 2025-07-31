@@ -311,8 +311,10 @@ func TestParseVariableDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid view modifier for variable",
-					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:       "invalid view modifier for variable",
+					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
+					Secondary:     "the `view` modifier can only be used on functions",
+					Documentation: "https://cadence-lang.org/docs/language/functions#view-functions",
 				},
 			},
 			errs,
@@ -592,7 +594,6 @@ func TestParseParameterList(t *testing.T) {
 		)
 	})
 }
-
 func TestParseFunctionDeclaration(t *testing.T) {
 
 	t.Parallel()
@@ -1337,7 +1338,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			errs,
 		)
 	})
-
 	t.Run("access(all) static native, enabled", func(t *testing.T) {
 
 		t.Parallel()
@@ -2071,7 +2071,6 @@ func TestParseAccess(t *testing.T) {
 	})
 
 }
-
 func TestParseImportDeclaration(t *testing.T) {
 
 	t.Parallel()
@@ -2862,7 +2861,6 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 		)
 	})
 }
-
 func TestParseField(t *testing.T) {
 
 	t.Parallel()
@@ -3625,7 +3623,6 @@ func TestParseCompositeDeclaration(t *testing.T) {
 			result,
 		)
 	})
-
 	t.Run("struct with view initializer", func(t *testing.T) {
 
 		t.Parallel()
@@ -3693,8 +3690,10 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid view modifier for variable",
-					Pos:     ast.Position{Offset: 15, Line: 2, Column: 3},
+					Message:       "invalid view modifier for variable",
+					Pos:           ast.Position{Offset: 15, Line: 2, Column: 3},
+					Secondary:     "the `view` modifier can only be used on functions",
+					Documentation: "https://cadence-lang.org/docs/language/functions#view-functions",
 				},
 			},
 			errs,
@@ -4314,7 +4313,6 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		)
 	})
 }
-
 func TestParseInterfaceDeclaration(t *testing.T) {
 
 	t.Parallel()
@@ -4770,8 +4768,10 @@ func TestParseEnumDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid view modifier for enum case",
-					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+					Message:       "invalid view modifier for enum case",
+					Pos:           ast.Position{Offset: 10, Line: 1, Column: 10},
+					Secondary:     "the `view` modifier can only be used on functions",
+					Documentation: "https://cadence-lang.org/docs/language/functions#view-functions",
 				},
 			},
 			errs,
@@ -4854,7 +4854,6 @@ func TestParseEnumDeclaration(t *testing.T) {
 		)
 	})
 }
-
 func TestParseTransactionDeclaration(t *testing.T) {
 
 	t.Parallel()
@@ -5635,7 +5634,6 @@ func TestParseTransactionDeclaration(t *testing.T) {
 		)
 	})
 }
-
 func TestParseFunctionAndBlock(t *testing.T) {
 
 	t.Parallel()
@@ -6384,7 +6382,6 @@ func TestParsePreAndPostConditions(t *testing.T) {
 		result.Declarations(),
 	)
 }
-
 func TestParseConditionMessage(t *testing.T) {
 
 	t.Parallel()
@@ -6885,8 +6882,10 @@ func TestParsePragmaNoArguments(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid view modifier for pragma",
-					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:       "invalid view modifier for pragma",
+					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
+					Secondary:     "the `view` modifier can only be used on functions",
+					Documentation: "https://cadence-lang.org/docs/language/functions#view-functions",
 				},
 			},
 			errs,
@@ -7168,7 +7167,6 @@ func TestParseFunctionWithFromIdentifier(t *testing.T) {
 	_, errs := testParseProgram(code)
 	require.Empty(t, errs)
 }
-
 func TestParseImportWithFromIdentifier(t *testing.T) {
 
 	t.Parallel()
@@ -7214,8 +7212,10 @@ func TestParseInvalidImportWithPurity(t *testing.T) {
 	AssertEqualWithDiff(t,
 		[]error{
 			&SyntaxError{
-				Message: "invalid view modifier for import",
-				Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
+				Message:       "invalid view modifier for import",
+				Pos:           ast.Position{Offset: 9, Line: 2, Column: 8},
+				Secondary:     "the `view` modifier can only be used on functions",
+				Documentation: "https://cadence-lang.org/docs/language/functions#view-functions",
 			},
 		},
 		errs,
@@ -7267,8 +7267,10 @@ func TestParseInvalidEventWithPurity(t *testing.T) {
 	AssertEqualWithDiff(t,
 		[]error{
 			&SyntaxError{
-				Message: "invalid view modifier for event",
-				Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
+				Message:       "invalid view modifier for event",
+				Pos:           ast.Position{Offset: 9, Line: 2, Column: 8},
+				Secondary:     "the `view` modifier can only be used on functions",
+				Documentation: "https://cadence-lang.org/docs/language/functions#view-functions",
 			},
 		},
 		errs,
@@ -7287,8 +7289,10 @@ func TestParseInvalidCompositeWithPurity(t *testing.T) {
 	AssertEqualWithDiff(t,
 		[]error{
 			&SyntaxError{
-				Message: "invalid view modifier for struct",
-				Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
+				Message:       "invalid view modifier for struct",
+				Pos:           ast.Position{Offset: 9, Line: 2, Column: 8},
+				Secondary:     "the `view` modifier can only be used on functions",
+				Documentation: "https://cadence-lang.org/docs/language/functions#view-functions",
 			},
 		},
 		errs,
@@ -7307,8 +7311,10 @@ func TestParseInvalidTransactionWithPurity(t *testing.T) {
 	AssertEqualWithDiff(t,
 		[]error{
 			&SyntaxError{
-				Message: "invalid view modifier for transaction",
-				Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
+				Message:       "invalid view modifier for transaction",
+				Pos:           ast.Position{Offset: 9, Line: 2, Column: 8},
+				Secondary:     "the `view` modifier can only be used on functions",
+				Documentation: "https://cadence-lang.org/docs/language/functions#view-functions",
 			},
 		},
 		errs,
@@ -7986,7 +7992,6 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 		result.Declarations(),
 	)
 }
-
 func TestParseInvalidCompositeFunctionNames(t *testing.T) {
 
 	t.Parallel()
@@ -8637,7 +8642,6 @@ func TestParseTransactionWithModifier(t *testing.T) {
 		)
 	})
 }
-
 func TestParseNestedPragma(t *testing.T) {
 
 	t.Parallel()
@@ -8980,8 +8984,10 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid view modifier for entitlement",
-					Pos:     ast.Position{Offset: 13, Line: 1, Column: 13},
+					Message:       "invalid view modifier for entitlement",
+					Pos:           ast.Position{Offset: 13, Line: 1, Column: 13},
+					Secondary:     "the `view` modifier can only be used on functions",
+					Documentation: "https://cadence-lang.org/docs/language/functions#view-functions",
 				},
 			},
 			errs,
@@ -9186,7 +9192,6 @@ func TestParseMemberDocStrings(t *testing.T) {
 	})
 
 }
-
 func TestParseEntitlementMappingDeclaration(t *testing.T) {
 
 	t.Parallel()
@@ -9795,12 +9800,12 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxErrorWithSuggestedReplacement{
-					Message: "`pub` is no longer a valid access keyword",
-					Range: ast.Range{
-						StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
-						EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
-					},
-					SuggestedFix: "access(all)",
+					Message:       "`pub` is no longer a valid access keyword",
+					Range:         ast.Range{StartPos: ast.Position{Offset: 1, Line: 1, Column: 1}, EndPos: ast.Position{Offset: 3, Line: 1, Column: 3}},
+					SuggestedFix:  "access(all)",
+					Secondary:     "use `access(all)` instead",
+					Documentation: "https://cadence-lang.org/docs/language/access-control",
+					Migration:     "This is pre-Cadence 1.0 syntax. The `pub` and `priv` keywords were deprecated in favor of the new access control system",
 				},
 			},
 			errs,
@@ -9816,12 +9821,12 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxErrorWithSuggestedReplacement{
-					Message: "`priv` is no longer a valid access keyword",
-					Range: ast.Range{
-						StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
-						EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
-					},
-					SuggestedFix: "access(self)",
+					Message:       "`priv` is no longer a valid access keyword",
+					Range:         ast.Range{StartPos: ast.Position{Offset: 1, Line: 1, Column: 1}, EndPos: ast.Position{Offset: 4, Line: 1, Column: 4}},
+					SuggestedFix:  "access(self)",
+					Secondary:     "use `access(self)` instead",
+					Documentation: "https://cadence-lang.org/docs/language/access-control",
+					Migration:     "This is pre-Cadence 1.0 syntax. The `pub` and `priv` keywords were deprecated in favor of the new access control system",
 				},
 			},
 			errs,
@@ -9837,8 +9842,10 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "`pub(set)` is no longer a valid access keyword",
-					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
+					Message:       "`pub(set)` is no longer a valid access keyword",
+					Pos:           ast.Position{Offset: 1, Line: 1, Column: 1},
+					Migration:     "This is pre-Cadence 1.0 syntax. The `pub(set)` pattern was deprecated and has no direct equivalent in the new access control system",
+					Documentation: "https://cadence-lang.org/docs/cadence-migration-guide/improvements#-motivation-11",
 				},
 			},
 			errs,

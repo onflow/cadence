@@ -67,8 +67,11 @@ type ParseError interface {
 // SyntaxError
 
 type SyntaxError struct {
-	Message string
-	Pos     ast.Position
+	Message       string
+	Secondary     string
+	Migration     string
+	Documentation string
+	Pos           ast.Position
 }
 
 func NewSyntaxError(pos ast.Position, message string, params ...any) *SyntaxError {
@@ -80,6 +83,9 @@ func NewSyntaxError(pos ast.Position, message string, params ...any) *SyntaxErro
 
 var _ ParseError = &SyntaxError{}
 var _ errors.UserError = &SyntaxError{}
+var _ errors.HasMigrationNote = &SyntaxError{}
+var _ errors.HasDocumentationLink = &SyntaxError{}
+var _ errors.SecondaryError = &SyntaxError{}
 
 func (*SyntaxError) isParseError() {}
 
@@ -97,11 +103,43 @@ func (e *SyntaxError) Error() string {
 	return e.Message
 }
 
+func (e *SyntaxError) SecondaryError() string {
+	return e.Secondary
+}
+
+func (e *SyntaxError) MigrationNote() string {
+	return e.Migration
+}
+
+func (e *SyntaxError) DocumentationLink() string {
+	return e.Documentation
+}
+
+// Helper methods to set additional error information
+
+func (e *SyntaxError) WithSecondary(secondary string) *SyntaxError {
+	e.Secondary = secondary
+	return e
+}
+
+func (e *SyntaxError) WithMigration(migration string) *SyntaxError {
+	e.Migration = migration
+	return e
+}
+
+func (e *SyntaxError) WithDocumentation(documentation string) *SyntaxError {
+	e.Documentation = documentation
+	return e
+}
+
 // SyntaxErrorWithSuggestedFix
 
 type SyntaxErrorWithSuggestedReplacement struct {
-	Message      string
-	SuggestedFix string
+	Message       string
+	SuggestedFix  string
+	Secondary     string
+	Migration     string
+	Documentation string
 	ast.Range
 }
 
@@ -117,6 +155,9 @@ func NewSyntaxErrorWithSuggestedReplacement(r ast.Range, message string, suggest
 
 var _ ParseError = &SyntaxErrorWithSuggestedReplacement{}
 var _ errors.UserError = &SyntaxErrorWithSuggestedReplacement{}
+var _ errors.SecondaryError = &SyntaxErrorWithSuggestedReplacement{}
+var _ errors.HasDocumentationLink = &SyntaxErrorWithSuggestedReplacement{}
+var _ errors.HasMigrationNote = &SyntaxErrorWithSuggestedReplacement{}
 
 func (*SyntaxErrorWithSuggestedReplacement) isParseError() {}
 
@@ -137,6 +178,35 @@ func (e *SyntaxErrorWithSuggestedReplacement) SuggestFixes(_ string) []errors.Su
 			},
 		},
 	}
+}
+
+func (e *SyntaxErrorWithSuggestedReplacement) SecondaryError() string {
+	return e.Secondary
+}
+
+func (e *SyntaxErrorWithSuggestedReplacement) DocumentationLink() string {
+	return e.Documentation
+}
+
+func (e *SyntaxErrorWithSuggestedReplacement) MigrationNote() string {
+	return e.Migration
+}
+
+// Helper methods to set additional error information
+
+func (e *SyntaxErrorWithSuggestedReplacement) WithSecondary(secondary string) *SyntaxErrorWithSuggestedReplacement {
+	e.Secondary = secondary
+	return e
+}
+
+func (e *SyntaxErrorWithSuggestedReplacement) WithMigration(migration string) *SyntaxErrorWithSuggestedReplacement {
+	e.Migration = migration
+	return e
+}
+
+func (e *SyntaxErrorWithSuggestedReplacement) WithDocumentation(documentation string) *SyntaxErrorWithSuggestedReplacement {
+	e.Documentation = documentation
+	return e
 }
 
 // InvalidIntegerLiteralError
