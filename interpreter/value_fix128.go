@@ -1,0 +1,615 @@
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright Flow Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package interpreter
+
+import (
+	"encoding/binary"
+	"fmt"
+	"unsafe"
+
+	"github.com/onflow/atree"
+
+	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/format"
+	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/values"
+	fix "github.com/onflow/fixed-point"
+)
+
+// Fix128Value
+type Fix128Value fix.Fix128
+
+const fix128Size = int(unsafe.Sizeof(Fix128Value{}))
+
+var fix128MemoryUsage = common.NewNumberMemoryUsage(fix128Size)
+
+func NewFix128ValueWithInteger(gauge common.MemoryGauge, constructor func() int64, locationRange LocationRange) Fix128Value {
+	common.UseMemory(gauge, fix128MemoryUsage)
+	return NewUnmeteredFix128ValueWithInteger(constructor(), locationRange)
+}
+
+func NewUnmeteredFix128ValueWithInteger(integer int64, locationRange LocationRange) Fix128Value {
+
+	if integer < sema.Fix64TypeMinInt {
+		panic(&UnderflowError{
+			LocationRange: locationRange,
+		})
+	}
+
+	if integer > sema.Fix64TypeMaxInt {
+		panic(&OverflowError{
+			LocationRange: locationRange,
+		})
+	}
+
+	return NewUnmeteredFix128Value(integer * sema.Fix64Factor)
+}
+
+func NewFix128Value(gauge common.MemoryGauge, valueGetter func() fix.Fix128) Fix128Value {
+	common.UseMemory(gauge, fix64MemoryUsage)
+	return NewUnmeteredFix128Value(valueGetter())
+}
+
+func NewUnmeteredFix128Value(integer fix.Fix128) Fix128Value {
+	return Fix128Value(integer)
+}
+
+func NewFix128ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
+	return NewFix128Value(
+		gauge,
+		func() fix.Fix128 {
+			bytes := padWithZeroes(b, 8)
+			lo := binary.BigEndian.Uint64(bytes[:8])
+			lo := binary.BigEndian.Uint64(bytes[:8])
+			return fix.Fix128{
+				Lo: uint64(lo),
+				Hi: 0,
+			}
+		},
+	)
+}
+
+var _ Value = Fix128Value{}
+var _ atree.Storable = Fix128Value{}
+var _ NumberValue = Fix128Value{}
+var _ FixedPointValue = Fix128Value{}
+var _ EquatableValue = Fix128Value{}
+var _ ComparableValue = Fix128Value{}
+var _ HashableValue = Fix128Value{}
+var _ MemberAccessibleValue = Fix128Value{}
+
+func (Fix128Value) IsValue() {}
+
+func (v Fix128Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+	visitor.VisitFix128Value(context, v)
+}
+
+func (Fix128Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+	// NO-OP
+}
+
+func (Fix128Value) StaticType(context ValueStaticTypeContext) StaticType {
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeFix64)
+}
+
+func (Fix128Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+	return true
+}
+
+func (v Fix128Value) String() string {
+	return format.Fix64(int64(v))
+}
+
+func (v Fix128Value) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v Fix128Value) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+	common.UseMemory(
+		context,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(context, v),
+		),
+	)
+	return v.String()
+}
+
+func (v Fix128Value) ToInt(_ LocationRange) int {
+	return int(v / sema.Fix64Factor)
+}
+
+func (v Fix128Value) Negate(context NumberValueArithmeticContext, locationRange LocationRange) NumberValue {
+	valueGetter := func() fix.Fix128 {
+		neg, err := fix.Fix128(v).Neg()
+		handleFixedpointError(err, locationRange)
+		return neg
+	}
+
+	return NewFix128Value(context, valueGetter)
+}
+
+func (v Fix128Value) Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(Fix128Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			Operation:     ast.OperationPlus,
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
+			LocationRange: locationRange,
+		})
+	}
+
+	valueGetter := func() fix.Fix128 {
+		result, err := fix.Fix128(v).Add(fix.Fix128(o))
+		// Should panic on overflow/underflow
+		handleFixedpointError(err, locationRange)
+		return result
+	}
+
+	return NewFix128Value(context, valueGetter)
+}
+
+func (v Fix128Value) SaturatingPlus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(Fix128Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			FunctionName:  sema.NumericTypeSaturatingAddFunctionName,
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
+			LocationRange: locationRange,
+		})
+	}
+
+	valueGetter := func() fix.Fix128 {
+		return performSaturationArithmatic(fix.Fix128(v).Add, o)
+	}
+
+	return NewFix128Value(context, valueGetter)
+}
+
+func (v Fix128Value) Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(Fix128Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			Operation:     ast.OperationMinus,
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
+			LocationRange: locationRange,
+		})
+	}
+
+	valueGetter := func() fix.Fix128 {
+		result, err := fix.Fix128(v).Sub(fix.Fix128(o))
+		// Should panic on overflow/underflow
+		handleFixedpointError(err, locationRange)
+		return result
+	}
+
+	return NewFix128Value(context, valueGetter)
+}
+
+func (v Fix128Value) SaturatingMinus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(Fix128Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			FunctionName:  sema.NumericTypeSaturatingSubtractFunctionName,
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
+			LocationRange: locationRange,
+		})
+	}
+
+	valueGetter := func() fix.Fix128 {
+		return performSaturationArithmatic(fix.Fix128(v).Sub, o)
+	}
+
+	return NewFix128Value(context, valueGetter)
+}
+
+func (v Fix128Value) Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(Fix128Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			Operation:     ast.OperationMul,
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
+			LocationRange: locationRange,
+		})
+	}
+
+	valueGetter := func() fix.Fix128 {
+		result, err := fix.Fix128(v).Mul(fix.Fix128(o))
+		// Should panic on overflow/underflow
+		handleFixedpointError(err, locationRange)
+		return result
+	}
+
+	return NewFix128Value(context, valueGetter)
+}
+
+func (v Fix128Value) SaturatingMul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(Fix128Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			FunctionName:  sema.NumericTypeSaturatingMultiplyFunctionName,
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
+			LocationRange: locationRange,
+		})
+	}
+
+	valueGetter := func() fix.Fix128 {
+		return performSaturationArithmatic(fix.Fix128(v).Mul, o)
+	}
+
+	return NewFix128Value(context, valueGetter)
+}
+
+func (v Fix128Value) Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(Fix128Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			Operation:     ast.OperationDiv,
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
+			LocationRange: locationRange,
+		})
+	}
+
+	valueGetter := func() fix.Fix128 {
+		result, err := fix.Fix128(v).Div(fix.Fix128(o))
+		// Should panic on overflow/underflow
+		handleFixedpointError(err, locationRange)
+		return result
+	}
+
+	return NewFix128Value(context, valueGetter)
+}
+
+func (v Fix128Value) SaturatingDiv(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(Fix128Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			FunctionName:  sema.NumericTypeSaturatingDivideFunctionName,
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
+			LocationRange: locationRange,
+		})
+	}
+
+	valueGetter := func() fix.Fix128 {
+		return performSaturationArithmatic(fix.Fix128(v).Div, o)
+	}
+
+	return NewFix128Value(context, valueGetter)
+}
+
+func (v Fix128Value) Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(Fix128Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			Operation:     ast.OperationMod,
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
+			LocationRange: locationRange,
+		})
+	}
+
+	// v - int(v/o) * o
+	quotient, ok := v.Div(context, o, locationRange).(Fix128Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			Operation:     ast.OperationMod,
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
+			LocationRange: locationRange,
+		})
+	}
+
+	truncatedQuotient := NewFix128Value(
+		context,
+		func() int64 {
+			return (int64(quotient) / sema.Fix64Factor) * sema.Fix64Factor
+		},
+	)
+
+	return v.Minus(
+		context,
+		truncatedQuotient.Mul(context, o, locationRange),
+		locationRange,
+	)
+}
+
+func (v Fix128Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(Fix128Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			Operation:     ast.OperationLess,
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
+			LocationRange: locationRange,
+		})
+	}
+
+	this := fix.Fix128(v)
+	that := fix.Fix128(o)
+
+	return BoolValue(this.Lt(that))
+}
+
+func (v Fix128Value) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(Fix128Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			Operation:     ast.OperationLessEqual,
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
+			LocationRange: locationRange,
+		})
+	}
+
+	this := fix.Fix128(v)
+	that := fix.Fix128(o)
+
+	return BoolValue(this.Lte(that))
+}
+
+func (v Fix128Value) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(Fix128Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			Operation:     ast.OperationGreater,
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
+			LocationRange: locationRange,
+		})
+	}
+
+	this := fix.Fix128(v)
+	that := fix.Fix128(o)
+
+	return BoolValue(this.Gt(that))
+}
+
+func (v Fix128Value) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(Fix128Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			Operation:     ast.OperationGreaterEqual,
+			LeftType:      v.StaticType(context),
+			RightType:     other.StaticType(context),
+			LocationRange: locationRange,
+		})
+	}
+
+	this := fix.Fix128(v)
+	that := fix.Fix128(o)
+
+	return BoolValue(this.Gte(that))
+}
+
+func (v Fix128Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
+	otherFix64, ok := other.(Fix128Value)
+	if !ok {
+		return false
+	}
+	return v == otherFix64
+}
+
+// HashInput returns a byte slice containing:
+// - HashInputTypeFix64 (1 byte)
+// - low 64 bits encoded in big-endian (8 bytes)
+// - high 64 bits encoded in big-endian (8 bytes)
+func (v Fix128Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+	scratch[0] = byte(HashInputTypeFix128)
+
+	fix128 := fix.Fix128(v)
+	binary.BigEndian.PutUint64(scratch[1:], uint64(fix128.Lo))
+	binary.BigEndian.PutUint64(scratch[9:], uint64(fix128.Hi))
+	return scratch[:17]
+}
+
+func ConvertFix128(memoryGauge common.MemoryGauge, value Value, locationRange LocationRange) Fix128Value {
+	switch value := value.(type) {
+	case Fix128Value:
+		return value
+
+	// TODO:
+	//case UFix128Value:
+	//	if value.UFix128Value > Fix64MaxValue {
+	//		panic(&OverflowError{
+	//			LocationRange: locationRange,
+	//		})
+	//	}
+	//	return NewFix128Value(
+	//		memoryGauge,
+	//		func() int64 {
+	//			return int64(value.UFix128Value)
+	//		},
+	//	)
+
+	case BigNumberValue:
+		converter := func() int64 {
+			v := value.ToBigInt(memoryGauge)
+
+			// First, check if the value is at least in the int64 range.
+			// The integer range for Fix64 is smaller, but this test at least
+			// allows us to call `v.Int64()` safely.
+
+			if !v.IsInt64() {
+				panic(&OverflowError{
+					LocationRange: locationRange,
+				})
+			}
+
+			return v.Int64()
+		}
+
+		// Now check that the integer value fits the range of Fix64
+		return NewFix128ValueWithInteger(memoryGauge, converter, locationRange)
+
+	case NumberValue:
+		// Check that the integer value fits the range of Fix64
+		return NewFix128ValueWithInteger(
+			memoryGauge,
+			func() int64 {
+				return int64(value.ToInt(locationRange))
+			},
+			locationRange,
+		)
+
+	default:
+		panic(fmt.Sprintf("can't convert Fix64: %s", value))
+	}
+}
+
+func (v Fix128Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+	return context.GetMethod(v, name, locationRange)
+}
+
+func (v Fix128Value) GetMethod(
+	context MemberAccessibleContext,
+	locationRange LocationRange,
+	name string,
+) FunctionValue {
+	return getNumberValueFunctionMember(context, v, name, sema.Fix64Type, locationRange)
+}
+
+func (Fix128Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+	// Numbers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
+func (Fix128Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+	// Numbers have no settable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
+func (v Fix128Value) ToBigEndianBytes() []byte {
+	fix128 := fix.Fix128(v)
+
+	// TODO: Verify
+	b := make([]byte, 16)
+	binary.BigEndian.PutUint64(b[:8], uint64(fix128.Lo))
+	binary.BigEndian.PutUint64(b[8:], uint64(fix128.Hi))
+	return b
+}
+
+func (v Fix128Value) ConformsToStaticType(
+	_ ValueStaticTypeConformanceContext,
+	_ LocationRange,
+	_ TypeConformanceResults,
+) bool {
+	return true
+}
+
+func (Fix128Value) IsStorable() bool {
+	return true
+}
+
+func (v Fix128Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+	return v, nil
+}
+
+func (Fix128Value) NeedsStoreTo(_ atree.Address) bool {
+	return false
+}
+
+func (Fix128Value) IsResourceKinded(_ ValueStaticTypeContext) bool {
+	return false
+}
+
+func (v Fix128Value) Transfer(
+	context ValueTransferContext,
+	_ LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+	_ map[atree.ValueID]struct{},
+	_ bool,
+) Value {
+	if remove {
+		RemoveReferencedSlab(context, storable)
+	}
+	return v
+}
+
+func (v Fix128Value) Clone(_ ValueCloneContext) Value {
+	return v
+}
+
+func (Fix128Value) DeepRemove(_ ValueRemoveContext, _ bool) {
+	// NO-OP
+}
+
+func (v Fix128Value) ByteSize() uint32 {
+	fix128 := fix.Fix128(v)
+	return values.CBORTagSize +
+		values.GetIntCBORSize(int64(fix128.Lo)) +
+		values.GetIntCBORSize(int64(fix128.Hi))
+}
+
+func (v Fix128Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (Fix128Value) ChildStorables() []atree.Storable {
+	return nil
+}
+
+func (v Fix128Value) IntegerPart() NumberValue {
+	return UInt64Value(v / sema.Fix64Factor)
+}
+
+func (Fix128Value) Scale() int {
+	return sema.Fix64Scale
+}
+
+func handleFixedpointError(err error, _ LocationRange) {
+	if err == nil {
+		return
+	}
+
+	// TODO: handle/wrap external error with a cadence overflow/underflow error.
+	panic(err)
+}
+
+func performSaturationArithmatic(
+	operation func(value fix.Fix128) (fix.Fix128, error),
+	otherValue Fix128Value,
+) fix.Fix128 {
+	result, err := operation(fix.Fix128(otherValue))
+
+	// Should not panic on overflow/underflow
+
+	// TODO: Switch on error type, rather than value.
+	// 	Need changes to the library.
+	switch err {
+	case fix.ErrOverflow, fix.ErrNegOverflow:
+		return fix.Fix128Max
+	case fix.ErrUnderflow:
+		return fix.Fix128Min
+	default:
+		panic(err)
+	}
+
+	return result
+}
