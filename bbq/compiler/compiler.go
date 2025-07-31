@@ -21,6 +21,7 @@ package compiler
 import (
 	"math"
 	"math/big"
+	"strings"
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
@@ -89,6 +90,12 @@ type Compiler[E, T any] struct {
 	// This could be also reused during compilation to desugar expressions and statements.
 	// Important: It must NOT be reused to desugar any top-level declaration, after the initial use.
 	desugar *Desugar
+
+	// used for import aliasing, maps an alias back to its original name
+	// e.g. Foo1 -> Foo
+	// this is used for all global (var/func) loads
+	// this allows us to map all aliases back to their original type
+	globalAliasTable map[string]string
 }
 
 type constantsCacheKey struct {
@@ -177,6 +184,7 @@ func newCompiler[E, T any](
 		codeGen:             codeGen,
 		typeGen:             typeGen,
 		postConditionsIndex: -1,
+		globalAliasTable:    make(map[string]string),
 	}
 }
 
@@ -2153,6 +2161,8 @@ func (c *Compiler[_, _]) emitVariableLoad(name string) {
 }
 
 func (c *Compiler[_, _]) emitGlobalLoad(name string) {
+	// we might need to antialias this name
+	name = c.applyTypeAliases(name)
 	global := c.findGlobal(name)
 	c.emit(opcode.InstructionGetGlobal{
 		Global: global.Index,
@@ -2160,6 +2170,9 @@ func (c *Compiler[_, _]) emitGlobalLoad(name string) {
 }
 
 func (c *Compiler[_, _]) emitMethodLoad(name string) {
+	// we might need to antialias part of this name
+	// we might need to antialias this name
+	name = c.applyTypeAliases(name)
 	global := c.findGlobal(name)
 	c.emit(opcode.InstructionGetMethod{
 		Method: global.Index,
@@ -3280,11 +3293,34 @@ func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclarati
 		panic(err)
 	}
 
+	// construct aliasing table
+	for k, v := range declaration.Aliases {
+		// we have Foo -> Foo1
+		// we want the reverse Foo1 -> Foo
+		// since aliases must be unique this map is valid
+		// note the other direction is not a valid 1:1 map
+		c.globalAliasTable[v] = k
+	}
+
 	for _, location := range resolvedLocations {
 		c.addGlobalsFromImportedProgram(location.Location)
 	}
 
 	return
+}
+
+// Applies type aliases to a given string.
+// Generalized to support type qualified names (e.g. methods like Foo.bar)
+func (c *Compiler[_, _]) applyTypeAliases(name string) string {
+	parts := strings.Split(name, ".")
+	for i, part := range parts {
+		alias, ok := c.globalAliasTable[part]
+		if ok {
+			parts[i] = alias
+		}
+	}
+	aliasedName := strings.Join(parts, ".")
+	return aliasedName
 }
 
 func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location) {
