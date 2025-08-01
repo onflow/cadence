@@ -21,6 +21,7 @@ package interpreter
 import (
 	"encoding/binary"
 	"fmt"
+	"math/big"
 	"unsafe"
 
 	"github.com/onflow/atree"
@@ -36,6 +37,12 @@ import (
 
 // Fix128Value
 type Fix128Value fix.Fix128
+
+// TODO: Move to encode.go
+func (v Fix128Value) Encode(encoder *atree.Encoder) error {
+	//TODO implement me
+	panic("implement me")
+}
 
 const fix128Size = int(unsafe.Sizeof(Fix128Value{}))
 
@@ -60,7 +67,8 @@ func NewUnmeteredFix128ValueWithInteger(integer int64, locationRange LocationRan
 		})
 	}
 
-	return NewUnmeteredFix128Value(integer * sema.Fix64Factor)
+	fix128 := fix.NewFix128(uint64(integer), 0)
+	return Fix128Value(fix128)
 }
 
 func NewFix128Value(gauge common.MemoryGauge, valueGetter func() fix.Fix128) Fix128Value {
@@ -77,12 +85,9 @@ func NewFix128ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value 
 		gauge,
 		func() fix.Fix128 {
 			bytes := padWithZeroes(b, 8)
-			lo := binary.BigEndian.Uint64(bytes[:8])
-			lo := binary.BigEndian.Uint64(bytes[:8])
-			return fix.Fix128{
-				Lo: uint64(lo),
-				Hi: 0,
-			}
+			hi := binary.BigEndian.Uint64(bytes[:8])
+			lo := binary.BigEndian.Uint64(bytes[8:])
+			return fix.NewFix128(hi, lo)
 		},
 	)
 }
@@ -132,8 +137,17 @@ func (v Fix128Value) MeteredString(context ValueStringContext, _ SeenReferences,
 	return v.String()
 }
 
-func (v Fix128Value) ToInt(_ LocationRange) int {
-	return int(v / sema.Fix64Factor)
+func (v Fix128Value) ToInt(locationRange LocationRange) int {
+	fix128BigInt := v.toBigInt()
+	integerPart := fix128BigInt.Div(fix128BigInt, sema.Fix128FactorIntBig)
+
+	if !integerPart.IsInt64() {
+		panic(&OverflowError{
+			LocationRange: locationRange,
+		})
+	}
+
+	return int(integerPart.Int64())
 }
 
 func (v Fix128Value) Negate(context NumberValueArithmeticContext, locationRange LocationRange) NumberValue {
@@ -314,6 +328,7 @@ func (v Fix128Value) Mod(context NumberValueArithmeticContext, other NumberValue
 	}
 
 	// v - int(v/o) * o
+
 	quotient, ok := v.Div(context, o, locationRange).(Fix128Value)
 	if !ok {
 		panic(&InvalidOperandsError{
@@ -326,8 +341,10 @@ func (v Fix128Value) Mod(context NumberValueArithmeticContext, other NumberValue
 
 	truncatedQuotient := NewFix128Value(
 		context,
-		func() int64 {
-			return (int64(quotient) / sema.Fix64Factor) * sema.Fix64Factor
+		func() fix.Fix128 {
+			quotientFix128 := fix.Fix128(quotient)
+			divided, err := quotientFix128.Div(sema.Fix128FactorIntBig)
+			return divided.Mul(sema.Fix128FactorInt)
 		},
 	)
 
@@ -508,8 +525,8 @@ func (v Fix128Value) ToBigEndianBytes() []byte {
 
 	// TODO: Verify
 	b := make([]byte, 16)
-	binary.BigEndian.PutUint64(b[:8], uint64(fix128.Lo))
-	binary.BigEndian.PutUint64(b[8:], uint64(fix128.Hi))
+	binary.BigEndian.PutUint64(b[:8], uint64(fix128.Hi))
+	binary.BigEndian.PutUint64(b[8:], uint64(fix128.Lo))
 	return b
 }
 
@@ -576,11 +593,34 @@ func (Fix128Value) ChildStorables() []atree.Storable {
 }
 
 func (v Fix128Value) IntegerPart() NumberValue {
-	return UInt64Value(v / sema.Fix64Factor)
+	fix128BigInt := v.toBigInt()
+
+	integerPart := fix128BigInt.Div(fix128BigInt, sema.Fix128FactorIntBig)
+
+	// The max length of the integer part is 128-bits.
+	// Therefore, return an `Int128`.
+	return NewUnmeteredInt128ValueFromBigInt(integerPart)
 }
 
 func (Fix128Value) Scale() int {
-	return sema.Fix64Scale
+	return sema.Fix128Scale
+}
+
+func (v Fix128Value) toBigInt() *big.Int {
+	fix128 := fix.Fix128(v)
+
+	hi := new(big.Int).SetUint64(uint64(fix128.Hi))
+	lo := new(big.Int).SetUint64(uint64(fix128.Lo))
+
+	fix128Integer := hi.Lsh(hi, 64)
+	return fix128Integer.Add(fix128Integer, lo)
+}
+
+func fix128FromBigInt(b *big.Int) fix.Fix128 {
+	bytes := b.FillBytes(make([]byte, 16))
+	hi := new(big.Int).SetBytes(bytes[:8]).Uint64()
+	lo := new(big.Int).SetBytes(bytes[8:]).Uint64()
+	return fix.NewFix128(hi, lo)
 }
 
 func handleFixedpointError(err error, _ LocationRange) {

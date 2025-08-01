@@ -47,6 +47,7 @@ type Visitor interface {
 	VisitWord128Value(context ValueVisitContext, value Word128Value)
 	VisitWord256Value(context ValueVisitContext, value Word256Value)
 	VisitFix64Value(context ValueVisitContext, value Fix64Value)
+	VisitFix128Value(context ValueVisitContext, v Fix128Value)
 	VisitUFix64Value(context ValueVisitContext, value UFix64Value)
 	VisitCompositeValue(context ValueVisitContext, value *CompositeValue) bool
 	VisitDictionaryValue(context ValueVisitContext, value *DictionaryValue) bool
@@ -94,6 +95,7 @@ type EmptyVisitor struct {
 	Word128ValueVisitor                     func(context ValueVisitContext, value Word128Value)
 	Word256ValueVisitor                     func(context ValueVisitContext, value Word256Value)
 	Fix64ValueVisitor                       func(context ValueVisitContext, value Fix64Value)
+	Fix128ValueVisitor                      func(context ValueVisitContext, value Fix128Value)
 	UFix64ValueVisitor                      func(context ValueVisitContext, value UFix64Value)
 	CompositeValueVisitor                   func(context ValueVisitContext, value *CompositeValue) bool
 	DictionaryValueVisitor                  func(context ValueVisitContext, value *DictionaryValue) bool
@@ -332,6 +334,14 @@ func (v EmptyVisitor) VisitWord256Value(context ValueVisitContext, value Word256
 
 func (v EmptyVisitor) VisitFix64Value(context ValueVisitContext, value Fix64Value) {
 	visitor := v.Fix64ValueVisitor
+	if visitor == nil {
+		return
+	}
+	visitor(context, value)
+}
+
+func (v EmptyVisitor) VisitFix128Value(context ValueVisitContext, value Fix128Value) {
+	visitor := v.Fix128ValueVisitor
 	if visitor == nil {
 		return
 	}
