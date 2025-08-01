@@ -738,6 +738,7 @@ func TestIncorrectArgumentLabelError(t *testing.T) {
 
 	// Direct unit test for SuggestFixes
 	t.Run("SuggestFixes", func(t *testing.T) {
+		t.Parallel()
 		incorrectError := errs[0].(*sema.IncorrectArgumentLabelError)
 		assert.Equal(t, "x", incorrectError.ExpectedArgumentLabel)
 		assert.Equal(t, "y", incorrectError.ActualArgumentLabel)
