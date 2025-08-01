@@ -3355,8 +3355,6 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location,
 
 	importedProgram := c.Config.ImportHandler(location)
 
-	var aliased bool
-
 	// Add a global variable for the imported contract value.
 	contracts := importedProgram.Contracts
 	for _, contract := range contracts {
@@ -3373,7 +3371,6 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location,
 
 			c.globalRemoveAddressTable[addressQualifiedName] = name
 			name = addressQualifiedName
-			aliased = true
 		}
 		c.addImportedGlobal(location, name)
 	}
@@ -3392,17 +3389,21 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location,
 
 			c.globalRemoveAddressTable[addressQualifiedName] = name
 			name = addressQualifiedName
-			aliased = true
 		}
 		c.addImportedGlobal(location, name)
 	}
 
 	for _, function := range importedProgram.Functions {
 		name := function.QualifiedName
-		// for functions, if aliases were potentially applied to the enclosing type
+		alias, ok := aliases[name]
+		// for functions, as long as aliases exist, always location qualify
 		// then we should qualify the function name as well
-		if aliased {
+		if len(aliases) != 0 {
 			addressQualifiedName := string(location.TypeID(nil, name))
+			// struct constructors can be aliased functions, but otherwise the enclosing type is the one aliased
+			if ok {
+				c.globalAliasTable[alias] = addressQualifiedName
+			}
 			c.globalRemoveAddressTable[addressQualifiedName] = name
 			name = addressQualifiedName
 		}
