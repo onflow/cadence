@@ -1498,7 +1498,11 @@ func (e *InvalidImplementationError) Error() string {
 }
 
 func (e *InvalidImplementationError) SecondaryError() string {
-	return fmt.Sprintf("Only certain declaration types can be implemented within %s; %s implementations are not allowed in this context", e.ContainerKind.Name(), e.ImplementedKind.Name())
+	return fmt.Sprintf(
+		"Only certain declaration types can be implemented within %s; %s implementations are not allowed in this context",
+		e.ContainerKind.Name(),
+		e.ImplementedKind.Name(),
+	)
 }
 
 func (*InvalidImplementationError) DocumentationLink() string {
@@ -2044,7 +2048,10 @@ func (e *ImportedProgramError) Error() string {
 }
 
 func (e *ImportedProgramError) SecondaryError() string {
-	return fmt.Sprintf("check that %s is in flow.json or at a valid local path and has no errors", e.Location)
+	return fmt.Sprintf(
+		"check that %s is in flow.json or at a valid local path and has no errors",
+		e.Location,
+	)
 }
 
 func (e *ImportedProgramError) DocumentationLink() string {
@@ -2876,7 +2883,10 @@ func (e *InvalidEventParameterTypeError) Error() string {
 }
 
 func (e *InvalidEventParameterTypeError) SecondaryError() string {
-	return fmt.Sprintf("Event parameters must be storable types; the type `%s` cannot be stored", e.Type.QualifiedString())
+	return fmt.Sprintf(
+		"Event parameters must be storable types; the type `%s` cannot be stored",
+		e.Type.QualifiedString(),
+	)
 }
 
 func (*InvalidEventParameterTypeError) DocumentationLink() string {
@@ -2908,7 +2918,10 @@ func (e *InvalidEventUsageError) Error() string {
 
 func (e *InvalidEventUsageError) SecondaryError() string {
 	if e.EventName != "" {
-		return fmt.Sprintf("use `emit %s()` syntax instead of calling the event directly", e.EventName)
+		return fmt.Sprintf(
+			"use `emit %s()` syntax instead of calling the event directly",
+			e.EventName,
+		)
 	}
 	return "use `emit EventName()` syntax instead of calling the event directly"
 }
@@ -3408,7 +3421,10 @@ func (e *InvalidDictionaryKeyTypeError) Error() string {
 }
 
 func (e *InvalidDictionaryKeyTypeError) SecondaryError() string {
-	return fmt.Sprintf("The type `%s` cannot be used as a key because it is not hashable; use primitive types like `String`, `Int`, `Address`, or `Bool` instead", e.Type.QualifiedString())
+	return fmt.Sprintf(
+		"The type `%s` cannot be used as a key because it is not hashable; use primitive types like `String`, `Int`, `Address`, or `Bool` instead",
+		e.Type.QualifiedString(),
+	)
 }
 
 func (*InvalidDictionaryKeyTypeError) DocumentationLink() string {
@@ -3940,7 +3956,11 @@ func (e *InvalidNestedDeclarationError) Error() string {
 }
 
 func (e *InvalidNestedDeclarationError) SecondaryError() string {
-	return fmt.Sprintf("Only certain declaration types can be nested within %s; %s declarations are not allowed in this context", e.ContainerDeclarationKind.Name(), e.NestedDeclarationKind.Name())
+	return fmt.Sprintf(
+		"Only certain declaration types can be nested within %s; %s declarations are not allowed in this context",
+		e.ContainerDeclarationKind.Name(),
+		e.NestedDeclarationKind.Name(),
+	)
 }
 
 func (*InvalidNestedDeclarationError) DocumentationLink() string {
@@ -4119,7 +4139,7 @@ func (e *InvalidMoveError) Error() string {
 
 func (e *InvalidMoveError) SecondaryError() string {
 	return fmt.Sprintf(
-		"only certain %s declarations can be moved; check the declaration's access level and usage context",
+		"only resource-typed values can be moved; remove the move operator or use the assignment (`=`) operator instead, if this is an assignment",
 		e.DeclarationKind.Name(),
 	)
 }
