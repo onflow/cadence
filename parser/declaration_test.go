@@ -350,8 +350,10 @@ func TestParseVariableDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:       "unexpected token: identifier",
+					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -387,8 +389,10 @@ func TestParseVariableDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:       "unexpected token: identifier",
+					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -1171,8 +1175,10 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:       "unexpected token: identifier",
+					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -1231,8 +1237,10 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:       "unexpected token: identifier",
+					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -1292,8 +1300,10 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:       "unexpected token: identifier",
+					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -1331,8 +1341,10 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:       "unexpected token: identifier",
+					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -1420,7 +1432,9 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token: identifier",
+					Message:       "unexpected token: identifier",
+					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 					Pos: ast.Position{
 						Offset: 12,
 						Line:   1,
@@ -6921,8 +6935,11 @@ func TestParsePragmaNoArguments(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:       "unexpected token: identifier",
+					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
+					Migration:     "",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -6958,8 +6975,11 @@ func TestParsePragmaNoArguments(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:       "unexpected token: identifier",
+					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
+					Migration:     "",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -8317,8 +8337,11 @@ func TestParseInvalidImportWithModifier(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
+					Message:       "unexpected token: identifier",
+					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
+					Migration:     "",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 			},
 			errs,
@@ -8360,8 +8383,11 @@ func TestParseInvalidImportWithModifier(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
+					Message:       "unexpected token: identifier",
+					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
+					Migration:     "",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 			},
 			errs,
@@ -8408,8 +8434,11 @@ func TestParseInvalidEventWithModifier(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
+					Message:       "unexpected token: identifier",
+					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
+					Migration:     "",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 			},
 			errs,
@@ -8451,8 +8480,11 @@ func TestParseInvalidEventWithModifier(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
+					Message:       "unexpected token: identifier",
+					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
+					Migration:     "",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 			},
 			errs,
@@ -8500,8 +8532,10 @@ func TestParseCompositeWithModifier(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
+					Message:       "unexpected token: identifier",
+					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 			},
 			errs,
@@ -8543,8 +8577,10 @@ func TestParseCompositeWithModifier(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
+					Message:       "unexpected token: identifier",
+					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 			},
 			errs,
@@ -8591,8 +8627,10 @@ func TestParseTransactionWithModifier(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
+					Message:       "unexpected token: identifier",
+					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 			},
 			errs,
@@ -8634,8 +8672,10 @@ func TestParseTransactionWithModifier(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
+					Message:       "unexpected token: identifier",
+					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 			},
 			errs,
@@ -8691,8 +8731,9 @@ func TestParseNestedPragma(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:   "unexpected token: identifier",
+					Secondary: "remove the identifier before the pragma declaration",
+					Pos:       ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -8732,8 +8773,9 @@ func TestParseNestedPragma(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:   "unexpected token: identifier",
+					Secondary: "remove the identifier before the pragma declaration",
+					Pos:       ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -9509,8 +9551,10 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 13, Line: 1, Column: 13},
+					Message:       "unexpected token: identifier",
+					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 13, Line: 1, Column: 13},
 				},
 			},
 			errs,
@@ -9525,8 +9569,10 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token: '{'",
-					Pos:     ast.Position{Offset: 27, Line: 1, Column: 27},
+					Message:       "unexpected token: '{'",
+					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 27, Line: 1, Column: 27},
 				},
 			},
 			errs,

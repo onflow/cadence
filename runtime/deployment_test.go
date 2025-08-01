@@ -326,7 +326,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 					" --> 2a00000000000000.Test:2:14\n" +
 					"  |\n" +
 					"2 |               X\n" +
-					"  |               ^\n"
+					"  |               ^ check for extra characters, missing semicolons, or incomplete statements\n"
 		}
 
 		test(t, testCase{

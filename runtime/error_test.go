@@ -68,7 +68,7 @@ func TestRuntimeError(t *testing.T) {
 				" --> 0100000000000000000000000000000000000000000000000000000000000000:1:0\n"+
 				"  |\n"+
 				"1 | X\n"+
-				"  | ^\n",
+				"  | ^ check for extra characters, missing semicolons, or incomplete statements\n",
 		)
 	})
 
@@ -311,7 +311,7 @@ error: panic: 42
 				" --> imported:1:0\n"+
 				"  |\n"+
 				"1 | X\n"+
-				"  | ^\n",
+				"  | ^ check for extra characters, missing semicolons, or incomplete statements\n",
 		)
 	})
 

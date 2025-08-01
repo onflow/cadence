@@ -1648,7 +1648,9 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 			switch string(p.currentTokenSource()) {
 			case KeywordLet, KeywordVar:
 				if purity != ast.FunctionPurityUnspecified {
-					return nil, NewSyntaxError(*purityPos, "invalid view modifier for variable").WithSecondary("the `view` modifier can only be used on functions").WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions")
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for variable").
+						WithSecondary("the `view` modifier can only be used on functions").
+						WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions")
 				}
 				return parseFieldWithVariableKind(
 					p,
@@ -1661,7 +1663,9 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 
 			case KeywordCase:
 				if purity != ast.FunctionPurityUnspecified {
-					return nil, NewSyntaxError(*purityPos, "invalid view modifier for enum case").WithSecondary("the `view` modifier can only be used on functions").WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions")
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for enum case").
+						WithSecondary("the `view` modifier can only be used on functions").
+						WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions")
 				}
 				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindEnumCase)
 				if err != nil {
@@ -1684,7 +1688,9 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 
 			case KeywordEvent:
 				if purity != ast.FunctionPurityUnspecified {
-					return nil, NewSyntaxError(*purityPos, "invalid view modifier for event").WithSecondary("the `view` modifier can only be used on functions").WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions")
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for event").
+						WithSecondary("the `view` modifier can only be used on functions").
+						WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions")
 				}
 				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindEvent)
 				if err != nil {
@@ -1694,7 +1700,9 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 
 			case KeywordStruct:
 				if purity != ast.FunctionPurityUnspecified {
-					return nil, NewSyntaxError(*purityPos, "invalid view modifier for struct").WithSecondary("the `view` modifier can only be used on functions").WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions")
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for struct").
+						WithSecondary("the `view` modifier can only be used on functions").
+						WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions")
 				}
 				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindStructure)
 				if err != nil {
@@ -1704,7 +1712,9 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 
 			case KeywordResource:
 				if purity != ast.FunctionPurityUnspecified {
-					return nil, NewSyntaxError(*purityPos, "invalid view modifier for resource").WithSecondary("the `view` modifier can only be used on functions").WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions")
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for resource").
+						WithSecondary("the `view` modifier can only be used on functions").
+						WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions")
 				}
 				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindResource)
 				if err != nil {
@@ -1714,7 +1724,9 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 
 			case KeywordContract:
 				if purity != ast.FunctionPurityUnspecified {
-					return nil, NewSyntaxError(*purityPos, "invalid view modifier for contract").WithSecondary("the `view` modifier can only be used on functions").WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions")
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for contract").
+						WithSecondary("the `view` modifier can only be used on functions").
+						WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions")
 				}
 				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindContract)
 				if err != nil {
@@ -1728,13 +1740,17 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 					return nil, err
 				}
 				if purity != ast.FunctionPurityUnspecified {
-					return nil, NewSyntaxError(*purityPos, "invalid view modifier for entitlement").WithSecondary("the `view` modifier can only be used on functions").WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions")
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for entitlement").
+						WithSecondary("the `view` modifier can only be used on functions").
+						WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions")
 				}
 				return parseEntitlementOrMappingDeclaration(p, access, accessPos, docString)
 
 			case KeywordEnum:
 				if purity != ast.FunctionPurityUnspecified {
-					return nil, NewSyntaxError(*purityPos, "invalid view modifier for enum").WithSecondary("the `view` modifier can only be used on functions").WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions")
+					return nil, NewSyntaxError(*purityPos, "invalid view modifier for enum").
+						WithSecondary("the `view` modifier can only be used on functions").
+						WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions")
 				}
 				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindEnum)
 				if err != nil {
@@ -1826,13 +1842,15 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 			p.next()
 			continue
 
+		// TODO: Add documentation link
 		case lexer.TokenPragma:
 			if previousIdentifierToken != nil {
 				return nil, NewSyntaxError(
 					previousIdentifierToken.StartPos,
 					"unexpected token: %s",
 					previousIdentifierToken.Type,
-				)
+				).
+					WithSecondary("remove the identifier before the pragma declaration")
 			}
 			err := rejectAllModifiers(p, access, accessPos, staticPos, nativePos, common.DeclarationKindPragma)
 			if err != nil {
@@ -1842,10 +1860,14 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 
 		case lexer.TokenColon:
 			if previousIdentifierToken == nil {
-				return nil, p.syntaxError("unexpected %s", p.current.Type)
+				return nil, NewSyntaxError(p.current.StartPos, "unexpected %s", p.current.Type).
+					WithSecondary("expected an identifier before the colon").
+					WithDocumentation("https://cadence-lang.org/docs/language/glossary#-colon")
 			}
 			if purity != ast.FunctionPurityUnspecified {
-				return nil, NewSyntaxError(*purityPos, "invalid view modifier for variable").WithSecondary("the `view` modifier can only be used on functions").WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions")
+				return nil, NewSyntaxError(*purityPos, "invalid view modifier for variable").
+					WithSecondary("the `view` modifier can only be used on functions").
+					WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions")
 			}
 			identifier := p.tokenToIdentifier(*previousIdentifierToken)
 			return parseFieldDeclarationWithoutVariableKind(
@@ -1860,7 +1882,9 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 
 		case lexer.TokenParenOpen:
 			if previousIdentifierToken == nil {
-				return nil, p.syntaxError("unexpected %s", p.current.Type)
+				return nil, NewSyntaxError(p.current.StartPos, "unexpected %s", p.current.Type).
+					WithSecondary("expected an identifier before the opening parenthesis").
+					WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 			}
 
 			identifier := p.tokenToIdentifier(*previousIdentifierToken)
