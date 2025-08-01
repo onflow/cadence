@@ -803,7 +803,10 @@ func (e *ControlStatementError) SecondaryError() string {
 	case common.ControlStatementContinue:
 		return "`continue` can only be used inside a loop statement; move this statement to a valid context."
 	default:
-		return fmt.Sprintf("`%s` can only be used within a valid control flow body; move this statement to a valid context.", e.ControlStatement.Symbol())
+		return fmt.Sprintf(
+			"`%s` can only be used within a valid control flow body; move this statement to a valid context.",
+			e.ControlStatement.Symbol(),
+		)
 	}
 }
 
