@@ -232,9 +232,14 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 
 				return parseTransactionDeclaration(p, docString)
 
+			// TODO: Add suggested fix for this error
 			case KeywordView:
 				if purity != ast.FunctionPurityUnspecified {
-					p.report(p.syntaxError("invalid second view modifier"))
+					p.report(NewSyntaxError(
+						p.current.StartPos,
+						"invalid second view modifier",
+					).WithSecondary("the `view` modifier can only be used once per function declaration").
+						WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions"))
 				}
 
 				pos := p.current.StartPos
@@ -255,7 +260,11 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 
 			case KeywordAccess:
 				if access != ast.AccessNotSpecified {
-					return nil, p.syntaxError("invalid second access modifier")
+					return nil, NewSyntaxError(
+						p.current.StartPos,
+						"invalid second access modifier",
+					).WithSecondary("only one access modifier can be used per declaration").
+						WithDocumentation("https://cadence-lang.org/docs/language/access-control")
 				}
 				if staticModifierEnabled && staticPos != nil {
 					return nil, p.syntaxError("invalid access modifier after static modifier")
@@ -1323,10 +1332,12 @@ func parseConformances(p *parser) ([]*ast.NominalType, error) {
 		}
 
 		if len(conformances) < 1 {
-			return nil, p.syntaxError(
+			return nil, NewSyntaxError(
+				p.current.StartPos,
 				"expected at least one conformance after %s",
 				lexer.TokenColon,
-			)
+			).WithSecondary("provide at least one interface or type to conform to, or remove the colon if no conformances are needed").
+				WithDocumentation("https://cadence-lang.org/docs/language/interfaces")
 		}
 	}
 
@@ -1763,7 +1774,11 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 
 			case KeywordView:
 				if purity != ast.FunctionPurityUnspecified {
-					return nil, p.syntaxError("invalid second view modifier")
+					return nil, NewSyntaxError(
+						p.current.StartPos,
+						"invalid second view modifier",
+					).WithSecondary("the `view` modifier can only be used once per function declaration").
+						WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions")
 				}
 				pos := p.current.StartPos
 				purityPos = &pos
@@ -1783,7 +1798,11 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 
 			case KeywordAccess:
 				if access != ast.AccessNotSpecified {
-					return nil, p.syntaxError("invalid second access modifier")
+					return nil, NewSyntaxError(
+						p.current.StartPos,
+						"invalid second access modifier",
+					).WithSecondary("only one access modifier can be used per declaration").
+						WithDocumentation("https://cadence-lang.org/docs/language/access-control")
 				}
 				if staticModifierEnabled && staticPos != nil {
 					return nil, p.syntaxError("invalid access modifier after static modifier")
@@ -1917,7 +1936,9 @@ func rejectAllModifiers(
 	kind common.DeclarationKind,
 ) error {
 	if access != ast.AccessNotSpecified {
-		return NewSyntaxError(*accessPos, "invalid access modifier for %s", kind.Name())
+		return NewSyntaxError(*accessPos, "invalid access modifier for %s", kind.Name()).
+			WithSecondary(fmt.Sprintf("access modifiers are not allowed on %s declarations", kind.Name())).
+			WithDocumentation("https://cadence-lang.org/docs/language/access-control")
 	}
 	return rejectStaticAndNativeModifiers(p, staticPos, nativePos, kind)
 }
@@ -1928,11 +1949,17 @@ func rejectStaticAndNativeModifiers(
 	nativePos *ast.Position,
 	kind common.DeclarationKind,
 ) error {
+	// TODO: Update with better documentation for the `static` modifier
 	if p.config.StaticModifierEnabled && staticPos != nil {
-		return NewSyntaxError(*staticPos, "invalid static modifier for %s", kind.Name())
+		return NewSyntaxError(*staticPos, "invalid static modifier for %s", kind.Name()).
+			WithSecondary(fmt.Sprintf("the `static` modifier can only be used on fields and functions, not on %s declarations", kind.Name())).
+			WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 	}
+	// TODO: Update with better documentation for the `native` modifier
 	if p.config.NativeModifierEnabled && nativePos != nil {
-		return NewSyntaxError(*nativePos, "invalid native modifier for %s", kind.Name())
+		return NewSyntaxError(*nativePos, "invalid native modifier for %s", kind.Name()).
+			WithSecondary(fmt.Sprintf("the `native` modifier can only be used on fields and functions, not on %s declarations", kind.Name())).
+			WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 	}
 	return nil
 }
@@ -2033,7 +2060,8 @@ func parseSpecialFunctionDeclaration(
 			returnTypeAnnotation.StartPos,
 			"invalid return type for %s",
 			kindDescription,
-		))
+		).WithSecondary("special functions like `init`, `destroy`, and `prepare` cannot have return types").
+			WithDocumentation("https://cadence-lang.org/docs/language/functions"))
 	}
 
 	return ast.NewSpecialFunctionDeclaration(

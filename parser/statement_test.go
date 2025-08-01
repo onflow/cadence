@@ -1126,8 +1126,11 @@ func TestParseViewNonFunction(t *testing.T) {
 	AssertEqualWithDiff(t,
 		[]error{
 			&SyntaxError{
-				Message: "statements on the same line must be separated with a semicolon",
-				Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+				Message:       "statements on the same line must be separated with a semicolon",
+				Secondary:     "add a semicolon (;) between statements or place each statement on a separate line",
+				Migration:     "",
+				Documentation: "https://cadence-lang.org/docs/language/syntax#semicolons",
+				Pos:           ast.Position{Offset: 5, Line: 1, Column: 5},
 			},
 		},
 		errs,
@@ -1194,8 +1197,11 @@ func TestParseStatements(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "statements on the same line must be separated with a semicolon",
-					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+					Message:       "statements on the same line must be separated with a semicolon",
+					Secondary:     "add a semicolon (;) between statements or place each statement on a separate line",
+					Migration:     "",
+					Documentation: "https://cadence-lang.org/docs/language/syntax#semicolons",
+					Pos:           ast.Position{Offset: 7, Line: 1, Column: 7},
 				},
 			},
 			errs,
@@ -1307,8 +1313,11 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
 				},
 				&SyntaxError{
-					Message: "unexpected end of program",
-					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
+					Message:       "unexpected end of program",
+					Secondary:     "check for incomplete expressions, missing tokens, or unterminated strings/comments",
+					Migration:     "",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 8, Line: 1, Column: 8},
 				},
 			},
 			errs,
@@ -1324,8 +1333,11 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected end of program",
-					Pos:     ast.Position{Offset: 13, Line: 1, Column: 13},
+					Message:       "unexpected end of program",
+					Secondary:     "check for incomplete expressions, missing tokens, or unterminated strings/comments",
+					Migration:     "",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 13, Line: 1, Column: 13},
 				},
 			},
 			errs,

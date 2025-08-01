@@ -507,7 +507,9 @@ func init() {
 	defineIdentifierExpression()
 
 	setExprNullDenotation(lexer.TokenEOF, func(parser *parser, token lexer.Token) (ast.Expression, error) {
-		return nil, NewSyntaxError(token.StartPos, "unexpected end of program")
+		return nil, NewSyntaxError(token.StartPos, "unexpected end of program").
+			WithSecondary("check for incomplete expressions, missing tokens, or unterminated strings/comments").
+			WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 	})
 }
 
@@ -1489,6 +1491,7 @@ func parseMemberAccess(p *parser, token lexer.Token, left ast.Expression, option
 	// Whitespace after '.' (dot token) and '?.' (question mark dot token) is not allowed.
 	// We parse it anyway and report an error
 
+	// TODO: Add suggested fix for this error
 	if p.current.Is(lexer.TokenSpace) {
 		errorPos := p.current.StartPos
 		p.skipSpaceAndComments()
@@ -1496,7 +1499,8 @@ func parseMemberAccess(p *parser, token lexer.Token, left ast.Expression, option
 			errorPos,
 			"invalid whitespace after %s",
 			lexer.TokenDot,
-		))
+		).WithSecondary("remove the space between the dot (.) and the member name").
+			WithDocumentation("https://cadence-lang.org/docs/language/syntax"))
 	}
 
 	// If there is an identifier, use it.
@@ -1507,10 +1511,12 @@ func parseMemberAccess(p *parser, token lexer.Token, left ast.Expression, option
 		identifier = p.tokenToIdentifier(p.current)
 		p.next()
 	} else {
-		p.reportSyntaxError(
+		p.report(NewSyntaxError(
+			p.current.StartPos,
 			"expected member name, got %s",
 			p.current.Type,
-		)
+		).WithSecondary("after a dot (.), you must provide a valid identifier for the member name").
+			WithDocumentation("https://cadence-lang.org/docs/language/syntax"))
 	}
 
 	return ast.NewMemberExpression(
