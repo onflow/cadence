@@ -95,11 +95,13 @@ type Compiler[E, T any] struct {
 	// e.g. Foo1 -> A.0001.Foo
 	// this is used for all global (var/func) loads
 	// this allows us to map all aliases back to their address qualified type
-	// note that the reverse map is not valid since a type can be aliased multiple times
+	// type needs to be address qualified because two types with the same name can be aliased in the same program
+	// we need to differentiate between these in method compilation
 	globalAliasTable map[string]string
 	// some globals are address qualified as a result of import aliasing
 	// these globals should be restored to their original un-aliased typenames for linking
 	// e.g. A.0001.Foo -> Foo
+	// note a key might be added in this map multiple times but always with the same value
 	// this table maps a global from its address qualified name to its original un-aliased typename
 	// used mainly for exporting imports for linking
 	globalRemoveAddressTable map[string]string
@@ -2175,7 +2177,7 @@ func (c *Compiler[_, _]) emitVariableLoad(name string) {
 
 func (c *Compiler[_, _]) emitGlobalLoad(name string) {
 	// we might need to antialias this name
-	name = c.applyTypeAliases(name, c.globalAliasTable)
+	name = c.applyTypeAliases(name)
 	global := c.findGlobal(name)
 	c.emit(opcode.InstructionGetGlobal{
 		Global: global.Index,
@@ -2184,8 +2186,7 @@ func (c *Compiler[_, _]) emitGlobalLoad(name string) {
 
 func (c *Compiler[_, _]) emitMethodLoad(name string) {
 	// we might need to antialias part of this name
-	// we might need to antialias this name
-	name = c.applyTypeAliases(name, c.globalAliasTable)
+	name = c.applyTypeAliases(name)
 	global := c.findGlobal(name)
 	c.emit(opcode.InstructionGetMethod{
 		Method: global.Index,
@@ -3334,11 +3335,12 @@ func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclarati
 }
 
 // Applies type aliases to a given string.
-// Generalized to support type qualified names (e.g. methods like Foo.bar)
-func (c *Compiler[_, _]) applyTypeAliases(name string, aliases map[string]string) string {
+// Generalized to support type qualified function names
+// e.g. Foo1.bar -> A.001.Foo.bar
+func (c *Compiler[_, _]) applyTypeAliases(name string) string {
 	parts := strings.Split(name, ".")
 	for i, part := range parts {
-		alias, ok := aliases[part]
+		alias, ok := c.globalAliasTable[part]
 		if ok {
 			parts[i] = alias
 		}
@@ -3361,11 +3363,7 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location,
 		name := contract.Name
 		alias, ok := aliases[name]
 		if ok {
-			// we have Foo -> Foo1
-			// we want the reverse with an address qualifier Foo1 -> A.0001.Foo
-			// we need the address qualifier because two different types
-			// with the same name can be aliased in the same program
-			// e.g. Foo1.bar() and Foo2.bar()
+			// we want a table pointing from the alias -> address qualifier (Foo1 -> A.0001.Foo)
 			addressQualifiedName := string(location.TypeID(nil, name))
 			c.globalAliasTable[alias] = addressQualifiedName
 
@@ -3379,11 +3377,7 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location,
 		name := variable.Name
 		alias, ok := aliases[name]
 		if ok {
-			// we have Foo -> Foo1
-			// we want the reverse with an address qualifier Foo1 -> A.0001.Foo
-			// we need the address qualifier because two different types
-			// with the same name can be aliased in the same program
-			// e.g. Foo1.bar() and Foo2.bar()
+			// we want a table pointing from the alias -> address qualifier (Foo1 -> A.0001.Foo)
 			addressQualifiedName := string(location.TypeID(nil, name))
 			c.globalAliasTable[alias] = addressQualifiedName
 
@@ -3397,10 +3391,10 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location,
 		name := function.QualifiedName
 		alias, ok := aliases[name]
 		// for functions, as long as aliases exist, always location qualify
-		// then we should qualify the function name as well
+		// most function names will not have aliases, exception: struct constructors
 		if len(aliases) != 0 {
 			addressQualifiedName := string(location.TypeID(nil, name))
-			// struct constructors can be aliased functions, but otherwise the enclosing type is the one aliased
+			// struct constructors can be aliased
 			if ok {
 				c.globalAliasTable[alias] = addressQualifiedName
 			}

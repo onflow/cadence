@@ -100,7 +100,6 @@ func LocationQualifier(typ sema.Type) string {
 	case *sema.ReferenceType:
 		return LocationQualifier(typ.Type)
 	case *sema.IntersectionType:
-		// TODO: Revisit. Probably this is not needed here?
 		return LocationQualifier(typ.Types[0])
 	default:
 		return string(typ.ID())
