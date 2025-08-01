@@ -524,7 +524,12 @@ func parseNominalType(
 	}
 	nominalType, ok := ty.(*ast.NominalType)
 	if !ok {
-		return nil, p.syntaxError("unexpected non-nominal type: %s", ty)
+		return nil, NewSyntaxError(
+			ty.StartPosition(),
+			"unexpected non-nominal type: %s",
+			ty,
+		).WithSecondary("expected a nominal type (like a struct, resource, or interface name)").
+			WithDocumentation("https://cadence-lang.org/docs/language/types")
 	}
 	return nominalType, nil
 }

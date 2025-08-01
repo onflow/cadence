@@ -409,7 +409,12 @@ func rejectAccessKeywords(p *parser, produceNominalType func() (*ast.NominalType
 
 	switch nominalType.Identifier.Identifier {
 	case KeywordAll, KeywordAccess, KeywordAccount, KeywordSelf:
-		return nil, p.syntaxError("unexpected non-nominal type: %s", nominalType)
+		return nil, NewSyntaxError(
+			nominalType.StartPosition(),
+			"unexpected non-nominal type: %s",
+			nominalType,
+		).WithSecondary("use an entitlement name instead of access control keywords").
+			WithDocumentation("https://cadence-lang.org/docs/language/access-control#entitlements")
 	}
 	return nominalType, nil
 }
@@ -436,10 +441,12 @@ func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
 		// Luckily, however, the former two are just equivalent, and the latter we can disambiguate in the type checker.
 		return ast.NewConjunctiveEntitlementSet(entitlements), nil
 	default:
-		return nil, p.syntaxError(
+		return nil, NewSyntaxError(
+			p.current.StartPos,
 			"unexpected entitlement separator %s",
 			p.current.Type.String(),
-		)
+		).WithSecondary("use a comma (,) for conjunctive entitlements or a vertical bar (|) for disjunctive entitlements").
+			WithDocumentation("https://cadence-lang.org/docs/language/access-control#entitlements")
 	}
 
 	remainingEntitlements, _, err := parseNominalTypes(p, lexer.TokenParenClose, separator)
@@ -449,7 +456,12 @@ func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
 	for _, entitlement := range remainingEntitlements {
 		switch entitlement.Identifier.Identifier {
 		case KeywordAll, KeywordAccess, KeywordAccount, KeywordSelf:
-			return nil, p.syntaxError("unexpected non-nominal type: %s", entitlement)
+			return nil, NewSyntaxError(
+				entitlement.StartPosition(),
+				"unexpected non-nominal type: %s",
+				entitlement,
+			).WithSecondary("use an entitlement name instead of access control keywords").
+				WithDocumentation("https://cadence-lang.org/docs/language/access-control#entitlements")
 		}
 		entitlements = append(entitlements, entitlement)
 	}
@@ -2108,10 +2120,12 @@ func parseEnumCase(
 	// Skip the `enum` keyword
 	p.nextSemanticToken()
 	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, p.syntaxError(
+		return nil, NewSyntaxError(
+			p.current.StartPos,
 			"expected identifier after start of enum case declaration, got %s",
 			p.current.Type,
-		)
+		).WithSecondary("provide a name for the enum case after the `case` keyword").
+			WithDocumentation("https://cadence-lang.org/docs/language/enumerations")
 	}
 
 	identifier := p.tokenToIdentifier(p.current)

@@ -334,8 +334,11 @@ func TestParseVariableDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid static modifier for variable",
-					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:       "invalid static modifier for variable",
+					Secondary:     "the `static` modifier can only be used on fields and functions, not on variable declarations",
+					Migration:     "",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -373,8 +376,11 @@ func TestParseVariableDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid native modifier for variable",
-					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:       "invalid native modifier for variable",
+					Secondary:     "the `native` modifier can only be used on fields and functions, not on variable declarations",
+					Migration:     "",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -1969,8 +1975,11 @@ func TestParseAccess(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected non-nominal type: self",
-					Pos:     ast.Position{Offset: 20, Line: 1, Column: 20},
+					Message:       "unexpected non-nominal type: self",
+					Secondary:     "use an entitlement name instead of access control keywords",
+					Migration:     "",
+					Documentation: "https://cadence-lang.org/docs/language/access-control#entitlements",
+					Pos:           ast.Position{Offset: 15, Line: 1, Column: 15},
 				},
 			},
 			errs,
@@ -1990,8 +1999,11 @@ func TestParseAccess(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected non-nominal type: self",
-					Pos:     ast.Position{Offset: 20, Line: 1, Column: 20},
+					Message:       "unexpected non-nominal type: self",
+					Secondary:     "use an entitlement name instead of access control keywords",
+					Migration:     "",
+					Documentation: "https://cadence-lang.org/docs/language/access-control#entitlements",
+					Pos:           ast.Position{Offset: 15, Line: 1, Column: 15},
 				},
 			},
 			errs,
@@ -2011,8 +2023,11 @@ func TestParseAccess(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected entitlement separator identifier",
-					Pos:     ast.Position{Offset: 13, Line: 1, Column: 13},
+					Message:       "unexpected entitlement separator identifier",
+					Secondary:     "use a comma (,) for conjunctive entitlements or a vertical bar (|) for disjunctive entitlements",
+					Migration:     "",
+					Documentation: "https://cadence-lang.org/docs/language/access-control#entitlements",
+					Pos:           ast.Position{Offset: 13, Line: 1, Column: 13},
 				},
 			},
 			errs,
@@ -2032,8 +2047,11 @@ func TestParseAccess(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected entitlement separator '&'",
-					Pos:     ast.Position{Offset: 13, Line: 1, Column: 13},
+					Message:       "unexpected entitlement separator '&'",
+					Secondary:     "use a comma (,) for conjunctive entitlements or a vertical bar (|) for disjunctive entitlements",
+					Migration:     "",
+					Documentation: "https://cadence-lang.org/docs/language/access-control#entitlements",
+					Pos:           ast.Position{Offset: 13, Line: 1, Column: 13},
 				},
 			},
 			errs,
@@ -4808,8 +4826,11 @@ func TestParseEnumDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid static modifier for enum case",
-					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+					Message:       "invalid static modifier for enum case",
+					Secondary:     "the `static` modifier can only be used on fields and functions, not on enum case declarations",
+					Migration:     "",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 10, Line: 1, Column: 10},
 				},
 			},
 			errs,
@@ -4846,8 +4867,11 @@ func TestParseEnumDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid native modifier for enum case",
-					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+					Message:       "invalid native modifier for enum case",
+					Secondary:     "the `native` modifier can only be used on fields and functions, not on enum case declarations",
+					Migration:     "",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 10, Line: 1, Column: 10},
 				},
 			},
 			errs,
@@ -4865,6 +4889,25 @@ func TestParseEnumDeclaration(t *testing.T) {
 				&SyntaxError{
 					Message: "unexpected identifier",
 					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("enum case missing identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("enum E { case }")
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message:       "expected identifier after start of enum case declaration, got '}'",
+					Secondary:     "provide a name for the enum case after the `case` keyword",
+					Migration:     "",
+					Documentation: "https://cadence-lang.org/docs/language/enumerations",
+					Pos:           ast.Position{Offset: 14, Line: 1, Column: 14},
 				},
 			},
 			errs,
@@ -6941,8 +6984,11 @@ func TestParsePragmaNoArguments(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid static modifier for pragma",
-					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:       "invalid static modifier for pragma",
+					Secondary:     "the `static` modifier can only be used on fields and functions, not on pragma declarations",
+					Migration:     "",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -6981,8 +7027,11 @@ func TestParsePragmaNoArguments(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid native modifier for pragma",
-					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:       "invalid native modifier for pragma",
+					Secondary:     "the `native` modifier can only be used on fields and functions, not on pragma declarations",
+					Migration:     "",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
