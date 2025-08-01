@@ -1085,7 +1085,10 @@ func (e *InvalidDeclarationError) Error() string {
 }
 
 func (e *InvalidDeclarationError) SecondaryError() string {
-	return fmt.Sprintf("Only function and variable declarations are allowed in this scope; %s declarations must be at the top level or within composite types", e.Kind.Name())
+	return fmt.Sprintf(
+	"Only function and variable declarations are allowed in this scope; %s declarations must be at the top level or within composite types",
+		e.Kind.Name(),
+	)
 }
 
 func (*InvalidDeclarationError) DocumentationLink() string {
