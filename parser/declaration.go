@@ -325,7 +325,10 @@ func handlePriv(p *parser) {
 		"access(self)",
 	)
 	if syntaxErr, ok := err.(*SyntaxErrorWithSuggestedReplacement); ok {
-		syntaxErr.WithSecondary("use `access(self)` instead").WithDocumentation("https://cadence-lang.org/docs/language/access-control").WithMigration("This is pre-Cadence 1.0 syntax. The `pub` and `priv` keywords were deprecated in favor of the new access control system")
+		//nolint:errcheck // These methods return *SyntaxErrorWithSuggestedReplacement, not errors
+		syntaxErr.WithSecondary("use `access(self)` instead").
+			WithDocumentation("https://cadence-lang.org/docs/language/access-control").
+			WithMigration("This is pre-Cadence 1.0 syntax. The `pub` and `priv` keywords were deprecated in favor of the new access control system")
 	}
 	p.report(err)
 	p.next()
@@ -342,7 +345,9 @@ func handlePub(p *parser) error {
 			pubToken.Range,
 			"`pub` is no longer a valid access keyword",
 			"access(all)",
-		).WithSecondary("use `access(all)` instead").WithDocumentation("https://cadence-lang.org/docs/language/access-control").WithMigration("This is pre-Cadence 1.0 syntax. The `pub` and `priv` keywords were deprecated in favor of the new access control system"))
+		).WithSecondary("use `access(all)` instead").
+			WithDocumentation("https://cadence-lang.org/docs/language/access-control").
+			WithMigration("This is pre-Cadence 1.0 syntax. The `pub` and `priv` keywords were deprecated in favor of the new access control system"))
 		return nil
 	}
 
@@ -379,7 +384,8 @@ func handlePub(p *parser) error {
 	p.report(NewSyntaxError(
 		pubToken.StartPos,
 		"`pub(set)` is no longer a valid access keyword",
-	).WithMigration("This is pre-Cadence 1.0 syntax. The `pub(set)` pattern was deprecated and has no direct equivalent in the new access control system").WithDocumentation("https://cadence-lang.org/docs/cadence-migration-guide/improvements#-motivation-11"))
+	).WithMigration("This is pre-Cadence 1.0 syntax. The `pub(set)` pattern was deprecated and has no direct equivalent in the new access control system").
+		WithDocumentation("https://cadence-lang.org/docs/cadence-migration-guide/improvements#-motivation-11"))
 
 	return nil
 }
