@@ -728,8 +728,16 @@ func (e *InvalidBinaryOperandsError) SecondaryError() string {
 			e.LeftType.QualifiedString(),
 			e.RightType.QualifiedString(),
 		)
-	case ast.OperationPlus, ast.OperationMinus, ast.OperationMul, ast.OperationDiv, ast.OperationMod:
-		return fmt.Sprintf("Arithmetic operators require numeric operands of the same type; got `%s` and `%s` which are incompatible", e.LeftType.QualifiedString(), e.RightType.QualifiedString())
+	case ast.OperationPlus,
+		ast.OperationMinus,
+		ast.OperationMul,
+		ast.OperationDiv,
+		ast.OperationMod:
+		return fmt.Sprintf(
+			"Arithmetic operators require numeric operands of the same type; got `%s` and `%s` which are incompatible",
+			e.LeftType.QualifiedString(),
+			e.RightType.QualifiedString(),
+		)
 	case ast.OperationBitwiseOr, ast.OperationBitwiseAnd, ast.OperationBitwiseXor, ast.OperationBitwiseLeftShift, ast.OperationBitwiseRightShift:
 		return fmt.Sprintf("Bitwise operators require integer operands of the same type; got `%s` and `%s` which are incompatible", e.LeftType.QualifiedString(), e.RightType.QualifiedString())
 	case ast.OperationLess, ast.OperationLessEqual, ast.OperationGreater, ast.OperationGreaterEqual:
