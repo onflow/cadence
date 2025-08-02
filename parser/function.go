@@ -38,11 +38,14 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 	p.skipSpaceAndComments()
 
 	if !p.current.Is(lexer.TokenParenOpen) {
-		return nil, p.syntaxError(
+		return nil, NewSyntaxError(
+			p.current.StartPos,
 			"expected %s as start of parameter list, got %s",
 			lexer.TokenParenOpen,
 			p.current.Type,
-		)
+		).
+			WithSecondary("Function parameters must be enclosed in parentheses").
+			WithDocumentation("https://cadence-lang.org/docs/language/functions")
 	}
 
 	startPos := p.current.StartPos
@@ -77,10 +80,13 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 
 		case lexer.TokenComma:
 			if expectParameter {
-				return nil, p.syntaxError(
+				return nil, NewSyntaxError(
+					p.current.StartPos,
 					"expected parameter or end of parameter list, got %s",
 					p.current.Type,
-				)
+				).
+					WithSecondary("Parameters must be separated by commas, and the list must end with a closing parenthesis").
+					WithDocumentation("https://cadence-lang.org/docs/language/functions")
 			}
 			// Skip the comma
 			p.next()
@@ -100,15 +106,21 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 
 		default:
 			if expectParameter {
-				return nil, p.syntaxError(
+				return nil, NewSyntaxError(
+					p.current.StartPos,
 					"expected parameter or end of parameter list, got %s",
 					p.current.Type,
-				)
+				).
+					WithSecondary("Parameters must be separated by commas, and the list must end with a closing parenthesis").
+					WithDocumentation("https://cadence-lang.org/docs/language/functions")
 			} else {
-				return nil, p.syntaxError(
+				return nil, NewSyntaxError(
+					p.current.StartPos,
 					"expected comma or end of parameter list, got %s",
 					p.current.Type,
-				)
+				).
+					WithSecondary("Multiple parameters must be separated by commas, and the parameter list must end with a closing parenthesis").
+					WithDocumentation("https://cadence-lang.org/docs/language/functions")
 			}
 		}
 	}
@@ -155,11 +167,14 @@ func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, erro
 	}
 
 	if !p.current.Is(lexer.TokenColon) {
-		return nil, p.syntaxError(
+		return nil, NewSyntaxError(
+			p.current.StartPos,
 			"expected %s after parameter name, got %s",
 			lexer.TokenColon,
 			p.current.Type,
-		)
+		).
+			WithSecondary("Function parameters must have a type annotation separated by a colon").
+			WithDocumentation("https://cadence-lang.org/docs/language/functions")
 	}
 
 	// Skip the colon
@@ -177,10 +192,13 @@ func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, erro
 
 	if expectDefaultArgument {
 		if !p.current.Is(lexer.TokenEqual) {
-			return nil, p.syntaxError(
+			return nil, NewSyntaxError(
+				p.current.StartPos,
 				"expected a default argument after type annotation, got %s",
 				p.current.Type,
-			)
+			).
+				WithSecondary("Default arguments must be specified with an equals sign (=) followed by the default value").
+				WithDocumentation("https://cadence-lang.org/docs/language/functions")
 		}
 
 		// Skip the =
@@ -192,7 +210,12 @@ func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, erro
 		}
 
 	} else if p.current.Is(lexer.TokenEqual) {
-		return nil, p.syntaxError("cannot use a default argument for this function")
+		return nil, NewSyntaxError(
+			p.current.StartPos,
+			"cannot use a default argument for this function",
+		).
+			WithSecondary("Default arguments are only allowed in function declarations, not in events or other contexts").
+			WithDocumentation("https://cadence-lang.org/docs/language/functions")
 	}
 
 	return ast.NewParameter(

@@ -1046,10 +1046,13 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 			if !expectArgument {
 				return nil,
 					ast.EmptyPosition,
-					p.syntaxError(
+					NewSyntaxError(
+						p.current.StartPos,
 						"unexpected argument in argument list (expecting delimiter or end of argument list), got %s",
 						p.current.Type,
-					)
+					).
+						WithSecondary("Arguments in function calls and type instantiations must be separated by commas").
+						WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 			}
 
 			argument, err := parseArgument(p)

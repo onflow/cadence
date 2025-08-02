@@ -1735,9 +1735,10 @@ func TestParseInvocation(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected argument in argument list (expecting delimiter or end of argument list)," +
-						" got decimal integer",
-					Pos: ast.Position{Offset: 4, Line: 1, Column: 4},
+					Message:       "unexpected argument in argument list (expecting delimiter or end of argument list), got decimal integer",
+					Secondary:     "Arguments in function calls and type instantiations must be separated by commas",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
 			},
 			errs,
