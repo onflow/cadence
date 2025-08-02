@@ -739,13 +739,27 @@ func (e *InvalidBinaryOperandsError) SecondaryError() string {
 			e.RightType.QualifiedString(),
 		)
 	case ast.OperationBitwiseOr, ast.OperationBitwiseAnd, ast.OperationBitwiseXor, ast.OperationBitwiseLeftShift, ast.OperationBitwiseRightShift:
-		return fmt.Sprintf("Bitwise operators require integer operands of the same type; got `%s` and `%s` which are incompatible", e.LeftType.QualifiedString(), e.RightType.QualifiedString())
+		return fmt.Sprintf("Bitwise operators require integer operands of the same type; got `%s` and `%s` which are incompatible",
+			e.LeftType.QualifiedString(),
+			e.RightType.QualifiedString(),
+		)
 	case ast.OperationLess, ast.OperationLessEqual, ast.OperationGreater, ast.OperationGreaterEqual:
-		return fmt.Sprintf("Comparison operators require comparable operands of the same type; got `%s` and `%s` which are incompatible", e.LeftType.QualifiedString(), e.RightType.QualifiedString())
+		return fmt.Sprintf("Comparison operators require comparable operands of the same type; got `%s` and `%s` which are incompatible",
+			e.LeftType.QualifiedString(),
+			e.RightType.QualifiedString(),
+		)
 	case ast.OperationEqual, ast.OperationNotEqual:
-		return fmt.Sprintf("Equality operators require compatible types; got `%s` and `%s` which cannot be compared for equality", e.LeftType.QualifiedString(), e.RightType.QualifiedString())
+		return fmt.Sprintf("Equality operators require compatible types; got `%s` and `%s` which cannot be compared for equality",
+			e.LeftType.QualifiedString(),
+			e.RightType.QualifiedString(),
+		)
 	default:
-		return fmt.Sprintf("The binary operation `%s` cannot be applied to operands of types `%s` and `%s`", e.Operation.Symbol(), e.LeftType.QualifiedString(), e.RightType.QualifiedString())
+		return fmt.Sprintf(
+			"The binary operation `%s` cannot be applied to operands of types `%s` and `%s`",
+			e.Operation.Symbol(),
+			e.LeftType.QualifiedString(),
+			e.RightType.QualifiedString(),
+		)
 	}
 }
 
@@ -1086,7 +1100,7 @@ func (e *InvalidDeclarationError) Error() string {
 
 func (e *InvalidDeclarationError) SecondaryError() string {
 	return fmt.Sprintf(
-	"Only function and variable declarations are allowed in this scope; %s declarations must be at the top level or within composite types",
+		"Only function and variable declarations are allowed in this scope; %s declarations must be at the top level or within composite types",
 		e.Kind.Name(),
 	)
 }
@@ -2521,6 +2535,7 @@ func (*InvalidInterfaceDeclarationError) DocumentationLink() string {
 
 // IncorrectTransferOperationError
 
+// TODO: Add suggested fix for this error
 type IncorrectTransferOperationError struct {
 	ActualOperation   ast.TransferOperation
 	ExpectedOperation ast.TransferOperation
@@ -2530,8 +2545,6 @@ type IncorrectTransferOperationError struct {
 var _ SemanticError = &IncorrectTransferOperationError{}
 var _ errors.UserError = &IncorrectTransferOperationError{}
 var _ errors.SecondaryError = &IncorrectTransferOperationError{}
-
-// var _ errors.HasSuggestedFixes[ast.TextEdit] = &IncorrectTransferOperationError{}
 var _ errors.HasDocumentationLink = &IncorrectTransferOperationError{}
 
 func (*IncorrectTransferOperationError) isSemanticError() {}
@@ -2548,22 +2561,6 @@ func (e *IncorrectTransferOperationError) SecondaryError() string {
 		e.ExpectedOperation.Operator(),
 	)
 }
-
-// TODO: add tests and enable
-
-// func (e *IncorrectTransferOperationError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
-// 	return []errors.SuggestedFix[ast.TextEdit]{
-// 		{
-// 			Message: "use the correct transfer operation",
-// 			TextEdits: []ast.TextEdit{
-// 				{
-// 					Replacement: e.ExpectedOperation.Operator(),
-// 					Range:       e.Range,
-// 				},
-// 			},
-// 		},
-// 	}
-// }
 
 func (e *IncorrectTransferOperationError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/resources"
@@ -4138,10 +4135,7 @@ func (e *InvalidMoveError) Error() string {
 }
 
 func (e *InvalidMoveError) SecondaryError() string {
-	return fmt.Sprintf(
-		"only resource-typed values can be moved; remove the move operator or use the assignment (`=`) operator instead, if this is an assignment",
-		e.DeclarationKind.Name(),
-	)
+	return "only resource-typed values can be moved; remove the move operator or use the assignment (`=`) operator instead, if this is an assignment"
 }
 
 func (*InvalidMoveError) DocumentationLink() string {
