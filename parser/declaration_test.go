@@ -29,8 +29,24 @@ import (
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
+
+// Helper to apply a single ast.TextEdit to a string
+func applyTextEdit(code string, edit ast.TextEdit) string {
+	runes := []rune(code)
+	start := edit.Range.StartPos.Offset
+	end := edit.Range.EndPos.Offset
+
+	// Handle Insertion (for zero-width ranges)
+	if edit.Insertion != "" {
+		return string(runes[:start]) + edit.Insertion + string(runes[end:])
+	}
+
+	// Handle Replacement
+	return string(runes[:start]) + edit.Replacement + string(runes[end:])
+}
 
 func TestParseVariableDeclaration(t *testing.T) {
 
@@ -1651,7 +1667,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			errs,
 		)
 	})
-
 }
 
 func TestParseAccess(t *testing.T) {
@@ -7768,15 +7783,84 @@ func TestParseDestructor(t *testing.T) {
             destroy() {}
         }
 	`
+
+	// Define the positions once
+	destroyStartPos := ast.Position{Offset: 37, Line: 3, Column: 12}
+	destroyEndPos := ast.Position{Offset: 48, Line: 3, Column: 23}
+
 	_, errs := testParseDeclarations(code)
 	AssertEqualWithDiff(t,
 		[]error{
 			&CustomDestructorError{
-				Pos: ast.Position{Offset: 37, Line: 3, Column: 12},
+				Pos: destroyStartPos,
+				Range: ast.Range{
+					StartPos: destroyStartPos,
+					EndPos:   destroyEndPos,
+				},
 			},
 		},
 		errs,
 	)
+
+	// Direct unit test for SuggestFixes
+	t.Run("SuggestFixes", func(t *testing.T) {
+		t.Parallel()
+
+		destructorRange := ast.Range{
+			StartPos: destroyStartPos,
+			EndPos:   destroyEndPos,
+		}
+		err := &CustomDestructorError{
+			Pos:   destroyStartPos,
+			Range: destructorRange,
+		}
+		assert.Equal(t, []errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Remove the deprecated custom destructor",
+				TextEdits: []ast.TextEdit{{
+					Replacement: "",
+					Range:       destructorRange,
+				}},
+			},
+		}, err.SuggestFixes(code))
+	})
+
+	// End-to-end test: apply suggested fix to code
+	t.Run("SuggestFixes apply edit to code", func(t *testing.T) {
+		t.Parallel()
+
+		// Note: This test uses a slightly different end position
+		destroyEndPosWithBrace := ast.Position{Offset: 49, Line: 3, Column: 24}
+
+		err := &CustomDestructorError{
+			Pos: destroyStartPos,
+			Range: ast.Range{
+				StartPos: destroyStartPos,
+				EndPos:   destroyEndPosWithBrace,
+			},
+		}
+		fixes := err.SuggestFixes(code)
+		require.Len(t, fixes, 1)
+		edit := fixes[0].TextEdits[0]
+		updated := applyTextEdit(code, edit)
+		expected := `
+        resource Test {
+            
+        }
+	`
+		assert.Equal(t, expected, updated)
+	})
+
+	// Test that CustomDestructorError implements errors.HasMigrationNote and returns the expected migration note
+	t.Run("CustomDestructorError_HasMigrationNote", func(t *testing.T) {
+		t.Parallel()
+
+		err := &CustomDestructorError{}
+		noteProvider, ok := interface{}(err).(errors.HasMigrationNote)
+		require.True(t, ok, "CustomDestructorError should implement errors.HasMigrationNote")
+		note := noteProvider.MigrationNote()
+		assert.Equal(t, note, "This is pre-Cadence 1.0 syntax. Support for custom destructors was removed. Any custom cleanup logic should be moved to a separate function, and must be explicitly called before the destruction.")
+	})
 }
 
 func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
@@ -9762,6 +9846,59 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 	})
 }
 
+func TestMissingCommaInParameterListError(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+		fun test(a: Int b: Int) {
+			return a + b
+		}
+	`
+
+	_, errs := testParseDeclarations(code)
+	require.Len(t, errs, 1)
+	assert.IsType(t, &MissingCommaInParameterListError{}, errs[0])
+
+	// Direct unit test for SuggestFixes
+	t.Run("SuggestFixes", func(t *testing.T) {
+		missingCommaError := errs[0].(*MissingCommaInParameterListError)
+
+		fixes := missingCommaError.SuggestFixes(code)
+		fmt.Printf("Suggested fixes: %+v\n", fixes)
+
+		assert.Equal(t, []errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Add comma to separate parameters",
+				TextEdits: []ast.TextEdit{
+					{
+						Replacement: ", ",
+						Range: ast.Range{
+							StartPos: missingCommaError.Pos.Shifted(nil, -1), // Start of whitespace
+							EndPos:   missingCommaError.Pos,                  // End of whitespace
+						},
+					},
+				},
+			},
+		}, fixes)
+	})
+
+	// End-to-end test: apply suggested fix to code
+	t.Run("ApplySuggestedFix", func(t *testing.T) {
+		missingCommaError := errs[0].(*MissingCommaInParameterListError)
+		fixes := missingCommaError.SuggestFixes(code)
+		require.Len(t, fixes, 1)
+		edits := fixes[0].TextEdits[0]
+		updated := applyTextEdit(code, edits)
+		expected := `
+		fun test(a: Int, b: Int) {
+			return a + b
+		}
+	`
+		assert.Equal(t, expected, updated)
+	})
+}
+
 func TestParseKeywordsAsFieldNames(t *testing.T) {
 
 	t.Parallel()
@@ -9783,6 +9920,14 @@ func TestParseKeywordsAsFieldNames(t *testing.T) {
 			require.Empty(t, errs)
 		})
 	}
+}
+
+func TestRestrictedTypeError_HasMigrationNote(t *testing.T) {
+	err := &RestrictedTypeError{}
+	noteProvider, ok := interface{}(err).(errors.HasMigrationNote)
+	require.True(t, ok, "RestrictedTypeError should implement errors.HasMigrationNote")
+	note := noteProvider.MigrationNote()
+	assert.Equal(t, note, "This is pre-Cadence 1.0 syntax. Restricted types like `T{}` have been replaced with intersection types like `{T}`.")
 }
 
 func TestParseStructNamedTransaction(t *testing.T) {
@@ -9814,5 +9959,4 @@ func TestParseStructNamedTransaction(t *testing.T) {
 		},
 		errs,
 	)
-
 }

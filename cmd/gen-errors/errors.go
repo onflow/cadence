@@ -13,7 +13,8 @@ func generateErrors() []namedError {
 	return []namedError{
 		{"parser.CustomDestructorError",
 			&parser.CustomDestructorError{
-				Pos: placeholderPosition,
+				Pos:   placeholderPosition,
+				Range: placeholderRange,
 			},
 		},
 		{"parser.ExpressionDepthLimitReachedError",
@@ -27,11 +28,6 @@ func generateErrors() []namedError {
 				IntegerLiteralKind:        placeholderIntegerLiteralKind,
 				InvalidIntegerLiteralKind: placeholderInvalidNumberLiteralKind,
 				Range:                     placeholderRange,
-			},
-		},
-		{"parser.JuxtaposedUnaryOperatorsError",
-			&parser.JuxtaposedUnaryOperatorsError{
-				Pos: placeholderPosition,
 			},
 		},
 		{"parser.MissingCommaInParameterListError",
@@ -485,7 +481,8 @@ func generateErrors() []namedError {
 		},
 		{"sema.InvalidEventUsageError",
 			&sema.InvalidEventUsageError{
-				Range: placeholderRange,
+				EventName: placeholderString,
+				Range:     placeholderRange,
 			},
 		},
 		{"sema.InvalidFailableResourceDowncastOutsideOptionalBindingError",
@@ -612,6 +609,7 @@ func generateErrors() []namedError {
 		},
 		{"sema.InvalidNonEntitlementAccessError",
 			&sema.InvalidNonEntitlementAccessError{
+				Type:  placeholderSemaType,
 				Range: placeholderRange,
 			},
 		},

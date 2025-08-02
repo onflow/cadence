@@ -21,6 +21,7 @@ package parser
 import (
 	"fmt"
 	"strings"
+	"unicode"
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
@@ -138,31 +139,6 @@ func (e *SyntaxErrorWithSuggestedReplacement) SuggestFixes(_ string) []errors.Su
 	}
 }
 
-// JuxtaposedUnaryOperatorsError
-
-type JuxtaposedUnaryOperatorsError struct {
-	Pos ast.Position
-}
-
-var _ ParseError = &JuxtaposedUnaryOperatorsError{}
-var _ errors.UserError = &JuxtaposedUnaryOperatorsError{}
-
-func (*JuxtaposedUnaryOperatorsError) isParseError() {}
-
-func (*JuxtaposedUnaryOperatorsError) IsUserError() {}
-
-func (e *JuxtaposedUnaryOperatorsError) StartPosition() ast.Position {
-	return e.Pos
-}
-
-func (e *JuxtaposedUnaryOperatorsError) EndPosition(_ common.MemoryGauge) ast.Position {
-	return e.Pos
-}
-
-func (e *JuxtaposedUnaryOperatorsError) Error() string {
-	return "unary operators must not be juxtaposed; parenthesize inner expression"
-}
-
 // InvalidIntegerLiteralError
 
 type InvalidIntegerLiteralError struct {
@@ -175,6 +151,7 @@ type InvalidIntegerLiteralError struct {
 var _ ParseError = &InvalidIntegerLiteralError{}
 var _ errors.UserError = &InvalidIntegerLiteralError{}
 var _ errors.SecondaryError = &InvalidIntegerLiteralError{}
+var _ errors.HasDocumentationLink = &InvalidIntegerLiteralError{}
 
 func (*InvalidIntegerLiteralError) isParseError() {}
 
@@ -214,6 +191,10 @@ func (e *InvalidIntegerLiteralError) SecondaryError() string {
 	panic(errors.NewUnreachableError())
 }
 
+func (e *InvalidIntegerLiteralError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types/booleans-numlits-ints"
+}
+
 // ExpressionDepthLimitReachedError is reported when the expression depth limit was reached
 type ExpressionDepthLimitReachedError struct {
 	Pos ast.Position
@@ -221,6 +202,7 @@ type ExpressionDepthLimitReachedError struct {
 
 var _ ParseError = ExpressionDepthLimitReachedError{}
 var _ errors.UserError = ExpressionDepthLimitReachedError{}
+var _ errors.SecondaryError = ExpressionDepthLimitReachedError{}
 
 func (ExpressionDepthLimitReachedError) isParseError() {}
 
@@ -228,9 +210,13 @@ func (ExpressionDepthLimitReachedError) IsUserError() {}
 
 func (e ExpressionDepthLimitReachedError) Error() string {
 	return fmt.Sprintf(
-		"program too complex, reached max expression depth limit %d",
+		"expression too deeply nested, exceeded depth limit of %d",
 		expressionDepthLimit,
 	)
+}
+
+func (e ExpressionDepthLimitReachedError) SecondaryError() string {
+	return "Consider extracting the sub-expressions out and storing the intermediate results in local variables"
 }
 
 func (e ExpressionDepthLimitReachedError) StartPosition() ast.Position {
@@ -242,14 +228,13 @@ func (e ExpressionDepthLimitReachedError) EndPosition(_ common.MemoryGauge) ast.
 }
 
 // TypeDepthLimitReachedError is reported when the type depth limit was reached
-//
-
 type TypeDepthLimitReachedError struct {
 	Pos ast.Position
 }
 
 var _ ParseError = TypeDepthLimitReachedError{}
 var _ errors.UserError = TypeDepthLimitReachedError{}
+var _ errors.SecondaryError = TypeDepthLimitReachedError{}
 
 func (TypeDepthLimitReachedError) isParseError() {}
 
@@ -257,9 +242,13 @@ func (TypeDepthLimitReachedError) IsUserError() {}
 
 func (e TypeDepthLimitReachedError) Error() string {
 	return fmt.Sprintf(
-		"program too complex, reached max type depth limit %d",
+		"type too deeply nested, exceeded depth limit of %d",
 		typeDepthLimit,
 	)
+}
+
+func (e TypeDepthLimitReachedError) SecondaryError() string {
+	return "Refactor the type so that the depth of nesting is less than the limit"
 }
 
 func (e TypeDepthLimitReachedError) StartPosition() ast.Position {
@@ -278,6 +267,9 @@ type MissingCommaInParameterListError struct {
 
 var _ ParseError = &MissingCommaInParameterListError{}
 var _ errors.UserError = &MissingCommaInParameterListError{}
+var _ errors.SecondaryError = &MissingCommaInParameterListError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingCommaInParameterListError{}
+var _ errors.HasDocumentationLink = &MissingCommaInParameterListError{}
 
 func (*MissingCommaInParameterListError) isParseError() {}
 
@@ -295,14 +287,54 @@ func (e *MissingCommaInParameterListError) Error() string {
 	return "missing comma after parameter"
 }
 
+func (e *MissingCommaInParameterListError) SecondaryError() string {
+	return "add a comma to separate parameters in the parameter list"
+}
+
+func (e *MissingCommaInParameterListError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
+	// Find the start of whitespace before the error position
+	errorPos := e.Pos.Offset
+
+	// Use strings.TrimRight to find where the non-whitespace ends
+	beforeError := code[:errorPos]
+	trimmed := strings.TrimRightFunc(beforeError, unicode.IsSpace)
+	whitespaceStart := len(trimmed)
+
+	// Create a position for the start of whitespace
+	startPos := e.Pos.Shifted(nil, whitespaceStart-errorPos)
+
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Add comma to separate parameters",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: ", ",
+					Range: ast.Range{
+						StartPos: startPos,
+						EndPos:   e.Pos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (e *MissingCommaInParameterListError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/functions#function-declarations"
+}
+
 // CustomDestructorError
 
 type CustomDestructorError struct {
 	Pos ast.Position
+	ast.Range
 }
 
 var _ ParseError = &CustomDestructorError{}
 var _ errors.UserError = &CustomDestructorError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &CustomDestructorError{}
+var _ errors.HasDocumentationLink = &CustomDestructorError{}
+var _ errors.HasMigrationNote = &CustomDestructorError{}
 
 func (*CustomDestructorError) isParseError() {}
 
@@ -317,11 +349,33 @@ func (e *CustomDestructorError) EndPosition(_ common.MemoryGauge) ast.Position {
 }
 
 func (e *CustomDestructorError) Error() string {
-	return "custom destructor definitions are no longer permitted"
+	return "custom destructor definitions are no longer permitted since Cadence v1.0"
 }
 
 func (e *CustomDestructorError) SecondaryError() string {
 	return "remove the destructor definition"
+}
+
+func (e *CustomDestructorError) MigrationNote() string {
+	return "This is pre-Cadence 1.0 syntax. Support for custom destructors was removed. Any custom cleanup logic should be moved to a separate function, and must be explicitly called before the destruction."
+}
+
+func (e *CustomDestructorError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Remove the deprecated custom destructor",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "",
+					Range:       e.Range,
+				},
+			},
+		},
+	}
+}
+
+func (e *CustomDestructorError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/cadence-migration-guide/improvements#-motivation-23"
 }
 
 // RestrictedTypeError
@@ -330,13 +384,28 @@ type RestrictedTypeError struct {
 	ast.Range
 }
 
-var _ ParseError = &CustomDestructorError{}
-var _ errors.UserError = &CustomDestructorError{}
+var _ ParseError = &RestrictedTypeError{}
+var _ errors.UserError = &RestrictedTypeError{}
+var _ errors.SecondaryError = &RestrictedTypeError{}
+var _ errors.HasDocumentationLink = &RestrictedTypeError{}
+var _ errors.HasMigrationNote = &RestrictedTypeError{}
 
 func (*RestrictedTypeError) isParseError() {}
 
 func (*RestrictedTypeError) IsUserError() {}
 
 func (e *RestrictedTypeError) Error() string {
-	return "restricted types have been removed; replace with the concrete type or an equivalent intersection type"
+	return "restricted types have been removed in Cadence 1.0+"
+}
+
+func (e *RestrictedTypeError) SecondaryError() string {
+	return "replace with the concrete type or an equivalent intersection type"
+}
+
+func (e *RestrictedTypeError) MigrationNote() string {
+	return "This is pre-Cadence 1.0 syntax. Restricted types like `T{}` have been replaced with intersection types like `{T}`."
+}
+
+func (e *RestrictedTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/cadence-migration-guide/improvements#-motivation-12"
 }
