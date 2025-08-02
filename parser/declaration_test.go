@@ -1765,8 +1765,10 @@ func TestParseAccess(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected keyword \"all\", \"account\", \"contract\", or \"self\", got EOF",
-					Pos:     ast.Position{Offset: 9, Line: 1, Column: 9},
+					Message:       "expected keyword \"all\", \"account\", \"contract\", or \"self\", got EOF",
+					Secondary:     "Access control modifiers must be one of: 'all', 'account', 'contract', or 'self'",
+					Documentation: "https://cadence-lang.org/docs/language/access-control",
+					Pos:           ast.Position{Offset: 9, Line: 1, Column: 9},
 				},
 			},
 			errs,
@@ -2118,8 +2120,10 @@ func TestParseImportDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected end in import declaration: expected string, address, or identifier",
-					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+					Message:       "unexpected end in import declaration: expected string, address, or identifier",
+					Secondary:     "Import declarations must specify what to import - provide a string literal (for file paths), hexadecimal address, or identifier",
+					Documentation: "https://cadence-lang.org/docs/language/imports",
+					Pos:           ast.Position{Offset: 7, Line: 1, Column: 7},
 				},
 			},
 			errs,
@@ -2226,7 +2230,9 @@ func TestParseImportDeclaration(t *testing.T) {
 				&SyntaxError{
 					Message: "unexpected token in import declaration: " +
 						"got decimal integer, expected string, address, or identifier",
-					Pos: ast.Position{Offset: 8, Line: 1, Column: 8},
+					Secondary:     "Import declarations must start with a string literal (for file paths), hexadecimal address, or identifier",
+					Documentation: "https://cadence-lang.org/docs/language/imports",
+					Pos:           ast.Position{Offset: 8, Line: 1, Column: 8},
 				},
 			},
 			errs,
@@ -2279,7 +2285,9 @@ func TestParseImportDeclaration(t *testing.T) {
 				&SyntaxError{
 					Message: "unexpected token in import declaration: " +
 						"got string, expected keyword \"from\" or ','",
-					Pos: ast.Position{Offset: 12, Line: 1, Column: 12},
+					Secondary:     "After an imported identifier, expect either a comma to import more items or the 'from' keyword to specify the import location",
+					Documentation: "https://cadence-lang.org/docs/language/imports",
+					Pos:           ast.Position{Offset: 12, Line: 1, Column: 12},
 				},
 			},
 			errs,
@@ -2339,8 +2347,10 @@ func TestParseImportDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: `expected identifier, got keyword "from"`,
-					Pos:     ast.Position{Offset: 20, Line: 1, Column: 20},
+					Message:       `expected identifier, got keyword "from"`,
+					Secondary:     "Import declarations expect an identifier to import, not the 'from' keyword in this position",
+					Documentation: "https://cadence-lang.org/docs/language/imports",
+					Pos:           ast.Position{Offset: 20, Line: 1, Column: 20},
 				},
 			},
 			errs,
@@ -2361,8 +2371,10 @@ func TestParseImportDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Pos:     ast.Position{Line: 1, Column: 12, Offset: 12},
-					Message: `expected identifier or keyword "from", got ','`,
+					Pos:           ast.Position{Line: 1, Column: 12, Offset: 12},
+					Message:       `expected identifier or keyword "from", got ','`,
+					Secondary:     "Import declarations expect either an identifier to import or the 'from' keyword to specify the import location",
+					Documentation: "https://cadence-lang.org/docs/language/imports",
 				},
 			},
 			errs,
@@ -2402,8 +2414,10 @@ func TestParseImportDeclaration(t *testing.T) {
 
 		AssertEqualWithDiff(t, []error{
 			&SyntaxError{
-				Pos:     ast.Position{Line: 1, Column: 22, Offset: 22},
-				Message: `unexpected token in import declaration: got '@', expected keyword "from" or ','`,
+				Pos:           ast.Position{Line: 1, Column: 22, Offset: 22},
+				Message:       `unexpected token in import declaration: got '@', expected keyword "from" or ','`,
+				Secondary:     "After an imported identifier, expect either a comma to import more items or the 'from' keyword to specify the import location",
+				Documentation: "https://cadence-lang.org/docs/language/imports",
 			},
 		}, errs)
 
@@ -2894,6 +2908,20 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 			},
 			result,
 		)
+	})
+
+	t.Run("missing identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("let : Int")
+		require.Len(t, errs, 1)
+
+		syntaxError, ok := errs[0].(*SyntaxError)
+		require.True(t, ok)
+		require.Equal(t, "expected identifier after start of field declaration, got ':'", syntaxError.Message)
+		require.Equal(t, "Field declarations must have a valid identifier name after the variable kind keyword (let/var)", syntaxError.Secondary)
+		require.Equal(t, "https://cadence-lang.org/docs/language/constants-and-variables", syntaxError.Documentation)
 	})
 }
 func TestParseField(t *testing.T) {
@@ -4387,8 +4415,10 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected interface name, got keyword \"interface\"",
-					Pos:     ast.Position{Offset: 30, Line: 1, Column: 30},
+					Message:       "expected interface name, got keyword \"interface\"",
+					Secondary:     "Interface declarations must have a unique name after the 'interface' keyword",
+					Documentation: "https://cadence-lang.org/docs/language/interfaces",
+					Pos:           ast.Position{Offset: 30, Line: 1, Column: 30},
 				},
 			},
 			errs,

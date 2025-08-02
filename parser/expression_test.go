@@ -1873,6 +1873,24 @@ func TestParseInvocation(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("invalid: non-identifier label", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("f(1+2: 3)")
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message:       "expected identifier for label, got 1 + 2",
+					Secondary:     "Argument labels must be simple identifiers, not expressions or complex syntax",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 5, Line: 1, Column: 5},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseMemberExpression(t *testing.T) {
@@ -5180,8 +5198,10 @@ func TestParseUnaryExpression(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token in expression: '%'",
-					Pos:     ast.Position{Line: 1, Column: 2, Offset: 2},
+					Message:       "unexpected token in expression: '%'",
+					Secondary:     "This token cannot be used to start an expression - check for missing operators, parentheses, or invalid syntax",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Line: 1, Column: 1, Offset: 1},
 				},
 			},
 			errs,
@@ -6169,8 +6189,10 @@ func TestParseStringTemplate(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token in expression: '.'",
-					Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
+					Message:       "unexpected token in expression: '.'",
+					Secondary:     "This token cannot be used to start an expression - check for missing operators, parentheses, or invalid syntax",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 8, Line: 2, Column: 7},
 				},
 			},
 			errs,
@@ -6232,8 +6254,10 @@ func TestParseStringTemplate(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token in expression: ')'",
-					Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
+					Message:       "unexpected token in expression: ')'",
+					Secondary:     "This token cannot be used to start an expression - check for missing operators, parentheses, or invalid syntax",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 8, Line: 2, Column: 7},
 				},
 			},
 			errs,

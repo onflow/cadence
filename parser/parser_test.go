@@ -891,8 +891,10 @@ func TestParseBufferedErrors(t *testing.T) {
 				Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
 			},
 			&SyntaxError{
-				Message: "missing ')' at end of invocation argument list",
-				Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+				Message:       "missing ')' at end of invocation argument list",
+				Secondary:     "Function calls and type instantiations must be properly closed with a closing parenthesis",
+				Documentation: "https://cadence-lang.org/docs/language/syntax",
+				Pos:           ast.Position{Offset: 6, Line: 1, Column: 6},
 			},
 		},
 		errs,
@@ -905,7 +907,7 @@ func TestParseInvalidSingleQuoteImport(t *testing.T) {
 
 	_, err := testParseProgram(`import 'X'`)
 
-	require.ErrorContains(t, err, "Parsing failed:\nerror: unrecognized character: U+0027 '''\n --> :1:7\n  |\n1 | import 'X'\n  |        ^\n\nerror: unexpected end in import declaration: expected string, address, or identifier\n --> :1:7\n  |\n1 | import 'X'\n  |        ^\n")
+	require.ErrorContains(t, err, "Parsing failed:\nerror: unrecognized character: U+0027 '''\n --> :1:7\n  |\n1 | import 'X'\n  |        ^\n\nerror: unexpected end in import declaration: expected string, address, or identifier\n --> :1:7\n  |\n1 | import 'X'\n  |        ^ Import declarations must specify what to import - provide a string literal (for file paths), hexadecimal address, or identifier\n")
 }
 
 func TestParseExpressionDepthLimit(t *testing.T) {

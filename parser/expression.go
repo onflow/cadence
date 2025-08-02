@@ -1035,7 +1035,12 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 		case lexer.TokenEOF:
 			return nil,
 				ast.EmptyPosition,
-				p.syntaxError("missing ')' at end of invocation argument list")
+				NewSyntaxError(
+					p.current.StartPos,
+					"missing ')' at end of invocation argument list",
+				).
+					WithSecondary("Function calls and type instantiations must be properly closed with a closing parenthesis").
+					WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 
 		default:
 			if !expectArgument {
@@ -1084,10 +1089,13 @@ func parseArgument(p *parser) (*ast.Argument, error) {
 
 		identifier, ok := expr.(*ast.IdentifierExpression)
 		if !ok {
-			return nil, p.syntaxError(
+			return nil, NewSyntaxError(
+				p.current.StartPos,
 				"expected identifier for label, got %s",
 				expr,
-			)
+			).
+				WithSecondary("Argument labels must be simple identifiers, not expressions or complex syntax").
+				WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 		}
 		label = identifier.Identifier.Identifier
 		labelStartPos = expr.StartPosition()
@@ -1677,7 +1685,13 @@ func applyExprNullDenotation(p *parser, token lexer.Token) (ast.Expression, erro
 	tokenType := token.Type
 	nullDenotation := exprNullDenotations[tokenType]
 	if nullDenotation == nil {
-		return nil, p.syntaxError("unexpected token in expression: %s", tokenType)
+		return nil, NewSyntaxError(
+			token.StartPos,
+			"unexpected token in expression: %s",
+			tokenType,
+		).
+			WithSecondary("This token cannot be used to start an expression - check for missing operators, parentheses, or invalid syntax").
+			WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 	}
 	return nullDenotation(p, token)
 }
@@ -1685,7 +1699,13 @@ func applyExprNullDenotation(p *parser, token lexer.Token) (ast.Expression, erro
 func applyExprLeftDenotation(p *parser, token lexer.Token, left ast.Expression) (ast.Expression, error) {
 	leftDenotation := exprLeftDenotations[token.Type]
 	if leftDenotation == nil {
-		return nil, p.syntaxError("unexpected token in expression: %s", token.Type)
+		return nil, NewSyntaxError(
+			token.StartPos,
+			"unexpected token in expression: %s",
+			token.Type,
+		).
+			WithSecondary("This token cannot be used as an operator in an expression - check for missing operators, parentheses, or invalid syntax").
+			WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 	}
 	return leftDenotation(p, token, left)
 }

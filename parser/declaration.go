@@ -357,11 +357,14 @@ func handlePub(p *parser) error {
 	const keywordSet = "set"
 
 	if !p.current.Is(lexer.TokenIdentifier) {
-		return p.syntaxError(
+		return NewSyntaxError(
+			p.current.StartPos,
 			"expected keyword %q, got %s",
 			keywordSet,
 			p.current.Type,
-		)
+		).
+			WithSecondary("The 'set' keyword is used in access control modifiers to specify settable access").
+			WithDocumentation("https://cadence-lang.org/docs/language/access-control")
 	}
 
 	keyword := p.currentTokenSource()
@@ -496,11 +499,14 @@ func parseAccess(p *parser) (ast.Access, error) {
 		p.skipSpaceAndComments()
 
 		if !p.current.Is(lexer.TokenIdentifier) {
-			return ast.AccessNotSpecified, p.syntaxError(
+			return ast.AccessNotSpecified, NewSyntaxError(
+				p.current.StartPos,
 				"expected keyword %s, got %s",
 				enumeratedAccessModifierKeywords,
 				p.current.Type,
-			)
+			).
+				WithSecondary("Access control modifiers must be one of: 'all', 'account', 'contract', or 'self'").
+				WithDocumentation("https://cadence-lang.org/docs/language/access-control")
 		}
 
 		var access ast.Access
@@ -609,7 +615,12 @@ func parseVariableDeclaration(
 	p.skipSpaceAndComments()
 	transfer := parseTransfer(p)
 	if transfer == nil {
-		return nil, p.syntaxError("expected transfer")
+		return nil, NewSyntaxError(
+			p.current.StartPos,
+			"expected transfer",
+		).
+			WithSecondary("Variable declarations must specify how to transfer the value: use '=' for copy, '<-' for move, or '<-!' for forced move").
+			WithDocumentation("https://cadence-lang.org/docs/language/constants-and-variables")
 	}
 
 	value, err := parseExpression(p, lowestBindingPower)
@@ -756,10 +767,13 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 			p.next()
 
 		default:
-			return p.syntaxError(
+			return NewSyntaxError(
+				p.current.StartPos,
 				"unexpected token in import declaration: got %s, expected string, address, or identifier",
 				p.current.Type,
-			)
+			).
+				WithSecondary("Import declarations must start with a string literal (for file paths), hexadecimal address, or identifier").
+				WithDocumentation("https://cadence-lang.org/docs/language/imports")
 		}
 
 		return nil
@@ -778,12 +792,15 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 			switch p.current.Type {
 			case lexer.TokenComma:
 				if !expectCommaOrFrom {
-					return p.syntaxError(
+					return NewSyntaxError(
+						p.current.StartPos,
 						"expected %s or keyword %q, got %s",
 						lexer.TokenIdentifier,
 						KeywordFrom,
 						p.current.Type,
-					)
+					).
+						WithSecondary("Import declarations expect either an identifier to import or the 'from' keyword to specify the import location").
+						WithDocumentation("https://cadence-lang.org/docs/language/imports")
 				}
 				expectCommaOrFrom = false
 
@@ -806,11 +823,14 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 					}
 
 					if !isNextTokenCommaOrFrom(p) {
-						return p.syntaxError(
+						return NewSyntaxError(
+							p.current.StartPos,
 							"expected %s, got keyword %q",
 							lexer.TokenIdentifier,
 							keyword,
-						)
+						).
+							WithSecondary("Import declarations expect an identifier to import, not the 'from' keyword in this position").
+							WithDocumentation("https://cadence-lang.org/docs/language/imports")
 					}
 
 					// If the next token is either comma or 'from' token, then fall through
@@ -823,19 +843,25 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 				expectCommaOrFrom = true
 
 			case lexer.TokenEOF:
-				return p.syntaxError(
+				return NewSyntaxError(
+					p.current.StartPos,
 					"unexpected end in import declaration: expected %s or %s",
 					lexer.TokenIdentifier,
 					lexer.TokenComma,
-				)
+				).
+					WithSecondary("Import declarations cannot end abruptly - expect either an identifier to import or a comma to continue the import list").
+					WithDocumentation("https://cadence-lang.org/docs/language/imports")
 
 			default:
-				return p.syntaxError(
+				return NewSyntaxError(
+					p.current.StartPos,
 					"unexpected token in import declaration: got %s, expected keyword %q or %s",
 					p.current.Type,
 					KeywordFrom,
 					lexer.TokenComma,
-				)
+				).
+					WithSecondary("After an imported identifier, expect either a comma to import more items or the 'from' keyword to specify the import location").
+					WithDocumentation("https://cadence-lang.org/docs/language/imports")
 			}
 		}
 
@@ -897,22 +923,33 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 			setIdentifierLocation(identifier)
 
 		default:
-			return nil, p.syntaxError(
+			return nil, NewSyntaxError(
+				p.current.StartPos,
 				"unexpected token in import declaration: got %s, expected keyword %q or %s",
 				p.current.Type,
 				KeywordFrom,
 				lexer.TokenComma,
-			)
+			).
+				WithSecondary("After an imported identifier, expect either a comma to import more items or the 'from' keyword to specify the import location").
+				WithDocumentation("https://cadence-lang.org/docs/language/imports")
 		}
 
 	case lexer.TokenEOF:
-		return nil, p.syntaxError("unexpected end in import declaration: expected string, address, or identifier")
+		return nil, NewSyntaxError(
+			p.current.StartPos,
+			"unexpected end in import declaration: expected string, address, or identifier",
+		).
+			WithSecondary("Import declarations must specify what to import - provide a string literal (for file paths), hexadecimal address, or identifier").
+			WithDocumentation("https://cadence-lang.org/docs/language/imports")
 
 	default:
-		return nil, p.syntaxError(
+		return nil, NewSyntaxError(
+			p.current.StartPos,
 			"unexpected token in import declaration: got %s, expected string, address, or identifier",
 			p.current.Type,
-		)
+		).
+			WithSecondary("Import declarations must start with a string literal (for file paths), hexadecimal address, or identifier").
+			WithDocumentation("https://cadence-lang.org/docs/language/imports")
 	}
 
 	return ast.NewImportDeclaration(
@@ -1109,10 +1146,13 @@ func parseFieldWithVariableKind(
 	// Skip the `let` or `var` keyword
 	p.nextSemanticToken()
 	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, p.syntaxError(
+		return nil, NewSyntaxError(
+			p.current.StartPos,
 			"expected identifier after start of field declaration, got %s",
 			p.current.Type,
-		)
+		).
+			WithSecondary("Field declarations must have a valid identifier name after the variable kind keyword (let/var)").
+			WithDocumentation("https://cadence-lang.org/docs/language/constants-and-variables")
 	}
 
 	identifier := p.tokenToIdentifier(p.current)
@@ -1411,10 +1451,13 @@ func parseCompositeOrInterfaceDeclaration(
 		if string(p.currentTokenSource()) == KeywordInterface {
 			isInterface = true
 			if wasInterface {
-				return nil, p.syntaxError(
+				return nil, NewSyntaxError(
+					p.current.StartPos,
 					"expected interface name, got keyword %q",
 					KeywordInterface,
-				)
+				).
+					WithSecondary("Interface declarations must have a unique name after the 'interface' keyword").
+					WithDocumentation("https://cadence-lang.org/docs/language/interfaces")
 			}
 			// Skip the `interface` keyword
 			p.next()
