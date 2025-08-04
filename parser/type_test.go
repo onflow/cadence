@@ -151,8 +151,10 @@ func TestParseArrayType(t *testing.T) {
 				},
 				// TODO: improve/avoid error by skipping full negative integer literal
 				&SyntaxError{
-					Message: `expected token ']'`,
-					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
+					Message:       `expected token ']'`,
+					Pos:           ast.Position{Offset: 8, Line: 1, Column: 8},
+					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -427,8 +429,10 @@ func TestParseReferenceType(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token in type: ')'",
-					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+					Message:       "unexpected token in type: ')'",
+					Pos:           ast.Position{Offset: 5, Line: 1, Column: 5},
+					Secondary:     "This token cannot be used in this context - check for missing operators, parentheses, or invalid syntax",
+					Documentation: "https://cadence-lang.org/docs/language/values-and-types",
 				},
 			},
 			errs,
@@ -505,8 +509,10 @@ func TestParseReferenceType(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token in type: ')'",
-					Pos:     ast.Position{Offset: 15, Line: 1, Column: 15},
+					Message:       "unexpected token in type: ')'",
+					Pos:           ast.Position{Offset: 14, Line: 1, Column: 14},
+					Secondary:     "This token cannot be used in this context - check for missing operators, parentheses, or invalid syntax",
+					Documentation: "https://cadence-lang.org/docs/language/values-and-types",
 				},
 			},
 			errs,
@@ -837,8 +843,10 @@ func TestParseIntersectionType(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected comma in intersection type",
-					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
+					Message:       "unexpected comma in intersection type",
+					Pos:           ast.Position{Offset: 1, Line: 1, Column: 1},
+					Secondary:     "Intersection types use commas to separate multiple types, but a type is expected after the comma",
+					Documentation: "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types",
 				},
 			},
 			errs,
@@ -960,8 +968,10 @@ func TestParseDictionaryType(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected comma in dictionary type",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+					Message:       "unexpected comma in dictionary type",
+					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
+					Secondary:     "Dictionary types use a colon (:) to separate key and value types, not commas",
+					Documentation: "https://cadence-lang.org/docs/language/values-and-types/dictionaries",
 				},
 			},
 			errs,

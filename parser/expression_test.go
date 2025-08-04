@@ -2214,6 +2214,8 @@ func TestParseBlockComment(t *testing.T) {
 						Line:   1,
 						Column: 37,
 					},
+					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -6288,8 +6290,10 @@ func TestParseStringTemplate(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token ')'",
-					Pos:     ast.Position{Offset: 10, Line: 2, Column: 9},
+					Message:       "expected token ')'",
+					Pos:           ast.Position{Offset: 10, Line: 2, Column: 9},
+					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -6308,8 +6312,10 @@ func TestParseStringTemplate(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token ')'",
-					Pos:     ast.Position{Offset: 16, Line: 2, Column: 15},
+					Message:       "expected token ')'",
+					Pos:           ast.Position{Offset: 16, Line: 2, Column: 15},
+					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -6328,8 +6334,10 @@ func TestParseStringTemplate(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token ')'",
-					Pos:     ast.Position{Offset: 30, Line: 2, Column: 29},
+					Message:       "expected token ')'",
+					Pos:           ast.Position{Offset: 30, Line: 2, Column: 29},
+					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,

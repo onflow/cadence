@@ -99,10 +99,13 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 			atEnd = true
 
 		case lexer.TokenEOF:
-			return nil, p.syntaxError(
+			return nil, NewSyntaxError(
+				p.current.StartPos,
 				"missing %s at end of parameter list",
 				lexer.TokenParenClose,
-			)
+			).
+				WithSecondary("Function parameter lists must be properly closed with a closing parenthesis").
+				WithDocumentation("https://cadence-lang.org/docs/language/functions")
 
 		default:
 			if expectParameter {
@@ -269,10 +272,13 @@ func parseTypeParameterList(p *parser) (*ast.TypeParameterList, error) {
 
 		case lexer.TokenComma:
 			if expectTypeParameter {
-				return nil, p.syntaxError(
+				return nil, NewSyntaxError(
+					p.current.StartPos,
 					"expected type parameter or end of type parameter list, got %s",
 					p.current.Type,
-				)
+				).
+					WithSecondary("Type parameters must be separated by commas, and the list must end with a closing angle bracket (>)").
+					WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 			}
 			// Skip the comma
 			p.next()
@@ -285,22 +291,31 @@ func parseTypeParameterList(p *parser) (*ast.TypeParameterList, error) {
 			atEnd = true
 
 		case lexer.TokenEOF:
-			return nil, p.syntaxError(
+			return nil, NewSyntaxError(
+				p.current.StartPos,
 				"missing %s at end of type parameter list",
 				lexer.TokenGreater,
-			)
+			).
+				WithSecondary("Type parameters must be separated by commas, and the list must end with a closing angle bracket (>)").
+				WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 
 		default:
 			if expectTypeParameter {
-				return nil, p.syntaxError(
+				return nil, NewSyntaxError(
+					p.current.StartPos,
 					"expected parameter or end of type parameter list, got %s",
 					p.current.Type,
-				)
+				).
+					WithSecondary("Type parameters must be separated by commas, and the list must end with a closing angle bracket (>)").
+					WithDocumentation("https://cadence-lang.org/docs/language/syntax/")
 			} else {
-				return nil, p.syntaxError(
+				return nil, NewSyntaxError(
+					p.current.StartPos,
 					"expected comma or end of type parameter list, got %s",
 					p.current.Type,
-				)
+				).
+					WithSecondary("Type parameters must be separated by commas, and the list must end with a closing angle bracket (>)").
+					WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 			}
 		}
 	}
@@ -320,10 +335,13 @@ func parseTypeParameter(p *parser) (*ast.TypeParameter, error) {
 	p.skipSpaceAndComments()
 
 	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, p.syntaxError(
+		return nil, NewSyntaxError(
+			p.current.StartPos,
 			"expected type parameter name, got %s",
 			p.current.Type,
-		)
+		).
+			WithSecondary("Type parameters must have a valid identifier name").
+			WithDocumentation("https://cadence-lang.org/docs/language/functions")
 	}
 
 	identifier := p.tokenToIdentifier(p.current)

@@ -292,8 +292,10 @@ func TestParseBuffering(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token identifier with string value c",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+					Message:       "expected token identifier with string value c",
+					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
+					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -535,8 +537,10 @@ func TestParseBuffering(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token identifier with string value d",
-					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+					Message:       "expected token identifier with string value d",
+					Pos:           ast.Position{Offset: 6, Line: 1, Column: 6},
+					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -563,8 +567,10 @@ func TestParseBuffering(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token identifier",
-					Pos:     ast.Position{Offset: 398, Line: 9, Column: 94},
+					Message:       "expected token identifier",
+					Pos:           ast.Position{Offset: 398, Line: 9, Column: 94},
+					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			err.(Error).Errors,
@@ -757,8 +763,10 @@ func TestParseArgumentList(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token '('",
-					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:       "expected token '('",
+					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
+					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,

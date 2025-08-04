@@ -1664,8 +1664,10 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "missing '>' at end of type parameter list",
-					Pos:     ast.Position{Offset: 11, Line: 1, Column: 11},
+					Message:       "missing '>' at end of type parameter list",
+					Pos:           ast.Position{Offset: 11, Line: 1, Column: 11},
+					Secondary:     "Type parameters must be separated by commas, and the list must end with a closing angle bracket (>)",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -1790,8 +1792,10 @@ func TestParseAccess(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token ')'",
-					Pos:     ast.Position{Offset: 14, Line: 1, Column: 14},
+					Message:       "expected token ')'",
+					Pos:           ast.Position{Offset: 14, Line: 1, Column: 14},
+					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -1937,8 +1941,10 @@ func TestParseAccess(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token ')'",
-					Pos:     ast.Position{Offset: 14, Line: 1, Column: 14},
+					Message:       "expected token ')'",
+					Pos:           ast.Position{Offset: 14, Line: 1, Column: 14},
+					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -1958,8 +1964,10 @@ func TestParseAccess(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token ')'",
-					Pos:     ast.Position{Offset: 14, Line: 1, Column: 14},
+					Message:       "expected token ')'",
+					Pos:           ast.Position{Offset: 14, Line: 1, Column: 14},
+					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -2096,8 +2104,10 @@ func TestParseAccess(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token in type: ')'",
-					Pos:     ast.Position{Offset: 18, Line: 1, Column: 18},
+					Message:       "unexpected token in type: ')'",
+					Pos:           ast.Position{Offset: 17, Line: 1, Column: 17},
+					Secondary:     "This token cannot be used in this context - check for missing operators, parentheses, or invalid syntax",
+					Documentation: "https://cadence-lang.org/docs/language/values-and-types",
 				},
 			},
 			errs,
@@ -5727,8 +5737,15 @@ func TestParseTransactionDeclaration(t *testing.T) {
 		_, errs := testParseDeclarations(code)
 
 		AssertEqualWithDiff(t,
-			`unexpected identifier, expected keyword "prepare" or "execute", got "uwu"`,
-			errs[0].Error(),
+			[]error{
+				&SyntaxError{
+					Message:       `unexpected identifier, expected keyword "prepare" or "execute", got "uwu"`,
+					Pos:           ast.Position{Offset: 35, Line: 5, Column: 3},
+					Secondary:     "Transaction declarations can only contain 'prepare' and 'execute' blocks",
+					Documentation: "https://cadence-lang.org/docs/language/transactions",
+				},
+			},
+			errs,
 		)
 	})
 }
@@ -6631,8 +6648,10 @@ func TestParseInvalidEmitConditionNonInvocation(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token '('",
-					Pos:     ast.Position{Offset: 91, Line: 5, Column: 14},
+					Message:       "expected token '('",
+					Pos:           ast.Position{Offset: 91, Line: 5, Column: 14},
+					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -6654,8 +6673,10 @@ func TestParseInvalidEmitConditionNonInvocation(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token '('",
-					Pos:     ast.Position{Offset: 92, Line: 5, Column: 14},
+					Message:       "expected token '('",
+					Pos:           ast.Position{Offset: 92, Line: 5, Column: 14},
+					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -9748,8 +9769,10 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token '{'",
-					Pos:     ast.Position{Offset: 35, Line: 1, Column: 35},
+					Message:       "expected token '{'",
+					Pos:           ast.Position{Offset: 35, Line: 1, Column: 35},
+					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -9764,8 +9787,10 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token '}'",
-					Pos:     ast.Position{Offset: 36, Line: 1, Column: 36},
+					Message:       "expected token '}'",
+					Pos:           ast.Position{Offset: 36, Line: 1, Column: 36},
+					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -9780,8 +9805,10 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token '{'",
-					Pos:     ast.Position{Offset: 35, Line: 1, Column: 35},
+					Message:       "expected token '{'",
+					Pos:           ast.Position{Offset: 35, Line: 1, Column: 35},
+					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -9853,8 +9880,10 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token '->'",
-					Pos:     ast.Position{Offset: 43, Line: 2, Column: 5},
+					Message:       "expected token '->'",
+					Pos:           ast.Position{Offset: 43, Line: 2, Column: 5},
+					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -9872,8 +9901,10 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token '->'",
-					Pos:     ast.Position{Offset: 43, Line: 2, Column: 5},
+					Message:       "expected token '->'",
+					Pos:           ast.Position{Offset: 43, Line: 2, Column: 5},
+					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -9910,8 +9941,10 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected token in type: '->'",
-					Pos:     ast.Position{Offset: 51, Line: 2, Column: 13},
+					Message:       "unexpected token in type: '->'",
+					Pos:           ast.Position{Offset: 49, Line: 2, Column: 11},
+					Secondary:     "This token cannot be used in this context - check for missing operators, parentheses, or invalid syntax",
+					Documentation: "https://cadence-lang.org/docs/language/values-and-types",
 				},
 			},
 			errs,
