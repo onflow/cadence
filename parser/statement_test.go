@@ -98,6 +98,8 @@ return // After return
 					Comments: ast.Comments{
 						Leading: []*ast.Comment{
 							ast.NewComment(nil, []byte("// Before return")),
+						},
+						Trailing: []*ast.Comment{
 							ast.NewComment(nil, []byte("// After return")),
 						},
 					},
@@ -1538,16 +1540,16 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 					Attachment: &ast.NominalType{
 						Identifier: ast.Identifier{
 							Identifier: "A",
-							Pos:        ast.Position{Line: 3, Column: 7, Offset: 25},
+							Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
 						},
 					},
 					Value: &ast.IdentifierExpression{
 						Identifier: ast.Identifier{
 							Identifier: "b",
-							Pos:        ast.Position{Line: 5, Column: 5, Offset: 47},
+							Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
 						},
 					},
-					StartPos: ast.Position{Line: 3, Column: 0, Offset: 18},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 				},
 			},
 			result,
