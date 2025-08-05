@@ -5697,9 +5697,8 @@ func (*InvalidNonEntitlementAccessError) Error() string {
 
 func (e *InvalidNonEntitlementAccessError) SecondaryError() string {
 	return fmt.Sprintf(
-		"`%s` is a %s, not an entitlement",
+		"`%s` is not an entitlement",
 		e.Type.QualifiedString(),
-		e.Type.String(),
 	)
 }
 
