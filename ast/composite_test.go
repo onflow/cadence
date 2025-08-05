@@ -51,7 +51,11 @@ func TestFieldDeclaration_MarshalJSON(t *testing.T) {
 			},
 			StartPos: Position{Offset: 7, Line: 8, Column: 9},
 		},
-		DocString: "test",
+		Comments: Comments{
+			Leading: []*Comment{
+				NewComment(nil, []byte("///test")),
+			},
+		},
 		Range: Range{
 			StartPos: Position{Offset: 10, Line: 11, Column: 12},
 			EndPos:   Position{Offset: 13, Line: 14, Column: 15},

@@ -821,6 +821,7 @@ func defineIdentifierExpression() {
 				return ast.NewIdentifierExpression(
 					p.memoryGauge,
 					p.tokenToIdentifier(token),
+					ast.Comments{},
 				), nil
 			}
 		},

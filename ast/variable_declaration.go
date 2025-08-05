@@ -218,10 +218,6 @@ func (d *VariableDeclaration) Doc() prettier.Doc {
 
 	var doc prettier.Concat
 
-	if !d.Comments.IsEmpty() {
-		doc = append(doc, d.Comments.LeadingDoc())
-	}
-
 	if d.Access != AccessNotSpecified {
 		doc = append(
 			doc,

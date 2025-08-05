@@ -306,9 +306,7 @@ const (
 
 type FieldDeclaration struct {
 	TypeAnnotation *TypeAnnotation
-	// TODO(preserve-comments): Remove
-	DocString  string
-	Identifier Identifier
+	Identifier     Identifier
 	Range
 	Access       Access
 	VariableKind VariableKind
@@ -379,7 +377,7 @@ func (d *FieldDeclaration) DeclarationMembers() *Members {
 }
 
 func (d *FieldDeclaration) DeclarationDocString() string {
-	return d.DocString
+	return d.Comments.LeadingDocString()
 }
 
 func (d *FieldDeclaration) MarshalJSON() ([]byte, error) {
@@ -498,10 +496,10 @@ func (d *FieldDeclaration) IsNative() bool {
 // EnumCaseDeclaration
 
 type EnumCaseDeclaration struct {
-	DocString  string
 	Identifier Identifier
 	StartPos   Position `json:"-"`
 	Access     Access
+	Comments   Comments
 }
 
 var _ Element = &EnumCaseDeclaration{}
@@ -511,7 +509,7 @@ func NewEnumCaseDeclaration(
 	memoryGauge common.MemoryGauge,
 	access Access,
 	identifier Identifier,
-	docString string,
+	comments Comments,
 	startPos Position,
 ) *EnumCaseDeclaration {
 	common.UseMemory(memoryGauge, common.EnumCaseDeclarationMemoryUsage)
@@ -519,7 +517,7 @@ func NewEnumCaseDeclaration(
 	return &EnumCaseDeclaration{
 		Access:     access,
 		Identifier: identifier,
-		DocString:  docString,
+		Comments:   comments,
 		StartPos:   startPos,
 	}
 }
@@ -559,7 +557,7 @@ func (d *EnumCaseDeclaration) DeclarationMembers() *Members {
 }
 
 func (d *EnumCaseDeclaration) DeclarationDocString() string {
-	return d.DocString
+	return d.Comments.LeadingDocString()
 }
 
 func (d *EnumCaseDeclaration) MarshalJSON() ([]byte, error) {

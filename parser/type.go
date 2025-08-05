@@ -179,7 +179,8 @@ func parseNominalTypeRemainder(p *parser, token lexer.Token) (*ast.NominalType, 
 		// Skip the dot
 		p.next()
 
-		nestedToken = &p.current
+		tok := p.current
+		nestedToken = &tok
 
 		if !nestedToken.Is(lexer.TokenIdentifier) {
 			return nil, p.syntaxError(

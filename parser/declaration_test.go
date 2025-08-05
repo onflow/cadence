@@ -340,6 +340,7 @@ var x = /* Before 1 */ 1 // After 1
 		)
 	})
 
+	// TODO: Fix these cases
 	t.Run("with purity", func(t *testing.T) {
 
 		t.Parallel()
@@ -1874,7 +1875,7 @@ func TestParseAccess(t *testing.T) {
 			nil,
 			[]byte(input),
 			func(p *parser) (ast.Access, error) {
-				access, _, err := parseAccess(p)
+				access, err := parseAccess(p)
 				return access, err
 			},
 			Config{},
@@ -3198,7 +3199,6 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 				return parseFieldWithVariableKind(
 					p,
 					ast.AccessNotSpecified,
-					nil,
 					nil,
 					nil,
 					nil,
@@ -6723,7 +6723,6 @@ func TestParseStructure(t *testing.T) {
 								},
 								IsResource: false,
 							},
-							DocString: "",
 							Identifier: ast.Identifier{
 								Identifier: "foo",
 								Pos: ast.Position{

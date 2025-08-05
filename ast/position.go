@@ -20,7 +20,6 @@ package ast
 
 import (
 	"fmt"
-
 	"github.com/onflow/cadence/common"
 )
 

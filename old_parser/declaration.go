@@ -1577,7 +1577,7 @@ func parseEnumCase(
 		p.memoryGauge,
 		access,
 		identifier,
-		docString,
+		ast.Comments{},
 		startPos,
 	), nil
 }

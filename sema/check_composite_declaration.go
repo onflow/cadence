@@ -1083,7 +1083,7 @@ func (checker *Checker) declareEnumConstructor(
 				TypeAnnotation:  memberCaseTypeAnnotation,
 				DeclarationKind: common.DeclarationKindField,
 				VariableKind:    ast.VariableKindConstant,
-				DocString:       enumCase.DocString,
+				DocString:       enumCase.DeclarationDocString(),
 			},
 		)
 
@@ -1092,7 +1092,7 @@ func (checker *Checker) declareEnumConstructor(
 				checker.recordFieldDeclarationOrigin(
 					enumCase.Identifier,
 					compositeType,
-					enumCase.DocString,
+					enumCase.DeclarationDocString(),
 				)
 		}
 	}
@@ -1827,7 +1827,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 				DeclarationKind: declarationKind,
 				TypeAnnotation:  fieldTypeAnnotation,
 				VariableKind:    field.VariableKind,
-				DocString:       field.DocString,
+				DocString:       field.DeclarationDocString(),
 			})
 
 		if checker.PositionInfo != nil && origins != nil {
@@ -1835,7 +1835,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 				checker.recordFieldDeclarationOrigin(
 					field.Identifier,
 					fieldTypeAnnotation.Type,
-					field.DocString,
+					field.DeclarationDocString(),
 				)
 		}
 

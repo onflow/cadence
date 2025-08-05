@@ -279,7 +279,8 @@ func parseReturnStatement(p *parser) (*ast.ReturnStatement, error) {
 	var err error
 	switch p.current.Type {
 	case lexer.TokenEOF, lexer.TokenSemicolon, lexer.TokenBraceClose:
-		endToken = &p.current
+		tok := p.current
+		endToken = &tok
 		break
 	default:
 		if !sawNewLine {
@@ -345,7 +346,7 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 			switch string(p.currentTokenSource()) {
 			case KeywordLet, KeywordVar:
 				variableDeclaration, err =
-					parseVariableDeclaration(p, ast.AccessNotSpecified, nil, nil)
+					parseVariableDeclaration(p, ast.AccessNotSpecified, nil)
 				if err != nil {
 					return nil, err
 				}

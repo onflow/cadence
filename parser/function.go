@@ -360,15 +360,13 @@ func parseFunctionDeclaration(
 	p *parser,
 	functionBlockIsOptional bool,
 	access ast.Access,
-	accessPos *ast.Position,
+	accessToken *lexer.Token,
 	purity ast.FunctionPurity,
-	purityPos *ast.Position,
-	staticPos *ast.Position,
-	nativePos *ast.Position,
-	startComments []*ast.Comment,
+	purityToken *lexer.Token,
+	staticToken *lexer.Token,
+	nativeToken *lexer.Token,
 ) (*ast.FunctionDeclaration, error) {
-	startToken := p.current
-	startPos := ast.EarliestPosition(startToken.StartPos, accessPos, purityPos, staticPos, nativePos)
+	startToken := lexer.EarliestToken(p.current, accessToken, purityToken, staticToken, nativeToken)
 
 	// Skip the `fun` keyword
 	p.nextSemanticToken()
@@ -399,24 +397,20 @@ func parseFunctionDeclaration(
 		return nil, err
 	}
 
-	var leadingComments []*ast.Comment
-	leadingComments = append(leadingComments, startComments...)
-	leadingComments = append(leadingComments, startToken.Comments.Leading...)
-
 	return ast.NewFunctionDeclaration(
 		p.memoryGauge,
 		access,
 		purity,
-		staticPos != nil,
-		nativePos != nil,
+		staticToken != nil,
+		nativeToken != nil,
 		identifier,
 		typeParameterList,
 		parameterList,
 		returnTypeAnnotation,
 		functionBlock,
-		startPos,
+		startToken.StartPos,
 		ast.Comments{
-			Leading: leadingComments,
+			Leading: startToken.Comments.Leading,
 		},
 	), nil
 }

@@ -40,10 +40,9 @@ import (
 //	    | /* no execute or postConditions */
 //	    )
 //	    '}'
-func parseTransactionDeclaration(p *parser, startComments []*ast.Comment) (*ast.TransactionDeclaration, error) {
+func parseTransactionDeclaration(p *parser) (*ast.TransactionDeclaration, error) {
 
 	startToken := p.current
-	startPos := startToken.StartPos
 
 	// Skip the `transaction` keyword
 	p.nextSemanticToken()
@@ -199,10 +198,6 @@ func parseTransactionDeclaration(p *parser, startComments []*ast.Comment) (*ast.
 		}
 	}
 
-	var leadingComments []*ast.Comment
-	leadingComments = append(leadingComments, startComments...)
-	leadingComments = append(leadingComments, startToken.Comments.Leading...)
-
 	return ast.NewTransactionDeclaration(
 		p.memoryGauge,
 		parameterList,
@@ -213,11 +208,11 @@ func parseTransactionDeclaration(p *parser, startComments []*ast.Comment) (*ast.
 		execute,
 		ast.NewRange(
 			p.memoryGauge,
-			startPos,
+			startToken.StartPos,
 			endPos,
 		),
 		ast.Comments{
-			Leading: leadingComments,
+			Leading: startToken.Comments.Leading,
 		},
 	), nil
 }
@@ -246,7 +241,6 @@ func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err erro
 				field, err := parseFieldWithVariableKind(
 					p,
 					ast.AccessNotSpecified,
-					nil,
 					nil,
 					nil,
 					nil,
