@@ -370,7 +370,13 @@ func defineIntersectionOrDictionaryType() {
 					if intersectionType == nil {
 						firstNominalType, ok := firstType.(*ast.NominalType)
 						if !ok {
-							return nil, p.syntaxError("non-nominal type in intersection list: %s", firstType)
+							return nil, NewSyntaxError(
+								firstType.StartPosition(),
+								"non-nominal type in intersection list: %s",
+								firstType,
+							).
+								WithSecondary("Intersection types can only contain nominal types (struct, resource, or interface names)").
+								WithDocumentation("https://cadence-lang.org/docs/language/types-and-type-system/intersection-types")
 						}
 						intersectionType = ast.NewIntersectionType(
 							p.memoryGauge,
@@ -390,10 +396,20 @@ func defineIntersectionOrDictionaryType() {
 
 				case lexer.TokenColon:
 					if intersectionType != nil {
-						return nil, p.syntaxError("unexpected colon in intersection type")
+						return nil, NewSyntaxError(
+							p.current.StartPos,
+							"unexpected colon in intersection type",
+						).
+							WithSecondary("Intersection types use commas to separate multiple types, not colons").
+							WithDocumentation("https://cadence-lang.org/docs/language/types-and-type-system/intersection-types")
 					}
 					if expectType {
-						return nil, p.syntaxError("unexpected colon in dictionary type")
+						return nil, NewSyntaxError(
+							p.current.StartPos,
+							"unexpected colon in dictionary type",
+						).
+							WithSecondary("Dictionary types use a colon (:) to separate key and value types, but a value type is expected after the colon").
+							WithDocumentation("https://cadence-lang.org/docs/language/values-and-types/dictionaries")
 					}
 					if dictionaryType == nil {
 						if firstType == nil {
@@ -410,7 +426,12 @@ func defineIntersectionOrDictionaryType() {
 							),
 						)
 					} else {
-						return nil, p.syntaxError("unexpected colon in dictionary type")
+						return nil, NewSyntaxError(
+							p.current.StartPos,
+							"unexpected colon in dictionary type",
+						).
+							WithSecondary("Dictionary types can only have one colon (:) to separate key and value types").
+							WithDocumentation("https://cadence-lang.org/docs/language/values-and-types/dictionaries")
 					}
 					// Skip the colon
 					p.next()
@@ -432,7 +453,12 @@ func defineIntersectionOrDictionaryType() {
 
 				case lexer.TokenEOF:
 					if expectType {
-						return nil, p.syntaxError("invalid end of input, expected type")
+						return nil, NewSyntaxError(
+							p.current.StartPos,
+							"invalid end of input, expected type",
+						).
+							WithSecondary("Check for incomplete expressions, missing tokens, or unterminated strings/comments").
+							WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 					} else {
 						return nil, p.syntaxError("invalid end of input, expected %s", lexer.TokenBraceClose)
 					}
@@ -456,7 +482,13 @@ func defineIntersectionOrDictionaryType() {
 					case intersectionType != nil:
 						nominalType, ok := ty.(*ast.NominalType)
 						if !ok {
-							return nil, p.syntaxError("non-nominal type in intersection list: %s", ty)
+							return nil, NewSyntaxError(
+								ty.StartPosition(),
+								"non-nominal type in intersection list: %s",
+								ty,
+							).
+								WithSecondary("Intersection types can only contain nominal types (struct, resource, or interface names)").
+								WithDocumentation("https://cadence-lang.org/docs/language/types-and-type-system/intersection-types")
 						}
 						intersectionType.Types = append(intersectionType.Types, nominalType)
 
@@ -486,7 +518,13 @@ func defineIntersectionOrDictionaryType() {
 				if firstType != nil {
 					firstNominalType, ok := firstType.(*ast.NominalType)
 					if !ok {
-						return nil, p.syntaxError("non-nominal type in intersection list: %s", firstType)
+						return nil, NewSyntaxError(
+							firstType.StartPosition(),
+							"non-nominal type in intersection list: %s",
+							firstType,
+						).
+							WithSecondary("Intersection types can only contain nominal types (struct, resource, or interface names)").
+							WithDocumentation("https://cadence-lang.org/docs/language/types-and-type-system/intersection-types")
 					}
 					intersectionType.Types = append(intersectionType.Types, firstNominalType)
 				}
@@ -582,7 +620,12 @@ func parseNominalTypes(
 
 		case lexer.TokenEOF:
 			if expectType {
-				return nil, ast.EmptyPosition, p.syntaxError("invalid end of input, expected type")
+				return nil, ast.EmptyPosition, NewSyntaxError(
+					p.current.StartPos,
+					"invalid end of input, expected type",
+				).
+					WithSecondary("Check for incomplete expressions, missing tokens, or unterminated strings/comments").
+					WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 			} else {
 				return nil, ast.EmptyPosition, p.syntaxError("invalid end of input, expected %s", endTokenType)
 			}
@@ -883,7 +926,12 @@ func parseCommaSeparatedTypeAnnotations(
 		switch p.current.Type {
 		case lexer.TokenComma:
 			if expectTypeAnnotation {
-				return nil, p.syntaxError("unexpected comma")
+				return nil, NewSyntaxError(
+					p.current.StartPos,
+					"unexpected comma",
+				).
+					WithSecondary("A comma is used to separate multiple items, but a type annotation is expected here").
+					WithDocumentation("https://cadence-lang.org/docs/language/types-and-type-system/type-annotations")
 			}
 			// Skip the comma
 			p.next()
@@ -891,13 +939,23 @@ func parseCommaSeparatedTypeAnnotations(
 
 		case endTokenType:
 			if expectTypeAnnotation && len(typeAnnotations) > 0 {
-				p.reportSyntaxError("missing type annotation after comma")
+				return nil, NewSyntaxError(
+					p.current.StartPos,
+					"missing type annotation after comma",
+				).
+					WithSecondary("After a comma, a type annotation is required to complete the list").
+					WithDocumentation("https://cadence-lang.org/docs/language/types-and-type-system/type-annotations")
 			}
 			atEnd = true
 
 		case lexer.TokenEOF:
 			if expectTypeAnnotation {
-				return nil, p.syntaxError("invalid end of input, expected type")
+				return nil, NewSyntaxError(
+					p.current.StartPos,
+					"invalid end of input, expected type",
+				).
+					WithSecondary("Check for incomplete expressions, missing tokens, or unterminated strings/comments").
+					WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 			} else {
 				return nil, p.syntaxError("invalid end of input, expected %s", endTokenType)
 			}
