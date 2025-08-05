@@ -627,7 +627,8 @@ func (e *IncorrectArgumentLabelError) SecondaryError() string {
 		expected = fmt.Sprintf("`%s`", e.ExpectedArgumentLabel)
 	}
 	return fmt.Sprintf(
-		"expected %s, got `%s`; function calls must use the exact argument labels defined in the function signature",
+		"expected %s, got `%s`; "+
+			"function calls must use the exact argument labels defined in the function signature",
 		expected,
 		e.ActualArgumentLabel,
 	)
@@ -1637,7 +1638,7 @@ func (e *MissingReturnValueError) Error() string {
 	if e.ExpectedValueType.IsInvalidType() {
 		typeDescription = "non-void"
 	} else {
-		typeDescription = fmt.Sprintf("`%s`", e.ExpectedValueType)
+		typeDescription = fmt.Sprintf("`%s`", e.ExpectedValueType.QualifiedString())
 	}
 
 	return fmt.Sprintf(
@@ -4481,7 +4482,7 @@ func (*InvalidTransactionPrepareParameterTypeError) IsUserError() {}
 func (e *InvalidTransactionPrepareParameterTypeError) Error() string {
 	return fmt.Sprintf(
 		"prepare parameter must be subtype of `%s`, not `%s`",
-		AccountReferenceType,
+		AccountReferenceType.QualifiedString(),
 		e.Type.QualifiedString(),
 	)
 }
