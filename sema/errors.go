@@ -1793,7 +1793,7 @@ func (e *MissingEnumRawTypeError) EndPosition(common.MemoryGauge) ast.Position {
 }
 
 func (*MissingEnumRawTypeError) SecondaryError() string {
-	return "add a raw type conformance like `: UInt8` or `: String`"
+	return "specify the raw value type, e.g. `: UInt8`"
 }
 
 func (*MissingEnumRawTypeError) DocumentationLink() string {
