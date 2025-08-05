@@ -479,3 +479,79 @@ func (e *RestrictedTypeError) MigrationNote() string {
 func (e *RestrictedTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/cadence-migration-guide/improvements#-motivation-12"
 }
+
+// InvalidAccessModifierError
+
+type InvalidAccessModifierError struct {
+	Pos             ast.Position
+	DeclarationKind common.DeclarationKind
+}
+
+var _ ParseError = &InvalidAccessModifierError{}
+var _ errors.UserError = &InvalidAccessModifierError{}
+var _ errors.SecondaryError = &InvalidAccessModifierError{}
+var _ errors.HasDocumentationLink = &InvalidAccessModifierError{}
+
+func (*InvalidAccessModifierError) isParseError() {}
+
+func (*InvalidAccessModifierError) IsUserError() {}
+
+func (e *InvalidAccessModifierError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidAccessModifierError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+func (e *InvalidAccessModifierError) Error() string {
+	return fmt.Sprintf(
+		"invalid access modifier for %s",
+		e.DeclarationKind.Name(),
+	)
+}
+
+func (e *InvalidAccessModifierError) SecondaryError() string {
+	return fmt.Sprintf(
+		"access modifiers are not allowed on %s declarations",
+		e.DeclarationKind.Name(),
+	)
+}
+
+func (*InvalidAccessModifierError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control"
+}
+
+// InvalidViewModifierError
+
+type InvalidViewModifierError struct {
+	Pos             ast.Position
+	DeclarationKind common.DeclarationKind
+}
+
+var _ ParseError = &InvalidViewModifierError{}
+var _ errors.UserError = &InvalidViewModifierError{}
+var _ errors.SecondaryError = &InvalidViewModifierError{}
+var _ errors.HasDocumentationLink = &InvalidViewModifierError{}
+
+func (*InvalidViewModifierError) isParseError() {}
+
+func (*InvalidViewModifierError) IsUserError() {}
+
+func (e *InvalidViewModifierError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidViewModifierError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+func (e *InvalidViewModifierError) Error() string {
+	return fmt.Sprintf("invalid `view` modifier for %s", e.DeclarationKind.Name())
+}
+
+func (*InvalidViewModifierError) SecondaryError() string {
+	return "the `view` modifier can only be used on functions"
+}
+
+func (*InvalidViewModifierError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/functions#view-functions"
+}

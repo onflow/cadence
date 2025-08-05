@@ -310,11 +310,9 @@ func TestParseVariableDeclaration(t *testing.T) {
 		_, errs := testParseDeclarations("view var x = 1")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "invalid view modifier for variable",
-					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
-					Secondary:     "the `view` modifier can only be used on functions",
-					Documentation: "https://cadence-lang.org/docs/language/functions#view-functions",
+				&InvalidViewModifierError{
+					Pos:             ast.Position{Offset: 0, Line: 1, Column: 0},
+					DeclarationKind: common.DeclarationKindVariable,
 				},
 			},
 			errs,
@@ -334,11 +332,9 @@ func TestParseVariableDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message:       "invalid static modifier for variable",
-					Secondary:     "the `static` modifier can only be used on fields and functions, not on variable declarations",
-					Migration:     "",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:   "invalid `static` modifier for variable",
+					Secondary: "the `static` modifier can only be used on fields and functions, not on variable declarations",
+					Pos:       ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -376,11 +372,9 @@ func TestParseVariableDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message:       "invalid native modifier for variable",
-					Secondary:     "the `native` modifier can only be used on fields and functions, not on variable declarations",
-					Migration:     "",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:   "invalid `native` modifier for variable",
+					Secondary: "the `native` modifier can only be used on fields and functions, not on variable declarations",
+					Pos:       ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -3714,21 +3708,21 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		)
 	})
 
-	t.Run("resource with view field", func(t *testing.T) {
+	t.Run("composite with view field", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations(`struct S { 
-			view foo: Int
-		}`)
+		_, errs := testParseDeclarations(`
+          struct S { 
+              view foo: Int
+          }
+        `)
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "invalid view modifier for variable",
-					Pos:           ast.Position{Offset: 15, Line: 2, Column: 3},
-					Secondary:     "the `view` modifier can only be used on functions",
-					Documentation: "https://cadence-lang.org/docs/language/functions#view-functions",
+				&InvalidViewModifierError{
+					Pos:             ast.Position{Offset: 37, Line: 3, Column: 14},
+					DeclarationKind: common.DeclarationKindField,
 				},
 			},
 			errs,
@@ -4802,11 +4796,9 @@ func TestParseEnumDeclaration(t *testing.T) {
 		_, errs := testParseDeclarations(" enum E { view case e }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "invalid view modifier for enum case",
-					Pos:           ast.Position{Offset: 10, Line: 1, Column: 10},
-					Secondary:     "the `view` modifier can only be used on functions",
-					Documentation: "https://cadence-lang.org/docs/language/functions#view-functions",
+				&InvalidViewModifierError{
+					Pos:             ast.Position{Offset: 10, Line: 1, Column: 10},
+					DeclarationKind: common.DeclarationKindEnumCase,
 				},
 			},
 			errs,
@@ -4826,11 +4818,9 @@ func TestParseEnumDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message:       "invalid static modifier for enum case",
-					Secondary:     "the `static` modifier can only be used on fields and functions, not on enum case declarations",
-					Migration:     "",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 10, Line: 1, Column: 10},
+					Message:   "invalid `static` modifier for enum case",
+					Secondary: "the `static` modifier can only be used on fields and functions, not on enum case declarations",
+					Pos:       ast.Position{Offset: 10, Line: 1, Column: 10},
 				},
 			},
 			errs,
@@ -4867,11 +4857,9 @@ func TestParseEnumDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message:       "invalid native modifier for enum case",
-					Secondary:     "the `native` modifier can only be used on fields and functions, not on enum case declarations",
-					Migration:     "",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 10, Line: 1, Column: 10},
+					Message:   "invalid `native` modifier for enum case",
+					Secondary: "the `native` modifier can only be used on fields and functions, not on enum case declarations",
+					Pos:       ast.Position{Offset: 10, Line: 1, Column: 10},
 				},
 			},
 			errs,
@@ -6960,11 +6948,9 @@ func TestParsePragmaNoArguments(t *testing.T) {
 		_, errs := testParseDeclarations("view #foo")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "invalid view modifier for pragma",
-					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
-					Secondary:     "the `view` modifier can only be used on functions",
-					Documentation: "https://cadence-lang.org/docs/language/functions#view-functions",
+				&InvalidViewModifierError{
+					Pos:             ast.Position{Offset: 0, Line: 1, Column: 0},
+					DeclarationKind: common.DeclarationKindPragma,
 				},
 			},
 			errs,
@@ -6984,11 +6970,9 @@ func TestParsePragmaNoArguments(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message:       "invalid static modifier for pragma",
-					Secondary:     "the `static` modifier can only be used on fields and functions, not on pragma declarations",
-					Migration:     "",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:   "invalid `static` modifier for pragma",
+					Secondary: "the `static` modifier can only be used on fields and functions, not on pragma declarations",
+					Pos:       ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -7027,11 +7011,9 @@ func TestParsePragmaNoArguments(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message:       "invalid native modifier for pragma",
-					Secondary:     "the `native` modifier can only be used on fields and functions, not on pragma declarations",
-					Migration:     "",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:   "invalid `native` modifier for pragma",
+					Secondary: "the `native` modifier can only be used on fields and functions, not on pragma declarations",
+					Pos:       ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -7302,11 +7284,9 @@ func TestParseInvalidImportWithPurity(t *testing.T) {
 
 	AssertEqualWithDiff(t,
 		[]error{
-			&SyntaxError{
-				Message:       "invalid view modifier for import",
-				Pos:           ast.Position{Offset: 9, Line: 2, Column: 8},
-				Secondary:     "the `view` modifier can only be used on functions",
-				Documentation: "https://cadence-lang.org/docs/language/functions#view-functions",
+			&InvalidViewModifierError{
+				Pos:             ast.Position{Offset: 9, Line: 2, Column: 8},
+				DeclarationKind: common.DeclarationKindImport,
 			},
 		},
 		errs,
@@ -7357,11 +7337,9 @@ func TestParseInvalidEventWithPurity(t *testing.T) {
 
 	AssertEqualWithDiff(t,
 		[]error{
-			&SyntaxError{
-				Message:       "invalid view modifier for event",
-				Pos:           ast.Position{Offset: 9, Line: 2, Column: 8},
-				Secondary:     "the `view` modifier can only be used on functions",
-				Documentation: "https://cadence-lang.org/docs/language/functions#view-functions",
+			&InvalidViewModifierError{
+				Pos:             ast.Position{Offset: 9, Line: 2, Column: 8},
+				DeclarationKind: common.DeclarationKindEvent,
 			},
 		},
 		errs,
@@ -7379,11 +7357,9 @@ func TestParseInvalidCompositeWithPurity(t *testing.T) {
 
 	AssertEqualWithDiff(t,
 		[]error{
-			&SyntaxError{
-				Message:       "invalid view modifier for struct",
-				Pos:           ast.Position{Offset: 9, Line: 2, Column: 8},
-				Secondary:     "the `view` modifier can only be used on functions",
-				Documentation: "https://cadence-lang.org/docs/language/functions#view-functions",
+			&InvalidViewModifierError{
+				Pos:             ast.Position{Offset: 9, Line: 2, Column: 8},
+				DeclarationKind: common.DeclarationKindStructure,
 			},
 		},
 		errs,
@@ -7401,11 +7377,9 @@ func TestParseInvalidTransactionWithPurity(t *testing.T) {
 
 	AssertEqualWithDiff(t,
 		[]error{
-			&SyntaxError{
-				Message:       "invalid view modifier for transaction",
-				Pos:           ast.Position{Offset: 9, Line: 2, Column: 8},
-				Secondary:     "the `view` modifier can only be used on functions",
-				Documentation: "https://cadence-lang.org/docs/language/functions#view-functions",
+			&InvalidViewModifierError{
+				Pos:             ast.Position{Offset: 9, Line: 2, Column: 8},
+				DeclarationKind: common.DeclarationKindTransaction,
 			},
 		},
 		errs,
@@ -8327,12 +8301,9 @@ func TestParseInvalidAccessModifiers(t *testing.T) {
 		_, errs := testParseDeclarations("access(all) #test")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "invalid access modifier for pragma",
-					Secondary:     "access modifiers are not allowed on pragma declarations",
-					Migration:     "",
-					Documentation: "https://cadence-lang.org/docs/language/access-control",
-					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
+				&InvalidAccessModifierError{
+					Pos:             ast.Position{Offset: 0, Line: 1, Column: 0},
+					DeclarationKind: common.DeclarationKindPragma,
 				},
 			},
 			errs,
@@ -8346,12 +8317,9 @@ func TestParseInvalidAccessModifiers(t *testing.T) {
 		_, errs := testParseDeclarations("access(all) transaction {}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "invalid access modifier for transaction",
-					Secondary:     "access modifiers are not allowed on transaction declarations",
-					Migration:     "",
-					Documentation: "https://cadence-lang.org/docs/language/access-control",
-					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
+				&InvalidAccessModifierError{
+					Pos:             ast.Position{Offset: 0, Line: 1, Column: 0},
+					DeclarationKind: common.DeclarationKindTransaction,
 				},
 			},
 			errs,
@@ -8398,11 +8366,9 @@ func TestParseInvalidImportWithModifier(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message:       "invalid static modifier for import",
-					Secondary:     "the `static` modifier can only be used on fields and functions, not on import declarations",
-					Migration:     "",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 17, Line: 2, Column: 16},
+					Message:   "invalid `static` modifier for import",
+					Secondary: "the `static` modifier can only be used on fields and functions, not on import declarations",
+					Pos:       ast.Position{Offset: 17, Line: 2, Column: 16},
 				},
 			},
 			errs,
@@ -8447,11 +8413,9 @@ func TestParseInvalidImportWithModifier(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message:       "invalid native modifier for import",
-					Secondary:     "the `native` modifier can only be used on fields and functions, not on import declarations",
-					Migration:     "",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 17, Line: 2, Column: 16},
+					Message:   "invalid `native` modifier for import",
+					Secondary: "the `native` modifier can only be used on fields and functions, not on import declarations",
+					Pos:       ast.Position{Offset: 17, Line: 2, Column: 16},
 				},
 			},
 			errs,
@@ -8501,11 +8465,9 @@ func TestParseInvalidEventWithModifier(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message:       "invalid static modifier for event",
-					Secondary:     "the `static` modifier can only be used on fields and functions, not on event declarations",
-					Migration:     "",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 17, Line: 2, Column: 16},
+					Message:   "invalid `static` modifier for event",
+					Secondary: "the `static` modifier can only be used on fields and functions, not on event declarations",
+					Pos:       ast.Position{Offset: 17, Line: 2, Column: 16},
 				},
 			},
 			errs,
@@ -8550,11 +8512,9 @@ func TestParseInvalidEventWithModifier(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message:       "invalid native modifier for event",
-					Secondary:     "the `native` modifier can only be used on fields and functions, not on event declarations",
-					Migration:     "",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 17, Line: 2, Column: 16},
+					Message:   "invalid `native` modifier for event",
+					Secondary: "the `native` modifier can only be used on fields and functions, not on event declarations",
+					Pos:       ast.Position{Offset: 17, Line: 2, Column: 16},
 				},
 			},
 			errs,
@@ -8595,7 +8555,7 @@ func TestParseCompositeWithModifier(t *testing.T) {
 
 		_, errs := testParseDeclarationsWithConfig(
 			`
-                static struct Foo()
+                static struct Foo {}
 	        `,
 			Config{
 				StaticModifierEnabled: true,
@@ -8605,11 +8565,9 @@ func TestParseCompositeWithModifier(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message:       "invalid static modifier for structure",
-					Secondary:     "the `static` modifier can only be used on fields and functions, not on structure declarations",
-					Migration:     "",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 17, Line: 2, Column: 16},
+					Message:   "invalid `static` modifier for structure",
+					Secondary: "the `static` modifier can only be used on fields and functions, not on structure declarations",
+					Pos:       ast.Position{Offset: 17, Line: 2, Column: 16},
 				},
 			},
 			errs,
@@ -8621,7 +8579,7 @@ func TestParseCompositeWithModifier(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations(`
-            static struct Foo()
+            static struct Foo {}
 	    `)
 
 		AssertEqualWithDiff(t,
@@ -8643,7 +8601,7 @@ func TestParseCompositeWithModifier(t *testing.T) {
 
 		_, errs := testParseDeclarationsWithConfig(
 			`
-                native struct Foo()
+                native struct Foo {}
 	        `,
 			Config{
 				NativeModifierEnabled: true,
@@ -8653,11 +8611,9 @@ func TestParseCompositeWithModifier(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message:       "invalid native modifier for structure",
-					Secondary:     "the `native` modifier can only be used on fields and functions, not on structure declarations",
-					Migration:     "",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 17, Line: 2, Column: 16},
+					Message:   "invalid `native` modifier for structure",
+					Secondary: "the `native` modifier can only be used on fields and functions, not on structure declarations",
+					Pos:       ast.Position{Offset: 17, Line: 2, Column: 16},
 				},
 			},
 			errs,
@@ -8706,11 +8662,9 @@ func TestParseTransactionWithModifier(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message:       "invalid static modifier for transaction",
-					Secondary:     "the `static` modifier can only be used on fields and functions, not on transaction declarations",
-					Migration:     "",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 17, Line: 2, Column: 16},
+					Message:   "invalid `static` modifier for transaction",
+					Secondary: "the `static` modifier can only be used on fields and functions, not on transaction declarations",
+					Pos:       ast.Position{Offset: 17, Line: 2, Column: 16},
 				},
 			},
 			errs,
@@ -8754,11 +8708,9 @@ func TestParseTransactionWithModifier(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message:       "invalid native modifier for transaction",
-					Secondary:     "the `native` modifier can only be used on fields and functions, not on transaction declarations",
-					Migration:     "",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 17, Line: 2, Column: 16},
+					Message:   "invalid `native` modifier for transaction",
+					Secondary: "the `native` modifier can only be used on fields and functions, not on transaction declarations",
+					Pos:       ast.Position{Offset: 17, Line: 2, Column: 16},
 				},
 			},
 			errs,
@@ -8818,11 +8770,9 @@ func TestParseNestedPragma(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message:       "invalid native modifier for pragma",
-					Secondary:     "the `native` modifier can only be used on fields and functions, not on pragma declarations",
-					Migration:     "",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:   "invalid `native` modifier for pragma",
+					Secondary: "the `native` modifier can only be used on fields and functions, not on pragma declarations",
+					Pos:       ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -8860,11 +8810,9 @@ func TestParseNestedPragma(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message:       "invalid static modifier for pragma",
-					Secondary:     "the `static` modifier can only be used on fields and functions, not on pragma declarations",
-					Migration:     "",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:   "invalid `static` modifier for pragma",
+					Secondary: "the `static` modifier can only be used on fields and functions, not on pragma declarations",
+					Pos:       ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
 			},
 			errs,
@@ -8906,11 +8854,14 @@ func TestParseNestedPragma(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message:       "invalid static modifier for pragma",
-					Secondary:     "the `static` modifier can only be used on fields and functions, not on pragma declarations",
-					Migration:     "",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:   "invalid `static` modifier for pragma",
+					Secondary: "the `static` modifier can only be used on fields and functions, not on pragma declarations",
+					Pos:       ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+				&SyntaxError{
+					Message:   "invalid `native` modifier for pragma",
+					Secondary: "the `native` modifier can only be used on fields and functions, not on pragma declarations",
+					Pos:       ast.Position{Offset: 7, Line: 1, Column: 7},
 				},
 			},
 			errs,
@@ -8952,6 +8903,16 @@ func TestParseNestedPragma(t *testing.T) {
 					Message: "invalid static modifier after native modifier",
 					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
 				},
+				&SyntaxError{
+					Message:   "invalid `static` modifier for pragma",
+					Secondary: "the `static` modifier can only be used on fields and functions, not on pragma declarations",
+					Pos:       ast.Position{Offset: 7, Line: 1, Column: 7},
+				},
+				&SyntaxError{
+					Message:   "invalid `native` modifier for pragma",
+					Secondary: "the `native` modifier can only be used on fields and functions, not on pragma declarations",
+					Pos:       ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
 			},
 			errs,
 		)
@@ -8965,12 +8926,9 @@ func TestParseNestedPragma(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "invalid access modifier for pragma",
-					Secondary:     "access modifiers are not allowed on pragma declarations",
-					Migration:     "",
-					Documentation: "https://cadence-lang.org/docs/language/access-control",
-					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
+				&InvalidAccessModifierError{
+					Pos:             ast.Position{Offset: 0, Line: 1, Column: 0},
+					DeclarationKind: common.DeclarationKindPragma,
 				},
 			},
 			errs,
@@ -8990,12 +8948,19 @@ func TestParseNestedPragma(t *testing.T) {
 		)
 		AssertEqualWithDiff(t,
 			[]error{
+				&InvalidAccessModifierError{
+					Pos:             ast.Position{Offset: 0, Line: 1, Column: 0},
+					DeclarationKind: common.DeclarationKindPragma,
+				},
 				&SyntaxError{
-					Message:       "invalid access modifier for pragma",
-					Secondary:     "access modifiers are not allowed on pragma declarations",
-					Migration:     "",
-					Documentation: "https://cadence-lang.org/docs/language/access-control",
-					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
+					Message:   "invalid `static` modifier for pragma",
+					Secondary: "the `static` modifier can only be used on fields and functions, not on pragma declarations",
+					Pos:       ast.Position{Offset: 12, Line: 1, Column: 12},
+				},
+				&SyntaxError{
+					Message:   "invalid `native` modifier for pragma",
+					Secondary: "the `native` modifier can only be used on fields and functions, not on pragma declarations",
+					Pos:       ast.Position{Offset: 19, Line: 1, Column: 19},
 				},
 			},
 			errs,
@@ -9144,11 +9109,9 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 		_, errs := testParseDeclarations(" access(all) view entitlement E")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "invalid view modifier for entitlement",
-					Pos:           ast.Position{Offset: 13, Line: 1, Column: 13},
-					Secondary:     "the `view` modifier can only be used on functions",
-					Documentation: "https://cadence-lang.org/docs/language/functions#view-functions",
+				&InvalidViewModifierError{
+					Pos:             ast.Position{Offset: 13, Line: 1, Column: 13},
+					DeclarationKind: common.DeclarationKindEntitlement,
 				},
 			},
 			errs,
