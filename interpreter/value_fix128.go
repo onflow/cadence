@@ -21,6 +21,7 @@ package interpreter
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/onflow/cadence/fixedpoint"
 	"math/big"
 	"unsafe"
 
@@ -67,7 +68,7 @@ func NewUnmeteredFix128ValueWithInteger(integer int64, locationRange LocationRan
 		})
 	}
 
-	fix128 := fix.NewFix128(uint64(integer), 0)
+	fix128 := fix.NewFix128(0, uint64(integer))
 	return Fix128Value(fix128)
 }
 
@@ -85,9 +86,18 @@ func NewFix128ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value 
 		gauge,
 		func() fix.Fix128 {
 			bytes := padWithZeroes(b, 8)
-			hi := binary.BigEndian.Uint64(bytes[:8])
-			lo := binary.BigEndian.Uint64(bytes[8:])
-			return fix.NewFix128(hi, lo)
+			high := new(big.Int).SetBytes(bytes[:8]).Uint64()
+			low := new(big.Int).SetBytes(bytes[8:]).Uint64()
+			return fix.NewFix128(high, low)
+		},
+	)
+}
+
+func NewFix128ValueFromBigInt(gauge common.MemoryGauge, v *big.Int) Value {
+	return NewFix128Value(
+		gauge,
+		func() fix.Fix128 {
+			return fixedpoint.Fix128FromBigInt(v)
 		},
 	)
 }
@@ -112,7 +122,7 @@ func (Fix128Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
 }
 
 func (Fix128Value) StaticType(context ValueStaticTypeContext) StaticType {
-	return NewPrimitiveStaticType(context, PrimitiveStaticTypeFix64)
+	return NewPrimitiveStaticType(context, PrimitiveStaticTypeFix128)
 }
 
 func (Fix128Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
@@ -120,7 +130,8 @@ func (Fix128Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool 
 }
 
 func (v Fix128Value) String() string {
-	return format.Fix64(int64(v))
+	// TODO: Maybe compute this without the use of `big.Int`
+	return format.Fix128(v.ToBigInt())
 }
 
 func (v Fix128Value) RecursiveString(_ SeenReferences) string {
@@ -138,7 +149,8 @@ func (v Fix128Value) MeteredString(context ValueStringContext, _ SeenReferences,
 }
 
 func (v Fix128Value) ToInt(locationRange LocationRange) int {
-	fix128BigInt := v.toBigInt()
+	// TODO: Maybe compute this without the use of `big.Int`
+	fix128BigInt := v.ToBigInt()
 	integerPart := fix128BigInt.Div(fix128BigInt, sema.Fix128FactorIntBig)
 
 	if !integerPart.IsInt64() {
@@ -343,8 +355,14 @@ func (v Fix128Value) Mod(context NumberValueArithmeticContext, other NumberValue
 		context,
 		func() fix.Fix128 {
 			quotientFix128 := fix.Fix128(quotient)
-			divided, err := quotientFix128.Div(sema.Fix128FactorIntBig)
-			return divided.Mul(sema.Fix128FactorInt)
+
+			divided, err := quotientFix128.Div(fixedpoint.Fix128FactorAsFix128)
+			handleFixedpointError(err, locationRange)
+
+			truncatedQuotientFix128, err := divided.Mul(fixedpoint.Fix128FactorAsFix128)
+			handleFixedpointError(err, locationRange)
+
+			return truncatedQuotientFix128
 		},
 	)
 
@@ -593,9 +611,10 @@ func (Fix128Value) ChildStorables() []atree.Storable {
 }
 
 func (v Fix128Value) IntegerPart() NumberValue {
-	fix128BigInt := v.toBigInt()
+	// TODO: Maybe compute this without the use of `big.Int`.
+	fix128BigInt := v.ToBigInt()
 
-	integerPart := fix128BigInt.Div(fix128BigInt, sema.Fix128FactorIntBig)
+	integerPart := new(big.Int).Div(fix128BigInt, sema.Fix128FactorIntBig)
 
 	// The max length of the integer part is 128-bits.
 	// Therefore, return an `Int128`.
@@ -606,21 +625,14 @@ func (Fix128Value) Scale() int {
 	return sema.Fix128Scale
 }
 
-func (v Fix128Value) toBigInt() *big.Int {
+func (v Fix128Value) ToBigInt() *big.Int {
 	fix128 := fix.Fix128(v)
 
 	hi := new(big.Int).SetUint64(uint64(fix128.Hi))
 	lo := new(big.Int).SetUint64(uint64(fix128.Lo))
 
-	fix128Integer := hi.Lsh(hi, 64)
-	return fix128Integer.Add(fix128Integer, lo)
-}
-
-func fix128FromBigInt(b *big.Int) fix.Fix128 {
-	bytes := b.FillBytes(make([]byte, 16))
-	hi := new(big.Int).SetBytes(bytes[:8]).Uint64()
-	lo := new(big.Int).SetBytes(bytes[8:]).Uint64()
-	return fix.NewFix128(hi, lo)
+	fix128Integer := new(big.Int).Lsh(hi, 64)
+	return new(big.Int).Add(fix128Integer, lo)
 }
 
 func handleFixedpointError(err error, _ LocationRange) {
@@ -640,8 +652,8 @@ func performSaturationArithmatic(
 
 	// Should not panic on overflow/underflow
 
-	// TODO: Switch on error type, rather than value.
-	// 	Need changes to the library.
+	// TODO: Switch on error type, rather than the value.
+	// 	Need changes to the fixedpoint library.
 	switch err {
 	case fix.ErrOverflow, fix.ErrNegOverflow:
 		return fix.Fix128Max

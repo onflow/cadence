@@ -19,8 +19,11 @@
 package fixedpoint
 
 import (
+	"encoding/binary"
 	"math"
 	"math/big"
+
+	fix "github.com/onflow/fixed-point"
 )
 
 const Fix64Scale = 8
@@ -44,11 +47,22 @@ var Fix64TypeMaxFractionalBig = new(big.Int).SetInt64(Fix64TypeMaxFractional)
 
 const Fix128Scale = 24
 
-var Fix128FactorIntBig = new(big.Int).Exp(
+var Fix128FactorAsBigInt = new(big.Int).Exp(
 	big.NewInt(10),
 	big.NewInt(Fix128Scale),
 	nil,
 )
+
+var Fix128FactorAsFix128 = Fix128FromBigInt(Fix128FactorAsBigInt)
+
+func Fix128FromBigInt(b *big.Int) fix.Fix128 {
+	// 128 bits -> 16 bytes
+	bytes := b.FillBytes(make([]byte, 16))
+
+	high := binary.BigEndian.Uint64(bytes[:8])
+	low := binary.BigEndian.Uint64(bytes[8:])
+	return fix.NewFix128(high, low)
+}
 
 // UFix64
 

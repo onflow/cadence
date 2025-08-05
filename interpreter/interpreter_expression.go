@@ -892,6 +892,8 @@ func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedP
 	switch fixedPointSubType {
 	case sema.Fix64Type, sema.SignedFixedPointType:
 		return NewFix64Value(interpreter, value.Int64)
+	case sema.Fix128Type:
+		return NewFix128ValueFromBigInt(interpreter, value)
 	case sema.UFix64Type:
 		return NewUFix64Value(interpreter, value.Uint64)
 	case sema.FixedPointType:

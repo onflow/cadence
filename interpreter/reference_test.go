@@ -1991,16 +1991,13 @@ func TestInterpretDereference(t *testing.T) {
 		expectedValues := map[sema.Type]interpreter.FixedPointValue{
 			sema.UFix64Type: interpreter.NewUnmeteredUFix64Value(4224_000_000),
 			sema.Fix64Type:  interpreter.NewUnmeteredFix64Value(4224_000_000),
+			sema.Fix128Type: interpreter.NewUnmeteredFix128ValueWithInteger(4224_000_000, interpreter.EmptyLocationRange),
 		}
 
 		for _, typ := range sema.AllFixedPointTypes {
 			// Only test leaf types
 			switch typ {
 			case sema.FixedPointType, sema.SignedFixedPointType:
-				continue
-
-			// TODO: Remove once Fix128 type is supported in the interpreter
-			case sema.Fix128Type:
 				continue
 			}
 

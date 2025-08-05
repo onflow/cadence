@@ -20,6 +20,7 @@ package format
 
 import (
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 
@@ -52,4 +53,29 @@ func UFix64(v uint64) string {
 		integer,
 		PadLeft(strconv.Itoa(int(fraction)), '0', fixedpoint.Fix64Scale),
 	)
+}
+
+func Fix128(fix128AsBigInt *big.Int) string {
+	integer := new(big.Int).Div(fix128AsBigInt, fixedpoint.Fix128FactorAsBigInt)
+	fraction := new(big.Int).Mod(fix128AsBigInt, fixedpoint.Fix128FactorAsBigInt)
+
+	negative := fraction.Sign() == -1
+	var builder strings.Builder
+	if negative {
+		fraction = new(big.Int).Neg(fraction)
+		if integer.Sign() == 0 {
+			builder.WriteByte('-')
+		}
+	}
+	builder.WriteString(fmt.Sprint(integer))
+	builder.WriteByte('.')
+
+	builder.WriteString(
+		PadLeft(
+			fraction.String(),
+			'0',
+			fixedpoint.Fix64Scale,
+		),
+	)
+	return builder.String()
 }

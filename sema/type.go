@@ -2047,7 +2047,7 @@ var (
 	Fix64TypeMinFractionalBig = fixedpoint.Fix64TypeMinFractionalBig
 	Fix64TypeMaxFractionalBig = fixedpoint.Fix64TypeMaxFractionalBig
 
-	Fix128FactorIntBig = fixedpoint.Fix128FactorIntBig
+	Fix128FactorIntBig = fixedpoint.Fix128FactorAsBigInt
 
 	Fix128Factor = func() *big.Int {
 		// TODO:

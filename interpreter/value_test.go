@@ -4043,16 +4043,13 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		testCases := map[*sema.FixedPointNumericType]NumberValue{
 			sema.UFix64Type: NewUnmeteredUFix64ValueWithInteger(42, EmptyLocationRange),
 			sema.Fix64Type:  NewUnmeteredFix64ValueWithInteger(42, EmptyLocationRange),
+			sema.Fix128Type:  NewUnmeteredFix128ValueWithInteger(42, EmptyLocationRange),
 		}
 
 		for _, ty := range sema.AllFixedPointTypes {
 			// Only test leaf types
 			switch ty {
 			case sema.FixedPointType, sema.SignedFixedPointType:
-				continue
-
-			// TODO: Remove once Fix128 type is supported in the interpreter
-			case sema.Fix128Type:
 				continue
 			}
 
