@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/parser"
@@ -2165,7 +2166,7 @@ func TestCheckInvalidMissingMember(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheck(t, `
+		const code = `
           struct S {
               fun a() {}
           }
@@ -2174,8 +2175,8 @@ func TestCheckInvalidMissingMember(t *testing.T) {
 		     let s: S? = S()
 		     s.a
 		  }
-        `)
-
+        `
+		_, err := ParseAndCheck(t, code)
 		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t,
@@ -2187,6 +2188,49 @@ func TestCheckInvalidMissingMember(t *testing.T) {
 		assert.Equal(t,
 			"type is optional, consider optional-chaining: ?.a",
 			notDeclaredMemberErr.SecondaryError(),
+		)
+
+		fixes := notDeclaredMemberErr.SuggestFixes(code)
+		require.Equal(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "use optional chaining",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "?",
+							Range: ast.Range{
+								StartPos: ast.Position{
+									Offset: 108,
+									Line:   8,
+									Column: 8,
+								},
+								EndPos: ast.Position{
+									Offset: 108,
+									Line:   8,
+									Column: 8,
+								},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		const expected = `
+          struct S {
+              fun a() {}
+          }
+
+		  fun test() {
+		     let s: S? = S()
+		     s?.a
+		  }
+        `
+
+		assert.Equal(t,
+			expected,
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
