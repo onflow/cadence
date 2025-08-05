@@ -33,21 +33,6 @@ import (
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
-// Helper to apply a single ast.TextEdit to a string
-func applyTextEdit(code string, edit ast.TextEdit) string {
-	runes := []rune(code)
-	start := edit.Range.StartPos.Offset
-	end := edit.Range.EndPos.Offset
-
-	// Handle Insertion (for zero-width ranges)
-	if edit.Insertion != "" {
-		return string(runes[:start]) + edit.Insertion + string(runes[end:])
-	}
-
-	// Handle Replacement
-	return string(runes[:start]) + edit.Replacement + string(runes[end:])
-}
-
 func TestParseVariableDeclaration(t *testing.T) {
 
 	t.Parallel()
