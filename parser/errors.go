@@ -548,6 +548,80 @@ func (*InvalidViewModifierError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions#view-functions"
 }
 
+// InvalidStaticModifierError
+
+type InvalidStaticModifierError struct {
+	Pos             ast.Position
+	DeclarationKind common.DeclarationKind
+}
+
+var _ ParseError = &InvalidStaticModifierError{}
+var _ errors.UserError = &InvalidStaticModifierError{}
+var _ errors.SecondaryError = &InvalidStaticModifierError{}
+
+func (*InvalidStaticModifierError) isParseError() {}
+
+func (*InvalidStaticModifierError) IsUserError() {}
+
+func (e *InvalidStaticModifierError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidStaticModifierError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+func (e *InvalidStaticModifierError) Error() string {
+	return fmt.Sprintf(
+		"invalid `static` modifier for %s",
+		e.DeclarationKind.Name(),
+	)
+}
+
+func (e *InvalidStaticModifierError) SecondaryError() string {
+	return fmt.Sprintf(
+		"the `static` modifier can only be used on on fields and functions, "+
+			"not on %s declarations",
+		e.DeclarationKind.Name(),
+	)
+}
+
+// InvalidNativeModifierError
+
+type InvalidNativeModifierError struct {
+	Pos             ast.Position
+	DeclarationKind common.DeclarationKind
+}
+
+var _ ParseError = &InvalidNativeModifierError{}
+var _ errors.UserError = &InvalidNativeModifierError{}
+var _ errors.SecondaryError = &InvalidNativeModifierError{}
+
+func (*InvalidNativeModifierError) isParseError() {}
+
+func (*InvalidNativeModifierError) IsUserError() {}
+
+func (e *InvalidNativeModifierError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidNativeModifierError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+func (e *InvalidNativeModifierError) Error() string {
+	return fmt.Sprintf(
+		"invalid `native` modifier for %s",
+		e.DeclarationKind.Name(),
+	)
+}
+
+func (e *InvalidNativeModifierError) SecondaryError() string {
+	return fmt.Sprintf(
+		"the `native` modifier can only be used on on fields and functions, "+
+			"not on %s declarations",
+		e.DeclarationKind.Name(),
+	)
+}
+
 // NonNominalTypeError
 
 type NonNominalTypeError struct {

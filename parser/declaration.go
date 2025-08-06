@@ -1835,26 +1835,16 @@ func rejectNonAccessModifiers(
 	kind common.DeclarationKind,
 ) {
 	if p.config.StaticModifierEnabled && staticPos != nil {
-		p.report(
-			NewSyntaxError(*staticPos, "invalid `static` modifier for %s", kind.Name()).
-				WithSecondary(
-					fmt.Sprintf(
-						"the `static` modifier can only be used on fields and functions, not on %s declarations",
-						kind.Name(),
-					),
-				),
-		)
+		p.report(&InvalidStaticModifierError{
+			Pos:             *staticPos,
+			DeclarationKind: kind,
+		})
 	}
 	if p.config.NativeModifierEnabled && nativePos != nil {
-		p.report(
-			NewSyntaxError(*nativePos, "invalid `native` modifier for %s", kind.Name()).
-				WithSecondary(
-					fmt.Sprintf(
-						"the `native` modifier can only be used on fields and functions, not on %s declarations",
-						kind.Name(),
-					),
-				),
-		)
+		p.report(&InvalidNativeModifierError{
+			Pos:             *nativePos,
+			DeclarationKind: kind,
+		})
 	}
 	rejectPurityModifier(p, purityPos, kind)
 }

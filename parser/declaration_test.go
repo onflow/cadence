@@ -316,10 +316,9 @@ func TestParseVariableDeclaration(t *testing.T) {
 		)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:   "invalid `static` modifier for variable",
-					Secondary: "the `static` modifier can only be used on fields and functions, not on variable declarations",
-					Pos:       ast.Position{Offset: 0, Line: 1, Column: 0},
+				&InvalidStaticModifierError{
+					Pos:             ast.Position{Offset: 0, Line: 1, Column: 0},
+					DeclarationKind: common.DeclarationKindVariable,
 				},
 			},
 			errs,
@@ -356,10 +355,9 @@ func TestParseVariableDeclaration(t *testing.T) {
 		)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:   "invalid `native` modifier for variable",
-					Secondary: "the `native` modifier can only be used on fields and functions, not on variable declarations",
-					Pos:       ast.Position{Offset: 0, Line: 1, Column: 0},
+				&InvalidNativeModifierError{
+					Pos:             ast.Position{Offset: 0, Line: 1, Column: 0},
+					DeclarationKind: common.DeclarationKindVariable,
 				},
 			},
 			errs,
@@ -4797,10 +4795,9 @@ func TestParseEnumDeclaration(t *testing.T) {
 		)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:   "invalid `static` modifier for enum case",
-					Secondary: "the `static` modifier can only be used on fields and functions, not on enum case declarations",
-					Pos:       ast.Position{Offset: 10, Line: 1, Column: 10},
+				&InvalidStaticModifierError{
+					Pos:             ast.Position{Offset: 10, Line: 1, Column: 10},
+					DeclarationKind: common.DeclarationKindEnumCase,
 				},
 			},
 			errs,
@@ -4836,10 +4833,9 @@ func TestParseEnumDeclaration(t *testing.T) {
 		)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:   "invalid `native` modifier for enum case",
-					Secondary: "the `native` modifier can only be used on fields and functions, not on enum case declarations",
-					Pos:       ast.Position{Offset: 10, Line: 1, Column: 10},
+				&InvalidNativeModifierError{
+					Pos:             ast.Position{Offset: 10, Line: 1, Column: 10},
+					DeclarationKind: common.DeclarationKindEnumCase,
 				},
 			},
 			errs,
@@ -6947,10 +6943,9 @@ func TestParsePragmaNoArguments(t *testing.T) {
 		)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:   "invalid `static` modifier for pragma",
-					Secondary: "the `static` modifier can only be used on fields and functions, not on pragma declarations",
-					Pos:       ast.Position{Offset: 0, Line: 1, Column: 0},
+				&InvalidStaticModifierError{
+					Pos:             ast.Position{Offset: 0, Line: 1, Column: 0},
+					DeclarationKind: common.DeclarationKindPragma,
 				},
 			},
 			errs,
@@ -6987,10 +6982,9 @@ func TestParsePragmaNoArguments(t *testing.T) {
 		)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:   "invalid `native` modifier for pragma",
-					Secondary: "the `native` modifier can only be used on fields and functions, not on pragma declarations",
-					Pos:       ast.Position{Offset: 0, Line: 1, Column: 0},
+				&InvalidNativeModifierError{
+					Pos:             ast.Position{Offset: 0, Line: 1, Column: 0},
+					DeclarationKind: common.DeclarationKindPragma,
 				},
 			},
 			errs,
@@ -8309,10 +8303,9 @@ func TestParseInvalidImportWithModifier(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:   "invalid `static` modifier for import",
-					Secondary: "the `static` modifier can only be used on fields and functions, not on import declarations",
-					Pos:       ast.Position{Offset: 17, Line: 2, Column: 16},
+				&InvalidStaticModifierError{
+					Pos:             ast.Position{Offset: 17, Line: 2, Column: 16},
+					DeclarationKind: common.DeclarationKindImport,
 				},
 			},
 			errs,
@@ -8355,10 +8348,9 @@ func TestParseInvalidImportWithModifier(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:   "invalid `native` modifier for import",
-					Secondary: "the `native` modifier can only be used on fields and functions, not on import declarations",
-					Pos:       ast.Position{Offset: 17, Line: 2, Column: 16},
+				&InvalidNativeModifierError{
+					Pos:             ast.Position{Offset: 17, Line: 2, Column: 16},
+					DeclarationKind: common.DeclarationKindImport,
 				},
 			},
 			errs,
@@ -8406,10 +8398,9 @@ func TestParseInvalidEventWithModifier(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:   "invalid `static` modifier for event",
-					Secondary: "the `static` modifier can only be used on fields and functions, not on event declarations",
-					Pos:       ast.Position{Offset: 17, Line: 2, Column: 16},
+				&InvalidStaticModifierError{
+					Pos:             ast.Position{Offset: 17, Line: 2, Column: 16},
+					DeclarationKind: common.DeclarationKindEvent,
 				},
 			},
 			errs,
@@ -8452,10 +8443,9 @@ func TestParseInvalidEventWithModifier(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:   "invalid `native` modifier for event",
-					Secondary: "the `native` modifier can only be used on fields and functions, not on event declarations",
-					Pos:       ast.Position{Offset: 17, Line: 2, Column: 16},
+				&InvalidNativeModifierError{
+					Pos:             ast.Position{Offset: 17, Line: 2, Column: 16},
+					DeclarationKind: common.DeclarationKindEvent,
 				},
 			},
 			errs,
@@ -8504,10 +8494,9 @@ func TestParseCompositeWithModifier(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:   "invalid `static` modifier for structure",
-					Secondary: "the `static` modifier can only be used on fields and functions, not on structure declarations",
-					Pos:       ast.Position{Offset: 17, Line: 2, Column: 16},
+				&InvalidStaticModifierError{
+					Pos:             ast.Position{Offset: 17, Line: 2, Column: 16},
+					DeclarationKind: common.DeclarationKindStructure,
 				},
 			},
 			errs,
@@ -8550,10 +8539,9 @@ func TestParseCompositeWithModifier(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:   "invalid `native` modifier for structure",
-					Secondary: "the `native` modifier can only be used on fields and functions, not on structure declarations",
-					Pos:       ast.Position{Offset: 17, Line: 2, Column: 16},
+				&InvalidNativeModifierError{
+					Pos:             ast.Position{Offset: 17, Line: 2, Column: 16},
+					DeclarationKind: common.DeclarationKindStructure,
 				},
 			},
 			errs,
@@ -8601,10 +8589,9 @@ func TestParseTransactionWithModifier(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:   "invalid `static` modifier for transaction",
-					Secondary: "the `static` modifier can only be used on fields and functions, not on transaction declarations",
-					Pos:       ast.Position{Offset: 17, Line: 2, Column: 16},
+				&InvalidStaticModifierError{
+					Pos:             ast.Position{Offset: 17, Line: 2, Column: 16},
+					DeclarationKind: common.DeclarationKindTransaction,
 				},
 			},
 			errs,
@@ -8647,10 +8634,9 @@ func TestParseTransactionWithModifier(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:   "invalid `native` modifier for transaction",
-					Secondary: "the `native` modifier can only be used on fields and functions, not on transaction declarations",
-					Pos:       ast.Position{Offset: 17, Line: 2, Column: 16},
+				&InvalidNativeModifierError{
+					Pos:             ast.Position{Offset: 17, Line: 2, Column: 16},
+					DeclarationKind: common.DeclarationKindTransaction,
 				},
 			},
 			errs,
@@ -8709,10 +8695,9 @@ func TestParseNestedPragma(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:   "invalid `native` modifier for pragma",
-					Secondary: "the `native` modifier can only be used on fields and functions, not on pragma declarations",
-					Pos:       ast.Position{Offset: 0, Line: 1, Column: 0},
+				&InvalidNativeModifierError{
+					Pos:             ast.Position{Offset: 0, Line: 1, Column: 0},
+					DeclarationKind: common.DeclarationKindPragma,
 				},
 			},
 			errs,
@@ -8749,10 +8734,9 @@ func TestParseNestedPragma(t *testing.T) {
 		)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:   "invalid `static` modifier for pragma",
-					Secondary: "the `static` modifier can only be used on fields and functions, not on pragma declarations",
-					Pos:       ast.Position{Offset: 0, Line: 1, Column: 0},
+				&InvalidStaticModifierError{
+					Pos:             ast.Position{Offset: 0, Line: 1, Column: 0},
+					DeclarationKind: common.DeclarationKindPragma,
 				},
 			},
 			errs,
@@ -8793,15 +8777,13 @@ func TestParseNestedPragma(t *testing.T) {
 		)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:   "invalid `static` modifier for pragma",
-					Secondary: "the `static` modifier can only be used on fields and functions, not on pragma declarations",
-					Pos:       ast.Position{Offset: 0, Line: 1, Column: 0},
+				&InvalidStaticModifierError{
+					Pos:             ast.Position{Offset: 0, Line: 1, Column: 0},
+					DeclarationKind: common.DeclarationKindPragma,
 				},
-				&SyntaxError{
-					Message:   "invalid `native` modifier for pragma",
-					Secondary: "the `native` modifier can only be used on fields and functions, not on pragma declarations",
-					Pos:       ast.Position{Offset: 7, Line: 1, Column: 7},
+				&InvalidNativeModifierError{
+					Pos:             ast.Position{Offset: 7, Line: 1, Column: 7},
+					DeclarationKind: common.DeclarationKindPragma,
 				},
 			},
 			errs,
@@ -8843,15 +8825,13 @@ func TestParseNestedPragma(t *testing.T) {
 					Message: "invalid static modifier after native modifier",
 					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
 				},
-				&SyntaxError{
-					Message:   "invalid `static` modifier for pragma",
-					Secondary: "the `static` modifier can only be used on fields and functions, not on pragma declarations",
-					Pos:       ast.Position{Offset: 7, Line: 1, Column: 7},
+				&InvalidStaticModifierError{
+					Pos:             ast.Position{Offset: 7, Line: 1, Column: 7},
+					DeclarationKind: common.DeclarationKindPragma,
 				},
-				&SyntaxError{
-					Message:   "invalid `native` modifier for pragma",
-					Secondary: "the `native` modifier can only be used on fields and functions, not on pragma declarations",
-					Pos:       ast.Position{Offset: 0, Line: 1, Column: 0},
+				&InvalidNativeModifierError{
+					Pos:             ast.Position{Offset: 0, Line: 1, Column: 0},
+					DeclarationKind: common.DeclarationKindPragma,
 				},
 			},
 			errs,
@@ -8892,15 +8872,13 @@ func TestParseNestedPragma(t *testing.T) {
 					Pos:             ast.Position{Offset: 0, Line: 1, Column: 0},
 					DeclarationKind: common.DeclarationKindPragma,
 				},
-				&SyntaxError{
-					Message:   "invalid `static` modifier for pragma",
-					Secondary: "the `static` modifier can only be used on fields and functions, not on pragma declarations",
-					Pos:       ast.Position{Offset: 12, Line: 1, Column: 12},
+				&InvalidStaticModifierError{
+					Pos:             ast.Position{Offset: 12, Line: 1, Column: 12},
+					DeclarationKind: common.DeclarationKindPragma,
 				},
-				&SyntaxError{
-					Message:   "invalid `native` modifier for pragma",
-					Secondary: "the `native` modifier can only be used on fields and functions, not on pragma declarations",
-					Pos:       ast.Position{Offset: 19, Line: 1, Column: 19},
+				&InvalidNativeModifierError{
+					Pos:             ast.Position{Offset: 19, Line: 1, Column: 19},
+					DeclarationKind: common.DeclarationKindPragma,
 				},
 			},
 			errs,
