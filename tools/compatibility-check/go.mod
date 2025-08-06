@@ -1,6 +1,8 @@
 module github.com/onflow/cadence/tools/compatibility_check
 
-go 1.23.0
+go 1.23.2
+
+toolchain go1.24.3
 
 require (
 	github.com/onflow/cadence v1.1.1-0.20241018202510-7f1b6fbc57c2
@@ -45,6 +47,7 @@ require (
 	github.com/multiformats/go-varint v0.0.7 // indirect
 	github.com/onflow/atree v0.10.0 // indirect
 	github.com/onflow/crypto v0.25.2 // indirect
+	github.com/onflow/fixed-point v0.0.0-00010101000000-000000000000 // indirect
 	github.com/onflow/flow-core-contracts/lib/go/templates v1.3.3-0.20241017220455-79fdc6c8ba53 // indirect
 	github.com/onflow/flow-ft/lib/go/contracts v1.0.1 // indirect
 	github.com/onflow/flow-ft/lib/go/templates v1.0.1 // indirect
@@ -89,3 +92,5 @@ require (
 )
 
 replace github.com/onflow/cadence => ../../
+
+replace github.com/onflow/fixed-point => ../../../fixed-point

@@ -74,7 +74,7 @@ func Fix128(fix128AsBigInt *big.Int) string {
 		PadLeft(
 			fraction.String(),
 			'0',
-			fixedpoint.Fix64Scale,
+			fixedpoint.Fix128Scale,
 		),
 	)
 	return builder.String()

@@ -39,12 +39,6 @@ import (
 // Fix128Value
 type Fix128Value fix.Fix128
 
-// TODO: Move to encode.go
-func (v Fix128Value) Encode(encoder *atree.Encoder) error {
-	//TODO implement me
-	panic("implement me")
-}
-
 const fix128Size = int(unsafe.Sizeof(Fix128Value{}))
 
 var fix128MemoryUsage = common.NewNumberMemoryUsage(fix128Size)
@@ -93,7 +87,7 @@ func NewFix128ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value 
 	)
 }
 
-func NewFix128ValueFromBigInt(gauge common.MemoryGauge, v *big.Int) Value {
+func NewFix128ValueFromBigInt(gauge common.MemoryGauge, v *big.Int) Fix128Value {
 	return NewFix128Value(
 		gauge,
 		func() fix.Fix128 {

@@ -8504,6 +8504,7 @@ func TestEncodeSimpleTypes(t *testing.T) {
 		ccf.SimpleTypeWord128:                          cadence.Word128Type,
 		ccf.SimpleTypeWord256:                          cadence.Word256Type,
 		ccf.SimpleTypeFix64:                            cadence.Fix64Type,
+		ccf.SimpleTypeFix128:                           cadence.Fix128Type,
 		ccf.SimpleTypeUFix64:                           cadence.UFix64Type,
 		ccf.SimpleTypeBlock:                            cadence.BlockType,
 		ccf.SimpleTypePath:                             cadence.PathType,

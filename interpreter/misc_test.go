@@ -6333,12 +6333,6 @@ func TestInterpretDictionaryKeyTypes(t *testing.T) {
 	}
 
 	for _, fixedPointType := range sema.AllFixedPointTypes {
-		switch fixedPointType {
-		// TODO: Remove once Fix128 type is supported in the interpreter
-		case sema.Fix128Type:
-			continue
-		}
-
 		var literal string
 
 		if sema.IsSubType(fixedPointType, sema.SignedFixedPointType) {
@@ -7643,6 +7637,10 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			value: interpreter.NewUnmeteredFix64Value(123000000),
 			ty:    sema.Fix64Type,
 		},
+		"Fix128": {
+			value: interpreter.NewUnmeteredFix128ValueWithInteger(123000000, interpreter.EmptyLocationRange),
+			ty:    sema.Fix128Type,
+		},
 		// UFix*
 		"UFix64": {
 			value: interpreter.NewUnmeteredUFix64Value(123000000),
@@ -7673,10 +7671,6 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 		switch fixedPointType {
 		case sema.FixedPointType, sema.SignedFixedPointType:
-			continue
-
-		// TODO: Remove once Fix128 type is supported in the interpreter
-		case sema.Fix128Type:
 			continue
 		}
 

@@ -824,6 +824,8 @@ func ConvertSemaToPrimitiveStaticType(
 	// Fix*
 	case sema.Fix64Type:
 		typ = PrimitiveStaticTypeFix64
+	case sema.Fix128Type:
+		typ = PrimitiveStaticTypeFix128
 
 	// UFix*
 	case sema.UFix64Type:

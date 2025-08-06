@@ -480,6 +480,32 @@ func (v Fix64Value) Encode(e *atree.Encoder) error {
 	return e.CBOR.EncodeInt64(int64(v))
 }
 
+// Encode encodes Fix128Value as
+//
+//	cbor.Tag{
+//			Number:  CBORTagFix128Value,
+//			Content: []any {
+//			    int64(hi),
+//			    int64(lo),
+//			}
+//	}
+func (v Fix128Value) Encode(e *atree.Encoder) error {
+	err := e.CBOR.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, values.CBORTagFix128Value,
+	})
+	if err != nil {
+		return err
+	}
+
+	err = e.CBOR.EncodeUint64(uint64(v.Hi))
+	if err != nil {
+		return err
+	}
+
+	return e.CBOR.EncodeUint64(uint64(v.Lo))
+}
+
 var _ atree.ContainerStorable = &SomeStorable{}
 
 func (s SomeStorable) Encode(e *atree.Encoder) error {

@@ -26,6 +26,8 @@ import (
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
@@ -344,6 +346,8 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 
 		case values.CBORTagFix64Value:
 			storable, err = d.decodeFix64()
+		case values.CBORTagFix128Value:
+			storable, err = d.decodeFix128()
 
 		// UFix*
 
@@ -845,6 +849,34 @@ func (d StorableDecoder) decodeFix64() (Fix64Value, error) {
 
 	// Already metered at `decodeInt64`
 	return NewUnmeteredFix64Value(value), nil
+}
+
+func (d StorableDecoder) decodeFix128() (Fix128Value, error) {
+	high, err := decodeUint64(d.decoder, d.memoryGauge)
+	if err != nil {
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return Fix128Value{},
+				errors.NewUnexpectedError("unknown Fix128 high-bits encoding: %s", e.ActualType.String())
+		}
+		return Fix128Value{}, err
+	}
+
+	low, err := decodeUint64(d.decoder, d.memoryGauge)
+	if err != nil {
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return Fix128Value{},
+				errors.NewUnexpectedError("unknown Fix128 low-bits encoding: %s", e.ActualType.String())
+		}
+		return Fix128Value{}, err
+	}
+
+	// Already metered at `decodeInt128`
+	return NewFix128Value(
+		d.memoryGauge,
+		func() fix.Fix128 {
+			return fix.NewFix128(high, low)
+		},
+	), nil
 }
 
 func (d StorableDecoder) decodeUFix64() (UFix64Value, error) {

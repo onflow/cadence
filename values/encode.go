@@ -117,7 +117,7 @@ const (
 	_ // future: Fix16
 	_ // future: Fix32
 	CBORTagFix64Value
-	_ // future: Fix128
+	CBORTagFix128Value
 	_ // future: Fix256
 	_
 
