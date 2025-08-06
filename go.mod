@@ -35,7 +35,7 @@ require (
 	github.com/k0kubun/pp v3.0.1+incompatible
 	github.com/kodova/html-to-markdown v1.0.1
 	github.com/onflow/crypto v0.25.0
-	github.com/onflow/fixed-point v0.0.0-00010101000000-000000000000
+	github.com/onflow/fixed-point v0.0.0-20250806214451-1d11e9d9f3e3
 )
 
 require (
@@ -66,5 +66,3 @@ require (
 	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/onflow/fixed-point => ../fixed-point
