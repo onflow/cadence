@@ -57,10 +57,11 @@ func ConvertToFixedPointBigInt(
 
 	// value = integer + fractional
 
+	result := integer.Add(integer, fractional)
+
 	if negative {
-		integer.Neg(integer)
-		fractional.Neg(fractional)
+		result.Neg(result)
 	}
 
-	return integer.Add(integer, fractional)
+	return result
 }

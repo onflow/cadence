@@ -591,9 +591,12 @@ func (Fix128Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 
 func (v Fix128Value) ByteSize() uint32 {
 	fix128 := fix.Fix128(v)
+
+	// tag number (2 bytes) + array head (1 byte) + high-bits (CBOR uint) + low-bits (CBOR uint)
 	return values.CBORTagSize +
-		values.GetIntCBORSize(int64(fix128.Lo)) +
-		values.GetIntCBORSize(int64(fix128.Hi))
+		1 +
+		values.GetUintCBORSize(uint64(fix128.Hi)) +
+		values.GetUintCBORSize(uint64(fix128.Lo))
 }
 
 func (v Fix128Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -620,13 +623,7 @@ func (Fix128Value) Scale() int {
 }
 
 func (v Fix128Value) ToBigInt() *big.Int {
-	fix128 := fix.Fix128(v)
-
-	hi := new(big.Int).SetUint64(uint64(fix128.Hi))
-	lo := new(big.Int).SetUint64(uint64(fix128.Lo))
-
-	fix128Integer := new(big.Int).Lsh(hi, 64)
-	return new(big.Int).Add(fix128Integer, lo)
+	return fixedpoint.Fix128ToBigInt(fix.Fix128(v))
 }
 
 func handleFixedpointError(err error, _ LocationRange) {

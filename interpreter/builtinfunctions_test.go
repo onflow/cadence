@@ -79,26 +79,28 @@ func TestInterpretToString(t *testing.T) {
 
 	for _, ty := range sema.AllFixedPointTypes {
 
-		switch ty {
-		// TODO: Remove once Fix128 type is supported in the interpreter
-		case sema.Fix128Type:
-			continue
-		}
-
 		t.Run(ty.String(), func(t *testing.T) {
 
-			var literal string
 			var expected interpreter.Value
 
 			isSigned := sema.IsSubType(ty, sema.SignedFixedPointType)
 
-			if isSigned {
-				literal = "-12.34"
-				expected = interpreter.NewUnmeteredStringValue("-12.34000000")
-			} else {
-				literal = "12.34"
-				expected = interpreter.NewUnmeteredStringValue("12.34000000")
+			literal := "12.34"
+			var expectedStr string
+
+			switch ty {
+			case sema.Fix128Type:
+				expectedStr = "12.340000000000000000000000"
+			default:
+				expectedStr = "12.34000000"
 			}
+
+			if isSigned {
+				literal = "-" + literal
+				expectedStr = "-" + expectedStr
+			}
+
+			expected = interpreter.NewUnmeteredStringValue(expectedStr)
 
 			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(

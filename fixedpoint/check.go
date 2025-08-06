@@ -19,7 +19,6 @@
 package fixedpoint
 
 import (
-	"encoding/binary"
 	"math"
 	"math/big"
 
@@ -45,23 +44,58 @@ var Fix64TypeMaxFractionalBig = new(big.Int).SetInt64(Fix64TypeMaxFractional)
 
 // Fix128
 
-const Fix128Scale = 24
-
-var Fix128FactorAsBigInt = new(big.Int).Exp(
-	big.NewInt(10),
-	big.NewInt(Fix128Scale),
-	nil,
+const (
+	Fix128Scale      = 24
+	Fix128MaxBits    = 128
+	Fix128LowMaxBits = 64
 )
 
-var Fix128FactorAsFix128 = Fix128FromBigInt(Fix128FactorAsBigInt)
+var (
+	twoPow64  = new(big.Int).Lsh(big.NewInt(1), Fix128LowMaxBits) // 2^64
+	twoPow128 = new(big.Int).Lsh(big.NewInt(1), Fix128MaxBits)    // 2^128
 
-func Fix128FromBigInt(b *big.Int) fix.Fix128 {
-	// 128 bits -> 16 bytes
-	bytes := b.FillBytes(make([]byte, 16))
+	Fix128FactorAsBigInt = new(big.Int).Exp(
+		big.NewInt(10),
+		big.NewInt(Fix128Scale),
+		nil,
+	)
 
-	high := binary.BigEndian.Uint64(bytes[:8])
-	low := binary.BigEndian.Uint64(bytes[8:])
+	Fix128FactorAsFix128 = Fix128FromBigInt(Fix128FactorAsBigInt)
+)
+
+func Fix128FromBigInt(value *big.Int) fix.Fix128 {
+	v := new(big.Int).Set(value)
+
+	// Handle negative values using two's complement
+	if value.Sign() < 0 {
+		// Convert to 2's complement: x + 2^128
+		v = new(big.Int).Add(v, twoPow128)
+	}
+
+	// Use v.Uint64() if it fits in 64 bits
+	low := v.Uint64()
+
+	// Shift right to get the high 64 bits
+	high := new(big.Int).Rsh(v, 64).Uint64()
+
 	return fix.NewFix128(high, low)
+}
+
+func Fix128ToBigInt(fix128 fix.Fix128) *big.Int {
+	high := new(big.Int).SetUint64(uint64(fix128.Hi))
+	low := new(big.Int).SetUint64(uint64(fix128.Lo))
+
+	// v = (high << 64) + low, done in place with minimal temp vars
+	result := new(big.Int).Mul(high, twoPow64)
+	result = new(big.Int).Add(result, low)
+
+	// If sign bit (bit 127) is set, it's a negative number in two's complement.
+	// Subtract 2^128 to get negative value.
+	if fix128.Hi&(1<<63) != 0 {
+		result = new(big.Int).Sub(result, twoPow128)
+	}
+
+	return result
 }
 
 // UFix64

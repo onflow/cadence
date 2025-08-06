@@ -2049,11 +2049,6 @@ var (
 
 	Fix128FactorIntBig = fixedpoint.Fix128FactorAsBigInt
 
-	Fix128Factor = func() *big.Int {
-		// TODO:
-		return Fix128FactorIntBig
-	}
-
 	Fix128TypeMinIntBig = func() *big.Int {
 		fix128TypeMin := new(big.Int)
 		fix128TypeMin.Div(Int128TypeMinIntBig, Fix128FactorIntBig)

@@ -56,10 +56,14 @@ func UFix64(v uint64) string {
 }
 
 func Fix128(fix128AsBigInt *big.Int) string {
-	integer := new(big.Int).Div(fix128AsBigInt, fixedpoint.Fix128FactorAsBigInt)
-	fraction := new(big.Int).Mod(fix128AsBigInt, fixedpoint.Fix128FactorAsBigInt)
+	fraction := new(big.Int)
+	integer, fraction := new(big.Int).QuoRem(
+		fix128AsBigInt,
+		fixedpoint.Fix128FactorAsBigInt,
+		fraction,
+	)
 
-	negative := fraction.Sign() == -1
+	negative := fraction.Sign() < 0
 	var builder strings.Builder
 	if negative {
 		fraction = new(big.Int).Neg(fraction)

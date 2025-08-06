@@ -480,6 +480,14 @@ func (v Fix64Value) Encode(e *atree.Encoder) error {
 	return e.CBOR.EncodeInt64(int64(v))
 }
 
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	// !!! *WARNING* !!!
+	//
+	// encodedFix128ValueLength is used to verify encoded path length during decoding.
+	encodedFix128ValueLength = 2
+)
+
 // Encode encodes Fix128Value as
 //
 //	cbor.Tag{
@@ -493,6 +501,8 @@ func (v Fix128Value) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, values.CBORTagFix128Value,
+		// array, 2 items follow
+		0x82,
 	})
 	if err != nil {
 		return err

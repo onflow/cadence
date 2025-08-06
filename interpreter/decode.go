@@ -852,6 +852,29 @@ func (d StorableDecoder) decodeFix64() (Fix64Value, error) {
 }
 
 func (d StorableDecoder) decodeFix128() (Fix128Value, error) {
+	const expectedLength = encodedFix128ValueLength
+
+	size, err := d.decoder.DecodeArrayHead()
+	if err != nil {
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return Fix128Value{}, errors.NewUnexpectedError(
+				"invalid fix128 encoding: expected [%d]any, got %s",
+				expectedLength,
+				e.ActualType.String(),
+			)
+		}
+		return Fix128Value{}, err
+	}
+
+	if size != expectedLength {
+		return Fix128Value{}, errors.NewUnexpectedError(
+			"invalid fix128 encoding: expected [%d]any, got [%d]any",
+			expectedLength,
+			size,
+		)
+	}
+
+
 	high, err := decodeUint64(d.decoder, d.memoryGauge)
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -870,7 +893,6 @@ func (d StorableDecoder) decodeFix128() (Fix128Value, error) {
 		return Fix128Value{}, err
 	}
 
-	// Already metered at `decodeInt128`
 	return NewFix128Value(
 		d.memoryGauge,
 		func() fix.Fix128 {
