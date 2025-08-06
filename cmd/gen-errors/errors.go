@@ -22,6 +22,12 @@ func generateErrors() []namedError {
 				Pos: placeholderPosition,
 			},
 		},
+		{"parser.InvalidAccessModifierError",
+			&parser.InvalidAccessModifierError{
+				Pos:             placeholderPosition,
+				DeclarationKind: placeholderDeclarationKind,
+			},
+		},
 		{"parser.InvalidIntegerLiteralError",
 			&parser.InvalidIntegerLiteralError{
 				Literal:                   placeholderString,
@@ -30,9 +36,33 @@ func generateErrors() []namedError {
 				Range:                     placeholderRange,
 			},
 		},
+		{"parser.InvalidNativeModifierError",
+			&parser.InvalidNativeModifierError{
+				Pos:             placeholderPosition,
+				DeclarationKind: placeholderDeclarationKind,
+			},
+		},
+		{"parser.InvalidStaticModifierError",
+			&parser.InvalidStaticModifierError{
+				Pos:             placeholderPosition,
+				DeclarationKind: placeholderDeclarationKind,
+			},
+		},
+		{"parser.InvalidViewModifierError",
+			&parser.InvalidViewModifierError{
+				Pos:             placeholderPosition,
+				DeclarationKind: placeholderDeclarationKind,
+			},
+		},
 		{"parser.MissingCommaInParameterListError",
 			&parser.MissingCommaInParameterListError{
 				Pos: placeholderPosition,
+			},
+		},
+		{"parser.NonNominalTypeError",
+			&parser.NonNominalTypeError{
+				Pos:  placeholderPosition,
+				Type: placeholderAstType,
 			},
 		},
 		{"parser.RestrictedTypeError",
