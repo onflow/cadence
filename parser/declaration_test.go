@@ -9882,12 +9882,15 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxErrorWithSuggestedReplacement{
-					Message:       "`pub` is no longer a valid access keyword",
-					Range:         ast.Range{StartPos: ast.Position{Offset: 1, Line: 1, Column: 1}, EndPos: ast.Position{Offset: 3, Line: 1, Column: 3}},
+					Message: "`pub` is no longer a valid access modifier",
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+						EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+					},
 					SuggestedFix:  "access(all)",
 					Secondary:     "use `access(all)` instead",
 					Documentation: "https://cadence-lang.org/docs/language/access-control",
-					Migration:     "This is pre-Cadence 1.0 syntax. The `pub` and `priv` keywords were deprecated in favor of the new access control system",
+					Migration:     "This is pre-Cadence 1.0 syntax. The `pub` modifier was replaced with `access(all)`",
 				},
 			},
 			errs,
@@ -9903,12 +9906,15 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxErrorWithSuggestedReplacement{
-					Message:       "`priv` is no longer a valid access keyword",
-					Range:         ast.Range{StartPos: ast.Position{Offset: 1, Line: 1, Column: 1}, EndPos: ast.Position{Offset: 4, Line: 1, Column: 4}},
+					Message: "`priv` is no longer a valid access modifier",
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+						EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+					},
 					SuggestedFix:  "access(self)",
 					Secondary:     "use `access(self)` instead",
 					Documentation: "https://cadence-lang.org/docs/language/access-control",
-					Migration:     "This is pre-Cadence 1.0 syntax. The `pub` and `priv` keywords were deprecated in favor of the new access control system",
+					Migration:     "This is pre-Cadence 1.0 syntax. The `priv` modifier was replaced with `access(self)`",
 				},
 			},
 			errs,
@@ -9924,9 +9930,11 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message:       "`pub(set)` is no longer a valid access keyword",
-					Pos:           ast.Position{Offset: 1, Line: 1, Column: 1},
-					Migration:     "This is pre-Cadence 1.0 syntax. The `pub(set)` pattern was deprecated and has no direct equivalent in the new access control system",
+					Message: "`pub(set)` is no longer a valid access modifier",
+					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
+					Migration: "This is pre-Cadence 1.0 syntax. " +
+						"The `pub(set)` modifier was deprecated and has no direct equivalent in the new access control system. " +
+						"Consider adding a setter method that allows updating the field.",
 					Documentation: "https://cadence-lang.org/docs/cadence-migration-guide/improvements#-motivation-11",
 				},
 			},

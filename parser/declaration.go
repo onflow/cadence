@@ -152,8 +152,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				if purity != ast.FunctionPurityUnspecified {
 					// TODO: Add suggested fix for this error
 					p.report(
-						NewSyntaxError(
-							p.current.StartPos,
+						p.newSyntaxError(
 							"invalid second view modifier",
 						).WithSecondary("the `view` modifier can only be used once per function declaration").
 							WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions"),
@@ -179,18 +178,16 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 			case KeywordAccess:
 				if access != ast.AccessNotSpecified {
 					p.report(
-						NewSyntaxError(
-							p.current.StartPos,
-							"invalid second access modifier",
-						).WithSecondary("only one access modifier can be used per declaration").
+						p.newSyntaxError("invalid second access modifier").
+							WithSecondary("only one access modifier can be used per declaration").
 							WithDocumentation("https://cadence-lang.org/docs/language/access-control"),
 					)
 				}
 				if staticModifierEnabled && staticPos != nil {
-					p.report(p.syntaxError("invalid access modifier after `static` modifier"))
+					p.reportSyntaxError("invalid access modifier after `static` modifier")
 				}
 				if nativeModifierEnabled && nativePos != nil {
-					p.report(p.syntaxError("invalid access modifier after `native` modifier"))
+					p.reportSyntaxError("invalid access modifier after `native` modifier")
 				}
 				pos := p.current.StartPos
 				accessPos = &pos
@@ -208,10 +205,10 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				}
 
 				if staticPos != nil {
-					p.report(p.syntaxError("invalid second `static` modifier"))
+					p.reportSyntaxError("invalid second `static` modifier")
 				}
 				if nativeModifierEnabled && nativePos != nil {
-					p.report(p.syntaxError("invalid `static` modifier after `native` modifier"))
+					p.reportSyntaxError("invalid `static` modifier after `native` modifier")
 				}
 				pos := p.current.StartPos
 				staticPos = &pos
@@ -224,7 +221,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				}
 
 				if nativePos != nil {
-					p.report(p.syntaxError("invalid second native modifier"))
+					p.reportSyntaxError("invalid second native modifier")
 				}
 				pos := p.current.StartPos
 				nativePos = &pos
@@ -240,17 +237,15 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 }
 
 func handlePriv(p *parser) {
-	err := p.syntaxErrorWithSuggestedFix(
-		"`priv` is no longer a valid access keyword",
-		"access(self)",
+	p.report(
+		NewSyntaxErrorWithSuggestedReplacement(
+			p.current.Range,
+			"`priv` is no longer a valid access modifier",
+			"access(self)",
+		).WithSecondary("use `access(self)` instead").
+			WithMigration("This is pre-Cadence 1.0 syntax. The `priv` modifier was replaced with `access(self)`").
+			WithDocumentation("https://cadence-lang.org/docs/language/access-control"),
 	)
-	if syntaxErr, ok := err.(*SyntaxErrorWithSuggestedReplacement); ok {
-		//nolint:errcheck // These methods return *SyntaxErrorWithSuggestedReplacement, not errors
-		syntaxErr.WithSecondary("use `access(self)` instead").
-			WithDocumentation("https://cadence-lang.org/docs/language/access-control").
-			WithMigration("This is pre-Cadence 1.0 syntax. The `pub` and `priv` keywords were deprecated in favor of the new access control system")
-	}
-	p.report(err)
 	p.next()
 }
 
@@ -261,13 +256,15 @@ func handlePub(p *parser) error {
 
 	// Try to parse `(set)` if given
 	if !p.current.Is(lexer.TokenParenOpen) {
-		p.report(NewSyntaxErrorWithSuggestedReplacement(
-			pubToken.Range,
-			"`pub` is no longer a valid access keyword",
-			"access(all)",
-		).WithSecondary("use `access(all)` instead").
-			WithDocumentation("https://cadence-lang.org/docs/language/access-control").
-			WithMigration("This is pre-Cadence 1.0 syntax. The `pub` and `priv` keywords were deprecated in favor of the new access control system"))
+		p.report(
+			NewSyntaxErrorWithSuggestedReplacement(
+				pubToken.Range,
+				"`pub` is no longer a valid access modifier",
+				"access(all)",
+			).WithSecondary("use `access(all)` instead").
+				WithMigration("This is pre-Cadence 1.0 syntax. The `pub` modifier was replaced with `access(all)`").
+				WithDocumentation("https://cadence-lang.org/docs/language/access-control"),
+		)
 		return nil
 	}
 
@@ -277,7 +274,7 @@ func handlePub(p *parser) error {
 	const keywordSet = "set"
 
 	if !p.current.Is(lexer.TokenIdentifier) {
-		return p.syntaxError(
+		return p.newSyntaxError(
 			"expected keyword %q, got %s",
 			keywordSet,
 			p.current.Type,
@@ -286,7 +283,7 @@ func handlePub(p *parser) error {
 
 	keyword := p.currentTokenSource()
 	if string(keyword) != keywordSet {
-		return p.syntaxError(
+		return p.newSyntaxError(
 			"expected keyword %q, got %q",
 			keywordSet,
 			keyword,
@@ -301,11 +298,18 @@ func handlePub(p *parser) error {
 		return err
 	}
 
-	p.report(NewSyntaxError(
-		pubToken.StartPos,
-		"`pub(set)` is no longer a valid access keyword",
-	).WithMigration("This is pre-Cadence 1.0 syntax. The `pub(set)` pattern was deprecated and has no direct equivalent in the new access control system").
-		WithDocumentation("https://cadence-lang.org/docs/cadence-migration-guide/improvements#-motivation-11"))
+	p.report(
+		NewSyntaxError(
+			pubToken.StartPos,
+			"`pub(set)` is no longer a valid access modifier",
+		).WithMigration(
+			"This is pre-Cadence 1.0 syntax. " +
+				"The `pub(set)` modifier was deprecated and has no direct equivalent in the new access control system. " +
+				"Consider adding a setter method that allows updating the field.",
+		).WithDocumentation(
+			"https://cadence-lang.org/docs/cadence-migration-guide/improvements#-motivation-11",
+		),
+	)
 
 	return nil
 }
@@ -355,11 +359,9 @@ func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
 		// Luckily, however, the former two are just equivalent, and the latter we can disambiguate in the type checker.
 		return ast.NewConjunctiveEntitlementSet(entitlements), nil
 	default:
-		return nil, NewSyntaxError(
-			p.current.StartPos,
-			"unexpected entitlement separator %s",
-			p.current.Type.String(),
-		).WithSecondary("use a comma (,) for conjunctive entitlements or a vertical bar (|) for disjunctive entitlements").
+		return nil, p.newSyntaxError("unexpected entitlement separator %s", p.current.Type.String()).
+			WithSecondary("use a comma (,) for conjunctive entitlements " +
+				"or a vertical bar (|) for disjunctive entitlements").
 			WithDocumentation("https://cadence-lang.org/docs/language/access-control#entitlements")
 	}
 
@@ -402,7 +404,7 @@ func parseAccess(p *parser) (ast.Access, error) {
 		p.skipSpaceAndComments()
 
 		if !p.current.Is(lexer.TokenIdentifier) {
-			return ast.AccessNotSpecified, p.syntaxError(
+			return ast.AccessNotSpecified, p.newSyntaxError(
 				"expected keyword %s, got %s",
 				enumeratedAccessModifierKeywords,
 				p.current.Type,
@@ -515,7 +517,7 @@ func parseVariableDeclaration(
 	p.skipSpaceAndComments()
 	transfer := parseTransfer(p)
 	if transfer == nil {
-		return nil, p.syntaxError("expected transfer")
+		return nil, p.newSyntaxError("expected transfer")
 	}
 
 	value, err := parseExpression(p, lowestBindingPower)
@@ -662,7 +664,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 			p.next()
 
 		default:
-			return p.syntaxError(
+			return p.newSyntaxError(
 				"unexpected token in import declaration: got %s, expected string, address, or identifier",
 				p.current.Type,
 			)
@@ -684,7 +686,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 			switch p.current.Type {
 			case lexer.TokenComma:
 				if !expectCommaOrFrom {
-					return p.syntaxError(
+					return p.newSyntaxError(
 						"expected %s or keyword %q, got %s",
 						lexer.TokenIdentifier,
 						KeywordFrom,
@@ -712,7 +714,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 					}
 
 					if !isNextTokenCommaOrFrom(p) {
-						return p.syntaxError(
+						return p.newSyntaxError(
 							"expected %s, got keyword %q",
 							lexer.TokenIdentifier,
 							keyword,
@@ -729,14 +731,14 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 				expectCommaOrFrom = true
 
 			case lexer.TokenEOF:
-				return p.syntaxError(
+				return p.newSyntaxError(
 					"unexpected end in import declaration: expected %s or %s",
 					lexer.TokenIdentifier,
 					lexer.TokenComma,
 				)
 
 			default:
-				return p.syntaxError(
+				return p.newSyntaxError(
 					"unexpected token in import declaration: got %s, expected keyword %q or %s",
 					p.current.Type,
 					KeywordFrom,
@@ -803,7 +805,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 			setIdentifierLocation(identifier)
 
 		default:
-			return nil, p.syntaxError(
+			return nil, p.newSyntaxError(
 				"unexpected token in import declaration: got %s, expected keyword %q or %s",
 				p.current.Type,
 				KeywordFrom,
@@ -812,10 +814,10 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 		}
 
 	case lexer.TokenEOF:
-		return nil, p.syntaxError("unexpected end in import declaration: expected string, address, or identifier")
+		return nil, p.newSyntaxError("unexpected end in import declaration: expected string, address, or identifier")
 
 	default:
-		return nil, p.syntaxError(
+		return nil, p.newSyntaxError(
 			"unexpected token in import declaration: got %s, expected string, address, or identifier",
 			p.current.Type,
 		)
@@ -1015,7 +1017,7 @@ func parseFieldWithVariableKind(
 	// Skip the `let` or `var` keyword
 	p.nextSemanticToken()
 	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, p.syntaxError(
+		return nil, p.newSyntaxError(
 			"expected identifier after start of field declaration, got %s",
 			p.current.Type,
 		)
@@ -1172,7 +1174,7 @@ func parseEntitlementOrMappingDeclaration(
 	expectString := "following entitlement declaration"
 
 	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, p.syntaxError(
+		return nil, p.newSyntaxError(
 			"expected %s, got %s",
 			lexer.TokenIdentifier,
 			p.current.Type,
@@ -1256,11 +1258,9 @@ func parseConformances(p *parser) ([]*ast.NominalType, error) {
 		}
 
 		if len(conformances) < 1 {
-			return nil, NewSyntaxError(
-				p.current.StartPos,
-				"expected at least one conformance after %s",
-				lexer.TokenColon,
-			).WithSecondary("provide at least one interface or type to conform to, or remove the colon if no conformances are needed").
+			return nil, p.newSyntaxError("expected at least one conformance after %s", lexer.TokenColon).
+				WithSecondary("provide at least one interface or type to conform to, " +
+					"or remove the colon if no conformances are needed").
 				WithDocumentation("https://cadence-lang.org/docs/language/interfaces")
 		}
 	}
@@ -1305,7 +1305,7 @@ func parseCompositeOrInterfaceDeclaration(
 		p.skipSpaceAndComments()
 
 		if !p.current.Is(lexer.TokenIdentifier) {
-			return nil, p.syntaxError(
+			return nil, p.newSyntaxError(
 				"expected %s, got %s",
 				lexer.TokenIdentifier,
 				p.current.Type,
@@ -1317,7 +1317,7 @@ func parseCompositeOrInterfaceDeclaration(
 		if string(p.currentTokenSource()) == KeywordInterface {
 			isInterface = true
 			if wasInterface {
-				return nil, p.syntaxError(
+				return nil, p.newSyntaxError(
 					"expected interface name, got keyword %q",
 					KeywordInterface,
 				)
@@ -1416,7 +1416,7 @@ func parseAttachmentDeclaration(
 	p.skipSpaceAndComments()
 
 	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordFor) {
-		return nil, p.syntaxError(
+		return nil, p.newSyntaxError(
 			"expected 'for', got %s",
 			p.current.Type,
 		)
@@ -1426,7 +1426,7 @@ func parseAttachmentDeclaration(
 	p.nextSemanticToken()
 
 	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, p.syntaxError(
+		return nil, p.newSyntaxError(
 			"expected %s, got %s",
 			lexer.TokenIdentifier,
 			p.current.Type,
@@ -1640,10 +1640,8 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				if purity != ast.FunctionPurityUnspecified {
 					// TODO: Add suggested fix for this error
 					p.report(
-						NewSyntaxError(
-							p.current.StartPos,
-							"invalid second view modifier",
-						).WithSecondary("the `view` modifier can only be used once per function declaration").
+						p.newSyntaxError("invalid second view modifier").
+							WithSecondary("the `view` modifier can only be used once per function declaration").
 							WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions"),
 					)
 				}
@@ -1666,18 +1664,16 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 			case KeywordAccess:
 				if access != ast.AccessNotSpecified {
 					p.report(
-						NewSyntaxError(
-							p.current.StartPos,
-							"invalid second access modifier",
-						).WithSecondary("only one access modifier can be used per declaration").
+						p.newSyntaxError("invalid second access modifier").
+							WithSecondary("only one access modifier can be used per declaration").
 							WithDocumentation("https://cadence-lang.org/docs/language/access-control"),
 					)
 				}
 				if staticModifierEnabled && staticPos != nil {
-					p.report(p.syntaxError("invalid access modifier after `static` modifier"))
+					p.reportSyntaxError("invalid access modifier after `static` modifier")
 				}
 				if nativeModifierEnabled && nativePos != nil {
-					p.report(p.syntaxError("invalid access modifier after `native` modifier"))
+					p.reportSyntaxError("invalid access modifier after `native` modifier")
 				}
 				pos := p.current.StartPos
 				accessPos = &pos
@@ -1694,10 +1690,10 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				}
 
 				if staticPos != nil {
-					p.report(p.syntaxError("invalid second `static` modifier"))
+					p.reportSyntaxError("invalid second `static` modifier")
 				}
 				if nativeModifierEnabled && nativePos != nil {
-					p.report(p.syntaxError("invalid `static` modifier after `native` modifier"))
+					p.reportSyntaxError("invalid `static` modifier after `native` modifier")
 				}
 				pos := p.current.StartPos
 				staticPos = &pos
@@ -1710,7 +1706,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				}
 
 				if nativePos != nil {
-					p.report(p.syntaxError("invalid second native modifier"))
+					p.reportSyntaxError("invalid second native modifier")
 				}
 				pos := p.current.StartPos
 				nativePos = &pos
@@ -1721,7 +1717,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 			if p.config.IgnoreLeadingIdentifierEnabled &&
 				previousIdentifierToken != nil {
 
-				return nil, p.syntaxError("unexpected %s", p.current.Type)
+				return nil, p.newSyntaxError("unexpected %s", p.current.Type)
 			}
 
 			t := p.current
@@ -1745,7 +1741,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 
 		case lexer.TokenColon:
 			if previousIdentifierToken == nil {
-				return nil, NewSyntaxError(p.current.StartPos, "unexpected %s", p.current.Type).
+				return nil, p.newSyntaxError("unexpected %s", p.current.Type).
 					WithSecondary("expected an identifier before the colon").
 					WithDocumentation("https://cadence-lang.org/docs/language/glossary#-colon")
 			}
@@ -1763,9 +1759,9 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 
 		case lexer.TokenParenOpen:
 			if previousIdentifierToken == nil {
-				return nil, NewSyntaxError(p.current.StartPos, "unexpected %s", p.current.Type).
+				return nil, p.newSyntaxError("unexpected %s", p.current.Type).
 					WithSecondary("expected an identifier before the opening parenthesis").
-					WithDocumentation("https://cadence-lang.org/docs/language/syntax")
+					WithDocumentation("https://cadence-lang.org/docs/language/types-and-type-system/composite-types")
 			}
 
 			identifier := p.tokenToIdentifier(*previousIdentifierToken)
@@ -1986,11 +1982,8 @@ func parseEnumCase(
 	// Skip the `enum` keyword
 	p.nextSemanticToken()
 	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, NewSyntaxError(
-			p.current.StartPos,
-			"expected identifier after start of enum case declaration, got %s",
-			p.current.Type,
-		).WithSecondary("provide a name for the enum case after the `case` keyword").
+		return nil, p.newSyntaxError("expected identifier after start of enum case declaration, got %s", p.current.Type).
+			WithSecondary("provide a name for the enum case after the `case` keyword").
 			WithDocumentation("https://cadence-lang.org/docs/language/enumerations")
 	}
 
