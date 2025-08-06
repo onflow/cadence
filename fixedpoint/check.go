@@ -60,43 +60,17 @@ var (
 		nil,
 	)
 
+	Fix128TypeMinIntBig = Fix128ToBigInt(fix.NewFix128(0x8000000000000000, 0x0000000000000000))
+	Fix128TypeMaxIntBig = Fix128ToBigInt(fix.NewFix128(0x7FFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF))
+
+	// Fix128TypeMinFractionalBig is -0.000_000_000_000_000_000_000_001
+	Fix128TypeMinFractionalBig = Fix128ToBigInt(fix.NewFix128(0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF))
+
+	// Fix128TypeMaxFractionalBig is 0.999_999_999_999_999_999_999_999
+	Fix128TypeMaxFractionalBig = Fix128ToBigInt(fix.NewFix128(0x0000DE0B6B3A763F, 0xFFFFFFFFFFFFFFEF))
+
 	Fix128FactorAsFix128 = Fix128FromBigInt(Fix128FactorAsBigInt)
 )
-
-func Fix128FromBigInt(value *big.Int) fix.Fix128 {
-	v := new(big.Int).Set(value)
-
-	// Handle negative values using two's complement
-	if value.Sign() < 0 {
-		// Convert to 2's complement: x + 2^128
-		v = v.Add(v, twoPow128)
-	}
-
-	// Use v.Uint64() if it fits in 64 bits
-	low := v.Uint64()
-
-	// Shift right to get the high 64 bits
-	high := v.Rsh(v, 64).Uint64()
-
-	return fix.NewFix128(high, low)
-}
-
-func Fix128ToBigInt(fix128 fix.Fix128) *big.Int {
-	high := new(big.Int).SetUint64(uint64(fix128.Hi))
-	low := new(big.Int).SetUint64(uint64(fix128.Lo))
-
-	// v = (high << 64) + low, done in place with minimal temp vars
-	result := high.Mul(high, twoPow64)
-	result = result.Add(result, low)
-
-	// If sign bit (bit 127) is set, it's a negative number in two's complement.
-	// Subtract 2^128 to get negative value.
-	if fix128.Hi&(1<<63) != 0 {
-		result = result.Sub(result, twoPow128)
-	}
-
-	return result
-}
 
 // UFix64
 

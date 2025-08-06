@@ -172,8 +172,8 @@ const (
 	_ // future: Fix16
 	_ // future: Fix32
 	fix64TypeMask
-	fix128TypeMask // future: Fix128
-	_              // future: Fix256
+	fix128TypeMask
+	_ // future: Fix256
 
 	_ // future: UFix8
 	_ // future: UFix16

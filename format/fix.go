@@ -20,6 +20,7 @@ package format
 
 import (
 	"fmt"
+	fix "github.com/onflow/fixed-point"
 	"math/big"
 	"strconv"
 	"strings"
@@ -55,7 +56,10 @@ func UFix64(v uint64) string {
 	)
 }
 
-func Fix128(fix128AsBigInt *big.Int) string {
+func Fix128(v fix.Fix128) string {
+	// TODO: Maybe compute this without the use of `big.Int`
+	fix128AsBigInt := fixedpoint.Fix128ToBigInt(v)
+
 	fraction := new(big.Int)
 	integer, fraction := new(big.Int).QuoRem(
 		fix128AsBigInt,

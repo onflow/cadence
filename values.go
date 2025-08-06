@@ -25,6 +25,8 @@ import (
 	"unicode/utf8"
 	"unsafe"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/fixedpoint"
@@ -1312,6 +1314,69 @@ func (v Fix64) ToBigEndianBytes() []byte {
 
 func (v Fix64) String() string {
 	return format.Fix64(int64(v))
+}
+
+// Fix128
+
+type Fix128 fix.Fix128
+
+var _ Value = Fix128{}
+
+var fix128MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(Fix128{})))
+
+func NewFix128(s string) (Fix128, error) {
+	v, err := fixedpoint.ParseFix128(s)
+	if err != nil {
+		return Fix128{}, err
+	}
+
+	fix128Value := fixedpoint.Fix128FromBigInt(v)
+
+	return Fix128(fix128Value), nil
+}
+
+func NewFix128FromParts(negative bool, integer int, fraction uint) (Fix128, error) {
+	v, err := fixedpoint.NewFix128(
+		negative,
+		new(big.Int).SetInt64(int64(integer)),
+		new(big.Int).SetInt64(int64(fraction)),
+		fixedpoint.Fix128Scale,
+	)
+	if err != nil {
+		return Fix128{}, err
+	}
+
+	fix128Value := fixedpoint.Fix128FromBigInt(v)
+
+	return Fix128(fix128Value), nil
+}
+
+func NewMeteredFix128(gauge common.MemoryGauge, constructor func() (string, error)) (Fix128, error) {
+	common.UseMemory(gauge, fix128MemoryUsage)
+	value, err := constructor()
+	if err != nil {
+		return Fix128{}, err
+	}
+	return NewFix128(value)
+}
+
+func (Fix128) isValue() {}
+
+func (Fix128) Type() Type {
+	return Fix64Type
+}
+
+func (v Fix128) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
+}
+
+func (v Fix128) ToBigEndianBytes() []byte {
+	fix128 := fix.Fix128(v)
+	return fixedpoint.Fix128ToBigEndianBytes(fix128)
+}
+
+func (v Fix128) String() string {
+	return format.Fix128(fix.Fix128(v))
 }
 
 // UFix64

@@ -9204,12 +9204,6 @@ func TestRuntimeTypesAndConversions(t *testing.T) {
 	}
 
 	for name, ty := range AllBaseSemaTypes() {
-		switch ty {
-		// TODO: Remove once Fix128 type is supported in the interpreter
-		case sema.Fix128Type:
-			continue
-		}
-
 		// Inclusive range is a dynamically created type.
 		if _, isInclusiveRange := ty.(*sema.InclusiveRangeType); isInclusiveRange {
 			continue

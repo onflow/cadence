@@ -124,8 +124,7 @@ func (Fix128Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool 
 }
 
 func (v Fix128Value) String() string {
-	// TODO: Maybe compute this without the use of `big.Int`
-	return format.Fix128(v.ToBigInt())
+	return format.Fix128(fix.Fix128(v))
 }
 
 func (v Fix128Value) RecursiveString(_ SeenReferences) string {
@@ -534,12 +533,7 @@ func (Fix128Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, 
 
 func (v Fix128Value) ToBigEndianBytes() []byte {
 	fix128 := fix.Fix128(v)
-
-	// TODO: Verify
-	b := make([]byte, 16)
-	binary.BigEndian.PutUint64(b[:8], uint64(fix128.Hi))
-	binary.BigEndian.PutUint64(b[8:], uint64(fix128.Lo))
-	return b
+	return fixedpoint.Fix128ToBigEndianBytes(fix128)
 }
 
 func (v Fix128Value) ConformsToStaticType(

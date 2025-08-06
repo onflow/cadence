@@ -422,11 +422,6 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		for _, typ := range sema.AllNumberTypes {
-			switch typ {
-			// TODO: Remove once Fix128 type is supported in the interpreter
-			case sema.Fix128Type:
-				continue
-			}
 
 			typString := typ.QualifiedString()
 
@@ -1019,11 +1014,6 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		for _, typ := range sema.AllNumberTypes {
-			switch typ {
-			// TODO: Remove once Fix128 type is supported in the interpreter
-			case sema.Fix128Type:
-				continue
-			}
 
 			typString := typ.QualifiedString()
 
