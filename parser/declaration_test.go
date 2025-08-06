@@ -1309,7 +1309,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid static modifier after native modifier",
+					Message: "invalid `static` modifier after `native` modifier",
 					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
 				},
 			},
@@ -3073,7 +3073,7 @@ func TestParseField(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid static modifier after native modifier",
+					Message: "invalid `static` modifier after `native` modifier",
 					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
 				},
 			},
@@ -8822,7 +8822,7 @@ func TestParseNestedPragma(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid static modifier after native modifier",
+					Message: "invalid `static` modifier after `native` modifier",
 					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
 				},
 				&InvalidStaticModifierError{

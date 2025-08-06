@@ -187,10 +187,10 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 					)
 				}
 				if staticModifierEnabled && staticPos != nil {
-					p.report(p.syntaxError("invalid access modifier after static modifier"))
+					p.report(p.syntaxError("invalid access modifier after `static` modifier"))
 				}
 				if nativeModifierEnabled && nativePos != nil {
-					p.report(p.syntaxError("invalid access modifier after native modifier"))
+					p.report(p.syntaxError("invalid access modifier after `native` modifier"))
 				}
 				pos := p.current.StartPos
 				accessPos = &pos
@@ -208,10 +208,10 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				}
 
 				if staticPos != nil {
-					p.report(p.syntaxError("invalid second static modifier"))
+					p.report(p.syntaxError("invalid second `static` modifier"))
 				}
 				if nativeModifierEnabled && nativePos != nil {
-					p.report(p.syntaxError("invalid static modifier after native modifier"))
+					p.report(p.syntaxError("invalid `static` modifier after `native` modifier"))
 				}
 				pos := p.current.StartPos
 				staticPos = &pos
@@ -1688,10 +1688,10 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 					)
 				}
 				if staticModifierEnabled && staticPos != nil {
-					p.report(p.syntaxError("invalid access modifier after static modifier"))
+					p.report(p.syntaxError("invalid access modifier after `static` modifier"))
 				}
 				if nativeModifierEnabled && nativePos != nil {
-					p.report(p.syntaxError("invalid access modifier after native modifier"))
+					p.report(p.syntaxError("invalid access modifier after `native` modifier"))
 				}
 				pos := p.current.StartPos
 				accessPos = &pos
@@ -1708,10 +1708,10 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				}
 
 				if staticPos != nil {
-					p.report(p.syntaxError("invalid second static modifier"))
+					p.report(p.syntaxError("invalid second `static` modifier"))
 				}
 				if nativeModifierEnabled && nativePos != nil {
-					p.report(p.syntaxError("invalid static modifier after native modifier"))
+					p.report(p.syntaxError("invalid `static` modifier after `native` modifier"))
 				}
 				pos := p.current.StartPos
 				staticPos = &pos
