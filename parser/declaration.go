@@ -1943,7 +1943,7 @@ func parseSpecialFunctionDeclaration(
 			returnTypeAnnotation.StartPos,
 			"invalid return type for %s",
 			kindDescription,
-		).WithSecondary("special functions like `init`, `destroy`, and `prepare` cannot have return types").
+		).WithSecondary("special functions like `init` or `prepare` cannot have return types").
 			WithDocumentation("https://cadence-lang.org/docs/language/functions"))
 	}
 

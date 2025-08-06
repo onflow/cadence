@@ -9828,7 +9828,7 @@ func TestParseInvalidSpecialFunctionReturnTypeAnnotation(t *testing.T) {
 		[]error{
 			&SyntaxError{
 				Message:       "invalid return type for initializer",
-				Secondary:     "special functions like `init`, `destroy`, and `prepare` cannot have return types",
+				Secondary:     "special functions like `init` or `prepare` cannot have return types",
 				Documentation: "https://cadence-lang.org/docs/language/functions",
 				Pos:           ast.Position{Offset: 40, Line: 4, Column: 18},
 			},
