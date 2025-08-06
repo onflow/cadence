@@ -52,7 +52,7 @@ func generateErrors() []namedError {
 		{"parser.SyntaxErrorWithSuggestedReplacement",
 			&parser.SyntaxErrorWithSuggestedReplacement{
 				Message:       placeholderString,
-				SuggestedFix:  placeholderString,
+				Replacement:   placeholderString,
 				Secondary:     placeholderString,
 				Migration:     placeholderString,
 				Documentation: placeholderString,

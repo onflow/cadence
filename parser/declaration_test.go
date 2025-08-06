@@ -1142,13 +1142,21 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		t.Parallel()
 
 		_, errs := testParseDeclarations("view view fun foo (): X { }")
-		require.Equal(t, 1, len(errs))
-		require.Equal(t, errs[0], &SyntaxError{
-			Message:       "invalid second view modifier",
-			Secondary:     "the `view` modifier can only be used once per function declaration",
-			Documentation: "https://cadence-lang.org/docs/language/functions#view-functions",
-			Pos:           ast.Position{Offset: 5, Line: 1, Column: 5},
-		})
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxErrorWithSuggestedReplacement{
+					Message:       "invalid second `view` modifier",
+					Replacement:   "",
+					Secondary:     "the `view` modifier can only be used once per function declaration",
+					Documentation: "https://cadence-lang.org/docs/language/functions#view-functions",
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+						EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+					},
+				},
+			},
+			errs,
+		)
 	})
 
 	t.Run("native, disabled", func(t *testing.T) {
@@ -9887,7 +9895,7 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 						StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
 						EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
 					},
-					SuggestedFix:  "access(all)",
+					Replacement:   "access(all)",
 					Secondary:     "use `access(all)` instead",
 					Documentation: "https://cadence-lang.org/docs/language/access-control",
 					Migration:     "This is pre-Cadence 1.0 syntax. The `pub` modifier was replaced with `access(all)`",
@@ -9911,7 +9919,7 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 						StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
 						EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
 					},
-					SuggestedFix:  "access(self)",
+					Replacement:   "access(self)",
 					Secondary:     "use `access(self)` instead",
 					Documentation: "https://cadence-lang.org/docs/language/access-control",
 					Migration:     "This is pre-Cadence 1.0 syntax. The `priv` modifier was replaced with `access(self)`",

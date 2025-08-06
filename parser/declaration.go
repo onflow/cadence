@@ -150,10 +150,11 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 
 			case KeywordView:
 				if purity != ast.FunctionPurityUnspecified {
-					// TODO: Add suggested fix for this error
 					p.report(
-						p.newSyntaxError(
-							"invalid second view modifier",
+						NewSyntaxErrorWithSuggestedReplacement(
+							p.current.Range,
+							"invalid second `view` modifier",
+							"",
 						).WithSecondary("the `view` modifier can only be used once per function declaration").
 							WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions"),
 					)
@@ -1638,10 +1639,12 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 
 			case KeywordView:
 				if purity != ast.FunctionPurityUnspecified {
-					// TODO: Add suggested fix for this error
 					p.report(
-						p.newSyntaxError("invalid second view modifier").
-							WithSecondary("the `view` modifier can only be used once per function declaration").
+						NewSyntaxErrorWithSuggestedReplacement(
+							p.current.Range,
+							"invalid second `view` modifier",
+							"",
+						).WithSecondary("the `view` modifier can only be used once per function declaration").
 							WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions"),
 					)
 				}

@@ -135,7 +135,7 @@ func (e *SyntaxError) WithDocumentation(documentation string) *SyntaxError {
 
 type SyntaxErrorWithSuggestedReplacement struct {
 	Message       string
-	SuggestedFix  string
+	Replacement   string
 	Secondary     string
 	Migration     string
 	Documentation string
@@ -146,9 +146,9 @@ var _ errors.HasSuggestedFixes[ast.TextEdit] = &SyntaxErrorWithSuggestedReplacem
 
 func NewSyntaxErrorWithSuggestedReplacement(r ast.Range, message string, suggestedFix string) *SyntaxErrorWithSuggestedReplacement {
 	return &SyntaxErrorWithSuggestedReplacement{
-		Range:        r,
-		Message:      message,
-		SuggestedFix: suggestedFix,
+		Range:       r,
+		Message:     message,
+		Replacement: suggestedFix,
 	}
 }
 
@@ -169,10 +169,10 @@ func (e *SyntaxErrorWithSuggestedReplacement) Error() string {
 func (e *SyntaxErrorWithSuggestedReplacement) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
-			Message: fmt.Sprintf("replace with %s", e.SuggestedFix),
+			Message: fmt.Sprintf("replace with %s", e.Replacement),
 			TextEdits: []ast.TextEdit{
 				{
-					Replacement: e.SuggestedFix,
+					Replacement: e.Replacement,
 					Range:       e.Range,
 				},
 			},
