@@ -1547,7 +1547,7 @@ func (e *InvalidImplementationError) SecondaryError() string {
 }
 
 func (*InvalidImplementationError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/declarations"
+	return "https://cadence-lang.org/docs/language/interfaces"
 }
 
 func (e *InvalidImplementationError) StartPosition() ast.Position {
@@ -4040,7 +4040,7 @@ func (e *InvalidNestedTypeError) SecondaryError() string {
 }
 
 func (*InvalidNestedTypeError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/composite-types"
+	return "https://cadence-lang.org/docs/language/types-and-type-system/composite-types"
 }
 
 func (e *InvalidNestedTypeError) StartPosition() ast.Position {
