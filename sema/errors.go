@@ -82,7 +82,7 @@ func (*InvalidPragmaError) isSemanticError() {}
 
 func (*InvalidPragmaError) IsUserError() {}
 
-func (e *InvalidPragmaError) Error() string {
+func (*InvalidPragmaError) Error() string {
 	return "invalid pragma"
 }
 
@@ -226,7 +226,7 @@ func (e *NotDeclaredError) Error() string {
 	)
 }
 
-func (e *NotDeclaredError) SecondaryError() string {
+func (*NotDeclaredError) SecondaryError() string {
 	return "not found in this scope"
 }
 
@@ -263,7 +263,7 @@ func (e *AssignmentToConstantError) SecondaryError() string {
 	return fmt.Sprintf("consider changing the declaration of `%s` to be `var`", e.Name)
 }
 
-func (e *AssignmentToConstantError) DocumentationLink() string {
+func (*AssignmentToConstantError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/constants-and-variables"
 }
 
@@ -284,7 +284,7 @@ func (*TypeMismatchError) isSemanticError() {}
 
 func (*TypeMismatchError) IsUserError() {}
 
-func (e *TypeMismatchError) Error() string {
+func (*TypeMismatchError) Error() string {
 	return "mismatched types"
 }
 
@@ -317,7 +317,7 @@ func (*TypeMismatchWithDescriptionError) isSemanticError() {}
 
 func (*TypeMismatchWithDescriptionError) IsUserError() {}
 
-func (e *TypeMismatchWithDescriptionError) Error() string {
+func (*TypeMismatchWithDescriptionError) Error() string {
 	return "mismatched types"
 }
 
@@ -429,7 +429,7 @@ func (*InsufficientArgumentsError) isSemanticError() {}
 
 func (*InsufficientArgumentsError) IsUserError() {}
 
-func (e *InsufficientArgumentsError) Error() string {
+func (*InsufficientArgumentsError) Error() string {
 	return "too few arguments"
 }
 
@@ -441,7 +441,7 @@ func (e *InsufficientArgumentsError) SecondaryError() string {
 	)
 }
 
-func (e *InsufficientArgumentsError) DocumentationLink() string {
+func (*InsufficientArgumentsError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions"
 }
 
@@ -462,7 +462,7 @@ func (*ExcessiveArgumentsError) isSemanticError() {}
 
 func (*ExcessiveArgumentsError) IsUserError() {}
 
-func (e *ExcessiveArgumentsError) Error() string {
+func (*ExcessiveArgumentsError) Error() string {
 	return "too many arguments"
 }
 
@@ -474,7 +474,7 @@ func (e *ExcessiveArgumentsError) SecondaryError() string {
 	)
 }
 
-func (e *ExcessiveArgumentsError) DocumentationLink() string {
+func (*ExcessiveArgumentsError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions"
 }
 
@@ -537,7 +537,7 @@ func (*IncorrectArgumentLabelError) isSemanticError() {}
 
 func (*IncorrectArgumentLabelError) IsUserError() {}
 
-func (e *IncorrectArgumentLabelError) Error() string {
+func (*IncorrectArgumentLabelError) Error() string {
 	return "incorrect argument label"
 }
 
@@ -560,7 +560,7 @@ func (e *IncorrectArgumentLabelError) SuggestFixes(code string) []errors.Suggest
 				Message: "replace argument label",
 				TextEdits: []ast.TextEdit{
 					{
-						Replacement: e.ExpectedArgumentLabel,
+						Replacement: e.ExpectedArgumentLabel + ":",
 						Range:       e.Range,
 					},
 				},
@@ -597,7 +597,7 @@ func (e *IncorrectArgumentLabelError) SuggestFixes(code string) []errors.Suggest
 	}
 }
 
-func (e *IncorrectArgumentLabelError) DocumentationLink() string {
+func (*IncorrectArgumentLabelError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions"
 }
 
@@ -721,41 +721,65 @@ func (e *InvalidBinaryOperandsError) Error() string {
 
 func (e *InvalidBinaryOperandsError) SecondaryError() string {
 	switch e.Operation {
-	case ast.OperationOr, ast.OperationAnd:
+	case ast.OperationOr,
+		ast.OperationAnd:
+
 		return fmt.Sprintf(
-			"Logical operator `%s` requires both operands to be of type `Bool`, but got `%s` and `%s`",
+			"logical operator `%s` requires both operands to be of type `Bool`, "+
+				"but got `%s` and `%s`",
 			e.Operation.Symbol(),
 			e.LeftType.QualifiedString(),
 			e.RightType.QualifiedString(),
 		)
+
 	case ast.OperationPlus,
 		ast.OperationMinus,
 		ast.OperationMul,
 		ast.OperationDiv,
 		ast.OperationMod:
+
 		return fmt.Sprintf(
-			"Arithmetic operators require numeric operands of the same type; got `%s` and `%s` which are incompatible",
+			"arithmetic operators require numeric operands of the same type; "+
+				"got `%s` and `%s` which are incompatible",
 			e.LeftType.QualifiedString(),
 			e.RightType.QualifiedString(),
 		)
-	case ast.OperationBitwiseOr, ast.OperationBitwiseAnd, ast.OperationBitwiseXor, ast.OperationBitwiseLeftShift, ast.OperationBitwiseRightShift:
-		return fmt.Sprintf("Bitwise operators require integer operands of the same type; got `%s` and `%s` which are incompatible",
+
+	case ast.OperationBitwiseOr,
+		ast.OperationBitwiseAnd,
+		ast.OperationBitwiseXor,
+		ast.OperationBitwiseLeftShift,
+		ast.OperationBitwiseRightShift:
+
+		return fmt.Sprintf(
+			"bitwise operators require integer operands of the same type; "+
+				"got `%s` and `%s` which are incompatible",
 			e.LeftType.QualifiedString(),
 			e.RightType.QualifiedString(),
 		)
-	case ast.OperationLess, ast.OperationLessEqual, ast.OperationGreater, ast.OperationGreaterEqual:
-		return fmt.Sprintf("Comparison operators require comparable operands of the same type; got `%s` and `%s` which are incompatible",
+
+	case ast.OperationLess,
+		ast.OperationLessEqual,
+		ast.OperationGreater,
+		ast.OperationGreaterEqual:
+		return fmt.Sprintf(
+			"comparison operators require comparable operands of the same type; "+
+				"got `%s` and `%s` which are incompatible",
 			e.LeftType.QualifiedString(),
 			e.RightType.QualifiedString(),
 		)
-	case ast.OperationEqual, ast.OperationNotEqual:
-		return fmt.Sprintf("Equality operators require compatible types; got `%s` and `%s` which cannot be compared for equality",
+
+	case ast.OperationEqual,
+		ast.OperationNotEqual:
+		return fmt.Sprintf(
+			"equality operators require compatible types; "+
+				"got `%s` and `%s` which cannot be compared for equality",
 			e.LeftType.QualifiedString(),
 			e.RightType.QualifiedString(),
 		)
 	default:
 		return fmt.Sprintf(
-			"The binary operation `%s` cannot be applied to operands of types `%s` and `%s`",
+			"binary operation `%s` cannot be applied to operands of types `%s` and `%s`",
 			e.Operation.Symbol(),
 			e.LeftType.QualifiedString(),
 			e.RightType.QualifiedString(),
@@ -773,7 +797,7 @@ type InvalidNilCoalescingRightResourceOperandError struct {
 	ast.Range
 }
 
-func (e *InvalidNilCoalescingRightResourceOperandError) Error() string {
+func (*InvalidNilCoalescingRightResourceOperandError) Error() string {
 	return "nil-coalescing with right-hand resource is not supported at the moment"
 }
 
@@ -783,7 +807,7 @@ type InvalidConditionalResourceOperandError struct {
 	ast.Range
 }
 
-func (e *InvalidConditionalResourceOperandError) Error() string {
+func (*InvalidConditionalResourceOperandError) Error() string {
 	return "conditional with resource is not supported at the moment"
 }
 
@@ -824,7 +848,7 @@ func (e *ControlStatementError) SecondaryError() string {
 	}
 }
 
-func (e *ControlStatementError) DocumentationLink() string {
+func (*ControlStatementError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/control-flow"
 }
 
@@ -868,11 +892,11 @@ func (e *InvalidAccessModifierError) Error() string {
 	}
 }
 
-func (e *InvalidAccessModifierError) SecondaryError() string {
+func (*InvalidAccessModifierError) SecondaryError() string {
 	return "use a valid access modifier"
 }
 
-func (e *InvalidAccessModifierError) DocumentationLink() string {
+func (*InvalidAccessModifierError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control"
 }
 
@@ -938,7 +962,7 @@ func (*InvalidStaticModifierError) isSemanticError() {}
 
 func (*InvalidStaticModifierError) IsUserError() {}
 
-func (e *InvalidStaticModifierError) Error() string {
+func (*InvalidStaticModifierError) Error() string {
 	return "invalid static modifier for declaration"
 }
 
@@ -957,12 +981,13 @@ func (*InvalidNativeModifierError) isSemanticError() {}
 
 func (*InvalidNativeModifierError) IsUserError() {}
 
-func (e *InvalidNativeModifierError) Error() string {
+func (*InvalidNativeModifierError) Error() string {
 	return "invalid native modifier for declaration"
 }
 
-func (e *InvalidNativeModifierError) SecondaryError() string {
-	return "the native modifier can only be used on function declarations; remove the native modifier or use a function declaration"
+func (*InvalidNativeModifierError) SecondaryError() string {
+	return "the native modifier can only be used on function declarations; " +
+		"remove the native modifier or use a function declaration"
 }
 
 func (*InvalidNativeModifierError) DocumentationLink() string {
@@ -982,7 +1007,7 @@ func (*NativeFunctionWithImplementationError) isSemanticError() {}
 
 func (*NativeFunctionWithImplementationError) IsUserError() {}
 
-func (e *NativeFunctionWithImplementationError) Error() string {
+func (*NativeFunctionWithImplementationError) Error() string {
 	return "native function must not have an implementation"
 }
 
@@ -1006,7 +1031,7 @@ func (e *InvalidNameError) Error() string {
 	return fmt.Sprintf("invalid name: `%s`", e.Name)
 }
 
-func (e *InvalidNameError) SecondaryError() string {
+func (*InvalidNameError) SecondaryError() string {
 	return "names must start with a letter or underscore and contain only letters, digits, and underscores"
 }
 
@@ -1036,7 +1061,7 @@ func (*UnknownSpecialFunctionError) isSemanticError() {}
 
 func (*UnknownSpecialFunctionError) IsUserError() {}
 
-func (e *UnknownSpecialFunctionError) Error() string {
+func (*UnknownSpecialFunctionError) Error() string {
 	return "unknown special function; did you mean `init` or forget the `fun` keyword?"
 }
 
@@ -1100,7 +1125,8 @@ func (e *InvalidDeclarationError) Error() string {
 
 func (e *InvalidDeclarationError) SecondaryError() string {
 	return fmt.Sprintf(
-		"Only function and variable declarations are allowed in this scope; %s declarations must be at the top level or within composite types",
+		"only function and variable declarations are allowed in this scope; "+
+			"%s declarations must be at the top level or within composite types",
 		e.Kind.Name(),
 	)
 }
@@ -1278,11 +1304,11 @@ func (e *AssignmentToConstantMemberError) Error() string {
 	return fmt.Sprintf("cannot assign to constant member: `%s`", e.Name)
 }
 
-func (e *AssignmentToConstantMemberError) SecondaryError() string {
+func (*AssignmentToConstantMemberError) SecondaryError() string {
 	return "constant members cannot be reassigned after initialization; consider using a variable field (var) instead"
 }
 
-func (e *AssignmentToConstantMemberError) DocumentationLink() string {
+func (*AssignmentToConstantMemberError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/constants-and-variables"
 }
 
@@ -1305,11 +1331,11 @@ func (e *FieldReinitializationError) Error() string {
 	return fmt.Sprintf("invalid reinitialization of field: `%s`", e.Name)
 }
 
-func (e *FieldReinitializationError) SecondaryError() string {
+func (*FieldReinitializationError) SecondaryError() string {
 	return "fields can only be initialized once. Remove the duplicate initialization or use assignment instead"
 }
 
-func (e *FieldReinitializationError) DocumentationLink() string {
+func (*FieldReinitializationError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system/composite-types#composite-type-fields"
 }
 
@@ -1337,11 +1363,11 @@ func (e *FieldUninitializedError) Error() string {
 	)
 }
 
-func (e *FieldUninitializedError) SecondaryError() string {
+func (*FieldUninitializedError) SecondaryError() string {
 	return "all fields must be initialized when creating a composite type; add an initializer or provide a default value"
 }
 
-func (e *FieldUninitializedError) DocumentationLink() string {
+func (*FieldUninitializedError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system/composite-types#composite-type-fields"
 }
 
@@ -1387,11 +1413,11 @@ func (e *FieldTypeNotStorableError) Error() string {
 	)
 }
 
-func (e *FieldTypeNotStorableError) SecondaryError() string {
+func (*FieldTypeNotStorableError) SecondaryError() string {
 	return "all contract fields must be storable; remove the non-storable type"
 }
 
-func (e *FieldTypeNotStorableError) DocumentationLink() string {
+func (*FieldTypeNotStorableError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system/composite-types#composite-type-fields"
 }
 
@@ -1419,15 +1445,15 @@ func (*FunctionExpressionInConditionError) isSemanticError() {}
 
 func (*FunctionExpressionInConditionError) IsUserError() {}
 
-func (e *FunctionExpressionInConditionError) Error() string {
+func (*FunctionExpressionInConditionError) Error() string {
 	return "condition contains function"
 }
 
-func (e *FunctionExpressionInConditionError) SecondaryError() string {
+func (*FunctionExpressionInConditionError) SecondaryError() string {
 	return "conditions must evaluate to a boolean value; call the function to get its return value"
 }
 
-func (e *FunctionExpressionInConditionError) DocumentationLink() string {
+func (*FunctionExpressionInConditionError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/control-flow"
 }
 
@@ -1446,12 +1472,12 @@ func (*InvalidEmitConditionError) isSemanticError() {}
 
 func (*InvalidEmitConditionError) IsUserError() {}
 
-func (e *InvalidEmitConditionError) Error() string {
+func (*InvalidEmitConditionError) Error() string {
 	return "invalid emit condition"
 }
 
 func (*InvalidEmitConditionError) SecondaryError() string {
-	return "Emit conditions must contain a valid event invocation expression; use `emit EventName()` syntax"
+	return "emit conditions must contain a valid event invocation expression; use `emit EventName()` syntax"
 }
 
 func (*InvalidEmitConditionError) DocumentationLink() string {
@@ -1513,7 +1539,8 @@ func (e *InvalidImplementationError) Error() string {
 
 func (e *InvalidImplementationError) SecondaryError() string {
 	return fmt.Sprintf(
-		"Only certain declaration types can be implemented within %s; %s implementations are not allowed in this context",
+		"only certain declaration types can be implemented within %s; "+
+			"%s implementations are not allowed in this context",
 		e.ContainerKind.Name(),
 		e.ImplementedKind.Name(),
 	)
@@ -1555,7 +1582,10 @@ func (e *InvalidConformanceError) Error() string {
 }
 
 func (e *InvalidConformanceError) SecondaryError() string {
-	return fmt.Sprintf("Only interface types can be conformed to; the type `%s` is not an interface", e.Type.QualifiedString())
+	return fmt.Sprintf(
+		"only interface types can be conformed to; the type `%s` is not an interface",
+		e.Type.QualifiedString(),
+	)
 }
 
 func (*InvalidConformanceError) DocumentationLink() string {
@@ -1585,7 +1615,7 @@ func (e *InvalidEnumRawTypeError) Error() string {
 	)
 }
 
-func (e *InvalidEnumRawTypeError) SecondaryError() string {
+func (*InvalidEnumRawTypeError) SecondaryError() string {
 	return "only integer types are currently supported for enums"
 }
 
@@ -1606,7 +1636,7 @@ func (*MissingEnumRawTypeError) isSemanticError() {}
 
 func (*MissingEnumRawTypeError) IsUserError() {}
 
-func (e *MissingEnumRawTypeError) Error() string {
+func (*MissingEnumRawTypeError) Error() string {
 	return "missing enum raw type"
 }
 
@@ -1632,7 +1662,7 @@ func (*InvalidEnumConformancesError) isSemanticError() {}
 
 func (*InvalidEnumConformancesError) IsUserError() {}
 
-func (e *InvalidEnumConformancesError) Error() string {
+func (*InvalidEnumConformancesError) Error() string {
 	return "enums cannot conform to interfaces"
 }
 
@@ -1655,15 +1685,15 @@ func (*InvalidAttachmentConformancesError) isSemanticError() {}
 
 func (*InvalidAttachmentConformancesError) IsUserError() {}
 
-func (e *InvalidAttachmentConformancesError) Error() string {
+func (*InvalidAttachmentConformancesError) Error() string {
 	return "attachments cannot conform to interfaces"
 }
 
-func (e *InvalidAttachmentConformancesError) SecondaryError() string {
-	return "Attachment types are a special kind of composite type and cannot conform to interfaces."
+func (*InvalidAttachmentConformancesError) SecondaryError() string {
+	return "attachment types are a special kind of composite type and cannot conform to interfaces."
 }
 
-func (e *InvalidAttachmentConformancesError) DocumentationLink() string {
+func (*InvalidAttachmentConformancesError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/attachments"
 }
 
@@ -1716,9 +1746,13 @@ func (e *ConformanceError) Error() string {
 func (e *ConformanceError) SecondaryError() string {
 	var builder strings.Builder
 	if len(e.MissingMembers) > 0 {
-		builder.WriteString(fmt.Sprintf("`%s` is missing definitions for members: ", e.CompositeType.QualifiedString()))
+		_, _ = fmt.Fprintf(
+			&builder,
+			"`%s` is missing definitions for members: ",
+			e.CompositeType.QualifiedString(),
+		)
 		for i, member := range e.MissingMembers {
-			builder.WriteString(fmt.Sprintf("`%s`", member.Identifier.Identifier))
+			_, _ = fmt.Fprintf(&builder, "`%s`", member.Identifier.Identifier)
 			if i != len(e.MissingMembers)-1 {
 				builder.WriteString(", ")
 			}
@@ -1729,13 +1763,13 @@ func (e *ConformanceError) SecondaryError() string {
 	}
 
 	if len(e.MissingNestedCompositeTypes) > 0 {
-		builder.WriteString(fmt.Sprintf("`%s` is", e.CompositeType.QualifiedString()))
+		_, _ = fmt.Fprintf(&builder, "`%s` is", e.CompositeType.QualifiedString())
 		if len(e.MissingMembers) > 0 {
 			builder.WriteString(" also")
 		}
 		builder.WriteString(" missing definitions for types: ")
 		for i, ty := range e.MissingNestedCompositeTypes {
-			builder.WriteString(fmt.Sprintf("`%s`", ty.QualifiedString()))
+			_, _ = fmt.Fprintf(&builder, "`%s`", ty.QualifiedString())
 			if i != len(e.MissingNestedCompositeTypes)-1 {
 				builder.WriteString(", ")
 			}
@@ -1745,7 +1779,7 @@ func (e *ConformanceError) SecondaryError() string {
 	return builder.String()
 }
 
-func (e *ConformanceError) DocumentationLink() string {
+func (*ConformanceError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/interfaces"
 }
 
@@ -1819,11 +1853,11 @@ func (e *DuplicateConformanceError) Error() string {
 	)
 }
 
-func (e *DuplicateConformanceError) SecondaryError() string {
-	return "Remove the duplicate conformance declaration; each interface can only be conformed to once"
+func (*DuplicateConformanceError) SecondaryError() string {
+	return "remove the duplicate conformance declaration; each interface can only be conformed to once"
 }
 
-func (e *DuplicateConformanceError) DocumentationLink() string {
+func (*DuplicateConformanceError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/interfaces"
 }
 
@@ -1849,11 +1883,11 @@ func (e CyclicConformanceError) Error() string {
 	)
 }
 
-func (e CyclicConformanceError) SecondaryError() string {
+func (CyclicConformanceError) SecondaryError() string {
 	return "interfaces cannot have circular dependencies; break the cycle by removing one of the conformance declarations"
 }
 
-func (e CyclicConformanceError) DocumentationLink() string {
+func (CyclicConformanceError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/interfaces"
 }
 
@@ -1941,11 +1975,11 @@ func (e *InterfaceMemberConflictError) Error() string {
 	)
 }
 
-func (e *InterfaceMemberConflictError) SecondaryError() string {
+func (*InterfaceMemberConflictError) SecondaryError() string {
 	return "interface members must have unique names; rename one of the conflicting members to resolve the conflict"
 }
 
-func (e *InterfaceMemberConflictError) DocumentationLink() string {
+func (*InterfaceMemberConflictError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/interfaces"
 }
 
@@ -2068,7 +2102,7 @@ func (e *ImportedProgramError) SecondaryError() string {
 	)
 }
 
-func (e *ImportedProgramError) DocumentationLink() string {
+func (*ImportedProgramError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/imports"
 }
 
@@ -2109,11 +2143,11 @@ func (e *AlwaysFailingNonResourceCastingTypeError) Error() string {
 	)
 }
 
-func (e *AlwaysFailingNonResourceCastingTypeError) SecondaryError() string {
+func (*AlwaysFailingNonResourceCastingTypeError) SecondaryError() string {
 	return "resources cannot be cast to non-resource types."
 }
 
-func (e *AlwaysFailingNonResourceCastingTypeError) DocumentationLink() string {
+func (*AlwaysFailingNonResourceCastingTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/operators/casting-operators"
 }
 
@@ -2142,11 +2176,11 @@ func (e *AlwaysFailingResourceCastingTypeError) Error() string {
 	)
 }
 
-func (e *AlwaysFailingResourceCastingTypeError) SecondaryError() string {
+func (*AlwaysFailingResourceCastingTypeError) SecondaryError() string {
 	return "non-resource types cannot be cast to resource types."
 }
 
-func (e *AlwaysFailingResourceCastingTypeError) DocumentationLink() string {
+func (*AlwaysFailingResourceCastingTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/operators/casting-operators"
 }
 
@@ -2188,7 +2222,7 @@ func (*CompositeKindMismatchError) isSemanticError() {}
 
 func (*CompositeKindMismatchError) IsUserError() {}
 
-func (e *CompositeKindMismatchError) Error() string {
+func (*CompositeKindMismatchError) Error() string {
 	return "mismatched composite kinds"
 }
 
@@ -2200,7 +2234,7 @@ func (e *CompositeKindMismatchError) SecondaryError() string {
 	)
 }
 
-func (e *CompositeKindMismatchError) DocumentationLink() string {
+func (*CompositeKindMismatchError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
 }
 
@@ -2222,7 +2256,7 @@ func (*InvalidIntegerLiteralRangeError) IsUserError() {}
 
 func (*InvalidIntegerLiteralRangeError) isSemanticError() {}
 
-func (e *InvalidIntegerLiteralRangeError) Error() string {
+func (*InvalidIntegerLiteralRangeError) Error() string {
 	return "integer literal out of range"
 }
 
@@ -2254,15 +2288,15 @@ func (*InvalidAddressLiteralError) isSemanticError() {}
 
 func (*InvalidAddressLiteralError) IsUserError() {}
 
-func (e *InvalidAddressLiteralError) Error() string {
+func (*InvalidAddressLiteralError) Error() string {
 	return "invalid address literal"
 }
 
-func (e *InvalidAddressLiteralError) SecondaryError() string {
+func (*InvalidAddressLiteralError) SecondaryError() string {
 	return "address literals must be hexadecimal (e.g., 0x1, 0x123) and fit within a 64-bit range"
 }
 
-func (e *InvalidAddressLiteralError) DocumentationLink() string {
+func (*InvalidAddressLiteralError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/values-and-types#address"
 }
 
@@ -2286,7 +2320,7 @@ func (*InvalidFixedPointLiteralRangeError) isSemanticError() {}
 
 func (*InvalidFixedPointLiteralRangeError) IsUserError() {}
 
-func (e *InvalidFixedPointLiteralRangeError) Error() string {
+func (*InvalidFixedPointLiteralRangeError) Error() string {
 	return "fixed-point literal out of range"
 }
 
@@ -2322,7 +2356,7 @@ func (*InvalidFixedPointLiteralScaleError) isSemanticError() {}
 
 func (*InvalidFixedPointLiteralScaleError) IsUserError() {}
 
-func (e *InvalidFixedPointLiteralScaleError) Error() string {
+func (*InvalidFixedPointLiteralScaleError) Error() string {
 	return "fixed-point literal scale out of range"
 }
 
@@ -2351,7 +2385,7 @@ func (*MissingReturnStatementError) isSemanticError() {}
 
 func (*MissingReturnStatementError) IsUserError() {}
 
-func (e *MissingReturnStatementError) Error() string {
+func (*MissingReturnStatementError) Error() string {
 	return "missing return statement"
 }
 
@@ -2368,7 +2402,7 @@ func (*UnsupportedOptionalChainingAssignmentError) isSemanticError() {}
 
 func (*UnsupportedOptionalChainingAssignmentError) IsUserError() {}
 
-func (e *UnsupportedOptionalChainingAssignmentError) Error() string {
+func (*UnsupportedOptionalChainingAssignmentError) Error() string {
 	return "cannot assign to optional chaining expression"
 }
 
@@ -2385,7 +2419,7 @@ func (*MissingResourceAnnotationError) isSemanticError() {}
 
 func (*MissingResourceAnnotationError) IsUserError() {}
 
-func (e *MissingResourceAnnotationError) Error() string {
+func (*MissingResourceAnnotationError) Error() string {
 	return fmt.Sprintf(
 		"missing resource annotation: `%s`",
 		common.CompositeKindResource.Annotation(),
@@ -2407,11 +2441,11 @@ func (*InvalidNestedResourceMoveError) isSemanticError() {}
 
 func (*InvalidNestedResourceMoveError) IsUserError() {}
 
-func (e *InvalidNestedResourceMoveError) Error() string {
+func (*InvalidNestedResourceMoveError) Error() string {
 	return "cannot move nested resource"
 }
 
-func (e *InvalidNestedResourceMoveError) SecondaryError() string {
+func (*InvalidNestedResourceMoveError) SecondaryError() string {
 	return "nested resources cannot be moved independently; move the containing resource instead"
 }
 
@@ -2434,12 +2468,12 @@ func (*InvalidInterfaceConditionResourceInvalidationError) isSemanticError() {}
 
 func (*InvalidInterfaceConditionResourceInvalidationError) IsUserError() {}
 
-func (e *InvalidInterfaceConditionResourceInvalidationError) Error() string {
+func (*InvalidInterfaceConditionResourceInvalidationError) Error() string {
 	return "cannot invalidate resource in interface condition"
 }
 
 func (*InvalidInterfaceConditionResourceInvalidationError) SecondaryError() string {
-	return "Interface conditions must be pure and cannot modify resources; use pre/post conditions instead"
+	return "interface conditions must be pure and cannot modify resources; use pre/post conditions instead"
 }
 
 func (*InvalidInterfaceConditionResourceInvalidationError) DocumentationLink() string {
@@ -2483,7 +2517,7 @@ func (*InvalidInterfaceTypeError) isSemanticError() {}
 
 func (*InvalidInterfaceTypeError) IsUserError() {}
 
-func (e *InvalidInterfaceTypeError) Error() string {
+func (*InvalidInterfaceTypeError) Error() string {
 	return "invalid use of interface as type"
 }
 
@@ -2524,7 +2558,7 @@ func (e *InvalidInterfaceDeclarationError) Error() string {
 
 func (e *InvalidInterfaceDeclarationError) SecondaryError() string {
 	return fmt.Sprintf(
-		"Only struct and resource types can have interfaces; %s interfaces are not allowed",
+		"only struct and resource types can have interfaces; %s interfaces are not allowed",
 		e.CompositeKind.Name(),
 	)
 }
@@ -2551,18 +2585,20 @@ func (*IncorrectTransferOperationError) isSemanticError() {}
 
 func (*IncorrectTransferOperationError) IsUserError() {}
 
-func (e *IncorrectTransferOperationError) Error() string {
+func (*IncorrectTransferOperationError) Error() string {
 	return "incorrect transfer operation"
 }
 
 func (e *IncorrectTransferOperationError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected `%s`; transfer operations must match the expected operation for the context (e.g., `<-` for move, `<-!` for force move)",
+		"expected `%s`; "+
+			"transfer operations must match the expected operation for the context "+
+			"(e.g., `<-` for move, `<-!` for force move)",
 		e.ExpectedOperation.Operator(),
 	)
 }
 
-func (e *IncorrectTransferOperationError) DocumentationLink() string {
+func (*IncorrectTransferOperationError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/resources"
 }
 
@@ -2581,12 +2617,13 @@ func (*InvalidConstructionError) isSemanticError() {}
 
 func (*InvalidConstructionError) IsUserError() {}
 
-func (e *InvalidConstructionError) Error() string {
+func (*InvalidConstructionError) Error() string {
 	return "cannot create value: not a resource"
 }
 
 func (*InvalidConstructionError) SecondaryError() string {
-	return "The `create` expression can only be used with resource types; use regular constructor calls for structs and other composite types"
+	return "The `create` expression can only be used with resource types; " +
+		"use regular constructor calls for structs and other composite types"
 }
 
 func (*InvalidConstructionError) DocumentationLink() string {
@@ -2608,12 +2645,13 @@ func (*InvalidDestructionError) isSemanticError() {}
 
 func (*InvalidDestructionError) IsUserError() {}
 
-func (e *InvalidDestructionError) Error() string {
+func (*InvalidDestructionError) Error() string {
 	return "cannot destroy value: not a resource"
 }
 
 func (*InvalidDestructionError) SecondaryError() string {
-	return "The `destroy` expression can only be used with resource types; non-resource types are automatically cleaned up when they go out of scope"
+	return "The `destroy` expression can only be used with resource types; " +
+		"non-resource types are automatically cleaned up when they go out of scope"
 }
 
 func (*InvalidDestructionError) DocumentationLink() string {
@@ -2633,7 +2671,7 @@ func (*ResourceLossError) isSemanticError() {}
 
 func (*ResourceLossError) IsUserError() {}
 
-func (e *ResourceLossError) Error() string {
+func (*ResourceLossError) Error() string {
 	return "loss of resource"
 }
 
@@ -2711,11 +2749,11 @@ func (*MissingCreateError) isSemanticError() {}
 
 func (*MissingCreateError) IsUserError() {}
 
-func (e *MissingCreateError) Error() string {
+func (*MissingCreateError) Error() string {
 	return "cannot create resource"
 }
 
-func (e *MissingCreateError) SecondaryError() string {
+func (*MissingCreateError) SecondaryError() string {
 	return "expected `create`"
 }
 
@@ -2732,7 +2770,7 @@ func (*MissingMoveOperationError) isSemanticError() {}
 
 func (*MissingMoveOperationError) IsUserError() {}
 
-func (e *MissingMoveOperationError) Error() string {
+func (*MissingMoveOperationError) Error() string {
 	return "missing move operation: `<-`"
 }
 
@@ -2759,11 +2797,11 @@ func (*InvalidMoveOperationError) isSemanticError() {}
 
 func (*InvalidMoveOperationError) IsUserError() {}
 
-func (e *InvalidMoveOperationError) Error() string {
+func (*InvalidMoveOperationError) Error() string {
 	return "invalid move operation for non-resource"
 }
 
-func (e *InvalidMoveOperationError) SecondaryError() string {
+func (*InvalidMoveOperationError) SecondaryError() string {
 	return "unexpected `<-`"
 }
 
@@ -2852,7 +2890,7 @@ func (e *InvalidSwapExpressionError) Error() string {
 	)
 }
 
-func (e *InvalidSwapExpressionError) SecondaryError() string {
+func (*InvalidSwapExpressionError) SecondaryError() string {
 	return "expected target expression"
 }
 
@@ -2881,7 +2919,7 @@ func (e *InvalidEventParameterTypeError) Error() string {
 
 func (e *InvalidEventParameterTypeError) SecondaryError() string {
 	return fmt.Sprintf(
-		"Event parameters must be storable types; the type `%s` cannot be stored",
+		"event parameters must be storable types; the type `%s` cannot be stored",
 		e.Type.QualifiedString(),
 	)
 }
@@ -2950,11 +2988,11 @@ func (e *EmitNonEventError) Error() string {
 	)
 }
 
-func (e *EmitNonEventError) SecondaryError() string {
+func (*EmitNonEventError) SecondaryError() string {
 	return "only event types can be emitted; consider declaring the type as an event"
 }
 
-func (e *EmitNonEventError) DocumentationLink() string {
+func (*EmitNonEventError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/events"
 }
 
@@ -2974,12 +3012,13 @@ func (*EmitDefaultDestroyEventError) isSemanticError() {}
 
 func (*EmitDefaultDestroyEventError) IsUserError() {}
 
-func (e *EmitDefaultDestroyEventError) Error() string {
+func (*EmitDefaultDestroyEventError) Error() string {
 	return "default destruction events may not be explicitly emitted"
 }
 
-func (e *EmitDefaultDestroyEventError) SecondaryError() string {
-	return "ResourceDestroyed events are automatically emitted when resources are destroyed; remove the explicit emit statement"
+func (*EmitDefaultDestroyEventError) SecondaryError() string {
+	return "ResourceDestroyed events are automatically emitted when resources are destroyed; " +
+		"remove the explicit emit statement"
 }
 
 func (e *EmitDefaultDestroyEventError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
@@ -2996,7 +3035,7 @@ func (e *EmitDefaultDestroyEventError) SuggestFixes(_ string) []errors.Suggested
 	}
 }
 
-func (e *EmitDefaultDestroyEventError) DocumentationLink() string {
+func (*EmitDefaultDestroyEventError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/resources#destroy-events"
 }
 
@@ -3023,11 +3062,12 @@ func (e *EmitImportedEventError) Error() string {
 	)
 }
 
-func (e *EmitImportedEventError) SecondaryError() string {
-	return "Events can only be emitted from the contract where they are declared; imported events cannot be emitted elsewhere, e.g. from other contracts or transactions"
+func (*EmitImportedEventError) SecondaryError() string {
+	return "events can only be emitted from the contract where they are declared; " +
+		"imported events cannot be emitted elsewhere, e.g. from other contracts or transactions"
 }
 
-func (e *EmitImportedEventError) DocumentationLink() string {
+func (*EmitImportedEventError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/events"
 }
 
@@ -3045,11 +3085,11 @@ func (*InvalidResourceAssignmentError) isSemanticError() {}
 
 func (*InvalidResourceAssignmentError) IsUserError() {}
 
-func (e *InvalidResourceAssignmentError) Error() string {
+func (*InvalidResourceAssignmentError) Error() string {
 	return "cannot assign to resource-typed target"
 }
 
-func (e *InvalidResourceAssignmentError) SecondaryError() string {
+func (*InvalidResourceAssignmentError) SecondaryError() string {
 	return "consider force assigning (<-!) or swapping (<->)"
 }
 
@@ -3077,7 +3117,7 @@ func (e *ResourceFieldNotInvalidatedError) Error() string {
 	)
 }
 
-func (e *ResourceFieldNotInvalidatedError) SecondaryError() string {
+func (*ResourceFieldNotInvalidatedError) SecondaryError() string {
 	return "not invalidated"
 }
 
@@ -3134,11 +3174,11 @@ func (*UnreachableStatementError) isSemanticError() {}
 
 func (*UnreachableStatementError) IsUserError() {}
 
-func (e *UnreachableStatementError) Error() string {
+func (*UnreachableStatementError) Error() string {
 	return "unreachable statement"
 }
 
-func (e *UnreachableStatementError) SecondaryError() string {
+func (*UnreachableStatementError) SecondaryError() string {
 	return "consider removing this code"
 }
 
@@ -3256,7 +3296,7 @@ func (*NonReferenceTypeReferenceError) isSemanticError() {}
 
 func (*NonReferenceTypeReferenceError) IsUserError() {}
 
-func (e *NonReferenceTypeReferenceError) Error() string {
+func (*NonReferenceTypeReferenceError) Error() string {
 	return "cannot create reference"
 }
 
@@ -3282,7 +3322,7 @@ func (*ReferenceToAnOptionalError) isSemanticError() {}
 
 func (*ReferenceToAnOptionalError) IsUserError() {}
 
-func (e *ReferenceToAnOptionalError) Error() string {
+func (*ReferenceToAnOptionalError) Error() string {
 	return "cannot create reference"
 }
 
@@ -3339,7 +3379,7 @@ func (*NonResourceTypeError) isSemanticError() {}
 
 func (*NonResourceTypeError) IsUserError() {}
 
-func (e *NonResourceTypeError) Error() string {
+func (*NonResourceTypeError) Error() string {
 	return "invalid type"
 }
 
@@ -3365,15 +3405,16 @@ func (*InvalidAssignmentTargetError) isSemanticError() {}
 
 func (*InvalidAssignmentTargetError) IsUserError() {}
 
-func (e *InvalidAssignmentTargetError) Error() string {
+func (*InvalidAssignmentTargetError) Error() string {
 	return "cannot assign to unassignable expression"
 }
 
-func (e *InvalidAssignmentTargetError) SecondaryError() string {
-	return "only variables, array elements, and struct fields can be assigned to; function calls and literals cannot be assigned to"
+func (*InvalidAssignmentTargetError) SecondaryError() string {
+	return "only variables, array elements, and struct fields can be assigned to; " +
+		"function calls and literals cannot be assigned to"
 }
 
-func (e *InvalidAssignmentTargetError) DocumentationLink() string {
+func (*InvalidAssignmentTargetError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/operators/assign-move-force-swap"
 }
 
@@ -3390,7 +3431,7 @@ func (*ResourceMethodBindingError) isSemanticError() {}
 
 func (*ResourceMethodBindingError) IsUserError() {}
 
-func (e *ResourceMethodBindingError) Error() string {
+func (*ResourceMethodBindingError) Error() string {
 	return "cannot create bound method for resource"
 }
 
@@ -3419,7 +3460,8 @@ func (e *InvalidDictionaryKeyTypeError) Error() string {
 
 func (e *InvalidDictionaryKeyTypeError) SecondaryError() string {
 	return fmt.Sprintf(
-		"The type `%s` cannot be used as a key because it is not hashable; use primitive types like `String`, `Int`, `Address`, or `Bool` instead",
+		"type `%s` cannot be used as a key because it is not hashable; "+
+			"use primitive types like `String`, `Int`, `Address`, or `Bool` instead",
 		e.Type.QualifiedString(),
 	)
 }
@@ -3441,7 +3483,7 @@ func (*MissingFunctionBodyError) isSemanticError() {}
 
 func (*MissingFunctionBodyError) IsUserError() {}
 
-func (e *MissingFunctionBodyError) Error() string {
+func (*MissingFunctionBodyError) Error() string {
 	return "missing function implementation"
 }
 
@@ -3516,7 +3558,7 @@ func (e *InvalidAccessError) Error() string {
 	)
 }
 
-func (e *InvalidAccessError) DocumentationLink() string {
+func (*InvalidAccessError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control"
 }
 
@@ -3620,13 +3662,14 @@ func (e *InvalidAssignmentAccessError) Error() string {
 
 func (e *InvalidAssignmentAccessError) SecondaryError() string {
 	return fmt.Sprintf(
-		"fields with `%s` access cannot be directly assigned to; consider adding a setter function to %s or using a different access modifier",
+		"fields with `%s` access cannot be directly assigned to; "+
+			"consider adding a setter function to %s or using a different access modifier",
 		e.RestrictingAccess.String(),
 		e.ContainerType.QualifiedString(),
 	)
 }
 
-func (e *InvalidAssignmentAccessError) DocumentationLink() string {
+func (*InvalidAssignmentAccessError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control"
 }
 
@@ -3686,7 +3729,7 @@ func (*InvalidCharacterLiteralError) isSemanticError() {}
 
 func (*InvalidCharacterLiteralError) IsUserError() {}
 
-func (e *InvalidCharacterLiteralError) Error() string {
+func (*InvalidCharacterLiteralError) Error() string {
 	return "character literal has invalid length"
 }
 
@@ -3715,12 +3758,13 @@ func (*InvalidFailableResourceDowncastOutsideOptionalBindingError) isSemanticErr
 
 func (*InvalidFailableResourceDowncastOutsideOptionalBindingError) IsUserError() {}
 
-func (e *InvalidFailableResourceDowncastOutsideOptionalBindingError) Error() string {
+func (*InvalidFailableResourceDowncastOutsideOptionalBindingError) Error() string {
 	return "cannot failably downcast resource type outside of optional binding"
 }
 
 func (*InvalidFailableResourceDowncastOutsideOptionalBindingError) SecondaryError() string {
-	return "Resource downcasts must be performed within optional bindings; use `if let` or `switch` statements to safely handle the optional result"
+	return "resource downcasts must be performed within optional bindings; " +
+		"use `if let` or `switch` statements to safely handle the optional result"
 }
 
 func (*InvalidFailableResourceDowncastOutsideOptionalBindingError) DocumentationLink() string {
@@ -3741,11 +3785,11 @@ func (*InvalidNonIdentifierFailableResourceDowncast) isSemanticError() {}
 
 func (*InvalidNonIdentifierFailableResourceDowncast) IsUserError() {}
 
-func (e *InvalidNonIdentifierFailableResourceDowncast) Error() string {
+func (*InvalidNonIdentifierFailableResourceDowncast) Error() string {
 	return "cannot failably downcast non-identifier resource"
 }
 
-func (e *InvalidNonIdentifierFailableResourceDowncast) SecondaryError() string {
+func (*InvalidNonIdentifierFailableResourceDowncast) SecondaryError() string {
 	return "consider declaring a variable for this expression"
 }
 
@@ -3762,7 +3806,7 @@ func (*ReadOnlyTargetAssignmentError) isSemanticError() {}
 
 func (*ReadOnlyTargetAssignmentError) IsUserError() {}
 
-func (e *ReadOnlyTargetAssignmentError) Error() string {
+func (*ReadOnlyTargetAssignmentError) Error() string {
 	return "cannot assign to read-only target"
 }
 
@@ -3781,7 +3825,7 @@ func (*InvalidTransactionBlockError) isSemanticError() {}
 
 func (*InvalidTransactionBlockError) IsUserError() {}
 
-func (e *InvalidTransactionBlockError) Error() string {
+func (*InvalidTransactionBlockError) Error() string {
 	return "invalid transaction block"
 }
 
@@ -3954,7 +3998,8 @@ func (e *InvalidNestedDeclarationError) Error() string {
 
 func (e *InvalidNestedDeclarationError) SecondaryError() string {
 	return fmt.Sprintf(
-		"Only certain declaration types can be nested within %s; %s declarations are not allowed in this context",
+		"only certain declaration types can be nested within %s; "+
+			"%s declarations are not allowed in this context",
 		e.ContainerDeclarationKind.Name(),
 		e.NestedDeclarationKind.Name(),
 	)
@@ -3987,7 +4032,11 @@ func (e *InvalidNestedTypeError) Error() string {
 }
 
 func (e *InvalidNestedTypeError) SecondaryError() string {
-	return fmt.Sprintf("only composite types (struct, resource, contract, enum) can contain nested type declarations; the type `%s` is not a composite type", e.Type)
+	return fmt.Sprintf(
+		"only composite types (struct, resource, contract, enum) can contain nested type declarations; "+
+			"the type `%s` is not a composite type",
+		e.Type,
+	)
 }
 
 func (*InvalidNestedTypeError) DocumentationLink() string {
@@ -4025,8 +4074,8 @@ func (e *InvalidEnumCaseError) Error() string {
 	)
 }
 
-func (e *InvalidEnumCaseError) SecondaryError() string {
-	return "Enum cases can only be declared within enum types"
+func (*InvalidEnumCaseError) SecondaryError() string {
+	return "enum cases can only be declared within enum types"
 }
 
 func (*InvalidEnumCaseError) DocumentationLink() string {
@@ -4134,8 +4183,9 @@ func (e *InvalidMoveError) Error() string {
 	)
 }
 
-func (e *InvalidMoveError) SecondaryError() string {
-	return "only resource-typed values can be moved; remove the move operator or use the assignment (`=`) operator instead, if this is an assignment"
+func (*InvalidMoveError) SecondaryError() string {
+	return "only resource-typed values can be moved; " +
+		"remove the move operator or use the assignment (`=`) operator instead, if this is an assignment"
 }
 
 func (*InvalidMoveError) DocumentationLink() string {
@@ -4168,7 +4218,7 @@ func (*ConstantSizedArrayLiteralSizeError) isSemanticError() {}
 
 func (*ConstantSizedArrayLiteralSizeError) IsUserError() {}
 
-func (e *ConstantSizedArrayLiteralSizeError) Error() string {
+func (*ConstantSizedArrayLiteralSizeError) Error() string {
 	return "incorrect number of array literal elements"
 }
 
@@ -4180,7 +4230,7 @@ func (e *ConstantSizedArrayLiteralSizeError) SecondaryError() string {
 	)
 }
 
-func (e *ConstantSizedArrayLiteralSizeError) DocumentationLink() string {
+func (*ConstantSizedArrayLiteralSizeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/values-and-types/arrays"
 }
 
@@ -4209,7 +4259,7 @@ func (e *InvalidIntersectedTypeError) Error() string {
 
 func (e *InvalidIntersectedTypeError) SecondaryError() string {
 	return fmt.Sprintf(
-		"Only interface types can be intersected; the type `%s` is not an interface",
+		"only interface types can be intersected; the type `%s` is not an interface",
 		e.Type.QualifiedString(),
 	)
 }
@@ -4235,19 +4285,20 @@ func (*IntersectionCompositeKindMismatchError) isSemanticError() {}
 
 func (*IntersectionCompositeKindMismatchError) IsUserError() {}
 
-func (e *IntersectionCompositeKindMismatchError) Error() string {
+func (*IntersectionCompositeKindMismatchError) Error() string {
 	return "interface kinds in intersection type must match"
 }
 
 func (e *IntersectionCompositeKindMismatchError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected `%s`, got `%s`. All interfaces in an intersection type must have the same composite kind (struct, resource, contract, etc.)",
+		"expected `%s`, got `%s`. "+
+			"All interfaces in an intersection type must have the same composite kind (struct, resource, contract, etc.)",
 		e.PreviousCompositeKind.Name(),
 		e.CompositeKind.Name(),
 	)
 }
 
-func (e *IntersectionCompositeKindMismatchError) DocumentationLink() string {
+func (*IntersectionCompositeKindMismatchError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
 }
 
@@ -4276,7 +4327,7 @@ func (e *InvalidIntersectionTypeDuplicateError) Error() string {
 
 func (e *InvalidIntersectionTypeDuplicateError) SecondaryError() string {
 	return fmt.Sprintf(
-		"Each interface type can only appear once in an intersection; remove the duplicate `%s`",
+		"each interface type can only appear once in an intersection; remove the duplicate `%s`",
 		e.Type.QualifiedString(),
 	)
 }
@@ -4312,14 +4363,15 @@ func (e *IntersectionMemberClashError) Error() string {
 
 func (e *IntersectionMemberClashError) SecondaryError() string {
 	return fmt.Sprintf(
-		"member `%s` is declared in both `%s` and `%s`; intersection types cannot have conflicting member declarations with the same name",
+		"member `%s` is declared in both `%s` and `%s`; "+
+			"intersection types cannot have conflicting member declarations with the same name",
 		e.Name,
 		e.OriginalDeclaringType.QualifiedString(),
 		e.RedeclaringType.QualifiedString(),
 	)
 }
 
-func (e *IntersectionMemberClashError) DocumentationLink() string {
+func (*IntersectionMemberClashError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
 }
 
@@ -4338,15 +4390,16 @@ func (*AmbiguousIntersectionTypeError) isSemanticError() {}
 
 func (*AmbiguousIntersectionTypeError) IsUserError() {}
 
-func (e *AmbiguousIntersectionTypeError) Error() string {
+func (*AmbiguousIntersectionTypeError) Error() string {
 	return "ambiguous intersection type"
 }
 
-func (e *AmbiguousIntersectionTypeError) SecondaryError() string {
-	return "empty intersection types like `{}` or `@{}` are ambiguous; specify the interfaces to intersect. example: {Interface1, Interface2} or @{Interface1, Interface2}"
+func (*AmbiguousIntersectionTypeError) SecondaryError() string {
+	return "empty intersection types like `{}` or `@{}` are ambiguous; " +
+		"specify the interfaces to intersect. example: {Interface1, Interface2} or @{Interface1, Interface2}"
 }
 
-func (e *AmbiguousIntersectionTypeError) DocumentationLink() string {
+func (*AmbiguousIntersectionTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
 }
 
@@ -4412,7 +4465,7 @@ func (e *InvalidTypeArgumentCountError) isSemanticError() {}
 
 func (*InvalidTypeArgumentCountError) IsUserError() {}
 
-func (e *InvalidTypeArgumentCountError) Error() string {
+func (*InvalidTypeArgumentCountError) Error() string {
 	return "incorrect number of type arguments"
 }
 
@@ -4503,7 +4556,7 @@ func (e *InvalidConstantSizedTypeBaseError) isSemanticError() {}
 
 func (*InvalidConstantSizedTypeBaseError) IsUserError() {}
 
-func (e *InvalidConstantSizedTypeBaseError) Error() string {
+func (*InvalidConstantSizedTypeBaseError) Error() string {
 	return "invalid base for constant sized type size"
 }
 
@@ -4537,7 +4590,7 @@ func (*InvalidConstantSizedTypeSizeError) isSemanticError() {}
 
 func (*InvalidConstantSizedTypeSizeError) IsUserError() {}
 
-func (e *InvalidConstantSizedTypeSizeError) Error() string {
+func (*InvalidConstantSizedTypeSizeError) Error() string {
 	return "invalid size for constant sized type"
 }
 
@@ -4567,7 +4620,7 @@ func (*UnsupportedResourceForLoopError) isSemanticError() {}
 
 func (*UnsupportedResourceForLoopError) IsUserError() {}
 
-func (e *UnsupportedResourceForLoopError) Error() string {
+func (*UnsupportedResourceForLoopError) Error() string {
 	return "cannot loop over resources"
 }
 
@@ -4588,7 +4641,7 @@ func (*TypeParameterTypeMismatchError) isSemanticError() {}
 
 func (*TypeParameterTypeMismatchError) IsUserError() {}
 
-func (e *TypeParameterTypeMismatchError) Error() string {
+func (*TypeParameterTypeMismatchError) Error() string {
 	return "mismatched types for type parameter"
 }
 
@@ -4621,7 +4674,7 @@ func (*UnparameterizedTypeInstantiationError) isSemanticError() {}
 
 func (*UnparameterizedTypeInstantiationError) IsUserError() {}
 
-func (e *UnparameterizedTypeInstantiationError) Error() string {
+func (*UnparameterizedTypeInstantiationError) Error() string {
 	return "cannot instantiate non-parameterized type"
 }
 
@@ -4684,11 +4737,12 @@ func (e *CyclicImportsError) Error() string {
 	return fmt.Sprintf("cyclic import of `%s`", e.Location)
 }
 
-func (e *CyclicImportsError) SecondaryError() string {
-	return "circular dependencies between imports are not allowed; break the cycle by removing one of the import statements"
+func (*CyclicImportsError) SecondaryError() string {
+	return "circular dependencies between imports are not allowed; " +
+		"break the cycle by removing one of the import statements"
 }
 
-func (e *CyclicImportsError) DocumentationLink() string {
+func (*CyclicImportsError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/imports"
 }
 
@@ -4705,8 +4759,8 @@ func (*SwitchDefaultPositionError) isSemanticError() {}
 
 func (*SwitchDefaultPositionError) IsUserError() {}
 
-func (e *SwitchDefaultPositionError) Error() string {
-	return "the 'default' case must appear at the end of a 'switch' statement"
+func (*SwitchDefaultPositionError) Error() string {
+	return "the `default` case must appear at the end of a `switch` statement"
 }
 
 // MissingSwitchCaseStatementsError
@@ -4722,7 +4776,7 @@ func (*MissingSwitchCaseStatementsError) isSemanticError() {}
 
 func (*MissingSwitchCaseStatementsError) IsUserError() {}
 
-func (e *MissingSwitchCaseStatementsError) Error() string {
+func (*MissingSwitchCaseStatementsError) Error() string {
 	return "switch cases must have at least one statement"
 }
 
@@ -4769,7 +4823,7 @@ type PurityError struct {
 	ast.Range
 }
 
-func (e *PurityError) Error() string {
+func (*PurityError) Error() string {
 	return "Impure operation performed in view context"
 }
 
@@ -4794,7 +4848,7 @@ func (*InvalidatedResourceReferenceError) isSemanticError() {}
 
 func (*InvalidatedResourceReferenceError) IsUserError() {}
 
-func (e *InvalidatedResourceReferenceError) Error() string {
+func (*InvalidatedResourceReferenceError) Error() string {
 	return "invalid reference: referenced resource may have been moved or destroyed"
 }
 
@@ -4819,12 +4873,13 @@ func (*InvalidEntitlementAccessError) isSemanticError() {}
 
 func (*InvalidEntitlementAccessError) IsUserError() {}
 
-func (e *InvalidEntitlementAccessError) Error() string {
+func (*InvalidEntitlementAccessError) Error() string {
 	return "only struct or resource members may be declared with entitlement access"
 }
 
 func (*InvalidEntitlementAccessError) SecondaryError() string {
-	return "Entitlement access modifiers can only be used on fields and functions within struct and resource types; use regular access modifiers for other declarations"
+	return "entitlement access modifiers can only be used on fields and functions within struct and resource types; " +
+		"use regular access modifiers for other declarations"
 }
 
 func (*InvalidEntitlementAccessError) DocumentationLink() string {
@@ -4854,10 +4909,13 @@ func (*InvalidEntitlementMappingTypeError) isSemanticError() {}
 func (*InvalidEntitlementMappingTypeError) IsUserError() {}
 
 func (e *InvalidEntitlementMappingTypeError) Error() string {
-	return fmt.Sprintf("`%s` is not an entitlement map type", e.Type.QualifiedString())
+	return fmt.Sprintf(
+		"`%s` is not an entitlement map type",
+		e.Type.QualifiedString(),
+	)
 }
 
-func (e *InvalidEntitlementMappingTypeError) SecondaryError() string {
+func (*InvalidEntitlementMappingTypeError) SecondaryError() string {
 	return "consider removing the `mapping` keyword"
 }
 
@@ -4885,7 +4943,7 @@ func (*InvalidNonEntitlementTypeInMapError) isSemanticError() {}
 
 func (*InvalidNonEntitlementTypeInMapError) IsUserError() {}
 
-func (e *InvalidNonEntitlementTypeInMapError) Error() string {
+func (*InvalidNonEntitlementTypeInMapError) Error() string {
 	return "cannot use non-entitlement type in entitlement mapping"
 }
 
@@ -4911,12 +4969,13 @@ func (*InvalidMappingAccessError) isSemanticError() {}
 
 func (*InvalidMappingAccessError) IsUserError() {}
 
-func (e *InvalidMappingAccessError) Error() string {
+func (*InvalidMappingAccessError) Error() string {
 	return "access(mapping ...) may only be used in structs and resources"
 }
 
-func (e *InvalidMappingAccessError) SecondaryError() string {
-	return "Entitlement mapping access modifiers are only allowed on struct and resource members; use regular access modifiers for other declaration types"
+func (*InvalidMappingAccessError) SecondaryError() string {
+	return "entitlement mapping access modifiers are only allowed on struct and resource members; " +
+		"use regular access modifiers for other declaration types"
 }
 
 func (*InvalidMappingAccessError) DocumentationLink() string {
@@ -4945,12 +5004,13 @@ func (*InvalidMappingAccessMemberTypeError) isSemanticError() {}
 
 func (*InvalidMappingAccessMemberTypeError) IsUserError() {}
 
-func (e *InvalidMappingAccessMemberTypeError) Error() string {
+func (*InvalidMappingAccessMemberTypeError) Error() string {
 	return "invalid type for access(mapping ...) declaration"
 }
 
-func (e *InvalidMappingAccessMemberTypeError) SecondaryError() string {
-	return "only entitlement mapping types can be used in access(mapping ...) declarations; use regular access modifiers for other types"
+func (*InvalidMappingAccessMemberTypeError) SecondaryError() string {
+	return "only entitlement mapping types can be used in access(mapping ...) declarations; " +
+		"use regular access modifiers for other types"
 }
 
 func (*InvalidMappingAccessMemberTypeError) DocumentationLink() string {
@@ -4980,12 +5040,16 @@ func (*InvalidNonEntitlementAccessError) isSemanticError() {}
 
 func (*InvalidNonEntitlementAccessError) IsUserError() {}
 
-func (e *InvalidNonEntitlementAccessError) Error() string {
+func (*InvalidNonEntitlementAccessError) Error() string {
 	return "only entitlements may be used in access modifiers"
 }
 
 func (e *InvalidNonEntitlementAccessError) SecondaryError() string {
-	return fmt.Sprintf("`%s` is a %s, not an entitlement", e.Type.QualifiedString(), e.Type.String())
+	return fmt.Sprintf(
+		"`%s` is a %s, not an entitlement",
+		e.Type.QualifiedString(),
+		e.Type.String(),
+	)
 }
 
 func (*InvalidNonEntitlementAccessError) DocumentationLink() string {
@@ -5005,12 +5069,16 @@ func (*MappingAccessMissingKeywordError) isSemanticError() {}
 
 func (*MappingAccessMissingKeywordError) IsUserError() {}
 
-func (e *MappingAccessMissingKeywordError) Error() string {
+func (*MappingAccessMissingKeywordError) Error() string {
 	return "entitlement mapping access modifiers require the `mapping` keyword preceding the name of the map"
 }
 
 func (e *MappingAccessMissingKeywordError) SecondaryError() string {
-	return fmt.Sprintf("replace `%s` with `mapping %s`", e.Type.QualifiedString(), e.Type.QualifiedString())
+	return fmt.Sprintf(
+		"replace `%s` with `mapping %s`",
+		e.Type.QualifiedString(),
+		e.Type.QualifiedString(),
+	)
 }
 
 // DirectEntitlementAnnotationError
@@ -5027,15 +5095,16 @@ func (*DirectEntitlementAnnotationError) isSemanticError() {}
 
 func (*DirectEntitlementAnnotationError) IsUserError() {}
 
-func (e *DirectEntitlementAnnotationError) Error() string {
+func (*DirectEntitlementAnnotationError) Error() string {
 	return "cannot use an entitlement type outside of an `access` declaration or `auth` modifier"
 }
 
-func (e *DirectEntitlementAnnotationError) SecondaryError() string {
-	return "entitlements can only be used in access modifiers for struct/resource members or in auth expressions for reference access"
+func (*DirectEntitlementAnnotationError) SecondaryError() string {
+	return "entitlements can only be used in access modifiers for struct/resource members " +
+		"or in auth expressions for reference access"
 }
 
-func (e *DirectEntitlementAnnotationError) DocumentationLink() string {
+func (*DirectEntitlementAnnotationError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control#entitlements"
 }
 
@@ -5101,7 +5170,11 @@ func (e *InvalidEntitlementMappingInclusionError) Error() string {
 }
 
 func (e *InvalidEntitlementMappingInclusionError) SecondaryError() string {
-	return fmt.Sprintf("Only entitlement mapping types can be included in entitlement mappings; the type `%s` is not an entitlement mapping", e.IncludedType.QualifiedString())
+	return fmt.Sprintf(
+		"only entitlement mapping types can be included in entitlement mappings; "+
+			"the type `%s` is not an entitlement mapping",
+		e.IncludedType.QualifiedString(),
+	)
 }
 
 func (*InvalidEntitlementMappingInclusionError) DocumentationLink() string {
@@ -5132,11 +5205,12 @@ func (e *DuplicateEntitlementMappingInclusionError) Error() string {
 	)
 }
 
-func (e *DuplicateEntitlementMappingInclusionError) SecondaryError() string {
-	return "remove the duplicate include statement; each entitlement map can only be included once in a mapping definition"
+func (*DuplicateEntitlementMappingInclusionError) SecondaryError() string {
+	return "remove the duplicate include statement; " +
+		"each entitlement map can only be included once in a mapping definition"
 }
 
-func (e *DuplicateEntitlementMappingInclusionError) DocumentationLink() string {
+func (*DuplicateEntitlementMappingInclusionError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control#entitlements"
 }
 
@@ -5164,11 +5238,12 @@ func (e *CyclicEntitlementMappingError) Error() string {
 	)
 }
 
-func (e *CyclicEntitlementMappingError) SecondaryError() string {
-	return "Entitlement mappings cannot have circular dependencies; remove the include statement to break the cycle"
+func (*CyclicEntitlementMappingError) SecondaryError() string {
+	return "entitlement mappings cannot have circular dependencies; " +
+		"remove the include statement to break the cycle"
 }
 
-func (e *CyclicEntitlementMappingError) DocumentationLink() string {
+func (*CyclicEntitlementMappingError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control#entitlement-mappings"
 }
 
@@ -5198,7 +5273,11 @@ func (e *InvalidBaseTypeError) Error() string {
 }
 
 func (e *InvalidBaseTypeError) SecondaryError() string {
-	return fmt.Sprintf("Attachments require a specific concrete type as their base type; the type `%s` is too generic or invalid; use a specific resource or struct type instead", e.BaseType.QualifiedString())
+	return fmt.Sprintf(
+		"attachments require a specific concrete type as their base type; "+
+			"the type `%s` is too generic or invalid; use a specific resource or struct type instead",
+		e.BaseType.QualifiedString(),
+	)
 }
 
 func (*InvalidBaseTypeError) DocumentationLink() string {
@@ -5220,15 +5299,16 @@ func (*InvalidAttachmentAnnotationError) isSemanticError() {}
 
 func (*InvalidAttachmentAnnotationError) IsUserError() {}
 
-func (e *InvalidAttachmentAnnotationError) Error() string {
+func (*InvalidAttachmentAnnotationError) Error() string {
 	return "cannot refer directly to attachment type"
 }
 
-func (e *InvalidAttachmentAnnotationError) SecondaryError() string {
-	return "attachment types must be used in reference types (e.g., `&T` or `[&T]`) rather than directly; they cannot be stored or passed as values"
+func (*InvalidAttachmentAnnotationError) SecondaryError() string {
+	return "attachment types must be used in reference types (e.g., `&T` or `[&T]`) rather than directly; " +
+		"they cannot be stored or passed as values"
 }
 
-func (e *InvalidAttachmentAnnotationError) DocumentationLink() string {
+func (*InvalidAttachmentAnnotationError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/attachments"
 }
 
@@ -5252,7 +5332,8 @@ func (*InvalidAttachmentUsageError) Error() string {
 }
 
 func (*InvalidAttachmentUsageError) SecondaryError() string {
-	return "Attachments must be constructed using the `attach` expression syntax; use `attach AttachmentType() to baseValue` instead of calling the constructor directly"
+	return "attachments must be constructed using the `attach` expression syntax; " +
+		"use `attach AttachmentType() to baseValue` instead of calling the constructor directly"
 }
 
 func (*InvalidAttachmentUsageError) DocumentationLink() string {
@@ -5282,11 +5363,12 @@ func (e *AttachNonAttachmentError) Error() string {
 	)
 }
 
-func (e *AttachNonAttachmentError) SecondaryError() string {
-	return "only attachment types can be used in attach expressions; consider creating an attachment declaration: attachment MyAttachment for BaseType { ... }"
+func (*AttachNonAttachmentError) SecondaryError() string {
+	return "only attachment types can be used in attach expressions; " +
+		"consider creating an attachment declaration: attachment MyAttachment for BaseType { ... }"
 }
 
-func (e *AttachNonAttachmentError) DocumentationLink() string {
+func (*AttachNonAttachmentError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/attachments"
 }
 
@@ -5312,11 +5394,12 @@ func (e *AttachToInvalidTypeError) Error() string {
 	)
 }
 
-func (e *AttachToInvalidTypeError) SecondaryError() string {
-	return "attachments can only be attached to composite types (structs, resources) that match the attachment's base type declaration"
+func (*AttachToInvalidTypeError) SecondaryError() string {
+	return "attachments can only be attached to composite types (structs, resources) " +
+		"that match the attachment's base type declaration"
 }
 
-func (e *AttachToInvalidTypeError) DocumentationLink() string {
+func (*AttachToInvalidTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/attachments"
 }
 
@@ -5352,15 +5435,18 @@ func (e *InvalidAttachmentRemoveError) Error() string {
 
 func (e *InvalidAttachmentRemoveError) SecondaryError() string {
 	if e.BaseType == nil {
-		return "Only attachment types can be removed from values; check that the type is declared as an attachment"
+		return "only attachment types can be removed from values; " +
+			"check that the type is declared as an attachment"
 	}
-	return fmt.Sprintf("The attachment `%s` can only be removed from values that are compatible with its base type; the current value has type `%s` which is not compatible",
+	return fmt.Sprintf(
+		"attachment `%s` can only be removed from values that are compatible with its base type; "+
+			"the current value has type `%s` which is not compatible",
 		e.Attachment.QualifiedString(),
 		e.BaseType.QualifiedString(),
 	)
 }
 
-func (e *InvalidAttachmentRemoveError) DocumentationLink() string {
+func (*InvalidAttachmentRemoveError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/attachments"
 }
 
@@ -5408,19 +5494,22 @@ func (e *InvalidAttachmentEntitlementError) Error() string {
 		entitlementDescription = fmt.Sprintf("`%s`", e.InvalidEntitlement.QualifiedIdentifier())
 	}
 
-	return fmt.Sprintf("cannot use %s in the access modifier for a member in `%s`",
+	return fmt.Sprintf(
+		"cannot use %s in the access modifier for a member in `%s`",
 		entitlementDescription,
 		e.Attachment.QualifiedIdentifier())
 }
 
 func (e *InvalidAttachmentEntitlementError) SecondaryError() string {
-	return fmt.Sprintf("Attachments can only use entitlements supported by the base type; `%s` must be declared in `%s` to be used in attachment member access modifiers",
+	return fmt.Sprintf(
+		"attachments can only use entitlements supported by the base type; "+
+			"`%s` must be declared in `%s` to be used in attachment member access modifiers",
 		e.InvalidEntitlement.QualifiedIdentifier(),
 		e.BaseType.String(),
 	)
 }
 
-func (e *InvalidAttachmentEntitlementError) DocumentationLink() string {
+func (*InvalidAttachmentEntitlementError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/attachments"
 }
 
@@ -5455,11 +5544,11 @@ func (e *DefaultDestroyEventInNonResourceError) Error() string {
 	)
 }
 
-func (e *DefaultDestroyEventInNonResourceError) SecondaryError() string {
+func (*DefaultDestroyEventInNonResourceError) SecondaryError() string {
 	return "the ResourceDestroyed event can only be declared in resources and resource attachments"
 }
 
-func (e *DefaultDestroyEventInNonResourceError) DocumentationLink() string {
+func (*DefaultDestroyEventInNonResourceError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/events"
 }
 
@@ -5488,25 +5577,26 @@ func (*DefaultDestroyInvalidArgumentError) isSemanticError() {}
 
 func (*DefaultDestroyInvalidArgumentError) IsUserError() {}
 
-func (e *DefaultDestroyInvalidArgumentError) Error() string {
+func (*DefaultDestroyInvalidArgumentError) Error() string {
 	return "Invalid default destroy event argument"
 }
 
 func (e *DefaultDestroyInvalidArgumentError) SecondaryError() string {
 	switch e.Kind {
 	case NonDictionaryIndexExpression:
-		return "Indexed accesses may only be performed on dictionaries"
+		return "indexed accesses may only be performed on dictionaries"
 	case ReferenceTypedMemberAccess:
-		return "Member accesses in arguments may not contain reference types"
+		return "member accesses in arguments may not contain reference types"
 	case InvalidIdentifier:
-		return "Identifiers other than `self` or `base` may not appear in arguments"
+		return "identifiers other than `self` or `base` may not appear in arguments"
 	case InvalidExpression:
-		return "Arguments must be literals, member access expressions on `self` or `base`, indexed access expressions on dictionaries, or attachment accesses"
+		return "arguments must be literals, member access expressions on `self` or `base`, " +
+			"indexed access expressions on dictionaries, or attachment accesses"
 	}
 	return ""
 }
 
-func (e *DefaultDestroyInvalidArgumentError) DocumentationLink() string {
+func (*DefaultDestroyInvalidArgumentError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/resources#destroy-events"
 }
 
@@ -5527,14 +5617,17 @@ func (*DefaultDestroyInvalidParameterError) isSemanticError() {}
 func (*DefaultDestroyInvalidParameterError) IsUserError() {}
 
 func (e *DefaultDestroyInvalidParameterError) Error() string {
-	return fmt.Sprintf("`%s` is not a valid parameter type for a default destroy event", e.ParamType.QualifiedString())
+	return fmt.Sprintf(
+		"`%s` is not a valid parameter type for a default destroy event",
+		e.ParamType.QualifiedString(),
+	)
 }
 
-func (e *DefaultDestroyInvalidParameterError) SecondaryError() string {
-	return "default destroy events only support primitive types (like String, Int, Bool) as parameters"
+func (*DefaultDestroyInvalidParameterError) SecondaryError() string {
+	return "default destroy events only support primitive types (like `String`, `Int`, `Bool`) as parameters"
 }
 
-func (e *DefaultDestroyInvalidParameterError) DocumentationLink() string {
+func (*DefaultDestroyInvalidParameterError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/resources#destroy-events"
 }
 
@@ -5551,7 +5644,7 @@ func (*InvalidTypeParameterizedNonNativeFunctionError) isSemanticError() {}
 
 func (*InvalidTypeParameterizedNonNativeFunctionError) IsUserError() {}
 
-func (e *InvalidTypeParameterizedNonNativeFunctionError) Error() string {
+func (*InvalidTypeParameterizedNonNativeFunctionError) Error() string {
 	return "invalid type parameters in non-native function"
 }
 
@@ -5569,7 +5662,10 @@ func (*NestedReferenceError) isSemanticError() {}
 func (*NestedReferenceError) IsUserError() {}
 
 func (e *NestedReferenceError) Error() string {
-	return fmt.Sprintf("cannot create a nested reference to value of type %s", e.Type.QualifiedString())
+	return fmt.Sprintf(
+		"cannot create a nested reference to value of type %s",
+		e.Type.QualifiedString(),
+	)
 }
 
 // ResultVariableConflictError
@@ -5658,7 +5754,7 @@ func (e *InvocationTypeInferenceError) isSemanticError() {}
 
 func (*InvocationTypeInferenceError) IsUserError() {}
 
-func (e *InvocationTypeInferenceError) Error() string {
+func (*InvocationTypeInferenceError) Error() string {
 	return "cannot infer type of invocation"
 }
 
@@ -5695,12 +5791,13 @@ func (*InvalidMappingAuthorizationError) isSemanticError() {}
 
 func (*InvalidMappingAuthorizationError) IsUserError() {}
 
-func (e *InvalidMappingAuthorizationError) Error() string {
+func (*InvalidMappingAuthorizationError) Error() string {
 	return "auth(mapping ...) is not supported"
 }
 
-func (e *InvalidMappingAuthorizationError) SecondaryError() string {
-	return "entitlement mapping authorization is not yet implemented; use regular auth expressions for entitlement-based access control"
+func (*InvalidMappingAuthorizationError) SecondaryError() string {
+	return "entitlement mapping authorization is not implemented; " +
+		"use regular auth expressions for entitlement-based access control"
 }
 
 func (*InvalidMappingAuthorizationError) DocumentationLink() string {

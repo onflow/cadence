@@ -21,7 +21,6 @@ package parser
 import (
 	"fmt"
 	"strings"
-	"unicode"
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
@@ -121,6 +120,7 @@ var _ errors.UserError = &SyntaxErrorWithSuggestedReplacement{}
 func (*SyntaxErrorWithSuggestedReplacement) isParseError() {}
 
 func (*SyntaxErrorWithSuggestedReplacement) IsUserError() {}
+
 func (e *SyntaxErrorWithSuggestedReplacement) Error() string {
 	return e.Message
 }
@@ -191,7 +191,7 @@ func (e *InvalidIntegerLiteralError) SecondaryError() string {
 	panic(errors.NewUnreachableError())
 }
 
-func (e *InvalidIntegerLiteralError) DocumentationLink() string {
+func (*InvalidIntegerLiteralError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/values-and-types/booleans-numlits-ints"
 }
 
@@ -208,14 +208,14 @@ func (ExpressionDepthLimitReachedError) isParseError() {}
 
 func (ExpressionDepthLimitReachedError) IsUserError() {}
 
-func (e ExpressionDepthLimitReachedError) Error() string {
+func (ExpressionDepthLimitReachedError) Error() string {
 	return fmt.Sprintf(
 		"expression too deeply nested, exceeded depth limit of %d",
 		expressionDepthLimit,
 	)
 }
 
-func (e ExpressionDepthLimitReachedError) SecondaryError() string {
+func (ExpressionDepthLimitReachedError) SecondaryError() string {
 	return "Consider extracting the sub-expressions out and storing the intermediate results in local variables"
 }
 
@@ -240,14 +240,14 @@ func (TypeDepthLimitReachedError) isParseError() {}
 
 func (TypeDepthLimitReachedError) IsUserError() {}
 
-func (e TypeDepthLimitReachedError) Error() string {
+func (TypeDepthLimitReachedError) Error() string {
 	return fmt.Sprintf(
 		"type too deeply nested, exceeded depth limit of %d",
 		typeDepthLimit,
 	)
 }
 
-func (e TypeDepthLimitReachedError) SecondaryError() string {
+func (TypeDepthLimitReachedError) SecondaryError() string {
 	return "Refactor the type so that the depth of nesting is less than the limit"
 }
 
@@ -283,34 +283,23 @@ func (e *MissingCommaInParameterListError) EndPosition(_ common.MemoryGauge) ast
 	return e.Pos
 }
 
-func (e *MissingCommaInParameterListError) Error() string {
+func (*MissingCommaInParameterListError) Error() string {
 	return "missing comma after parameter"
 }
 
-func (e *MissingCommaInParameterListError) SecondaryError() string {
+func (*MissingCommaInParameterListError) SecondaryError() string {
 	return "add a comma to separate parameters in the parameter list"
 }
 
-func (e *MissingCommaInParameterListError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
-	// Find the start of whitespace before the error position
-	errorPos := e.Pos.Offset
-
-	// Use strings.TrimRight to find where the non-whitespace ends
-	beforeError := code[:errorPos]
-	trimmed := strings.TrimRightFunc(beforeError, unicode.IsSpace)
-	whitespaceStart := len(trimmed)
-
-	// Create a position for the start of whitespace
-	startPos := e.Pos.Shifted(nil, whitespaceStart-errorPos)
-
+func (e *MissingCommaInParameterListError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Add comma to separate parameters",
 			TextEdits: []ast.TextEdit{
 				{
-					Replacement: ", ",
+					Insertion: ", ",
 					Range: ast.Range{
-						StartPos: startPos,
+						StartPos: e.Pos,
 						EndPos:   e.Pos,
 					},
 				},
@@ -319,15 +308,15 @@ func (e *MissingCommaInParameterListError) SuggestFixes(code string) []errors.Su
 	}
 }
 
-func (e *MissingCommaInParameterListError) DocumentationLink() string {
+func (*MissingCommaInParameterListError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions#function-declarations"
 }
 
 // CustomDestructorError
 
 type CustomDestructorError struct {
-	Pos ast.Position
-	ast.Range
+	Pos             ast.Position
+	DestructorRange ast.Range
 }
 
 var _ ParseError = &CustomDestructorError{}
@@ -348,16 +337,18 @@ func (e *CustomDestructorError) EndPosition(_ common.MemoryGauge) ast.Position {
 	return e.Pos
 }
 
-func (e *CustomDestructorError) Error() string {
+func (*CustomDestructorError) Error() string {
 	return "custom destructor definitions are no longer permitted since Cadence v1.0"
 }
 
-func (e *CustomDestructorError) SecondaryError() string {
+func (*CustomDestructorError) SecondaryError() string {
 	return "remove the destructor definition"
 }
 
-func (e *CustomDestructorError) MigrationNote() string {
-	return "This is pre-Cadence 1.0 syntax. Support for custom destructors was removed. Any custom cleanup logic should be moved to a separate function, and must be explicitly called before the destruction."
+func (*CustomDestructorError) MigrationNote() string {
+	return "This is pre-Cadence 1.0 syntax. Support for custom destructors was removed. " +
+		"Any custom cleanup logic should be moved to a separate function, " +
+		"and must be explicitly called before the destruction."
 }
 
 func (e *CustomDestructorError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
@@ -367,14 +358,14 @@ func (e *CustomDestructorError) SuggestFixes(_ string) []errors.SuggestedFix[ast
 			TextEdits: []ast.TextEdit{
 				{
 					Replacement: "",
-					Range:       e.Range,
+					Range:       e.DestructorRange,
 				},
 			},
 		},
 	}
 }
 
-func (e *CustomDestructorError) DocumentationLink() string {
+func (*CustomDestructorError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/cadence-migration-guide/improvements#-motivation-23"
 }
 
@@ -394,18 +385,19 @@ func (*RestrictedTypeError) isParseError() {}
 
 func (*RestrictedTypeError) IsUserError() {}
 
-func (e *RestrictedTypeError) Error() string {
+func (*RestrictedTypeError) Error() string {
 	return "restricted types have been removed in Cadence 1.0+"
 }
 
-func (e *RestrictedTypeError) SecondaryError() string {
+func (*RestrictedTypeError) SecondaryError() string {
 	return "replace with the concrete type or an equivalent intersection type"
 }
 
-func (e *RestrictedTypeError) MigrationNote() string {
-	return "This is pre-Cadence 1.0 syntax. Restricted types like `T{}` have been replaced with intersection types like `{T}`."
+func (*RestrictedTypeError) MigrationNote() string {
+	return "This is pre-Cadence 1.0 syntax. " +
+		"Restricted types like `T{}` have been replaced with intersection types like `{T}`."
 }
 
-func (e *RestrictedTypeError) DocumentationLink() string {
+func (*RestrictedTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/cadence-migration-guide/improvements#-motivation-12"
 }

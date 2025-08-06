@@ -4621,6 +4621,13 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 			},
 			errs,
 		)
+
+		require.Len(t, errs, 1)
+
+		var restrictedTypeErr *RestrictedTypeError
+		require.ErrorAs(t, errs[0], &restrictedTypeErr)
+
+		assert.NotEmpty(t, restrictedTypeErr.MigrationNote())
 	})
 }
 
