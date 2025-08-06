@@ -320,35 +320,29 @@ var enumeratedAccessModifierKeywords = common.EnumerateWords(
 	"or",
 )
 
-func rejectAccessKeywords(p *parser, produceNominalType func() (*ast.NominalType, error)) (*ast.NominalType, error) {
-	nominalType, err := produceNominalType()
-
-	if err != nil {
-		return nil, err
-	}
-
-	switch nominalType.Identifier.Identifier {
+func rejectAccessKeywordEntitlementType(p *parser, ty *ast.NominalType) {
+	switch ty.Identifier.Identifier {
 	case KeywordAll, KeywordAccess, KeywordAccount, KeywordSelf:
-		return nil, NewSyntaxError(
-			nominalType.StartPosition(),
-			"unexpected non-nominal type: %s",
-			nominalType,
-		).WithSecondary("use an entitlement name instead of access control keywords").
-			WithDocumentation("https://cadence-lang.org/docs/language/access-control#entitlements")
+		p.report(
+			NewSyntaxError(
+				ty.StartPosition(),
+				"unexpected non-nominal type: %s",
+				ty,
+			).WithSecondary("use an entitlement name instead of access control keywords").
+				WithDocumentation("https://cadence-lang.org/docs/language/access-control#entitlements"),
+		)
 	}
-	return nominalType, nil
 }
 
 func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
-	firstTy, err := rejectAccessKeywords(p, func() (*ast.NominalType, error) {
-		return parseNominalType(p)
-	})
-
+	firstType, err := parseNominalType(p)
 	if err != nil {
 		return nil, err
 	}
+	rejectAccessKeywordEntitlementType(p, firstType)
+
 	p.skipSpaceAndComments()
-	entitlements := []*ast.NominalType{firstTy}
+	entitlements := []*ast.NominalType{firstType}
 	var separator lexer.TokenType
 
 	switch p.current.Type {
@@ -374,15 +368,7 @@ func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
 		return nil, err
 	}
 	for _, entitlement := range remainingEntitlements {
-		switch entitlement.Identifier.Identifier {
-		case KeywordAll, KeywordAccess, KeywordAccount, KeywordSelf:
-			return nil, NewSyntaxError(
-				entitlement.StartPosition(),
-				"unexpected non-nominal type: %s",
-				entitlement,
-			).WithSecondary("use an entitlement name instead of access control keywords").
-				WithDocumentation("https://cadence-lang.org/docs/language/access-control#entitlements")
-		}
+		rejectAccessKeywordEntitlementType(p, entitlement)
 		entitlements = append(entitlements, entitlement)
 	}
 

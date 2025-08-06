@@ -1961,7 +1961,24 @@ func TestParseAccess(t *testing.T) {
 		)
 
 		AssertEqualWithDiff(t,
-			ast.AccessNotSpecified,
+			ast.EntitlementAccess{
+				EntitlementSet: &ast.ConjunctiveEntitlementSet{
+					Elements: []*ast.NominalType{
+						{
+							Identifier: ast.Identifier{
+								Identifier: "foo",
+								Pos:        ast.Position{Offset: 9, Line: 1, Column: 9},
+							},
+						},
+						{
+							Identifier: ast.Identifier{
+								Identifier: "self",
+								Pos:        ast.Position{Offset: 15, Line: 1, Column: 15},
+							},
+						},
+					},
+				},
+			},
 			result,
 		)
 	})
@@ -1984,7 +2001,24 @@ func TestParseAccess(t *testing.T) {
 		)
 
 		AssertEqualWithDiff(t,
-			ast.AccessNotSpecified,
+			ast.EntitlementAccess{
+				EntitlementSet: &ast.DisjunctiveEntitlementSet{
+					Elements: []*ast.NominalType{
+						{
+							Identifier: ast.Identifier{
+								Identifier: "foo",
+								Pos:        ast.Position{Offset: 9, Line: 1, Column: 9},
+							},
+						},
+						{
+							Identifier: ast.Identifier{
+								Identifier: "self",
+								Pos:        ast.Position{Offset: 15, Line: 1, Column: 15},
+							},
+						},
+					},
+				},
+			},
 			result,
 		)
 	})
