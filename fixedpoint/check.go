@@ -69,14 +69,14 @@ func Fix128FromBigInt(value *big.Int) fix.Fix128 {
 	// Handle negative values using two's complement
 	if value.Sign() < 0 {
 		// Convert to 2's complement: x + 2^128
-		v = new(big.Int).Add(v, twoPow128)
+		v = v.Add(v, twoPow128)
 	}
 
 	// Use v.Uint64() if it fits in 64 bits
 	low := v.Uint64()
 
 	// Shift right to get the high 64 bits
-	high := new(big.Int).Rsh(v, 64).Uint64()
+	high := v.Rsh(v, 64).Uint64()
 
 	return fix.NewFix128(high, low)
 }
@@ -86,13 +86,13 @@ func Fix128ToBigInt(fix128 fix.Fix128) *big.Int {
 	low := new(big.Int).SetUint64(uint64(fix128.Lo))
 
 	// v = (high << 64) + low, done in place with minimal temp vars
-	result := new(big.Int).Mul(high, twoPow64)
-	result = new(big.Int).Add(result, low)
+	result := high.Mul(high, twoPow64)
+	result = result.Add(result, low)
 
 	// If sign bit (bit 127) is set, it's a negative number in two's complement.
 	// Subtract 2^128 to get negative value.
 	if fix128.Hi&(1<<63) != 0 {
-		result = new(big.Int).Sub(result, twoPow128)
+		result = result.Sub(result, twoPow128)
 	}
 
 	return result

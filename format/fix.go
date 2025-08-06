@@ -66,7 +66,7 @@ func Fix128(fix128AsBigInt *big.Int) string {
 	negative := fraction.Sign() < 0
 	var builder strings.Builder
 	if negative {
-		fraction = new(big.Int).Neg(fraction)
+		fraction = fraction.Neg(fraction)
 		if integer.Sign() == 0 {
 			builder.WriteByte('-')
 		}
