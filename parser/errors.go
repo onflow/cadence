@@ -495,6 +495,7 @@ func (e *InvalidAccessModifierError) StartPosition() ast.Position {
 func (e *InvalidAccessModifierError) EndPosition(_ common.MemoryGauge) ast.Position {
 	return e.Pos
 }
+
 func (e *InvalidAccessModifierError) Error() string {
 	return fmt.Sprintf(
 		"invalid access modifier for %s",
@@ -536,6 +537,7 @@ func (e *InvalidViewModifierError) StartPosition() ast.Position {
 func (e *InvalidViewModifierError) EndPosition(_ common.MemoryGauge) ast.Position {
 	return e.Pos
 }
+
 func (e *InvalidViewModifierError) Error() string {
 	return fmt.Sprintf("invalid `view` modifier for %s", e.DeclarationKind.Name())
 }
@@ -570,6 +572,7 @@ func (e *InvalidStaticModifierError) StartPosition() ast.Position {
 func (e *InvalidStaticModifierError) EndPosition(_ common.MemoryGauge) ast.Position {
 	return e.Pos
 }
+
 func (e *InvalidStaticModifierError) Error() string {
 	return fmt.Sprintf(
 		"invalid `static` modifier for %s",
@@ -607,6 +610,7 @@ func (e *InvalidNativeModifierError) StartPosition() ast.Position {
 func (e *InvalidNativeModifierError) EndPosition(_ common.MemoryGauge) ast.Position {
 	return e.Pos
 }
+
 func (e *InvalidNativeModifierError) Error() string {
 	return fmt.Sprintf(
 		"invalid `native` modifier for %s",
@@ -635,7 +639,9 @@ var _ errors.SecondaryError = &NonNominalTypeError{}
 var _ errors.HasDocumentationLink = &NonNominalTypeError{}
 
 func (*NonNominalTypeError) isParseError() {}
-func (*NonNominalTypeError) IsUserError()  {}
+
+func (*NonNominalTypeError) IsUserError() {}
+
 func (e *NonNominalTypeError) StartPosition() ast.Position {
 	return e.Pos
 }

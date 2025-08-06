@@ -6222,6 +6222,7 @@ func TestParseStringTemplate(t *testing.T) {
 		AssertEqualWithDiff(t, expected, actual)
 
 	})
+
 	t.Run("invalid, empty", func(t *testing.T) {
 
 		t.Parallel()

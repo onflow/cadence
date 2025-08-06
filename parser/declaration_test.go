@@ -581,6 +581,7 @@ func TestParseParameterList(t *testing.T) {
 		)
 	})
 }
+
 func TestParseFunctionDeclaration(t *testing.T) {
 
 	t.Parallel()
@@ -1343,6 +1344,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			errs,
 		)
 	})
+
 	t.Run("access(all) static native, enabled", func(t *testing.T) {
 
 		t.Parallel()
@@ -2120,6 +2122,7 @@ func TestParseAccess(t *testing.T) {
 	})
 
 }
+
 func TestParseImportDeclaration(t *testing.T) {
 
 	t.Parallel()
@@ -2422,6 +2425,7 @@ func TestParseImportDeclaration(t *testing.T) {
 		}, errs)
 
 	})
+
 	t.Run("from keyword as second identifier", func(t *testing.T) {
 
 		t.Parallel()
@@ -2910,6 +2914,7 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 		)
 	})
 }
+
 func TestParseField(t *testing.T) {
 
 	t.Parallel()
@@ -3672,6 +3677,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 			result,
 		)
 	})
+
 	t.Run("struct with view initializer", func(t *testing.T) {
 
 		t.Parallel()
@@ -4362,6 +4368,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		)
 	})
 }
+
 func TestParseInterfaceDeclaration(t *testing.T) {
 
 	t.Parallel()
@@ -4919,6 +4926,7 @@ func TestParseEnumDeclaration(t *testing.T) {
 		)
 	})
 }
+
 func TestParseTransactionDeclaration(t *testing.T) {
 
 	t.Parallel()
@@ -5699,6 +5707,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 		)
 	})
 }
+
 func TestParseFunctionAndBlock(t *testing.T) {
 
 	t.Parallel()
@@ -6465,6 +6474,7 @@ func TestParsePreAndPostConditions(t *testing.T) {
 		result.Declarations(),
 	)
 }
+
 func TestParseConditionMessage(t *testing.T) {
 
 	t.Parallel()
@@ -7252,6 +7262,7 @@ func TestParseFunctionWithFromIdentifier(t *testing.T) {
 	_, errs := testParseProgram(code)
 	require.Empty(t, errs)
 }
+
 func TestParseImportWithFromIdentifier(t *testing.T) {
 
 	t.Parallel()
@@ -8038,6 +8049,7 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 		result.Declarations(),
 	)
 }
+
 func TestParseInvalidCompositeFunctionNames(t *testing.T) {
 
 	t.Parallel()
@@ -8706,6 +8718,7 @@ func TestParseTransactionWithModifier(t *testing.T) {
 		)
 	})
 }
+
 func TestParseNestedPragma(t *testing.T) {
 
 	t.Parallel()
@@ -9276,6 +9289,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 	})
 
 }
+
 func TestParseEntitlementMappingDeclaration(t *testing.T) {
 
 	t.Parallel()
