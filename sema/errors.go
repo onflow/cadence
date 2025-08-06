@@ -386,7 +386,7 @@ func (*NotIndexableTypeError) SecondaryError() string {
 }
 
 func (*NotIndexableTypeError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/arrays"
+	return "https://cadence-lang.org/docs/language/values-and-types/arrays"
 }
 
 // NotIndexingAssignableTypeError
@@ -417,7 +417,7 @@ func (*NotIndexingAssignableTypeError) SecondaryError() string {
 }
 
 func (*NotIndexingAssignableTypeError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/arrays"
+	return "https://cadence-lang.org/docs/language/values-and-types/arrays"
 }
 
 // NotEquatableTypeError

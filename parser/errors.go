@@ -659,5 +659,5 @@ func (*NonNominalTypeError) SecondaryError() string {
 }
 
 func (*NonNominalTypeError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/types"
+	return "https://cadence-lang.org/docs/language/types-and-type-system/"
 }
