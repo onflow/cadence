@@ -21,7 +21,10 @@ package main
 import (
 	"encoding/csv"
 	"log"
+	"net/http"
 	"os"
+
+	"github.com/onflow/cadence/errors"
 )
 
 type namedError struct {
@@ -30,6 +33,20 @@ type namedError struct {
 }
 
 func main() {
+	if len(os.Args) < 1 {
+		log.Printf("Usage: %s <write-csv|validate-doc-links>", os.Args[0])
+		os.Exit(1)
+	}
+
+	switch os.Args[1] {
+	case "write-csv":
+		writeCSV()
+	case "validate-doc-links":
+		validateDocLinks()
+	}
+}
+
+func writeCSV() {
 	w := csv.NewWriter(os.Stdout)
 	defer w.Flush()
 
@@ -43,5 +60,38 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to write CSV row: %v", err)
 		}
+	}
+
+}
+
+func validateDocLinks() {
+
+	var failed bool
+
+	for _, namedErr := range generateErrors() {
+		hasDocumentationLink, ok := namedErr.error.(errors.HasDocumentationLink)
+		if !ok {
+			continue
+		}
+
+		link := hasDocumentationLink.DocumentationLink()
+		if link == placeholderString {
+			continue
+		}
+
+		resp, err := http.Head(link)
+		if err != nil {
+			log.Printf("Error checking documentation link for error %q: %v", namedErr.name, err)
+			continue
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			log.Printf("Invalid documentation link for error %q: %v", namedErr.name, link)
+			failed = true
+		}
+	}
+
+	if failed {
+		os.Exit(1)
 	}
 }
