@@ -1148,7 +1148,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		require.Equal(t, errs[0], &SyntaxError{
 			Message:       "invalid second view modifier",
 			Secondary:     "the `view` modifier can only be used once per function declaration",
-			Migration:     "",
 			Documentation: "https://cadence-lang.org/docs/language/functions#view-functions",
 			Pos:           ast.Position{Offset: 5, Line: 1, Column: 5},
 		})
@@ -1956,7 +1955,6 @@ func TestParseAccess(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected non-nominal type: self",
 					Secondary:     "use an entitlement name instead of access control keywords",
-					Migration:     "",
 					Documentation: "https://cadence-lang.org/docs/language/access-control#entitlements",
 					Pos:           ast.Position{Offset: 15, Line: 1, Column: 15},
 				},
@@ -1980,7 +1978,6 @@ func TestParseAccess(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected non-nominal type: self",
 					Secondary:     "use an entitlement name instead of access control keywords",
-					Migration:     "",
 					Documentation: "https://cadence-lang.org/docs/language/access-control#entitlements",
 					Pos:           ast.Position{Offset: 15, Line: 1, Column: 15},
 				},
@@ -2004,7 +2001,6 @@ func TestParseAccess(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected entitlement separator identifier",
 					Secondary:     "use a comma (,) for conjunctive entitlements or a vertical bar (|) for disjunctive entitlements",
-					Migration:     "",
 					Documentation: "https://cadence-lang.org/docs/language/access-control#entitlements",
 					Pos:           ast.Position{Offset: 13, Line: 1, Column: 13},
 				},
@@ -2028,7 +2024,6 @@ func TestParseAccess(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected entitlement separator '&'",
 					Secondary:     "use a comma (,) for conjunctive entitlements or a vertical bar (|) for disjunctive entitlements",
-					Migration:     "",
 					Documentation: "https://cadence-lang.org/docs/language/access-control#entitlements",
 					Pos:           ast.Position{Offset: 13, Line: 1, Column: 13},
 				},
@@ -4878,7 +4873,6 @@ func TestParseEnumDeclaration(t *testing.T) {
 				&SyntaxError{
 					Message:       "expected identifier after start of enum case declaration, got '}'",
 					Secondary:     "provide a name for the enum case after the `case` keyword",
-					Migration:     "",
 					Documentation: "https://cadence-lang.org/docs/language/enumerations",
 					Pos:           ast.Position{Offset: 14, Line: 1, Column: 14},
 				},
@@ -6220,7 +6214,6 @@ func TestParseInvalidConformances(t *testing.T) {
 			&SyntaxError{
 				Message:       "expected at least one conformance after ':'",
 				Secondary:     "provide at least one interface or type to conform to, or remove the colon if no conformances are needed",
-				Migration:     "",
 				Documentation: "https://cadence-lang.org/docs/language/interfaces",
 				Pos:           ast.Position{Offset: 13, Line: 1, Column: 13},
 			},
@@ -6974,7 +6967,6 @@ func TestParsePragmaNoArguments(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected token: identifier",
 					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
-					Migration:     "",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
@@ -7015,7 +7007,6 @@ func TestParsePragmaNoArguments(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected token: identifier",
 					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
-					Migration:     "",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
 				},
@@ -8290,7 +8281,6 @@ func TestParseInvalidAccessModifiers(t *testing.T) {
 				&SyntaxError{
 					Message:       "invalid second access modifier",
 					Secondary:     "only one access modifier can be used per declaration",
-					Migration:     "",
 					Documentation: "https://cadence-lang.org/docs/language/access-control",
 					Pos:           ast.Position{Offset: 12, Line: 1, Column: 12},
 				},
@@ -8342,7 +8332,6 @@ func TestParseInvalidImportWithModifier(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected token: identifier",
 					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
-					Migration:     "",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 					Pos:           ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
@@ -8389,7 +8378,6 @@ func TestParseInvalidImportWithModifier(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected token: identifier",
 					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
-					Migration:     "",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 					Pos:           ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
@@ -8441,7 +8429,6 @@ func TestParseInvalidEventWithModifier(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected token: identifier",
 					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
-					Migration:     "",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 					Pos:           ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
@@ -8488,7 +8475,6 @@ func TestParseInvalidEventWithModifier(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected token: identifier",
 					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
-					Migration:     "",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 					Pos:           ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
@@ -9809,7 +9795,6 @@ func TestParseInvalidSpecialFunctionReturnTypeAnnotation(t *testing.T) {
 			&SyntaxError{
 				Message:       "invalid return type for initializer",
 				Secondary:     "special functions like `init`, `destroy`, and `prepare` cannot have return types",
-				Migration:     "",
 				Documentation: "https://cadence-lang.org/docs/language/functions",
 				Pos:           ast.Position{Offset: 40, Line: 4, Column: 18},
 			},

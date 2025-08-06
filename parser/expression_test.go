@@ -1939,7 +1939,6 @@ func TestParseMemberExpression(t *testing.T) {
 				&SyntaxError{
 					Message:       "expected member name, got EOF",
 					Secondary:     "after a dot (.), you must provide a valid identifier for the member name",
-					Migration:     "",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 					Pos:           ast.Position{Offset: 2, Line: 1, Column: 2},
 				},
@@ -2220,7 +2219,6 @@ func TestParseBlockComment(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected end of program",
 					Secondary:     "check for incomplete expressions, missing tokens, or unterminated strings/comments",
-					Migration:     "",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 					Pos: ast.Position{
 						Offset: 33,
@@ -2441,7 +2439,6 @@ func TestParseReference(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected end of program",
 					Secondary:     "check for incomplete expressions, missing tokens, or unterminated strings/comments",
-					Migration:     "",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 					Pos: ast.Position{
 						Offset: 13,
@@ -2844,7 +2841,6 @@ func TestParseForceExpression(t *testing.T) {
 				&SyntaxError{
 					Message:       "invalid whitespace after '.'",
 					Secondary:     "remove the space between the dot (.) and the member name",
-					Migration:     "",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 					Pos:           ast.Position{Offset: 2, Line: 1, Column: 2},
 				},
@@ -3069,7 +3065,6 @@ func TestParseAttach(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected end of program",
 					Secondary:     "check for incomplete expressions, missing tokens, or unterminated strings/comments",
-					Migration:     "",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 					Pos:           ast.Position{Offset: 13, Line: 1, Column: 13},
 				},
@@ -6489,7 +6484,6 @@ func TestParseStringTemplate(t *testing.T) {
 				&SyntaxError{
 					Message:       "statements on the same line must be separated with a semicolon",
 					Secondary:     "add a semicolon (;) between statements or place each statement on a separate line",
-					Migration:     "",
 					Documentation: "https://cadence-lang.org/docs/language/syntax#semicolons",
 					Pos: ast.Position{
 						Offset: 24,
@@ -6524,7 +6518,6 @@ func TestParseStringTemplate(t *testing.T) {
 				&SyntaxError{
 					Message:       "statements on the same line must be separated with a semicolon",
 					Secondary:     "add a semicolon (;) between statements or place each statement on a separate line",
-					Migration:     "",
 					Documentation: "https://cadence-lang.org/docs/language/syntax#semicolons",
 					Pos: ast.Position{
 						Offset: 33,

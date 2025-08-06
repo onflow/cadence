@@ -1128,7 +1128,6 @@ func TestParseViewNonFunction(t *testing.T) {
 			&SyntaxError{
 				Message:       "statements on the same line must be separated with a semicolon",
 				Secondary:     "add a semicolon (;) between statements or place each statement on a separate line",
-				Migration:     "",
 				Documentation: "https://cadence-lang.org/docs/language/syntax#semicolons",
 				Pos:           ast.Position{Offset: 5, Line: 1, Column: 5},
 			},
@@ -1199,7 +1198,6 @@ func TestParseStatements(t *testing.T) {
 				&SyntaxError{
 					Message:       "statements on the same line must be separated with a semicolon",
 					Secondary:     "add a semicolon (;) between statements or place each statement on a separate line",
-					Migration:     "",
 					Documentation: "https://cadence-lang.org/docs/language/syntax#semicolons",
 					Pos:           ast.Position{Offset: 7, Line: 1, Column: 7},
 				},
@@ -1315,7 +1313,6 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected end of program",
 					Secondary:     "check for incomplete expressions, missing tokens, or unterminated strings/comments",
-					Migration:     "",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 					Pos:           ast.Position{Offset: 8, Line: 1, Column: 8},
 				},
@@ -1335,7 +1332,6 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected end of program",
 					Secondary:     "check for incomplete expressions, missing tokens, or unterminated strings/comments",
-					Migration:     "",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 					Pos:           ast.Position{Offset: 13, Line: 1, Column: 13},
 				},
