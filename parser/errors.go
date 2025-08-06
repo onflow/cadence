@@ -547,3 +547,37 @@ func (*InvalidViewModifierError) SecondaryError() string {
 func (*InvalidViewModifierError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions#view-functions"
 }
+
+// NonNominalTypeError
+
+type NonNominalTypeError struct {
+	Pos  ast.Position
+	Type ast.Type
+}
+
+var _ ParseError = &NonNominalTypeError{}
+var _ errors.UserError = &NonNominalTypeError{}
+var _ errors.SecondaryError = &NonNominalTypeError{}
+var _ errors.HasDocumentationLink = &NonNominalTypeError{}
+
+func (*NonNominalTypeError) isParseError() {}
+func (*NonNominalTypeError) IsUserError()  {}
+func (e *NonNominalTypeError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *NonNominalTypeError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (e *NonNominalTypeError) Error() string {
+	return fmt.Sprintf("expected nominal type, got non-nominal type `%s`", e.Type)
+}
+
+func (*NonNominalTypeError) SecondaryError() string {
+	return "expected a nominal type (like a struct, resource, or interface name)"
+}
+
+func (*NonNominalTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/types"
+}

@@ -516,7 +516,6 @@ func defineIntersectionOrDictionaryType() {
 
 func parseNominalType(
 	p *parser,
-	rightBindingPower int,
 ) (*ast.NominalType, error) {
 	ty, err := parseType(p, lowestBindingPower)
 	if err != nil {
@@ -524,12 +523,10 @@ func parseNominalType(
 	}
 	nominalType, ok := ty.(*ast.NominalType)
 	if !ok {
-		return nil, NewSyntaxError(
-			ty.StartPosition(),
-			"unexpected non-nominal type: %s",
-			ty,
-		).WithSecondary("expected a nominal type (like a struct, resource, or interface name)").
-			WithDocumentation("https://cadence-lang.org/docs/language/types")
+		return nil, &NonNominalTypeError{
+			Pos:  ty.StartPosition(),
+			Type: ty,
+		}
 	}
 	return nominalType, nil
 }
@@ -589,8 +586,7 @@ func parseNominalTypes(
 
 			expectType = false
 
-			nominalType, err := parseNominalType(p, lowestBindingPower)
-
+			nominalType, err := parseNominalType(p)
 			if err != nil {
 				return nil, ast.EmptyPosition, err
 			}
@@ -1011,7 +1007,7 @@ func parseAuthorization(p *parser) (auth ast.Authorization, err error) {
 		// Skip the keyword
 		p.nextSemanticToken()
 
-		entitlementMapName, err := parseNominalType(p, lowestBindingPower)
+		entitlementMapName, err := parseNominalType(p)
 		if err != nil {
 			return nil, err
 		}

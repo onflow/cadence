@@ -341,7 +341,7 @@ func rejectAccessKeywords(p *parser, produceNominalType func() (*ast.NominalType
 
 func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
 	firstTy, err := rejectAccessKeywords(p, func() (*ast.NominalType, error) {
-		return parseNominalType(p, lowestBindingPower)
+		return parseNominalType(p)
 	})
 
 	if err != nil {
@@ -453,7 +453,7 @@ func parseAccess(p *parser) (ast.Access, error) {
 			// Skip the keyword
 			p.nextSemanticToken()
 
-			entitlementMapName, err := parseNominalType(p, lowestBindingPower)
+			entitlementMapName, err := parseNominalType(p)
 			if err != nil {
 				return ast.AccessNotSpecified, err
 			}
