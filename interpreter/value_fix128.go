@@ -62,8 +62,7 @@ func NewUnmeteredFix128ValueWithInteger(integer int64, locationRange LocationRan
 		})
 	}
 
-	fix128 := fix.NewFix128(0, uint64(integer))
-	return Fix128Value(fix128)
+	return NewFix128ValueFromBigInt(nil, big.NewInt(integer))
 }
 
 func NewFix128Value(gauge common.MemoryGauge, valueGetter func() fix.Fix128) Fix128Value {
