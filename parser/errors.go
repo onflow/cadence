@@ -169,7 +169,7 @@ func (e *SyntaxErrorWithSuggestedReplacement) Error() string {
 func (e *SyntaxErrorWithSuggestedReplacement) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
-			Message: fmt.Sprintf("replace with %s", e.Replacement),
+			Message: fmt.Sprintf("Replace with %s", e.Replacement),
 			TextEdits: []ast.TextEdit{
 				{
 					Replacement: e.Replacement,

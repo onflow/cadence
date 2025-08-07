@@ -744,7 +744,7 @@ func TestCheckIncorrectArgumentLabelError(t *testing.T) {
 	require.Equal(t,
 		[]errors.SuggestedFix[ast.TextEdit]{
 			{
-				Message: "replace argument label",
+				Message: "Replace argument label",
 				TextEdits: []ast.TextEdit{
 					{
 						Replacement: "x:",

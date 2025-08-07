@@ -585,7 +585,7 @@ func (*MissingArgumentLabelError) DocumentationLink() string {
 func (e *MissingArgumentLabelError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
-			Message: "insert argument label",
+			Message: "Insert argument label",
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: fmt.Sprintf("%s: ", e.ExpectedArgumentLabel),
@@ -638,7 +638,7 @@ func (e *IncorrectArgumentLabelError) SuggestFixes(code string) []errors.Suggest
 	if len(e.ExpectedArgumentLabel) > 0 {
 		return []errors.SuggestedFix[ast.TextEdit]{
 			{
-				Message: "replace argument label",
+				Message: "Replace argument label",
 				TextEdits: []ast.TextEdit{
 					{
 						Replacement: e.ExpectedArgumentLabel + ":",
@@ -663,7 +663,7 @@ func (e *IncorrectArgumentLabelError) SuggestFixes(code string) []errors.Suggest
 
 		return []errors.SuggestedFix[ast.TextEdit]{
 			{
-				Message: "remove argument label",
+				Message: "Remove argument label",
 				TextEdits: []ast.TextEdit{
 					{
 						Replacement: "",
@@ -1361,7 +1361,7 @@ func (e *NotDeclaredMemberError) SuggestFixes(_ string) []errors.SuggestedFix[as
 
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
-			Message: "use optional chaining",
+			Message: "Use optional chaining",
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: "?",
@@ -1957,7 +1957,7 @@ func (e *ConformanceError) ErrorNotes() (notes []errors.ErrorNote) {
 
 	if e.InitializerMismatch != nil && len(e.CompositeDeclaration.DeclarationMembers().Initializers()) > 0 {
 		compositeMemberIdentifierRange :=
-		//	right now we only support a single initializer
+			//	right now we only support a single initializer
 			ast.NewUnmeteredRangeFromPositioned(e.CompositeDeclaration.DeclarationMembers().Initializers()[0].FunctionDeclaration.Identifier)
 
 		notes = append(notes, &MemberMismatchNote{
@@ -3353,7 +3353,7 @@ func (*EmitDefaultDestroyEventError) SecondaryError() string {
 func (e *EmitDefaultDestroyEventError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
-			Message: "remove explicit emit statement",
+			Message: "Remove explicit emit statement",
 			TextEdits: []ast.TextEdit{
 				{
 					Replacement: "",
