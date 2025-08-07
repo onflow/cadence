@@ -150,6 +150,8 @@ type RedeclarationError struct {
 
 var _ SemanticError = &RedeclarationError{}
 var _ errors.UserError = &RedeclarationError{}
+var _ errors.SecondaryError = &RedeclarationError{}
+var _ errors.HasDocumentationLink = &RedeclarationError{}
 
 func (*RedeclarationError) isSemanticError() {}
 
@@ -191,13 +193,21 @@ func (e *RedeclarationError) ErrorNotes() []errors.ErrorNote {
 	}
 }
 
+func (*RedeclarationError) SecondaryError() string {
+	return "each declaration must have a unique name in its scope"
+}
+
+func (*RedeclarationError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/constants-and-variables"
+}
+
 // RedeclarationNote
 
 type RedeclarationNote struct {
 	ast.Range
 }
 
-func (n RedeclarationNote) Message() string {
+func (RedeclarationNote) Message() string {
 	return "previously declared here"
 }
 
@@ -213,6 +223,7 @@ type NotDeclaredError struct {
 var _ SemanticError = &NotDeclaredError{}
 var _ errors.UserError = &NotDeclaredError{}
 var _ errors.SecondaryError = &NotDeclaredError{}
+var _ errors.HasDocumentationLink = &NotDeclaredError{}
 
 func (*NotDeclaredError) isSemanticError() {}
 
@@ -237,6 +248,10 @@ func (e *NotDeclaredError) StartPosition() ast.Position {
 func (e *NotDeclaredError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	length := len(e.Name)
 	return e.Pos.Shifted(memoryGauge, length-1)
+}
+
+func (*NotDeclaredError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/constants-and-variables"
 }
 
 // AssignmentToConstantError
@@ -269,6 +284,8 @@ func (*AssignmentToConstantError) DocumentationLink() string {
 
 // TypeMismatchError
 
+// TODO: Add suggested fix for type mismatch
+
 type TypeMismatchError struct {
 	ExpectedType Type
 	ActualType   Type
@@ -279,6 +296,7 @@ type TypeMismatchError struct {
 var _ SemanticError = &TypeMismatchError{}
 var _ errors.UserError = &TypeMismatchError{}
 var _ errors.SecondaryError = &TypeMismatchError{}
+var _ errors.HasDocumentationLink = &TypeMismatchError{}
 
 func (*TypeMismatchError) isSemanticError() {}
 
@@ -301,7 +319,13 @@ func (e *TypeMismatchError) SecondaryError() string {
 	)
 }
 
+func (*TypeMismatchError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types"
+}
+
 // TypeMismatchWithDescriptionError
+
+// TODO: Add suggested fix for type mismatch
 
 type TypeMismatchWithDescriptionError struct {
 	ActualType              Type
@@ -312,6 +336,7 @@ type TypeMismatchWithDescriptionError struct {
 var _ SemanticError = &TypeMismatchWithDescriptionError{}
 var _ errors.UserError = &TypeMismatchWithDescriptionError{}
 var _ errors.SecondaryError = &TypeMismatchWithDescriptionError{}
+var _ errors.HasDocumentationLink = &TypeMismatchWithDescriptionError{}
 
 func (*TypeMismatchWithDescriptionError) isSemanticError() {}
 
@@ -329,6 +354,10 @@ func (e *TypeMismatchWithDescriptionError) SecondaryError() string {
 	)
 }
 
+func (*TypeMismatchWithDescriptionError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types"
+}
+
 // NotIndexableTypeError
 
 type NotIndexableTypeError struct {
@@ -338,6 +367,8 @@ type NotIndexableTypeError struct {
 
 var _ SemanticError = &NotIndexableTypeError{}
 var _ errors.UserError = &NotIndexableTypeError{}
+var _ errors.SecondaryError = &NotIndexableTypeError{}
+var _ errors.HasDocumentationLink = &NotIndexableTypeError{}
 
 func (*NotIndexableTypeError) isSemanticError() {}
 
@@ -350,6 +381,14 @@ func (e *NotIndexableTypeError) Error() string {
 	)
 }
 
+func (*NotIndexableTypeError) SecondaryError() string {
+	return "only arrays, dictionaries, and other indexable types can be indexed"
+}
+
+func (*NotIndexableTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types/arrays"
+}
+
 // NotIndexingAssignableTypeError
 
 type NotIndexingAssignableTypeError struct {
@@ -359,6 +398,8 @@ type NotIndexingAssignableTypeError struct {
 
 var _ SemanticError = &NotIndexingAssignableTypeError{}
 var _ errors.UserError = &NotIndexingAssignableTypeError{}
+var _ errors.SecondaryError = &NotIndexingAssignableTypeError{}
+var _ errors.HasDocumentationLink = &NotIndexingAssignableTypeError{}
 
 func (*NotIndexingAssignableTypeError) isSemanticError() {}
 
@@ -371,6 +412,14 @@ func (e *NotIndexingAssignableTypeError) Error() string {
 	)
 }
 
+func (*NotIndexingAssignableTypeError) SecondaryError() string {
+	return "this type supports indexing but not assignment through indexing"
+}
+
+func (*NotIndexingAssignableTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types/arrays"
+}
+
 // NotEquatableTypeError
 
 type NotEquatableTypeError struct {
@@ -380,6 +429,8 @@ type NotEquatableTypeError struct {
 
 var _ SemanticError = &NotEquatableTypeError{}
 var _ errors.UserError = &NotEquatableTypeError{}
+var _ errors.SecondaryError = &NotEquatableTypeError{}
+var _ errors.HasDocumentationLink = &NotEquatableTypeError{}
 
 func (*NotEquatableTypeError) isSemanticError() {}
 
@@ -392,6 +443,14 @@ func (e *NotEquatableTypeError) Error() string {
 	)
 }
 
+func (*NotEquatableTypeError) SecondaryError() string {
+	return "only equatable types can be compared"
+}
+
+func (*NotEquatableTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types"
+}
+
 // NotCallableError
 
 type NotCallableError struct {
@@ -401,6 +460,8 @@ type NotCallableError struct {
 
 var _ SemanticError = &NotCallableError{}
 var _ errors.UserError = &NotCallableError{}
+var _ errors.SecondaryError = &NotCallableError{}
+var _ errors.HasDocumentationLink = &NotCallableError{}
 
 func (*NotCallableError) isSemanticError() {}
 
@@ -410,6 +471,14 @@ func (e *NotCallableError) Error() string {
 	return fmt.Sprintf("cannot call type: `%s`",
 		e.Type.QualifiedString(),
 	)
+}
+
+func (*NotCallableError) SecondaryError() string {
+	return "only functions can be called"
+}
+
+func (*NotCallableError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/functions"
 }
 
 // InsufficientArgumentsError
@@ -480,8 +549,6 @@ func (*ExcessiveArgumentsError) DocumentationLink() string {
 
 // MissingArgumentLabelError
 
-// TODO: suggest adding argument label
-
 type MissingArgumentLabelError struct {
 	ExpectedArgumentLabel string
 	ast.Range
@@ -489,6 +556,8 @@ type MissingArgumentLabelError struct {
 
 var _ SemanticError = &MissingArgumentLabelError{}
 var _ errors.UserError = &MissingArgumentLabelError{}
+var _ errors.SecondaryError = &MissingArgumentLabelError{}
+var _ errors.HasDocumentationLink = &MissingArgumentLabelError{}
 var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingArgumentLabelError{}
 
 func (*MissingArgumentLabelError) isSemanticError() {}
@@ -500,6 +569,17 @@ func (e *MissingArgumentLabelError) Error() string {
 		"missing argument label: `%s`",
 		e.ExpectedArgumentLabel,
 	)
+}
+
+func (e *MissingArgumentLabelError) SecondaryError() string {
+	return fmt.Sprintf(
+		"add the argument label `%s:` before the argument",
+		e.ExpectedArgumentLabel,
+	)
+}
+
+func (*MissingArgumentLabelError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/functions"
 }
 
 func (e *MissingArgumentLabelError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
@@ -547,7 +627,8 @@ func (e *IncorrectArgumentLabelError) SecondaryError() string {
 		expected = fmt.Sprintf("`%s`", e.ExpectedArgumentLabel)
 	}
 	return fmt.Sprintf(
-		"expected %s, got `%s`; function calls must use the exact argument labels defined in the function signature",
+		"expected %s, got `%s`; "+
+			"function calls must use the exact argument labels defined in the function signature",
 		expected,
 		e.ActualArgumentLabel,
 	)
@@ -614,6 +695,7 @@ type InvalidUnaryOperandError struct {
 var _ SemanticError = &InvalidUnaryOperandError{}
 var _ errors.UserError = &InvalidUnaryOperandError{}
 var _ errors.SecondaryError = &InvalidUnaryOperandError{}
+var _ errors.HasDocumentationLink = &InvalidUnaryOperandError{}
 
 func (*InvalidUnaryOperandError) isSemanticError() {}
 
@@ -646,6 +728,10 @@ func (e *InvalidUnaryOperandError) SecondaryError() string {
 			e.ActualType.QualifiedString(),
 		)
 	}
+}
+
+func (*InvalidUnaryOperandError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/operators"
 }
 
 // InvalidBinaryOperandError
@@ -923,6 +1009,8 @@ type MissingAccessModifierError struct {
 
 var _ errors.UserError = &MissingAccessModifierError{}
 var _ SemanticError = &MissingAccessModifierError{}
+var _ errors.SecondaryError = &MissingAccessModifierError{}
+var _ errors.HasDocumentationLink = &MissingAccessModifierError{}
 
 func (*MissingAccessModifierError) isSemanticError() {}
 
@@ -949,6 +1037,14 @@ func (e *MissingAccessModifierError) EndPosition(common.MemoryGauge) ast.Positio
 	return e.Pos
 }
 
+func (*MissingAccessModifierError) SecondaryError() string {
+	return "add an access modifier like `access(all)`, `access(contract)`, or `access(self)`"
+}
+
+func (*MissingAccessModifierError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control"
+}
+
 // InvalidStaticModifierError
 
 type InvalidStaticModifierError struct {
@@ -957,13 +1053,18 @@ type InvalidStaticModifierError struct {
 
 var _ SemanticError = &InvalidStaticModifierError{}
 var _ errors.UserError = &InvalidStaticModifierError{}
+var _ errors.SecondaryError = &InvalidStaticModifierError{}
 
 func (*InvalidStaticModifierError) isSemanticError() {}
 
 func (*InvalidStaticModifierError) IsUserError() {}
 
 func (*InvalidStaticModifierError) Error() string {
-	return "invalid static modifier for declaration"
+	return "invalid `static` modifier for declaration"
+}
+
+func (*InvalidStaticModifierError) SecondaryError() string {
+	return "the `static` modifier can only be used on functions and fields within composite types"
 }
 
 // InvalidNativeModifierError
@@ -975,23 +1076,18 @@ type InvalidNativeModifierError struct {
 var _ SemanticError = &InvalidNativeModifierError{}
 var _ errors.UserError = &InvalidNativeModifierError{}
 var _ errors.SecondaryError = &InvalidNativeModifierError{}
-var _ errors.HasDocumentationLink = &InvalidNativeModifierError{}
 
 func (*InvalidNativeModifierError) isSemanticError() {}
 
 func (*InvalidNativeModifierError) IsUserError() {}
 
 func (*InvalidNativeModifierError) Error() string {
-	return "invalid native modifier for declaration"
+	return "invalid `native` modifier for declaration"
 }
 
 func (*InvalidNativeModifierError) SecondaryError() string {
-	return "the native modifier can only be used on function declarations; " +
-		"remove the native modifier or use a function declaration"
-}
-
-func (*InvalidNativeModifierError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/syntax#reserved-identifiers"
+	return "the `native` modifier can only be used on function declarations; " +
+		"remove the `native` modifier or use a function declaration"
 }
 
 // NativeFunctionWithImplementationError
@@ -1002,6 +1098,7 @@ type NativeFunctionWithImplementationError struct {
 
 var _ SemanticError = &NativeFunctionWithImplementationError{}
 var _ errors.UserError = &NativeFunctionWithImplementationError{}
+var _ errors.SecondaryError = &NativeFunctionWithImplementationError{}
 
 func (*NativeFunctionWithImplementationError) isSemanticError() {}
 
@@ -1009,6 +1106,10 @@ func (*NativeFunctionWithImplementationError) IsUserError() {}
 
 func (*NativeFunctionWithImplementationError) Error() string {
 	return "native function must not have an implementation"
+}
+
+func (e *NativeFunctionWithImplementationError) SecondaryError() string {
+	return "remove the function body from the native function"
 }
 
 // InvalidNameError
@@ -1056,6 +1157,8 @@ type UnknownSpecialFunctionError struct {
 
 var _ SemanticError = &UnknownSpecialFunctionError{}
 var _ errors.UserError = &UnknownSpecialFunctionError{}
+var _ errors.SecondaryError = &UnknownSpecialFunctionError{}
+var _ errors.HasDocumentationLink = &UnknownSpecialFunctionError{}
 
 func (*UnknownSpecialFunctionError) isSemanticError() {}
 
@@ -1063,6 +1166,14 @@ func (*UnknownSpecialFunctionError) IsUserError() {}
 
 func (*UnknownSpecialFunctionError) Error() string {
 	return "unknown special function; did you mean `init` or forget the `fun` keyword?"
+}
+
+func (*UnknownSpecialFunctionError) SecondaryError() string {
+	return "use `init` for constructors or add the `fun` keyword for regular functions"
+}
+
+func (*UnknownSpecialFunctionError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/functions"
 }
 
 func (e *UnknownSpecialFunctionError) StartPosition() ast.Position {
@@ -1082,6 +1193,8 @@ type InvalidVariableKindError struct {
 
 var _ SemanticError = &InvalidVariableKindError{}
 var _ errors.UserError = &InvalidVariableKindError{}
+var _ errors.SecondaryError = &InvalidVariableKindError{}
+var _ errors.HasDocumentationLink = &InvalidVariableKindError{}
 
 func (*InvalidVariableKindError) isSemanticError() {}
 
@@ -1092,6 +1205,14 @@ func (e *InvalidVariableKindError) Error() string {
 		return "missing variable kind"
 	}
 	return fmt.Sprintf("invalid variable kind: `%s`", e.Kind.Name())
+}
+
+func (*InvalidVariableKindError) SecondaryError() string {
+	return "field declarations must specify `let` or `var`"
+}
+
+func (*InvalidVariableKindError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/constants-and-variables"
 }
 
 // InvalidDeclarationError
@@ -1145,6 +1266,8 @@ type MissingInitializerError struct {
 
 var _ SemanticError = &MissingInitializerError{}
 var _ errors.UserError = &MissingInitializerError{}
+var _ errors.SecondaryError = &MissingInitializerError{}
+var _ errors.HasDocumentationLink = &MissingInitializerError{}
 
 func (*MissingInitializerError) isSemanticError() {}
 
@@ -1165,6 +1288,14 @@ func (e *MissingInitializerError) StartPosition() ast.Position {
 func (e *MissingInitializerError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	length := len(e.FirstFieldName)
 	return e.FirstFieldPos.Shifted(memoryGauge, length-1)
+}
+
+func (*MissingInitializerError) SecondaryError() string {
+	return "add an `init` function to initialize the fields"
+}
+
+func (*MissingInitializerError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/types-and-type-system/composite-types"
 }
 
 // NotDeclaredMemberError
@@ -1305,7 +1436,8 @@ func (e *AssignmentToConstantMemberError) Error() string {
 }
 
 func (*AssignmentToConstantMemberError) SecondaryError() string {
-	return "constant members cannot be reassigned after initialization; consider using a variable field (var) instead"
+	return "constant members cannot be reassigned after initialization; " +
+		"consider using a variable field (`var`) instead"
 }
 
 func (*AssignmentToConstantMemberError) DocumentationLink() string {
@@ -1364,7 +1496,8 @@ func (e *FieldUninitializedError) Error() string {
 }
 
 func (*FieldUninitializedError) SecondaryError() string {
-	return "all fields must be initialized when creating a composite type; add an initializer or provide a default value"
+	return "all fields must be initialized when creating a composite type; " +
+		"add an initializer or provide a default value"
 }
 
 func (*FieldUninitializedError) DocumentationLink() string {
@@ -1493,6 +1626,8 @@ type MissingReturnValueError struct {
 
 var _ SemanticError = &MissingReturnValueError{}
 var _ errors.UserError = &MissingReturnValueError{}
+var _ errors.SecondaryError = &MissingReturnValueError{}
+var _ errors.HasDocumentationLink = &MissingReturnValueError{}
 
 func (*MissingReturnValueError) isSemanticError() {}
 
@@ -1503,13 +1638,21 @@ func (e *MissingReturnValueError) Error() string {
 	if e.ExpectedValueType.IsInvalidType() {
 		typeDescription = "non-void"
 	} else {
-		typeDescription = fmt.Sprintf("`%s`", e.ExpectedValueType)
+		typeDescription = fmt.Sprintf("`%s`", e.ExpectedValueType.QualifiedString())
 	}
 
 	return fmt.Sprintf(
 		"missing value in return from function with %s return type",
 		typeDescription,
 	)
+}
+
+func (*MissingReturnValueError) SecondaryError() string {
+	return "add a value to the return statement"
+}
+
+func (*MissingReturnValueError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/functions"
 }
 
 // InvalidImplementationError
@@ -1547,7 +1690,7 @@ func (e *InvalidImplementationError) SecondaryError() string {
 }
 
 func (*InvalidImplementationError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/declarations"
+	return "https://cadence-lang.org/docs/language/interfaces"
 }
 
 func (e *InvalidImplementationError) StartPosition() ast.Position {
@@ -1631,6 +1774,8 @@ type MissingEnumRawTypeError struct {
 
 var _ SemanticError = &MissingEnumRawTypeError{}
 var _ errors.UserError = &MissingEnumRawTypeError{}
+var _ errors.SecondaryError = &MissingEnumRawTypeError{}
+var _ errors.HasDocumentationLink = &MissingEnumRawTypeError{}
 
 func (*MissingEnumRawTypeError) isSemanticError() {}
 
@@ -1646,6 +1791,14 @@ func (e *MissingEnumRawTypeError) StartPosition() ast.Position {
 
 func (e *MissingEnumRawTypeError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.Pos
+}
+
+func (*MissingEnumRawTypeError) SecondaryError() string {
+	return "specify the raw value type, e.g. `: UInt8`"
+}
+
+func (*MissingEnumRawTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/enumerations"
 }
 
 // InvalidEnumConformancesError
@@ -1803,9 +1956,9 @@ func (e *ConformanceError) ErrorNotes() (notes []errors.ErrorNote) {
 	}
 
 	if e.InitializerMismatch != nil && len(e.CompositeDeclaration.DeclarationMembers().Initializers()) > 0 {
-		compositeMemberIdentifierRange :=
-			//	right now we only support a single initializer
-			ast.NewUnmeteredRangeFromPositioned(e.CompositeDeclaration.DeclarationMembers().Initializers()[0].FunctionDeclaration.Identifier)
+		//	right now we only support a single initializer
+		initializer := e.CompositeDeclaration.DeclarationMembers().Initializers()[0]
+		compositeMemberIdentifierRange := ast.NewUnmeteredRangeFromPositioned(initializer.FunctionDeclaration.Identifier)
 
 		notes = append(notes, &MemberMismatchNote{
 			Range: compositeMemberIdentifierRange,
@@ -1821,7 +1974,7 @@ type MemberMismatchNote struct {
 	ast.Range
 }
 
-func (n MemberMismatchNote) Message() string {
+func (MemberMismatchNote) Message() string {
 	return "mismatch here"
 }
 
@@ -1854,7 +2007,8 @@ func (e *DuplicateConformanceError) Error() string {
 }
 
 func (*DuplicateConformanceError) SecondaryError() string {
-	return "remove the duplicate conformance declaration; each interface can only be conformed to once"
+	return "remove the duplicate conformance declaration; " +
+		"each interface can only be conformed to once"
 }
 
 func (*DuplicateConformanceError) DocumentationLink() string {
@@ -1900,6 +2054,8 @@ type MultipleInterfaceDefaultImplementationsError struct {
 
 var _ SemanticError = &MultipleInterfaceDefaultImplementationsError{}
 var _ errors.UserError = &MultipleInterfaceDefaultImplementationsError{}
+var _ errors.SecondaryError = &MultipleInterfaceDefaultImplementationsError{}
+var _ errors.HasDocumentationLink = &MultipleInterfaceDefaultImplementationsError{}
 
 func (*MultipleInterfaceDefaultImplementationsError) isSemanticError() {}
 
@@ -1914,6 +2070,14 @@ func (e *MultipleInterfaceDefaultImplementationsError) Error() string {
 	)
 }
 
+func (*MultipleInterfaceDefaultImplementationsError) SecondaryError() string {
+	return "provide your own implementation to resolve the ambiguity"
+}
+
+func (*MultipleInterfaceDefaultImplementationsError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/interfaces"
+}
+
 // SpecialFunctionDefaultImplementationError
 type SpecialFunctionDefaultImplementationError struct {
 	Container  ast.Declaration
@@ -1923,6 +2087,8 @@ type SpecialFunctionDefaultImplementationError struct {
 
 var _ SemanticError = &SpecialFunctionDefaultImplementationError{}
 var _ errors.UserError = &SpecialFunctionDefaultImplementationError{}
+var _ errors.SecondaryError = &SpecialFunctionDefaultImplementationError{}
+var _ errors.HasDocumentationLink = &SpecialFunctionDefaultImplementationError{}
 
 func (*SpecialFunctionDefaultImplementationError) isSemanticError() {}
 
@@ -1943,6 +2109,14 @@ func (e *SpecialFunctionDefaultImplementationError) StartPosition() ast.Position
 
 func (e *SpecialFunctionDefaultImplementationError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	return e.Identifier.EndPosition(memoryGauge)
+}
+
+func (*SpecialFunctionDefaultImplementationError) SecondaryError() string {
+	return "special functions like `init` and `destroy` cannot have default implementations in interfaces"
+}
+
+func (*SpecialFunctionDefaultImplementationError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/interfaces"
 }
 
 // InterfaceMemberConflictError
@@ -1992,6 +2166,8 @@ type MissingConformanceError struct {
 
 var _ SemanticError = &MissingConformanceError{}
 var _ errors.UserError = &MissingConformanceError{}
+var _ errors.SecondaryError = &MissingConformanceError{}
+var _ errors.HasDocumentationLink = &MissingConformanceError{}
 
 func (*MissingConformanceError) isSemanticError() {}
 
@@ -2007,6 +2183,18 @@ func (e *MissingConformanceError) Error() string {
 	)
 }
 
+func (e *MissingConformanceError) SecondaryError() string {
+	return fmt.Sprintf(
+		"add `: %s` to the %s declaration",
+		e.InterfaceType.QualifiedString(),
+		e.CompositeType.Kind.Name(),
+	)
+}
+
+func (*MissingConformanceError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/interfaces"
+}
+
 // UnresolvedImportError
 
 type UnresolvedImportError struct {
@@ -2016,6 +2204,8 @@ type UnresolvedImportError struct {
 
 var _ SemanticError = &UnresolvedImportError{}
 var _ errors.UserError = &UnresolvedImportError{}
+var _ errors.SecondaryError = &UnresolvedImportError{}
+var _ errors.HasDocumentationLink = &UnresolvedImportError{}
 
 func (*UnresolvedImportError) isSemanticError() {}
 
@@ -2023,6 +2213,14 @@ func (*UnresolvedImportError) IsUserError() {}
 
 func (e *UnresolvedImportError) Error() string {
 	return fmt.Sprintf("import could not be resolved: %s", e.ImportLocation)
+}
+
+func (*UnresolvedImportError) SecondaryError() string {
+	return "check that the import path is correct and the program exists"
+}
+
+func (*UnresolvedImportError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/imports"
 }
 
 // NotExportedError
@@ -2037,6 +2235,7 @@ type NotExportedError struct {
 var _ SemanticError = &NotExportedError{}
 var _ errors.UserError = &NotExportedError{}
 var _ errors.SecondaryError = &NotExportedError{}
+var _ errors.HasDocumentationLink = &NotExportedError{}
 
 func (*NotExportedError) isSemanticError() {}
 
@@ -2068,6 +2267,10 @@ func (e *NotExportedError) StartPosition() ast.Position {
 func (e *NotExportedError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	length := len(e.Name)
 	return e.Pos.Shifted(memoryGauge, length-1)
+}
+
+func (*NotExportedError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/imports"
 }
 
 // ImportedProgramError
@@ -2193,6 +2396,8 @@ type UnsupportedOverloadingError struct {
 
 var _ SemanticError = &UnsupportedOverloadingError{}
 var _ errors.UserError = &UnsupportedOverloadingError{}
+var _ errors.SecondaryError = &UnsupportedOverloadingError{}
+var _ errors.HasDocumentationLink = &UnsupportedOverloadingError{}
 
 func (*UnsupportedOverloadingError) isSemanticError() {}
 
@@ -2203,6 +2408,29 @@ func (e *UnsupportedOverloadingError) Error() string {
 		"%s overloading is not supported yet",
 		e.DeclarationKind.Name(),
 	)
+}
+
+func (*UnsupportedOverloadingError) SecondaryError() string {
+	return "use unique names for each declaration"
+}
+
+func (e *UnsupportedOverloadingError) DocumentationLink() string {
+	switch e.DeclarationKind {
+	case common.DeclarationKindFunction:
+		return "https://cadence-lang.org/docs/language/functions#function-declarations"
+	case common.DeclarationKindInitializer:
+		return "https://cadence-lang.org/docs/language/types-and-type-system/composite-types"
+	case common.DeclarationKindResource, common.DeclarationKindStructure, common.DeclarationKindContract:
+		return "https://cadence-lang.org/docs/language/types-and-type-system/composite-types"
+	case common.DeclarationKindEvent:
+		return "https://cadence-lang.org/docs/language/events"
+	case common.DeclarationKindEnum:
+		return "https://cadence-lang.org/docs/language/enumerations"
+	case common.DeclarationKindAttachment:
+		return "https://cadence-lang.org/docs/language/attachments"
+	default:
+		return "https://cadence-lang.org/docs/language/types-and-type-system/composite-types"
+	}
 }
 
 // CompositeKindMismatchError
@@ -2380,6 +2608,8 @@ type MissingReturnStatementError struct {
 
 var _ SemanticError = &MissingReturnStatementError{}
 var _ errors.UserError = &MissingReturnStatementError{}
+var _ errors.SecondaryError = &MissingReturnStatementError{}
+var _ errors.HasDocumentationLink = &MissingReturnStatementError{}
 
 func (*MissingReturnStatementError) isSemanticError() {}
 
@@ -2387,6 +2617,14 @@ func (*MissingReturnStatementError) IsUserError() {}
 
 func (*MissingReturnStatementError) Error() string {
 	return "missing return statement"
+}
+
+func (*MissingReturnStatementError) SecondaryError() string {
+	return "add a return statement to return a value"
+}
+
+func (*MissingReturnStatementError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/functions"
 }
 
 // UnsupportedOptionalChainingAssignmentError
@@ -2397,6 +2635,8 @@ type UnsupportedOptionalChainingAssignmentError struct {
 
 var _ SemanticError = &UnsupportedOptionalChainingAssignmentError{}
 var _ errors.UserError = &UnsupportedOptionalChainingAssignmentError{}
+var _ errors.SecondaryError = &UnsupportedOptionalChainingAssignmentError{}
+var _ errors.HasDocumentationLink = &UnsupportedOptionalChainingAssignmentError{}
 
 func (*UnsupportedOptionalChainingAssignmentError) isSemanticError() {}
 
@@ -2406,7 +2646,17 @@ func (*UnsupportedOptionalChainingAssignmentError) Error() string {
 	return "cannot assign to optional chaining expression"
 }
 
+func (*UnsupportedOptionalChainingAssignmentError) SecondaryError() string {
+	return "use direct assignment instead of optional chaining"
+}
+
+func (*UnsupportedOptionalChainingAssignmentError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types/anystruct-anyresource-opts-never#optionals"
+}
+
 // MissingResourceAnnotationError
+
+// TODO: Add suggested fix for missing resource annotation
 
 type MissingResourceAnnotationError struct {
 	ast.Range
@@ -2414,6 +2664,8 @@ type MissingResourceAnnotationError struct {
 
 var _ SemanticError = &MissingResourceAnnotationError{}
 var _ errors.UserError = &MissingResourceAnnotationError{}
+var _ errors.SecondaryError = &MissingResourceAnnotationError{}
+var _ errors.HasDocumentationLink = &MissingResourceAnnotationError{}
 
 func (*MissingResourceAnnotationError) isSemanticError() {}
 
@@ -2424,6 +2676,14 @@ func (*MissingResourceAnnotationError) Error() string {
 		"missing resource annotation: `%s`",
 		common.CompositeKindResource.Annotation(),
 	)
+}
+
+func (*MissingResourceAnnotationError) SecondaryError() string {
+	return "add the `@` annotation before the resource type"
+}
+
+func (*MissingResourceAnnotationError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources"
 }
 
 // InvalidNestedResourceMoveError
@@ -2483,11 +2743,14 @@ func (*InvalidInterfaceConditionResourceInvalidationError) DocumentationLink() s
 // InvalidResourceAnnotationError
 
 type InvalidResourceAnnotationError struct {
+	Type Type
 	ast.Range
 }
 
 var _ SemanticError = &InvalidResourceAnnotationError{}
 var _ errors.UserError = &InvalidResourceAnnotationError{}
+var _ errors.SecondaryError = &InvalidResourceAnnotationError{}
+var _ errors.HasDocumentationLink = &InvalidResourceAnnotationError{}
 
 func (*InvalidResourceAnnotationError) isSemanticError() {}
 
@@ -2495,9 +2758,18 @@ func (*InvalidResourceAnnotationError) IsUserError() {}
 
 func (e *InvalidResourceAnnotationError) Error() string {
 	return fmt.Sprintf(
-		"invalid resource annotation: `%s`",
+		"invalid resource annotation: `%s` on type `%s`",
 		common.CompositeKindResource.Annotation(),
+		e.Type.QualifiedString(),
 	)
+}
+
+func (e *InvalidResourceAnnotationError) SecondaryError() string {
+	return fmt.Sprintf("`%s` is not a resource", e.Type.QualifiedString())
+}
+
+func (*InvalidResourceAnnotationError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources"
 }
 
 // InvalidInterfaceTypeError
@@ -2666,6 +2938,8 @@ type ResourceLossError struct {
 
 var _ SemanticError = &ResourceLossError{}
 var _ errors.UserError = &ResourceLossError{}
+var _ errors.SecondaryError = &ResourceLossError{}
+var _ errors.HasDocumentationLink = &ResourceLossError{}
 
 func (*ResourceLossError) isSemanticError() {}
 
@@ -2673,6 +2947,14 @@ func (*ResourceLossError) IsUserError() {}
 
 func (*ResourceLossError) Error() string {
 	return "loss of resource"
+}
+
+func (*ResourceLossError) SecondaryError() string {
+	return "resources must be explicitly moved or destroyed to prevent resource loss"
+}
+
+func (*ResourceLossError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources"
 }
 
 // ResourceUseAfterInvalidationError
@@ -2685,6 +2967,7 @@ type ResourceUseAfterInvalidationError struct {
 var _ SemanticError = &ResourceUseAfterInvalidationError{}
 var _ errors.UserError = &ResourceUseAfterInvalidationError{}
 var _ errors.SecondaryError = &ResourceUseAfterInvalidationError{}
+var _ errors.HasDocumentationLink = &ResourceUseAfterInvalidationError{}
 
 func (*ResourceUseAfterInvalidationError) isSemanticError() {}
 
@@ -2709,6 +2992,10 @@ func (e *ResourceUseAfterInvalidationError) ErrorNotes() []errors.ErrorNote {
 	return []errors.ErrorNote{
 		newPreviousResourceInvalidationNote(invalidation),
 	}
+}
+
+func (*ResourceUseAfterInvalidationError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources"
 }
 
 // PreviousResourceInvalidationNote
@@ -2744,20 +3031,27 @@ type MissingCreateError struct {
 var _ SemanticError = &MissingCreateError{}
 var _ errors.UserError = &MissingCreateError{}
 var _ errors.SecondaryError = &MissingCreateError{}
+var _ errors.HasDocumentationLink = &MissingCreateError{}
 
 func (*MissingCreateError) isSemanticError() {}
 
 func (*MissingCreateError) IsUserError() {}
 
 func (*MissingCreateError) Error() string {
-	return "cannot create resource"
+	return "cannot create resource without the `create` keyword"
 }
 
 func (*MissingCreateError) SecondaryError() string {
-	return "expected `create`"
+	return "add the `create` keyword before the resource constructor call"
+}
+
+func (*MissingCreateError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources"
 }
 
 // MissingMoveOperationError
+
+// TODO: Add suggested fix for missing move operation
 
 type MissingMoveOperationError struct {
 	Pos ast.Position
@@ -2765,6 +3059,8 @@ type MissingMoveOperationError struct {
 
 var _ SemanticError = &MissingMoveOperationError{}
 var _ errors.UserError = &MissingMoveOperationError{}
+var _ errors.SecondaryError = &MissingMoveOperationError{}
+var _ errors.HasDocumentationLink = &MissingMoveOperationError{}
 
 func (*MissingMoveOperationError) isSemanticError() {}
 
@@ -2780,6 +3076,14 @@ func (e *MissingMoveOperationError) StartPosition() ast.Position {
 
 func (e *MissingMoveOperationError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.Pos
+}
+
+func (*MissingMoveOperationError) SecondaryError() string {
+	return "add the `<-` operator to move the resource"
+}
+
+func (*MissingMoveOperationError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/operators/assign-move-force-swap"
 }
 
 // InvalidMoveOperationError
@@ -2818,6 +3122,8 @@ type ResourceCapturingError struct {
 
 var _ SemanticError = &ResourceCapturingError{}
 var _ errors.UserError = &ResourceCapturingError{}
+var _ errors.SecondaryError = &ResourceCapturingError{}
+var _ errors.HasDocumentationLink = &ResourceCapturingError{}
 
 func (*ResourceCapturingError) isSemanticError() {}
 
@@ -2836,6 +3142,14 @@ func (e *ResourceCapturingError) EndPosition(memoryGauge common.MemoryGauge) ast
 	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
+func (*ResourceCapturingError) SecondaryError() string {
+	return "resources cannot be captured in closures due to resource safety constraints"
+}
+
+func (*ResourceCapturingError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources"
+}
+
 // InvalidResourceFieldError
 
 type InvalidResourceFieldError struct {
@@ -2846,6 +3160,8 @@ type InvalidResourceFieldError struct {
 
 var _ SemanticError = &InvalidResourceFieldError{}
 var _ errors.UserError = &InvalidResourceFieldError{}
+var _ errors.SecondaryError = &InvalidResourceFieldError{}
+var _ errors.HasDocumentationLink = &InvalidResourceFieldError{}
 
 func (*InvalidResourceFieldError) isSemanticError() {}
 
@@ -2857,6 +3173,14 @@ func (e *InvalidResourceFieldError) Error() string {
 		e.CompositeKind.Name(),
 		e.Name,
 	)
+}
+
+func (*InvalidResourceFieldError) SecondaryError() string {
+	return "resource fields must be storable and have proper access modifiers"
+}
+
+func (*InvalidResourceFieldError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources"
 }
 
 func (e *InvalidResourceFieldError) StartPosition() ast.Position {
@@ -2878,6 +3202,7 @@ type InvalidSwapExpressionError struct {
 var _ SemanticError = &InvalidSwapExpressionError{}
 var _ errors.UserError = &InvalidSwapExpressionError{}
 var _ errors.SecondaryError = &InvalidSwapExpressionError{}
+var _ errors.HasDocumentationLink = &InvalidSwapExpressionError{}
 
 func (*InvalidSwapExpressionError) isSemanticError() {}
 
@@ -2891,7 +3216,11 @@ func (e *InvalidSwapExpressionError) Error() string {
 }
 
 func (*InvalidSwapExpressionError) SecondaryError() string {
-	return "expected target expression"
+	return "swap targets must be variables, array elements, or fields"
+}
+
+func (*InvalidSwapExpressionError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/operators/assign-move-force-swap#swapping-operator--"
 }
 
 // InvalidEventParameterTypeError
@@ -3080,6 +3409,7 @@ type InvalidResourceAssignmentError struct {
 var _ SemanticError = &InvalidResourceAssignmentError{}
 var _ errors.UserError = &InvalidResourceAssignmentError{}
 var _ errors.SecondaryError = &InvalidResourceAssignmentError{}
+var _ errors.HasDocumentationLink = &InvalidResourceAssignmentError{}
 
 func (*InvalidResourceAssignmentError) isSemanticError() {}
 
@@ -3093,6 +3423,10 @@ func (*InvalidResourceAssignmentError) SecondaryError() string {
 	return "consider force assigning (<-!) or swapping (<->)"
 }
 
+func (e *InvalidResourceAssignmentError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/operators/assign-move-force-swap"
+}
+
 // ResourceFieldNotInvalidatedError
 
 type ResourceFieldNotInvalidatedError struct {
@@ -3104,6 +3438,7 @@ type ResourceFieldNotInvalidatedError struct {
 var _ SemanticError = &ResourceFieldNotInvalidatedError{}
 var _ errors.UserError = &ResourceFieldNotInvalidatedError{}
 var _ errors.SecondaryError = &ResourceFieldNotInvalidatedError{}
+var _ errors.HasDocumentationLink = &ResourceFieldNotInvalidatedError{}
 
 func (*ResourceFieldNotInvalidatedError) isSemanticError() {}
 
@@ -3118,7 +3453,11 @@ func (e *ResourceFieldNotInvalidatedError) Error() string {
 }
 
 func (*ResourceFieldNotInvalidatedError) SecondaryError() string {
-	return "not invalidated"
+	return "all resource fields must be moved or destroyed before the resource can be destroyed"
+}
+
+func (*ResourceFieldNotInvalidatedError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources"
 }
 
 func (e *ResourceFieldNotInvalidatedError) StartPosition() ast.Position {
@@ -3139,6 +3478,8 @@ type UninitializedFieldAccessError struct {
 
 var _ SemanticError = &UninitializedFieldAccessError{}
 var _ errors.UserError = &UninitializedFieldAccessError{}
+var _ errors.SecondaryError = &UninitializedFieldAccessError{}
+var _ errors.HasDocumentationLink = &UninitializedFieldAccessError{}
 
 func (*UninitializedFieldAccessError) isSemanticError() {}
 
@@ -3149,6 +3490,14 @@ func (e *UninitializedFieldAccessError) Error() string {
 		"cannot access uninitialized field: `%s`",
 		e.Name,
 	)
+}
+
+func (*UninitializedFieldAccessError) SecondaryError() string {
+	return "initialize the field before accessing it"
+}
+
+func (*UninitializedFieldAccessError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/types-and-type-system/composite-types"
 }
 
 func (e *UninitializedFieldAccessError) StartPosition() ast.Position {
@@ -3169,6 +3518,7 @@ type UnreachableStatementError struct {
 var _ SemanticError = &UnreachableStatementError{}
 var _ errors.UserError = &UnreachableStatementError{}
 var _ errors.SecondaryError = &UnreachableStatementError{}
+var _ errors.HasDocumentationLink = &UnreachableStatementError{}
 
 func (*UnreachableStatementError) isSemanticError() {}
 
@@ -3182,6 +3532,10 @@ func (*UnreachableStatementError) SecondaryError() string {
 	return "consider removing this code"
 }
 
+func (*UnreachableStatementError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/control-flow"
+}
+
 // UninitializedUseError
 
 type UninitializedUseError struct {
@@ -3191,6 +3545,8 @@ type UninitializedUseError struct {
 
 var _ SemanticError = &UninitializedUseError{}
 var _ errors.UserError = &UninitializedUseError{}
+var _ errors.SecondaryError = &UninitializedUseError{}
+var _ errors.HasDocumentationLink = &UninitializedUseError{}
 
 func (*UninitializedUseError) isSemanticError() {}
 
@@ -3201,6 +3557,14 @@ func (e *UninitializedUseError) Error() string {
 		"cannot use incompletely initialized value: `%s`",
 		e.Name,
 	)
+}
+
+func (*UninitializedUseError) SecondaryError() string {
+	return "complete the initialization before using the value"
+}
+
+func (*UninitializedUseError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/types-and-type-system/composite-types"
 }
 
 func (e *UninitializedUseError) StartPosition() ast.Position {
@@ -3222,6 +3586,8 @@ type InvalidResourceArrayMemberError struct {
 
 var _ SemanticError = &InvalidResourceArrayMemberError{}
 var _ errors.UserError = &InvalidResourceArrayMemberError{}
+var _ errors.SecondaryError = &InvalidResourceArrayMemberError{}
+var _ errors.HasDocumentationLink = &InvalidResourceArrayMemberError{}
 
 func (*InvalidResourceArrayMemberError) isSemanticError() {}
 
@@ -3235,6 +3601,14 @@ func (e *InvalidResourceArrayMemberError) Error() string {
 	)
 }
 
+func (*InvalidResourceArrayMemberError) SecondaryError() string {
+	return "resource arrays have limited member access due to resource safety constraints"
+}
+
+func (*InvalidResourceArrayMemberError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources#resources-in-arrays-and-dictionaries"
+}
+
 // InvalidResourceDictionaryMemberError
 
 type InvalidResourceDictionaryMemberError struct {
@@ -3245,6 +3619,8 @@ type InvalidResourceDictionaryMemberError struct {
 
 var _ SemanticError = &InvalidResourceDictionaryMemberError{}
 var _ errors.UserError = &InvalidResourceDictionaryMemberError{}
+var _ errors.SecondaryError = &InvalidResourceDictionaryMemberError{}
+var _ errors.HasDocumentationLink = &InvalidResourceDictionaryMemberError{}
 
 func (*InvalidResourceDictionaryMemberError) isSemanticError() {}
 
@@ -3258,6 +3634,14 @@ func (e *InvalidResourceDictionaryMemberError) Error() string {
 	)
 }
 
+func (*InvalidResourceDictionaryMemberError) SecondaryError() string {
+	return "resource dictionaries have limited member access due to resource safety constraints"
+}
+
+func (*InvalidResourceDictionaryMemberError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources#resources-in-arrays-and-dictionaries"
+}
+
 // InvalidResourceOptionalMemberError
 
 type InvalidResourceOptionalMemberError struct {
@@ -3268,6 +3652,8 @@ type InvalidResourceOptionalMemberError struct {
 
 var _ SemanticError = &InvalidResourceOptionalMemberError{}
 var _ errors.UserError = &InvalidResourceOptionalMemberError{}
+var _ errors.SecondaryError = &InvalidResourceOptionalMemberError{}
+var _ errors.HasDocumentationLink = &InvalidResourceOptionalMemberError{}
 
 func (*InvalidResourceOptionalMemberError) isSemanticError() {}
 
@@ -3281,6 +3667,14 @@ func (e *InvalidResourceOptionalMemberError) Error() string {
 	)
 }
 
+func (*InvalidResourceOptionalMemberError) SecondaryError() string {
+	return "resource optionals have limited member access due to resource safety constraints"
+}
+
+func (*InvalidResourceOptionalMemberError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types/anystruct-anyresource-opts-never#optionals"
+}
+
 // NonReferenceTypeReferenceError
 
 type NonReferenceTypeReferenceError struct {
@@ -3291,6 +3685,7 @@ type NonReferenceTypeReferenceError struct {
 var _ SemanticError = &NonReferenceTypeReferenceError{}
 var _ errors.UserError = &NonReferenceTypeReferenceError{}
 var _ errors.SecondaryError = &NonReferenceTypeReferenceError{}
+var _ errors.HasDocumentationLink = &NonReferenceTypeReferenceError{}
 
 func (*NonReferenceTypeReferenceError) isSemanticError() {}
 
@@ -3307,6 +3702,10 @@ func (e *NonReferenceTypeReferenceError) SecondaryError() string {
 	)
 }
 
+func (*NonReferenceTypeReferenceError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/references"
+}
+
 // ReferenceToAnOptionalError
 
 type ReferenceToAnOptionalError struct {
@@ -3317,6 +3716,7 @@ type ReferenceToAnOptionalError struct {
 var _ SemanticError = &ReferenceToAnOptionalError{}
 var _ errors.UserError = &ReferenceToAnOptionalError{}
 var _ errors.SecondaryError = &ReferenceToAnOptionalError{}
+var _ errors.HasDocumentationLink = &ReferenceToAnOptionalError{}
 
 func (*ReferenceToAnOptionalError) isSemanticError() {}
 
@@ -3343,6 +3743,10 @@ func (e *ReferenceToAnOptionalError) SecondaryError() string {
 	)
 }
 
+func (*ReferenceToAnOptionalError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/references"
+}
+
 // InvalidResourceCreationError
 
 type InvalidResourceCreationError struct {
@@ -3352,6 +3756,8 @@ type InvalidResourceCreationError struct {
 
 var _ SemanticError = &InvalidResourceCreationError{}
 var _ errors.UserError = &InvalidResourceCreationError{}
+var _ errors.SecondaryError = &InvalidResourceCreationError{}
+var _ errors.HasDocumentationLink = &InvalidResourceCreationError{}
 
 func (*InvalidResourceCreationError) isSemanticError() {}
 
@@ -3364,6 +3770,14 @@ func (e *InvalidResourceCreationError) Error() string {
 	)
 }
 
+func (*InvalidResourceCreationError) SecondaryError() string {
+	return "resources can only be created within the contract that declares them"
+}
+
+func (*InvalidResourceCreationError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources"
+}
+
 // NonResourceTypeError
 
 type NonResourceTypeError struct {
@@ -3374,6 +3788,7 @@ type NonResourceTypeError struct {
 var _ SemanticError = &NonResourceTypeError{}
 var _ errors.UserError = &NonResourceTypeError{}
 var _ errors.SecondaryError = &NonResourceTypeError{}
+var _ errors.HasDocumentationLink = &NonResourceTypeError{}
 
 func (*NonResourceTypeError) isSemanticError() {}
 
@@ -3388,6 +3803,10 @@ func (e *NonResourceTypeError) SecondaryError() string {
 		"expected resource type, got `%s`",
 		e.ActualType.QualifiedString(),
 	)
+}
+
+func (*NonResourceTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources"
 }
 
 // InvalidAssignmentTargetError
@@ -3426,13 +3845,23 @@ type ResourceMethodBindingError struct {
 
 var _ SemanticError = &ResourceMethodBindingError{}
 var _ errors.UserError = &ResourceMethodBindingError{}
+var _ errors.SecondaryError = &ResourceMethodBindingError{}
+var _ errors.HasDocumentationLink = &ResourceMethodBindingError{}
 
 func (*ResourceMethodBindingError) isSemanticError() {}
 
 func (*ResourceMethodBindingError) IsUserError() {}
 
 func (*ResourceMethodBindingError) Error() string {
-	return "cannot create bound method for resource"
+	return "cannot bind resource method to variable or pass as argument"
+}
+
+func (*ResourceMethodBindingError) SecondaryError() string {
+	return "call the method directly (e.g., `r.method()`) instead of binding it (e.g., `r.method`)"
+}
+
+func (*ResourceMethodBindingError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources"
 }
 
 // InvalidDictionaryKeyTypeError
@@ -3478,6 +3907,8 @@ type MissingFunctionBodyError struct {
 
 var _ SemanticError = &MissingFunctionBodyError{}
 var _ errors.UserError = &MissingFunctionBodyError{}
+var _ errors.SecondaryError = &MissingFunctionBodyError{}
+var _ errors.HasDocumentationLink = &MissingFunctionBodyError{}
 
 func (*MissingFunctionBodyError) isSemanticError() {}
 
@@ -3495,6 +3926,14 @@ func (e *MissingFunctionBodyError) EndPosition(common.MemoryGauge) ast.Position 
 	return e.Pos
 }
 
+func (*MissingFunctionBodyError) SecondaryError() string {
+	return "add a function body with `{ ... }`"
+}
+
+func (*MissingFunctionBodyError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/functions"
+}
+
 // InvalidOptionalChainingError
 
 type InvalidOptionalChainingError struct {
@@ -3504,6 +3943,8 @@ type InvalidOptionalChainingError struct {
 
 var _ SemanticError = &InvalidOptionalChainingError{}
 var _ errors.UserError = &InvalidOptionalChainingError{}
+var _ errors.SecondaryError = &InvalidOptionalChainingError{}
+var _ errors.HasDocumentationLink = &InvalidOptionalChainingError{}
 
 func (*InvalidOptionalChainingError) isSemanticError() {}
 
@@ -3514,6 +3955,14 @@ func (e *InvalidOptionalChainingError) Error() string {
 		"cannot use optional chaining: type `%s` is not optional",
 		e.Type.QualifiedString(),
 	)
+}
+
+func (*InvalidOptionalChainingError) SecondaryError() string {
+	return "optional chaining (`?.`) can only be used on optional types"
+}
+
+func (*InvalidOptionalChainingError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types/anystruct-anyresource-opts-never#optionals"
 }
 
 // InvalidAccessError
@@ -3684,6 +4133,7 @@ type UnauthorizedReferenceAssignmentError struct {
 var _ SemanticError = &UnauthorizedReferenceAssignmentError{}
 var _ errors.UserError = &UnauthorizedReferenceAssignmentError{}
 var _ errors.SecondaryError = &UnauthorizedReferenceAssignmentError{}
+var _ errors.HasDocumentationLink = &UnauthorizedReferenceAssignmentError{}
 
 func (*UnauthorizedReferenceAssignmentError) isSemanticError() {}
 
@@ -3711,6 +4161,10 @@ func (e *UnauthorizedReferenceAssignmentError) SecondaryError() string {
 		e.RequiredAccess[0].String(),
 		e.RequiredAccess[1].String(),
 	)
+}
+
+func (*UnauthorizedReferenceAssignmentError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/references"
 }
 
 // InvalidCharacterLiteralError
@@ -3780,6 +4234,7 @@ type InvalidNonIdentifierFailableResourceDowncast struct {
 var _ SemanticError = &InvalidNonIdentifierFailableResourceDowncast{}
 var _ errors.UserError = &InvalidNonIdentifierFailableResourceDowncast{}
 var _ errors.SecondaryError = &InvalidNonIdentifierFailableResourceDowncast{}
+var _ errors.HasDocumentationLink = &InvalidNonIdentifierFailableResourceDowncast{}
 
 func (*InvalidNonIdentifierFailableResourceDowncast) isSemanticError() {}
 
@@ -3793,6 +4248,10 @@ func (*InvalidNonIdentifierFailableResourceDowncast) SecondaryError() string {
 	return "consider declaring a variable for this expression"
 }
 
+func (*InvalidNonIdentifierFailableResourceDowncast) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources"
+}
+
 // ReadOnlyTargetAssignmentError
 
 type ReadOnlyTargetAssignmentError struct {
@@ -3801,6 +4260,8 @@ type ReadOnlyTargetAssignmentError struct {
 
 var _ SemanticError = &ReadOnlyTargetAssignmentError{}
 var _ errors.UserError = &ReadOnlyTargetAssignmentError{}
+var _ errors.SecondaryError = &ReadOnlyTargetAssignmentError{}
+var _ errors.HasDocumentationLink = &ReadOnlyTargetAssignmentError{}
 
 func (*ReadOnlyTargetAssignmentError) isSemanticError() {}
 
@@ -3808,6 +4269,14 @@ func (*ReadOnlyTargetAssignmentError) IsUserError() {}
 
 func (*ReadOnlyTargetAssignmentError) Error() string {
 	return "cannot assign to read-only target"
+}
+
+func (*ReadOnlyTargetAssignmentError) SecondaryError() string {
+	return "read-only targets cannot be modified through assignment"
+}
+
+func (*ReadOnlyTargetAssignmentError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/constants-and-variables"
 }
 
 // InvalidTransactionBlockError
@@ -3820,6 +4289,7 @@ type InvalidTransactionBlockError struct {
 var _ SemanticError = &InvalidTransactionBlockError{}
 var _ errors.UserError = &InvalidTransactionBlockError{}
 var _ errors.SecondaryError = &InvalidTransactionBlockError{}
+var _ errors.HasDocumentationLink = &InvalidTransactionBlockError{}
 
 func (*InvalidTransactionBlockError) isSemanticError() {}
 
@@ -3834,6 +4304,10 @@ func (e *InvalidTransactionBlockError) SecondaryError() string {
 		"expected `prepare` or `execute`, got `%s`",
 		e.Name,
 	)
+}
+
+func (*InvalidTransactionBlockError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/transactions"
 }
 
 func (e *InvalidTransactionBlockError) StartPosition() ast.Position {
@@ -3854,6 +4328,8 @@ type TransactionMissingPrepareError struct {
 
 var _ SemanticError = &TransactionMissingPrepareError{}
 var _ errors.UserError = &TransactionMissingPrepareError{}
+var _ errors.SecondaryError = &TransactionMissingPrepareError{}
+var _ errors.HasDocumentationLink = &TransactionMissingPrepareError{}
 
 func (*TransactionMissingPrepareError) isSemanticError() {}
 
@@ -3875,6 +4351,14 @@ func (e *TransactionMissingPrepareError) EndPosition(memoryGauge common.MemoryGa
 	return e.FirstFieldPos.Shifted(memoryGauge, length-1)
 }
 
+func (*TransactionMissingPrepareError) SecondaryError() string {
+	return "add a `prepare` function and initialize transaction fields"
+}
+
+func (*TransactionMissingPrepareError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/transactions"
+}
+
 // InvalidResourceTransactionParameterError
 
 type InvalidResourceTransactionParameterError struct {
@@ -3884,6 +4368,8 @@ type InvalidResourceTransactionParameterError struct {
 
 var _ SemanticError = &InvalidResourceTransactionParameterError{}
 var _ errors.UserError = &InvalidResourceTransactionParameterError{}
+var _ errors.SecondaryError = &InvalidResourceTransactionParameterError{}
+var _ errors.HasDocumentationLink = &InvalidResourceTransactionParameterError{}
 
 func (*InvalidResourceTransactionParameterError) isSemanticError() {}
 
@@ -3896,6 +4382,14 @@ func (e *InvalidResourceTransactionParameterError) Error() string {
 	)
 }
 
+func (*InvalidResourceTransactionParameterError) SecondaryError() string {
+	return "transaction parameters must be non-resource types that can be passed across account boundaries"
+}
+
+func (*InvalidResourceTransactionParameterError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/transactions"
+}
+
 // InvalidNonImportableTransactionParameterTypeError
 
 type InvalidNonImportableTransactionParameterTypeError struct {
@@ -3905,6 +4399,8 @@ type InvalidNonImportableTransactionParameterTypeError struct {
 
 var _ SemanticError = &InvalidNonImportableTransactionParameterTypeError{}
 var _ errors.UserError = &InvalidNonImportableTransactionParameterTypeError{}
+var _ errors.SecondaryError = &InvalidNonImportableTransactionParameterTypeError{}
+var _ errors.HasDocumentationLink = &InvalidNonImportableTransactionParameterTypeError{}
 
 func (*InvalidNonImportableTransactionParameterTypeError) isSemanticError() {}
 
@@ -3917,6 +4413,14 @@ func (e *InvalidNonImportableTransactionParameterTypeError) Error() string {
 	)
 }
 
+func (*InvalidNonImportableTransactionParameterTypeError) SecondaryError() string {
+	return "use a concrete type that can be imported across account boundaries"
+}
+
+func (*InvalidNonImportableTransactionParameterTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/transactions"
+}
+
 // InvalidTransactionFieldAccessModifierError
 
 type InvalidTransactionFieldAccessModifierError struct {
@@ -3927,6 +4431,8 @@ type InvalidTransactionFieldAccessModifierError struct {
 
 var _ SemanticError = &InvalidTransactionFieldAccessModifierError{}
 var _ errors.UserError = &InvalidTransactionFieldAccessModifierError{}
+var _ errors.SecondaryError = &InvalidTransactionFieldAccessModifierError{}
+var _ errors.HasDocumentationLink = &InvalidTransactionFieldAccessModifierError{}
 
 func (*InvalidTransactionFieldAccessModifierError) isSemanticError() {}
 
@@ -3938,6 +4444,14 @@ func (e *InvalidTransactionFieldAccessModifierError) Error() string {
 		e.Name,
 		e.Access.Keyword(),
 	)
+}
+
+func (*InvalidTransactionFieldAccessModifierError) SecondaryError() string {
+	return "transaction fields cannot have access modifiers"
+}
+
+func (*InvalidTransactionFieldAccessModifierError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/transactions"
 }
 
 func (e *InvalidTransactionFieldAccessModifierError) StartPosition() ast.Position {
@@ -3958,6 +4472,8 @@ type InvalidTransactionPrepareParameterTypeError struct {
 
 var _ SemanticError = &InvalidTransactionPrepareParameterTypeError{}
 var _ errors.UserError = &InvalidTransactionPrepareParameterTypeError{}
+var _ errors.SecondaryError = &InvalidTransactionPrepareParameterTypeError{}
+var _ errors.HasDocumentationLink = &InvalidTransactionPrepareParameterTypeError{}
 
 func (*InvalidTransactionPrepareParameterTypeError) isSemanticError() {}
 
@@ -3966,9 +4482,17 @@ func (*InvalidTransactionPrepareParameterTypeError) IsUserError() {}
 func (e *InvalidTransactionPrepareParameterTypeError) Error() string {
 	return fmt.Sprintf(
 		"prepare parameter must be subtype of `%s`, not `%s`",
-		AccountReferenceType,
+		AccountReferenceType.QualifiedString(),
 		e.Type.QualifiedString(),
 	)
+}
+
+func (*InvalidTransactionPrepareParameterTypeError) SecondaryError() string {
+	return "prepare function parameters must be account references"
+}
+
+func (*InvalidTransactionPrepareParameterTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/transactions"
 }
 
 // InvalidNestedDeclarationError
@@ -4040,7 +4564,7 @@ func (e *InvalidNestedTypeError) SecondaryError() string {
 }
 
 func (*InvalidNestedTypeError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/composite-types"
+	return "https://cadence-lang.org/docs/language/types-and-type-system/composite-types"
 }
 
 func (e *InvalidNestedTypeError) StartPosition() ast.Position {
@@ -4091,6 +4615,8 @@ type InvalidNonEnumCaseError struct {
 
 var _ SemanticError = &InvalidNonEnumCaseError{}
 var _ errors.UserError = &InvalidNonEnumCaseError{}
+var _ errors.SecondaryError = &InvalidNonEnumCaseError{}
+var _ errors.HasDocumentationLink = &InvalidNonEnumCaseError{}
 
 func (*InvalidNonEnumCaseError) isSemanticError() {}
 
@@ -4103,6 +4629,14 @@ func (e *InvalidNonEnumCaseError) Error() string {
 	)
 }
 
+func (*InvalidNonEnumCaseError) SecondaryError() string {
+	return "move the declaration outside the enum or convert it to an enum case"
+}
+
+func (*InvalidNonEnumCaseError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/enumerations"
+}
+
 // InvalidTopLevelDeclarationError
 
 type InvalidTopLevelDeclarationError struct {
@@ -4112,6 +4646,8 @@ type InvalidTopLevelDeclarationError struct {
 
 var _ SemanticError = &InvalidTopLevelDeclarationError{}
 var _ errors.UserError = &InvalidTopLevelDeclarationError{}
+var _ errors.SecondaryError = &InvalidTopLevelDeclarationError{}
+var _ errors.HasDocumentationLink = &InvalidTopLevelDeclarationError{}
 
 func (*InvalidTopLevelDeclarationError) isSemanticError() {}
 
@@ -4124,6 +4660,14 @@ func (e *InvalidTopLevelDeclarationError) Error() string {
 	)
 }
 
+func (*InvalidTopLevelDeclarationError) SecondaryError() string {
+	return "move the declaration inside a contract or function"
+}
+
+func (*InvalidTopLevelDeclarationError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/constants-and-variables"
+}
+
 // InvalidSelfInvalidationError
 
 type InvalidSelfInvalidationError struct {
@@ -4133,6 +4677,8 @@ type InvalidSelfInvalidationError struct {
 
 var _ SemanticError = &InvalidSelfInvalidationError{}
 var _ errors.UserError = &InvalidSelfInvalidationError{}
+var _ errors.SecondaryError = &InvalidSelfInvalidationError{}
+var _ errors.HasDocumentationLink = &InvalidSelfInvalidationError{}
 
 func (*InvalidSelfInvalidationError) isSemanticError() {}
 
@@ -4156,6 +4702,14 @@ func (e *InvalidSelfInvalidationError) Error() string {
 		panic(errors.NewUnreachableError())
 	}
 	return fmt.Sprintf("cannot %s `self`", action)
+}
+
+func (*InvalidSelfInvalidationError) SecondaryError() string {
+	return "`self` cannot be moved or destroyed within the resource's own methods"
+}
+
+func (*InvalidSelfInvalidationError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources"
 }
 
 // InvalidMoveError
@@ -4422,6 +4976,7 @@ type InvalidPathIdentifierError struct {
 var _ SemanticError = &InvalidPathDomainError{}
 var _ errors.UserError = &InvalidPathDomainError{}
 var _ errors.SecondaryError = &InvalidPathDomainError{}
+var _ errors.HasDocumentationLink = &InvalidPathDomainError{}
 
 func (*InvalidPathDomainError) isSemanticError() {}
 
@@ -4449,6 +5004,10 @@ func (e *InvalidPathDomainError) SecondaryError() string {
 	)
 }
 
+func (*InvalidPathDomainError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/accounts/paths"
+}
+
 // InvalidTypeArgumentCountError
 
 type InvalidTypeArgumentCountError struct {
@@ -4460,6 +5019,7 @@ type InvalidTypeArgumentCountError struct {
 var _ SemanticError = &InvalidTypeArgumentCountError{}
 var _ errors.UserError = &InvalidTypeArgumentCountError{}
 var _ errors.SecondaryError = &InvalidTypeArgumentCountError{}
+var _ errors.HasDocumentationLink = &InvalidTypeArgumentCountError{}
 
 func (e *InvalidTypeArgumentCountError) isSemanticError() {}
 
@@ -4477,6 +5037,10 @@ func (e *InvalidTypeArgumentCountError) SecondaryError() string {
 	)
 }
 
+func (*InvalidTypeArgumentCountError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/capabilities"
+}
+
 // MissingTypeArgumentError
 
 type MissingTypeArgumentError struct {
@@ -4486,6 +5050,8 @@ type MissingTypeArgumentError struct {
 
 var _ SemanticError = &MissingTypeArgumentError{}
 var _ errors.UserError = &MissingTypeArgumentError{}
+var _ errors.SecondaryError = &MissingTypeArgumentError{}
+var _ errors.HasDocumentationLink = &MissingTypeArgumentError{}
 
 func (e *MissingTypeArgumentError) isSemanticError() {}
 
@@ -4493,6 +5059,14 @@ func (*MissingTypeArgumentError) IsUserError() {}
 
 func (e *MissingTypeArgumentError) Error() string {
 	return fmt.Sprintf("non-optional type argument %s missing", e.TypeArgumentName)
+}
+
+func (e *MissingTypeArgumentError) SecondaryError() string {
+	return fmt.Sprintf("provide a type argument for `%s`", e.TypeArgumentName)
+}
+
+func (*MissingTypeArgumentError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types"
 }
 
 // InvalidTypeArgumentError
@@ -4527,6 +5101,8 @@ type TypeParameterTypeInferenceError struct {
 
 var _ SemanticError = &TypeParameterTypeInferenceError{}
 var _ errors.UserError = &TypeParameterTypeInferenceError{}
+var _ errors.SecondaryError = &TypeParameterTypeInferenceError{}
+var _ errors.HasDocumentationLink = &TypeParameterTypeInferenceError{}
 
 func (e *TypeParameterTypeInferenceError) isSemanticError() {}
 
@@ -4537,6 +5113,14 @@ func (e *TypeParameterTypeInferenceError) Error() string {
 		"cannot infer type parameter: `%s`",
 		e.Name,
 	)
+}
+
+func (*TypeParameterTypeInferenceError) SecondaryError() string {
+	return "provide explicit type arguments to resolve the ambiguity"
+}
+
+func (*TypeParameterTypeInferenceError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types"
 }
 
 // InvalidConstantSizedTypeBaseError
@@ -4615,6 +5199,8 @@ type UnsupportedResourceForLoopError struct {
 
 var _ SemanticError = &UnsupportedResourceForLoopError{}
 var _ errors.UserError = &UnsupportedResourceForLoopError{}
+var _ errors.SecondaryError = &UnsupportedResourceForLoopError{}
+var _ errors.HasDocumentationLink = &UnsupportedResourceForLoopError{}
 
 func (*UnsupportedResourceForLoopError) isSemanticError() {}
 
@@ -4624,7 +5210,17 @@ func (*UnsupportedResourceForLoopError) Error() string {
 	return "cannot loop over resources"
 }
 
+func (*UnsupportedResourceForLoopError) SecondaryError() string {
+	return "use a different data structure or iterate over resource references"
+}
+
+func (*UnsupportedResourceForLoopError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources"
+}
+
 // TypeParameterTypeMismatchError
+
+// TODO: Add suggested fix for type mismatch
 
 type TypeParameterTypeMismatchError struct {
 	TypeParameter *TypeParameter
@@ -4636,6 +5232,7 @@ type TypeParameterTypeMismatchError struct {
 var _ SemanticError = &TypeParameterTypeMismatchError{}
 var _ errors.UserError = &TypeParameterTypeMismatchError{}
 var _ errors.SecondaryError = &TypeParameterTypeMismatchError{}
+var _ errors.HasDocumentationLink = &TypeParameterTypeMismatchError{}
 
 func (*TypeParameterTypeMismatchError) isSemanticError() {}
 
@@ -4659,6 +5256,10 @@ func (e *TypeParameterTypeMismatchError) SecondaryError() string {
 	)
 }
 
+func (*TypeParameterTypeMismatchError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types"
+}
+
 // UnparameterizedTypeInstantiationError
 
 type UnparameterizedTypeInstantiationError struct {
@@ -4669,6 +5270,7 @@ type UnparameterizedTypeInstantiationError struct {
 var _ SemanticError = &UnparameterizedTypeInstantiationError{}
 var _ errors.UserError = &UnparameterizedTypeInstantiationError{}
 var _ errors.SecondaryError = &UnparameterizedTypeInstantiationError{}
+var _ errors.HasDocumentationLink = &UnparameterizedTypeInstantiationError{}
 
 func (*UnparameterizedTypeInstantiationError) isSemanticError() {}
 
@@ -4685,6 +5287,10 @@ func (e *UnparameterizedTypeInstantiationError) SecondaryError() string {
 	)
 }
 
+func (*UnparameterizedTypeInstantiationError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types"
+}
+
 // TypeAnnotationRequiredError
 
 type TypeAnnotationRequiredError struct {
@@ -4694,6 +5300,8 @@ type TypeAnnotationRequiredError struct {
 
 var _ SemanticError = &TypeAnnotationRequiredError{}
 var _ errors.UserError = &TypeAnnotationRequiredError{}
+var _ errors.SecondaryError = &TypeAnnotationRequiredError{}
+var _ errors.HasDocumentationLink = &TypeAnnotationRequiredError{}
 
 func (*TypeAnnotationRequiredError) isSemanticError() {}
 
@@ -4715,6 +5323,14 @@ func (e *TypeAnnotationRequiredError) StartPosition() ast.Position {
 
 func (e *TypeAnnotationRequiredError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.Pos
+}
+
+func (*TypeAnnotationRequiredError) SecondaryError() string {
+	return "add an explicit type annotation to resolve the ambiguity"
+}
+
+func (*TypeAnnotationRequiredError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types"
 }
 
 // CyclicImportsError
@@ -4754,6 +5370,8 @@ type SwitchDefaultPositionError struct {
 
 var _ SemanticError = &SwitchDefaultPositionError{}
 var _ errors.UserError = &SwitchDefaultPositionError{}
+var _ errors.SecondaryError = &SwitchDefaultPositionError{}
+var _ errors.HasDocumentationLink = &SwitchDefaultPositionError{}
 
 func (*SwitchDefaultPositionError) isSemanticError() {}
 
@@ -4761,6 +5379,14 @@ func (*SwitchDefaultPositionError) IsUserError() {}
 
 func (*SwitchDefaultPositionError) Error() string {
 	return "the `default` case must appear at the end of a `switch` statement"
+}
+
+func (*SwitchDefaultPositionError) SecondaryError() string {
+	return "move the default case to the end of the switch statement"
+}
+
+func (*SwitchDefaultPositionError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/control-flow#switch"
 }
 
 // MissingSwitchCaseStatementsError
@@ -4771,6 +5397,8 @@ type MissingSwitchCaseStatementsError struct {
 
 var _ SemanticError = &MissingSwitchCaseStatementsError{}
 var _ errors.UserError = &MissingSwitchCaseStatementsError{}
+var _ errors.SecondaryError = &MissingSwitchCaseStatementsError{}
+var _ errors.HasDocumentationLink = &MissingSwitchCaseStatementsError{}
 
 func (*MissingSwitchCaseStatementsError) isSemanticError() {}
 
@@ -4778,6 +5406,14 @@ func (*MissingSwitchCaseStatementsError) IsUserError() {}
 
 func (*MissingSwitchCaseStatementsError) Error() string {
 	return "switch cases must have at least one statement"
+}
+
+func (*MissingSwitchCaseStatementsError) SecondaryError() string {
+	return "add at least one statement to the switch case"
+}
+
+func (*MissingSwitchCaseStatementsError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/control-flow#switch"
 }
 
 func (e *MissingSwitchCaseStatementsError) StartPosition() ast.Position {
@@ -4827,8 +5463,18 @@ func (*PurityError) Error() string {
 	return "Impure operation performed in view context"
 }
 
+func (*PurityError) SecondaryError() string {
+	return "view functions can only perform pure operations that don't modify state"
+}
+
+func (*PurityError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/functions#view-functions"
+}
+
 var _ SemanticError = &PurityError{}
 var _ errors.UserError = &PurityError{}
+var _ errors.SecondaryError = &PurityError{}
+var _ errors.HasDocumentationLink = &PurityError{}
 
 func (*PurityError) IsUserError() {}
 
@@ -4843,6 +5489,7 @@ type InvalidatedResourceReferenceError struct {
 
 var _ SemanticError = &InvalidatedResourceReferenceError{}
 var _ errors.UserError = &InvalidatedResourceReferenceError{}
+var _ errors.HasDocumentationLink = &InvalidatedResourceReferenceError{}
 
 func (*InvalidatedResourceReferenceError) isSemanticError() {}
 
@@ -4857,6 +5504,10 @@ func (e *InvalidatedResourceReferenceError) ErrorNotes() []errors.ErrorNote {
 	return []errors.ErrorNote{
 		newPreviousResourceInvalidationNote(invalidation),
 	}
+}
+
+func (*InvalidatedResourceReferenceError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/resources"
 }
 
 // InvalidEntitlementAccessError
@@ -5046,9 +5697,8 @@ func (*InvalidNonEntitlementAccessError) Error() string {
 
 func (e *InvalidNonEntitlementAccessError) SecondaryError() string {
 	return fmt.Sprintf(
-		"`%s` is a %s, not an entitlement",
+		"`%s` is not an entitlement",
 		e.Type.QualifiedString(),
-		e.Type.String(),
 	)
 }
 
@@ -5064,6 +5714,7 @@ type MappingAccessMissingKeywordError struct {
 
 var _ SemanticError = &MappingAccessMissingKeywordError{}
 var _ errors.UserError = &MappingAccessMissingKeywordError{}
+var _ errors.HasDocumentationLink = &MappingAccessMissingKeywordError{}
 
 func (*MappingAccessMissingKeywordError) isSemanticError() {}
 
@@ -5079,6 +5730,10 @@ func (e *MappingAccessMissingKeywordError) SecondaryError() string {
 		e.Type.QualifiedString(),
 		e.Type.QualifiedString(),
 	)
+}
+
+func (*MappingAccessMissingKeywordError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control"
 }
 
 // DirectEntitlementAnnotationError
@@ -5117,6 +5772,7 @@ type UnrepresentableEntitlementMapOutputError struct {
 
 var _ SemanticError = &UnrepresentableEntitlementMapOutputError{}
 var _ errors.UserError = &UnrepresentableEntitlementMapOutputError{}
+var _ errors.HasDocumentationLink = &UnrepresentableEntitlementMapOutputError{}
 
 func (*UnrepresentableEntitlementMapOutputError) isSemanticError() {}
 
@@ -5135,6 +5791,10 @@ func (e *UnrepresentableEntitlementMapOutputError) SecondaryError() string {
 		"this usually occurs because the input set is disjunctive and `%s` is one-to-many",
 		e.Map.QualifiedString(),
 	)
+}
+
+func (*UnrepresentableEntitlementMapOutputError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control"
 }
 
 func (e *UnrepresentableEntitlementMapOutputError) StartPosition() ast.Position {
@@ -5459,6 +6119,8 @@ type InvalidTypeIndexingError struct {
 
 var _ SemanticError = &InvalidTypeIndexingError{}
 var _ errors.UserError = &InvalidTypeIndexingError{}
+var _ errors.SecondaryError = &InvalidTypeIndexingError{}
+var _ errors.HasDocumentationLink = &InvalidTypeIndexingError{}
 
 func (*InvalidTypeIndexingError) isSemanticError() {}
 
@@ -5470,6 +6132,14 @@ func (e *InvalidTypeIndexingError) Error() string {
 		e.BaseType.QualifiedString(),
 		e.IndexingExpression.String(),
 	)
+}
+
+func (*InvalidTypeIndexingError) SecondaryError() string {
+	return "type indexing can only be used with valid attachment types"
+}
+
+func (*InvalidTypeIndexingError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/attachments"
 }
 
 // InvalidAttachmentEntitlementError
@@ -5639,6 +6309,7 @@ type InvalidTypeParameterizedNonNativeFunctionError struct {
 
 var _ SemanticError = &InvalidTypeParameterizedNonNativeFunctionError{}
 var _ errors.UserError = &InvalidTypeParameterizedNonNativeFunctionError{}
+var _ errors.SecondaryError = &InvalidTypeParameterizedNonNativeFunctionError{}
 
 func (*InvalidTypeParameterizedNonNativeFunctionError) isSemanticError() {}
 
@@ -5646,6 +6317,10 @@ func (*InvalidTypeParameterizedNonNativeFunctionError) IsUserError() {}
 
 func (*InvalidTypeParameterizedNonNativeFunctionError) Error() string {
 	return "invalid type parameters in non-native function"
+}
+
+func (*InvalidTypeParameterizedNonNativeFunctionError) SecondaryError() string {
+	return "only native functions can have type parameters"
 }
 
 // NestedReferenceError
@@ -5656,6 +6331,8 @@ type NestedReferenceError struct {
 
 var _ SemanticError = &NestedReferenceError{}
 var _ errors.UserError = &NestedReferenceError{}
+var _ errors.SecondaryError = &NestedReferenceError{}
+var _ errors.HasDocumentationLink = &NestedReferenceError{}
 
 func (*NestedReferenceError) isSemanticError() {}
 
@@ -5666,6 +6343,14 @@ func (e *NestedReferenceError) Error() string {
 		"cannot create a nested reference to value of type %s",
 		e.Type.QualifiedString(),
 	)
+}
+
+func (*NestedReferenceError) SecondaryError() string {
+	return "references cannot be nested - use the referenced value directly"
+}
+
+func (*NestedReferenceError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/references"
 }
 
 // ResultVariableConflictError
@@ -5680,6 +6365,7 @@ type ResultVariableConflictError struct {
 var _ SemanticError = &ResultVariableConflictError{}
 var _ errors.UserError = &ResultVariableConflictError{}
 var _ errors.SecondaryError = &ResultVariableConflictError{}
+var _ errors.HasDocumentationLink = &ResultVariableConflictError{}
 
 func (*ResultVariableConflictError) isSemanticError() {}
 
@@ -5717,6 +6403,10 @@ func (e *ResultVariableConflictError) ErrorNotes() []errors.ErrorNote {
 	}
 }
 
+func (*ResultVariableConflictError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/pre-and-post-conditions"
+}
+
 // ResultVariableReturnTypeNote
 
 type ResultVariableReturnTypeNote struct {
@@ -5749,6 +6439,8 @@ type InvocationTypeInferenceError struct {
 
 var _ SemanticError = &InvocationTypeInferenceError{}
 var _ errors.UserError = &InvocationTypeInferenceError{}
+var _ errors.SecondaryError = &InvocationTypeInferenceError{}
+var _ errors.HasDocumentationLink = &InvocationTypeInferenceError{}
 
 func (e *InvocationTypeInferenceError) isSemanticError() {}
 
@@ -5756,6 +6448,14 @@ func (*InvocationTypeInferenceError) IsUserError() {}
 
 func (*InvocationTypeInferenceError) Error() string {
 	return "cannot infer type of invocation"
+}
+
+func (*InvocationTypeInferenceError) SecondaryError() string {
+	return "provide explicit type arguments or check function signature"
+}
+
+func (*InvocationTypeInferenceError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/functions"
 }
 
 // UnconvertableTypeError
@@ -5767,6 +6467,8 @@ type UnconvertableTypeError struct {
 
 var _ SemanticError = &UnconvertableTypeError{}
 var _ errors.UserError = &UnconvertableTypeError{}
+var _ errors.SecondaryError = &UnconvertableTypeError{}
+var _ errors.HasDocumentationLink = &UnconvertableTypeError{}
 
 func (e *UnconvertableTypeError) isSemanticError() {}
 
@@ -5774,6 +6476,14 @@ func (*UnconvertableTypeError) IsUserError() {}
 
 func (e *UnconvertableTypeError) Error() string {
 	return fmt.Sprintf("cannot convert type `%s`", e.Type)
+}
+
+func (*UnconvertableTypeError) SecondaryError() string {
+	return "use explicit type conversion or check if the type supports conversion"
+}
+
+func (*UnconvertableTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types"
 }
 
 // InvalidMappingAuthorizationError
