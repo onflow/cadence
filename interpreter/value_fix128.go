@@ -48,12 +48,10 @@ func NewFix128ValueWithInteger(gauge common.MemoryGauge, constructor func() int6
 	return NewUnmeteredFix128ValueWithInteger(constructor(), locationRange)
 }
 
+// NewUnmeteredFix128ValueWithInteger construct a Fix128Value from a int64.
+// Note that the int64 is the scaled representation.
 func NewUnmeteredFix128ValueWithInteger(integer int64, locationRange LocationRange) Fix128Value {
-	scaledValue := new(big.Int).Mul(
-		big.NewInt(integer),
-		fixedpoint.Fix128FactorAsBigInt,
-	)
-	return NewFix128ValueFromBigInt(nil, scaledValue)
+	return NewFix128ValueFromBigInt(nil, big.NewInt(integer))
 }
 
 func NewFix128Value(gauge common.MemoryGauge, valueGetter func() fix.Fix128) Fix128Value {
@@ -67,7 +65,6 @@ func NewUnmeteredFix128Value(integer fix.Fix128) Fix128Value {
 
 func NewFix128ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
 	// TODO: Validate bounds
-
 	return NewFix128Value(
 		gauge,
 		func() fix.Fix128 {
@@ -80,9 +77,7 @@ func NewFix128ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value 
 }
 
 func NewFix128ValueFromBigInt(gauge common.MemoryGauge, v *big.Int) Fix128Value {
-
 	// TODO: Validate bounds
-
 	return NewFix128Value(
 		gauge,
 		func() fix.Fix128 {
@@ -451,57 +446,45 @@ func (v Fix128Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []
 }
 
 func ConvertFix128(memoryGauge common.MemoryGauge, value Value, locationRange LocationRange) Fix128Value {
+	scaledInt := new(big.Int)
+
 	switch value := value.(type) {
 	case Fix128Value:
 		return value
 
-	// TODO:
-	//case UFix128Value:
-	//	if value.UFix128Value > Fix64MaxValue {
-	//		panic(&OverflowError{
-	//			LocationRange: locationRange,
-	//		})
-	//	}
-	//	return NewFix128Value(
-	//		memoryGauge,
-	//		func() int64 {
-	//			return int64(value.UFix128Value)
-	//		},
-	//	)
+	case Fix64Value:
+		bigInt := big.NewInt(int64(value))
+		scaledInt = scaledInt.Mul(
+			bigInt,
+			fixedpoint.Fix64ToFix128FactorAsBigInt,
+		)
+
+	case UFix64Value:
+		bigInt := new(big.Int).SetUint64(uint64(value.UFix64Value))
+		scaledInt = scaledInt.Mul(
+			bigInt,
+			fixedpoint.Fix64ToFix128FactorAsBigInt,
+		)
 
 	case BigNumberValue:
-		converter := func() int64 {
-			v := value.ToBigInt(memoryGauge)
-
-			// First, check if the value is at least in the int64 range.
-			// The integer range for Fix64 is smaller, but this test at least
-			// allows us to call `v.Int64()` safely.
-
-			if !v.IsInt64() {
-				panic(&OverflowError{
-					LocationRange: locationRange,
-				})
-			}
-
-			return v.Int64()
-		}
-
-		// Now check that the integer value fits the range of Fix64
-		return NewFix128ValueWithInteger(memoryGauge, converter, locationRange)
+		bigInt := value.ToBigInt(memoryGauge)
+		scaledInt = scaledInt.Mul(
+			bigInt,
+			fixedpoint.Fix128FactorAsBigInt,
+		)
 
 	case NumberValue:
-		// Check that the integer value fits the range of Fix64
-		return NewFix128ValueWithInteger(
-			memoryGauge,
-			func() int64 {
-				return int64(value.ToInt(locationRange))
-			},
-			locationRange,
+		bigInt := new(big.Int).SetInt64(int64(value.ToInt(locationRange)))
+		scaledInt = scaledInt.Mul(
+			bigInt,
+			fixedpoint.Fix128FactorAsBigInt,
 		)
 
 	default:
 		panic(fmt.Sprintf("can't convert Fix64: %s", value))
 	}
+
+	return NewFix128ValueFromBigInt(memoryGauge, scaledInt)
 }
 
 func (v Fix128Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {

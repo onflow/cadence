@@ -56,6 +56,18 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 	tests := map[string]interpreter.Value{
 		// Fix*
 		"Fix64": interpreter.NewUnmeteredFix64Value(123000000),
+		"Fix128": interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128FromBigInt(
+			// 1.23
+			new(big.Int).Mul(
+				big.NewInt(123),
+				new(big.Int).Exp(
+					big.NewInt(10),
+					big.NewInt(22),
+					nil,
+				),
+			),
+		)),
+
 		// UFix*
 		"UFix64": interpreter.NewUnmeteredUFix64Value(123000000),
 	}
@@ -64,10 +76,6 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 		// Only test leaf types
 		switch fixedPointType {
 		case sema.FixedPointType, sema.SignedFixedPointType:
-			continue
-
-		// TODO: Remove once Fix128 type is supported in the interpreter
-		case sema.Fix128Type:
 			continue
 		}
 
@@ -117,7 +125,14 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 }
 
 var testFixedPointValues = map[string]interpreter.Value{
-	"Fix64":  interpreter.NewUnmeteredFix64Value(50 * sema.Fix64Factor),
+	"Fix64": interpreter.NewUnmeteredFix64Value(50 * sema.Fix64Factor),
+	"Fix128": interpreter.NewFix128ValueFromBigInt(
+		nil,
+		new(big.Int).Mul(
+			big.NewInt(50),
+			fixedpoint.Fix128FactorAsBigInt,
+		),
+	),
 	"UFix64": interpreter.NewUnmeteredUFix64Value(50 * sema.Fix64Factor),
 }
 
@@ -126,10 +141,6 @@ func init() {
 		// Only test leaf types
 		switch fixedPointType {
 		case sema.FixedPointType, sema.SignedFixedPointType:
-			continue
-
-		// TODO: Remove once Fix128 type is supported in the interpreter
-		case sema.Fix128Type:
 			continue
 		}
 

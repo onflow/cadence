@@ -3392,6 +3392,14 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		Max: NewUnmeteredFix64Value(math.MaxInt64),
 	},
 	{
+		Name: sema.Fix128TypeName,
+		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+			return ConvertFix128(gauge, value, locationRange)
+		},
+		Min: NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
+		Max: NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
+	},
+	{
 		Name: sema.UFix64TypeName,
 		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
 			return ConvertUFix64(gauge, value, locationRange)

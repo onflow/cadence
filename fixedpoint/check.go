@@ -60,8 +60,17 @@ var (
 		nil,
 	)
 
-	Fix128TypeMinIntBig = Fix128ToBigInt(fix.NewFix128(0x8000000000000000, 0x0000000000000000))
-	Fix128TypeMaxIntBig = Fix128ToBigInt(fix.NewFix128(0x7FFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF))
+	Fix64ToFix128FactorAsBigInt = new(big.Int).Exp(
+		big.NewInt(10),
+		big.NewInt(Fix128Scale-Fix64Scale),
+		nil,
+	)
+
+	Fix128TypeMin = fix.NewFix128(0x8000000000000000, 0x0000000000000000)
+	Fix128TypeMax = fix.NewFix128(0x7FFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF)
+
+	Fix128TypeMinIntBig = Fix128ToBigInt(Fix128TypeMin)
+	Fix128TypeMaxIntBig = Fix128ToBigInt(Fix128TypeMax)
 
 	// Fix128TypeMinFractionalBig is -0.000_000_000_000_000_000_000_001
 	Fix128TypeMinFractionalBig = Fix128ToBigInt(fix.NewFix128(0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF))
