@@ -6281,11 +6281,8 @@ func TestParseInvalidConformances(t *testing.T) {
 	_, errs := testParseDeclarations("struct Test: {}")
 	AssertEqualWithDiff(t,
 		[]error{
-			&SyntaxError{
-				Message:       "expected at least one conformance after ':'",
-				Secondary:     "provide at least one interface or type to conform to, or remove the colon if no conformances are needed",
-				Documentation: "https://cadence-lang.org/docs/language/interfaces",
-				Pos:           ast.Position{Offset: 13, Line: 1, Column: 13},
+			&MissingConformanceError{
+				Pos: ast.Position{Offset: 13, Line: 1, Column: 13},
 			},
 		},
 		errs,

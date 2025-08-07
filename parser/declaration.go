@@ -1238,10 +1238,9 @@ func parseConformances(p *parser) ([]*ast.NominalType, error) {
 		}
 
 		if len(conformances) < 1 {
-			return nil, p.newSyntaxError("expected at least one conformance after %s", lexer.TokenColon).
-				WithSecondary("provide at least one interface or type to conform to, " +
-					"or remove the colon if no conformances are needed").
-				WithDocumentation("https://cadence-lang.org/docs/language/interfaces")
+			p.report(&MissingConformanceError{
+				Pos: p.current.StartPos,
+			})
 		}
 	}
 

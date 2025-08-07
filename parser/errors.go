@@ -816,6 +816,41 @@ func (*PubAccessError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control"
 }
 
+// MissingConformanceError is reported when a colon for conformances is present,
+// but no conformances follow.
+type MissingConformanceError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &MissingConformanceError{}
+var _ errors.UserError = &MissingConformanceError{}
+var _ errors.SecondaryError = &MissingConformanceError{}
+var _ errors.HasDocumentationLink = &MissingConformanceError{}
+
+func (*MissingConformanceError) isParseError() {}
+
+func (*MissingConformanceError) IsUserError() {}
+
+func (e *MissingConformanceError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *MissingConformanceError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*MissingConformanceError) Error() string {
+	return "expected at least one conformance after :"
+}
+
+func (*MissingConformanceError) SecondaryError() string {
+	return "provide at least one interface or type to conform to, or remove the colon if no conformances are needed"
+}
+
+func (*MissingConformanceError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/interfaces"
+}
+
 // AccessKeywordEntitlementNameError is reported when an access keyword (e.g. `all`, `self`)
 // is used as an entitlement name.
 type AccessKeywordEntitlementNameError struct {
