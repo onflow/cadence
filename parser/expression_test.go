@@ -6465,15 +6465,8 @@ func TestParseStringTemplate(t *testing.T) {
 						Column: 24,
 					},
 				},
-				&SyntaxError{
-					Message:       "statements on the same line must be separated with a semicolon",
-					Secondary:     "add a semicolon (;) between statements or place each statement on a separate line",
-					Documentation: "https://cadence-lang.org/docs/language/syntax#semicolons",
-					Pos: ast.Position{
-						Offset: 24,
-						Line:   2,
-						Column: 23,
-					},
+				&StatementSeparationError{
+					Pos: ast.Position{Offset: 24, Line: 2, Column: 23},
 				},
 			},
 			errs,
@@ -6499,15 +6492,8 @@ func TestParseStringTemplate(t *testing.T) {
 						Column: 38,
 					},
 				},
-				&SyntaxError{
-					Message:       "statements on the same line must be separated with a semicolon",
-					Secondary:     "add a semicolon (;) between statements or place each statement on a separate line",
-					Documentation: "https://cadence-lang.org/docs/language/syntax#semicolons",
-					Pos: ast.Position{
-						Offset: 33,
-						Line:   2,
-						Column: 32,
-					},
+				&StatementSeparationError{
+					Pos: ast.Position{Offset: 33, Line: 2, Column: 32},
 				},
 			},
 			errs,

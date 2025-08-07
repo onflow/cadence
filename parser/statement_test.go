@@ -1125,11 +1125,8 @@ func TestParseViewNonFunction(t *testing.T) {
 	_, errs := testParseStatements("view return 3")
 	AssertEqualWithDiff(t,
 		[]error{
-			&SyntaxError{
-				Message:       "statements on the same line must be separated with a semicolon",
-				Secondary:     "add a semicolon (;) between statements or place each statement on a separate line",
-				Documentation: "https://cadence-lang.org/docs/language/syntax#semicolons",
-				Pos:           ast.Position{Offset: 5, Line: 1, Column: 5},
+			&StatementSeparationError{
+				Pos: ast.Position{Offset: 5, Line: 1, Column: 5},
 			},
 		},
 		errs,
@@ -1195,11 +1192,8 @@ func TestParseStatements(t *testing.T) {
 		result, errs := testParseStatements(`assert true`)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "statements on the same line must be separated with a semicolon",
-					Secondary:     "add a semicolon (;) between statements or place each statement on a separate line",
-					Documentation: "https://cadence-lang.org/docs/language/syntax#semicolons",
-					Pos:           ast.Position{Offset: 7, Line: 1, Column: 7},
+				&StatementSeparationError{
+					Pos: ast.Position{Offset: 7, Line: 1, Column: 7},
 				},
 			},
 			errs,

@@ -363,6 +363,59 @@ func (UnexpectedEOFError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
+// StatementSeparationError is reported when two statements on the same line
+// are not separated by a semicolon.
+type StatementSeparationError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &StatementSeparationError{}
+var _ errors.UserError = &StatementSeparationError{}
+var _ errors.SecondaryError = &StatementSeparationError{}
+var _ errors.HasDocumentationLink = &StatementSeparationError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &StatementSeparationError{}
+
+func (*StatementSeparationError) isParseError() {}
+
+func (*StatementSeparationError) IsUserError() {}
+
+func (e *StatementSeparationError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *StatementSeparationError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*StatementSeparationError) Error() string {
+	return "statements on the same line must be separated with a semicolon"
+}
+
+func (*StatementSeparationError) SecondaryError() string {
+	return "add a semicolon (;) between statements or place each statement on a separate line"
+}
+
+func (e *StatementSeparationError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Add semicolon to separate statements",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "; ",
+					Range: ast.Range{
+						StartPos: e.Pos,
+						EndPos:   e.Pos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (*StatementSeparationError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax#semicolons"
+}
+
 // MissingCommaInParameterListError
 
 type MissingCommaInParameterListError struct {
