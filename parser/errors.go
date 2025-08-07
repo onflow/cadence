@@ -1053,6 +1053,56 @@ func (*MemberAccessMissingNameError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
+// WhitespaceAfterMemberAccessError is reported when there is whitespace after a member access operator.
+type WhitespaceAfterMemberAccessError struct {
+	OperatorTokenType lexer.TokenType
+	WhitespaceRange   ast.Range
+}
+
+var _ ParseError = &WhitespaceAfterMemberAccessError{}
+var _ errors.UserError = &WhitespaceAfterMemberAccessError{}
+var _ errors.SecondaryError = &WhitespaceAfterMemberAccessError{}
+var _ errors.HasDocumentationLink = &WhitespaceAfterMemberAccessError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &WhitespaceAfterMemberAccessError{}
+
+func (*WhitespaceAfterMemberAccessError) isParseError() {}
+
+func (*WhitespaceAfterMemberAccessError) IsUserError() {}
+
+func (e *WhitespaceAfterMemberAccessError) StartPosition() ast.Position {
+	return e.WhitespaceRange.StartPos
+}
+
+func (e *WhitespaceAfterMemberAccessError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.WhitespaceRange.EndPos
+}
+
+func (e *WhitespaceAfterMemberAccessError) Error() string {
+	return fmt.Sprintf("invalid whitespace after %s", e.OperatorTokenType)
+}
+
+func (e *WhitespaceAfterMemberAccessError) SecondaryError() string {
+	return fmt.Sprintf("remove the space between %s and the member name", e.OperatorTokenType)
+}
+
+func (e *WhitespaceAfterMemberAccessError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Remove whitespace",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "",
+					Range:       e.WhitespaceRange,
+				},
+			},
+		},
+	}
+}
+
+func (*WhitespaceAfterMemberAccessError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
 // InvalidStaticModifierError
 
 type InvalidStaticModifierError struct {

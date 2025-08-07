@@ -3457,7 +3457,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 																Column: 23,
 															},
 														},
-														AccessPos: ast.Position{
+														AccessEndPos: ast.Position{
 															Offset: 118,
 															Line:   6,
 															Column: 22,
@@ -3572,7 +3572,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 															Column: 30,
 														},
 													},
-													AccessPos: ast.Position{
+													AccessEndPos: ast.Position{
 														Offset: 221,
 														Line:   10,
 														Column: 29,
@@ -6044,7 +6044,7 @@ func TestParseStructure(t *testing.T) {
 															Column: 21,
 														},
 													},
-													AccessPos: ast.Position{
+													AccessEndPos: ast.Position{
 														Offset: 110,
 														Line:   6,
 														Column: 20,
@@ -6158,7 +6158,7 @@ func TestParseStructure(t *testing.T) {
 														Column: 28,
 													},
 												},
-												AccessPos: ast.Position{
+												AccessEndPos: ast.Position{
 													Offset: 207,
 													Line:   10,
 													Column: 27,
@@ -8048,7 +8048,7 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 															Pos:        ast.Position{Offset: 54, Line: 2, Column: 53},
 														},
 													},
-													AccessPos: ast.Position{Offset: 58, Line: 2, Column: 57},
+													AccessEndPos: ast.Position{Offset: 58, Line: 2, Column: 57},
 													Identifier: ast.Identifier{
 														Identifier: "id",
 														Pos:        ast.Position{Offset: 59, Line: 2, Column: 58},

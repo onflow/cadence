@@ -1894,7 +1894,7 @@ func TestParseMemberExpression(t *testing.T) {
 						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
 					},
 				},
-				AccessPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+				AccessEndPos: ast.Position{Offset: 1, Line: 1, Column: 1},
 				Identifier: ast.Identifier{
 					Identifier: "n",
 					Pos:        ast.Position{Offset: 2, Line: 1, Column: 2},
@@ -1919,7 +1919,7 @@ func TestParseMemberExpression(t *testing.T) {
 						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
 					},
 				},
-				AccessPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+				AccessEndPos: ast.Position{Offset: 2, Line: 1, Column: 2},
 				Identifier: ast.Identifier{
 					Identifier: "n",
 					Pos:        ast.Position{Offset: 3, Line: 1, Column: 3},
@@ -1957,7 +1957,7 @@ func TestParseMemberExpression(t *testing.T) {
 						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
 					},
 				},
-				AccessPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+				AccessEndPos: ast.Position{Offset: 1, Line: 1, Column: 1},
 			},
 			result,
 		)
@@ -2004,7 +2004,7 @@ func TestParseMemberExpression(t *testing.T) {
 							Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
 						},
 					},
-					AccessPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+					AccessEndPos: ast.Position{Offset: 1, Line: 1, Column: 1},
 					Identifier: ast.Identifier{
 						Identifier: "n",
 						Pos:        ast.Position{Offset: 2, Line: 1, Column: 2},
@@ -2050,7 +2050,7 @@ func TestParseMemberExpression(t *testing.T) {
 							Pos:        ast.Position{Offset: 4, Line: 1, Column: 4},
 						},
 					},
-					AccessPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+					AccessEndPos: ast.Position{Offset: 5, Line: 1, Column: 5},
 					Identifier: ast.Identifier{
 						Identifier: "n",
 						Pos:        ast.Position{Offset: 6, Line: 1, Column: 6},
@@ -2077,7 +2077,7 @@ func TestParseMemberExpression(t *testing.T) {
 						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
 					},
 				},
-				AccessPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+				AccessEndPos: ast.Position{Offset: 2, Line: 1, Column: 2},
 				Identifier: ast.Identifier{
 					Identifier: "n",
 					Pos:        ast.Position{Offset: 3, Line: 1, Column: 3},
@@ -2121,7 +2121,7 @@ func TestParseMemberExpression(t *testing.T) {
 							Identifier: "c",
 							Pos:        ast.Position{Offset: 21, Line: 2, Column: 20},
 						},
-						AccessPos: ast.Position{Offset: 20, Line: 2, Column: 19},
+						AccessEndPos: ast.Position{Offset: 20, Line: 2, Column: 19},
 					},
 					StartPos: ast.Position{Offset: 11, Line: 2, Column: 10},
 				},
@@ -2830,7 +2830,7 @@ func TestParseForceExpression(t *testing.T) {
 									Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
 								},
 							},
-							AccessPos: ast.Position{Line: 2, Column: 0, Offset: 2},
+							AccessEndPos: ast.Position{Line: 2, Column: 0, Offset: 2},
 							Identifier: ast.Identifier{
 								Identifier: "y",
 								Pos:        ast.Position{Line: 2, Column: 1, Offset: 3},
@@ -2848,14 +2848,15 @@ func TestParseForceExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseStatements("x. y")
+		result, errs := testParseStatements("x.  y")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "invalid whitespace after '.'",
-					Secondary:     "remove the space between the dot (.) and the member name",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 2, Line: 1, Column: 2},
+				&WhitespaceAfterMemberAccessError{
+					OperatorTokenType: lexer.TokenDot,
+					WhitespaceRange: ast.Range{
+						StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+						EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+					},
 				},
 			},
 			errs,
@@ -2871,10 +2872,51 @@ func TestParseForceExpression(t *testing.T) {
 								Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
 							},
 						},
-						AccessPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						AccessEndPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 						Identifier: ast.Identifier{
 							Identifier: "y",
-							Pos:        ast.Position{Line: 1, Column: 3, Offset: 3},
+							Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("member access, optional, whitespace", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseStatements("x?.  y")
+		AssertEqualWithDiff(t,
+			[]error{
+				&WhitespaceAfterMemberAccessError{
+					OperatorTokenType: lexer.TokenQuestionMarkDot,
+					WhitespaceRange: ast.Range{
+						StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+						EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+					},
+				},
+			},
+			errs,
+		)
+
+		AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.ExpressionStatement{
+					Expression: &ast.MemberExpression{
+						Expression: &ast.IdentifierExpression{
+							Identifier: ast.Identifier{
+								Identifier: "x",
+								Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+							},
+						},
+						Optional:     true,
+						AccessEndPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+						Identifier: ast.Identifier{
+							Identifier: "y",
+							Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
 						},
 					},
 				},
@@ -5054,7 +5096,7 @@ func TestParseOptionalMemberExpression(t *testing.T) {
 						Identifier: "c",
 						Pos:        ast.Position{Offset: 17, Line: 2, Column: 16},
 					},
-					AccessPos: ast.Position{Offset: 16, Line: 2, Column: 15},
+					AccessEndPos: ast.Position{Offset: 16, Line: 2, Column: 15},
 				},
 				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
 			},
@@ -7050,7 +7092,7 @@ func TestParseReferenceInVariableDeclaration(t *testing.T) {
 								Pos:        ast.Position{Offset: 17, Line: 2, Column: 16},
 							},
 						},
-						AccessPos: ast.Position{Offset: 24, Line: 2, Column: 23},
+						AccessEndPos: ast.Position{Offset: 24, Line: 2, Column: 23},
 						Identifier: ast.Identifier{
 							Identifier: "storage",
 							Pos:        ast.Position{Offset: 25, Line: 2, Column: 24},

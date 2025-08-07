@@ -1357,7 +1357,7 @@ func (e *NotDeclaredMemberError) SuggestFixes(_ string) []errors.SuggestedFix[as
 		return nil
 	}
 
-	accessPos := e.Expression.AccessPos
+	accessPos := e.Expression.AccessEndPos
 
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
