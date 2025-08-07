@@ -2255,6 +2255,7 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation TypeAnnotation, pos a
 	case TypeAnnotationStateInvalidResourceAnnotation:
 		checker.report(
 			&InvalidResourceAnnotationError{
+				Type:  typeAnnotation.Type,
 				Range: ast.NewRangeFromPositioned(checker.memoryGauge, pos),
 			},
 		)
