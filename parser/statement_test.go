@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/errors"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
@@ -1189,7 +1190,8 @@ func TestParseStatements(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseStatements(`assert true`)
+		const code = `assert true`
+		result, errs := testParseStatements(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&StatementSeparationError{
@@ -1220,6 +1222,34 @@ func TestParseStatements(t *testing.T) {
 				},
 			},
 			result,
+		)
+
+		var statementSeparationError *StatementSeparationError
+		require.ErrorAs(t, errs[0], &statementSeparationError)
+
+		fixes := statementSeparationError.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Add semicolon to separate statements",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "; ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+								EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			`assert ; true`,
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 }
