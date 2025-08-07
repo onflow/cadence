@@ -172,13 +172,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				continue
 
 			case KeywordAccess:
-				if access != ast.AccessNotSpecified {
-					p.report(
-						&DuplicateAccessModifierError{
-							Range: p.current.Range,
-						},
-					)
-				}
+				previousAccess := access
 				if staticModifierEnabled && staticPos != nil {
 					p.reportSyntaxError("invalid access modifier after `static` modifier")
 				}
@@ -187,10 +181,18 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				}
 				pos := p.current.StartPos
 				accessPos = &pos
-				var err error
-				access, err = parseAccess(p)
+				var (
+					accessRange ast.Range
+					err         error
+				)
+				access, accessRange, err = parseAccess(p)
 				if err != nil {
 					return nil, err
+				}
+				if previousAccess != ast.AccessNotSpecified {
+					p.report(&DuplicateAccessModifierError{
+						Range: accessRange,
+					})
 				}
 
 				continue
@@ -368,22 +370,26 @@ func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
 //	    : 'access(self)'
 //	    | 'access(all)' ( '(' 'set' ')' )?
 //	    | 'access' '(' ( 'self' | 'contract' | 'account' | 'all' | entitlementList ) ')'
-func parseAccess(p *parser) (ast.Access, error) {
+func parseAccess(p *parser) (ast.Access, ast.Range, error) {
+
+	var accessRange ast.Range
 
 	switch string(p.currentTokenSource()) {
 	case KeywordAccess:
+		accessRange.StartPos = p.current.StartPos
+
 		// Skip the `access` keyword
 		p.nextSemanticToken()
 
 		_, err := p.mustOne(lexer.TokenParenOpen)
 		if err != nil {
-			return ast.AccessNotSpecified, err
+			return ast.AccessNotSpecified, ast.EmptyRange, err
 		}
 
 		p.skipSpaceAndComments()
 
 		if !p.current.Is(lexer.TokenIdentifier) {
-			return ast.AccessNotSpecified, p.newSyntaxError(
+			return ast.AccessNotSpecified, ast.EmptyRange, p.newSyntaxError(
 				"expected keyword %s, got %s",
 				enumeratedAccessModifierKeywords,
 				p.current.Type,
@@ -422,7 +428,7 @@ func parseAccess(p *parser) (ast.Access, error) {
 
 			entitlementMapName, err := parseNominalType(p)
 			if err != nil {
-				return ast.AccessNotSpecified, err
+				return ast.AccessNotSpecified, ast.EmptyRange, err
 			}
 			access = ast.NewMappedAccess(entitlementMapName, keywordPos)
 
@@ -431,20 +437,22 @@ func parseAccess(p *parser) (ast.Access, error) {
 		default:
 			entitlements, err := parseEntitlementList(p)
 			if err != nil {
-				return ast.AccessNotSpecified, err
+				return ast.AccessNotSpecified, ast.EmptyRange, err
 			}
 			access = ast.NewEntitlementAccess(entitlements)
 		}
 
+		accessRange.EndPos = p.current.EndPos
+
 		_, err = p.mustOne(lexer.TokenParenClose)
 		if err != nil {
-			return ast.AccessNotSpecified, err
+			return ast.AccessNotSpecified, ast.EmptyRange, err
 		}
 
-		return access, nil
+		return access, accessRange, nil
 
 	default:
-		return ast.AccessNotSpecified, errors.NewUnreachableError()
+		return ast.AccessNotSpecified, ast.EmptyRange, errors.NewUnreachableError()
 	}
 }
 
@@ -1637,11 +1645,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				continue
 
 			case KeywordAccess:
-				if access != ast.AccessNotSpecified {
-					p.report(&DuplicateAccessModifierError{
-						Range: p.current.Range,
-					})
-				}
+				previousAccess := access
 				if staticModifierEnabled && staticPos != nil {
 					p.reportSyntaxError("invalid access modifier after `static` modifier")
 				}
@@ -1650,10 +1654,18 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				}
 				pos := p.current.StartPos
 				accessPos = &pos
-				var err error
-				access, err = parseAccess(p)
+				var (
+					accessRange ast.Range
+					err         error
+				)
+				access, accessRange, err = parseAccess(p)
 				if err != nil {
 					return nil, err
+				}
+				if previousAccess != ast.AccessNotSpecified {
+					p.report(&DuplicateAccessModifierError{
+						Range: accessRange,
+					})
 				}
 				continue
 

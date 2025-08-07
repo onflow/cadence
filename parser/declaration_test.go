@@ -1736,7 +1736,10 @@ func TestParseAccess(t *testing.T) {
 		return Parse(
 			nil,
 			[]byte(input),
-			parseAccess,
+			func(p *parser) (ast.Access, error) {
+				access, _, err := parseAccess(p)
+				return access, err
+			},
 			Config{},
 		)
 	}
@@ -8385,21 +8388,50 @@ func TestParseInvalidAccessModifiers(t *testing.T) {
 		)
 	})
 
-	t.Run("transaction", func(t *testing.T) {
+	t.Run("variable", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations("access(all) access(self) let x = 1")
+		const code = "access(all) access(self) let x = 1"
+		_, errs := testParseDeclarations(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&DuplicateAccessModifierError{
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
-						EndPos:   ast.Position{Offset: 17, Line: 1, Column: 17},
+						EndPos:   ast.Position{Offset: 23, Line: 1, Column: 23},
 					},
 				},
 			},
 			errs,
+		)
+
+		var duplicateAccessError *DuplicateAccessModifierError
+		require.ErrorAs(t, errs[0], &duplicateAccessError)
+
+		fixes := duplicateAccessError.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove duplicate access modifier",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
+								EndPos:   ast.Position{Offset: 23, Line: 1, Column: 23},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		const expected = "access(all)  let x = 1"
+		assert.Equal(t,
+			expected,
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 }
