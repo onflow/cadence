@@ -913,6 +913,40 @@ func (*AccessKeywordEntitlementNameError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control#entitlements"
 }
 
+// InvalidEntitlementSeparatorError is reported when an invalid token is used as an entitlement separator.
+type InvalidEntitlementSeparatorError struct {
+	Token lexer.Token
+}
+
+var _ ParseError = &InvalidEntitlementSeparatorError{}
+var _ errors.UserError = &InvalidEntitlementSeparatorError{}
+var _ errors.SecondaryError = &InvalidEntitlementSeparatorError{}
+var _ errors.HasDocumentationLink = &InvalidEntitlementSeparatorError{}
+
+func (*InvalidEntitlementSeparatorError) isParseError() {}
+
+func (*InvalidEntitlementSeparatorError) IsUserError() {}
+
+func (e *InvalidEntitlementSeparatorError) StartPosition() ast.Position {
+	return e.Token.StartPos
+}
+
+func (e *InvalidEntitlementSeparatorError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Token.EndPos
+}
+
+func (e *InvalidEntitlementSeparatorError) Error() string {
+	return fmt.Sprintf("unexpected entitlement separator %s", e.Token.Type.String())
+}
+
+func (*InvalidEntitlementSeparatorError) SecondaryError() string {
+	return "use a comma (,) for conjunctive entitlements or a vertical bar (|) for disjunctive entitlements"
+}
+
+func (*InvalidEntitlementSeparatorError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control#entitlements"
+}
+
 // UnexpectedTokenAtEndError is reported when there is an unexpected token at the end of the program
 type UnexpectedTokenAtEndError struct {
 	Token lexer.Token

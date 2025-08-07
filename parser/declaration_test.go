@@ -2063,11 +2063,14 @@ func TestParseAccess(t *testing.T) {
 		result, errs := parse("access ( foo bar )")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected entitlement separator identifier",
-					Secondary:     "use a comma (,) for conjunctive entitlements or a vertical bar (|) for disjunctive entitlements",
-					Documentation: "https://cadence-lang.org/docs/language/access-control#entitlements",
-					Pos:           ast.Position{Offset: 13, Line: 1, Column: 13},
+				&InvalidEntitlementSeparatorError{
+					Token: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+							EndPos:   ast.Position{Offset: 15, Line: 1, Column: 15},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
@@ -2086,11 +2089,14 @@ func TestParseAccess(t *testing.T) {
 		result, errs := parse("access ( foo & bar )")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected entitlement separator '&'",
-					Secondary:     "use a comma (,) for conjunctive entitlements or a vertical bar (|) for disjunctive entitlements",
-					Documentation: "https://cadence-lang.org/docs/language/access-control#entitlements",
-					Pos:           ast.Position{Offset: 13, Line: 1, Column: 13},
+				&InvalidEntitlementSeparatorError{
+					Token: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+							EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+						},
+						Type: lexer.TokenAmpersand,
+					},
 				},
 			},
 			errs,

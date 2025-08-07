@@ -339,10 +339,9 @@ func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
 		// Luckily, however, the former two are just equivalent, and the latter we can disambiguate in the type checker.
 		return ast.NewConjunctiveEntitlementSet(entitlements), nil
 	default:
-		return nil, p.newSyntaxError("unexpected entitlement separator %s", p.current.Type.String()).
-			WithSecondary("use a comma (,) for conjunctive entitlements " +
-				"or a vertical bar (|) for disjunctive entitlements").
-			WithDocumentation("https://cadence-lang.org/docs/language/access-control#entitlements")
+		return nil, &InvalidEntitlementSeparatorError{
+			Token: p.current,
+		}
 	}
 
 	remainingEntitlements, _, err := parseNominalTypes(p, lexer.TokenParenClose, separator)
