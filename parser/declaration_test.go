@@ -1151,7 +1151,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations("view view fun foo (): X { }")
+		const code = "view view fun foo (): X { }"
+		_, errs := testParseDeclarations(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&DuplicateViewModifierError{
@@ -1162,6 +1163,34 @@ func TestParseFunctionDeclaration(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var duplicateViewError *DuplicateViewModifierError
+		require.ErrorAs(t, errs[0], &duplicateViewError)
+
+		fixes := duplicateViewError.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove duplicate `view` modifier",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+								EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		const expected = "view  fun foo (): X { }"
+		assert.Equal(t,
+			expected,
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
