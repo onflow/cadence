@@ -33,20 +33,23 @@ func NewBiMap[K comparable, V comparable]() *BiMap[K, V] {
 
 // Insert puts a key and value into the BiMap, and creates the reverse mapping from value to key.
 func (b *BiMap[K, V]) Insert(k K, v V) {
-	if _, ok := b.forward[k]; ok {
-		delete(b.backward, b.forward[k])
+	if existing, ok := b.forward[k]; ok {
+		delete(b.backward, existing)
+	}
+	if existing, ok := b.backward[v]; ok {
+		delete(b.forward, existing)
 	}
 	b.forward[k] = v
 	b.backward[v] = k
 }
 
-// Exists checks whether or not a key exists in the BiMap
+// Exists checks whether a key exists in the BiMap
 func (b *BiMap[K, V]) Exists(k K) bool {
 	_, ok := b.forward[k]
 	return ok
 }
 
-// ExistsInverse checks whether or not a value exists in the BiMap
+// ExistsInverse checks whether a value exists in the BiMap
 func (b *BiMap[K, V]) ExistsInverse(k V) bool {
 	_, ok := b.backward[k]
 	return ok

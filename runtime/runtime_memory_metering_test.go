@@ -1196,8 +1196,9 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 		)
 		require.NoError(t, err)
 
+		// Scripts should not perform any encoding
 		assert.Equal(t,
-			uint64(58362),
+			uint64(0),
 			meter.getMemory(common.MemoryKindBytes),
 		)
 	})

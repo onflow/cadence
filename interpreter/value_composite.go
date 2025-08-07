@@ -600,7 +600,7 @@ func (v *CompositeValue) OwnerValue(context MemberAccessibleContext, locationRan
 		return NilOptionalValue
 	}
 
-	accountHandler := context.AccountHandler()
+	accountHandler := context.GetAccountHandlerFunc()
 
 	ownerAccount := accountHandler(context, AddressValue(address))
 
@@ -730,7 +730,7 @@ func (v *CompositeValue) SetMemberWithoutTransfer(
 	if existingStorable != nil {
 		existingValue := StoredValue(context, existingStorable, context.Storage())
 
-		checkResourceLoss(context, existingValue, locationRange)
+		CheckResourceLoss(context, existingValue, locationRange)
 
 		existingValue.DeepRemove(context, true) // existingValue is standalone because it was overwritten in parent container.
 
@@ -1593,7 +1593,7 @@ func (v *CompositeValue) RemoveField(
 
 	// Value
 	existingValue := StoredValue(context, existingValueStorable, context.Storage())
-	checkResourceLoss(context, existingValue, locationRange)
+	CheckResourceLoss(context, existingValue, locationRange)
 	existingValue.DeepRemove(context, true) // existingValue is standalone because it was removed from parent container.
 	RemoveReferencedSlab(context, existingValueStorable)
 }

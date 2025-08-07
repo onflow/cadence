@@ -133,7 +133,7 @@ func (executor *contractFunctionExecutor) preprocess() (err error) {
 	executor.environment = environment
 
 	switch environment := environment.(type) {
-	case *interpreterEnvironment:
+	case *InterpreterEnvironment:
 		// NO-OP
 
 	// TODO: Uncomment once the compiler branch is merged to master.
@@ -167,7 +167,7 @@ func (executor *contractFunctionExecutor) execute() (val cadence.Value, err erro
 	)
 
 	switch environment := environment.(type) {
-	case *interpreterEnvironment:
+	case *InterpreterEnvironment:
 		value, err := executor.executeWithInterpreter(environment)
 		if err != nil {
 			return nil, newError(err, executor.context.Location, codesAndPrograms)
@@ -188,13 +188,13 @@ func (executor *contractFunctionExecutor) execute() (val cadence.Value, err erro
 }
 
 func (executor *contractFunctionExecutor) executeWithInterpreter(
-	environment *interpreterEnvironment,
+	environment *InterpreterEnvironment,
 ) (val cadence.Value, err error) {
 
 	location := executor.context.Location
 
 	// create interpreter
-	_, inter, err := environment.interpret(
+	_, inter, err := environment.Interpret(
 		location,
 		nil,
 		nil,

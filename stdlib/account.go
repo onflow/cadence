@@ -3609,7 +3609,7 @@ func AccountCapabilitiesPublish(
 			panic(errors.NewUnreachableError())
 		}
 
-		publishHandler := invocationContext.ValidateAccountCapabilitiesPublishHandler()
+		publishHandler := invocationContext.GetValidateAccountCapabilitiesPublishHandler()
 		if publishHandler != nil {
 			valid, err := publishHandler(
 				invocationContext,
@@ -4109,7 +4109,7 @@ func AccountCapabilitiesGet(
 		panic(errors.NewUnreachableError())
 	}
 
-	getHandler := invocationContext.ValidateAccountCapabilitiesGetHandler()
+	getHandler := invocationContext.GetValidateAccountCapabilitiesGetHandler()
 	if getHandler != nil {
 		valid, err := getHandler(
 			invocationContext,

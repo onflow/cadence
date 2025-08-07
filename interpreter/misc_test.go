@@ -8061,8 +8061,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 
 	t.Parallel()
 
-	// TODO: Enable test: Need var-decl second value.
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       resource R {
           let id: Int
           init(id: Int) {
@@ -8213,7 +8212,7 @@ func TestInterpretOptionalChainingFieldRead(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t,
+	inter := parseCheckAndPrepare(t,
 		`
           struct Test {
               let x: Int
@@ -8252,7 +8251,7 @@ func TestInterpretOptionalChainingFunctionRead(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t,
+	inter := parseCheckAndPrepare(t,
 		`
           struct Test {
               fun x(): Int {
@@ -8280,8 +8279,18 @@ func TestInterpretOptionalChainingFunctionRead(t *testing.T) {
 		inter.GetGlobal("x2"),
 	)
 
+	expected := interpreter.BoundFunctionValue{}
+
+	// TODO: enable once feature branch is merged
+	//var expected interpreter.FunctionValue
+	//if *compile {
+	//	expected = &vm.BoundFunctionPointerValue{}
+	//} else {
+	//	expected = interpreter.BoundFunctionValue{}
+	//}
+
 	assert.IsType(t,
-		interpreter.BoundFunctionValue{},
+		expected,
 		inter.GetGlobal("x2").(*interpreter.SomeValue).InnerValue(),
 	)
 }
@@ -8290,7 +8299,7 @@ func TestInterpretOptionalChainingFunctionCall(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t,
+	inter := parseCheckAndPrepare(t,
 		`
          struct Test {
              fun x(): Int {
@@ -8417,7 +8426,7 @@ func TestInterpretOptionalChainingArgumentEvaluation(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t,
+	inter := parseCheckAndPrepare(t,
 		`
           var a = 1
           var b = 1

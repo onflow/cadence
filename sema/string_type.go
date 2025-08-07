@@ -421,7 +421,7 @@ var StringFunctionType = func() *FunctionType {
 		StringTypeAnnotation,
 	)
 
-	functionType.IsConstructor = true
+	functionType.TypeFunctionType = StringType
 
 	addMember := func(member *Member) {
 		if functionType.Members == nil {
