@@ -73,6 +73,9 @@ jobs:
       - name: Check license headers
         run: make check-headers
 
+      - name: Validate error documentation links
+        run: make validate-error-doc-links
+
   lint-json:
     name: Lint JSON
     runs-on: ubuntu-latest
