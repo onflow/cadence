@@ -1015,6 +1015,44 @@ func (*SpecialFunctionReturnTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions"
 }
 
+// MemberAccessMissingNameError is reported when a member access is missing a name.
+type MemberAccessMissingNameError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MemberAccessMissingNameError{}
+var _ errors.UserError = &MemberAccessMissingNameError{}
+var _ errors.SecondaryError = &MemberAccessMissingNameError{}
+var _ errors.HasDocumentationLink = &MemberAccessMissingNameError{}
+
+func (*MemberAccessMissingNameError) isParseError() {}
+
+func (*MemberAccessMissingNameError) IsUserError() {}
+
+func (e *MemberAccessMissingNameError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MemberAccessMissingNameError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MemberAccessMissingNameError) Error() string {
+	tokenType := e.GotToken.Type
+	if tokenType == lexer.TokenEOF {
+		return "expected member name"
+	}
+	return fmt.Sprintf("expected member name, got %s", tokenType)
+}
+
+func (*MemberAccessMissingNameError) SecondaryError() string {
+	return "after a dot (.), you must provide a valid identifier for the member name"
+}
+
+func (*MemberAccessMissingNameError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
 // InvalidStaticModifierError
 
 type InvalidStaticModifierError struct {

@@ -1936,11 +1936,14 @@ func TestParseMemberExpression(t *testing.T) {
 		result, errs := testParseExpression("f.")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "expected member name, got EOF",
-					Secondary:     "after a dot (.), you must provide a valid identifier for the member name",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 2, Line: 1, Column: 2},
+				&MemberAccessMissingNameError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+							EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+						},
+						Type: lexer.TokenEOF,
+					},
 				},
 			},
 			errs,
@@ -1957,6 +1960,30 @@ func TestParseMemberExpression(t *testing.T) {
 				AccessPos: ast.Position{Offset: 1, Line: 1, Column: 1},
 			},
 			result,
+		)
+	})
+
+	t.Run("not a name", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("f.-")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MemberAccessMissingNameError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+							EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+						},
+						Type: lexer.TokenMinus,
+					},
+				},
+				UnexpectedEOFError{
+					Pos: ast.Position{Offset: 3, Line: 1, Column: 3},
+				},
+			},
+			errs,
 		)
 	})
 

@@ -1511,11 +1511,9 @@ func parseMemberAccess(p *parser, token lexer.Token, left ast.Expression, option
 		identifier = p.tokenToIdentifier(p.current)
 		p.next()
 	} else {
-		p.report(
-			p.newSyntaxError("expected member name, got %s", p.current.Type).
-				WithSecondary("after a dot (.), you must provide a valid identifier for the member name").
-				WithDocumentation("https://cadence-lang.org/docs/language/syntax"),
-		)
+		p.report(&MemberAccessMissingNameError{
+			GotToken: p.current,
+		})
 	}
 
 	return ast.NewMemberExpression(
