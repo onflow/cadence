@@ -174,9 +174,9 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 			case KeywordAccess:
 				if access != ast.AccessNotSpecified {
 					p.report(
-						p.newSyntaxError("invalid second access modifier").
-							WithSecondary("only one access modifier can be used per declaration").
-							WithDocumentation("https://cadence-lang.org/docs/language/access-control"),
+						&DuplicateAccessModifierError{
+							Range: p.current.Range,
+						},
 					)
 				}
 				if staticModifierEnabled && staticPos != nil {
@@ -1656,11 +1656,9 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 
 			case KeywordAccess:
 				if access != ast.AccessNotSpecified {
-					p.report(
-						p.newSyntaxError("invalid second access modifier").
-							WithSecondary("only one access modifier can be used per declaration").
-							WithDocumentation("https://cadence-lang.org/docs/language/access-control"),
-					)
+					p.report(&DuplicateAccessModifierError{
+						Range: p.current.Range,
+					})
 				}
 				if staticModifierEnabled && staticPos != nil {
 					p.reportSyntaxError("invalid access modifier after `static` modifier")

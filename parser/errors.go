@@ -626,6 +626,48 @@ func (*DuplicateViewModifierError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions#view-functions"
 }
 
+// DuplicateAccessModifierError
+
+type DuplicateAccessModifierError struct {
+	ast.Range
+}
+
+var _ ParseError = &DuplicateAccessModifierError{}
+var _ errors.UserError = &DuplicateAccessModifierError{}
+var _ errors.SecondaryError = &DuplicateAccessModifierError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &DuplicateAccessModifierError{}
+var _ errors.HasDocumentationLink = &DuplicateAccessModifierError{}
+
+func (*DuplicateAccessModifierError) isParseError() {}
+
+func (*DuplicateAccessModifierError) IsUserError() {}
+
+func (*DuplicateAccessModifierError) Error() string {
+	return "invalid second access modifier"
+}
+
+func (*DuplicateAccessModifierError) SecondaryError() string {
+	return "only one access modifier can be used per declaration"
+}
+
+func (e *DuplicateAccessModifierError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Remove duplicate access modifier",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "",
+					Range:       e.Range,
+				},
+			},
+		},
+	}
+}
+
+func (*DuplicateAccessModifierError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control"
+}
+
 // InvalidStaticModifierError
 
 type InvalidStaticModifierError struct {

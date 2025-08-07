@@ -8322,11 +8322,11 @@ func TestParseInvalidAccessModifiers(t *testing.T) {
 		_, errs := testParseDeclarations("access(all) access(self) let x = 1")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "invalid second access modifier",
-					Secondary:     "only one access modifier can be used per declaration",
-					Documentation: "https://cadence-lang.org/docs/language/access-control",
-					Pos:           ast.Position{Offset: 12, Line: 1, Column: 12},
+				&DuplicateAccessModifierError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
+						EndPos:   ast.Position{Offset: 17, Line: 1, Column: 17},
+					},
 				},
 			},
 			errs,
