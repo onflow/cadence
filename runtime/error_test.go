@@ -495,11 +495,15 @@ error: overflow
 				"3 |               access(all) fun bar() {\n"+
 				"  |                               ^^^ move the declaration inside a contract or function\n"+
 				"\n"+
+				"  See documentation at: https://cadence-lang.org/docs/language/constants-and-variables\n"+
+				"\n"+
 				"error: cannot find variable in this scope: `X`\n"+
 				" --> 0000000000000002.B:5:18\n"+
 				"  |\n"+
 				"5 |                   X\n"+
 				"  |                   ^ not found in this scope\n"+
+				"\n"+
+				"  See documentation at: https://cadence-lang.org/docs/language/constants-and-variables\n"+
 				"\n"+
 				"error: function declarations are not valid at the top-level\n"+
 				" --> 0000000000000001.A:8:30\n"+
@@ -507,11 +511,16 @@ error: overflow
 				"8 |               access(all) fun foo() {\n"+
 				"  |                               ^^^ move the declaration inside a contract or function\n"+
 				"\n"+
+				"  See documentation at: https://cadence-lang.org/docs/language/constants-and-variables\n"+
+				"\n"+
 				"error: cannot find variable in this scope: `Y`\n"+
 				"  --> 0000000000000001.A:10:18\n"+
 				"   |\n"+
 				"10 |                   Y\n"+
-				"   |                   ^ not found in this scope\n",
+				"   |                   ^ not found in this scope\n"+
+				"\n"+
+				"  See documentation at: https://cadence-lang.org/docs/language/constants-and-variables\n"+
+				"\n",
 		)
 
 	})
