@@ -2993,6 +2993,19 @@ var StringValueParsers = func() map[string]TypedStringValueParser {
 
 			},
 		},
+		{
+			ReceiverType: sema.Fix128Type,
+			Parser: func(memoryGauge common.MemoryGauge, input string) OptionalValue {
+				n, err := fixedpoint.ParseFix128(input)
+				if err != nil {
+					return NilOptionalValue
+				}
+
+				val := NewFix128ValueFromBigInt(memoryGauge, n)
+				return NewSomeValueNonCopying(memoryGauge, val)
+
+			},
+		},
 
 		// UFix*
 		{
@@ -3199,6 +3212,11 @@ var BigEndianBytesConverters = func() map[string]TypedBigEndianBytesConverter {
 			ReceiverType: sema.Fix64Type,
 			ByteLength:   sema.Fix64TypeSize,
 			Converter:    NewFix64ValueFromBigEndianBytes,
+		},
+		{
+			ReceiverType: sema.Fix128Type,
+			ByteLength:   sema.Fix128TypeSize,
+			Converter:    NewFix128ValueFromBigEndianBytes,
 		},
 
 		// UFix*
@@ -3539,11 +3557,6 @@ func init() {
 			sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType,
 			sema.FixedPointType, sema.SignedFixedPointType:
 			continue
-
-		// TODO: Remove once Fix128 type is supported in the interpreter
-		case sema.Fix128Type:
-			continue
-
 		}
 
 		// todo use TypeID's here?

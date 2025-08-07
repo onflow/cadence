@@ -7638,17 +7638,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			ty:    sema.Fix64Type,
 		},
 		"Fix128": {
-			value: interpreter.NewFix128ValueFromBigInt(
-				nil,
-				new(big.Int).Mul(
-					big.NewInt(123),
-					new(big.Int).Exp(
-						big.NewInt(10),
-						big.NewInt(22),
-						nil,
-					),
-				),
-			),
+			value: interpreter.NewUnmeteredFix128ValueFromUnscaledInteger(123, 22),
 			ty: sema.Fix128Type,
 		},
 		// UFix*

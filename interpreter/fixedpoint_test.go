@@ -56,17 +56,7 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 	tests := map[string]interpreter.Value{
 		// Fix*
 		"Fix64": interpreter.NewUnmeteredFix64Value(123000000),
-		"Fix128": interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128FromBigInt(
-			// 1.23
-			new(big.Int).Mul(
-				big.NewInt(123),
-				new(big.Int).Exp(
-					big.NewInt(10),
-					big.NewInt(22),
-					nil,
-				),
-			),
-		)),
+		"Fix128": interpreter.NewUnmeteredFix128ValueFromUnscaledInteger(123, 22),
 
 		// UFix*
 		"UFix64": interpreter.NewUnmeteredUFix64Value(123000000),
@@ -595,6 +585,10 @@ func TestInterpretFixedPointMinMax(t *testing.T) {
 			min: interpreter.NewUnmeteredFix64Value(math.MinInt64),
 			max: interpreter.NewUnmeteredFix64Value(math.MaxInt64),
 		},
+		sema.Fix128Type: {
+			min: interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
+			max: interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
+		},
 		sema.UFix64Type: {
 			min: interpreter.NewUnmeteredUFix64Value(0),
 			max: interpreter.NewUnmeteredUFix64Value(math.MaxUint64),
@@ -605,10 +599,6 @@ func TestInterpretFixedPointMinMax(t *testing.T) {
 		// Only test leaf types
 		switch ty {
 		case sema.FixedPointType, sema.SignedFixedPointType:
-			continue
-
-		// TODO: Remove once Fix128 type is supported in the interpreter
-		case sema.Fix128Type:
 			continue
 		}
 

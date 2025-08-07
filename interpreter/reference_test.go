@@ -20,7 +20,6 @@ package interpreter_test
 
 import (
 	"fmt"
-	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -1992,21 +1991,7 @@ func TestInterpretDereference(t *testing.T) {
 		expectedValues := map[sema.Type]interpreter.FixedPointValue{
 			sema.UFix64Type: interpreter.NewUnmeteredUFix64Value(4224_000_000),
 			sema.Fix64Type:  interpreter.NewUnmeteredFix64Value(4224_000_000),
-			sema.Fix128Type: interpreter.NewFix128ValueFromBigInt(
-				nil,
-				func() *big.Int {
-					// 42.24 x 1e24
-					return new(big.Int).Mul(
-						big.NewInt(4224),
-						// 1e22 to remove the fractional.
-						// 22 (24-2) is because we've already shifted the decimal place by 2, above.
-						new(big.Int).Exp(
-							big.NewInt(10),
-							big.NewInt(22),
-							nil,
-						))
-				}(),
-			),
+			sema.Fix128Type: interpreter.NewUnmeteredFix128ValueFromUnscaledInteger(4224, 22),
 		}
 
 		for _, typ := range sema.AllFixedPointTypes {

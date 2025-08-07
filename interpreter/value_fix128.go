@@ -54,13 +54,26 @@ func NewUnmeteredFix128ValueWithInteger(integer int64, locationRange LocationRan
 	return NewFix128ValueFromBigInt(nil, big.NewInt(integer))
 }
 
+func NewUnmeteredFix128ValueFromUnscaledInteger(integer int64, scale int64) Fix128Value {
+	bigInt := new(big.Int).Mul(
+		big.NewInt(integer),
+		// To remove the fractional, multiply it by the given scale.
+		new(big.Int).Exp(
+			big.NewInt(10),
+			big.NewInt(scale),
+			nil,
+		))
+
+	return NewFix128ValueFromBigInt(nil, bigInt)
+}
+
 func NewFix128Value(gauge common.MemoryGauge, valueGetter func() fix.Fix128) Fix128Value {
 	common.UseMemory(gauge, fix64MemoryUsage)
 	return NewUnmeteredFix128Value(valueGetter())
 }
 
-func NewUnmeteredFix128Value(integer fix.Fix128) Fix128Value {
-	return Fix128Value(integer)
+func NewUnmeteredFix128Value(fix128 fix.Fix128) Fix128Value {
+	return Fix128Value(fix128)
 }
 
 func NewFix128ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
@@ -68,7 +81,7 @@ func NewFix128ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value 
 	return NewFix128Value(
 		gauge,
 		func() fix.Fix128 {
-			bytes := padWithZeroes(b, 8)
+			bytes := padWithZeroes(b, 16)
 			high := new(big.Int).SetBytes(bytes[:8]).Uint64()
 			low := new(big.Int).SetBytes(bytes[8:]).Uint64()
 			return fix.NewFix128(high, low)
