@@ -4938,11 +4938,14 @@ func TestParseEnumDeclaration(t *testing.T) {
 		_, errs := testParseDeclarations("enum E { case }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "expected identifier after start of enum case declaration, got '}'",
-					Secondary:     "provide a name for the enum case after the `case` keyword",
-					Documentation: "https://cadence-lang.org/docs/language/enumerations",
-					Pos:           ast.Position{Offset: 14, Line: 1, Column: 14},
+				&MissingEnumCaseNameError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 14, Line: 1, Column: 14},
+							EndPos:   ast.Position{Offset: 14, Line: 1, Column: 14},
+						},
+						Type: lexer.TokenBraceClose,
+					},
 				},
 			},
 			errs,

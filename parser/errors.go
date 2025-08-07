@@ -816,6 +816,40 @@ func (*PubAccessError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control"
 }
 
+// MissingEnumCaseNameError is reported when an enum case is missing a name.
+type MissingEnumCaseNameError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingEnumCaseNameError{}
+var _ errors.UserError = &MissingEnumCaseNameError{}
+var _ errors.SecondaryError = &MissingEnumCaseNameError{}
+var _ errors.HasDocumentationLink = &MissingEnumCaseNameError{}
+
+func (*MissingEnumCaseNameError) isParseError() {}
+
+func (*MissingEnumCaseNameError) IsUserError() {}
+
+func (e *MissingEnumCaseNameError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingEnumCaseNameError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingEnumCaseNameError) Error() string {
+	return fmt.Sprintf("expected identifier after start of enum case declaration, got %s", e.GotToken.Type)
+}
+
+func (*MissingEnumCaseNameError) SecondaryError() string {
+	return "provide a name for the enum case after the `case` keyword"
+}
+
+func (*MissingEnumCaseNameError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/enumerations"
+}
+
 // MissingConformanceError is reported when a colon for conformances is present,
 // but no conformances follow.
 type MissingConformanceError struct {

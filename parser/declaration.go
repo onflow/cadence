@@ -1956,9 +1956,9 @@ func parseEnumCase(
 	// Skip the `enum` keyword
 	p.nextSemanticToken()
 	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, p.newSyntaxError("expected identifier after start of enum case declaration, got %s", p.current.Type).
-			WithSecondary("provide a name for the enum case after the `case` keyword").
-			WithDocumentation("https://cadence-lang.org/docs/language/enumerations")
+		return nil, &MissingEnumCaseNameError{
+			GotToken: p.current,
+		}
 	}
 
 	identifier := p.tokenToIdentifier(p.current)
