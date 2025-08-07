@@ -990,6 +990,7 @@ type SpecialFunctionReturnTypeError struct {
 var _ ParseError = &SpecialFunctionReturnTypeError{}
 var _ errors.UserError = &SpecialFunctionReturnTypeError{}
 var _ errors.SecondaryError = &SpecialFunctionReturnTypeError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &SpecialFunctionReturnTypeError{}
 var _ errors.HasDocumentationLink = &SpecialFunctionReturnTypeError{}
 
 func (*SpecialFunctionReturnTypeError) isParseError() {}
@@ -1127,6 +1128,7 @@ type InvalidStaticModifierError struct {
 var _ ParseError = &InvalidStaticModifierError{}
 var _ errors.UserError = &InvalidStaticModifierError{}
 var _ errors.SecondaryError = &InvalidStaticModifierError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &InvalidStaticModifierError{}
 
 func (*InvalidStaticModifierError) isParseError() {}
 
@@ -1136,8 +1138,8 @@ func (e *InvalidStaticModifierError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *InvalidStaticModifierError) EndPosition(_ common.MemoryGauge) ast.Position {
-	return e.Pos
+func (e *InvalidStaticModifierError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
+	return e.Pos.Shifted(memoryGauge, len(KeywordNative)-1)
 }
 
 func (e *InvalidStaticModifierError) Error() string {
@@ -1153,6 +1155,20 @@ func (e *InvalidStaticModifierError) SecondaryError() string {
 			"not on %s declarations",
 		e.DeclarationKind.Name(),
 	)
+}
+
+func (e *InvalidStaticModifierError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Remove `static` modifier",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "",
+					Range:       ast.NewRangeFromPositioned(nil, e),
+				},
+			},
+		},
+	}
 }
 
 // InvalidNativeModifierError
@@ -1174,8 +1190,8 @@ func (e *InvalidNativeModifierError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *InvalidNativeModifierError) EndPosition(_ common.MemoryGauge) ast.Position {
-	return e.Pos
+func (e *InvalidNativeModifierError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
+	return e.Pos.Shifted(memoryGauge, len(KeywordNative)-1)
 }
 
 func (e *InvalidNativeModifierError) Error() string {
@@ -1183,6 +1199,20 @@ func (e *InvalidNativeModifierError) Error() string {
 		"invalid `native` modifier for %s",
 		e.DeclarationKind.Name(),
 	)
+}
+
+func (e *InvalidNativeModifierError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Remove `native` modifier",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "",
+					Range:       ast.NewRangeFromPositioned(nil, e),
+				},
+			},
+		},
+	}
 }
 
 func (e *InvalidNativeModifierError) SecondaryError() string {
