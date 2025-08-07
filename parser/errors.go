@@ -947,6 +947,40 @@ func (*UnexpectedTokenAtEndError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
+// SpecialFunctionReturnTypeError is reported when a special function has a return type.
+type SpecialFunctionReturnTypeError struct {
+	DeclarationKind common.DeclarationKind
+	ast.Range
+}
+
+var _ ParseError = &SpecialFunctionReturnTypeError{}
+var _ errors.UserError = &SpecialFunctionReturnTypeError{}
+var _ errors.SecondaryError = &SpecialFunctionReturnTypeError{}
+var _ errors.HasDocumentationLink = &SpecialFunctionReturnTypeError{}
+
+func (*SpecialFunctionReturnTypeError) isParseError() {}
+
+func (*SpecialFunctionReturnTypeError) IsUserError() {}
+
+func (e *SpecialFunctionReturnTypeError) Error() string {
+	var kindDescription string
+	if e.DeclarationKind != common.DeclarationKindUnknown {
+		kindDescription = e.DeclarationKind.Name()
+	} else {
+		kindDescription = "special function"
+	}
+
+	return fmt.Sprintf("invalid return type for %s", kindDescription)
+}
+
+func (*SpecialFunctionReturnTypeError) SecondaryError() string {
+	return "special functions like `init` or `prepare` cannot have return types"
+}
+
+func (*SpecialFunctionReturnTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/functions"
+}
+
 // InvalidStaticModifierError
 
 type InvalidStaticModifierError struct {

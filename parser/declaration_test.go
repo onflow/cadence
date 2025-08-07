@@ -9897,11 +9897,12 @@ func TestParseInvalidSpecialFunctionReturnTypeAnnotation(t *testing.T) {
 	`)
 	AssertEqualWithDiff(t,
 		[]error{
-			&SyntaxError{
-				Message:       "invalid return type for initializer",
-				Secondary:     "special functions like `init` or `prepare` cannot have return types",
-				Documentation: "https://cadence-lang.org/docs/language/functions",
-				Pos:           ast.Position{Offset: 40, Line: 4, Column: 18},
+			&SpecialFunctionReturnTypeError{
+				DeclarationKind: common.DeclarationKindInitializer,
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 40, Line: 4, Column: 18},
+					EndPos:   ast.Position{Offset: 42, Line: 4, Column: 20},
+				},
 			},
 		},
 		errs,

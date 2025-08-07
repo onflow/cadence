@@ -1903,19 +1903,10 @@ func parseSpecialFunctionDeclaration(
 	}
 
 	if returnTypeAnnotation != nil {
-		var kindDescription string
-		if declarationKind != common.DeclarationKindUnknown {
-			kindDescription = declarationKind.Name()
-		} else {
-			kindDescription = "special function"
-		}
-
-		p.report(NewSyntaxError(
-			returnTypeAnnotation.StartPos,
-			"invalid return type for %s",
-			kindDescription,
-		).WithSecondary("special functions like `init` or `prepare` cannot have return types").
-			WithDocumentation("https://cadence-lang.org/docs/language/functions"))
+		p.report(&SpecialFunctionReturnTypeError{
+			DeclarationKind: declarationKind,
+			Range:           ast.NewRangeFromPositioned(p.memoryGauge, returnTypeAnnotation),
+		})
 	}
 
 	return ast.NewSpecialFunctionDeclaration(
