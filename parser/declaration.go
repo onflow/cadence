@@ -310,15 +310,11 @@ var enumeratedAccessModifierKeywords = common.EnumerateWords(
 
 func rejectAccessKeywordEntitlementType(p *parser, ty *ast.NominalType) {
 	switch ty.Identifier.Identifier {
-	case KeywordAll, KeywordAccess, KeywordAccount, KeywordSelf:
-		p.report(
-			NewSyntaxError(
-				ty.StartPosition(),
-				"unexpected non-nominal type: %s",
-				ty,
-			).WithSecondary("use an entitlement name instead of access control keywords").
-				WithDocumentation("https://cadence-lang.org/docs/language/access-control#entitlements"),
-		)
+	case KeywordAll, KeywordAccess, KeywordAccount, KeywordSelf, KeywordContract:
+		p.report(&AccessKeywordEntitlementNameError{
+			Keyword: ty.Identifier.Identifier,
+			Range:   ast.NewRangeFromPositioned(p.memoryGauge, ty),
+		})
 	}
 }
 

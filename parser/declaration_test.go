@@ -1981,11 +1981,12 @@ func TestParseAccess(t *testing.T) {
 		result, errs := parse("access ( foo , self )")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected non-nominal type: self",
-					Secondary:     "use an entitlement name instead of access control keywords",
-					Documentation: "https://cadence-lang.org/docs/language/access-control#entitlements",
-					Pos:           ast.Position{Offset: 15, Line: 1, Column: 15},
+				&AccessKeywordEntitlementNameError{
+					Keyword: "self",
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 15, Line: 1, Column: 15},
+						EndPos:   ast.Position{Offset: 18, Line: 1, Column: 18},
+					},
 				},
 			},
 			errs,
@@ -2021,11 +2022,12 @@ func TestParseAccess(t *testing.T) {
 		result, errs := parse("access ( foo | self )")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected non-nominal type: self",
-					Secondary:     "use an entitlement name instead of access control keywords",
-					Documentation: "https://cadence-lang.org/docs/language/access-control#entitlements",
-					Pos:           ast.Position{Offset: 15, Line: 1, Column: 15},
+				&AccessKeywordEntitlementNameError{
+					Keyword: "self",
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 15, Line: 1, Column: 15},
+						EndPos:   ast.Position{Offset: 18, Line: 1, Column: 18},
+					},
 				},
 			},
 			errs,

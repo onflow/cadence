@@ -816,6 +816,34 @@ func (*PubAccessError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control"
 }
 
+// AccessKeywordEntitlementNameError is reported when an access keyword (e.g. `all`, `self`)
+// is used as an entitlement name.
+type AccessKeywordEntitlementNameError struct {
+	Keyword string
+	ast.Range
+}
+
+var _ ParseError = &AccessKeywordEntitlementNameError{}
+var _ errors.UserError = &AccessKeywordEntitlementNameError{}
+var _ errors.SecondaryError = &AccessKeywordEntitlementNameError{}
+var _ errors.HasDocumentationLink = &AccessKeywordEntitlementNameError{}
+
+func (*AccessKeywordEntitlementNameError) isParseError() {}
+
+func (*AccessKeywordEntitlementNameError) IsUserError() {}
+
+func (e *AccessKeywordEntitlementNameError) Error() string {
+	return fmt.Sprintf("unexpected non-nominal type: %s", e.Keyword)
+}
+
+func (*AccessKeywordEntitlementNameError) SecondaryError() string {
+	return "use an entitlement name instead of an access control keyword"
+}
+
+func (*AccessKeywordEntitlementNameError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control#entitlements"
+}
+
 // UnexpectedTokenAtEndError is reported when there is an unexpected token at the end of the program
 type UnexpectedTokenAtEndError struct {
 	Token lexer.Token
