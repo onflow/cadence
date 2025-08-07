@@ -1145,11 +1145,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		_, errs := testParseDeclarations("view view fun foo (): X { }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxErrorWithSuggestedReplacement{
-					Message:       "invalid second `view` modifier",
-					Replacement:   "",
-					Secondary:     "the `view` modifier can only be used once per function declaration",
-					Documentation: "https://cadence-lang.org/docs/language/functions#view-functions",
+				&DuplicateViewModifierError{
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
 						EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},

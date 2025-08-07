@@ -584,6 +584,48 @@ func (*InvalidViewModifierError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions#view-functions"
 }
 
+// DuplicateViewModifierError
+
+type DuplicateViewModifierError struct {
+	ast.Range
+}
+
+var _ ParseError = &DuplicateViewModifierError{}
+var _ errors.UserError = &DuplicateViewModifierError{}
+var _ errors.SecondaryError = &DuplicateViewModifierError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &DuplicateViewModifierError{}
+var _ errors.HasDocumentationLink = &DuplicateViewModifierError{}
+
+func (*DuplicateViewModifierError) isParseError() {}
+
+func (*DuplicateViewModifierError) IsUserError() {}
+
+func (*DuplicateViewModifierError) Error() string {
+	return "invalid second `view` modifier"
+}
+
+func (*DuplicateViewModifierError) SecondaryError() string {
+	return "the `view` modifier can only be used once per function declaration"
+}
+
+func (e *DuplicateViewModifierError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Remove duplicate `view` modifier",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "",
+					Range:       e.Range,
+				},
+			},
+		},
+	}
+}
+
+func (*DuplicateViewModifierError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/functions#view-functions"
+}
+
 // InvalidStaticModifierError
 
 type InvalidStaticModifierError struct {
