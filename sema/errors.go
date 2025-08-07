@@ -1956,9 +1956,9 @@ func (e *ConformanceError) ErrorNotes() (notes []errors.ErrorNote) {
 	}
 
 	if e.InitializerMismatch != nil && len(e.CompositeDeclaration.DeclarationMembers().Initializers()) > 0 {
-		compositeMemberIdentifierRange :=
-			//	right now we only support a single initializer
-			ast.NewUnmeteredRangeFromPositioned(e.CompositeDeclaration.DeclarationMembers().Initializers()[0].FunctionDeclaration.Identifier)
+		// right now we only support a single initializer
+		initializer := e.CompositeDeclaration.DeclarationMembers().Initializers()[0]
+		compositeMemberIdentifierRange := ast.NewUnmeteredRangeFromPositioned(initializer.FunctionDeclaration.Identifier)
 
 		notes = append(notes, &MemberMismatchNote{
 			Range: compositeMemberIdentifierRange,
