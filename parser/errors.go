@@ -721,6 +721,100 @@ func (*DuplicateAccessModifierError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control"
 }
 
+// PrivAccessError
+
+type PrivAccessError struct {
+	ast.Range
+}
+
+var _ ParseError = &PrivAccessError{}
+var _ errors.UserError = &PrivAccessError{}
+var _ errors.SecondaryError = &PrivAccessError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &PrivAccessError{}
+var _ errors.HasMigrationNote = &PrivAccessError{}
+var _ errors.HasDocumentationLink = &PrivAccessError{}
+
+func (*PrivAccessError) isParseError() {}
+
+func (*PrivAccessError) IsUserError() {}
+
+func (*PrivAccessError) Error() string {
+	return "`priv` is no longer a valid access modifier"
+}
+
+func (*PrivAccessError) SecondaryError() string {
+	return "use `access(self)` instead"
+}
+
+func (e *PrivAccessError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Replace with `access(self)`",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "access(self)",
+					Range:       e.Range,
+				},
+			},
+		},
+	}
+}
+
+func (*PrivAccessError) MigrationNote() string {
+	return "This is pre-Cadence 1.0 syntax. The `priv` modifier was replaced with `access(self)`"
+}
+
+func (*PrivAccessError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control"
+}
+
+// PubAccessError
+
+type PubAccessError struct {
+	ast.Range
+}
+
+var _ ParseError = &PubAccessError{}
+var _ errors.UserError = &PubAccessError{}
+var _ errors.SecondaryError = &PubAccessError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &PubAccessError{}
+var _ errors.HasMigrationNote = &PubAccessError{}
+var _ errors.HasDocumentationLink = &PubAccessError{}
+
+func (*PubAccessError) isParseError() {}
+
+func (*PubAccessError) IsUserError() {}
+
+func (*PubAccessError) Error() string {
+	return "`pub` is no longer a valid access modifier"
+}
+
+func (*PubAccessError) SecondaryError() string {
+	return "use `access(all)` instead"
+}
+
+func (e *PubAccessError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Replace with `access(all)`",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "access(all)",
+					Range:       e.Range,
+				},
+			},
+		},
+	}
+}
+
+func (*PubAccessError) MigrationNote() string {
+	return "This is pre-Cadence 1.0 syntax. The `pub` modifier was replaced with `access(all)`"
+}
+
+func (*PubAccessError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control"
+}
+
 // InvalidStaticModifierError
 
 type InvalidStaticModifierError struct {

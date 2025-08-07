@@ -9899,16 +9899,11 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 		_, errs := testParseDeclarations(" pub fun foo ( ) { }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxErrorWithSuggestedReplacement{
-					Message: "`pub` is no longer a valid access modifier",
+				&PubAccessError{
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
 						EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
 					},
-					Replacement:   "access(all)",
-					Secondary:     "use `access(all)` instead",
-					Documentation: "https://cadence-lang.org/docs/language/access-control",
-					Migration:     "This is pre-Cadence 1.0 syntax. The `pub` modifier was replaced with `access(all)`",
 				},
 			},
 			errs,
@@ -9923,16 +9918,11 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 		_, errs := testParseDeclarations(" priv fun foo ( ) { }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxErrorWithSuggestedReplacement{
-					Message: "`priv` is no longer a valid access modifier",
+				&PrivAccessError{
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
 						EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
 					},
-					Replacement:   "access(self)",
-					Secondary:     "use `access(self)` instead",
-					Documentation: "https://cadence-lang.org/docs/language/access-control",
-					Migration:     "This is pre-Cadence 1.0 syntax. The `priv` modifier was replaced with `access(self)`",
 				},
 			},
 			errs,

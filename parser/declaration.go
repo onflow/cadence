@@ -233,15 +233,9 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 }
 
 func handlePriv(p *parser) {
-	p.report(
-		NewSyntaxErrorWithSuggestedReplacement(
-			p.current.Range,
-			"`priv` is no longer a valid access modifier",
-			"access(self)",
-		).WithSecondary("use `access(self)` instead").
-			WithMigration("This is pre-Cadence 1.0 syntax. The `priv` modifier was replaced with `access(self)`").
-			WithDocumentation("https://cadence-lang.org/docs/language/access-control"),
-	)
+	p.report(&PrivAccessError{
+		Range: p.current.Range,
+	})
 	p.next()
 }
 
@@ -252,15 +246,9 @@ func handlePub(p *parser) error {
 
 	// Try to parse `(set)` if given
 	if !p.current.Is(lexer.TokenParenOpen) {
-		p.report(
-			NewSyntaxErrorWithSuggestedReplacement(
-				pubToken.Range,
-				"`pub` is no longer a valid access modifier",
-				"access(all)",
-			).WithSecondary("use `access(all)` instead").
-				WithMigration("This is pre-Cadence 1.0 syntax. The `pub` modifier was replaced with `access(all)`").
-				WithDocumentation("https://cadence-lang.org/docs/language/access-control"),
-		)
+		p.report(&PubAccessError{
+			Range: pubToken.Range,
+		})
 		return nil
 	}
 
