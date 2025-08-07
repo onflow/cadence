@@ -329,6 +329,40 @@ func (e TypeDepthLimitReachedError) EndPosition(_ common.MemoryGauge) ast.Positi
 	return e.Pos
 }
 
+// UnexpectedEOFError is reported when the end of the program is reached unexpectedly
+type UnexpectedEOFError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = UnexpectedEOFError{}
+var _ errors.UserError = UnexpectedEOFError{}
+var _ errors.SecondaryError = UnexpectedEOFError{}
+var _ errors.HasDocumentationLink = UnexpectedEOFError{}
+
+func (UnexpectedEOFError) isParseError() {}
+
+func (UnexpectedEOFError) IsUserError() {}
+
+func (e UnexpectedEOFError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e UnexpectedEOFError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (UnexpectedEOFError) Error() string {
+	return "unexpected end of program"
+}
+
+func (UnexpectedEOFError) SecondaryError() string {
+	return "check for incomplete expressions, missing tokens, or unterminated strings/comments"
+}
+
+func (UnexpectedEOFError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
 // MissingCommaInParameterListError
 
 type MissingCommaInParameterListError struct {

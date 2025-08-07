@@ -507,9 +507,9 @@ func init() {
 	defineIdentifierExpression()
 
 	setExprNullDenotation(lexer.TokenEOF, func(parser *parser, token lexer.Token) (ast.Expression, error) {
-		return nil, NewSyntaxError(token.StartPos, "unexpected end of program").
-			WithSecondary("check for incomplete expressions, missing tokens, or unterminated strings/comments").
-			WithDocumentation("https://cadence-lang.org/docs/language/syntax")
+		return nil, UnexpectedEOFError{
+			Pos: token.StartPos,
+		}
 	})
 }
 

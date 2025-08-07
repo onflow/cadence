@@ -1310,11 +1310,8 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 					Message: "expected from keyword, got EOF",
 					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
 				},
-				&SyntaxError{
-					Message:       "unexpected end of program",
-					Secondary:     "check for incomplete expressions, missing tokens, or unterminated strings/comments",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 8, Line: 1, Column: 8},
+				UnexpectedEOFError{
+					Pos: ast.Position{Offset: 8, Line: 1, Column: 8},
 				},
 			},
 			errs,
@@ -1329,11 +1326,8 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected end of program",
-					Secondary:     "check for incomplete expressions, missing tokens, or unterminated strings/comments",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 13, Line: 1, Column: 13},
+				UnexpectedEOFError{
+					Pos: ast.Position{Offset: 13, Line: 1, Column: 13},
 				},
 			},
 			errs,
