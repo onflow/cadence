@@ -10039,7 +10039,8 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations(" pub fun foo ( ) { }")
+		const code = " pub fun foo ( ) { }"
+		_, errs := testParseDeclarations(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&PubAccessError{
@@ -10052,13 +10053,41 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 			errs,
 		)
 
+		var pubAccessError *PubAccessError
+		require.ErrorAs(t, errs[0], &pubAccessError)
+
+		fixes := pubAccessError.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Replace with `access(all)`",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "access(all)",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+								EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		const expected = " access(all) fun foo ( ) { }"
+		assert.Equal(t,
+			expected,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
 	})
 
 	t.Run("priv", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations(" priv fun foo ( ) { }")
+		const code = " priv fun foo ( ) { }"
+		_, errs := testParseDeclarations(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&PrivAccessError{
@@ -10071,6 +10100,33 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 			errs,
 		)
 
+		var privAccessError *PrivAccessError
+		require.ErrorAs(t, errs[0], &privAccessError)
+
+		fixes := privAccessError.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Replace with `access(self)`",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "access(self)",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		const expected = " access(self) fun foo ( ) { }"
+		assert.Equal(t,
+			expected,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
 	})
 
 	t.Run("pub(set)", func(t *testing.T) {
