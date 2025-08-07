@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/parser/lexer"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
@@ -332,11 +333,15 @@ func TestParseVariableDeclaration(t *testing.T) {
 		_, errs := testParseDeclarations("static var x = 1")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token: identifier",
-					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
@@ -371,11 +376,15 @@ func TestParseVariableDeclaration(t *testing.T) {
 		_, errs := testParseDeclarations("native var x = 1")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token: identifier",
-					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
@@ -1164,11 +1173,15 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token: identifier",
-					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
@@ -1226,11 +1239,15 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token: identifier",
-					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
@@ -1289,11 +1306,15 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token: identifier",
-					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
@@ -1330,11 +1351,15 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token: identifier",
-					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
@@ -1422,14 +1447,14 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token: identifier",
-					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos: ast.Position{
-						Offset: 12,
-						Line:   1,
-						Column: 12,
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
+							EndPos:   ast.Position{Offset: 17, Line: 1, Column: 17},
+						},
+						Type: lexer.TokenIdentifier,
 					},
 				},
 			},
@@ -7007,11 +7032,15 @@ func TestParsePragmaNoArguments(t *testing.T) {
 		_, errs := testParseDeclarations("static #foo")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token: identifier",
-					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
@@ -7046,11 +7075,15 @@ func TestParsePragmaNoArguments(t *testing.T) {
 		_, errs := testParseDeclarations("native #foo")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token: identifier",
-					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
@@ -8372,11 +8405,15 @@ func TestParseInvalidImportWithModifier(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token: identifier",
-					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 13, Line: 2, Column: 12},
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
+							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
@@ -8417,11 +8454,15 @@ func TestParseInvalidImportWithModifier(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token: identifier",
-					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 13, Line: 2, Column: 12},
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
+							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
@@ -8467,11 +8508,15 @@ func TestParseInvalidEventWithModifier(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token: identifier",
-					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 13, Line: 2, Column: 12},
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
+							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
@@ -8512,11 +8557,15 @@ func TestParseInvalidEventWithModifier(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token: identifier",
-					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 13, Line: 2, Column: 12},
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
+							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
@@ -8563,11 +8612,15 @@ func TestParseCompositeWithModifier(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token: identifier",
-					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 13, Line: 2, Column: 12},
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
+							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
@@ -8608,11 +8661,15 @@ func TestParseCompositeWithModifier(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token: identifier",
-					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 13, Line: 2, Column: 12},
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
+							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
@@ -8658,11 +8715,15 @@ func TestParseTransactionWithModifier(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token: identifier",
-					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 13, Line: 2, Column: 12},
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
+							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
@@ -8703,11 +8764,15 @@ func TestParseTransactionWithModifier(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token: identifier",
-					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 13, Line: 2, Column: 12},
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
+							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
@@ -9602,11 +9667,15 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		_, errs := testParseDeclarations(" access(all) mapping M {} ")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token: identifier",
-					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 13, Line: 1, Column: 13},
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+							EndPos:   ast.Position{Offset: 19, Line: 1, Column: 19},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
@@ -9620,11 +9689,15 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		_, errs := testParseDeclarations(" access(all) entitlement M {} ")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token: '{'",
-					Secondary:     "check for extra characters, missing semicolons, or incomplete statements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 27, Line: 1, Column: 27},
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 27, Line: 1, Column: 27},
+							EndPos:   ast.Position{Offset: 27, Line: 1, Column: 27},
+						},
+						Type: lexer.TokenBraceOpen,
+					},
 				},
 			},
 			errs,

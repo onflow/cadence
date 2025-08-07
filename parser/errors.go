@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/parser/lexer"
 	"github.com/onflow/cadence/pretty"
 )
 
@@ -813,6 +814,40 @@ func (*PubAccessError) MigrationNote() string {
 
 func (*PubAccessError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control"
+}
+
+// UnexpectedTokenAtEndError is reported when there is an unexpected token at the end of the program
+type UnexpectedTokenAtEndError struct {
+	Token lexer.Token
+}
+
+var _ ParseError = &UnexpectedTokenAtEndError{}
+var _ errors.UserError = &UnexpectedTokenAtEndError{}
+var _ errors.SecondaryError = &UnexpectedTokenAtEndError{}
+var _ errors.HasDocumentationLink = &UnexpectedTokenAtEndError{}
+
+func (*UnexpectedTokenAtEndError) isParseError() {}
+
+func (*UnexpectedTokenAtEndError) IsUserError() {}
+
+func (e *UnexpectedTokenAtEndError) StartPosition() ast.Position {
+	return e.Token.StartPos
+}
+
+func (e *UnexpectedTokenAtEndError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Token.EndPos
+}
+
+func (e *UnexpectedTokenAtEndError) Error() string {
+	return fmt.Sprintf("unexpected token: %s", e.Token.Type)
+}
+
+func (*UnexpectedTokenAtEndError) SecondaryError() string {
+	return "check for extra characters, missing semicolons, or incomplete statements"
+}
+
+func (*UnexpectedTokenAtEndError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
 }
 
 // InvalidStaticModifierError
