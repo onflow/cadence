@@ -38,7 +38,7 @@ func TestInterpretOptionalResourceBindingWithSecondValue(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
       resource R {
           let field: Int
 
@@ -3017,7 +3017,7 @@ func TestInterpretMovedResourceInOptionalBinding(t *testing.T) {
 
 	t.Parallel()
 
-	inter, err := parseCheckAndInterpretWithOptions(t, `
+	inter, err := parseCheckAndPrepareWithOptions(t, `
         resource R{}
 
         fun collect(copy2: @R?, _ arrRef: auth(Mutate) &[R]): @R {
@@ -3061,7 +3061,7 @@ func TestInterpretMovedResourceInSecondValue(t *testing.T) {
 
 	t.Parallel()
 
-	inter, err := parseCheckAndInterpretWithOptions(t, `
+	inter, err := parseCheckAndPrepareWithOptions(t, `
         resource R{}
 
         fun collect(copy2: @R?, _ arrRef: auth(Mutate) &[R]): @R {
@@ -3829,4 +3829,157 @@ func TestInterpretInvalidNilCoalescingResourceDuplication(t *testing.T) {
 		require.ErrorAs(t, err, &destroyedResourceErr)
 	})
 
+}
+
+func TestForceAssignment(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil variable", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(
+			t,
+			`
+            resource R {}
+
+            fun test(): @R {
+                var r: @R? <- nil
+                r <-! create R()
+                return <- r!
+            }
+            `,
+		)
+
+		result, err := invokable.Invoke("test")
+		require.NoError(t, err)
+
+		assert.IsType(
+			t,
+			&interpreter.CompositeValue{},
+			result,
+		)
+	})
+
+	t.Run("non-nil variable", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(
+			t,
+			`
+            resource R {}
+
+            fun test() {
+                var r: @R? <- create R()
+                r <-! create R()
+                destroy r
+            }
+            `,
+		)
+
+		_, err := invokable.Invoke("test")
+		RequireError(t, err)
+
+		var resourceLossError *interpreter.ResourceLossError
+		assert.ErrorAs(t, err, &resourceLossError)
+	})
+
+	t.Run("nil field", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(
+			t,
+			`
+            resource R1 {
+                var r2: @R2?
+                init() {
+                    self.r2 <- nil
+                }
+            }
+
+            resource R2 {}
+
+            fun test() {
+                var r1: @R1 <- create R1()
+                r1.r2 <-! create R2()
+                destroy r1
+            }
+            `,
+		)
+
+		_, err := invokable.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("non-nil field", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(
+			t,
+			`
+            resource R1 {
+                var r2: @R2?
+                init() {
+                    self.r2 <- create R2()
+                }
+            }
+
+            resource R2 {}
+
+            fun test() {
+                var r1: @R1 <- create R1()
+                r1.r2 <-! create R2()
+                destroy r1
+            }
+            `,
+		)
+
+		_, err := invokable.Invoke("test")
+		RequireError(t, err)
+
+		var resourceLossError *interpreter.ResourceLossError
+		assert.ErrorAs(t, err, &resourceLossError)
+	})
+
+	t.Run("nil index", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(
+			t,
+			`
+            resource R {}
+
+            fun test() {
+                var r: @[R?] <- [nil]
+                r[0] <-! create R()
+                destroy r
+            }
+            `,
+		)
+
+		_, err := invokable.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("non-nil index", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(
+			t,
+			`
+            resource R {}
+
+            fun test() {
+                var r: @[R?] <- [<- create R()]
+                r[0] <-! create R()
+                destroy r
+            }
+            `,
+		)
+
+		_, err := invokable.Invoke("test")
+		RequireError(t, err)
+
+		var resourceLossError *interpreter.ResourceLossError
+		assert.ErrorAs(t, err, &resourceLossError)
+	})
 }

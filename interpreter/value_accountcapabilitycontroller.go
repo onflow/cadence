@@ -306,7 +306,7 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 	locationRange LocationRange,
 ) ReferenceValue {
 
-	accountHandler := context.AccountHandler()
+	accountHandler := context.GetAccountHandlerFunc()
 	account := accountHandler(context, AddressValue(capabilityAddress))
 
 	// Account must be of `Account` type.

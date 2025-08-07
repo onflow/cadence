@@ -200,7 +200,7 @@ type IterableValueForeachContext interface {
 var _ IterableValueForeachContext = &Interpreter{}
 
 type AccountHandlerContext interface {
-	AccountHandler() AccountHandlerFunc
+	GetAccountHandlerFunc() AccountHandlerFunc
 }
 
 var _ AccountHandlerContext = &Interpreter{}
@@ -214,7 +214,7 @@ type MemberAccessibleContext interface {
 	AccountContractBorrowContext
 	AttachmentContext
 
-	InjectedCompositeFieldsHandler() InjectedCompositeFieldsHandlerFunc
+	GetInjectedCompositeFieldsHandler() InjectedCompositeFieldsHandlerFunc
 	GetMemberAccessContextForLocation(location common.Location) MemberAccessibleContext
 
 	GetMethod(value MemberAccessibleValue, name string, locationRange LocationRange) FunctionValue
@@ -352,9 +352,9 @@ type BorrowCapabilityControllerContext interface {
 var _ BorrowCapabilityControllerContext = &Interpreter{}
 
 type CapabilityHandlers interface {
-	ValidateAccountCapabilitiesGetHandler() ValidateAccountCapabilitiesGetHandlerFunc
-	ValidateAccountCapabilitiesPublishHandler() ValidateAccountCapabilitiesPublishHandlerFunc
-	CapabilityBorrowHandler() CapabilityBorrowHandlerFunc
+	GetValidateAccountCapabilitiesGetHandler() ValidateAccountCapabilitiesGetHandlerFunc
+	GetValidateAccountCapabilitiesPublishHandler() ValidateAccountCapabilitiesPublishHandlerFunc
+	GetCapabilityBorrowHandler() CapabilityBorrowHandlerFunc
 }
 
 var _ CapabilityHandlers = &Interpreter{}

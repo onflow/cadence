@@ -166,84 +166,97 @@ func ParseCheckAndPrepareWithOptions(
 	//	storage = interpreterConfig.Storage
 	//}
 	//
-	//vmConfig := vm.NewConfig(storage).
-	//	WithInterpreterConfig(interpreterConfig).
-	//	WithDebugEnabled()
-	//
+	//programs := CompiledPrograms{}
 	//var compilerConfig *compiler.Config
 	//
-	//// If there are builtin functions provided externally (e.g: for tests),
-	//// then convert them to corresponding functions in compiler and in vm.
-	//if interpreterConfig != nil && interpreterConfig.BaseActivationHandler != nil {
-	//	baseActivation := interpreterConfig.BaseActivationHandler(nil)
-	//	baseActivationVariables := baseActivation.ValuesInFunction()
+	//vmConfig := vm.NewConfig(storage).
+	//	WithDebugEnabled()
 	//
-	//	vmConfig.BuiltinGlobalsProvider = func() map[string]*vm.Variable {
-	//		builtinGlobals := vm.NativeFunctions()
+	//vmConfig.TypeLoader = compilerUtils.CompiledProgramsTypeLoader(programs)
 	//
-	//		// Add the given built-in values.
-	//		// Convert the externally provided `interpreter.HostFunctionValue`s into `vm.NativeFunctionValue`s.
-	//		for name, variable := range baseActivationVariables { //nolint:maprange
+	//if interpreterConfig != nil {
+	//	vmConfig.MemoryGauge = interpreterConfig.MemoryGauge
+	//	vmConfig.ComputationGauge = interpreterConfig.ComputationGauge
+	//	vmConfig.CapabilityCheckHandler = interpreterConfig.CapabilityCheckHandler
+	//	vmConfig.CapabilityBorrowHandler = interpreterConfig.CapabilityBorrowHandler
+	//	vmConfig.ValidateAccountCapabilitiesGetHandler = interpreterConfig.ValidateAccountCapabilitiesGetHandler
+	//	vmConfig.ValidateAccountCapabilitiesPublishHandler = interpreterConfig.ValidateAccountCapabilitiesPublishHandler
+	//	vmConfig.OnEventEmitted = interpreterConfig.OnEventEmitted
+	//	vmConfig.AccountHandlerFunc = interpreterConfig.AccountHandler
+	//	vmConfig.InjectedCompositeFieldsHandler = interpreterConfig.InjectedCompositeFieldsHandler
+	//	vmConfig.UUIDHandler = interpreterConfig.UUIDHandler
 	//
-	//			if builtinGlobals[name] != nil {
-	//				continue
-	//			}
+	//	// If there are builtin functions provided externally (e.g: for tests),
+	//	// then convert them to corresponding functions in compiler and in vm.
+	//	if interpreterConfig.BaseActivationHandler != nil {
+	//		baseActivation := interpreterConfig.BaseActivationHandler(nil)
+	//		baseActivationVariables := baseActivation.ValuesInFunction()
 	//
-	//			value := variable.GetValue(nil)
+	//		vmConfig.BuiltinGlobalsProvider = func() map[string]*vm.Variable {
+	//			builtinGlobals := vm.NativeFunctions()
 	//
-	//			if functionValue, ok := value.(*interpreter.HostFunctionValue); ok {
-	//				value = vm.NewNativeFunctionValue(
-	//					name,
-	//					functionValue.Type,
-	//					func(context *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
-	//						invocation := interpreter.NewInvocation(
-	//							context,
-	//							nil,
-	//							nil,
-	//							arguments,
-	//							nil,
-	//							// TODO: provide these if they are needed for tests.
-	//							nil,
-	//							interpreter.EmptyLocationRange,
-	//						)
-	//						return functionValue.Function(invocation)
-	//					},
-	//				)
+	//			// Add the given built-in values.
+	//			// Convert the externally provided `interpreter.HostFunctionValue`s into `vm.NativeFunctionValue`s.
+	//			for name, variable := range baseActivationVariables { //nolint:maprange
 	//
-	//			}
-	//
-	//			vmVariable := &vm.Variable{}
-	//			vmVariable.InitializeWithValue(value)
-	//
-	//			builtinGlobals[name] = vmVariable
-	//		}
-	//
-	//		return builtinGlobals
-	//	}
-	//
-	//	// Register externally provided globals in compiler.
-	//	compilerConfig = &compiler.Config{
-	//		BuiltinGlobalsProvider: func() map[string]*compiler.Global {
-	//			globals := compiler.NativeFunctions()
-	//			for name := range baseActivationVariables { //nolint:maprange
-	//				if globals[name] != nil {
+	//				if builtinGlobals[name] != nil {
 	//					continue
 	//				}
-	//				globals[name] = &compiler.Global{
-	//					Name: name,
+	//
+	//				value := variable.GetValue(nil)
+	//
+	//				if functionValue, ok := value.(*interpreter.HostFunctionValue); ok {
+	//					value = vm.NewNativeFunctionValue(
+	//						name,
+	//						functionValue.Type,
+	//						func(context *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+	//							invocation := interpreter.NewInvocation(
+	//								context,
+	//								nil,
+	//								nil,
+	//								arguments,
+	//								nil,
+	//								// TODO: provide these if they are needed for tests.
+	//								nil,
+	//								interpreter.EmptyLocationRange,
+	//							)
+	//							return functionValue.Function(invocation)
+	//						},
+	//					)
+	//
 	//				}
+	//
+	//				vmVariable := &vm.Variable{}
+	//				vmVariable.InitializeWithValue(value)
+	//
+	//				builtinGlobals[name] = vmVariable
 	//			}
 	//
-	//			return globals
-	//		},
+	//			return builtinGlobals
+	//		}
+	//
+	//		// Register externally provided globals in compiler.
+	//		compilerConfig = &compiler.Config{
+	//			BuiltinGlobalsProvider: func() map[string]*compiler.Global {
+	//				globals := compiler.NativeFunctions()
+	//				for name := range baseActivationVariables { //nolint:maprange
+	//					if globals[name] != nil {
+	//						continue
+	//					}
+	//					globals[name] = &compiler.Global{
+	//						Name: name,
+	//					}
+	//				}
+	//
+	//				return globals
+	//			},
+	//		}
 	//	}
 	//}
 	//
 	//parseAndCheckOptions := &sema_utils.ParseAndCheckOptions{
 	//	Config: options.CheckerConfig,
 	//}
-	//
-	//programs := map[common.Location]*CompiledProgram{}
 	//
 	//vmInstance := compilerUtils.CompileAndPrepareToInvoke(
 	//	tb,
