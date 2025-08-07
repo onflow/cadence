@@ -20,10 +20,16 @@ func TestFix128(t *testing.T) {
 
 		for _, bigInt := range []*big.Int{
 			// 1
-			big.NewInt(1),
+			new(big.Int).Mul(
+				big.NewInt(1),
+				fixedpoint.Fix128FactorAsBigInt,
+			),
 
 			// -1
-			big.NewInt(-1),
+			new(big.Int).Mul(
+				big.NewInt(-1),
+				fixedpoint.Fix128FactorAsBigInt,
+			),
 
 			// -12.34
 			new(big.Int).Mul(
@@ -38,12 +44,14 @@ func TestFix128(t *testing.T) {
 			// Max fix128
 			func() *big.Int {
 				b, _ := new(big.Int).SetString("170141183460469231731687303715884105727", 10)
+				require.NotNil(t, b)
 				return b
 			}(),
 
 			// Min fix128
 			func() *big.Int {
 				b, _ := new(big.Int).SetString("-170141183460469231731687303715884105728", 10)
+				require.NotNil(t, b)
 				return b
 			}(),
 		} {

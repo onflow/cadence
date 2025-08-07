@@ -91,7 +91,7 @@ func Fix128ToBigInt(fix128 fix.Fix128) *big.Int {
 	high := new(big.Int).SetUint64(uint64(fix128.Hi))
 	low := new(big.Int).SetUint64(uint64(fix128.Lo))
 
-	// v = (high << 64) + low, done in place with minimal temp vars
+	// v = (high << 64) + low
 	result := high.Mul(high, twoPow64)
 	result = result.Add(result, low)
 

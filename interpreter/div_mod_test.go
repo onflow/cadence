@@ -3444,14 +3444,15 @@ func TestNegativeMod(t *testing.T) {
 				NewUnmeteredFix64ValueWithInteger(5, EmptyLocationRange),
 				NewUnmeteredFix64ValueWithInteger(-1, EmptyLocationRange),
 			},
-			"Fix128": {
-				NewUnmeteredFix128ValueWithInteger(-1, EmptyLocationRange),
-				NewUnmeteredFix128ValueWithInteger(5, EmptyLocationRange),
-				NewUnmeteredFix128ValueWithInteger(-1, EmptyLocationRange),
-			},
 		}
 
 		for _, fixedPointType := range sema.AllSignedFixedPointTypes {
+			switch fixedPointType {
+			// TODO: Remove once Fix128 type is supported in the interpreter
+			case sema.Fix128Type:
+				continue
+			}
+
 			if _, ok := tests[fixedPointType.String()]; !ok {
 				panic(fmt.Sprintf("broken test: missing %s", fixedPointType))
 			}

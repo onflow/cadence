@@ -21,7 +21,6 @@ package interpreter
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/onflow/cadence/fixedpoint"
 	"math/big"
 	"unsafe"
 
@@ -30,6 +29,7 @@ import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/values"
@@ -49,20 +49,11 @@ func NewFix128ValueWithInteger(gauge common.MemoryGauge, constructor func() int6
 }
 
 func NewUnmeteredFix128ValueWithInteger(integer int64, locationRange LocationRange) Fix128Value {
-
-	if integer < sema.Fix64TypeMinInt {
-		panic(&UnderflowError{
-			LocationRange: locationRange,
-		})
-	}
-
-	if integer > sema.Fix64TypeMaxInt {
-		panic(&OverflowError{
-			LocationRange: locationRange,
-		})
-	}
-
-	return NewFix128ValueFromBigInt(nil, big.NewInt(integer))
+	scaledValue := new(big.Int).Mul(
+		big.NewInt(integer),
+		fixedpoint.Fix128FactorAsBigInt,
+	)
+	return NewFix128ValueFromBigInt(nil, scaledValue)
 }
 
 func NewFix128Value(gauge common.MemoryGauge, valueGetter func() fix.Fix128) Fix128Value {
@@ -75,6 +66,8 @@ func NewUnmeteredFix128Value(integer fix.Fix128) Fix128Value {
 }
 
 func NewFix128ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
+	// TODO: Validate bounds
+
 	return NewFix128Value(
 		gauge,
 		func() fix.Fix128 {
@@ -87,6 +80,9 @@ func NewFix128ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value 
 }
 
 func NewFix128ValueFromBigInt(gauge common.MemoryGauge, v *big.Int) Fix128Value {
+
+	// TODO: Validate bounds
+
 	return NewFix128Value(
 		gauge,
 		func() fix.Fix128 {
@@ -634,17 +630,21 @@ func performSaturationArithmatic(
 ) fix.Fix128 {
 	result, err := operation(fix.Fix128(otherValue))
 
-	// Should not panic on overflow/underflow
+	if err != nil {
+		// Should not panic on overflow/underflow.
 
-	// TODO: Switch on error type, rather than the value.
-	// 	Need changes to the fixedpoint library.
-	switch err {
-	case fix.ErrOverflow, fix.ErrNegOverflow:
-		return fix.Fix128Max
-	case fix.ErrUnderflow:
-		return fix.Fix128Min
-	default:
-		panic(err)
+		// TODO: Switch on error type, rather than the value.
+		// 	Need changes to the fixedpoint library.
+		switch err {
+		case fix.ErrOverflow:
+			return fix.Fix128Max
+		case fix.ErrNegOverflow:
+			return fix.Fix128Min
+		case fix.ErrUnderflow:
+			return fix.Fix128Zero
+		default:
+			panic(err)
+		}
 	}
 
 	return result
