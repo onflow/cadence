@@ -1011,6 +1011,20 @@ func (*SpecialFunctionReturnTypeError) SecondaryError() string {
 	return "special functions like `init` or `prepare` cannot have return types"
 }
 
+func (e *SpecialFunctionReturnTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Remove return type from special function",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "",
+					Range:       e.Range,
+				},
+			},
+		},
+	}
+}
+
 func (*SpecialFunctionReturnTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions"
 }
