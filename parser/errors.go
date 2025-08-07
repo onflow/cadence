@@ -1012,14 +1012,34 @@ func (*SpecialFunctionReturnTypeError) SecondaryError() string {
 	return "special functions like `init` or `prepare` cannot have return types"
 }
 
-func (e *SpecialFunctionReturnTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *SpecialFunctionReturnTypeError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
+	r := e.Range
+
+	// Find the colon on the same line, if any
+loop:
+	for i := r.StartPos.Offset - 1; i >= 0; i-- {
+		switch code[i] {
+		case ' ', '\t':
+			continue
+		case ':':
+			// If we find a colon, we remove the return type by adjusting the range
+			// to exclude the colon and everything after it.
+			r.StartPos = r.StartPos.Shifted(nil, -(r.StartPos.Offset - i))
+			break loop
+		default:
+			// If we hit a non-whitespace character before finding a colon,
+			// we assume the colon is not present and return no fixes.
+			return nil
+		}
+	}
+
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Remove return type from special function",
 			TextEdits: []ast.TextEdit{
 				{
 					Replacement: "",
-					Range:       e.Range,
+					Range:       r,
 				},
 			},
 		},

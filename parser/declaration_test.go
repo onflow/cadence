@@ -9956,12 +9956,13 @@ func TestParseInvalidSpecialFunctionReturnTypeAnnotation(t *testing.T) {
 
 	t.Parallel()
 
-	_, errs := testParseDeclarations(`
+	const code = `
       struct Test {
 
           init(): Int
       }
-	`)
+	`
+	_, errs := testParseDeclarations(code)
 	AssertEqualWithDiff(t,
 		[]error{
 			&SpecialFunctionReturnTypeError{
@@ -9973,6 +9974,39 @@ func TestParseInvalidSpecialFunctionReturnTypeAnnotation(t *testing.T) {
 			},
 		},
 		errs,
+	)
+
+	var returnTypeError *SpecialFunctionReturnTypeError
+	require.ErrorAs(t, errs[0], &returnTypeError)
+
+	fixes := returnTypeError.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Remove return type from special function",
+				TextEdits: []ast.TextEdit{
+					{
+						Replacement: "",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 38, Line: 4, Column: 16},
+							EndPos:   ast.Position{Offset: 42, Line: 4, Column: 20},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	const expected = `
+      struct Test {
+
+          init()
+      }
+	`
+	assert.Equal(t,
+		expected,
+		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
 
