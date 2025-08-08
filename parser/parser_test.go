@@ -36,6 +36,15 @@ import (
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
+func (p *parser) mustToken(tokenType lexer.TokenType, string string) (lexer.Token, error) {
+	t := p.current
+	if !p.isToken(t, tokenType, string) {
+		return lexer.Token{}, p.newSyntaxError("expected token %s with string value %s", tokenType, string)
+	}
+	p.next()
+	return t, nil
+}
+
 func TestMain(m *testing.M) {
 	goleak.VerifyTestMain(m)
 }
@@ -292,10 +301,8 @@ func TestParseBuffering(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message:       "expected token identifier with string value c",
-					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
-					Secondary:     "check for missing punctuation, operators, or syntax elements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Message: "expected token identifier with string value c",
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
 			},
 			errs,
@@ -537,10 +544,8 @@ func TestParseBuffering(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message:       "expected token identifier with string value d",
-					Pos:           ast.Position{Offset: 6, Line: 1, Column: 6},
-					Secondary:     "check for missing punctuation, operators, or syntax elements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Message: "expected token identifier with string value d",
+					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
 				},
 			},
 			errs,
