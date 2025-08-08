@@ -2287,11 +2287,8 @@ func TestParseImportDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations(` import`)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected end in import declaration: expected string, address, or identifier",
-					Secondary:     "import declarations must specify what to import - provide a string literal (for file paths), hexadecimal address, or identifier",
-					Documentation: "https://cadence-lang.org/docs/language/imports",
-					Pos:           ast.Position{Offset: 7, Line: 1, Column: 7},
+				&MissingImportLocationError{
+					Pos: ast.Position{Offset: 7, Line: 1, Column: 7},
 				},
 			},
 			errs,

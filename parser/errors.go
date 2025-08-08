@@ -1023,6 +1023,40 @@ func (*InvalidImportContinuationError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/imports"
 }
 
+// MissingImportLocationError is reported when an import declaration is missing a location.
+type MissingImportLocationError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &MissingImportLocationError{}
+var _ errors.UserError = &MissingImportLocationError{}
+var _ errors.SecondaryError = &MissingImportLocationError{}
+var _ errors.HasDocumentationLink = &MissingImportLocationError{}
+
+func (*MissingImportLocationError) isParseError() {}
+
+func (*MissingImportLocationError) IsUserError() {}
+
+func (e *MissingImportLocationError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *MissingImportLocationError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*MissingImportLocationError) Error() string {
+	return "unexpected end in import declaration: expected string, address, or identifier"
+}
+
+func (*MissingImportLocationError) SecondaryError() string {
+	return "import declarations must specify what to import - provide a string literal, hexadecimal address, or identifier"
+}
+
+func (*MissingImportLocationError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/imports"
+}
+
 // MissingConformanceError is reported when a colon for conformances is present,
 // but no conformances follow.
 type MissingConformanceError struct {

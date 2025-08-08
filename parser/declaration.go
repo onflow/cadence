@@ -781,9 +781,9 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 		}
 
 	case lexer.TokenEOF:
-		return nil, p.newSyntaxError("unexpected end in import declaration: expected string, address, or identifier").
-			WithSecondary("import declarations must specify what to import - provide a string literal (for file paths), hexadecimal address, or identifier").
-			WithDocumentation("https://cadence-lang.org/docs/language/imports")
+		return nil, &MissingImportLocationError{
+			Pos: p.current.StartPos,
+		}
 
 	default:
 		return nil, &InvalidImportLocationError{
