@@ -2848,7 +2848,9 @@ func TestParseForceExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseStatements("x.  y")
+		const code = "x.  y"
+
+		result, errs := testParseStatements(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&WhitespaceAfterMemberAccessError{
@@ -2882,13 +2884,43 @@ func TestParseForceExpression(t *testing.T) {
 			},
 			result,
 		)
+
+		var whitespaceError *WhitespaceAfterMemberAccessError
+		require.ErrorAs(t, errs[0], &whitespaceError)
+
+		fixes := whitespaceError.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove whitespace",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+								EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			`x.y`,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
 	})
 
 	t.Run("member access, optional, whitespace", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseStatements("x?.  y")
+		const code = "x?.  y"
+
+		result, errs := testParseStatements(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&WhitespaceAfterMemberAccessError{
@@ -2922,6 +2954,34 @@ func TestParseForceExpression(t *testing.T) {
 				},
 			},
 			result,
+		)
+
+		var whitespaceError *WhitespaceAfterMemberAccessError
+		require.ErrorAs(t, errs[0], &whitespaceError)
+
+		fixes := whitespaceError.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove whitespace",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			`x?.y`,
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 }
