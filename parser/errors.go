@@ -814,6 +814,43 @@ func (*ExpectedCommaOrEndOfTypeParameterListError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
+// InvalidTypeParameterNameError is reported when a type parameter has an invalid name.
+type InvalidTypeParameterNameError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &InvalidTypeParameterNameError{}
+var _ errors.UserError = &InvalidTypeParameterNameError{}
+var _ errors.SecondaryError = &InvalidTypeParameterNameError{}
+var _ errors.HasDocumentationLink = &InvalidTypeParameterNameError{}
+
+func (*InvalidTypeParameterNameError) isParseError() {}
+
+func (*InvalidTypeParameterNameError) IsUserError() {}
+
+func (e *InvalidTypeParameterNameError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *InvalidTypeParameterNameError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *InvalidTypeParameterNameError) Error() string {
+	return fmt.Sprintf(
+		"expected type parameter name, got %s",
+		e.GotToken.Type,
+	)
+}
+
+func (*InvalidTypeParameterNameError) SecondaryError() string {
+	return "type parameters must have a valid identifier name"
+}
+
+func (*InvalidTypeParameterNameError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/functions"
+}
+
 // MissingClosingParenInArgumentListError is reported when an argument list is missing a closing parenthesis.
 type MissingClosingParenInArgumentListError struct {
 	Pos ast.Position

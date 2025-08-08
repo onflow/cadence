@@ -285,11 +285,9 @@ func parseTypeParameter(p *parser) (*ast.TypeParameter, error) {
 	p.skipSpaceAndComments()
 
 	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, p.newSyntaxError(
-			"expected type parameter name, got %s",
-			p.current.Type,
-		).WithSecondary("type parameters must have a valid identifier name").
-			WithDocumentation("https://cadence-lang.org/docs/language/functions")
+		return nil, &InvalidTypeParameterNameError{
+			GotToken: p.current,
+		}
 	}
 
 	identifier := p.tokenToIdentifier(p.current)
