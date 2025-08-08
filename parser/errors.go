@@ -911,6 +911,41 @@ func (*MissingFieldNameError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system/composite-types#composite-type-fields"
 }
 
+// MissingTransferError is reported when a transfer is missing in a variable declaration.
+type MissingTransferError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &MissingTransferError{}
+var _ errors.UserError = &MissingTransferError{}
+var _ errors.SecondaryError = &MissingTransferError{}
+var _ errors.HasDocumentationLink = &MissingTransferError{}
+
+func (*MissingTransferError) isParseError() {}
+
+func (*MissingTransferError) IsUserError() {}
+
+func (e *MissingTransferError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *MissingTransferError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*MissingTransferError) Error() string {
+	return "missing transfer operator"
+}
+
+func (*MissingTransferError) SecondaryError() string {
+	return "variable declarations must specify how to transfer the value: " +
+		"use '=' for copy (struct), '<-' for move (resource), or '<-!' for forced move (resource)"
+}
+
+func (*MissingTransferError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/constants-and-variables"
+}
+
 // MissingConformanceError is reported when a colon for conformances is present,
 // but no conformances follow.
 type MissingConformanceError struct {

@@ -486,9 +486,9 @@ func parseVariableDeclaration(
 	p.skipSpaceAndComments()
 	transfer := parseTransfer(p)
 	if transfer == nil {
-		return nil, p.newSyntaxError("expected transfer").
-			WithSecondary("variable declarations must specify how to transfer the value: use '=' for copy, '<-' for move, or '<-!' for forced move").
-			WithDocumentation("https://cadence-lang.org/docs/language/constants-and-variables")
+		return nil, &MissingTransferError{
+			Pos: p.current.StartPos,
+		}
 	}
 
 	value, err := parseExpression(p, lowestBindingPower)

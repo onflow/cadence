@@ -450,6 +450,21 @@ func TestParseVariableDeclaration(t *testing.T) {
 			errs,
 		)
 	})
+
+	t.Run("missing transfer", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("let x 1")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingTransferError{
+					Pos: ast.Position{Offset: 6, Line: 1, Column: 6},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseParameterList(t *testing.T) {
