@@ -309,8 +309,10 @@ func TestParseVariableDeclaration(t *testing.T) {
 
 		t.Parallel()
 
+		const code = "static var x = 1"
+
 		_, errs := testParseDeclarationsWithConfig(
-			"static var x = 1",
+			code,
 			Config{
 				StaticModifierEnabled: true,
 			},
@@ -323,6 +325,34 @@ func TestParseVariableDeclaration(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var invalidError *InvalidStaticModifierError
+		require.ErrorAs(t, errs[0], &invalidError)
+
+		fixes := invalidError.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove `static` modifier",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+								EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			` var x = 1`,
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
@@ -352,8 +382,10 @@ func TestParseVariableDeclaration(t *testing.T) {
 
 		t.Parallel()
 
+		const code = "native var x = 1"
+
 		_, errs := testParseDeclarationsWithConfig(
-			"native var x = 1",
+			code,
 			Config{
 				NativeModifierEnabled: true,
 			},
@@ -366,6 +398,34 @@ func TestParseVariableDeclaration(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var invalidError *InvalidNativeModifierError
+		require.ErrorAs(t, errs[0], &invalidError)
+
+		fixes := invalidError.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove `native` modifier",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+								EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			` var x = 1`,
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
