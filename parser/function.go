@@ -38,12 +38,9 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 	p.skipSpaceAndComments()
 
 	if !p.current.Is(lexer.TokenParenOpen) {
-		return nil, p.newSyntaxError(
-			"expected %s as start of parameter list, got %s",
-			lexer.TokenParenOpen,
-			p.current.Type,
-		).WithSecondary("function parameters must be enclosed in parentheses").
-			WithDocumentation("https://cadence-lang.org/docs/language/functions")
+		return nil, &MissingStartOfParameterListError{
+			GotToken: p.current,
+		}
 	}
 
 	startPos := p.current.StartPos
@@ -78,11 +75,9 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 
 		case lexer.TokenComma:
 			if expectParameter {
-				return nil, p.newSyntaxError(
-					"expected parameter or end of parameter list, got %s",
-					p.current.Type,
-				).WithSecondary("parameters must be separated by commas, and the list must end with a closing parenthesis").
-					WithDocumentation("https://cadence-lang.org/docs/language/functions")
+				return nil, &UnexpectedTokenInParameterListError{
+					GotToken: p.current,
+				}
 			}
 			// Skip the comma
 			p.next()
@@ -95,25 +90,19 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 			atEnd = true
 
 		case lexer.TokenEOF:
-			return nil, p.newSyntaxError(
-				"missing %s at end of parameter list",
-				lexer.TokenParenClose,
-			).WithSecondary("function parameter lists must be properly closed with a closing parenthesis").
-				WithDocumentation("https://cadence-lang.org/docs/language/functions")
+			return nil, &MissingClosingParenInParameterListError{
+				Pos: p.current.StartPos,
+			}
 
 		default:
 			if expectParameter {
-				return nil, p.newSyntaxError(
-					"expected parameter or end of parameter list, got %s",
-					p.current.Type,
-				).WithSecondary("parameters must be separated by commas, and the list must end with a closing parenthesis").
-					WithDocumentation("https://cadence-lang.org/docs/language/functions")
+				return nil, &UnexpectedTokenInParameterListError{
+					GotToken: p.current,
+				}
 			} else {
-				return nil, p.newSyntaxError(
-					"expected comma or end of parameter list, got %s",
-					p.current.Type,
-				).WithSecondary("multiple parameters must be separated by commas, and the parameter list must end with a closing parenthesis").
-					WithDocumentation("https://cadence-lang.org/docs/language/functions")
+				return nil, &ExpectedCommaOrEndOfParameterListError{
+					GotToken: p.current,
+				}
 			}
 		}
 	}

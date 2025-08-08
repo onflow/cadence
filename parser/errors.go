@@ -392,6 +392,155 @@ func (*MissingCommaInParameterListError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions#function-declarations"
 }
 
+// MissingStartOfParameterListError is reported when a parameter list is missing a start token.
+type MissingStartOfParameterListError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingStartOfParameterListError{}
+var _ errors.UserError = &MissingStartOfParameterListError{}
+var _ errors.SecondaryError = &MissingStartOfParameterListError{}
+var _ errors.HasDocumentationLink = &MissingStartOfParameterListError{}
+
+func (*MissingStartOfParameterListError) isParseError() {}
+
+func (*MissingStartOfParameterListError) IsUserError() {}
+
+func (e *MissingStartOfParameterListError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingStartOfParameterListError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingStartOfParameterListError) Error() string {
+	return fmt.Sprintf(
+		"expected %s as start of parameter list, got %s",
+		lexer.TokenParenOpen,
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingStartOfParameterListError) SecondaryError() string {
+	return "function parameters must be enclosed in parentheses"
+}
+
+func (*MissingStartOfParameterListError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/functions"
+}
+
+// UnexpectedTokenInParameterListError is reported when an unexpected token is found in a parameter list.
+type UnexpectedTokenInParameterListError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &UnexpectedTokenInParameterListError{}
+var _ errors.UserError = &UnexpectedTokenInParameterListError{}
+var _ errors.SecondaryError = &UnexpectedTokenInParameterListError{}
+var _ errors.HasDocumentationLink = &UnexpectedTokenInParameterListError{}
+
+func (*UnexpectedTokenInParameterListError) isParseError() {}
+
+func (*UnexpectedTokenInParameterListError) IsUserError() {}
+
+func (e *UnexpectedTokenInParameterListError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *UnexpectedTokenInParameterListError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *UnexpectedTokenInParameterListError) Error() string {
+	return fmt.Sprintf(
+		"expected parameter or end of parameter list, got %s",
+		e.GotToken.Type,
+	)
+}
+
+func (*UnexpectedTokenInParameterListError) SecondaryError() string {
+	return "parameters must be separated by commas, and the list must end with a closing parenthesis"
+}
+
+func (*UnexpectedTokenInParameterListError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/functions"
+}
+
+// MissingClosingParenInParameterListError is reported when a parameter list is missing a closing parenthesis.
+type MissingClosingParenInParameterListError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &MissingClosingParenInParameterListError{}
+var _ errors.UserError = &MissingClosingParenInParameterListError{}
+var _ errors.SecondaryError = &MissingClosingParenInParameterListError{}
+var _ errors.HasDocumentationLink = &MissingClosingParenInParameterListError{}
+
+func (*MissingClosingParenInParameterListError) isParseError() {}
+
+func (*MissingClosingParenInParameterListError) IsUserError() {}
+
+func (e *MissingClosingParenInParameterListError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *MissingClosingParenInParameterListError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*MissingClosingParenInParameterListError) Error() string {
+	return fmt.Sprintf(
+		"missing %s at end of parameter list",
+		lexer.TokenParenClose,
+	)
+}
+
+func (*MissingClosingParenInParameterListError) SecondaryError() string {
+	return "function parameter lists must be properly closed with a closing parenthesis"
+}
+
+func (*MissingClosingParenInParameterListError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/functions"
+}
+
+// ExpectedCommaOrEndOfParameterListError is reported when a comma or the end of a parameter list is expected.
+type ExpectedCommaOrEndOfParameterListError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &ExpectedCommaOrEndOfParameterListError{}
+var _ errors.UserError = &ExpectedCommaOrEndOfParameterListError{}
+var _ errors.SecondaryError = &ExpectedCommaOrEndOfParameterListError{}
+var _ errors.HasDocumentationLink = &ExpectedCommaOrEndOfParameterListError{}
+
+func (*ExpectedCommaOrEndOfParameterListError) isParseError() {}
+
+func (*ExpectedCommaOrEndOfParameterListError) IsUserError() {}
+
+func (e *ExpectedCommaOrEndOfParameterListError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *ExpectedCommaOrEndOfParameterListError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *ExpectedCommaOrEndOfParameterListError) Error() string {
+	return fmt.Sprintf(
+		"expected comma or end of parameter list, got %s",
+		e.GotToken.Type,
+	)
+}
+
+func (*ExpectedCommaOrEndOfParameterListError) SecondaryError() string {
+	return "multiple parameters must be separated by commas, and the parameter list must end with a closing parenthesis"
+}
+
+func (*ExpectedCommaOrEndOfParameterListError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/functions"
+}
+
 // MissingClosingParenInArgumentListError is reported when an argument list is missing a closing parenthesis.
 type MissingClosingParenInArgumentListError struct {
 	Pos ast.Position

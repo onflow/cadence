@@ -768,6 +768,84 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("missing parameter list start", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("fun foo} {}")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingStartOfParameterListError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenBraceClose,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+							EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("unexpected token in parameter list", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("fun foo(-) {}")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedTokenInParameterListError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenMinus,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+							EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing parameter list end", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("fun foo(")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingClosingParenInParameterListError{
+					Pos: ast.Position{Offset: 8, Line: 1, Column: 8},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid parameter list continuation", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("fun foo(a: Int -) {}")
+		AssertEqualWithDiff(t,
+			[]error{
+				&ExpectedCommaOrEndOfParameterListError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenMinus,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 15, Line: 1, Column: 15},
+							EndPos:   ast.Position{Offset: 15, Line: 1, Column: 15},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
+
 	t.Run("with return type", func(t *testing.T) {
 
 		t.Parallel()
@@ -1750,11 +1828,15 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "expected '(' as start of parameter list, got '<'",
-					Secondary:     "function parameters must be enclosed in parentheses",
-					Documentation: "https://cadence-lang.org/docs/language/functions",
-					Pos:           ast.Position{Offset: 7, Line: 1, Column: 7},
+				&MissingStartOfParameterListError{
+					GotToken: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+							EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+						},
+						Type: 0x21,
+					},
 				},
 			},
 			errs,
