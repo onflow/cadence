@@ -312,7 +312,7 @@ var enumeratedAccessModifierKeywords = common.EnumerateWords(
 
 func rejectAccessKeywordEntitlementType(p *parser, ty *ast.NominalType) {
 	switch ty.Identifier.Identifier {
-	case KeywordAll, KeywordAccess, KeywordAccount, KeywordSelf, KeywordContract:
+	case KeywordAll, KeywordAccess, KeywordAccount, KeywordSelf:
 		p.report(&AccessKeywordEntitlementNameError{
 			Keyword: ty.Identifier.Identifier,
 			Range:   ast.NewRangeFromPositioned(p.memoryGauge, ty),
