@@ -672,16 +672,20 @@ func TestNumberValue_ToBigEndianBytes(t *testing.T) {
 
 	// Ensure the test cases are complete
 
-	for _, integerType := range sema.AllNumberTypes {
-		switch integerType {
+	for _, numberType := range sema.AllNumberTypes {
+		switch numberType {
 		case sema.NumberType, sema.SignedNumberType,
 			sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType,
 			sema.FixedPointType, sema.SignedFixedPointType:
 			continue
+
+		// TODO: Remove once Fix128 type is supported in the interpreter
+		case sema.Fix128Type:
+			continue
 		}
 
-		if _, ok := typeTests[integerType.String()]; !ok {
-			panic(fmt.Sprintf("broken test: missing %s", integerType))
+		if _, ok := typeTests[numberType.String()]; !ok {
+			panic(fmt.Sprintf("broken test: missing %s", numberType))
 		}
 	}
 

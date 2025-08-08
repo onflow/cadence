@@ -423,6 +423,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		for _, typ := range sema.AllNumberTypes {
+
 			typString := typ.QualifiedString()
 
 			t.Run(typString, func(t *testing.T) {
@@ -1016,6 +1017,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		for _, typ := range sema.AllNumberTypes {
+
 			typString := typ.QualifiedString()
 
 			t.Run(typString, func(t *testing.T) {

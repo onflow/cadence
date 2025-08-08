@@ -3019,6 +3019,19 @@ var StringValueParsers = func() map[string]TypedStringValueParser {
 
 			},
 		},
+		{
+			ReceiverType: sema.Fix128Type,
+			Parser: func(memoryGauge common.MemoryGauge, input string) OptionalValue {
+				n, err := fixedpoint.ParseFix128(input)
+				if err != nil {
+					return NilOptionalValue
+				}
+
+				val := NewFix128ValueFromBigInt(memoryGauge, n)
+				return NewSomeValueNonCopying(memoryGauge, val)
+
+			},
+		},
 
 		// UFix*
 		{
@@ -3226,6 +3239,11 @@ var BigEndianBytesConverters = func() map[string]TypedBigEndianBytesConverter {
 			ByteLength:   sema.Fix64TypeSize,
 			Converter:    NewFix64ValueFromBigEndianBytes,
 		},
+		{
+			ReceiverType: sema.Fix128Type,
+			ByteLength:   sema.Fix128TypeSize,
+			Converter:    NewFix128ValueFromBigEndianBytes,
+		},
 
 		// UFix*
 		{
@@ -3416,6 +3434,14 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		},
 		Min: NewUnmeteredFix64Value(math.MinInt64),
 		Max: NewUnmeteredFix64Value(math.MaxInt64),
+	},
+	{
+		Name: sema.Fix128TypeName,
+		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+			return ConvertFix128(gauge, value, locationRange)
+		},
+		Min: NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
+		Max: NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
 	},
 	{
 		Name: sema.UFix64TypeName,

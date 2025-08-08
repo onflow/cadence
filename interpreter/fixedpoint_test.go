@@ -55,7 +55,9 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 
 	tests := map[string]interpreter.Value{
 		// Fix*
-		"Fix64": interpreter.NewUnmeteredFix64Value(123000000),
+		"Fix64":  interpreter.NewUnmeteredFix64Value(123000000),
+		"Fix128": interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(123, 22),
+
 		// UFix*
 		"UFix64": interpreter.NewUnmeteredUFix64Value(123000000),
 	}
@@ -114,6 +116,7 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 
 var testFixedPointValues = map[string]interpreter.Value{
 	"Fix64":  interpreter.NewUnmeteredFix64Value(50 * sema.Fix64Factor),
+	"Fix128": interpreter.NewUnmeteredFix128ValueWithInteger(50, interpreter.EmptyLocationRange),
 	"UFix64": interpreter.NewUnmeteredUFix64Value(50 * sema.Fix64Factor),
 }
 
@@ -575,6 +578,10 @@ func TestInterpretFixedPointMinMax(t *testing.T) {
 		sema.Fix64Type: {
 			min: interpreter.NewUnmeteredFix64Value(math.MinInt64),
 			max: interpreter.NewUnmeteredFix64Value(math.MaxInt64),
+		},
+		sema.Fix128Type: {
+			min: interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
+			max: interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
 		},
 		sema.UFix64Type: {
 			min: interpreter.NewUnmeteredUFix64Value(0),

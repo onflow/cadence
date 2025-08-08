@@ -29,8 +29,11 @@ import (
 	"strings"
 	_ "unsafe"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/sema"
 )
 
@@ -257,6 +260,7 @@ const (
 	word128TypeStr        = "Word128"
 	word256TypeStr        = "Word256"
 	fix64TypeStr          = "Fix64"
+	fix128TypeStr         = "Fix128"
 	ufix64TypeStr         = "UFix64"
 	arrayTypeStr          = "Array"
 	dictionaryTypeStr     = "Dictionary"
@@ -331,6 +335,8 @@ func Prepare(v cadence.Value) jsonValue {
 		return prepareWord256(v)
 	case cadence.Fix64:
 		return prepareFix64(v)
+	case cadence.Fix128:
+		return prepareFix128(v)
 	case cadence.UFix64:
 		return prepareUFix64(v)
 	case cadence.Array:
@@ -555,6 +561,13 @@ func prepareFix64(v cadence.Fix64) jsonValue {
 	return jsonValueObject{
 		Type:  fix64TypeStr,
 		Value: encodeFix64(int64(v)),
+	}
+}
+
+func prepareFix128(v cadence.Fix128) jsonValue {
+	return jsonValueObject{
+		Type:  fix128TypeStr,
+		Value: encodeFix128(fix.Fix128(v)),
 	}
 }
 
@@ -1034,6 +1047,35 @@ func encodeFix64(v int64) string {
 	if negative {
 		fraction = -fraction
 		if integer == 0 {
+			builder.WriteByte('-')
+		}
+	}
+
+	builder.WriteString(fmt.Sprintf(
+		"%d.%08d",
+		integer,
+		fraction,
+	))
+
+	return builder.String()
+}
+
+func encodeFix128(v fix.Fix128) string {
+	fix128AsBigInt := fixedpoint.Fix128ToBigInt(v)
+
+	fraction := new(big.Int)
+	integer, fraction := new(big.Int).QuoRem(
+		fix128AsBigInt,
+		fixedpoint.Fix128FactorAsBigInt,
+		fraction,
+	)
+
+	var builder strings.Builder
+
+	negative := fraction.Sign() < 0
+	if negative {
+		fraction = fraction.Neg(fraction)
+		if integer.Sign() == 0 {
 			builder.WriteByte('-')
 		}
 	}

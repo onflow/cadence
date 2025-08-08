@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
@@ -505,6 +506,7 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 				},
 			},
 		},
+
 		sema.Fix64Type: {
 			add: testCalls{
 				overflow: testCall{
@@ -550,6 +552,52 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 				},
 			},
 		},
+		sema.Fix128Type: {
+			add: testCalls{
+				overflow: testCall{
+					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
+					interpreter.NewUnmeteredFix128ValueWithInteger(2, interpreter.EmptyLocationRange),
+					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
+				},
+				underflow: testCall{
+					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
+					interpreter.NewUnmeteredFix128ValueWithInteger(-2, interpreter.EmptyLocationRange),
+					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
+				},
+			},
+			subtract: testCalls{
+				overflow: testCall{
+					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
+					interpreter.NewUnmeteredFix128ValueWithInteger(-2, interpreter.EmptyLocationRange),
+					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
+				},
+				underflow: testCall{
+					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
+					interpreter.NewUnmeteredFix128ValueWithInteger(2, interpreter.EmptyLocationRange),
+					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
+				},
+			},
+			multiply: testCalls{
+				overflow: testCall{
+					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
+					interpreter.NewUnmeteredFix128ValueWithInteger(2, interpreter.EmptyLocationRange),
+					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
+				},
+				underflow: testCall{
+					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
+					interpreter.NewUnmeteredFix128ValueWithInteger(2, interpreter.EmptyLocationRange),
+					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
+				},
+			},
+			divide: testCalls{
+				overflow: testCall{
+					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
+					interpreter.NewUnmeteredFix128ValueWithInteger(-1, interpreter.EmptyLocationRange),
+					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
+				},
+			},
+		},
+
 		sema.UIntType: {
 			subtract: testCalls{
 				underflow: testCall{
@@ -728,7 +776,6 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 		sema.AllSignedIntegerTypes,
 		sema.AllSignedFixedPointTypes,
 	) {
-
 		testCase, ok := testCases[ty]
 
 		if ty == sema.IntType {
@@ -754,7 +801,6 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 		sema.AllUnsignedIntegerTypes,
 		sema.AllUnsignedFixedPointTypes,
 	) {
-
 		if strings.HasPrefix(ty.String(), "Word") {
 			continue
 		}

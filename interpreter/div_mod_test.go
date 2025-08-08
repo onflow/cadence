@@ -3428,11 +3428,17 @@ func TestNegativeMod(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		for _, test := range tests {
-			assert.Equal(t,
-				test.expected,
-				test.a.Mod(inter, test.b, EmptyLocationRange),
-			)
+		for name, test := range tests {
+			test := test
+
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+
+				assert.Equal(t,
+					test.expected,
+					test.a.Mod(inter, test.b, EmptyLocationRange),
+				)
+			})
 		}
 	})
 
@@ -3444,22 +3450,33 @@ func TestNegativeMod(t *testing.T) {
 				NewUnmeteredFix64ValueWithInteger(5, EmptyLocationRange),
 				NewUnmeteredFix64ValueWithInteger(-1, EmptyLocationRange),
 			},
+			"Fix128": {
+				NewUnmeteredFix128ValueWithInteger(-1, EmptyLocationRange),
+				NewUnmeteredFix128ValueWithInteger(5, EmptyLocationRange),
+				NewUnmeteredFix128ValueWithInteger(-1, EmptyLocationRange),
+			},
 		}
 
-		for _, integerType := range sema.AllSignedFixedPointTypes {
-			if _, ok := tests[integerType.String()]; !ok {
-				panic(fmt.Sprintf("broken test: missing %s", integerType))
+		for _, fixedPointType := range sema.AllSignedFixedPointTypes {
+			if _, ok := tests[fixedPointType.String()]; !ok {
+				panic(fmt.Sprintf("broken test: missing %s", fixedPointType))
 			}
 		}
 
 		inter, err := NewInterpreter(nil, nil, &Config{})
 		require.NoError(t, err)
 
-		for _, test := range tests {
-			assert.Equal(t,
-				test.expected,
-				test.a.Mod(inter, test.b, EmptyLocationRange),
-			)
+		for name, test := range tests {
+			test := test
+
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+
+				assert.Equal(t,
+					test.expected,
+					test.a.Mod(inter, test.b, EmptyLocationRange),
+				)
+			})
 		}
 	})
 }

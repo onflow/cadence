@@ -102,7 +102,7 @@ const (
 	_ // future: Fix16
 	_ // future: Fix32
 	HashInputTypeFix64
-	_ // future: Fix128
+	HashInputTypeFix128
 	_ // future: Fix256
 	_
 

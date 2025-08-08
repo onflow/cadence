@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/fixedpoint"
+	"github.com/onflow/cadence/integer"
 )
 
 const TypeIDSeparator = '.'
@@ -1899,6 +1900,21 @@ var Fix64Type = NewFixedPointNumericType(Fix64TypeName).
 	})
 var Fix64TypeAnnotation = NewTypeAnnotation(Fix64Type)
 
+// Fix128Type represents the 128-bit signed decimal fixed-point type `Fix128`
+// which has a scale of Fix128Scale, and checks for overflow and underflow.
+var Fix128Type = NewFixedPointNumericType(Fix128TypeName).
+	WithTag(Fix128TypeTag).
+	WithIntRange(Fix128TypeMinIntBig, Fix128TypeMaxIntBig).
+	WithFractionalRange(Fix128TypeMinFractionalBig, Fix128TypeMaxFractionalBig).
+	WithScale(Fix128Scale).
+	WithSaturatingFunctions(SaturatingArithmeticSupport{
+		Add:      true,
+		Subtract: true,
+		Multiply: true,
+		Divide:   true,
+	})
+var Fix128TypeAnnotation = NewTypeAnnotation(Fix128Type)
+
 // UFix64Type represents the 64-bit unsigned decimal fixed-point type `UFix64`
 // which has a scale of 1E9, and checks for overflow and underflow
 var UFix64Type = NewFixedPointNumericType(UFix64TypeName).
@@ -1927,18 +1943,8 @@ var (
 	Int64TypeMinInt = new(big.Int).SetInt64(math.MinInt64)
 	Int64TypeMaxInt = new(big.Int).SetInt64(math.MaxInt64)
 
-	Int128TypeMinIntBig = func() *big.Int {
-		int128TypeMin := big.NewInt(-1)
-		int128TypeMin.Lsh(int128TypeMin, 127)
-		return int128TypeMin
-	}()
-
-	Int128TypeMaxIntBig = func() *big.Int {
-		int128TypeMax := big.NewInt(1)
-		int128TypeMax.Lsh(int128TypeMax, 127)
-		int128TypeMax.Sub(int128TypeMax, big.NewInt(1))
-		return int128TypeMax
-	}()
+	Int128TypeMinIntBig = integer.Int128TypeMinIntBig
+	Int128TypeMaxIntBig = integer.Int128TypeMaxIntBig
 
 	Int256TypeMinIntBig = func() *big.Int {
 		int256TypeMin := big.NewInt(-1)
@@ -2024,6 +2030,8 @@ var (
 		return word256TypeMax
 	}()
 
+	// Fix64
+
 	Fix64FactorBig = new(big.Int).SetUint64(uint64(Fix64Factor))
 
 	Fix64TypeMinIntBig = fixedpoint.Fix64TypeMinIntBig
@@ -2031,6 +2039,18 @@ var (
 
 	Fix64TypeMinFractionalBig = fixedpoint.Fix64TypeMinFractionalBig
 	Fix64TypeMaxFractionalBig = fixedpoint.Fix64TypeMaxFractionalBig
+
+	// Fix128
+
+	Fix128FactorIntBig = fixedpoint.Fix128FactorAsBigInt
+
+	Fix128TypeMinIntBig = fixedpoint.Fix128TypeMinIntBig
+	Fix128TypeMaxIntBig = fixedpoint.Fix128TypeMaxIntBig
+
+	Fix128TypeMinFractionalBig = fixedpoint.Fix128TypeMinFractionalBig
+	Fix128TypeMaxFractionalBig = fixedpoint.Fix128TypeMaxFractionalBig
+
+	// UFix64
 
 	UFix64TypeMinIntBig = fixedpoint.UFix64TypeMinIntBig
 	UFix64TypeMaxIntBig = fixedpoint.UFix64TypeMaxIntBig
@@ -2057,6 +2077,7 @@ const (
 	UFix64TypeSize  uint = 8
 	Int128TypeSize  uint = 16
 	UInt128TypeSize uint = 16
+	Fix128TypeSize  uint = 16
 	Word128TypeSize uint = 16
 	Int256TypeSize  uint = 32
 	UInt256TypeSize uint = 32
@@ -2071,6 +2092,8 @@ const Fix64TypeMaxInt = fixedpoint.Fix64TypeMaxInt
 
 const Fix64TypeMinFractional = fixedpoint.Fix64TypeMinFractional
 const Fix64TypeMaxFractional = fixedpoint.Fix64TypeMaxFractional
+
+const Fix128Scale = fixedpoint.Fix128Scale
 
 const UFix64TypeMinInt = fixedpoint.UFix64TypeMinInt
 const UFix64TypeMaxInt = fixedpoint.UFix64TypeMaxInt
@@ -4274,6 +4297,7 @@ var BaseValueActivation = NewVariableActivation(nil)
 
 var AllSignedFixedPointTypes = []Type{
 	Fix64Type,
+	Fix128Type,
 }
 
 var AllUnsignedFixedPointTypes = []Type{
@@ -7568,7 +7592,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 	case FixedPointType:
 		switch subType {
-		case FixedPointType, SignedFixedPointType,
+		case FixedPointType,
+			SignedFixedPointType,
 			UFix64Type:
 
 			return true
@@ -7579,7 +7604,9 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 	case SignedFixedPointType:
 		switch subType {
-		case SignedFixedPointType, Fix64Type:
+		case SignedFixedPointType,
+			Fix64Type,
+			Fix128Type:
 			return true
 
 		default:

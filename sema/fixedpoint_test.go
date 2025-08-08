@@ -651,7 +651,8 @@ func TestCheckFixedPointLiteralScales(t *testing.T) {
 					fmt.Sprintf(
 						`
                           let withType: %[1]s = 1.%[2]s
-                          let withoutType = 1.%[2]s
+                          // Testing this without explicit type is no longer valid,
+                          // because the type inference will assume a different type.
                         `,
 						ty,
 						generateFraction(i),
@@ -661,10 +662,8 @@ func TestCheckFixedPointLiteralScales(t *testing.T) {
 				if i <= scale {
 					assert.NoError(t, err)
 				} else {
-					errs := RequireCheckerErrors(t, err, 2)
-
+					errs := RequireCheckerErrors(t, err, 1)
 					assert.IsType(t, &sema.InvalidFixedPointLiteralScaleError{}, errs[0])
-					assert.IsType(t, &sema.InvalidFixedPointLiteralScaleError{}, errs[1])
 				}
 			}
 		})
