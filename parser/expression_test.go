@@ -1702,9 +1702,8 @@ func TestParseInvocation(t *testing.T) {
 		_, errs := testParseExpression("f(,,)")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected argument or end of argument list, got ','",
-					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
+				&UnexpectedCommaInArgumentListError{
+					Pos: ast.Position{Offset: 2, Line: 1, Column: 2},
 				},
 			},
 			errs,
@@ -1718,9 +1717,8 @@ func TestParseInvocation(t *testing.T) {
 		_, errs := testParseExpression("f(1,,)")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected argument or end of argument list, got ','",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				&UnexpectedCommaInArgumentListError{
+					Pos: ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
 			},
 			errs,
@@ -1734,11 +1732,14 @@ func TestParseInvocation(t *testing.T) {
 		_, errs := testParseExpression("f(1 2)")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected argument in argument list (expecting delimiter or end of argument list), got decimal integer",
-					Secondary:     "arguments in function calls and type instantiations must be separated by commas",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
+				&MissingCommaInArgumentListError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+							EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+						},
+					},
 				},
 			},
 			errs,
@@ -1872,6 +1873,21 @@ func TestParseInvocation(t *testing.T) {
 				EndPos:            ast.Position{Offset: 13, Line: 1, Column: 13},
 			},
 			result,
+		)
+	})
+
+	t.Run("invalid: missing closing paren", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("f(1")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingClosingParenInArgumentListError{
+					Pos: ast.Position{Offset: 3, Line: 1, Column: 3},
+				},
+			},
+			errs,
 		)
 	})
 

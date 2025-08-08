@@ -1017,10 +1017,9 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 		switch p.current.Type {
 		case lexer.TokenComma:
 			if expectArgument {
-				return nil, ast.EmptyPosition, p.newSyntaxError(
-					"expected argument or end of argument list, got %s",
-					p.current.Type,
-				)
+				return nil, ast.EmptyPosition, &UnexpectedCommaInArgumentListError{
+					Pos: p.current.StartPos,
+				}
 			}
 			// Skip the comma
 			p.next()
@@ -1035,19 +1034,15 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 		case lexer.TokenEOF:
 			return nil,
 				ast.EmptyPosition,
-				p.newSyntaxError("missing ')' at end of invocation argument list").
-					WithSecondary("function calls and type instantiations must be properly closed with a closing parenthesis").
-					WithDocumentation("https://cadence-lang.org/docs/language/syntax")
+				&MissingClosingParenInArgumentListError{
+					Pos: p.current.StartPos,
+				}
 
 		default:
 			if !expectArgument {
-				return nil,
-					ast.EmptyPosition,
-					p.newSyntaxError(
-						"unexpected argument in argument list (expecting delimiter or end of argument list), got %s",
-						p.current.Type,
-					).WithSecondary("arguments in function calls and type instantiations must be separated by commas").
-						WithDocumentation("https://cadence-lang.org/docs/language/syntax")
+				return nil, ast.EmptyPosition, &MissingCommaInArgumentListError{
+					GotToken: p.current,
+				}
 			}
 
 			argument, err := parseArgument(p)

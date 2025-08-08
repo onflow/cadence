@@ -900,11 +900,8 @@ func TestParseBufferedErrors(t *testing.T) {
 				Secondary:     "after a comma, a type annotation is required to complete the list",
 				Documentation: "https://cadence-lang.org/docs/language/types-and-type-system/type-annotations",
 			},
-			&SyntaxError{
-				Message:       "missing ')' at end of invocation argument list",
-				Secondary:     "function calls and type instantiations must be properly closed with a closing parenthesis",
-				Documentation: "https://cadence-lang.org/docs/language/syntax",
-				Pos:           ast.Position{Offset: 6, Line: 1, Column: 6},
+			&MissingClosingParenInArgumentListError{
+				Pos: ast.Position{Offset: 6, Line: 1, Column: 6},
 			},
 		},
 		errs,

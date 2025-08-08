@@ -392,6 +392,112 @@ func (*MissingCommaInParameterListError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions#function-declarations"
 }
 
+// MissingClosingParenInArgumentListError is reported when an argument list is missing a closing parenthesis.
+type MissingClosingParenInArgumentListError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &MissingClosingParenInArgumentListError{}
+var _ errors.UserError = &MissingClosingParenInArgumentListError{}
+var _ errors.SecondaryError = &MissingClosingParenInArgumentListError{}
+var _ errors.HasDocumentationLink = &MissingClosingParenInArgumentListError{}
+
+func (*MissingClosingParenInArgumentListError) isParseError() {}
+
+func (*MissingClosingParenInArgumentListError) IsUserError() {}
+
+func (e *MissingClosingParenInArgumentListError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *MissingClosingParenInArgumentListError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*MissingClosingParenInArgumentListError) Error() string {
+	return "missing ')' at end of invocation argument list"
+}
+
+func (*MissingClosingParenInArgumentListError) SecondaryError() string {
+	return "function calls and type instantiations must be properly closed with a closing parenthesis"
+}
+
+func (*MissingClosingParenInArgumentListError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+// UnexpectedCommaInArgumentListError is reported when a comma is found at an unexpected position in an argument list.
+type UnexpectedCommaInArgumentListError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &UnexpectedCommaInArgumentListError{}
+var _ errors.UserError = &UnexpectedCommaInArgumentListError{}
+var _ errors.SecondaryError = &UnexpectedCommaInArgumentListError{}
+var _ errors.HasDocumentationLink = &UnexpectedCommaInArgumentListError{}
+
+func (*UnexpectedCommaInArgumentListError) isParseError() {}
+
+func (*UnexpectedCommaInArgumentListError) IsUserError() {}
+
+func (e *UnexpectedCommaInArgumentListError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *UnexpectedCommaInArgumentListError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*UnexpectedCommaInArgumentListError) Error() string {
+	return "unexpected comma in argument list"
+}
+
+func (*UnexpectedCommaInArgumentListError) SecondaryError() string {
+	return "commas are used to separate arguments. Did you add a superfluous comma, or is an argument missing?"
+}
+
+func (*UnexpectedCommaInArgumentListError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+// MissingCommaInArgumentListError is reported when an argument is found,
+// but a comma or the end of the argument list is expected.
+type MissingCommaInArgumentListError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingCommaInArgumentListError{}
+var _ errors.UserError = &MissingCommaInArgumentListError{}
+var _ errors.SecondaryError = &MissingCommaInArgumentListError{}
+var _ errors.HasDocumentationLink = &MissingCommaInArgumentListError{}
+
+func (*MissingCommaInArgumentListError) isParseError() {}
+
+func (*MissingCommaInArgumentListError) IsUserError() {}
+
+func (e *MissingCommaInArgumentListError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingCommaInArgumentListError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingCommaInArgumentListError) Error() string {
+	return fmt.Sprintf(
+		"unexpected argument in argument list (expecting delimiter or end of argument list), got %s",
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingCommaInArgumentListError) SecondaryError() string {
+	return "arguments in function calls and type instantiations must be separated by commas"
+}
+
+func (*MissingCommaInArgumentListError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
 // CustomDestructorError
 
 type CustomDestructorError struct {
