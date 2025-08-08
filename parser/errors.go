@@ -524,6 +524,80 @@ func (*InvalidExpressionAsLabelError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
+// UnexpectedExpressionStartError is reported when an unexpected token is found at the start of an expression.
+type UnexpectedExpressionStartError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &UnexpectedExpressionStartError{}
+var _ errors.UserError = &UnexpectedExpressionStartError{}
+var _ errors.SecondaryError = &UnexpectedExpressionStartError{}
+var _ errors.HasDocumentationLink = &UnexpectedExpressionStartError{}
+
+func (*UnexpectedExpressionStartError) isParseError() {}
+
+func (*UnexpectedExpressionStartError) IsUserError() {}
+
+func (e *UnexpectedExpressionStartError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *UnexpectedExpressionStartError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *UnexpectedExpressionStartError) Error() string {
+	return fmt.Sprintf(
+		"unexpected token at start of expression: %s",
+		e.GotToken.Type,
+	)
+}
+
+func (*UnexpectedExpressionStartError) SecondaryError() string {
+	return "this token cannot be used to start an expression - check for missing operators, parentheses, or invalid syntax"
+}
+
+func (*UnexpectedExpressionStartError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+// UnexpectedTokenInExpressionError is reported when an unexpected token is found in an expression.
+type UnexpectedTokenInExpressionError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &UnexpectedTokenInExpressionError{}
+var _ errors.UserError = &UnexpectedTokenInExpressionError{}
+var _ errors.SecondaryError = &UnexpectedTokenInExpressionError{}
+var _ errors.HasDocumentationLink = &UnexpectedTokenInExpressionError{}
+
+func (*UnexpectedTokenInExpressionError) isParseError() {}
+
+func (*UnexpectedTokenInExpressionError) IsUserError() {}
+
+func (e *UnexpectedTokenInExpressionError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *UnexpectedTokenInExpressionError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *UnexpectedTokenInExpressionError) Error() string {
+	return fmt.Sprintf(
+		"unexpected token in expression: %s",
+		e.GotToken.Type,
+	)
+}
+
+func (*UnexpectedTokenInExpressionError) SecondaryError() string {
+	return "this token cannot be used as an operator in an expression - check for missing operators, parentheses, or invalid syntax"
+}
+
+func (*UnexpectedTokenInExpressionError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
 // CustomDestructorError
 
 type CustomDestructorError struct {

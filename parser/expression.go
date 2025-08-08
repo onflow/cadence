@@ -1666,14 +1666,11 @@ func exprLeftBindingPower(p *parser) (int, error) {
 }
 
 func applyExprNullDenotation(p *parser, token lexer.Token) (ast.Expression, error) {
-	tokenType := token.Type
-	nullDenotation := exprNullDenotations[tokenType]
+	nullDenotation := exprNullDenotations[token.Type]
 	if nullDenotation == nil {
-		return nil, p.newSyntaxError(
-			"unexpected token in expression: %s",
-			tokenType,
-		).WithSecondary("this token cannot be used to start an expression - check for missing operators, parentheses, or invalid syntax").
-			WithDocumentation("https://cadence-lang.org/docs/language/syntax")
+		return nil, &UnexpectedExpressionStartError{
+			GotToken: token,
+		}
 	}
 	return nullDenotation(p, token)
 }
@@ -1681,11 +1678,9 @@ func applyExprNullDenotation(p *parser, token lexer.Token) (ast.Expression, erro
 func applyExprLeftDenotation(p *parser, token lexer.Token, left ast.Expression) (ast.Expression, error) {
 	leftDenotation := exprLeftDenotations[token.Type]
 	if leftDenotation == nil {
-		return nil, p.newSyntaxError(
-			"unexpected token in expression: %s",
-			token.Type,
-		).WithSecondary("this token cannot be used as an operator in an expression - check for missing operators, parentheses, or invalid syntax").
-			WithDocumentation("https://cadence-lang.org/docs/language/syntax")
+		return nil, &UnexpectedTokenInExpressionError{
+			GotToken: token,
+		}
 	}
 	return leftDenotation(p, token, left)
 }

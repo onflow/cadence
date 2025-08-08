@@ -5338,11 +5338,14 @@ func TestParseUnaryExpression(t *testing.T) {
 		_, errs := testParseExpression(code)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token in expression: '%'",
-					Secondary:     "this token cannot be used to start an expression - check for missing operators, parentheses, or invalid syntax",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Line: 1, Column: 2, Offset: 2},
+				&UnexpectedExpressionStartError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenPercent,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+							EndPos:   ast.Position{Offset: 1, Line: 1, Column: 1},
+						},
+					},
 				},
 			},
 			errs,
@@ -6327,11 +6330,14 @@ func TestParseStringTemplate(t *testing.T) {
 		require.NotEmpty(t, errs)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token in expression: '.'",
-					Secondary:     "this token cannot be used to start an expression - check for missing operators, parentheses, or invalid syntax",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
+				&UnexpectedExpressionStartError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenDot,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+							EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+						},
+					},
 				},
 			},
 			errs,
@@ -6391,11 +6397,14 @@ func TestParseStringTemplate(t *testing.T) {
 		require.NotEmpty(t, errs)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token in expression: ')'",
-					Secondary:     "this token cannot be used to start an expression - check for missing operators, parentheses, or invalid syntax",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
+				&UnexpectedExpressionStartError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenParenClose,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+							EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+						},
+					},
 				},
 			},
 			errs,
