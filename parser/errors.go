@@ -650,6 +650,170 @@ func (*UnexpectedDefaultArgumentError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions"
 }
 
+// MissingCommaInTypeParameterListError
+
+type MissingCommaInTypeParameterListError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &MissingCommaInTypeParameterListError{}
+var _ errors.UserError = &MissingCommaInTypeParameterListError{}
+var _ errors.SecondaryError = &MissingCommaInTypeParameterListError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingCommaInTypeParameterListError{}
+var _ errors.HasDocumentationLink = &MissingCommaInTypeParameterListError{}
+
+func (*MissingCommaInTypeParameterListError) isParseError() {}
+
+func (*MissingCommaInTypeParameterListError) IsUserError() {}
+
+func (e *MissingCommaInTypeParameterListError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *MissingCommaInTypeParameterListError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*MissingCommaInTypeParameterListError) Error() string {
+	return "missing comma after type parameter"
+}
+
+func (*MissingCommaInTypeParameterListError) SecondaryError() string {
+	return "add a comma to separate type parameters in the type parameter list"
+}
+
+func (e *MissingCommaInTypeParameterListError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Add comma to separate type parameters",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: ", ",
+					Range: ast.Range{
+						StartPos: e.Pos,
+						EndPos:   e.Pos,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (*MissingCommaInTypeParameterListError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/functions#function-declarations"
+}
+
+// UnexpectedTokenInTypeParameterListError is reported when an unexpected token is found in a type parameter list.
+type UnexpectedTokenInTypeParameterListError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &UnexpectedTokenInTypeParameterListError{}
+var _ errors.UserError = &UnexpectedTokenInTypeParameterListError{}
+var _ errors.SecondaryError = &UnexpectedTokenInTypeParameterListError{}
+var _ errors.HasDocumentationLink = &UnexpectedTokenInTypeParameterListError{}
+
+func (*UnexpectedTokenInTypeParameterListError) isParseError() {}
+
+func (*UnexpectedTokenInTypeParameterListError) IsUserError() {}
+
+func (e *UnexpectedTokenInTypeParameterListError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *UnexpectedTokenInTypeParameterListError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *UnexpectedTokenInTypeParameterListError) Error() string {
+	return fmt.Sprintf(
+		"expected type parameter or end of type parameter list, got %s",
+		e.GotToken.Type,
+	)
+}
+
+func (*UnexpectedTokenInTypeParameterListError) SecondaryError() string {
+	return "type parameters must be separated by commas, and the list must end with a closing angle bracket (>)"
+}
+
+func (*UnexpectedTokenInTypeParameterListError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+// MissingClosingGreaterInTypeParameterListError is reported when a type parameter list is missing a closing angle bracket.
+type MissingClosingGreaterInTypeParameterListError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &MissingClosingGreaterInTypeParameterListError{}
+var _ errors.UserError = &MissingClosingGreaterInTypeParameterListError{}
+var _ errors.SecondaryError = &MissingClosingGreaterInTypeParameterListError{}
+var _ errors.HasDocumentationLink = &MissingClosingGreaterInTypeParameterListError{}
+
+func (*MissingClosingGreaterInTypeParameterListError) isParseError() {}
+
+func (*MissingClosingGreaterInTypeParameterListError) IsUserError() {}
+
+func (e *MissingClosingGreaterInTypeParameterListError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *MissingClosingGreaterInTypeParameterListError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*MissingClosingGreaterInTypeParameterListError) Error() string {
+	return fmt.Sprintf(
+		"missing %s at end of type parameter list",
+		lexer.TokenGreater,
+	)
+}
+
+func (*MissingClosingGreaterInTypeParameterListError) SecondaryError() string {
+	return "type parameters must be separated by commas, and the list must end with a closing angle bracket (>)"
+}
+
+func (*MissingClosingGreaterInTypeParameterListError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+// ExpectedCommaOrEndOfTypeParameterListError is reported when a comma or the end of a type parameter list is expected.
+type ExpectedCommaOrEndOfTypeParameterListError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &ExpectedCommaOrEndOfTypeParameterListError{}
+var _ errors.UserError = &ExpectedCommaOrEndOfTypeParameterListError{}
+var _ errors.SecondaryError = &ExpectedCommaOrEndOfTypeParameterListError{}
+var _ errors.HasDocumentationLink = &ExpectedCommaOrEndOfTypeParameterListError{}
+
+func (*ExpectedCommaOrEndOfTypeParameterListError) isParseError() {}
+
+func (*ExpectedCommaOrEndOfTypeParameterListError) IsUserError() {}
+
+func (e *ExpectedCommaOrEndOfTypeParameterListError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *ExpectedCommaOrEndOfTypeParameterListError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *ExpectedCommaOrEndOfTypeParameterListError) Error() string {
+	return fmt.Sprintf(
+		"expected comma or end of type parameter list, got %s",
+		e.GotToken.Type,
+	)
+}
+
+func (*ExpectedCommaOrEndOfTypeParameterListError) SecondaryError() string {
+	return "type parameters must be separated by commas, and the list must end with a closing angle bracket (>)"
+}
+
+func (*ExpectedCommaOrEndOfTypeParameterListError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
 // MissingClosingParenInArgumentListError is reported when an argument list is missing a closing parenthesis.
 type MissingClosingParenInArgumentListError struct {
 	Pos ast.Position

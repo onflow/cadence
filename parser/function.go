@@ -225,7 +225,7 @@ func parseTypeParameterList(p *parser) (*ast.TypeParameterList, error) {
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
 			if !expectTypeParameter {
-				p.report(&MissingCommaInParameterListError{
+				p.report(&MissingCommaInTypeParameterListError{
 					Pos: p.current.StartPos,
 				})
 			}
@@ -239,11 +239,9 @@ func parseTypeParameterList(p *parser) (*ast.TypeParameterList, error) {
 
 		case lexer.TokenComma:
 			if expectTypeParameter {
-				return nil, p.newSyntaxError(
-					"expected type parameter or end of type parameter list, got %s",
-					p.current.Type,
-				).WithSecondary("type parameters must be separated by commas, and the list must end with a closing angle bracket (>)").
-					WithDocumentation("https://cadence-lang.org/docs/language/syntax")
+				return nil, &UnexpectedTokenInTypeParameterListError{
+					GotToken: p.current,
+				}
 			}
 			// Skip the comma
 			p.next()
@@ -256,25 +254,18 @@ func parseTypeParameterList(p *parser) (*ast.TypeParameterList, error) {
 			atEnd = true
 
 		case lexer.TokenEOF:
-			return nil, p.newSyntaxError(
-				"missing %s at end of type parameter list",
-				lexer.TokenGreater,
-			).WithSecondary("type parameters must be separated by commas, and the list must end with a closing angle bracket (>)").
-				WithDocumentation("https://cadence-lang.org/docs/language/syntax")
-
+			return nil, &MissingClosingGreaterInTypeParameterListError{
+				Pos: p.current.StartPos,
+			}
 		default:
 			if expectTypeParameter {
-				return nil, p.newSyntaxError(
-					"expected parameter or end of type parameter list, got %s",
-					p.current.Type,
-				).WithSecondary("type parameters must be separated by commas, and the list must end with a closing angle bracket (>)").
-					WithDocumentation("https://cadence-lang.org/docs/language/syntax/")
+				return nil, &UnexpectedTokenInTypeParameterListError{
+					GotToken: p.current,
+				}
 			} else {
-				return nil, p.newSyntaxError(
-					"expected comma or end of type parameter list, got %s",
-					p.current.Type,
-				).WithSecondary("type parameters must be separated by commas, and the list must end with a closing angle bracket (>)").
-					WithDocumentation("https://cadence-lang.org/docs/language/syntax")
+				return nil, &ExpectedCommaOrEndOfTypeParameterListError{
+					GotToken: p.current,
+				}
 			}
 		}
 	}

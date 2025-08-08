@@ -867,6 +867,31 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("invalid type parameter list continuation", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarationsWithConfig(
+			"fun foo  < A ,, > () {}",
+			Config{
+				TypeParametersEnabled: true,
+			},
+		)
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedTokenInTypeParameterListError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenComma,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 14, Line: 1, Column: 14},
+							EndPos:   ast.Position{Offset: 14, Line: 1, Column: 14},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
 	t.Run("with return type", func(t *testing.T) {
 
 		t.Parallel()
@@ -1877,11 +1902,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "missing '>' at end of type parameter list",
-					Pos:           ast.Position{Offset: 11, Line: 1, Column: 11},
-					Secondary:     "type parameters must be separated by commas, and the list must end with a closing angle bracket (>)",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
+				&MissingClosingGreaterInTypeParameterListError{
+					Pos: ast.Position{Offset: 11, Line: 1, Column: 11},
 				},
 			},
 			errs,
@@ -1901,8 +1923,35 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&MissingCommaInParameterListError{
+				&MissingCommaInTypeParameterListError{
 					Pos: ast.Position{Offset: 13, Line: 1, Column: 13},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid type parameter list separator", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarationsWithConfig(
+			"fun foo  < A - > () { } ",
+			Config{
+				TypeParametersEnabled: true,
+			},
+		)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&ExpectedCommaOrEndOfTypeParameterListError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenMinus,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+							EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+						},
+					},
 				},
 			},
 			errs,
