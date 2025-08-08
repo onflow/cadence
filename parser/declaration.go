@@ -703,12 +703,9 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 				expectCommaOrFrom = true
 
 			case lexer.TokenEOF:
-				return p.newSyntaxError(
-					"unexpected end in import declaration: expected %s or %s",
-					lexer.TokenIdentifier,
-					lexer.TokenComma,
-				).WithSecondary("import declarations cannot end abruptly - expect either an identifier to import or a comma to continue the import list").
-					WithDocumentation("https://cadence-lang.org/docs/language/imports")
+				return &UnexpectedEOFInImportListError{
+					Pos: p.current.StartPos,
+				}
 
 			default:
 				return &InvalidImportContinuationError{

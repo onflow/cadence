@@ -2595,6 +2595,22 @@ func TestParseImportDeclaration(t *testing.T) {
 
 	})
 
+	t.Run("one identifier, missing second identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`import foo , `)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedEOFInImportListError{
+					Pos: ast.Position{Offset: 13, Line: 1, Column: 13},
+				},
+			},
+			errs,
+		)
+	})
+
 	t.Run("from keyword as second identifier", func(t *testing.T) {
 
 		t.Parallel()

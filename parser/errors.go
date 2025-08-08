@@ -1057,6 +1057,44 @@ func (*MissingImportLocationError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/imports"
 }
 
+// UnexpectedEOFInImportListError is reported when an import list ends unexpectedly.
+type UnexpectedEOFInImportListError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &UnexpectedEOFInImportListError{}
+var _ errors.UserError = &UnexpectedEOFInImportListError{}
+var _ errors.SecondaryError = &UnexpectedEOFInImportListError{}
+var _ errors.HasDocumentationLink = &UnexpectedEOFInImportListError{}
+
+func (*UnexpectedEOFInImportListError) isParseError() {}
+
+func (*UnexpectedEOFInImportListError) IsUserError() {}
+
+func (e *UnexpectedEOFInImportListError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *UnexpectedEOFInImportListError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*UnexpectedEOFInImportListError) Error() string {
+	return fmt.Sprintf(
+		"unexpected end in import declaration: expected %s or %s",
+		lexer.TokenIdentifier,
+		lexer.TokenComma,
+	)
+}
+
+func (*UnexpectedEOFInImportListError) SecondaryError() string {
+	return "import declarations cannot end abruptly - expect either an identifier to import or a comma to continue the import list"
+}
+
+func (*UnexpectedEOFInImportListError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/imports"
+}
+
 // MissingConformanceError is reported when a colon for conformances is present,
 // but no conformances follow.
 type MissingConformanceError struct {
