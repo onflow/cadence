@@ -383,3 +383,7 @@ func (c *Context) MaybeUpdateStorageReferenceMemberReceiver(
 
 	return member
 }
+
+func (c *Context) TracingEnabled() bool {
+	return c.Tracer != nil
+}

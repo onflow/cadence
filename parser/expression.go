@@ -507,9 +507,9 @@ func init() {
 	defineIdentifierExpression()
 
 	setExprNullDenotation(lexer.TokenEOF, func(parser *parser, token lexer.Token) (ast.Expression, error) {
-		return nil, NewSyntaxError(token.StartPos, "unexpected end of program").
-			WithSecondary("check for incomplete expressions, missing tokens, or unterminated strings/comments").
-			WithDocumentation("https://cadence-lang.org/docs/language/syntax")
+		return nil, UnexpectedEOFError{
+			Pos: token.StartPos,
+		}
 	})
 }
 
@@ -958,7 +958,7 @@ func parseAttachExpressionRemainder(p *parser, token lexer.Token) (*ast.AttachEx
 	p.skipSpaceAndComments()
 
 	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordTo) {
-		return nil, p.syntaxError(
+		return nil, p.newSyntaxError(
 			"expected 'to', got %s",
 			p.current.Type,
 		)
@@ -1017,7 +1017,7 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 		switch p.current.Type {
 		case lexer.TokenComma:
 			if expectArgument {
-				return nil, ast.EmptyPosition, p.syntaxError(
+				return nil, ast.EmptyPosition, p.newSyntaxError(
 					"expected argument or end of argument list, got %s",
 					p.current.Type,
 				)
@@ -1035,10 +1035,7 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 		case lexer.TokenEOF:
 			return nil,
 				ast.EmptyPosition,
-				NewSyntaxError(
-					p.current.StartPos,
-					"missing ')' at end of invocation argument list",
-				).
+				p.newSyntaxError("missing ')' at end of invocation argument list").
 					WithSecondary("Function calls and type instantiations must be properly closed with a closing parenthesis").
 					WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 
@@ -1046,12 +1043,10 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 			if !expectArgument {
 				return nil,
 					ast.EmptyPosition,
-					NewSyntaxError(
-						p.current.StartPos,
+					p.newSyntaxError(
 						"unexpected argument in argument list (expecting delimiter or end of argument list), got %s",
 						p.current.Type,
-					).
-						WithSecondary("Arguments in function calls and type instantiations must be separated by commas").
+					).WithSecondary("Arguments in function calls and type instantiations must be separated by commas").
 						WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 			}
 
@@ -1092,12 +1087,10 @@ func parseArgument(p *parser) (*ast.Argument, error) {
 
 		identifier, ok := expr.(*ast.IdentifierExpression)
 		if !ok {
-			return nil, NewSyntaxError(
-				p.current.StartPos,
+			return nil, p.newSyntaxError(
 				"expected identifier for label, got %s",
 				expr,
-			).
-				WithSecondary("Argument labels must be simple identifiers, not expressions or complex syntax").
+			).WithSecondary("Argument labels must be simple identifiers, not expressions or complex syntax").
 				WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 		}
 		label = identifier.Identifier.Identifier
@@ -1502,16 +1495,13 @@ func parseMemberAccess(p *parser, token lexer.Token, left ast.Expression, option
 	// Whitespace after '.' (dot token) and '?.' (question mark dot token) is not allowed.
 	// We parse it anyway and report an error
 
-	// TODO: Add suggested fix for this error
 	if p.current.Is(lexer.TokenSpace) {
-		errorPos := p.current.StartPos
+		whitespaceToken := p.current
 		p.skipSpaceAndComments()
-		p.report(NewSyntaxError(
-			errorPos,
-			"invalid whitespace after %s",
-			lexer.TokenDot,
-		).WithSecondary("remove the space between the dot (.) and the member name").
-			WithDocumentation("https://cadence-lang.org/docs/language/syntax"))
+		p.report(&WhitespaceAfterMemberAccessError{
+			OperatorTokenType: token.Type,
+			WhitespaceRange:   whitespaceToken.Range,
+		})
 	}
 
 	// If there is an identifier, use it.
@@ -1522,12 +1512,9 @@ func parseMemberAccess(p *parser, token lexer.Token, left ast.Expression, option
 		identifier = p.tokenToIdentifier(p.current)
 		p.next()
 	} else {
-		p.report(NewSyntaxError(
-			p.current.StartPos,
-			"expected member name, got %s",
-			p.current.Type,
-		).WithSecondary("after a dot (.), you must provide a valid identifier for the member name").
-			WithDocumentation("https://cadence-lang.org/docs/language/syntax"))
+		p.report(&MemberAccessMissingNameError{
+			GotToken: p.current,
+		})
 	}
 
 	return ast.NewMemberExpression(
@@ -1688,12 +1675,10 @@ func applyExprNullDenotation(p *parser, token lexer.Token) (ast.Expression, erro
 	tokenType := token.Type
 	nullDenotation := exprNullDenotations[tokenType]
 	if nullDenotation == nil {
-		return nil, NewSyntaxError(
-			token.StartPos,
+		return nil, p.newSyntaxError(
 			"unexpected token in expression: %s",
 			tokenType,
-		).
-			WithSecondary("This token cannot be used to start an expression - check for missing operators, parentheses, or invalid syntax").
+		).WithSecondary("This token cannot be used to start an expression - check for missing operators, parentheses, or invalid syntax").
 			WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 	}
 	return nullDenotation(p, token)
@@ -1702,12 +1687,10 @@ func applyExprNullDenotation(p *parser, token lexer.Token) (ast.Expression, erro
 func applyExprLeftDenotation(p *parser, token lexer.Token, left ast.Expression) (ast.Expression, error) {
 	leftDenotation := exprLeftDenotations[token.Type]
 	if leftDenotation == nil {
-		return nil, NewSyntaxError(
-			token.StartPos,
+		return nil, p.newSyntaxError(
 			"unexpected token in expression: %s",
 			token.Type,
-		).
-			WithSecondary("This token cannot be used as an operator in an expression - check for missing operators, parentheses, or invalid syntax").
+		).WithSecondary("This token cannot be used as an operator in an expression - check for missing operators, parentheses, or invalid syntax").
 			WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 	}
 	return leftDenotation(p, token, left)

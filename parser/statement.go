@@ -55,7 +55,6 @@ func parseStatements(p *parser, isEndToken func(token lexer.Token) bool) (statem
 
 			// Check that the previous statement (if any) followed a semicolon
 
-			// TODO: Add suggested fix for this error
 			if !sawSemicolon {
 				statementCount := len(statements)
 				if statementCount > 1 {
@@ -63,11 +62,9 @@ func parseStatements(p *parser, isEndToken func(token lexer.Token) bool) (statem
 					previousLine := previousStatement.EndPosition(p.memoryGauge).Line
 					currentStartPos := statement.StartPosition()
 					if previousLine == currentStartPos.Line {
-						p.report(NewSyntaxError(
-							currentStartPos,
-							"statements on the same line must be separated with a semicolon",
-						).WithSecondary("add a semicolon (;) between statements or place each statement on a separate line").
-							WithDocumentation("https://cadence-lang.org/docs/language/syntax#semicolons"))
+						p.report(&StatementSeparationError{
+							Pos: currentStartPos,
+						})
 					}
 				}
 			}

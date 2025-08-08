@@ -672,17 +672,53 @@ func TestCheckDefaultEventDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheck(t, `
-			resource R {
-				event ResourceDestroyed()
-				fun foo() {
-					emit ResourceDestroyed()
-				}
-			}
-        `)
+		const code = `
+            resource R {
+                event ResourceDestroyed()
+
+                fun foo() {
+                    emit ResourceDestroyed()
+                }
+            }
+        `
+		_, err := ParseAndCheck(t, code)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.EmitDefaultDestroyEventError{}, errs[0])
+		var emitDefaultDestroyEventErr *sema.EmitDefaultDestroyEventError
+		require.ErrorAs(t, errs[0], &emitDefaultDestroyEventErr)
+
+		fixes := emitDefaultDestroyEventErr.SuggestFixes(code)
+		require.Equal(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove explicit emit statement",
+					TextEdits: []ast.TextEdit{
+						{
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 117, Line: 6, Column: 20},
+								EndPos:   ast.Position{Offset: 140, Line: 6, Column: 43},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		const expected = `
+            resource R {
+                event ResourceDestroyed()
+
+                fun foo() {
+                    
+                }
+            }
+        `
+
+		assert.Equal(t,
+			expected,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
 	})
 
 	t.Run("explicit emit disallowed outside", func(t *testing.T) {

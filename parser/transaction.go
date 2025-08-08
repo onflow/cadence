@@ -110,14 +110,12 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 			}
 
 		default:
-			return nil, NewSyntaxError(
-				p.current.StartPos,
+			return nil, p.newSyntaxError(
 				"unexpected identifier, expected keyword %q or %q, got %q",
 				KeywordPrepare,
 				KeywordExecute,
 				keyword,
-			).
-				WithSecondary("Transaction declarations can only contain 'prepare' and 'execute' blocks").
+			).WithSecondary("Transaction declarations can only contain 'prepare' and 'execute' blocks").
 				WithDocumentation("https://cadence-lang.org/docs/language/transactions")
 		}
 	}
@@ -161,12 +159,10 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 			switch string(keyword) {
 			case KeywordExecute:
 				if execute != nil {
-					return nil, NewSyntaxError(
-						p.current.StartPos,
+					return nil, p.newSyntaxError(
 						"unexpected second %q block",
 						KeywordExecute,
-					).
-						WithSecondary("Transaction declarations can only have one 'execute' block").
+					).WithSecondary("Transaction declarations can only have one 'execute' block").
 						WithDocumentation("https://cadence-lang.org/docs/language/transactions")
 				}
 
@@ -177,10 +173,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 
 			case KeywordPost:
 				if sawPost {
-					return nil, NewSyntaxError(
-						p.current.StartPos,
-						"unexpected second post-conditions",
-					).
+					return nil, p.newSyntaxError("unexpected second post-conditions").
 						WithSecondary("Transaction declarations can only have one 'post' block").
 						WithDocumentation("https://cadence-lang.org/docs/language/transactions")
 				}
@@ -194,14 +187,12 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 				sawPost = true
 
 			default:
-				return nil, NewSyntaxError(
-					p.current.StartPos,
+				return nil, p.newSyntaxError(
 					"unexpected identifier, expected keyword %q or %q, got %q",
 					KeywordExecute,
 					KeywordPost,
 					keyword,
-				).
-					WithSecondary("Transaction declarations can only contain 'execute' and 'post' blocks in this context").
+				).WithSecondary("Transaction declarations can only contain 'execute' and 'post' blocks in this context").
 					WithDocumentation("https://cadence-lang.org/docs/language/transactions")
 			}
 
@@ -212,12 +203,10 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 			atEnd = true
 
 		default:
-			return nil, NewSyntaxError(
-				p.current.StartPos,
+			return nil, p.newSyntaxError(
 				"unexpected token: %s",
 				p.current.Type,
-			).
-				WithSecondary("Check for extra characters, missing semicolons, or incomplete statements").
+			).WithSecondary("Check for extra characters, missing semicolons, or incomplete statements").
 				WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 		}
 	}

@@ -195,25 +195,20 @@ func ParseTokenStream[T any](
 	p.skipSpaceAndComments()
 
 	if !p.current.Is(lexer.TokenEOF) {
-		err := NewSyntaxError(p.current.StartPos, "unexpected token: %s", p.current.Type).
-			WithSecondary("check for extra characters, missing semicolons, or incomplete statements").
-			WithDocumentation("https://cadence-lang.org/docs/language/syntax")
-		p.report(err)
+		p.report(&UnexpectedTokenAtEndError{
+			Token: p.current,
+		})
 	}
 
 	return result, p.errors
 }
 
-func (p *parser) syntaxError(message string, params ...any) error {
+func (p *parser) newSyntaxError(message string, params ...any) *SyntaxError {
 	return NewSyntaxError(p.current.StartPos, message, params...)
 }
 
-func (p *parser) syntaxErrorWithSuggestedFix(message string, suggestedFix string) error {
-	return NewSyntaxErrorWithSuggestedReplacement(p.current.Range, message, suggestedFix)
-}
-
 func (p *parser) reportSyntaxError(message string, params ...any) {
-	err := p.syntaxError(message, params...)
+	err := p.newSyntaxError(message, params...)
 	p.report(err)
 }
 
@@ -288,11 +283,7 @@ func (p *parser) nextSemanticToken() {
 func (p *parser) mustOne(tokenType lexer.TokenType) (lexer.Token, error) {
 	t := p.current
 	if !t.Is(tokenType) {
-		return lexer.Token{}, NewSyntaxError(
-			p.current.StartPos,
-			"expected token %s",
-			tokenType,
-		).
+		return lexer.Token{}, p.newSyntaxError("expected token %s", tokenType).
 			WithSecondary("Check for missing punctuation, operators, or syntax elements").
 			WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 	}
@@ -321,12 +312,7 @@ func (p *parser) isToken(token lexer.Token, tokenType lexer.TokenType, expected 
 func (p *parser) mustToken(tokenType lexer.TokenType, string string) (lexer.Token, error) {
 	t := p.current
 	if !p.isToken(t, tokenType, string) {
-		return lexer.Token{}, NewSyntaxError(
-			p.current.StartPos,
-			"expected token %s with string value %s",
-			tokenType,
-			string,
-		).
+		return lexer.Token{}, p.newSyntaxError("expected token %s with string value %s", tokenType, string).
 			WithSecondary("Check for missing punctuation, operators, or syntax elements").
 			WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 	}
@@ -392,7 +378,7 @@ func (p *parser) checkReplayCount(total, additional, limit uint, kind string) (u
 	newTotal := total + additional
 	// Check for overflow (uint) and for exceeding the limit
 	if newTotal < total || newTotal > limit {
-		return newTotal, p.syntaxError("program too ambiguous, %s replay limit of %d tokens exceeded", kind, limit)
+		return newTotal, p.newSyntaxError("program too ambiguous, %s replay limit of %d tokens exceeded", kind, limit)
 	}
 	return newTotal, nil
 }
@@ -554,7 +540,7 @@ func (p *parser) mustNotKeyword(errMsgContext string, token lexer.Token) (ast.Id
 			errMsgContext = " " + errMsgContext
 		}
 
-		return ast.Identifier{}, p.syntaxError("expected identifier%s, got %s", errMsgContext, invalidTokenMsg)
+		return ast.Identifier{}, p.newSyntaxError("expected identifier%s, got %s", errMsgContext, invalidTokenMsg)
 	}
 
 	if token.Type != lexer.TokenIdentifier {
