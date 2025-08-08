@@ -1991,7 +1991,7 @@ func TestInterpretDereference(t *testing.T) {
 		expectedValues := map[sema.Type]interpreter.FixedPointValue{
 			sema.UFix64Type: interpreter.NewUnmeteredUFix64Value(4224_000_000),
 			sema.Fix64Type:  interpreter.NewUnmeteredFix64Value(4224_000_000),
-			sema.Fix128Type: interpreter.NewUnmeteredFix128ValueFromUnscaledInteger(4224, 22),
+			sema.Fix128Type: interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(4224, 22),
 		}
 
 		for _, typ := range sema.AllFixedPointTypes {

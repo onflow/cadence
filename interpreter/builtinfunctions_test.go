@@ -825,10 +825,10 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 		},
 		"Fix128": {
 			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]":                                 interpreter.NewUnmeteredFix128ValueWithInteger(0, interpreter.EmptyLocationRange),
-			"[34, 189, 216, 143, 237, 158, 252, 106, 0, 0, 0]":                                 interpreter.NewUnmeteredFix128ValueFromUnscaledInteger(42, 24),   // 42.0 with padding
-			"[0, 0, 0, 0, 0, 34, 189, 216, 143, 237, 158, 252, 106, 0, 0, 0]":                  interpreter.NewUnmeteredFix128ValueFromUnscaledInteger(42, 24),   // 42.0
-			"[0, 0, 0, 0, 0, 34, 240, 170, 253, 0, 136, 125, 32, 0, 0, 0]":                     interpreter.NewUnmeteredFix128ValueFromUnscaledInteger(4224, 22), // 42.24
-			"[255, 255, 255, 255, 255, 255, 44, 61, 228, 49, 51, 18, 95, 0, 0, 0]":             interpreter.NewUnmeteredFix128ValueFromUnscaledInteger(-1, 24),   // -1.0
+			"[34, 189, 216, 143, 237, 158, 252, 106, 0, 0, 0]":                                 interpreter.NewUnmeteredFix128ValueWithInteger(42, interpreter.EmptyLocationRange), // 42.0 with padding
+			"[0, 0, 0, 0, 0, 34, 189, 216, 143, 237, 158, 252, 106, 0, 0, 0]":                  interpreter.NewUnmeteredFix128ValueWithInteger(42, interpreter.EmptyLocationRange), // 42.0
+			"[0, 0, 0, 0, 0, 34, 240, 170, 253, 0, 136, 125, 32, 0, 0, 0]":                     interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(4224, 22),                   // 42.24
+			"[255, 255, 255, 255, 255, 255, 44, 61, 228, 49, 51, 18, 95, 0, 0, 0]":             interpreter.NewUnmeteredFix128ValueWithInteger(-1, interpreter.EmptyLocationRange), // -1.0
 			"[127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
 			"[128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]":                               interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
 		},

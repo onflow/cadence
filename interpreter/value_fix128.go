@@ -48,13 +48,18 @@ func NewFix128ValueWithInteger(gauge common.MemoryGauge, constructor func() int6
 	return NewUnmeteredFix128ValueWithInteger(constructor(), locationRange)
 }
 
-// NewUnmeteredFix128ValueWithInteger construct a Fix128Value from a int64.
-// Note that the int64 is the scaled representation.
+// NewUnmeteredFix128ValueWithInteger construct a Fix128Value from an int64.
+// Note that this function uses the default scaling of 24.
 func NewUnmeteredFix128ValueWithInteger(integer int64, locationRange LocationRange) Fix128Value {
-	return NewFix128ValueFromBigInt(nil, big.NewInt(integer))
+	bigInt := new(big.Int).Mul(
+		big.NewInt(integer),
+		sema.Fix128FactorIntBig,
+	)
+
+	return NewFix128ValueFromBigInt(nil, bigInt)
 }
 
-func NewUnmeteredFix128ValueFromUnscaledInteger(integer int64, scale int64) Fix128Value {
+func NewUnmeteredFix128ValueWithIntegerAndScale(integer int64, scale int64) Fix128Value {
 	bigInt := new(big.Int).Mul(
 		big.NewInt(integer),
 		// To remove the fractional, multiply it by the given scale.
@@ -62,7 +67,8 @@ func NewUnmeteredFix128ValueFromUnscaledInteger(integer int64, scale int64) Fix1
 			big.NewInt(10),
 			big.NewInt(scale),
 			nil,
-		))
+		),
+	)
 
 	return NewFix128ValueFromBigInt(nil, bigInt)
 }
@@ -335,38 +341,14 @@ func (v Fix128Value) Mod(context NumberValueArithmeticContext, other NumberValue
 		})
 	}
 
-	// v - int(v/o) * o
-
-	quotient, ok := v.Div(context, o, locationRange).(Fix128Value)
-	if !ok {
-		panic(&InvalidOperandsError{
-			Operation:     ast.OperationMod,
-			LeftType:      v.StaticType(context),
-			RightType:     other.StaticType(context),
-			LocationRange: locationRange,
-		})
+	valueGetter := func() fix.Fix128 {
+		result, err := fix.Fix128(v).Mod(fix.Fix128(o))
+		// Should panic on overflow/underflow
+		handleFixedpointError(err, locationRange)
+		return result
 	}
 
-	truncatedQuotient := NewFix128Value(
-		context,
-		func() fix.Fix128 {
-			quotientFix128 := fix.Fix128(quotient)
-
-			divided, err := quotientFix128.Div(fixedpoint.Fix128FactorAsFix128)
-			handleFixedpointError(err, locationRange)
-
-			truncatedQuotientFix128, err := divided.Mul(fixedpoint.Fix128FactorAsFix128)
-			handleFixedpointError(err, locationRange)
-
-			return truncatedQuotientFix128
-		},
-	)
-
-	return v.Minus(
-		context,
-		truncatedQuotient.Mul(context, o, locationRange),
-		locationRange,
-	)
+	return NewFix128Value(context, valueGetter)
 }
 
 func (v Fix128Value) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {

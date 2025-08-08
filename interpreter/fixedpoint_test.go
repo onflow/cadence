@@ -55,8 +55,8 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 
 	tests := map[string]interpreter.Value{
 		// Fix*
-		"Fix64": interpreter.NewUnmeteredFix64Value(123000000),
-		"Fix128": interpreter.NewUnmeteredFix128ValueFromUnscaledInteger(123, 22),
+		"Fix64":  interpreter.NewUnmeteredFix64Value(123000000),
+		"Fix128": interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(123, 22),
 
 		// UFix*
 		"UFix64": interpreter.NewUnmeteredUFix64Value(123000000),

@@ -506,6 +506,7 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 				},
 			},
 		},
+
 		sema.Fix64Type: {
 			add: testCalls{
 				overflow: testCall{
@@ -555,47 +556,48 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 			add: testCalls{
 				overflow: testCall{
 					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
-					interpreter.NewUnmeteredFix128ValueFromUnscaledInteger(2, 24),
+					interpreter.NewUnmeteredFix128ValueWithInteger(2, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
 				},
 				underflow: testCall{
 					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
-					interpreter.NewUnmeteredFix128ValueFromUnscaledInteger(-2, 24),
+					interpreter.NewUnmeteredFix128ValueWithInteger(-2, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
 				},
 			},
 			subtract: testCalls{
 				overflow: testCall{
 					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
-					interpreter.NewUnmeteredFix128ValueFromUnscaledInteger(-2, 24),
+					interpreter.NewUnmeteredFix128ValueWithInteger(-2, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
 				},
 				underflow: testCall{
 					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
-					interpreter.NewUnmeteredFix128ValueFromUnscaledInteger(2, 24),
+					interpreter.NewUnmeteredFix128ValueWithInteger(2, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
 				},
 			},
 			multiply: testCalls{
 				overflow: testCall{
 					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
-					interpreter.NewUnmeteredFix128ValueFromUnscaledInteger(2, 24),
+					interpreter.NewUnmeteredFix128ValueWithInteger(2, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
 				},
 				underflow: testCall{
 					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
-					interpreter.NewUnmeteredFix128ValueFromUnscaledInteger(2, 24),
+					interpreter.NewUnmeteredFix128ValueWithInteger(2, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
 				},
 			},
 			divide: testCalls{
 				overflow: testCall{
 					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
-					interpreter.NewUnmeteredFix128ValueFromUnscaledInteger(-1, 24),
+					interpreter.NewUnmeteredFix128ValueWithInteger(-1, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
 				},
 			},
 		},
+
 		sema.UIntType: {
 			subtract: testCalls{
 				underflow: testCall{
