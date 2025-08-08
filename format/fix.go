@@ -20,10 +20,11 @@ package format
 
 import (
 	"fmt"
-	fix "github.com/onflow/fixed-point"
 	"math/big"
 	"strconv"
 	"strings"
+
+	fix "github.com/onflow/fixed-point"
 
 	"github.com/onflow/cadence/fixedpoint"
 )

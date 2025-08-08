@@ -851,10 +851,6 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 
 			t.Run(fmt.Sprintf("%s %s %s", ty, method, kind), func(t *testing.T) {
 
-				if ty != sema.Fix128Type {
-					return
-				}
-
 				inter := parseCheckAndPrepare(t,
 					fmt.Sprintf(
 						`

@@ -115,14 +115,8 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 }
 
 var testFixedPointValues = map[string]interpreter.Value{
-	"Fix64": interpreter.NewUnmeteredFix64Value(50 * sema.Fix64Factor),
-	"Fix128": interpreter.NewFix128ValueFromBigInt(
-		nil,
-		new(big.Int).Mul(
-			big.NewInt(50),
-			fixedpoint.Fix128FactorAsBigInt,
-		),
-	),
+	"Fix64":  interpreter.NewUnmeteredFix64Value(50 * sema.Fix64Factor),
+	"Fix128": interpreter.NewUnmeteredFix128ValueWithInteger(50, interpreter.EmptyLocationRange),
 	"UFix64": interpreter.NewUnmeteredUFix64Value(50 * sema.Fix64Factor),
 }
 

@@ -3091,8 +3091,10 @@ func TestParseFix128Type(t *testing.T) {
 	t.Parallel()
 
 	code := `let x: Fix128 = 42`
+
 	prog, errs := testParseProgram(code)
 	require.Empty(t, errs)
+
 	expected := []ast.Declaration{
 		&ast.VariableDeclaration{
 			Access:     ast.AccessNotSpecified,

@@ -484,7 +484,7 @@ func (v Fix64Value) Encode(e *atree.Encoder) error {
 const (
 	// !!! *WARNING* !!!
 	//
-	// encodedFix128ValueLength is used to verify encoded path length during decoding.
+	// encodedFix128ValueLength is used to verify encoded fix128-parts length during decoding.
 	encodedFix128ValueLength = 2
 )
 

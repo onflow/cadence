@@ -112,7 +112,7 @@ func TestInterpretPassBuiltinByValue(t *testing.T) {
 	// Check built-ins have a static type, so value transfer check works
 
 	_ = sema.BaseValueActivation.ForEach(
-		func(name string, variable *sema.Variable) error {
+		func(name string, _ *sema.Variable) error {
 
 			t.Run(name, func(t *testing.T) {
 
