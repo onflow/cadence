@@ -5397,11 +5397,8 @@ func TestParseTransactionDeclaration(t *testing.T) {
 		_, errs := testParseDeclarations("transaction { execute {}  execute {}}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       `unexpected second "execute" block`,
-					Secondary:     "transaction declarations can only have one 'execute' block",
-					Pos:           ast.Position{Offset: 26, Line: 1, Column: 26},
-					Documentation: "https://cadence-lang.org/docs/language/transactions",
+				&DuplicateExecuteBlockError{
+					Pos: ast.Position{Offset: 26, Line: 1, Column: 26},
 				},
 			},
 			errs,
@@ -5415,10 +5412,8 @@ func TestParseTransactionDeclaration(t *testing.T) {
 		_, errs := testParseDeclarations("transaction { foo }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       `unexpected identifier, expected keyword "prepare" or "execute", got "foo"`,
-					Secondary:     "transaction declarations can only contain 'prepare' and 'execute' blocks",
-					Documentation: "https://cadence-lang.org/docs/language/transactions",
+				&ExpectedPrepareOrExecuteError{
+					GotIdentifier: "foo",
 					Pos:           ast.Position{Offset: 14, Line: 1, Column: 14},
 				},
 			},
@@ -5433,11 +5428,8 @@ func TestParseTransactionDeclaration(t *testing.T) {
 		_, errs := testParseDeclarations("transaction { execute {} post {} post {} }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected second post-conditions",
-					Secondary:     "transaction declarations can only have one 'post' block",
-					Documentation: "https://cadence-lang.org/docs/language/transactions",
-					Pos:           ast.Position{Offset: 33, Line: 1, Column: 33},
+				&DuplicatePostConditionsError{
+					Pos: ast.Position{Offset: 33, Line: 1, Column: 33},
 				},
 			},
 			errs,
@@ -5451,10 +5443,8 @@ func TestParseTransactionDeclaration(t *testing.T) {
 		_, errs := testParseDeclarations("transaction { prepare() {} foo }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       `unexpected identifier, expected keyword "execute" or "post", got "foo"`,
-					Secondary:     "transaction declarations can only contain 'execute' and 'post' blocks in this context",
-					Documentation: "https://cadence-lang.org/docs/language/transactions",
+				&ExpectedExecuteOrPostError{
+					GotIdentifier: "foo",
 					Pos:           ast.Position{Offset: 27, Line: 1, Column: 27},
 				},
 			},
@@ -5469,11 +5459,8 @@ func TestParseTransactionDeclaration(t *testing.T) {
 		_, errs := testParseDeclarations("transaction { execute {} foo }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       `unexpected identifier, expected keyword "execute" or "post", got "foo"`,
-					Secondary:     "transaction declarations can only contain 'execute' and 'post' blocks in this context",
-					Migration:     "",
-					Documentation: "https://cadence-lang.org/docs/language/transactions",
+				&ExpectedExecuteOrPostError{
+					GotIdentifier: "foo",
 					Pos:           ast.Position{Offset: 25, Line: 1, Column: 25},
 				},
 			},
@@ -6235,11 +6222,9 @@ func TestParseTransactionDeclaration(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       `unexpected identifier, expected keyword "prepare" or "execute", got "uwu"`,
+				&ExpectedPrepareOrExecuteError{
+					GotIdentifier: "uwu",
 					Pos:           ast.Position{Offset: 35, Line: 5, Column: 3},
-					Secondary:     "transaction declarations can only contain 'prepare' and 'execute' blocks",
-					Documentation: "https://cadence-lang.org/docs/language/transactions",
 				},
 			},
 			errs,

@@ -110,13 +110,10 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 			}
 
 		default:
-			return nil, p.newSyntaxError(
-				"unexpected identifier, expected keyword %q or %q, got %q",
-				KeywordPrepare,
-				KeywordExecute,
-				keyword,
-			).WithSecondary("transaction declarations can only contain 'prepare' and 'execute' blocks").
-				WithDocumentation("https://cadence-lang.org/docs/language/transactions")
+			return nil, &ExpectedPrepareOrExecuteError{
+				GotIdentifier: string(keyword),
+				Pos:           p.current.StartPos,
+			}
 		}
 	}
 
@@ -159,11 +156,9 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 			switch string(keyword) {
 			case KeywordExecute:
 				if execute != nil {
-					return nil, p.newSyntaxError(
-						"unexpected second %q block",
-						KeywordExecute,
-					).WithSecondary("transaction declarations can only have one 'execute' block").
-						WithDocumentation("https://cadence-lang.org/docs/language/transactions")
+					return nil, &DuplicateExecuteBlockError{
+						Pos: p.current.StartPos,
+					}
 				}
 
 				execute, err = parseTransactionExecute(p)
@@ -173,9 +168,9 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 
 			case KeywordPost:
 				if sawPost {
-					return nil, p.newSyntaxError("unexpected second post-conditions").
-						WithSecondary("transaction declarations can only have one 'post' block").
-						WithDocumentation("https://cadence-lang.org/docs/language/transactions")
+					return nil, &DuplicatePostConditionsError{
+						Pos: p.current.StartPos,
+					}
 				}
 				postStartPos := p.current.StartPos
 				// Skip the `post` keyword
@@ -187,13 +182,10 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 				sawPost = true
 
 			default:
-				return nil, p.newSyntaxError(
-					"unexpected identifier, expected keyword %q or %q, got %q",
-					KeywordExecute,
-					KeywordPost,
-					keyword,
-				).WithSecondary("transaction declarations can only contain 'execute' and 'post' blocks in this context").
-					WithDocumentation("https://cadence-lang.org/docs/language/transactions")
+				return nil, &ExpectedExecuteOrPostError{
+					GotIdentifier: string(keyword),
+					Pos:           p.current.StartPos,
+				}
 			}
 
 		case lexer.TokenBraceClose:

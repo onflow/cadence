@@ -851,6 +851,159 @@ func (*InvalidTypeParameterNameError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions"
 }
 
+// DuplicateExecuteBlockError is reported when a transaction declaration has a second execute block.
+type DuplicateExecuteBlockError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &DuplicateExecuteBlockError{}
+var _ errors.UserError = &DuplicateExecuteBlockError{}
+var _ errors.SecondaryError = &DuplicateExecuteBlockError{}
+var _ errors.HasDocumentationLink = &DuplicateExecuteBlockError{}
+
+func (*DuplicateExecuteBlockError) isParseError() {}
+
+func (*DuplicateExecuteBlockError) IsUserError() {}
+
+func (e *DuplicateExecuteBlockError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *DuplicateExecuteBlockError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (e *DuplicateExecuteBlockError) Error() string {
+	return fmt.Sprintf(
+		"unexpected second %q block",
+		KeywordExecute,
+	)
+}
+
+func (*DuplicateExecuteBlockError) SecondaryError() string {
+	return "transaction declarations can only have one 'execute' block"
+}
+
+func (*DuplicateExecuteBlockError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/transactions"
+}
+
+// DuplicatePostConditionsError is reported when a transaction declaration has a second post-conditions block.
+type DuplicatePostConditionsError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &DuplicatePostConditionsError{}
+var _ errors.UserError = &DuplicatePostConditionsError{}
+var _ errors.SecondaryError = &DuplicatePostConditionsError{}
+var _ errors.HasDocumentationLink = &DuplicatePostConditionsError{}
+
+func (*DuplicatePostConditionsError) isParseError() {}
+
+func (*DuplicatePostConditionsError) IsUserError() {}
+
+func (e *DuplicatePostConditionsError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *DuplicatePostConditionsError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (e *DuplicatePostConditionsError) Error() string {
+	return "unexpected second post-conditions"
+}
+
+func (*DuplicatePostConditionsError) SecondaryError() string {
+	return "transaction declarations can only have one 'post' block"
+}
+
+func (*DuplicatePostConditionsError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/transactions"
+}
+
+// ExpectedPrepareOrExecuteError is reported when a 'prepare' or 'execute' block is expected in a transaction.
+type ExpectedPrepareOrExecuteError struct {
+	GotIdentifier string
+	Pos           ast.Position
+}
+
+var _ ParseError = &ExpectedPrepareOrExecuteError{}
+var _ errors.UserError = &ExpectedPrepareOrExecuteError{}
+var _ errors.SecondaryError = &ExpectedPrepareOrExecuteError{}
+var _ errors.HasDocumentationLink = &ExpectedPrepareOrExecuteError{}
+
+func (*ExpectedPrepareOrExecuteError) isParseError() {}
+
+func (*ExpectedPrepareOrExecuteError) IsUserError() {}
+
+func (e *ExpectedPrepareOrExecuteError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *ExpectedPrepareOrExecuteError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
+	length := len(e.GotIdentifier)
+	return e.Pos.Shifted(memoryGauge, length-1)
+}
+
+func (e *ExpectedPrepareOrExecuteError) Error() string {
+	return fmt.Sprintf(
+		"unexpected identifier, expected keyword %q or %q, got %q",
+		KeywordPrepare,
+		KeywordExecute,
+		e.GotIdentifier,
+	)
+}
+
+func (*ExpectedPrepareOrExecuteError) SecondaryError() string {
+	return "transaction declarations can only contain 'prepare' and 'execute' blocks"
+}
+
+func (*ExpectedPrepareOrExecuteError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/transactions"
+}
+
+// ExpectedExecuteOrPostError is reported when an 'execute' or 'post' block is expected in a transaction.
+type ExpectedExecuteOrPostError struct {
+	GotIdentifier string
+	Pos           ast.Position
+}
+
+var _ ParseError = &ExpectedExecuteOrPostError{}
+var _ errors.UserError = &ExpectedExecuteOrPostError{}
+var _ errors.SecondaryError = &ExpectedExecuteOrPostError{}
+var _ errors.HasDocumentationLink = &ExpectedExecuteOrPostError{}
+
+func (*ExpectedExecuteOrPostError) isParseError() {}
+
+func (*ExpectedExecuteOrPostError) IsUserError() {}
+
+func (e *ExpectedExecuteOrPostError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *ExpectedExecuteOrPostError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
+	length := len(e.GotIdentifier)
+	return e.Pos.Shifted(memoryGauge, length-1)
+}
+
+func (e *ExpectedExecuteOrPostError) Error() string {
+	return fmt.Sprintf(
+		"unexpected identifier, expected keyword %q or %q, got %q",
+		KeywordExecute,
+		KeywordPost,
+		e.GotIdentifier,
+	)
+}
+
+func (*ExpectedExecuteOrPostError) SecondaryError() string {
+	return "transaction declarations can only contain 'execute' and 'post' blocks in this context"
+}
+
+func (*ExpectedExecuteOrPostError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/transactions"
+}
+
 // MissingClosingParenInArgumentListError is reported when an argument list is missing a closing parenthesis.
 type MissingClosingParenInArgumentListError struct {
 	Pos ast.Position
