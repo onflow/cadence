@@ -990,7 +990,7 @@ func TestMemberExpression_MarshalJSON(t *testing.T) {
                 "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
             },
             "Optional": true,
-            "AccessPos": {"Offset": 7, "Line": 8, "Column": 9},
+            "AccessEndPos": {"Offset": 7, "Line": 8, "Column": 9},
             "Identifier": {
                 "Identifier": "foobar",
                 "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
