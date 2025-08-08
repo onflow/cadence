@@ -656,13 +656,9 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 			switch p.current.Type {
 			case lexer.TokenComma:
 				if !expectCommaOrFrom {
-					return p.newSyntaxError(
-						"expected %s or keyword %q, got %s",
-						lexer.TokenIdentifier,
-						KeywordFrom,
-						p.current.Type,
-					).WithSecondary("import declarations expect either an identifier to import or the 'from' keyword to specify the import location").
-						WithDocumentation("https://cadence-lang.org/docs/language/imports")
+					return &InvalidTokenInImportListError{
+						GotToken: p.current,
+					}
 				}
 				expectCommaOrFrom = false
 

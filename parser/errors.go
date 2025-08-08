@@ -1095,6 +1095,44 @@ func (*UnexpectedEOFInImportListError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/imports"
 }
 
+// InvalidTokenInImportListError is reported when an import list has an invalid token.
+type InvalidTokenInImportListError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &InvalidTokenInImportListError{}
+var _ errors.UserError = &InvalidTokenInImportListError{}
+var _ errors.SecondaryError = &InvalidTokenInImportListError{}
+var _ errors.HasDocumentationLink = &InvalidTokenInImportListError{}
+
+func (*InvalidTokenInImportListError) isParseError() {}
+
+func (*InvalidTokenInImportListError) IsUserError() {}
+
+func (e *InvalidTokenInImportListError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *InvalidTokenInImportListError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *InvalidTokenInImportListError) Error() string {
+	return fmt.Sprintf(
+		"expected identifier or keyword %q, got %s",
+		KeywordFrom,
+		e.GotToken.Type,
+	)
+}
+
+func (*InvalidTokenInImportListError) SecondaryError() string {
+	return "import declarations expect either an identifier to import or the 'from' keyword to specify the import location"
+}
+
+func (*InvalidTokenInImportListError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/imports"
+}
+
 // MissingConformanceError is reported when a colon for conformances is present,
 // but no conformances follow.
 type MissingConformanceError struct {

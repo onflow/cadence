@@ -2539,11 +2539,14 @@ func TestParseImportDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations(`import foo, , bar from 0xaaaa`)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Pos:           ast.Position{Line: 1, Column: 12, Offset: 12},
-					Message:       `expected identifier or keyword "from", got ','`,
-					Secondary:     "import declarations expect either an identifier to import or the 'from' keyword to specify the import location",
-					Documentation: "https://cadence-lang.org/docs/language/imports",
+				&InvalidTokenInImportListError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenComma,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
+							EndPos:   ast.Position{Offset: 12, Line: 1, Column: 12},
+						},
+					},
 				},
 			},
 			errs,
