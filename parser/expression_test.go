@@ -5326,7 +5326,7 @@ func TestParseUnaryExpression(t *testing.T) {
 					Message:       "unexpected token in expression: '%'",
 					Secondary:     "This token cannot be used to start an expression - check for missing operators, parentheses, or invalid syntax",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Line: 1, Column: 1, Offset: 1},
+					Pos:           ast.Position{Line: 1, Column: 2, Offset: 2},
 				},
 			},
 			errs,
@@ -6306,9 +6306,7 @@ func TestParseStringTemplate(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression(`
-		  "\(.)"
-		`)
+		_, errs := testParseExpression(`"\(.)"`)
 
 		require.NotEmpty(t, errs)
 		AssertEqualWithDiff(t,
@@ -6317,7 +6315,7 @@ func TestParseStringTemplate(t *testing.T) {
 					Message:       "unexpected token in expression: '.'",
 					Secondary:     "This token cannot be used to start an expression - check for missing operators, parentheses, or invalid syntax",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 8, Line: 2, Column: 7},
+					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
 			},
 			errs,
@@ -6372,9 +6370,7 @@ func TestParseStringTemplate(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression(`
-		  "\()"
-		`)
+		_, errs := testParseExpression(`"\()"`)
 
 		require.NotEmpty(t, errs)
 		AssertEqualWithDiff(t,
@@ -6383,7 +6379,7 @@ func TestParseStringTemplate(t *testing.T) {
 					Message:       "unexpected token in expression: ')'",
 					Secondary:     "This token cannot be used to start an expression - check for missing operators, parentheses, or invalid syntax",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 8, Line: 2, Column: 7},
+					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
 			},
 			errs,

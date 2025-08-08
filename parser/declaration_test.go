@@ -10069,15 +10069,17 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations(` access(all) entitlement mapping M { 
-			include -> B
-		} `)
+		_, errs := testParseDeclarations(`
+            access(all) entitlement mapping M {
+                include -> B
+            }
+        `)
 
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message:       "unexpected token in type: '->'",
-					Pos:           ast.Position{Offset: 49, Line: 2, Column: 11},
+					Pos:           ast.Position{Offset: 73, Line: 3, Column: 24},
 					Secondary:     "This token cannot be used in this context - check for missing operators, parentheses, or invalid syntax",
 					Documentation: "https://cadence-lang.org/docs/language/values-and-types",
 				},

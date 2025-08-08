@@ -810,8 +810,11 @@ func applyTypeNullDenotation(p *parser, token lexer.Token) (ast.Type, error) {
 	tokenType := token.Type
 	nullDenotation := typeNullDenotations[tokenType]
 	if nullDenotation == nil {
-		return nil, p.newSyntaxError("unexpected token in type: %s", tokenType).
-			WithSecondary("This token cannot be used in this context - check for missing operators, parentheses, or invalid syntax").
+		return nil, NewSyntaxError(
+			token.StartPos,
+			"unexpected token in type: %s",
+			tokenType,
+		).WithSecondary("This token cannot be used in this context - check for missing operators, parentheses, or invalid syntax").
 			WithDocumentation("https://cadence-lang.org/docs/language/values-and-types")
 	}
 	return nullDenotation(p, token)
@@ -820,8 +823,11 @@ func applyTypeNullDenotation(p *parser, token lexer.Token) (ast.Type, error) {
 func applyTypeLeftDenotation(p *parser, token lexer.Token, left ast.Type) (ast.Type, error) {
 	leftDenotation := typeLeftDenotations[token.Type]
 	if leftDenotation == nil {
-		return nil, p.newSyntaxError("unexpected token in type: %s", token.Type).
-			WithSecondary("This token cannot be used in this context - check for missing operators, parentheses, or invalid syntax").
+		return nil, NewSyntaxError(
+			token.StartPos,
+			"unexpected token in type: %s",
+			token.Type,
+		).WithSecondary("This token cannot be used in this context - check for missing operators, parentheses, or invalid syntax").
 			WithDocumentation("https://cadence-lang.org/docs/language/values-and-types")
 	}
 	return leftDenotation(p, token, left)
@@ -906,12 +912,11 @@ func parseCommaSeparatedTypeAnnotations(
 
 		case endTokenType:
 			if expectTypeAnnotation && len(typeAnnotations) > 0 {
-				return nil, NewSyntaxError(
-					p.current.StartPos,
-					"missing type annotation after comma",
-				).
-					WithSecondary("After a comma, a type annotation is required to complete the list").
-					WithDocumentation("https://cadence-lang.org/docs/language/types-and-type-system/type-annotations")
+				p.report(
+					p.newSyntaxError("missing type annotation after comma").
+						WithSecondary("After a comma, a type annotation is required to complete the list").
+						WithDocumentation("https://cadence-lang.org/docs/language/types-and-type-system/type-annotations"),
+				)
 			}
 			atEnd = true
 

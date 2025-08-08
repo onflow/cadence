@@ -715,7 +715,7 @@ func TestParseIntersectionType(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected colon in intersection type",
 					Pos:           ast.Position{Offset: 8, Line: 1, Column: 8},
-					Secondary:     "Intersection types use commas to separate multiple types, not colons",
+					Secondary:     "Intersection types use commas (,) to separate multiple types, not colons (:)",
 					Documentation: "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types",
 				},
 			},
@@ -736,7 +736,7 @@ func TestParseIntersectionType(t *testing.T) {
 				&SyntaxError{
 					Message:       `unexpected colon in intersection type`,
 					Pos:           ast.Position{Offset: 7, Line: 1, Column: 7},
-					Secondary:     "Intersection types use commas to separate multiple types, not colons",
+					Secondary:     "Intersection types use commas (,) to separate multiple types, not colons (:)",
 					Documentation: "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types",
 				},
 			},
@@ -756,7 +756,7 @@ func TestParseIntersectionType(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message:       "non-nominal type in intersection list: [T]",
-					Pos:           ast.Position{Offset: 5, Line: 1, Column: 5},
+					Pos:           ast.Position{Offset: 1, Line: 1, Column: 1},
 					Secondary:     "Intersection types can only contain nominal types (struct, resource, or interface names)",
 					Documentation: "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types",
 				},
@@ -777,7 +777,7 @@ func TestParseIntersectionType(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message:       "non-nominal type in intersection list: [U]",
-					Pos:           ast.Position{Offset: 7, Line: 1, Column: 7},
+					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
 					Secondary:     "Intersection types can only contain nominal types (struct, resource, or interface names)",
 					Documentation: "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types",
 				},
@@ -986,7 +986,7 @@ func TestParseDictionaryType(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected comma in dictionary type",
 					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
-					Secondary:     "Dictionary types use a colon (:) to separate key and value types, not commas",
+					Secondary:     "Dictionary types use a colon (:) to separate key and value types, not commas (,)",
 					Documentation: "https://cadence-lang.org/docs/language/values-and-types/dictionaries",
 				},
 			},
@@ -1028,7 +1028,7 @@ func TestParseDictionaryType(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected colon in dictionary type",
 					Pos:           ast.Position{Offset: 3, Line: 1, Column: 3},
-					Secondary:     "Dictionary types can only have one colon (:) to separate key and value types",
+					Secondary:     "Dictionary types use a colon (:) to separate key and value types, but a value type is expected after the colon",
 					Documentation: "https://cadence-lang.org/docs/language/values-and-types/dictionaries",
 				},
 			},
