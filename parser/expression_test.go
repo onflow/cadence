@@ -1736,7 +1736,7 @@ func TestParseInvocation(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message:       "unexpected argument in argument list (expecting delimiter or end of argument list), got decimal integer",
-					Secondary:     "Arguments in function calls and type instantiations must be separated by commas",
+					Secondary:     "arguments in function calls and type instantiations must be separated by commas",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
@@ -1884,7 +1884,7 @@ func TestParseInvocation(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message:       "expected identifier for label, got 1 + 2",
-					Secondary:     "Argument labels must be simple identifiers, not expressions or complex syntax",
+					Secondary:     "argument labels must be simple identifiers, not expressions or complex syntax",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 					Pos:           ast.Position{Offset: 5, Line: 1, Column: 5},
 				},
@@ -2240,7 +2240,7 @@ func TestParseBlockComment(t *testing.T) {
 						Line:   1,
 						Column: 37,
 					},
-					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
@@ -5324,7 +5324,7 @@ func TestParseUnaryExpression(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message:       "unexpected token in expression: '%'",
-					Secondary:     "This token cannot be used to start an expression - check for missing operators, parentheses, or invalid syntax",
+					Secondary:     "this token cannot be used to start an expression - check for missing operators, parentheses, or invalid syntax",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 					Pos:           ast.Position{Line: 1, Column: 2, Offset: 2},
 				},
@@ -6313,7 +6313,7 @@ func TestParseStringTemplate(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message:       "unexpected token in expression: '.'",
-					Secondary:     "This token cannot be used to start an expression - check for missing operators, parentheses, or invalid syntax",
+					Secondary:     "this token cannot be used to start an expression - check for missing operators, parentheses, or invalid syntax",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
@@ -6377,7 +6377,7 @@ func TestParseStringTemplate(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message:       "unexpected token in expression: ')'",
-					Secondary:     "This token cannot be used to start an expression - check for missing operators, parentheses, or invalid syntax",
+					Secondary:     "this token cannot be used to start an expression - check for missing operators, parentheses, or invalid syntax",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
@@ -6411,7 +6411,7 @@ func TestParseStringTemplate(t *testing.T) {
 				&SyntaxError{
 					Message:       "expected token ')'",
 					Pos:           ast.Position{Offset: 10, Line: 2, Column: 9},
-					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
@@ -6433,7 +6433,7 @@ func TestParseStringTemplate(t *testing.T) {
 				&SyntaxError{
 					Message:       "expected token ')'",
 					Pos:           ast.Position{Offset: 16, Line: 2, Column: 15},
-					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
@@ -6455,7 +6455,7 @@ func TestParseStringTemplate(t *testing.T) {
 				&SyntaxError{
 					Message:       "expected token ')'",
 					Pos:           ast.Position{Offset: 30, Line: 2, Column: 29},
-					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},

@@ -153,7 +153,7 @@ func TestParseArrayType(t *testing.T) {
 				&SyntaxError{
 					Message:       `expected token ']'`,
 					Pos:           ast.Position{Offset: 8, Line: 1, Column: 8},
-					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
@@ -431,7 +431,7 @@ func TestParseReferenceType(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected token in type: ')'",
 					Pos:           ast.Position{Offset: 5, Line: 1, Column: 5},
-					Secondary:     "This token cannot be used in this context - check for missing operators, parentheses, or invalid syntax",
+					Secondary:     "this token cannot be used in this context - check for missing operators, parentheses, or invalid syntax",
 					Documentation: "https://cadence-lang.org/docs/language/values-and-types",
 				},
 			},
@@ -511,7 +511,7 @@ func TestParseReferenceType(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected token in type: ')'",
 					Pos:           ast.Position{Offset: 14, Line: 1, Column: 14},
-					Secondary:     "This token cannot be used in this context - check for missing operators, parentheses, or invalid syntax",
+					Secondary:     "this token cannot be used in this context - check for missing operators, parentheses, or invalid syntax",
 					Documentation: "https://cadence-lang.org/docs/language/values-and-types",
 				},
 			},
@@ -715,7 +715,7 @@ func TestParseIntersectionType(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected colon in intersection type",
 					Pos:           ast.Position{Offset: 8, Line: 1, Column: 8},
-					Secondary:     "Intersection types use commas (,) to separate multiple types, not colons (:)",
+					Secondary:     "intersection types use commas (,) to separate multiple types, not colons (:)",
 					Documentation: "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types",
 				},
 			},
@@ -736,7 +736,7 @@ func TestParseIntersectionType(t *testing.T) {
 				&SyntaxError{
 					Message:       `unexpected colon in intersection type`,
 					Pos:           ast.Position{Offset: 7, Line: 1, Column: 7},
-					Secondary:     "Intersection types use commas (,) to separate multiple types, not colons (:)",
+					Secondary:     "intersection types use commas (,) to separate multiple types, not colons (:)",
 					Documentation: "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types",
 				},
 			},
@@ -757,7 +757,7 @@ func TestParseIntersectionType(t *testing.T) {
 				&SyntaxError{
 					Message:       "non-nominal type in intersection list: [T]",
 					Pos:           ast.Position{Offset: 1, Line: 1, Column: 1},
-					Secondary:     "Intersection types can only contain nominal types (struct, resource, or interface names)",
+					Secondary:     "intersection types can only contain nominal types (struct, resource, or interface names)",
 					Documentation: "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types",
 				},
 			},
@@ -778,7 +778,7 @@ func TestParseIntersectionType(t *testing.T) {
 				&SyntaxError{
 					Message:       "non-nominal type in intersection list: [U]",
 					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
-					Secondary:     "Intersection types can only contain nominal types (struct, resource, or interface names)",
+					Secondary:     "intersection types can only contain nominal types (struct, resource, or interface names)",
 					Documentation: "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types",
 				},
 			},
@@ -799,7 +799,7 @@ func TestParseIntersectionType(t *testing.T) {
 				&SyntaxError{
 					Message:       "invalid end of input, expected type",
 					Pos:           ast.Position{Offset: 1, Line: 1, Column: 1},
-					Secondary:     "Check for incomplete expressions, missing tokens, or unterminated strings/comments",
+					Secondary:     "check for incomplete expressions, missing tokens, or unterminated strings/comments",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
@@ -837,7 +837,7 @@ func TestParseIntersectionType(t *testing.T) {
 				&SyntaxError{
 					Message:       "invalid end of input, expected type",
 					Pos:           ast.Position{Offset: 3, Line: 1, Column: 3},
-					Secondary:     "Check for incomplete expressions, missing tokens, or unterminated strings/comments",
+					Secondary:     "check for incomplete expressions, missing tokens, or unterminated strings/comments",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
@@ -857,7 +857,7 @@ func TestParseIntersectionType(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected comma in intersection type",
 					Pos:           ast.Position{Offset: 1, Line: 1, Column: 1},
-					Secondary:     "Intersection types use commas to separate multiple types, but a type is expected after the comma",
+					Secondary:     "intersection types use commas to separate multiple types, but a type is expected after the comma",
 					Documentation: "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types",
 				},
 			},
@@ -945,7 +945,7 @@ func TestParseDictionaryType(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected colon in dictionary type",
 					Pos:           ast.Position{Offset: 1, Line: 1, Column: 1},
-					Secondary:     "Dictionary types use a colon (:) to separate key and value types, but a value type is expected after the colon",
+					Secondary:     "dictionary types use a colon (:) to separate key and value types, but a value type is expected after the colon",
 					Documentation: "https://cadence-lang.org/docs/language/values-and-types/dictionaries",
 				},
 			},
@@ -965,7 +965,7 @@ func TestParseDictionaryType(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected colon in dictionary type",
 					Pos:           ast.Position{Offset: 1, Line: 1, Column: 1},
-					Secondary:     "Dictionary types use a colon (:) to separate key and value types, but a value type is expected after the colon",
+					Secondary:     "dictionary types use a colon (:) to separate key and value types, but a value type is expected after the colon",
 					Documentation: "https://cadence-lang.org/docs/language/values-and-types/dictionaries",
 				},
 			},
@@ -986,7 +986,7 @@ func TestParseDictionaryType(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected comma in dictionary type",
 					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
-					Secondary:     "Dictionary types use a colon (:) to separate key and value types, not commas (,)",
+					Secondary:     "dictionary types use a colon (:) to separate key and value types, not commas (,)",
 					Documentation: "https://cadence-lang.org/docs/language/values-and-types/dictionaries",
 				},
 			},
@@ -1007,7 +1007,7 @@ func TestParseDictionaryType(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected colon in dictionary type",
 					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
-					Secondary:     "Dictionary types can only have one colon (:) to separate key and value types",
+					Secondary:     "dictionary types can only have one colon (:) to separate key and value types",
 					Documentation: "https://cadence-lang.org/docs/language/values-and-types/dictionaries",
 				},
 			},
@@ -1028,7 +1028,7 @@ func TestParseDictionaryType(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected colon in dictionary type",
 					Pos:           ast.Position{Offset: 3, Line: 1, Column: 3},
-					Secondary:     "Dictionary types use a colon (:) to separate key and value types, but a value type is expected after the colon",
+					Secondary:     "dictionary types use a colon (:) to separate key and value types, but a value type is expected after the colon",
 					Documentation: "https://cadence-lang.org/docs/language/values-and-types/dictionaries",
 				},
 			},
@@ -1049,7 +1049,7 @@ func TestParseDictionaryType(t *testing.T) {
 				&SyntaxError{
 					Message:       "invalid end of input, expected type",
 					Pos:           ast.Position{Offset: 3, Line: 1, Column: 3},
-					Secondary:     "Check for incomplete expressions, missing tokens, or unterminated strings/comments",
+					Secondary:     "check for incomplete expressions, missing tokens, or unterminated strings/comments",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},

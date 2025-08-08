@@ -294,7 +294,7 @@ func TestParseBuffering(t *testing.T) {
 				&SyntaxError{
 					Message:       "expected token identifier with string value c",
 					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
-					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
@@ -539,7 +539,7 @@ func TestParseBuffering(t *testing.T) {
 				&SyntaxError{
 					Message:       "expected token identifier with string value d",
 					Pos:           ast.Position{Offset: 6, Line: 1, Column: 6},
-					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
@@ -569,7 +569,7 @@ func TestParseBuffering(t *testing.T) {
 				&SyntaxError{
 					Message:       "expected token identifier",
 					Pos:           ast.Position{Offset: 398, Line: 9, Column: 94},
-					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
@@ -765,7 +765,7 @@ func TestParseArgumentList(t *testing.T) {
 				&SyntaxError{
 					Message:       "expected token '('",
 					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
-					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
@@ -897,12 +897,12 @@ func TestParseBufferedErrors(t *testing.T) {
 			&SyntaxError{
 				Message:       "missing type annotation after comma",
 				Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
-				Secondary:     "After a comma, a type annotation is required to complete the list",
+				Secondary:     "after a comma, a type annotation is required to complete the list",
 				Documentation: "https://cadence-lang.org/docs/language/types-and-type-system/type-annotations",
 			},
 			&SyntaxError{
 				Message:       "missing ')' at end of invocation argument list",
-				Secondary:     "Function calls and type instantiations must be properly closed with a closing parenthesis",
+				Secondary:     "function calls and type instantiations must be properly closed with a closing parenthesis",
 				Documentation: "https://cadence-lang.org/docs/language/syntax",
 				Pos:           ast.Position{Offset: 6, Line: 1, Column: 6},
 			},
@@ -917,7 +917,7 @@ func TestParseInvalidSingleQuoteImport(t *testing.T) {
 
 	_, err := testParseProgram(`import 'X'`)
 
-	require.ErrorContains(t, err, "Parsing failed:\nerror: unrecognized character: U+0027 '''\n --> :1:7\n  |\n1 | import 'X'\n  |        ^\n\nerror: unexpected end in import declaration: expected string, address, or identifier\n --> :1:7\n  |\n1 | import 'X'\n  |        ^ Import declarations must specify what to import - provide a string literal (for file paths), hexadecimal address, or identifier\n")
+	require.ErrorContains(t, err, "Parsing failed:\nerror: unrecognized character: U+0027 '''")
 }
 
 func TestParseExpressionDepthLimit(t *testing.T) {

@@ -42,7 +42,7 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 			"expected %s as start of parameter list, got %s",
 			lexer.TokenParenOpen,
 			p.current.Type,
-		).WithSecondary("Function parameters must be enclosed in parentheses").
+		).WithSecondary("function parameters must be enclosed in parentheses").
 			WithDocumentation("https://cadence-lang.org/docs/language/functions")
 	}
 
@@ -81,7 +81,7 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 				return nil, p.newSyntaxError(
 					"expected parameter or end of parameter list, got %s",
 					p.current.Type,
-				).WithSecondary("Parameters must be separated by commas, and the list must end with a closing parenthesis").
+				).WithSecondary("parameters must be separated by commas, and the list must end with a closing parenthesis").
 					WithDocumentation("https://cadence-lang.org/docs/language/functions")
 			}
 			// Skip the comma
@@ -98,7 +98,7 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 			return nil, p.newSyntaxError(
 				"missing %s at end of parameter list",
 				lexer.TokenParenClose,
-			).WithSecondary("Function parameter lists must be properly closed with a closing parenthesis").
+			).WithSecondary("function parameter lists must be properly closed with a closing parenthesis").
 				WithDocumentation("https://cadence-lang.org/docs/language/functions")
 
 		default:
@@ -106,13 +106,13 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 				return nil, p.newSyntaxError(
 					"expected parameter or end of parameter list, got %s",
 					p.current.Type,
-				).WithSecondary("Parameters must be separated by commas, and the list must end with a closing parenthesis").
+				).WithSecondary("parameters must be separated by commas, and the list must end with a closing parenthesis").
 					WithDocumentation("https://cadence-lang.org/docs/language/functions")
 			} else {
 				return nil, p.newSyntaxError(
 					"expected comma or end of parameter list, got %s",
 					p.current.Type,
-				).WithSecondary("Multiple parameters must be separated by commas, and the parameter list must end with a closing parenthesis").
+				).WithSecondary("multiple parameters must be separated by commas, and the parameter list must end with a closing parenthesis").
 					WithDocumentation("https://cadence-lang.org/docs/language/functions")
 			}
 		}
@@ -164,7 +164,7 @@ func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, erro
 			"expected %s after parameter name, got %s",
 			lexer.TokenColon,
 			p.current.Type,
-		).WithSecondary("Function parameters must have a type annotation separated by a colon").
+		).WithSecondary("function parameters must have a type annotation separated by a colon").
 			WithDocumentation("https://cadence-lang.org/docs/language/functions")
 	}
 
@@ -186,7 +186,7 @@ func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, erro
 			return nil, p.newSyntaxError(
 				"expected a default argument after type annotation, got %s",
 				p.current.Type,
-			).WithSecondary("Default arguments must be specified with an equals sign (=) followed by the default value").
+			).WithSecondary("default arguments must be specified with an equals sign (=) followed by the default value").
 				WithDocumentation("https://cadence-lang.org/docs/language/functions")
 		}
 
@@ -200,7 +200,7 @@ func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, erro
 
 	} else if p.current.Is(lexer.TokenEqual) {
 		return nil, p.newSyntaxError("cannot use a default argument for this function").
-			WithSecondary("Default arguments are only allowed in function declarations, not in events or other contexts").
+			WithSecondary("default arguments are only allowed in function declarations, not in events or other contexts").
 			WithDocumentation("https://cadence-lang.org/docs/language/functions")
 	}
 
@@ -258,7 +258,7 @@ func parseTypeParameterList(p *parser) (*ast.TypeParameterList, error) {
 				return nil, p.newSyntaxError(
 					"expected type parameter or end of type parameter list, got %s",
 					p.current.Type,
-				).WithSecondary("Type parameters must be separated by commas, and the list must end with a closing angle bracket (>)").
+				).WithSecondary("type parameters must be separated by commas, and the list must end with a closing angle bracket (>)").
 					WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 			}
 			// Skip the comma
@@ -275,7 +275,7 @@ func parseTypeParameterList(p *parser) (*ast.TypeParameterList, error) {
 			return nil, p.newSyntaxError(
 				"missing %s at end of type parameter list",
 				lexer.TokenGreater,
-			).WithSecondary("Type parameters must be separated by commas, and the list must end with a closing angle bracket (>)").
+			).WithSecondary("type parameters must be separated by commas, and the list must end with a closing angle bracket (>)").
 				WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 
 		default:
@@ -283,13 +283,13 @@ func parseTypeParameterList(p *parser) (*ast.TypeParameterList, error) {
 				return nil, p.newSyntaxError(
 					"expected parameter or end of type parameter list, got %s",
 					p.current.Type,
-				).WithSecondary("Type parameters must be separated by commas, and the list must end with a closing angle bracket (>)").
+				).WithSecondary("type parameters must be separated by commas, and the list must end with a closing angle bracket (>)").
 					WithDocumentation("https://cadence-lang.org/docs/language/syntax/")
 			} else {
 				return nil, p.newSyntaxError(
 					"expected comma or end of type parameter list, got %s",
 					p.current.Type,
-				).WithSecondary("Type parameters must be separated by commas, and the list must end with a closing angle bracket (>)").
+				).WithSecondary("type parameters must be separated by commas, and the list must end with a closing angle bracket (>)").
 					WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 			}
 		}
@@ -313,7 +313,7 @@ func parseTypeParameter(p *parser) (*ast.TypeParameter, error) {
 		return nil, p.newSyntaxError(
 			"expected type parameter name, got %s",
 			p.current.Type,
-		).WithSecondary("Type parameters must have a valid identifier name").
+		).WithSecondary("type parameters must have a valid identifier name").
 			WithDocumentation("https://cadence-lang.org/docs/language/functions")
 	}
 

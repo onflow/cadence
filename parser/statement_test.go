@@ -886,7 +886,7 @@ func TestParseForStatementIndexBinding(t *testing.T) {
 				&SyntaxError{
 					Message:       "expected token '{'",
 					Pos:           ast.Position{Offset: 11, Line: 1, Column: 11},
-					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
@@ -908,7 +908,7 @@ func TestParseForStatementIndexBinding(t *testing.T) {
 				&SyntaxError{
 					Message:       "expected token identifier",
 					Pos:           ast.Position{Offset: 6, Line: 1, Column: 6},
-					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},

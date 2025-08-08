@@ -353,12 +353,12 @@ func defineIntersectionOrDictionaryType() {
 				case lexer.TokenComma:
 					if dictionaryType != nil {
 						return nil, p.newSyntaxError("unexpected comma in dictionary type").
-							WithSecondary("Dictionary types use a colon (:) to separate key and value types, not commas (,)").
+							WithSecondary("dictionary types use a colon (:) to separate key and value types, not commas (,)").
 							WithDocumentation("https://cadence-lang.org/docs/language/values-and-types/dictionaries")
 					}
 					if expectType {
 						return nil, p.newSyntaxError("unexpected comma in intersection type").
-							WithSecondary("Intersection types use commas to separate multiple types, but a type is expected after the comma").
+							WithSecondary("intersection types use commas to separate multiple types, but a type is expected after the comma").
 							WithDocumentation("https://cadence-lang.org/docs/language/types-and-type-system/intersection-types")
 					}
 					if intersectionType == nil {
@@ -368,7 +368,7 @@ func defineIntersectionOrDictionaryType() {
 								firstType.StartPosition(),
 								"non-nominal type in intersection list: %s",
 								firstType,
-							).WithSecondary("Intersection types can only contain nominal types (struct, resource, or interface names)").
+							).WithSecondary("intersection types can only contain nominal types (struct, resource, or interface names)").
 								WithDocumentation("https://cadence-lang.org/docs/language/types-and-type-system/intersection-types")
 						}
 						intersectionType = ast.NewIntersectionType(
@@ -393,7 +393,7 @@ func defineIntersectionOrDictionaryType() {
 							p.current.StartPos,
 							"unexpected colon in intersection type",
 						).
-							WithSecondary("Intersection types use commas (,) to separate multiple types, not colons (:)").
+							WithSecondary("intersection types use commas (,) to separate multiple types, not colons (:)").
 							WithDocumentation("https://cadence-lang.org/docs/language/types-and-type-system/intersection-types")
 					}
 					if expectType {
@@ -401,7 +401,7 @@ func defineIntersectionOrDictionaryType() {
 							p.current.StartPos,
 							"unexpected colon in dictionary type",
 						).
-							WithSecondary("Dictionary types use a colon (:) to separate key and value types, but a value type is expected after the colon").
+							WithSecondary("dictionary types use a colon (:) to separate key and value types, but a value type is expected after the colon").
 							WithDocumentation("https://cadence-lang.org/docs/language/values-and-types/dictionaries")
 					}
 					if dictionaryType == nil {
@@ -420,7 +420,7 @@ func defineIntersectionOrDictionaryType() {
 						)
 					} else {
 						return nil, p.newSyntaxError("unexpected colon in dictionary type").
-							WithSecondary("Dictionary types can only have one colon (:) to separate key and value types").
+							WithSecondary("dictionary types can only have one colon (:) to separate key and value types").
 							WithDocumentation("https://cadence-lang.org/docs/language/values-and-types/dictionaries")
 					}
 					// Skip the colon
@@ -444,7 +444,7 @@ func defineIntersectionOrDictionaryType() {
 				case lexer.TokenEOF:
 					if expectType {
 						return nil, p.newSyntaxError("invalid end of input, expected type").
-							WithSecondary("Check for incomplete expressions, missing tokens, or unterminated strings/comments").
+							WithSecondary("check for incomplete expressions, missing tokens, or unterminated strings/comments").
 							WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 					} else {
 						return nil, p.newSyntaxError("invalid end of input, expected %s", lexer.TokenBraceClose)
@@ -473,7 +473,7 @@ func defineIntersectionOrDictionaryType() {
 								ty.StartPosition(),
 								"non-nominal type in intersection list: %s",
 								ty,
-							).WithSecondary("Intersection types can only contain nominal types (struct, resource, or interface names)").
+							).WithSecondary("intersection types can only contain nominal types (struct, resource, or interface names)").
 								WithDocumentation("https://cadence-lang.org/docs/language/types-and-type-system/intersection-types")
 						}
 						intersectionType.Types = append(intersectionType.Types, nominalType)
@@ -508,7 +508,7 @@ func defineIntersectionOrDictionaryType() {
 							firstType.StartPosition(),
 							"non-nominal type in intersection list: %s",
 							firstType,
-						).WithSecondary("Intersection types can only contain nominal types (struct, resource, or interface names)").
+						).WithSecondary("intersection types can only contain nominal types (struct, resource, or interface names)").
 							WithDocumentation("https://cadence-lang.org/docs/language/types-and-type-system/intersection-types")
 					}
 					intersectionType.Types = append(intersectionType.Types, firstNominalType)
@@ -603,7 +603,7 @@ func parseNominalTypes(
 		case lexer.TokenEOF:
 			if expectType {
 				return nil, ast.EmptyPosition, p.newSyntaxError("invalid end of input, expected type").
-					WithSecondary("Check for incomplete expressions, missing tokens, or unterminated strings/comments").
+					WithSecondary("check for incomplete expressions, missing tokens, or unterminated strings/comments").
 					WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 			} else {
 				return nil, ast.EmptyPosition, p.newSyntaxError("invalid end of input, expected %s", endTokenType)
@@ -814,7 +814,7 @@ func applyTypeNullDenotation(p *parser, token lexer.Token) (ast.Type, error) {
 			token.StartPos,
 			"unexpected token in type: %s",
 			tokenType,
-		).WithSecondary("This token cannot be used in this context - check for missing operators, parentheses, or invalid syntax").
+		).WithSecondary("this token cannot be used in this context - check for missing operators, parentheses, or invalid syntax").
 			WithDocumentation("https://cadence-lang.org/docs/language/values-and-types")
 	}
 	return nullDenotation(p, token)
@@ -827,7 +827,7 @@ func applyTypeLeftDenotation(p *parser, token lexer.Token, left ast.Type) (ast.T
 			token.StartPos,
 			"unexpected token in type: %s",
 			token.Type,
-		).WithSecondary("This token cannot be used in this context - check for missing operators, parentheses, or invalid syntax").
+		).WithSecondary("this token cannot be used in this context - check for missing operators, parentheses, or invalid syntax").
 			WithDocumentation("https://cadence-lang.org/docs/language/values-and-types")
 	}
 	return leftDenotation(p, token, left)
@@ -903,7 +903,7 @@ func parseCommaSeparatedTypeAnnotations(
 		case lexer.TokenComma:
 			if expectTypeAnnotation {
 				return nil, p.newSyntaxError("unexpected comma").
-					WithSecondary("A comma is used to separate multiple items, but a type annotation is expected here").
+					WithSecondary("a comma is used to separate multiple items, but a type annotation is expected here").
 					WithDocumentation("https://cadence-lang.org/docs/language/types-and-type-system/type-annotations")
 			}
 			// Skip the comma
@@ -914,7 +914,7 @@ func parseCommaSeparatedTypeAnnotations(
 			if expectTypeAnnotation && len(typeAnnotations) > 0 {
 				p.report(
 					p.newSyntaxError("missing type annotation after comma").
-						WithSecondary("After a comma, a type annotation is required to complete the list").
+						WithSecondary("after a comma, a type annotation is required to complete the list").
 						WithDocumentation("https://cadence-lang.org/docs/language/types-and-type-system/type-annotations"),
 				)
 			}
@@ -923,7 +923,7 @@ func parseCommaSeparatedTypeAnnotations(
 		case lexer.TokenEOF:
 			if expectTypeAnnotation {
 				return nil, p.newSyntaxError("invalid end of input, expected type").
-					WithSecondary("Check for incomplete expressions, missing tokens, or unterminated strings/comments").
+					WithSecondary("check for incomplete expressions, missing tokens, or unterminated strings/comments").
 					WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 			} else {
 				return nil, p.newSyntaxError("invalid end of input, expected %s", endTokenType)

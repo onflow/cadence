@@ -115,7 +115,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 				KeywordPrepare,
 				KeywordExecute,
 				keyword,
-			).WithSecondary("Transaction declarations can only contain 'prepare' and 'execute' blocks").
+			).WithSecondary("transaction declarations can only contain 'prepare' and 'execute' blocks").
 				WithDocumentation("https://cadence-lang.org/docs/language/transactions")
 		}
 	}
@@ -162,7 +162,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 					return nil, p.newSyntaxError(
 						"unexpected second %q block",
 						KeywordExecute,
-					).WithSecondary("Transaction declarations can only have one 'execute' block").
+					).WithSecondary("transaction declarations can only have one 'execute' block").
 						WithDocumentation("https://cadence-lang.org/docs/language/transactions")
 				}
 
@@ -174,7 +174,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 			case KeywordPost:
 				if sawPost {
 					return nil, p.newSyntaxError("unexpected second post-conditions").
-						WithSecondary("Transaction declarations can only have one 'post' block").
+						WithSecondary("transaction declarations can only have one 'post' block").
 						WithDocumentation("https://cadence-lang.org/docs/language/transactions")
 				}
 				postStartPos := p.current.StartPos
@@ -192,7 +192,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 					KeywordExecute,
 					KeywordPost,
 					keyword,
-				).WithSecondary("Transaction declarations can only contain 'execute' and 'post' blocks in this context").
+				).WithSecondary("transaction declarations can only contain 'execute' and 'post' blocks in this context").
 					WithDocumentation("https://cadence-lang.org/docs/language/transactions")
 			}
 

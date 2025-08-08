@@ -284,7 +284,7 @@ func (p *parser) mustOne(tokenType lexer.TokenType) (lexer.Token, error) {
 	t := p.current
 	if !t.Is(tokenType) {
 		return lexer.Token{}, p.newSyntaxError("expected token %s", tokenType).
-			WithSecondary("Check for missing punctuation, operators, or syntax elements").
+			WithSecondary("check for missing punctuation, operators, or syntax elements").
 			WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 	}
 	p.next()
@@ -313,7 +313,7 @@ func (p *parser) mustToken(tokenType lexer.TokenType, string string) (lexer.Toke
 	t := p.current
 	if !p.isToken(t, tokenType, string) {
 		return lexer.Token{}, p.newSyntaxError("expected token %s with string value %s", tokenType, string).
-			WithSecondary("Check for missing punctuation, operators, or syntax elements").
+			WithSecondary("check for missing punctuation, operators, or syntax elements").
 			WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 	}
 	p.next()

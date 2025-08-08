@@ -1737,7 +1737,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message:       "expected '(' as start of parameter list, got '<'",
-					Secondary:     "Function parameters must be enclosed in parentheses",
+					Secondary:     "function parameters must be enclosed in parentheses",
 					Documentation: "https://cadence-lang.org/docs/language/functions",
 					Pos:           ast.Position{Offset: 7, Line: 1, Column: 7},
 				},
@@ -1762,7 +1762,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 				&SyntaxError{
 					Message:       "missing '>' at end of type parameter list",
 					Pos:           ast.Position{Offset: 11, Line: 1, Column: 11},
-					Secondary:     "Type parameters must be separated by commas, and the list must end with a closing angle bracket (>)",
+					Secondary:     "type parameters must be separated by commas, and the list must end with a closing angle bracket (>)",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
@@ -1869,7 +1869,7 @@ func TestParseAccess(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message:       "expected keyword \"all\", \"account\", \"contract\", or \"self\", got EOF",
-					Secondary:     "Access control modifiers must be one of: 'all', 'account', 'contract', or 'self'",
+					Secondary:     "access control modifiers must be one of: 'all', 'account', 'contract', or 'self'",
 					Documentation: "https://cadence-lang.org/docs/language/access-control",
 					Pos:           ast.Position{Offset: 9, Line: 1, Column: 9},
 				},
@@ -1893,7 +1893,7 @@ func TestParseAccess(t *testing.T) {
 				&SyntaxError{
 					Message:       "expected token ')'",
 					Pos:           ast.Position{Offset: 14, Line: 1, Column: 14},
-					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
@@ -2042,7 +2042,7 @@ func TestParseAccess(t *testing.T) {
 				&SyntaxError{
 					Message:       "expected token ')'",
 					Pos:           ast.Position{Offset: 14, Line: 1, Column: 14},
-					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
@@ -2065,7 +2065,7 @@ func TestParseAccess(t *testing.T) {
 				&SyntaxError{
 					Message:       "expected token ')'",
 					Pos:           ast.Position{Offset: 14, Line: 1, Column: 14},
-					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
@@ -2243,7 +2243,7 @@ func TestParseAccess(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected token in type: ')'",
 					Pos:           ast.Position{Offset: 17, Line: 1, Column: 17},
-					Secondary:     "This token cannot be used in this context - check for missing operators, parentheses, or invalid syntax",
+					Secondary:     "this token cannot be used in this context - check for missing operators, parentheses, or invalid syntax",
 					Documentation: "https://cadence-lang.org/docs/language/values-and-types",
 				},
 			},
@@ -2271,7 +2271,7 @@ func TestParseImportDeclaration(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message:       "unexpected end in import declaration: expected string, address, or identifier",
-					Secondary:     "Import declarations must specify what to import - provide a string literal (for file paths), hexadecimal address, or identifier",
+					Secondary:     "import declarations must specify what to import - provide a string literal (for file paths), hexadecimal address, or identifier",
 					Documentation: "https://cadence-lang.org/docs/language/imports",
 					Pos:           ast.Position{Offset: 7, Line: 1, Column: 7},
 				},
@@ -2380,7 +2380,7 @@ func TestParseImportDeclaration(t *testing.T) {
 				&SyntaxError{
 					Message: "unexpected token in import declaration: " +
 						"got decimal integer, expected string, address, or identifier",
-					Secondary:     "Import declarations must start with a string literal (for file paths), hexadecimal address, or identifier",
+					Secondary:     "import declarations must start with a string literal (for file paths), hexadecimal address, or identifier",
 					Documentation: "https://cadence-lang.org/docs/language/imports",
 					Pos:           ast.Position{Offset: 8, Line: 1, Column: 8},
 				},
@@ -2435,7 +2435,7 @@ func TestParseImportDeclaration(t *testing.T) {
 				&SyntaxError{
 					Message: "unexpected token in import declaration: " +
 						"got string, expected keyword \"from\" or ','",
-					Secondary:     "After an imported identifier, expect either a comma to import more items or the 'from' keyword to specify the import location",
+					Secondary:     "after an imported identifier, expect either a comma to import more items or the 'from' keyword to specify the import location",
 					Documentation: "https://cadence-lang.org/docs/language/imports",
 					Pos:           ast.Position{Offset: 12, Line: 1, Column: 12},
 				},
@@ -2498,7 +2498,7 @@ func TestParseImportDeclaration(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message:       `expected identifier, got keyword "from"`,
-					Secondary:     "Import declarations expect an identifier to import, not the 'from' keyword in this position",
+					Secondary:     "import declarations expect an identifier to import, not the 'from' keyword in this position",
 					Documentation: "https://cadence-lang.org/docs/language/imports",
 					Pos:           ast.Position{Offset: 20, Line: 1, Column: 20},
 				},
@@ -2523,7 +2523,7 @@ func TestParseImportDeclaration(t *testing.T) {
 				&SyntaxError{
 					Pos:           ast.Position{Line: 1, Column: 12, Offset: 12},
 					Message:       `expected identifier or keyword "from", got ','`,
-					Secondary:     "Import declarations expect either an identifier to import or the 'from' keyword to specify the import location",
+					Secondary:     "import declarations expect either an identifier to import or the 'from' keyword to specify the import location",
 					Documentation: "https://cadence-lang.org/docs/language/imports",
 				},
 			},
@@ -2566,7 +2566,7 @@ func TestParseImportDeclaration(t *testing.T) {
 			&SyntaxError{
 				Pos:           ast.Position{Line: 1, Column: 22, Offset: 22},
 				Message:       `unexpected token in import declaration: got '@', expected keyword "from" or ','`,
-				Secondary:     "After an imported identifier, expect either a comma to import more items or the 'from' keyword to specify the import location",
+				Secondary:     "after an imported identifier, expect either a comma to import more items or the 'from' keyword to specify the import location",
 				Documentation: "https://cadence-lang.org/docs/language/imports",
 			},
 		}, errs)
@@ -2941,7 +2941,7 @@ func TestParseEvent(t *testing.T) {
 			&SyntaxError{
 				Pos:           ast.Position{Line: 1, Column: 47, Offset: 47},
 				Message:       "expected a default argument after type annotation, got ')'",
-				Secondary:     "Default arguments must be specified with an equals sign (=) followed by the default value",
+				Secondary:     "default arguments must be specified with an equals sign (=) followed by the default value",
 				Documentation: "https://cadence-lang.org/docs/language/functions",
 			},
 		}, errs)
@@ -2957,7 +2957,7 @@ func TestParseEvent(t *testing.T) {
 			&SyntaxError{
 				Pos:           ast.Position{Line: 1, Column: 33, Offset: 33},
 				Message:       "cannot use a default argument for this function",
-				Secondary:     "Default arguments are only allowed in function declarations, not in events or other contexts",
+				Secondary:     "default arguments are only allowed in function declarations, not in events or other contexts",
 				Documentation: "https://cadence-lang.org/docs/language/functions",
 			},
 		}, errs)
@@ -3072,11 +3072,17 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 		_, errs := parse("let : Int")
 		require.Len(t, errs, 1)
 
-		syntaxError, ok := errs[0].(*SyntaxError)
-		require.True(t, ok)
-		require.Equal(t, "expected identifier after start of field declaration, got ':'", syntaxError.Message)
-		require.Equal(t, "Field declarations must have a valid identifier name after the variable kind keyword (let/var)", syntaxError.Secondary)
-		require.Equal(t, "https://cadence-lang.org/docs/language/constants-and-variables", syntaxError.Documentation)
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message:       "expected identifier after start of field declaration, got ':'",
+					Secondary:     "field declarations must have a valid identifier name after the variable kind keyword (let/var)",
+					Documentation: "https://cadence-lang.org/docs/language/constants-and-variables",
+					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
+			},
+			errs,
+		)
 	})
 }
 
@@ -3978,7 +3984,7 @@ func TestParseParametersWithExtraLabels(t *testing.T) {
 		&SyntaxError{
 			Pos:           ast.Position{Line: 1, Column: 47, Offset: 47},
 			Message:       "expected ':' after parameter name, got identifier",
-			Secondary:     "Function parameters must have a type annotation separated by a colon",
+			Secondary:     "function parameters must have a type annotation separated by a colon",
 			Documentation: "https://cadence-lang.org/docs/language/functions",
 		},
 	}, errs)
@@ -4576,7 +4582,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message:       "expected interface name, got keyword \"interface\"",
-					Secondary:     "Interface declarations must have a unique name after the 'interface' keyword",
+					Secondary:     "interface declarations must have a unique name after the 'interface' keyword",
 					Documentation: "https://cadence-lang.org/docs/language/interfaces",
 					Pos:           ast.Position{Offset: 30, Line: 1, Column: 30},
 				},
@@ -5151,7 +5157,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message:       `unexpected second "execute" block`,
-					Secondary:     "Transaction declarations can only have one 'execute' block",
+					Secondary:     "transaction declarations can only have one 'execute' block",
 					Pos:           ast.Position{Offset: 26, Line: 1, Column: 26},
 					Documentation: "https://cadence-lang.org/docs/language/transactions",
 				},
@@ -5169,7 +5175,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message:       `unexpected identifier, expected keyword "prepare" or "execute", got "foo"`,
-					Secondary:     "Transaction declarations can only contain 'prepare' and 'execute' blocks",
+					Secondary:     "transaction declarations can only contain 'prepare' and 'execute' blocks",
 					Documentation: "https://cadence-lang.org/docs/language/transactions",
 					Pos:           ast.Position{Offset: 14, Line: 1, Column: 14},
 				},
@@ -5187,7 +5193,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message:       "unexpected second post-conditions",
-					Secondary:     "Transaction declarations can only have one 'post' block",
+					Secondary:     "transaction declarations can only have one 'post' block",
 					Documentation: "https://cadence-lang.org/docs/language/transactions",
 					Pos:           ast.Position{Offset: 33, Line: 1, Column: 33},
 				},
@@ -5205,7 +5211,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message:       `unexpected identifier, expected keyword "execute" or "post", got "foo"`,
-					Secondary:     "Transaction declarations can only contain 'execute' and 'post' blocks in this context",
+					Secondary:     "transaction declarations can only contain 'execute' and 'post' blocks in this context",
 					Documentation: "https://cadence-lang.org/docs/language/transactions",
 					Pos:           ast.Position{Offset: 27, Line: 1, Column: 27},
 				},
@@ -5223,7 +5229,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message:       `unexpected identifier, expected keyword "execute" or "post", got "foo"`,
-					Secondary:     "Transaction declarations can only contain 'execute' and 'post' blocks in this context",
+					Secondary:     "transaction declarations can only contain 'execute' and 'post' blocks in this context",
 					Migration:     "",
 					Documentation: "https://cadence-lang.org/docs/language/transactions",
 					Pos:           ast.Position{Offset: 25, Line: 1, Column: 25},
@@ -5990,7 +5996,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 				&SyntaxError{
 					Message:       `unexpected identifier, expected keyword "prepare" or "execute", got "uwu"`,
 					Pos:           ast.Position{Offset: 35, Line: 5, Column: 3},
-					Secondary:     "Transaction declarations can only contain 'prepare' and 'execute' blocks",
+					Secondary:     "transaction declarations can only contain 'prepare' and 'execute' blocks",
 					Documentation: "https://cadence-lang.org/docs/language/transactions",
 				},
 			},
@@ -6897,7 +6903,7 @@ func TestParseInvalidEmitConditionNonInvocation(t *testing.T) {
 				&SyntaxError{
 					Message:       "expected token '('",
 					Pos:           ast.Position{Offset: 91, Line: 5, Column: 14},
-					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
@@ -6922,7 +6928,7 @@ func TestParseInvalidEmitConditionNonInvocation(t *testing.T) {
 				&SyntaxError{
 					Message:       "expected token '('",
 					Pos:           ast.Position{Offset: 92, Line: 5, Column: 14},
-					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
@@ -7630,7 +7636,7 @@ func TestParseInvalidDefaultArgument(t *testing.T) {
 			&SyntaxError{
 				Pos:           ast.Position{Line: 1, Column: 31, Offset: 31},
 				Message:       "cannot use a default argument for this function",
-				Secondary:     "Default arguments are only allowed in function declarations, not in events or other contexts",
+				Secondary:     "default arguments are only allowed in function declarations, not in events or other contexts",
 				Documentation: "https://cadence-lang.org/docs/language/functions",
 			},
 		}, errs)
@@ -7646,7 +7652,7 @@ func TestParseInvalidDefaultArgument(t *testing.T) {
 			&SyntaxError{
 				Pos:           ast.Position{Line: 1, Column: 25, Offset: 25},
 				Message:       "cannot use a default argument for this function",
-				Secondary:     "Default arguments are only allowed in function declarations, not in events or other contexts",
+				Secondary:     "default arguments are only allowed in function declarations, not in events or other contexts",
 				Documentation: "https://cadence-lang.org/docs/language/functions",
 			},
 		}, errs)
@@ -10018,7 +10024,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 				&SyntaxError{
 					Message:       "expected token '{'",
 					Pos:           ast.Position{Offset: 35, Line: 1, Column: 35},
-					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
@@ -10036,7 +10042,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 				&SyntaxError{
 					Message:       "expected token '}'",
 					Pos:           ast.Position{Offset: 36, Line: 1, Column: 36},
-					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
@@ -10054,7 +10060,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 				&SyntaxError{
 					Message:       "expected token '{'",
 					Pos:           ast.Position{Offset: 35, Line: 1, Column: 35},
-					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
@@ -10129,7 +10135,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 				&SyntaxError{
 					Message:       "expected token '->'",
 					Pos:           ast.Position{Offset: 43, Line: 2, Column: 5},
-					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
@@ -10150,7 +10156,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 				&SyntaxError{
 					Message:       "expected token '->'",
 					Pos:           ast.Position{Offset: 43, Line: 2, Column: 5},
-					Secondary:     "Check for missing punctuation, operators, or syntax elements",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
@@ -10192,7 +10198,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 				&SyntaxError{
 					Message:       "unexpected token in type: '->'",
 					Pos:           ast.Position{Offset: 73, Line: 3, Column: 24},
-					Secondary:     "This token cannot be used in this context - check for missing operators, parentheses, or invalid syntax",
+					Secondary:     "this token cannot be used in this context - check for missing operators, parentheses, or invalid syntax",
 					Documentation: "https://cadence-lang.org/docs/language/values-and-types",
 				},
 			},
