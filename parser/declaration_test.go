@@ -1867,11 +1867,14 @@ func TestParseAccess(t *testing.T) {
 		result, errs := parse("access ( ")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "expected keyword \"all\", \"account\", \"contract\", or \"self\", got EOF",
-					Secondary:     "access control modifiers must be one of: 'all', 'account', 'contract', or 'self'",
-					Documentation: "https://cadence-lang.org/docs/language/access-control",
-					Pos:           ast.Position{Offset: 9, Line: 1, Column: 9},
+				&MissingAccessKeywordError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 9, Line: 1, Column: 9},
+							EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+						},
+					},
 				},
 			},
 			errs,

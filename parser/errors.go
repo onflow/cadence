@@ -801,6 +801,48 @@ func (*InvalidPubSetModifierError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control"
 }
 
+// MissingAccessKeywordError is reported when an access modifier keyword is missing.
+type MissingAccessKeywordError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingAccessKeywordError{}
+var _ errors.UserError = &MissingAccessKeywordError{}
+var _ errors.SecondaryError = &MissingAccessKeywordError{}
+var _ errors.HasDocumentationLink = &MissingAccessKeywordError{}
+
+func (*MissingAccessKeywordError) isParseError() {}
+
+func (*MissingAccessKeywordError) IsUserError() {}
+
+func (e *MissingAccessKeywordError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingAccessKeywordError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingAccessKeywordError) Error() string {
+	keywords := common.EnumerateWords(
+		[]string{`"all"`, `"account"`, `"contract"`, `"self"`},
+		"or",
+	)
+	return fmt.Sprintf(
+		"expected keyword %s, got %s",
+		keywords,
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingAccessKeywordError) SecondaryError() string {
+	return "access control modifiers must be one of: 'all', 'account', 'contract', or 'self'"
+}
+
+func (*MissingAccessKeywordError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control"
+}
+
 // MissingEnumCaseNameError is reported when an enum case is missing a name.
 type MissingEnumCaseNameError struct {
 	GotToken lexer.Token

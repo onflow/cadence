@@ -373,12 +373,9 @@ func parseAccess(p *parser) (ast.Access, ast.Range, error) {
 		p.skipSpaceAndComments()
 
 		if !p.current.Is(lexer.TokenIdentifier) {
-			return ast.AccessNotSpecified, ast.EmptyRange, p.newSyntaxError(
-				"expected keyword %s, got %s",
-				enumeratedAccessModifierKeywords,
-				p.current.Type,
-			).WithSecondary("access control modifiers must be one of: 'all', 'account', 'contract', or 'self'").
-				WithDocumentation("https://cadence-lang.org/docs/language/access-control")
+			return ast.AccessNotSpecified, ast.EmptyRange, &MissingAccessKeywordError{
+				GotToken: p.current,
+			}
 		}
 
 		var access ast.Access
