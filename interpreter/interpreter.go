@@ -3001,6 +3001,7 @@ var StringValueParsers = func() map[string]TypedStringValueParser {
 					return NilOptionalValue
 				}
 
+				// No need to check ranges, as `ParseFix128` already does that.
 				val := NewFix128ValueFromBigInt(memoryGauge, n)
 				return NewSomeValueNonCopying(memoryGauge, val)
 

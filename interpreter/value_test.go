@@ -34,6 +34,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/fixedpoint"
 	. "github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
@@ -4043,7 +4044,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		testCases := map[*sema.FixedPointNumericType]NumberValue{
 			sema.UFix64Type: NewUnmeteredUFix64ValueWithInteger(42, EmptyLocationRange),
 			sema.Fix64Type:  NewUnmeteredFix64ValueWithInteger(42, EmptyLocationRange),
-			sema.Fix128Type:  NewUnmeteredFix128ValueWithInteger(42, EmptyLocationRange),
+			sema.Fix128Type: NewUnmeteredFix128ValueWithInteger(42, EmptyLocationRange),
 		}
 
 		for _, ty := range sema.AllFixedPointTypes {
@@ -4686,4 +4687,78 @@ func checkRootSlabIDsInStorage(t *testing.T, storage atree.SlabStorage, expected
 	}
 
 	require.ElementsMatch(t, expectedRootSlabIDs, nontempSlabIDs)
+}
+
+func TestFixedpointValueRangeCheck(t *testing.T) {
+	t.Parallel()
+
+	type testCase[T any] struct {
+		name          string
+		value         T
+		expectedError error
+	}
+
+	t.Run("fix64", func(t *testing.T) {
+		t.Parallel()
+
+		for _, test := range []testCase[int64]{
+			{
+				name:          "overflow",
+				value:         sema.Fix64TypeMaxInt + 1,
+				expectedError: &OverflowError{},
+			},
+			{
+				name:          "underflow",
+				value:         sema.Fix64TypeMinInt - 1,
+				expectedError: &UnderflowError{},
+			},
+		} {
+
+			test := test
+
+			t.Run(test.name, func(t *testing.T) {
+				t.Parallel()
+
+				defer func() {
+					r := recover()
+					assert.NotNil(t, r)
+					require.IsType(t, test.expectedError, r)
+				}()
+
+				_ = NewUnmeteredFix64ValueWithInteger(test.value, EmptyLocationRange)
+			})
+		}
+	})
+
+	t.Run("fix128", func(t *testing.T) {
+		t.Parallel()
+
+		for _, test := range []testCase[*big.Int]{
+			{
+				name:          "overflow",
+				value:         new(big.Int).Add(fixedpoint.Fix128TypeMaxIntBig, big.NewInt(1)),
+				expectedError: &OverflowError{},
+			},
+			{
+				name:          "underflow",
+				value:         new(big.Int).Sub(fixedpoint.Fix128TypeMinIntBig, big.NewInt(1)),
+				expectedError: &UnderflowError{},
+			},
+		} {
+
+			testCase := test
+
+			t.Run(testCase.name, func(t *testing.T) {
+				t.Parallel()
+
+				defer func() {
+					r := recover()
+					assert.NotNil(t, r)
+					require.IsType(t, testCase.expectedError, r)
+				}()
+
+				_ = NewFix128ValueFromBigIntWithRangeCheck(nil, testCase.value, EmptyLocationRange)
+			})
+		}
+	})
 }

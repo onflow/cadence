@@ -22,8 +22,10 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"strconv"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/fixedpoint"
@@ -114,10 +116,13 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 	}
 }
 
-var testFixedPointValues = map[string]interpreter.Value{
-	"Fix64":  interpreter.NewUnmeteredFix64Value(50 * sema.Fix64Factor),
-	"Fix128": interpreter.NewUnmeteredFix128ValueWithInteger(50, interpreter.EmptyLocationRange),
-	"UFix64": interpreter.NewUnmeteredUFix64Value(50 * sema.Fix64Factor),
+var testFixedPointValues = map[sema.Type]interpreter.Value{
+	// Fix types
+	sema.Fix64Type:  interpreter.NewUnmeteredFix64Value(50 * sema.Fix64Factor),
+	sema.Fix128Type: interpreter.NewUnmeteredFix128ValueWithInteger(50, interpreter.EmptyLocationRange),
+
+	// UFix types
+	sema.UFix64Type: interpreter.NewUnmeteredUFix64Value(50 * sema.Fix64Factor),
 }
 
 func init() {
@@ -128,17 +133,14 @@ func init() {
 			continue
 		}
 
-		if _, ok := testFixedPointValues[fixedPointType.String()]; !ok {
+		if _, ok := testFixedPointValues[fixedPointType]; !ok {
 			panic(fmt.Sprintf("broken test: missing fixed-point type: %s", fixedPointType))
 		}
 	}
 }
 
-func TestInterpretFixedPointConversions(t *testing.T) {
-
+func TestInterpretFixedPointToIntegerConversions(t *testing.T) {
 	t.Parallel()
-
-	// check conversion to integer types
 
 	for fixedPointType, fixedPointValue := range testFixedPointValues {
 
@@ -147,6 +149,8 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 			testName := fmt.Sprintf("valid %s to %s", fixedPointType, integerType)
 
 			t.Run(testName, func(t *testing.T) {
+
+				t.Parallel()
 
 				inter := parseCheckAndPrepare(t,
 					fmt.Sprintf(
@@ -175,368 +179,403 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 			})
 		}
 	}
+}
 
-	t.Run("valid UFix64 to UFix64", func(t *testing.T) {
+func TestInterpretIntegerToFixedPointConversions(t *testing.T) {
+	t.Parallel()
 
-		for _, value := range []uint64{
-			50,
-			sema.UFix64TypeMinInt,
-			sema.UFix64TypeMaxInt,
-		} {
+	test := func(
+		t *testing.T,
+		targetFixType sema.Type,
+		sourceIntegerType sema.Type,
+		testedValueStr string,
+		expectedError error,
+	) {
+		t.Run(sourceIntegerType.String(), func(t *testing.T) {
 
-			t.Run(fmt.Sprint(value), func(t *testing.T) {
+			t.Parallel()
 
-				code := fmt.Sprintf(
+			inter := parseCheckAndPrepare(t,
+				fmt.Sprintf(
 					`
-                          let x: UFix64 = %d.0
-                          let y = UFix64(x)
-                        `,
-					value,
-				)
+                         fun test(): %[1]s {
+                             let x: %[2]s = %[3]s
+                             return %[1]s(x)
+                         }
+                       `,
+					targetFixType,
+					sourceIntegerType,
+					testedValueStr,
+				),
+			)
 
-				inter := parseCheckAndPrepare(t, code)
+			_, err := inter.Invoke("test")
+			RequireError(t, err)
+			require.ErrorAs(t, err, &expectedError)
+		})
+	}
 
-				expected := interpreter.NewUnmeteredUFix64Value(value * sema.Fix64Factor)
+	t.Run("Fix64", func(t *testing.T) {
+		t.Parallel()
 
-				AssertValuesEqual(
+		t.Run("invalid integer > Fix64 max int", func(t *testing.T) {
+
+			const testedValue = sema.Fix64TypeMaxInt + 1
+			testValueBig := big.NewInt(0).SetUint64(testedValue)
+
+			for _, integerType := range sema.AllIntegerTypes {
+
+				// Only test for integer types that can hold testedValue
+				maxInt := integerType.(sema.IntegerRangedType).MaxInt()
+				if maxInt != nil && maxInt.Cmp(testValueBig) < 0 {
+					continue
+				}
+
+				test(
 					t,
-					inter,
-					expected,
-					inter.GetGlobal("x"),
+					sema.Fix64Type,
+					integerType,
+					testValueBig.String(),
+					&interpreter.OverflowError{},
 				)
+			}
+		})
 
-				AssertValuesEqual(
+		t.Run("invalid integer < Fix64 min int", func(t *testing.T) {
+
+			const testedValue = sema.Fix64TypeMinInt - 1
+			testValueBig := big.NewInt(testedValue)
+
+			for _, integerType := range sema.AllSignedIntegerTypes {
+
+				// Only test for integer types that can hold testedValue
+
+				minInt := integerType.(sema.IntegerRangedType).MinInt()
+				if minInt != nil && minInt.Cmp(testValueBig) > 0 {
+					continue
+				}
+
+				test(
 					t,
-					inter,
-					expected,
-					inter.GetGlobal("y"),
+					sema.Fix64Type,
+					integerType,
+					testValueBig.String(),
+					&interpreter.OverflowError{},
 				)
-			})
+			}
+		})
+	})
+
+	t.Run("Fix128", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("invalid integer > Fix128 max int", func(t *testing.T) {
+
+			// max + 1
+			testValueBig := new(big.Int).Add(fixedpoint.Fix128TypeMaxIntBig, big.NewInt(1))
+
+			for _, integerType := range sema.AllIntegerTypes {
+
+				// Only test for integer types that can hold testedValue
+				maxInt := integerType.(sema.IntegerRangedType).MaxInt()
+				if maxInt != nil && maxInt.Cmp(testValueBig) < 0 {
+					continue
+				}
+
+				test(
+					t,
+					sema.Fix128Type,
+					integerType,
+					testValueBig.String(),
+					&interpreter.OverflowError{},
+				)
+			}
+		})
+
+		t.Run("invalid integer < Fix128 min int", func(t *testing.T) {
+
+			// min - 1
+			testValueBig := new(big.Int).Sub(fixedpoint.Fix128TypeMinIntBig, big.NewInt(1))
+
+			for _, integerType := range sema.AllSignedIntegerTypes {
+
+				// Only test for integer types that can hold testedValue
+
+				minInt := integerType.(sema.IntegerRangedType).MinInt()
+				if minInt != nil && minInt.Cmp(testValueBig) > 0 {
+					continue
+				}
+
+				test(
+					t,
+					sema.Fix128Type,
+					integerType,
+					testValueBig.String(),
+					&interpreter.OverflowError{},
+				)
+			}
+		})
+	})
+
+	t.Run("UFix64", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("invalid negative integer", func(t *testing.T) {
+
+			for _, integerType := range sema.AllSignedIntegerTypes {
+				test(
+					t,
+					sema.UFix64Type,
+					integerType,
+					"-1",
+					&interpreter.OverflowError{},
+				)
+			}
+		})
+
+		t.Run("invalid big integer (>uint64)", func(t *testing.T) {
+
+			bigIntegerTypes := []sema.Type{
+				sema.Word64Type,
+				sema.Word128Type,
+				sema.Word256Type,
+				sema.UInt64Type,
+				sema.UInt128Type,
+				sema.UInt256Type,
+				sema.Int256Type,
+				sema.Int128Type,
+			}
+
+			for _, integerType := range bigIntegerTypes {
+				test(
+					t,
+					sema.UFix64Type,
+					integerType,
+					strconv.Itoa(int(sema.UFix64TypeMaxInt+1)),
+					&interpreter.OverflowError{},
+				)
+			}
+		})
+
+		t.Run("invalid integer > UFix64 max", func(t *testing.T) {
+
+			const testedValue = sema.UFix64TypeMaxInt + 1
+			testValueBig := big.NewInt(0).SetUint64(testedValue)
+
+			for _, integerType := range sema.AllIntegerTypes {
+
+				// Only test for integer types that can hold testedValue
+
+				maxInt := integerType.(sema.IntegerRangedType).MaxInt()
+				if maxInt != nil && maxInt.Cmp(testValueBig) < 0 {
+					continue
+				}
+
+				test(
+					t,
+					sema.UFix64Type,
+					integerType,
+					testValueBig.String(),
+					&interpreter.OverflowError{},
+				)
+			}
+		})
+
+	})
+}
+
+func TestInterpretFixedPointToFixedPointConversions(t *testing.T) {
+	t.Parallel()
+
+	type values struct {
+		positiveValue interpreter.Value
+		negativeValue interpreter.Value
+		min           interpreter.Value
+		max           interpreter.Value
+	}
+
+	testValues := map[*sema.FixedPointNumericType]values{
+		// Fix types
+		sema.Fix64Type: {
+			positiveValue: interpreter.NewUnmeteredFix64ValueWithInteger(42, interpreter.EmptyLocationRange),
+			negativeValue: interpreter.NewUnmeteredFix64ValueWithInteger(-42, interpreter.EmptyLocationRange),
+			min:           interpreter.NewUnmeteredFix64ValueWithInteger(sema.Fix64TypeMinInt, interpreter.EmptyLocationRange),
+			max:           interpreter.NewUnmeteredFix64ValueWithInteger(sema.Fix64TypeMaxInt, interpreter.EmptyLocationRange),
+		},
+		sema.Fix128Type: {
+			positiveValue: interpreter.NewUnmeteredFix128ValueWithInteger(42, interpreter.EmptyLocationRange),
+			negativeValue: interpreter.NewUnmeteredFix128ValueWithInteger(-42, interpreter.EmptyLocationRange),
+			min:           interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
+			max:           interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
+		},
+
+		// UFix types
+		sema.UFix64Type: {
+			positiveValue: interpreter.NewUnmeteredUFix64ValueWithInteger(42, interpreter.EmptyLocationRange),
+			min:           interpreter.NewUnmeteredUFix64ValueWithInteger(sema.UFix64TypeMinInt, interpreter.EmptyLocationRange),
+			max:           interpreter.NewUnmeteredUFix64ValueWithInteger(sema.UFix64TypeMaxInt, interpreter.EmptyLocationRange),
+		},
+	}
+
+	for _, fixedPointType := range sema.AllFixedPointTypes {
+		// Only test leaf types
+		switch fixedPointType {
+		case sema.FixedPointType, sema.SignedFixedPointType:
+			continue
 		}
-	})
 
-	t.Run("valid Fix64 to Fix64", func(t *testing.T) {
+		_, ok := testValues[fixedPointType.(*sema.FixedPointNumericType)]
+		require.True(t, ok, "missing expected value for type %s", fixedPointType.String())
+	}
 
-		for _, value := range []int64{
-			-50,
-			50,
-			sema.Fix64TypeMinInt,
-			sema.Fix64TypeMaxInt,
-		} {
-
-			t.Run(fmt.Sprint(value), func(t *testing.T) {
-
-				code := fmt.Sprintf(
-					`
-                          let x: Fix64 = %d.0
-                          let y = Fix64(x)
-                        `,
-					value,
-				)
-
-				inter := parseCheckAndPrepare(t, code)
-
-				expected := interpreter.NewUnmeteredFix64Value(value * sema.Fix64Factor)
-
-				AssertValuesEqual(
-					t,
-					inter,
-					expected,
-					inter.GetGlobal("x"),
-				)
-
-				AssertValuesEqual(
-					t,
-					inter,
-					expected,
-					inter.GetGlobal("y"),
-				)
-			})
-		}
-	})
-
-	t.Run("valid Fix64 to UFix64", func(t *testing.T) {
-
-		for _, value := range []int64{0, 50, sema.Fix64TypeMaxInt} {
-
-			t.Run(fmt.Sprint(value), func(t *testing.T) {
-
-				code := fmt.Sprintf(
-					`
-                          let x: Fix64 = %d.0
-                          let y = UFix64(x)
-                        `,
-					value,
-				)
-
-				inter := parseCheckAndPrepare(t, code)
-
-				AssertValuesEqual(
-					t,
-					inter,
-					interpreter.NewUnmeteredFix64Value(value*sema.Fix64Factor),
-					inter.GetGlobal("x"),
-				)
-
-				AssertValuesEqual(
-					t,
-					inter,
-					interpreter.NewUnmeteredUFix64Value(uint64(value*sema.Fix64Factor)),
-					inter.GetGlobal("y"),
-				)
-			})
-		}
-	})
-
-	t.Run("valid UFix64 to Fix64", func(t *testing.T) {
-
-		for _, value := range []int64{0, 50, sema.Fix64TypeMaxInt} {
-
-			t.Run(fmt.Sprint(value), func(t *testing.T) {
-
-				code := fmt.Sprintf(
-					`
-                          let x: UFix64 = %d.0
-                          let y = Fix64(x)
-                        `,
-					value,
-				)
-
-				inter := parseCheckAndPrepare(t, code)
-
-				AssertValuesEqual(
-					t,
-					inter,
-					interpreter.NewUnmeteredUFix64Value(uint64(value*sema.Fix64Factor)),
-					inter.GetGlobal("x"),
-				)
-
-				AssertValuesEqual(
-					t,
-					inter,
-					interpreter.NewUnmeteredFix64Value(value*sema.Fix64Factor),
-					inter.GetGlobal("y"),
-				)
-			})
-		}
-	})
-
-	t.Run("invalid negative Fix64 to UFix64", func(t *testing.T) {
-
-		inter := parseCheckAndPrepare(t, `
-          fun test(): UFix64 {
-              let x: Fix64 = -1.0
-              return UFix64(x)
-          }
-        `)
-
-		_, err := inter.Invoke("test")
-		RequireError(t, err)
-
-		var underflowError *interpreter.UnderflowError
-		require.ErrorAs(t, err, &underflowError)
-	})
-
-	t.Run("invalid UFix64 > max Fix64 int to Fix64", func(t *testing.T) {
+	test := func(
+		t *testing.T,
+		sourceType sema.Type,
+		targetType sema.Type,
+		value interpreter.Value,
+		expectedValue interpreter.Value,
+		expectedError error,
+	) {
 
 		inter := parseCheckAndPrepare(t,
 			fmt.Sprintf(
 				`
-                  fun test(): Fix64 {
-                      let x: UFix64 = %d.0
-                      return Fix64(x)
+                  fun test(value: %[1]s): %[2]s {
+                      return %[2]s(value)
                   }
                 `,
-				sema.Fix64TypeMaxInt+1,
+				sourceType,
+				targetType,
 			),
 		)
 
-		_, err := inter.Invoke("test")
-		RequireError(t, err)
+		result, err := inter.Invoke("test", value)
 
-		var overflowError *interpreter.OverflowError
-		require.ErrorAs(t, err, &overflowError)
-	})
+		if expectedError != nil {
+			RequireError(t, err)
 
-	t.Run("invalid negative integer to UFix64", func(t *testing.T) {
+			require.ErrorAs(t, err, &expectedError)
+		} else {
+			require.NoError(t, err)
 
-		for _, integerType := range sema.AllSignedIntegerTypes {
+			if expectedValue != nil {
+				assert.Equal(t, expectedValue, result)
+			} else {
+				// Fall back to string comparison,
+				// as it is too much work to construct the expected value
+				expectedValueStr := value.String()
+				actualValueStr := result.String()
 
-			t.Run(integerType.String(), func(t *testing.T) {
+				expectedValueStrLen := len(expectedValueStr)
+				actualValueStrLen := len(actualValueStr)
 
-				inter := parseCheckAndPrepare(t,
-					fmt.Sprintf(
-						`
-                         fun test(): UFix64 {
-                             let x: %s = -1
-                             return UFix64(x)
-                         }
-                       `,
-						integerType,
-					),
-				)
+				// Pad right (append zeros) to match the length.
+				if expectedValueStrLen < actualValueStrLen {
+					for i := 0; i < actualValueStrLen-expectedValueStrLen; i++ {
+						expectedValueStr += "0"
+					}
+				}
 
-				_, err := inter.Invoke("test")
-				RequireError(t, err)
-
-				var underflowError *interpreter.UnderflowError
-				require.ErrorAs(t, err, &underflowError)
-			})
-		}
-	})
-
-	t.Run("invalid big integer (>uint64) to UFix64", func(t *testing.T) {
-
-		bigIntegerTypes := []sema.Type{
-			sema.Word64Type,
-			sema.Word128Type,
-			sema.Word256Type,
-			sema.UInt64Type,
-			sema.UInt128Type,
-			sema.UInt256Type,
-			sema.Int256Type,
-			sema.Int128Type,
-		}
-
-		for _, integerType := range bigIntegerTypes {
-
-			t.Run(integerType.String(), func(t *testing.T) {
-
-				inter := parseCheckAndPrepare(t,
-					fmt.Sprintf(
-						`
-                         fun test(): UFix64 {
-                             let x: %s = %d
-                             return UFix64(x)
-                         }
-                       `,
-						integerType,
-						sema.UFix64TypeMaxInt+1,
-					),
-				)
-
-				_, err := inter.Invoke("test")
-				RequireError(t, err)
-
-				var overflowError *interpreter.OverflowError
-				require.ErrorAs(t, err, &overflowError)
-			})
-		}
-	})
-
-	t.Run("invalid integer > UFix64 max int to UFix64", func(t *testing.T) {
-
-		const testedValue = sema.UFix64TypeMaxInt + 1
-		testValueBig := big.NewInt(0).SetUint64(testedValue)
-
-		for _, integerType := range sema.AllIntegerTypes {
-
-			// Only test for integer types that can hold testedValue
-
-			maxInt := integerType.(sema.IntegerRangedType).MaxInt()
-			if maxInt != nil && maxInt.Cmp(testValueBig) < 0 {
-				continue
+				assert.Equal(t, expectedValueStr, actualValueStr)
 			}
+		}
+	}
 
-			t.Run(integerType.String(), func(t *testing.T) {
+	for sourceType, sourceValues := range testValues {
+		for targetType, targetValues := range testValues {
 
-				inter := parseCheckAndPrepare(t,
-					fmt.Sprintf(
-						`
-                         fun test(): UFix64 {
-                             let x: %s = %d
-                             return UFix64(x)
-                         }
-                       `,
-						integerType,
-						testedValue,
-					),
-				)
+			t.Run(fmt.Sprintf("%s to %s", sourceType, targetType), func(t *testing.T) {
 
-				_, err := inter.Invoke("test")
-				RequireError(t, err)
+				// Check a "typical" positive value
 
-				var overflowError *interpreter.OverflowError
-				require.ErrorAs(t, err, &overflowError)
+				t.Run("valid positive", func(t *testing.T) {
+					test(t,
+						sourceType,
+						targetType,
+						sourceValues.positiveValue,
+						targetValues.positiveValue,
+						nil,
+					)
+				})
+
+				// Check a "typical" negative value (only if both type are signed)
+
+				sourceNegativeValue := sourceValues.negativeValue
+				targetNegativeValue := targetValues.negativeValue
+				if sourceNegativeValue != nil && targetNegativeValue != nil {
+					t.Run("valid negative", func(t *testing.T) {
+						test(t,
+							sourceType,
+							targetType,
+							sourceNegativeValue,
+							targetNegativeValue,
+							nil,
+						)
+					})
+				}
+
+				targetMaxInt := targetType.MaxInt()
+				sourceMaxInt := sourceType.MaxInt()
+				targetMinInt := targetType.MinInt()
+				sourceMinInt := sourceType.MinInt()
+
+				if targetMaxInt.Cmp(sourceMaxInt) >= 0 {
+					// If the target type can accommodate source type's max value, check for conversion.
+					t.Run("max", func(t *testing.T) {
+						test(
+							t,
+							sourceType,
+							targetType,
+							sourceValues.max,
+							nil,
+							nil,
+						)
+					})
+				} else {
+					// Otherwise, check whether the maximum value can be converted.
+					t.Run("overflow", func(t *testing.T) {
+						test(
+							t,
+							sourceType,
+							targetType,
+							sourceValues.max,
+							nil,
+							&interpreter.OverflowError{},
+						)
+					})
+				}
+
+				// Check the minimum value can be converted.
+
+				if targetMinInt.Cmp(sourceMinInt) <= 0 {
+					// If the target type can accommodate source type's min value, check for conversion.
+					t.Run("min", func(t *testing.T) {
+						test(
+							t,
+							sourceType,
+							targetType,
+							sourceValues.min,
+							nil,
+							nil,
+						)
+					})
+				} else {
+					// Otherwise, check whether the underflow is handled correctly.
+					t.Run("underflow", func(t *testing.T) {
+						test(
+							t,
+							sourceType,
+							targetType,
+							sourceValues.min,
+							nil,
+							&interpreter.UnderflowError{},
+						)
+					})
+				}
 			})
 		}
-	})
+	}
 
-	t.Run("invalid integer > Fix64 max int to Fix64", func(t *testing.T) {
-
-		const testedValue = sema.Fix64TypeMaxInt + 1
-		testValueBig := big.NewInt(0).SetUint64(testedValue)
-
-		for _, integerType := range sema.AllIntegerTypes {
-
-			// Only test for integer types that can hold testedValue
-
-			maxInt := integerType.(sema.IntegerRangedType).MaxInt()
-			if maxInt != nil && maxInt.Cmp(testValueBig) < 0 {
-				continue
-			}
-
-			t.Run(integerType.String(), func(t *testing.T) {
-
-				inter := parseCheckAndPrepare(t,
-					fmt.Sprintf(
-						`
-                         fun test(): Fix64 {
-                             let x: %s = %d
-                             return Fix64(x)
-                         }
-                       `,
-						integerType,
-						testedValue,
-					),
-				)
-
-				_, err := inter.Invoke("test")
-				RequireError(t, err)
-
-				var overflowError *interpreter.OverflowError
-				require.ErrorAs(t, err, &overflowError)
-			})
-		}
-	})
-
-	t.Run("invalid integer < Fix64 min int to Fix64", func(t *testing.T) {
-
-		const testedValue = sema.Fix64TypeMinInt - 1
-		testValueBig := big.NewInt(testedValue)
-
-		for _, integerType := range sema.AllSignedIntegerTypes {
-
-			// Only test for integer types that can hold testedValue
-
-			minInt := integerType.(sema.IntegerRangedType).MinInt()
-			if minInt != nil && minInt.Cmp(testValueBig) > 0 {
-				continue
-			}
-
-			t.Run(integerType.String(), func(t *testing.T) {
-
-				inter := parseCheckAndPrepare(t,
-					fmt.Sprintf(
-						`
-                         fun test(): Fix64 {
-                             let x: %s = %d
-                             return Fix64(x)
-                         }
-                       `,
-						integerType,
-						testedValue,
-					),
-				)
-
-				_, err := inter.Invoke("test")
-				RequireError(t, err)
-
-				var underflowError *interpreter.UnderflowError
-				require.ErrorAs(t, err, &underflowError)
-			})
-		}
-	})
 }
 
 func TestInterpretFixedPointMinMax(t *testing.T) {
@@ -618,7 +657,6 @@ func TestInterpretStringFixedPointConversion(t *testing.T) {
 	}
 
 	type testsuite struct {
-		typeName     string
 		toFixedValue func(isNegative bool, decimal, fractional *big.Int, scale uint) (interpreter.Value, error)
 		intBounds    []*big.Int
 		fracBounds   []*big.Int
@@ -627,9 +665,8 @@ func TestInterpretStringFixedPointConversion(t *testing.T) {
 	bigZero := big.NewInt(0)
 	bigOne := big.NewInt(1)
 
-	suites := []testsuite{
-		{
-			"Fix64",
+	suites := map[sema.Type]testsuite{
+		sema.Fix64Type: {
 			func(isNeg bool, decimal, fractional *big.Int, scale uint) (interpreter.Value, error) {
 				fixedVal, err := fixedpoint.NewFix64(isNeg, decimal, fractional, scale)
 				if err != nil {
@@ -640,8 +677,20 @@ func TestInterpretStringFixedPointConversion(t *testing.T) {
 			[]*big.Int{sema.Fix64TypeMinIntBig, sema.Fix64TypeMaxIntBig, bigZero, bigOne},
 			[]*big.Int{sema.UFix64TypeMinFractionalBig, sema.Fix64TypeMaxFractionalBig, bigZero, bigOne},
 		},
-		{
-			"UFix64",
+
+		sema.Fix128Type: {
+			func(isNeg bool, decimal, fractional *big.Int, scale uint) (interpreter.Value, error) {
+				fixedVal, err := fixedpoint.NewFix128(isNeg, decimal, fractional, scale)
+				if err != nil {
+					return nil, err
+				}
+				return interpreter.NewFix128ValueFromBigInt(nil, fixedVal), nil
+			},
+			[]*big.Int{sema.Fix64TypeMinIntBig, sema.Fix64TypeMaxIntBig, bigZero, bigOne},
+			[]*big.Int{sema.UFix64TypeMinFractionalBig, sema.Fix64TypeMaxFractionalBig, bigZero, bigOne},
+		},
+
+		sema.UFix64Type: {
 			func(_ bool, decimal, fractional *big.Int, scale uint) (interpreter.Value, error) {
 				fixedVal, err := fixedpoint.NewUFix64(decimal, fractional, scale)
 				if err != nil {
@@ -652,6 +701,18 @@ func TestInterpretStringFixedPointConversion(t *testing.T) {
 			[]*big.Int{sema.UFix64TypeMinIntBig, sema.UFix64TypeMaxIntBig, bigZero, bigOne},
 			[]*big.Int{sema.UFix64TypeMinFractionalBig, sema.UFix64TypeMaxFractionalBig, bigZero, bigOne},
 		},
+	}
+
+	for _, ty := range sema.AllFixedPointTypes {
+		// Only test leaf types
+		switch ty {
+		case sema.FixedPointType, sema.SignedFixedPointType:
+			continue
+		}
+
+		if _, ok := suites[ty]; !ok {
+			require.Fail(t, fmt.Sprintf("missing type: %s", ty.String()))
+		}
 	}
 
 	genCases := func(intComponents, fracComponents []*big.Int) []testcase {
@@ -684,8 +745,8 @@ func TestInterpretStringFixedPointConversion(t *testing.T) {
 		return m
 	}
 
-	test := func(suite testsuite) {
-		t.Run(suite.typeName, func(t *testing.T) {
+	test := func(typeName string, suite testsuite) {
+		t.Run(typeName, func(t *testing.T) {
 			t.Parallel()
 
 			code := fmt.Sprintf(
@@ -700,7 +761,7 @@ func TestInterpretStringFixedPointConversion(t *testing.T) {
                         return b
                     }
                 `,
-				suite.typeName,
+				typeName,
 			)
 
 			inter := parseCheckAndPrepare(t, code)
@@ -732,8 +793,8 @@ func TestInterpretStringFixedPointConversion(t *testing.T) {
 		})
 
 	}
-	for _, testsuite := range suites {
-		test(testsuite)
+	for typeName, testsuite := range suites {
+		test(typeName.QualifiedString(), testsuite)
 	}
 
 }

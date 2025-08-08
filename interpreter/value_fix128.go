@@ -43,11 +43,6 @@ const fix128Size = int(unsafe.Sizeof(Fix128Value{}))
 
 var fix128MemoryUsage = common.NewNumberMemoryUsage(fix128Size)
 
-func NewFix128ValueWithInteger(gauge common.MemoryGauge, constructor func() int64, locationRange LocationRange) Fix128Value {
-	common.UseMemory(gauge, fix128MemoryUsage)
-	return NewUnmeteredFix128ValueWithInteger(constructor(), locationRange)
-}
-
 // NewUnmeteredFix128ValueWithInteger construct a Fix128Value from an int64.
 // Note that this function uses the default scaling of 24.
 func NewUnmeteredFix128ValueWithInteger(integer int64, locationRange LocationRange) Fix128Value {
@@ -56,7 +51,7 @@ func NewUnmeteredFix128ValueWithInteger(integer int64, locationRange LocationRan
 		sema.Fix128FactorIntBig,
 	)
 
-	return NewFix128ValueFromBigInt(nil, bigInt)
+	return NewFix128ValueFromBigIntWithRangeCheck(nil, bigInt, locationRange)
 }
 
 func NewUnmeteredFix128ValueWithIntegerAndScale(integer int64, scale int64) Fix128Value {
@@ -83,7 +78,6 @@ func NewUnmeteredFix128Value(fix128 fix.Fix128) Fix128Value {
 }
 
 func NewFix128ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
-	// TODO: Validate bounds
 	return NewFix128Value(
 		gauge,
 		func() fix.Fix128 {
@@ -96,13 +90,28 @@ func NewFix128ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value 
 }
 
 func NewFix128ValueFromBigInt(gauge common.MemoryGauge, v *big.Int) Fix128Value {
-	// TODO: Validate bounds
 	return NewFix128Value(
 		gauge,
 		func() fix.Fix128 {
 			return fixedpoint.Fix128FromBigInt(v)
 		},
 	)
+}
+
+func NewFix128ValueFromBigIntWithRangeCheck(gauge common.MemoryGauge, v *big.Int, locationRange LocationRange) Fix128Value {
+	if v.Cmp(fixedpoint.Fix128TypeMinIntBig) == -1 {
+		panic(&UnderflowError{
+			LocationRange: locationRange,
+		})
+	}
+
+	if v.Cmp(fixedpoint.Fix128TypeMaxIntBig) == 1 {
+		panic(&OverflowError{
+			LocationRange: locationRange,
+		})
+	}
+
+	return NewFix128ValueFromBigInt(gauge, v)
 }
 
 var _ Value = Fix128Value{}
@@ -479,7 +488,7 @@ func ConvertFix128(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 		panic(fmt.Sprintf("can't convert Fix64: %s", value))
 	}
 
-	return NewFix128ValueFromBigInt(memoryGauge, scaledInt)
+	return NewFix128ValueFromBigIntWithRangeCheck(memoryGauge, scaledInt, locationRange)
 }
 
 func (v Fix128Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {

@@ -77,8 +77,6 @@ var (
 
 	// Fix128TypeMaxFractionalBig is 0.999_999_999_999_999_999_999_999
 	Fix128TypeMaxFractionalBig = Fix128ToBigInt(fix.NewFix128(0x0000DE0B6B3A763F, 0xFFFFFFFFFFFFFFEF))
-
-	Fix128FactorAsFix128 = Fix128FromBigInt(Fix128FactorAsBigInt)
 )
 
 // UFix64
