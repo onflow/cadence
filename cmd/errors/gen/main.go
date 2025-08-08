@@ -383,6 +383,12 @@ func placeholderValue(t types.Type) dst.Expr {
 	case "github.com/onflow/cadence/sema.EntitlementSetAccess":
 		return dst.NewIdent("placeholderEntitlementSetAccess")
 
+	case "github.com/onflow/cadence/parser/lexer.TokenType":
+		return dst.NewIdent("placeholderTokenType")
+
+	case "github.com/onflow/cadence/parser/lexer.Token":
+		return dst.NewIdent("placeholderToken")
+
 	default:
 		log.Fatalf("unsupported field type: %s", t.String())
 		return nil

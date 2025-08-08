@@ -201,7 +201,7 @@ func (i *PositionInfo) recordMemberAccess(
 	memberAccessType Type,
 ) {
 	i.MemberAccesses.Put(
-		expression.AccessPos,
+		expression.AccessEndPos,
 		expression.EndPosition(memoryGauge),
 		memberAccessType,
 	)

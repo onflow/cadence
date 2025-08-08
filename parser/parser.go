@@ -195,11 +195,9 @@ func ParseTokenStream[T any](
 	p.skipSpaceAndComments()
 
 	if !p.current.Is(lexer.TokenEOF) {
-		p.report(
-			p.newSyntaxError("unexpected token: %s", p.current.Type).
-				WithSecondary("check for extra characters, missing semicolons, or incomplete statements").
-				WithDocumentation("https://cadence-lang.org/docs/language/syntax"),
-		)
+		p.report(&UnexpectedTokenAtEndError{
+			Token: p.current,
+		})
 	}
 
 	return result, p.errors

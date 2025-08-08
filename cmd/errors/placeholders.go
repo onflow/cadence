@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/parser"
+	"github.com/onflow/cadence/parser/lexer"
 	"github.com/onflow/cadence/sema"
 )
 
@@ -230,3 +231,10 @@ var placeholderEntitlementSetAccess = sema.NewEntitlementSetAccess(
 	},
 	sema.Conjunction,
 )
+
+const placeholderTokenType = lexer.TokenIdentifier
+
+var placeholderToken = lexer.Token{
+	Type:  placeholderTokenType,
+	Range: placeholderRange,
+}

@@ -878,10 +878,10 @@ type AccessExpression interface {
 type MemberExpression struct {
 	Expression Expression
 	Identifier Identifier
-	// The position of the token (`.`, `?.`) that separates the accessed expression
+	// The end position of the token (`.`, `?.`) that separates the accessed expression
 	// and the identifier of the member
-	AccessPos Position
-	Optional  bool
+	AccessEndPos Position
+	Optional     bool
 }
 
 var _ Element = &MemberExpression{}
@@ -891,16 +891,16 @@ func NewMemberExpression(
 	gauge common.MemoryGauge,
 	expression Expression,
 	optional bool,
-	accessPos Position,
+	accessEndPos Position,
 	identifier Identifier,
 ) *MemberExpression {
 	common.UseMemory(gauge, common.MemberExpressionMemoryUsage)
 
 	return &MemberExpression{
-		Expression: expression,
-		Optional:   optional,
-		AccessPos:  accessPos,
-		Identifier: identifier,
+		Expression:   expression,
+		Optional:     optional,
+		AccessEndPos: accessEndPos,
+		Identifier:   identifier,
 	}
 }
 
@@ -960,7 +960,7 @@ func (e *MemberExpression) StartPosition() Position {
 
 func (e *MemberExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
 	if e.Identifier.Identifier == "" {
-		return e.AccessPos
+		return e.AccessEndPos
 	} else {
 		return e.Identifier.EndPosition(memoryGauge)
 	}

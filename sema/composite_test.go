@@ -2194,7 +2194,7 @@ func TestCheckInvalidMissingMember(t *testing.T) {
 		require.Equal(t,
 			[]errors.SuggestedFix[ast.TextEdit]{
 				{
-					Message: "use optional chaining",
+					Message: "Use optional chaining",
 					TextEdits: []ast.TextEdit{
 						{
 							Insertion: "?",
