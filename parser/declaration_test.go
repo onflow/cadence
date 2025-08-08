@@ -846,6 +846,27 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("missing colon after parameter name", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("fun foo(a Int) {}")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingColonAfterParameterNameError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenParenClose,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+							EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
+
 	t.Run("with return type", func(t *testing.T) {
 
 		t.Parallel()
@@ -4132,14 +4153,20 @@ func TestParseParametersWithExtraLabels(t *testing.T) {
 
 	_, errs := testParseDeclarations(`access(all) fun foo(_ foo: String, label fable table: Int) {}`)
 
-	AssertEqualWithDiff(t, []error{
-		&SyntaxError{
-			Pos:           ast.Position{Line: 1, Column: 47, Offset: 47},
-			Message:       "expected ':' after parameter name, got identifier",
-			Secondary:     "function parameters must have a type annotation separated by a colon",
-			Documentation: "https://cadence-lang.org/docs/language/functions",
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingColonAfterParameterNameError{
+				GotToken: lexer.Token{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 47, Line: 1, Column: 47},
+						EndPos:   ast.Position{Offset: 51, Line: 1, Column: 51},
+					},
+					Type: lexer.TokenIdentifier,
+				},
+			},
 		},
-	}, errs)
+		errs,
+	)
 }
 
 func TestParseAttachmentDeclaration(t *testing.T) {

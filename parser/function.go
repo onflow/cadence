@@ -149,12 +149,9 @@ func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, erro
 	}
 
 	if !p.current.Is(lexer.TokenColon) {
-		return nil, p.newSyntaxError(
-			"expected %s after parameter name, got %s",
-			lexer.TokenColon,
-			p.current.Type,
-		).WithSecondary("function parameters must have a type annotation separated by a colon").
-			WithDocumentation("https://cadence-lang.org/docs/language/functions")
+		return nil, &MissingColonAfterParameterNameError{
+			GotToken: p.current,
+		}
 	}
 
 	// Skip the colon

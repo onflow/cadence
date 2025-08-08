@@ -541,6 +541,44 @@ func (*ExpectedCommaOrEndOfParameterListError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions"
 }
 
+// MissingColonAfterParameterNameError is reported when a colon is missing after a parameter name.
+type MissingColonAfterParameterNameError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingColonAfterParameterNameError{}
+var _ errors.UserError = &MissingColonAfterParameterNameError{}
+var _ errors.SecondaryError = &MissingColonAfterParameterNameError{}
+var _ errors.HasDocumentationLink = &MissingColonAfterParameterNameError{}
+
+func (*MissingColonAfterParameterNameError) isParseError() {}
+
+func (*MissingColonAfterParameterNameError) IsUserError() {}
+
+func (e *MissingColonAfterParameterNameError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingColonAfterParameterNameError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingColonAfterParameterNameError) Error() string {
+	return fmt.Sprintf(
+		"expected %s after parameter name, got %s",
+		lexer.TokenColon,
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingColonAfterParameterNameError) SecondaryError() string {
+	return "function parameters must have a type annotation separated by a colon"
+}
+
+func (*MissingColonAfterParameterNameError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/functions"
+}
+
 // MissingClosingParenInArgumentListError is reported when an argument list is missing a closing parenthesis.
 type MissingClosingParenInArgumentListError struct {
 	Pos ast.Position
