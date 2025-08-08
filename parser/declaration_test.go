@@ -3074,11 +3074,15 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "expected identifier after start of field declaration, got ':'",
-					Secondary:     "field declarations must have a valid identifier name after the variable kind keyword (let/var)",
-					Documentation: "https://cadence-lang.org/docs/language/constants-and-variables",
-					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
+				&MissingFieldNameError{
+					GotToken: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+							EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+						},
+						Type: 0x1a,
+					},
 				},
 			},
 			errs,

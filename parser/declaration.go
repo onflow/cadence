@@ -1017,11 +1017,9 @@ func parseFieldWithVariableKind(
 	// Skip the `let` or `var` keyword
 	p.nextSemanticToken()
 	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, p.newSyntaxError(
-			"expected identifier after start of field declaration, got %s",
-			p.current.Type,
-		).WithSecondary("field declarations must have a valid identifier name after the variable kind keyword (let/var)").
-			WithDocumentation("https://cadence-lang.org/docs/language/constants-and-variables")
+		return nil, &MissingFieldNameError{
+			GotToken: p.current,
+		}
 	}
 
 	identifier := p.tokenToIdentifier(p.current)

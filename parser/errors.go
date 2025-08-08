@@ -772,6 +772,40 @@ func (*MissingEnumCaseNameError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/enumerations"
 }
 
+// MissingFieldNameError is reported when a field is missing a name.
+type MissingFieldNameError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingFieldNameError{}
+var _ errors.UserError = &MissingFieldNameError{}
+var _ errors.SecondaryError = &MissingFieldNameError{}
+var _ errors.HasDocumentationLink = &MissingFieldNameError{}
+
+func (*MissingFieldNameError) isParseError() {}
+
+func (*MissingFieldNameError) IsUserError() {}
+
+func (e *MissingFieldNameError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingFieldNameError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingFieldNameError) Error() string {
+	return fmt.Sprintf("expected identifier after start of field declaration, got %s", e.GotToken.Type)
+}
+
+func (*MissingFieldNameError) SecondaryError() string {
+	return "field declarations must have a valid identifier name after the variable kind keyword (let/var)"
+}
+
+func (*MissingFieldNameError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/types-and-type-system/composite-types#composite-type-fields"
+}
+
 // MissingConformanceError is reported when a colon for conformances is present,
 // but no conformances follow.
 type MissingConformanceError struct {
