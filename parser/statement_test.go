@@ -1100,12 +1100,15 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 
 		require.Empty(t, result)
 
-		AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Message: "expected identifier after start of function declaration, got keyword continue",
-				Pos:     ast.Position{Line: 1, Column: 4, Offset: 4},
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected identifier after start of function declaration, got keyword continue",
+					Pos:     ast.Position{Line: 1, Column: 4, Offset: 4},
+				},
 			},
-		}, errs)
+			errs,
+		)
 	})
 
 	t.Run("function expression with purity, and keyword as name", func(t *testing.T) {
@@ -1115,12 +1118,15 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 
 		require.Empty(t, result)
 
-		AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Message: "expected identifier after start of function declaration, got keyword break",
-				Pos:     ast.Position{Line: 1, Column: 9, Offset: 9},
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected identifier after start of function declaration, got keyword break",
+					Pos:     ast.Position{Line: 1, Column: 9, Offset: 9},
+				},
 			},
-		}, errs)
+			errs,
+		)
 	})
 }
 

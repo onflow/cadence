@@ -2690,18 +2690,20 @@ func TestParseImportDeclaration(t *testing.T) {
 
 		_, errs := testParseDeclarations(`import foo, bar, baz, @ from 0x42`)
 
-		AssertEqualWithDiff(t, []error{
-			&InvalidImportContinuationError{
-				GotToken: lexer.Token{
-					Type: lexer.TokenAt,
-					Range: ast.Range{
-						StartPos: ast.Position{Offset: 22, Line: 1, Column: 22},
-						EndPos:   ast.Position{Offset: 22, Line: 1, Column: 22},
+		AssertEqualWithDiff(t,
+			[]error{
+				&InvalidImportContinuationError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenAt,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 22, Line: 1, Column: 22},
+							EndPos:   ast.Position{Offset: 22, Line: 1, Column: 22},
+						},
 					},
 				},
 			},
-		}, errs)
-
+			errs,
+		)
 	})
 
 	t.Run("one identifier, missing second identifier", func(t *testing.T) {
@@ -3084,14 +3086,17 @@ func TestParseEvent(t *testing.T) {
 
 		_, errs := testParseDeclarations(" access(all) event ResourceDestroyed ( a : Int )")
 
-		AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Pos:           ast.Position{Line: 1, Column: 47, Offset: 47},
-				Message:       "expected a default argument after type annotation, got ')'",
-				Secondary:     "default arguments must be specified with an equals sign (=) followed by the default value",
-				Documentation: "https://cadence-lang.org/docs/language/functions",
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Pos:           ast.Position{Line: 1, Column: 47, Offset: 47},
+					Message:       "expected a default argument after type annotation, got ')'",
+					Secondary:     "default arguments must be specified with an equals sign (=) followed by the default value",
+					Documentation: "https://cadence-lang.org/docs/language/functions",
+				},
 			},
-		}, errs)
+			errs,
+		)
 	})
 
 	t.Run("non-default event with default arg", func(t *testing.T) {
@@ -3100,25 +3105,31 @@ func TestParseEvent(t *testing.T) {
 
 		_, errs := testParseDeclarations(" access(all) event Foo ( a : Int = 3)")
 
-		AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Pos:           ast.Position{Line: 1, Column: 33, Offset: 33},
-				Message:       "cannot use a default argument for this function",
-				Secondary:     "default arguments are only allowed in function declarations, not in events or other contexts",
-				Documentation: "https://cadence-lang.org/docs/language/functions",
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Pos:           ast.Position{Line: 1, Column: 33, Offset: 33},
+					Message:       "cannot use a default argument for this function",
+					Secondary:     "default arguments are only allowed in function declarations, not in events or other contexts",
+					Documentation: "https://cadence-lang.org/docs/language/functions",
+				},
 			},
-		}, errs)
+			errs,
+		)
 	})
 
 	t.Run("invalid event name", func(t *testing.T) {
 		_, errs := testParseDeclarations(`event continue {}`)
 
-		AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Pos:     ast.Position{Line: 1, Column: 6, Offset: 6},
-				Message: "expected identifier after start of event declaration, got keyword continue",
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Pos:     ast.Position{Line: 1, Column: 6, Offset: 6},
+					Message: "expected identifier after start of event declaration, got keyword continue",
+				},
 			},
-		}, errs)
+			errs,
+		)
 	})
 }
 
@@ -4140,12 +4151,15 @@ func TestParseInvalidParameterWithoutLabel(t *testing.T) {
 
 	_, errs := testParseDeclarations(`access(all) fun foo(continue: Int) {}`)
 
-	AssertEqualWithDiff(t, []error{
-		&SyntaxError{
-			Pos:     ast.Position{Line: 1, Column: 20, Offset: 20},
-			Message: "expected identifier for argument label or parameter name, got keyword continue",
+	AssertEqualWithDiff(t,
+		[]error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 1, Column: 20, Offset: 20},
+				Message: "expected identifier for argument label or parameter name, got keyword continue",
+			},
 		},
-	}, errs)
+		errs,
+	)
 }
 
 func TestParseParametersWithExtraLabels(t *testing.T) {
@@ -4602,12 +4616,15 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		_, errs := testParseDeclarations(`access(all) attachment E for S {
 			require entitlement X
 		}`)
-		AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Pos:     ast.Position{Line: 2, Column: 3, Offset: 36},
-				Message: "unexpected identifier",
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Pos:     ast.Position{Line: 2, Column: 3, Offset: 36},
+					Message: "unexpected identifier",
+				},
 			},
-		}, errs)
+			errs,
+		)
 	})
 
 	t.Run("entitlement access", func(t *testing.T) {
@@ -5061,12 +5078,15 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 	t.Run("invalid interface name", func(t *testing.T) {
 		_, errs := testParseDeclarations(`access(all) struct interface continue {}`)
 
-		AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Pos:     ast.Position{Line: 1, Column: 29, Offset: 29},
-				Message: "expected identifier following struct declaration, got keyword continue",
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Pos:     ast.Position{Line: 1, Column: 29, Offset: 29},
+					Message: "expected identifier following struct declaration, got keyword continue",
+				},
 			},
-		}, errs)
+			errs,
+		)
 	})
 
 	t.Run("struct with view member", func(t *testing.T) {
@@ -7814,14 +7834,17 @@ func TestParseInvalidDefaultArgument(t *testing.T) {
 
 		_, errs := testParseDeclarations(" access(all) fun foo ( a : Int = 3) { } ")
 
-		AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Pos:           ast.Position{Line: 1, Column: 31, Offset: 31},
-				Message:       "cannot use a default argument for this function",
-				Secondary:     "default arguments are only allowed in function declarations, not in events or other contexts",
-				Documentation: "https://cadence-lang.org/docs/language/functions",
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Pos:           ast.Position{Line: 1, Column: 31, Offset: 31},
+					Message:       "cannot use a default argument for this function",
+					Secondary:     "default arguments are only allowed in function declarations, not in events or other contexts",
+					Documentation: "https://cadence-lang.org/docs/language/functions",
+				},
 			},
-		}, errs)
+			errs,
+		)
 	})
 
 	t.Run("function expression ", func(t *testing.T) {
@@ -7830,14 +7853,17 @@ func TestParseInvalidDefaultArgument(t *testing.T) {
 
 		_, errs := testParseDeclarations(" let foo = fun ( a : Int = 3) { } ")
 
-		AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Pos:           ast.Position{Line: 1, Column: 25, Offset: 25},
-				Message:       "cannot use a default argument for this function",
-				Secondary:     "default arguments are only allowed in function declarations, not in events or other contexts",
-				Documentation: "https://cadence-lang.org/docs/language/functions",
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Pos:           ast.Position{Line: 1, Column: 25, Offset: 25},
+					Message:       "cannot use a default argument for this function",
+					Secondary:     "default arguments are only allowed in function declarations, not in events or other contexts",
+					Documentation: "https://cadence-lang.org/docs/language/functions",
+				},
 			},
-		}, errs)
+			errs,
+		)
 	})
 }
 
