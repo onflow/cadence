@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/fixedpoint"
+	"github.com/onflow/cadence/integer"
 )
 
 const TypeIDSeparator = '.'
@@ -1942,18 +1943,8 @@ var (
 	Int64TypeMinInt = new(big.Int).SetInt64(math.MinInt64)
 	Int64TypeMaxInt = new(big.Int).SetInt64(math.MaxInt64)
 
-	Int128TypeMinIntBig = func() *big.Int {
-		int128TypeMin := big.NewInt(-1)
-		int128TypeMin.Lsh(int128TypeMin, 127)
-		return int128TypeMin
-	}()
-
-	Int128TypeMaxIntBig = func() *big.Int {
-		int128TypeMax := big.NewInt(1)
-		int128TypeMax.Lsh(int128TypeMax, 127)
-		int128TypeMax.Sub(int128TypeMax, big.NewInt(1))
-		return int128TypeMax
-	}()
+	Int128TypeMinIntBig = integer.Int128TypeMinIntBig
+	Int128TypeMaxIntBig = integer.Int128TypeMaxIntBig
 
 	Int256TypeMinIntBig = func() *big.Int {
 		int256TypeMin := big.NewInt(-1)
@@ -2039,6 +2030,8 @@ var (
 		return word256TypeMax
 	}()
 
+	// Fix64
+
 	Fix64FactorBig = new(big.Int).SetUint64(uint64(Fix64Factor))
 
 	Fix64TypeMinIntBig = fixedpoint.Fix64TypeMinIntBig
@@ -2047,31 +2040,17 @@ var (
 	Fix64TypeMinFractionalBig = fixedpoint.Fix64TypeMinFractionalBig
 	Fix64TypeMaxFractionalBig = fixedpoint.Fix64TypeMaxFractionalBig
 
+	// Fix128
+
 	Fix128FactorIntBig = fixedpoint.Fix128FactorAsBigInt
 
-	Fix128TypeMinIntBig = func() *big.Int {
-		fix128TypeMin := new(big.Int)
-		fix128TypeMin.Div(Int128TypeMinIntBig, Fix128FactorIntBig)
-		return fix128TypeMin
-	}()
+	Fix128TypeMinIntBig = fixedpoint.Fix128TypeMinIntBig
+	Fix128TypeMaxIntBig = fixedpoint.Fix128TypeMaxIntBig
 
-	Fix128TypeMaxIntBig = func() *big.Int {
-		fix128TypeMax := new(big.Int)
-		fix128TypeMax.Div(Int128TypeMaxIntBig, Fix128FactorIntBig)
-		return fix128TypeMax
-	}()
+	Fix128TypeMinFractionalBig = fixedpoint.Fix128TypeMinFractionalBig
+	Fix128TypeMaxFractionalBig = fixedpoint.Fix128TypeMaxFractionalBig
 
-	Fix128TypeMinFractionalBig = func() *big.Int {
-		fix128TypeMinFractional := new(big.Int)
-		fix128TypeMinFractional.Mod(Int128TypeMaxIntBig, Fix128FactorIntBig)
-		return fix128TypeMinFractional
-	}()
-
-	Fix128TypeMaxFractionalBig = func() *big.Int {
-		fix128TypeMaxFractional := new(big.Int)
-		fix128TypeMaxFractional.Mod(Int128TypeMaxIntBig, Fix128FactorIntBig)
-		return fix128TypeMaxFractional
-	}()
+	// UFix64
 
 	UFix64TypeMinIntBig = fixedpoint.UFix64TypeMinIntBig
 	UFix64TypeMaxIntBig = fixedpoint.UFix64TypeMaxIntBig
@@ -2098,7 +2077,7 @@ const (
 	UFix64TypeSize  uint = 8
 	Int128TypeSize  uint = 16
 	UInt128TypeSize uint = 16
-	Fix128TypeSize   uint = 16
+	Fix128TypeSize  uint = 16
 	Word128TypeSize uint = 16
 	Int256TypeSize  uint = 32
 	UInt256TypeSize uint = 32

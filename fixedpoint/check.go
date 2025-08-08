@@ -23,6 +23,8 @@ import (
 	"math/big"
 
 	fix "github.com/onflow/fixed-point"
+
+	"github.com/onflow/cadence/integer"
 )
 
 const Fix64Scale = 8
@@ -72,11 +74,17 @@ var (
 	Fix128TypeMinIntBig = Fix128ToBigInt(Fix128TypeMin)
 	Fix128TypeMaxIntBig = Fix128ToBigInt(Fix128TypeMax)
 
-	// Fix128TypeMinFractionalBig is -0.000_000_000_000_000_000_000_001
-	Fix128TypeMinFractionalBig = Fix128ToBigInt(fix.NewFix128(0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF))
+	Fix128TypeMinFractionalBig = func() *big.Int {
+		fix128TypeMinFractional := new(big.Int)
+		fix128TypeMinFractional.Mod(integer.Int128TypeMinIntBig, Fix128FactorAsBigInt)
+		return fix128TypeMinFractional
+	}()
 
-	// Fix128TypeMaxFractionalBig is 0.999_999_999_999_999_999_999_999
-	Fix128TypeMaxFractionalBig = Fix128ToBigInt(fix.NewFix128(0x0000DE0B6B3A763F, 0xFFFFFFFFFFFFFFEF))
+	Fix128TypeMaxFractionalBig = func() *big.Int {
+		fix128TypeMaxFractional := new(big.Int)
+		fix128TypeMaxFractional.Mod(integer.Int128TypeMaxIntBig, Fix128FactorAsBigInt)
+		return fix128TypeMaxFractional
+	}()
 )
 
 // UFix64
