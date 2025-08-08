@@ -713,13 +713,9 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 					WithDocumentation("https://cadence-lang.org/docs/language/imports")
 
 			default:
-				return p.newSyntaxError(
-					"unexpected token in import declaration: got %s, expected keyword %q or %s",
-					p.current.Type,
-					KeywordFrom,
-					lexer.TokenComma,
-				).WithSecondary("after an imported identifier, expect either a comma to import more items or the 'from' keyword to specify the import location").
-					WithDocumentation("https://cadence-lang.org/docs/language/imports")
+				return &InvalidImportContinuationError{
+					GotToken: p.current,
+				}
 			}
 		}
 
@@ -781,13 +777,9 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 			setIdentifierLocation(identifier)
 
 		default:
-			return nil, p.newSyntaxError(
-				"unexpected token in import declaration: got %s, expected keyword %q or %s",
-				p.current.Type,
-				KeywordFrom,
-				lexer.TokenComma,
-			).WithSecondary("after an imported identifier, expect either a comma to import more items or the 'from' keyword to specify the import location").
-				WithDocumentation("https://cadence-lang.org/docs/language/imports")
+			return nil, &InvalidImportContinuationError{
+				GotToken: p.current,
+			}
 		}
 
 	case lexer.TokenEOF:

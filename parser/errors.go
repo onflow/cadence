@@ -946,6 +946,46 @@ func (*MissingTransferError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/constants-and-variables"
 }
 
+// InvalidImportContinuationError is reported when an import declaration
+// has an invalid token after an identifier.
+type InvalidImportContinuationError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &InvalidImportContinuationError{}
+var _ errors.UserError = &InvalidImportContinuationError{}
+var _ errors.SecondaryError = &InvalidImportContinuationError{}
+var _ errors.HasDocumentationLink = &InvalidImportContinuationError{}
+
+func (*InvalidImportContinuationError) isParseError() {}
+
+func (*InvalidImportContinuationError) IsUserError() {}
+
+func (e *InvalidImportContinuationError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *InvalidImportContinuationError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *InvalidImportContinuationError) Error() string {
+	return fmt.Sprintf(
+		"unexpected token in import declaration: got %s, expected keyword %q or %s",
+		e.GotToken.Type,
+		KeywordFrom,
+		lexer.TokenComma,
+	)
+}
+
+func (*InvalidImportContinuationError) SecondaryError() string {
+	return "after an imported identifier, expect either a comma to import more items or the 'from' keyword to specify the import location"
+}
+
+func (*InvalidImportContinuationError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/imports"
+}
+
 // MissingConformanceError is reported when a colon for conformances is present,
 // but no conformances follow.
 type MissingConformanceError struct {

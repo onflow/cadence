@@ -2450,12 +2450,14 @@ func TestParseImportDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations(` import foo "bar"`)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token in import declaration: " +
-						"got string, expected keyword \"from\" or ','",
-					Secondary:     "after an imported identifier, expect either a comma to import more items or the 'from' keyword to specify the import location",
-					Documentation: "https://cadence-lang.org/docs/language/imports",
-					Pos:           ast.Position{Offset: 12, Line: 1, Column: 12},
+				&InvalidImportContinuationError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
+							EndPos:   ast.Position{Offset: 16, Line: 1, Column: 16},
+						},
+					},
 				},
 			},
 			errs,
@@ -2581,11 +2583,14 @@ func TestParseImportDeclaration(t *testing.T) {
 		_, errs := testParseDeclarations(`import foo, bar, baz, @ from 0x42`)
 
 		AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Pos:           ast.Position{Line: 1, Column: 22, Offset: 22},
-				Message:       `unexpected token in import declaration: got '@', expected keyword "from" or ','`,
-				Secondary:     "after an imported identifier, expect either a comma to import more items or the 'from' keyword to specify the import location",
-				Documentation: "https://cadence-lang.org/docs/language/imports",
+			&InvalidImportContinuationError{
+				GotToken: lexer.Token{
+					Type: lexer.TokenAt,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 22, Line: 1, Column: 22},
+						EndPos:   ast.Position{Offset: 22, Line: 1, Column: 22},
+					},
+				},
 			},
 		}, errs)
 
