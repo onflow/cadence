@@ -1273,11 +1273,9 @@ func parseCompositeOrInterfaceDeclaration(
 		if string(p.currentTokenSource()) == KeywordInterface {
 			isInterface = true
 			if wasInterface {
-				return nil, p.newSyntaxError(
-					"expected interface name, got keyword %q",
-					KeywordInterface,
-				).WithSecondary("interface declarations must have a unique name after the 'interface' keyword").
-					WithDocumentation("https://cadence-lang.org/docs/language/interfaces")
+				return nil, &InvalidInterfaceNameError{
+					GotToken: p.current,
+				}
 			}
 			// Skip the `interface` keyword
 			p.next()

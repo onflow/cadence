@@ -4650,11 +4650,14 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations(" access(all) struct interface interface { }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "expected interface name, got keyword \"interface\"",
-					Secondary:     "interface declarations must have a unique name after the 'interface' keyword",
-					Documentation: "https://cadence-lang.org/docs/language/interfaces",
-					Pos:           ast.Position{Offset: 30, Line: 1, Column: 30},
+				&InvalidInterfaceNameError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 30, Line: 1, Column: 30},
+							EndPos:   ast.Position{Offset: 38, Line: 1, Column: 38},
+						},
+					},
 				},
 			},
 			errs,

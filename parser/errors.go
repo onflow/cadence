@@ -1203,6 +1203,40 @@ func (*MissingConformanceError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/interfaces"
 }
 
+// InvalidInterfaceNameError is reported when an interface is missing a name.
+type InvalidInterfaceNameError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &InvalidInterfaceNameError{}
+var _ errors.UserError = &InvalidInterfaceNameError{}
+var _ errors.SecondaryError = &InvalidInterfaceNameError{}
+var _ errors.HasDocumentationLink = &InvalidInterfaceNameError{}
+
+func (*InvalidInterfaceNameError) isParseError() {}
+
+func (*InvalidInterfaceNameError) IsUserError() {}
+
+func (e *InvalidInterfaceNameError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *InvalidInterfaceNameError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *InvalidInterfaceNameError) Error() string {
+	return fmt.Sprintf("expected interface name, got keyword %q", "interface")
+}
+
+func (*InvalidInterfaceNameError) SecondaryError() string {
+	return "interface declarations must have a unique name after the 'interface' keyword"
+}
+
+func (*InvalidInterfaceNameError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/interfaces"
+}
+
 // AccessKeywordEntitlementNameError is reported when an access keyword (e.g. `all`, `self`)
 // is used as an entitlement name.
 type AccessKeywordEntitlementNameError struct {
