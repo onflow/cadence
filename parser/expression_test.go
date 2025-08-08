@@ -3138,7 +3138,6 @@ func TestParseAttach(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 16, Line: 1, Column: 16},
 							EndPos:   ast.Position{Offset: 19, Line: 1, Column: 19},
@@ -3382,7 +3381,6 @@ func TestParseFunctionExpression(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
 							EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},

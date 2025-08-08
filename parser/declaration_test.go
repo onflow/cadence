@@ -365,7 +365,6 @@ func TestParseVariableDeclaration(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
 							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
@@ -438,7 +437,6 @@ func TestParseVariableDeclaration(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
 							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
@@ -1403,7 +1401,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
 							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
@@ -1469,7 +1466,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
 							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
@@ -1536,7 +1532,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
 							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
@@ -1581,7 +1576,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
 							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
@@ -1677,7 +1671,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
 							EndPos:   ast.Position{Offset: 17, Line: 1, Column: 17},
@@ -1876,12 +1869,11 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			[]error{
 				&MissingStartOfParameterListError{
 					GotToken: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
 							EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
 						},
-						Type: 0x21,
+						Type: lexer.TokenLess,
 					},
 				},
 			},
@@ -3283,12 +3275,11 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 			[]error{
 				&MissingFieldNameError{
 					GotToken: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
 							EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
 						},
-						Type: 0x1a,
+						Type: lexer.TokenColon,
 					},
 				},
 			},
@@ -7562,7 +7553,6 @@ func TestParsePragmaNoArguments(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
 							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
@@ -7605,7 +7595,6 @@ func TestParsePragmaNoArguments(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
 							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
@@ -8968,7 +8957,6 @@ func TestParseInvalidImportWithModifier(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
 							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
@@ -9017,7 +9005,6 @@ func TestParseInvalidImportWithModifier(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
 							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
@@ -9071,7 +9058,6 @@ func TestParseInvalidEventWithModifier(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
 							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
@@ -9120,7 +9106,6 @@ func TestParseInvalidEventWithModifier(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
 							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
@@ -9175,7 +9160,6 @@ func TestParseCompositeWithModifier(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
 							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
@@ -9224,7 +9208,6 @@ func TestParseCompositeWithModifier(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
 							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
@@ -9278,7 +9261,6 @@ func TestParseTransactionWithModifier(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
 							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
@@ -9327,7 +9309,6 @@ func TestParseTransactionWithModifier(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
 							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
@@ -10230,7 +10211,6 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
 							EndPos:   ast.Position{Offset: 19, Line: 1, Column: 19},
@@ -10252,7 +10232,6 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 27, Line: 1, Column: 27},
 							EndPos:   ast.Position{Offset: 27, Line: 1, Column: 27},
