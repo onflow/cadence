@@ -259,44 +259,27 @@ func handlePub(p *parser) error {
 
 	const keywordSet = "set"
 
-	if !p.current.Is(lexer.TokenIdentifier) {
-		return p.newSyntaxError(
-			"expected keyword %q, got %s",
-			keywordSet,
-			p.current.Type,
-		).WithSecondary("the 'set' keyword is used in access control modifiers to specify settable access").
-			WithDocumentation("https://cadence-lang.org/docs/language/access-control")
-	}
-
-	keyword := p.currentTokenSource()
-	if string(keyword) != keywordSet {
-		return p.newSyntaxError(
-			"expected keyword %q, got %q",
-			keywordSet,
-			keyword,
-		)
+	if !p.isToken(p.current, lexer.TokenIdentifier, keywordSet) {
+		return &InvalidPubSetModifierError{
+			GotToken: p.current,
+		}
 	}
 
 	// Skip the `set` keyword
 	p.nextSemanticToken()
 
-	_, err := p.mustOne(lexer.TokenParenClose)
+	endToken, err := p.mustOne(lexer.TokenParenClose)
 	if err != nil {
 		return err
 	}
 
-	p.report(
-		NewSyntaxError(
+	p.report(&PubSetAccessError{
+		Range: ast.NewRange(
+			p.memoryGauge,
 			pubToken.StartPos,
-			"`pub(set)` is no longer a valid access modifier",
-		).WithMigration(
-			"This is pre-Cadence 1.0 syntax. " +
-				"The `pub(set)` modifier was deprecated and has no direct equivalent in the new access control system. " +
-				"Consider adding a setter method that allows updating the field.",
-		).WithDocumentation(
-			"https://cadence-lang.org/docs/cadence-migration-guide/improvements#-motivation-11",
+			endToken.EndPos,
 		),
-	)
+	})
 
 	return nil
 }

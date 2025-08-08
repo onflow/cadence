@@ -3966,6 +3966,28 @@ func TestParseInvalidCompositeFunctionWithSelfParameter(t *testing.T) {
 	}
 }
 
+func TestParseInvalidPubSetModifier(t *testing.T) {
+
+	t.Parallel()
+
+	_, errs := testParseDeclarations("pub(foo) fun x() {}")
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&InvalidPubSetModifierError{
+				GotToken: lexer.Token{
+					Type: lexer.TokenIdentifier,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+						EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
 func TestParseInvalidParameterWithoutLabel(t *testing.T) {
 	t.Parallel()
 
@@ -10429,13 +10451,11 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 		_, errs := testParseDeclarations(" pub(set) fun foo ( ) { }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "`pub(set)` is no longer a valid access modifier",
-					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
-					Migration: "This is pre-Cadence 1.0 syntax. " +
-						"The `pub(set)` modifier was deprecated and has no direct equivalent in the new access control system. " +
-						"Consider adding a setter method that allows updating the field.",
-					Documentation: "https://cadence-lang.org/docs/cadence-migration-guide/improvements#-motivation-11",
+				&PubSetAccessError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+						EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+					},
 				},
 			},
 			errs,

@@ -738,6 +738,69 @@ func (*PubAccessError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control"
 }
 
+// PubSetAccessError is reported when the `pub(set)` access modifier is used.
+// This modifier is invalid in Cadence 1.0.
+type PubSetAccessError struct {
+	ast.Range
+}
+
+var _ ParseError = &PubSetAccessError{}
+var _ errors.UserError = &PubSetAccessError{}
+var _ errors.HasMigrationNote = &PubSetAccessError{}
+var _ errors.HasDocumentationLink = &PubSetAccessError{}
+
+func (*PubSetAccessError) isParseError() {}
+
+func (*PubSetAccessError) IsUserError() {}
+
+func (e *PubSetAccessError) Error() string {
+	return "`pub(set)` is no longer a valid access modifier"
+}
+
+func (*PubSetAccessError) MigrationNote() string {
+	return "This is pre-Cadence 1.0 syntax. " +
+		"The `pub(set)` modifier was deprecated and has no direct equivalent in the new access control system. " +
+		"Consider adding a setter method that allows updating the field."
+}
+
+func (*PubSetAccessError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/cadence-migration-guide/improvements#-motivation-11"
+}
+
+// InvalidPubSetModifierError is reported when the modifier for `pub` is not `set`.
+type InvalidPubSetModifierError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &InvalidPubSetModifierError{}
+var _ errors.UserError = &InvalidPubSetModifierError{}
+var _ errors.SecondaryError = &InvalidPubSetModifierError{}
+var _ errors.HasDocumentationLink = &InvalidPubSetModifierError{}
+
+func (*InvalidPubSetModifierError) isParseError() {}
+
+func (*InvalidPubSetModifierError) IsUserError() {}
+
+func (e *InvalidPubSetModifierError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *InvalidPubSetModifierError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *InvalidPubSetModifierError) Error() string {
+	return fmt.Sprintf("expected keyword %q, got %s", "set", e.GotToken.Type)
+}
+
+func (*InvalidPubSetModifierError) SecondaryError() string {
+	return "the 'set' keyword is used in access control modifiers to specify settable access"
+}
+
+func (*InvalidPubSetModifierError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control"
+}
+
 // MissingEnumCaseNameError is reported when an enum case is missing a name.
 type MissingEnumCaseNameError struct {
 	GotToken lexer.Token
