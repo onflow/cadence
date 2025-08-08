@@ -203,11 +203,9 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 			atEnd = true
 
 		default:
-			return nil, p.newSyntaxError(
-				"unexpected token: %s",
-				p.current.Type,
-			).WithSecondary("Check for extra characters, missing semicolons, or incomplete statements").
-				WithDocumentation("https://cadence-lang.org/docs/language/syntax")
+			return nil, &UnexpectedTokenAtEndError{
+				Token: p.current,
+			}
 		}
 	}
 

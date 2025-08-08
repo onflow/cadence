@@ -5142,7 +5142,119 @@ func TestParseTransactionDeclaration(t *testing.T) {
 		)
 	})
 
-	t.Run("EmptyTransaction", func(t *testing.T) {
+	t.Run("duplicate execute", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("transaction { execute {}  execute {}}")
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message:       `unexpected second "execute" block`,
+					Secondary:     "Transaction declarations can only have one 'execute' block",
+					Pos:           ast.Position{Offset: 26, Line: 1, Column: 26},
+					Documentation: "https://cadence-lang.org/docs/language/transactions",
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("unexpected initial identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("transaction { foo }")
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message:       `unexpected identifier, expected keyword "prepare" or "execute", got "foo"`,
+					Secondary:     "Transaction declarations can only contain 'prepare' and 'execute' blocks",
+					Documentation: "https://cadence-lang.org/docs/language/transactions",
+					Pos:           ast.Position{Offset: 14, Line: 1, Column: 14},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("duplicate post", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("transaction { execute {} post {} post {} }")
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message:       "unexpected second post-conditions",
+					Secondary:     "Transaction declarations can only have one 'post' block",
+					Documentation: "https://cadence-lang.org/docs/language/transactions",
+					Pos:           ast.Position{Offset: 33, Line: 1, Column: 33},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("unexpected identifier after prepare", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("transaction { prepare() {} foo }")
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message:       `unexpected identifier, expected keyword "execute" or "post", got "foo"`,
+					Secondary:     "Transaction declarations can only contain 'execute' and 'post' blocks in this context",
+					Documentation: "https://cadence-lang.org/docs/language/transactions",
+					Pos:           ast.Position{Offset: 27, Line: 1, Column: 27},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("unexpected identifier after execute", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("transaction { execute {} foo }")
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message:       `unexpected identifier, expected keyword "execute" or "post", got "foo"`,
+					Secondary:     "Transaction declarations can only contain 'execute' and 'post' blocks in this context",
+					Migration:     "",
+					Documentation: "https://cadence-lang.org/docs/language/transactions",
+					Pos:           ast.Position{Offset: 25, Line: 1, Column: 25},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("unexpected token at end", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("transaction { execute {} .")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 25, Line: 1, Column: 25},
+							EndPos:   ast.Position{Offset: 25, Line: 1, Column: 25},
+						},
+						Type: lexer.TokenDot,
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("empty", func(t *testing.T) {
 
 		const code = `
 		  transaction {}
