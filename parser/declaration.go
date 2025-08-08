@@ -681,12 +681,9 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 					}
 
 					if !isNextTokenCommaOrFrom(p) {
-						return p.newSyntaxError(
-							"expected %s, got keyword %q",
-							lexer.TokenIdentifier,
-							keyword,
-						).WithSecondary("import declarations expect an identifier to import, not the 'from' keyword in this position").
-							WithDocumentation("https://cadence-lang.org/docs/language/imports")
+						return &InvalidFromKeywordAsIdentifierError{
+							GotToken: p.current,
+						}
 					}
 
 					// If the next token is either comma or 'from' token, then fall through

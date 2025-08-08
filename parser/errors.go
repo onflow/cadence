@@ -1133,6 +1133,41 @@ func (*InvalidTokenInImportListError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/imports"
 }
 
+// InvalidFromKeywordAsIdentifierError is reported when the `from` keyword is used as an identifier
+// in an invalid context in an import declaration.
+type InvalidFromKeywordAsIdentifierError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &InvalidFromKeywordAsIdentifierError{}
+var _ errors.UserError = &InvalidFromKeywordAsIdentifierError{}
+var _ errors.SecondaryError = &InvalidFromKeywordAsIdentifierError{}
+var _ errors.HasDocumentationLink = &InvalidFromKeywordAsIdentifierError{}
+
+func (*InvalidFromKeywordAsIdentifierError) isParseError() {}
+
+func (*InvalidFromKeywordAsIdentifierError) IsUserError() {}
+
+func (e *InvalidFromKeywordAsIdentifierError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *InvalidFromKeywordAsIdentifierError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (*InvalidFromKeywordAsIdentifierError) Error() string {
+	return fmt.Sprintf("expected identifier, got keyword %q", KeywordFrom)
+}
+
+func (*InvalidFromKeywordAsIdentifierError) SecondaryError() string {
+	return "import declarations expect an identifier to import, not the 'from' keyword in this position"
+}
+
+func (*InvalidFromKeywordAsIdentifierError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/imports"
+}
+
 // MissingConformanceError is reported when a colon for conformances is present,
 // but no conformances follow.
 type MissingConformanceError struct {
