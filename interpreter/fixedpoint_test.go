@@ -498,7 +498,7 @@ func TestInterpretFixedPointToFixedPointConversions(t *testing.T) {
 					)
 				})
 
-				// Check a "typical" negative value (only if both type are signed)
+				// Check a "typical" negative value (only if both types are signed)
 
 				sourceNegativeValue := sourceValues.negativeValue
 				targetNegativeValue := targetValues.negativeValue
@@ -532,7 +532,7 @@ func TestInterpretFixedPointToFixedPointConversions(t *testing.T) {
 						)
 					})
 				} else {
-					// Otherwise, check whether the maximum value can be converted.
+					// Otherwise,check whether the overflow is handled correctly.
 					t.Run("overflow", func(t *testing.T) {
 						test(
 							t,
