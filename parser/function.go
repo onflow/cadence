@@ -169,11 +169,9 @@ func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, erro
 
 	if expectDefaultArgument {
 		if !p.current.Is(lexer.TokenEqual) {
-			return nil, p.newSyntaxError(
-				"expected a default argument after type annotation, got %s",
-				p.current.Type,
-			).WithSecondary("default arguments must be specified with an equals sign (=) followed by the default value").
-				WithDocumentation("https://cadence-lang.org/docs/language/functions")
+			return nil, &MissingDefaultArgumentError{
+				GotToken: p.current,
+			}
 		}
 
 		// Skip the =

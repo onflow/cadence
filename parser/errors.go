@@ -579,6 +579,43 @@ func (*MissingColonAfterParameterNameError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions"
 }
 
+// MissingDefaultArgumentError is reported when a default argument is missing after a type annotation.
+type MissingDefaultArgumentError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingDefaultArgumentError{}
+var _ errors.UserError = &MissingDefaultArgumentError{}
+var _ errors.SecondaryError = &MissingDefaultArgumentError{}
+var _ errors.HasDocumentationLink = &MissingDefaultArgumentError{}
+
+func (*MissingDefaultArgumentError) isParseError() {}
+
+func (*MissingDefaultArgumentError) IsUserError() {}
+
+func (e *MissingDefaultArgumentError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingDefaultArgumentError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingDefaultArgumentError) Error() string {
+	return fmt.Sprintf(
+		"expected a default argument after type annotation, got %s",
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingDefaultArgumentError) SecondaryError() string {
+	return "default arguments must be specified with an equals sign (=) followed by the default value"
+}
+
+func (*MissingDefaultArgumentError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/functions"
+}
+
 // MissingClosingParenInArgumentListError is reported when an argument list is missing a closing parenthesis.
 type MissingClosingParenInArgumentListError struct {
 	Pos ast.Position

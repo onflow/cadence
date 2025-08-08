@@ -3088,11 +3088,14 @@ func TestParseEvent(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Pos:           ast.Position{Line: 1, Column: 47, Offset: 47},
-					Message:       "expected a default argument after type annotation, got ')'",
-					Secondary:     "default arguments must be specified with an equals sign (=) followed by the default value",
-					Documentation: "https://cadence-lang.org/docs/language/functions",
+				&MissingDefaultArgumentError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenParenClose,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 47, Offset: 47},
+							EndPos:   ast.Position{Line: 1, Column: 47, Offset: 47},
+						},
+					},
 				},
 			},
 			errs,
