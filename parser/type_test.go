@@ -754,11 +754,11 @@ func TestParseIntersectionType(t *testing.T) {
 		result, errs := testParseType("{[T]}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "non-nominal type in intersection list: [T]",
-					Pos:           ast.Position{Offset: 1, Line: 1, Column: 1},
-					Secondary:     "intersection types can only contain nominal types (struct, resource, or interface names)",
-					Documentation: "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types",
+				&InvalidNonNominalTypeInIntersectionError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+						EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+					},
 				},
 			},
 			errs,
@@ -775,11 +775,11 @@ func TestParseIntersectionType(t *testing.T) {
 		result, errs := testParseType("{T, [U]}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "non-nominal type in intersection list: [U]",
-					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
-					Secondary:     "intersection types can only contain nominal types (struct, resource, or interface names)",
-					Documentation: "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types",
+				&InvalidNonNominalTypeInIntersectionError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+						EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+					},
 				},
 			},
 			errs,
@@ -854,11 +854,8 @@ func TestParseIntersectionType(t *testing.T) {
 		result, errs := testParseType("{,}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected comma in intersection type",
-					Pos:           ast.Position{Offset: 1, Line: 1, Column: 1},
-					Secondary:     "intersection types use commas to separate multiple types, but a type is expected after the comma",
-					Documentation: "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types",
+				&UnexpectedCommaInIntersectionTypeError{
+					Pos: ast.Position{Offset: 1, Line: 1, Column: 1},
 				},
 			},
 			errs,
@@ -983,11 +980,8 @@ func TestParseDictionaryType(t *testing.T) {
 		result, errs := testParseType("{T:U,}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected comma in dictionary type",
-					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
-					Secondary:     "dictionary types use a colon (:) to separate key and value types, not commas (,)",
-					Documentation: "https://cadence-lang.org/docs/language/values-and-types/dictionaries",
+				&UnexpectedCommaInDictionaryTypeError{
+					Pos: ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
 			},
 			errs,

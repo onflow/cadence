@@ -352,24 +352,21 @@ func defineIntersectionOrDictionaryType() {
 				switch p.current.Type {
 				case lexer.TokenComma:
 					if dictionaryType != nil {
-						return nil, p.newSyntaxError("unexpected comma in dictionary type").
-							WithSecondary("dictionary types use a colon (:) to separate key and value types, not commas (,)").
-							WithDocumentation("https://cadence-lang.org/docs/language/values-and-types/dictionaries")
+						return nil, &UnexpectedCommaInDictionaryTypeError{
+							Pos: p.current.StartPos,
+						}
 					}
 					if expectType {
-						return nil, p.newSyntaxError("unexpected comma in intersection type").
-							WithSecondary("intersection types use commas to separate multiple types, but a type is expected after the comma").
-							WithDocumentation("https://cadence-lang.org/docs/language/types-and-type-system/intersection-types")
+						return nil, &UnexpectedCommaInIntersectionTypeError{
+							Pos: p.current.StartPos,
+						}
 					}
 					if intersectionType == nil {
 						firstNominalType, ok := firstType.(*ast.NominalType)
 						if !ok {
-							return nil, NewSyntaxError(
-								firstType.StartPosition(),
-								"non-nominal type in intersection list: %s",
-								firstType,
-							).WithSecondary("intersection types can only contain nominal types (struct, resource, or interface names)").
-								WithDocumentation("https://cadence-lang.org/docs/language/types-and-type-system/intersection-types")
+							return nil, &InvalidNonNominalTypeInIntersectionError{
+								Range: ast.NewRangeFromPositioned(p.memoryGauge, firstType),
+							}
 						}
 						intersectionType = ast.NewIntersectionType(
 							p.memoryGauge,
@@ -469,12 +466,9 @@ func defineIntersectionOrDictionaryType() {
 					case intersectionType != nil:
 						nominalType, ok := ty.(*ast.NominalType)
 						if !ok {
-							return nil, NewSyntaxError(
-								ty.StartPosition(),
-								"non-nominal type in intersection list: %s",
-								ty,
-							).WithSecondary("intersection types can only contain nominal types (struct, resource, or interface names)").
-								WithDocumentation("https://cadence-lang.org/docs/language/types-and-type-system/intersection-types")
+							return nil, &InvalidNonNominalTypeInIntersectionError{
+								Range: ast.NewRangeFromPositioned(p.memoryGauge, ty),
+							}
 						}
 						intersectionType.Types = append(intersectionType.Types, nominalType)
 
@@ -504,12 +498,9 @@ func defineIntersectionOrDictionaryType() {
 				if firstType != nil {
 					firstNominalType, ok := firstType.(*ast.NominalType)
 					if !ok {
-						return nil, NewSyntaxError(
-							firstType.StartPosition(),
-							"non-nominal type in intersection list: %s",
-							firstType,
-						).WithSecondary("intersection types can only contain nominal types (struct, resource, or interface names)").
-							WithDocumentation("https://cadence-lang.org/docs/language/types-and-type-system/intersection-types")
+						return nil, &InvalidNonNominalTypeInIntersectionError{
+							Range: ast.NewRangeFromPositioned(p.memoryGauge, firstType),
+						}
 					}
 					intersectionType.Types = append(intersectionType.Types, firstNominalType)
 				}

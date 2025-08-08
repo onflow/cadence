@@ -1004,6 +1004,102 @@ func (*ExpectedExecuteOrPostError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/transactions"
 }
 
+// UnexpectedCommaInDictionaryTypeError is reported when a comma is found in a dictionary type.
+type UnexpectedCommaInDictionaryTypeError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &UnexpectedCommaInDictionaryTypeError{}
+var _ errors.UserError = &UnexpectedCommaInDictionaryTypeError{}
+var _ errors.SecondaryError = &UnexpectedCommaInDictionaryTypeError{}
+var _ errors.HasDocumentationLink = &UnexpectedCommaInDictionaryTypeError{}
+
+func (*UnexpectedCommaInDictionaryTypeError) isParseError() {}
+
+func (*UnexpectedCommaInDictionaryTypeError) IsUserError() {}
+
+func (e *UnexpectedCommaInDictionaryTypeError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *UnexpectedCommaInDictionaryTypeError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*UnexpectedCommaInDictionaryTypeError) Error() string {
+	return "unexpected comma in dictionary type"
+}
+
+func (*UnexpectedCommaInDictionaryTypeError) SecondaryError() string {
+	return "dictionary types use a colon (:) to separate key and value types, not commas (,)"
+}
+
+func (*UnexpectedCommaInDictionaryTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types/dictionaries"
+}
+
+// UnexpectedCommaInIntersectionTypeError is reported when a comma is found at an unexpected position in an intersection type.
+type UnexpectedCommaInIntersectionTypeError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &UnexpectedCommaInIntersectionTypeError{}
+var _ errors.UserError = &UnexpectedCommaInIntersectionTypeError{}
+var _ errors.SecondaryError = &UnexpectedCommaInIntersectionTypeError{}
+var _ errors.HasDocumentationLink = &UnexpectedCommaInIntersectionTypeError{}
+
+func (*UnexpectedCommaInIntersectionTypeError) isParseError() {}
+
+func (*UnexpectedCommaInIntersectionTypeError) IsUserError() {}
+
+func (e *UnexpectedCommaInIntersectionTypeError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *UnexpectedCommaInIntersectionTypeError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*UnexpectedCommaInIntersectionTypeError) Error() string {
+	return "unexpected comma in intersection type"
+}
+
+func (*UnexpectedCommaInIntersectionTypeError) SecondaryError() string {
+	return "intersection types use commas to separate multiple types, but a type is expected after the comma"
+}
+
+func (*UnexpectedCommaInIntersectionTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
+}
+
+// InvalidNonNominalTypeInIntersectionError is reported when a non-nominal type is found in an intersection type.
+type InvalidNonNominalTypeInIntersectionError struct {
+	ast.Range
+}
+
+var _ ParseError = &InvalidNonNominalTypeInIntersectionError{}
+var _ errors.UserError = &InvalidNonNominalTypeInIntersectionError{}
+var _ errors.SecondaryError = &InvalidNonNominalTypeInIntersectionError{}
+var _ errors.HasDocumentationLink = &InvalidNonNominalTypeInIntersectionError{}
+
+func (*InvalidNonNominalTypeInIntersectionError) isParseError() {}
+
+func (*InvalidNonNominalTypeInIntersectionError) IsUserError() {}
+
+func (e *InvalidNonNominalTypeInIntersectionError) Error() string {
+	return fmt.Sprintf(
+		"non-nominal type in intersection type",
+	)
+}
+
+func (*InvalidNonNominalTypeInIntersectionError) SecondaryError() string {
+	return "intersection types can only contain nominal types (struct, resource, or interface names)"
+}
+
+func (*InvalidNonNominalTypeInIntersectionError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
+}
+
 // MissingClosingParenInArgumentListError is reported when an argument list is missing a closing parenthesis.
 type MissingClosingParenInArgumentListError struct {
 	Pos ast.Position
