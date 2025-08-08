@@ -498,6 +498,32 @@ func (*MissingCommaInArgumentListError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
+// InvalidExpressionAsLabelError is reported when an argument label is not a simple identifier.
+type InvalidExpressionAsLabelError struct {
+	ast.Range
+}
+
+var _ ParseError = &InvalidExpressionAsLabelError{}
+var _ errors.UserError = &InvalidExpressionAsLabelError{}
+var _ errors.SecondaryError = &InvalidExpressionAsLabelError{}
+var _ errors.HasDocumentationLink = &InvalidExpressionAsLabelError{}
+
+func (*InvalidExpressionAsLabelError) isParseError() {}
+
+func (*InvalidExpressionAsLabelError) IsUserError() {}
+
+func (e *InvalidExpressionAsLabelError) Error() string {
+	return "expected identifier for label"
+}
+
+func (*InvalidExpressionAsLabelError) SecondaryError() string {
+	return "argument labels must be simple identifiers, not expressions or complex syntax"
+}
+
+func (*InvalidExpressionAsLabelError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
 // CustomDestructorError
 
 type CustomDestructorError struct {

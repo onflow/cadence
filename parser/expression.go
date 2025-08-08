@@ -1082,11 +1082,10 @@ func parseArgument(p *parser) (*ast.Argument, error) {
 
 		identifier, ok := expr.(*ast.IdentifierExpression)
 		if !ok {
-			return nil, p.newSyntaxError(
-				"expected identifier for label, got %s",
-				expr,
-			).WithSecondary("argument labels must be simple identifiers, not expressions or complex syntax").
-				WithDocumentation("https://cadence-lang.org/docs/language/syntax")
+			expressionRange := ast.NewRangeFromPositioned(p.memoryGauge, expr)
+			return nil, &InvalidExpressionAsLabelError{
+				Range: expressionRange,
+			}
 		}
 		label = identifier.Identifier.Identifier
 		labelStartPos = expr.StartPosition()

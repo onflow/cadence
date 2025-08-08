@@ -1898,11 +1898,11 @@ func TestParseInvocation(t *testing.T) {
 		_, errs := testParseExpression("f(1+2: 3)")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "expected identifier for label, got 1 + 2",
-					Secondary:     "argument labels must be simple identifiers, not expressions or complex syntax",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 5, Line: 1, Column: 5},
+				&InvalidExpressionAsLabelError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+						EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+					},
 				},
 			},
 			errs,
