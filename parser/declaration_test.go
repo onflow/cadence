@@ -3110,11 +3110,8 @@ func TestParseEvent(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Pos:           ast.Position{Line: 1, Column: 33, Offset: 33},
-					Message:       "cannot use a default argument for this function",
-					Secondary:     "default arguments are only allowed in function declarations, not in events or other contexts",
-					Documentation: "https://cadence-lang.org/docs/language/functions",
+				&UnexpectedDefaultArgumentError{
+					Pos: ast.Position{Line: 1, Column: 33, Offset: 33},
 				},
 			},
 			errs,
@@ -7839,11 +7836,8 @@ func TestParseInvalidDefaultArgument(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Pos:           ast.Position{Line: 1, Column: 31, Offset: 31},
-					Message:       "cannot use a default argument for this function",
-					Secondary:     "default arguments are only allowed in function declarations, not in events or other contexts",
-					Documentation: "https://cadence-lang.org/docs/language/functions",
+				&UnexpectedDefaultArgumentError{
+					Pos: ast.Position{Line: 1, Column: 31, Offset: 31},
 				},
 			},
 			errs,
@@ -7858,11 +7852,8 @@ func TestParseInvalidDefaultArgument(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Pos:           ast.Position{Line: 1, Column: 25, Offset: 25},
-					Message:       "cannot use a default argument for this function",
-					Secondary:     "default arguments are only allowed in function declarations, not in events or other contexts",
-					Documentation: "https://cadence-lang.org/docs/language/functions",
+				&UnexpectedDefaultArgumentError{
+					Pos: ast.Position{Line: 1, Column: 25, Offset: 25},
 				},
 			},
 			errs,

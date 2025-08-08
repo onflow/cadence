@@ -183,9 +183,9 @@ func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, erro
 		}
 
 	} else if p.current.Is(lexer.TokenEqual) {
-		return nil, p.newSyntaxError("cannot use a default argument for this function").
-			WithSecondary("default arguments are only allowed in function declarations, not in events or other contexts").
-			WithDocumentation("https://cadence-lang.org/docs/language/functions")
+		return nil, &UnexpectedDefaultArgumentError{
+			Pos: p.current.StartPos,
+		}
 	}
 
 	return ast.NewParameter(

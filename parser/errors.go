@@ -616,6 +616,40 @@ func (*MissingDefaultArgumentError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions"
 }
 
+// UnexpectedDefaultArgumentError is reported when a default argument is found in an unexpected context.
+type UnexpectedDefaultArgumentError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &UnexpectedDefaultArgumentError{}
+var _ errors.UserError = &UnexpectedDefaultArgumentError{}
+var _ errors.SecondaryError = &UnexpectedDefaultArgumentError{}
+var _ errors.HasDocumentationLink = &UnexpectedDefaultArgumentError{}
+
+func (*UnexpectedDefaultArgumentError) isParseError() {}
+
+func (*UnexpectedDefaultArgumentError) IsUserError() {}
+
+func (e *UnexpectedDefaultArgumentError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *UnexpectedDefaultArgumentError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*UnexpectedDefaultArgumentError) Error() string {
+	return "cannot define a default argument for this function"
+}
+
+func (*UnexpectedDefaultArgumentError) SecondaryError() string {
+	return "default arguments are only allowed in ResourceDestroyed events, not in functions"
+}
+
+func (*UnexpectedDefaultArgumentError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/functions"
+}
+
 // MissingClosingParenInArgumentListError is reported when an argument list is missing a closing parenthesis.
 type MissingClosingParenInArgumentListError struct {
 	Pos ast.Position
