@@ -635,11 +635,9 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 			p.next()
 
 		default:
-			return p.newSyntaxError(
-				"unexpected token in import declaration: got %s, expected string, address, or identifier",
-				p.current.Type,
-			).WithSecondary("import declarations must start with a string literal (for file paths), hexadecimal address, or identifier").
-				WithDocumentation("https://cadence-lang.org/docs/language/imports")
+			return &InvalidImportLocationError{
+				GotToken: p.current,
+			}
 		}
 
 		return nil
@@ -788,11 +786,9 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 			WithDocumentation("https://cadence-lang.org/docs/language/imports")
 
 	default:
-		return nil, p.newSyntaxError(
-			"unexpected token in import declaration: got %s, expected string, address, or identifier",
-			p.current.Type,
-		).WithSecondary("import declarations must start with a string literal (for file paths), hexadecimal address, or identifier").
-			WithDocumentation("https://cadence-lang.org/docs/language/imports")
+		return nil, &InvalidImportLocationError{
+			GotToken: p.current,
+		}
 	}
 
 	return ast.NewImportDeclaration(

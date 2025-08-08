@@ -946,6 +946,43 @@ func (*MissingTransferError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/constants-and-variables"
 }
 
+// InvalidImportLocationError is reported when an import declaration has an invalid location.
+type InvalidImportLocationError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &InvalidImportLocationError{}
+var _ errors.UserError = &InvalidImportLocationError{}
+var _ errors.SecondaryError = &InvalidImportLocationError{}
+var _ errors.HasDocumentationLink = &InvalidImportLocationError{}
+
+func (*InvalidImportLocationError) isParseError() {}
+
+func (*InvalidImportLocationError) IsUserError() {}
+
+func (e *InvalidImportLocationError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *InvalidImportLocationError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *InvalidImportLocationError) Error() string {
+	return fmt.Sprintf(
+		"unexpected token in import declaration: got %s, expected address, string, or identifier",
+		e.GotToken.Type,
+	)
+}
+
+func (*InvalidImportLocationError) SecondaryError() string {
+	return "import declarations must start with a hexadecimal address, string literal, or identifier"
+}
+
+func (*InvalidImportLocationError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/imports"
+}
+
 // InvalidImportContinuationError is reported when an import declaration
 // has an invalid token after an identifier.
 type InvalidImportContinuationError struct {

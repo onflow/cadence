@@ -2395,12 +2395,14 @@ func TestParseImportDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations(` import 1`)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token in import declaration: " +
-						"got decimal integer, expected string, address, or identifier",
-					Secondary:     "import declarations must start with a string literal (for file paths), hexadecimal address, or identifier",
-					Documentation: "https://cadence-lang.org/docs/language/imports",
-					Pos:           ast.Position{Offset: 8, Line: 1, Column: 8},
+				&InvalidImportLocationError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+							EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+						},
+					},
 				},
 			},
 			errs,
