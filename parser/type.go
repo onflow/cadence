@@ -434,9 +434,9 @@ func defineIntersectionOrDictionaryType() {
 
 				case lexer.TokenEOF:
 					if expectType {
-						return nil, p.newSyntaxError("invalid end of input, expected type").
-							WithSecondary("check for incomplete expressions, missing tokens, or unterminated strings/comments").
-							WithDocumentation("https://cadence-lang.org/docs/language/syntax")
+						return nil, &UnexpectedEOFExpectedTypeError{
+							Pos: p.current.StartPos,
+						}
 					} else {
 						return nil, p.newSyntaxError("invalid end of input, expected %s", lexer.TokenBraceClose)
 					}
@@ -587,9 +587,9 @@ func parseNominalTypes(
 
 		case lexer.TokenEOF:
 			if expectType {
-				return nil, ast.EmptyPosition, p.newSyntaxError("invalid end of input, expected type").
-					WithSecondary("check for incomplete expressions, missing tokens, or unterminated strings/comments").
-					WithDocumentation("https://cadence-lang.org/docs/language/syntax")
+				return nil, ast.EmptyPosition, &UnexpectedEOFExpectedTypeError{
+					Pos: p.current.StartPos,
+				}
 			} else {
 				return nil, ast.EmptyPosition, p.newSyntaxError("invalid end of input, expected %s", endTokenType)
 			}
@@ -907,9 +907,9 @@ func parseCommaSeparatedTypeAnnotations(
 
 		case lexer.TokenEOF:
 			if expectTypeAnnotation {
-				return nil, p.newSyntaxError("invalid end of input, expected type").
-					WithSecondary("check for incomplete expressions, missing tokens, or unterminated strings/comments").
-					WithDocumentation("https://cadence-lang.org/docs/language/syntax")
+				return nil, &UnexpectedEOFExpectedTypeError{
+					Pos: p.current.StartPos,
+				}
 			} else {
 				return nil, p.newSyntaxError("invalid end of input, expected %s", endTokenType)
 			}

@@ -790,11 +790,8 @@ func TestParseIntersectionType(t *testing.T) {
 		result, errs := testParseType("{")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "invalid end of input, expected type",
-					Pos:           ast.Position{Offset: 1, Line: 1, Column: 1},
-					Secondary:     "check for incomplete expressions, missing tokens, or unterminated strings/comments",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
+				&UnexpectedEOFExpectedTypeError{
+					Pos: ast.Position{Offset: 1, Line: 1, Column: 1},
 				},
 			},
 			errs,
@@ -828,11 +825,8 @@ func TestParseIntersectionType(t *testing.T) {
 		result, errs := testParseType("{U,")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "invalid end of input, expected type",
-					Pos:           ast.Position{Offset: 3, Line: 1, Column: 3},
-					Secondary:     "check for incomplete expressions, missing tokens, or unterminated strings/comments",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
+				&UnexpectedEOFExpectedTypeError{
+					Pos: ast.Position{Offset: 3, Line: 1, Column: 3},
 				},
 			},
 			errs,
@@ -1022,11 +1016,8 @@ func TestParseDictionaryType(t *testing.T) {
 		result, errs := testParseType("{T:")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "invalid end of input, expected type",
-					Pos:           ast.Position{Offset: 3, Line: 1, Column: 3},
-					Secondary:     "check for incomplete expressions, missing tokens, or unterminated strings/comments",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
+				&UnexpectedEOFExpectedTypeError{
+					Pos: ast.Position{Offset: 3, Line: 1, Column: 3},
 				},
 			},
 			errs,

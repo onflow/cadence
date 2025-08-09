@@ -286,6 +286,40 @@ func (UnexpectedEOFError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
+// UnexpectedEOFExpectedTypeError is reported when the end of the program is reached unexpectedly, but a type was expected.
+type UnexpectedEOFExpectedTypeError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &UnexpectedEOFExpectedTypeError{}
+var _ errors.UserError = &UnexpectedEOFExpectedTypeError{}
+var _ errors.SecondaryError = &UnexpectedEOFExpectedTypeError{}
+var _ errors.HasDocumentationLink = &UnexpectedEOFExpectedTypeError{}
+
+func (*UnexpectedEOFExpectedTypeError) isParseError() {}
+
+func (*UnexpectedEOFExpectedTypeError) IsUserError() {}
+
+func (e *UnexpectedEOFExpectedTypeError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *UnexpectedEOFExpectedTypeError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*UnexpectedEOFExpectedTypeError) Error() string {
+	return "invalid end of input, expected type"
+}
+
+func (*UnexpectedEOFExpectedTypeError) SecondaryError() string {
+	return "check for incomplete expressions, missing tokens, or unterminated strings/comments"
+}
+
+func (*UnexpectedEOFExpectedTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
 // StatementSeparationError is reported when two statements on the same line
 // are not separated by a semicolon.
 type StatementSeparationError struct {
