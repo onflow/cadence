@@ -1510,6 +1510,80 @@ func (*UnexpectedTokenInExpressionError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
+// UnexpectedTypeStartError is reported when an unexpected token is found at the start of a type.
+type UnexpectedTypeStartError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &UnexpectedTypeStartError{}
+var _ errors.UserError = &UnexpectedTypeStartError{}
+var _ errors.SecondaryError = &UnexpectedTypeStartError{}
+var _ errors.HasDocumentationLink = &UnexpectedTypeStartError{}
+
+func (*UnexpectedTypeStartError) isParseError() {}
+
+func (*UnexpectedTypeStartError) IsUserError() {}
+
+func (e *UnexpectedTypeStartError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *UnexpectedTypeStartError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *UnexpectedTypeStartError) Error() string {
+	return fmt.Sprintf(
+		"unexpected token at start of type: %s",
+		e.GotToken.Type,
+	)
+}
+
+func (*UnexpectedTypeStartError) SecondaryError() string {
+	return "this token cannot be used to start a type - check for missing operators, parentheses, or invalid syntax"
+}
+
+func (*UnexpectedTypeStartError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+// UnexpectedTokenInTypeError is reported when an unexpected token is found in a type.
+type UnexpectedTokenInTypeError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &UnexpectedTokenInTypeError{}
+var _ errors.UserError = &UnexpectedTokenInTypeError{}
+var _ errors.SecondaryError = &UnexpectedTokenInTypeError{}
+var _ errors.HasDocumentationLink = &UnexpectedTokenInTypeError{}
+
+func (*UnexpectedTokenInTypeError) isParseError() {}
+
+func (*UnexpectedTokenInTypeError) IsUserError() {}
+
+func (e *UnexpectedTokenInTypeError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *UnexpectedTokenInTypeError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *UnexpectedTokenInTypeError) Error() string {
+	return fmt.Sprintf(
+		"unexpected token in type: %s",
+		e.GotToken.Type,
+	)
+}
+
+func (*UnexpectedTokenInTypeError) SecondaryError() string {
+	return "this token cannot be used as an operator in a type - check for missing operators, parentheses, or invalid syntax"
+}
+
+func (*UnexpectedTokenInTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
 // CustomDestructorError
 
 type CustomDestructorError struct {

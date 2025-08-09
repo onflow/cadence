@@ -792,15 +792,11 @@ func parseTypeAnnotation(p *parser) (*ast.TypeAnnotation, error) {
 }
 
 func applyTypeNullDenotation(p *parser, token lexer.Token) (ast.Type, error) {
-	tokenType := token.Type
-	nullDenotation := typeNullDenotations[tokenType]
+	nullDenotation := typeNullDenotations[token.Type]
 	if nullDenotation == nil {
-		return nil, NewSyntaxError(
-			token.StartPos,
-			"unexpected token in type: %s",
-			tokenType,
-		).WithSecondary("this token cannot be used in this context - check for missing operators, parentheses, or invalid syntax").
-			WithDocumentation("https://cadence-lang.org/docs/language/values-and-types")
+		return nil, &UnexpectedTypeStartError{
+			GotToken: token,
+		}
 	}
 	return nullDenotation(p, token)
 }
@@ -808,12 +804,9 @@ func applyTypeNullDenotation(p *parser, token lexer.Token) (ast.Type, error) {
 func applyTypeLeftDenotation(p *parser, token lexer.Token, left ast.Type) (ast.Type, error) {
 	leftDenotation := typeLeftDenotations[token.Type]
 	if leftDenotation == nil {
-		return nil, NewSyntaxError(
-			token.StartPos,
-			"unexpected token in type: %s",
-			token.Type,
-		).WithSecondary("this token cannot be used in this context - check for missing operators, parentheses, or invalid syntax").
-			WithDocumentation("https://cadence-lang.org/docs/language/values-and-types")
+		return nil, &UnexpectedTokenInTypeError{
+			GotToken: token,
+		}
 	}
 	return leftDenotation(p, token, left)
 }

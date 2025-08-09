@@ -2402,11 +2402,14 @@ func TestParseAccess(t *testing.T) {
 		result, errs := parse("access ( mapping )")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token in type: ')'",
-					Pos:           ast.Position{Offset: 17, Line: 1, Column: 17},
-					Secondary:     "this token cannot be used in this context - check for missing operators, parentheses, or invalid syntax",
-					Documentation: "https://cadence-lang.org/docs/language/values-and-types",
+				&UnexpectedTypeStartError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
+							EndPos:   ast.Position{Offset: 17, Line: 1, Column: 17},
+						},
+						Type: lexer.TokenParenClose,
+					},
 				},
 			},
 			errs,
@@ -10410,11 +10413,14 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token in type: '->'",
-					Pos:           ast.Position{Offset: 73, Line: 3, Column: 24},
-					Secondary:     "this token cannot be used in this context - check for missing operators, parentheses, or invalid syntax",
-					Documentation: "https://cadence-lang.org/docs/language/values-and-types",
+				&UnexpectedTypeStartError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 73, Line: 3, Column: 24},
+							EndPos:   ast.Position{Offset: 74, Line: 3, Column: 25},
+						},
+						Type: lexer.TokenRightArrow,
+					},
 				},
 			},
 			errs,

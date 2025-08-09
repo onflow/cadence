@@ -27,6 +27,7 @@ import (
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/parser/lexer"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
@@ -73,6 +74,32 @@ func TestParseNominalType(t *testing.T) {
 				},
 			},
 			result,
+		)
+	})
+}
+
+func TestParseInvalidType(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("number literal", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("123")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedTypeStartError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+							EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+						},
+					},
+				},
+			},
+			errs,
 		)
 	})
 }
@@ -428,11 +455,16 @@ func TestParseReferenceType(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token in type: ')'",
-					Pos:           ast.Position{Offset: 5, Line: 1, Column: 5},
-					Secondary:     "this token cannot be used in this context - check for missing operators, parentheses, or invalid syntax",
-					Documentation: "https://cadence-lang.org/docs/language/values-and-types",
+				// TODO: improve
+				&UnexpectedTypeStartError{
+					GotToken: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+						},
+						Type: lexer.TokenParenClose,
+					},
 				},
 			},
 			errs,
@@ -508,11 +540,14 @@ func TestParseReferenceType(t *testing.T) {
 		_, errs := testParseType("auth( mapping ) &Int")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected token in type: ')'",
-					Pos:           ast.Position{Offset: 14, Line: 1, Column: 14},
-					Secondary:     "this token cannot be used in this context - check for missing operators, parentheses, or invalid syntax",
-					Documentation: "https://cadence-lang.org/docs/language/values-and-types",
+				&UnexpectedTypeStartError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 14, Line: 1, Column: 14},
+							EndPos:   ast.Position{Offset: 14, Line: 1, Column: 14},
+						},
+						Type: lexer.TokenParenClose,
+					},
 				},
 			},
 			errs,
