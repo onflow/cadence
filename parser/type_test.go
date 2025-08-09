@@ -712,11 +712,8 @@ func TestParseIntersectionType(t *testing.T) {
 		result, errs := testParseType("{ T , U : V }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected colon in intersection type",
-					Pos:           ast.Position{Offset: 8, Line: 1, Column: 8},
-					Secondary:     "intersection types use commas (,) to separate multiple types, not colons (:)",
-					Documentation: "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types",
+				&UnexpectedColonInIntersectionTypeError{
+					Pos: ast.Position{Offset: 8, Line: 1, Column: 8},
 				},
 			},
 			errs,
@@ -733,11 +730,8 @@ func TestParseIntersectionType(t *testing.T) {
 		result, errs := testParseType("{U , V : W }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       `unexpected colon in intersection type`,
-					Pos:           ast.Position{Offset: 7, Line: 1, Column: 7},
-					Secondary:     "intersection types use commas (,) to separate multiple types, not colons (:)",
-					Documentation: "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types",
+				&UnexpectedColonInIntersectionTypeError{
+					Pos: ast.Position{Offset: 7, Line: 1, Column: 7},
 				},
 			},
 			errs,
@@ -939,11 +933,8 @@ func TestParseDictionaryType(t *testing.T) {
 		result, errs := testParseType("{:}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected colon in dictionary type",
-					Pos:           ast.Position{Offset: 1, Line: 1, Column: 1},
-					Secondary:     "dictionary types use a colon (:) to separate key and value types, but a value type is expected after the colon",
-					Documentation: "https://cadence-lang.org/docs/language/values-and-types/dictionaries",
+				&UnexpectedColonInDictionaryTypeError{
+					Pos: ast.Position{Offset: 1, Line: 1, Column: 1},
 				},
 			},
 			errs,
@@ -959,11 +950,8 @@ func TestParseDictionaryType(t *testing.T) {
 		result, errs := testParseType("{:U}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected colon in dictionary type",
-					Pos:           ast.Position{Offset: 1, Line: 1, Column: 1},
-					Secondary:     "dictionary types use a colon (:) to separate key and value types, but a value type is expected after the colon",
-					Documentation: "https://cadence-lang.org/docs/language/values-and-types/dictionaries",
+				&UnexpectedColonInDictionaryTypeError{
+					Pos: ast.Position{Offset: 1, Line: 1, Column: 1},
 				},
 			},
 			errs,
@@ -998,11 +986,8 @@ func TestParseDictionaryType(t *testing.T) {
 		result, errs := testParseType("{T:U:}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected colon in dictionary type",
-					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
-					Secondary:     "dictionary types can only have one colon (:) to separate key and value types",
-					Documentation: "https://cadence-lang.org/docs/language/values-and-types/dictionaries",
+				&MultipleColonInDictionaryTypeError{
+					Pos: ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
 			},
 			errs,
@@ -1019,11 +1004,8 @@ func TestParseDictionaryType(t *testing.T) {
 		result, errs := testParseType("{T::U}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected colon in dictionary type",
-					Pos:           ast.Position{Offset: 3, Line: 1, Column: 3},
-					Secondary:     "dictionary types use a colon (:) to separate key and value types, but a value type is expected after the colon",
-					Documentation: "https://cadence-lang.org/docs/language/values-and-types/dictionaries",
+				&UnexpectedColonInDictionaryTypeError{
+					Pos: ast.Position{Offset: 3, Line: 1, Column: 3},
 				},
 			},
 			errs,

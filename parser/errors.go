@@ -1038,6 +1038,74 @@ func (*UnexpectedCommaInDictionaryTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/values-and-types/dictionaries"
 }
 
+// UnexpectedColonInDictionaryTypeError is reported when a colon is found at an unexpected position in a dictionary type.
+type UnexpectedColonInDictionaryTypeError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &UnexpectedColonInDictionaryTypeError{}
+var _ errors.UserError = &UnexpectedColonInDictionaryTypeError{}
+var _ errors.SecondaryError = &UnexpectedColonInDictionaryTypeError{}
+var _ errors.HasDocumentationLink = &UnexpectedColonInDictionaryTypeError{}
+
+func (*UnexpectedColonInDictionaryTypeError) isParseError() {}
+
+func (*UnexpectedColonInDictionaryTypeError) IsUserError() {}
+
+func (e *UnexpectedColonInDictionaryTypeError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *UnexpectedColonInDictionaryTypeError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*UnexpectedColonInDictionaryTypeError) Error() string {
+	return "unexpected colon in dictionary type"
+}
+
+func (*UnexpectedColonInDictionaryTypeError) SecondaryError() string {
+	return "dictionary types use a colon (:) to separate key and value types, but a value type is expected after the colon"
+}
+
+func (*UnexpectedColonInDictionaryTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types/dictionaries"
+}
+
+// MultipleColonInDictionaryTypeError is reported when more than one colon is found in a dictionary type.
+type MultipleColonInDictionaryTypeError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &MultipleColonInDictionaryTypeError{}
+var _ errors.UserError = &MultipleColonInDictionaryTypeError{}
+var _ errors.SecondaryError = &MultipleColonInDictionaryTypeError{}
+var _ errors.HasDocumentationLink = &MultipleColonInDictionaryTypeError{}
+
+func (*MultipleColonInDictionaryTypeError) isParseError() {}
+
+func (*MultipleColonInDictionaryTypeError) IsUserError() {}
+
+func (e *MultipleColonInDictionaryTypeError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *MultipleColonInDictionaryTypeError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*MultipleColonInDictionaryTypeError) Error() string {
+	return "unexpected colon in dictionary type"
+}
+
+func (*MultipleColonInDictionaryTypeError) SecondaryError() string {
+	return "dictionary types can only have one colon (:) to separate key and value types"
+}
+
+func (*MultipleColonInDictionaryTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types/dictionaries"
+}
+
 // UnexpectedCommaInIntersectionTypeError is reported when a comma is found at an unexpected position in an intersection type.
 type UnexpectedCommaInIntersectionTypeError struct {
 	Pos ast.Position
@@ -1069,6 +1137,40 @@ func (*UnexpectedCommaInIntersectionTypeError) SecondaryError() string {
 }
 
 func (*UnexpectedCommaInIntersectionTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
+}
+
+// UnexpectedColonInIntersectionTypeError is reported when a colon is found in an intersection type.
+type UnexpectedColonInIntersectionTypeError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &UnexpectedColonInIntersectionTypeError{}
+var _ errors.UserError = &UnexpectedColonInIntersectionTypeError{}
+var _ errors.SecondaryError = &UnexpectedColonInIntersectionTypeError{}
+var _ errors.HasDocumentationLink = &UnexpectedColonInIntersectionTypeError{}
+
+func (*UnexpectedColonInIntersectionTypeError) isParseError() {}
+
+func (*UnexpectedColonInIntersectionTypeError) IsUserError() {}
+
+func (e *UnexpectedColonInIntersectionTypeError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *UnexpectedColonInIntersectionTypeError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*UnexpectedColonInIntersectionTypeError) Error() string {
+	return "unexpected colon in intersection type"
+}
+
+func (*UnexpectedColonInIntersectionTypeError) SecondaryError() string {
+	return "intersection types use commas (,) to separate multiple types, not colons (:)"
+}
+
+func (*UnexpectedColonInIntersectionTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
 }
 

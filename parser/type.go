@@ -386,20 +386,14 @@ func defineIntersectionOrDictionaryType() {
 
 				case lexer.TokenColon:
 					if intersectionType != nil {
-						return nil, NewSyntaxError(
-							p.current.StartPos,
-							"unexpected colon in intersection type",
-						).
-							WithSecondary("intersection types use commas (,) to separate multiple types, not colons (:)").
-							WithDocumentation("https://cadence-lang.org/docs/language/types-and-type-system/intersection-types")
+						return nil, &UnexpectedColonInIntersectionTypeError{
+							Pos: p.current.StartPos,
+						}
 					}
 					if expectType {
-						return nil, NewSyntaxError(
-							p.current.StartPos,
-							"unexpected colon in dictionary type",
-						).
-							WithSecondary("dictionary types use a colon (:) to separate key and value types, but a value type is expected after the colon").
-							WithDocumentation("https://cadence-lang.org/docs/language/values-and-types/dictionaries")
+						return nil, &UnexpectedColonInDictionaryTypeError{
+							Pos: p.current.StartPos,
+						}
 					}
 					if dictionaryType == nil {
 						if firstType == nil {
@@ -416,9 +410,9 @@ func defineIntersectionOrDictionaryType() {
 							),
 						)
 					} else {
-						return nil, p.newSyntaxError("unexpected colon in dictionary type").
-							WithSecondary("dictionary types can only have one colon (:) to separate key and value types").
-							WithDocumentation("https://cadence-lang.org/docs/language/values-and-types/dictionaries")
+						return nil, &MultipleColonInDictionaryTypeError{
+							Pos: p.current.StartPos,
+						}
 					}
 					// Skip the colon
 					p.next()
