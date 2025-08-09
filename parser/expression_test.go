@@ -1702,9 +1702,8 @@ func TestParseInvocation(t *testing.T) {
 		_, errs := testParseExpression("f(,,)")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected argument or end of argument list, got ','",
-					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
+				&UnexpectedCommaInArgumentListError{
+					Pos: ast.Position{Offset: 2, Line: 1, Column: 2},
 				},
 			},
 			errs,
@@ -1718,9 +1717,8 @@ func TestParseInvocation(t *testing.T) {
 		_, errs := testParseExpression("f(1,,)")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected argument or end of argument list, got ','",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				&UnexpectedCommaInArgumentListError{
+					Pos: ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
 			},
 			errs,
@@ -1734,10 +1732,14 @@ func TestParseInvocation(t *testing.T) {
 		_, errs := testParseExpression("f(1 2)")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected argument in argument list (expecting delimiter or end of argument list)," +
-						" got decimal integer",
-					Pos: ast.Position{Offset: 4, Line: 1, Column: 4},
+				&MissingCommaInArgumentListError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+							EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+						},
+					},
 				},
 			},
 			errs,
@@ -1871,6 +1873,39 @@ func TestParseInvocation(t *testing.T) {
 				EndPos:            ast.Position{Offset: 13, Line: 1, Column: 13},
 			},
 			result,
+		)
+	})
+
+	t.Run("invalid: missing closing paren", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("f(1")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingClosingParenInArgumentListError{
+					Pos: ast.Position{Offset: 3, Line: 1, Column: 3},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid: non-identifier label", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("f(1+2: 3)")
+		AssertEqualWithDiff(t,
+			[]error{
+				&InvalidExpressionAsLabelError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+						EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+					},
+				},
+			},
+			errs,
 		)
 	})
 }
@@ -2221,6 +2256,8 @@ func TestParseBlockComment(t *testing.T) {
 						Line:   1,
 						Column: 37,
 					},
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -3101,7 +3138,6 @@ func TestParseAttach(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 16, Line: 1, Column: 16},
 							EndPos:   ast.Position{Offset: 19, Line: 1, Column: 19},
@@ -3345,7 +3381,6 @@ func TestParseFunctionExpression(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
 							EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
@@ -5301,9 +5336,14 @@ func TestParseUnaryExpression(t *testing.T) {
 		_, errs := testParseExpression(code)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token in expression: '%'",
-					Pos:     ast.Position{Line: 1, Column: 2, Offset: 2},
+				&UnexpectedExpressionStartError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenPercent,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+							EndPos:   ast.Position{Offset: 1, Line: 1, Column: 1},
+						},
+					},
 				},
 			},
 			errs,
@@ -6283,16 +6323,19 @@ func TestParseStringTemplate(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression(`
-		  "\(.)"
-		`)
+		_, errs := testParseExpression(`"\(.)"`)
 
 		require.NotEmpty(t, errs)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token in expression: '.'",
-					Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
+				&UnexpectedExpressionStartError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenDot,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+							EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+						},
+					},
 				},
 			},
 			errs,
@@ -6347,16 +6390,19 @@ func TestParseStringTemplate(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression(`
-		  "\()"
-		`)
+		_, errs := testParseExpression(`"\()"`)
 
 		require.NotEmpty(t, errs)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token in expression: ')'",
-					Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
+				&UnexpectedExpressionStartError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenParenClose,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+							EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+						},
+					},
 				},
 			},
 			errs,
@@ -6386,8 +6432,10 @@ func TestParseStringTemplate(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token ')'",
-					Pos:     ast.Position{Offset: 10, Line: 2, Column: 9},
+					Message:       "expected token ')'",
+					Pos:           ast.Position{Offset: 10, Line: 2, Column: 9},
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -6406,8 +6454,10 @@ func TestParseStringTemplate(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token ')'",
-					Pos:     ast.Position{Offset: 16, Line: 2, Column: 15},
+					Message:       "expected token ')'",
+					Pos:           ast.Position{Offset: 16, Line: 2, Column: 15},
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -6426,8 +6476,10 @@ func TestParseStringTemplate(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token ')'",
-					Pos:     ast.Position{Offset: 30, Line: 2, Column: 29},
+					Message:       "expected token ')'",
+					Pos:           ast.Position{Offset: 30, Line: 2, Column: 29},
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,

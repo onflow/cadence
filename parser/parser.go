@@ -283,7 +283,9 @@ func (p *parser) nextSemanticToken() {
 func (p *parser) mustOne(tokenType lexer.TokenType) (lexer.Token, error) {
 	t := p.current
 	if !t.Is(tokenType) {
-		return lexer.Token{}, p.newSyntaxError("expected token %s", tokenType)
+		return lexer.Token{}, p.newSyntaxError("expected token %s", tokenType).
+			WithSecondary("check for missing punctuation, operators, or syntax elements").
+			WithDocumentation("https://cadence-lang.org/docs/language/syntax")
 	}
 	p.next()
 	return t, nil
@@ -305,15 +307,6 @@ func (p *parser) isToken(token lexer.Token, tokenType lexer.TokenType, expected 
 
 	actual := p.tokenSource(token)
 	return string(actual) == expected
-}
-
-func (p *parser) mustToken(tokenType lexer.TokenType, string string) (lexer.Token, error) {
-	t := p.current
-	if !p.isToken(t, tokenType, string) {
-		return lexer.Token{}, p.newSyntaxError("expected token %s with string value %s", tokenType, string)
-	}
-	p.next()
-	return t, nil
 }
 
 func (p *parser) startBuffering() {
