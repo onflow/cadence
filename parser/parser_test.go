@@ -899,11 +899,8 @@ func TestParseBufferedErrors(t *testing.T) {
 	_, errs := testParseExpression("a<b,>(")
 	AssertEqualWithDiff(t,
 		[]error{
-			&SyntaxError{
-				Message:       "missing type annotation after comma",
-				Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
-				Secondary:     "after a comma, a type annotation is required to complete the list",
-				Documentation: "https://cadence-lang.org/docs/language/types-and-type-system/type-annotations",
+			&MissingTypeAnnotationAfterCommaError{
+				Pos: ast.Position{Offset: 4, Line: 1, Column: 4},
 			},
 			&MissingClosingParenInArgumentListError{
 				Pos: ast.Position{Offset: 6, Line: 1, Column: 6},

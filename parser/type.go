@@ -887,9 +887,9 @@ func parseCommaSeparatedTypeAnnotations(
 		switch p.current.Type {
 		case lexer.TokenComma:
 			if expectTypeAnnotation {
-				return nil, p.newSyntaxError("unexpected comma").
-					WithSecondary("a comma is used to separate multiple items, but a type annotation is expected here").
-					WithDocumentation("https://cadence-lang.org/docs/language/types-and-type-system/type-annotations")
+				return nil, &UnexpectedCommaInTypeAnnotationListError{
+					Pos: p.current.StartPos,
+				}
 			}
 			// Skip the comma
 			p.next()
@@ -897,11 +897,9 @@ func parseCommaSeparatedTypeAnnotations(
 
 		case endTokenType:
 			if expectTypeAnnotation && len(typeAnnotations) > 0 {
-				p.report(
-					p.newSyntaxError("missing type annotation after comma").
-						WithSecondary("after a comma, a type annotation is required to complete the list").
-						WithDocumentation("https://cadence-lang.org/docs/language/types-and-type-system/type-annotations"),
-				)
+				p.report(&MissingTypeAnnotationAfterCommaError{
+					Pos: p.current.StartPos,
+				})
 			}
 			atEnd = true
 

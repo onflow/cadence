@@ -1140,6 +1140,74 @@ func (*MultipleColonInDictionaryTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/values-and-types/dictionaries"
 }
 
+// UnexpectedCommaInTypeAnnotationListError is reported when a comma is found at an unexpected position in a type annotation list.
+type UnexpectedCommaInTypeAnnotationListError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &UnexpectedCommaInTypeAnnotationListError{}
+var _ errors.UserError = &UnexpectedCommaInTypeAnnotationListError{}
+var _ errors.SecondaryError = &UnexpectedCommaInTypeAnnotationListError{}
+var _ errors.HasDocumentationLink = &UnexpectedCommaInTypeAnnotationListError{}
+
+func (*UnexpectedCommaInTypeAnnotationListError) isParseError() {}
+
+func (*UnexpectedCommaInTypeAnnotationListError) IsUserError() {}
+
+func (e *UnexpectedCommaInTypeAnnotationListError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *UnexpectedCommaInTypeAnnotationListError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*UnexpectedCommaInTypeAnnotationListError) Error() string {
+	return "unexpected comma"
+}
+
+func (*UnexpectedCommaInTypeAnnotationListError) SecondaryError() string {
+	return "a comma is used to separate multiple types, but a type is expected here"
+}
+
+func (*UnexpectedCommaInTypeAnnotationListError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/types-and-type-system/type-annotations"
+}
+
+// MissingTypeAnnotationAfterCommaError is reported when a type annotation is missing after a comma.
+type MissingTypeAnnotationAfterCommaError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &MissingTypeAnnotationAfterCommaError{}
+var _ errors.UserError = &MissingTypeAnnotationAfterCommaError{}
+var _ errors.SecondaryError = &MissingTypeAnnotationAfterCommaError{}
+var _ errors.HasDocumentationLink = &MissingTypeAnnotationAfterCommaError{}
+
+func (*MissingTypeAnnotationAfterCommaError) isParseError() {}
+
+func (*MissingTypeAnnotationAfterCommaError) IsUserError() {}
+
+func (e *MissingTypeAnnotationAfterCommaError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *MissingTypeAnnotationAfterCommaError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*MissingTypeAnnotationAfterCommaError) Error() string {
+	return "missing type annotation after comma"
+}
+
+func (*MissingTypeAnnotationAfterCommaError) SecondaryError() string {
+	return "after a comma, a type annotation is required to complete the list"
+}
+
+func (*MissingTypeAnnotationAfterCommaError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/types-and-type-system/type-annotations"
+}
+
 // UnexpectedCommaInIntersectionTypeError is reported when a comma is found at an unexpected position in an intersection type.
 type UnexpectedCommaInIntersectionTypeError struct {
 	Pos ast.Position

@@ -1391,6 +1391,64 @@ func TestParseInstantiationType(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("invalid: unexpected comma", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("T<,U>")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedCommaInTypeAnnotationListError{
+					Pos: ast.Position{Offset: 2, Line: 1, Column: 2},
+				},
+			},
+			errs,
+		)
+
+		assert.Nil(t, result)
+	})
+
+	t.Run("invalid: missing type after comma", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("T<U,>")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingTypeAnnotationAfterCommaError{
+					Pos: ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
+			},
+			errs,
+		)
+
+		AssertEqualWithDiff(t,
+			&ast.InstantiationType{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+					},
+				},
+				TypeArguments: []*ast.TypeAnnotation{
+					{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "U",
+								Pos:        ast.Position{Offset: 2, Line: 1, Column: 2},
+							},
+						},
+						StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+					},
+				},
+				TypeArgumentsStartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+				EndPos:                ast.Position{Offset: 4, Line: 1, Column: 4},
+			},
+			result,
+		)
+	})
 }
 
 func TestParseParametersAndArrayTypes(t *testing.T) {
