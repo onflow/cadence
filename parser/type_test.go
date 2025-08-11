@@ -252,6 +252,66 @@ func TestParseArrayType(t *testing.T) {
 		)
 	})
 
+	t.Run("invalid, dot", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("[.")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedTypeStartError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenDot,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+							EndPos:   ast.Position{Offset: 1, Line: 1, Column: 1},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("constant, invalid size, dot", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("[T;.")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedExpressionStartError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenDot,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+							EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("constant, missing end", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("[T;1")
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message:       "expected token ']'",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Migration:     "",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseOptionalType(t *testing.T) {
@@ -599,6 +659,27 @@ func TestParseReferenceType(t *testing.T) {
 			errs,
 		)
 	})
+
+	t.Run("invalid, dot", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("&.")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedTypeStartError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenDot,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+							EndPos:   ast.Position{Offset: 1, Line: 1, Column: 1},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseOptionalReferenceType(t *testing.T) {
@@ -741,7 +822,7 @@ func TestParseIntersectionType(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingTypeAfterCommaInIntersectionError{
-					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+					Pos: ast.Position{Offset: 6, Line: 1, Column: 6},
 				},
 			},
 			errs,
@@ -863,6 +944,27 @@ func TestParseIntersectionType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
+	t.Run("invalid: two, first is non-nominal", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("{[U], T}")
+		AssertEqualWithDiff(t,
+			[]error{
+				&InvalidNonNominalTypeInIntersectionError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+						EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+					},
+				},
+			},
+			errs,
+		)
+
+		// TODO: return type
+		assert.Nil(t, result)
+	})
+
 	t.Run("invalid: missing end", func(t *testing.T) {
 
 		t.Parallel()
@@ -889,7 +991,7 @@ func TestParseIntersectionType(t *testing.T) {
 			[]error{
 				&UnexpectedEOFExpectedTokenError{
 					ExpectedToken: lexer.TokenBraceClose,
-					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
+					Pos:           ast.Position{Offset: 2, Line: 1, Column: 2},
 				},
 			},
 			errs,
@@ -975,7 +1077,7 @@ func TestParseDictionaryType(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingDictionaryValueTypeError{
-					Pos:     ast.Position{Offset: 3, Line: 1, Column: 3},
+					Pos: ast.Position{Offset: 3, Line: 1, Column: 3},
 				},
 			},
 			errs,
@@ -1114,7 +1216,7 @@ func TestParseDictionaryType(t *testing.T) {
 			[]error{
 				&UnexpectedEOFExpectedTokenError{
 					ExpectedToken: lexer.TokenBraceClose,
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
 			},
 			errs,
@@ -3286,4 +3388,25 @@ func TestParseNestedParenthesizedTypes(t *testing.T) {
 	}
 
 	AssertEqualWithDiff(t, expected, prog.Declarations())
+}
+
+func TestParseParenthesizedTypeWithInvalidType(t *testing.T) {
+
+	t.Parallel()
+
+	_, errs := testParseType("(.")
+	AssertEqualWithDiff(t,
+		[]error{
+			&UnexpectedTypeStartError{
+				GotToken: lexer.Token{
+					Type: lexer.TokenDot,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+						EndPos:   ast.Position{Offset: 1, Line: 1, Column: 1},
+					},
+				},
+			},
+		},
+		errs,
+	)
 }
