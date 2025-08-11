@@ -435,7 +435,10 @@ func defineIntersectionOrDictionaryType() {
 							Pos: p.current.StartPos,
 						}
 					} else {
-						return nil, p.newSyntaxError("invalid end of input, expected %s", lexer.TokenBraceClose)
+						return nil, &UnexpectedEOFExpectedTokenError{
+							ExpectedToken: lexer.TokenBraceClose,
+							Pos:           p.current.StartPos,
+						}
 					}
 
 				default:
@@ -587,7 +590,10 @@ func parseNominalTypes(
 					Pos: p.current.StartPos,
 				}
 			} else {
-				return nil, ast.EmptyPosition, p.newSyntaxError("invalid end of input, expected %s", endTokenType)
+				return nil, ast.EmptyPosition, &UnexpectedEOFExpectedTokenError{
+					ExpectedToken: endTokenType,
+					Pos:           p.current.StartPos,
+				}
 			}
 
 		default:
@@ -648,10 +654,10 @@ func parseParameterTypeAnnotations(p *parser) (typeAnnotations []*ast.TypeAnnota
 			atEnd = true
 
 		case lexer.TokenEOF:
-			return nil, p.newSyntaxError(
-				"missing %q at end of list",
-				lexer.TokenParenClose,
-			)
+			return nil, &UnexpectedEOFExpectedTokenError{
+				ExpectedToken: lexer.TokenParenClose,
+				Pos:           p.current.StartPos,
+			}
 
 		default:
 			if !expectTypeAnnotation {
@@ -898,7 +904,10 @@ func parseCommaSeparatedTypeAnnotations(
 					Pos: p.current.StartPos,
 				}
 			} else {
-				return nil, p.newSyntaxError("invalid end of input, expected %s", endTokenType)
+				return nil, &UnexpectedEOFExpectedTokenError{
+					ExpectedToken: endTokenType,
+					Pos:           p.current.StartPos,
+				}
 			}
 
 		default:

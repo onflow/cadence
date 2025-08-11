@@ -3662,6 +3662,22 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("struct, one conformance, missing body", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("access(all) struct S: RI")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedEOFExpectedTokenError{
+					ExpectedToken: lexer.TokenBraceOpen,
+					Pos:           ast.Position{Offset: 24, Line: 1, Column: 24},
+				},
+			},
+			errs,
+		)
+	})
+
 	t.Run("struct, with fields, functions, and special functions", func(t *testing.T) {
 
 		t.Parallel()

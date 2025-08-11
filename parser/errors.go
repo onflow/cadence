@@ -309,7 +309,7 @@ func (e *UnexpectedEOFExpectedTypeError) EndPosition(_ common.MemoryGauge) ast.P
 }
 
 func (*UnexpectedEOFExpectedTypeError) Error() string {
-	return "invalid end of input, expected type"
+	return "unexpected end of input, expected type"
 }
 
 func (*UnexpectedEOFExpectedTypeError) SecondaryError() string {
@@ -317,6 +317,45 @@ func (*UnexpectedEOFExpectedTypeError) SecondaryError() string {
 }
 
 func (*UnexpectedEOFExpectedTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+// UnexpectedEOFExpectedTokenError is reported when the end of the program is reached unexpectedly,
+// but a specific token was expected.
+type UnexpectedEOFExpectedTokenError struct {
+	ExpectedToken lexer.TokenType
+	Pos           ast.Position
+}
+
+var _ ParseError = &UnexpectedEOFExpectedTokenError{}
+var _ errors.UserError = &UnexpectedEOFExpectedTokenError{}
+var _ errors.SecondaryError = &UnexpectedEOFExpectedTokenError{}
+var _ errors.HasDocumentationLink = &UnexpectedEOFExpectedTokenError{}
+
+func (*UnexpectedEOFExpectedTokenError) isParseError() {}
+
+func (*UnexpectedEOFExpectedTokenError) IsUserError() {}
+
+func (e *UnexpectedEOFExpectedTokenError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *UnexpectedEOFExpectedTokenError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (e *UnexpectedEOFExpectedTokenError) Error() string {
+	return fmt.Sprintf(
+		"unexpected end of input, expected %s",
+		e.ExpectedToken,
+	)
+}
+
+func (*UnexpectedEOFExpectedTokenError) SecondaryError() string {
+	return "check for incomplete expressions, missing tokens, or unterminated strings/comments"
+}
+
+func (*UnexpectedEOFExpectedTokenError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 

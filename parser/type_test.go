@@ -533,6 +533,22 @@ func TestParseReferenceType(t *testing.T) {
 		)
 	})
 
+	t.Run("authorized, missing closing paren after entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("auth(X, Y")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedEOFExpectedTokenError{
+					ExpectedToken: lexer.TokenParenClose,
+					Pos:           ast.Position{Offset: 9, Line: 1, Column: 9},
+				},
+			},
+			errs,
+		)
+	})
+
 	t.Run("authorized, map", func(t *testing.T) {
 
 		t.Parallel()
@@ -871,8 +887,8 @@ func TestParseIntersectionType(t *testing.T) {
 		result, errs := testParseType("{U")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "invalid end of input, expected '}'",
+				&UnexpectedEOFExpectedTokenError{
+					ExpectedToken: lexer.TokenBraceClose,
 					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
 				},
 			},
@@ -1096,8 +1112,8 @@ func TestParseDictionaryType(t *testing.T) {
 		result, errs := testParseType("{T:U")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "invalid end of input, expected '}'",
+				&UnexpectedEOFExpectedTokenError{
+					ExpectedToken: lexer.TokenBraceClose,
 					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
 			},
@@ -1169,6 +1185,22 @@ func TestParseFunctionType(t *testing.T) {
 				},
 			},
 			result,
+		)
+	})
+
+	t.Run("missing closing paren", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("fun(Int")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedEOFExpectedTokenError{
+					ExpectedToken: lexer.TokenParenClose,
+					Pos:           ast.Position{Offset: 7, Line: 1, Column: 7},
+				},
+			},
+			errs,
 		)
 	})
 
@@ -1469,6 +1501,23 @@ func TestParseInstantiationType(t *testing.T) {
 			errs,
 		)
 
+		assert.Nil(t, result)
+	})
+
+	t.Run("invalid: missing closing greater", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("T<U")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedEOFExpectedTokenError{
+					ExpectedToken: lexer.TokenGreater,
+					Pos:           ast.Position{Offset: 3, Line: 1, Column: 3},
+				},
+			},
+			errs,
+		)
 		assert.Nil(t, result)
 	})
 
