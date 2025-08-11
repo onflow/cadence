@@ -428,17 +428,15 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 	startPos := p.current.StartPos
 	p.nextSemanticToken()
 
-	if p.isToken(p.current, lexer.TokenIdentifier, KeywordIn) {
-		p.reportSyntaxError(
-			"expected identifier, got keyword %q",
-			KeywordIn,
-		)
-		p.next()
-	}
-
 	firstValue, err := p.mustIdentifier()
 	if err != nil {
 		return nil, err
+	}
+
+	if firstValue.Identifier == KeywordIn {
+		p.report(&InvalidInKeywordAsIdentifierError{
+			Pos: p.current.StartPos,
+		})
 	}
 
 	p.skipSpaceAndComments()
@@ -459,15 +457,13 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 		identifier = firstValue
 	}
 
-	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordIn) {
-		p.reportSyntaxError(
-			"expected keyword %q, got %s",
-			KeywordIn,
-			p.current.Type,
-		)
+	if p.isToken(p.current, lexer.TokenIdentifier, KeywordIn) {
+		p.next()
+	} else {
+		p.report(&MissingInKeywordInForStatementError{
+			GotToken: p.current,
+		})
 	}
-
-	p.next()
 
 	expression, err := parseExpression(p, lowestBindingPower)
 	if err != nil {

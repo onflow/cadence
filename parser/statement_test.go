@@ -28,6 +28,7 @@ import (
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/parser/lexer"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
@@ -879,13 +880,19 @@ func TestParseForStatementIndexBinding(t *testing.T) {
 		_, errs := testParseStatements("for i x in y { }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected keyword \"in\", got identifier",
-					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+				&MissingInKeywordInForStatementError{
+					GotToken: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+							EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 				&SyntaxError{
 					Message:       "expected token '{'",
-					Pos:           ast.Position{Offset: 11, Line: 1, Column: 11},
+					Pos:           ast.Position{Offset: 8, Line: 1, Column: 8},
 					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
@@ -901,15 +908,17 @@ func TestParseForStatementIndexBinding(t *testing.T) {
 		_, errs := testParseStatements("for in y { }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected identifier, got keyword \"in\"",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				&InvalidInKeywordAsIdentifierError{
+					Pos: ast.Position{Offset: 6, Line: 1, Column: 6},
 				},
-				&SyntaxError{
-					Message:       "expected token identifier",
-					Pos:           ast.Position{Offset: 6, Line: 1, Column: 6},
-					Secondary:     "check for missing punctuation, operators, or syntax elements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
+				&MissingInKeywordInForStatementError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+							EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
@@ -2795,4 +2804,40 @@ func TestParseStatementsWithWhitespace(t *testing.T) {
 
 		require.Len(t, statements, 1)
 	})
+}
+
+func TestParseForInKeywordAsIdentifier(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`for in in [] {}`)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&InvalidInKeywordAsIdentifierError{
+				Pos: ast.Position{Offset: 6, Line: 1, Column: 6},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseForStatementMissingInKeyword(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`for i [] {}`)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingInKeywordInForStatementError{
+				GotToken: lexer.Token{
+					Type: lexer.TokenBracketOpen,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+						EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+					},
+				},
+			},
+		},
+		errs,
+	)
 }

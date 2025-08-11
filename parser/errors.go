@@ -2753,6 +2753,81 @@ func (*InvalidFromKeywordAsIdentifierError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/imports"
 }
 
+// InvalidInKeywordAsIdentifierError is reported when the `in` keyword is used as an identifier
+// in an invalid context in a for statement.
+type InvalidInKeywordAsIdentifierError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &InvalidInKeywordAsIdentifierError{}
+var _ errors.UserError = &InvalidInKeywordAsIdentifierError{}
+var _ errors.SecondaryError = &InvalidInKeywordAsIdentifierError{}
+var _ errors.HasDocumentationLink = &InvalidInKeywordAsIdentifierError{}
+
+func (*InvalidInKeywordAsIdentifierError) isParseError() {}
+
+func (*InvalidInKeywordAsIdentifierError) IsUserError() {}
+
+func (e *InvalidInKeywordAsIdentifierError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidInKeywordAsIdentifierError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*InvalidInKeywordAsIdentifierError) Error() string {
+	return fmt.Sprintf("expected identifier, got keyword %q", KeywordIn)
+}
+
+func (*InvalidInKeywordAsIdentifierError) SecondaryError() string {
+	return "the 'in' keyword cannot be used as an identifier in a for-loop"
+}
+
+func (*InvalidInKeywordAsIdentifierError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/control-flow#for-in-statement"
+}
+
+// MissingInKeywordInForStatementError is reported when the `in` keyword is missing in a for statement.
+type MissingInKeywordInForStatementError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingInKeywordInForStatementError{}
+var _ errors.UserError = &MissingInKeywordInForStatementError{}
+var _ errors.SecondaryError = &MissingInKeywordInForStatementError{}
+var _ errors.HasDocumentationLink = &MissingInKeywordInForStatementError{}
+
+func (*MissingInKeywordInForStatementError) isParseError() {}
+
+func (*MissingInKeywordInForStatementError) IsUserError() {}
+
+func (e *MissingInKeywordInForStatementError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingInKeywordInForStatementError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingInKeywordInForStatementError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf(
+			"expected keyword %q",
+			KeywordIn,
+		),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingInKeywordInForStatementError) SecondaryError() string {
+	return "for-loops require the 'in' keyword to separate the loop variable from the iterated value"
+}
+
+func (*MissingInKeywordInForStatementError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/control-flow#for-in-statement"
+}
+
 // MissingConformanceError is reported when a colon for conformances is present,
 // but no conformances follow.
 type MissingConformanceError struct {
