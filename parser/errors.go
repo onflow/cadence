@@ -535,9 +535,8 @@ func (e *MissingStartOfParameterListError) EndPosition(_ common.MemoryGauge) ast
 }
 
 func (e *MissingStartOfParameterListError) Error() string {
-	return fmt.Sprintf(
-		"expected %s as start of parameter list, got %s",
-		lexer.TokenParenOpen,
+	return expectedButGotToken(
+		"expected open parenthesis '(' as start of parameter list",
 		e.GotToken.Type,
 	)
 }
@@ -613,8 +612,8 @@ func (e *UnexpectedTokenInParameterListError) EndPosition(_ common.MemoryGauge) 
 }
 
 func (e *UnexpectedTokenInParameterListError) Error() string {
-	return fmt.Sprintf(
-		"expected parameter or end of parameter list, got %s",
+	return expectedButGotToken(
+		"expected parameter or end of parameter list",
 		e.GotToken.Type,
 	)
 }
@@ -687,8 +686,8 @@ func (e *ExpectedCommaOrEndOfParameterListError) EndPosition(_ common.MemoryGaug
 }
 
 func (e *ExpectedCommaOrEndOfParameterListError) Error() string {
-	return fmt.Sprintf(
-		"expected comma or end of parameter list, got %s",
+	return expectedButGotToken(
+		"expected comma or end of parameter list",
 		e.GotToken.Type,
 	)
 }
@@ -724,9 +723,8 @@ func (e *MissingColonAfterParameterNameError) EndPosition(_ common.MemoryGauge) 
 }
 
 func (e *MissingColonAfterParameterNameError) Error() string {
-	return fmt.Sprintf(
-		"expected %s after parameter name, got %s",
-		lexer.TokenColon,
+	return expectedButGotToken(
+		"expected colon (:) after parameter name",
 		e.GotToken.Type,
 	)
 }
@@ -762,8 +760,8 @@ func (e *MissingDefaultArgumentError) EndPosition(_ common.MemoryGauge) ast.Posi
 }
 
 func (e *MissingDefaultArgumentError) Error() string {
-	return fmt.Sprintf(
-		"expected a default argument after type annotation, got %s",
+	return expectedButGotToken(
+		"expected a default argument after type annotation",
 		e.GotToken.Type,
 	)
 }
@@ -886,8 +884,8 @@ func (e *UnexpectedTokenInTypeParameterListError) EndPosition(_ common.MemoryGau
 }
 
 func (e *UnexpectedTokenInTypeParameterListError) Error() string {
-	return fmt.Sprintf(
-		"expected type parameter or end of type parameter list, got %s",
+	return expectedButGotToken(
+		"expected type parameter or end of type parameter list",
 		e.GotToken.Type,
 	)
 }
@@ -960,8 +958,8 @@ func (e *ExpectedCommaOrEndOfTypeParameterListError) EndPosition(_ common.Memory
 }
 
 func (e *ExpectedCommaOrEndOfTypeParameterListError) Error() string {
-	return fmt.Sprintf(
-		"expected comma or end of type parameter list, got %s",
+	return expectedButGotToken(
+		"expected comma (,) or end of type parameter list",
 		e.GotToken.Type,
 	)
 }
@@ -997,8 +995,8 @@ func (e *InvalidTypeParameterNameError) EndPosition(_ common.MemoryGauge) ast.Po
 }
 
 func (e *InvalidTypeParameterNameError) Error() string {
-	return fmt.Sprintf(
-		"expected type parameter name, got %s",
+	return expectedButGotToken(
+		"expected type parameter name",
 		e.GotToken.Type,
 	)
 }
@@ -1108,7 +1106,7 @@ func (e *ExpectedPrepareOrExecuteError) EndPosition(memoryGauge common.MemoryGau
 
 func (e *ExpectedPrepareOrExecuteError) Error() string {
 	return fmt.Sprintf(
-		"unexpected identifier, expected keyword %q or %q, got %q",
+		"unexpected identifier: expected keyword %q or %q, got %q",
 		KeywordPrepare,
 		KeywordExecute,
 		e.GotIdentifier,
@@ -1149,7 +1147,7 @@ func (e *ExpectedExecuteOrPostError) EndPosition(memoryGauge common.MemoryGauge)
 
 func (e *ExpectedExecuteOrPostError) Error() string {
 	return fmt.Sprintf(
-		"unexpected identifier, expected keyword %q or %q, got %q",
+		"unexpected identifier: expected keyword %q or %q, got %q",
 		KeywordExecute,
 		KeywordPost,
 		e.GotIdentifier,
@@ -1557,8 +1555,8 @@ func (e *MissingSeparatorInIntersectionOrDictionaryTypeError) EndPosition(_ comm
 }
 
 func (e *MissingSeparatorInIntersectionOrDictionaryTypeError) Error() string {
-	return fmt.Sprintf(
-		"missing separator in type list, got %s",
+	return expectedButGotToken(
+		"missing separator in type list",
 		e.GotToken.Type,
 	)
 }
@@ -1634,11 +1632,13 @@ func (e *UnexpectedTokenInsteadOfSeparatorError) EndPosition(_ common.MemoryGaug
 }
 
 func (e *UnexpectedTokenInsteadOfSeparatorError) Error() string {
-	return fmt.Sprintf(
-		"unexpected token: got %s, expected %s or separator %s",
+	return expectedButGotToken(
+		fmt.Sprintf(
+			"unexpected token: expected %s or separator %s",
+			e.ExpectedEndToken,
+			e.ExpectedSeparator,
+		),
 		e.GotToken.Type,
-		e.ExpectedEndToken,
-		e.ExpectedSeparator,
 	)
 }
 
@@ -1746,8 +1746,8 @@ func (e *MissingCommaInArgumentListError) EndPosition(_ common.MemoryGauge) ast.
 }
 
 func (e *MissingCommaInArgumentListError) Error() string {
-	return fmt.Sprintf(
-		"unexpected argument in argument list (expecting delimiter or end of argument list), got %s",
+	return expectedButGotToken(
+		"unexpected argument in argument list: expected delimiter or end of argument list",
 		e.GotToken.Type,
 	)
 }
@@ -2359,7 +2359,10 @@ func (e *InvalidPubSetModifierError) EndPosition(_ common.MemoryGauge) ast.Posit
 }
 
 func (e *InvalidPubSetModifierError) Error() string {
-	return fmt.Sprintf("expected keyword %q, got %s", "set", e.GotToken.Type)
+	return expectedButGotToken(
+		`expected keyword "set"`,
+		e.GotToken.Type,
+	)
 }
 
 func (*InvalidPubSetModifierError) SecondaryError() string {
@@ -2397,9 +2400,11 @@ func (e *MissingAccessKeywordError) Error() string {
 		[]string{`"all"`, `"account"`, `"contract"`, `"self"`},
 		"or",
 	)
-	return fmt.Sprintf(
-		"expected keyword %s, got %s",
-		keywords,
+	return expectedButGotToken(
+		fmt.Sprintf(
+			"expected keyword %s",
+			keywords,
+		),
 		e.GotToken.Type,
 	)
 }
@@ -2435,7 +2440,10 @@ func (e *MissingEnumCaseNameError) EndPosition(_ common.MemoryGauge) ast.Positio
 }
 
 func (e *MissingEnumCaseNameError) Error() string {
-	return fmt.Sprintf("expected identifier after start of enum case declaration, got %s", e.GotToken.Type)
+	return expectedButGotToken(
+		"expected identifier after start of enum case declaration",
+		e.GotToken.Type,
+	)
 }
 
 func (*MissingEnumCaseNameError) SecondaryError() string {
@@ -2469,7 +2477,10 @@ func (e *MissingFieldNameError) EndPosition(_ common.MemoryGauge) ast.Position {
 }
 
 func (e *MissingFieldNameError) Error() string {
-	return fmt.Sprintf("expected identifier after start of field declaration, got %s", e.GotToken.Type)
+	return expectedButGotToken(
+		"expected identifier after start of field declaration",
+		e.GotToken.Type,
+	)
 }
 
 func (*MissingFieldNameError) SecondaryError() string {
@@ -2538,8 +2549,8 @@ func (e *InvalidImportLocationError) EndPosition(_ common.MemoryGauge) ast.Posit
 }
 
 func (e *InvalidImportLocationError) Error() string {
-	return fmt.Sprintf(
-		"unexpected token in import declaration: got %s, expected address, string, or identifier",
+	return expectedButGotToken(
+		"unexpected token in import declaration: expected address, string, or identifier",
 		e.GotToken.Type,
 	)
 }
@@ -2576,16 +2587,19 @@ func (e *InvalidImportContinuationError) EndPosition(_ common.MemoryGauge) ast.P
 }
 
 func (e *InvalidImportContinuationError) Error() string {
-	return fmt.Sprintf(
-		"unexpected token in import declaration: got %s, expected keyword %q or %s",
+	return expectedButGotToken(
+		fmt.Sprintf(
+			"unexpected token in import declaration: expected keyword %q or %s",
+			KeywordFrom,
+			lexer.TokenComma,
+		),
 		e.GotToken.Type,
-		KeywordFrom,
-		lexer.TokenComma,
 	)
 }
 
 func (*InvalidImportContinuationError) SecondaryError() string {
-	return "after an imported identifier, expect either a comma to import more items or the 'from' keyword to specify the import location"
+	return "after an imported identifier, expect either a comma to import more items " +
+		"or the 'from' keyword to specify the import location"
 }
 
 func (*InvalidImportContinuationError) DocumentationLink() string {
@@ -2687,9 +2701,11 @@ func (e *InvalidTokenInImportListError) EndPosition(_ common.MemoryGauge) ast.Po
 }
 
 func (e *InvalidTokenInImportListError) Error() string {
-	return fmt.Sprintf(
-		"expected identifier or keyword %q, got %s",
-		KeywordFrom,
+	return expectedButGotToken(
+		fmt.Sprintf(
+			"expected identifier or keyword %q",
+			KeywordFrom,
+		),
 		e.GotToken.Type,
 	)
 }
@@ -2795,7 +2811,7 @@ func (e *InvalidInterfaceNameError) EndPosition(_ common.MemoryGauge) ast.Positi
 }
 
 func (e *InvalidInterfaceNameError) Error() string {
-	return fmt.Sprintf("expected interface name, got keyword %q", "interface")
+	return fmt.Sprintf("expected interface name, got keyword %q", KeywordInterface)
 }
 
 func (*InvalidInterfaceNameError) SecondaryError() string {
@@ -2994,11 +3010,10 @@ func (e *MemberAccessMissingNameError) EndPosition(_ common.MemoryGauge) ast.Pos
 }
 
 func (e *MemberAccessMissingNameError) Error() string {
-	tokenType := e.GotToken.Type
-	if tokenType == lexer.TokenEOF {
-		return "expected member name"
-	}
-	return fmt.Sprintf("expected member name, got %s", tokenType)
+	return expectedButGotToken(
+		"expected member name",
+		e.GotToken.Type,
+	)
 }
 
 func (*MemberAccessMissingNameError) SecondaryError() string {
@@ -3223,11 +3238,10 @@ func (e *NestedTypeMissingNameError) EndPosition(_ common.MemoryGauge) ast.Posit
 }
 
 func (e *NestedTypeMissingNameError) Error() string {
-	tokenType := e.GotToken.Type
-	if tokenType == lexer.TokenEOF {
-		return "expected nested type name after dot (.)"
-	}
-	return fmt.Sprintf("expected nested type name after dot (.) got %s", tokenType)
+	return expectedButGotToken(
+		"expected nested type name after dot (.)",
+		e.GotToken.Type,
+	)
 }
 
 func (*NestedTypeMissingNameError) SecondaryError() string {
