@@ -2849,3 +2849,41 @@ func (*NonNominalTypeError) SecondaryError() string {
 func (*NonNominalTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system/"
 }
+
+// NestedTypeMissingNameError is reported when a nested type is missing a name.
+type NestedTypeMissingNameError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &NestedTypeMissingNameError{}
+var _ errors.UserError = &NestedTypeMissingNameError{}
+var _ errors.SecondaryError = &NestedTypeMissingNameError{}
+var _ errors.HasDocumentationLink = &NestedTypeMissingNameError{}
+
+func (*NestedTypeMissingNameError) isParseError() {}
+
+func (*NestedTypeMissingNameError) IsUserError() {}
+
+func (e *NestedTypeMissingNameError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *NestedTypeMissingNameError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *NestedTypeMissingNameError) Error() string {
+	tokenType := e.GotToken.Type
+	if tokenType == lexer.TokenEOF {
+		return "expected nested type name after dot (.)"
+	}
+	return fmt.Sprintf("expected nested type name after dot (.) got %s", tokenType)
+}
+
+func (*NestedTypeMissingNameError) SecondaryError() string {
+	return "after a dot (.), you must provide a valid identifier for the nested type name"
+}
+
+func (*NestedTypeMissingNameError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}

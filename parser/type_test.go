@@ -76,6 +76,27 @@ func TestParseNominalType(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("invalid nested", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("Foo.1")
+		AssertEqualWithDiff(t,
+			[]error{
+				&NestedTypeMissingNameError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+							EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseInvalidType(t *testing.T) {

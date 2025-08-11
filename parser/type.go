@@ -180,11 +180,9 @@ func parseNominalTypeRemainder(p *parser, token lexer.Token) (*ast.NominalType, 
 		nestedToken := p.current
 
 		if !nestedToken.Is(lexer.TokenIdentifier) {
-			return nil, p.newSyntaxError(
-				"expected identifier after %s, got %s",
-				lexer.TokenDot,
-				nestedToken.Type,
-			)
+			return nil, &NestedTypeMissingNameError{
+				GotToken: nestedToken,
+			}
 		}
 
 		nestedIdentifier := p.tokenToIdentifier(nestedToken)
@@ -196,7 +194,6 @@ func parseNominalTypeRemainder(p *parser, token lexer.Token) (*ast.NominalType, 
 			nestedIdentifiers,
 			nestedIdentifier,
 		)
-
 	}
 
 	return ast.NewNominalType(
@@ -543,8 +540,7 @@ func parseNominalType(
 	return nominalType, nil
 }
 
-// parseNominalTypes parses zero or more nominal types separated by a separator, either
-// a comma `,` or a vertical bar `|`.
+// parseNominalTypes parses zero or more nominal types separated by a separator.
 func parseNominalTypes(
 	p *parser,
 	endTokenType lexer.TokenType,
