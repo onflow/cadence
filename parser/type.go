@@ -600,21 +600,21 @@ func parseNominalTypes(
 
 		default:
 			if !expectType {
-				return nil, ast.EmptyPosition, p.newSyntaxError(
-					"unexpected token: got %s, expected %s or %s",
-					p.current.Type,
-					separator,
-					endTokenType,
-				)
+				return nil, ast.EmptyPosition, &UnexpectedTokenInsteadOfSeparatorError{
+					GotToken:          p.current,
+					ExpectedSeparator: separator,
+					ExpectedEndToken:  endTokenType,
+				}
 			}
-
-			expectType = false
 
 			nominalType, err := parseNominalType(p)
 			if err != nil {
 				return nil, ast.EmptyPosition, err
 			}
+
 			nominalTypes = append(nominalTypes, nominalType)
+
+			expectType = false
 		}
 	}
 
@@ -864,12 +864,11 @@ func parseCommaSeparatedTypeAnnotations(
 
 		default:
 			if !expectTypeAnnotation {
-				return nil, p.newSyntaxError(
-					"unexpected token: got %s, expected %s or %s",
-					p.current.Type,
-					lexer.TokenComma,
-					endTokenType,
-				)
+				return nil, &UnexpectedTokenInsteadOfSeparatorError{
+					GotToken:          p.current,
+					ExpectedSeparator: lexer.TokenComma,
+					ExpectedEndToken:  endTokenType,
+				}
 			}
 
 			typeAnnotation, err := parseTypeAnnotation(p)

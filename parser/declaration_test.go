@@ -2159,9 +2159,17 @@ func TestParseAccess(t *testing.T) {
 		result, errs := parse("access ( foo | bar , baz )")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token: got ',', expected '|' or ')'",
-					Pos:     ast.Position{Offset: 19, Line: 1, Column: 19},
+				&UnexpectedTokenInsteadOfSeparatorError{
+					GotToken: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 19, Line: 1, Column: 19},
+							EndPos:   ast.Position{Offset: 19, Line: 1, Column: 19},
+						},
+						Type: lexer.TokenComma,
+					},
+					ExpectedSeparator: lexer.TokenVerticalBar,
+					ExpectedEndToken:  lexer.TokenParenClose,
 				},
 			},
 			errs,
@@ -2180,9 +2188,17 @@ func TestParseAccess(t *testing.T) {
 		result, errs := parse("access ( foo , bar | baz )")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token: got '|', expected ',' or ')'",
-					Pos:     ast.Position{Offset: 19, Line: 1, Column: 19},
+				&UnexpectedTokenInsteadOfSeparatorError{
+					GotToken: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 19, Line: 1, Column: 19},
+							EndPos:   ast.Position{Offset: 19, Line: 1, Column: 19},
+						},
+						Type: lexer.TokenVerticalBar,
+					},
+					ExpectedSeparator: lexer.TokenComma,
+					ExpectedEndToken:  lexer.TokenParenClose,
 				},
 			},
 			errs,
@@ -2329,6 +2345,34 @@ func TestParseAccess(t *testing.T) {
 				&ExpectedTypeInsteadSeparatorError{
 					Pos:       ast.Position{Offset: 15, Line: 1, Column: 15},
 					Separator: lexer.TokenComma,
+				},
+			},
+			errs,
+		)
+
+		AssertEqualWithDiff(t,
+			ast.AccessNotSpecified,
+			result,
+		)
+	})
+
+	t.Run("access, conjunctive entitlements list with missing separator", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( foo, bar baz )")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedTokenInsteadOfSeparatorError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 18, Line: 1, Column: 18},
+							EndPos:   ast.Position{Offset: 20, Line: 1, Column: 20},
+						},
+					},
+					ExpectedSeparator: lexer.TokenComma,
+					ExpectedEndToken:  lexer.TokenParenClose,
 				},
 			},
 			errs,

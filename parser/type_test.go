@@ -568,9 +568,16 @@ func TestParseReferenceType(t *testing.T) {
 		_, errs := testParseType("auth(X, Y | Z) &Int")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token: got '|', expected ',' or ')'",
-					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				&UnexpectedTokenInsteadOfSeparatorError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+						},
+						Type: lexer.TokenVerticalBar,
+					},
+					ExpectedSeparator: lexer.TokenComma,
+					ExpectedEndToken:  lexer.TokenParenClose,
 				},
 			},
 			errs,
@@ -584,9 +591,16 @@ func TestParseReferenceType(t *testing.T) {
 		_, errs := testParseType("auth(X | Y, Z) &Int")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token: got ',', expected '|' or ')'",
-					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				&UnexpectedTokenInsteadOfSeparatorError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+						},
+						Type: lexer.TokenComma,
+					},
+					ExpectedSeparator: lexer.TokenVerticalBar,
+					ExpectedEndToken:  lexer.TokenParenClose,
 				},
 			},
 			errs,
@@ -1636,6 +1650,31 @@ func TestParseInstantiationType(t *testing.T) {
 			[]error{
 				&UnexpectedCommaInTypeAnnotationListError{
 					Pos: ast.Position{Offset: 2, Line: 1, Column: 2},
+				},
+			},
+			errs,
+		)
+
+		assert.Nil(t, result)
+	})
+
+	t.Run("invalid: missing separator", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("T<U V>")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedTokenInsteadOfSeparatorError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+							EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+						},
+					},
+					ExpectedSeparator: lexer.TokenComma,
+					ExpectedEndToken:  lexer.TokenGreater,
 				},
 			},
 			errs,

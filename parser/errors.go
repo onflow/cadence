@@ -1521,6 +1521,52 @@ func (*ExpectedTypeInsteadSeparatorError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
+// UnexpectedTokenInsteadOfSeparatorError is reported when an unexpected token is found,
+// where a separator or an end token was expected.
+type UnexpectedTokenInsteadOfSeparatorError struct {
+	GotToken          lexer.Token
+	ExpectedSeparator lexer.TokenType
+	ExpectedEndToken  lexer.TokenType
+}
+
+var _ ParseError = &UnexpectedTokenInsteadOfSeparatorError{}
+var _ errors.UserError = &UnexpectedTokenInsteadOfSeparatorError{}
+var _ errors.SecondaryError = &UnexpectedTokenInsteadOfSeparatorError{}
+var _ errors.HasDocumentationLink = &UnexpectedTokenInsteadOfSeparatorError{}
+
+func (*UnexpectedTokenInsteadOfSeparatorError) isParseError() {}
+
+func (*UnexpectedTokenInsteadOfSeparatorError) IsUserError() {}
+
+func (e *UnexpectedTokenInsteadOfSeparatorError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *UnexpectedTokenInsteadOfSeparatorError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *UnexpectedTokenInsteadOfSeparatorError) Error() string {
+	return fmt.Sprintf(
+		"unexpected token: got %s, expected %s or separator %s",
+		e.GotToken.Type,
+		e.ExpectedEndToken,
+		e.ExpectedSeparator,
+	)
+}
+
+func (e *UnexpectedTokenInsteadOfSeparatorError) SecondaryError() string {
+	return fmt.Sprintf(
+		"did you miss a separator ('%s') or a closing token ('%s')?",
+		e.ExpectedSeparator,
+		e.ExpectedEndToken,
+	)
+}
+
+func (*UnexpectedTokenInsteadOfSeparatorError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
 // MissingClosingParenInArgumentListError is reported when an argument list is missing a closing parenthesis.
 type MissingClosingParenInArgumentListError struct {
 	Pos ast.Position
