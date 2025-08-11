@@ -1584,6 +1584,33 @@ func (*UnexpectedTokenInTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
+// InvalidConstantSizedTypeSizeError
+
+type InvalidConstantSizedTypeSizeError struct {
+	ast.Range
+}
+
+var _ ParseError = &InvalidConstantSizedTypeSizeError{}
+var _ errors.UserError = &InvalidConstantSizedTypeSizeError{}
+var _ errors.SecondaryError = &InvalidConstantSizedTypeSizeError{}
+var _ errors.HasDocumentationLink = &InvalidConstantSizedTypeSizeError{}
+
+func (*InvalidConstantSizedTypeSizeError) isParseError() {}
+
+func (*InvalidConstantSizedTypeSizeError) IsUserError() {}
+
+func (*InvalidConstantSizedTypeSizeError) Error() string {
+	return "expected positive integer size for constant sized type"
+}
+
+func (*InvalidConstantSizedTypeSizeError) SecondaryError() string {
+	return "the size of a constant-sized array must be a positive integer literal"
+}
+
+func (*InvalidConstantSizedTypeSizeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types/arrays#array-types"
+}
+
 // CustomDestructorError
 
 type CustomDestructorError struct {

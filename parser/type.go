@@ -224,24 +224,18 @@ func defineArrayType() {
 				// Skip the semicolon
 				p.nextSemanticToken()
 
-				if !p.current.Type.IsIntegerLiteral() {
-					p.reportSyntaxError("expected positive integer size for constant sized type")
+				sizeExpression, err := parseExpression(p, lowestBindingPower)
+				if err != nil {
+					return nil, err
+				}
 
-					// Skip the invalid non-integer literal token
-					p.next()
-
+				integerExpression, ok := sizeExpression.(*ast.IntegerExpression)
+				if !ok || integerExpression.Value.Sign() < 0 {
+					p.report(&InvalidConstantSizedTypeSizeError{
+						Range: ast.NewRangeFromPositioned(p.memoryGauge, sizeExpression),
+					})
 				} else {
-					numberExpression, err := parseExpression(p, lowestBindingPower)
-					if err != nil {
-						return nil, err
-					}
-
-					integerExpression, ok := numberExpression.(*ast.IntegerExpression)
-					if !ok || integerExpression.Value.Sign() < 0 {
-						p.reportSyntaxError("expected positive integer size for constant sized type")
-					} else {
-						size = integerExpression
-					}
+					size = integerExpression
 				}
 			}
 

@@ -172,22 +172,29 @@ func TestParseArrayType(t *testing.T) {
 		result, errs := testParseType("[Int ; -2 ]")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: `expected positive integer size for constant sized type`,
-					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
-				},
-				// TODO: improve/avoid error by skipping full negative integer literal
-				&SyntaxError{
-					Message:       `expected token ']'`,
-					Pos:           ast.Position{Offset: 8, Line: 1, Column: 8},
-					Secondary:     "check for missing punctuation, operators, or syntax elements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
+				&InvalidConstantSizedTypeSizeError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+						EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+					},
 				},
 			},
 			errs,
 		)
 
-		require.Nil(t, result)
+		// The parser recovers and returns a variable-sized array type
+		AssertEqualWithDiff(t,
+			&ast.VariableSizedType{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{Identifier: "Int", Pos: ast.Position{Offset: 1, Line: 1, Column: 1}},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+					EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			result,
+		)
 	})
 
 	t.Run("constant, invalid size", func(t *testing.T) {
@@ -197,9 +204,11 @@ func TestParseArrayType(t *testing.T) {
 		result, errs := testParseType("[Int ; X ]")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: `expected positive integer size for constant sized type`,
-					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				&InvalidConstantSizedTypeSizeError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+						EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+					},
 				},
 			},
 			errs,
