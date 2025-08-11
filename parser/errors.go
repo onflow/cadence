@@ -286,7 +286,8 @@ func (UnexpectedEOFError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
-// UnexpectedEOFExpectedTypeError is reported when the end of the program is reached unexpectedly, but a type was expected.
+// UnexpectedEOFExpectedTypeError is reported when the end of the program is reached unexpectedly,
+// but a type was expected.
 type UnexpectedEOFExpectedTypeError struct {
 	Pos ast.Position
 }
@@ -317,6 +318,41 @@ func (*UnexpectedEOFExpectedTypeError) SecondaryError() string {
 }
 
 func (*UnexpectedEOFExpectedTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+// UnexpectedEOFExpectedTypeAnnotationError is reported when the end of the program is reached unexpectedly,
+// but a type annotation was expected.
+type UnexpectedEOFExpectedTypeAnnotationError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &UnexpectedEOFExpectedTypeAnnotationError{}
+var _ errors.UserError = &UnexpectedEOFExpectedTypeAnnotationError{}
+var _ errors.SecondaryError = &UnexpectedEOFExpectedTypeAnnotationError{}
+var _ errors.HasDocumentationLink = &UnexpectedEOFExpectedTypeAnnotationError{}
+
+func (*UnexpectedEOFExpectedTypeAnnotationError) isParseError() {}
+
+func (*UnexpectedEOFExpectedTypeAnnotationError) IsUserError() {}
+
+func (e *UnexpectedEOFExpectedTypeAnnotationError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *UnexpectedEOFExpectedTypeAnnotationError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*UnexpectedEOFExpectedTypeAnnotationError) Error() string {
+	return "unexpected end of input, expected type annotation"
+}
+
+func (*UnexpectedEOFExpectedTypeAnnotationError) SecondaryError() string {
+	return "check for incomplete expressions, missing tokens, or unterminated strings/comments"
+}
+
+func (*UnexpectedEOFExpectedTypeAnnotationError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 

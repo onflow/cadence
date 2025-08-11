@@ -852,7 +852,7 @@ func parseCommaSeparatedTypeAnnotations(
 
 		case lexer.TokenEOF:
 			if expectTypeAnnotation {
-				return nil, &UnexpectedEOFExpectedTypeError{
+				return nil, &UnexpectedEOFExpectedTypeAnnotationError{
 					Pos: p.current.StartPos,
 				}
 			} else {

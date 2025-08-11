@@ -97,6 +97,21 @@ func TestParseNominalType(t *testing.T) {
 			errs,
 		)
 	})
+
+	t.Run("incomplete parameter list", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("fun(T,")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedEOFExpectedTypeAnnotationError{
+					Pos: ast.Position{Offset: 6, Line: 1, Column: 6},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseInvalidType(t *testing.T) {
