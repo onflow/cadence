@@ -573,7 +573,10 @@ func parseNominalTypes(
 
 		case endTokenType:
 			if expectType && len(nominalTypes) > 0 {
-				p.reportSyntaxError("missing type after separator")
+				p.report(&MissingTypeAfterSeparatorError{
+					Pos:       p.current.StartPos,
+					Separator: separator,
+				})
 			}
 			endPos = p.current.EndPos
 			atEnd = true

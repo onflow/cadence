@@ -2281,6 +2281,44 @@ func TestParseAccess(t *testing.T) {
 		)
 	})
 
+	t.Run("access, conjunctive entitlements list with trailing comma", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( foo , bar , )")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingTypeAfterSeparatorError{
+					Pos:       ast.Position{Offset: 21, Line: 1, Column: 21},
+					Separator: lexer.TokenComma,
+				},
+			},
+			errs,
+		)
+
+		AssertEqualWithDiff(t,
+			ast.EntitlementAccess{
+				EntitlementSet: &ast.ConjunctiveEntitlementSet{
+					Elements: []*ast.NominalType{
+						{
+							Identifier: ast.Identifier{
+								Identifier: "foo",
+								Pos:        ast.Position{Offset: 9, Line: 1, Column: 9},
+							},
+						},
+						{
+							Identifier: ast.Identifier{
+								Identifier: "bar",
+								Pos:        ast.Position{Offset: 15, Line: 1, Column: 15},
+							},
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
 	t.Run("access, disjunctive entitlements list ending with keyword", func(t *testing.T) {
 
 		t.Parallel()
@@ -3686,7 +3724,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&UnexpectedEOFExpectedTypeError{
-					Pos:           ast.Position{Offset: 26, Line: 1, Column: 26},
+					Pos: ast.Position{Offset: 26, Line: 1, Column: 26},
 				},
 			},
 			errs,
@@ -6813,15 +6851,34 @@ func TestParseInvalidConformances(t *testing.T) {
 
 	t.Parallel()
 
-	_, errs := testParseDeclarations("struct Test: {}")
-	AssertEqualWithDiff(t,
-		[]error{
-			&MissingConformanceError{
-				Pos: ast.Position{Offset: 13, Line: 1, Column: 13},
+	t.Run("no conformances", func(t *testing.T) {
+		t.Parallel()
+
+		_, errs := testParseDeclarations("struct Test: {}")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingConformanceError{
+					Pos: ast.Position{Offset: 13, Line: 1, Column: 13},
+				},
 			},
-		},
-		errs,
-	)
+			errs,
+		)
+	})
+
+	t.Run("missing type after comma", func(t *testing.T) {
+		t.Parallel()
+
+		_, errs := testParseDeclarations("struct Test: I, {}")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingTypeAfterSeparatorError{
+					Pos:       ast.Position{Offset: 16, Line: 1, Column: 16},
+					Separator: lexer.TokenComma,
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseInvalidMember(t *testing.T) {

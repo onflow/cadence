@@ -1411,6 +1411,41 @@ func (*MissingTypeAfterCommaInIntersectionError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
 }
 
+// MissingTypeAfterSeparatorError is reported when a type is missing after a separator.
+type MissingTypeAfterSeparatorError struct {
+	Pos       ast.Position
+	Separator lexer.TokenType
+}
+
+var _ ParseError = &MissingTypeAfterSeparatorError{}
+var _ errors.UserError = &MissingTypeAfterSeparatorError{}
+var _ errors.SecondaryError = &MissingTypeAfterSeparatorError{}
+var _ errors.HasDocumentationLink = &MissingTypeAfterSeparatorError{}
+
+func (*MissingTypeAfterSeparatorError) isParseError() {}
+
+func (*MissingTypeAfterSeparatorError) IsUserError() {}
+
+func (e *MissingTypeAfterSeparatorError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *MissingTypeAfterSeparatorError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (e *MissingTypeAfterSeparatorError) Error() string {
+	return fmt.Sprintf("missing type after separator: %s", e.Separator)
+}
+
+func (e *MissingTypeAfterSeparatorError) SecondaryError() string {
+	return fmt.Sprintf("a type is expected after the %s separator", e.Separator)
+}
+
+func (*MissingTypeAfterSeparatorError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
 // MissingClosingParenInArgumentListError is reported when an argument list is missing a closing parenthesis.
 type MissingClosingParenInArgumentListError struct {
 	Pos ast.Position
