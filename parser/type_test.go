@@ -959,8 +959,7 @@ func TestParseDictionaryType(t *testing.T) {
 		result, errs := testParseType("{T:}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "missing dictionary value type",
+				&MissingDictionaryValueTypeError{
 					Pos:     ast.Position{Offset: 3, Line: 1, Column: 3},
 				},
 			},

@@ -1140,6 +1140,40 @@ func (*MultipleColonInDictionaryTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/values-and-types/dictionaries#dictionary-types"
 }
 
+// MissingDictionaryValueTypeError is reported when a dictionary type is missing a value type.
+type MissingDictionaryValueTypeError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &MissingDictionaryValueTypeError{}
+var _ errors.UserError = &MissingDictionaryValueTypeError{}
+var _ errors.SecondaryError = &MissingDictionaryValueTypeError{}
+var _ errors.HasDocumentationLink = &MissingDictionaryValueTypeError{}
+
+func (*MissingDictionaryValueTypeError) isParseError() {}
+
+func (*MissingDictionaryValueTypeError) IsUserError() {}
+
+func (e *MissingDictionaryValueTypeError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *MissingDictionaryValueTypeError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*MissingDictionaryValueTypeError) Error() string {
+	return "missing dictionary value type"
+}
+
+func (*MissingDictionaryValueTypeError) SecondaryError() string {
+	return "a value type is expected after the colon (:)"
+}
+
+func (*MissingDictionaryValueTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types/dictionaries#dictionary-types"
+}
+
 // UnexpectedCommaInTypeAnnotationListError is reported when a comma is found at an unexpected position in a type annotation list.
 type UnexpectedCommaInTypeAnnotationListError struct {
 	Pos ast.Position

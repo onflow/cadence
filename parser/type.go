@@ -415,7 +415,9 @@ func defineIntersectionOrDictionaryType() {
 					if expectType {
 						switch {
 						case dictionaryType != nil:
-							p.reportSyntaxError("missing dictionary value type")
+							p.report(&MissingDictionaryValueTypeError{
+								Pos: p.current.StartPos,
+							})
 						case intersectionType != nil:
 							p.reportSyntaxError("missing type after comma")
 						}
