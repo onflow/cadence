@@ -2918,6 +2918,80 @@ func (*UnexpectedTokenAtEndError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
+// MissingCommentEndError is reported when a block comment is missing an end.
+type MissingCommentEndError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &MissingCommentEndError{}
+var _ errors.UserError = &MissingCommentEndError{}
+var _ errors.SecondaryError = &MissingCommentEndError{}
+var _ errors.HasDocumentationLink = &MissingCommentEndError{}
+
+func (*MissingCommentEndError) isParseError() {}
+
+func (*MissingCommentEndError) IsUserError() {}
+
+func (e *MissingCommentEndError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *MissingCommentEndError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (e *MissingCommentEndError) Error() string {
+	return fmt.Sprintf(
+		"missing comment end %s",
+		lexer.TokenBlockCommentEnd,
+	)
+}
+
+func (*MissingCommentEndError) SecondaryError() string {
+	return "ensure all block comments are properly closed with '*/'"
+}
+
+func (*MissingCommentEndError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax#comments"
+}
+
+// UnexpectedTokenInBlockCommentError is reported when an unexpected token is found in a block comment.
+type UnexpectedTokenInBlockCommentError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &UnexpectedTokenInBlockCommentError{}
+var _ errors.UserError = &UnexpectedTokenInBlockCommentError{}
+var _ errors.SecondaryError = &UnexpectedTokenInBlockCommentError{}
+var _ errors.HasDocumentationLink = &UnexpectedTokenInBlockCommentError{}
+
+func (*UnexpectedTokenInBlockCommentError) isParseError() {}
+
+func (*UnexpectedTokenInBlockCommentError) IsUserError() {}
+
+func (e *UnexpectedTokenInBlockCommentError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *UnexpectedTokenInBlockCommentError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *UnexpectedTokenInBlockCommentError) Error() string {
+	return fmt.Sprintf(
+		"unexpected token %s in block comment",
+		e.GotToken.Type,
+	)
+}
+
+func (*UnexpectedTokenInBlockCommentError) SecondaryError() string {
+	return "only text is allowed in a block comment"
+}
+
+func (*UnexpectedTokenInBlockCommentError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax#comments"
+}
+
 // SpecialFunctionReturnTypeError is reported when a special function has a return type.
 type SpecialFunctionReturnTypeError struct {
 	DeclarationKind common.DeclarationKind

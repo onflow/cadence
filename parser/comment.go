@@ -49,18 +49,16 @@ func (p *parser) parseBlockComment() (endToken lexer.Token, ok bool) {
 			}
 
 		case lexer.TokenEOF:
-			p.reportSyntaxError(
-				"missing comment end %s",
-				lexer.TokenBlockCommentEnd,
-			)
+			p.report(&MissingCommentEndError{
+				Pos: p.current.StartPos,
+			})
 			ok = false
 			return
 
 		default:
-			p.reportSyntaxError(
-				"unexpected token %s in block comment",
-				p.current.Type,
-			)
+			p.report(&UnexpectedTokenInBlockCommentError{
+				GotToken: p.current,
+			})
 			ok = false
 			return
 		}
