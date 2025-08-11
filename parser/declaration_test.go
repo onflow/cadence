@@ -3678,6 +3678,21 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("struct, one conformance, missing type after comma", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("access(all) struct S: RI, ")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedEOFExpectedTypeError{
+					Pos:           ast.Position{Offset: 26, Line: 1, Column: 26},
+				},
+			},
+			errs,
+		)
+	})
+
 	t.Run("struct, with fields, functions, and special functions", func(t *testing.T) {
 
 		t.Parallel()
