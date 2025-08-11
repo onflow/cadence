@@ -2323,11 +2323,11 @@ func TestParseAccess(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := parse("access ( , foo )")
+		result, errs := parse("access ( foo , , )")
 		AssertEqualWithDiff(t,
 			[]error{
 				&ExpectedTypeInsteadSeparatorError{
-					Pos:       ast.Position{Offset: 9, Line: 1, Column: 9},
+					Pos:       ast.Position{Offset: 15, Line: 1, Column: 15},
 					Separator: lexer.TokenComma,
 				},
 			},

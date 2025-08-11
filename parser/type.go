@@ -641,10 +641,10 @@ func parseParameterTypeAnnotations(p *parser) (typeAnnotations []*ast.TypeAnnota
 		switch p.current.Type {
 		case lexer.TokenComma:
 			if expectTypeAnnotation {
-				return nil, p.newSyntaxError(
-					"expected type annotation or end of list, got %q",
-					p.current.Type,
-				)
+				return nil, &ExpectedTypeAnnotationInsteadSeparatorError{
+					Pos:       p.current.StartPos,
+					Separator: lexer.TokenComma,
+				}
 			}
 			// Skip the comma
 			p.next()

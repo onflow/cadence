@@ -1311,6 +1311,22 @@ func TestParseFunctionType(t *testing.T) {
 		)
 	})
 
+	t.Run("invalid, leading comma", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("fun(,) : Void")
+		AssertEqualWithDiff(t,
+			[]error{
+				&ExpectedTypeAnnotationInsteadSeparatorError{
+					Pos:       ast.Position{Offset: 4, Line: 1, Column: 4},
+					Separator: lexer.TokenComma,
+				},
+			},
+			errs,
+		)
+	})
+
 	t.Run("three parameters, Int return type", func(t *testing.T) {
 
 		t.Parallel()
