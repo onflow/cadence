@@ -934,7 +934,9 @@ func defineIdentifierTypes() {
 						return nil, err
 					}
 				} else {
-					p.reportSyntaxError("expected authorization (entitlement list)")
+					p.report(&MissingStartOfAuthorizationError{
+						GotToken: p.current,
+					})
 				}
 
 				p.skipSpaceAndComments()

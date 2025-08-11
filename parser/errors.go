@@ -29,6 +29,17 @@ import (
 	"github.com/onflow/cadence/pretty"
 )
 
+func expectedButGotToken(message string, tokenType lexer.TokenType) string {
+	if tokenType == lexer.TokenEOF {
+		return message
+	}
+	return fmt.Sprintf(
+		"%s, got %s",
+		message,
+		tokenType,
+	)
+}
+
 // Error
 
 type Error struct {
@@ -537,6 +548,46 @@ func (*MissingStartOfParameterListError) SecondaryError() string {
 
 func (*MissingStartOfParameterListError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions"
+}
+
+// MissingStartOfAuthorizationError is reported when an authorization list is missing a start token.
+type MissingStartOfAuthorizationError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingStartOfAuthorizationError{}
+var _ errors.UserError = &MissingStartOfAuthorizationError{}
+var _ errors.SecondaryError = &MissingStartOfAuthorizationError{}
+var _ errors.HasDocumentationLink = &MissingStartOfAuthorizationError{}
+
+func (*MissingStartOfAuthorizationError) isParseError() {}
+
+func (*MissingStartOfAuthorizationError) IsUserError() {}
+
+func (e *MissingStartOfAuthorizationError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingStartOfAuthorizationError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingStartOfAuthorizationError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf(
+			"expected %s as start of authorization",
+			lexer.TokenParenOpen,
+		),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingStartOfAuthorizationError) SecondaryError() string {
+	return "authorized references must have an authorization list enclosed in parentheses (`auth(...)`)"
+}
+
+func (*MissingStartOfAuthorizationError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/references#authorized-references"
 }
 
 // UnexpectedTokenInParameterListError is reported when an unexpected token is found in a parameter list.

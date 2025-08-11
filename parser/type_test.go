@@ -431,16 +431,21 @@ func TestParseReferenceType(t *testing.T) {
 		)
 	})
 
-	t.Run("authorized, no entitlements", func(t *testing.T) {
+	t.Run("authorized, missing parens", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, errs := testParseType("auth &Int")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected authorization (entitlement list)",
-					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+				&MissingStartOfAuthorizationError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenAmpersand,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+						},
+					},
 				},
 			},
 			errs,
@@ -3307,9 +3312,15 @@ func TestParseAuthorizedReferenceTypeWithNoEntitlements(t *testing.T) {
 
 	AssertEqualWithDiff(t,
 		[]error{
-			&SyntaxError{
-				Message: "expected authorization (entitlement list)",
-				Pos:     ast.Position{Offset: 20, Line: 2, Column: 19},
+			&MissingStartOfAuthorizationError{
+				GotToken: lexer.Token{
+					SpaceOrError: nil,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 20, Line: 2, Column: 19},
+						EndPos:   ast.Position{Offset: 20, Line: 2, Column: 19},
+					},
+					Type: lexer.TokenAmpersand,
+				},
 			},
 		},
 		errs.(Error).Errors,
