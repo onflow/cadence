@@ -1485,6 +1485,42 @@ func (*MissingSeparatorInIntersectionOrDictionaryTypeError) DocumentationLink() 
 	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
 }
 
+// ExpectedTypeInsteadSeparatorError is reported when a separator is found at an unexpected position,
+// where a type was expected.
+type ExpectedTypeInsteadSeparatorError struct {
+	Pos       ast.Position
+	Separator lexer.TokenType
+}
+
+var _ ParseError = &ExpectedTypeInsteadSeparatorError{}
+var _ errors.UserError = &ExpectedTypeInsteadSeparatorError{}
+var _ errors.SecondaryError = &ExpectedTypeInsteadSeparatorError{}
+var _ errors.HasDocumentationLink = &ExpectedTypeInsteadSeparatorError{}
+
+func (*ExpectedTypeInsteadSeparatorError) isParseError() {}
+
+func (*ExpectedTypeInsteadSeparatorError) IsUserError() {}
+
+func (e *ExpectedTypeInsteadSeparatorError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *ExpectedTypeInsteadSeparatorError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (e *ExpectedTypeInsteadSeparatorError) Error() string {
+	return fmt.Sprintf("expected type, got separator '%s'", e.Separator)
+}
+
+func (e *ExpectedTypeInsteadSeparatorError) SecondaryError() string {
+	return "a type was expected, but a separator was found instead"
+}
+
+func (*ExpectedTypeInsteadSeparatorError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
 // MissingClosingParenInArgumentListError is reported when an argument list is missing a closing parenthesis.
 type MissingClosingParenInArgumentListError struct {
 	Pos ast.Position

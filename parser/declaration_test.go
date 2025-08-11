@@ -2319,6 +2319,27 @@ func TestParseAccess(t *testing.T) {
 		)
 	})
 
+	t.Run("access, conjunctive entitlements list with leading comma", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( , foo )")
+		AssertEqualWithDiff(t,
+			[]error{
+				&ExpectedTypeInsteadSeparatorError{
+					Pos:       ast.Position{Offset: 9, Line: 1, Column: 9},
+					Separator: lexer.TokenComma,
+				},
+			},
+			errs,
+		)
+
+		AssertEqualWithDiff(t,
+			ast.AccessNotSpecified,
+			result,
+		)
+	})
+
 	t.Run("access, disjunctive entitlements list ending with keyword", func(t *testing.T) {
 
 		t.Parallel()
@@ -3208,6 +3229,21 @@ func TestParseEvent(t *testing.T) {
 				&SyntaxError{
 					Pos:     ast.Position{Line: 1, Column: 6, Offset: 6},
 					Message: "expected identifier after start of event declaration, got keyword continue",
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("leading separator in conformances", func(t *testing.T) {
+		t.Parallel()
+
+		_, errs := testParseDeclarations("struct Test: , I {}")
+		AssertEqualWithDiff(t,
+			[]error{
+				&ExpectedTypeInsteadSeparatorError{
+					Pos:       ast.Position{Offset: 13, Line: 1, Column: 13},
+					Separator: lexer.TokenComma,
 				},
 			},
 			errs,

@@ -567,7 +567,10 @@ func parseNominalTypes(
 		switch p.current.Type {
 		case separator:
 			if expectType {
-				return nil, ast.EmptyPosition, p.newSyntaxError("unexpected separator")
+				return nil, ast.EmptyPosition, &ExpectedTypeInsteadSeparatorError{
+					Pos:       p.current.StartPos,
+					Separator: separator,
+				}
 			}
 			// Skip the separator
 			p.next()
