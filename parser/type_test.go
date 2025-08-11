@@ -724,8 +724,7 @@ func TestParseIntersectionType(t *testing.T) {
 		result, errs := testParseType("{ T , }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "missing type after comma",
+				&MissingTypeAfterCommaInIntersectionError{
 					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
 				},
 			},

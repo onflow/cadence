@@ -419,7 +419,9 @@ func defineIntersectionOrDictionaryType() {
 								Pos: p.current.StartPos,
 							})
 						case intersectionType != nil:
-							p.reportSyntaxError("missing type after comma")
+							p.report(&MissingTypeAfterCommaInIntersectionError{
+								Pos: p.current.StartPos,
+							})
 						}
 					}
 					endPos = p.current.EndPos

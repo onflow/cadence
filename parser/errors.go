@@ -1338,6 +1338,40 @@ func (*InvalidNonNominalTypeInIntersectionError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
 }
 
+// MissingTypeAfterCommaInIntersectionError is reported when a type is missing after a comma in an intersection type.
+type MissingTypeAfterCommaInIntersectionError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &MissingTypeAfterCommaInIntersectionError{}
+var _ errors.UserError = &MissingTypeAfterCommaInIntersectionError{}
+var _ errors.SecondaryError = &MissingTypeAfterCommaInIntersectionError{}
+var _ errors.HasDocumentationLink = &MissingTypeAfterCommaInIntersectionError{}
+
+func (*MissingTypeAfterCommaInIntersectionError) isParseError() {}
+
+func (*MissingTypeAfterCommaInIntersectionError) IsUserError() {}
+
+func (e *MissingTypeAfterCommaInIntersectionError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *MissingTypeAfterCommaInIntersectionError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*MissingTypeAfterCommaInIntersectionError) Error() string {
+	return "missing type after comma"
+}
+
+func (*MissingTypeAfterCommaInIntersectionError) SecondaryError() string {
+	return "a type is expected after the comma"
+}
+
+func (*MissingTypeAfterCommaInIntersectionError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
+}
+
 // MissingClosingParenInArgumentListError is reported when an argument list is missing a closing parenthesis.
 type MissingClosingParenInArgumentListError struct {
 	Pos ast.Position
