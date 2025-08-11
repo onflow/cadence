@@ -94,11 +94,6 @@ func setTypeMetaLeftDenotation(tokenType lexer.TokenType, metaLeftDenotation typ
 type prefixTypeFunc func(parser *parser, right ast.Type, tokenRange ast.Range) ast.Type
 type postfixTypeFunc func(parser *parser, left ast.Type, tokenRange ast.Range) ast.Type
 
-type literalType struct {
-	nullDenotation typeNullDenotationFunc
-	tokenType      lexer.TokenType
-}
-
 type prefixType struct {
 	nullDenotation prefixTypeFunc
 	bindingPower   int
@@ -126,6 +121,7 @@ func defineType(def any) {
 				return def.nullDenotation(parser, right, token.Range), nil
 			},
 		)
+
 	case postfixType:
 		tokenType := def.tokenType
 		setTypeLeftBindingPower(tokenType, def.bindingPower)
@@ -135,9 +131,7 @@ func defineType(def any) {
 				return def.leftDenotation(p, left, token.Range), nil
 			},
 		)
-	case literalType:
-		tokenType := def.tokenType
-		setTypeNullDenotation(tokenType, def.nullDenotation)
+
 	default:
 		panic(errors.NewUnreachableError())
 	}
