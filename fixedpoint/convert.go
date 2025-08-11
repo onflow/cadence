@@ -87,6 +87,20 @@ func Fix128FromBigInt(value *big.Int) fix.Fix128 {
 	return fix.NewFix128(high, low)
 }
 
+func Fix128FromIntAndScale(integer, scale int64) fix.Fix128 {
+	bigInt := new(big.Int).Mul(
+		big.NewInt(integer),
+		// To remove the fractional, multiply it by the given scale.
+		new(big.Int).Exp(
+			big.NewInt(10),
+			big.NewInt(scale),
+			nil,
+		),
+	)
+
+	return Fix128FromBigInt(bigInt)
+}
+
 func Fix128ToBigInt(fix128 fix.Fix128) *big.Int {
 	high := new(big.Int).SetUint64(uint64(fix128.Hi))
 	low := new(big.Int).SetUint64(uint64(fix128.Lo))

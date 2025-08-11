@@ -33,7 +33,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/fixedpoint"
+	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
 )
 
@@ -1061,32 +1061,7 @@ func encodeFix64(v int64) string {
 }
 
 func encodeFix128(v fix.Fix128) string {
-	fix128AsBigInt := fixedpoint.Fix128ToBigInt(v)
-
-	fraction := new(big.Int)
-	integer, fraction := new(big.Int).QuoRem(
-		fix128AsBigInt,
-		fixedpoint.Fix128FactorAsBigInt,
-		fraction,
-	)
-
-	var builder strings.Builder
-
-	negative := fraction.Sign() < 0
-	if negative {
-		fraction = fraction.Neg(fraction)
-		if integer.Sign() == 0 {
-			builder.WriteByte('-')
-		}
-	}
-
-	builder.WriteString(fmt.Sprintf(
-		"%d.%08d",
-		integer,
-		fraction,
-	))
-
-	return builder.String()
+	return format.Fix128(v)
 }
 
 func encodeUFix64(v uint64) string {

@@ -230,6 +230,8 @@ func (d *Decoder) DecodeJSON(v any) cadence.Value {
 		return d.decodeWord256(valueJSON)
 	case fix64TypeStr:
 		return d.decodeFix64(valueJSON)
+	case fix128TypeStr:
+		return d.decodeFix128(valueJSON)
 	case ufix64TypeStr:
 		return d.decodeUFix64(valueJSON)
 	case arrayTypeStr:
@@ -646,6 +648,17 @@ func (d *Decoder) decodeFix64(valueJSON any) cadence.Fix64 {
 	})
 	if err != nil {
 		panic(errors.NewDefaultUserError("invalid Fix64: %w", err))
+	}
+	return v
+}
+
+
+func (d *Decoder) decodeFix128(valueJSON any) cadence.Fix128 {
+	v, err := cadence.NewMeteredFix128(d.gauge, func() (string, error) {
+		return toString(valueJSON), nil
+	})
+	if err != nil {
+		panic(errors.NewDefaultUserError("invalid Fix128: %w", err))
 	}
 	return v
 }
