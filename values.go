@@ -1322,11 +1322,31 @@ type Fix128 fix.Fix128
 
 var _ Value = Fix128{}
 
-var fix128MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(Fix128{})))
+var Fix128MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(Fix128{})))
 var fix128MinExceededError = errors.NewDefaultUserError("value exceeds min of Fix128")
 var fix128MaxExceededError = errors.NewDefaultUserError("value exceeds max of Fix128")
 
-func NewFix128(s string) (Fix128, error) {
+func NewFix128(v fix.Fix128) (Fix128, error) {
+	if v.Lt(fixedpoint.Fix128TypeMin) {
+		return Fix128{}, fix128MinExceededError
+	}
+	if v.Gt(fixedpoint.Fix128TypeMax) {
+		return Fix128{}, fix128MaxExceededError
+	}
+
+	return Fix128(v), nil
+}
+
+func NewFix128FromString(gauge common.MemoryGauge, constructor func() (string, error)) (Fix128, error) {
+	common.UseMemory(gauge, Fix128MemoryUsage)
+	value, err := constructor()
+	if err != nil {
+		return Fix128{}, err
+	}
+	return NewUnmeteredFix128FromString(value)
+}
+
+func NewUnmeteredFix128FromString(s string) (Fix128, error) {
 	v, err := fixedpoint.ParseFix128(s)
 	if err != nil {
 		return Fix128{}, err
@@ -1336,19 +1356,6 @@ func NewFix128(s string) (Fix128, error) {
 
 	return Fix128(fix128Value), nil
 }
-
-func NewFix128FromBig(v *big.Int) (Fix128, error) {
-	if v.Cmp(sema.Fix128TypeMinIntBig) < 0 {
-		return Fix128{}, fix128MinExceededError
-	}
-	if v.Cmp(sema.Fix128TypeMaxIntBig) > 0 {
-		return Fix128{}, fix128MaxExceededError
-	}
-
-	fix128Value := fixedpoint.Fix128FromBigInt(v)
-	return Fix128(fix128Value), nil
-}
-
 
 func NewFix128FromParts(negative bool, integer int, fraction uint) (Fix128, error) {
 	v, err := fixedpoint.NewFix128(
@@ -1366,19 +1373,10 @@ func NewFix128FromParts(negative bool, integer int, fraction uint) (Fix128, erro
 	return Fix128(fix128Value), nil
 }
 
-func NewMeteredFix128(gauge common.MemoryGauge, constructor func() (string, error)) (Fix128, error) {
-	common.UseMemory(gauge, fix128MemoryUsage)
-	value, err := constructor()
-	if err != nil {
-		return Fix128{}, err
-	}
-	return NewFix128(value)
-}
-
 func (Fix128) isValue() {}
 
 func (Fix128) Type() Type {
-	return Fix64Type
+	return Fix128Type
 }
 
 func (v Fix128) MeteredType(common.MemoryGauge) Type {

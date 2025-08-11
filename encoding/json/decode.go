@@ -654,7 +654,7 @@ func (d *Decoder) decodeFix64(valueJSON any) cadence.Fix64 {
 
 
 func (d *Decoder) decodeFix128(valueJSON any) cadence.Fix128 {
-	v, err := cadence.NewMeteredFix128(d.gauge, func() (string, error) {
+	v, err := cadence.NewFix128FromString(d.gauge, func() (string, error) {
 		return toString(valueJSON), nil
 	})
 	if err != nil {

@@ -601,6 +601,9 @@ func (e *Encoder) encodeValue(
 	case cadence.Fix64:
 		return e.encodeFix64(v)
 
+	case cadence.Fix128:
+		return e.encodeFix128(v)
+
 	case cadence.UFix64:
 		return e.encodeUFix64(v)
 
@@ -863,6 +866,34 @@ func (e *Encoder) encodeWord256(v cadence.Word256) error {
 // fix64-value = (int .ge -9223372036854775808) .le 9223372036854775807
 func (e *Encoder) encodeFix64(v cadence.Fix64) error {
 	return e.enc.EncodeInt64(int64(v))
+}
+
+// encodeFix128 encodes cadence.Fix128 as
+// language=CDDL
+// fix128-value = [
+//
+//	hi: uint64,
+//	low: uint64,
+//
+// ]
+func (e *Encoder) encodeFix128(v cadence.Fix128) error {
+	// Encode array head with length 2.
+	err := e.enc.EncodeRawBytes([]byte{
+		// array, 2 items follow
+		0x82,
+	})
+	if err != nil {
+		return err
+	}
+
+	// element 0: high-bits as CBOR uint64.
+	err = e.enc.EncodeUint64(uint64(v.Hi))
+	if err != nil {
+		return err
+	}
+
+	// element 1: low-bits as CBOR uint64.
+	return e.enc.EncodeUint64(uint64(v.Lo))
 }
 
 // encodeUFix64 encodes cadence.UFix64 as
