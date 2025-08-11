@@ -3051,6 +3051,38 @@ func TestParseCreate(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("nested", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseExpression("create Foo.Bar()")
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			&ast.CreateExpression{
+				InvocationExpression: &ast.InvocationExpression{
+					InvokedExpression: &ast.MemberExpression{
+						Expression: &ast.IdentifierExpression{
+							Identifier: ast.Identifier{
+								Identifier: "Foo",
+								Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+							},
+						},
+						AccessEndPos: ast.Position{Line: 1, Column: 11, Offset: 11},
+						Identifier: ast.Identifier{
+							Identifier: "Bar",
+							Pos:        ast.Position{Line: 1, Column: 11, Offset: 11},
+						},
+					},
+					ArgumentsStartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
+					EndPos:            ast.Position{Line: 1, Column: 15, Offset: 15},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
 }
 
 func TestParseNil(t *testing.T) {

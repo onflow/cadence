@@ -1312,6 +1312,54 @@ func TestParseFunctionType(t *testing.T) {
 		)
 	})
 
+	t.Run("no parameters, no return type", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("fun()")
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			&ast.FunctionType{
+				PurityAnnotation: ast.FunctionPurityUnspecified,
+				ReturnTypeAnnotation: &ast.TypeAnnotation{
+					IsResource: false,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "",
+							Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("no parameter list", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("fun")
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message:       "expected token '('",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Migration:     "",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 3, Line: 1, Column: 3},
+				},
+			},
+			errs,
+		)
+	})
+
 	t.Run("view function type", func(t *testing.T) {
 
 		t.Parallel()
