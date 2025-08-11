@@ -444,8 +444,8 @@ func (v Fix128Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []
 	scratch[0] = byte(HashInputTypeFix128)
 
 	fix128 := fix.Fix128(v)
-	binary.BigEndian.PutUint64(scratch[1:], uint64(fix128.Lo))
-	binary.BigEndian.PutUint64(scratch[9:], uint64(fix128.Hi))
+	binary.BigEndian.PutUint64(scratch[1:], uint64(fix128.Hi))
+	binary.BigEndian.PutUint64(scratch[9:], uint64(fix128.Lo))
 	return scratch[:17]
 }
 

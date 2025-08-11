@@ -1028,6 +1028,12 @@ func TestStringer(t *testing.T) {
 			},
 			expected: "-32.00000000",
 		},
+		"Fix1284": {
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredFix128ValueWithInteger(-32, EmptyLocationRange)
+			},
+			expected: "-32.000000000000000000000000",
+		},
 		"Void": {
 			value: func(_ *Interpreter) Value {
 				return Void
@@ -1699,6 +1705,27 @@ func TestGetHashInput(t *testing.T) {
 		"Fix64 max": {
 			value:    NewUnmeteredFix64ValueWithInteger(sema.Fix64TypeMaxInt, EmptyLocationRange),
 			expected: []byte{byte(HashInputTypeFix64), 0x7f, 0xff, 0xff, 0xff, 0xfc, 0xbc, 0x30, 0x00},
+		},
+		"Fix128": {
+			value: NewUnmeteredFix128ValueWithInteger(-32, EmptyLocationRange),
+			expected: []byte{
+				byte(HashInputTypeFix128),
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xe5, 0x87, 0xbc, 0x86, 0x26, 0x62, 0x4b, 0xe0, 0x0, 0x0, 0x0,
+			},
+		},
+		"Fix128 min": {
+			value: NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
+			expected: []byte{
+				byte(HashInputTypeFix128),
+				0x80, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			},
+		},
+		"Fix128 max": {
+			value: NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
+			expected: []byte{
+				byte(HashInputTypeFix128),
+				0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			},
 		},
 		"true": {
 			value:    TrueValue,
