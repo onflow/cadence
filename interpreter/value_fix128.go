@@ -438,8 +438,8 @@ func (v Fix128Value) Equal(_ ValueComparisonContext, _ LocationRange, other Valu
 
 // HashInput returns a byte slice containing:
 // - HashInputTypeFix64 (1 byte)
-// - low 64 bits encoded in big-endian (8 bytes)
 // - high 64 bits encoded in big-endian (8 bytes)
+// - low 64 bits encoded in big-endian (8 bytes)
 func (v Fix128Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeFix128)
 
