@@ -21,6 +21,7 @@ package ccf
 import (
 	"errors"
 	"fmt"
+	fix "github.com/onflow/fixed-point"
 	"math"
 	"math/big"
 	goRuntime "runtime"
@@ -501,6 +502,9 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 
 	case cadence.Fix64Type:
 		return d.decodeFix64()
+
+	case cadence.Fix128Type:
+		return d.decodeFix128()
 
 	case cadence.UFix64Type:
 		return d.decodeUFix64()
@@ -1012,6 +1016,39 @@ func (d *Decoder) decodeFix64() (cadence.Value, error) {
 		return nil, err
 	}
 	return cadence.NewMeteredFix64FromRawFixedPointNumber(d.gauge, i)
+}
+
+// decodeFix64 decodes fix128-value as
+// language=CDDL
+// fix128-value = [
+//
+//	hi: uint64,
+//	low: uint64,
+//
+// ]
+func (d *Decoder) decodeFix128() (cadence.Value, error) {
+	// Decode array head of length 2.
+	err := decodeCBORArrayWithKnownSize(d.dec, 2)
+	if err != nil {
+		return nil, err
+	}
+
+	// Decode high-bits.
+	high, err := d.dec.DecodeUint64()
+	if err != nil {
+		return nil, err
+	}
+
+	// Decode low-bits.
+	low, err := d.dec.DecodeUint64()
+	if err != nil {
+		return nil, err
+	}
+
+	common.UseMemory(d.gauge, cadence.Fix128MemoryUsage)
+
+	fix128 := fix.NewFix128(high, low)
+	return cadence.NewFix128(fix128)
 }
 
 // decodeUFix64 decodes ufix64-value as
