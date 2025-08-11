@@ -629,57 +629,7 @@ func parseParameterTypeAnnotations(p *parser) (typeAnnotations []*ast.TypeAnnota
 		return
 	}
 
-	expectTypeAnnotation := true
-
-	var atEnd bool
-	progress := p.newProgress()
-
-	for !atEnd && p.checkProgress(&progress) {
-
-		p.skipSpaceAndComments()
-
-		switch p.current.Type {
-		case lexer.TokenComma:
-			if expectTypeAnnotation {
-				return nil, &ExpectedTypeAnnotationInsteadSeparatorError{
-					Pos:       p.current.StartPos,
-					Separator: lexer.TokenComma,
-				}
-			}
-			// Skip the comma
-			p.next()
-			expectTypeAnnotation = true
-
-		case lexer.TokenParenClose:
-			// Don't skip the closing paren, so that we can mark the current
-			// position as an end pos if the type signature is missing an explicit return type
-			atEnd = true
-
-		case lexer.TokenEOF:
-			return nil, &UnexpectedEOFExpectedTokenError{
-				ExpectedToken: lexer.TokenParenClose,
-				Pos:           p.current.StartPos,
-			}
-
-		default:
-			if !expectTypeAnnotation {
-				return nil, p.newSyntaxError(
-					"expected comma or end of list, got %q",
-					p.current.Type,
-				)
-			}
-
-			typeAnnotation, err := parseTypeAnnotation(p)
-			if err != nil {
-				return nil, err
-			}
-
-			typeAnnotations = append(typeAnnotations, typeAnnotation)
-
-			expectTypeAnnotation = false
-		}
-	}
-
+	typeAnnotations, err = parseCommaSeparatedTypeAnnotations(p, lexer.TokenParenClose)
 	return
 }
 

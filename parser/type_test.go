@@ -1038,6 +1038,24 @@ func TestParseIntersectionType(t *testing.T) {
 
 		assert.Nil(t, result)
 	})
+
+	t.Run("invalid: leading comma", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("{ , T }")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedCommaInIntersectionTypeError{
+					Pos: ast.Position{Offset: 2, Line: 1, Column: 2},
+				},
+			},
+			errs,
+		)
+
+		// TODO: return type
+		assert.Nil(t, result)
+	})
 }
 
 func TestParseDictionaryType(t *testing.T) {
@@ -1318,9 +1336,8 @@ func TestParseFunctionType(t *testing.T) {
 		_, errs := testParseType("fun(,) : Void")
 		AssertEqualWithDiff(t,
 			[]error{
-				&ExpectedTypeAnnotationInsteadSeparatorError{
-					Pos:       ast.Position{Offset: 4, Line: 1, Column: 4},
-					Separator: lexer.TokenComma,
+				&UnexpectedCommaInTypeAnnotationListError{
+					Pos: ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
 			},
 			errs,

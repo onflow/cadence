@@ -1521,42 +1521,6 @@ func (*ExpectedTypeInsteadSeparatorError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
-// ExpectedTypeAnnotationInsteadSeparatorError is reported when a separator is found at an unexpected position,
-// where a type was expected.
-type ExpectedTypeAnnotationInsteadSeparatorError struct {
-	Pos       ast.Position
-	Separator lexer.TokenType
-}
-
-var _ ParseError = &ExpectedTypeAnnotationInsteadSeparatorError{}
-var _ errors.UserError = &ExpectedTypeAnnotationInsteadSeparatorError{}
-var _ errors.SecondaryError = &ExpectedTypeAnnotationInsteadSeparatorError{}
-var _ errors.HasDocumentationLink = &ExpectedTypeAnnotationInsteadSeparatorError{}
-
-func (*ExpectedTypeAnnotationInsteadSeparatorError) isParseError() {}
-
-func (*ExpectedTypeAnnotationInsteadSeparatorError) IsUserError() {}
-
-func (e *ExpectedTypeAnnotationInsteadSeparatorError) StartPosition() ast.Position {
-	return e.Pos
-}
-
-func (e *ExpectedTypeAnnotationInsteadSeparatorError) EndPosition(_ common.MemoryGauge) ast.Position {
-	return e.Pos
-}
-
-func (e *ExpectedTypeAnnotationInsteadSeparatorError) Error() string {
-	return fmt.Sprintf("expected type annotation, got separator '%s'", e.Separator)
-}
-
-func (e *ExpectedTypeAnnotationInsteadSeparatorError) SecondaryError() string {
-	return "a type annotation was expected, but a separator was found instead"
-}
-
-func (*ExpectedTypeAnnotationInsteadSeparatorError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/syntax"
-}
-
 // MissingClosingParenInArgumentListError is reported when an argument list is missing a closing parenthesis.
 type MissingClosingParenInArgumentListError struct {
 	Pos ast.Position
