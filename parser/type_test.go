@@ -854,9 +854,14 @@ func TestParseIntersectionType(t *testing.T) {
 		result, errs := testParseType("{ T U }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected type",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				&MissingSeparatorInIntersectionOrDictionaryTypeError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+							EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,

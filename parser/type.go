@@ -437,7 +437,9 @@ func defineIntersectionOrDictionaryType() {
 
 				default:
 					if !expectType {
-						return nil, p.newSyntaxError("unexpected type")
+						return nil, &MissingSeparatorInIntersectionOrDictionaryTypeError{
+							GotToken: p.current,
+						}
 					}
 
 					ty, err := parseType(p, lowestBindingPower)

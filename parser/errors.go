@@ -1446,6 +1446,45 @@ func (*MissingTypeAfterSeparatorError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
+// MissingSeparatorInIntersectionOrDictionaryTypeError is reported when a separator is missing
+// between types in an intersection or dictionary type.
+type MissingSeparatorInIntersectionOrDictionaryTypeError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingSeparatorInIntersectionOrDictionaryTypeError{}
+var _ errors.UserError = &MissingSeparatorInIntersectionOrDictionaryTypeError{}
+var _ errors.SecondaryError = &MissingSeparatorInIntersectionOrDictionaryTypeError{}
+var _ errors.HasDocumentationLink = &MissingSeparatorInIntersectionOrDictionaryTypeError{}
+
+func (*MissingSeparatorInIntersectionOrDictionaryTypeError) isParseError() {}
+
+func (*MissingSeparatorInIntersectionOrDictionaryTypeError) IsUserError() {}
+
+func (e *MissingSeparatorInIntersectionOrDictionaryTypeError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingSeparatorInIntersectionOrDictionaryTypeError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingSeparatorInIntersectionOrDictionaryTypeError) Error() string {
+	return fmt.Sprintf(
+		"missing separator in type list, got %s",
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingSeparatorInIntersectionOrDictionaryTypeError) SecondaryError() string {
+	return "types in an intersection type must be separated by a comma (,) " +
+		"and types in a dictionary type must be separated by a colon (:)"
+}
+
+func (*MissingSeparatorInIntersectionOrDictionaryTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
+}
+
 // MissingClosingParenInArgumentListError is reported when an argument list is missing a closing parenthesis.
 type MissingClosingParenInArgumentListError struct {
 	Pos ast.Position
