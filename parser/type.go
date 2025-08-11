@@ -367,6 +367,7 @@ func defineIntersectionOrDictionaryType() {
 							ast.NewRange(
 								p.memoryGauge,
 								startToken.StartPos,
+								// Unknown at the moment, set later
 								ast.EmptyPosition,
 							),
 						)
@@ -388,7 +389,7 @@ func defineIntersectionOrDictionaryType() {
 					}
 					if dictionaryType == nil {
 						if firstType == nil {
-							return nil, p.newSyntaxError("unexpected colon after missing dictionary key type")
+							panic(errors.NewUnreachableError())
 						}
 						dictionaryType = ast.NewDictionaryType(
 							p.memoryGauge,
@@ -397,6 +398,7 @@ func defineIntersectionOrDictionaryType() {
 							ast.NewRange(
 								p.memoryGauge,
 								startToken.StartPos,
+								// Unknown at the moment, set later
 								ast.EmptyPosition,
 							),
 						)

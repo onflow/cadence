@@ -1137,7 +1137,7 @@ func (*MultipleColonInDictionaryTypeError) SecondaryError() string {
 }
 
 func (*MultipleColonInDictionaryTypeError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/values-and-types/dictionaries"
+	return "https://cadence-lang.org/docs/language/values-and-types/dictionaries#dictionary-types"
 }
 
 // UnexpectedCommaInTypeAnnotationListError is reported when a comma is found at an unexpected position in a type annotation list.
