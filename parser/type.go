@@ -27,7 +27,6 @@ import (
 const (
 	typeLeftBindingPowerOptional = 10 * (iota + 1)
 	typeLeftBindingPowerReference
-	typeLeftBindingPowerIntersection
 	typeLeftBindingPowerInstantiation
 )
 
