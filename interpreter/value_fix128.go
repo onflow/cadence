@@ -72,7 +72,7 @@ func NewUnmeteredFix128ValueWithIntegerAndScale(integer int64, scale int64) Fix1
 }
 
 func NewFix128Value(gauge common.MemoryGauge, valueGetter func() fix.Fix128) Fix128Value {
-	common.UseMemory(gauge, fix64MemoryUsage)
+	common.UseMemory(gauge, fix128MemoryUsage)
 	return NewUnmeteredFix128Value(valueGetter())
 }
 
