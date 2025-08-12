@@ -2045,6 +2045,41 @@ func TestParseAccess(t *testing.T) {
 		)
 	})
 
+	t.Run("access, missing opening paren", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access self")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingAccessOpeningParenError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+						},
+						Type: lexer.TokenIdentifier,
+					},
+				},
+				&MissingAccessClosingParenError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
+							EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+						},
+						Type: lexer.TokenEOF,
+					},
+				},
+			},
+			errs,
+		)
+
+		AssertEqualWithDiff(t,
+			ast.AccessSelf,
+			result,
+		)
+	})
+
 	t.Run("access, missing closing paren", func(t *testing.T) {
 
 		t.Parallel()
@@ -2052,18 +2087,21 @@ func TestParseAccess(t *testing.T) {
 		result, errs := parse("access ( self ")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "expected token ')'",
-					Pos:           ast.Position{Offset: 14, Line: 1, Column: 14},
-					Secondary:     "check for missing punctuation, operators, or syntax elements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
+				&MissingAccessClosingParenError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 14, Line: 1, Column: 14},
+							EndPos:   ast.Position{Offset: 14, Line: 1, Column: 14},
+						},
+					},
 				},
 			},
 			errs,
 		)
 
 		AssertEqualWithDiff(t,
-			ast.AccessNotSpecified,
+			ast.AccessSelf,
 			result,
 		)
 	})
@@ -2161,7 +2199,6 @@ func TestParseAccess(t *testing.T) {
 			[]error{
 				&UnexpectedTokenInsteadOfSeparatorError{
 					GotToken: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 19, Line: 1, Column: 19},
 							EndPos:   ast.Position{Offset: 19, Line: 1, Column: 19},
@@ -2190,7 +2227,6 @@ func TestParseAccess(t *testing.T) {
 			[]error{
 				&UnexpectedTokenInsteadOfSeparatorError{
 					GotToken: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 19, Line: 1, Column: 19},
 							EndPos:   ast.Position{Offset: 19, Line: 1, Column: 19},
@@ -2217,18 +2253,30 @@ func TestParseAccess(t *testing.T) {
 		result, errs := parse("access ( self , bar )")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "expected token ')'",
-					Pos:           ast.Position{Offset: 14, Line: 1, Column: 14},
-					Secondary:     "check for missing punctuation, operators, or syntax elements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
+				&MissingAccessClosingParenError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 14, Line: 1, Column: 14},
+							EndPos:   ast.Position{Offset: 14, Line: 1, Column: 14},
+						},
+						Type: lexer.TokenComma,
+					},
+				},
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 14, Line: 1, Column: 14},
+							EndPos:   ast.Position{Offset: 14, Line: 1, Column: 14},
+						},
+						Type: lexer.TokenComma,
+					},
 				},
 			},
 			errs,
 		)
 
 		AssertEqualWithDiff(t,
-			ast.AccessNotSpecified,
+			ast.AccessSelf,
 			result,
 		)
 	})
@@ -2240,18 +2288,30 @@ func TestParseAccess(t *testing.T) {
 		result, errs := parse("access ( self | bar )")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "expected token ')'",
-					Pos:           ast.Position{Offset: 14, Line: 1, Column: 14},
-					Secondary:     "check for missing punctuation, operators, or syntax elements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
+				&MissingAccessClosingParenError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 14, Line: 1, Column: 14},
+							EndPos:   ast.Position{Offset: 14, Line: 1, Column: 14},
+						},
+						Type: lexer.TokenVerticalBar,
+					},
+				},
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 14, Line: 1, Column: 14},
+							EndPos:   ast.Position{Offset: 14, Line: 1, Column: 14},
+						},
+						Type: lexer.TokenVerticalBar,
+					},
 				},
 			},
 			errs,
 		)
 
 		AssertEqualWithDiff(t,
-			ast.AccessNotSpecified,
+			ast.AccessSelf,
 			result,
 		)
 	})

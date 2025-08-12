@@ -2639,6 +2639,80 @@ func (*MissingPubClosingParenError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control"
 }
 
+// MissingAccessOpeningParenError is reported when an access modifier is missing an opening parenthesis.
+type MissingAccessOpeningParenError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingAccessOpeningParenError{}
+var _ errors.UserError = &MissingAccessOpeningParenError{}
+var _ errors.SecondaryError = &MissingAccessOpeningParenError{}
+var _ errors.HasDocumentationLink = &MissingAccessOpeningParenError{}
+
+func (*MissingAccessOpeningParenError) isParseError() {}
+
+func (*MissingAccessOpeningParenError) IsUserError() {}
+
+func (e *MissingAccessOpeningParenError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingAccessOpeningParenError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingAccessOpeningParenError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf("expected %s after `access` keyword", lexer.TokenParenOpen),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingAccessOpeningParenError) SecondaryError() string {
+	return "access modifiers must be enclosed in parentheses, for example `access(all)`"
+}
+
+func (*MissingAccessOpeningParenError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control"
+}
+
+// MissingAccessClosingParenError is reported when an access modifier is missing a closing parenthesis.
+type MissingAccessClosingParenError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingAccessClosingParenError{}
+var _ errors.UserError = &MissingAccessClosingParenError{}
+var _ errors.SecondaryError = &MissingAccessClosingParenError{}
+var _ errors.HasDocumentationLink = &MissingAccessClosingParenError{}
+
+func (*MissingAccessClosingParenError) isParseError() {}
+
+func (*MissingAccessClosingParenError) IsUserError() {}
+
+func (e *MissingAccessClosingParenError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingAccessClosingParenError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingAccessClosingParenError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf("expected %s at end of `access` modifier", lexer.TokenParenClose),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingAccessClosingParenError) SecondaryError() string {
+	return "the `access` modifier must be properly closed with a closing parenthesis"
+}
+
+func (*MissingAccessClosingParenError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control"
+}
+
 // MissingAccessKeywordError is reported when an access modifier keyword is missing.
 type MissingAccessKeywordError struct {
 	GotToken lexer.Token

@@ -352,92 +352,89 @@ func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
 
 // parseAccess parses an access modifier
 //
-//	access
-//	    : 'access(self)'
-//	    | 'access(all)' ( '(' 'set' ')' )?
-//	    | 'access' '(' ( 'self' | 'contract' | 'account' | 'all' | entitlementList ) ')'
+//	access : 'access' '(' ( 'self' | 'contract' | 'account' | 'all' | entitlementList ) ')'
 func parseAccess(p *parser) (ast.Access, ast.Range, error) {
 
 	var accessRange ast.Range
 
-	switch string(p.currentTokenSource()) {
-	case KeywordAccess:
-		accessRange.StartPos = p.current.StartPos
+	accessRange.StartPos = p.current.StartPos
 
-		// Skip the `access` keyword
+	// Skip the `access` keyword
+	p.nextSemanticToken()
+
+	if p.current.Is(lexer.TokenParenOpen) {
+		p.next()
+	} else {
+		p.report(&MissingAccessOpeningParenError{
+			GotToken: p.current,
+		})
+	}
+
+	p.skipSpaceAndComments()
+
+	if !p.current.Is(lexer.TokenIdentifier) {
+		return ast.AccessNotSpecified, ast.EmptyRange, &MissingAccessKeywordError{
+			GotToken: p.current,
+		}
+	}
+
+	var access ast.Access
+
+	keyword := p.currentTokenSource()
+	switch string(keyword) {
+	case KeywordAll:
+		access = ast.AccessAll
+		// Skip the keyword
 		p.nextSemanticToken()
 
-		_, err := p.mustOne(lexer.TokenParenOpen)
+	case KeywordAccount:
+		access = ast.AccessAccount
+		// Skip the keyword
+		p.nextSemanticToken()
+
+	case KeywordContract:
+		access = ast.AccessContract
+		// Skip the keyword
+		p.nextSemanticToken()
+
+	case KeywordSelf:
+		access = ast.AccessSelf
+		// Skip the keyword
+		p.nextSemanticToken()
+
+	case KeywordMapping:
+
+		keywordPos := p.current.StartPos
+		// Skip the keyword
+		p.nextSemanticToken()
+
+		entitlementMapName, err := parseNominalType(p)
 		if err != nil {
 			return ast.AccessNotSpecified, ast.EmptyRange, err
 		}
+		access = ast.NewMappedAccess(entitlementMapName, keywordPos)
 
 		p.skipSpaceAndComments()
 
-		if !p.current.Is(lexer.TokenIdentifier) {
-			return ast.AccessNotSpecified, ast.EmptyRange, &MissingAccessKeywordError{
-				GotToken: p.current,
-			}
-		}
-
-		var access ast.Access
-
-		keyword := p.currentTokenSource()
-		switch string(keyword) {
-		case KeywordAll:
-			access = ast.AccessAll
-			// Skip the keyword
-			p.nextSemanticToken()
-
-		case KeywordAccount:
-			access = ast.AccessAccount
-			// Skip the keyword
-			p.nextSemanticToken()
-
-		case KeywordContract:
-			access = ast.AccessContract
-			// Skip the keyword
-			p.nextSemanticToken()
-
-		case KeywordSelf:
-			access = ast.AccessSelf
-			// Skip the keyword
-			p.nextSemanticToken()
-
-		case KeywordMapping:
-
-			keywordPos := p.current.StartPos
-			// Skip the keyword
-			p.nextSemanticToken()
-
-			entitlementMapName, err := parseNominalType(p)
-			if err != nil {
-				return ast.AccessNotSpecified, ast.EmptyRange, err
-			}
-			access = ast.NewMappedAccess(entitlementMapName, keywordPos)
-
-			p.skipSpaceAndComments()
-
-		default:
-			entitlements, err := parseEntitlementList(p)
-			if err != nil {
-				return ast.AccessNotSpecified, ast.EmptyRange, err
-			}
-			access = ast.NewEntitlementAccess(entitlements)
-		}
-
-		accessRange.EndPos = p.current.EndPos
-
-		_, err = p.mustOne(lexer.TokenParenClose)
+	default:
+		entitlements, err := parseEntitlementList(p)
 		if err != nil {
 			return ast.AccessNotSpecified, ast.EmptyRange, err
 		}
-
-		return access, accessRange, nil
-
-	default:
-		return ast.AccessNotSpecified, ast.EmptyRange, errors.NewUnreachableError()
+		access = ast.NewEntitlementAccess(entitlements)
 	}
+
+	accessRange.EndPos = p.current.EndPos
+
+	if p.current.Is(lexer.TokenParenClose) {
+		p.next()
+	} else {
+		p.report(&MissingAccessClosingParenError{
+			GotToken: p.current,
+		})
+	}
+
+	return access, accessRange, nil
 }
 
 // parseVariableDeclaration parses a variable declaration.

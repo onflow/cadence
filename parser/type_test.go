@@ -568,7 +568,6 @@ func TestParseReferenceType(t *testing.T) {
 				// TODO: improve
 				&UnexpectedTypeStartError{
 					GotToken: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
 							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
@@ -3314,7 +3313,6 @@ func TestParseAuthorizedReferenceTypeWithNoEntitlements(t *testing.T) {
 		[]error{
 			&MissingStartOfAuthorizationError{
 				GotToken: lexer.Token{
-					SpaceOrError: nil,
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 20, Line: 2, Column: 19},
 						EndPos:   ast.Position{Offset: 20, Line: 2, Column: 19},
