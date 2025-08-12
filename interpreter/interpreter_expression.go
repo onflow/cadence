@@ -896,16 +896,27 @@ func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedP
 
 	fixedPointSubType := interpreter.Program.Elaboration.FixedPointExpression(expression)
 
+	var scale uint
+	switch fixedPointSubType {
+	case sema.Fix128Type:
+		scale = sema.Fix128Scale
+	default:
+		scale = sema.Fix64Scale
+	}
+
 	value := fixedpoint.ConvertToFixedPointBigInt(
 		expression.Negative,
 		expression.UnsignedInteger,
 		expression.Fractional,
 		expression.Scale,
-		sema.Fix64Scale,
+		scale,
 	)
+
 	switch fixedPointSubType {
 	case sema.Fix64Type, sema.SignedFixedPointType:
 		return NewFix64Value(interpreter, value.Int64)
+	case sema.Fix128Type:
+		return NewFix128ValueFromBigInt(interpreter, value)
 	case sema.UFix64Type:
 		return NewUFix64Value(interpreter, value.Uint64)
 	case sema.FixedPointType:

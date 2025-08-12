@@ -167,6 +167,7 @@ var Word128Type = PrimitiveType(interpreter.PrimitiveStaticTypeWord128)
 var Word256Type = PrimitiveType(interpreter.PrimitiveStaticTypeWord256)
 
 var Fix64Type = PrimitiveType(interpreter.PrimitiveStaticTypeFix64)
+var Fix128Type = PrimitiveType(interpreter.PrimitiveStaticTypeFix128)
 var UFix64Type = PrimitiveType(interpreter.PrimitiveStaticTypeUFix64)
 
 var PathType = PrimitiveType(interpreter.PrimitiveStaticTypePath)

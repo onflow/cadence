@@ -25,6 +25,8 @@ import (
 	"unicode/utf8"
 	"unsafe"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/fixedpoint"
@@ -1312,6 +1314,82 @@ func (v Fix64) ToBigEndianBytes() []byte {
 
 func (v Fix64) String() string {
 	return format.Fix64(int64(v))
+}
+
+// Fix128
+
+type Fix128 fix.Fix128
+
+var _ Value = Fix128{}
+
+var Fix128MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(Fix128{})))
+var fix128MinExceededError = errors.NewDefaultUserError("value exceeds min of Fix128")
+var fix128MaxExceededError = errors.NewDefaultUserError("value exceeds max of Fix128")
+
+func NewFix128(v fix.Fix128) (Fix128, error) {
+	if v.Lt(fixedpoint.Fix128TypeMin) {
+		return Fix128{}, fix128MinExceededError
+	}
+	if v.Gt(fixedpoint.Fix128TypeMax) {
+		return Fix128{}, fix128MaxExceededError
+	}
+
+	return Fix128(v), nil
+}
+
+func NewFix128FromString(gauge common.MemoryGauge, constructor func() (string, error)) (Fix128, error) {
+	common.UseMemory(gauge, Fix128MemoryUsage)
+	value, err := constructor()
+	if err != nil {
+		return Fix128{}, err
+	}
+	return NewUnmeteredFix128FromString(value)
+}
+
+func NewUnmeteredFix128FromString(s string) (Fix128, error) {
+	v, err := fixedpoint.ParseFix128(s)
+	if err != nil {
+		return Fix128{}, err
+	}
+
+	fix128Value := fixedpoint.Fix128FromBigInt(v)
+
+	return Fix128(fix128Value), nil
+}
+
+func NewFix128FromParts(negative bool, integer int, fraction uint) (Fix128, error) {
+	v, err := fixedpoint.NewFix128(
+		negative,
+		new(big.Int).SetInt64(int64(integer)),
+		new(big.Int).SetInt64(int64(fraction)),
+		fixedpoint.Fix128Scale,
+	)
+	if err != nil {
+		return Fix128{}, err
+	}
+
+	fix128Value := fixedpoint.Fix128FromBigInt(v)
+
+	return Fix128(fix128Value), nil
+}
+
+func (Fix128) isValue() {}
+
+func (Fix128) Type() Type {
+	return Fix128Type
+}
+
+func (v Fix128) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
+}
+
+func (v Fix128) ToBigEndianBytes() []byte {
+	fix128 := fix.Fix128(v)
+	return fixedpoint.Fix128ToBigEndianBytes(fix128)
+}
+
+func (v Fix128) String() string {
+	return format.Fix128(fix.Fix128(v))
 }
 
 // UFix64

@@ -106,6 +106,8 @@ func ExportMeteredType(
 			return cadence.Word256Type
 		case sema.Fix64Type:
 			return cadence.Fix64Type
+		case sema.Fix128Type:
+			return cadence.Fix128Type
 		case sema.UFix64Type:
 			return cadence.UFix64Type
 		case sema.PathType:

@@ -1,6 +1,8 @@
 module github.com/onflow/cadence
 
-go 1.23.0
+go 1.23.2
+
+toolchain go1.24.2
 
 require (
 	github.com/bits-and-blooms/bitset v1.5.0
@@ -34,6 +36,7 @@ require (
 	github.com/k0kubun/pp v3.0.1+incompatible
 	github.com/kodova/html-to-markdown v1.0.1
 	github.com/onflow/crypto v0.25.0
+	github.com/onflow/fixed-point v0.0.0-20250808153944-f83bd1ca34df
 )
 
 require (

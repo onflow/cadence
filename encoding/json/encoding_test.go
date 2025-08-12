@@ -30,6 +30,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
@@ -706,6 +707,38 @@ func TestEncodeFix64(t *testing.T) {
 			cadence.Fix64(-1_234_500_678_900),
 			// language=json
 			`{"type":"Fix64","value":"-12345.00678900"}`,
+		},
+	}...)
+}
+
+func TestEncodeFix128(t *testing.T) {
+
+	t.Parallel()
+
+	testAllEncodeAndDecode(t, []encodeTest{
+		{
+			"Zero",
+			cadence.Fix128(fixedpoint.Fix128FromIntAndScale(0, 24)),
+			// language=json
+			`{"type":"Fix128","value":"0.000000000000000000000000"}`,
+		},
+		{
+			"789.00123010",
+			cadence.Fix128(fixedpoint.Fix128FromIntAndScale(78_900_123_010, 24-8)),
+			// language=json
+			`{"type":"Fix128","value":"789.001230100000000000000000"}`,
+		},
+		{
+			"1234.056",
+			cadence.Fix128(fixedpoint.Fix128FromIntAndScale(123_405_600_000, 24-8)),
+			// language=json
+			`{"type":"Fix128","value":"1234.056000000000000000000000"}`,
+		},
+		{
+			"-12345.006789",
+			cadence.Fix128(fixedpoint.Fix128FromIntAndScale(-1_234_500_678_900, 24-8)),
+			// language=json
+			`{"type":"Fix128","value":"-12345.006789000000000000000000"}`,
 		},
 	}...)
 }
