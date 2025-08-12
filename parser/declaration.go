@@ -219,7 +219,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				}
 
 				if nativePos != nil {
-					p.reportSyntaxError("invalid second native modifier")
+					p.reportSyntaxError("invalid second `native` modifier")
 				}
 				pos := p.current.StartPos
 				nativePos = &pos
@@ -1148,6 +1148,7 @@ func parseEntitlementOrMappingDeclaration(
 		// we are parsing an entitlement mapping
 		// Skip the `mapping` keyword
 		p.nextSemanticToken()
+
 		isMapping = true
 		expectString = "following entitlement mapping declaration"
 	}
@@ -1657,7 +1658,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				}
 
 				if nativePos != nil {
-					p.reportSyntaxError("invalid second native modifier")
+					p.reportSyntaxError("invalid second `native` modifier")
 				}
 				pos := p.current.StartPos
 				nativePos = &pos

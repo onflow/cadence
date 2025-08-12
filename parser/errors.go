@@ -1277,7 +1277,7 @@ func (*MissingFromKeywordInRemoveStatementError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/attachments#removing-attachments"
 }
 
-// InvalidAttachmentTypeError is reported when a removed attachment type is not nominal.
+// InvalidAttachmentRemovalTypeError is reported when a removed attachment type is not nominal.
 type InvalidAttachmentRemovalTypeError struct {
 	ast.Range
 }
@@ -3435,7 +3435,7 @@ func (e *InvalidStaticModifierError) StartPosition() ast.Position {
 }
 
 func (e *InvalidStaticModifierError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
-	return e.Pos.Shifted(memoryGauge, len(KeywordNative)-1)
+	return e.Pos.Shifted(memoryGauge, len(KeywordStatic)-1)
 }
 
 func (e *InvalidStaticModifierError) Error() string {
