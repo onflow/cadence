@@ -4456,19 +4456,17 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 						Type: lexer.TokenBraceOpen,
 					},
 				},
-				&SyntaxError{
-					Message: "expected nominal type, got {}",
-					Pos:     ast.Position{Offset: 15, Line: 1, Column: 15},
+				&InvalidAttachmentBaseTypeError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+						EndPos:   ast.Position{Offset: 14, Line: 1, Column: 14},
+					},
 				},
 				&SyntaxError{
 					Message:       "expected token '{'",
 					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos: ast.Position{
-						Offset: 16,
-						Line:   1,
-						Column: 16,
-					},
+					Pos:           ast.Position{Offset: 16, Line: 1, Column: 16},
 				},
 			},
 			errs,

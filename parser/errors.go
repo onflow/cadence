@@ -3628,3 +3628,29 @@ func (*MissingForKeywordInAttachmentDeclarationError) SecondaryError() string {
 func (*MissingForKeywordInAttachmentDeclarationError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/attachments#declaring-attachments"
 }
+
+// InvalidAttachmentBaseTypeError is reported when an attachment declaration has an invalid base type.
+type InvalidAttachmentBaseTypeError struct {
+	ast.Range
+}
+
+var _ ParseError = &InvalidAttachmentBaseTypeError{}
+var _ errors.UserError = &InvalidAttachmentBaseTypeError{}
+var _ errors.SecondaryError = &InvalidAttachmentBaseTypeError{}
+var _ errors.HasDocumentationLink = &InvalidAttachmentBaseTypeError{}
+
+func (*InvalidAttachmentBaseTypeError) isParseError() {}
+
+func (*InvalidAttachmentBaseTypeError) IsUserError() {}
+
+func (e *InvalidAttachmentBaseTypeError) Error() string {
+	return "expected nominal type"
+}
+
+func (*InvalidAttachmentBaseTypeError) SecondaryError() string {
+	return "attachments can only be declared for nominal types"
+}
+
+func (*InvalidAttachmentBaseTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/attachments#declaring-attachments"
+}

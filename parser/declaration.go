@@ -1392,10 +1392,9 @@ func parseAttachmentDeclaration(
 
 	baseNominalType, ok := baseType.(*ast.NominalType)
 	if !ok {
-		p.reportSyntaxError(
-			"expected nominal type, got %s",
-			baseType,
-		)
+		p.report(&InvalidAttachmentBaseTypeError{
+			Range: ast.NewRangeFromPositioned(p.memoryGauge, baseType),
+		})
 	}
 
 	p.skipSpaceAndComments()
