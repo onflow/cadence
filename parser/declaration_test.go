@@ -4316,28 +4316,6 @@ func TestParseInvalidCompositeFunctionWithSelfParameter(t *testing.T) {
 	}
 }
 
-func TestParseInvalidPubSetModifier(t *testing.T) {
-
-	t.Parallel()
-
-	_, errs := testParseDeclarations("pub(foo) fun x() {}")
-
-	AssertEqualWithDiff(t,
-		[]error{
-			&InvalidPubSetModifierError{
-				GotToken: lexer.Token{
-					Type: lexer.TokenIdentifier,
-					Range: ast.Range{
-						StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
-						EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
-					},
-				},
-			},
-		},
-		errs,
-	)
-}
-
 func TestParseInvalidParameterWithoutLabel(t *testing.T) {
 	t.Parallel()
 
@@ -4469,9 +4447,26 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		_, errs := testParseDeclarations("attachment E {} ")
 		AssertEqualWithDiff(t,
 			[]error{
+				&MissingForKeywordInAttachmentDeclarationError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+							EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+						},
+						Type: lexer.TokenBraceOpen,
+					},
+				},
+				&InvalidAttachmentBaseTypeError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+						EndPos:   ast.Position{Offset: 14, Line: 1, Column: 14},
+					},
+				},
 				&SyntaxError{
-					Message: "expected 'for', got '{'",
-					Pos:     ast.Position{Offset: 13, Line: 1, Column: 13},
+					Message:       "expected token '{'",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 16, Line: 1, Column: 16},
 				},
 			},
 			errs,
@@ -10474,15 +10469,19 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations(` access(all) entitlement mapping M { 
-			&A -> B
-		} `)
+		_, errs := testParseDeclarations(`
+          access(all) entitlement mapping M {
+              &A -> B
+          }
+        `)
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected nominal type, got &A",
-					Pos:     ast.Position{Offset: 43, Line: 2, Column: 5},
+				&InvalidEntitlementMappingTypeError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 61, Line: 3, Column: 14},
+						EndPos:   ast.Position{Offset: 62, Line: 3, Column: 15},
+					},
 				},
 			},
 			errs,
@@ -10493,15 +10492,19 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations(` access(all) entitlement mapping M { 
-			A -> [B]
-		} `)
+		_, errs := testParseDeclarations(`
+          access(all) entitlement mapping M {
+              A -> [B]
+          }
+        `)
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected nominal type, got [B]",
-					Pos:     ast.Position{Offset: 49, Line: 2, Column: 11},
+				&InvalidEntitlementMappingTypeError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 66, Line: 3, Column: 19},
+						EndPos:   ast.Position{Offset: 68, Line: 3, Column: 21},
+					},
 				},
 			},
 			errs,
@@ -10554,15 +10557,19 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations(` access(all) entitlement mapping M { 
-			include &A
-		} `)
+		_, errs := testParseDeclarations(`
+          access(all) entitlement mapping M {
+              include &A
+          }
+        `)
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected nominal type, got &A",
-					Pos:     ast.Position{Offset: 51, Line: 2, Column: 13},
+				&InvalidEntitlementMappingIncludeTypeError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 69, Line: 3, Column: 22},
+						EndPos:   ast.Position{Offset: 70, Line: 3, Column: 23},
+					},
 				},
 			},
 			errs,
@@ -10818,6 +10825,27 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
 						EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("pub(foo)", func(t *testing.T) {
+		t.Parallel()
+
+		_, errs := testParseDeclarations("pub(foo) fun x() {}")
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&InvalidPubModifierError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+							EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+						},
 					},
 				},
 			},

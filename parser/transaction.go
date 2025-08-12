@@ -123,10 +123,13 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 
 	if execute == nil {
 		p.skipSpaceAndComments()
+
 		if p.isToken(p.current, lexer.TokenIdentifier, KeywordPre) {
 			preStartPos := p.current.StartPos
+
 			// Skip the `pre` keyword
-			p.next()
+			p.nextSemanticToken()
+
 			preConditions, err = parseConditions(p, preStartPos)
 			if err != nil {
 				return nil, err

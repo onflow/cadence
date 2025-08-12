@@ -966,16 +966,17 @@ func defineIdentifierTypes() {
 				current := p.current
 				cursor := p.tokens.Cursor()
 
-				// look ahead for the `fun` keyword, if it exists
+				// Look ahead for the `fun` keyword, if it exists
 				p.skipSpaceAndComments()
 
 				if p.isToken(p.current, lexer.TokenIdentifier, KeywordFun) {
-					// skip the `fun` keyword
+					// Skip the `fun` keyword
 					p.nextSemanticToken()
+
 					return parseFunctionType(p, current.StartPos, ast.FunctionPurityView)
 				}
 
-				// backtrack otherwise - view is a nominal type here
+				// Backtrack otherwise - view is a nominal type here
 				p.current = current
 				p.tokens.Revert(cursor)
 			}
