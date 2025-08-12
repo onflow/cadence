@@ -857,8 +857,8 @@ func parseRemoveStatement(
 	if err != nil {
 		return nil, err
 	}
-	attachmentNominalType, ok := attachment.(*ast.NominalType)
 
+	attachmentNominalType, ok := attachment.(*ast.NominalType)
 	if !ok {
 		p.reportSyntaxError(
 			"expected attachment nominal type, got %s",
@@ -870,10 +870,9 @@ func parseRemoveStatement(
 
 	// check and skip `from` keyword
 	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordFrom) {
-		p.reportSyntaxError(
-			"expected from keyword, got %s",
-			p.current.Type,
-		)
+		p.report(&MissingFromKeywordInRemoveStatementError{
+			GotToken: p.current,
+		})
 	}
 	p.nextSemanticToken()
 

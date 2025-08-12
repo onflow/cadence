@@ -1349,9 +1349,14 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected from keyword, got EOF",
-					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
+				&MissingFromKeywordInRemoveStatementError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+							EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+						},
+					},
 				},
 				UnexpectedEOFError{
 					Pos: ast.Position{Offset: 8, Line: 1, Column: 8},

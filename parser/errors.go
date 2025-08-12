@@ -1240,6 +1240,43 @@ func (*MissingColonInSwitchCaseError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/control-flow#switch"
 }
 
+// MissingFromKeywordInRemoveStatementError is reported when the 'from' keyword is missing in a remove statement.
+type MissingFromKeywordInRemoveStatementError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingFromKeywordInRemoveStatementError{}
+var _ errors.UserError = &MissingFromKeywordInRemoveStatementError{}
+var _ errors.SecondaryError = &MissingFromKeywordInRemoveStatementError{}
+var _ errors.HasDocumentationLink = &MissingFromKeywordInRemoveStatementError{}
+
+func (*MissingFromKeywordInRemoveStatementError) isParseError() {}
+
+func (*MissingFromKeywordInRemoveStatementError) IsUserError() {}
+
+func (e *MissingFromKeywordInRemoveStatementError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingFromKeywordInRemoveStatementError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingFromKeywordInRemoveStatementError) Error() string {
+	return expectedButGotToken(
+		"expected 'from' keyword",
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingFromKeywordInRemoveStatementError) SecondaryError() string {
+	return "the 'remove' statement requires the 'from' keyword to specify the value to remove the attachment from"
+}
+
+func (*MissingFromKeywordInRemoveStatementError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/attachments#removing-attachments"
+}
+
 // UnexpectedCommaInDictionaryTypeError is reported when a comma is found in a dictionary type.
 type UnexpectedCommaInDictionaryTypeError struct {
 	Pos ast.Position
