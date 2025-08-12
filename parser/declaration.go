@@ -369,14 +369,12 @@ func parseAccess(p *parser) (ast.Access, ast.Range, error) {
 	p.nextSemanticToken()
 
 	if p.current.Is(lexer.TokenParenOpen) {
-		p.next()
+		p.nextSemanticToken()
 	} else {
 		p.report(&MissingAccessOpeningParenError{
 			GotToken: p.current,
 		})
 	}
-
-	p.skipSpaceAndComments()
 
 	if !p.current.Is(lexer.TokenIdentifier) {
 		return ast.AccessNotSpecified, ast.EmptyRange, &MissingAccessKeywordError{
@@ -989,12 +987,13 @@ func parseFieldWithVariableKind(
 	// Skip the identifier
 	p.nextSemanticToken()
 
-	_, err := p.mustOne(lexer.TokenColon)
-	if err != nil {
-		return nil, err
+	if p.current.Is(lexer.TokenColon) {
+		p.nextSemanticToken()
+	} else {
+		p.report(&MissingColonAfterFieldNameError{
+			GotToken: p.current,
+		})
 	}
-
-	p.skipSpaceAndComments()
 
 	typeAnnotation, err := parseTypeAnnotation(p)
 	if err != nil {

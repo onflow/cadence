@@ -2837,6 +2837,43 @@ func (*MissingFieldNameError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system/composite-types#composite-type-fields"
 }
 
+// MissingColonAfterFieldNameError is reported when a colon is missing after a field name.
+type MissingColonAfterFieldNameError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingColonAfterFieldNameError{}
+var _ errors.UserError = &MissingColonAfterFieldNameError{}
+var _ errors.SecondaryError = &MissingColonAfterFieldNameError{}
+var _ errors.HasDocumentationLink = &MissingColonAfterFieldNameError{}
+
+func (*MissingColonAfterFieldNameError) isParseError() {}
+
+func (*MissingColonAfterFieldNameError) IsUserError() {}
+
+func (e *MissingColonAfterFieldNameError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingColonAfterFieldNameError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingColonAfterFieldNameError) Error() string {
+	return expectedButGotToken(
+		"expected colon (:) after field name",
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingColonAfterFieldNameError) SecondaryError() string {
+	return "field declarations must have a type annotation separated by a colon (:)"
+}
+
+func (*MissingColonAfterFieldNameError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/types-and-type-system/composite-types#composite-type-fields"
+}
+
 // MissingTransferError is reported when a transfer is missing in a variable declaration.
 type MissingTransferError struct {
 	Pos ast.Position

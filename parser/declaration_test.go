@@ -3450,7 +3450,6 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 		t.Parallel()
 
 		_, errs := parse("let : Int")
-		require.Len(t, errs, 1)
 
 		AssertEqualWithDiff(t,
 			[]error{
@@ -3461,6 +3460,28 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 							EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
 						},
 						Type: lexer.TokenColon,
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing colon", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("let x Int")
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingColonAfterFieldNameError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+							EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+						},
 					},
 				},
 			},
