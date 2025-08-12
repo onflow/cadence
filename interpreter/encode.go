@@ -528,7 +528,7 @@ const (
 // Encode encodes Fix128Value as
 //
 //	cbor.Tag{
-//			Number:  CBORTagFix128Value,
+//			Number:  CBORTagUFix128Value,
 //			Content: []any {
 //			    int64(hi),
 //			    int64(lo),
@@ -537,7 +537,7 @@ const (
 func (v UFix128Value) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xbd, values.CBORTagUFix128Value,
+		0xd8, values.CBORTagUFix128Value,
 		// array, 2 items follow
 		0x82,
 	})

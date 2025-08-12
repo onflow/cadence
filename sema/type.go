@@ -2095,6 +2095,7 @@ const (
 	Int128TypeSize  uint = 16
 	UInt128TypeSize uint = 16
 	Fix128TypeSize  uint = 16
+	UFix128TypeSize uint = 16
 	Word128TypeSize uint = 16
 	Int256TypeSize  uint = 32
 	UInt256TypeSize uint = 32

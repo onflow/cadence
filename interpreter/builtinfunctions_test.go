@@ -90,7 +90,7 @@ func TestInterpretToString(t *testing.T) {
 			var expectedStr string
 
 			switch ty {
-			case sema.Fix128Type:
+			case sema.Fix128Type, sema.UFix128Type:
 				expectedStr = "12.340000000000000000000000"
 			default:
 				expectedStr = "12.34000000"
@@ -564,6 +564,12 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 			"42.0":  {0, 0, 0, 0, 250, 86, 234, 0},
 			"42.24": {0, 0, 0, 0, 251, 197, 32, 0},
 		},
+		"UFix128": {
+			"0.0":   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			"42.0":  {0, 0, 0, 0, 0, 34, 189, 216, 143, 237, 158, 252, 106, 0, 0, 0},
+			"42.24": {0, 0, 0, 0, 0, 34, 240, 170, 253, 0, 136, 125, 32, 0, 0, 0},
+			"20282409603651670423947251286015.999999999999999999999999": {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+		},
 	}
 
 	sizes := map[string]uint{
@@ -840,6 +846,13 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 			"[0, 0, 0, 0, 250, 86, 234, 0]": interpreter.NewUnmeteredUFix64Value(42 * sema.Fix64Factor), // 42.0
 			"[0, 0, 0, 0, 251, 197, 32, 0]": interpreter.NewUnmeteredUFix64Value(4224_000_000),          // 42.24
 		},
+		"UFix128": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]":                                 interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMin),
+			"[34, 189, 216, 143, 237, 158, 252, 106, 0, 0, 0]":                                 interpreter.NewUnmeteredUFix128ValueWithInteger(42, interpreter.EmptyLocationRange), // 42.0 with padding
+			"[0, 0, 0, 0, 0, 34, 189, 216, 143, 237, 158, 252, 106, 0, 0, 0]":                  interpreter.NewUnmeteredUFix128ValueWithInteger(42, interpreter.EmptyLocationRange), // 42.0
+			"[0, 0, 0, 0, 0, 34, 240, 170, 253, 0, 136, 125, 32, 0, 0, 0]":                     interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(4224, 22),                   // 42.24
+			"[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMax),
+		},
 	}
 
 	invalidTests := map[string][]string{
@@ -933,6 +946,10 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 		"UFix64": {
 			"[0, 0, 0, 0, 0, 0, 0, 0, 0]",
 			"[0, 22, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		"UFix128": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
 		},
 	}
 

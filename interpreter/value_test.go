@@ -4072,6 +4072,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 			sema.UFix64Type: NewUnmeteredUFix64ValueWithInteger(42, EmptyLocationRange),
 			sema.Fix64Type:  NewUnmeteredFix64ValueWithInteger(42, EmptyLocationRange),
 			sema.Fix128Type: NewUnmeteredFix128ValueWithInteger(42, EmptyLocationRange),
+			sema.UFix128Type: NewUnmeteredUFix128ValueWithInteger(42, EmptyLocationRange),
 		}
 
 		for _, ty := range sema.AllFixedPointTypes {

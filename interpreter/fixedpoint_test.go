@@ -61,7 +61,8 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 		"Fix128": interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(123, 22),
 
 		// UFix*
-		"UFix64": interpreter.NewUnmeteredUFix64Value(123000000),
+		"UFix64":  interpreter.NewUnmeteredUFix64Value(123000000),
+		"UFix128": interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(123, 22),
 	}
 
 	for _, fixedPointType := range sema.AllFixedPointTypes {
@@ -122,7 +123,8 @@ var testFixedPointValues = map[sema.Type]interpreter.Value{
 	sema.Fix128Type: interpreter.NewUnmeteredFix128ValueWithInteger(50, interpreter.EmptyLocationRange),
 
 	// UFix types
-	sema.UFix64Type: interpreter.NewUnmeteredUFix64Value(50 * sema.Fix64Factor),
+	sema.UFix64Type:  interpreter.NewUnmeteredUFix64Value(50 * sema.Fix64Factor),
+	sema.UFix128Type: interpreter.NewUnmeteredUFix128ValueWithInteger(50, interpreter.EmptyLocationRange),
 }
 
 func init() {
@@ -380,7 +382,70 @@ func TestInterpretIntegerToFixedPointConversions(t *testing.T) {
 				)
 			}
 		})
+	})
 
+	t.Run("UFix128", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("invalid negative integer", func(t *testing.T) {
+
+			for _, integerType := range sema.AllSignedIntegerTypes {
+				test(
+					t,
+					sema.UFix128Type,
+					integerType,
+					"-1",
+					&interpreter.OverflowError{},
+				)
+			}
+		})
+
+		t.Run("invalid integer > UFix128 max int", func(t *testing.T) {
+
+			// max + 1
+			testValueBig := new(big.Int).Add(fixedpoint.UFix128TypeMaxIntBig, big.NewInt(1))
+
+			for _, integerType := range sema.AllIntegerTypes {
+
+				// Only test for integer types that can hold testedValue
+				maxInt := integerType.(sema.IntegerRangedType).MaxInt()
+				if maxInt != nil && maxInt.Cmp(testValueBig) < 0 {
+					continue
+				}
+
+				test(
+					t,
+					sema.UFix128Type,
+					integerType,
+					testValueBig.String(),
+					&interpreter.OverflowError{},
+				)
+			}
+		})
+
+		t.Run("invalid integer < Fix128 min int", func(t *testing.T) {
+
+			// min - 1
+			testValueBig := new(big.Int).Sub(fixedpoint.UFix128TypeMinIntBig, big.NewInt(1))
+
+			for _, integerType := range sema.AllSignedIntegerTypes {
+
+				// Only test for integer types that can hold testedValue
+
+				minInt := integerType.(sema.IntegerRangedType).MinInt()
+				if minInt != nil && minInt.Cmp(testValueBig) > 0 {
+					continue
+				}
+
+				test(
+					t,
+					sema.UFix128Type,
+					integerType,
+					testValueBig.String(),
+					&interpreter.OverflowError{},
+				)
+			}
+		})
 	})
 }
 
@@ -414,6 +479,11 @@ func TestInterpretFixedPointToFixedPointConversions(t *testing.T) {
 			positiveValue: interpreter.NewUnmeteredUFix64ValueWithInteger(42, interpreter.EmptyLocationRange),
 			min:           interpreter.NewUnmeteredUFix64ValueWithInteger(sema.UFix64TypeMinInt, interpreter.EmptyLocationRange),
 			max:           interpreter.NewUnmeteredUFix64ValueWithInteger(sema.UFix64TypeMaxInt, interpreter.EmptyLocationRange),
+		},
+		sema.UFix128Type: {
+			positiveValue: interpreter.NewUnmeteredUFix128ValueWithInteger(42, interpreter.EmptyLocationRange),
+			min:           interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMin),
+			max:           interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMax),
 		},
 	}
 
@@ -473,6 +543,10 @@ func TestInterpretFixedPointToFixedPointConversions(t *testing.T) {
 				if expectedValueStrLen < actualValueStrLen {
 					for i := 0; i < actualValueStrLen-expectedValueStrLen; i++ {
 						expectedValueStr += "0"
+					}
+				} else if expectedValueStrLen > actualValueStrLen {
+					for i := 0; i < expectedValueStrLen-actualValueStrLen; i++ {
+						actualValueStr += "0"
 					}
 				}
 
@@ -626,6 +700,10 @@ func TestInterpretFixedPointMinMax(t *testing.T) {
 			min: interpreter.NewUnmeteredUFix64Value(0),
 			max: interpreter.NewUnmeteredUFix64Value(math.MaxUint64),
 		},
+		sema.UFix128Type: {
+			min: interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMin),
+			max: interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMax),
+		},
 	}
 
 	for _, ty := range sema.AllFixedPointTypes {
@@ -675,7 +753,7 @@ func TestInterpretStringFixedPointConversion(t *testing.T) {
 				return interpreter.NewUnmeteredFix64Value(fixedVal.Int64()), nil
 			},
 			[]*big.Int{sema.Fix64TypeMinIntBig, sema.Fix64TypeMaxIntBig, bigZero, bigOne},
-			[]*big.Int{sema.UFix64TypeMinFractionalBig, sema.Fix64TypeMaxFractionalBig, bigZero, bigOne},
+			[]*big.Int{sema.Fix64TypeMinFractionalBig, sema.Fix64TypeMaxFractionalBig, bigZero, bigOne},
 		},
 
 		sema.Fix128Type: {
@@ -686,8 +764,8 @@ func TestInterpretStringFixedPointConversion(t *testing.T) {
 				}
 				return interpreter.NewFix128ValueFromBigInt(nil, fixedVal), nil
 			},
-			[]*big.Int{sema.Fix64TypeMinIntBig, sema.Fix64TypeMaxIntBig, bigZero, bigOne},
-			[]*big.Int{sema.UFix64TypeMinFractionalBig, sema.Fix64TypeMaxFractionalBig, bigZero, bigOne},
+			[]*big.Int{sema.Fix128TypeMinIntBig, sema.Fix128TypeMaxIntBig, bigZero, bigOne},
+			[]*big.Int{sema.Fix128TypeMinFractionalBig, sema.Fix128TypeMaxFractionalBig, bigZero, bigOne},
 		},
 
 		sema.UFix64Type: {
@@ -700,6 +778,18 @@ func TestInterpretStringFixedPointConversion(t *testing.T) {
 			},
 			[]*big.Int{sema.UFix64TypeMinIntBig, sema.UFix64TypeMaxIntBig, bigZero, bigOne},
 			[]*big.Int{sema.UFix64TypeMinFractionalBig, sema.UFix64TypeMaxFractionalBig, bigZero, bigOne},
+		},
+
+		sema.UFix128Type: {
+			func(isNeg bool, decimal, fractional *big.Int, scale uint) (interpreter.Value, error) {
+				fixedVal, err := fixedpoint.NewUFix128(decimal, fractional, scale)
+				if err != nil {
+					return nil, err
+				}
+				return interpreter.NewUFix128ValueFromBigInt(nil, fixedVal), nil
+			},
+			[]*big.Int{sema.UFix128TypeMinIntBig, sema.UFix128TypeMaxIntBig, bigZero, bigOne},
+			[]*big.Int{sema.UFix128TypeMinFractionalBig, sema.UFix128TypeMaxFractionalBig, bigZero, bigOne},
 		},
 	}
 
