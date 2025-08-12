@@ -161,10 +161,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				continue
 
 			case KeywordPub:
-				err := handlePub(p)
-				if err != nil {
-					return nil, err
-				}
+				handlePub(p)
 				continue
 
 			case KeywordPriv:
@@ -241,7 +238,7 @@ func handlePriv(p *parser) {
 	p.next()
 }
 
-func handlePub(p *parser) error {
+func handlePub(p *parser) {
 	pubToken := p.current
 
 	p.nextSemanticToken()
@@ -251,13 +248,16 @@ func handlePub(p *parser) error {
 		p.report(&PubAccessError{
 			Range: pubToken.Range,
 		})
-		return nil
+		return
 	}
 
 	// Skip the opening paren
 	p.nextSemanticToken()
 
-	var isPubSet bool
+	var (
+		isPubSet bool
+		endToken lexer.Token
+	)
 
 	if p.current.Type == lexer.TokenIdentifier {
 		const keywordSet = "set"
@@ -270,13 +270,20 @@ func handlePub(p *parser) error {
 			})
 		}
 
+		endToken = p.current
+
 		// Assume it is a keyword, skip it
 		p.nextSemanticToken()
 	}
 
-	endToken, err := p.mustOne(lexer.TokenParenClose)
-	if err != nil {
-		return err
+	if p.current.Is(lexer.TokenParenClose) {
+		endToken = p.current
+		// Skip the closing paren
+		p.next()
+	} else {
+		p.report(&MissingPubClosingParenError{
+			Pos: p.current.StartPos,
+		})
 	}
 
 	if isPubSet {
@@ -288,8 +295,6 @@ func handlePub(p *parser) error {
 			),
 		})
 	}
-
-	return nil
 }
 
 var enumeratedAccessModifierKeywords = common.EnumerateWords(
@@ -1602,10 +1607,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				continue
 
 			case KeywordPub:
-				err := handlePub(p)
-				if err != nil {
-					return nil, err
-				}
+				handlePub(p)
 				continue
 
 			case KeywordPriv:

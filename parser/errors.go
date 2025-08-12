@@ -2601,6 +2601,43 @@ func (*InvalidPubModifierError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control"
 }
 
+// MissingPubClosingParenError is reported when a pub(set) modifier is missing a closing parenthesis.
+type MissingPubClosingParenError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &MissingPubClosingParenError{}
+var _ errors.UserError = &MissingPubClosingParenError{}
+var _ errors.SecondaryError = &MissingPubClosingParenError{}
+var _ errors.HasDocumentationLink = &MissingPubClosingParenError{}
+
+func (*MissingPubClosingParenError) isParseError() {}
+
+func (*MissingPubClosingParenError) IsUserError() {}
+
+func (e *MissingPubClosingParenError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *MissingPubClosingParenError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*MissingPubClosingParenError) Error() string {
+	return fmt.Sprintf(
+		"missing %s at end of `pub` modifier",
+		lexer.TokenParenClose,
+	)
+}
+
+func (*MissingPubClosingParenError) SecondaryError() string {
+	return "the 'pub(set)' modifier must be properly closed with a closing parenthesis"
+}
+
+func (*MissingPubClosingParenError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control"
+}
+
 // MissingAccessKeywordError is reported when an access modifier keyword is missing.
 type MissingAccessKeywordError struct {
 	GotToken lexer.Token
