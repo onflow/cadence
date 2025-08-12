@@ -157,7 +157,7 @@ const (
 	_ // future: UFix16
 	_ // future: UFix32
 	PrimitiveStaticTypeUFix64
-	_ // future: UFix128
+	PrimitiveStaticTypeUFix128
 	_ // future: UFix256
 	_
 

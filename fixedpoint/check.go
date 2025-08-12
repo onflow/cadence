@@ -68,8 +68,8 @@ var (
 		nil,
 	)
 
-	Fix128TypeMin = fix.NewFix128(0x8000000000000000, 0x0000000000000000)
-	Fix128TypeMax = fix.NewFix128(0x7FFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF)
+	Fix128TypeMin = fix.Fix128Min
+	Fix128TypeMax = fix.Fix128Max
 
 	Fix128TypeMinIntBig = Fix128ToBigInt(Fix128TypeMin)
 	Fix128TypeMaxIntBig = Fix128ToBigInt(Fix128TypeMax)
@@ -108,11 +108,10 @@ const (
 )
 
 var (
-	UFix128FactorAsBigInt         = Fix128FactorAsBigInt
-	UFix64ToUFix128FactorAsBigInt = Fix64ToFix128FactorAsBigInt
+	UFix128FactorAsBigInt = Fix128FactorAsBigInt
 
-	UFix128TypeMin = fix.NewUFix128(0x0000000000000000, 0x0000000000000000)
-	UFix128TypeMax = fix.NewUFix128(0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF)
+	UFix128TypeMin = fix.UFix128Zero
+	UFix128TypeMax = fix.UFix128Max
 
 	UFix128TypeMinIntBig = UFix128ToBigInt(UFix128TypeMin)
 	UFix128TypeMaxIntBig = UFix128ToBigInt(UFix128TypeMax)

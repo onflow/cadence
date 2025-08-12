@@ -219,7 +219,7 @@ func (v Fix128Value) SaturatingPlus(context NumberValueArithmeticContext, other 
 	}
 
 	valueGetter := func() fix.Fix128 {
-		return performSaturationArithmatic(fix.Fix128(v).Add, o)
+		return performFix128SaturationArithmatic(fix.Fix128(v).Add, o)
 	}
 
 	return NewFix128Value(context, valueGetter)
@@ -258,7 +258,7 @@ func (v Fix128Value) SaturatingMinus(context NumberValueArithmeticContext, other
 	}
 
 	valueGetter := func() fix.Fix128 {
-		return performSaturationArithmatic(fix.Fix128(v).Sub, o)
+		return performFix128SaturationArithmatic(fix.Fix128(v).Sub, o)
 	}
 
 	return NewFix128Value(context, valueGetter)
@@ -297,7 +297,7 @@ func (v Fix128Value) SaturatingMul(context NumberValueArithmeticContext, other N
 	}
 
 	valueGetter := func() fix.Fix128 {
-		return performSaturationArithmatic(fix.Fix128(v).Mul, o)
+		return performFix128SaturationArithmatic(fix.Fix128(v).Mul, o)
 	}
 
 	return NewFix128Value(context, valueGetter)
@@ -336,7 +336,7 @@ func (v Fix128Value) SaturatingDiv(context NumberValueArithmeticContext, other N
 	}
 
 	valueGetter := func() fix.Fix128 {
-		return performSaturationArithmatic(fix.Fix128(v).Div, o)
+		return performFix128SaturationArithmatic(fix.Fix128(v).Div, o)
 	}
 
 	return NewFix128Value(context, valueGetter)
@@ -614,7 +614,7 @@ func handleFixedpointError(err error, _ LocationRange) {
 	panic(err)
 }
 
-func performSaturationArithmatic(
+func performFix128SaturationArithmatic(
 	operation func(value fix.Fix128) (fix.Fix128, error),
 	otherValue Fix128Value,
 ) fix.Fix128 {

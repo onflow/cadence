@@ -1930,12 +1930,12 @@ var UFix64Type = NewFixedPointNumericType(UFix64TypeName).
 var UFix64TypeAnnotation = NewTypeAnnotation(UFix64Type)
 
 // UFix128Type represents the 128-bit unsigned decimal fixed-point type `UFix128`
-// which has a scale of UFix128Scale, and checks for overflow and underflow.
+// which has a scale of Fix128Scale, and checks for overflow and underflow.
 var UFix128Type = NewFixedPointNumericType(UFix128TypeName).
 	WithTag(UFix128TypeTag).
 	WithIntRange(UFix128TypeMinIntBig, UFix128TypeMaxIntBig).
 	WithFractionalRange(UFix128TypeMinFractionalBig, UFix128TypeMaxFractionalBig).
-	WithScale(UFix128Scale).
+	WithScale(Fix128Scale).
 	WithSaturatingFunctions(SaturatingArithmeticSupport{
 		Add:      true,
 		Subtract: true,
@@ -2117,8 +2117,6 @@ const UFix64TypeMaxInt = fixedpoint.UFix64TypeMaxInt
 
 const UFix64TypeMinFractional = fixedpoint.UFix64TypeMinFractional
 const UFix64TypeMaxFractional = fixedpoint.UFix64TypeMaxFractional
-
-const UFix128Scale = fixedpoint.UFix128Scale
 
 // ArrayType
 

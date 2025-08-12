@@ -88,3 +88,7 @@ func Fix128(v fix.Fix128) string {
 	)
 	return builder.String()
 }
+
+func UFix128(v fix.UFix128) string {
+	return Fix128(fix.Fix128(v))
+}
