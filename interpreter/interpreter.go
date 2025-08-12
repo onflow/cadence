@@ -3558,6 +3558,10 @@ func init() {
 			sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType,
 			sema.FixedPointType, sema.SignedFixedPointType:
 			continue
+
+		// TODO: Support UFix128
+		case sema.UFix128Type:
+			continue
 		}
 
 		// todo use TypeID's here?

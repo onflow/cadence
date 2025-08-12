@@ -76,13 +76,13 @@ var (
 
 	Fix128TypeMinFractionalBig = func() *big.Int {
 		fix128TypeMinFractional := new(big.Int)
-		fix128TypeMinFractional.Mod(integer.Int128TypeMinIntBig, Fix128FactorAsBigInt)
+		fix128TypeMinFractional = fix128TypeMinFractional.Mod(integer.Int128TypeMinIntBig, Fix128FactorAsBigInt)
 		return fix128TypeMinFractional
 	}()
 
 	Fix128TypeMaxFractionalBig = func() *big.Int {
 		fix128TypeMaxFractional := new(big.Int)
-		fix128TypeMaxFractional.Mod(integer.Int128TypeMaxIntBig, Fix128FactorAsBigInt)
+		fix128TypeMaxFractional = fix128TypeMaxFractional.Mod(integer.Int128TypeMaxIntBig, Fix128FactorAsBigInt)
 		return fix128TypeMaxFractional
 	}()
 )
@@ -100,6 +100,31 @@ const UFix64TypeMaxFractional = math.MaxUint64 % uint64(Fix64Factor)
 
 var UFix64TypeMinFractionalBig = new(big.Int).SetUint64(UFix64TypeMinFractional)
 var UFix64TypeMaxFractionalBig = new(big.Int).SetUint64(UFix64TypeMaxFractional)
+
+// UFix128
+
+const (
+	UFix128Scale = Fix128Scale
+)
+
+var (
+	UFix128FactorAsBigInt         = Fix128FactorAsBigInt
+	UFix64ToUFix128FactorAsBigInt = Fix64ToFix128FactorAsBigInt
+
+	UFix128TypeMin = fix.NewUFix128(0x0000000000000000, 0x0000000000000000)
+	UFix128TypeMax = fix.NewUFix128(0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF)
+
+	UFix128TypeMinIntBig = UFix128ToBigInt(UFix128TypeMin)
+	UFix128TypeMaxIntBig = UFix128ToBigInt(UFix128TypeMax)
+
+	UFix128TypeMinFractionalBig = big.NewInt(0)
+
+	UFix128TypeMaxFractionalBig = func() *big.Int {
+		ufix128TypeMaxFractional := new(big.Int)
+		ufix128TypeMaxFractional = ufix128TypeMaxFractional.Mod(integer.UInt128TypeMaxIntBig, UFix128FactorAsBigInt)
+		return ufix128TypeMaxFractional
+	}()
+)
 
 func init() {
 	Fix64TypeMinFractionalBig.Abs(Fix64TypeMinFractionalBig)

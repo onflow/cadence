@@ -1929,6 +1929,20 @@ var UFix64Type = NewFixedPointNumericType(UFix64TypeName).
 	})
 var UFix64TypeAnnotation = NewTypeAnnotation(UFix64Type)
 
+// UFix128Type represents the 128-bit unsigned decimal fixed-point type `UFix128`
+// which has a scale of UFix128Scale, and checks for overflow and underflow.
+var UFix128Type = NewFixedPointNumericType(UFix128TypeName).
+	WithTag(UFix128TypeTag).
+	WithIntRange(UFix128TypeMinIntBig, UFix128TypeMaxIntBig).
+	WithFractionalRange(UFix128TypeMinFractionalBig, UFix128TypeMaxFractionalBig).
+	WithScale(UFix128Scale).
+	WithSaturatingFunctions(SaturatingArithmeticSupport{
+		Add:      true,
+		Subtract: true,
+		Multiply: true,
+	})
+var UFix128TypeAnnotation = NewTypeAnnotation(UFix128Type)
+
 // Numeric type ranges
 var (
 	Int8TypeMinInt = new(big.Int).SetInt64(math.MinInt8)
@@ -1974,14 +1988,7 @@ var (
 	UInt64TypeMaxInt = new(big.Int).SetUint64(math.MaxUint64)
 
 	UInt128TypeMinIntBig = new(big.Int)
-
-	UInt128TypeMaxIntBig = func() *big.Int {
-		uInt128TypeMax := big.NewInt(1)
-		uInt128TypeMax.Lsh(uInt128TypeMax, 128)
-		uInt128TypeMax.Sub(uInt128TypeMax, big.NewInt(1))
-		return uInt128TypeMax
-
-	}()
+	UInt128TypeMaxIntBig = integer.UInt128TypeMaxIntBig
 
 	UInt256TypeMinIntBig = new(big.Int)
 
@@ -2057,6 +2064,16 @@ var (
 
 	UFix64TypeMinFractionalBig = fixedpoint.UFix64TypeMinFractionalBig
 	UFix64TypeMaxFractionalBig = fixedpoint.UFix64TypeMaxFractionalBig
+
+	// UFix128
+
+	UFix128FactorIntBig = fixedpoint.UFix128FactorAsBigInt
+
+	UFix128TypeMinIntBig = fixedpoint.UFix128TypeMinIntBig
+	UFix128TypeMaxIntBig = fixedpoint.UFix128TypeMaxIntBig
+
+	UFix128TypeMinFractionalBig = fixedpoint.UFix128TypeMinFractionalBig
+	UFix128TypeMaxFractionalBig = fixedpoint.UFix128TypeMaxFractionalBig
 )
 
 // size constants (in bytes) for fixed-width numeric types
@@ -2100,6 +2117,8 @@ const UFix64TypeMaxInt = fixedpoint.UFix64TypeMaxInt
 
 const UFix64TypeMinFractional = fixedpoint.UFix64TypeMinFractional
 const UFix64TypeMaxFractional = fixedpoint.UFix64TypeMaxFractional
+
+const UFix128Scale = fixedpoint.UFix128Scale
 
 // ArrayType
 
@@ -4302,6 +4321,7 @@ var AllSignedFixedPointTypes = []Type{
 
 var AllUnsignedFixedPointTypes = []Type{
 	UFix64Type,
+	UFix128Type,
 }
 
 var AllFixedPointTypes = common.Concat(
@@ -7594,7 +7614,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		switch subType {
 		case FixedPointType,
 			SignedFixedPointType,
-			UFix64Type:
+			UFix64Type,
+			UFix128Type:
 
 			return true
 

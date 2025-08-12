@@ -125,3 +125,25 @@ func Fix128ToBigEndianBytes(fix128 fix.Fix128) []byte {
 	binary.BigEndian.PutUint64(b[8:], uint64(fix128.Lo))
 	return b
 }
+
+func UFix128FromBigInt(value *big.Int) fix.UFix128 {
+	v := new(big.Int).Set(value)
+
+	// Use v.Uint64() to get the low 64 bits
+	low := v.Uint64()
+
+	// Shift right to get the high 64 bits
+	high := new(big.Int).Rsh(v, 64).Uint64()
+
+	return fix.NewUFix128(high, low)
+}
+
+func UFix128ToBigInt(value fix.UFix128) *big.Int {
+	high := new(big.Int).SetUint64(uint64(value.Hi))
+	low := new(big.Int).SetUint64(uint64(value.Lo))
+
+	result := high.Lsh(high, 64)
+	result = result.Add(result, low)
+
+	return result
+}
