@@ -21,7 +21,6 @@ package parser
 import (
 	"encoding/hex"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/onflow/cadence/ast"
@@ -296,16 +295,6 @@ func handlePub(p *parser) {
 		})
 	}
 }
-
-var enumeratedAccessModifierKeywords = common.EnumerateWords(
-	[]string{
-		strconv.Quote(KeywordAll),
-		strconv.Quote(KeywordAccount),
-		strconv.Quote(KeywordContract),
-		strconv.Quote(KeywordSelf),
-	},
-	"or",
-)
 
 func rejectAccessKeywordEntitlementType(p *parser, ty *ast.NominalType) {
 	switch ty.Identifier.Identifier {

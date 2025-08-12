@@ -20,6 +20,7 @@ package parser
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/onflow/cadence/ast"
@@ -2660,15 +2661,21 @@ func (e *MissingAccessKeywordError) EndPosition(_ common.MemoryGauge) ast.Positi
 	return e.GotToken.EndPos
 }
 
+var enumeratedAccessModifierKeywords = common.EnumerateWords(
+	[]string{
+		strconv.Quote(KeywordAll),
+		strconv.Quote(KeywordAccount),
+		strconv.Quote(KeywordContract),
+		strconv.Quote(KeywordSelf),
+	},
+	"or",
+)
+
 func (e *MissingAccessKeywordError) Error() string {
-	keywords := common.EnumerateWords(
-		[]string{`"all"`, `"account"`, `"contract"`, `"self"`},
-		"or",
-	)
 	return expectedButGotToken(
 		fmt.Sprintf(
 			"expected keyword %s",
-			keywords,
+			enumeratedAccessModifierKeywords,
 		),
 		e.GotToken.Type,
 	)
