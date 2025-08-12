@@ -2477,40 +2477,40 @@ func (*PubSetAccessError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/cadence-migration-guide/improvements#-motivation-11"
 }
 
-// InvalidPubSetModifierError is reported when the modifier for `pub` is not `set`.
-type InvalidPubSetModifierError struct {
+// InvalidPubModifierError is reported when the modifier for `pub` is not `set`.
+type InvalidPubModifierError struct {
 	GotToken lexer.Token
 }
 
-var _ ParseError = &InvalidPubSetModifierError{}
-var _ errors.UserError = &InvalidPubSetModifierError{}
-var _ errors.SecondaryError = &InvalidPubSetModifierError{}
-var _ errors.HasDocumentationLink = &InvalidPubSetModifierError{}
+var _ ParseError = &InvalidPubModifierError{}
+var _ errors.UserError = &InvalidPubModifierError{}
+var _ errors.SecondaryError = &InvalidPubModifierError{}
+var _ errors.HasDocumentationLink = &InvalidPubModifierError{}
 
-func (*InvalidPubSetModifierError) isParseError() {}
+func (*InvalidPubModifierError) isParseError() {}
 
-func (*InvalidPubSetModifierError) IsUserError() {}
+func (*InvalidPubModifierError) IsUserError() {}
 
-func (e *InvalidPubSetModifierError) StartPosition() ast.Position {
+func (e *InvalidPubModifierError) StartPosition() ast.Position {
 	return e.GotToken.StartPos
 }
 
-func (e *InvalidPubSetModifierError) EndPosition(_ common.MemoryGauge) ast.Position {
+func (e *InvalidPubModifierError) EndPosition(_ common.MemoryGauge) ast.Position {
 	return e.GotToken.EndPos
 }
 
-func (e *InvalidPubSetModifierError) Error() string {
+func (e *InvalidPubModifierError) Error() string {
 	return expectedButGotToken(
 		`expected keyword "set"`,
 		e.GotToken.Type,
 	)
 }
 
-func (*InvalidPubSetModifierError) SecondaryError() string {
+func (*InvalidPubModifierError) SecondaryError() string {
 	return "the 'set' keyword is used in access control modifiers to specify settable access"
 }
 
-func (*InvalidPubSetModifierError) DocumentationLink() string {
+func (*InvalidPubModifierError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control"
 }
 

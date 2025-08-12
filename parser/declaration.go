@@ -257,29 +257,37 @@ func handlePub(p *parser) error {
 	// Skip the opening paren
 	p.nextSemanticToken()
 
-	const keywordSet = "set"
+	var isPubSet bool
 
-	if !p.isToken(p.current, lexer.TokenIdentifier, keywordSet) {
-		return &InvalidPubSetModifierError{
-			GotToken: p.current,
+	if p.current.Type == lexer.TokenIdentifier {
+		const keywordSet = "set"
+
+		isPubSet = string(p.currentTokenSource()) == keywordSet
+
+		if !isPubSet {
+			p.report(&InvalidPubModifierError{
+				GotToken: p.current,
+			})
 		}
-	}
 
-	// Skip the `set` keyword
-	p.nextSemanticToken()
+		// Assume it is a keyword, skip it
+		p.nextSemanticToken()
+	}
 
 	endToken, err := p.mustOne(lexer.TokenParenClose)
 	if err != nil {
 		return err
 	}
 
-	p.report(&PubSetAccessError{
-		Range: ast.NewRange(
-			p.memoryGauge,
-			pubToken.StartPos,
-			endToken.EndPos,
-		),
-	})
+	if isPubSet {
+		p.report(&PubSetAccessError{
+			Range: ast.NewRange(
+				p.memoryGauge,
+				pubToken.StartPos,
+				endToken.EndPos,
+			),
+		})
+	}
 
 	return nil
 }

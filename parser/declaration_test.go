@@ -4316,28 +4316,6 @@ func TestParseInvalidCompositeFunctionWithSelfParameter(t *testing.T) {
 	}
 }
 
-func TestParseInvalidPubSetModifier(t *testing.T) {
-
-	t.Parallel()
-
-	_, errs := testParseDeclarations("pub(foo) fun x() {}")
-
-	AssertEqualWithDiff(t,
-		[]error{
-			&InvalidPubSetModifierError{
-				GotToken: lexer.Token{
-					Type: lexer.TokenIdentifier,
-					Range: ast.Range{
-						StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
-						EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
-					},
-				},
-			},
-		},
-		errs,
-	)
-}
-
 func TestParseInvalidParameterWithoutLabel(t *testing.T) {
 	t.Parallel()
 
@@ -4471,6 +4449,10 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "expected 'for', got '{'",
+					Pos:     ast.Position{Offset: 13, Line: 1, Column: 13},
+				},
+				&SyntaxError{
+					Message: "expected identifier, got '{'",
 					Pos:     ast.Position{Offset: 13, Line: 1, Column: 13},
 				},
 			},
@@ -10818,6 +10800,27 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
 						EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("pub(foo)", func(t *testing.T) {
+		t.Parallel()
+
+		_, errs := testParseDeclarations("pub(foo) fun x() {}")
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&InvalidPubModifierError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+							EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+						},
 					},
 				},
 			},
