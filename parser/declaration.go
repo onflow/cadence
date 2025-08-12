@@ -1024,17 +1024,16 @@ func parseFieldWithVariableKind(
 // parseEntitlementMapping parses an entitlement mapping
 //
 //	entitlementMapping : nominalType '->' nominalType
-func parseEntitlementMapping(p *parser, docString string) (*ast.EntitlementMapRelation, error) {
+func parseEntitlementMapping(p *parser) (*ast.EntitlementMapRelation, error) {
 	inputType, err := parseType(p, lowestBindingPower)
 	if err != nil {
 		return nil, err
 	}
 	inputNominalType, ok := inputType.(*ast.NominalType)
 	if !ok {
-		p.reportSyntaxError(
-			"expected nominal type, got %s",
-			inputType,
-		)
+		p.report(&InvalidEntitlementMappingTypeError{
+			Range: ast.NewRangeFromPositioned(p.memoryGauge, inputType),
+		})
 	}
 
 	p.skipSpaceAndComments()
@@ -1053,15 +1052,18 @@ func parseEntitlementMapping(p *parser, docString string) (*ast.EntitlementMapRe
 
 	outputNominalType, ok := outputType.(*ast.NominalType)
 	if !ok {
-		p.reportSyntaxError(
-			"expected nominal type, got %s",
-			outputType,
-		)
+		p.report(&InvalidEntitlementMappingTypeError{
+			Range: ast.NewRangeFromPositioned(p.memoryGauge, outputType),
+		})
 	}
 
 	p.skipSpaceAndComments()
 
-	return ast.NewEntitlementMapRelation(p.memoryGauge, inputNominalType, outputNominalType), nil
+	return ast.NewEntitlementMapRelation(
+		p.memoryGauge,
+		inputNominalType,
+		outputNominalType,
+	), nil
 }
 
 // parseEntitlementMappings parses entitlement mappings
@@ -1072,10 +1074,7 @@ func parseEntitlementMappingsAndInclusions(p *parser, endTokenType lexer.TokenTy
 
 	for p.checkProgress(&progress) {
 
-		_, docString := p.parseTrivia(triviaOptions{
-			skipNewlines:    true,
-			parseDocStrings: true,
-		})
+		p.skipSpaceAndComments()
 
 		switch p.current.Type {
 
@@ -1083,26 +1082,25 @@ func parseEntitlementMappingsAndInclusions(p *parser, endTokenType lexer.TokenTy
 			return elements, nil
 
 		default:
-			if string(p.currentTokenSource()) == KeywordInclude {
+			if p.isToken(p.current, lexer.TokenIdentifier, KeywordInclude) {
 				// Skip the `include` keyword
 				p.nextSemanticToken()
-				outputType, err := parseType(p, lowestBindingPower)
+
+				includedType, err := parseType(p, lowestBindingPower)
 				if err != nil {
 					return nil, err
 				}
 
-				outputNominalType, ok := outputType.(*ast.NominalType)
+				includedNominalType, ok := includedType.(*ast.NominalType)
 				if !ok {
-					p.reportSyntaxError(
-						"expected nominal type, got %s",
-						outputType,
-					)
+					p.report(&InvalidEntitlementMappingIncludeTypeError{
+						Range: ast.NewRangeFromPositioned(p.memoryGauge, includedType),
+					})
 				}
 
-				p.skipSpaceAndComments()
-				elements = append(elements, outputNominalType)
+				elements = append(elements, includedNominalType)
 			} else {
-				mapping, err := parseEntitlementMapping(p, docString)
+				mapping, err := parseEntitlementMapping(p)
 				if err != nil {
 					return nil, err
 				}

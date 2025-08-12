@@ -10456,15 +10456,19 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations(` access(all) entitlement mapping M { 
-			&A -> B
-		} `)
+		_, errs := testParseDeclarations(`
+          access(all) entitlement mapping M {
+              &A -> B
+          }
+        `)
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected nominal type, got &A",
-					Pos:     ast.Position{Offset: 43, Line: 2, Column: 5},
+				&InvalidEntitlementMappingTypeError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 61, Line: 3, Column: 14},
+						EndPos:   ast.Position{Offset: 62, Line: 3, Column: 15},
+					},
 				},
 			},
 			errs,
@@ -10475,15 +10479,19 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations(` access(all) entitlement mapping M { 
-			A -> [B]
-		} `)
+		_, errs := testParseDeclarations(`
+          access(all) entitlement mapping M {
+              A -> [B]
+          }
+        `)
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected nominal type, got [B]",
-					Pos:     ast.Position{Offset: 49, Line: 2, Column: 11},
+				&InvalidEntitlementMappingTypeError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 66, Line: 3, Column: 19},
+						EndPos:   ast.Position{Offset: 68, Line: 3, Column: 21},
+					},
 				},
 			},
 			errs,
@@ -10536,15 +10544,19 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations(` access(all) entitlement mapping M { 
-			include &A
-		} `)
+		_, errs := testParseDeclarations(`
+          access(all) entitlement mapping M {
+              include &A
+          }
+        `)
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected nominal type, got &A",
-					Pos:     ast.Position{Offset: 51, Line: 2, Column: 13},
+				&InvalidEntitlementMappingIncludeTypeError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 69, Line: 3, Column: 22},
+						EndPos:   ast.Position{Offset: 70, Line: 3, Column: 23},
+					},
 				},
 			},
 			errs,

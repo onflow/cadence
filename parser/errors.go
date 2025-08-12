@@ -1575,6 +1575,58 @@ func (*UnexpectedColonInIntersectionTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
 }
 
+// InvalidEntitlementMappingTypeError is reported when an entitlement mapping type is not nominal.
+type InvalidEntitlementMappingTypeError struct {
+	ast.Range
+}
+
+var _ ParseError = &InvalidEntitlementMappingTypeError{}
+var _ errors.UserError = &InvalidEntitlementMappingTypeError{}
+var _ errors.SecondaryError = &InvalidEntitlementMappingTypeError{}
+var _ errors.HasDocumentationLink = &InvalidEntitlementMappingTypeError{}
+
+func (*InvalidEntitlementMappingTypeError) isParseError() {}
+
+func (*InvalidEntitlementMappingTypeError) IsUserError() {}
+
+func (e *InvalidEntitlementMappingTypeError) Error() string {
+	return "expected entitlement type"
+}
+
+func (*InvalidEntitlementMappingTypeError) SecondaryError() string {
+	return "only entitlement types can be used in entitlement mappings"
+}
+
+func (*InvalidEntitlementMappingTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control#entitlement-mappings"
+}
+
+// InvalidEntitlementMappingIncludeTypeError is reported when an included entitlement mapping type is not nominal.
+type InvalidEntitlementMappingIncludeTypeError struct {
+	ast.Range
+}
+
+var _ ParseError = &InvalidEntitlementMappingIncludeTypeError{}
+var _ errors.UserError = &InvalidEntitlementMappingIncludeTypeError{}
+var _ errors.SecondaryError = &InvalidEntitlementMappingIncludeTypeError{}
+var _ errors.HasDocumentationLink = &InvalidEntitlementMappingIncludeTypeError{}
+
+func (*InvalidEntitlementMappingIncludeTypeError) isParseError() {}
+
+func (*InvalidEntitlementMappingIncludeTypeError) IsUserError() {}
+
+func (e *InvalidEntitlementMappingIncludeTypeError) Error() string {
+	return "expected entitlement mapping type"
+}
+
+func (*InvalidEntitlementMappingIncludeTypeError) SecondaryError() string {
+	return "only entitlement mapping types can be included in entitlement mappings"
+}
+
+func (*InvalidEntitlementMappingIncludeTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control#mapping-composition"
+}
+
 // InvalidNonNominalTypeInIntersectionError is reported when a non-nominal type is found in an intersection type.
 type InvalidNonNominalTypeInIntersectionError struct {
 	ast.Range
