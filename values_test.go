@@ -45,6 +45,7 @@ type valueTestCase struct {
 func newValueTestCases() map[string]valueTestCase {
 	ufix64, _ := NewUFix64("64.01")
 	fix64, _ := NewFix64("-32.11")
+	fix128, _ := NewUnmeteredFix128FromString("-32.11")
 
 	testFunctionType := NewFunctionType(
 		FunctionPurityUnspecified,
@@ -167,6 +168,11 @@ func newValueTestCases() map[string]valueTestCase {
 			value:        fix64,
 			string:       "-32.11000000",
 			expectedType: Fix64Type,
+		},
+		"Fix128": {
+			value:        fix128,
+			string:       "-32.110000000000000000000000",
+			expectedType: Fix128Type,
 		},
 		"Void": {
 			value:        NewVoid(),
@@ -474,6 +480,12 @@ func TestNumberValue_ToBigEndianBytes(t *testing.T) {
 	word256LargeValueTestCase, _ := NewWord256FromBig(new(big.Int).SetBytes([]byte{127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}))
 	word256MaxValue, _ := NewWord256FromBig(sema.Word256TypeMaxIntBig)
 
+	newFix128 := func(s string) Fix128 {
+		v, err := NewUnmeteredFix128FromString(s)
+		require.NoError(t, err)
+		return v
+	}
+
 	typeTests := map[string]map[NumberValue][]byte{
 		// Int*
 		"Int": {
@@ -661,6 +673,14 @@ func TestNumberValue_ToBigEndianBytes(t *testing.T) {
 			Fix64(42_00000000): {0, 0, 0, 0, 250, 86, 234, 0},
 			Fix64(42_24000000): {0, 0, 0, 0, 251, 197, 32, 0},
 			Fix64(-1_00000000): {255, 255, 255, 255, 250, 10, 31, 0},
+		},
+		"Fix128": {
+			newFix128("0.0"):   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			newFix128("42.0"):  {0, 0, 0, 0, 0, 34, 189, 216, 143, 237, 158, 252, 106, 0, 0, 0},
+			newFix128("42.24"): {0, 0, 0, 0, 0, 34, 240, 170, 253, 0, 136, 125, 32, 0, 0, 0},
+			newFix128("-1.0"):  {255, 255, 255, 255, 255, 255, 44, 61, 228, 49, 51, 18, 95, 0, 0, 0},
+			newFix128("170141183460469.231731687303715884105727"):  {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			newFix128("-170141183460469.231731687303715884105728"): {128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		},
 		// UFix*
 		"UFix64": {
