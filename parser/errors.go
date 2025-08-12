@@ -1642,9 +1642,7 @@ func (*InvalidNonNominalTypeInIntersectionError) isParseError() {}
 func (*InvalidNonNominalTypeInIntersectionError) IsUserError() {}
 
 func (e *InvalidNonNominalTypeInIntersectionError) Error() string {
-	return fmt.Sprintf(
-		"non-nominal type in intersection type",
-	)
+	return "non-nominal type in intersection type"
 }
 
 func (*InvalidNonNominalTypeInIntersectionError) SecondaryError() string {
@@ -3592,4 +3590,41 @@ func (*NestedTypeMissingNameError) SecondaryError() string {
 
 func (*NestedTypeMissingNameError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+// MissingForKeywordInAttachmentDeclarationError is reported when the 'for' keyword is missing in an attachment declaration.
+type MissingForKeywordInAttachmentDeclarationError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingForKeywordInAttachmentDeclarationError{}
+var _ errors.UserError = &MissingForKeywordInAttachmentDeclarationError{}
+var _ errors.SecondaryError = &MissingForKeywordInAttachmentDeclarationError{}
+var _ errors.HasDocumentationLink = &MissingForKeywordInAttachmentDeclarationError{}
+
+func (*MissingForKeywordInAttachmentDeclarationError) isParseError() {}
+
+func (*MissingForKeywordInAttachmentDeclarationError) IsUserError() {}
+
+func (e *MissingForKeywordInAttachmentDeclarationError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingForKeywordInAttachmentDeclarationError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingForKeywordInAttachmentDeclarationError) Error() string {
+	return expectedButGotToken(
+		"expected 'for' keyword",
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingForKeywordInAttachmentDeclarationError) SecondaryError() string {
+	return "the 'attachment' declaration requires the 'for' keyword to specify the target"
+}
+
+func (*MissingForKeywordInAttachmentDeclarationError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/attachments#declaring-attachments"
 }

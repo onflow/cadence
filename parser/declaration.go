@@ -1380,30 +1380,22 @@ func parseAttachmentDeclaration(
 		// Skip the `for` keyword
 		p.nextSemanticToken()
 	} else {
-		p.reportSyntaxError(
-			"expected 'for', got %s",
-			p.current.Type,
-		)
-	}
-
-	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, p.newSyntaxError(
-			"expected %s, got %s",
-			lexer.TokenIdentifier,
-			p.current.Type,
-		)
+		p.report(&MissingForKeywordInAttachmentDeclarationError{
+			GotToken: p.current,
+		})
 	}
 
 	baseType, err := parseType(p, lowestBindingPower)
+	if err != nil {
+		return nil, err
+	}
+
 	baseNominalType, ok := baseType.(*ast.NominalType)
 	if !ok {
 		p.reportSyntaxError(
 			"expected nominal type, got %s",
 			baseType,
 		)
-	}
-	if err != nil {
-		return nil, err
 	}
 
 	p.skipSpaceAndComments()

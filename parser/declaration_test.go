@@ -4447,13 +4447,28 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		_, errs := testParseDeclarations("attachment E {} ")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected 'for', got '{'",
-					Pos:     ast.Position{Offset: 13, Line: 1, Column: 13},
+				&MissingForKeywordInAttachmentDeclarationError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+							EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+						},
+						Type: lexer.TokenBraceOpen,
+					},
 				},
 				&SyntaxError{
-					Message: "expected identifier, got '{'",
-					Pos:     ast.Position{Offset: 13, Line: 1, Column: 13},
+					Message: "expected nominal type, got {}",
+					Pos:     ast.Position{Offset: 15, Line: 1, Column: 15},
+				},
+				&SyntaxError{
+					Message:       "expected token '{'",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos: ast.Position{
+						Offset: 16,
+						Line:   1,
+						Column: 16,
+					},
 				},
 			},
 			errs,
