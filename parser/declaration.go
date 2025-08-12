@@ -1177,6 +1177,7 @@ func parseEntitlementOrMappingDeclaration(
 		if err != nil {
 			return nil, err
 		}
+
 		declarationRange := ast.NewRange(
 			p.memoryGauge,
 			startPos,
@@ -1688,7 +1689,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				).
 					WithSecondary("remove the identifier before the pragma declaration")
 			}
-			rejectAllModifiers(p, access, accessPos, staticPos, nativePos, nil, common.DeclarationKindPragma)
+			rejectAllModifiers(p, access, accessPos, staticPos, nativePos, purityPos, common.DeclarationKindPragma)
 			return parsePragmaDeclaration(p)
 
 		case lexer.TokenColon:
