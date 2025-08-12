@@ -853,17 +853,16 @@ func parseRemoveStatement(
 	p.next()
 	p.skipSpaceAndComments()
 
-	attachment, err := parseType(p, lowestBindingPower)
+	ty, err := parseType(p, lowestBindingPower)
 	if err != nil {
 		return nil, err
 	}
 
-	attachmentNominalType, ok := attachment.(*ast.NominalType)
+	attachmentNominalType, ok := ty.(*ast.NominalType)
 	if !ok {
-		p.reportSyntaxError(
-			"expected attachment nominal type, got %s",
-			attachment,
-		)
+		p.report(&InvalidAttachmentRemovalTypeError{
+			Range: ast.NewRangeFromPositioned(p.memoryGauge, ty),
+		})
 	}
 
 	p.skipSpaceAndComments()

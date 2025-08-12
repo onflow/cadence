@@ -1390,9 +1390,11 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected attachment nominal type, got [A]",
-					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				&InvalidAttachmentRemovalTypeError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+						EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+					},
 				},
 			},
 			errs,

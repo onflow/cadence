@@ -1277,6 +1277,32 @@ func (*MissingFromKeywordInRemoveStatementError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/attachments#removing-attachments"
 }
 
+// InvalidAttachmentTypeError is reported when a removed attachment type is not nominal.
+type InvalidAttachmentRemovalTypeError struct {
+	ast.Range
+}
+
+var _ ParseError = &InvalidAttachmentRemovalTypeError{}
+var _ errors.UserError = &InvalidAttachmentRemovalTypeError{}
+var _ errors.SecondaryError = &InvalidAttachmentRemovalTypeError{}
+var _ errors.HasDocumentationLink = &InvalidAttachmentRemovalTypeError{}
+
+func (*InvalidAttachmentRemovalTypeError) isParseError() {}
+
+func (*InvalidAttachmentRemovalTypeError) IsUserError() {}
+
+func (e *InvalidAttachmentRemovalTypeError) Error() string {
+	return "expected attachment nominal type"
+}
+
+func (*InvalidAttachmentRemovalTypeError) SecondaryError() string {
+	return "only attachment types can be removed"
+}
+
+func (*InvalidAttachmentRemovalTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/attachments#removing-attachments"
+}
+
 // UnexpectedCommaInDictionaryTypeError is reported when a comma is found in a dictionary type.
 type UnexpectedCommaInDictionaryTypeError struct {
 	Pos ast.Position
