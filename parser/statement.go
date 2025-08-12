@@ -724,16 +724,6 @@ func parseSwitchStatement(p *parser) (*ast.SwitchStatement, error) {
 //	switchCases : switchCase*
 func parseSwitchCases(p *parser) (cases []*ast.SwitchCase, err error) {
 
-	reportUnexpected := func() {
-		p.reportSyntaxError(
-			"unexpected token: got %s, expected %q or %q",
-			p.current.Type,
-			KeywordCase,
-			KeywordDefault,
-		)
-		p.next()
-	}
-
 	progress := p.newProgress()
 
 	for p.checkProgress(&progress) {
@@ -747,17 +737,22 @@ func parseSwitchCases(p *parser) (cases []*ast.SwitchCase, err error) {
 			switch string(p.currentTokenSource()) {
 			case KeywordCase:
 				switchCase, err = parseSwitchCase(p, true)
+				if err != nil {
+					return
+				}
 
 			case KeywordDefault:
 				switchCase, err = parseSwitchCase(p, false)
+				if err != nil {
+					return
+				}
 
 			default:
-				reportUnexpected()
+				p.report(&ExpectedCaseOrDefaultError{
+					GotToken: p.current,
+				})
+				p.next()
 				continue
-			}
-
-			if err != nil {
-				return
 			}
 
 			cases = append(cases, switchCase)
@@ -766,7 +761,10 @@ func parseSwitchCases(p *parser) (cases []*ast.SwitchCase, err error) {
 			return
 
 		default:
-			reportUnexpected()
+			p.report(&ExpectedCaseOrDefaultError{
+				GotToken: p.current,
+			})
+			p.next()
 		}
 	}
 
@@ -799,15 +797,13 @@ func parseSwitchCase(p *parser, hasExpression bool) (*ast.SwitchCase, error) {
 
 	colonPos := p.current.StartPos
 
-	if !p.current.Is(lexer.TokenColon) {
-		p.reportSyntaxError(
-			"expected %s, got %s",
-			lexer.TokenColon,
-			p.current.Type,
-		)
+	if p.current.Is(lexer.TokenColon) {
+		p.next()
+	} else {
+		p.report(&MissingColonInSwitchCaseError{
+			GotToken: p.current,
+		})
 	}
-
-	p.next()
 
 	statements, err := parseStatements(p, func(token lexer.Token) bool {
 		switch token.Type {

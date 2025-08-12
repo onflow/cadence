@@ -1545,12 +1545,70 @@ func TestParseSwitchStatement(t *testing.T) {
 		)
 	})
 
-	t.Run("Invalid identifiers in switch cases", func(t *testing.T) {
-		code := "switch 1 {AAAAA: break; case 3: break; default: break}"
-		_, errs := testParseStatements(code)
+	t.Run("invalid identifiers in switch cases", func(t *testing.T) {
+		t.Parallel()
+
+		_, errs := testParseStatements("switch 1 {AAAAA: break; case 3: break; default: break}")
 		AssertEqualWithDiff(t,
-			`unexpected token: got identifier, expected "case" or "default"`,
-			errs[0].Error(),
+			[]error{
+				&ExpectedCaseOrDefaultError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 14, Line: 1, Column: 14},
+						},
+					},
+				},
+				&ExpectedCaseOrDefaultError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenColon,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 15, Line: 1, Column: 15},
+							EndPos:   ast.Position{Offset: 15, Line: 1, Column: 15},
+						},
+					},
+				},
+				&ExpectedCaseOrDefaultError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
+							EndPos:   ast.Position{Offset: 21, Line: 1, Column: 21},
+						},
+					},
+				},
+				&ExpectedCaseOrDefaultError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenSemicolon,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 22, Line: 1, Column: 22},
+							EndPos:   ast.Position{Offset: 22, Line: 1, Column: 22},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing colon", func(t *testing.T) {
+		t.Parallel()
+
+		_, errs := testParseStatements("switch 1 { case 2 break }")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingColonInSwitchCaseError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 18, Line: 1, Column: 18},
+							EndPos:   ast.Position{Offset: 22, Line: 1, Column: 22},
+						},
+					},
+				},
+			},
+			errs,
 		)
 	})
 }

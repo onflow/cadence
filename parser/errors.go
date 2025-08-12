@@ -1162,6 +1162,84 @@ func (*ExpectedExecuteOrPostError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/transactions"
 }
 
+// ExpectedCaseOrDefaultError is reported when a 'case' or 'default' is expected in a switch statement.
+type ExpectedCaseOrDefaultError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &ExpectedCaseOrDefaultError{}
+var _ errors.UserError = &ExpectedCaseOrDefaultError{}
+var _ errors.SecondaryError = &ExpectedCaseOrDefaultError{}
+var _ errors.HasDocumentationLink = &ExpectedCaseOrDefaultError{}
+
+func (*ExpectedCaseOrDefaultError) isParseError() {}
+
+func (*ExpectedCaseOrDefaultError) IsUserError() {}
+
+func (e *ExpectedCaseOrDefaultError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *ExpectedCaseOrDefaultError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *ExpectedCaseOrDefaultError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf(
+			"unexpected token: expected keyword %q or %q",
+			KeywordCase,
+			KeywordDefault,
+		),
+		e.GotToken.Type,
+	)
+}
+
+func (*ExpectedCaseOrDefaultError) SecondaryError() string {
+	return "switch statements can only contain 'case' and 'default' blocks"
+}
+
+func (*ExpectedCaseOrDefaultError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/control-flow#switch"
+}
+
+// MissingColonInSwitchCaseError is reported when a colon is missing in a switch case.
+type MissingColonInSwitchCaseError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingColonInSwitchCaseError{}
+var _ errors.UserError = &MissingColonInSwitchCaseError{}
+var _ errors.SecondaryError = &MissingColonInSwitchCaseError{}
+var _ errors.HasDocumentationLink = &MissingColonInSwitchCaseError{}
+
+func (*MissingColonInSwitchCaseError) isParseError() {}
+
+func (*MissingColonInSwitchCaseError) IsUserError() {}
+
+func (e *MissingColonInSwitchCaseError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingColonInSwitchCaseError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingColonInSwitchCaseError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf("expected %s", lexer.TokenColon),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingColonInSwitchCaseError) SecondaryError() string {
+	return "a colon (:) is required after the case expression in a switch statement"
+}
+
+func (*MissingColonInSwitchCaseError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/control-flow#switch"
+}
+
 // UnexpectedCommaInDictionaryTypeError is reported when a comma is found in a dictionary type.
 type UnexpectedCommaInDictionaryTypeError struct {
 	Pos ast.Position
