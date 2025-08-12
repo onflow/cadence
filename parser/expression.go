@@ -962,10 +962,9 @@ func parseAttachExpressionRemainder(p *parser, token lexer.Token) (*ast.AttachEx
 		// Skip the `to` keyword
 		p.nextSemanticToken()
 	} else {
-		p.reportSyntaxError(
-			"expected 'to', got %s",
-			p.current.Type,
-		)
+		p.report(&MissingToKeywordInAttachExpressionError{
+			GotToken: p.current,
+		})
 	}
 
 	base, err := parseExpression(p, lowestBindingPower)

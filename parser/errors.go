@@ -1277,6 +1277,43 @@ func (*MissingFromKeywordInRemoveStatementError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/attachments#removing-attachments"
 }
 
+// MissingToKeywordInAttachExpressionError is reported when the 'to' keyword is missing in an attach expression.
+type MissingToKeywordInAttachExpressionError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingToKeywordInAttachExpressionError{}
+var _ errors.UserError = &MissingToKeywordInAttachExpressionError{}
+var _ errors.SecondaryError = &MissingToKeywordInAttachExpressionError{}
+var _ errors.HasDocumentationLink = &MissingToKeywordInAttachExpressionError{}
+
+func (*MissingToKeywordInAttachExpressionError) isParseError() {}
+
+func (*MissingToKeywordInAttachExpressionError) IsUserError() {}
+
+func (e *MissingToKeywordInAttachExpressionError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingToKeywordInAttachExpressionError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingToKeywordInAttachExpressionError) Error() string {
+	return expectedButGotToken(
+		"expected 'to' keyword",
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingToKeywordInAttachExpressionError) SecondaryError() string {
+	return "the 'attach' expression requires the 'to' keyword to specify the value to attach to"
+}
+
+func (*MissingToKeywordInAttachExpressionError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/attachments#creating-attachments"
+}
+
 // InvalidAttachmentRemovalTypeError is reported when a removed attachment type is not nominal.
 type InvalidAttachmentRemovalTypeError struct {
 	ast.Range

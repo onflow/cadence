@@ -3044,9 +3044,14 @@ func TestParseAttach(t *testing.T) {
 		_, errs := testParseExpression("attach A()")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected 'to', got EOF",
-					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				&MissingToKeywordInAttachExpressionError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+						},
+						Type: lexer.TokenEOF,
+					},
 				},
 				UnexpectedEOFError{
 					Pos: ast.Position{Offset: 10, Line: 1, Column: 10},
