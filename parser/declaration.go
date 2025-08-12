@@ -94,9 +94,15 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 		case lexer.TokenIdentifier:
 			switch string(p.currentTokenSource()) {
 
-			case KeywordLet, KeywordVar:
+			case KeywordLet:
+				const isLet = true
 				rejectNonAccessModifiers(p, staticPos, nativePos, purityPos, common.DeclarationKindVariable)
-				return parseVariableDeclaration(p, access, accessPos, docString)
+				return parseVariableDeclaration(p, access, accessPos, isLet, docString)
+
+			case KeywordVar:
+				const isLet = false
+				rejectNonAccessModifiers(p, staticPos, nativePos, purityPos, common.DeclarationKindVariable)
+				return parseVariableDeclaration(p, access, accessPos, isLet, docString)
 
 			case KeywordFun:
 				return parseFunctionDeclaration(
@@ -449,6 +455,7 @@ func parseVariableDeclaration(
 	p *parser,
 	access ast.Access,
 	accessPos *ast.Position,
+	isLet bool,
 	docString string,
 ) (*ast.VariableDeclaration, error) {
 
@@ -456,8 +463,6 @@ func parseVariableDeclaration(
 	if accessPos != nil {
 		startPos = *accessPos
 	}
-
-	isLet := string(p.currentTokenSource()) == KeywordLet
 
 	// Skip the `let` or `var` keyword
 	p.nextSemanticToken()
@@ -483,6 +488,7 @@ func parseVariableDeclaration(
 	}
 
 	p.skipSpaceAndComments()
+
 	transfer := parseTransfer(p)
 	if transfer == nil {
 		return nil, &MissingTransferError{

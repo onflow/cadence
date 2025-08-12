@@ -319,9 +319,18 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 
 		if p.current.Type == lexer.TokenIdentifier {
 			switch string(p.currentTokenSource()) {
-			case KeywordLet, KeywordVar:
+			case KeywordLet:
+				const isLet = true
 				variableDeclaration, err =
-					parseVariableDeclaration(p, ast.AccessNotSpecified, nil, "")
+					parseVariableDeclaration(p, ast.AccessNotSpecified, nil, isLet, "")
+				if err != nil {
+					return nil, err
+				}
+
+			case KeywordVar:
+				const isLet = false
+				variableDeclaration, err =
+					parseVariableDeclaration(p, ast.AccessNotSpecified, nil, isLet, "")
 				if err != nil {
 					return nil, err
 				}
