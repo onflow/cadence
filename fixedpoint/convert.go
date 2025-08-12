@@ -88,8 +88,9 @@ func Fix128FromBigInt(value *big.Int) fix.Fix128 {
 }
 
 func Fix128FromIntAndScale(integer, scale int64) fix.Fix128 {
-	bigInt := new(big.Int).Mul(
-		big.NewInt(integer),
+	bigInt := big.NewInt(integer)
+	bigInt = new(big.Int).Mul(
+		bigInt,
 		// To remove the fractional, multiply it by the given scale.
 		new(big.Int).Exp(
 			big.NewInt(10),

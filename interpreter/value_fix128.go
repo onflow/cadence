@@ -46,8 +46,9 @@ var fix128MemoryUsage = common.NewNumberMemoryUsage(fix128Size)
 // NewUnmeteredFix128ValueWithInteger construct a Fix128Value from an int64.
 // Note that this function uses the default scaling of 24.
 func NewUnmeteredFix128ValueWithInteger(integer int64, locationRange LocationRange) Fix128Value {
-	bigInt := new(big.Int).Mul(
-		big.NewInt(integer),
+	bigInt := big.NewInt(integer)
+	bigInt = new(big.Int).Mul(
+		bigInt,
 		sema.Fix128FactorIntBig,
 	)
 
@@ -55,8 +56,10 @@ func NewUnmeteredFix128ValueWithInteger(integer int64, locationRange LocationRan
 }
 
 func NewUnmeteredFix128ValueWithIntegerAndScale(integer int64, scale int64) Fix128Value {
-	bigInt := new(big.Int).Mul(
-		big.NewInt(integer),
+	bigInt := big.NewInt(integer)
+
+	bigInt = new(big.Int).Mul(
+		bigInt,
 		// To remove the fractional, multiply it by the given scale.
 		new(big.Int).Exp(
 			big.NewInt(10),
