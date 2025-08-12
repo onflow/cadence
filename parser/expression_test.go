@@ -3048,6 +3048,9 @@ func TestParseAttach(t *testing.T) {
 					Message: "expected 'to', got EOF",
 					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
 				},
+				UnexpectedEOFError{
+					Pos: ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
 			},
 			errs,
 		)

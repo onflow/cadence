@@ -348,7 +348,9 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 
 		p.skipSpaceAndComments()
 		if p.isToken(p.current, lexer.TokenIdentifier, KeywordElse) {
+			// Skip the `else` keyword
 			p.nextSemanticToken()
+
 			if p.isToken(p.current, lexer.TokenIdentifier, KeywordIf) {
 				parseNested = true
 			} else {
@@ -458,7 +460,8 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 	}
 
 	if p.isToken(p.current, lexer.TokenIdentifier, KeywordIn) {
-		p.next()
+		// Skip the `in` keyword
+		p.nextSemanticToken()
 	} else {
 		p.report(&MissingInKeywordInForStatementError{
 			GotToken: p.current,
@@ -527,8 +530,10 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 	var preConditions *ast.Conditions
 	if p.isToken(p.current, lexer.TokenIdentifier, KeywordPre) {
 		prePos := p.current.StartPos
+
 		// Skip the `pre` keyword
-		p.next()
+		p.nextSemanticToken()
+
 		preConditions, err = parseConditions(p, prePos)
 		if err != nil {
 			return nil, err
@@ -540,8 +545,10 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 	var postConditions *ast.Conditions
 	if p.isToken(p.current, lexer.TokenIdentifier, KeywordPost) {
 		startPos := p.current.StartPos
+
 		// Skip the `post` keyword
-		p.next()
+		p.nextSemanticToken()
+
 		postConditions, err = parseConditions(p, startPos)
 		if err != nil {
 			return nil, err
@@ -867,13 +874,14 @@ func parseRemoveStatement(
 
 	p.skipSpaceAndComments()
 
-	// check and skip `from` keyword
-	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordFrom) {
+	if p.isToken(p.current, lexer.TokenIdentifier, KeywordFrom) {
+		// Skip the `from` keyword
+		p.nextSemanticToken()
+	} else {
 		p.report(&MissingFromKeywordInRemoveStatementError{
 			GotToken: p.current,
 		})
 	}
-	p.nextSemanticToken()
 
 	attached, err := parseExpression(p, lowestBindingPower)
 	if err != nil {

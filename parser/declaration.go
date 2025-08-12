@@ -1378,15 +1378,15 @@ func parseAttachmentDeclaration(
 
 	p.skipSpaceAndComments()
 
-	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordFor) {
-		return nil, p.newSyntaxError(
+	if p.isToken(p.current, lexer.TokenIdentifier, KeywordFor) {
+		// Skip the `for` keyword
+		p.nextSemanticToken()
+	} else {
+		p.reportSyntaxError(
 			"expected 'for', got %s",
 			p.current.Type,
 		)
 	}
-
-	// skip the `for` keyword
-	p.nextSemanticToken()
 
 	if !p.current.Is(lexer.TokenIdentifier) {
 		return nil, p.newSyntaxError(

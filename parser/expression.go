@@ -825,8 +825,9 @@ func defineIdentifierExpression() {
 				p.skipSpaceAndComments()
 
 				if p.isToken(p.current, lexer.TokenIdentifier, KeywordFun) {
-					// skip the `fun` keyword
+					// Skip the `fun` keyword
 					p.nextSemanticToken()
+
 					return parseFunctionExpression(p, token, ast.FunctionPurityView)
 				}
 
@@ -957,15 +958,15 @@ func parseAttachExpressionRemainder(p *parser, token lexer.Token) (*ast.AttachEx
 
 	p.skipSpaceAndComments()
 
-	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordTo) {
-		return nil, p.newSyntaxError(
+	if p.isToken(p.current, lexer.TokenIdentifier, KeywordTo) {
+		// Skip the `to` keyword
+		p.nextSemanticToken()
+	} else {
+		p.reportSyntaxError(
 			"expected 'to', got %s",
 			p.current.Type,
 		)
 	}
-
-	// consume the `to` token
-	p.nextSemanticToken()
 
 	base, err := parseExpression(p, lowestBindingPower)
 	if err != nil {
