@@ -22,10 +22,11 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/parser/lexer"
 	. "github.com/onflow/cadence/test_utils/common_utils"
-	"github.com/stretchr/testify/require"
 )
 
 func TestParseBlockComment(t *testing.T) {
@@ -180,31 +181,15 @@ func TestParseBlockComment(t *testing.T) {
 				{
 					Type: lexer.TokenBlockCommentStart,
 					Range: ast.Range{
-						StartPos: ast.Position{
-							Line:   1,
-							Offset: 0,
-							Column: 0,
-						},
-						EndPos: ast.Position{
-							Line:   1,
-							Offset: 1,
-							Column: 1,
-						},
+						StartPos: ast.Position{Line: 1, Offset: 0, Column: 0},
+						EndPos:   ast.Position{Line: 1, Offset: 1, Column: 1},
 					},
 				},
 				{
 					Type: lexer.TokenIdentifier,
 					Range: ast.Range{
-						StartPos: ast.Position{
-							Line:   1,
-							Offset: 2,
-							Column: 2,
-						},
-						EndPos: ast.Position{
-							Line:   1,
-							Offset: 4,
-							Column: 4,
-						},
+						StartPos: ast.Position{Line: 1, Offset: 2, Column: 2},
+						EndPos:   ast.Position{Line: 1, Offset: 4, Column: 4},
 					},
 				},
 				{Type: lexer.TokenEOF},
