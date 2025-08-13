@@ -1034,9 +1034,12 @@ func parseEntitlementMapping(p *parser) (*ast.EntitlementMapRelation, error) {
 
 	p.skipSpaceAndComments()
 
-	_, err = p.mustOne(lexer.TokenRightArrow)
-	if err != nil {
-		return nil, err
+	if p.current.Is(lexer.TokenRightArrow) {
+		p.next()
+	} else {
+		p.report(&MissingRightArrowInEntitlementMappingError{
+			GotToken: p.current,
+		})
 	}
 
 	p.skipSpaceAndComments()

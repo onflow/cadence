@@ -9753,11 +9753,14 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "expected token '->'",
-					Pos:           ast.Position{Offset: 63, Line: 3, Column: 16},
-					Secondary:     "check for missing punctuation, operators, or syntax elements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
+				&MissingRightArrowInEntitlementMappingError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 63, Line: 3, Column: 16},
+							EndPos:   ast.Position{Offset: 63, Line: 3, Column: 16},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
@@ -9776,11 +9779,23 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "expected token '->'",
-					Pos:           ast.Position{Offset: 63, Line: 3, Column: 16},
-					Secondary:     "check for missing punctuation, operators, or syntax elements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
+				&MissingRightArrowInEntitlementMappingError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 63, Line: 3, Column: 16},
+							EndPos:   ast.Position{Offset: 63, Line: 3, Column: 16},
+						},
+						Type: lexer.TokenMinus,
+					},
+				},
+				&UnexpectedTypeStartError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 63, Line: 3, Column: 16},
+							EndPos:   ast.Position{Offset: 63, Line: 3, Column: 16},
+						},
+						Type: lexer.TokenMinus,
+					},
 				},
 			},
 			errs,

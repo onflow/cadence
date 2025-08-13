@@ -1665,6 +1665,43 @@ func (*InvalidEntitlementMappingIncludeTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control#mapping-composition"
 }
 
+// MissingRightArrowInEntitlementMappingError is reported when the '->' token is missing in an entitlement mapping.
+type MissingRightArrowInEntitlementMappingError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingRightArrowInEntitlementMappingError{}
+var _ errors.UserError = &MissingRightArrowInEntitlementMappingError{}
+var _ errors.SecondaryError = &MissingRightArrowInEntitlementMappingError{}
+var _ errors.HasDocumentationLink = &MissingRightArrowInEntitlementMappingError{}
+
+func (*MissingRightArrowInEntitlementMappingError) isParseError() {}
+
+func (*MissingRightArrowInEntitlementMappingError) IsUserError() {}
+
+func (e *MissingRightArrowInEntitlementMappingError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingRightArrowInEntitlementMappingError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingRightArrowInEntitlementMappingError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf("expected %s in entitlement mapping", lexer.TokenRightArrow),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingRightArrowInEntitlementMappingError) SecondaryError() string {
+	return "entitlement mappings must use '->' to separate the input and output types"
+}
+
+func (*MissingRightArrowInEntitlementMappingError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control#entitlement-mappings"
+}
+
 // InvalidNonNominalTypeInIntersectionError is reported when a non-nominal type is found in an intersection type.
 type InvalidNonNominalTypeInIntersectionError struct {
 	ast.Range
