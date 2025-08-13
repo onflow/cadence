@@ -7963,6 +7963,258 @@ func TestInterpretUFix64Metering(t *testing.T) {
 	})
 }
 
+func TestInterpretUFix128Metering(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("creation", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+          fun main() {
+              let x: UFix128 = 1.4
+          }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindNumberValue))
+		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindBigInt))
+	})
+
+	t.Run("addition", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+          fun main() {
+              let x: UFix128 = 1.4 + 2.5
+          }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// two literals: 16 + 16
+		// result: 16
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindNumberValue))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
+	})
+
+	t.Run("saturating addition", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+          fun main() {
+              let x: UFix128 = 1.4
+              let y: UFix128 = x.saturatingAdd(2.5)
+          }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// two literals: 16 + 16
+		// result: 16
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindNumberValue))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
+	})
+
+	t.Run("subtraction", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+          fun main() {
+              let x: UFix128 = 2.5 - 1.4
+          }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// two literals: 16 + 16
+		// result: 16
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindNumberValue))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
+	})
+
+	t.Run("saturating subtraction", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+          fun main() {
+              let x: UFix128 = 1.4
+              let y: UFix128 = x.saturatingSubtract(2.5)
+          }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// two literals: 16 + 16
+		// result: 16
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindNumberValue))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
+	})
+
+	t.Run("multiplication", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+          fun main() {
+              let x: UFix128 = 1.4 * 2.5
+          }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// two literals: 16 + 16
+		// result: 16
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindNumberValue))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
+	})
+
+	t.Run("saturating multiplication", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+          fun main() {
+              let x: UFix128 = 1.4
+              let y: UFix128 = x.saturatingMultiply(2.5)
+          }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// two literals: 16 + 16
+		// result: 16
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindNumberValue))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
+	})
+
+	t.Run("division", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+          fun main() {
+              let x: UFix128 = 3.4 / 2.5
+          }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// two literals: 16 + 16
+		// result: 16
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindNumberValue))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
+	})
+
+	t.Run("saturating division", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+          fun main() {
+              let x: UFix128 = 3.4
+              let y: UFix128 = x.saturatingMultiply(2.5)
+          }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// two literals: 16 + 16
+		// result: 16
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindNumberValue))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
+	})
+
+	t.Run("modulo", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+          fun main() {
+              let x: UFix128 = 3.4 % 2.5
+          }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		// two literals: 16 + 16
+		// result: 16
+		assert.Equal(t, uint64(48), meter.getMemory(common.MemoryKindNumberValue))
+		assert.Equal(t, uint64(64), meter.getMemory(common.MemoryKindBigInt))
+	})
+
+	t.Run("logical operations", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+          fun main() {
+              let x: UFix128 = 1.0
+              x == 1.0
+              x != 1.0
+              x > 1.0
+              x >= 1.0
+              x < 1.0
+              x <= 1.0
+          }
+        `
+
+		meter := newTestMemoryGauge()
+		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+		assert.Equal(t, uint64(112), meter.getMemory(common.MemoryKindNumberValue))
+		assert.Equal(t, uint64(224), meter.getMemory(common.MemoryKindBigInt))
+	})
+}
+
 func TestInterpretTokenMetering(t *testing.T) {
 	t.Parallel()
 

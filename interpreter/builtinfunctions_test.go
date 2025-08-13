@@ -587,6 +587,7 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 		"Fix64":   sema.Fix64TypeSize,
 		"Fix128":  sema.Fix128TypeSize,
 		"UFix64":  sema.UFix64TypeSize,
+		"UFix128": sema.UFix128TypeSize,
 		"Word64":  sema.Word64TypeSize,
 		"Int128":  sema.Int128TypeSize,
 		"UInt128": sema.UInt128TypeSize,
