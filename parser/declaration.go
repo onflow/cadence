@@ -1110,7 +1110,7 @@ func parseEntitlementMappingsAndInclusions(p *parser, endTokenType lexer.TokenTy
 	panic(errors.NewUnreachableError())
 }
 
-func parseInDeclarationBraces[T any](
+func parseDeclarationBraces[T any](
 	p *parser,
 	kind common.DeclarationKind,
 	f func() (T, error),
@@ -1196,7 +1196,7 @@ func parseEntitlementOrMappingDeclaration(
 
 	if isMapping {
 
-		elements, endToken, err := parseInDeclarationBraces(
+		elements, endToken, err := parseDeclarationBraces(
 			p,
 			common.DeclarationKindEntitlementMapping,
 			func() ([]ast.EntitlementMapElement, error) {
@@ -1337,7 +1337,7 @@ func parseCompositeOrInterfaceDeclaration(
 		return nil, err
 	}
 
-	members, endToken, err := parseInDeclarationBraces(
+	members, endToken, err := parseDeclarationBraces(
 		p,
 		compositeKind.DeclarationKind(isInterface),
 		func() (*ast.Members, error) {
@@ -1428,7 +1428,7 @@ func parseAttachmentDeclaration(
 		return nil, err
 	}
 
-	members, endToken, err := parseInDeclarationBraces(
+	members, endToken, err := parseDeclarationBraces(
 		p,
 		common.DeclarationKindAttachment,
 		func() (*ast.Members, error) {
