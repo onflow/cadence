@@ -150,14 +150,9 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 
 			case KeywordView:
 				if purity != ast.FunctionPurityUnspecified {
-					p.report(
-						NewSyntaxErrorWithSuggestedReplacement(
-							p.current.Range,
-							"invalid second `view` modifier",
-							"",
-						).WithSecondary("the `view` modifier can only be used once per function declaration").
-							WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions"),
-					)
+					p.report(&DuplicateViewModifierError{
+						Range: p.current.Range,
+					})
 				}
 
 				pos := p.current.StartPos
@@ -177,13 +172,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				continue
 
 			case KeywordAccess:
-				if access != ast.AccessNotSpecified {
-					p.report(
-						p.newSyntaxError("invalid second access modifier").
-							WithSecondary("only one access modifier can be used per declaration").
-							WithDocumentation("https://cadence-lang.org/docs/language/access-control"),
-					)
-				}
+				previousAccess := access
 				if staticModifierEnabled && staticPos != nil {
 					p.reportSyntaxError("invalid access modifier after `static` modifier")
 				}
@@ -192,10 +181,18 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				}
 				pos := p.current.StartPos
 				accessPos = &pos
-				var err error
-				access, err = parseAccess(p)
+				var (
+					accessRange ast.Range
+					err         error
+				)
+				access, accessRange, err = parseAccess(p)
 				if err != nil {
 					return nil, err
+				}
+				if previousAccess != ast.AccessNotSpecified {
+					p.report(&DuplicateAccessModifierError{
+						Range: accessRange,
+					})
 				}
 
 				continue
@@ -238,15 +235,9 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 }
 
 func handlePriv(p *parser) {
-	p.report(
-		NewSyntaxErrorWithSuggestedReplacement(
-			p.current.Range,
-			"`priv` is no longer a valid access modifier",
-			"access(self)",
-		).WithSecondary("use `access(self)` instead").
-			WithMigration("This is pre-Cadence 1.0 syntax. The `priv` modifier was replaced with `access(self)`").
-			WithDocumentation("https://cadence-lang.org/docs/language/access-control"),
-	)
+	p.report(&PrivAccessError{
+		Range: p.current.Range,
+	})
 	p.next()
 }
 
@@ -257,15 +248,9 @@ func handlePub(p *parser) error {
 
 	// Try to parse `(set)` if given
 	if !p.current.Is(lexer.TokenParenOpen) {
-		p.report(
-			NewSyntaxErrorWithSuggestedReplacement(
-				pubToken.Range,
-				"`pub` is no longer a valid access modifier",
-				"access(all)",
-			).WithSecondary("use `access(all)` instead").
-				WithMigration("This is pre-Cadence 1.0 syntax. The `pub` modifier was replaced with `access(all)`").
-				WithDocumentation("https://cadence-lang.org/docs/language/access-control"),
-		)
+		p.report(&PubAccessError{
+			Range: pubToken.Range,
+		})
 		return nil
 	}
 
@@ -328,14 +313,10 @@ var enumeratedAccessModifierKeywords = common.EnumerateWords(
 func rejectAccessKeywordEntitlementType(p *parser, ty *ast.NominalType) {
 	switch ty.Identifier.Identifier {
 	case KeywordAll, KeywordAccess, KeywordAccount, KeywordSelf:
-		p.report(
-			NewSyntaxError(
-				ty.StartPosition(),
-				"unexpected non-nominal type: %s",
-				ty,
-			).WithSecondary("use an entitlement name instead of access control keywords").
-				WithDocumentation("https://cadence-lang.org/docs/language/access-control#entitlements"),
-		)
+		p.report(&AccessKeywordEntitlementNameError{
+			Keyword: ty.Identifier.Identifier,
+			Range:   ast.NewRangeFromPositioned(p.memoryGauge, ty),
+		})
 	}
 }
 
@@ -360,10 +341,9 @@ func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
 		// Luckily, however, the former two are just equivalent, and the latter we can disambiguate in the type checker.
 		return ast.NewConjunctiveEntitlementSet(entitlements), nil
 	default:
-		return nil, p.newSyntaxError("unexpected entitlement separator %s", p.current.Type.String()).
-			WithSecondary("use a comma (,) for conjunctive entitlements " +
-				"or a vertical bar (|) for disjunctive entitlements").
-			WithDocumentation("https://cadence-lang.org/docs/language/access-control#entitlements")
+		return nil, &InvalidEntitlementSeparatorError{
+			Token: p.current,
+		}
 	}
 
 	remainingEntitlements, _, err := parseNominalTypes(p, lexer.TokenParenClose, separator)
@@ -390,22 +370,26 @@ func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
 //	    : 'access(self)'
 //	    | 'access(all)' ( '(' 'set' ')' )?
 //	    | 'access' '(' ( 'self' | 'contract' | 'account' | 'all' | entitlementList ) ')'
-func parseAccess(p *parser) (ast.Access, error) {
+func parseAccess(p *parser) (ast.Access, ast.Range, error) {
+
+	var accessRange ast.Range
 
 	switch string(p.currentTokenSource()) {
 	case KeywordAccess:
+		accessRange.StartPos = p.current.StartPos
+
 		// Skip the `access` keyword
 		p.nextSemanticToken()
 
 		_, err := p.mustOne(lexer.TokenParenOpen)
 		if err != nil {
-			return ast.AccessNotSpecified, err
+			return ast.AccessNotSpecified, ast.EmptyRange, err
 		}
 
 		p.skipSpaceAndComments()
 
 		if !p.current.Is(lexer.TokenIdentifier) {
-			return ast.AccessNotSpecified, p.newSyntaxError(
+			return ast.AccessNotSpecified, ast.EmptyRange, p.newSyntaxError(
 				"expected keyword %s, got %s",
 				enumeratedAccessModifierKeywords,
 				p.current.Type,
@@ -444,7 +428,7 @@ func parseAccess(p *parser) (ast.Access, error) {
 
 			entitlementMapName, err := parseNominalType(p)
 			if err != nil {
-				return ast.AccessNotSpecified, err
+				return ast.AccessNotSpecified, ast.EmptyRange, err
 			}
 			access = ast.NewMappedAccess(entitlementMapName, keywordPos)
 
@@ -453,20 +437,22 @@ func parseAccess(p *parser) (ast.Access, error) {
 		default:
 			entitlements, err := parseEntitlementList(p)
 			if err != nil {
-				return ast.AccessNotSpecified, err
+				return ast.AccessNotSpecified, ast.EmptyRange, err
 			}
 			access = ast.NewEntitlementAccess(entitlements)
 		}
 
+		accessRange.EndPos = p.current.EndPos
+
 		_, err = p.mustOne(lexer.TokenParenClose)
 		if err != nil {
-			return ast.AccessNotSpecified, err
+			return ast.AccessNotSpecified, ast.EmptyRange, err
 		}
 
-		return access, nil
+		return access, accessRange, nil
 
 	default:
-		return ast.AccessNotSpecified, errors.NewUnreachableError()
+		return ast.AccessNotSpecified, ast.EmptyRange, errors.NewUnreachableError()
 	}
 }
 
@@ -1259,10 +1245,9 @@ func parseConformances(p *parser) ([]*ast.NominalType, error) {
 		}
 
 		if len(conformances) < 1 {
-			return nil, p.newSyntaxError("expected at least one conformance after %s", lexer.TokenColon).
-				WithSecondary("provide at least one interface or type to conform to, " +
-					"or remove the colon if no conformances are needed").
-				WithDocumentation("https://cadence-lang.org/docs/language/interfaces")
+			p.report(&MissingConformanceError{
+				Pos: p.current.StartPos,
+			})
 		}
 	}
 
@@ -1639,14 +1624,9 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 
 			case KeywordView:
 				if purity != ast.FunctionPurityUnspecified {
-					p.report(
-						NewSyntaxErrorWithSuggestedReplacement(
-							p.current.Range,
-							"invalid second `view` modifier",
-							"",
-						).WithSecondary("the `view` modifier can only be used once per function declaration").
-							WithDocumentation("https://cadence-lang.org/docs/language/functions#view-functions"),
-					)
+					p.report(&DuplicateViewModifierError{
+						Range: p.current.Range,
+					})
 				}
 				pos := p.current.StartPos
 				purityPos = &pos
@@ -1665,13 +1645,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				continue
 
 			case KeywordAccess:
-				if access != ast.AccessNotSpecified {
-					p.report(
-						p.newSyntaxError("invalid second access modifier").
-							WithSecondary("only one access modifier can be used per declaration").
-							WithDocumentation("https://cadence-lang.org/docs/language/access-control"),
-					)
-				}
+				previousAccess := access
 				if staticModifierEnabled && staticPos != nil {
 					p.reportSyntaxError("invalid access modifier after `static` modifier")
 				}
@@ -1680,10 +1654,18 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				}
 				pos := p.current.StartPos
 				accessPos = &pos
-				var err error
-				access, err = parseAccess(p)
+				var (
+					accessRange ast.Range
+					err         error
+				)
+				access, accessRange, err = parseAccess(p)
 				if err != nil {
 					return nil, err
+				}
+				if previousAccess != ast.AccessNotSpecified {
+					p.report(&DuplicateAccessModifierError{
+						Range: accessRange,
+					})
 				}
 				continue
 
@@ -1932,19 +1914,10 @@ func parseSpecialFunctionDeclaration(
 	}
 
 	if returnTypeAnnotation != nil {
-		var kindDescription string
-		if declarationKind != common.DeclarationKindUnknown {
-			kindDescription = declarationKind.Name()
-		} else {
-			kindDescription = "special function"
-		}
-
-		p.report(NewSyntaxError(
-			returnTypeAnnotation.StartPos,
-			"invalid return type for %s",
-			kindDescription,
-		).WithSecondary("special functions like `init` or `prepare` cannot have return types").
-			WithDocumentation("https://cadence-lang.org/docs/language/functions"))
+		p.report(&SpecialFunctionReturnTypeError{
+			DeclarationKind: declarationKind,
+			Range:           ast.NewRangeFromPositioned(p.memoryGauge, returnTypeAnnotation),
+		})
 	}
 
 	return ast.NewSpecialFunctionDeclaration(
@@ -1985,9 +1958,9 @@ func parseEnumCase(
 	// Skip the `enum` keyword
 	p.nextSemanticToken()
 	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, p.newSyntaxError("expected identifier after start of enum case declaration, got %s", p.current.Type).
-			WithSecondary("provide a name for the enum case after the `case` keyword").
-			WithDocumentation("https://cadence-lang.org/docs/language/enumerations")
+		return nil, &MissingEnumCaseNameError{
+			GotToken: p.current,
+		}
 	}
 
 	identifier := p.tokenToIdentifier(p.current)

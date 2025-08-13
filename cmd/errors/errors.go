@@ -11,10 +11,26 @@ import (
 
 func generateErrors() []namedError {
 	return []namedError{
+		{"parser.AccessKeywordEntitlementNameError",
+			&parser.AccessKeywordEntitlementNameError{
+				Keyword: placeholderString,
+				Range:   placeholderRange,
+			},
+		},
 		{"parser.CustomDestructorError",
 			&parser.CustomDestructorError{
 				Pos:             placeholderPosition,
 				DestructorRange: placeholderRange,
+			},
+		},
+		{"parser.DuplicateAccessModifierError",
+			&parser.DuplicateAccessModifierError{
+				Range: placeholderRange,
+			},
+		},
+		{"parser.DuplicateViewModifierError",
+			&parser.DuplicateViewModifierError{
+				Range: placeholderRange,
 			},
 		},
 		{"parser.ExpressionDepthLimitReachedError",
@@ -26,6 +42,11 @@ func generateErrors() []namedError {
 			&parser.InvalidAccessModifierError{
 				Pos:             placeholderPosition,
 				DeclarationKind: placeholderDeclarationKind,
+			},
+		},
+		{"parser.InvalidEntitlementSeparatorError",
+			&parser.InvalidEntitlementSeparatorError{
+				Token: placeholderToken,
 			},
 		},
 		{"parser.InvalidIntegerLiteralError",
@@ -54,9 +75,24 @@ func generateErrors() []namedError {
 				DeclarationKind: placeholderDeclarationKind,
 			},
 		},
+		{"parser.MemberAccessMissingNameError",
+			&parser.MemberAccessMissingNameError{
+				GotToken: placeholderToken,
+			},
+		},
 		{"parser.MissingCommaInParameterListError",
 			&parser.MissingCommaInParameterListError{
 				Pos: placeholderPosition,
+			},
+		},
+		{"parser.MissingConformanceError",
+			&parser.MissingConformanceError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.MissingEnumCaseNameError",
+			&parser.MissingEnumCaseNameError{
+				GotToken: placeholderToken,
 			},
 		},
 		{"parser.NonNominalTypeError",
@@ -65,9 +101,30 @@ func generateErrors() []namedError {
 				Type: placeholderAstType,
 			},
 		},
+		{"parser.PrivAccessError",
+			&parser.PrivAccessError{
+				Range: placeholderRange,
+			},
+		},
+		{"parser.PubAccessError",
+			&parser.PubAccessError{
+				Range: placeholderRange,
+			},
+		},
 		{"parser.RestrictedTypeError",
 			&parser.RestrictedTypeError{
 				Range: placeholderRange,
+			},
+		},
+		{"parser.SpecialFunctionReturnTypeError",
+			&parser.SpecialFunctionReturnTypeError{
+				DeclarationKind: placeholderDeclarationKind,
+				Range:           placeholderRange,
+			},
+		},
+		{"parser.StatementSeparationError",
+			&parser.StatementSeparationError{
+				Pos: placeholderPosition,
 			},
 		},
 		{"parser.SyntaxError",
@@ -79,19 +136,25 @@ func generateErrors() []namedError {
 				Pos:           placeholderPosition,
 			},
 		},
-		{"parser.SyntaxErrorWithSuggestedReplacement",
-			&parser.SyntaxErrorWithSuggestedReplacement{
-				Message:       placeholderString,
-				Replacement:   placeholderString,
-				Secondary:     placeholderString,
-				Migration:     placeholderString,
-				Documentation: placeholderString,
-				Range:         placeholderRange,
-			},
-		},
 		{"parser.TypeDepthLimitReachedError",
 			parser.TypeDepthLimitReachedError{
 				Pos: placeholderPosition,
+			},
+		},
+		{"parser.UnexpectedEOFError",
+			parser.UnexpectedEOFError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.UnexpectedTokenAtEndError",
+			&parser.UnexpectedTokenAtEndError{
+				Token: placeholderToken,
+			},
+		},
+		{"parser.WhitespaceAfterMemberAccessError",
+			&parser.WhitespaceAfterMemberAccessError{
+				OperatorTokenType: placeholderTokenType,
+				WhitespaceRange:   placeholderRange,
 			},
 		},
 		{"sema.AlwaysFailingNonResourceCastingTypeError",

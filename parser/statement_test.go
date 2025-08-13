@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/errors"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
@@ -1125,11 +1126,8 @@ func TestParseViewNonFunction(t *testing.T) {
 	_, errs := testParseStatements("view return 3")
 	AssertEqualWithDiff(t,
 		[]error{
-			&SyntaxError{
-				Message:       "statements on the same line must be separated with a semicolon",
-				Secondary:     "add a semicolon (;) between statements or place each statement on a separate line",
-				Documentation: "https://cadence-lang.org/docs/language/syntax#semicolons",
-				Pos:           ast.Position{Offset: 5, Line: 1, Column: 5},
+			&StatementSeparationError{
+				Pos: ast.Position{Offset: 5, Line: 1, Column: 5},
 			},
 		},
 		errs,
@@ -1192,14 +1190,12 @@ func TestParseStatements(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseStatements(`assert true`)
+		const code = `assert true`
+		result, errs := testParseStatements(code)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "statements on the same line must be separated with a semicolon",
-					Secondary:     "add a semicolon (;) between statements or place each statement on a separate line",
-					Documentation: "https://cadence-lang.org/docs/language/syntax#semicolons",
-					Pos:           ast.Position{Offset: 7, Line: 1, Column: 7},
+				&StatementSeparationError{
+					Pos: ast.Position{Offset: 7, Line: 1, Column: 7},
 				},
 			},
 			errs,
@@ -1226,6 +1222,34 @@ func TestParseStatements(t *testing.T) {
 				},
 			},
 			result,
+		)
+
+		var statementSeparationError *StatementSeparationError
+		require.ErrorAs(t, errs[0], &statementSeparationError)
+
+		fixes := statementSeparationError.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Add semicolon to separate statements",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "; ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+								EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			`assert ; true`,
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 }
@@ -1310,11 +1334,8 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 					Message: "expected from keyword, got EOF",
 					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
 				},
-				&SyntaxError{
-					Message:       "unexpected end of program",
-					Secondary:     "check for incomplete expressions, missing tokens, or unterminated strings/comments",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 8, Line: 1, Column: 8},
+				UnexpectedEOFError{
+					Pos: ast.Position{Offset: 8, Line: 1, Column: 8},
 				},
 			},
 			errs,
@@ -1329,11 +1350,8 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected end of program",
-					Secondary:     "check for incomplete expressions, missing tokens, or unterminated strings/comments",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 13, Line: 1, Column: 13},
+				UnexpectedEOFError{
+					Pos: ast.Position{Offset: 13, Line: 1, Column: 13},
 				},
 			},
 			errs,
@@ -2092,13 +2110,13 @@ func TestParseAccessAssignment(t *testing.T) {
 															Pos:        ast.Position{Offset: 31, Line: 3, Column: 12},
 														},
 													},
-													AccessPos: ast.Position{Offset: 32, Line: 3, Column: 13},
+													AccessEndPos: ast.Position{Offset: 32, Line: 3, Column: 13},
 													Identifier: ast.Identifier{
 														Identifier: "foo",
 														Pos:        ast.Position{Offset: 33, Line: 3, Column: 14},
 													},
 												},
-												AccessPos: ast.Position{Offset: 36, Line: 3, Column: 17},
+												AccessEndPos: ast.Position{Offset: 36, Line: 3, Column: 17},
 												Identifier: ast.Identifier{
 													Identifier: "bar",
 													Pos:        ast.Position{Offset: 37, Line: 3, Column: 18},
@@ -2132,7 +2150,7 @@ func TestParseAccessAssignment(t *testing.T) {
 											EndPos:   ast.Position{Offset: 45, Line: 3, Column: 26},
 										},
 									},
-									AccessPos: ast.Position{Offset: 46, Line: 3, Column: 27},
+									AccessEndPos: ast.Position{Offset: 46, Line: 3, Column: 27},
 									Identifier: ast.Identifier{
 										Identifier: "baz",
 										Pos:        ast.Position{Offset: 47, Line: 3, Column: 28},
@@ -2205,13 +2223,13 @@ func TestParseExpressionStatementWithAccess(t *testing.T) {
 															Pos:        ast.Position{Offset: 19, Line: 2, Column: 18},
 														},
 													},
-													AccessPos: ast.Position{Offset: 20, Line: 2, Column: 19},
+													AccessEndPos: ast.Position{Offset: 20, Line: 2, Column: 19},
 													Identifier: ast.Identifier{
 														Identifier: "foo",
 														Pos:        ast.Position{Offset: 21, Line: 2, Column: 20},
 													},
 												},
-												AccessPos: ast.Position{Offset: 24, Line: 2, Column: 23},
+												AccessEndPos: ast.Position{Offset: 24, Line: 2, Column: 23},
 												Identifier: ast.Identifier{
 													Identifier: "bar",
 													Pos:        ast.Position{Offset: 25, Line: 2, Column: 24},
@@ -2245,7 +2263,7 @@ func TestParseExpressionStatementWithAccess(t *testing.T) {
 											EndPos:   ast.Position{Offset: 33, Line: 2, Column: 32},
 										},
 									},
-									AccessPos: ast.Position{Offset: 34, Line: 2, Column: 33},
+									AccessEndPos: ast.Position{Offset: 34, Line: 2, Column: 33},
 									Identifier: ast.Identifier{
 										Identifier: "baz",
 										Pos:        ast.Position{Offset: 35, Line: 2, Column: 34},
@@ -2550,7 +2568,7 @@ func TestParseSwapStatementInFunctionDeclaration(t *testing.T) {
 											Pos:        ast.Position{Offset: 41, Line: 3, Column: 21},
 										},
 									},
-									AccessPos: ast.Position{Offset: 44, Line: 3, Column: 24},
+									AccessEndPos: ast.Position{Offset: 44, Line: 3, Column: 24},
 									Identifier: ast.Identifier{
 										Identifier: "baz",
 										Pos:        ast.Position{Offset: 45, Line: 3, Column: 25},

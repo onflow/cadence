@@ -691,7 +691,7 @@ func TestCheckDefaultEventDeclaration(t *testing.T) {
 		require.Equal(t,
 			[]errors.SuggestedFix[ast.TextEdit]{
 				{
-					Message: "remove explicit emit statement",
+					Message: "Remove explicit emit statement",
 					TextEdits: []ast.TextEdit{
 						{
 							Range: ast.Range{
