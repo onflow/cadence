@@ -4063,3 +4063,40 @@ func (*MissingClosingBraceError) DocumentationLink() string {
 	// TODO: improve this link to point to the specific page
 	return "https://cadence-lang.org/docs/language/syntax"
 }
+
+// MissingEndOfParenthesizedTypeError is reported when a parenthesized type is missing a closing parenthesis.
+type MissingEndOfParenthesizedTypeError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingEndOfParenthesizedTypeError{}
+var _ errors.UserError = &MissingEndOfParenthesizedTypeError{}
+var _ errors.SecondaryError = &MissingEndOfParenthesizedTypeError{}
+var _ errors.HasDocumentationLink = &MissingEndOfParenthesizedTypeError{}
+
+func (*MissingEndOfParenthesizedTypeError) isParseError() {}
+
+func (*MissingEndOfParenthesizedTypeError) IsUserError() {}
+
+func (e *MissingEndOfParenthesizedTypeError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingEndOfParenthesizedTypeError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingEndOfParenthesizedTypeError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf("expected %s at end of parenthesized type", lexer.TokenParenClose),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingEndOfParenthesizedTypeError) SecondaryError() string {
+	return "parenthesized types must be properly closed with a closing parenthesis"
+}
+
+func (*MissingEndOfParenthesizedTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}

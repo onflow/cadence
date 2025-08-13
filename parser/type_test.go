@@ -3559,3 +3559,24 @@ func TestParseParenthesizedTypeWithInvalidType(t *testing.T) {
 		errs,
 	)
 }
+
+func TestParseMissingEndOfParenthesizedType(t *testing.T) {
+
+	t.Parallel()
+
+	_, errs := testParseType("(Int")
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingEndOfParenthesizedTypeError{
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+						EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}

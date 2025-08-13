@@ -648,7 +648,30 @@ func TestParseBuffering(t *testing.T) {
             }`
 
 		_, err := testParseProgram(src)
-		assert.NoError(t, err)
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingEndOfParenthesizedTypeError{
+					GotToken: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 283, Line: 9, Column: 36},
+							EndPos:   ast.Position{Offset: 283, Line: 9, Column: 36},
+						},
+						Type: lexer.TokenGreater,
+					},
+				},
+				&UnexpectedExpressionStartError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 289, Line: 9, Column: 42},
+							EndPos:   ast.Position{Offset: 289, Line: 9, Column: 42},
+						},
+						Type: lexer.TokenParenClose,
+					},
+				},
+			},
+			err.(Error).Errors,
+		)
 	})
 
 }

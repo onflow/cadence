@@ -154,7 +154,15 @@ func defineParenthesizedTypes() {
 			return nil, err
 		}
 		p.skipSpaceAndComments()
-		_, err = p.mustOne(lexer.TokenParenClose)
+
+		if p.current.Is(lexer.TokenParenClose) {
+			p.next()
+		} else {
+			p.report(&MissingEndOfParenthesizedTypeError{
+				GotToken: p.current,
+			})
+		}
+
 		return innerType, err
 	})
 }
