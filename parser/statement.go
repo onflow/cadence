@@ -497,20 +497,58 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 	), nil
 }
 
+func parseBraces[T any](
+	p *parser,
+	description string,
+	f func() (T, error),
+) (
+	result T,
+	startToken lexer.Token,
+	endToken lexer.Token,
+	err error,
+) {
+	startToken = p.current
+
+	if p.current.Is(lexer.TokenBraceOpen) {
+		p.next()
+	} else {
+		p.report(&MissingOpeningBraceError{
+			Description: description,
+			GotToken:    p.current,
+		})
+	}
+
+	result, err = f()
+	if err != nil {
+		return
+	}
+
+	p.skipSpaceAndComments()
+
+	endToken = p.current
+
+	if p.current.Is(lexer.TokenBraceClose) {
+		p.next()
+	} else {
+		p.report(&MissingClosingBraceError{
+			Description: description,
+			GotToken:    p.current,
+		})
+	}
+
+	return
+}
+
 func parseBlock(p *parser) (*ast.Block, error) {
-	startToken, err := p.mustOne(lexer.TokenBraceOpen)
-	if err != nil {
-		return nil, err
-	}
-
-	statements, err := parseStatements(p, func(token lexer.Token) bool {
-		return token.Type == lexer.TokenBraceClose
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	endToken, err := p.mustOne(lexer.TokenBraceClose)
+	statements, startToken, endToken, err := parseBraces(
+		p,
+		"block",
+		func() ([]ast.Statement, error) {
+			return parseStatements(p, func(token lexer.Token) bool {
+				return token.Type == lexer.TokenBraceClose
+			})
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -529,49 +567,52 @@ func parseBlock(p *parser) (*ast.Block, error) {
 func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 	p.skipSpaceAndComments()
 
-	startToken, err := p.mustOne(lexer.TokenBraceOpen)
-	if err != nil {
-		return nil, err
+	type bracesResult struct {
+		preConditions  *ast.Conditions
+		postConditions *ast.Conditions
+		statements     []ast.Statement
 	}
 
-	p.skipSpaceAndComments()
+	res, startToken, endToken, err := parseBraces(
+		p,
+		"function block",
+		func() (res bracesResult, err error) {
 
-	var preConditions *ast.Conditions
-	if p.isToken(p.current, lexer.TokenIdentifier, KeywordPre) {
-		prePos := p.current.StartPos
+			p.skipSpaceAndComments()
 
-		// Skip the `pre` keyword
-		p.nextSemanticToken()
+			if p.isToken(p.current, lexer.TokenIdentifier, KeywordPre) {
+				prePos := p.current.StartPos
 
-		preConditions, err = parseConditions(p, prePos)
-		if err != nil {
-			return nil, err
-		}
-	}
+				// Skip the `pre` keyword
+				p.nextSemanticToken()
 
-	p.skipSpaceAndComments()
+				res.preConditions, err = parseConditions(p, prePos)
+				if err != nil {
+					return
+				}
+			}
 
-	var postConditions *ast.Conditions
-	if p.isToken(p.current, lexer.TokenIdentifier, KeywordPost) {
-		startPos := p.current.StartPos
+			p.skipSpaceAndComments()
 
-		// Skip the `post` keyword
-		p.nextSemanticToken()
+			if p.isToken(p.current, lexer.TokenIdentifier, KeywordPost) {
+				startPos := p.current.StartPos
 
-		postConditions, err = parseConditions(p, startPos)
-		if err != nil {
-			return nil, err
-		}
-	}
+				// Skip the `post` keyword
+				p.nextSemanticToken()
 
-	statements, err := parseStatements(p, func(token lexer.Token) bool {
-		return token.Type == lexer.TokenBraceClose
-	})
-	if err != nil {
-		return nil, err
-	}
+				res.postConditions, err = parseConditions(p, startPos)
+				if err != nil {
+					return
+				}
+			}
 
-	endToken, err := p.mustOne(lexer.TokenBraceClose)
+			res.statements, err = parseStatements(p, func(token lexer.Token) bool {
+				return token.Type == lexer.TokenBraceClose
+			})
+
+			return
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -580,15 +621,15 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 		p.memoryGauge,
 		ast.NewBlock(
 			p.memoryGauge,
-			statements,
+			res.statements,
 			ast.NewRange(
 				p.memoryGauge,
 				startToken.StartPos,
 				endToken.EndPos,
 			),
 		),
-		preConditions,
-		postConditions,
+		res.preConditions,
+		res.postConditions,
 	), nil
 }
 
@@ -596,51 +637,52 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 func parseConditions(p *parser, startPos ast.Position) (*ast.Conditions, error) {
 
 	p.skipSpaceAndComments()
-	_, err := p.mustOne(lexer.TokenBraceOpen)
-	if err != nil {
-		return nil, err
-	}
 
-	var conditions []ast.Condition
+	conditions, _, endToken, err := parseBraces(
+		p,
+		"conditions",
+		func() (conditions []ast.Condition, err error) {
 
-	var done bool
-	progress := p.newProgress()
+			var done bool
+			progress := p.newProgress()
 
-	for !done && p.checkProgress(&progress) {
+			for !done && p.checkProgress(&progress) {
 
-		p.skipSpaceAndComments()
+				p.skipSpaceAndComments()
 
-		switch p.current.Type {
-		case lexer.TokenSemicolon:
-			p.next()
-			continue
+				switch p.current.Type {
+				case lexer.TokenSemicolon:
+					p.next()
+					continue
 
-		case lexer.TokenBraceClose, lexer.TokenEOF:
-			done = true
+				case lexer.TokenBraceClose, lexer.TokenEOF:
+					done = true
 
-		default:
-			var condition ast.Condition
-			condition, err = parseCondition(p)
-			if err != nil || condition == nil {
-				return nil, err
+				default:
+					var condition ast.Condition
+					condition, err = parseCondition(p)
+					if err != nil || condition == nil {
+						return nil, err
+					}
+
+					conditions = append(conditions, condition)
+				}
 			}
 
-			conditions = append(conditions, condition)
-		}
-	}
-
-	p.skipSpaceAndComments()
-
-	endPos := p.current.StartPos
-
-	_, err = p.mustOne(lexer.TokenBraceClose)
+			return
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
 
 	return &ast.Conditions{
 		Conditions: conditions,
-		Range:      ast.NewRange(p.memoryGauge, startPos, endPos),
+		Range: ast.NewRange(
+			p.memoryGauge,
+			startPos,
+			endToken.EndPos,
+		),
 	}, nil
 }
 
@@ -708,17 +750,13 @@ func parseSwitchStatement(p *parser) (*ast.SwitchStatement, error) {
 		return nil, err
 	}
 
-	_, err = p.mustOne(lexer.TokenBraceOpen)
-	if err != nil {
-		return nil, err
-	}
-
-	cases, err := parseSwitchCases(p)
-	if err != nil {
-		return nil, err
-	}
-
-	endToken, err := p.mustOne(lexer.TokenBraceClose)
+	cases, _, endToken, err := parseBraces(
+		p,
+		"switch cases",
+		func() ([]*ast.SwitchCase, error) {
+			return parseSwitchCases(p)
+		},
+	)
 	if err != nil {
 		return nil, err
 	}

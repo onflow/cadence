@@ -1116,14 +1116,7 @@ func parseDeclarationBraces[T any](
 	f func() (T, error),
 ) (result T, endToken lexer.Token, err error) {
 
-	if p.current.Is(lexer.TokenBraceOpen) {
-		p.next()
-	} else {
-		p.report(&DeclarationMissingOpeningBraceError{
-			Kind:     kind,
-			GotToken: p.current,
-		})
-	}
+	parseDeclarationOpeningBrace(p, kind)
 
 	result, err = f()
 	if err != nil {
@@ -1134,6 +1127,23 @@ func parseDeclarationBraces[T any](
 
 	endToken = p.current
 
+	parseDeclarationClosingBrace(p, kind)
+
+	return
+}
+
+func parseDeclarationOpeningBrace(p *parser, kind common.DeclarationKind) {
+	if p.current.Is(lexer.TokenBraceOpen) {
+		p.next()
+	} else {
+		p.report(&DeclarationMissingOpeningBraceError{
+			Kind:     kind,
+			GotToken: p.current,
+		})
+	}
+}
+
+func parseDeclarationClosingBrace(p *parser, kind common.DeclarationKind) {
 	if p.current.Is(lexer.TokenBraceClose) {
 		p.next()
 	} else {
@@ -1142,8 +1152,6 @@ func parseDeclarationBraces[T any](
 			GotToken: p.current,
 		})
 	}
-
-	return
 }
 
 // parseEntitlementOrMappingDeclaration parses an entitlement declaration,

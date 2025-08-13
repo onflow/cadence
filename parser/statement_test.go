@@ -889,11 +889,31 @@ func TestParseForStatementIndexBinding(t *testing.T) {
 						Type: lexer.TokenIdentifier,
 					},
 				},
-				&SyntaxError{
-					Message:       "expected token '{'",
-					Pos:           ast.Position{Offset: 8, Line: 1, Column: 8},
-					Secondary:     "check for missing punctuation, operators, or syntax elements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
+				&MissingOpeningBraceError{
+					Description: "block",
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+							EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+						},
+						Type: lexer.TokenIdentifier,
+					},
+				},
+				&StatementSeparationError{
+					Pos: ast.Position{Offset: 11, Line: 1, Column: 11},
+				},
+				&StatementSeparationError{
+					Pos: ast.Position{Offset: 13, Line: 1, Column: 13},
+				},
+				&MissingClosingBraceError{
+					Description: "block",
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 16, Line: 1, Column: 16},
+							EndPos:   ast.Position{Offset: 16, Line: 1, Column: 16},
+						},
+						Type: lexer.TokenEOF,
+					},
 				},
 			},
 			errs,
@@ -2898,6 +2918,578 @@ func TestParseForStatementMissingInKeyword(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
 						EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseIfStatementMissingOpeningBrace(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`if true }`)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenBraceClose,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+						EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseWhileStatementMissingOpeningBrace(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`while true }`)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenBraceClose,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
+						EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseForStatementMissingOpeningBrace(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`for x in y }`)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenBraceClose,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
+						EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseIfStatementMissingClosingBrace(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`if true { `)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingClosingBraceError{
+				Description: "block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+						EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseWhileStatementMissingClosingBrace(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`while true { `)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingClosingBraceError{
+				Description: "block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+						EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseForStatementMissingClosingBrace(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`for x in y { `)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingClosingBraceError{
+				Description: "block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+						EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseFunctionDeclarationMissingOpeningBrace(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`fun test() }`)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "function block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenBraceClose,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
+						EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseFunctionDeclarationMissingClosingBrace(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`fun test() { `)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingClosingBraceError{
+				Description: "function block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+						EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParsePreConditionsMissingOpeningBrace(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`fun test() { pre } }`)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "conditions",
+				GotToken: lexer.Token{
+					Type: lexer.TokenBraceClose,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
+						EndPos:   ast.Position{Offset: 17, Line: 1, Column: 17},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParsePreConditionsMissingClosingBrace(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`fun test() { pre { `)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingClosingBraceError{
+				Description: "conditions",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 19, Line: 1, Column: 19},
+						EndPos:   ast.Position{Offset: 19, Line: 1, Column: 19},
+					},
+				},
+			},
+			&MissingClosingBraceError{
+				Description: "function block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 19, Line: 1, Column: 19},
+						EndPos:   ast.Position{Offset: 19, Line: 1, Column: 19},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParsePostConditionsMissingOpeningBrace(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`fun test() { post } }`)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "conditions",
+				GotToken: lexer.Token{
+					Type: lexer.TokenBraceClose,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 18, Line: 1, Column: 18},
+						EndPos:   ast.Position{Offset: 18, Line: 1, Column: 18},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParsePostConditionsMissingClosingBrace(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`fun test() { post { `)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingClosingBraceError{
+				Description: "conditions",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 20, Line: 1, Column: 20},
+						EndPos:   ast.Position{Offset: 20, Line: 1, Column: 20},
+					},
+				},
+			},
+			&MissingClosingBraceError{
+				Description: "function block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 20, Line: 1, Column: 20},
+						EndPos:   ast.Position{Offset: 20, Line: 1, Column: 20},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseSwitchStatementMissingOpeningBrace(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`switch x }`)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "switch cases",
+				GotToken: lexer.Token{
+					Type: lexer.TokenBraceClose,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 9, Line: 1, Column: 9},
+						EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseSwitchStatementMissingClosingBrace(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`switch x { `)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingClosingBraceError{
+				Description: "switch cases",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
+						EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseIfStatementMissingOpeningBraceEOF(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`if true`)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+						EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+					},
+				},
+			},
+			&MissingClosingBraceError{
+				Description: "block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+						EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseWhileStatementMissingOpeningBraceEOF(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`while true`)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+						EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+					},
+				},
+			},
+			&MissingClosingBraceError{
+				Description: "block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+						EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseForStatementMissingOpeningBraceEOF(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`for x in y`)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+						EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+					},
+				},
+			},
+			&MissingClosingBraceError{
+				Description: "block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+						EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseFunctionDeclarationMissingOpeningBraceEOF(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`fun test()`)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "function block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+						EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+					},
+				},
+			},
+			&MissingClosingBraceError{
+				Description: "function block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+						EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParsePreConditionsMissingOpeningBraceEOF(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`fun test() { pre`)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "conditions",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 16, Line: 1, Column: 16},
+						EndPos:   ast.Position{Offset: 16, Line: 1, Column: 16},
+					},
+				},
+			},
+			&MissingClosingBraceError{
+				Description: "conditions",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 16, Line: 1, Column: 16},
+						EndPos:   ast.Position{Offset: 16, Line: 1, Column: 16},
+					},
+				},
+			},
+			&MissingClosingBraceError{
+				Description: "function block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 16, Line: 1, Column: 16},
+						EndPos:   ast.Position{Offset: 16, Line: 1, Column: 16},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParsePostConditionsMissingOpeningBraceEOF(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`fun test() { post`)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "conditions",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
+						EndPos:   ast.Position{Offset: 17, Line: 1, Column: 17},
+					},
+				},
+			},
+			&MissingClosingBraceError{
+				Description: "conditions",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
+						EndPos:   ast.Position{Offset: 17, Line: 1, Column: 17},
+					},
+				},
+			},
+			&MissingClosingBraceError{
+				Description: "function block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
+						EndPos:   ast.Position{Offset: 17, Line: 1, Column: 17},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseSwitchStatementMissingOpeningBraceEOF(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`switch x`)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "switch cases",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+						EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+					},
+				},
+			},
+			&MissingClosingBraceError{
+				Description: "switch cases",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+						EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
 					},
 				},
 			},

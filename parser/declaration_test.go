@@ -10275,3 +10275,56 @@ func TestParseStructNamedTransaction(t *testing.T) {
 		errs,
 	)
 }
+
+func TestParseTransactionDeclarationMissingOpeningBrace(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`transaction }`)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&DeclarationMissingOpeningBraceError{
+				Kind: common.DeclarationKindTransaction,
+				GotToken: lexer.Token{
+					Type: lexer.TokenBraceClose,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
+						EndPos:   ast.Position{Offset: 12, Line: 1, Column: 12},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseTransactionDeclarationMissingOpeningBraceEOF(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`transaction`)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&DeclarationMissingOpeningBraceError{
+				Kind: common.DeclarationKindTransaction,
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
+						EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+					},
+				},
+			},
+			&UnexpectedTokenAtEndError{
+				Token: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
+						EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
