@@ -1035,14 +1035,12 @@ func parseEntitlementMapping(p *parser) (*ast.EntitlementMapRelation, error) {
 	p.skipSpaceAndComments()
 
 	if p.current.Is(lexer.TokenRightArrow) {
-		p.next()
+		p.nextSemanticToken()
 	} else {
 		p.report(&MissingRightArrowInEntitlementMappingError{
 			GotToken: p.current,
 		})
 	}
-
-	p.skipSpaceAndComments()
 
 	outputType, err := parseType(p, lowestBindingPower)
 	if err != nil {
@@ -1228,7 +1226,6 @@ func parseConformances(p *parser) ([]*ast.NominalType, error) {
 		}
 	}
 
-	p.skipSpaceAndComments()
 	return conformances, nil
 }
 
@@ -1924,6 +1921,7 @@ func parseEnumCase(
 
 	// Skip the `enum` keyword
 	p.nextSemanticToken()
+
 	if !p.current.Is(lexer.TokenIdentifier) {
 		return nil, &MissingEnumCaseNameError{
 			GotToken: p.current,
