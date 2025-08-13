@@ -4100,3 +4100,40 @@ func (*MissingEndOfParenthesizedTypeError) SecondaryError() string {
 func (*MissingEndOfParenthesizedTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
+
+// MissingClosingBracketInArrayTypeError is reported when an array type is missing a closing bracket.
+type MissingClosingBracketInArrayTypeError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingClosingBracketInArrayTypeError{}
+var _ errors.UserError = &MissingClosingBracketInArrayTypeError{}
+var _ errors.SecondaryError = &MissingClosingBracketInArrayTypeError{}
+var _ errors.HasDocumentationLink = &MissingClosingBracketInArrayTypeError{}
+
+func (*MissingClosingBracketInArrayTypeError) isParseError() {}
+
+func (*MissingClosingBracketInArrayTypeError) IsUserError() {}
+
+func (e *MissingClosingBracketInArrayTypeError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingClosingBracketInArrayTypeError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingClosingBracketInArrayTypeError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf("expected %s at end of array type", lexer.TokenBracketClose),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingClosingBracketInArrayTypeError) SecondaryError() string {
+	return "array types must be properly closed with a closing bracket (])"
+}
+
+func (*MissingClosingBracketInArrayTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types/arrays#array-types"
+}

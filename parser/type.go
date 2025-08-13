@@ -239,9 +239,14 @@ func defineArrayType() {
 
 			p.skipSpaceAndComments()
 
-			endToken, err := p.mustOne(lexer.TokenBracketClose)
-			if err != nil {
-				return nil, err
+			endToken := p.current
+			if p.current.Is(lexer.TokenBracketClose) {
+				// Skip the closing bracket
+				p.next()
+			} else {
+				p.report(&MissingClosingBracketInArrayTypeError{
+					GotToken: p.current,
+				})
 			}
 
 			typeRange := ast.NewRange(

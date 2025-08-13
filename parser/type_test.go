@@ -168,6 +168,26 @@ func TestParseArrayType(t *testing.T) {
 		)
 	})
 
+	t.Run("variable, missing end", func(t *testing.T) {
+		t.Parallel()
+
+		_, errs := testParseType("[Int")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingClosingBracketInArrayTypeError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+							EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
+
 	t.Run("constant", func(t *testing.T) {
 
 		t.Parallel()
@@ -316,12 +336,14 @@ func TestParseArrayType(t *testing.T) {
 		_, errs := testParseType("[T;1")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "expected token ']'",
-					Secondary:     "check for missing punctuation, operators, or syntax elements",
-					Migration:     "",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
+				&MissingClosingBracketInArrayTypeError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+							EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+						},
+						Type: lexer.TokenEOF,
+					},
 				},
 			},
 			errs,
