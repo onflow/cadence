@@ -2280,7 +2280,7 @@ func (*UnexpectedEOFInImportListError) Error() string {
 }
 
 func (*UnexpectedEOFInImportListError) SecondaryError() string {
-	return "import declarations cannot end abruptly - expect either an identifier to import or a comma to continue the import list"
+	return "import declarations cannot end abruptly - use either an identifier to import or a comma to continue the import list"
 }
 
 func (*UnexpectedEOFInImportListError) DocumentationLink() string {
