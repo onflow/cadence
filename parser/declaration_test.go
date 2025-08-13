@@ -3120,7 +3120,9 @@ func TestParseEvent(t *testing.T) {
 	t.Run("default event with no default arg", func(t *testing.T) {
 		t.Parallel()
 
-		_, errs := testParseDeclarations(" access(all) event ResourceDestroyed ( a : Int )")
+		_, errs := testParseDeclarations(`
+          access(all) event ResourceDestroyed ( a : Int )
+        `)
 
 		AssertEqualWithDiff(t,
 			[]error{
@@ -3128,8 +3130,8 @@ func TestParseEvent(t *testing.T) {
 					GotToken: lexer.Token{
 						Type: lexer.TokenParenClose,
 						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 47, Offset: 47},
-							EndPos:   ast.Position{Line: 1, Column: 47, Offset: 47},
+							StartPos: ast.Position{Line: 2, Column: 56, Offset: 57},
+							EndPos:   ast.Position{Line: 2, Column: 56, Offset: 57},
 						},
 					},
 				},
@@ -3141,12 +3143,14 @@ func TestParseEvent(t *testing.T) {
 	t.Run("non-default event with default arg", func(t *testing.T) {
 		t.Parallel()
 
-		_, errs := testParseDeclarations(" access(all) event Foo ( a : Int = 3)")
+		_, errs := testParseDeclarations(`
+          access(all) event Foo ( a : Int = 3)
+        `)
 
 		AssertEqualWithDiff(t,
 			[]error{
 				&UnexpectedDefaultArgumentError{
-					Pos: ast.Position{Line: 1, Column: 33, Offset: 33},
+					Pos: ast.Position{Line: 2, Column: 42, Offset: 43},
 				},
 			},
 			errs,
@@ -3156,12 +3160,14 @@ func TestParseEvent(t *testing.T) {
 	t.Run("invalid event name", func(t *testing.T) {
 		t.Parallel()
 
-		_, errs := testParseDeclarations(`event continue {}`)
+		_, errs := testParseDeclarations(`
+          event continue {}
+        `)
 
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Pos:     ast.Position{Line: 1, Column: 6, Offset: 6},
+					Pos:     ast.Position{Line: 2, Column: 16, Offset: 17},
 					Message: "expected identifier after start of event declaration, got keyword continue",
 				},
 			},
