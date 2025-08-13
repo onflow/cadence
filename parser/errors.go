@@ -1114,7 +1114,7 @@ func (e *ExpectedPrepareOrExecuteError) Error() string {
 }
 
 func (*ExpectedPrepareOrExecuteError) SecondaryError() string {
-	return "transaction declarations can only contain 'prepare' and 'execute' blocks"
+	return "the first block in a transaction declaration must be a 'prepare' or an 'execute' block"
 }
 
 func (*ExpectedPrepareOrExecuteError) DocumentationLink() string {
@@ -1155,7 +1155,7 @@ func (e *ExpectedExecuteOrPostError) Error() string {
 }
 
 func (*ExpectedExecuteOrPostError) SecondaryError() string {
-	return "transaction declarations can only contain 'execute' and 'post' blocks in this context"
+	return "transaction declarations may only define an 'execute' or a 'post' block here"
 }
 
 func (*ExpectedExecuteOrPostError) DocumentationLink() string {
@@ -1223,7 +1223,7 @@ func (*UnexpectedColonInDictionaryTypeError) Error() string {
 }
 
 func (*UnexpectedColonInDictionaryTypeError) SecondaryError() string {
-	return "dictionary types use a colon (:) to separate key and value types, but a value type is expected after the colon"
+	return "dictionary types use a colon (:) to separate key and value types, both types must be provided ({K:V})"
 }
 
 func (*UnexpectedColonInDictionaryTypeError) DocumentationLink() string {
@@ -1449,9 +1449,7 @@ func (*InvalidNonNominalTypeInIntersectionError) isParseError() {}
 func (*InvalidNonNominalTypeInIntersectionError) IsUserError() {}
 
 func (e *InvalidNonNominalTypeInIntersectionError) Error() string {
-	return fmt.Sprintf(
-		"non-nominal type in intersection type",
-	)
+	return "non-nominal type in intersection type"
 }
 
 func (*InvalidNonNominalTypeInIntersectionError) SecondaryError() string {
@@ -2598,7 +2596,7 @@ func (e *InvalidImportContinuationError) Error() string {
 }
 
 func (*InvalidImportContinuationError) SecondaryError() string {
-	return "after an imported identifier, expect either a comma to import more items " +
+	return "after an imported identifier, use either a comma to import more items " +
 		"or the 'from' keyword to specify the import location"
 }
 
@@ -2671,7 +2669,7 @@ func (*UnexpectedEOFInImportListError) Error() string {
 }
 
 func (*UnexpectedEOFInImportListError) SecondaryError() string {
-	return "import declarations cannot end abruptly - expect either an identifier to import or a comma to continue the import list"
+	return "import declarations cannot end abruptly - use either an identifier to import or a comma to continue the import list"
 }
 
 func (*UnexpectedEOFInImportListError) DocumentationLink() string {

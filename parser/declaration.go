@@ -284,16 +284,6 @@ func handlePub(p *parser) error {
 	return nil
 }
 
-var enumeratedAccessModifierKeywords = common.EnumerateWords(
-	[]string{
-		strconv.Quote(KeywordAll),
-		strconv.Quote(KeywordAccount),
-		strconv.Quote(KeywordContract),
-		strconv.Quote(KeywordSelf),
-	},
-	"or",
-)
-
 func rejectAccessKeywordEntitlementType(p *parser, ty *ast.NominalType) {
 	switch ty.Identifier.Identifier {
 	case KeywordAll, KeywordAccess, KeywordAccount, KeywordSelf:
