@@ -1291,9 +1291,7 @@ func (*InvalidNonNominalTypeInIntersectionError) isParseError() {}
 func (*InvalidNonNominalTypeInIntersectionError) IsUserError() {}
 
 func (e *InvalidNonNominalTypeInIntersectionError) Error() string {
-	return fmt.Sprintf(
-		"non-nominal type in intersection type",
-	)
+	return "non-nominal type in intersection type"
 }
 
 func (*InvalidNonNominalTypeInIntersectionError) SecondaryError() string {
