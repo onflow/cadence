@@ -209,7 +209,6 @@ func TestParseBlockComment(t *testing.T) {
 			[]error{
 				&UnexpectedTokenInBlockCommentError{
 					GotToken: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
 							EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},

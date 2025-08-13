@@ -20,6 +20,7 @@ package parser
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/onflow/cadence/ast"
@@ -1664,6 +1665,43 @@ func (*InvalidEntitlementMappingIncludeTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control#mapping-composition"
 }
 
+// MissingRightArrowInEntitlementMappingError is reported when the '->' token is missing in an entitlement mapping.
+type MissingRightArrowInEntitlementMappingError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingRightArrowInEntitlementMappingError{}
+var _ errors.UserError = &MissingRightArrowInEntitlementMappingError{}
+var _ errors.SecondaryError = &MissingRightArrowInEntitlementMappingError{}
+var _ errors.HasDocumentationLink = &MissingRightArrowInEntitlementMappingError{}
+
+func (*MissingRightArrowInEntitlementMappingError) isParseError() {}
+
+func (*MissingRightArrowInEntitlementMappingError) IsUserError() {}
+
+func (e *MissingRightArrowInEntitlementMappingError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingRightArrowInEntitlementMappingError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingRightArrowInEntitlementMappingError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf("expected %s in entitlement mapping", lexer.TokenRightArrow),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingRightArrowInEntitlementMappingError) SecondaryError() string {
+	return "entitlement mappings must use '->' to separate the input and output types"
+}
+
+func (*MissingRightArrowInEntitlementMappingError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control#entitlement-mappings"
+}
+
 // InvalidNonNominalTypeInIntersectionError is reported when a non-nominal type is found in an intersection type.
 type InvalidNonNominalTypeInIntersectionError struct {
 	ast.Range
@@ -2601,6 +2639,117 @@ func (*InvalidPubModifierError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control"
 }
 
+// MissingPubClosingParenError is reported when a pub(set) modifier is missing a closing parenthesis.
+type MissingPubClosingParenError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &MissingPubClosingParenError{}
+var _ errors.UserError = &MissingPubClosingParenError{}
+var _ errors.SecondaryError = &MissingPubClosingParenError{}
+var _ errors.HasDocumentationLink = &MissingPubClosingParenError{}
+
+func (*MissingPubClosingParenError) isParseError() {}
+
+func (*MissingPubClosingParenError) IsUserError() {}
+
+func (e *MissingPubClosingParenError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *MissingPubClosingParenError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*MissingPubClosingParenError) Error() string {
+	return fmt.Sprintf(
+		"missing %s at end of `pub` modifier",
+		lexer.TokenParenClose,
+	)
+}
+
+func (*MissingPubClosingParenError) SecondaryError() string {
+	return "the 'pub(set)' modifier must be properly closed with a closing parenthesis"
+}
+
+func (*MissingPubClosingParenError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control"
+}
+
+// MissingAccessOpeningParenError is reported when an access modifier is missing an opening parenthesis.
+type MissingAccessOpeningParenError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingAccessOpeningParenError{}
+var _ errors.UserError = &MissingAccessOpeningParenError{}
+var _ errors.SecondaryError = &MissingAccessOpeningParenError{}
+var _ errors.HasDocumentationLink = &MissingAccessOpeningParenError{}
+
+func (*MissingAccessOpeningParenError) isParseError() {}
+
+func (*MissingAccessOpeningParenError) IsUserError() {}
+
+func (e *MissingAccessOpeningParenError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingAccessOpeningParenError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingAccessOpeningParenError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf("expected %s after `access` keyword", lexer.TokenParenOpen),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingAccessOpeningParenError) SecondaryError() string {
+	return "access modifiers must be enclosed in parentheses, for example `access(all)`"
+}
+
+func (*MissingAccessOpeningParenError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control"
+}
+
+// MissingAccessClosingParenError is reported when an access modifier is missing a closing parenthesis.
+type MissingAccessClosingParenError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingAccessClosingParenError{}
+var _ errors.UserError = &MissingAccessClosingParenError{}
+var _ errors.SecondaryError = &MissingAccessClosingParenError{}
+var _ errors.HasDocumentationLink = &MissingAccessClosingParenError{}
+
+func (*MissingAccessClosingParenError) isParseError() {}
+
+func (*MissingAccessClosingParenError) IsUserError() {}
+
+func (e *MissingAccessClosingParenError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingAccessClosingParenError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingAccessClosingParenError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf("expected %s at end of `access` modifier", lexer.TokenParenClose),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingAccessClosingParenError) SecondaryError() string {
+	return "the `access` modifier must be properly closed with a closing parenthesis"
+}
+
+func (*MissingAccessClosingParenError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control"
+}
+
 // MissingAccessKeywordError is reported when an access modifier keyword is missing.
 type MissingAccessKeywordError struct {
 	GotToken lexer.Token
@@ -2623,15 +2772,21 @@ func (e *MissingAccessKeywordError) EndPosition(_ common.MemoryGauge) ast.Positi
 	return e.GotToken.EndPos
 }
 
+var enumeratedAccessModifierKeywords = common.EnumerateWords(
+	[]string{
+		strconv.Quote(KeywordAll),
+		strconv.Quote(KeywordAccount),
+		strconv.Quote(KeywordContract),
+		strconv.Quote(KeywordSelf),
+	},
+	"or",
+)
+
 func (e *MissingAccessKeywordError) Error() string {
-	keywords := common.EnumerateWords(
-		[]string{`"all"`, `"account"`, `"contract"`, `"self"`},
-		"or",
-	)
 	return expectedButGotToken(
 		fmt.Sprintf(
 			"expected keyword %s",
-			keywords,
+			enumeratedAccessModifierKeywords,
 		),
 		e.GotToken.Type,
 	)
@@ -2716,6 +2871,43 @@ func (*MissingFieldNameError) SecondaryError() string {
 }
 
 func (*MissingFieldNameError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/types-and-type-system/composite-types#composite-type-fields"
+}
+
+// MissingColonAfterFieldNameError is reported when a colon is missing after a field name.
+type MissingColonAfterFieldNameError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingColonAfterFieldNameError{}
+var _ errors.UserError = &MissingColonAfterFieldNameError{}
+var _ errors.SecondaryError = &MissingColonAfterFieldNameError{}
+var _ errors.HasDocumentationLink = &MissingColonAfterFieldNameError{}
+
+func (*MissingColonAfterFieldNameError) isParseError() {}
+
+func (*MissingColonAfterFieldNameError) IsUserError() {}
+
+func (e *MissingColonAfterFieldNameError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingColonAfterFieldNameError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingColonAfterFieldNameError) Error() string {
+	return expectedButGotToken(
+		"expected colon (:) after field name",
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingColonAfterFieldNameError) SecondaryError() string {
+	return "field declarations must have a type annotation separated by a colon (:)"
+}
+
+func (*MissingColonAfterFieldNameError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system/composite-types#composite-type-fields"
 }
 
@@ -3690,4 +3882,94 @@ func (*InvalidAttachmentBaseTypeError) SecondaryError() string {
 
 func (*InvalidAttachmentBaseTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/attachments#declaring-attachments"
+}
+
+// DeclarationMissingOpeningBraceError is reported when a declaration is missing an opening brace.
+type DeclarationMissingOpeningBraceError struct {
+	Kind     common.DeclarationKind
+	GotToken lexer.Token
+}
+
+var _ ParseError = &DeclarationMissingOpeningBraceError{}
+var _ errors.UserError = &DeclarationMissingOpeningBraceError{}
+var _ errors.SecondaryError = &DeclarationMissingOpeningBraceError{}
+var _ errors.HasDocumentationLink = &DeclarationMissingOpeningBraceError{}
+
+func (*DeclarationMissingOpeningBraceError) isParseError() {}
+
+func (*DeclarationMissingOpeningBraceError) IsUserError() {}
+
+func (e *DeclarationMissingOpeningBraceError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *DeclarationMissingOpeningBraceError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *DeclarationMissingOpeningBraceError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf(
+			"expected opening brace ({) at start of %s declaration",
+			e.Kind.Name(),
+		),
+		e.GotToken.Type,
+	)
+}
+
+func (e *DeclarationMissingOpeningBraceError) SecondaryError() string {
+	return fmt.Sprintf(
+		"%s declarations must be enclosed in braces `{ ... }`; add the missing opening brace ({)",
+		e.Kind.Name(),
+	)
+}
+
+func (*DeclarationMissingOpeningBraceError) DocumentationLink() string {
+	// TODO: improve this link to point to the specific page based on the declaration kind
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+// DeclarationMissingClosingBraceError is reported when a declaration is missing a closing brace.
+type DeclarationMissingClosingBraceError struct {
+	Kind     common.DeclarationKind
+	GotToken lexer.Token
+}
+
+var _ ParseError = &DeclarationMissingClosingBraceError{}
+var _ errors.UserError = &DeclarationMissingClosingBraceError{}
+var _ errors.SecondaryError = &DeclarationMissingClosingBraceError{}
+var _ errors.HasDocumentationLink = &DeclarationMissingClosingBraceError{}
+
+func (*DeclarationMissingClosingBraceError) isParseError() {}
+
+func (*DeclarationMissingClosingBraceError) IsUserError() {}
+
+func (e *DeclarationMissingClosingBraceError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *DeclarationMissingClosingBraceError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *DeclarationMissingClosingBraceError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf(
+			"expected closing brace (}) at end of %s declaration",
+			e.Kind.Name(),
+		),
+		e.GotToken.Type,
+	)
+}
+
+func (e *DeclarationMissingClosingBraceError) SecondaryError() string {
+	return fmt.Sprintf(
+		"%s declarations must be enclosed in braces `{ ... }`; add the missing closing brace ({)",
+		e.Kind.Name(),
+	)
+}
+
+func (*DeclarationMissingClosingBraceError) DocumentationLink() string {
+	// TODO: improve this link to point to the specific page based on the declaration kind
+	return "https://cadence-lang.org/docs/language/syntax"
 }
