@@ -990,7 +990,7 @@ func (e *ExpectedPrepareOrExecuteError) Error() string {
 }
 
 func (*ExpectedPrepareOrExecuteError) SecondaryError() string {
-	return "transaction declarations can only contain 'prepare' and 'execute' blocks"
+	return "the first block in a transaction declaration must be a 'prepare' or an 'execute' block"
 }
 
 func (*ExpectedPrepareOrExecuteError) DocumentationLink() string {
