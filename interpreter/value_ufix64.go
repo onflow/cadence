@@ -22,12 +22,14 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
+	"math/big"
 
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/values"
 )
@@ -117,6 +119,20 @@ func ConvertUFix64(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 			func() uint64 {
 				return uint64(value)
 			},
+		)
+
+	case Fix128Value:
+		return fix128BigIntToUFix64(
+			memoryGauge,
+			value.ToBigInt(),
+			locationRange,
+		)
+
+	case UFix128Value:
+		return fix128BigIntToUFix64(
+			memoryGauge,
+			value.ToBigInt(),
+			locationRange,
 		)
 
 	case BigNumberValue:
@@ -503,4 +519,32 @@ func (UFix64Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 
 func (v UFix64Value) IntegerPart() NumberValue {
 	return UInt64Value(v.UFix64Value.IntegerPart())
+}
+
+func fix128BigIntToUFix64(
+	memoryGauge common.MemoryGauge,
+	bigInt *big.Int,
+	locationRange LocationRange,
+) UFix64Value {
+
+	if bigInt.Cmp(fixedpoint.UFix64TypeMaxScaledTo128) > 0 {
+		panic(&OverflowError{
+			LocationRange: locationRange,
+		})
+	} else if bigInt.Cmp(fixedpoint.UFix64TypeMinScaledTo128) < 0 {
+		panic(&UnderflowError{
+			LocationRange: locationRange,
+		})
+	}
+
+	bigInt = bigInt.Div(bigInt, fixedpoint.Fix64ToFix128FactorAsBigInt)
+
+	return NewUFix64Value(
+		memoryGauge,
+		func() uint64 {
+			// Already checked the bounds above.
+			// So safe to directly convert to uint64.
+			return bigInt.Uint64()
+		},
+	)
 }

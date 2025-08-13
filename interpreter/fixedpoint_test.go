@@ -453,10 +453,12 @@ func TestInterpretFixedPointToFixedPointConversions(t *testing.T) {
 	t.Parallel()
 
 	type values struct {
-		positiveValue interpreter.Value
-		negativeValue interpreter.Value
-		min           interpreter.Value
-		max           interpreter.Value
+		positiveValue      interpreter.Value
+		negativeValue      interpreter.Value
+		largePositiveValue interpreter.Value
+		largeNegativeValue interpreter.Value
+		min                interpreter.Value
+		max                interpreter.Value
 	}
 
 	testValues := map[*sema.FixedPointNumericType]values{
@@ -464,26 +466,46 @@ func TestInterpretFixedPointToFixedPointConversions(t *testing.T) {
 		sema.Fix64Type: {
 			positiveValue: interpreter.NewUnmeteredFix64ValueWithInteger(42, interpreter.EmptyLocationRange),
 			negativeValue: interpreter.NewUnmeteredFix64ValueWithInteger(-42, interpreter.EmptyLocationRange),
-			min:           interpreter.NewUnmeteredFix64ValueWithInteger(sema.Fix64TypeMinInt, interpreter.EmptyLocationRange),
-			max:           interpreter.NewUnmeteredFix64ValueWithInteger(sema.Fix64TypeMaxInt, interpreter.EmptyLocationRange),
+
+			// Use the max(Fix64) as the large positive value
+			largePositiveValue: interpreter.NewUnmeteredFix64Value(math.MaxInt64),
+			// Use the min(Fix64) as the large negative value
+			largeNegativeValue: interpreter.NewUnmeteredFix64Value(math.MinInt64),
+
+			min: interpreter.NewUnmeteredFix64ValueWithInteger(sema.Fix64TypeMinInt, interpreter.EmptyLocationRange),
+			max: interpreter.NewUnmeteredFix64ValueWithInteger(sema.Fix64TypeMaxInt, interpreter.EmptyLocationRange),
 		},
 		sema.Fix128Type: {
 			positiveValue: interpreter.NewUnmeteredFix128ValueWithInteger(42, interpreter.EmptyLocationRange),
 			negativeValue: interpreter.NewUnmeteredFix128ValueWithInteger(-42, interpreter.EmptyLocationRange),
-			min:           interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
-			max:           interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
+
+			// Use the max(Fix64) as the large positive value
+			largePositiveValue: interpreter.NewFix128ValueFromBigInt(nil, fixedpoint.Fix64TypeMaxScaledTo128),
+			// Use the min(Fix64) as the large negative value
+			largeNegativeValue: interpreter.NewFix128ValueFromBigInt(nil, fixedpoint.Fix64TypeMinScaledTo128),
+
+			min: interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
+			max: interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
 		},
 
 		// UFix types
 		sema.UFix64Type: {
 			positiveValue: interpreter.NewUnmeteredUFix64ValueWithInteger(42, interpreter.EmptyLocationRange),
-			min:           interpreter.NewUnmeteredUFix64ValueWithInteger(sema.UFix64TypeMinInt, interpreter.EmptyLocationRange),
-			max:           interpreter.NewUnmeteredUFix64ValueWithInteger(sema.UFix64TypeMaxInt, interpreter.EmptyLocationRange),
+
+			// Use the max(Fix64) as the large positive value
+			largePositiveValue: interpreter.NewUnmeteredUFix64Value(math.MaxInt64),
+
+			min: interpreter.NewUnmeteredUFix64ValueWithInteger(sema.UFix64TypeMinInt, interpreter.EmptyLocationRange),
+			max: interpreter.NewUnmeteredUFix64ValueWithInteger(sema.UFix64TypeMaxInt, interpreter.EmptyLocationRange),
 		},
 		sema.UFix128Type: {
 			positiveValue: interpreter.NewUnmeteredUFix128ValueWithInteger(42, interpreter.EmptyLocationRange),
-			min:           interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMin),
-			max:           interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMax),
+
+			// Use the max(Fix64) as the large positive value
+			largePositiveValue: interpreter.NewUFix128ValueFromBigInt(nil, fixedpoint.Fix64TypeMaxScaledTo128),
+
+			min: interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMin),
+			max: interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMax),
 		},
 	}
 
@@ -583,6 +605,30 @@ func TestInterpretFixedPointToFixedPointConversions(t *testing.T) {
 							targetType,
 							sourceNegativeValue,
 							targetNegativeValue,
+							nil,
+						)
+					})
+				}
+
+				t.Run("valid large positive", func(t *testing.T) {
+					test(t,
+						sourceType,
+						targetType,
+						sourceValues.largePositiveValue,
+						targetValues.largePositiveValue,
+						nil,
+					)
+				})
+
+				sourceLargeNegativeValue := sourceValues.largeNegativeValue
+				targetLargeNegativeValue := targetValues.largeNegativeValue
+				if sourceLargeNegativeValue != nil && targetLargeNegativeValue != nil {
+					t.Run("valid large negative", func(t *testing.T) {
+						test(t,
+							sourceType,
+							targetType,
+							sourceLargeNegativeValue,
+							targetLargeNegativeValue,
 							nil,
 						)
 					})
