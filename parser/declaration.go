@@ -1805,12 +1805,15 @@ func parseFieldDeclarationWithoutVariableKind(
 
 	startPos := ast.EarliestPosition(identifier.Pos, accessPos, staticPos, nativePos)
 
-	_, err := p.mustOne(lexer.TokenColon)
-	if err != nil {
-		return nil, err
+	if p.current.Is(lexer.TokenColon) {
+		p.nextSemanticToken()
+	} else {
+		// Impossible, as parseFieldDeclarationWithoutVariableKind is currently only called
+		// when the current token is a colon, but report an error for consistency / future changes
+		p.report(&MissingColonAfterFieldNameError{
+			GotToken: p.current,
+		})
 	}
-
-	p.skipSpaceAndComments()
 
 	typeAnnotation, err := parseTypeAnnotation(p)
 	if err != nil {
