@@ -486,6 +486,12 @@ func TestNumberValue_ToBigEndianBytes(t *testing.T) {
 		return v
 	}
 
+	newUFix128 := func(s string) UFix128 {
+		v, err := NewUnmeteredUFix128FromString(s)
+		require.NoError(t, err)
+		return v
+	}
+
 	typeTests := map[string]map[NumberValue][]byte{
 		// Int*
 		"Int": {
@@ -687,6 +693,12 @@ func TestNumberValue_ToBigEndianBytes(t *testing.T) {
 			Fix64(0):           {0, 0, 0, 0, 0, 0, 0, 0},
 			Fix64(42_00000000): {0, 0, 0, 0, 250, 86, 234, 0},
 			Fix64(42_24000000): {0, 0, 0, 0, 251, 197, 32, 0},
+		},
+		"UFix128": {
+			newUFix128("0.0"):   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			newUFix128("42.0"):  {0, 0, 0, 0, 0, 34, 189, 216, 143, 237, 158, 252, 106, 0, 0, 0},
+			newUFix128("42.24"): {0, 0, 0, 0, 0, 34, 240, 170, 253, 0, 136, 125, 32, 0, 0, 0},
+			newUFix128("170141183460469.231731687303715884105727"):  {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 		},
 	}
 

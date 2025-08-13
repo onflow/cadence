@@ -147,3 +147,7 @@ func UFix128ToBigInt(value fix.UFix128) *big.Int {
 
 	return result
 }
+
+func UFix128ToBigEndianBytes(fix128 fix.UFix128) []byte {
+	return Fix128ToBigEndianBytes(fix.Fix128(fix128))
+}
