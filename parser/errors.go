@@ -3883,3 +3883,93 @@ func (*InvalidAttachmentBaseTypeError) SecondaryError() string {
 func (*InvalidAttachmentBaseTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/attachments#declaring-attachments"
 }
+
+// DeclarationMissingOpeningBraceError is reported when a declaration is missing an opening brace.
+type DeclarationMissingOpeningBraceError struct {
+	Kind     common.DeclarationKind
+	GotToken lexer.Token
+}
+
+var _ ParseError = &DeclarationMissingOpeningBraceError{}
+var _ errors.UserError = &DeclarationMissingOpeningBraceError{}
+var _ errors.SecondaryError = &DeclarationMissingOpeningBraceError{}
+var _ errors.HasDocumentationLink = &DeclarationMissingOpeningBraceError{}
+
+func (*DeclarationMissingOpeningBraceError) isParseError() {}
+
+func (*DeclarationMissingOpeningBraceError) IsUserError() {}
+
+func (e *DeclarationMissingOpeningBraceError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *DeclarationMissingOpeningBraceError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *DeclarationMissingOpeningBraceError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf(
+			"expected opening brace ({) at start of %s declaration",
+			e.Kind.Name(),
+		),
+		e.GotToken.Type,
+	)
+}
+
+func (e *DeclarationMissingOpeningBraceError) SecondaryError() string {
+	return fmt.Sprintf(
+		"%s declarations must be enclosed in braces `{ ... }`; add the missing opening brace ({)",
+		e.Kind.Name(),
+	)
+}
+
+func (*DeclarationMissingOpeningBraceError) DocumentationLink() string {
+	// TODO: improve this link to point to the specific page based on the declaration kind
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+// DeclarationMissingClosingBraceError is reported when a declaration is missing a closing brace.
+type DeclarationMissingClosingBraceError struct {
+	Kind     common.DeclarationKind
+	GotToken lexer.Token
+}
+
+var _ ParseError = &DeclarationMissingClosingBraceError{}
+var _ errors.UserError = &DeclarationMissingClosingBraceError{}
+var _ errors.SecondaryError = &DeclarationMissingClosingBraceError{}
+var _ errors.HasDocumentationLink = &DeclarationMissingClosingBraceError{}
+
+func (*DeclarationMissingClosingBraceError) isParseError() {}
+
+func (*DeclarationMissingClosingBraceError) IsUserError() {}
+
+func (e *DeclarationMissingClosingBraceError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *DeclarationMissingClosingBraceError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *DeclarationMissingClosingBraceError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf(
+			"expected closing brace (}) at end of %s declaration",
+			e.Kind.Name(),
+		),
+		e.GotToken.Type,
+	)
+}
+
+func (e *DeclarationMissingClosingBraceError) SecondaryError() string {
+	return fmt.Sprintf(
+		"%s declarations must be enclosed in braces `{ ... }`; add the missing closing brace ({)",
+		e.Kind.Name(),
+	)
+}
+
+func (*DeclarationMissingClosingBraceError) DocumentationLink() string {
+	// TODO: improve this link to point to the specific page based on the declaration kind
+	return "https://cadence-lang.org/docs/language/syntax"
+}

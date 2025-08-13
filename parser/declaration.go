@@ -1110,6 +1110,42 @@ func parseEntitlementMappingsAndInclusions(p *parser, endTokenType lexer.TokenTy
 	panic(errors.NewUnreachableError())
 }
 
+func parseInDeclarationBraces[T any](
+	p *parser,
+	kind common.DeclarationKind,
+	f func() (T, error),
+) (result T, endToken lexer.Token, err error) {
+
+	if p.current.Is(lexer.TokenBraceOpen) {
+		p.next()
+	} else {
+		p.report(&DeclarationMissingOpeningBraceError{
+			Kind:     kind,
+			GotToken: p.current,
+		})
+	}
+
+	result, err = f()
+	if err != nil {
+		return
+	}
+
+	p.skipSpaceAndComments()
+
+	endToken = p.current
+
+	if p.current.Is(lexer.TokenBraceClose) {
+		p.next()
+	} else {
+		p.report(&DeclarationMissingClosingBraceError{
+			Kind:     kind,
+			GotToken: p.current,
+		})
+	}
+
+	return
+}
+
 // parseEntitlementOrMappingDeclaration parses an entitlement declaration,
 // or an entitlement mapping declaration
 //
@@ -1159,18 +1195,14 @@ func parseEntitlementOrMappingDeclaration(
 	p.nextSemanticToken()
 
 	if isMapping {
-		_, err = p.mustOne(lexer.TokenBraceOpen)
-		if err != nil {
-			return nil, err
-		}
-		elements, err := parseEntitlementMappingsAndInclusions(p, lexer.TokenBraceClose)
-		if err != nil {
-			return nil, err
-		}
 
-		p.skipSpaceAndComments()
-
-		endToken, err := p.mustOne(lexer.TokenBraceClose)
+		elements, endToken, err := parseInDeclarationBraces(
+			p,
+			common.DeclarationKindEntitlementMapping,
+			func() ([]ast.EntitlementMapElement, error) {
+				return parseEntitlementMappingsAndInclusions(p, lexer.TokenBraceClose)
+			},
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -1305,19 +1337,13 @@ func parseCompositeOrInterfaceDeclaration(
 		return nil, err
 	}
 
-	_, err = p.mustOne(lexer.TokenBraceOpen)
-	if err != nil {
-		return nil, err
-	}
-
-	members, err := parseMembersAndNestedDeclarations(p, lexer.TokenBraceClose)
-	if err != nil {
-		return nil, err
-	}
-
-	p.skipSpaceAndComments()
-
-	endToken, err := p.mustOne(lexer.TokenBraceClose)
+	members, endToken, err := parseInDeclarationBraces(
+		p,
+		compositeKind.DeclarationKind(isInterface),
+		func() (*ast.Members, error) {
+			return parseMembersAndNestedDeclarations(p, lexer.TokenBraceClose)
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -1402,21 +1428,13 @@ func parseAttachmentDeclaration(
 		return nil, err
 	}
 
-	_, err = p.mustOne(lexer.TokenBraceOpen)
-	if err != nil {
-		return nil, err
-	}
-
-	p.skipSpaceAndComments()
-
-	members, err := parseMembersAndNestedDeclarations(p, lexer.TokenBraceClose)
-	if err != nil {
-		return nil, err
-	}
-
-	p.skipSpaceAndComments()
-
-	endToken, err := p.mustOne(lexer.TokenBraceClose)
+	members, endToken, err := parseInDeclarationBraces(
+		p,
+		common.DeclarationKindAttachment,
+		func() (*ast.Members, error) {
+			return parseMembersAndNestedDeclarations(p, lexer.TokenBraceClose)
+		},
+	)
 	if err != nil {
 		return nil, err
 	}

@@ -4193,29 +4193,45 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations("attachment E {} ")
+		_, errs := testParseDeclarations(`
+          attachment E {}
+        `)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingForKeywordInAttachmentDeclarationError{
 					GotToken: lexer.Token{
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
-							EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+							StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
+							EndPos:   ast.Position{Offset: 24, Line: 2, Column: 23},
 						},
 						Type: lexer.TokenBraceOpen,
 					},
 				},
 				&InvalidAttachmentBaseTypeError{
 					Range: ast.Range{
-						StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
-						EndPos:   ast.Position{Offset: 14, Line: 1, Column: 14},
+						StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
+						EndPos:   ast.Position{Offset: 25, Line: 2, Column: 24},
 					},
 				},
-				&SyntaxError{
-					Message:       "expected token '{'",
-					Secondary:     "check for missing punctuation, operators, or syntax elements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 16, Line: 1, Column: 16},
+				&DeclarationMissingOpeningBraceError{
+					Kind: common.DeclarationKindAttachment,
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 35, Line: 3, Column: 8},
+							EndPos:   ast.Position{Offset: 35, Line: 3, Column: 8},
+						},
+						Type: lexer.TokenEOF,
+					},
+				},
+				&DeclarationMissingClosingBraceError{
+					Kind: common.DeclarationKindAttachment,
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 35, Line: 3, Column: 8},
+							EndPos:   ast.Position{Offset: 35, Line: 3, Column: 8},
+						},
+						Type: lexer.TokenEOF,
+					},
 				},
 			},
 			errs,
@@ -9632,11 +9648,25 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		_, errs := testParseDeclarations(" access(all) entitlement mapping M ")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "expected token '{'",
-					Pos:           ast.Position{Offset: 35, Line: 1, Column: 35},
-					Secondary:     "check for missing punctuation, operators, or syntax elements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
+				&DeclarationMissingOpeningBraceError{
+					Kind: common.DeclarationKindEntitlementMapping,
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 35, Line: 1, Column: 35},
+							EndPos:   ast.Position{Offset: 35, Line: 1, Column: 35},
+						},
+						Type: lexer.TokenEOF,
+					},
+				},
+				&DeclarationMissingClosingBraceError{
+					Kind: common.DeclarationKindEntitlementMapping,
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 35, Line: 1, Column: 35},
+							EndPos:   ast.Position{Offset: 35, Line: 1, Column: 35},
+						},
+						Type: lexer.TokenEOF,
+					},
 				},
 			},
 			errs,
@@ -9647,14 +9677,20 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations(" access(all) entitlement mapping M {")
+		_, errs := testParseDeclarations(`
+          access(all) entitlement mapping M {
+        `)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "expected token '}'",
-					Pos:           ast.Position{Offset: 36, Line: 1, Column: 36},
-					Secondary:     "check for missing punctuation, operators, or syntax elements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
+				&DeclarationMissingClosingBraceError{
+					Kind: common.DeclarationKindEntitlementMapping,
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 55, Line: 3, Column: 8},
+							EndPos:   ast.Position{Offset: 55, Line: 3, Column: 8},
+						},
+						Type: lexer.TokenEOF,
+					},
 				},
 			},
 			errs,
@@ -9665,14 +9701,20 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations(" access(all) entitlement mapping M }")
+		_, errs := testParseDeclarations(`
+          access(all) entitlement mapping M }
+        `)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "expected token '{'",
-					Pos:           ast.Position{Offset: 35, Line: 1, Column: 35},
-					Secondary:     "check for missing punctuation, operators, or syntax elements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
+				&DeclarationMissingOpeningBraceError{
+					Kind: common.DeclarationKindEntitlementMapping,
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 45, Line: 2, Column: 44},
+							EndPos:   ast.Position{Offset: 45, Line: 2, Column: 44},
+						},
+						Type: lexer.TokenBraceClose,
+					},
 				},
 			},
 			errs,
