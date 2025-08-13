@@ -1162,6 +1162,147 @@ func (*ExpectedExecuteOrPostError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/transactions"
 }
 
+// ExpectedCaseOrDefaultError is reported when a 'case' or 'default' is expected in a switch statement.
+type ExpectedCaseOrDefaultError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &ExpectedCaseOrDefaultError{}
+var _ errors.UserError = &ExpectedCaseOrDefaultError{}
+var _ errors.SecondaryError = &ExpectedCaseOrDefaultError{}
+var _ errors.HasDocumentationLink = &ExpectedCaseOrDefaultError{}
+
+func (*ExpectedCaseOrDefaultError) isParseError() {}
+
+func (*ExpectedCaseOrDefaultError) IsUserError() {}
+
+func (e *ExpectedCaseOrDefaultError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *ExpectedCaseOrDefaultError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *ExpectedCaseOrDefaultError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf(
+			"unexpected token: expected keyword %q or %q",
+			KeywordCase,
+			KeywordDefault,
+		),
+		e.GotToken.Type,
+	)
+}
+
+func (*ExpectedCaseOrDefaultError) SecondaryError() string {
+	return "switch statements can only contain 'case' and 'default' blocks"
+}
+
+func (*ExpectedCaseOrDefaultError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/control-flow#switch"
+}
+
+// MissingColonInSwitchCaseError is reported when a colon is missing in a switch case.
+type MissingColonInSwitchCaseError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingColonInSwitchCaseError{}
+var _ errors.UserError = &MissingColonInSwitchCaseError{}
+var _ errors.SecondaryError = &MissingColonInSwitchCaseError{}
+var _ errors.HasDocumentationLink = &MissingColonInSwitchCaseError{}
+
+func (*MissingColonInSwitchCaseError) isParseError() {}
+
+func (*MissingColonInSwitchCaseError) IsUserError() {}
+
+func (e *MissingColonInSwitchCaseError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingColonInSwitchCaseError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingColonInSwitchCaseError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf("expected %s", lexer.TokenColon),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingColonInSwitchCaseError) SecondaryError() string {
+	return "a colon (:) is required after the case expression in a switch statement"
+}
+
+func (*MissingColonInSwitchCaseError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/control-flow#switch"
+}
+
+// MissingFromKeywordInRemoveStatementError is reported when the 'from' keyword is missing in a remove statement.
+type MissingFromKeywordInRemoveStatementError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingFromKeywordInRemoveStatementError{}
+var _ errors.UserError = &MissingFromKeywordInRemoveStatementError{}
+var _ errors.SecondaryError = &MissingFromKeywordInRemoveStatementError{}
+var _ errors.HasDocumentationLink = &MissingFromKeywordInRemoveStatementError{}
+
+func (*MissingFromKeywordInRemoveStatementError) isParseError() {}
+
+func (*MissingFromKeywordInRemoveStatementError) IsUserError() {}
+
+func (e *MissingFromKeywordInRemoveStatementError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingFromKeywordInRemoveStatementError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingFromKeywordInRemoveStatementError) Error() string {
+	return expectedButGotToken(
+		"expected 'from' keyword",
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingFromKeywordInRemoveStatementError) SecondaryError() string {
+	return "the 'remove' statement requires the 'from' keyword to specify the value to remove the attachment from"
+}
+
+func (*MissingFromKeywordInRemoveStatementError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/attachments#removing-attachments"
+}
+
+// InvalidAttachmentTypeError is reported when a removed attachment type is not nominal.
+type InvalidAttachmentRemovalTypeError struct {
+	ast.Range
+}
+
+var _ ParseError = &InvalidAttachmentRemovalTypeError{}
+var _ errors.UserError = &InvalidAttachmentRemovalTypeError{}
+var _ errors.SecondaryError = &InvalidAttachmentRemovalTypeError{}
+var _ errors.HasDocumentationLink = &InvalidAttachmentRemovalTypeError{}
+
+func (*InvalidAttachmentRemovalTypeError) isParseError() {}
+
+func (*InvalidAttachmentRemovalTypeError) IsUserError() {}
+
+func (e *InvalidAttachmentRemovalTypeError) Error() string {
+	return "expected attachment nominal type"
+}
+
+func (*InvalidAttachmentRemovalTypeError) SecondaryError() string {
+	return "only attachment types can be removed"
+}
+
+func (*InvalidAttachmentRemovalTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/attachments#removing-attachments"
+}
+
 // UnexpectedCommaInDictionaryTypeError is reported when a comma is found in a dictionary type.
 type UnexpectedCommaInDictionaryTypeError struct {
 	Pos ast.Position
@@ -2751,6 +2892,81 @@ func (*InvalidFromKeywordAsIdentifierError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/imports"
 }
 
+// InvalidInKeywordAsIdentifierError is reported when the `in` keyword is used as an identifier
+// in an invalid context in a for statement.
+type InvalidInKeywordAsIdentifierError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &InvalidInKeywordAsIdentifierError{}
+var _ errors.UserError = &InvalidInKeywordAsIdentifierError{}
+var _ errors.SecondaryError = &InvalidInKeywordAsIdentifierError{}
+var _ errors.HasDocumentationLink = &InvalidInKeywordAsIdentifierError{}
+
+func (*InvalidInKeywordAsIdentifierError) isParseError() {}
+
+func (*InvalidInKeywordAsIdentifierError) IsUserError() {}
+
+func (e *InvalidInKeywordAsIdentifierError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidInKeywordAsIdentifierError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*InvalidInKeywordAsIdentifierError) Error() string {
+	return fmt.Sprintf("expected identifier, got keyword %q", KeywordIn)
+}
+
+func (*InvalidInKeywordAsIdentifierError) SecondaryError() string {
+	return "the 'in' keyword cannot be used as an identifier in a for-loop"
+}
+
+func (*InvalidInKeywordAsIdentifierError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/control-flow#for-in-statement"
+}
+
+// MissingInKeywordInForStatementError is reported when the `in` keyword is missing in a for statement.
+type MissingInKeywordInForStatementError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingInKeywordInForStatementError{}
+var _ errors.UserError = &MissingInKeywordInForStatementError{}
+var _ errors.SecondaryError = &MissingInKeywordInForStatementError{}
+var _ errors.HasDocumentationLink = &MissingInKeywordInForStatementError{}
+
+func (*MissingInKeywordInForStatementError) isParseError() {}
+
+func (*MissingInKeywordInForStatementError) IsUserError() {}
+
+func (e *MissingInKeywordInForStatementError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingInKeywordInForStatementError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingInKeywordInForStatementError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf(
+			"expected keyword %q",
+			KeywordIn,
+		),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingInKeywordInForStatementError) SecondaryError() string {
+	return "for-loops require the 'in' keyword to separate the loop variable from the iterated value"
+}
+
+func (*MissingInKeywordInForStatementError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/control-flow#for-in-statement"
+}
+
 // MissingConformanceError is reported when a colon for conformances is present,
 // but no conformances follow.
 type MissingConformanceError struct {
@@ -2914,6 +3130,80 @@ func (*UnexpectedTokenAtEndError) SecondaryError() string {
 
 func (*UnexpectedTokenAtEndError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+// MissingCommentEndError is reported when a block comment is missing an end.
+type MissingCommentEndError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &MissingCommentEndError{}
+var _ errors.UserError = &MissingCommentEndError{}
+var _ errors.SecondaryError = &MissingCommentEndError{}
+var _ errors.HasDocumentationLink = &MissingCommentEndError{}
+
+func (*MissingCommentEndError) isParseError() {}
+
+func (*MissingCommentEndError) IsUserError() {}
+
+func (e *MissingCommentEndError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *MissingCommentEndError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (e *MissingCommentEndError) Error() string {
+	return fmt.Sprintf(
+		"missing comment end %s",
+		lexer.TokenBlockCommentEnd,
+	)
+}
+
+func (*MissingCommentEndError) SecondaryError() string {
+	return "ensure all block comments are properly closed with '*/'"
+}
+
+func (*MissingCommentEndError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax#comments"
+}
+
+// UnexpectedTokenInBlockCommentError is reported when an unexpected token is found in a block comment.
+type UnexpectedTokenInBlockCommentError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &UnexpectedTokenInBlockCommentError{}
+var _ errors.UserError = &UnexpectedTokenInBlockCommentError{}
+var _ errors.SecondaryError = &UnexpectedTokenInBlockCommentError{}
+var _ errors.HasDocumentationLink = &UnexpectedTokenInBlockCommentError{}
+
+func (*UnexpectedTokenInBlockCommentError) isParseError() {}
+
+func (*UnexpectedTokenInBlockCommentError) IsUserError() {}
+
+func (e *UnexpectedTokenInBlockCommentError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *UnexpectedTokenInBlockCommentError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *UnexpectedTokenInBlockCommentError) Error() string {
+	return fmt.Sprintf(
+		"unexpected token %s in block comment",
+		e.GotToken.Type,
+	)
+}
+
+func (*UnexpectedTokenInBlockCommentError) SecondaryError() string {
+	return "only text is allowed in a block comment"
+}
+
+func (*UnexpectedTokenInBlockCommentError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax#comments"
 }
 
 // SpecialFunctionReturnTypeError is reported when a special function has a return type.

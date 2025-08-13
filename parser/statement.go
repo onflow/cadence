@@ -428,17 +428,15 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 	startPos := p.current.StartPos
 	p.nextSemanticToken()
 
-	if p.isToken(p.current, lexer.TokenIdentifier, KeywordIn) {
-		p.reportSyntaxError(
-			"expected identifier, got keyword %q",
-			KeywordIn,
-		)
-		p.next()
-	}
-
 	firstValue, err := p.mustIdentifier()
 	if err != nil {
 		return nil, err
+	}
+
+	if firstValue.Identifier == KeywordIn {
+		p.report(&InvalidInKeywordAsIdentifierError{
+			Pos: p.current.StartPos,
+		})
 	}
 
 	p.skipSpaceAndComments()
@@ -459,15 +457,13 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 		identifier = firstValue
 	}
 
-	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordIn) {
-		p.reportSyntaxError(
-			"expected keyword %q, got %s",
-			KeywordIn,
-			p.current.Type,
-		)
+	if p.isToken(p.current, lexer.TokenIdentifier, KeywordIn) {
+		p.next()
+	} else {
+		p.report(&MissingInKeywordInForStatementError{
+			GotToken: p.current,
+		})
 	}
-
-	p.next()
 
 	expression, err := parseExpression(p, lowestBindingPower)
 	if err != nil {
@@ -728,16 +724,6 @@ func parseSwitchStatement(p *parser) (*ast.SwitchStatement, error) {
 //	switchCases : switchCase*
 func parseSwitchCases(p *parser) (cases []*ast.SwitchCase, err error) {
 
-	reportUnexpected := func() {
-		p.reportSyntaxError(
-			"unexpected token: got %s, expected %q or %q",
-			p.current.Type,
-			KeywordCase,
-			KeywordDefault,
-		)
-		p.next()
-	}
-
 	progress := p.newProgress()
 
 	for p.checkProgress(&progress) {
@@ -751,17 +737,22 @@ func parseSwitchCases(p *parser) (cases []*ast.SwitchCase, err error) {
 			switch string(p.currentTokenSource()) {
 			case KeywordCase:
 				switchCase, err = parseSwitchCase(p, true)
+				if err != nil {
+					return
+				}
 
 			case KeywordDefault:
 				switchCase, err = parseSwitchCase(p, false)
+				if err != nil {
+					return
+				}
 
 			default:
-				reportUnexpected()
+				p.report(&ExpectedCaseOrDefaultError{
+					GotToken: p.current,
+				})
+				p.next()
 				continue
-			}
-
-			if err != nil {
-				return
 			}
 
 			cases = append(cases, switchCase)
@@ -770,7 +761,10 @@ func parseSwitchCases(p *parser) (cases []*ast.SwitchCase, err error) {
 			return
 
 		default:
-			reportUnexpected()
+			p.report(&ExpectedCaseOrDefaultError{
+				GotToken: p.current,
+			})
+			p.next()
 		}
 	}
 
@@ -803,15 +797,13 @@ func parseSwitchCase(p *parser, hasExpression bool) (*ast.SwitchCase, error) {
 
 	colonPos := p.current.StartPos
 
-	if !p.current.Is(lexer.TokenColon) {
-		p.reportSyntaxError(
-			"expected %s, got %s",
-			lexer.TokenColon,
-			p.current.Type,
-		)
+	if p.current.Is(lexer.TokenColon) {
+		p.next()
+	} else {
+		p.report(&MissingColonInSwitchCaseError{
+			GotToken: p.current,
+		})
 	}
-
-	p.next()
 
 	statements, err := parseStatements(p, func(token lexer.Token) bool {
 		switch token.Type {
@@ -861,27 +853,25 @@ func parseRemoveStatement(
 	p.next()
 	p.skipSpaceAndComments()
 
-	attachment, err := parseType(p, lowestBindingPower)
+	ty, err := parseType(p, lowestBindingPower)
 	if err != nil {
 		return nil, err
 	}
-	attachmentNominalType, ok := attachment.(*ast.NominalType)
 
+	attachmentNominalType, ok := ty.(*ast.NominalType)
 	if !ok {
-		p.reportSyntaxError(
-			"expected attachment nominal type, got %s",
-			attachment,
-		)
+		p.report(&InvalidAttachmentRemovalTypeError{
+			Range: ast.NewRangeFromPositioned(p.memoryGauge, ty),
+		})
 	}
 
 	p.skipSpaceAndComments()
 
 	// check and skip `from` keyword
 	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordFrom) {
-		p.reportSyntaxError(
-			"expected from keyword, got %s",
-			p.current.Type,
-		)
+		p.report(&MissingFromKeywordInRemoveStatementError{
+			GotToken: p.current,
+		})
 	}
 	p.nextSemanticToken()
 

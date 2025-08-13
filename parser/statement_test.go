@@ -28,6 +28,7 @@ import (
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/parser/lexer"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
@@ -879,13 +880,19 @@ func TestParseForStatementIndexBinding(t *testing.T) {
 		_, errs := testParseStatements("for i x in y { }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected keyword \"in\", got identifier",
-					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+				&MissingInKeywordInForStatementError{
+					GotToken: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+							EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 				&SyntaxError{
 					Message:       "expected token '{'",
-					Pos:           ast.Position{Offset: 11, Line: 1, Column: 11},
+					Pos:           ast.Position{Offset: 8, Line: 1, Column: 8},
 					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
@@ -901,15 +908,17 @@ func TestParseForStatementIndexBinding(t *testing.T) {
 		_, errs := testParseStatements("for in y { }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected identifier, got keyword \"in\"",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				&InvalidInKeywordAsIdentifierError{
+					Pos: ast.Position{Offset: 6, Line: 1, Column: 6},
 				},
-				&SyntaxError{
-					Message:       "expected token identifier",
-					Pos:           ast.Position{Offset: 6, Line: 1, Column: 6},
-					Secondary:     "check for missing punctuation, operators, or syntax elements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
+				&MissingInKeywordInForStatementError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+							EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
@@ -1340,9 +1349,14 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected from keyword, got EOF",
-					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
+				&MissingFromKeywordInRemoveStatementError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+							EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+						},
+					},
 				},
 				UnexpectedEOFError{
 					Pos: ast.Position{Offset: 8, Line: 1, Column: 8},
@@ -1376,9 +1390,11 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected attachment nominal type, got [A]",
-					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				&InvalidAttachmentRemovalTypeError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+						EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+					},
 				},
 			},
 			errs,
@@ -1536,12 +1552,70 @@ func TestParseSwitchStatement(t *testing.T) {
 		)
 	})
 
-	t.Run("Invalid identifiers in switch cases", func(t *testing.T) {
-		code := "switch 1 {AAAAA: break; case 3: break; default: break}"
-		_, errs := testParseStatements(code)
+	t.Run("invalid identifiers in switch cases", func(t *testing.T) {
+		t.Parallel()
+
+		_, errs := testParseStatements("switch 1 {AAAAA: break; case 3: break; default: break}")
 		AssertEqualWithDiff(t,
-			`unexpected token: got identifier, expected "case" or "default"`,
-			errs[0].Error(),
+			[]error{
+				&ExpectedCaseOrDefaultError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 14, Line: 1, Column: 14},
+						},
+					},
+				},
+				&ExpectedCaseOrDefaultError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenColon,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 15, Line: 1, Column: 15},
+							EndPos:   ast.Position{Offset: 15, Line: 1, Column: 15},
+						},
+					},
+				},
+				&ExpectedCaseOrDefaultError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
+							EndPos:   ast.Position{Offset: 21, Line: 1, Column: 21},
+						},
+					},
+				},
+				&ExpectedCaseOrDefaultError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenSemicolon,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 22, Line: 1, Column: 22},
+							EndPos:   ast.Position{Offset: 22, Line: 1, Column: 22},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing colon", func(t *testing.T) {
+		t.Parallel()
+
+		_, errs := testParseStatements("switch 1 { case 2 break }")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingColonInSwitchCaseError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 18, Line: 1, Column: 18},
+							EndPos:   ast.Position{Offset: 22, Line: 1, Column: 22},
+						},
+					},
+				},
+			},
+			errs,
 		)
 	})
 }
@@ -2795,4 +2869,40 @@ func TestParseStatementsWithWhitespace(t *testing.T) {
 
 		require.Len(t, statements, 1)
 	})
+}
+
+func TestParseForInKeywordAsIdentifier(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`for in in [] {}`)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&InvalidInKeywordAsIdentifierError{
+				Pos: ast.Position{Offset: 6, Line: 1, Column: 6},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseForStatementMissingInKeyword(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`for i [] {}`)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingInKeywordInForStatementError{
+				GotToken: lexer.Token{
+					Type: lexer.TokenBracketOpen,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+						EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+					},
+				},
+			},
+		},
+		errs,
+	)
 }
