@@ -2208,7 +2208,7 @@ func (e *InvalidImportContinuationError) Error() string {
 }
 
 func (*InvalidImportContinuationError) SecondaryError() string {
-	return "after an imported identifier, expect either a comma to import more items or the 'from' keyword to specify the import location"
+	return "after an imported identifier, use either a comma to import more items or the 'from' keyword to specify the import location"
 }
 
 func (*InvalidImportContinuationError) DocumentationLink() string {
