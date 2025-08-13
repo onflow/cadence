@@ -553,7 +553,7 @@ func (checker *Checker) declareEntitlementMappingType(declaration *ast.Entitleme
 		inputEntitlement, isEntitlement := input.(*EntitlementType)
 
 		if !isEntitlement {
-			checker.report(&InvalidNonEntitlementTypeInMapError{
+			checker.report(&InvalidNonEntitlementTypeInMappingError{
 				Pos: association.Input.Identifier.Pos,
 			})
 			continue
@@ -563,7 +563,7 @@ func (checker *Checker) declareEntitlementMappingType(declaration *ast.Entitleme
 		outputEntitlement, isEntitlement := output.(*EntitlementType)
 
 		if !isEntitlement {
-			checker.report(&InvalidNonEntitlementTypeInMapError{
+			checker.report(&InvalidNonEntitlementTypeInMappingError{
 				Pos: association.Output.Identifier.Pos,
 			})
 			continue

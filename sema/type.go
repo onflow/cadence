@@ -370,7 +370,7 @@ func CheckParameterizedTypeInstantiated(
 		if !typeParam.Optional && typeArgs[index] == nil {
 			report(
 				&MissingTypeArgumentError{
-					TypeArgumentName: typeParam.Name,
+					TypeParameterName: typeParam.Name,
 					Range: ast.NewRange(
 						memoryGauge,
 						pos.StartPosition(),

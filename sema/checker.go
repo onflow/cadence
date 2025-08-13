@@ -885,7 +885,7 @@ func (checker *Checker) ConvertType(t ast.Type) Type {
 		return checker.convertInstantiationType(t)
 
 	default:
-		checker.report(&UnconvertableTypeError{
+		checker.report(&UnconvertibleTypeError{
 			Range: ast.NewRangeFromPositioned(checker.memoryGauge, t),
 		})
 		return InvalidType
