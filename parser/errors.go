@@ -1235,7 +1235,7 @@ func (*UnexpectedCommaInIntersectionTypeError) Error() string {
 }
 
 func (*UnexpectedCommaInIntersectionTypeError) SecondaryError() string {
-	return "intersection types use commas to separate multiple types, but a type is expected after the comma"
+	return "intersection types use commas to separate multiple types, check for missing types or remove the comma"
 }
 
 func (*UnexpectedCommaInIntersectionTypeError) DocumentationLink() string {
