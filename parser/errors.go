@@ -1099,7 +1099,7 @@ func (*UnexpectedColonInDictionaryTypeError) Error() string {
 }
 
 func (*UnexpectedColonInDictionaryTypeError) SecondaryError() string {
-	return "dictionary types use a colon (:) to separate key and value types, but a value type is expected after the colon"
+	return "dictionary types use a colon (:) to separate key and value types, both types must be provided ({K:V})"
 }
 
 func (*UnexpectedColonInDictionaryTypeError) DocumentationLink() string {
