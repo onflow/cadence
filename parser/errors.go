@@ -1031,7 +1031,7 @@ func (e *ExpectedExecuteOrPostError) Error() string {
 }
 
 func (*ExpectedExecuteOrPostError) SecondaryError() string {
-	return "transaction declarations can only contain 'execute' and 'post' blocks in this context"
+	return "transaction declarations may only define an 'execute' or a 'post' block here"
 }
 
 func (*ExpectedExecuteOrPostError) DocumentationLink() string {
