@@ -881,7 +881,12 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	if boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue); isBoundFunction {
 		functionValue = boundFunction.Method
 		receiver := boundFunction.Receiver(vm.context)
-		arguments = append([]Value{receiver}, arguments...)
+		values := []Value{receiver}
+		base := boundFunction.Base
+		if base != nil {
+			values = append(values, base)
+		}
+		arguments = append(values, arguments...)
 	}
 
 	invokeFunction(
@@ -906,16 +911,37 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 	if val, ok := receiver.(*interpreter.EphemeralReferenceValue); ok {
 		if refValue, ok := val.Value.(*interpreter.CompositeValue); ok {
 			if refValue.Kind == common.CompositeKindAttachment {
-				base = refValue.GetBaseValue(
-					vm.context,
-					interpreter.ConvertSemaAccessToStaticAuthorization(
-						vm.context,
-						sema.UnauthorizedAccess,
-					),
-					interpreter.EmptyLocationRange,
-				)
-			}
+				// CompositeValue.GetMethod, as in the interpreter we need an authorized reference to base
+				var unqualifiedName string
+				switch functionValue := method.(type) {
+				case CompiledFunctionValue:
+					parts := strings.Split(functionValue.Function.Name, ".")
+					unqualifiedName = parts[len(parts)-1]
+				case *NativeFunctionValue:
+					unqualifiedName = functionValue.Name
+				}
 
+				fnAccess := interpreter.GetAccessOfMember(vm.context, refValue, unqualifiedName)
+				// with respect to entitlements, any access inside an attachment that is not an entitlement access
+				// does not provide any entitlements to base and self
+				// E.g. consider:
+				//
+				//    access(E) fun foo() {}
+				//    access(self) fun bar() {
+				//        self.foo()
+				//    }
+				//    access(all) fun baz() {
+				//        self.bar()
+				//    }
+				//
+				// clearly `bar` should be callable within `baz`, but we cannot allow `foo`
+				// to be callable within `bar`, or it will be possible to access `E` entitled
+				// methods on `base`
+				if fnAccess.IsPrimitiveAccess() {
+					fnAccess = sema.UnauthorizedAccess
+				}
+				base, receiver = interpreter.AttachmentBaseAndSelfValues(vm.context, fnAccess, refValue, EmptyLocationRange)
+			}
 		}
 	}
 
@@ -967,7 +993,6 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
 	// Load arguments
 	arguments := vm.popN(int(ins.ArgCount))
 	receiver := arguments[ReceiverIndex]
-	arguments[ReceiverIndex] = maybeDereferenceReceiver(vm.context, receiver)
 
 	// Get function
 	nameIndex := ins.Name
@@ -980,6 +1005,9 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
 		EmptyLocationRange,
 		funcName,
 	)
+
+	_, ok := functionValue.(*NativeFunctionValue)
+	arguments[ReceiverIndex] = maybeDereferenceReceiver(vm.context, receiver, ok)
 
 	invokeFunction(
 		vm,
@@ -1032,11 +1060,12 @@ func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
 	return typeArguments
 }
 
-func maybeDereferenceReceiver(context interpreter.ValueStaticTypeContext, value Value) Value {
+func maybeDereferenceReceiver(context interpreter.ValueStaticTypeContext, value Value, isNative bool) Value {
 	switch typedValue := value.(type) {
 	case *interpreter.EphemeralReferenceValue:
 		// Do not dereference attachments, so that the receiver is a reference as expected.
-		if val, ok := typedValue.Value.(*interpreter.CompositeValue); ok {
+		// Exception: Native function receiver needs to be dereferenced to match interpreter.
+		if val, ok := typedValue.Value.(*interpreter.CompositeValue); ok && !isNative {
 			if val.Kind == common.CompositeKindAttachment {
 				return value
 			}
@@ -1519,15 +1548,35 @@ func opSetTypeIndex(vm *VM, ins opcode.InstructionSetTypeIndex) {
 	typ := vm.context.SemaTypeFromStaticType(staticType)
 	attachment := fieldValue.(*interpreter.CompositeValue)
 
-	compositeValue := target.(*interpreter.CompositeValue)
-	compositeValue.SetTypeKey(
+	base := target.(*interpreter.CompositeValue)
+
+	if inIteration := vm.context.inAttachmentIteration(base); inIteration {
+		panic(&interpreter.AttachmentIterationMutationError{
+			Value:         base,
+			LocationRange: EmptyLocationRange,
+		})
+	}
+
+	// transfer here instead of in compiler
+	// so we can check attachment iteration properly
+	base = base.Transfer(
+		vm.context,
+		EmptyLocationRange,
+		atree.Address{},
+		false,
+		nil,
+		nil,
+		true, // base is standalone,
+	).(*interpreter.CompositeValue)
+
+	base.SetTypeKey(
 		vm.context,
 		EmptyLocationRange,
 		typ,
 		fieldValue,
 	)
-	attachment.SetBaseValue(compositeValue)
-	vm.push(compositeValue)
+	attachment.SetBaseValue(base)
+	vm.push(base)
 }
 
 func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
@@ -1538,8 +1587,21 @@ func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 	staticType := vm.loadType(typeIndex)
 	typ := vm.context.SemaTypeFromStaticType(staticType)
 
-	compositeValue := target.(*interpreter.CompositeValue)
-	removed := compositeValue.RemoveTypeKey(
+	base, ok := target.(*interpreter.CompositeValue)
+	if inIteration := vm.context.inAttachmentIteration(base); inIteration {
+		panic(&interpreter.AttachmentIterationMutationError{
+			Value:         base,
+			LocationRange: EmptyLocationRange,
+		})
+	}
+	// we enforce this in the checker, but check defensively anyways
+	if !ok || !base.Kind.SupportsAttachments() {
+		panic(&interpreter.InvalidAttachmentOperationTargetError{
+			Value:         target,
+			LocationRange: EmptyLocationRange,
+		})
+	}
+	removed := base.RemoveTypeKey(
 		vm.context,
 		EmptyLocationRange,
 		typ,
@@ -1555,7 +1617,7 @@ func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 	}
 	if attachment.IsResourceKinded(vm.context) {
 		// this attachment is no longer attached to its base, but the `base` variable is still available in the destructor
-		attachment.SetBaseValue(compositeValue)
+		attachment.SetBaseValue(base)
 		attachment.Destroy(vm.context, EmptyLocationRange)
 	}
 }

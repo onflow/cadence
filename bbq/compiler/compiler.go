@@ -3410,7 +3410,11 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 	c.emitSetLocal(baseLocalIndex)
 	// get base back on stack
 	c.emitGetLocal(baseLocalIndex)
-	baseTyp := baseType.(sema.EntitlementSupportingType)
+	baseTyp, ok := baseType.(sema.EntitlementSupportingType)
+	if !ok {
+		// simulates defensive check in interpreter
+		panic(errors.NewUnreachableError())
+	}
 	baseAccess := baseTyp.SupportedEntitlements().Access()
 	refType := &sema.ReferenceType{
 		Type:          baseTyp,
@@ -3430,8 +3434,6 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 
 	// base back on stack
 	c.emitGetLocal(baseLocalIndex)
-	// base should now be transferred
-	c.emitTransfer()
 
 	// add attachment value as a member of transferred base
 	// returns the result

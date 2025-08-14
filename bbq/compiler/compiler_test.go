@@ -8935,8 +8935,6 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.InstructionInvoke{TypeArgs: []uint16{1}, ArgCount: 2},
 				// get s back on stack
 				opcode.InstructionGetLocal{Local: sTmpLocalIndex},
-				// copy/transfer of s to attach to
-				opcode.InstructionTransfer{},
 				// attachment operation, attach A to s-copy
 				opcode.InstructionSetTypeIndex{Type: 4},
 				// return value is s-copy
@@ -8951,13 +8949,13 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.InstructionGetTypeIndex{Type: 4},
 				opcode.InstructionSetLocal{Local: attachmentLocalIndex},
 				opcode.InstructionGetLocal{Local: attachmentLocalIndex},
-				opcode.InstructionJumpIfNil{Target: 32},
+				opcode.InstructionJumpIfNil{Target: 31},
 				opcode.InstructionGetLocal{Local: attachmentLocalIndex},
 				opcode.InstructionUnwrap{},
 				// call foo if not nil
 				opcode.InstructionGetMethod{Method: 8},
 				opcode.InstructionInvokeMethodStatic{TypeArgs: []uint16(nil), ArgCount: 0},
-				opcode.InstructionJump{Target: 33},
+				opcode.InstructionJump{Target: 32},
 				opcode.InstructionNil{},
 				opcode.InstructionUnwrap{},
 				opcode.InstructionTransferAndConvert{Type: 3},
