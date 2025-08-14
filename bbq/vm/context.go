@@ -57,7 +57,7 @@ type Context struct {
 	// TODO: Maybe extend/share this between executions.
 	semaTypes map[sema.TypeID]sema.Type
 
-	attachmentIterationMap map[*interpreter.CompositeValue]bool
+	attachmentIterationMap map[*interpreter.CompositeValue]struct{}
 
 	// TODO: stack-trace, location, etc.
 }
