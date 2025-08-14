@@ -3678,7 +3678,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&DeclarationMissingOpeningBraceError{
-					Kind: 0x8,
+					Kind: common.DeclarationKindStructure,
 					GotToken: lexer.Token{
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 24, Line: 1, Column: 24},
@@ -3688,7 +3688,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 					},
 				},
 				&DeclarationMissingClosingBraceError{
-					Kind: 0x8,
+					Kind: common.DeclarationKindStructure,
 					GotToken: lexer.Token{
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 24, Line: 1, Column: 24},
