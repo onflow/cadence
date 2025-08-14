@@ -121,7 +121,11 @@ func (c *Context) SetAttachmentIteration(composite *interpreter.CompositeValue, 
 	if c.attachmentIterationMap == nil {
 		c.attachmentIterationMap = map[*interpreter.CompositeValue]bool{}
 	}
-	c.attachmentIterationMap[composite] = state
+	if state {
+		c.attachmentIterationMap[composite] = struct{}
+	} else {
+		delete(c.attachmentIterationMap, composite)
+	}
 	return oldState
 }
 
