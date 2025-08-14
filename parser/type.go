@@ -775,9 +775,13 @@ func parseNominalTypeInvocationRemainder(p *parser) (*ast.InvocationExpression, 
 
 	p.skipSpaceAndComments()
 
-	parenOpenToken, err := p.mustOne(lexer.TokenParenOpen)
-	if err != nil {
-		return nil, err
+	parenOpenToken := p.current
+	if p.current.Is(lexer.TokenParenOpen) {
+		p.next()
+	} else {
+		p.report(&MissingOpeningParenInNominalTypeInvocationError{
+			GotToken: p.current,
+		})
 	}
 
 	argumentsStartPos := parenOpenToken.EndPos

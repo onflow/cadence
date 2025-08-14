@@ -6669,11 +6669,23 @@ func TestParseInvalidEmitConditionNonInvocation(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "expected token '('",
-					Pos:           ast.Position{Offset: 91, Line: 5, Column: 14},
-					Secondary:     "check for missing punctuation, operators, or syntax elements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
+				&MissingOpeningParenInNominalTypeInvocationError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 91, Line: 5, Column: 14},
+							EndPos:   ast.Position{Offset: 91, Line: 5, Column: 14},
+						},
+						Type: lexer.TokenBraceClose,
+					},
+				},
+				&UnexpectedExpressionStartError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 91, Line: 5, Column: 14},
+							EndPos:   ast.Position{Offset: 91, Line: 5, Column: 14},
+						},
+						Type: lexer.TokenBraceClose,
+					},
 				},
 			},
 			errs,
@@ -6694,11 +6706,23 @@ func TestParseInvalidEmitConditionNonInvocation(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "expected token '('",
-					Pos:           ast.Position{Offset: 92, Line: 5, Column: 14},
-					Secondary:     "check for missing punctuation, operators, or syntax elements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
+				&MissingOpeningParenInNominalTypeInvocationError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 92, Line: 5, Column: 14},
+							EndPos:   ast.Position{Offset: 92, Line: 5, Column: 14},
+						},
+						Type: lexer.TokenBraceClose,
+					},
+				},
+				&UnexpectedExpressionStartError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 92, Line: 5, Column: 14},
+							EndPos:   ast.Position{Offset: 92, Line: 5, Column: 14},
+						},
+						Type: lexer.TokenBraceClose,
+					},
 				},
 			},
 			errs,

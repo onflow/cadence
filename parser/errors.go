@@ -4209,6 +4209,44 @@ func (*MissingClosingParenInAuthError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/references#authorized-references"
 }
 
+// MissingOpeningParenInNominalTypeInvocationError is reported when a nominal type invocation
+// is missing an opening parenthesis.
+type MissingOpeningParenInNominalTypeInvocationError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingOpeningParenInNominalTypeInvocationError{}
+var _ errors.UserError = &MissingOpeningParenInNominalTypeInvocationError{}
+var _ errors.SecondaryError = &MissingOpeningParenInNominalTypeInvocationError{}
+var _ errors.HasDocumentationLink = &MissingOpeningParenInNominalTypeInvocationError{}
+
+func (*MissingOpeningParenInNominalTypeInvocationError) isParseError() {}
+
+func (*MissingOpeningParenInNominalTypeInvocationError) IsUserError() {}
+
+func (e *MissingOpeningParenInNominalTypeInvocationError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingOpeningParenInNominalTypeInvocationError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingOpeningParenInNominalTypeInvocationError) Error() string {
+	return expectedButGotToken(
+		"expected '(' for invocation",
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingOpeningParenInNominalTypeInvocationError) SecondaryError() string {
+	return "type instantiations must be followed by an argument list enclosed in parentheses `(...)`"
+}
+
+func (*MissingOpeningParenInNominalTypeInvocationError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
 // MissingOpeningParenInFunctionTypeError is reported when a function type parameter list
 // is missing a opening parenthesis.
 type MissingOpeningParenInFunctionTypeError struct {

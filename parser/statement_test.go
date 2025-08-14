@@ -975,6 +975,30 @@ func TestParseEmit(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("missing parens", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseStatements("emit T")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingOpeningParenInNominalTypeInvocationError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+							EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+						},
+					},
+				},
+				&MissingClosingParenInArgumentListError{
+					Pos: ast.Position{Offset: 6, Line: 1, Column: 6},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseFunctionStatementOrExpression(t *testing.T) {
