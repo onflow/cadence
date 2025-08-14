@@ -456,9 +456,6 @@ func ConvertFix128(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 	scaledInt := new(big.Int)
 
 	switch value := value.(type) {
-	case Fix128Value:
-		return value
-
 	case Fix64Value:
 		bigInt := big.NewInt(int64(value))
 		scaledInt = scaledInt.Mul(
@@ -472,6 +469,12 @@ func ConvertFix128(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 			bigInt,
 			fixedpoint.Fix64ToFix128FactorAsBigInt,
 		)
+
+	case Fix128Value:
+		return value
+
+	case UFix128Value:
+		scaledInt = value.ToBigInt()
 
 	case BigNumberValue:
 		bigInt := value.ToBigInt(memoryGauge)

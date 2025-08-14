@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/values"
@@ -504,6 +505,20 @@ func ConvertFix64(memoryGauge common.MemoryGauge, value Value, locationRange Loc
 			},
 		)
 
+	case Fix128Value:
+		return fix128BigIntToFix64(
+			memoryGauge,
+			value.ToBigInt(),
+			locationRange,
+		)
+
+	case UFix128Value:
+		return fix128BigIntToFix64(
+			memoryGauge,
+			value.ToBigInt(),
+			locationRange,
+		)
+
 	case BigNumberValue:
 		converter := func() int64 {
 			v := value.ToBigInt(memoryGauge)
@@ -632,4 +647,31 @@ func (v Fix64Value) IntegerPart() NumberValue {
 
 func (Fix64Value) Scale() int {
 	return sema.Fix64Scale
+}
+
+func fix128BigIntToFix64(
+	memoryGauge common.MemoryGauge,
+	bigInt *big.Int,
+	locationRange LocationRange,
+) Fix64Value {
+
+	if bigInt.Cmp(fixedpoint.Fix64TypeMaxScaledTo128) > 0 {
+		panic(&OverflowError{
+			LocationRange: locationRange,
+		})
+	} else if bigInt.Cmp(fixedpoint.Fix64TypeMinScaledTo128) < 0 {
+		panic(&UnderflowError{
+			LocationRange: locationRange,
+		})
+	}
+
+	bigInt = bigInt.Div(bigInt, fixedpoint.Fix64ToFix128FactorAsBigInt)
+	return NewFix64Value(
+		memoryGauge,
+		func() int64 {
+			// Already checked the bounds above.
+			// So safe to directly convert to int64.
+			return bigInt.Int64()
+		},
+	)
 }
