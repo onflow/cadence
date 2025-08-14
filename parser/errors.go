@@ -588,6 +588,7 @@ var _ ParseError = &MissingStartOfParameterListError{}
 var _ errors.UserError = &MissingStartOfParameterListError{}
 var _ errors.SecondaryError = &MissingStartOfParameterListError{}
 var _ errors.HasDocumentationLink = &MissingStartOfParameterListError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingStartOfParameterListError{}
 
 func (*MissingStartOfParameterListError) isParseError() {}
 
@@ -615,6 +616,23 @@ func (*MissingStartOfParameterListError) SecondaryError() string {
 
 func (*MissingStartOfParameterListError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions"
+}
+
+func (e *MissingStartOfParameterListError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Add opening parenthesis",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "(",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // MissingStartOfAuthorizationError is reported when an authorization list is missing a start token.

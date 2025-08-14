@@ -726,20 +726,47 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations("fun foo} {}")
+		const code = "fun foo x: Int) {}"
+		_, errs := testParseDeclarations(code)
+		require.Len(t, errs, 1)
+
+		var missingStartErr *MissingStartOfParameterListError
+		require.ErrorAs(t, errs[0], &missingStartErr)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingStartOfParameterListError{
 					GotToken: lexer.Token{
-						Type: lexer.TokenBraceClose,
+						Type: lexer.TokenIdentifier,
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
-							EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+							StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+							EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
 						},
 					},
 				},
 			},
 			errs,
+		)
+
+		fixes := missingStartErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Add opening parenthesis",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "(",
+							Range:     ast.NewRange(nil, missingStartErr.GotToken.StartPos, missingStartErr.GotToken.StartPos),
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			`fun foo (x: Int) {}`,
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
