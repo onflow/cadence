@@ -4791,12 +4791,12 @@ func TestFixedpointValueRangeCheck(t *testing.T) {
 		for _, test := range []testCase[*big.Int]{
 			{
 				name:          "overflow",
-				value:         new(big.Int).Add(fixedpoint.Fix128TypeMaxIntBig, big.NewInt(1)),
+				value:         new(big.Int).Add(fixedpoint.Fix128TypeMaxBig, big.NewInt(1)),
 				expectedError: &OverflowError{},
 			},
 			{
 				name:          "underflow",
-				value:         new(big.Int).Sub(fixedpoint.Fix128TypeMinIntBig, big.NewInt(1)),
+				value:         new(big.Int).Sub(fixedpoint.Fix128TypeMinBig, big.NewInt(1)),
 				expectedError: &UnderflowError{},
 			},
 		} {
@@ -4823,12 +4823,12 @@ func TestFixedpointValueRangeCheck(t *testing.T) {
 		for _, test := range []testCase[*big.Int]{
 			{
 				name:          "overflow",
-				value:         new(big.Int).Add(fixedpoint.UFix128TypeMaxIntBig, big.NewInt(1)),
+				value:         new(big.Int).Add(fixedpoint.UFix128TypeMaxBig, big.NewInt(1)),
 				expectedError: &OverflowError{},
 			},
 			{
 				name:          "underflow",
-				value:         new(big.Int).Sub(fixedpoint.UFix128TypeMinIntBig, big.NewInt(1)),
+				value:         new(big.Int).Sub(fixedpoint.UFix128TypeMinBig, big.NewInt(1)),
 				expectedError: &UnderflowError{},
 			},
 		} {

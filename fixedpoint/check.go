@@ -23,8 +23,6 @@ import (
 	"math/big"
 
 	fix "github.com/onflow/fixed-point"
-
-	"github.com/onflow/cadence/integer"
 )
 
 const Fix64Scale = 8
@@ -85,19 +83,31 @@ var (
 	Fix128TypeMin = fix.Fix128Min
 	Fix128TypeMax = fix.Fix128Max
 
-	Fix128TypeMinIntBig = Fix128ToBigInt(Fix128TypeMin)
-	Fix128TypeMaxIntBig = Fix128ToBigInt(Fix128TypeMax)
+	Fix128TypeMinBig = Fix128ToBigInt(Fix128TypeMin)
+	Fix128TypeMaxBig = Fix128ToBigInt(Fix128TypeMax)
 
-	Fix128TypeMinFractionalBig = func() *big.Int {
-		fix128TypeMinFractional := new(big.Int)
-		fix128TypeMinFractional = fix128TypeMinFractional.Mod(integer.Int128TypeMinIntBig, Fix128FactorAsBigInt)
-		return fix128TypeMinFractional
+	Fix128TypeMinIntBig, Fix128TypeMinFractionalBig = func() (*big.Int, *big.Int) {
+		quotient := new(big.Int)
+		remainder := new(big.Int)
+
+		// Use `QuoRem` (truncated division and modulus), instead of `DivMod`,
+		// to be consistent with to Go's division used in Fix64.
+		quotient, remainder = quotient.QuoRem(Fix128TypeMinBig, Fix128FactorAsBigInt, remainder)
+		remainder = remainder.Abs(remainder)
+
+		return quotient, remainder
 	}()
 
-	Fix128TypeMaxFractionalBig = func() *big.Int {
-		fix128TypeMaxFractional := new(big.Int)
-		fix128TypeMaxFractional = fix128TypeMaxFractional.Mod(integer.Int128TypeMaxIntBig, Fix128FactorAsBigInt)
-		return fix128TypeMaxFractional
+	Fix128TypeMaxIntBig, Fix128TypeMaxFractionalBig = func() (*big.Int, *big.Int) {
+		quotient := new(big.Int)
+		remainder := new(big.Int)
+
+		// Use `QuoRem` (truncated division and modulus), instead of `DivMod`,
+		// to be consistent with to Go's division used in Fix64.
+		quotient, remainder = quotient.QuoRem(Fix128TypeMaxBig, Fix128FactorAsBigInt, remainder)
+		remainder = remainder.Abs(remainder)
+
+		return quotient, remainder
 	}()
 )
 
@@ -137,15 +147,22 @@ var (
 	UFix128TypeMin = fix.UFix128Zero
 	UFix128TypeMax = fix.UFix128Max
 
-	UFix128TypeMinIntBig = UFix128ToBigInt(UFix128TypeMin)
-	UFix128TypeMaxIntBig = UFix128ToBigInt(UFix128TypeMax)
+	UFix128TypeMinBig = UFix128ToBigInt(UFix128TypeMin)
+	UFix128TypeMaxBig = UFix128ToBigInt(UFix128TypeMax)
 
+	UFix128TypeMinIntBig        = big.NewInt(0)
 	UFix128TypeMinFractionalBig = big.NewInt(0)
 
-	UFix128TypeMaxFractionalBig = func() *big.Int {
-		ufix128TypeMaxFractional := new(big.Int)
-		ufix128TypeMaxFractional = ufix128TypeMaxFractional.Mod(integer.UInt128TypeMaxIntBig, UFix128FactorAsBigInt)
-		return ufix128TypeMaxFractional
+	UFix128TypeMaxIntBig, UFix128TypeMaxFractionalBig = func() (*big.Int, *big.Int) {
+		quotient := new(big.Int)
+		remainder := new(big.Int)
+
+		// Use `QuoRem` (truncated division and modulus), instead of `DivMod`,
+		// to be consistent with to Go's division used in Fix64.
+		quotient, remainder = quotient.QuoRem(UFix128TypeMaxBig, UFix128FactorAsBigInt, remainder)
+		remainder = remainder.Abs(remainder)
+
+		return quotient, remainder
 	}()
 )
 

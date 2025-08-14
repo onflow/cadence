@@ -33,6 +33,7 @@ import (
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestInterpretNegativeZeroFixedPoint(t *testing.T) {
@@ -933,4 +934,158 @@ func TestInterpretStringFixedPointConversion(t *testing.T) {
 		test(typeName.QualifiedString(), testsuite)
 	}
 
+}
+
+func TestInterpretFixedPointLiteral(t *testing.T) {
+	t.Parallel()
+
+	type testValue struct {
+		name          string
+		literal       string
+		expectedValue interpreter.Value
+		expectedError error
+	}
+
+	testCases := map[sema.Type][]testValue{
+		sema.Fix64Type: {
+			{
+				name:          "min",
+				literal:       "-92233720368.54775808",
+				expectedValue: interpreter.NewUnmeteredFix64Value(interpreter.Fix64MinValue),
+			},
+			{
+				name:          "max",
+				literal:       "92233720368.54775807",
+				expectedValue: interpreter.NewUnmeteredFix64Value(interpreter.Fix64MaxValue),
+			},
+			{
+				name:          "underflow",
+				literal:       "-92233720368.54775809",
+				expectedError: &sema.InvalidFixedPointLiteralRangeError{},
+			},
+			{
+				name:          "overflow",
+				literal:       "92233720368.54775808",
+				expectedError: &sema.InvalidFixedPointLiteralRangeError{},
+			},
+		},
+
+		sema.UFix64Type: {
+			{
+				name:          "min",
+				literal:       "0.0",
+				expectedValue: interpreter.NewUnmeteredUFix64Value(0 * sema.Fix64Scale),
+			},
+			{
+				name:          "max",
+				literal:       "184467440737.09551615",
+				expectedValue: interpreter.NewUnmeteredUFix64Value(interpreter.UFix64MaxValue),
+			},
+			{
+				name:          "underflow",
+				literal:       "-0.00000001",
+				expectedError: &sema.InvalidFixedPointLiteralRangeError{},
+			},
+			{
+				name:          "overflow",
+				literal:       "184467440737.09551616",
+				expectedError: &sema.InvalidFixedPointLiteralRangeError{},
+			},
+		},
+
+		sema.Fix128Type: {
+			{
+				name:          "min",
+				literal:       "-170141183460469.231731687303715884105728",
+				expectedValue: interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
+			},
+			{
+				name:          "max",
+				literal:       "170141183460469.231731687303715884105727",
+				expectedValue: interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
+			},
+			{
+				name:          "underflow",
+				literal:       "-170141183460469.231731687303715884105729",
+				expectedError: &sema.InvalidFixedPointLiteralRangeError{},
+			},
+			{
+				name:          "overflow",
+				literal:       "170141183460469.231731687303715884105728",
+				expectedError: &sema.InvalidFixedPointLiteralRangeError{},
+			},
+		},
+
+		sema.UFix128Type: {
+			{
+				name:          "min",
+				literal:       "0.0",
+				expectedValue: interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMin),
+			},
+			{
+				name:          "max",
+				literal:       "340282366920938.463463374607431768211455",
+				expectedValue: interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMax),
+			},
+			{
+				name:          "underflow",
+				literal:       "-0.000000000000000000000001",
+				expectedError: &sema.InvalidFixedPointLiteralRangeError{},
+			},
+			{
+				name:          "overflow",
+				literal:       "340282366920938.463463374607431768211456",
+				expectedError: &sema.InvalidFixedPointLiteralRangeError{},
+			},
+		},
+	}
+
+	for _, ty := range sema.AllFixedPointTypes {
+		// Only test leaf types
+		switch ty {
+		case sema.FixedPointType, sema.SignedFixedPointType:
+			continue
+		}
+
+		if _, ok := testCases[ty]; !ok {
+			require.Fail(t, fmt.Sprintf("missing type: %s", ty.String()))
+		}
+	}
+
+	for ty, values := range testCases {
+		for _, value := range values {
+
+			literal := value.literal
+			expectedValue := value.expectedValue
+			expectedError := value.expectedError
+
+			t.Run(fmt.Sprintf("%s_%s (%s)", ty, value.name, literal), func(t *testing.T) {
+
+				t.Parallel()
+
+				code := fmt.Sprintf(`
+                    fun main(): %[1]s {
+                        return %[2]s
+                    }
+                    `,
+					ty,
+					literal,
+				)
+
+				if expectedError == nil {
+					invokable := parseCheckAndPrepare(t, code)
+
+					result, err := invokable.Invoke("main")
+					require.NoError(t, err)
+					assert.Equal(t, expectedValue, result)
+				} else {
+					_, err := ParseAndCheck(t, code)
+					RequireError(t, err)
+					errs := RequireCheckerErrors(t, err, 1)
+					assert.IsType(t, errs[0], expectedError)
+				}
+			})
+		}
+
+	}
 }
