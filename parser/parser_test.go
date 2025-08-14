@@ -1058,6 +1058,18 @@ func TestParseGlobalReplayLimit(t *testing.T) {
 		Error{
 			Code: []byte(code),
 			Errors: []error{
+				&MissingClosingGreaterInTypeArgumentsError{
+					Pos: ast.Position{Offset: 84, Line: 1, Column: 84},
+				},
+				&MissingClosingGreaterInTypeArgumentsError{
+					Pos: ast.Position{Offset: 84, Line: 1, Column: 84},
+				},
+				&MissingClosingGreaterInTypeArgumentsError{
+					Pos: ast.Position{Offset: 84, Line: 1, Column: 84},
+				},
+				&MissingClosingGreaterInTypeArgumentsError{
+					Pos: ast.Position{Offset: 84, Line: 1, Column: 84},
+				},
 				&SyntaxError{
 					Message: fmt.Sprintf(
 						"program too ambiguous, global replay limit of %d tokens exceeded",

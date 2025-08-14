@@ -342,6 +342,7 @@ func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	for _, entitlement := range remainingEntitlements {
 		rejectAccessKeywordEntitlementType(p, entitlement)
 		entitlements = append(entitlements, entitlement)
@@ -476,7 +477,6 @@ func parseVariableDeclaration(
 	var typeAnnotation *ast.TypeAnnotation
 
 	if p.current.Is(lexer.TokenColon) {
-		// Skip the colon
 		p.nextSemanticToken()
 
 		typeAnnotation, err = parseTypeAnnotation(p)
@@ -1251,7 +1251,6 @@ func parseConformances(p *parser) ([]*ast.NominalType, error) {
 	var err error
 
 	if p.current.Is(lexer.TokenColon) {
-		// Skip the colon
 		p.next()
 
 		conformances, _, err = parseNominalTypes(p, lexer.TokenBraceOpen, lexer.TokenComma)

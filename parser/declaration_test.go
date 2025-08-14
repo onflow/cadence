@@ -3673,9 +3673,25 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		_, errs := testParseDeclarations("access(all) struct S: RI")
 		AssertEqualWithDiff(t,
 			[]error{
-				&UnexpectedEOFExpectedTokenError{
-					ExpectedToken: lexer.TokenBraceOpen,
-					Pos:           ast.Position{Offset: 24, Line: 1, Column: 24},
+				&DeclarationMissingOpeningBraceError{
+					Kind: 0x8,
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 24, Line: 1, Column: 24},
+							EndPos:   ast.Position{Offset: 24, Line: 1, Column: 24},
+						},
+						Type: lexer.TokenEOF,
+					},
+				},
+				&DeclarationMissingClosingBraceError{
+					Kind: 0x8,
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 24, Line: 1, Column: 24},
+							EndPos:   ast.Position{Offset: 24, Line: 1, Column: 24},
+						},
+						Type: lexer.TokenEOF,
+					},
 				},
 			},
 			errs,

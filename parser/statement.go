@@ -457,6 +457,7 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 
 	if p.current.Is(lexer.TokenComma) {
 		p.nextSemanticToken()
+
 		index = &firstValue
 		identifier, err = p.mustIdentifier()
 		if err != nil {
