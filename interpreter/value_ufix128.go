@@ -102,13 +102,13 @@ func NewUFix128ValueFromBigInt(gauge common.MemoryGauge, v *big.Int) UFix128Valu
 }
 
 func NewUFix128ValueFromBigIntWithRangeCheck(gauge common.MemoryGauge, v *big.Int, locationRange LocationRange) UFix128Value {
-	if v.Cmp(fixedpoint.UFix128TypeMinIntBig) == -1 {
+	if v.Cmp(fixedpoint.UFix128TypeMinBig) == -1 {
 		panic(&UnderflowError{
 			LocationRange: locationRange,
 		})
 	}
 
-	if v.Cmp(fixedpoint.UFix128TypeMaxIntBig) == 1 {
+	if v.Cmp(fixedpoint.UFix128TypeMaxBig) == 1 {
 		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
@@ -145,7 +145,6 @@ func (UFix128Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool
 }
 
 func (v UFix128Value) String() string {
-	// TODO: is is safe?
 	return format.UFix128(fix.UFix128(v))
 }
 
