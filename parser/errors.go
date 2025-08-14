@@ -157,6 +157,7 @@ var _ ParseError = &InvalidIntegerLiteralError{}
 var _ errors.UserError = &InvalidIntegerLiteralError{}
 var _ errors.SecondaryError = &InvalidIntegerLiteralError{}
 var _ errors.HasDocumentationLink = &InvalidIntegerLiteralError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &InvalidIntegerLiteralError{}
 
 func (*InvalidIntegerLiteralError) isParseError() {}
 
@@ -194,6 +195,110 @@ func (e *InvalidIntegerLiteralError) SecondaryError() string {
 	}
 
 	panic(errors.NewUnreachableError())
+}
+
+func (e *InvalidIntegerLiteralError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	switch e.InvalidIntegerLiteralKind {
+	case InvalidNumberLiteralKindLeadingUnderscore:
+		// Remove the leading underscore after the prefix
+		// For literals like "0b_101010", we need to remove the underscore after the prefix
+		if len(e.Literal) >= 3 && e.Literal[0] == '0' && e.Literal[2] == '_' {
+			// Remove the underscore after the prefix (e.g., "0b_101010" -> "0b101010")
+			replacement := e.Literal[:2] + e.Literal[3:]
+			return []errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove leading underscore",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: replacement,
+							Range:       e.Range,
+						},
+					},
+				},
+			}
+		}
+
+	case InvalidNumberLiteralKindTrailingUnderscore:
+		// Remove the trailing underscore
+		if len(e.Literal) > 0 && e.Literal[len(e.Literal)-1] == '_' {
+			return []errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove trailing underscore",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: e.Literal[:len(e.Literal)-1],
+							Range:       e.Range,
+						},
+					},
+				},
+			}
+		}
+
+	case InvalidNumberLiteralKindMissingDigits:
+		// Add a "0" after the prefix
+		return []errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Add missing digit",
+				TextEdits: []ast.TextEdit{
+					{
+						Replacement: e.Literal + "0",
+						Range:       e.Range,
+					},
+				},
+			},
+		}
+
+	case InvalidNumberLiteralKindUnknownPrefix:
+		// Provide multiple fix options for common prefixes
+		var fixes []errors.SuggestedFix[ast.TextEdit]
+
+		// Extract the part after the unknown prefix (assuming it starts with "0")
+		suffix := e.Literal
+		if len(e.Literal) >= 2 && e.Literal[0] == '0' {
+			suffix = e.Literal[2:] // Remove "0x" or similar
+		}
+
+		// Suggest hexadecimal
+		fixes = append(fixes, errors.SuggestedFix[ast.TextEdit]{
+			Message: "Use hexadecimal prefix (0x)",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "0x" + suffix,
+					Range:       e.Range,
+				},
+			},
+		})
+
+		// Suggest binary
+		fixes = append(fixes, errors.SuggestedFix[ast.TextEdit]{
+			Message: "Use binary prefix (0b)",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "0b" + suffix,
+					Range:       e.Range,
+				},
+			},
+		})
+
+		// Suggest octal
+		fixes = append(fixes, errors.SuggestedFix[ast.TextEdit]{
+			Message: "Use octal prefix (0o)",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "0o" + suffix,
+					Range:       e.Range,
+				},
+			},
+		})
+
+		return fixes
+
+	case InvalidNumberLiteralKindUnknown:
+		// No fixes available for unknown errors
+		return nil
+	}
+
+	return nil
 }
 
 func (*InvalidIntegerLiteralError) DocumentationLink() string {

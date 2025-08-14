@@ -3428,10 +3428,6 @@ func TestParseIntegerLiterals(t *testing.T) {
 		result, errs := testParseExpression(`0b`)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "missing digits",
-					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
-				},
 				&InvalidIntegerLiteralError{
 					Literal:                   "0b",
 					IntegerLiteralKind:        common.IntegerLiteralKindBinary,
@@ -3595,10 +3591,6 @@ func TestParseIntegerLiterals(t *testing.T) {
 		result, errs := testParseExpression(`0o`)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "missing digits",
-					Pos:     ast.Position{Line: 1, Column: 1, Offset: 1},
-				},
 				&InvalidIntegerLiteralError{
 					Literal:                   `0o`,
 					IntegerLiteralKind:        common.IntegerLiteralKindOctal,
@@ -3819,10 +3811,6 @@ func TestParseIntegerLiterals(t *testing.T) {
 		result, errs := testParseExpression(`0x`)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "missing digits",
-					Pos:     ast.Position{Line: 1, Column: 1, Offset: 1},
-				},
 				&InvalidIntegerLiteralError{
 					Literal:                   `0x`,
 					IntegerLiteralKind:        common.IntegerLiteralKindHexadecimal,
@@ -4051,10 +4039,6 @@ func TestParseIntegerLiterals(t *testing.T) {
 		result, errs := testParseExpression(`0z123`)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "invalid number literal prefix: 'z'",
-					Pos:     ast.Position{Line: 1, Column: 1, Offset: 1},
-				},
 				&InvalidIntegerLiteralError{
 					Literal:                   `0z123`,
 					IntegerLiteralKind:        common.IntegerLiteralKindUnknown,
@@ -4142,6 +4126,206 @@ func TestParseIntegerLiterals(t *testing.T) {
 			},
 			result,
 		)
+	})
+
+	t.Run("suggest fixes - leading underscore, prefixed", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "0b_101010"
+		_, errs := testParseExpression(code)
+		require.Len(t, errs, 1)
+
+		var invalidIntegerLiteralError *InvalidIntegerLiteralError
+		require.ErrorAs(t, errs[0], &invalidIntegerLiteralError)
+
+		fixes := invalidIntegerLiteralError.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove leading underscore",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "0b101010",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+								EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			`0b101010`,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+	})
+
+	t.Run("suggest fixes - trailing underscore", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "101010_"
+		_, errs := testParseExpression(code)
+		require.Len(t, errs, 1)
+
+		var invalidIntegerLiteralError *InvalidIntegerLiteralError
+		require.ErrorAs(t, errs[0], &invalidIntegerLiteralError)
+
+		fixes := invalidIntegerLiteralError.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove trailing underscore",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "101010",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+								EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			`101010`,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+	})
+
+	t.Run("suggest fixes - missing digits", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "0o"
+		_, errs := testParseExpression(code)
+		require.Len(t, errs, 1)
+
+		var invalidIntegerLiteralError *InvalidIntegerLiteralError
+		require.ErrorAs(t, errs[0], &invalidIntegerLiteralError)
+
+		fixes := invalidIntegerLiteralError.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Add missing digit",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "0o0",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+								EndPos:   ast.Position{Offset: 1, Line: 1, Column: 1},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			`0o0`,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+	})
+
+	t.Run("suggest fixes - unknown prefix", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "0z456"
+		_, errs := testParseExpression(code)
+		require.Len(t, errs, 1)
+
+		var invalidIntegerLiteralError *InvalidIntegerLiteralError
+		require.ErrorAs(t, errs[0], &invalidIntegerLiteralError)
+
+		fixes := invalidIntegerLiteralError.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Use hexadecimal prefix (0x)",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "0x456",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+				{
+					Message: "Use binary prefix (0b)",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "0b456",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+				{
+					Message: "Use octal prefix (0o)",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "0o456",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			`0x456`,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+
+		assert.Equal(t,
+			`0b456`,
+			fixes[1].TextEdits[0].ApplyTo(code),
+		)
+
+		assert.Equal(t,
+			`0o456`,
+			fixes[2].TextEdits[0].ApplyTo(code),
+		)
+	})
+
+	t.Run("suggest fixes - unknown error kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		// Create an InvalidIntegerLiteralError with InvalidNumberLiteralKindUnknown
+		err := &InvalidIntegerLiteralError{
+			Literal:                   "test",
+			IntegerLiteralKind:        common.IntegerLiteralKindDecimal,
+			InvalidIntegerLiteralKind: InvalidNumberLiteralKindUnknown,
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+			},
+		}
+
+		fixes := err.SuggestFixes("")
+		assert.Empty(t, fixes)
 	})
 }
 
