@@ -102,13 +102,13 @@ func NewFix128ValueFromBigInt(gauge common.MemoryGauge, v *big.Int) Fix128Value 
 }
 
 func NewFix128ValueFromBigIntWithRangeCheck(gauge common.MemoryGauge, v *big.Int, locationRange LocationRange) Fix128Value {
-	if v.Cmp(fixedpoint.Fix128TypeMinIntBig) == -1 {
+	if v.Cmp(fixedpoint.Fix128TypeMinBig) == -1 {
 		panic(&UnderflowError{
 			LocationRange: locationRange,
 		})
 	}
 
-	if v.Cmp(fixedpoint.Fix128TypeMaxIntBig) == 1 {
+	if v.Cmp(fixedpoint.Fix128TypeMaxBig) == 1 {
 		panic(&OverflowError{
 			LocationRange: locationRange,
 		})

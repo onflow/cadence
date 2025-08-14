@@ -60,10 +60,13 @@ func UFix64(v uint64) string {
 func Fix128(v fix.Fix128) string {
 	// TODO: Maybe compute this without the use of `big.Int`
 	fix128AsBigInt := fixedpoint.Fix128ToBigInt(v)
+	return formatFixedpointBigInt(fix128AsBigInt)
+}
 
+func formatFixedpointBigInt(fixedpointAsBigInt *big.Int) string {
 	fraction := new(big.Int)
 	integer, fraction := new(big.Int).QuoRem(
-		fix128AsBigInt,
+		fixedpointAsBigInt,
 		fixedpoint.Fix128FactorAsBigInt,
 		fraction,
 	)
@@ -90,5 +93,7 @@ func Fix128(v fix.Fix128) string {
 }
 
 func UFix128(v fix.UFix128) string {
-	return Fix128(fix.Fix128(v))
+	ufix128AsBigInt := fixedpoint.UFix128ToBigInt(v)
+	fmt.Println(ufix128AsBigInt.String())
+	return formatFixedpointBigInt(ufix128AsBigInt)
 }
