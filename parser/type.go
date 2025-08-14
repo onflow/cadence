@@ -27,7 +27,6 @@ import (
 const (
 	typeLeftBindingPowerOptional = 10 * (iota + 1)
 	typeLeftBindingPowerReference
-	typeLeftBindingPowerIntersection
 	typeLeftBindingPowerInstantiation
 )
 
@@ -94,11 +93,6 @@ func setTypeMetaLeftDenotation(tokenType lexer.TokenType, metaLeftDenotation typ
 type prefixTypeFunc func(parser *parser, right ast.Type, tokenRange ast.Range) ast.Type
 type postfixTypeFunc func(parser *parser, left ast.Type, tokenRange ast.Range) ast.Type
 
-type literalType struct {
-	nullDenotation typeNullDenotationFunc
-	tokenType      lexer.TokenType
-}
-
 type prefixType struct {
 	nullDenotation prefixTypeFunc
 	bindingPower   int
@@ -126,6 +120,7 @@ func defineType(def any) {
 				return def.nullDenotation(parser, right, token.Range), nil
 			},
 		)
+
 	case postfixType:
 		tokenType := def.tokenType
 		setTypeLeftBindingPower(tokenType, def.bindingPower)
@@ -135,9 +130,7 @@ func defineType(def any) {
 				return def.leftDenotation(p, left, token.Range), nil
 			},
 		)
-	case literalType:
-		tokenType := def.tokenType
-		setTypeNullDenotation(tokenType, def.nullDenotation)
+
 	default:
 		panic(errors.NewUnreachableError())
 	}
@@ -180,11 +173,9 @@ func parseNominalTypeRemainder(p *parser, token lexer.Token) (*ast.NominalType, 
 		nestedToken := p.current
 
 		if !nestedToken.Is(lexer.TokenIdentifier) {
-			return nil, p.newSyntaxError(
-				"expected identifier after %s, got %s",
-				lexer.TokenDot,
-				nestedToken.Type,
-			)
+			return nil, &NestedTypeMissingNameError{
+				GotToken: nestedToken,
+			}
 		}
 
 		nestedIdentifier := p.tokenToIdentifier(nestedToken)
@@ -196,7 +187,6 @@ func parseNominalTypeRemainder(p *parser, token lexer.Token) (*ast.NominalType, 
 			nestedIdentifiers,
 			nestedIdentifier,
 		)
-
 	}
 
 	return ast.NewNominalType(
@@ -224,24 +214,18 @@ func defineArrayType() {
 				// Skip the semicolon
 				p.nextSemanticToken()
 
-				if !p.current.Type.IsIntegerLiteral() {
-					p.reportSyntaxError("expected positive integer size for constant sized type")
+				sizeExpression, err := parseExpression(p, lowestBindingPower)
+				if err != nil {
+					return nil, err
+				}
 
-					// Skip the invalid non-integer literal token
-					p.next()
-
+				integerExpression, ok := sizeExpression.(*ast.IntegerExpression)
+				if !ok || integerExpression.Value.Sign() < 0 {
+					p.report(&InvalidConstantSizedTypeSizeError{
+						Range: ast.NewRangeFromPositioned(p.memoryGauge, sizeExpression),
+					})
 				} else {
-					numberExpression, err := parseExpression(p, lowestBindingPower)
-					if err != nil {
-						return nil, err
-					}
-
-					integerExpression, ok := numberExpression.(*ast.IntegerExpression)
-					if !ok || integerExpression.Value.Sign() < 0 {
-						p.reportSyntaxError("expected positive integer size for constant sized type")
-					} else {
-						size = integerExpression
-					}
+					size = integerExpression
 				}
 			}
 
@@ -376,6 +360,7 @@ func defineIntersectionOrDictionaryType() {
 							ast.NewRange(
 								p.memoryGauge,
 								startToken.StartPos,
+								// Unknown at the moment, set later
 								ast.EmptyPosition,
 							),
 						)
@@ -397,7 +382,7 @@ func defineIntersectionOrDictionaryType() {
 					}
 					if dictionaryType == nil {
 						if firstType == nil {
-							return nil, p.newSyntaxError("unexpected colon after missing dictionary key type")
+							panic(errors.NewUnreachableError())
 						}
 						dictionaryType = ast.NewDictionaryType(
 							p.memoryGauge,
@@ -406,6 +391,7 @@ func defineIntersectionOrDictionaryType() {
 							ast.NewRange(
 								p.memoryGauge,
 								startToken.StartPos,
+								// Unknown at the moment, set later
 								ast.EmptyPosition,
 							),
 						)
@@ -422,9 +408,13 @@ func defineIntersectionOrDictionaryType() {
 					if expectType {
 						switch {
 						case dictionaryType != nil:
-							p.reportSyntaxError("missing dictionary value type")
+							p.report(&MissingDictionaryValueTypeError{
+								Pos: p.current.StartPos,
+							})
 						case intersectionType != nil:
-							p.reportSyntaxError("missing type after comma")
+							p.report(&MissingTypeAfterCommaInIntersectionError{
+								Pos: p.current.StartPos,
+							})
 						}
 					}
 					endPos = p.current.EndPos
@@ -438,12 +428,17 @@ func defineIntersectionOrDictionaryType() {
 							Pos: p.current.StartPos,
 						}
 					} else {
-						return nil, p.newSyntaxError("invalid end of input, expected %s", lexer.TokenBraceClose)
+						return nil, &UnexpectedEOFExpectedTokenError{
+							ExpectedToken: lexer.TokenBraceClose,
+							Pos:           p.current.StartPos,
+						}
 					}
 
 				default:
 					if !expectType {
-						return nil, p.newSyntaxError("unexpected type")
+						return nil, &MissingSeparatorInIntersectionOrDictionaryTypeError{
+							GotToken: p.current,
+						}
 					}
 
 					ty, err := parseType(p, lowestBindingPower)
@@ -549,8 +544,7 @@ func parseNominalType(
 	return nominalType, nil
 }
 
-// parseNominalTypes parses zero or more nominal types separated by a separator, either
-// a comma `,` or a vertical bar `|`.
+// parseNominalTypes parses zero or more nominal types separated by a separator.
 func parseNominalTypes(
 	p *parser,
 	endTokenType lexer.TokenType,
@@ -572,7 +566,10 @@ func parseNominalTypes(
 		switch p.current.Type {
 		case separator:
 			if expectType {
-				return nil, ast.EmptyPosition, p.newSyntaxError("unexpected separator")
+				return nil, ast.EmptyPosition, &ExpectedTypeInsteadSeparatorError{
+					Pos:       p.current.StartPos,
+					Separator: separator,
+				}
 			}
 			// Skip the separator
 			p.next()
@@ -580,7 +577,10 @@ func parseNominalTypes(
 
 		case endTokenType:
 			if expectType && len(nominalTypes) > 0 {
-				p.reportSyntaxError("missing type after separator")
+				p.report(&MissingTypeAfterSeparatorError{
+					Pos:       p.current.StartPos,
+					Separator: separator,
+				})
 			}
 			endPos = p.current.EndPos
 			atEnd = true
@@ -591,26 +591,29 @@ func parseNominalTypes(
 					Pos: p.current.StartPos,
 				}
 			} else {
-				return nil, ast.EmptyPosition, p.newSyntaxError("invalid end of input, expected %s", endTokenType)
+				return nil, ast.EmptyPosition, &UnexpectedEOFExpectedTokenError{
+					ExpectedToken: endTokenType,
+					Pos:           p.current.StartPos,
+				}
 			}
 
 		default:
 			if !expectType {
-				return nil, ast.EmptyPosition, p.newSyntaxError(
-					"unexpected token: got %s, expected %s or %s",
-					p.current.Type,
-					separator,
-					endTokenType,
-				)
+				return nil, ast.EmptyPosition, &UnexpectedTokenInsteadOfSeparatorError{
+					GotToken:          p.current,
+					ExpectedSeparator: separator,
+					ExpectedEndToken:  endTokenType,
+				}
 			}
-
-			expectType = false
 
 			nominalType, err := parseNominalType(p)
 			if err != nil {
 				return nil, ast.EmptyPosition, err
 			}
+
 			nominalTypes = append(nominalTypes, nominalType)
+
+			expectType = false
 		}
 	}
 
@@ -625,57 +628,7 @@ func parseParameterTypeAnnotations(p *parser) (typeAnnotations []*ast.TypeAnnota
 		return
 	}
 
-	expectTypeAnnotation := true
-
-	var atEnd bool
-	progress := p.newProgress()
-
-	for !atEnd && p.checkProgress(&progress) {
-
-		p.skipSpaceAndComments()
-
-		switch p.current.Type {
-		case lexer.TokenComma:
-			if expectTypeAnnotation {
-				return nil, p.newSyntaxError(
-					"expected type annotation or end of list, got %q",
-					p.current.Type,
-				)
-			}
-			// Skip the comma
-			p.next()
-			expectTypeAnnotation = true
-
-		case lexer.TokenParenClose:
-			// Don't skip the closing paren, so that we can mark the current
-			// position as an end pos if the type signature is missing an explicit return type
-			atEnd = true
-
-		case lexer.TokenEOF:
-			return nil, p.newSyntaxError(
-				"missing %q at end of list",
-				lexer.TokenParenClose,
-			)
-
-		default:
-			if !expectTypeAnnotation {
-				return nil, p.newSyntaxError(
-					"expected comma or end of list, got %q",
-					p.current.Type,
-				)
-			}
-
-			typeAnnotation, err := parseTypeAnnotation(p)
-			if err != nil {
-				return nil, err
-			}
-
-			typeAnnotations = append(typeAnnotations, typeAnnotation)
-
-			expectTypeAnnotation = false
-		}
-	}
-
+	typeAnnotations, err = parseCommaSeparatedTypeAnnotations(p, lexer.TokenParenClose)
 	return
 }
 
@@ -898,21 +851,23 @@ func parseCommaSeparatedTypeAnnotations(
 
 		case lexer.TokenEOF:
 			if expectTypeAnnotation {
-				return nil, &UnexpectedEOFExpectedTypeError{
+				return nil, &UnexpectedEOFExpectedTypeAnnotationError{
 					Pos: p.current.StartPos,
 				}
 			} else {
-				return nil, p.newSyntaxError("invalid end of input, expected %s", endTokenType)
+				return nil, &UnexpectedEOFExpectedTokenError{
+					ExpectedToken: endTokenType,
+					Pos:           p.current.StartPos,
+				}
 			}
 
 		default:
 			if !expectTypeAnnotation {
-				return nil, p.newSyntaxError(
-					"unexpected token: got %s, expected %s or %s",
-					p.current.Type,
-					lexer.TokenComma,
-					endTokenType,
-				)
+				return nil, &UnexpectedTokenInsteadOfSeparatorError{
+					GotToken:          p.current,
+					ExpectedSeparator: lexer.TokenComma,
+					ExpectedEndToken:  endTokenType,
+				}
 			}
 
 			typeAnnotation, err := parseTypeAnnotation(p)
@@ -978,7 +933,9 @@ func defineIdentifierTypes() {
 						return nil, err
 					}
 				} else {
-					p.reportSyntaxError("expected authorization (entitlement list)")
+					p.report(&MissingStartOfAuthorizationError{
+						GotToken: p.current,
+					})
 				}
 
 				p.skipSpaceAndComments()
