@@ -1462,6 +1462,81 @@ func (v UFix64) String() string {
 	return format.UFix64(uint64(v))
 }
 
+// UFix128
+
+type UFix128 fix.UFix128
+
+var _ Value = UFix128{}
+
+var UFix128MemoryUsage = common.NewCadenceNumberMemoryUsage(int(unsafe.Sizeof(UFix128{})))
+var ufix128MinExceededError = errors.NewDefaultUserError("value exceeds min of UFix128")
+var ufix128MaxExceededError = errors.NewDefaultUserError("value exceeds max of UFix128")
+
+func NewUFix128(v fix.UFix128) (UFix128, error) {
+	if v.Lt(fixedpoint.UFix128TypeMin) {
+		return UFix128{}, ufix128MinExceededError
+	}
+	if v.Gt(fixedpoint.UFix128TypeMax) {
+		return UFix128{}, ufix128MaxExceededError
+	}
+
+	return UFix128(v), nil
+}
+
+func NewUFix128FromString(gauge common.MemoryGauge, constructor func() (string, error)) (UFix128, error) {
+	common.UseMemory(gauge, UFix128MemoryUsage)
+	value, err := constructor()
+	if err != nil {
+		return UFix128{}, err
+	}
+	return NewUnmeteredUFix128FromString(value)
+}
+
+func NewUnmeteredUFix128FromString(s string) (UFix128, error) {
+	v, err := fixedpoint.ParseUFix128(s)
+	if err != nil {
+		return UFix128{}, err
+	}
+
+	UFix128Value := fixedpoint.UFix128FromBigInt(v)
+
+	return UFix128(UFix128Value), nil
+}
+
+func NewUFix128FromParts(integer int, fraction uint) (UFix128, error) {
+	v, err := fixedpoint.NewUFix128(
+		new(big.Int).SetInt64(int64(integer)),
+		new(big.Int).SetInt64(int64(fraction)),
+		fixedpoint.UFix128Scale,
+	)
+	if err != nil {
+		return UFix128{}, err
+	}
+
+	UFix128Value := fixedpoint.UFix128FromBigInt(v)
+
+	return UFix128(UFix128Value), nil
+}
+
+func (UFix128) isValue() {}
+
+func (UFix128) Type() Type {
+	return UFix128Type
+}
+
+func (v UFix128) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
+}
+
+func (v UFix128) ToBigEndianBytes() []byte {
+	ufix128 := fix.UFix128(v)
+	return fixedpoint.UFix128ToBigEndianBytes(ufix128)
+}
+
+func (v UFix128) String() string {
+	return format.UFix128(fix.UFix128(v))
+}
+
 // Array
 
 type Array struct {

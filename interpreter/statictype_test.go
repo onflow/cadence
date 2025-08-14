@@ -1207,6 +1207,11 @@ func TestStaticTypeConversion(t *testing.T) {
 			semaType:   sema.UFix64Type,
 			staticType: PrimitiveStaticTypeUFix64,
 		},
+		{
+			name:       "UFix128",
+			semaType:   sema.UFix128Type,
+			staticType: PrimitiveStaticTypeUFix128,
+		},
 
 		{
 			name:       "Path",

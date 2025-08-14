@@ -509,6 +509,9 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 	case cadence.UFix64Type:
 		return d.decodeUFix64()
 
+	case cadence.UFix128Type:
+		return d.decodeUFix128()
+
 	case cadence.StoragePathType:
 		return d.decodePath()
 
@@ -1060,6 +1063,39 @@ func (d *Decoder) decodeUFix64() (cadence.Value, error) {
 		return nil, err
 	}
 	return cadence.NewMeteredUFix64FromRawFixedPointNumber(d.gauge, i)
+}
+
+// decodeUFix64 decodes fix128-value as
+// language=CDDL
+// ufix128-value = [
+//
+//	hi: uint64,
+//	low: uint64,
+//
+// ]
+func (d *Decoder) decodeUFix128() (cadence.Value, error) {
+	// Decode array head of length 2.
+	err := decodeCBORArrayWithKnownSize(d.dec, 2)
+	if err != nil {
+		return nil, err
+	}
+
+	// Decode high-bits.
+	high, err := d.dec.DecodeUint64()
+	if err != nil {
+		return nil, err
+	}
+
+	// Decode low-bits.
+	low, err := d.dec.DecodeUint64()
+	if err != nil {
+		return nil, err
+	}
+
+	common.UseMemory(d.gauge, cadence.UFix128MemoryUsage)
+
+	fix128 := fix.NewUFix128(high, low)
+	return cadence.NewUFix128(fix128)
 }
 
 // decodeOptional decodes encoded optional-value as

@@ -39,6 +39,7 @@ import (
 type Fix64Value int64
 
 const Fix64MaxValue = math.MaxInt64
+const Fix64MinValue = math.MinInt64
 
 const fix64Size = int(unsafe.Sizeof(Fix64Value(0)))
 

@@ -768,6 +768,29 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 				},
 			},
 		},
+		sema.UFix128Type: {
+			add: testCalls{
+				overflow: testCall{
+					interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMax),
+					interpreter.NewUnmeteredUFix128ValueWithInteger(2, interpreter.EmptyLocationRange),
+					interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMax),
+				},
+			},
+			subtract: testCalls{
+				underflow: testCall{
+					interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMin),
+					interpreter.NewUnmeteredUFix128ValueWithInteger(2, interpreter.EmptyLocationRange),
+					interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMin),
+				},
+			},
+			multiply: testCalls{
+				overflow: testCall{
+					interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMax),
+					interpreter.NewUnmeteredUFix128ValueWithInteger(2, interpreter.EmptyLocationRange),
+					interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMax),
+				},
+			},
+		},
 	}
 
 	// Verify all test cases exist

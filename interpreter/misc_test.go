@@ -7646,6 +7646,10 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			value: interpreter.NewUnmeteredUFix64Value(123000000),
 			ty:    sema.UFix64Type,
 		},
+		"UFix128": {
+			value: interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(123, 22),
+			ty: sema.UFix128Type,
+		},
 		// TODO:
 		//// Struct
 		//"S": {

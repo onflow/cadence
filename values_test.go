@@ -46,6 +46,7 @@ func newValueTestCases() map[string]valueTestCase {
 	ufix64, _ := NewUFix64("64.01")
 	fix64, _ := NewFix64("-32.11")
 	fix128, _ := NewUnmeteredFix128FromString("-32.11")
+	ufix128, _ := NewUnmeteredUFix128FromString("32.11")
 
 	testFunctionType := NewFunctionType(
 		FunctionPurityUnspecified,
@@ -173,6 +174,11 @@ func newValueTestCases() map[string]valueTestCase {
 			value:        fix128,
 			string:       "-32.110000000000000000000000",
 			expectedType: Fix128Type,
+		},
+		"UFix128": {
+			value:        ufix128,
+			string:       "32.110000000000000000000000",
+			expectedType: UFix128Type,
 		},
 		"Void": {
 			value:        NewVoid(),
@@ -486,6 +492,12 @@ func TestNumberValue_ToBigEndianBytes(t *testing.T) {
 		return v
 	}
 
+	newUFix128 := func(s string) UFix128 {
+		v, err := NewUnmeteredUFix128FromString(s)
+		require.NoError(t, err)
+		return v
+	}
+
 	typeTests := map[string]map[NumberValue][]byte{
 		// Int*
 		"Int": {
@@ -688,6 +700,12 @@ func TestNumberValue_ToBigEndianBytes(t *testing.T) {
 			Fix64(42_00000000): {0, 0, 0, 0, 250, 86, 234, 0},
 			Fix64(42_24000000): {0, 0, 0, 0, 251, 197, 32, 0},
 		},
+		"UFix128": {
+			newUFix128("0.0"):   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			newUFix128("42.0"):  {0, 0, 0, 0, 0, 34, 189, 216, 143, 237, 158, 252, 106, 0, 0, 0},
+			newUFix128("42.24"): {0, 0, 0, 0, 0, 34, 240, 170, 253, 0, 136, 125, 32, 0, 0, 0},
+			newUFix128("340282366920938.463463374607431768211455"): {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+		},
 	}
 
 	// Ensure the test cases are complete
@@ -697,10 +715,6 @@ func TestNumberValue_ToBigEndianBytes(t *testing.T) {
 		case sema.NumberType, sema.SignedNumberType,
 			sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType,
 			sema.FixedPointType, sema.SignedFixedPointType:
-			continue
-
-		// TODO: Remove once Fix128 type is supported in the interpreter
-		case sema.Fix128Type:
 			continue
 		}
 

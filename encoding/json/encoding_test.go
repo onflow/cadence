@@ -769,6 +769,32 @@ func TestEncodeUFix64(t *testing.T) {
 	}...)
 }
 
+func TestEncodeUFix128(t *testing.T) {
+
+	t.Parallel()
+
+	testAllEncodeAndDecode(t, []encodeTest{
+		{
+			"Zero",
+			cadence.UFix128(fixedpoint.Fix128FromIntAndScale(0, 24)),
+			// language=json
+			`{"type":"UFix128","value":"0.000000000000000000000000"}`,
+		},
+		{
+			"789.00123010",
+			cadence.UFix128(fixedpoint.Fix128FromIntAndScale(78_900_123_010, 24-8)),
+			// language=json
+			`{"type":"UFix128","value":"789.001230100000000000000000"}`,
+		},
+		{
+			"1234.056",
+			cadence.UFix128(fixedpoint.Fix128FromIntAndScale(123_405_600_000, 24-8)),
+			// language=json
+			`{"type":"UFix128","value":"1234.056000000000000000000000"}`,
+		},
+	}...)
+}
+
 func TestEncodeArray(t *testing.T) {
 
 	t.Parallel()

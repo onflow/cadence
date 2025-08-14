@@ -262,6 +262,7 @@ const (
 	fix64TypeStr          = "Fix64"
 	fix128TypeStr         = "Fix128"
 	ufix64TypeStr         = "UFix64"
+	ufix128TypeStr        = "UFix128"
 	arrayTypeStr          = "Array"
 	dictionaryTypeStr     = "Dictionary"
 	structTypeStr         = "Struct"
@@ -339,6 +340,8 @@ func Prepare(v cadence.Value) jsonValue {
 		return prepareFix128(v)
 	case cadence.UFix64:
 		return prepareUFix64(v)
+	case cadence.UFix128:
+		return prepareUFix128(v)
 	case cadence.Array:
 		return prepareArray(v)
 	case cadence.Dictionary:
@@ -575,6 +578,13 @@ func prepareUFix64(v cadence.UFix64) jsonValue {
 	return jsonValueObject{
 		Type:  ufix64TypeStr,
 		Value: encodeUFix64(uint64(v)),
+	}
+}
+
+func prepareUFix128(v cadence.UFix128) jsonValue {
+	return jsonValueObject{
+		Type:  ufix128TypeStr,
+		Value: encodeUFix128(fix.UFix128(v)),
 	}
 }
 
@@ -1073,4 +1083,8 @@ func encodeUFix64(v uint64) string {
 		integer,
 		fraction,
 	)
+}
+
+func encodeUFix128(v fix.UFix128) string {
+	return format.UFix128(v)
 }

@@ -112,7 +112,7 @@ const (
 	_ // future: UFix16
 	_ // future: UFix32
 	HashInputTypeUFix64
-	_ // future: UFix128
+	HashInputTypeUFix128
 	_ // future: UFix256
 	_
 

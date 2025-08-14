@@ -607,6 +607,9 @@ func (e *Encoder) encodeValue(
 	case cadence.UFix64:
 		return e.encodeUFix64(v)
 
+	case cadence.UFix128:
+		return e.encodeUFix128(v)
+
 	case cadence.Array:
 		return e.encodeArray(v, tids)
 
@@ -924,6 +927,34 @@ func (e *Encoder) encodeArray(v cadence.Array, tids ccfTypeIDByCadenceType) erro
 	}
 
 	return nil
+}
+
+// encodeUFix128 encodes cadence.UFix128 as
+// language=CDDL
+// ufix128-value = [
+//
+//	hi: uint64,
+//	low: uint64,
+//
+// ]
+func (e *Encoder) encodeUFix128(v cadence.UFix128) error {
+	// Encode array head with length 2.
+	err := e.enc.EncodeRawBytes([]byte{
+		// array, 2 items follow
+		0x82,
+	})
+	if err != nil {
+		return err
+	}
+
+	// element 0: high-bits as CBOR uint64.
+	err = e.enc.EncodeUint64(uint64(v.Hi))
+	if err != nil {
+		return err
+	}
+
+	// element 1: low-bits as CBOR uint64.
+	return e.enc.EncodeUint64(uint64(v.Lo))
 }
 
 // encodeDictionary encodes cadence.Dictionary as

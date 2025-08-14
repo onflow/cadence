@@ -114,6 +114,38 @@ func NewUFix64(
 	)
 }
 
+func ParseUFix128(s string) (*big.Int, error) {
+	negative, unsignedInteger, fractional, parsedScale, err := parseFixedPoint(s)
+	if err != nil {
+		return nil, err
+	}
+
+	if negative {
+		return nil, errors.New("invalid negative integer part")
+	}
+
+	return NewUFix128(unsignedInteger, fractional, parsedScale)
+}
+
+func NewUFix128(
+	unsignedInteger *big.Int,
+	fractional *big.Int,
+	parsedScale uint,
+) (
+	*big.Int,
+	error,
+) {
+	return checkAndConvertFixedPoint(
+		false,
+		unsignedInteger,
+		fractional,
+		parsedScale,
+		UFix128Scale,
+		UFix128TypeMinIntBig, UFix128TypeMinFractionalBig,
+		UFix128TypeMaxIntBig, UFix128TypeMaxFractionalBig,
+	)
+}
+
 func parseFixedPoint(v string) (
 	negative bool,
 	unsignedInteger,

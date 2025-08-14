@@ -407,6 +407,22 @@ func TestRuntimeImportedValueMemoryMetering(t *testing.T) {
 		assert.Equal(t, uint64(8), meter[common.MemoryKindNumberValue])
 	})
 
+	t.Run("UFix128", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            access(all) fun main(x: UFix128) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+
+		ufix128Value, err := cadence.NewUFix128FromParts(1, 4)
+		require.NoError(t, err)
+
+		executeScript(t, script, meter, ufix128Value)
+		assert.Equal(t, uint64(16), meter[common.MemoryKindNumberValue])
+	})
+
 	t.Run("Struct", func(t *testing.T) {
 		t.Parallel()
 

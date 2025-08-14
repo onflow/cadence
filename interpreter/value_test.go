@@ -1028,11 +1028,17 @@ func TestStringer(t *testing.T) {
 			},
 			expected: "-32.00000000",
 		},
-		"Fix1284": {
+		"Fix128": {
 			value: func(_ *Interpreter) Value {
 				return NewUnmeteredFix128ValueWithInteger(-32, EmptyLocationRange)
 			},
 			expected: "-32.000000000000000000000000",
+		},
+		"UFix128": {
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredFix128ValueWithInteger(32, EmptyLocationRange)
+			},
+			expected: "32.000000000000000000000000",
 		},
 		"Void": {
 			value: func(_ *Interpreter) Value {
@@ -1725,6 +1731,27 @@ func TestGetHashInput(t *testing.T) {
 			expected: []byte{
 				byte(HashInputTypeFix128),
 				0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			},
+		},
+		"UFix128": {
+			value: NewUnmeteredUFix128ValueWithInteger(64, EmptyLocationRange),
+			expected: []byte{
+				byte(HashInputTypeUFix128),
+				0x0, 0x0, 0x0, 0x0, 0x0, 0x34, 0xf0, 0x86, 0xf3, 0xb3, 0x3b, 0x68, 0x40, 0x0, 0x0, 0x0,
+			},
+		},
+		"UFix128 min": {
+			value: NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMin),
+			expected: []byte{
+				byte(HashInputTypeUFix128),
+				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			},
+		},
+		"UFix128 max": {
+			value: NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMax),
+			expected: []byte{
+				byte(HashInputTypeUFix128),
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 			},
 		},
 		"true": {
@@ -4069,9 +4096,10 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		t.Parallel()
 
 		testCases := map[*sema.FixedPointNumericType]NumberValue{
-			sema.UFix64Type: NewUnmeteredUFix64ValueWithInteger(42, EmptyLocationRange),
-			sema.Fix64Type:  NewUnmeteredFix64ValueWithInteger(42, EmptyLocationRange),
-			sema.Fix128Type: NewUnmeteredFix128ValueWithInteger(42, EmptyLocationRange),
+			sema.UFix64Type:  NewUnmeteredUFix64ValueWithInteger(42, EmptyLocationRange),
+			sema.Fix64Type:   NewUnmeteredFix64ValueWithInteger(42, EmptyLocationRange),
+			sema.Fix128Type:  NewUnmeteredFix128ValueWithInteger(42, EmptyLocationRange),
+			sema.UFix128Type: NewUnmeteredUFix128ValueWithInteger(42, EmptyLocationRange),
 		}
 
 		for _, ty := range sema.AllFixedPointTypes {
@@ -4763,12 +4791,12 @@ func TestFixedpointValueRangeCheck(t *testing.T) {
 		for _, test := range []testCase[*big.Int]{
 			{
 				name:          "overflow",
-				value:         new(big.Int).Add(fixedpoint.Fix128TypeMaxIntBig, big.NewInt(1)),
+				value:         new(big.Int).Add(fixedpoint.Fix128TypeMaxBig, big.NewInt(1)),
 				expectedError: &OverflowError{},
 			},
 			{
 				name:          "underflow",
-				value:         new(big.Int).Sub(fixedpoint.Fix128TypeMinIntBig, big.NewInt(1)),
+				value:         new(big.Int).Sub(fixedpoint.Fix128TypeMinBig, big.NewInt(1)),
 				expectedError: &UnderflowError{},
 			},
 		} {
@@ -4785,6 +4813,38 @@ func TestFixedpointValueRangeCheck(t *testing.T) {
 				}()
 
 				_ = NewFix128ValueFromBigIntWithRangeCheck(nil, testCase.value, EmptyLocationRange)
+			})
+		}
+	})
+
+	t.Run("ufix128", func(t *testing.T) {
+		t.Parallel()
+
+		for _, test := range []testCase[*big.Int]{
+			{
+				name:          "overflow",
+				value:         new(big.Int).Add(fixedpoint.UFix128TypeMaxBig, big.NewInt(1)),
+				expectedError: &OverflowError{},
+			},
+			{
+				name:          "underflow",
+				value:         new(big.Int).Sub(fixedpoint.UFix128TypeMinBig, big.NewInt(1)),
+				expectedError: &UnderflowError{},
+			},
+		} {
+
+			testCase := test
+
+			t.Run(testCase.name, func(t *testing.T) {
+				t.Parallel()
+
+				defer func() {
+					r := recover()
+					assert.NotNil(t, r)
+					require.IsType(t, testCase.expectedError, r)
+				}()
+
+				_ = NewUFix128ValueFromBigIntWithRangeCheck(nil, testCase.value, EmptyLocationRange)
 			})
 		}
 	})
