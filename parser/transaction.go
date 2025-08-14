@@ -76,6 +76,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	var execute *ast.SpecialFunctionDeclaration
 
 	p.skipSpaceAndComments()
+
 	if p.current.Is(lexer.TokenIdentifier) {
 
 		keyword := p.currentTokenSource()

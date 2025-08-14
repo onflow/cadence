@@ -582,12 +582,16 @@ func defineLessThanOrTypeArgumentsExpression() {
 					return err
 				}
 
-				_, err = p.mustOne(lexer.TokenGreater)
-				if err != nil {
-					return err
+				if p.current.Is(lexer.TokenGreater) {
+					p.next()
+				} else {
+					p.report(&MissingClosingGreaterInTypeArgumentsError{
+						Pos: p.current.StartPos,
+					})
 				}
 
 				p.skipSpaceAndComments()
+
 				parenOpenToken, err := p.mustOne(lexer.TokenParenOpen)
 				if err != nil {
 					return err
