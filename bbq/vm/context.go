@@ -100,7 +100,8 @@ func (c *Context) SetInStorageIteration(inStorageIteration bool) {
 }
 
 func (c *Context) inAttachmentIteration(base *interpreter.CompositeValue) bool {
-	return c.attachmentIterationMap[base]
+	_, ok := c.attachmentIterationMap[base]
+	return ok
 }
 
 func (c *Context) GetCapabilityControllerIterations() map[interpreter.AddressPath]int {
