@@ -944,9 +944,12 @@ func defineIdentifierTypes() {
 
 				p.skipSpaceAndComments()
 
-				_, err := p.mustOne(lexer.TokenAmpersand)
-				if err != nil {
-					return nil, err
+				if p.current.Is(lexer.TokenAmpersand) {
+					p.next()
+				} else {
+					p.report(&MissingAmpersandInAuthReferenceError{
+						GotToken: p.current,
+					})
 				}
 
 				right, err := parseType(p, typeLeftBindingPowerReference)

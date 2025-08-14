@@ -4209,6 +4209,43 @@ func (*MissingClosingParenInAuthError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/references#authorized-references"
 }
 
+// MissingAmpersandInAuthReferenceError is reported when an authorized reference is missing an ampersand.
+type MissingAmpersandInAuthReferenceError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingAmpersandInAuthReferenceError{}
+var _ errors.UserError = &MissingAmpersandInAuthReferenceError{}
+var _ errors.SecondaryError = &MissingAmpersandInAuthReferenceError{}
+var _ errors.HasDocumentationLink = &MissingAmpersandInAuthReferenceError{}
+
+func (*MissingAmpersandInAuthReferenceError) isParseError() {}
+
+func (*MissingAmpersandInAuthReferenceError) IsUserError() {}
+
+func (e *MissingAmpersandInAuthReferenceError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingAmpersandInAuthReferenceError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingAmpersandInAuthReferenceError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf("expected %s in authorized reference", lexer.TokenAmpersand),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingAmpersandInAuthReferenceError) SecondaryError() string {
+	return "authorized references must contain an ampersand (&); insert the missing ampersand"
+}
+
+func (*MissingAmpersandInAuthReferenceError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/references#authorized-references"
+}
+
 // MissingOpeningParenInNominalTypeInvocationError is reported when a nominal type invocation
 // is missing an opening parenthesis.
 type MissingOpeningParenInNominalTypeInvocationError struct {

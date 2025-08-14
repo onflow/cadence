@@ -474,6 +474,27 @@ func TestParseReferenceType(t *testing.T) {
 		)
 	})
 
+	t.Run("authorized, missing ampersand", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("auth(X) Int")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingAmpersandInAuthReferenceError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
+
 	t.Run("authorized, one entitlement", func(t *testing.T) {
 
 		t.Parallel()
@@ -664,11 +685,23 @@ func TestParseReferenceType(t *testing.T) {
 						Type: lexer.TokenEOF,
 					},
 				},
-				&SyntaxError{
-					Message:       "expected token '&'",
-					Secondary:     "check for missing punctuation, operators, or syntax elements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 9, Line: 1, Column: 9},
+				&MissingAmpersandInAuthReferenceError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 9, Line: 1, Column: 9},
+							EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+						},
+						Type: lexer.TokenEOF,
+					},
+				},
+				&UnexpectedTypeStartError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 9, Line: 1, Column: 9},
+							EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+						},
+						Type: lexer.TokenEOF,
+					},
 				},
 			},
 			errs,
@@ -1381,7 +1414,6 @@ func TestParseFunctionType(t *testing.T) {
 			[]error{
 				&MissingOpeningParenInFunctionTypeError{
 					GotToken: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
 							EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
