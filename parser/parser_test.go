@@ -652,7 +652,6 @@ func TestParseBuffering(t *testing.T) {
 			[]error{
 				&MissingEndOfParenthesizedTypeError{
 					GotToken: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 283, Line: 9, Column: 36},
 							EndPos:   ast.Position{Offset: 283, Line: 9, Column: 36},

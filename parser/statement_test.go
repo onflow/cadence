@@ -575,7 +575,6 @@ func TestParseIfStatement(t *testing.T) {
 			result,
 		)
 	})
-
 }
 
 func TestParseWhileStatement(t *testing.T) {
