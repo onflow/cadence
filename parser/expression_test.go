@@ -441,6 +441,27 @@ func TestParseAdvancedExpression(t *testing.T) {
 		)
 	})
 
+	t.Run("conditional, missing colon", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("a ? b c")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingColonInConditionalExpressionError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+							EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
+
 	t.Run("boolean expressions", func(t *testing.T) {
 
 		t.Parallel()
@@ -597,6 +618,27 @@ func TestParseAdvancedExpression(t *testing.T) {
 		)
 	})
 
+	t.Run("missing closing brace", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("{1: 2")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingClosingBraceInDictionaryExpressionError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
+
 }
 
 func TestParseArrayExpression(t *testing.T) {
@@ -733,6 +775,27 @@ func TestParseArrayExpression(t *testing.T) {
 				},
 			},
 			result,
+		)
+	})
+
+	t.Run("missing closing bracket", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("[1, 2")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingClosingBracketInArrayExpressionError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+						},
+					},
+				},
+			},
+			errs,
 		)
 	})
 
@@ -911,6 +974,27 @@ func TestParseDictionaryExpression(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("missing colon", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression(`{"a" 1}`)
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingColonInDictionaryEntryError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseIndexExpression(t *testing.T) {
@@ -1008,6 +1092,27 @@ func TestParseIndexExpression(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("missing closing bracket", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("a[0")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingClosingBracketInIndexExpressionError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+							EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseIdentifier(t *testing.T) {
@@ -1049,23 +1154,55 @@ func TestParsePath(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := testParseExpression("/foo/bar")
-	require.Empty(t, errs)
+	t.Run("valid", func(t *testing.T) {
 
-	AssertEqualWithDiff(t,
-		&ast.PathExpression{
-			Domain: ast.Identifier{
-				Identifier: "foo",
-				Pos:        ast.Position{Line: 1, Column: 1, Offset: 1},
+		t.Parallel()
+
+		result, errs := testParseExpression("/foo/bar")
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			&ast.PathExpression{
+				Domain: ast.Identifier{
+					Identifier: "foo",
+					Pos:        ast.Position{Line: 1, Column: 1, Offset: 1},
+				},
+				Identifier: ast.Identifier{
+					Identifier: "bar",
+					Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 			},
-			Identifier: ast.Identifier{
-				Identifier: "bar",
-				Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
+			result,
+		)
+	})
+
+	t.Run("missing slash", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("/foo")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingSlashInPathExpressionError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+							EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+						},
+						Type: lexer.TokenEOF,
+					},
+				},
+				&SyntaxError{
+					Message:       "expected token identifier",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
 			},
-			StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-		},
-		result,
-	)
+			errs,
+		)
+	})
 }
 
 func TestParseString(t *testing.T) {
@@ -5193,6 +5330,32 @@ func TestParseUnaryExpression(t *testing.T) {
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
 							EndPos:   ast.Position{Offset: 1, Line: 1, Column: 1},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
+}
+
+func TestParseNestedExpression(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("parenthesized expression, missing closing paren", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("(1")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingEndOfParenthesizedExpressionError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+							EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
 						},
 					},
 				},

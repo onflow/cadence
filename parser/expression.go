@@ -1122,12 +1122,14 @@ func defineNestedExpression() {
 			p.skipSpaceAndComments()
 
 			// special case: parse a Void literal `()`
-			if p.current.Type == lexer.TokenParenClose {
-				// skip the closing parenthesis
+			if p.current.Is(lexer.TokenParenClose) {
 				p.next()
 
-				voidExpr := ast.NewVoidExpression(p.memoryGauge, startToken.StartPos, p.current.EndPos)
-				return voidExpr, nil
+				return ast.NewVoidExpression(
+					p.memoryGauge,
+					startToken.StartPos,
+					p.current.EndPos,
+				), nil
 			}
 
 			expression, err := parseExpression(p, lowestBindingPower)
@@ -1135,8 +1137,15 @@ func defineNestedExpression() {
 				return nil, err
 			}
 
-			_, err = p.mustOne(lexer.TokenParenClose)
-			return expression, err
+			if p.current.Is(lexer.TokenParenClose) {
+				p.next()
+			} else {
+				p.report(&MissingEndOfParenthesizedExpressionError{
+					GotToken: p.current,
+				})
+			}
+
+			return expression, nil
 		},
 	)
 }
@@ -1286,9 +1295,13 @@ func defineArrayExpression() {
 				values = append(values, value)
 			}
 
-			endToken, err := p.mustOne(lexer.TokenBracketClose)
-			if err != nil {
-				return nil, err
+			endToken := p.current
+			if p.current.Is(lexer.TokenBracketClose) {
+				p.next()
+			} else {
+				p.report(&MissingClosingBracketInArrayExpressionError{
+					GotToken: p.current,
+				})
 			}
 
 			return ast.NewArrayExpression(
@@ -1331,9 +1344,12 @@ func defineDictionaryExpression() {
 					return nil, err
 				}
 
-				_, err = p.mustOne(lexer.TokenColon)
-				if err != nil {
-					return nil, err
+				if p.current.Is(lexer.TokenColon) {
+					p.next()
+				} else {
+					p.report(&MissingColonInDictionaryEntryError{
+						GotToken: p.current,
+					})
 				}
 
 				value, err := parseExpression(p, lowestBindingPower)
@@ -1348,9 +1364,13 @@ func defineDictionaryExpression() {
 				))
 			}
 
-			endToken, err := p.mustOne(lexer.TokenBraceClose)
-			if err != nil {
-				return nil, err
+			endToken := p.current
+			if p.current.Is(lexer.TokenBraceClose) {
+				p.next()
+			} else {
+				p.report(&MissingClosingBraceInDictionaryExpressionError{
+					GotToken: p.current,
+				})
 			}
 
 			return ast.NewDictionaryExpression(
@@ -1376,9 +1396,13 @@ func defineIndexExpression() {
 				return nil, err
 			}
 
-			endToken, err := p.mustOne(lexer.TokenBracketClose)
-			if err != nil {
-				return nil, err
+			endToken := p.current
+			if p.current.Is(lexer.TokenBracketClose) {
+				p.next()
+			} else {
+				p.report(&MissingClosingBracketInIndexExpressionError{
+					GotToken: p.current,
+				})
 			}
 
 			return ast.NewIndexExpression(
@@ -1406,9 +1430,12 @@ func defineConditionalExpression() {
 				return nil, err
 			}
 
-			_, err = p.mustOne(lexer.TokenColon)
-			if err != nil {
-				return nil, err
+			if p.current.Is(lexer.TokenColon) {
+				p.next()
+			} else {
+				p.report(&MissingColonInConditionalExpressionError{
+					GotToken: p.current,
+				})
 			}
 
 			elseExpression, err := parseExpression(p, lowestBindingPower)
@@ -1435,9 +1462,12 @@ func definePathExpression() {
 				return nil, err
 			}
 
-			_, err = p.mustOne(lexer.TokenSlash)
-			if err != nil {
-				return nil, err
+			if p.current.Is(lexer.TokenSlash) {
+				p.next()
+			} else {
+				p.report(&MissingSlashInPathExpressionError{
+					GotToken: p.current,
+				})
 			}
 
 			identifier, err := p.mustIdentifier()
