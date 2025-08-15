@@ -529,7 +529,8 @@ func TestParseReferenceType(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseType("auth(X) Int")
+		const code = "auth(X) Int"
+		_, errs := testParseType(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingAmpersandInAuthReferenceError{
@@ -543,6 +544,33 @@ func TestParseReferenceType(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingAmpersandErr *MissingAmpersandInAuthReferenceError
+		require.ErrorAs(t, errs[0], &missingAmpersandErr)
+
+		fixes := missingAmpersandErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert ampersand",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "& ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+								EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"auth(X) & Int",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 

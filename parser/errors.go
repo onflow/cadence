@@ -5409,6 +5409,7 @@ var _ ParseError = &MissingAmpersandInAuthReferenceError{}
 var _ errors.UserError = &MissingAmpersandInAuthReferenceError{}
 var _ errors.SecondaryError = &MissingAmpersandInAuthReferenceError{}
 var _ errors.HasDocumentationLink = &MissingAmpersandInAuthReferenceError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingAmpersandInAuthReferenceError{}
 
 func (*MissingAmpersandInAuthReferenceError) isParseError() {}
 
@@ -5435,6 +5436,23 @@ func (*MissingAmpersandInAuthReferenceError) SecondaryError() string {
 
 func (*MissingAmpersandInAuthReferenceError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/references#authorized-references"
+}
+
+func (e *MissingAmpersandInAuthReferenceError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert ampersand",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "& ",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // MissingOpeningParenInNominalTypeInvocationError is reported when a nominal type invocation
