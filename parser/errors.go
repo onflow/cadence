@@ -1011,6 +1011,7 @@ var _ ParseError = &MissingClosingGreaterInTypeParameterListError{}
 var _ errors.UserError = &MissingClosingGreaterInTypeParameterListError{}
 var _ errors.SecondaryError = &MissingClosingGreaterInTypeParameterListError{}
 var _ errors.HasDocumentationLink = &MissingClosingGreaterInTypeParameterListError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingClosingGreaterInTypeParameterListError{}
 
 func (*MissingClosingGreaterInTypeParameterListError) isParseError() {}
 
@@ -1033,6 +1034,23 @@ func (*MissingClosingGreaterInTypeParameterListError) Error() string {
 
 func (*MissingClosingGreaterInTypeParameterListError) SecondaryError() string {
 	return "type parameters must be separated by commas, and the list must end with a closing angle bracket (>)"
+}
+
+func (e *MissingClosingGreaterInTypeParameterListError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Add closing angle bracket",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: ">",
+					Range: ast.Range{
+						StartPos: e.Pos,
+						EndPos:   e.Pos,
+					},
+				},
+			},
+		},
+	}
 }
 
 func (*MissingClosingGreaterInTypeParameterListError) DocumentationLink() string {

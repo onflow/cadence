@@ -1881,8 +1881,9 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		t.Parallel()
 
+		const code = "fun foo  < "
 		_, errs := testParseDeclarationsWithConfig(
-			"fun foo  < ",
+			code,
 			Config{
 				TypeParametersEnabled: true,
 			},
@@ -1895,6 +1896,33 @@ func TestParseFunctionDeclaration(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingClosingGreater *MissingClosingGreaterInTypeParameterListError
+		require.ErrorAs(t, errs[0], &missingClosingGreater)
+
+		fixes := missingClosingGreater.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Add closing angle bracket",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ">",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
+								EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			`fun foo  < >`,
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
