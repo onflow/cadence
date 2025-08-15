@@ -1638,23 +1638,13 @@ func (d *Desugar) VisitPragmaDeclaration(declaration *ast.PragmaDeclaration) ast
 }
 
 func (d *Desugar) VisitImportDeclaration(declaration *ast.ImportDeclaration) ast.Declaration {
-	resolvedLocations, err := commons.ResolveLocation(
+	_, err := commons.ResolveLocation(
 		d.config.LocationHandler,
 		declaration.Identifiers,
 		declaration.Location,
 	)
 	if err != nil {
 		panic(err)
-	}
-
-	for _, resolvedLocation := range resolvedLocations {
-		location := resolvedLocation.Location
-		_, exists := d.importsSet[location]
-		if exists {
-			return nil
-		}
-
-		d.importsSet[location] = struct{}{}
 	}
 
 	return declaration
