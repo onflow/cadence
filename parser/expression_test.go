@@ -620,9 +620,10 @@ func TestParseAdvancedExpression(t *testing.T) {
 
 	t.Run("missing closing brace", func(t *testing.T) {
 
+		const code = "{1: 2"
 		t.Parallel()
 
-		_, errs := testParseExpression("{1: 2")
+		_, errs := testParseExpression(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingClosingBraceInDictionaryExpressionError{
@@ -636,6 +637,33 @@ func TestParseAdvancedExpression(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingBraceErr *MissingClosingBraceInDictionaryExpressionError
+		require.ErrorAs(t, errs[0], &missingBraceErr)
+
+		fixes := missingBraceErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing brace",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "}",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+								EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"{1: 2}",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 

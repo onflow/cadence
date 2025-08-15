@@ -5023,6 +5023,7 @@ var _ ParseError = &MissingClosingBraceInDictionaryExpressionError{}
 var _ errors.UserError = &MissingClosingBraceInDictionaryExpressionError{}
 var _ errors.SecondaryError = &MissingClosingBraceInDictionaryExpressionError{}
 var _ errors.HasDocumentationLink = &MissingClosingBraceInDictionaryExpressionError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingClosingBraceInDictionaryExpressionError{}
 
 func (*MissingClosingBraceInDictionaryExpressionError) isParseError() {}
 
@@ -5049,6 +5050,23 @@ func (*MissingClosingBraceInDictionaryExpressionError) SecondaryError() string {
 
 func (*MissingClosingBraceInDictionaryExpressionError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/values-and-types/dictionaries#dictionary-literals"
+}
+
+func (e *MissingClosingBraceInDictionaryExpressionError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert closing brace",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "}",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // MissingColonInDictionaryEntryError is reported when a dictionary entry is missing a colon.
