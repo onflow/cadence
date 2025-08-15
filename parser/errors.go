@@ -721,6 +721,7 @@ var _ ParseError = &MissingClosingParenInParameterListError{}
 var _ errors.UserError = &MissingClosingParenInParameterListError{}
 var _ errors.SecondaryError = &MissingClosingParenInParameterListError{}
 var _ errors.HasDocumentationLink = &MissingClosingParenInParameterListError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingClosingParenInParameterListError{}
 
 func (*MissingClosingParenInParameterListError) isParseError() {}
 
@@ -743,6 +744,23 @@ func (*MissingClosingParenInParameterListError) Error() string {
 
 func (*MissingClosingParenInParameterListError) SecondaryError() string {
 	return "function parameter lists must be properly closed with a closing parenthesis"
+}
+
+func (e *MissingClosingParenInParameterListError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Add closing parenthesis",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: ")",
+					Range: ast.Range{
+						StartPos: e.Pos,
+						EndPos:   e.Pos,
+					},
+				},
+			},
+		},
+	}
 }
 
 func (*MissingClosingParenInParameterListError) DocumentationLink() string {

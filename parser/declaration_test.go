@@ -795,7 +795,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations("fun foo(")
+		const code = "fun foo("
+		_, errs := testParseDeclarations(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingClosingParenInParameterListError{
@@ -803,6 +804,42 @@ func TestParseFunctionDeclaration(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingClosingParen *MissingClosingParenInParameterListError
+		require.ErrorAs(t, errs[0], &missingClosingParen)
+
+		assert.Equal(t,
+			&MissingClosingParenInParameterListError{
+				Pos: ast.Position{Offset: 8, Line: 1, Column: 8},
+			},
+			missingClosingParen,
+		)
+
+		fixes := missingClosingParen.SuggestFixes(code)
+
+		require.Equal(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Add closing parenthesis",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ")",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+								EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		const expected = "fun foo()"
+		assert.Equal(t,
+			expected,
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
