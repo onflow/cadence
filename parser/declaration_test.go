@@ -4242,10 +4242,10 @@ func TestParseCompositeDeclaration(t *testing.T) {
 			errs,
 		)
 
-		var missingBraceErr *DeclarationMissingOpeningBraceError
-		require.ErrorAs(t, errs[0], &missingBraceErr)
+		var missingOpeningBraceErr *DeclarationMissingOpeningBraceError
+		require.ErrorAs(t, errs[0], &missingOpeningBraceErr)
 
-		fixes := missingBraceErr.SuggestFixes(code)
+		fixes := missingOpeningBraceErr.SuggestFixes(code)
 		AssertEqualWithDiff(t,
 			[]errors.SuggestedFix[ast.TextEdit]{
 				{
@@ -4266,6 +4266,33 @@ func TestParseCompositeDeclaration(t *testing.T) {
 
 		assert.Equal(t,
 			"access(all) struct S: RI{",
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+
+		var missingClosingBraceErr *DeclarationMissingClosingBraceError
+		require.ErrorAs(t, errs[1], &missingClosingBraceErr)
+
+		fixes = missingClosingBraceErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing brace",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "}",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 24, Line: 1, Column: 24},
+								EndPos:   ast.Position{Offset: 24, Line: 1, Column: 24},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"access(all) struct S: RI}",
 			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
@@ -10400,23 +10427,51 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations(`
-          access(all) entitlement mapping M {
-        `)
+		const code = `
+          access(all) entitlement mapping M {`
+
+		_, errs := testParseDeclarations(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&DeclarationMissingClosingBraceError{
 					Kind: common.DeclarationKindEntitlementMapping,
 					GotToken: lexer.Token{
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 55, Line: 3, Column: 8},
-							EndPos:   ast.Position{Offset: 55, Line: 3, Column: 8},
+							StartPos: ast.Position{Offset: 46, Line: 2, Column: 45},
+							EndPos:   ast.Position{Offset: 46, Line: 2, Column: 45},
 						},
 						Type: lexer.TokenEOF,
 					},
 				},
 			},
 			errs,
+		)
+
+		var missingClosingBraceErr *DeclarationMissingClosingBraceError
+		require.ErrorAs(t, errs[0], &missingClosingBraceErr)
+
+		fixes := missingClosingBraceErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing brace",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "}",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 46, Line: 2, Column: 45},
+								EndPos:   ast.Position{Offset: 46, Line: 2, Column: 45},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"access(all) entitlement mapping M {}",
+			strings.TrimSpace(fixes[0].TextEdits[0].ApplyTo(code)),
 		)
 	})
 

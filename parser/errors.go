@@ -4615,6 +4615,7 @@ var _ ParseError = &DeclarationMissingClosingBraceError{}
 var _ errors.UserError = &DeclarationMissingClosingBraceError{}
 var _ errors.SecondaryError = &DeclarationMissingClosingBraceError{}
 var _ errors.HasDocumentationLink = &DeclarationMissingClosingBraceError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &DeclarationMissingClosingBraceError{}
 
 func (*DeclarationMissingClosingBraceError) isParseError() {}
 
@@ -4648,6 +4649,23 @@ func (e *DeclarationMissingClosingBraceError) SecondaryError() string {
 func (*DeclarationMissingClosingBraceError) DocumentationLink() string {
 	// TODO: improve this link to point to the specific page based on the declaration kind
 	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+func (e *DeclarationMissingClosingBraceError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert closing brace",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "}",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // MissingOpeningBraceError is reported when an opening brace is missing .
