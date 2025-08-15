@@ -3116,6 +3116,7 @@ var _ ParseError = &MissingAccessOpeningParenError{}
 var _ errors.UserError = &MissingAccessOpeningParenError{}
 var _ errors.SecondaryError = &MissingAccessOpeningParenError{}
 var _ errors.HasDocumentationLink = &MissingAccessOpeningParenError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingAccessOpeningParenError{}
 
 func (*MissingAccessOpeningParenError) isParseError() {}
 
@@ -3144,6 +3145,38 @@ func (*MissingAccessOpeningParenError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control"
 }
 
+func (e *MissingAccessOpeningParenError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
+	if e.GotToken.Type == lexer.TokenIdentifier {
+		tokenSource := code[e.GotToken.StartPos.Offset : e.GotToken.EndPos.Offset+1]
+		return []errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Enclose in parentheses",
+				TextEdits: []ast.TextEdit{
+					{
+						Replacement: fmt.Sprintf("(%s)", tokenSource),
+						Range:       e.GotToken.Range,
+					},
+				},
+			},
+		}
+	} else {
+		return []errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening parenthesis",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: "(",
+						Range: ast.Range{
+							StartPos: e.GotToken.StartPos,
+							EndPos:   e.GotToken.StartPos,
+						},
+					},
+				},
+			},
+		}
+	}
+}
+
 // MissingAccessClosingParenError is reported when an access modifier is missing a closing parenthesis.
 type MissingAccessClosingParenError struct {
 	GotToken lexer.Token
@@ -3153,6 +3186,7 @@ var _ ParseError = &MissingAccessClosingParenError{}
 var _ errors.UserError = &MissingAccessClosingParenError{}
 var _ errors.SecondaryError = &MissingAccessClosingParenError{}
 var _ errors.HasDocumentationLink = &MissingAccessClosingParenError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingAccessClosingParenError{}
 
 func (*MissingAccessClosingParenError) isParseError() {}
 
@@ -3179,6 +3213,23 @@ func (*MissingAccessClosingParenError) SecondaryError() string {
 
 func (*MissingAccessClosingParenError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control"
+}
+
+func (e *MissingAccessClosingParenError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert closing parenthesis",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: ")",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // MissingAccessKeywordError is reported when an access modifier keyword is missing.

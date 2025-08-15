@@ -2238,11 +2238,12 @@ func TestParseAccess(t *testing.T) {
 		)
 	})
 
-	t.Run("access, missing opening paren", func(t *testing.T) {
+	t.Run("access, missing opening paren before identifier", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := parse("access self")
+		const code = "access self"
+		result, errs := parse(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingAccessOpeningParenError{
@@ -2271,13 +2272,101 @@ func TestParseAccess(t *testing.T) {
 			ast.AccessSelf,
 			result,
 		)
+
+		var missingParenErr *MissingAccessOpeningParenError
+		require.ErrorAs(t, errs[0], &missingParenErr)
+
+		fixes := missingParenErr.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Enclose in parentheses",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "(self)",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+								EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"access (self)",
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+	})
+
+	t.Run("access, missing opening paren at end", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "access "
+		_, errs := parse(code)
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingAccessOpeningParenError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+							EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+						},
+						Type: lexer.TokenEOF,
+					},
+				},
+				&MissingAccessKeywordError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+							EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+						},
+						Type: lexer.TokenEOF,
+					},
+				},
+			},
+			errs,
+		)
+
+		var missingParenErr *MissingAccessOpeningParenError
+		require.ErrorAs(t, errs[0], &missingParenErr)
+
+		fixes := missingParenErr.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert opening parenthesis",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "(",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+								EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"access (",
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
 	})
 
 	t.Run("access, missing closing paren", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := parse("access ( self ")
+		const code = "access ( self "
+		result, errs := parse(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingAccessClosingParenError{
@@ -2296,6 +2385,33 @@ func TestParseAccess(t *testing.T) {
 		AssertEqualWithDiff(t,
 			ast.AccessSelf,
 			result,
+		)
+
+		var missingParenErr *MissingAccessClosingParenError
+		require.ErrorAs(t, errs[0], &missingParenErr)
+
+		fixes := missingParenErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing parenthesis",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ")",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 14, Line: 1, Column: 14},
+								EndPos:   ast.Position{Offset: 14, Line: 1, Column: 14},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"access ( self )",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
