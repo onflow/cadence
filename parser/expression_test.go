@@ -2017,7 +2017,8 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression("f(1")
+		const code = "f(1"
+		_, errs := testParseExpression(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingClosingParenInArgumentListError{
@@ -2025,6 +2026,33 @@ func TestParseInvocation(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingParenErr *MissingClosingParenInArgumentListError
+		require.ErrorAs(t, errs[0], &missingParenErr)
+
+		fixes := missingParenErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Add closing parenthesis",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ")",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+								EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"f(1)",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
@@ -3178,7 +3206,57 @@ func TestParseAttach(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression("attach A()")
+		const code = "attach A() b"
+		_, errs := testParseExpression(code)
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingToKeywordInAttachExpressionError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
+							EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+						},
+						Type: lexer.TokenIdentifier,
+					},
+				},
+			},
+			errs,
+		)
+
+		var missingToErr *MissingToKeywordInAttachExpressionError
+		require.ErrorAs(t, errs[0], &missingToErr)
+
+		fixes := missingToErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert 'to'",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "to ",
+							Range: ast.Range{
+								StartPos: missingToErr.GotToken.StartPos,
+								EndPos:   missingToErr.GotToken.StartPos,
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"attach A() to b",
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+	})
+
+	t.Run("missing to at end", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "attach A()"
+		_, errs := testParseExpression(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingToKeywordInAttachExpressionError{
@@ -3195,6 +3273,33 @@ func TestParseAttach(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingToErr *MissingToKeywordInAttachExpressionError
+		require.ErrorAs(t, errs[0], &missingToErr)
+
+		fixes := missingToErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert 'to'",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: " to ",
+							Range: ast.Range{
+								StartPos: missingToErr.GotToken.StartPos,
+								EndPos:   missingToErr.GotToken.StartPos,
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"attach A() to ",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 

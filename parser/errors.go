@@ -41,6 +41,13 @@ func expectedButGotToken(message string, tokenType lexer.TokenType) string {
 	)
 }
 
+func keywordInsertion(keyword string, tokenType lexer.TokenType) string {
+	if tokenType == lexer.TokenEOF {
+		return fmt.Sprintf(" %s ", keyword)
+	}
+	return fmt.Sprintf("%s ", keyword)
+}
+
 // Error
 
 type Error struct {
@@ -776,6 +783,7 @@ var _ ParseError = &ExpectedCommaOrEndOfParameterListError{}
 var _ errors.UserError = &ExpectedCommaOrEndOfParameterListError{}
 var _ errors.SecondaryError = &ExpectedCommaOrEndOfParameterListError{}
 var _ errors.HasDocumentationLink = &ExpectedCommaOrEndOfParameterListError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &ExpectedCommaOrEndOfParameterListError{}
 
 func (*ExpectedCommaOrEndOfParameterListError) isParseError() {}
 
@@ -804,6 +812,23 @@ func (*ExpectedCommaOrEndOfParameterListError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions"
 }
 
+func (e *ExpectedCommaOrEndOfParameterListError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert comma",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: ", ",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
 // MissingColonAfterParameterNameError is reported when a colon is missing after a parameter name.
 type MissingColonAfterParameterNameError struct {
 	GotToken lexer.Token
@@ -813,6 +838,7 @@ var _ ParseError = &MissingColonAfterParameterNameError{}
 var _ errors.UserError = &MissingColonAfterParameterNameError{}
 var _ errors.SecondaryError = &MissingColonAfterParameterNameError{}
 var _ errors.HasDocumentationLink = &MissingColonAfterParameterNameError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingColonAfterParameterNameError{}
 
 func (*MissingColonAfterParameterNameError) isParseError() {}
 
@@ -834,11 +860,29 @@ func (e *MissingColonAfterParameterNameError) Error() string {
 }
 
 func (*MissingColonAfterParameterNameError) SecondaryError() string {
-	return "function parameters must have a type annotation separated by a colon"
+	return "function parameters must have a colon (:) after the parameter name; " +
+		"add a colon (:) after the parameter name"
 }
 
 func (*MissingColonAfterParameterNameError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions"
+}
+
+func (e *MissingColonAfterParameterNameError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert colon",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: ": ",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // MissingDefaultArgumentError is reported when a default argument is missing after a type annotation.
@@ -1118,6 +1162,7 @@ var _ ParseError = &ExpectedCommaOrEndOfTypeParameterListError{}
 var _ errors.UserError = &ExpectedCommaOrEndOfTypeParameterListError{}
 var _ errors.SecondaryError = &ExpectedCommaOrEndOfTypeParameterListError{}
 var _ errors.HasDocumentationLink = &ExpectedCommaOrEndOfTypeParameterListError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &ExpectedCommaOrEndOfTypeParameterListError{}
 
 func (*ExpectedCommaOrEndOfTypeParameterListError) isParseError() {}
 
@@ -1139,11 +1184,29 @@ func (e *ExpectedCommaOrEndOfTypeParameterListError) Error() string {
 }
 
 func (*ExpectedCommaOrEndOfTypeParameterListError) SecondaryError() string {
-	return "type parameters must be separated by commas, and the list must end with a closing angle bracket (>)"
+	return "type parameters must be separated by commas, " +
+		"and the list must end with a closing angle bracket (>)"
 }
 
 func (*ExpectedCommaOrEndOfTypeParameterListError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+func (e *ExpectedCommaOrEndOfTypeParameterListError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert comma",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: ", ",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // InvalidTypeParameterNameError is reported when a type parameter has an invalid name.
@@ -1386,6 +1449,7 @@ var _ ParseError = &MissingColonInSwitchCaseError{}
 var _ errors.UserError = &MissingColonInSwitchCaseError{}
 var _ errors.SecondaryError = &MissingColonInSwitchCaseError{}
 var _ errors.HasDocumentationLink = &MissingColonInSwitchCaseError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingColonInSwitchCaseError{}
 
 func (*MissingColonInSwitchCaseError) isParseError() {}
 
@@ -1410,6 +1474,23 @@ func (*MissingColonInSwitchCaseError) SecondaryError() string {
 	return "a colon (:) is required after the case expression in a switch statement"
 }
 
+func (e *MissingColonInSwitchCaseError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert colon",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: ": ",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
 func (*MissingColonInSwitchCaseError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/control-flow#switch"
 }
@@ -1423,6 +1504,7 @@ var _ ParseError = &MissingFromKeywordInRemoveStatementError{}
 var _ errors.UserError = &MissingFromKeywordInRemoveStatementError{}
 var _ errors.SecondaryError = &MissingFromKeywordInRemoveStatementError{}
 var _ errors.HasDocumentationLink = &MissingFromKeywordInRemoveStatementError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingFromKeywordInRemoveStatementError{}
 
 func (*MissingFromKeywordInRemoveStatementError) isParseError() {}
 
@@ -1447,6 +1529,23 @@ func (*MissingFromKeywordInRemoveStatementError) SecondaryError() string {
 	return "the 'remove' statement requires the 'from' keyword to specify the value to remove the attachment from"
 }
 
+func (e *MissingFromKeywordInRemoveStatementError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert 'from'",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: keywordInsertion(KeywordFrom, e.GotToken.Type),
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
 func (*MissingFromKeywordInRemoveStatementError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/attachments#removing-attachments"
 }
@@ -1460,6 +1559,7 @@ var _ ParseError = &MissingToKeywordInAttachExpressionError{}
 var _ errors.UserError = &MissingToKeywordInAttachExpressionError{}
 var _ errors.SecondaryError = &MissingToKeywordInAttachExpressionError{}
 var _ errors.HasDocumentationLink = &MissingToKeywordInAttachExpressionError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingToKeywordInAttachExpressionError{}
 
 func (*MissingToKeywordInAttachExpressionError) isParseError() {}
 
@@ -1482,6 +1582,23 @@ func (e *MissingToKeywordInAttachExpressionError) Error() string {
 
 func (*MissingToKeywordInAttachExpressionError) SecondaryError() string {
 	return "the 'attach' expression requires the 'to' keyword to specify the value to attach to"
+}
+
+func (e *MissingToKeywordInAttachExpressionError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert 'to'",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: keywordInsertion(KeywordTo, e.GotToken.Type),
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 func (*MissingToKeywordInAttachExpressionError) DocumentationLink() string {
@@ -1523,6 +1640,7 @@ var _ ParseError = &UnexpectedCommaInDictionaryTypeError{}
 var _ errors.UserError = &UnexpectedCommaInDictionaryTypeError{}
 var _ errors.SecondaryError = &UnexpectedCommaInDictionaryTypeError{}
 var _ errors.HasDocumentationLink = &UnexpectedCommaInDictionaryTypeError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &UnexpectedCommaInDictionaryTypeError{}
 
 func (*UnexpectedCommaInDictionaryTypeError) isParseError() {}
 
@@ -1542,6 +1660,23 @@ func (*UnexpectedCommaInDictionaryTypeError) Error() string {
 
 func (*UnexpectedCommaInDictionaryTypeError) SecondaryError() string {
 	return "dictionary types use a colon (:) to separate key and value types, not commas (,)"
+}
+
+func (e *UnexpectedCommaInDictionaryTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Remove comma",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "",
+					Range: ast.Range{
+						StartPos: e.Pos,
+						EndPos:   e.Pos,
+					},
+				},
+			},
+		},
+	}
 }
 
 func (*UnexpectedCommaInDictionaryTypeError) DocumentationLink() string {
@@ -1591,6 +1726,7 @@ var _ ParseError = &MultipleColonInDictionaryTypeError{}
 var _ errors.UserError = &MultipleColonInDictionaryTypeError{}
 var _ errors.SecondaryError = &MultipleColonInDictionaryTypeError{}
 var _ errors.HasDocumentationLink = &MultipleColonInDictionaryTypeError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MultipleColonInDictionaryTypeError{}
 
 func (*MultipleColonInDictionaryTypeError) isParseError() {}
 
@@ -1610,6 +1746,23 @@ func (*MultipleColonInDictionaryTypeError) Error() string {
 
 func (*MultipleColonInDictionaryTypeError) SecondaryError() string {
 	return "dictionary types can only have one colon (:) to separate key and value types"
+}
+
+func (e *MultipleColonInDictionaryTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Remove extra colon",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "",
+					Range: ast.Range{
+						StartPos: e.Pos,
+						EndPos:   e.Pos,
+					},
+				},
+			},
+		},
+	}
 }
 
 func (*MultipleColonInDictionaryTypeError) DocumentationLink() string {
@@ -1761,6 +1914,7 @@ var _ ParseError = &UnexpectedColonInIntersectionTypeError{}
 var _ errors.UserError = &UnexpectedColonInIntersectionTypeError{}
 var _ errors.SecondaryError = &UnexpectedColonInIntersectionTypeError{}
 var _ errors.HasDocumentationLink = &UnexpectedColonInIntersectionTypeError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &UnexpectedColonInIntersectionTypeError{}
 
 func (*UnexpectedColonInIntersectionTypeError) isParseError() {}
 
@@ -1780,6 +1934,23 @@ func (*UnexpectedColonInIntersectionTypeError) Error() string {
 
 func (*UnexpectedColonInIntersectionTypeError) SecondaryError() string {
 	return "intersection types use commas (,) to separate multiple types, not colons (:)"
+}
+
+func (e *UnexpectedColonInIntersectionTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Replace colon with comma",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: ",",
+					Range: ast.Range{
+						StartPos: e.Pos,
+						EndPos:   e.Pos,
+					},
+				},
+			},
+		},
+	}
 }
 
 func (*UnexpectedColonInIntersectionTypeError) DocumentationLink() string {
@@ -1847,6 +2018,7 @@ var _ ParseError = &MissingRightArrowInEntitlementMappingError{}
 var _ errors.UserError = &MissingRightArrowInEntitlementMappingError{}
 var _ errors.SecondaryError = &MissingRightArrowInEntitlementMappingError{}
 var _ errors.HasDocumentationLink = &MissingRightArrowInEntitlementMappingError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingRightArrowInEntitlementMappingError{}
 
 func (*MissingRightArrowInEntitlementMappingError) isParseError() {}
 
@@ -1869,6 +2041,23 @@ func (e *MissingRightArrowInEntitlementMappingError) Error() string {
 
 func (*MissingRightArrowInEntitlementMappingError) SecondaryError() string {
 	return "entitlement mappings must use '->' to separate the input and output types"
+}
+
+func (e *MissingRightArrowInEntitlementMappingError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert '->'",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: `-> `,
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 func (*MissingRightArrowInEntitlementMappingError) DocumentationLink() string {
@@ -1980,6 +2169,7 @@ var _ ParseError = &MissingSeparatorInIntersectionOrDictionaryTypeError{}
 var _ errors.UserError = &MissingSeparatorInIntersectionOrDictionaryTypeError{}
 var _ errors.SecondaryError = &MissingSeparatorInIntersectionOrDictionaryTypeError{}
 var _ errors.HasDocumentationLink = &MissingSeparatorInIntersectionOrDictionaryTypeError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingSeparatorInIntersectionOrDictionaryTypeError{}
 
 func (*MissingSeparatorInIntersectionOrDictionaryTypeError) isParseError() {}
 
@@ -2003,6 +2193,35 @@ func (e *MissingSeparatorInIntersectionOrDictionaryTypeError) Error() string {
 func (*MissingSeparatorInIntersectionOrDictionaryTypeError) SecondaryError() string {
 	return "types in an intersection type must be separated by a comma (,) " +
 		"and types in a dictionary type must be separated by a colon (:)"
+}
+
+func (e *MissingSeparatorInIntersectionOrDictionaryTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert comma",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: ", ",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+		{
+			Message: "Insert colon",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: ": ",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 func (*MissingSeparatorInIntersectionOrDictionaryTypeError) DocumentationLink() string {
@@ -2102,6 +2321,7 @@ var _ ParseError = &MissingClosingParenInArgumentListError{}
 var _ errors.UserError = &MissingClosingParenInArgumentListError{}
 var _ errors.SecondaryError = &MissingClosingParenInArgumentListError{}
 var _ errors.HasDocumentationLink = &MissingClosingParenInArgumentListError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingClosingParenInArgumentListError{}
 
 func (*MissingClosingParenInArgumentListError) isParseError() {}
 
@@ -2125,6 +2345,23 @@ func (*MissingClosingParenInArgumentListError) SecondaryError() string {
 
 func (*MissingClosingParenInArgumentListError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+func (e *MissingClosingParenInArgumentListError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Add closing parenthesis",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: ")",
+					Range: ast.Range{
+						StartPos: e.Pos,
+						EndPos:   e.Pos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // UnexpectedCommaInArgumentListError is reported when a comma is found at an unexpected position in an argument list.

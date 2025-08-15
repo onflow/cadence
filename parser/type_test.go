@@ -27,6 +27,7 @@ import (
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/parser/lexer"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
@@ -950,7 +951,8 @@ func TestParseIntersectionType(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseType("{ T U }")
+		const code = "{ T U }"
+		result, errs := testParseType(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingSeparatorInIntersectionOrDictionaryTypeError{
@@ -968,13 +970,52 @@ func TestParseIntersectionType(t *testing.T) {
 
 		// TODO: return type
 		assert.Nil(t, result)
+
+		var missingSepErr *MissingSeparatorInIntersectionOrDictionaryTypeError
+		require.ErrorAs(t, errs[0], &missingSepErr)
+
+		fixes := missingSepErr.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert comma",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ", ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+				{
+					Message: "Insert colon",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ": ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t, "{ T , U }", fixes[0].TextEdits[0].ApplyTo(code))
+		assert.Equal(t, "{ T : U }", fixes[1].TextEdits[0].ApplyTo(code))
 	})
 
 	t.Run("invalid: colon", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseType("{ T , U : V }")
+		const code = "{ T , U : V }"
+		result, errs := testParseType(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&UnexpectedColonInIntersectionTypeError{
@@ -986,6 +1027,34 @@ func TestParseIntersectionType(t *testing.T) {
 
 		// TODO: return type
 		assert.Nil(t, result)
+
+		var unexpectedColonErr *UnexpectedColonInIntersectionTypeError
+		require.ErrorAs(t, errs[0], &unexpectedColonErr)
+
+		fixes := unexpectedColonErr.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Replace colon with comma",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: ",",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+								EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"{ T , U , V }",
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
 	})
 
 	t.Run("invalid: colon", func(t *testing.T) {
@@ -1259,7 +1328,8 @@ func TestParseDictionaryType(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseType("{T:U,}")
+		const code = "{T:U,}"
+		result, errs := testParseType(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&UnexpectedCommaInDictionaryTypeError{
@@ -1271,13 +1341,42 @@ func TestParseDictionaryType(t *testing.T) {
 
 		// TODO: return type
 		assert.Nil(t, result)
+
+		var unexpectedCommaErr *UnexpectedCommaInDictionaryTypeError
+		require.ErrorAs(t, errs[0], &unexpectedCommaErr)
+
+		fixes := unexpectedCommaErr.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove comma",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"{T:U}",
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
 	})
 
 	t.Run("invalid, unexpected colon after value type", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseType("{T:U:}")
+		const code = "{T:U:}"
+		result, errs := testParseType(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MultipleColonInDictionaryTypeError{
@@ -1289,6 +1388,34 @@ func TestParseDictionaryType(t *testing.T) {
 
 		// TODO: return type
 		assert.Nil(t, result)
+
+		var multipleColonErr *MultipleColonInDictionaryTypeError
+		require.ErrorAs(t, errs[0], &multipleColonErr)
+
+		fixes := multipleColonErr.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove extra colon",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"{T:U}",
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
 	})
 
 	t.Run("invalid, unexpected colon after colon", func(t *testing.T) {
