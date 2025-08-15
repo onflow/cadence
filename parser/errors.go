@@ -4803,6 +4803,7 @@ var _ ParseError = &MissingEndOfParenthesizedTypeError{}
 var _ errors.UserError = &MissingEndOfParenthesizedTypeError{}
 var _ errors.SecondaryError = &MissingEndOfParenthesizedTypeError{}
 var _ errors.HasDocumentationLink = &MissingEndOfParenthesizedTypeError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingEndOfParenthesizedTypeError{}
 
 func (*MissingEndOfParenthesizedTypeError) isParseError() {}
 
@@ -4829,6 +4830,23 @@ func (*MissingEndOfParenthesizedTypeError) SecondaryError() string {
 
 func (*MissingEndOfParenthesizedTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+func (e *MissingEndOfParenthesizedTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert closing parenthesis",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: ")",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // MissingEndOfParenthesizedExpressionError is reported when a parenthesized expression is missing a closing parenthesis.
