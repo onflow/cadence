@@ -375,6 +375,30 @@ func TestParseArrayType(t *testing.T) {
 			},
 			errs,
 		)
+
+		var missingBracketErr *MissingClosingBracketInArrayTypeError
+		require.ErrorAs(t, errs[0], &missingBracketErr)
+
+		fixes := missingBracketErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing bracket",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "]",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t, "[T;1]", fixes[0].TextEdits[0].ApplyTo(code))
 	})
 }
 
@@ -1492,30 +1516,6 @@ func TestParseDictionaryType(t *testing.T) {
 			},
 			errs,
 		)
-
-		var missingBracketErr *MissingClosingBracketInArrayTypeError
-		require.ErrorAs(t, errs[0], &missingBracketErr)
-
-		fixes := missingBracketErr.SuggestFixes(code)
-		AssertEqualWithDiff(t,
-			[]errors.SuggestedFix[ast.TextEdit]{
-				{
-					Message: "Insert closing bracket",
-					TextEdits: []ast.TextEdit{
-						{
-							Insertion: "]",
-							Range: ast.Range{
-								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
-								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
-							},
-						},
-					},
-				},
-			},
-			fixes,
-		)
-
-		assert.Equal(t, "[T;1]", fixes[0].TextEdits[0].ApplyTo(code))
 	})
 }
 
