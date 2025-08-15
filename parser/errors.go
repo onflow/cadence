@@ -4044,6 +4044,7 @@ var _ ParseError = &MissingCommentEndError{}
 var _ errors.UserError = &MissingCommentEndError{}
 var _ errors.SecondaryError = &MissingCommentEndError{}
 var _ errors.HasDocumentationLink = &MissingCommentEndError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingCommentEndError{}
 
 func (*MissingCommentEndError) isParseError() {}
 
@@ -4070,6 +4071,23 @@ func (*MissingCommentEndError) SecondaryError() string {
 
 func (*MissingCommentEndError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax#comments"
+}
+
+func (e *MissingCommentEndError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert '*/'",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "*/",
+					Range: ast.Range{
+						StartPos: e.Pos,
+						EndPos:   e.Pos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // UnexpectedTokenInBlockCommentError is reported when an unexpected token is found in a block comment.
