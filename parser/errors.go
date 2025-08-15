@@ -4678,6 +4678,7 @@ var _ ParseError = &MissingOpeningBraceError{}
 var _ errors.UserError = &MissingOpeningBraceError{}
 var _ errors.SecondaryError = &MissingOpeningBraceError{}
 var _ errors.HasDocumentationLink = &MissingOpeningBraceError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingOpeningBraceError{}
 
 func (*MissingOpeningBraceError) isParseError() {}
 
@@ -4713,6 +4714,23 @@ func (*MissingOpeningBraceError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
+func (e *MissingOpeningBraceError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert opening brace",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "{",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
 // MissingClosingBraceError is reported when a closing brace is missing .
 type MissingClosingBraceError struct {
 	Description string
@@ -4723,6 +4741,7 @@ var _ ParseError = &MissingClosingBraceError{}
 var _ errors.UserError = &MissingClosingBraceError{}
 var _ errors.SecondaryError = &MissingClosingBraceError{}
 var _ errors.HasDocumentationLink = &MissingClosingBraceError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingClosingBraceError{}
 
 func (*MissingClosingBraceError) isParseError() {}
 
@@ -4756,6 +4775,23 @@ func (e *MissingClosingBraceError) SecondaryError() string {
 func (*MissingClosingBraceError) DocumentationLink() string {
 	// TODO: improve this link to point to the specific page
 	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+func (e *MissingClosingBraceError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert closing brace",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "}",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // MissingEndOfParenthesizedTypeError is reported when a parenthesized type is missing a closing parenthesis.
