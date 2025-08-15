@@ -979,7 +979,8 @@ func TestParseEmit(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseStatements("emit T")
+		const code = "emit T"
+		_, errs := testParseStatements(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingOpeningParenInNominalTypeInvocationError{
@@ -996,6 +997,33 @@ func TestParseEmit(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingParenErr *MissingOpeningParenInNominalTypeInvocationError
+		require.ErrorAs(t, errs[0], &missingParenErr)
+
+		fixes := missingParenErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert opening parenthesis",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "(",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+								EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"emit T(",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 }

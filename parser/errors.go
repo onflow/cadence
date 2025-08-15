@@ -5465,6 +5465,7 @@ var _ ParseError = &MissingOpeningParenInNominalTypeInvocationError{}
 var _ errors.UserError = &MissingOpeningParenInNominalTypeInvocationError{}
 var _ errors.SecondaryError = &MissingOpeningParenInNominalTypeInvocationError{}
 var _ errors.HasDocumentationLink = &MissingOpeningParenInNominalTypeInvocationError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingOpeningParenInNominalTypeInvocationError{}
 
 func (*MissingOpeningParenInNominalTypeInvocationError) isParseError() {}
 
@@ -5491,6 +5492,23 @@ func (*MissingOpeningParenInNominalTypeInvocationError) SecondaryError() string 
 
 func (*MissingOpeningParenInNominalTypeInvocationError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+func (e *MissingOpeningParenInNominalTypeInvocationError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert opening parenthesis",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "(",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // MissingOpeningParenInFunctionTypeError is reported when a function type parameter list
