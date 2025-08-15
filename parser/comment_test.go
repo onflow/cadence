@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/parser/lexer"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
@@ -137,7 +138,8 @@ func TestParseBlockComment(t *testing.T) {
 	t.Run("missing closing", func(t *testing.T) {
 		t.Parallel()
 
-		_, errs := testParseExpression(`/*`)
+		const code = `/*`
+		_, errs := testParseExpression(code)
 
 		AssertEqualWithDiff(t,
 			[]error{
@@ -149,6 +151,28 @@ func TestParseBlockComment(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingCommentEndErr *MissingCommentEndError
+		require.ErrorAs(t, errs[0], &missingCommentEndErr)
+
+		fixes := missingCommentEndErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert '*/'",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "*/",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+								EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+							},
+						},
+					},
+				},
+			},
+			fixes,
 		)
 	})
 
