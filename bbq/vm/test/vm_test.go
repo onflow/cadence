@@ -11351,4 +11351,161 @@ func TestVMImportAliasing(t *testing.T) {
 
 		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), result)
 	})
+
+	t.Run("nested type with same name as alias", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := common.MustBytesToAddress([]byte{0x1})
+
+		fooChecker, err := ParseAndCheckWithOptions(t,
+			`
+			access(all) contract Foo {
+				access(all) struct Foo1 {
+					fun Test(): Int {
+						return 1
+					}
+				}
+			}
+            `,
+			ParseAndCheckOptions{
+				Location: common.AddressLocation{
+					Address: address,
+					Name:    "Foo",
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		fooCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(fooChecker),
+			fooChecker.Location,
+		)
+		fooProgram := fooCompiler.Compile()
+
+		// Compile and run main program
+
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+			import Foo as Foo1 from 0x01
+
+			access(all) fun test(): Int {
+				var foo = Foo1.Foo1()
+				return foo.Test()
+			}
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						require.IsType(t, common.AddressLocation{}, location)
+						addressLocation := location.(common.AddressLocation)
+						var elaboration *sema.Elaboration
+						switch addressLocation.Address {
+						case address:
+							elaboration = fooChecker.Elaboration
+						default:
+							assert.FailNow(t, "invalid location")
+						}
+
+						return sema.ElaborationImport{
+							Elaboration: elaboration,
+						}, nil
+					},
+					LocationHandler: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
+
+						require.Equal(t,
+							common.AddressLocation{
+								Address: address,
+								Name:    "",
+							},
+							location,
+						)
+
+						for _, identifier := range identifiers {
+							result = append(result, sema.ResolvedLocation{
+								Location: common.AddressLocation{
+									Address: location.(common.AddressLocation).Address,
+									Name:    identifier.Identifier,
+								},
+								Identifiers: []ast.Identifier{
+									identifier,
+								},
+							})
+						}
+						return
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp.Config.LocationHandler = func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
+
+			require.Equal(t,
+				common.AddressLocation{
+					Address: address,
+					Name:    "",
+				},
+				location,
+			)
+
+			for _, identifier := range identifiers {
+				result = append(result, sema.ResolvedLocation{
+					Location: common.AddressLocation{
+						Address: location.(common.AddressLocation).Address,
+						Name:    identifier.Identifier,
+					},
+					Identifiers: []ast.Identifier{
+						identifier,
+					},
+				})
+			}
+			return
+		}
+		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			return fooProgram
+		}
+
+		program := comp.Compile()
+		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+		vmConfig.BuiltinGlobalsProvider = VMBuiltinGlobalsProviderWithDefaultsAndPanic
+		_, fooContractValue := initializeContract(
+			t,
+			common.AddressLocation{
+				Address: address,
+				Name:    "Foo",
+			},
+			fooProgram,
+			vmConfig,
+		)
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			return fooProgram
+		}
+		vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
+			return fooContractValue
+		}
+
+		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+
+			elaboration := fooChecker.Elaboration
+
+			compositeType := elaboration.CompositeType(typeID)
+			if compositeType != nil {
+				return compositeType, nil
+			}
+
+			return elaboration.InterfaceType(typeID), nil
+		}
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		result, err := vmInstance.InvokeExternally("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), result)
+	})
 }

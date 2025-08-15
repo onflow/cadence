@@ -190,11 +190,9 @@ func newCompiler[E, T any](
 		compositeTypeStack: &Stack[sema.CompositeKindedType]{
 			elements: make([]sema.CompositeKindedType, 0),
 		},
-		codeGen:                  codeGen,
-		typeGen:                  typeGen,
-		postConditionsIndex:      -1,
-		globalAliasTable:         make(map[string]string),
-		globalRemoveAddressTable: make(map[string]string),
+		codeGen:             codeGen,
+		typeGen:             typeGen,
+		postConditionsIndex: -1,
 	}
 }
 
@@ -842,6 +840,18 @@ func (c *Compiler[_, T]) exportTypes() []T {
 	return c.compiledTypes
 }
 
+// removeAlias removes the address qualifier from the name if it exists
+func (c *Compiler[_, T]) removeAlias(name string) string {
+	if c.globalRemoveAddressTable == nil {
+		return name
+	}
+	antialias, ok := c.globalRemoveAddressTable[name]
+	if ok {
+		return antialias
+	}
+	return name
+}
+
 func (c *Compiler[_, _]) exportImports() []bbq.Import {
 	var exportedImports []bbq.Import
 
@@ -849,11 +859,7 @@ func (c *Compiler[_, _]) exportImports() []bbq.Import {
 	if count > 0 {
 		exportedImports = make([]bbq.Import, 0, count)
 		for _, importedGlobal := range c.importedGlobals {
-			name := importedGlobal.Name
-			antialias, ok := c.globalRemoveAddressTable[name]
-			if ok {
-				name = antialias
-			}
+			name := c.removeAlias(importedGlobal.Name)
 			bbqImport := bbq.Import{
 				Location: importedGlobal.Location,
 				Name:     name,
@@ -2285,9 +2291,10 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 			commons.LocationQualifier(memberInfo.AccessedType),
 			invokedExpr.Identifier.Identifier,
 		)
-		_, ok := c.globalRemoveAddressTable[addressQualifiedFuncName]
-		if ok {
-			funcName = addressQualifiedFuncName
+		if c.globalRemoveAddressTable != nil {
+			if _, ok := c.globalRemoveAddressTable[addressQualifiedFuncName]; ok {
+				funcName = addressQualifiedFuncName
+			}
 		}
 
 		// Calling a type constructor must be invoked statically. e.g: `SomeContract.Foo()`.
@@ -2367,9 +2374,10 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		commons.LocationQualifier(memberInfo.AccessedType),
 		invokedExpr.Identifier.Identifier,
 	)
-	_, ok := c.globalRemoveAddressTable[addressQualifiedFuncName]
-	if ok {
-		funcName = addressQualifiedFuncName
+	if c.globalRemoveAddressTable != nil {
+		if _, ok := c.globalRemoveAddressTable[addressQualifiedFuncName]; ok {
+			funcName = addressQualifiedFuncName
+		}
 	}
 
 	// An invocation can be either a method of a value (e.g: `"someString".Concat("otherString")`),
@@ -3337,16 +3345,36 @@ func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclarati
 // Applies type aliases to a given string.
 // Generalized to support type qualified function names
 // e.g. Foo1.bar -> A.001.Foo.bar
+// Only consider the first part of the name for aliasing
 func (c *Compiler[_, _]) applyTypeAliases(name string) string {
+	if c.globalAliasTable == nil {
+		return name
+	}
 	parts := strings.Split(name, ".")
-	for i, part := range parts {
-		alias, ok := c.globalAliasTable[part]
-		if ok {
-			parts[i] = alias
-		}
+	part := parts[0]
+	alias, ok := c.globalAliasTable[part]
+	if ok {
+		parts[0] = alias
 	}
 	aliasedName := strings.Join(parts, ".")
 	return aliasedName
+}
+
+func (c *Compiler[_, _]) createGlobalAlias(location common.Location, name string, aliases map[string]string, forceQualify bool) string {
+	alias, ok := aliases[name]
+	// if alias exists or we want to force qualify (e.g. for aliased methods)
+	if ok || forceQualify {
+		// we want a table pointing from the alias -> address qualifier (Foo1 -> A.0001.Foo)
+		addressQualifiedName := string(location.TypeID(nil, name))
+		// check if alias exists in case of force qualification
+		if ok {
+			c.globalAliasTable[alias] = addressQualifiedName
+		}
+
+		c.globalRemoveAddressTable[addressQualifiedName] = name
+		return addressQualifiedName
+	}
+	return name
 }
 
 func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location, aliases map[string]string) {
@@ -3355,52 +3383,28 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location,
 		return
 	}
 
+	if len(aliases) != 0 && c.globalAliasTable == nil {
+		// Lazy initialize the alias tables when needed.
+		c.globalAliasTable = make(map[string]string)
+		c.globalRemoveAddressTable = make(map[string]string)
+	}
+
 	importedProgram := c.Config.ImportHandler(location)
 
 	// Add a global variable for the imported contract value.
 	contracts := importedProgram.Contracts
 	for _, contract := range contracts {
-		name := contract.Name
-		alias, ok := aliases[name]
-		if ok {
-			// we want a table pointing from the alias -> address qualifier (Foo1 -> A.0001.Foo)
-			addressQualifiedName := string(location.TypeID(nil, name))
-			c.globalAliasTable[alias] = addressQualifiedName
-
-			c.globalRemoveAddressTable[addressQualifiedName] = name
-			name = addressQualifiedName
-		}
+		name := c.createGlobalAlias(location, contract.Name, aliases, false)
 		c.addImportedGlobal(location, name)
 	}
 
 	for _, variable := range importedProgram.Variables {
-		name := variable.Name
-		alias, ok := aliases[name]
-		if ok {
-			// we want a table pointing from the alias -> address qualifier (Foo1 -> A.0001.Foo)
-			addressQualifiedName := string(location.TypeID(nil, name))
-			c.globalAliasTable[alias] = addressQualifiedName
-
-			c.globalRemoveAddressTable[addressQualifiedName] = name
-			name = addressQualifiedName
-		}
+		name := c.createGlobalAlias(location, variable.Name, aliases, false)
 		c.addImportedGlobal(location, name)
 	}
 
 	for _, function := range importedProgram.Functions {
-		name := function.QualifiedName
-		alias, ok := aliases[name]
-		// for functions, as long as aliases exist, always location qualify
-		// most function names will not have aliases, exception: struct constructors
-		if len(aliases) != 0 {
-			addressQualifiedName := string(location.TypeID(nil, name))
-			// struct constructors can be aliased
-			if ok {
-				c.globalAliasTable[alias] = addressQualifiedName
-			}
-			c.globalRemoveAddressTable[addressQualifiedName] = name
-			name = addressQualifiedName
-		}
+		name := c.createGlobalAlias(location, function.QualifiedName, aliases, len(aliases) > 0)
 		c.addImportedGlobal(location, name)
 	}
 
