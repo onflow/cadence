@@ -1209,7 +1209,8 @@ func TestParseIntersectionType(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseType("{U")
+		const code = "{U"
+		_, errs := testParseType(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingClosingBraceInIntersectionOrDictionaryTypeError{
@@ -1217,6 +1218,33 @@ func TestParseIntersectionType(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingBraceErr *MissingClosingBraceInIntersectionOrDictionaryTypeError
+		require.ErrorAs(t, errs[0], &missingBraceErr)
+
+		fixes := missingBraceErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing brace",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "}",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+								EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"{U}",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
@@ -1505,9 +1533,10 @@ func TestParseDictionaryType(t *testing.T) {
 
 	t.Run("invalid, missing end after key type  and value type", func(t *testing.T) {
 
+		const code = "{T:U"
 		t.Parallel()
 
-		_, errs := testParseType("{T:U")
+		_, errs := testParseType(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingClosingBraceInIntersectionOrDictionaryTypeError{
@@ -1515,6 +1544,33 @@ func TestParseDictionaryType(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingBraceErr *MissingClosingBraceInIntersectionOrDictionaryTypeError
+		require.ErrorAs(t, errs[0], &missingBraceErr)
+
+		fixes := missingBraceErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing brace",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "}",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"{T:U}",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 }

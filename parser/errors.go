@@ -5299,6 +5299,7 @@ var _ ParseError = &MissingClosingBraceInIntersectionOrDictionaryTypeError{}
 var _ errors.UserError = &MissingClosingBraceInIntersectionOrDictionaryTypeError{}
 var _ errors.SecondaryError = &MissingClosingBraceInIntersectionOrDictionaryTypeError{}
 var _ errors.HasDocumentationLink = &MissingClosingBraceInIntersectionOrDictionaryTypeError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingClosingBraceInIntersectionOrDictionaryTypeError{}
 
 func (*MissingClosingBraceInIntersectionOrDictionaryTypeError) isParseError() {}
 
@@ -5325,6 +5326,23 @@ func (*MissingClosingBraceInIntersectionOrDictionaryTypeError) SecondaryError() 
 
 func (*MissingClosingBraceInIntersectionOrDictionaryTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
+}
+
+func (e *MissingClosingBraceInIntersectionOrDictionaryTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert closing brace",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "}",
+					Range: ast.Range{
+						StartPos: e.Pos,
+						EndPos:   e.Pos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // MissingClosingParenInAuthError is reported when an authorization is missing a closing parenthesis.
