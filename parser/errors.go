@@ -5569,7 +5569,7 @@ func (e *MissingOpeningParenInFunctionTypeError) SuggestFixes(_ string) []errors
 }
 
 // MissingClosingParenInFunctionTypeError is reported when a function type parameter list
-// is missing a opening parenthesis.
+// is missing a closing parenthesis.
 type MissingClosingParenInFunctionTypeError struct {
 	GotToken lexer.Token
 }
@@ -5578,6 +5578,7 @@ var _ ParseError = &MissingClosingParenInFunctionTypeError{}
 var _ errors.UserError = &MissingClosingParenInFunctionTypeError{}
 var _ errors.SecondaryError = &MissingClosingParenInFunctionTypeError{}
 var _ errors.HasDocumentationLink = &MissingClosingParenInFunctionTypeError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingClosingParenInFunctionTypeError{}
 
 func (*MissingClosingParenInFunctionTypeError) isParseError() {}
 
@@ -5593,7 +5594,7 @@ func (e *MissingClosingParenInFunctionTypeError) EndPosition(_ common.MemoryGaug
 
 func (e *MissingClosingParenInFunctionTypeError) Error() string {
 	return expectedButGotToken(
-		fmt.Sprintf("expected %s at start of function type parameter list", lexer.TokenParenClose),
+		fmt.Sprintf("expected %s at end of function type parameter list", lexer.TokenParenClose),
 		e.GotToken.Type,
 	)
 }
@@ -5605,4 +5606,21 @@ func (*MissingClosingParenInFunctionTypeError) SecondaryError() string {
 
 func (*MissingClosingParenInFunctionTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions#function-types"
+}
+
+func (e *MissingClosingParenInFunctionTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert closing parenthesis",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: ")",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }

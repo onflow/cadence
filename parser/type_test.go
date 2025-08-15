@@ -1795,7 +1795,8 @@ func TestParseFunctionType(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseType("fun(Int")
+		const code = "fun(Int"
+		_, errs := testParseType(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingClosingParenInFunctionTypeError{
@@ -1810,6 +1811,30 @@ func TestParseFunctionType(t *testing.T) {
 			},
 			errs,
 		)
+
+		var missingParenErr *MissingClosingParenInFunctionTypeError
+		require.ErrorAs(t, errs[0], &missingParenErr)
+
+		fixes := missingParenErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing parenthesis",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ")",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+								EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t, "fun(Int)", fixes[0].TextEdits[0].ApplyTo(code))
 	})
 
 	t.Run("invalid, leading comma", func(t *testing.T) {
