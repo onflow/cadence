@@ -5133,6 +5133,7 @@ var _ ParseError = &MissingColonInConditionalExpressionError{}
 var _ errors.UserError = &MissingColonInConditionalExpressionError{}
 var _ errors.SecondaryError = &MissingColonInConditionalExpressionError{}
 var _ errors.HasDocumentationLink = &MissingColonInConditionalExpressionError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingColonInConditionalExpressionError{}
 
 func (*MissingColonInConditionalExpressionError) isParseError() {}
 
@@ -5159,6 +5160,23 @@ func (*MissingColonInConditionalExpressionError) SecondaryError() string {
 
 func (*MissingColonInConditionalExpressionError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/operators/bitwise-ternary-operators#ternary-conditional-operator"
+}
+
+func (e *MissingColonInConditionalExpressionError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert colon",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: ": ",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // MissingSlashInPathExpressionError is reported when a path expression is missing a slash.

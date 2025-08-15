@@ -445,7 +445,8 @@ func TestParseAdvancedExpression(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression("a ? b c")
+		const code = "a ? b c"
+		_, errs := testParseExpression(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingColonInConditionalExpressionError{
@@ -459,6 +460,33 @@ func TestParseAdvancedExpression(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingColonErr *MissingColonInConditionalExpressionError
+		require.ErrorAs(t, errs[0], &missingColonErr)
+
+		fixes := missingColonErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert colon",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ": ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+								EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"a ? b : c",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
