@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -1054,7 +1055,7 @@ func TestInterpretFixedPointLiteral(t *testing.T) {
 
 	for ty, values := range testCases {
 		for _, value := range values {
-
+			ty := ty
 			literal := value.literal
 			expectedValue := value.expectedValue
 			expectedError := value.expectedError
@@ -1086,6 +1087,149 @@ func TestInterpretFixedPointLiteral(t *testing.T) {
 				}
 			})
 		}
-
 	}
+}
+
+func TestInterpretFixedPointLeastSignificantDecimalHandling(t *testing.T) {
+	t.Parallel()
+
+	test := func(typ sema.Type, a, b string, operator ast.Operation) interpreter.Value {
+		code := fmt.Sprintf(`
+            fun main(): %[1]s {
+                return %[2]s %[4]s %[3]s
+            }
+            `,
+			typ,
+			a,
+			b,
+			operator.Symbol(),
+		)
+
+		invokable := parseCheckAndPrepare(t, code)
+
+		result, err := invokable.Invoke("main")
+		require.NoError(t, err)
+		return result
+	}
+
+	type testValue struct {
+		a, b   string
+		result string
+	}
+
+	t.Run("multiplication", func(t *testing.T) {
+		t.Parallel()
+
+		// Should truncate the least significant decimal point.
+		// i.e: result must always be zero.
+
+		testCases := map[sema.Type][]testValue{
+			sema.Fix64Type: {
+				{
+					a:      "0.6",
+					b:      "0.00000001",
+					result: "0.00000000",
+				},
+			},
+			sema.UFix64Type: {
+				{
+					a:      "0.6",
+					b:      "0.00000001",
+					result: "0.00000000",
+				},
+			},
+			sema.Fix128Type: {
+				{
+					a:      "0.6",
+					b:      "0.000000000000000000000001",
+					result: "0.000000000000000000000000",
+				},
+			},
+			sema.UFix128Type: {
+				{
+					a:      "0.6",
+					b:      "0.000000000000000000000001",
+					result: "0.000000000000000000000000",
+				},
+			},
+		}
+
+		for typ, values := range testCases {
+			for _, value := range values {
+				typ := typ
+				a := value.a
+				b := value.b
+				expectedResult := value.result
+
+				t.Run(typ.String(), func(t *testing.T) {
+					t.Parallel()
+
+					result := test(typ, a, b, ast.OperationMul)
+					assert.Equal(
+						t,
+						expectedResult,
+						result.String(),
+					)
+				})
+			}
+		}
+	})
+
+	t.Run("division", func(t *testing.T) {
+		t.Parallel()
+
+		// Should truncate the least significant decimal point.
+		// i.e: result must always be zero.
+
+		testCases := map[sema.Type][]testValue{
+			sema.Fix64Type: {
+				{
+					a:      "0.00000006",
+					b:      "10.0",
+					result: "0.00000000",
+				},
+			},
+			sema.UFix64Type: {
+				{
+					a:      "0.00000006",
+					b:      "10.0",
+					result: "0.00000000",
+				},
+			},
+			sema.Fix128Type: {
+				{
+					a:      "0.000000000000000000000006",
+					b:      "10.0",
+					result: "0.000000000000000000000000",
+				},
+			},
+			sema.UFix128Type: {
+				{
+					a:      "0.000000000000000000000006",
+					b:      "10.0",
+					result: "0.000000000000000000000000",
+				},
+			},
+		}
+
+		for typ, values := range testCases {
+			for _, value := range values {
+				typ := typ
+				a := value.a
+				b := value.b
+				expectedResult := value.result
+
+				t.Run(typ.String(), func(t *testing.T) {
+					t.Parallel()
+
+					result := test(typ, a, b, ast.OperationDiv)
+					assert.Equal(
+						t,
+						expectedResult,
+						result.String(),
+					)
+				})
+			}
+		}
+	})
 }
