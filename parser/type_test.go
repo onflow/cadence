@@ -172,7 +172,8 @@ func TestParseArrayType(t *testing.T) {
 	t.Run("variable, missing end", func(t *testing.T) {
 		t.Parallel()
 
-		_, errs := testParseType("[Int")
+		const code = "[Int"
+		_, errs := testParseType(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingClosingBracketInArrayTypeError{
@@ -187,6 +188,30 @@ func TestParseArrayType(t *testing.T) {
 			},
 			errs,
 		)
+
+		var missingBracketErr *MissingClosingBracketInArrayTypeError
+		require.ErrorAs(t, errs[0], &missingBracketErr)
+
+		fixes := missingBracketErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing bracket",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "]",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t, "[Int]", fixes[0].TextEdits[0].ApplyTo(code))
 	})
 
 	t.Run("constant", func(t *testing.T) {
@@ -334,7 +359,8 @@ func TestParseArrayType(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseType("[T;1")
+		const code = "[T;1"
+		_, errs := testParseType(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingClosingBracketInArrayTypeError{
@@ -1466,6 +1492,30 @@ func TestParseDictionaryType(t *testing.T) {
 			},
 			errs,
 		)
+
+		var missingBracketErr *MissingClosingBracketInArrayTypeError
+		require.ErrorAs(t, errs[0], &missingBracketErr)
+
+		fixes := missingBracketErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing bracket",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "]",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t, "[T;1]", fixes[0].TextEdits[0].ApplyTo(code))
 	})
 }
 

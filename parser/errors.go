@@ -4877,6 +4877,7 @@ var _ ParseError = &MissingClosingBracketInArrayTypeError{}
 var _ errors.UserError = &MissingClosingBracketInArrayTypeError{}
 var _ errors.SecondaryError = &MissingClosingBracketInArrayTypeError{}
 var _ errors.HasDocumentationLink = &MissingClosingBracketInArrayTypeError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingClosingBracketInArrayTypeError{}
 
 func (*MissingClosingBracketInArrayTypeError) isParseError() {}
 
@@ -4903,6 +4904,23 @@ func (*MissingClosingBracketInArrayTypeError) SecondaryError() string {
 
 func (*MissingClosingBracketInArrayTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/values-and-types/arrays#array-types"
+}
+
+func (e *MissingClosingBracketInArrayTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert closing bracket",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "]",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // MissingClosingBracketInArrayExpressionError is reported when an array expression is missing a closing bracket.
