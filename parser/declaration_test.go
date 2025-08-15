@@ -433,7 +433,8 @@ func TestParseVariableDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations("let x 1")
+		const code = "let x 1"
+		_, errs := testParseDeclarations(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingTransferError{
@@ -442,6 +443,43 @@ func TestParseVariableDeclaration(t *testing.T) {
 			},
 			errs,
 		)
+
+		var missingTransferErr *MissingTransferError
+		require.ErrorAs(t, errs[0], &missingTransferErr)
+
+		fixes := missingTransferErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert '=' (for struct)",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "= ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+								EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+							},
+						},
+					},
+				},
+				{
+					Message: "Insert '<-' (for resource)",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "<- ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+								EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t, "let x = 1", fixes[0].TextEdits[0].ApplyTo(code))
+		assert.Equal(t, "let x <- 1", fixes[1].TextEdits[0].ApplyTo(code))
 	})
 }
 

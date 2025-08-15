@@ -3458,6 +3458,7 @@ var _ ParseError = &MissingTransferError{}
 var _ errors.UserError = &MissingTransferError{}
 var _ errors.SecondaryError = &MissingTransferError{}
 var _ errors.HasDocumentationLink = &MissingTransferError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingTransferError{}
 
 func (*MissingTransferError) isParseError() {}
 
@@ -3482,6 +3483,35 @@ func (*MissingTransferError) SecondaryError() string {
 
 func (*MissingTransferError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/constants-and-variables"
+}
+
+func (e *MissingTransferError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert '=' (for struct)",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "= ",
+					Range: ast.Range{
+						StartPos: e.Pos,
+						EndPos:   e.Pos,
+					},
+				},
+			},
+		},
+		{
+			Message: "Insert '<-' (for resource)",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "<- ",
+					Range: ast.Range{
+						StartPos: e.Pos,
+						EndPos:   e.Pos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // InvalidImportLocationError is reported when an import declaration has an invalid location.
