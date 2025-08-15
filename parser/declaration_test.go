@@ -2238,6 +2238,63 @@ func TestParseAccess(t *testing.T) {
 		)
 	})
 
+	t.Run("access, missing keyword", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "access("
+		result, errs := parse(code)
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingAccessKeywordError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+							EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+						},
+						Type: lexer.TokenEOF,
+					},
+				},
+			},
+			errs,
+		)
+
+		AssertEqualWithDiff(t,
+			ast.AccessNotSpecified,
+			result,
+		)
+
+		var missingKeywordErr *MissingAccessKeywordError
+		require.ErrorAs(t, errs[0], &missingKeywordErr)
+
+		fixes := missingKeywordErr.SuggestFixes(code)
+		keywords := []string{"all", "account", "contract", "self"}
+		require.Len(t, fixes, len(keywords))
+
+		for i, keyword := range keywords {
+			AssertEqualWithDiff(t,
+				errors.SuggestedFix[ast.TextEdit]{
+					Message: fmt.Sprintf("Insert '%s'", keyword),
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: keyword,
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+								EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+							},
+						},
+					},
+				},
+				fixes[i],
+			)
+
+			assert.Equal(t,
+				fmt.Sprintf("access(%s", keyword),
+				fixes[i].TextEdits[0].ApplyTo(code),
+			)
+		}
+	})
+
 	t.Run("access, missing opening paren before identifier", func(t *testing.T) {
 
 		t.Parallel()

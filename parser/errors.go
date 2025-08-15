@@ -3241,6 +3241,7 @@ var _ ParseError = &MissingAccessKeywordError{}
 var _ errors.UserError = &MissingAccessKeywordError{}
 var _ errors.SecondaryError = &MissingAccessKeywordError{}
 var _ errors.HasDocumentationLink = &MissingAccessKeywordError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingAccessKeywordError{}
 
 func (*MissingAccessKeywordError) isParseError() {}
 
@@ -3254,14 +3255,22 @@ func (e *MissingAccessKeywordError) EndPosition(_ common.MemoryGauge) ast.Positi
 	return e.GotToken.EndPos
 }
 
-var enumeratedAccessModifierKeywords = common.EnumerateWords(
-	[]string{
-		strconv.Quote(KeywordAll),
-		strconv.Quote(KeywordAccount),
-		strconv.Quote(KeywordContract),
-		strconv.Quote(KeywordSelf),
-	},
-	"or",
+var (
+	accessModifierKeywords = []string{
+		KeywordAll,
+		KeywordAccount,
+		KeywordContract,
+		KeywordSelf,
+	}
+	enumeratedAccessModifierKeywords = common.EnumerateWords(
+		[]string{
+			strconv.Quote(KeywordAll),
+			strconv.Quote(KeywordAccount),
+			strconv.Quote(KeywordContract),
+			strconv.Quote(KeywordSelf),
+		},
+		"or",
+	)
 )
 
 func (e *MissingAccessKeywordError) Error() string {
@@ -3274,12 +3283,41 @@ func (e *MissingAccessKeywordError) Error() string {
 	)
 }
 
-func (*MissingAccessKeywordError) SecondaryError() string {
-	return "access control modifiers must be one of: 'all', 'account', 'contract', or 'self'"
+func (e *MissingAccessKeywordError) SecondaryError() string {
+	if e.GotToken.Is(lexer.TokenIdentifier) {
+		return "replace with one of the access modifier keywords"
+	} else {
+		return "add one of the access modifier keywords"
+	}
 }
 
 func (*MissingAccessKeywordError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control"
+}
+
+func (e *MissingAccessKeywordError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	var fixes []errors.SuggestedFix[ast.TextEdit]
+
+	for _, keyword := range accessModifierKeywords {
+
+		fixes = append(
+			fixes,
+			errors.SuggestedFix[ast.TextEdit]{
+				Message: fmt.Sprintf("Insert '%s'", keyword),
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: keyword,
+						Range: ast.Range{
+							StartPos: e.GotToken.StartPos,
+							EndPos:   e.GotToken.StartPos,
+						},
+					},
+				},
+			},
+		)
+	}
+
+	return fixes
 }
 
 // MissingEnumCaseNameError is reported when an enum case is missing a name.
