@@ -1698,7 +1698,8 @@ func TestParseFunctionType(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseType("fun")
+		const code = "fun"
+		_, errs := testParseType(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingOpeningParenInFunctionTypeError{
@@ -1715,6 +1716,33 @@ func TestParseFunctionType(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingParenErr *MissingOpeningParenInFunctionTypeError
+		require.ErrorAs(t, errs[0], &missingParenErr)
+
+		fixes := missingParenErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert opening parenthesis",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "(",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+								EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"fun(",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 

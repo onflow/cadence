@@ -5521,6 +5521,7 @@ var _ ParseError = &MissingOpeningParenInFunctionTypeError{}
 var _ errors.UserError = &MissingOpeningParenInFunctionTypeError{}
 var _ errors.SecondaryError = &MissingOpeningParenInFunctionTypeError{}
 var _ errors.HasDocumentationLink = &MissingOpeningParenInFunctionTypeError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingOpeningParenInFunctionTypeError{}
 
 func (*MissingOpeningParenInFunctionTypeError) isParseError() {}
 
@@ -5548,6 +5549,23 @@ func (*MissingOpeningParenInFunctionTypeError) SecondaryError() string {
 
 func (*MissingOpeningParenInFunctionTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions#function-types"
+}
+
+func (e *MissingOpeningParenInFunctionTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert opening parenthesis",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "(",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // MissingClosingParenInFunctionTypeError is reported when a function type parameter list
