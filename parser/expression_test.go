@@ -5664,7 +5664,8 @@ func TestParseNestedExpression(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression("(1")
+		const code = "(1"
+		_, errs := testParseExpression(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingEndOfParenthesizedExpressionError{
@@ -5678,6 +5679,33 @@ func TestParseNestedExpression(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingParenErr *MissingEndOfParenthesizedExpressionError
+		require.ErrorAs(t, errs[0], &missingParenErr)
+
+		fixes := missingParenErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing parenthesis",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ")",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+								EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"(1)",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 }

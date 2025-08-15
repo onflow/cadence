@@ -4858,6 +4858,7 @@ var _ ParseError = &MissingEndOfParenthesizedExpressionError{}
 var _ errors.UserError = &MissingEndOfParenthesizedExpressionError{}
 var _ errors.SecondaryError = &MissingEndOfParenthesizedExpressionError{}
 var _ errors.HasDocumentationLink = &MissingEndOfParenthesizedExpressionError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingEndOfParenthesizedExpressionError{}
 
 func (*MissingEndOfParenthesizedExpressionError) isParseError() {}
 
@@ -4884,6 +4885,23 @@ func (*MissingEndOfParenthesizedExpressionError) SecondaryError() string {
 
 func (*MissingEndOfParenthesizedExpressionError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+func (e *MissingEndOfParenthesizedExpressionError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert closing parenthesis",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: ")",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // MissingClosingBracketInArrayTypeError is reported when an array type is missing a closing bracket.
