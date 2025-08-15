@@ -4470,6 +4470,7 @@ var _ ParseError = &MissingForKeywordInAttachmentDeclarationError{}
 var _ errors.UserError = &MissingForKeywordInAttachmentDeclarationError{}
 var _ errors.SecondaryError = &MissingForKeywordInAttachmentDeclarationError{}
 var _ errors.HasDocumentationLink = &MissingForKeywordInAttachmentDeclarationError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingForKeywordInAttachmentDeclarationError{}
 
 func (*MissingForKeywordInAttachmentDeclarationError) isParseError() {}
 
@@ -4491,11 +4492,28 @@ func (e *MissingForKeywordInAttachmentDeclarationError) Error() string {
 }
 
 func (*MissingForKeywordInAttachmentDeclarationError) SecondaryError() string {
-	return "the 'attachment' declaration requires the 'for' keyword to specify the target"
+	return "the attachment declaration requires the 'for' keyword to specify the target"
 }
 
 func (*MissingForKeywordInAttachmentDeclarationError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/attachments#declaring-attachments"
+}
+
+func (e *MissingForKeywordInAttachmentDeclarationError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert 'for'",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: keywordInsertion(KeywordFor, e.GotToken.Type),
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // InvalidAttachmentBaseTypeError is reported when an attachment declaration has an invalid base type.

@@ -4754,13 +4754,14 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		)
 	})
 
-	t.Run("missing base type", func(t *testing.T) {
+	t.Run("missing for keyword", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations(`
+		const code = `
           attachment E {}
-        `)
+        `
+		_, errs := testParseDeclarations(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingForKeywordInAttachmentDeclarationError{
@@ -4800,6 +4801,98 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingForErr *MissingForKeywordInAttachmentDeclarationError
+		require.ErrorAs(t, errs[0], &missingForErr)
+
+		fixes := missingForErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert 'for'",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "for ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
+								EndPos:   ast.Position{Offset: 24, Line: 2, Column: 23},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		const expected = `
+          attachment E for {}
+        `
+		assert.Equal(t,
+			expected,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+	})
+
+	t.Run("missing for keyword at end", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = `
+          attachment E`
+		_, errs := testParseDeclarations(code)
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingForKeywordInAttachmentDeclarationError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 23, Line: 2, Column: 22},
+							EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
+						},
+						Type: lexer.TokenEOF,
+					},
+				},
+				&UnexpectedTypeStartError{
+					GotToken: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 23, Line: 2, Column: 22},
+							EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
+						},
+						Type: lexer.TokenEOF,
+					},
+				},
+			},
+			errs,
+		)
+
+		var missingForErr *MissingForKeywordInAttachmentDeclarationError
+		require.ErrorAs(t, errs[0], &missingForErr)
+
+		fixes := missingForErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert 'for'",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: " for ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 23, Line: 2, Column: 22},
+								EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		const expected = `
+          attachment E for `
+		assert.Equal(t,
+			expected,
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
