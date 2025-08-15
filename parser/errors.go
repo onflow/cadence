@@ -3146,7 +3146,7 @@ func (*MissingAccessOpeningParenError) DocumentationLink() string {
 }
 
 func (e *MissingAccessOpeningParenError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
-	if e.GotToken.Type == lexer.TokenIdentifier {
+	if e.GotToken.Is(lexer.TokenIdentifier) {
 		tokenSource := code[e.GotToken.StartPos.Offset : e.GotToken.EndPos.Offset+1]
 		return []errors.SuggestedFix[ast.TextEdit]{
 			{
