@@ -556,7 +556,7 @@ func TestParseReferenceType(t *testing.T) {
 					Message: "Insert ampersand",
 					TextEdits: []ast.TextEdit{
 						{
-							Insertion: "& ",
+							Insertion: "&",
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
 								EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
@@ -569,7 +569,7 @@ func TestParseReferenceType(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			"auth(X) & Int",
+			"auth(X) &Int",
 			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})

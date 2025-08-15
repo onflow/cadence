@@ -5444,7 +5444,7 @@ func (e *MissingAmpersandInAuthReferenceError) SuggestFixes(_ string) []errors.S
 			Message: "Insert ampersand",
 			TextEdits: []ast.TextEdit{
 				{
-					Insertion: "& ",
+					Insertion: "&",
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
