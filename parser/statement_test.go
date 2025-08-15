@@ -3037,7 +3037,8 @@ func TestParseForInKeywordAsIdentifier(t *testing.T) {
 func TestParseForStatementMissingInKeyword(t *testing.T) {
 	t.Parallel()
 
-	_, errs := testParseStatements(`for i [] {}`)
+	const code = `for i [] {}`
+	_, errs := testParseStatements(code)
 
 	AssertEqualWithDiff(t,
 		[]error{
@@ -3052,6 +3053,85 @@ func TestParseForStatementMissingInKeyword(t *testing.T) {
 			},
 		},
 		errs,
+	)
+
+	var missingInErr *MissingInKeywordInForStatementError
+	require.ErrorAs(t, errs[0], &missingInErr)
+
+	fixes := missingInErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert 'in'",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: "in ",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+							EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"for i in [] {}",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
+func TestParseForStatementMissingInKeywordAtEnd(t *testing.T) {
+	t.Parallel()
+
+	const code = `for i`
+	_, errs := testParseStatements(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingInKeywordInForStatementError{
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+						EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+					},
+				},
+			},
+			UnexpectedEOFError{
+				Pos: ast.Position{Offset: 5, Line: 1, Column: 5},
+			},
+		},
+		errs,
+	)
+
+	var missingInErr *MissingInKeywordInForStatementError
+	require.ErrorAs(t, errs[0], &missingInErr)
+
+	fixes := missingInErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert 'in'",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " in ",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"for i in ",
+		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
 

@@ -3586,7 +3586,7 @@ func (e *InvalidImportContinuationError) Error() string {
 }
 
 func (*InvalidImportContinuationError) SecondaryError() string {
-	return "after an imported identifier, expect either a comma to import more items " +
+	return "after an imported identifier, add either a comma to import more items " +
 		"or the 'from' keyword to specify the import location"
 }
 
@@ -3659,7 +3659,8 @@ func (*UnexpectedEOFInImportListError) Error() string {
 }
 
 func (*UnexpectedEOFInImportListError) SecondaryError() string {
-	return "import declarations cannot end abruptly - expect either an identifier to import or a comma to continue the import list"
+	return "import declarations cannot end abruptly - " +
+		"add either an identifier to import or a comma to continue the import list"
 }
 
 func (*UnexpectedEOFInImportListError) DocumentationLink() string {
@@ -3699,7 +3700,8 @@ func (e *InvalidTokenInImportListError) Error() string {
 }
 
 func (*InvalidTokenInImportListError) SecondaryError() string {
-	return "import declarations expect either an identifier to import or the 'from' keyword to specify the import location"
+	return "import declarations expect either an identifier to import " +
+		"or the 'from' keyword to specify the import location"
 }
 
 func (*InvalidTokenInImportListError) DocumentationLink() string {
@@ -3785,6 +3787,7 @@ var _ ParseError = &MissingInKeywordInForStatementError{}
 var _ errors.UserError = &MissingInKeywordInForStatementError{}
 var _ errors.SecondaryError = &MissingInKeywordInForStatementError{}
 var _ errors.HasDocumentationLink = &MissingInKeywordInForStatementError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingInKeywordInForStatementError{}
 
 func (*MissingInKeywordInForStatementError) isParseError() {}
 
@@ -3810,6 +3813,23 @@ func (e *MissingInKeywordInForStatementError) Error() string {
 
 func (*MissingInKeywordInForStatementError) SecondaryError() string {
 	return "for-loops require the 'in' keyword to separate the loop variable from the iterated value"
+}
+
+func (e *MissingInKeywordInForStatementError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert 'in'",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: keywordInsertion(KeywordIn, e.GotToken.Type),
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 func (*MissingInKeywordInForStatementError) DocumentationLink() string {
