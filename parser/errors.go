@@ -2391,7 +2391,8 @@ func (*UnexpectedCommaInArgumentListError) Error() string {
 }
 
 func (*UnexpectedCommaInArgumentListError) SecondaryError() string {
-	return "commas are used to separate arguments. Did you add a superfluous comma, or is an argument missing?"
+	return "commas are used to separate arguments; " +
+		"did you add a superfluous comma, or is an argument missing?"
 }
 
 func (*UnexpectedCommaInArgumentListError) DocumentationLink() string {
@@ -2547,7 +2548,8 @@ func (e *UnexpectedTokenInExpressionError) Error() string {
 }
 
 func (*UnexpectedTokenInExpressionError) SecondaryError() string {
-	return "this token cannot be used as an operator in an expression - check for missing operators, parentheses, or invalid syntax"
+	return "this token cannot be used as an operator in an expression - " +
+		"check for missing operators, parentheses, or invalid syntax"
 }
 
 func (*UnexpectedTokenInExpressionError) DocumentationLink() string {
@@ -2584,7 +2586,8 @@ func (e *UnexpectedTypeStartError) Error() string {
 }
 
 func (*UnexpectedTypeStartError) SecondaryError() string {
-	return "this token cannot be used to start a type - check for missing operators, parentheses, or invalid syntax"
+	return "this token cannot be used to start a type - " +
+		"check for missing operators, parentheses, or invalid syntax"
 }
 
 func (*UnexpectedTypeStartError) DocumentationLink() string {
