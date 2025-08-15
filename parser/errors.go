@@ -3403,6 +3403,7 @@ var _ ParseError = &MissingColonAfterFieldNameError{}
 var _ errors.UserError = &MissingColonAfterFieldNameError{}
 var _ errors.SecondaryError = &MissingColonAfterFieldNameError{}
 var _ errors.HasDocumentationLink = &MissingColonAfterFieldNameError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingColonAfterFieldNameError{}
 
 func (*MissingColonAfterFieldNameError) isParseError() {}
 
@@ -3429,6 +3430,23 @@ func (*MissingColonAfterFieldNameError) SecondaryError() string {
 
 func (*MissingColonAfterFieldNameError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system/composite-types#composite-type-fields"
+}
+
+func (e *MissingColonAfterFieldNameError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert colon",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: ": ",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // MissingTransferError is reported when a transfer is missing in a variable declaration.

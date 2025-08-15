@@ -3746,7 +3746,8 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := parse("let x Int")
+		const code = "let x Int"
+		_, errs := parse(code)
 
 		AssertEqualWithDiff(t,
 			[]error{
@@ -3761,6 +3762,34 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingColonErr *MissingColonAfterFieldNameError
+		require.ErrorAs(t, errs[0], &missingColonErr)
+
+		fixes := missingColonErr.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert colon",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ": ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+								EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"let x : Int",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 }
