@@ -21,7 +21,6 @@ package parser
 import (
 	"encoding/hex"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/onflow/cadence/ast"
@@ -259,56 +258,30 @@ func handlePub(p *parser) error {
 
 	const keywordSet = "set"
 
-	if !p.current.Is(lexer.TokenIdentifier) {
-		return p.newSyntaxError(
-			"expected keyword %q, got %s",
-			keywordSet,
-			p.current.Type,
-		)
-	}
-
-	keyword := p.currentTokenSource()
-	if string(keyword) != keywordSet {
-		return p.newSyntaxError(
-			"expected keyword %q, got %q",
-			keywordSet,
-			keyword,
-		)
+	if !p.isToken(p.current, lexer.TokenIdentifier, keywordSet) {
+		return &InvalidPubSetModifierError{
+			GotToken: p.current,
+		}
 	}
 
 	// Skip the `set` keyword
 	p.nextSemanticToken()
 
-	_, err := p.mustOne(lexer.TokenParenClose)
+	endToken, err := p.mustOne(lexer.TokenParenClose)
 	if err != nil {
 		return err
 	}
 
-	p.report(
-		NewSyntaxError(
+	p.report(&PubSetAccessError{
+		Range: ast.NewRange(
+			p.memoryGauge,
 			pubToken.StartPos,
-			"`pub(set)` is no longer a valid access modifier",
-		).WithMigration(
-			"This is pre-Cadence 1.0 syntax. " +
-				"The `pub(set)` modifier was deprecated and has no direct equivalent in the new access control system. " +
-				"Consider adding a setter method that allows updating the field.",
-		).WithDocumentation(
-			"https://cadence-lang.org/docs/cadence-migration-guide/improvements#-motivation-11",
+			endToken.EndPos,
 		),
-	)
+	})
 
 	return nil
 }
-
-var enumeratedAccessModifierKeywords = common.EnumerateWords(
-	[]string{
-		strconv.Quote(KeywordAll),
-		strconv.Quote(KeywordAccount),
-		strconv.Quote(KeywordContract),
-		strconv.Quote(KeywordSelf),
-	},
-	"or",
-)
 
 func rejectAccessKeywordEntitlementType(p *parser, ty *ast.NominalType) {
 	switch ty.Identifier.Identifier {
@@ -389,11 +362,9 @@ func parseAccess(p *parser) (ast.Access, ast.Range, error) {
 		p.skipSpaceAndComments()
 
 		if !p.current.Is(lexer.TokenIdentifier) {
-			return ast.AccessNotSpecified, ast.EmptyRange, p.newSyntaxError(
-				"expected keyword %s, got %s",
-				enumeratedAccessModifierKeywords,
-				p.current.Type,
-			)
+			return ast.AccessNotSpecified, ast.EmptyRange, &MissingAccessKeywordError{
+				GotToken: p.current,
+			}
 		}
 
 		var access ast.Access
@@ -504,7 +475,9 @@ func parseVariableDeclaration(
 	p.skipSpaceAndComments()
 	transfer := parseTransfer(p)
 	if transfer == nil {
-		return nil, p.newSyntaxError("expected transfer")
+		return nil, &MissingTransferError{
+			Pos: p.current.StartPos,
+		}
 	}
 
 	value, err := parseExpression(p, lowestBindingPower)
@@ -651,10 +624,9 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 			p.next()
 
 		default:
-			return p.newSyntaxError(
-				"unexpected token in import declaration: got %s, expected string, address, or identifier",
-				p.current.Type,
-			)
+			return &InvalidImportLocationError{
+				GotToken: p.current,
+			}
 		}
 
 		return nil
@@ -673,12 +645,9 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 			switch p.current.Type {
 			case lexer.TokenComma:
 				if !expectCommaOrFrom {
-					return p.newSyntaxError(
-						"expected %s or keyword %q, got %s",
-						lexer.TokenIdentifier,
-						KeywordFrom,
-						p.current.Type,
-					)
+					return &InvalidTokenInImportListError{
+						GotToken: p.current,
+					}
 				}
 				expectCommaOrFrom = false
 
@@ -701,11 +670,9 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 					}
 
 					if !isNextTokenCommaOrFrom(p) {
-						return p.newSyntaxError(
-							"expected %s, got keyword %q",
-							lexer.TokenIdentifier,
-							keyword,
-						)
+						return &InvalidFromKeywordAsIdentifierError{
+							GotToken: p.current,
+						}
 					}
 
 					// If the next token is either comma or 'from' token, then fall through
@@ -718,19 +685,14 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 				expectCommaOrFrom = true
 
 			case lexer.TokenEOF:
-				return p.newSyntaxError(
-					"unexpected end in import declaration: expected %s or %s",
-					lexer.TokenIdentifier,
-					lexer.TokenComma,
-				)
+				return &UnexpectedEOFInImportListError{
+					Pos: p.current.StartPos,
+				}
 
 			default:
-				return p.newSyntaxError(
-					"unexpected token in import declaration: got %s, expected keyword %q or %s",
-					p.current.Type,
-					KeywordFrom,
-					lexer.TokenComma,
-				)
+				return &InvalidImportContinuationError{
+					GotToken: p.current,
+				}
 			}
 		}
 
@@ -792,22 +754,20 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 			setIdentifierLocation(identifier)
 
 		default:
-			return nil, p.newSyntaxError(
-				"unexpected token in import declaration: got %s, expected keyword %q or %s",
-				p.current.Type,
-				KeywordFrom,
-				lexer.TokenComma,
-			)
+			return nil, &InvalidImportContinuationError{
+				GotToken: p.current,
+			}
 		}
 
 	case lexer.TokenEOF:
-		return nil, p.newSyntaxError("unexpected end in import declaration: expected string, address, or identifier")
+		return nil, &MissingImportLocationError{
+			Pos: p.current.StartPos,
+		}
 
 	default:
-		return nil, p.newSyntaxError(
-			"unexpected token in import declaration: got %s, expected string, address, or identifier",
-			p.current.Type,
-		)
+		return nil, &InvalidImportLocationError{
+			GotToken: p.current,
+		}
 	}
 
 	return ast.NewImportDeclaration(
@@ -1004,10 +964,9 @@ func parseFieldWithVariableKind(
 	// Skip the `let` or `var` keyword
 	p.nextSemanticToken()
 	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, p.newSyntaxError(
-			"expected identifier after start of field declaration, got %s",
-			p.current.Type,
-		)
+		return nil, &MissingFieldNameError{
+			GotToken: p.current,
+		}
 	}
 
 	identifier := p.tokenToIdentifier(p.current)
@@ -1303,10 +1262,9 @@ func parseCompositeOrInterfaceDeclaration(
 		if string(p.currentTokenSource()) == KeywordInterface {
 			isInterface = true
 			if wasInterface {
-				return nil, p.newSyntaxError(
-					"expected interface name, got keyword %q",
-					KeywordInterface,
-				)
+				return nil, &InvalidInterfaceNameError{
+					GotToken: p.current,
+				}
 			}
 			// Skip the `interface` keyword
 			p.next()

@@ -110,12 +110,10 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 			}
 
 		default:
-			return nil, p.newSyntaxError(
-				"unexpected identifier, expected keyword %q or %q, got %q",
-				KeywordPrepare,
-				KeywordExecute,
-				keyword,
-			)
+			return nil, &ExpectedPrepareOrExecuteError{
+				GotIdentifier: string(keyword),
+				Pos:           p.current.StartPos,
+			}
 		}
 	}
 
@@ -153,12 +151,14 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
-
+			// Not possible to encounter a second prepare block at this point
 			keyword := p.currentTokenSource()
 			switch string(keyword) {
 			case KeywordExecute:
 				if execute != nil {
-					return nil, p.newSyntaxError("unexpected second %q block", KeywordExecute)
+					return nil, &DuplicateExecuteBlockError{
+						Pos: p.current.StartPos,
+					}
 				}
 
 				execute, err = parseTransactionExecute(p)
@@ -168,7 +168,9 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 
 			case KeywordPost:
 				if sawPost {
-					return nil, p.newSyntaxError("unexpected second post-conditions")
+					return nil, &DuplicatePostConditionsError{
+						Pos: p.current.StartPos,
+					}
 				}
 				postStartPos := p.current.StartPos
 				// Skip the `post` keyword
@@ -180,12 +182,10 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 				sawPost = true
 
 			default:
-				return nil, p.newSyntaxError(
-					"unexpected identifier, expected keyword %q or %q, got %q",
-					KeywordExecute,
-					KeywordPost,
-					keyword,
-				)
+				return nil, &ExpectedExecuteOrPostError{
+					GotIdentifier: string(keyword),
+					Pos:           p.current.StartPos,
+				}
 			}
 
 		case lexer.TokenBraceClose:
@@ -195,7 +195,9 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 			atEnd = true
 
 		default:
-			return nil, p.newSyntaxError("unexpected token: %s", p.current.Type)
+			return nil, &UnexpectedTokenAtEndError{
+				Token: p.current,
+			}
 		}
 	}
 

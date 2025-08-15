@@ -1017,10 +1017,9 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 		switch p.current.Type {
 		case lexer.TokenComma:
 			if expectArgument {
-				return nil, ast.EmptyPosition, p.newSyntaxError(
-					"expected argument or end of argument list, got %s",
-					p.current.Type,
-				)
+				return nil, ast.EmptyPosition, &UnexpectedCommaInArgumentListError{
+					Pos: p.current.StartPos,
+				}
 			}
 			// Skip the comma
 			p.next()
@@ -1035,16 +1034,15 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 		case lexer.TokenEOF:
 			return nil,
 				ast.EmptyPosition,
-				p.newSyntaxError("missing ')' at end of invocation argument list")
+				&MissingClosingParenInArgumentListError{
+					Pos: p.current.StartPos,
+				}
 
 		default:
 			if !expectArgument {
-				return nil,
-					ast.EmptyPosition,
-					p.newSyntaxError(
-						"unexpected argument in argument list (expecting delimiter or end of argument list), got %s",
-						p.current.Type,
-					)
+				return nil, ast.EmptyPosition, &MissingCommaInArgumentListError{
+					GotToken: p.current,
+				}
 			}
 
 			argument, err := parseArgument(p)
@@ -1084,10 +1082,10 @@ func parseArgument(p *parser) (*ast.Argument, error) {
 
 		identifier, ok := expr.(*ast.IdentifierExpression)
 		if !ok {
-			return nil, p.newSyntaxError(
-				"expected identifier for label, got %s",
-				expr,
-			)
+			expressionRange := ast.NewRangeFromPositioned(p.memoryGauge, expr)
+			return nil, &InvalidExpressionAsLabelError{
+				Range: expressionRange,
+			}
 		}
 		label = identifier.Identifier.Identifier
 		labelStartPos = expr.StartPosition()
@@ -1668,10 +1666,11 @@ func exprLeftBindingPower(p *parser) (int, error) {
 }
 
 func applyExprNullDenotation(p *parser, token lexer.Token) (ast.Expression, error) {
-	tokenType := token.Type
-	nullDenotation := exprNullDenotations[tokenType]
+	nullDenotation := exprNullDenotations[token.Type]
 	if nullDenotation == nil {
-		return nil, p.newSyntaxError("unexpected token in expression: %s", tokenType)
+		return nil, &UnexpectedExpressionStartError{
+			GotToken: token,
+		}
 	}
 	return nullDenotation(p, token)
 }
@@ -1679,7 +1678,9 @@ func applyExprNullDenotation(p *parser, token lexer.Token) (ast.Expression, erro
 func applyExprLeftDenotation(p *parser, token lexer.Token, left ast.Expression) (ast.Expression, error) {
 	leftDenotation := exprLeftDenotations[token.Type]
 	if leftDenotation == nil {
-		return nil, p.newSyntaxError("unexpected token in expression: %s", token.Type)
+		return nil, &UnexpectedTokenInExpressionError{
+			GotToken: token,
+		}
 	}
 	return leftDenotation(p, token, left)
 }

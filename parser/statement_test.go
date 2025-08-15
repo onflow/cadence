@@ -884,8 +884,10 @@ func TestParseForStatementIndexBinding(t *testing.T) {
 					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
 				},
 				&SyntaxError{
-					Message: "expected token '{'",
-					Pos:     ast.Position{Offset: 11, Line: 1, Column: 11},
+					Message:       "expected token '{'",
+					Pos:           ast.Position{Offset: 11, Line: 1, Column: 11},
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -904,8 +906,10 @@ func TestParseForStatementIndexBinding(t *testing.T) {
 					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
 				&SyntaxError{
-					Message: "expected token identifier",
-					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+					Message:       "expected token identifier",
+					Pos:           ast.Position{Offset: 6, Line: 1, Column: 6},
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -1096,12 +1100,15 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 
 		require.Empty(t, result)
 
-		AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Message: "expected identifier after start of function declaration, got keyword continue",
-				Pos:     ast.Position{Line: 1, Column: 4, Offset: 4},
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected identifier after start of function declaration, got keyword continue",
+					Pos:     ast.Position{Line: 1, Column: 4, Offset: 4},
+				},
 			},
-		}, errs)
+			errs,
+		)
 	})
 
 	t.Run("function expression with purity, and keyword as name", func(t *testing.T) {
@@ -1111,12 +1118,15 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 
 		require.Empty(t, result)
 
-		AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Message: "expected identifier after start of function declaration, got keyword break",
-				Pos:     ast.Position{Line: 1, Column: 9, Offset: 9},
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected identifier after start of function declaration, got keyword break",
+					Pos:     ast.Position{Line: 1, Column: 9, Offset: 9},
+				},
 			},
-		}, errs)
+			errs,
+		)
 	})
 }
 
