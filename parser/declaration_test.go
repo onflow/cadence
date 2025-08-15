@@ -1973,6 +1973,56 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			errs,
 		)
 	})
+
+	t.Run("missing closing > in type arguments", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "let x: Foo<Bar"
+		_, errs := testParseDeclarations(code)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingClosingGreaterInTypeArgumentsError{
+					Pos: ast.Position{Offset: 14, Line: 1, Column: 14},
+				},
+				&MissingTransferError{
+					Pos: ast.Position{Offset: 14, Line: 1, Column: 14},
+				},
+				UnexpectedEOFError{
+					Pos: ast.Position{Offset: 14, Line: 1, Column: 14},
+				},
+			},
+			errs,
+		)
+
+		var missingClosingGreater *MissingClosingGreaterInTypeArgumentsError
+		require.ErrorAs(t, errs[0], &missingClosingGreater)
+
+		fixes := missingClosingGreater.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Add closing angle bracket",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ">",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 14, Line: 1, Column: 14},
+								EndPos:   ast.Position{Offset: 14, Line: 1, Column: 14},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			`let x: Foo<Bar>`,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+	})
 }
 
 func TestParseAccess(t *testing.T) {

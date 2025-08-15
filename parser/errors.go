@@ -1066,6 +1066,7 @@ var _ ParseError = &MissingClosingGreaterInTypeArgumentsError{}
 var _ errors.UserError = &MissingClosingGreaterInTypeArgumentsError{}
 var _ errors.SecondaryError = &MissingClosingGreaterInTypeArgumentsError{}
 var _ errors.HasDocumentationLink = &MissingClosingGreaterInTypeArgumentsError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingClosingGreaterInTypeArgumentsError{}
 
 func (*MissingClosingGreaterInTypeArgumentsError) isParseError() {}
 
@@ -1085,6 +1086,23 @@ func (*MissingClosingGreaterInTypeArgumentsError) Error() string {
 
 func (*MissingClosingGreaterInTypeArgumentsError) SecondaryError() string {
 	return "type arguments must be enclosed in angle brackets (`<...>`)"
+}
+
+func (e *MissingClosingGreaterInTypeArgumentsError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Add closing angle bracket",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: ">",
+					Range: ast.Range{
+						StartPos: e.Pos,
+						EndPos:   e.Pos,
+					},
+				},
+			},
+		},
+	}
 }
 
 func (*MissingClosingGreaterInTypeArgumentsError) DocumentationLink() string {
