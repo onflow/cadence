@@ -1209,7 +1209,9 @@ func TestParseIndexExpression(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression("a[0")
+		const code = "a[0"
+
+		_, errs := testParseExpression(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingClosingBracketInIndexExpressionError{
@@ -1223,6 +1225,33 @@ func TestParseIndexExpression(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingBracketErr *MissingClosingBracketInIndexExpressionError
+		require.ErrorAs(t, errs[0], &missingBracketErr)
+
+		fixes := missingBracketErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing bracket",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "]",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+								EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"a[0]",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 }

@@ -5243,6 +5243,7 @@ var _ ParseError = &MissingClosingBracketInIndexExpressionError{}
 var _ errors.UserError = &MissingClosingBracketInIndexExpressionError{}
 var _ errors.SecondaryError = &MissingClosingBracketInIndexExpressionError{}
 var _ errors.HasDocumentationLink = &MissingClosingBracketInIndexExpressionError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingClosingBracketInIndexExpressionError{}
 
 func (*MissingClosingBracketInIndexExpressionError) isParseError() {}
 
@@ -5269,6 +5270,23 @@ func (*MissingClosingBracketInIndexExpressionError) SecondaryError() string {
 
 func (*MissingClosingBracketInIndexExpressionError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/expressions#indexing-expressions"
+}
+
+func (e *MissingClosingBracketInIndexExpressionError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert closing bracket",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "]",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // MissingClosingBraceInIntersectionOrDictionaryTypeError is reported when an intersection or dictionary type
