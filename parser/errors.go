@@ -5188,6 +5188,7 @@ var _ ParseError = &MissingSlashInPathExpressionError{}
 var _ errors.UserError = &MissingSlashInPathExpressionError{}
 var _ errors.SecondaryError = &MissingSlashInPathExpressionError{}
 var _ errors.HasDocumentationLink = &MissingSlashInPathExpressionError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingSlashInPathExpressionError{}
 
 func (*MissingSlashInPathExpressionError) isParseError() {}
 
@@ -5214,6 +5215,23 @@ func (*MissingSlashInPathExpressionError) SecondaryError() string {
 
 func (*MissingSlashInPathExpressionError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/accounts/paths"
+}
+
+func (e *MissingSlashInPathExpressionError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert slash",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "/",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // MissingClosingBracketInIndexExpressionError is reported when an index expression is missing a closing bracket.

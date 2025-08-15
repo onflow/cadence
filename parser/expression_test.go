@@ -1293,7 +1293,9 @@ func TestParsePath(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression("/foo")
+		const code = "/foo"
+
+		_, errs := testParseExpression(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingSlashInPathExpressionError{
@@ -1313,6 +1315,33 @@ func TestParsePath(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingSlashErr *MissingSlashInPathExpressionError
+		require.ErrorAs(t, errs[0], &missingSlashErr)
+
+		fixes := missingSlashErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert slash",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "/",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"/foo/",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 }
