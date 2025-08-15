@@ -5078,6 +5078,7 @@ var _ ParseError = &MissingColonInDictionaryEntryError{}
 var _ errors.UserError = &MissingColonInDictionaryEntryError{}
 var _ errors.SecondaryError = &MissingColonInDictionaryEntryError{}
 var _ errors.HasDocumentationLink = &MissingColonInDictionaryEntryError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingColonInDictionaryEntryError{}
 
 func (*MissingColonInDictionaryEntryError) isParseError() {}
 
@@ -5104,6 +5105,23 @@ func (*MissingColonInDictionaryEntryError) SecondaryError() string {
 
 func (*MissingColonInDictionaryEntryError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/values-and-types/dictionaries#dictionary-literals"
+}
+
+func (e *MissingColonInDictionaryEntryError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert colon",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: ": ",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // MissingColonInConditionalExpressionError is reported when a conditional expression is missing a colon.
