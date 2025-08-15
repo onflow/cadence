@@ -1866,7 +1866,8 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression("f(1 2)")
+		const code = "f(1 2)"
+		_, errs := testParseExpression(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingCommaInArgumentListError{
@@ -1880,6 +1881,33 @@ func TestParseInvocation(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingCommaErr *MissingCommaInArgumentListError
+		require.ErrorAs(t, errs[0], &missingCommaErr)
+
+		fixes := missingCommaErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert comma",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ", ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"f(1 , 2)",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 

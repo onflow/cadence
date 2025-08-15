@@ -2408,6 +2408,7 @@ var _ ParseError = &MissingCommaInArgumentListError{}
 var _ errors.UserError = &MissingCommaInArgumentListError{}
 var _ errors.SecondaryError = &MissingCommaInArgumentListError{}
 var _ errors.HasDocumentationLink = &MissingCommaInArgumentListError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingCommaInArgumentListError{}
 
 func (*MissingCommaInArgumentListError) isParseError() {}
 
@@ -2429,11 +2430,28 @@ func (e *MissingCommaInArgumentListError) Error() string {
 }
 
 func (*MissingCommaInArgumentListError) SecondaryError() string {
-	return "arguments in function calls and type instantiations must be separated by commas"
+	return "arguments in function calls must be separated by commas"
 }
 
 func (*MissingCommaInArgumentListError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+func (e *MissingCommaInArgumentListError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert comma",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: ", ",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // InvalidExpressionAsLabelError is reported when an argument label is not a simple identifier.
