@@ -4213,7 +4213,9 @@ func TestParseCompositeDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations("access(all) struct S: RI")
+		const code = "access(all) struct S: RI"
+		_, errs := testParseDeclarations(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&DeclarationMissingOpeningBraceError{
@@ -4238,6 +4240,33 @@ func TestParseCompositeDeclaration(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingBraceErr *DeclarationMissingOpeningBraceError
+		require.ErrorAs(t, errs[0], &missingBraceErr)
+
+		fixes := missingBraceErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert opening brace",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "{",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 24, Line: 1, Column: 24},
+								EndPos:   ast.Position{Offset: 24, Line: 1, Column: 24},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"access(all) struct S: RI{",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
@@ -10393,11 +10422,13 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 
 	t.Run("missing open brace", func(t *testing.T) {
 
+		const code = `
+          access(all) entitlement mapping M }
+        `
+
 		t.Parallel()
 
-		_, errs := testParseDeclarations(`
-          access(all) entitlement mapping M }
-        `)
+		_, errs := testParseDeclarations(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&DeclarationMissingOpeningBraceError{
@@ -10412,6 +10443,33 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingBraceErr *DeclarationMissingOpeningBraceError
+		require.ErrorAs(t, errs[0], &missingBraceErr)
+
+		fixes := missingBraceErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert opening brace",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "{",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 45, Line: 2, Column: 44},
+								EndPos:   ast.Position{Offset: 45, Line: 2, Column: 44},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"access(all) entitlement mapping M {}",
+			strings.TrimSpace(fixes[0].TextEdits[0].ApplyTo(code)),
 		)
 	})
 
@@ -11001,7 +11059,8 @@ func TestParseStructNamedTransaction(t *testing.T) {
 func TestParseTransactionDeclarationMissingOpeningBrace(t *testing.T) {
 	t.Parallel()
 
-	_, errs := testParseStatements(`transaction }`)
+	const code = `transaction }`
+	_, errs := testParseStatements(code)
 
 	AssertEqualWithDiff(t,
 		[]error{
@@ -11018,12 +11077,40 @@ func TestParseTransactionDeclarationMissingOpeningBrace(t *testing.T) {
 		},
 		errs,
 	)
+
+	var missingBraceErr *DeclarationMissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: "{",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
+							EndPos:   ast.Position{Offset: 12, Line: 1, Column: 12},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"transaction {}",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestParseTransactionDeclarationMissingOpeningBraceEOF(t *testing.T) {
 	t.Parallel()
 
-	_, errs := testParseStatements(`transaction`)
+	const code = `transaction`
+	_, errs := testParseStatements(code)
 
 	AssertEqualWithDiff(t,
 		[]error{
@@ -11048,5 +11135,32 @@ func TestParseTransactionDeclarationMissingOpeningBraceEOF(t *testing.T) {
 			},
 		},
 		errs,
+	)
+
+	var missingBraceErr *DeclarationMissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: "{",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
+							EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"transaction{",
+		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
