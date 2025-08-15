@@ -3941,6 +3941,7 @@ type InvalidEntitlementSeparatorError struct {
 var _ ParseError = &InvalidEntitlementSeparatorError{}
 var _ errors.UserError = &InvalidEntitlementSeparatorError{}
 var _ errors.SecondaryError = &InvalidEntitlementSeparatorError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &InvalidEntitlementSeparatorError{}
 var _ errors.HasDocumentationLink = &InvalidEntitlementSeparatorError{}
 
 func (*InvalidEntitlementSeparatorError) isParseError() {}
@@ -3956,15 +3957,48 @@ func (e *InvalidEntitlementSeparatorError) EndPosition(_ common.MemoryGauge) ast
 }
 
 func (e *InvalidEntitlementSeparatorError) Error() string {
-	return fmt.Sprintf("unexpected entitlement separator %s", e.Token.Type.String())
+	return expectedButGotToken(
+		"expected entitlement separator",
+		e.Token.Type,
+	)
 }
 
 func (*InvalidEntitlementSeparatorError) SecondaryError() string {
-	return "use a comma (,) for conjunctive entitlements or a vertical bar (|) for disjunctive entitlements"
+	return "use a comma (,) for conjunctive entitlements " +
+		"or a vertical bar (|) for disjunctive entitlements"
 }
 
 func (*InvalidEntitlementSeparatorError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control#entitlements"
+}
+
+func (e *InvalidEntitlementSeparatorError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert comma (conjunction)",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: ", ",
+					Range: ast.Range{
+						StartPos: e.Token.StartPos,
+						EndPos:   e.Token.StartPos,
+					},
+				},
+			},
+		},
+		{
+			Message: "Insert vertical bar (disjunction)",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: " | ",
+					Range: ast.Range{
+						StartPos: e.Token.StartPos,
+						EndPos:   e.Token.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // UnexpectedTokenAtEndError is reported when there is an unexpected token at the end of the program

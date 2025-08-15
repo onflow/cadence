@@ -2893,7 +2893,8 @@ func TestParseAccess(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := parse("access ( foo bar )")
+		const code = "access ( foo bar )"
+		_, errs := parse(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&InvalidEntitlementSeparatorError{
@@ -2908,6 +2909,43 @@ func TestParseAccess(t *testing.T) {
 			},
 			errs,
 		)
+
+		var invalidSepErr *InvalidEntitlementSeparatorError
+		require.ErrorAs(t, errs[0], &invalidSepErr)
+
+		fixes := invalidSepErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert comma (conjunction)",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ", ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+								EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+							},
+						},
+					},
+				},
+				{
+					Message: "Insert vertical bar (disjunction)",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: " | ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+								EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t, "access ( foo , bar )", fixes[0].TextEdits[0].ApplyTo(code))
+		assert.Equal(t, "access ( foo  | bar )", fixes[1].TextEdits[0].ApplyTo(code))
 	})
 
 	t.Run("access, invalid separator", func(t *testing.T) {
