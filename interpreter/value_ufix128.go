@@ -43,10 +43,10 @@ const ufix128Size = int(unsafe.Sizeof(UFix128Value{}))
 
 var UFix128MemoryUsage = common.NewNumberMemoryUsage(ufix128Size)
 
-// NewUnmeteredUFix128ValueWithInteger construct a UFix128Value from an int64.
+// NewUnmeteredUFix128ValueWithInteger construct a UFix128Value from an uint64.
 // Note that this function uses the default scaling of 24.
-func NewUnmeteredUFix128ValueWithInteger(integer int64, locationRange LocationRange) UFix128Value {
-	bigInt := big.NewInt(integer)
+func NewUnmeteredUFix128ValueWithInteger(integer uint64, locationRange LocationRange) UFix128Value {
+	bigInt := new(big.Int).SetUint64(integer)
 	bigInt = new(big.Int).Mul(
 		bigInt,
 		sema.UFix128FactorIntBig,
@@ -55,8 +55,8 @@ func NewUnmeteredUFix128ValueWithInteger(integer int64, locationRange LocationRa
 	return NewUFix128ValueFromBigIntWithRangeCheck(nil, bigInt, locationRange)
 }
 
-func NewUnmeteredUFix128ValueWithIntegerAndScale(integer int64, scale int64) UFix128Value {
-	bigInt := big.NewInt(integer)
+func NewUnmeteredUFix128ValueWithIntegerAndScale(integer uint64, scale int64) UFix128Value {
+	bigInt :=  new(big.Int).SetUint64(integer)
 
 	bigInt = new(big.Int).Mul(
 		bigInt,
@@ -102,13 +102,13 @@ func NewUFix128ValueFromBigInt(gauge common.MemoryGauge, v *big.Int) UFix128Valu
 }
 
 func NewUFix128ValueFromBigIntWithRangeCheck(gauge common.MemoryGauge, v *big.Int, locationRange LocationRange) UFix128Value {
-	if v.Cmp(fixedpoint.UFix128TypeMinBig) == -1 {
+	if v.Cmp(fixedpoint.UFix128TypeMinBig) < 0 {
 		panic(&UnderflowError{
 			LocationRange: locationRange,
 		})
 	}
 
-	if v.Cmp(fixedpoint.UFix128TypeMaxBig) == 1 {
+	if v.Cmp(fixedpoint.UFix128TypeMaxBig) > 0 {
 		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
