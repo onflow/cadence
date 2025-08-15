@@ -724,7 +724,8 @@ func TestParseReferenceType(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseType("auth(X, Y")
+		const code = "auth(X, Y"
+		_, errs := testParseType(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingClosingParenInAuthError{
@@ -756,6 +757,33 @@ func TestParseReferenceType(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingParenErr *MissingClosingParenInAuthError
+		require.ErrorAs(t, errs[0], &missingParenErr)
+
+		fixes := missingParenErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing parenthesis",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ")",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 9, Line: 1, Column: 9},
+								EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"auth(X, Y)",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 

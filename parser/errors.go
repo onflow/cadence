@@ -5354,6 +5354,7 @@ var _ ParseError = &MissingClosingParenInAuthError{}
 var _ errors.UserError = &MissingClosingParenInAuthError{}
 var _ errors.SecondaryError = &MissingClosingParenInAuthError{}
 var _ errors.HasDocumentationLink = &MissingClosingParenInAuthError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingClosingParenInAuthError{}
 
 func (*MissingClosingParenInAuthError) isParseError() {}
 
@@ -5380,6 +5381,23 @@ func (*MissingClosingParenInAuthError) SecondaryError() string {
 
 func (*MissingClosingParenInAuthError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/references#authorized-references"
+}
+
+func (e *MissingClosingParenInAuthError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert closing parenthesis",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: ")",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // MissingAmpersandInAuthReferenceError is reported when an authorized reference is missing an ampersand.
