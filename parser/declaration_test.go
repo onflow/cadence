@@ -752,7 +752,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]errors.SuggestedFix[ast.TextEdit]{
 				{
-					Message: "Add opening parenthesis",
+					Message: "Insert opening parenthesis",
 					TextEdits: []ast.TextEdit{
 						{
 							Insertion: "(",
@@ -824,7 +824,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		require.Equal(t,
 			[]errors.SuggestedFix[ast.TextEdit]{
 				{
-					Message: "Add closing parenthesis",
+					Message: "Insert closing parenthesis",
 					TextEdits: []ast.TextEdit{
 						{
 							Insertion: ")",
@@ -1966,7 +1966,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]errors.SuggestedFix[ast.TextEdit]{
 				{
-					Message: "Add closing angle bracket",
+					Message: "Insert closing angle bracket",
 					TextEdits: []ast.TextEdit{
 						{
 							Insertion: ">",
@@ -2016,7 +2016,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]errors.SuggestedFix[ast.TextEdit]{
 				{
-					Message: "Add comma to separate type parameters",
+					Message: "Insert comma",
 					TextEdits: []ast.TextEdit{
 						{
 							Insertion: ", ",
@@ -2122,7 +2122,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]errors.SuggestedFix[ast.TextEdit]{
 				{
-					Message: "Add closing angle bracket",
+					Message: "Insert closing angle bracket",
 					TextEdits: []ast.TextEdit{
 						{
 							Insertion: ">",
@@ -10547,7 +10547,7 @@ func TestParseMissingCommaInParameterListError(t *testing.T) {
 	require.Equal(t,
 		[]errors.SuggestedFix[ast.TextEdit]{
 			{
-				Message: "Add comma to separate parameters",
+				Message: "Insert comma",
 				TextEdits: []ast.TextEdit{
 					{
 						Insertion: ", ",

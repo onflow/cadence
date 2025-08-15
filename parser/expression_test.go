@@ -2035,7 +2035,7 @@ func TestParseInvocation(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]errors.SuggestedFix[ast.TextEdit]{
 				{
-					Message: "Add closing parenthesis",
+					Message: "Insert closing parenthesis",
 					TextEdits: []ast.TextEdit{
 						{
 							Insertion: ")",
@@ -4323,7 +4323,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 			t,
 			[]errors.SuggestedFix[ast.TextEdit]{
 				{
-					Message: "Add missing digit",
+					Message: "Insert missing digit",
 					TextEdits: []ast.TextEdit{
 						{
 							Replacement: "0o0",

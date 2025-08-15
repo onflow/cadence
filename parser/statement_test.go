@@ -1293,7 +1293,7 @@ func TestParseStatements(t *testing.T) {
 			t,
 			[]errors.SuggestedFix[ast.TextEdit]{
 				{
-					Message: "Add semicolon to separate statements",
+					Message: "Insert semicolon",
 					TextEdits: []ast.TextEdit{
 						{
 							Insertion: "; ",

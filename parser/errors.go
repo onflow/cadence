@@ -245,7 +245,7 @@ func (e *InvalidIntegerLiteralError) SuggestFixes(_ string) []errors.SuggestedFi
 		// Add a "0" after the prefix
 		return []errors.SuggestedFix[ast.TextEdit]{
 			{
-				Message: "Add missing digit",
+				Message: "Insert missing digit",
 				TextEdits: []ast.TextEdit{
 					{
 						Replacement: e.Literal + "0",
@@ -515,7 +515,7 @@ func (*StatementSeparationError) SecondaryError() string {
 func (e *StatementSeparationError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
-			Message: "Add semicolon to separate statements",
+			Message: "Insert semicolon",
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: "; ",
@@ -568,7 +568,7 @@ func (*MissingCommaInParameterListError) SecondaryError() string {
 func (e *MissingCommaInParameterListError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
-			Message: "Add comma to separate parameters",
+			Message: "Insert comma",
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ", ",
@@ -628,7 +628,7 @@ func (*MissingStartOfParameterListError) DocumentationLink() string {
 func (e *MissingStartOfParameterListError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
-			Message: "Add opening parenthesis",
+			Message: "Insert opening parenthesis",
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: "(",
@@ -756,7 +756,7 @@ func (*MissingClosingParenInParameterListError) SecondaryError() string {
 func (e *MissingClosingParenInParameterListError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
-			Message: "Add closing parenthesis",
+			Message: "Insert closing parenthesis",
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ")",
@@ -991,7 +991,7 @@ func (*MissingCommaInTypeParameterListError) SecondaryError() string {
 func (e *MissingCommaInTypeParameterListError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
-			Message: "Add comma to separate type parameters",
+			Message: "Insert comma",
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ", ",
@@ -1083,7 +1083,7 @@ func (*MissingClosingGreaterInTypeParameterListError) SecondaryError() string {
 func (e *MissingClosingGreaterInTypeParameterListError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
-			Message: "Add closing angle bracket",
+			Message: "Insert closing angle bracket",
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ">",
@@ -1135,7 +1135,7 @@ func (*MissingClosingGreaterInTypeArgumentsError) SecondaryError() string {
 func (e *MissingClosingGreaterInTypeArgumentsError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
-			Message: "Add closing angle bracket",
+			Message: "Insert closing angle bracket",
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ">",
@@ -2350,7 +2350,7 @@ func (*MissingClosingParenInArgumentListError) DocumentationLink() string {
 func (e *MissingClosingParenInArgumentListError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
-			Message: "Add closing parenthesis",
+			Message: "Insert closing parenthesis",
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ")",
