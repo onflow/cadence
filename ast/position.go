@@ -135,12 +135,30 @@ func NewUnmeteredRange(startPos, endPos Position) Range {
 	}
 }
 
-func (e Range) StartPosition() Position {
-	return e.StartPos
+func (r Range) StartPosition() Position {
+	return r.StartPos
 }
 
-func (e Range) EndPosition(common.MemoryGauge) Position {
-	return e.EndPos
+func (r Range) EndPosition(common.MemoryGauge) Position {
+	return r.EndPos
+}
+
+// AttachLeft moves the range left until it reaches a non-whitespace character.
+func (r Range) AttachLeft(code string) Range {
+	var offset int
+	for i := r.StartPos.Offset - 1; i >= 0; i-- {
+		switch code[i] {
+		case ' ', '\t':
+			offset++
+			continue
+		}
+		break
+	}
+
+	r.StartPos = r.StartPos.Shifted(nil, -offset)
+	r.EndPos = r.EndPos.Shifted(nil, -offset)
+
+	return r
 }
 
 // NewRangeFromPositioned

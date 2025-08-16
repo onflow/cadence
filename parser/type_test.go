@@ -508,7 +508,8 @@ func TestParseReferenceType(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseType("auth &Int")
+		const code = "auth &Int"
+		_, errs := testParseType(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingStartOfAuthorizationError{
@@ -523,6 +524,30 @@ func TestParseReferenceType(t *testing.T) {
 			},
 			errs,
 		)
+
+		var missingParenErr *MissingStartOfAuthorizationError
+		require.ErrorAs(t, errs[0], &missingParenErr)
+
+		fixes := missingParenErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert opening parenthesis",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "(",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t, "auth( &Int", fixes[0].TextEdits[0].ApplyTo(code))
 	})
 
 	t.Run("authorized, missing ampersand", func(t *testing.T) {

@@ -651,6 +651,7 @@ var _ ParseError = &MissingStartOfAuthorizationError{}
 var _ errors.UserError = &MissingStartOfAuthorizationError{}
 var _ errors.SecondaryError = &MissingStartOfAuthorizationError{}
 var _ errors.HasDocumentationLink = &MissingStartOfAuthorizationError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingStartOfAuthorizationError{}
 
 func (*MissingStartOfAuthorizationError) isParseError() {}
 
@@ -680,6 +681,23 @@ func (*MissingStartOfAuthorizationError) SecondaryError() string {
 
 func (*MissingStartOfAuthorizationError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/references#authorized-references"
+}
+
+func (e *MissingStartOfAuthorizationError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert opening parenthesis",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "(",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					}.AttachLeft(code),
+				},
+			},
+		},
+	}
 }
 
 // UnexpectedTokenInParameterListError is reported when an unexpected token is found in a parameter list.
