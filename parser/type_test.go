@@ -174,6 +174,7 @@ func TestParseArrayType(t *testing.T) {
 
 		const code = "[Int"
 		_, errs := testParseType(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingClosingBracketInArrayTypeError{
@@ -361,6 +362,7 @@ func TestParseArrayType(t *testing.T) {
 
 		const code = "[T;1"
 		_, errs := testParseType(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingClosingBracketInArrayTypeError{
@@ -510,6 +512,7 @@ func TestParseReferenceType(t *testing.T) {
 
 		const code = "auth &Int"
 		_, errs := testParseType(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingStartOfAuthorizationError{
@@ -556,6 +559,7 @@ func TestParseReferenceType(t *testing.T) {
 
 		const code = "auth(X) Int"
 		_, errs := testParseType(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingAmpersandInAuthReferenceError{
@@ -779,6 +783,7 @@ func TestParseReferenceType(t *testing.T) {
 
 		const code = "auth(X, Y"
 		_, errs := testParseType(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingClosingParenInAuthError{
@@ -1084,6 +1089,7 @@ func TestParseIntersectionType(t *testing.T) {
 
 		const code = "{ T U }"
 		result, errs := testParseType(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingSeparatorInIntersectionOrDictionaryTypeError{
@@ -1113,10 +1119,10 @@ func TestParseIntersectionType(t *testing.T) {
 					Message: "Insert comma",
 					TextEdits: []ast.TextEdit{
 						{
-							Insertion: ", ",
+							Insertion: ",",
 							Range: ast.Range{
-								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
-								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+								StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+								EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
 							},
 						},
 					},
@@ -1125,10 +1131,10 @@ func TestParseIntersectionType(t *testing.T) {
 					Message: "Insert colon",
 					TextEdits: []ast.TextEdit{
 						{
-							Insertion: ": ",
+							Insertion: ":",
 							Range: ast.Range{
-								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
-								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+								StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+								EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
 							},
 						},
 					},
@@ -1137,8 +1143,8 @@ func TestParseIntersectionType(t *testing.T) {
 			fixes,
 		)
 
-		assert.Equal(t, "{ T , U }", fixes[0].TextEdits[0].ApplyTo(code))
-		assert.Equal(t, "{ T : U }", fixes[1].TextEdits[0].ApplyTo(code))
+		assert.Equal(t, "{ T, U }", fixes[0].TextEdits[0].ApplyTo(code))
+		assert.Equal(t, "{ T: U }", fixes[1].TextEdits[0].ApplyTo(code))
 	})
 
 	t.Run("invalid: colon", func(t *testing.T) {
@@ -1147,6 +1153,7 @@ func TestParseIntersectionType(t *testing.T) {
 
 		const code = "{ T , U : V }"
 		result, errs := testParseType(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&UnexpectedColonInIntersectionTypeError{
@@ -1292,6 +1299,7 @@ func TestParseIntersectionType(t *testing.T) {
 
 		const code = "{U"
 		_, errs := testParseType(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingClosingBraceInIntersectionOrDictionaryTypeError{
@@ -1489,6 +1497,7 @@ func TestParseDictionaryType(t *testing.T) {
 
 		const code = "{T:U,}"
 		result, errs := testParseType(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&UnexpectedCommaInDictionaryTypeError{
@@ -1536,6 +1545,7 @@ func TestParseDictionaryType(t *testing.T) {
 
 		const code = "{T:U:}"
 		result, errs := testParseType(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MultipleColonInDictionaryTypeError{
@@ -1614,10 +1624,11 @@ func TestParseDictionaryType(t *testing.T) {
 
 	t.Run("invalid, missing end after key type  and value type", func(t *testing.T) {
 
-		const code = "{T:U"
 		t.Parallel()
 
+		const code = "{T:U"
 		_, errs := testParseType(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingClosingBraceInIntersectionOrDictionaryTypeError{
@@ -1725,6 +1736,7 @@ func TestParseFunctionType(t *testing.T) {
 
 		const code = "fun"
 		_, errs := testParseType(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingOpeningParenInFunctionTypeError{
@@ -1822,6 +1834,7 @@ func TestParseFunctionType(t *testing.T) {
 
 		const code = "fun(Int"
 		_, errs := testParseType(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingClosingParenInFunctionTypeError{
@@ -4016,6 +4029,7 @@ func TestParseMissingEndOfParenthesizedType(t *testing.T) {
 
 	const code = "(Int"
 	_, errs := testParseType(code)
+
 	AssertEqualWithDiff(t,
 		[]error{
 			&MissingEndOfParenthesizedTypeError{

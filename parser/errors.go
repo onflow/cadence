@@ -512,17 +512,17 @@ func (*StatementSeparationError) SecondaryError() string {
 	return "add a semicolon (;) between statements or place each statement on a separate line"
 }
 
-func (e *StatementSeparationError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *StatementSeparationError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert semicolon",
 			TextEdits: []ast.TextEdit{
 				{
-					Insertion: "; ",
+					Insertion: ";",
 					Range: ast.Range{
 						StartPos: e.Pos,
 						EndPos:   e.Pos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -565,17 +565,17 @@ func (*MissingCommaInParameterListError) SecondaryError() string {
 	return "add a comma to separate parameters in the parameter list"
 }
 
-func (e *MissingCommaInParameterListError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingCommaInParameterListError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert comma",
 			TextEdits: []ast.TextEdit{
 				{
-					Insertion: ", ",
+					Insertion: ",",
 					Range: ast.Range{
 						StartPos: e.Pos,
 						EndPos:   e.Pos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -625,7 +625,7 @@ func (*MissingStartOfParameterListError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions"
 }
 
-func (e *MissingStartOfParameterListError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingStartOfParameterListError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert opening parenthesis",
@@ -635,7 +635,7 @@ func (e *MissingStartOfParameterListError) SuggestFixes(_ string) []errors.Sugge
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -771,7 +771,7 @@ func (*MissingClosingParenInParameterListError) SecondaryError() string {
 	return "function parameter lists must be properly closed with a closing parenthesis"
 }
 
-func (e *MissingClosingParenInParameterListError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingClosingParenInParameterListError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert closing parenthesis",
@@ -781,7 +781,7 @@ func (e *MissingClosingParenInParameterListError) SuggestFixes(_ string) []error
 					Range: ast.Range{
 						StartPos: e.Pos,
 						EndPos:   e.Pos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -830,17 +830,17 @@ func (*ExpectedCommaOrEndOfParameterListError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions"
 }
 
-func (e *ExpectedCommaOrEndOfParameterListError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *ExpectedCommaOrEndOfParameterListError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert comma",
 			TextEdits: []ast.TextEdit{
 				{
-					Insertion: ", ",
+					Insertion: ",",
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -886,17 +886,17 @@ func (*MissingColonAfterParameterNameError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions"
 }
 
-func (e *MissingColonAfterParameterNameError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingColonAfterParameterNameError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert colon",
 			TextEdits: []ast.TextEdit{
 				{
-					Insertion: ": ",
+					Insertion: ":",
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -1006,17 +1006,17 @@ func (*MissingCommaInTypeParameterListError) SecondaryError() string {
 	return "add a comma to separate type parameters in the type parameter list"
 }
 
-func (e *MissingCommaInTypeParameterListError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingCommaInTypeParameterListError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert comma",
 			TextEdits: []ast.TextEdit{
 				{
-					Insertion: ", ",
+					Insertion: ",",
 					Range: ast.Range{
 						StartPos: e.Pos,
 						EndPos:   e.Pos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -1098,7 +1098,7 @@ func (*MissingClosingGreaterInTypeParameterListError) SecondaryError() string {
 	return "type parameters must be separated by commas, and the list must end with a closing angle bracket (>)"
 }
 
-func (e *MissingClosingGreaterInTypeParameterListError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingClosingGreaterInTypeParameterListError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert closing angle bracket",
@@ -1108,7 +1108,7 @@ func (e *MissingClosingGreaterInTypeParameterListError) SuggestFixes(_ string) [
 					Range: ast.Range{
 						StartPos: e.Pos,
 						EndPos:   e.Pos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -1150,7 +1150,7 @@ func (*MissingClosingGreaterInTypeArgumentsError) SecondaryError() string {
 	return "type arguments must be enclosed in angle brackets (`<...>`)"
 }
 
-func (e *MissingClosingGreaterInTypeArgumentsError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingClosingGreaterInTypeArgumentsError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert closing angle bracket",
@@ -1160,7 +1160,7 @@ func (e *MissingClosingGreaterInTypeArgumentsError) SuggestFixes(_ string) []err
 					Range: ast.Range{
 						StartPos: e.Pos,
 						EndPos:   e.Pos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -1210,17 +1210,17 @@ func (*ExpectedCommaOrEndOfTypeParameterListError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
-func (e *ExpectedCommaOrEndOfTypeParameterListError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *ExpectedCommaOrEndOfTypeParameterListError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert comma",
 			TextEdits: []ast.TextEdit{
 				{
-					Insertion: ", ",
+					Insertion: ",",
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -1492,17 +1492,17 @@ func (*MissingColonInSwitchCaseError) SecondaryError() string {
 	return "a colon (:) is required after the case expression in a switch statement"
 }
 
-func (e *MissingColonInSwitchCaseError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingColonInSwitchCaseError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert colon",
 			TextEdits: []ast.TextEdit{
 				{
-					Insertion: ": ",
+					Insertion: ":",
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -2061,17 +2061,17 @@ func (*MissingRightArrowInEntitlementMappingError) SecondaryError() string {
 	return "entitlement mappings must use '->' to separate the input and output types"
 }
 
-func (e *MissingRightArrowInEntitlementMappingError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingRightArrowInEntitlementMappingError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert '->'",
 			TextEdits: []ast.TextEdit{
 				{
-					Insertion: `-> `,
+					Insertion: ` ->`,
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -2213,17 +2213,18 @@ func (*MissingSeparatorInIntersectionOrDictionaryTypeError) SecondaryError() str
 		"and types in a dictionary type must be separated by a colon (:)"
 }
 
-func (e *MissingSeparatorInIntersectionOrDictionaryTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingSeparatorInIntersectionOrDictionaryTypeError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
+	r := ast.Range{
+		StartPos: e.GotToken.StartPos,
+		EndPos:   e.GotToken.StartPos,
+	}.AttachLeft(code)
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert comma",
 			TextEdits: []ast.TextEdit{
 				{
-					Insertion: ", ",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					},
+					Insertion: ",",
+					Range:     r,
 				},
 			},
 		},
@@ -2231,11 +2232,8 @@ func (e *MissingSeparatorInIntersectionOrDictionaryTypeError) SuggestFixes(_ str
 			Message: "Insert colon",
 			TextEdits: []ast.TextEdit{
 				{
-					Insertion: ": ",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					},
+					Insertion: ":",
+					Range:     r,
 				},
 			},
 		},
@@ -2365,7 +2363,7 @@ func (*MissingClosingParenInArgumentListError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
-func (e *MissingClosingParenInArgumentListError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingClosingParenInArgumentListError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert closing parenthesis",
@@ -2375,7 +2373,7 @@ func (e *MissingClosingParenInArgumentListError) SuggestFixes(_ string) []errors
 					Range: ast.Range{
 						StartPos: e.Pos,
 						EndPos:   e.Pos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -2456,17 +2454,17 @@ func (*MissingCommaInArgumentListError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
-func (e *MissingCommaInArgumentListError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingCommaInArgumentListError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert comma",
 			TextEdits: []ast.TextEdit{
 				{
-					Insertion: ", ",
+					Insertion: ",",
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -3187,7 +3185,7 @@ func (e *MissingAccessOpeningParenError) SuggestFixes(code string) []errors.Sugg
 						Range: ast.Range{
 							StartPos: e.GotToken.StartPos,
 							EndPos:   e.GotToken.StartPos,
-						},
+						}.AttachLeft(code),
 					},
 				},
 			},
@@ -3233,7 +3231,7 @@ func (*MissingAccessClosingParenError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control"
 }
 
-func (e *MissingAccessClosingParenError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingAccessClosingParenError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert closing parenthesis",
@@ -3243,7 +3241,7 @@ func (e *MissingAccessClosingParenError) SuggestFixes(_ string) []errors.Suggest
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -3450,17 +3448,17 @@ func (*MissingColonAfterFieldNameError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system/composite-types#composite-type-fields"
 }
 
-func (e *MissingColonAfterFieldNameError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingColonAfterFieldNameError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert colon",
 			TextEdits: []ast.TextEdit{
 				{
-					Insertion: ": ",
+					Insertion: ":",
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -3503,17 +3501,18 @@ func (*MissingTransferError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/constants-and-variables"
 }
 
-func (e *MissingTransferError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingTransferError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
+	r := ast.Range{
+		StartPos: e.Pos,
+		EndPos:   e.Pos,
+	}.AttachLeft(code)
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert '=' (for struct)",
 			TextEdits: []ast.TextEdit{
 				{
-					Insertion: "= ",
-					Range: ast.Range{
-						StartPos: e.Pos,
-						EndPos:   e.Pos,
-					},
+					Insertion: " =",
+					Range:     r,
 				},
 			},
 		},
@@ -3521,11 +3520,8 @@ func (e *MissingTransferError) SuggestFixes(_ string) []errors.SuggestedFix[ast.
 			Message: "Insert '<-' (for resource)",
 			TextEdits: []ast.TextEdit{
 				{
-					Insertion: "<- ",
-					Range: ast.Range{
-						StartPos: e.Pos,
-						EndPos:   e.Pos,
-					},
+					Insertion: " <-",
+					Range:     r,
 				},
 			},
 		},
@@ -3990,17 +3986,18 @@ func (*InvalidEntitlementSeparatorError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control#entitlements"
 }
 
-func (e *InvalidEntitlementSeparatorError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *InvalidEntitlementSeparatorError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
+	r := ast.Range{
+		StartPos: e.Token.StartPos,
+		EndPos:   e.Token.StartPos,
+	}.AttachLeft(code)
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert comma (conjunction)",
 			TextEdits: []ast.TextEdit{
 				{
-					Insertion: ", ",
-					Range: ast.Range{
-						StartPos: e.Token.StartPos,
-						EndPos:   e.Token.StartPos,
-					},
+					Insertion: ",",
+					Range:     r,
 				},
 			},
 		},
@@ -4008,11 +4005,8 @@ func (e *InvalidEntitlementSeparatorError) SuggestFixes(_ string) []errors.Sugge
 			Message: "Insert vertical bar (disjunction)",
 			TextEdits: []ast.TextEdit{
 				{
-					Insertion: " | ",
-					Range: ast.Range{
-						StartPos: e.Token.StartPos,
-						EndPos:   e.Token.StartPos,
-					},
+					Insertion: " |",
+					Range:     r,
 				},
 			},
 		},
@@ -4606,17 +4600,17 @@ func (*DeclarationMissingOpeningBraceError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
-func (e *DeclarationMissingOpeningBraceError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *DeclarationMissingOpeningBraceError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert opening brace",
 			TextEdits: []ast.TextEdit{
 				{
-					Insertion: "{",
+					Insertion: " {",
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -4669,7 +4663,7 @@ func (*DeclarationMissingClosingBraceError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
-func (e *DeclarationMissingClosingBraceError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *DeclarationMissingClosingBraceError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert closing brace",
@@ -4679,7 +4673,7 @@ func (e *DeclarationMissingClosingBraceError) SuggestFixes(_ string) []errors.Su
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -4732,17 +4726,17 @@ func (*MissingOpeningBraceError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
-func (e *MissingOpeningBraceError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingOpeningBraceError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert opening brace",
 			TextEdits: []ast.TextEdit{
 				{
-					Insertion: "{",
+					Insertion: " {",
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -4795,7 +4789,7 @@ func (*MissingClosingBraceError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
-func (e *MissingClosingBraceError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingClosingBraceError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert closing brace",
@@ -4805,7 +4799,7 @@ func (e *MissingClosingBraceError) SuggestFixes(_ string) []errors.SuggestedFix[
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -4850,7 +4844,7 @@ func (*MissingEndOfParenthesizedTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
-func (e *MissingEndOfParenthesizedTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingEndOfParenthesizedTypeError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert closing parenthesis",
@@ -4860,7 +4854,7 @@ func (e *MissingEndOfParenthesizedTypeError) SuggestFixes(_ string) []errors.Sug
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -4905,7 +4899,7 @@ func (*MissingEndOfParenthesizedExpressionError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
-func (e *MissingEndOfParenthesizedExpressionError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingEndOfParenthesizedExpressionError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert closing parenthesis",
@@ -4915,7 +4909,7 @@ func (e *MissingEndOfParenthesizedExpressionError) SuggestFixes(_ string) []erro
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -4960,7 +4954,7 @@ func (*MissingClosingBracketInArrayTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/values-and-types/arrays#array-types"
 }
 
-func (e *MissingClosingBracketInArrayTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingClosingBracketInArrayTypeError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert closing bracket",
@@ -4970,7 +4964,7 @@ func (e *MissingClosingBracketInArrayTypeError) SuggestFixes(_ string) []errors.
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -5015,7 +5009,7 @@ func (*MissingClosingBracketInArrayExpressionError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/values-and-types/arrays#array-literals"
 }
 
-func (e *MissingClosingBracketInArrayExpressionError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingClosingBracketInArrayExpressionError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert closing bracket",
@@ -5025,7 +5019,7 @@ func (e *MissingClosingBracketInArrayExpressionError) SuggestFixes(_ string) []e
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -5070,7 +5064,7 @@ func (*MissingClosingBraceInDictionaryExpressionError) DocumentationLink() strin
 	return "https://cadence-lang.org/docs/language/values-and-types/dictionaries#dictionary-literals"
 }
 
-func (e *MissingClosingBraceInDictionaryExpressionError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingClosingBraceInDictionaryExpressionError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert closing brace",
@@ -5080,7 +5074,7 @@ func (e *MissingClosingBraceInDictionaryExpressionError) SuggestFixes(_ string) 
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -5125,17 +5119,17 @@ func (*MissingColonInDictionaryEntryError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/values-and-types/dictionaries#dictionary-literals"
 }
 
-func (e *MissingColonInDictionaryEntryError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingColonInDictionaryEntryError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert colon",
 			TextEdits: []ast.TextEdit{
 				{
-					Insertion: ": ",
+					Insertion: ":",
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -5180,17 +5174,17 @@ func (*MissingColonInConditionalExpressionError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/operators/bitwise-ternary-operators#ternary-conditional-operator"
 }
 
-func (e *MissingColonInConditionalExpressionError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingColonInConditionalExpressionError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert colon",
 			TextEdits: []ast.TextEdit{
 				{
-					Insertion: ": ",
+					Insertion: " :",
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -5235,7 +5229,7 @@ func (*MissingSlashInPathExpressionError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/accounts/paths"
 }
 
-func (e *MissingSlashInPathExpressionError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingSlashInPathExpressionError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert slash",
@@ -5245,7 +5239,7 @@ func (e *MissingSlashInPathExpressionError) SuggestFixes(_ string) []errors.Sugg
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -5290,7 +5284,7 @@ func (*MissingClosingBracketInIndexExpressionError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/expressions#indexing-expressions"
 }
 
-func (e *MissingClosingBracketInIndexExpressionError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingClosingBracketInIndexExpressionError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert closing bracket",
@@ -5300,7 +5294,7 @@ func (e *MissingClosingBracketInIndexExpressionError) SuggestFixes(_ string) []e
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -5346,7 +5340,7 @@ func (*MissingClosingBraceInIntersectionOrDictionaryTypeError) DocumentationLink
 	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
 }
 
-func (e *MissingClosingBraceInIntersectionOrDictionaryTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingClosingBraceInIntersectionOrDictionaryTypeError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert closing brace",
@@ -5356,7 +5350,7 @@ func (e *MissingClosingBraceInIntersectionOrDictionaryTypeError) SuggestFixes(_ 
 					Range: ast.Range{
 						StartPos: e.Pos,
 						EndPos:   e.Pos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -5401,7 +5395,7 @@ func (*MissingClosingParenInAuthError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/references#authorized-references"
 }
 
-func (e *MissingClosingParenInAuthError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingClosingParenInAuthError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert closing parenthesis",
@@ -5411,7 +5405,7 @@ func (e *MissingClosingParenInAuthError) SuggestFixes(_ string) []errors.Suggest
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -5512,7 +5506,7 @@ func (*MissingOpeningParenInNominalTypeInvocationError) DocumentationLink() stri
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
-func (e *MissingOpeningParenInNominalTypeInvocationError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingOpeningParenInNominalTypeInvocationError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert opening parenthesis",
@@ -5522,7 +5516,7 @@ func (e *MissingOpeningParenInNominalTypeInvocationError) SuggestFixes(_ string)
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -5530,7 +5524,7 @@ func (e *MissingOpeningParenInNominalTypeInvocationError) SuggestFixes(_ string)
 }
 
 // MissingOpeningParenInFunctionTypeError is reported when a function type parameter list
-// is missing a opening parenthesis.
+// is missing an opening parenthesis.
 type MissingOpeningParenInFunctionTypeError struct {
 	GotToken lexer.Token
 }
@@ -5569,7 +5563,7 @@ func (*MissingOpeningParenInFunctionTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions#function-types"
 }
 
-func (e *MissingOpeningParenInFunctionTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingOpeningParenInFunctionTypeError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert opening parenthesis",
@@ -5579,7 +5573,7 @@ func (e *MissingOpeningParenInFunctionTypeError) SuggestFixes(_ string) []errors
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},
@@ -5626,7 +5620,7 @@ func (*MissingClosingParenInFunctionTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions#function-types"
 }
 
-func (e *MissingClosingParenInFunctionTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *MissingClosingParenInFunctionTypeError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert closing parenthesis",
@@ -5636,7 +5630,7 @@ func (e *MissingClosingParenInFunctionTypeError) SuggestFixes(_ string) []errors
 					Range: ast.Range{
 						StartPos: e.GotToken.StartPos,
 						EndPos:   e.GotToken.StartPos,
-					},
+					}.AttachLeft(code),
 				},
 			},
 		},

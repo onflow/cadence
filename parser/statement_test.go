@@ -981,6 +981,7 @@ func TestParseEmit(t *testing.T) {
 
 		const code = "emit T"
 		_, errs := testParseStatements(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingOpeningParenInNominalTypeInvocationError{
@@ -1281,6 +1282,7 @@ func TestParseStatements(t *testing.T) {
 
 		const code = `assert true`
 		result, errs := testParseStatements(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&StatementSeparationError{
@@ -1324,10 +1326,10 @@ func TestParseStatements(t *testing.T) {
 					Message: "Insert semicolon",
 					TextEdits: []ast.TextEdit{
 						{
-							Insertion: "; ",
+							Insertion: ";",
 							Range: ast.Range{
-								StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
-								EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+								StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+								EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
 							},
 						},
 					},
@@ -1337,7 +1339,7 @@ func TestParseStatements(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			`assert ; true`,
+			`assert; true`,
 			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
@@ -1752,6 +1754,7 @@ func TestParseSwitchStatement(t *testing.T) {
 
 		const code = "switch 1 { case 2 break }"
 		_, errs := testParseStatements(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingColonInSwitchCaseError{
@@ -1777,10 +1780,10 @@ func TestParseSwitchStatement(t *testing.T) {
 					Message: "Insert colon",
 					TextEdits: []ast.TextEdit{
 						{
-							Insertion: ": ",
+							Insertion: ":",
 							Range: ast.Range{
-								StartPos: ast.Position{Offset: 18, Line: 1, Column: 18},
-								EndPos:   ast.Position{Offset: 18, Line: 1, Column: 18},
+								StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
+								EndPos:   ast.Position{Offset: 17, Line: 1, Column: 17},
 							},
 						},
 					},
@@ -1790,7 +1793,7 @@ func TestParseSwitchStatement(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			"switch 1 { case 2 : break }",
+			"switch 1 { case 2: break }",
 			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
@@ -3195,10 +3198,10 @@ func TestParseIfStatementMissingOpeningBrace(t *testing.T) {
 				Message: "Insert opening brace",
 				TextEdits: []ast.TextEdit{
 					{
-						Insertion: "{",
+						Insertion: " {",
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
-							EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+							StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+							EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
 						},
 					},
 				},
@@ -3208,7 +3211,7 @@ func TestParseIfStatementMissingOpeningBrace(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		"if true {}",
+		"if true { }",
 		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
@@ -3245,10 +3248,10 @@ func TestParseWhileStatementMissingOpeningBrace(t *testing.T) {
 				Message: "Insert opening brace",
 				TextEdits: []ast.TextEdit{
 					{
-						Insertion: "{",
+						Insertion: " {",
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
-							EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
 						},
 					},
 				},
@@ -3258,7 +3261,7 @@ func TestParseWhileStatementMissingOpeningBrace(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		"while true {}",
+		"while true { }",
 		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
@@ -3295,10 +3298,10 @@ func TestParseForStatementMissingOpeningBrace(t *testing.T) {
 				Message: "Insert opening brace",
 				TextEdits: []ast.TextEdit{
 					{
-						Insertion: "{",
+						Insertion: " {",
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
-							EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
 						},
 					},
 				},
@@ -3308,7 +3311,7 @@ func TestParseForStatementMissingOpeningBrace(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		"for x in y {}",
+		"for x in y { }",
 		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
@@ -3347,8 +3350,8 @@ func TestParseIfStatementMissingClosingBrace(t *testing.T) {
 					{
 						Insertion: "}",
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
-							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+							StartPos: ast.Position{Offset: 9, Line: 1, Column: 9},
+							EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
 						},
 					},
 				},
@@ -3358,7 +3361,7 @@ func TestParseIfStatementMissingClosingBrace(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		"if true { }",
+		"if true {} ",
 		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
@@ -3397,8 +3400,8 @@ func TestParseWhileStatementMissingClosingBrace(t *testing.T) {
 					{
 						Insertion: "}",
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
-							EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+							StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
+							EndPos:   ast.Position{Offset: 12, Line: 1, Column: 12},
 						},
 					},
 				},
@@ -3408,7 +3411,7 @@ func TestParseWhileStatementMissingClosingBrace(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		"while true { }",
+		"while true {} ",
 		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
@@ -3447,8 +3450,8 @@ func TestParseForStatementMissingClosingBrace(t *testing.T) {
 					{
 						Insertion: "}",
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
-							EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+							StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
+							EndPos:   ast.Position{Offset: 12, Line: 1, Column: 12},
 						},
 					},
 				},
@@ -3458,7 +3461,7 @@ func TestParseForStatementMissingClosingBrace(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		"for x in y { }",
+		"for x in y {} ",
 		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
@@ -3495,10 +3498,10 @@ func TestParseFunctionDeclarationMissingOpeningBrace(t *testing.T) {
 				Message: "Insert opening brace",
 				TextEdits: []ast.TextEdit{
 					{
-						Insertion: "{",
+						Insertion: " {",
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
-							EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
 						},
 					},
 				},
@@ -3508,7 +3511,7 @@ func TestParseFunctionDeclarationMissingOpeningBrace(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		"fun test() {}",
+		"fun test() { }",
 		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
@@ -3547,8 +3550,8 @@ func TestParseFunctionDeclarationMissingClosingBrace(t *testing.T) {
 					{
 						Insertion: "}",
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
-							EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+							StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
+							EndPos:   ast.Position{Offset: 12, Line: 1, Column: 12},
 						},
 					},
 				},
@@ -3558,7 +3561,7 @@ func TestParseFunctionDeclarationMissingClosingBrace(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		"fun test() { }",
+		"fun test() {} ",
 		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
@@ -3595,10 +3598,10 @@ func TestParsePreConditionsMissingOpeningBrace(t *testing.T) {
 				Message: "Insert opening brace",
 				TextEdits: []ast.TextEdit{
 					{
-						Insertion: "{",
+						Insertion: " {",
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
-							EndPos:   ast.Position{Offset: 17, Line: 1, Column: 17},
+							StartPos: ast.Position{Offset: 16, Line: 1, Column: 16},
+							EndPos:   ast.Position{Offset: 16, Line: 1, Column: 16},
 						},
 					},
 				},
@@ -3608,7 +3611,7 @@ func TestParsePreConditionsMissingOpeningBrace(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		"fun test() { pre {} }",
+		"fun test() { pre { } }",
 		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
@@ -3657,8 +3660,8 @@ func TestParsePreConditionsMissingClosingBrace(t *testing.T) {
 					{
 						Insertion: "}",
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 19, Line: 1, Column: 19},
-							EndPos:   ast.Position{Offset: 19, Line: 1, Column: 19},
+							StartPos: ast.Position{Offset: 18, Line: 1, Column: 18},
+							EndPos:   ast.Position{Offset: 18, Line: 1, Column: 18},
 						},
 					},
 				},
@@ -3668,7 +3671,7 @@ func TestParsePreConditionsMissingClosingBrace(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		"fun test() { pre { }",
+		"fun test() { pre {} ",
 		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
@@ -3705,10 +3708,10 @@ func TestParsePostConditionsMissingOpeningBrace(t *testing.T) {
 				Message: "Insert opening brace",
 				TextEdits: []ast.TextEdit{
 					{
-						Insertion: "{",
+						Insertion: " {",
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 18, Line: 1, Column: 18},
-							EndPos:   ast.Position{Offset: 18, Line: 1, Column: 18},
+							StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
+							EndPos:   ast.Position{Offset: 17, Line: 1, Column: 17},
 						},
 					},
 				},
@@ -3718,7 +3721,7 @@ func TestParsePostConditionsMissingOpeningBrace(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		"fun test() { post {} }",
+		"fun test() { post { } }",
 		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
@@ -3767,8 +3770,8 @@ func TestParsePostConditionsMissingClosingBrace(t *testing.T) {
 					{
 						Insertion: "}",
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 20, Line: 1, Column: 20},
-							EndPos:   ast.Position{Offset: 20, Line: 1, Column: 20},
+							StartPos: ast.Position{Offset: 19, Line: 1, Column: 19},
+							EndPos:   ast.Position{Offset: 19, Line: 1, Column: 19},
 						},
 					},
 				},
@@ -3778,7 +3781,7 @@ func TestParsePostConditionsMissingClosingBrace(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		"fun test() { post { }",
+		"fun test() { post {} ",
 		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
@@ -3815,10 +3818,10 @@ func TestParseSwitchStatementMissingOpeningBrace(t *testing.T) {
 				Message: "Insert opening brace",
 				TextEdits: []ast.TextEdit{
 					{
-						Insertion: "{",
+						Insertion: " {",
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 9, Line: 1, Column: 9},
-							EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+							StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+							EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
 						},
 					},
 				},
@@ -3828,7 +3831,7 @@ func TestParseSwitchStatementMissingOpeningBrace(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		"switch x {}",
+		"switch x { }",
 		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
@@ -3867,8 +3870,8 @@ func TestParseSwitchStatementMissingClosingBrace(t *testing.T) {
 					{
 						Insertion: "}",
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
-							EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
 						},
 					},
 				},
@@ -3878,7 +3881,7 @@ func TestParseSwitchStatementMissingClosingBrace(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		"switch x { }",
+		"switch x {} ",
 		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
@@ -3925,7 +3928,7 @@ func TestParseIfStatementMissingOpeningBraceEOF(t *testing.T) {
 				Message: "Insert opening brace",
 				TextEdits: []ast.TextEdit{
 					{
-						Insertion: "{",
+						Insertion: " {",
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
 							EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
@@ -3938,7 +3941,7 @@ func TestParseIfStatementMissingOpeningBraceEOF(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		"if true{",
+		"if true {",
 		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
@@ -3985,7 +3988,7 @@ func TestParseWhileStatementMissingOpeningBraceEOF(t *testing.T) {
 				Message: "Insert opening brace",
 				TextEdits: []ast.TextEdit{
 					{
-						Insertion: "{",
+						Insertion: " {",
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
 							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
@@ -3998,7 +4001,7 @@ func TestParseWhileStatementMissingOpeningBraceEOF(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		"while true{",
+		"while true {",
 		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
@@ -4045,7 +4048,7 @@ func TestParseForStatementMissingOpeningBraceEOF(t *testing.T) {
 				Message: "Insert opening brace",
 				TextEdits: []ast.TextEdit{
 					{
-						Insertion: "{",
+						Insertion: " {",
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
 							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
@@ -4058,7 +4061,7 @@ func TestParseForStatementMissingOpeningBraceEOF(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		"for x in y{",
+		"for x in y {",
 		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
@@ -4105,7 +4108,7 @@ func TestParseFunctionDeclarationMissingOpeningBraceEOF(t *testing.T) {
 				Message: "Insert opening brace",
 				TextEdits: []ast.TextEdit{
 					{
-						Insertion: "{",
+						Insertion: " {",
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
 							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
@@ -4118,7 +4121,7 @@ func TestParseFunctionDeclarationMissingOpeningBraceEOF(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		"fun test(){",
+		"fun test() {",
 		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
@@ -4175,7 +4178,7 @@ func TestParsePreConditionsMissingOpeningBraceEOF(t *testing.T) {
 				Message: "Insert opening brace",
 				TextEdits: []ast.TextEdit{
 					{
-						Insertion: "{",
+						Insertion: " {",
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 16, Line: 1, Column: 16},
 							EndPos:   ast.Position{Offset: 16, Line: 1, Column: 16},
@@ -4188,7 +4191,7 @@ func TestParsePreConditionsMissingOpeningBraceEOF(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		"fun test() { pre{",
+		"fun test() { pre {",
 		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
@@ -4245,7 +4248,7 @@ func TestParsePostConditionsMissingOpeningBraceEOF(t *testing.T) {
 				Message: "Insert opening brace",
 				TextEdits: []ast.TextEdit{
 					{
-						Insertion: "{",
+						Insertion: " {",
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
 							EndPos:   ast.Position{Offset: 17, Line: 1, Column: 17},
@@ -4258,7 +4261,7 @@ func TestParsePostConditionsMissingOpeningBraceEOF(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		"fun test() { post{",
+		"fun test() { post {",
 		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
@@ -4305,7 +4308,7 @@ func TestParseSwitchStatementMissingOpeningBraceEOF(t *testing.T) {
 				Message: "Insert opening brace",
 				TextEdits: []ast.TextEdit{
 					{
-						Insertion: "{",
+						Insertion: " {",
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
 							EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
@@ -4318,7 +4321,7 @@ func TestParseSwitchStatementMissingOpeningBraceEOF(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		"switch x{",
+		"switch x {",
 		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }

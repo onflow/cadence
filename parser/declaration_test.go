@@ -290,7 +290,6 @@ func TestParseVariableDeclaration(t *testing.T) {
 		t.Parallel()
 
 		const code = "static var x = 1"
-
 		_, errs := testParseDeclarationsWithConfig(
 			code,
 			Config{
@@ -362,7 +361,6 @@ func TestParseVariableDeclaration(t *testing.T) {
 		t.Parallel()
 
 		const code = "native var x = 1"
-
 		_, errs := testParseDeclarationsWithConfig(
 			code,
 			Config{
@@ -435,6 +433,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 
 		const code = "let x 1"
 		_, errs := testParseDeclarations(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingTransferError{
@@ -454,10 +453,10 @@ func TestParseVariableDeclaration(t *testing.T) {
 					Message: "Insert '=' (for struct)",
 					TextEdits: []ast.TextEdit{
 						{
-							Insertion: "= ",
+							Insertion: " =",
 							Range: ast.Range{
-								StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
-								EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+								StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+								EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
 							},
 						},
 					},
@@ -466,10 +465,10 @@ func TestParseVariableDeclaration(t *testing.T) {
 					Message: "Insert '<-' (for resource)",
 					TextEdits: []ast.TextEdit{
 						{
-							Insertion: "<- ",
+							Insertion: " <-",
 							Range: ast.Range{
-								StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
-								EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+								StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+								EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
 							},
 						},
 					},
@@ -766,10 +765,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		const code = "fun foo x: Int) {}"
 		_, errs := testParseDeclarations(code)
-		require.Len(t, errs, 1)
-
-		var missingStartErr *MissingStartOfParameterListError
-		require.ErrorAs(t, errs[0], &missingStartErr)
 
 		AssertEqualWithDiff(t,
 			[]error{
@@ -786,6 +781,9 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			errs,
 		)
 
+		var missingStartErr *MissingStartOfParameterListError
+		require.ErrorAs(t, errs[0], &missingStartErr)
+
 		fixes := missingStartErr.SuggestFixes(code)
 		AssertEqualWithDiff(t,
 			[]errors.SuggestedFix[ast.TextEdit]{
@@ -795,8 +793,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 						{
 							Insertion: "(",
 							Range: ast.Range{
-								StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
-								EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+								StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+								EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
 							},
 						},
 					},
@@ -806,7 +804,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			`fun foo (x: Int) {}`,
+			`fun foo( x: Int) {}`,
 			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
@@ -838,6 +836,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		const code = "fun foo("
 		_, errs := testParseDeclarations(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingClosingParenInParameterListError{
@@ -889,8 +888,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		t.Parallel()
 
 		const code = "fun foo(a: Int -) {}"
-
 		_, errs := testParseDeclarations(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&ExpectedCommaOrEndOfParameterListError{
@@ -916,10 +915,10 @@ func TestParseFunctionDeclaration(t *testing.T) {
 					Message: "Insert comma",
 					TextEdits: []ast.TextEdit{
 						{
-							Insertion: ", ",
+							Insertion: ",",
 							Range: ast.Range{
-								StartPos: ast.Position{Offset: 15, Line: 1, Column: 15},
-								EndPos:   ast.Position{Offset: 15, Line: 1, Column: 15},
+								StartPos: ast.Position{Offset: 14, Line: 1, Column: 14},
+								EndPos:   ast.Position{Offset: 14, Line: 1, Column: 14},
 							},
 						},
 					},
@@ -929,7 +928,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			"fun foo(a: Int , -) {}",
+			"fun foo(a: Int, -) {}",
 			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
@@ -939,8 +938,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		t.Parallel()
 
 		const code = "fun foo(a Int) {}"
-
 		_, errs := testParseDeclarations(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingColonAfterParameterNameError{
@@ -966,7 +965,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 					Message: "Insert colon",
 					TextEdits: []ast.TextEdit{
 						{
-							Insertion: ": ",
+							Insertion: ":",
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
 								EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
@@ -979,7 +978,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			"fun foo(a Int: ) {}",
+			"fun foo(a Int:) {}",
 			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
@@ -1469,6 +1468,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		const code = "view view fun foo (): X { }"
 		_, errs := testParseDeclarations(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&DuplicateViewModifierError{
@@ -2009,8 +2009,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 						{
 							Insertion: ">",
 							Range: ast.Range{
-								StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
-								EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+								StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+								EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
 							},
 						},
 					},
@@ -2020,7 +2020,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			`fun foo  < >`,
+			`fun foo  <> `,
 			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
@@ -2030,7 +2030,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		t.Parallel()
 
 		const code = "fun foo  < A B > () { } "
-
 		_, errs := testParseDeclarationsWithConfig(
 			code,
 			Config{
@@ -2057,10 +2056,10 @@ func TestParseFunctionDeclaration(t *testing.T) {
 					Message: "Insert comma",
 					TextEdits: []ast.TextEdit{
 						{
-							Insertion: ", ",
+							Insertion: ",",
 							Range: ast.Range{
-								StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
-								EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+								StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
+								EndPos:   ast.Position{Offset: 12, Line: 1, Column: 12},
 							},
 						},
 					},
@@ -2070,7 +2069,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			`fun foo  < A , B > () { } `,
+			`fun foo  < A, B > () { } `,
 			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
@@ -2080,7 +2079,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		t.Parallel()
 
 		const code = "fun foo  < A - > () { } "
-
 		_, errs := testParseDeclarationsWithConfig(
 			code,
 			Config{
@@ -2113,10 +2111,10 @@ func TestParseFunctionDeclaration(t *testing.T) {
 					Message: "Insert comma",
 					TextEdits: []ast.TextEdit{
 						{
-							Insertion: ", ",
+							Insertion: ",",
 							Range: ast.Range{
-								StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
-								EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+								StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
+								EndPos:   ast.Position{Offset: 12, Line: 1, Column: 12},
 							},
 						},
 					},
@@ -2126,7 +2124,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			`fun foo  < A , - > () { } `,
+			`fun foo  < A, - > () { } `,
 			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
@@ -2282,6 +2280,7 @@ func TestParseAccess(t *testing.T) {
 
 		const code = "access("
 		result, errs := parse(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingAccessKeywordError{
@@ -2339,6 +2338,7 @@ func TestParseAccess(t *testing.T) {
 
 		const code = "access self"
 		result, errs := parse(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingAccessOpeningParenError{
@@ -2403,6 +2403,7 @@ func TestParseAccess(t *testing.T) {
 
 		const code = "access "
 		_, errs := parse(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingAccessOpeningParenError{
@@ -2440,8 +2441,8 @@ func TestParseAccess(t *testing.T) {
 						{
 							Insertion: "(",
 							Range: ast.Range{
-								StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
-								EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+								StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+								EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
 							},
 						},
 					},
@@ -2451,7 +2452,7 @@ func TestParseAccess(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			"access (",
+			"access( ",
 			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
@@ -2462,6 +2463,7 @@ func TestParseAccess(t *testing.T) {
 
 		const code = "access ( self "
 		result, errs := parse(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingAccessClosingParenError{
@@ -2494,8 +2496,8 @@ func TestParseAccess(t *testing.T) {
 						{
 							Insertion: ")",
 							Range: ast.Range{
-								StartPos: ast.Position{Offset: 14, Line: 1, Column: 14},
-								EndPos:   ast.Position{Offset: 14, Line: 1, Column: 14},
+								StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+								EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
 							},
 						},
 					},
@@ -2505,7 +2507,7 @@ func TestParseAccess(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			"access ( self )",
+			"access ( self) ",
 			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
@@ -2895,6 +2897,7 @@ func TestParseAccess(t *testing.T) {
 
 		const code = "access ( foo bar )"
 		_, errs := parse(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&InvalidEntitlementSeparatorError{
@@ -2920,10 +2923,10 @@ func TestParseAccess(t *testing.T) {
 					Message: "Insert comma (conjunction)",
 					TextEdits: []ast.TextEdit{
 						{
-							Insertion: ", ",
+							Insertion: ",",
 							Range: ast.Range{
-								StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
-								EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+								StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
+								EndPos:   ast.Position{Offset: 12, Line: 1, Column: 12},
 							},
 						},
 					},
@@ -2932,10 +2935,10 @@ func TestParseAccess(t *testing.T) {
 					Message: "Insert vertical bar (disjunction)",
 					TextEdits: []ast.TextEdit{
 						{
-							Insertion: " | ",
+							Insertion: " |",
 							Range: ast.Range{
-								StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
-								EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+								StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
+								EndPos:   ast.Position{Offset: 12, Line: 1, Column: 12},
 							},
 						},
 					},
@@ -2944,8 +2947,8 @@ func TestParseAccess(t *testing.T) {
 			fixes,
 		)
 
-		assert.Equal(t, "access ( foo , bar )", fixes[0].TextEdits[0].ApplyTo(code))
-		assert.Equal(t, "access ( foo  | bar )", fixes[1].TextEdits[0].ApplyTo(code))
+		assert.Equal(t, "access ( foo, bar )", fixes[0].TextEdits[0].ApplyTo(code))
+		assert.Equal(t, "access ( foo | bar )", fixes[1].TextEdits[0].ApplyTo(code))
 	})
 
 	t.Run("access, invalid separator", func(t *testing.T) {
@@ -3851,10 +3854,10 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 					Message: "Insert colon",
 					TextEdits: []ast.TextEdit{
 						{
-							Insertion: ": ",
+							Insertion: ":",
 							Range: ast.Range{
-								StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
-								EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+								StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+								EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
 							},
 						},
 					},
@@ -3864,7 +3867,7 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			"let x : Int",
+			"let x: Int",
 			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
@@ -4252,7 +4255,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 					Message: "Insert opening brace",
 					TextEdits: []ast.TextEdit{
 						{
-							Insertion: "{",
+							Insertion: " {",
 							Range: ast.Range{
 								StartPos: ast.Position{Offset: 24, Line: 1, Column: 24},
 								EndPos:   ast.Position{Offset: 24, Line: 1, Column: 24},
@@ -4265,7 +4268,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			"access(all) struct S: RI{",
+			"access(all) struct S: RI {",
 			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 
@@ -4896,6 +4899,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 
 		const code = `
           attachment E`
+
 		_, errs := testParseDeclarations(code)
 		AssertEqualWithDiff(t,
 			[]error{
@@ -8681,8 +8685,8 @@ func TestParseDestructor(t *testing.T) {
             destroy() {}
         }
     `
-
 	_, errs := testParseDeclarations(code)
+
 	AssertEqualWithDiff(t,
 		[]error{
 			&CustomDestructorError{
@@ -9130,6 +9134,7 @@ func TestParseInvalidAccessModifiers(t *testing.T) {
 
 		const code = "access(all) access(self) let x = 1"
 		_, errs := testParseDeclarations(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&DuplicateAccessModifierError{
@@ -10429,8 +10434,8 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 
 		const code = `
           access(all) entitlement mapping M {`
-
 		_, errs := testParseDeclarations(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&DeclarationMissingClosingBraceError{
@@ -10477,13 +10482,13 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 
 	t.Run("missing open brace", func(t *testing.T) {
 
+		t.Parallel()
+
 		const code = `
           access(all) entitlement mapping M }
         `
-
-		t.Parallel()
-
 		_, errs := testParseDeclarations(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&DeclarationMissingOpeningBraceError{
@@ -10510,10 +10515,10 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 					Message: "Insert opening brace",
 					TextEdits: []ast.TextEdit{
 						{
-							Insertion: "{",
+							Insertion: " {",
 							Range: ast.Range{
-								StartPos: ast.Position{Offset: 45, Line: 2, Column: 44},
-								EndPos:   ast.Position{Offset: 45, Line: 2, Column: 44},
+								StartPos: ast.Position{Offset: 44, Line: 2, Column: 43},
+								EndPos:   ast.Position{Offset: 44, Line: 2, Column: 43},
 							},
 						},
 					},
@@ -10523,7 +10528,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			"access(all) entitlement mapping M {}",
+			"access(all) entitlement mapping M { }",
 			strings.TrimSpace(fixes[0].TextEdits[0].ApplyTo(code)),
 		)
 	})
@@ -10626,10 +10631,10 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 					Message: "Insert '->'",
 					TextEdits: []ast.TextEdit{
 						{
-							Insertion: "-> ",
+							Insertion: " ->",
 							Range: ast.Range{
-								StartPos: ast.Position{Offset: 63, Line: 3, Column: 16},
-								EndPos:   ast.Position{Offset: 63, Line: 3, Column: 16},
+								StartPos: ast.Position{Offset: 62, Line: 3, Column: 15},
+								EndPos:   ast.Position{Offset: 62, Line: 3, Column: 15},
 							},
 						},
 					},
@@ -10854,6 +10859,7 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 
 		const code = " pub fun foo ( ) { }"
 		_, errs := testParseDeclarations(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&PubAccessError{
@@ -10901,6 +10907,7 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 
 		const code = " priv fun foo ( ) { }"
 		_, errs := testParseDeclarations(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&PrivAccessError{
@@ -11034,10 +11041,10 @@ func TestParseMissingCommaInParameterListError(t *testing.T) {
 				Message: "Insert comma",
 				TextEdits: []ast.TextEdit{
 					{
-						Insertion: ", ",
+						Insertion: ",",
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 25, Line: 2, Column: 24},
-							EndPos:   ast.Position{Offset: 25, Line: 2, Column: 24},
+							StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
+							EndPos:   ast.Position{Offset: 24, Line: 2, Column: 23},
 						},
 					},
 				},
@@ -11047,7 +11054,7 @@ func TestParseMissingCommaInParameterListError(t *testing.T) {
 	)
 
 	const expected = `
-        fun test(a: Int , b: Int) {
+        fun test(a: Int, b: Int) {
             return a + b
         }
     `
@@ -11143,10 +11150,10 @@ func TestParseTransactionDeclarationMissingOpeningBrace(t *testing.T) {
 				Message: "Insert opening brace",
 				TextEdits: []ast.TextEdit{
 					{
-						Insertion: "{",
+						Insertion: " {",
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
-							EndPos:   ast.Position{Offset: 12, Line: 1, Column: 12},
+							StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
+							EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
 						},
 					},
 				},
@@ -11156,7 +11163,7 @@ func TestParseTransactionDeclarationMissingOpeningBrace(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		"transaction {}",
+		"transaction { }",
 		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
@@ -11202,7 +11209,7 @@ func TestParseTransactionDeclarationMissingOpeningBraceEOF(t *testing.T) {
 				Message: "Insert opening brace",
 				TextEdits: []ast.TextEdit{
 					{
-						Insertion: "{",
+						Insertion: " {",
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
 							EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
@@ -11215,7 +11222,7 @@ func TestParseTransactionDeclarationMissingOpeningBraceEOF(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		"transaction{",
+		"transaction {",
 		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
