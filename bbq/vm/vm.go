@@ -1471,7 +1471,12 @@ func opStringTemplate(vm *VM, ins opcode.InstructionTemplateString) {
 		valuesStr = append(valuesStr, s.Str)
 	}
 
-	vm.push(interpreter.BuildStringTemplate(valuesStr, expressions))
+	vm.push(interpreter.BuildStringTemplate(
+		vm.context,
+		EmptyLocationRange,
+		valuesStr,
+		expressions,
+	))
 }
 
 func (vm *VM) run() {

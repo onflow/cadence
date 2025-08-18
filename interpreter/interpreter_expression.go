@@ -937,23 +937,52 @@ func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpr
 	return NewUnmeteredStringValue(expression.Value)
 }
 
-func BuildStringTemplate(values []string, exprs []Value) Value {
-	var builder strings.Builder
+func BuildStringTemplate(
+	context ValueStringContext,
+	locationRange LocationRange,
+	values []string,
+	exprs []Value,
+) Value {
+
+	partCount := len(values) + len(exprs)
+	common.UseMemory(context, common.NewGoSliceMemoryUsages(partCount))
+	parts := make([]string, 0, partCount)
+
 	for i, str := range values {
-		builder.WriteString(str)
+		parts = append(parts, str)
 		if i < len(exprs) {
-			// switch on value instead of type
+			var part string
 			switch expr := exprs[i].(type) {
 			case *StringValue:
-				builder.WriteString(expr.Str)
+				part = expr.Str
 			case CharacterValue:
-				builder.WriteString(expr.Str)
+				part = expr.Str
 			default:
-				builder.WriteString(expr.String())
+				// Ideally we would pass in the location range of the expression instead of the whole template,
+				// but then ValueStringContext would be required to provide a location
+				part = expr.MeteredString(context, SeenReferences{}, locationRange)
 			}
+			parts = append(parts, part)
 		}
 	}
-	return NewUnmeteredStringValue(builder.String())
+
+	var length int
+	for _, part := range parts {
+		length += len(part)
+	}
+
+	return NewStringValue(
+		context,
+		common.NewStringMemoryUsage(length),
+		func() string {
+			var builder strings.Builder
+			builder.Grow(length)
+			for _, part := range parts {
+				builder.WriteString(part)
+			}
+			return builder.String()
+		},
+	)
 }
 
 func (interpreter *Interpreter) VisitStringTemplateExpression(expression *ast.StringTemplateExpression) Value {
@@ -969,7 +998,16 @@ func (interpreter *Interpreter) VisitStringTemplateExpression(expression *ast.St
 		}
 	}
 
-	return BuildStringTemplate(expression.Values, values)
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: expression,
+	}
+	return BuildStringTemplate(
+		interpreter,
+		locationRange,
+		expression.Values,
+		values,
+	)
 }
 
 func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpression) Value {
