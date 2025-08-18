@@ -567,6 +567,137 @@ func TestImport(t *testing.T) {
 	require.Equal(t, interpreter.NewUnmeteredStringValue("global function of the imported program"), result)
 }
 
+func TestImportError(t *testing.T) {
+
+	t.Parallel()
+
+	importLocation := common.NewAddressLocation(nil, common.Address{0x1}, "Test")
+
+	importedChecker, err := ParseAndCheckWithOptions(t,
+		`
+          fun helloText(): String {
+              return panic("error in helloText")
+          }
+
+          contract Test {
+              struct Foo {
+                  var id : String
+
+                  init(_ id: String) {
+                      self.id = id
+                  }
+
+                  fun sayHello(_ id: Int): String {
+                      self.id
+                      return helloText()
+                  }
+              }
+          }
+        `,
+		ParseAndCheckOptions{
+			Location: importLocation,
+			CheckerConfig: &sema.Config{
+				BaseValueActivationHandler: TestBaseValueActivation,
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	importCompConfig := &compiler.Config{
+		BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndPanic,
+	}
+
+	importCompiler := compiler.NewInstructionCompilerWithConfig(
+		interpreter.ProgramFromChecker(importedChecker),
+		importedChecker.Location,
+		importCompConfig,
+	)
+	importedProgram := importCompiler.Compile()
+
+	importVMConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+	importVMConfig.BuiltinGlobalsProvider = VMBuiltinGlobalsProviderWithDefaultsAndPanic
+
+	_, importedContractValue := initializeContract(
+		t,
+		importLocation,
+		importedProgram,
+		importVMConfig,
+	)
+
+	activation := sema.NewVariableActivation(sema.BaseValueActivation)
+	activation.DeclareValue(stdlib.VMPanicFunction)
+
+	checker, err := ParseAndCheckWithOptions(t,
+		`
+          import Test from 0x1
+
+          fun test(): String {
+              var r = Test.Foo("Hello from Foo!")
+              return r.sayHello(1)
+          }
+        `,
+		ParseAndCheckOptions{
+			CheckerConfig: &sema.Config{
+				ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
+				},
+				BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+					return activation
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	compConfig := &compiler.Config{
+		ImportHandler: func(location common.Location) *bbq.InstructionProgram {
+			return importedProgram
+		},
+		BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndPanic,
+	}
+
+	comp := compiler.NewInstructionCompilerWithConfig(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+		compConfig,
+	)
+
+	program := comp.Compile()
+
+	vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+	vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+		return importedProgram
+	}
+	vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
+		return importedContractValue
+	}
+	vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+		elaboration := importedChecker.Elaboration
+		compositeType := elaboration.CompositeType(typeID)
+		if compositeType != nil {
+			return compositeType, nil
+		}
+
+		return elaboration.InterfaceType(typeID), nil
+	}
+	vmConfig.BuiltinGlobalsProvider = VMBuiltinGlobalsProviderWithDefaultsAndPanic
+
+	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+	_, err = vmInstance.InvokeExternally("test")
+	RequireError(t, err)
+
+	var panicErr *stdlib.PanicError
+	require.ErrorAs(t, err, &panicErr)
+
+	assert.Equal(t,
+		"error in helloText",
+		panicErr.Message,
+	)
+}
+
 func TestContractImport(t *testing.T) {
 
 	t.Parallel()
@@ -1902,7 +2033,7 @@ func TestNativeFunctions(t *testing.T) {
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		_, err = vmInstance.InvokeExternally("test")
-		require.EqualError(t, err, "assertion failed: hello")
+		require.ErrorContains(t, err, "assertion failed: hello")
 		require.Equal(t, 0, vmInstance.StackSize())
 	})
 }
@@ -1934,6 +2065,11 @@ func TestTransaction(t *testing.T) {
             `,
 			CompilerAndVMOptions{
 				VMConfig: vmConfig,
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						Location: common.TransactionLocation{},
+					},
+				},
 			},
 		)
 		require.NoError(t, err)
@@ -2001,6 +2137,11 @@ func TestTransaction(t *testing.T) {
             `,
 			CompilerAndVMOptions{
 				VMConfig: vmConfig,
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						Location: common.TransactionLocation{},
+					},
+				},
 			},
 		)
 		require.NoError(t, err)
@@ -4990,6 +5131,10 @@ func TestCasting(t *testing.T) {
 			interpreter.TrueValue,
 		)
 		RequireError(t, err)
+
+		castingError := &interpreter.ForceCastTypeMismatchError{}
+		require.ErrorAs(t, err, &castingError)
+
 		assert.Equal(
 			t,
 			&interpreter.ForceCastTypeMismatchError{
@@ -5011,7 +5156,7 @@ func TestCasting(t *testing.T) {
 					},
 				},
 			},
-			err,
+			castingError,
 		)
 	})
 

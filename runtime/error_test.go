@@ -68,7 +68,7 @@ func TestRuntimeError(t *testing.T) {
 				" --> 0100000000000000000000000000000000000000000000000000000000000000:1:0\n"+
 				"  |\n"+
 				"1 | X\n"+
-				"  | ^\n",
+				"  | ^ check for extra characters, missing semicolons, or incomplete statements\n",
 		)
 	})
 
@@ -102,7 +102,7 @@ func TestRuntimeError(t *testing.T) {
 				" --> 0100000000000000000000000000000000000000000000000000000000000000:1:0\n"+
 				"  |\n"+
 				"1 | fun test() {}\n"+
-				"  | ^\n",
+				"  | ^ add an access modifier like `access(all)`, `access(contract)`, or `access(self)`\n",
 		)
 	})
 
@@ -225,12 +225,27 @@ func TestRuntimeError(t *testing.T) {
 			},
 		)
 
-		// TODO: improve error locations in the VM
 		if *compile {
 			require.ErrorContains(t, err,
-				"Execution failed:\n"+
-					"error: panic: 42\n"+
-					" --> 0100000000000000000000000000000000000000000000000000000000000000:0:0\n",
+				`Execution failed:
+  --> 0100000000000000000000000000000000000000000000000000000000000000:15:4
+   |
+15 | 				destroy createResource()
+   | 				^^^^^^^^^^^^^^^^^^^^^^^^
+
+  --> 0100000000000000000000000000000000000000000000000000000000000000:9:21
+   |
+ 9 | 				return <- create Resource(
+10 | 					s: "argument"
+11 | 				)
+   | 				^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: panic: 42
+ --> 0100000000000000000000000000000000000000000000000000000000000000:4:5
+  |
+4 | 					panic("42")
+  | 					^^^^^^^^^^^
+`,
 			)
 		} else {
 			require.ErrorContains(t, err,
@@ -296,7 +311,7 @@ func TestRuntimeError(t *testing.T) {
 				" --> imported:1:0\n"+
 				"  |\n"+
 				"1 | X\n"+
-				"  | ^\n",
+				"  | ^ check for extra characters, missing semicolons, or incomplete statements\n",
 		)
 	})
 
@@ -341,7 +356,7 @@ func TestRuntimeError(t *testing.T) {
 				" --> imported:1:0\n"+
 				"  |\n"+
 				"1 | fun test() {}\n"+
-				"  | ^\n",
+				"  | ^ add an access modifier like `access(all)`, `access(contract)`, or `access(self)`\n",
 		)
 	})
 
@@ -392,37 +407,20 @@ func TestRuntimeError(t *testing.T) {
 			},
 		)
 
-		// TODO: improve error locations in the VM
-		if *compile {
-			require.ErrorContains(
-				t,
-				err,
-				"Execution failed:\n"+
-					"error: overflow\n"+
-					" --> imported:6:16\n"+
-					"  |\n"+
-					"6 |                 a + b\n"+
-					"  |                 ^^^^^\n"+
-					"",
-			)
-		} else {
-			require.ErrorContains(
-				t,
-				err,
-				"Execution failed:\n"+
-					" --> 0100000000000000000000000000000000000000000000000000000000000000:5:16\n"+
-					"  |\n"+
-					"5 |                 add()\n"+
-					"  |                 ^^^^^\n"+
-					"\n"+
-					"error: overflow\n"+
-					" --> imported:6:16\n"+
-					"  |\n"+
-					"6 |                 a + b\n"+
-					"  |                 ^^^^^\n"+
-					"",
-			)
-		}
+		errorString := `Execution failed:
+ --> 0100000000000000000000000000000000000000000000000000000000000000:5:16
+  |
+5 |                 add()
+  |                 ^^^^^
+
+error: overflow
+ --> imported:6:16
+  |
+6 |                 a + b
+  |                 ^^^^^
+`
+
+		require.ErrorContains(t, err, errorString)
 	})
 
 	t.Run("nested errors", func(t *testing.T) {
@@ -495,7 +493,9 @@ func TestRuntimeError(t *testing.T) {
 				" --> 0000000000000002.B:3:30\n"+
 				"  |\n"+
 				"3 |               access(all) fun bar() {\n"+
-				"  |                               ^^^\n"+
+				"  |                               ^^^ move the declaration inside a contract or function\n"+
+				"\n"+
+				"  See documentation at: https://cadence-lang.org/docs/language/constants-and-variables\n"+
 				"\n"+
 				"error: cannot find variable in this scope: `X`\n"+
 				" --> 0000000000000002.B:5:18\n"+
@@ -503,17 +503,24 @@ func TestRuntimeError(t *testing.T) {
 				"5 |                   X\n"+
 				"  |                   ^ not found in this scope\n"+
 				"\n"+
+				"  See documentation at: https://cadence-lang.org/docs/language/constants-and-variables\n"+
+				"\n"+
 				"error: function declarations are not valid at the top-level\n"+
 				" --> 0000000000000001.A:8:30\n"+
 				"  |\n"+
 				"8 |               access(all) fun foo() {\n"+
-				"  |                               ^^^\n"+
+				"  |                               ^^^ move the declaration inside a contract or function\n"+
+				"\n"+
+				"  See documentation at: https://cadence-lang.org/docs/language/constants-and-variables\n"+
 				"\n"+
 				"error: cannot find variable in this scope: `Y`\n"+
 				"  --> 0000000000000001.A:10:18\n"+
 				"   |\n"+
 				"10 |                   Y\n"+
-				"   |                   ^ not found in this scope\n",
+				"   |                   ^ not found in this scope\n"+
+				"\n"+
+				"  See documentation at: https://cadence-lang.org/docs/language/constants-and-variables\n"+
+				"\n",
 		)
 
 	})

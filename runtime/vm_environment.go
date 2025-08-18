@@ -152,6 +152,11 @@ func (e *vmEnvironment) newVMConfig() *vm.Config {
 	conf.ValidateAccountCapabilitiesPublishHandler = newValidateAccountCapabilitiesPublishHandler(&e.Interface)
 	conf.ElaborationResolver = e.resolveElaboration
 	conf.StackDepthLimit = defaultStackDepthLimit
+
+	if e.config.TracingEnabled {
+		conf.Tracer = interpreter.CallbackTracer(newOnRecordTraceHandler(&e.Interface))
+	}
+
 	return conf
 }
 

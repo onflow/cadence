@@ -697,6 +697,57 @@ func (i InstructionNil) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
+// InstructionNewSimpleComposite
+//
+// Creates a new instance of a simple composite value of given kind and type, at address 0x0, and then pushes it onto the stack.
+type InstructionNewSimpleComposite struct {
+	Kind common.CompositeKind
+	Type uint16
+}
+
+var _ Instruction = InstructionNewSimpleComposite{}
+
+func (InstructionNewSimpleComposite) Opcode() Opcode {
+	return NewSimpleComposite
+}
+
+func (i InstructionNewSimpleComposite) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
+}
+
+func (i InstructionNewSimpleComposite) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "kind", i.Kind, colorize)
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
+}
+
+func (i InstructionNewSimpleComposite) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "kind", i.Kind, colorize)
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
+}
+
+func (i InstructionNewSimpleComposite) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitCompositeKind(code, i.Kind)
+	emitUint16(code, i.Type)
+}
+
+func DecodeNewSimpleComposite(ip *uint16, code []byte) (i InstructionNewSimpleComposite) {
+	i.Kind = decodeCompositeKind(ip, code)
+	i.Type = decodeUint16(ip, code)
+	return i
+}
+
 // InstructionNewComposite
 //
 // Creates a new instance of the given composite kind and type, at address 0x0, and then pushes it onto the stack.
@@ -1385,6 +1436,35 @@ func (i InstructionUnwrap) ResolvedOperandsString(sb *strings.Builder,
 }
 
 func (i InstructionUnwrap) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
+// InstructionWrap
+//
+// Pops a value off the stack, wrap it with an optional, and pushes back onto the stack.
+type InstructionWrap struct {
+}
+
+var _ Instruction = InstructionWrap{}
+
+func (InstructionWrap) Opcode() Opcode {
+	return Wrap
+}
+
+func (i InstructionWrap) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionWrap) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionWrap) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
+func (i InstructionWrap) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
 }
 
@@ -2685,6 +2765,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionFalse{}
 	case Nil:
 		return InstructionNil{}
+	case NewSimpleComposite:
+		return DecodeNewSimpleComposite(ip, code)
 	case NewComposite:
 		return DecodeNewComposite(ip, code)
 	case NewCompositeAt:
@@ -2715,6 +2797,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionDestroy{}
 	case Unwrap:
 		return InstructionUnwrap{}
+	case Wrap:
+		return InstructionWrap{}
 	case Transfer:
 		return InstructionTransfer{}
 	case TransferAndConvert:

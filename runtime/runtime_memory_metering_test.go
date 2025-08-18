@@ -90,6 +90,7 @@ func TestRuntimeInterpreterAddressLocationMetering(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -170,6 +171,7 @@ func TestRuntimeInterpreterElaborationImportMetering(t *testing.T) {
 					Context{
 						Interface: runtimeInterface,
 						Location:  nextTransactionLocation(),
+						UseVM:     *compile,
 					},
 				)
 				require.NoError(t, err)
@@ -186,6 +188,7 @@ func TestRuntimeInterpreterElaborationImportMetering(t *testing.T) {
 				Context{
 					Interface: runtimeInterface,
 					Location:  common.ScriptLocation{},
+					UseVM:     *compile,
 				},
 			)
 			require.NoError(t, err)
@@ -232,6 +235,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -271,6 +275,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -305,6 +310,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -339,6 +345,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -373,6 +380,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -407,6 +415,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -441,6 +450,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -475,6 +485,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -508,6 +519,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -542,6 +554,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -571,6 +584,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -600,6 +614,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -629,6 +644,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -658,6 +674,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -687,6 +704,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -716,6 +734,7 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -768,6 +787,7 @@ func TestRuntimeLogFunctionStringConversionMetering(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -830,6 +850,7 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.TransactionLocation{},
+				UseVM:     *compile,
 			},
 		)
 
@@ -868,6 +889,7 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.TransactionLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -922,6 +944,7 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.TransactionLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -970,6 +993,7 @@ func TestRuntimeMemoryMeteringErrors(t *testing.T) {
 			Context{
 				Interface: runtimeInterface(meter),
 				Location:  nextScriptLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -1083,6 +1107,7 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.TransactionLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1137,6 +1162,7 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.TransactionLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1192,6 +1218,7 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)

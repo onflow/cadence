@@ -110,7 +110,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 			}
 
 		default:
-			return nil, p.syntaxError(
+			return nil, p.newSyntaxError(
 				"unexpected identifier, expected keyword %q or %q, got %q",
 				KeywordPrepare,
 				KeywordExecute,
@@ -158,7 +158,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 			switch string(keyword) {
 			case KeywordExecute:
 				if execute != nil {
-					return nil, p.syntaxError("unexpected second %q block", KeywordExecute)
+					return nil, p.newSyntaxError("unexpected second %q block", KeywordExecute)
 				}
 
 				execute, err = parseTransactionExecute(p)
@@ -168,7 +168,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 
 			case KeywordPost:
 				if sawPost {
-					return nil, p.syntaxError("unexpected second post-conditions")
+					return nil, p.newSyntaxError("unexpected second post-conditions")
 				}
 				postStartPos := p.current.StartPos
 				// Skip the `post` keyword
@@ -180,7 +180,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 				sawPost = true
 
 			default:
-				return nil, p.syntaxError(
+				return nil, p.newSyntaxError(
 					"unexpected identifier, expected keyword %q or %q, got %q",
 					KeywordExecute,
 					KeywordPost,
@@ -195,7 +195,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 			atEnd = true
 
 		default:
-			return nil, p.syntaxError("unexpected token: %s", p.current.Type)
+			return nil, p.newSyntaxError("unexpected token: %s", p.current.Type)
 		}
 	}
 

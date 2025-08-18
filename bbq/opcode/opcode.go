@@ -77,6 +77,7 @@ const (
 	_
 	_
 	_
+	Wrap
 	Unwrap
 	Destroy
 	TransferAndConvert
@@ -89,7 +90,6 @@ const (
 	_
 	_
 	_
-	_
 
 	// Value/Constant loading
 
@@ -97,6 +97,7 @@ const (
 	False
 	Void
 	Nil
+	NewSimpleComposite
 	NewComposite
 	NewCompositeAt
 	NewPath
@@ -104,7 +105,6 @@ const (
 	NewDictionary
 	NewRef
 	NewClosure
-	_
 	_
 	_
 	_

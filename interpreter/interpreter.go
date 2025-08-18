@@ -82,7 +82,6 @@ type OnInvokedFunctionReturnFunc func(inter *Interpreter)
 
 // OnRecordTraceFunc is a function that records a trace.
 type OnRecordTraceFunc func(
-	inter *Interpreter,
 	operationName string,
 	duration time.Duration,
 	attrs []attribute.KeyValue,
@@ -247,6 +246,7 @@ type Interpreter struct {
 	activations  *VariableActivations
 	Transactions []*HostFunctionValue
 	interpreted  bool
+	Tracer
 }
 
 var _ common.MemoryGauge = &Interpreter{}
@@ -283,10 +283,16 @@ func NewInterpreterWithSharedState(
 	sharedState *SharedState,
 ) (*Interpreter, error) {
 
+	var tracer Tracer
+	if sharedState.Config.TracingEnabled {
+		tracer = CallbackTracer(sharedState.Config.OnRecordTrace)
+	}
+
 	interpreter := &Interpreter{
 		Program:     program,
 		Location:    location,
 		SharedState: sharedState,
+		Tracer:      tracer,
 	}
 
 	// Register self
@@ -572,7 +578,7 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 		}
 
 		interpreterErr := err.(Error)
-		interpreterErr.StackTrace = interpreter.CallStack()
+		interpreterErr.StackTrace = interpreter.CallStackLocations()
 
 		onError(interpreterErr)
 	}
@@ -605,6 +611,19 @@ func AsCadenceError(r any) error {
 
 func (interpreter *Interpreter) CallStack() []Invocation {
 	return interpreter.SharedState.callStack.Invocations[:]
+}
+
+func (interpreter *Interpreter) CallStackLocations() []LocationRange {
+	callstack := interpreter.CallStack()
+	if len(callstack) == 0 {
+		return nil
+	}
+
+	locationRanges := make([]LocationRange, 0, len(callstack))
+	for _, invocation := range callstack {
+		locationRanges = append(locationRanges, invocation.LocationRange)
+	}
+	return locationRanges
 }
 
 func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
@@ -6096,7 +6115,7 @@ func (interpreter *Interpreter) OnResourceOwnerChange(resource *CompositeValue, 
 }
 
 func (interpreter *Interpreter) TracingEnabled() bool {
-	return interpreter.SharedState.Config.TracingEnabled
+	return interpreter.Tracer != nil
 }
 
 func (interpreter *Interpreter) IsTypeInfoRecovered(location common.Location) bool {

@@ -123,8 +123,8 @@ type Interface interface {
 	ValidatePublicKey(key *PublicKey) error
 	// GetAccountContractNames returns the names of all contracts deployed in an account.
 	GetAccountContractNames(address Address) ([]string, error)
-	// RecordTrace records an opentelemetry trace.
-	RecordTrace(operation string, location Location, duration time.Duration, attrs []attribute.KeyValue)
+	// RecordTrace records an OpenTelemetry trace.
+	RecordTrace(operation string, duration time.Duration, attrs []attribute.KeyValue)
 	// BLSVerifyPOP verifies a proof of possession (PoP) for the receiver public key.
 	BLSVerifyPOP(publicKey *PublicKey, signature []byte) (bool, error)
 	// BLSAggregateSignatures aggregate multiple BLS signatures into one.

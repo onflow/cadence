@@ -392,19 +392,41 @@ func (interpreter *Interpreter) EmitEvent(
 
 func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement) StatementResult {
 
-	event, ok := interpreter.evalExpression(statement.InvocationExpression).(*CompositeValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	eventType := interpreter.Program.Elaboration.EmitStatementEventType(statement)
-
 	locationRange := LocationRange{
 		Location:    interpreter.Location,
 		HasPosition: statement,
 	}
 
-	eventFields := extractEventFields(interpreter, event, eventType)
+	invocationExpression := statement.InvocationExpression
+	arguments := invocationExpression.Arguments
+
+	var eventFields []Value
+	if len(arguments) > 0 {
+		eventFields = make([]Value, len(arguments))
+
+		elaboration := interpreter.Program.Elaboration
+		invocationExpressionTypes := elaboration.InvocationExpressionTypes(invocationExpression)
+
+		argumentTypes := invocationExpressionTypes.ArgumentTypes
+		parameterTypes := invocationExpressionTypes.ParameterTypes
+
+		for i, argument := range arguments {
+			value := interpreter.evalExpression(argument.Expression)
+
+			argumentType := argumentTypes[i]
+			parameterType := parameterTypes[i]
+
+			eventFields[i] = TransferAndConvert(
+				interpreter,
+				value,
+				argumentType,
+				parameterType,
+				locationRange,
+			)
+		}
+	}
+
+	eventType := interpreter.Program.Elaboration.EmitStatementEventType(statement)
 
 	interpreter.EmitEvent(
 		interpreter,

@@ -62,10 +62,9 @@ func parseStatements(p *parser, isEndToken func(token lexer.Token) bool) (statem
 					previousLine := previousStatement.EndPosition(p.memoryGauge).Line
 					currentStartPos := statement.StartPosition()
 					if previousLine == currentStartPos.Line {
-						p.report(NewSyntaxError(
-							currentStartPos,
-							"statements on the same line must be separated with a semicolon",
-						))
+						p.report(&StatementSeparationError{
+							Pos: currentStartPos,
+						})
 					}
 				}
 			}
