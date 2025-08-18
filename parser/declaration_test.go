@@ -10974,13 +10974,10 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&InvalidPubModifierError{
-					GotToken: lexer.Token{
-						Type: lexer.TokenIdentifier,
-						Range: ast.Range{
-							StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
-							EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
-						},
+				&PubAccessError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+						EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
 					},
 				},
 			},
@@ -10995,9 +10992,6 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&MissingPubClosingParenError{
-					Pos: ast.Position{Offset: 7, Line: 1, Column: 7},
-				},
 				&PubSetAccessError{
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
