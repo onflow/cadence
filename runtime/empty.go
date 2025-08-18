@@ -199,7 +199,7 @@ func (EmptyRuntimeInterface) GetAccountContractNames(_ Address) ([]string, error
 	panic("unexpected call to GetAccountContractNames")
 }
 
-func (EmptyRuntimeInterface) RecordTrace(_ string, _ Location, _ time.Duration, _ []attribute.KeyValue) {
+func (EmptyRuntimeInterface) RecordTrace(_ string, _ time.Duration, _ []attribute.KeyValue) {
 	panic("unexpected call to RecordTrace")
 }
 

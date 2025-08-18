@@ -402,3 +402,29 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 		require.ErrorAs(t, err, &typeErr)
 	})
 }
+
+func TestInvokeBoundFunctionsExternally(t *testing.T) {
+
+	t.Parallel()
+
+	invokable := parseCheckAndPrepare(
+		t,
+		`
+            access(all) fun test(): Bool? {
+                let opt: Type? = Type<Int>()
+                return opt.map(opt.isInstance)
+            }
+        `,
+	)
+
+	result, err := invokable.Invoke("test")
+	require.NoError(t, err)
+
+	assert.Equal(
+		t,
+		interpreter.NewUnmeteredSomeValueNonCopying(
+			interpreter.BoolValue(false),
+		),
+		result,
+	)
+}

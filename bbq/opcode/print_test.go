@@ -177,6 +177,7 @@ func TestPrintInstruction(t *testing.T) {
 
 		"TransferAndConvert type:258": {byte(TransferAndConvert), 1, 2},
 
+		"NewSimpleComposite kind:CompositeKind(258) type:772":          {byte(NewSimpleComposite), 1, 2, 3, 4},
 		"NewComposite kind:CompositeKind(258) type:772":                {byte(NewComposite), 1, 2, 3, 4},
 		"NewCompositeAt kind:CompositeKind(258) type:772 address:1286": {byte(NewCompositeAt), 1, 2, 3, 4, 5, 6},
 
@@ -222,6 +223,7 @@ func TestPrintInstruction(t *testing.T) {
 		"Equal":    {byte(Equal)},
 		"NotEqual": {byte(NotEqual)},
 
+		"Wrap":    {byte(Wrap)},
 		"Unwrap":  {byte(Unwrap)},
 		"Destroy": {byte(Destroy)},
 		"True":    {byte(True)},

@@ -163,7 +163,7 @@ func TestCheckEntitlementsErrorMessage(t *testing.T) {
 		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
 		require.ErrorAs(t, errs[1], &invalidAccess)
 		require.Equal(t,
-			"cannot access `foo`: function requires `E` authorization, but reference only has `F` authorization",
+			"access denied: cannot access `foo` because function requires `E` authorization, but reference only has `F` authorization",
 			invalidAccess.Error(),
 		)
 	})

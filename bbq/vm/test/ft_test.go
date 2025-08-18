@@ -84,7 +84,7 @@ func compiledFTTransfer(tb testing.TB) {
 	}
 
 	compilerConfig := &compiler.Config{
-		LocationHandler: commons.LocationHandler(locationHandler),
+		LocationHandler: locationHandler,
 		ImportHandler:   importHandler,
 		ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 			imported, ok := compiledPrograms[location]

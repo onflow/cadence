@@ -84,12 +84,12 @@ func NewDictionaryValueWithAddress(
 				return
 			}
 
-			typeInfo := v.Type.String()
-			count := v.Count()
+			valueID := v.ValueID().String()
+			typeID := string(v.Type.ID())
 
 			context.ReportDictionaryValueConstructTrace(
-				typeInfo,
-				count,
+				valueID,
+				typeID,
 				time.Since(startTime),
 			)
 		}()
@@ -181,12 +181,12 @@ func newDictionaryValueWithIterator(
 				return
 			}
 
-			typeInfo := v.Type.String()
-			count := v.Count()
+			valueID := v.ValueID().String()
+			typeID := string(v.Type.ID())
 
 			context.ReportDictionaryValueConstructTrace(
-				typeInfo,
-				count,
+				valueID,
+				typeID,
 				time.Since(startTime),
 			)
 		}()
@@ -496,13 +496,13 @@ func (v *DictionaryValue) Destroy(context ResourceDestructionContext, locationRa
 	if context.TracingEnabled() {
 		startTime := time.Now()
 
-		typeInfo := v.Type.String()
-		count := v.Count()
+		valueID := v.ValueID().String()
+		typeID := string(v.Type.ID())
 
 		defer func() {
 			context.ReportDictionaryValueDestroyTrace(
-				typeInfo,
-				count,
+				valueID,
+				typeID,
 				time.Since(startTime),
 			)
 		}()
@@ -747,21 +747,6 @@ func (v *DictionaryValue) MeteredString(context ValueStringContext, seenReferenc
 }
 
 func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
-	if context.TracingEnabled() {
-		startTime := time.Now()
-
-		typeInfo := v.Type.String()
-		count := v.Count()
-
-		defer func() {
-			context.ReportDictionaryValueGetMemberTrace(
-				typeInfo,
-				count,
-				name,
-				time.Since(startTime),
-			)
-		}()
-	}
 
 	switch name {
 	case "length":
@@ -1205,12 +1190,13 @@ func (v *DictionaryValue) ConformsToStaticType(
 	if context.TracingEnabled() {
 		startTime := time.Now()
 
-		typeInfo := v.Type.String()
+		valueID := v.ValueID().String()
+		typeID := string(v.Type.ID())
 
 		defer func() {
 			context.ReportDictionaryValueConformsToStaticTypeTrace(
-				typeInfo,
-				count,
+				valueID,
+				typeID,
 				time.Since(startTime),
 			)
 		}()
@@ -1388,12 +1374,13 @@ func (v *DictionaryValue) Transfer(
 	if context.TracingEnabled() {
 		startTime := time.Now()
 
+		valueID := v.ValueID().String()
 		typeInfo := v.Type.String()
 
 		defer func() {
 			context.ReportDictionaryValueTransferTrace(
+				valueID,
 				typeInfo,
-				count,
 				time.Since(startTime),
 			)
 		}()
@@ -1613,13 +1600,13 @@ func (v *DictionaryValue) DeepRemove(context ValueRemoveContext, hasNoParentCont
 	if context.TracingEnabled() {
 		startTime := time.Now()
 
-		typeInfo := v.Type.String()
-		count := v.Count()
+		valueID := v.ValueID().String()
+		typeID := string(v.Type.ID())
 
 		defer func() {
 			context.ReportDictionaryValueDeepRemoveTrace(
-				typeInfo,
-				count,
+				valueID,
+				typeID,
 				time.Since(startTime),
 			)
 		}()

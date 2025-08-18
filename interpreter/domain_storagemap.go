@@ -20,7 +20,6 @@ package interpreter
 
 import (
 	goerrors "errors"
-	"time"
 
 	"github.com/onflow/atree"
 
@@ -223,21 +222,6 @@ func (s *DomainStorageMap) RemoveValue(context ValueRemoveContext, key StorageMa
 
 // DeepRemove removes all elements (and their slabs) of domain storage map.
 func (s *DomainStorageMap) DeepRemove(context ValueRemoveContext, hasNoParentContainer bool) {
-
-	if context.TracingEnabled() {
-		startTime := time.Now()
-
-		typeInfo := "DomainStorageMap"
-		count := s.Count()
-
-		defer func() {
-			context.ReportDomainStorageMapDeepRemoveTrace(
-				typeInfo,
-				int(count),
-				time.Since(startTime),
-			)
-		}()
-	}
 
 	// Remove nested values and storables
 

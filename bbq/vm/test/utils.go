@@ -438,7 +438,7 @@ func VMBuiltinGlobalsProviderWithDefaultsAndPanic(_ common.Location) *activation
 					panic(errors.NewUnreachableError())
 				}
 
-				panic(stdlib.PanicError{
+				panic(&stdlib.PanicError{
 					Message: messageValue.Str,
 				})
 			},
@@ -663,14 +663,17 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 	if vmConfig.ContractValueHandler == nil {
 		// TODO: generalize this
 		if len(program.Contracts) == 1 {
-			vmConfig.ContractValueHandler = contractValueHandler(program.Contracts[0].Name)
+			vmConfig.ContractValueHandler = ContractValueHandler(program.Contracts[0].Name)
 		}
 	}
 
-	// recover panics from VM (e.g. global evaluation)
-	defer vm.RecoverErrors(func(internalErr error) {
-		err = internalErr
-	})
+	// recover panics from VM (e.g. globals evaluation)
+	defer func() {
+		if r := recover(); r != nil {
+			internalErr := interpreter.AsCadenceError(r)
+			err = internalErr
+		}
+	}()
 
 	programVM = vm.NewVM(
 		location,
@@ -681,7 +684,7 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 	return programVM, nil
 }
 
-func contractValueHandler(contractName string, arguments ...vm.Value) vm.ContractValueHandler {
+func ContractValueHandler(contractName string, arguments ...vm.Value) vm.ContractValueHandler {
 	return func(context *vm.Context, location common.Location) *interpreter.CompositeValue {
 		contractInitializerName := commons.QualifiedName(contractName, commons.InitFunctionName)
 		contractInitializer := context.GetFunction(location, contractInitializerName)

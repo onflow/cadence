@@ -59,7 +59,7 @@ type HasLocationRange interface {
 type Error struct {
 	Err        error
 	Location   common.Location
-	StackTrace []Invocation
+	StackTrace []LocationRange
 }
 
 func (e Error) Unwrap() error {
@@ -81,8 +81,7 @@ func (e Error) Error() string {
 func (e Error) ChildErrors() []error {
 	errs := make([]error, 0, 1+len(e.StackTrace))
 
-	for _, invocation := range e.StackTrace {
-		locationRange := invocation.LocationRange
+	for _, locationRange := range e.StackTrace {
 		if locationRange.Location == nil {
 			continue
 		}

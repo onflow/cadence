@@ -206,6 +206,20 @@
       - name: "value"
         type: "value"
 
+- name: "newSimpleComposite"
+  description:
+    Creates a new instance of a simple composite value of given kind and type, at address 0x0,
+    and then pushes it onto the stack.
+  operands:
+    - name: "kind"
+      type: "compositeKind"
+    - name: "type"
+      type: "typeIndex"
+  valueEffects:
+    push:
+      - name: "value"
+        type: "value"
+
 - name: "newComposite"
   description:
     Creates a new instance of the given composite kind and type, at address 0x0,
@@ -438,6 +452,17 @@
         type: "value"
     push:
       - name: "value"
+        type: "value"
+
+- name: "wrap"
+  description:
+    Pops a value off the stack, wrap it with an optional, and pushes back onto the stack.
+  valueEffects:
+    pop:
+      - name: "value"
+        type: "value"
+    push:
+      - name: "optional"
         type: "value"
 
 # Conversion instructions
