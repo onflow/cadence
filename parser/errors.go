@@ -4271,13 +4271,13 @@ func (e *MissingOpeningParenInNominalTypeInvocationError) EndPosition(_ common.M
 
 func (e *MissingOpeningParenInNominalTypeInvocationError) Error() string {
 	return expectedButGotToken(
-		"expected '(' for invocation",
+		"expected '(' to construct an instance of the type",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingOpeningParenInNominalTypeInvocationError) SecondaryError() string {
-	return "type instantiations must be followed by an argument list enclosed in parentheses `(...)`"
+	return "an instance of the nominal type is expected here; call the constructor by adding comma-separated arguments in parentheses `(...)`"
 }
 
 func (*MissingOpeningParenInNominalTypeInvocationError) DocumentationLink() string {
