@@ -37,11 +37,6 @@ type EmptyRuntimeInterface struct{}
 
 var _ Interface = EmptyRuntimeInterface{}
 
-func (EmptyRuntimeInterface) MeterMemory(_ common.MemoryUsage) error {
-	// NO-OP
-	return nil
-}
-
 func (EmptyRuntimeInterface) ResolveLocation(_ []Identifier, _ Location) ([]ResolvedLocation, error) {
 	panic("unexpected call to ResolveLocation")
 }
@@ -61,14 +56,6 @@ func (EmptyRuntimeInterface) MeterComputation(_ common.ComputationUsage) error {
 
 func (EmptyRuntimeInterface) ComputationUsed() (uint64, error) {
 	panic("unexpected call to ComputationUsed")
-}
-
-func (EmptyRuntimeInterface) MemoryUsed() (uint64, error) {
-	panic("unexpected call to MemoryUsed")
-}
-
-func (EmptyRuntimeInterface) InteractionUsed() (uint64, error) {
-	panic("unexpected call to InteractionUsed")
 }
 
 func (EmptyRuntimeInterface) GetCode(_ Location) ([]byte, error) {

@@ -35,6 +35,14 @@ type MemoryGauge interface {
 	MeterMemory(usage MemoryUsage) error
 }
 
+type FunctionMemoryGauge func(usage MemoryUsage) error
+
+var _ MemoryGauge = FunctionMemoryGauge(nil)
+
+func (f FunctionMemoryGauge) MeterMemory(usage MemoryUsage) error {
+	return f(usage)
+}
+
 type ComputationUsage struct {
 	Kind      ComputationKind
 	Intensity uint64
