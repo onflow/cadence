@@ -119,10 +119,10 @@ func (c *Context) MutationDuringCapabilityControllerIteration() bool {
 func (c *Context) SetAttachmentIteration(composite *interpreter.CompositeValue, state bool) bool {
 	oldState := c.inAttachmentIteration(composite)
 	if c.attachmentIterationMap == nil {
-		c.attachmentIterationMap = map[*interpreter.CompositeValue]bool{}
+		c.attachmentIterationMap = map[*interpreter.CompositeValue]struct{}{}
 	}
 	if state {
-		c.attachmentIterationMap[composite] = struct{}
+		c.attachmentIterationMap[composite] = struct{}{}
 	} else {
 		delete(c.attachmentIterationMap, composite)
 	}
@@ -281,6 +281,43 @@ func (c *Context) GetResourceDestructionContextForLocation(location common.Locat
 	return c
 }
 
+func AttachmentBaseAndSelfValues(
+	c *Context,
+	v *interpreter.CompositeValue,
+	method FunctionValue,
+) (base *interpreter.EphemeralReferenceValue, self *interpreter.EphemeralReferenceValue) {
+	// CompositeValue.GetMethod, as in the interpreter we need an authorized reference to self
+	var unqualifiedName string
+	switch functionValue := method.(type) {
+	case CompiledFunctionValue:
+		parts := strings.Split(functionValue.Function.Name, ".")
+		unqualifiedName = parts[len(parts)-1]
+	case *NativeFunctionValue:
+		unqualifiedName = functionValue.Name
+	}
+
+	fnAccess := interpreter.GetAccessOfMember(c, v, unqualifiedName)
+	// with respect to entitlements, any access inside an attachment that is not an entitlement access
+	// does not provide any entitlements to base and self
+	// E.g. consider:
+	//
+	//    access(E) fun foo() {}
+	//    access(self) fun bar() {
+	//        self.foo()
+	//    }
+	//    access(all) fun baz() {
+	//        self.bar()
+	//    }
+	//
+	// clearly `bar` should be callable within `baz`, but we cannot allow `foo`
+	// to be callable within `bar`, or it will be possible to access `E` entitled
+	// methods on `base`
+	if fnAccess.IsPrimitiveAccess() {
+		fnAccess = sema.UnauthorizedAccess
+	}
+	return interpreter.AttachmentBaseAndSelfValues(c, fnAccess, v, EmptyLocationRange)
+}
+
 func (c *Context) GetMethod(
 	value interpreter.MemberAccessibleValue,
 	name string,
@@ -313,39 +350,8 @@ func (c *Context) GetMethod(
 
 	var base *interpreter.EphemeralReferenceValue
 	// If the value is an attachment, then we must create an authorized reference
-	if v, ok := value.(*interpreter.CompositeValue); ok {
-		if v.Kind == common.CompositeKindAttachment {
-			// CompositeValue.GetMethod, as in the interpreter we need an authorized reference to self
-			var unqualifiedName string
-			switch functionValue := method.(type) {
-			case CompiledFunctionValue:
-				parts := strings.Split(functionValue.Function.Name, ".")
-				unqualifiedName = parts[len(parts)-1]
-			case *NativeFunctionValue:
-				unqualifiedName = functionValue.Name
-			}
-
-			fnAccess := interpreter.GetAccessOfMember(c, v, unqualifiedName)
-			// with respect to entitlements, any access inside an attachment that is not an entitlement access
-			// does not provide any entitlements to base and self
-			// E.g. consider:
-			//
-			//    access(E) fun foo() {}
-			//    access(self) fun bar() {
-			//        self.foo()
-			//    }
-			//    access(all) fun baz() {
-			//        self.bar()
-			//    }
-			//
-			// clearly `bar` should be callable within `baz`, but we cannot allow `foo`
-			// to be callable within `bar`, or it will be possible to access `E` entitled
-			// methods on `base`
-			if fnAccess.IsPrimitiveAccess() {
-				fnAccess = sema.UnauthorizedAccess
-			}
-			base, value = interpreter.AttachmentBaseAndSelfValues(c, fnAccess, v, EmptyLocationRange)
-		}
+	if v, ok := value.(*interpreter.CompositeValue); ok && v.Kind == common.CompositeKindAttachment {
+		base, value = AttachmentBaseAndSelfValues(c, v, method)
 	}
 
 	return NewBoundFunctionValue(

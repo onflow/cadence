@@ -906,42 +906,10 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 
 	receiver := vm.pop()
 
-	// TODO: Clean this up
 	var base *interpreter.EphemeralReferenceValue
 	if val, ok := receiver.(*interpreter.EphemeralReferenceValue); ok {
-		if refValue, ok := val.Value.(*interpreter.CompositeValue); ok {
-			if refValue.Kind == common.CompositeKindAttachment {
-				// CompositeValue.GetMethod, as in the interpreter we need an authorized reference to base
-				var unqualifiedName string
-				switch functionValue := method.(type) {
-				case CompiledFunctionValue:
-					parts := strings.Split(functionValue.Function.Name, ".")
-					unqualifiedName = parts[len(parts)-1]
-				case *NativeFunctionValue:
-					unqualifiedName = functionValue.Name
-				}
-
-				fnAccess := interpreter.GetAccessOfMember(vm.context, refValue, unqualifiedName)
-				// with respect to entitlements, any access inside an attachment that is not an entitlement access
-				// does not provide any entitlements to base and self
-				// E.g. consider:
-				//
-				//    access(E) fun foo() {}
-				//    access(self) fun bar() {
-				//        self.foo()
-				//    }
-				//    access(all) fun baz() {
-				//        self.bar()
-				//    }
-				//
-				// clearly `bar` should be callable within `baz`, but we cannot allow `foo`
-				// to be callable within `bar`, or it will be possible to access `E` entitled
-				// methods on `base`
-				if fnAccess.IsPrimitiveAccess() {
-					fnAccess = sema.UnauthorizedAccess
-				}
-				base, receiver = interpreter.AttachmentBaseAndSelfValues(vm.context, fnAccess, refValue, EmptyLocationRange)
-			}
+		if refValue, ok := val.Value.(*interpreter.CompositeValue); ok && refValue.Kind == common.CompositeKindAttachment {
+			base, receiver = AttachmentBaseAndSelfValues(vm.context, refValue, method)
 		}
 	}
 
