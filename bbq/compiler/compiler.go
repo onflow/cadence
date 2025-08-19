@@ -2270,6 +2270,27 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 	return
 }
 
+// maybeApplyAddressQualifierToFunctionName checks if the function is location qualified
+// and returns the location qualified name if it is.
+// Otherwise, returns the type qualified name.
+func (c *Compiler[_, _]) maybeApplyAddressQualifierToFunctionName(
+	functionName string,
+	accessedType sema.Type,
+	typeQualifiedName string,
+) string {
+	// check if this function is location qualified by checking globalRemoveAddressTable
+	addressQualifiedFuncName := commons.QualifiedName(
+		commons.LocationQualifier(accessedType),
+		functionName,
+	)
+	if c.globalRemoveAddressTable != nil {
+		if _, ok := c.globalRemoveAddressTable[addressQualifiedFuncName]; ok {
+			return addressQualifiedFuncName
+		}
+	}
+	return typeQualifiedName
+}
+
 func (c *Compiler[_, _]) compileMethodInvocation(
 	expression *ast.InvocationExpression,
 	memberInfo sema.MemberAccessInfo,
@@ -2281,21 +2302,15 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 
 	invocationType := memberInfo.Member.TypeAnnotation.Type.(*sema.FunctionType)
 	if invocationType.IsConstructor {
-		funcName = commons.TypeQualifiedName(
-			memberInfo.AccessedType,
-			invokedExpr.Identifier.Identifier,
-		)
 
-		// check if this function is location qualified by checking globalRemoveAddressTable
-		addressQualifiedFuncName := commons.QualifiedName(
-			commons.LocationQualifier(memberInfo.AccessedType),
+		funcName = c.maybeApplyAddressQualifierToFunctionName(
 			invokedExpr.Identifier.Identifier,
+			memberInfo.AccessedType,
+			commons.TypeQualifiedName(
+				memberInfo.AccessedType,
+				invokedExpr.Identifier.Identifier,
+			),
 		)
-		if c.globalRemoveAddressTable != nil {
-			if _, ok := c.globalRemoveAddressTable[addressQualifiedFuncName]; ok {
-				funcName = addressQualifiedFuncName
-			}
-		}
 
 		// Calling a type constructor must be invoked statically. e.g: `SomeContract.Foo()`.
 
@@ -2364,21 +2379,14 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	}
 
 	// Load function value.
-	funcName = commons.TypeQualifiedName(
+	funcName = c.maybeApplyAddressQualifierToFunctionName(
+		invokedExpr.Identifier.Identifier,
 		accessedType,
-		invokedExpr.Identifier.Identifier,
+		commons.TypeQualifiedName(
+			accessedType,
+			invokedExpr.Identifier.Identifier,
+		),
 	)
-
-	// check if this function is location qualified by checking globalRemoveAddressTable
-	addressQualifiedFuncName := commons.QualifiedName(
-		commons.LocationQualifier(memberInfo.AccessedType),
-		invokedExpr.Identifier.Identifier,
-	)
-	if c.globalRemoveAddressTable != nil {
-		if _, ok := c.globalRemoveAddressTable[addressQualifiedFuncName]; ok {
-			funcName = addressQualifiedFuncName
-		}
-	}
 
 	// An invocation can be either a method of a value (e.g: `"someString".Concat("otherString")`),
 	// or a function on a "type function" (e.g: `String.join(["someString", "otherString"], separator: ", ")`),
