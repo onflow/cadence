@@ -651,18 +651,27 @@ func TestParseAdvancedExpression(t *testing.T) {
 
 		t.Parallel()
 
-		const code = "{1: 2"
+		const code = "{1: 2\nfoo"
 		_, errs := testParseExpression(code)
 
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingClosingBraceInDictionaryExpressionError{
 					GotToken: lexer.Token{
-						Type: lexer.TokenEOF,
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
-							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+							StartPos: ast.Position{Offset: 6, Line: 2, Column: 0},
+							EndPos:   ast.Position{Offset: 8, Line: 2, Column: 2},
 						},
+						Type: lexer.TokenIdentifier,
+					},
+				},
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 6, Line: 2, Column: 0},
+							EndPos:   ast.Position{Offset: 8, Line: 2, Column: 2},
+						},
+						Type: lexer.TokenIdentifier,
 					},
 				},
 			},
@@ -692,7 +701,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			"{1: 2}",
+			"{1: 2}\nfoo",
 			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})

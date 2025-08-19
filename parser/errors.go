@@ -48,6 +48,14 @@ func keywordInsertion(keyword string, tokenType lexer.TokenType) string {
 	return fmt.Sprintf("%s ", keyword)
 }
 
+func newLeftAttachedRange(pos ast.Position, code string) ast.Range {
+	leftAttachedPos := pos.AttachLeft(code)
+	return ast.Range{
+		StartPos: leftAttachedPos,
+		EndPos:   leftAttachedPos,
+	}
+}
+
 // Error
 
 type Error struct {
@@ -519,10 +527,7 @@ func (e *StatementSeparationError) SuggestFixes(code string) []errors.SuggestedF
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ";",
-					Range: ast.Range{
-						StartPos: e.Pos,
-						EndPos:   e.Pos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.Pos, code),
 				},
 			},
 		},
@@ -572,10 +577,7 @@ func (e *MissingCommaInParameterListError) SuggestFixes(code string) []errors.Su
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ",",
-					Range: ast.Range{
-						StartPos: e.Pos,
-						EndPos:   e.Pos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.Pos, code),
 				},
 			},
 		},
@@ -632,10 +634,7 @@ func (e *MissingStartOfParameterListError) SuggestFixes(code string) []errors.Su
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: "(",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -690,10 +689,7 @@ func (e *MissingStartOfAuthorizationError) SuggestFixes(code string) []errors.Su
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: "(",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -778,10 +774,7 @@ func (e *MissingClosingParenInParameterListError) SuggestFixes(code string) []er
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ")",
-					Range: ast.Range{
-						StartPos: e.Pos,
-						EndPos:   e.Pos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.Pos, code),
 				},
 			},
 		},
@@ -837,10 +830,7 @@ func (e *ExpectedCommaOrEndOfParameterListError) SuggestFixes(code string) []err
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ",",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -893,10 +883,7 @@ func (e *MissingColonAfterParameterNameError) SuggestFixes(code string) []errors
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ":",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -1013,10 +1000,7 @@ func (e *MissingCommaInTypeParameterListError) SuggestFixes(code string) []error
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ",",
-					Range: ast.Range{
-						StartPos: e.Pos,
-						EndPos:   e.Pos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.Pos, code),
 				},
 			},
 		},
@@ -1105,10 +1089,7 @@ func (e *MissingClosingGreaterInTypeParameterListError) SuggestFixes(code string
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ">",
-					Range: ast.Range{
-						StartPos: e.Pos,
-						EndPos:   e.Pos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.Pos, code),
 				},
 			},
 		},
@@ -1157,10 +1138,7 @@ func (e *MissingClosingGreaterInTypeArgumentsError) SuggestFixes(code string) []
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ">",
-					Range: ast.Range{
-						StartPos: e.Pos,
-						EndPos:   e.Pos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.Pos, code),
 				},
 			},
 		},
@@ -1217,10 +1195,7 @@ func (e *ExpectedCommaOrEndOfTypeParameterListError) SuggestFixes(code string) [
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ",",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -1499,10 +1474,7 @@ func (e *MissingColonInSwitchCaseError) SuggestFixes(code string) []errors.Sugge
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ":",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -2068,10 +2040,7 @@ func (e *MissingRightArrowInEntitlementMappingError) SuggestFixes(code string) [
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ` ->`,
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -2214,10 +2183,7 @@ func (*MissingSeparatorInIntersectionOrDictionaryTypeError) SecondaryError() str
 }
 
 func (e *MissingSeparatorInIntersectionOrDictionaryTypeError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
-	r := ast.Range{
-		StartPos: e.GotToken.StartPos,
-		EndPos:   e.GotToken.StartPos,
-	}.AttachLeft(code)
+	r := newLeftAttachedRange(e.GotToken.StartPos, code)
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert comma",
@@ -2370,10 +2336,7 @@ func (e *MissingClosingParenInArgumentListError) SuggestFixes(code string) []err
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ")",
-					Range: ast.Range{
-						StartPos: e.Pos,
-						EndPos:   e.Pos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.Pos, code),
 				},
 			},
 		},
@@ -2461,10 +2424,7 @@ func (e *MissingCommaInArgumentListError) SuggestFixes(code string) []errors.Sug
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ",",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -3108,10 +3068,7 @@ func (e *MissingAccessOpeningParenError) SuggestFixes(code string) []errors.Sugg
 				TextEdits: []ast.TextEdit{
 					{
 						Insertion: "(",
-						Range: ast.Range{
-							StartPos: e.GotToken.StartPos,
-							EndPos:   e.GotToken.StartPos,
-						}.AttachLeft(code),
+						Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 					},
 				},
 			},
@@ -3164,10 +3121,7 @@ func (e *MissingAccessClosingParenError) SuggestFixes(code string) []errors.Sugg
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ")",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -3381,10 +3335,7 @@ func (e *MissingColonAfterFieldNameError) SuggestFixes(code string) []errors.Sug
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ":",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -3428,10 +3379,7 @@ func (*MissingTransferError) DocumentationLink() string {
 }
 
 func (e *MissingTransferError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
-	r := ast.Range{
-		StartPos: e.Pos,
-		EndPos:   e.Pos,
-	}.AttachLeft(code)
+	r := newLeftAttachedRange(e.Pos, code)
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert '=' (for struct)",
@@ -3913,10 +3861,7 @@ func (*InvalidEntitlementSeparatorError) DocumentationLink() string {
 }
 
 func (e *InvalidEntitlementSeparatorError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
-	r := ast.Range{
-		StartPos: e.Token.StartPos,
-		EndPos:   e.Token.StartPos,
-	}.AttachLeft(code)
+	r := newLeftAttachedRange(e.Token.StartPos, code)
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "Insert comma (conjunction)",
@@ -4533,10 +4478,7 @@ func (e *DeclarationMissingOpeningBraceError) SuggestFixes(code string) []errors
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: " {",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -4596,10 +4538,7 @@ func (e *DeclarationMissingClosingBraceError) SuggestFixes(code string) []errors
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: "}",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -4659,10 +4598,7 @@ func (e *MissingOpeningBraceError) SuggestFixes(code string) []errors.SuggestedF
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: " {",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -4722,10 +4658,7 @@ func (e *MissingClosingBraceError) SuggestFixes(code string) []errors.SuggestedF
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: "}",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -4777,10 +4710,7 @@ func (e *MissingEndOfParenthesizedTypeError) SuggestFixes(code string) []errors.
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ")",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -4832,10 +4762,7 @@ func (e *MissingEndOfParenthesizedExpressionError) SuggestFixes(code string) []e
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ")",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -4887,10 +4814,7 @@ func (e *MissingClosingBracketInArrayTypeError) SuggestFixes(code string) []erro
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: "]",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -4942,10 +4866,7 @@ func (e *MissingClosingBracketInArrayExpressionError) SuggestFixes(code string) 
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: "]",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -4997,10 +4918,7 @@ func (e *MissingClosingBraceInDictionaryExpressionError) SuggestFixes(code strin
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: "}",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -5052,10 +4970,7 @@ func (e *MissingColonInDictionaryEntryError) SuggestFixes(code string) []errors.
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ":",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -5107,10 +5022,7 @@ func (e *MissingColonInConditionalExpressionError) SuggestFixes(code string) []e
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: " :",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -5162,10 +5074,7 @@ func (e *MissingSlashInPathExpressionError) SuggestFixes(code string) []errors.S
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: "/",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -5217,10 +5126,7 @@ func (e *MissingClosingBracketInIndexExpressionError) SuggestFixes(code string) 
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: "]",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -5273,10 +5179,7 @@ func (e *MissingClosingBraceInIntersectionOrDictionaryTypeError) SuggestFixes(co
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: "}",
-					Range: ast.Range{
-						StartPos: e.Pos,
-						EndPos:   e.Pos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.Pos, code),
 				},
 			},
 		},
@@ -5328,10 +5231,7 @@ func (e *MissingClosingParenInAuthError) SuggestFixes(code string) []errors.Sugg
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ")",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -5439,10 +5339,7 @@ func (e *MissingOpeningParenInNominalTypeInvocationError) SuggestFixes(code stri
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: "(",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -5496,10 +5393,7 @@ func (e *MissingOpeningParenInFunctionTypeError) SuggestFixes(code string) []err
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: "(",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
@@ -5553,10 +5447,7 @@ func (e *MissingClosingParenInFunctionTypeError) SuggestFixes(code string) []err
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ")",
-					Range: ast.Range{
-						StartPos: e.GotToken.StartPos,
-						EndPos:   e.GotToken.StartPos,
-					}.AttachLeft(code),
+					Range:     newLeftAttachedRange(e.GotToken.StartPos, code),
 				},
 			},
 		},
