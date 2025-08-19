@@ -940,7 +940,7 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
 	// Load arguments
 	arguments := vm.popN(int(ins.ArgCount))
 	receiver := arguments[ReceiverIndex]
-	arguments[ReceiverIndex] = maybeDereference(vm.context, receiver)
+	arguments[ReceiverIndex] = maybeDereferenceReceiver(vm.context, receiver)
 
 	// Get function
 	nameIndex := ins.Name
@@ -1005,9 +1005,15 @@ func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
 	return typeArguments
 }
 
-func maybeDereference(context interpreter.ValueStaticTypeContext, value Value) Value {
+func maybeDereferenceReceiver(context interpreter.ValueStaticTypeContext, value Value) Value {
 	switch typedValue := value.(type) {
 	case *interpreter.EphemeralReferenceValue:
+		// Do not dereference attachments, so that the receiver is a reference as expected.
+		if val, ok := typedValue.Value.(*interpreter.CompositeValue); ok {
+			if val.Kind == common.CompositeKindAttachment {
+				return value
+			}
+		}
 		return typedValue.Value
 	case *interpreter.StorageReferenceValue:
 		referencedValue := typedValue.ReferencedValue(
@@ -1460,6 +1466,71 @@ func opStringTemplate(vm *VM, ins opcode.InstructionTemplateString) {
 	vm.push(interpreter.BuildStringTemplate(valuesStr, expressions))
 }
 
+func opGetTypeIndex(vm *VM, ins opcode.InstructionGetTypeIndex) {
+	target := vm.pop()
+
+	// Get attachment type
+	typeIndex := ins.Type
+	staticType := vm.loadType(typeIndex)
+	typ := vm.context.SemaTypeFromStaticType(staticType)
+
+	compositeValue := target.(interpreter.TypeIndexableValue)
+	value := compositeValue.GetTypeKey(
+		vm.context,
+		EmptyLocationRange,
+		typ,
+	)
+	vm.push(value)
+}
+
+func opSetTypeIndex(vm *VM, ins opcode.InstructionSetTypeIndex) {
+	fieldValue, target := vm.pop2()
+
+	// Get attachment type
+	typeIndex := ins.Type
+	staticType := vm.loadType(typeIndex)
+	typ := vm.context.SemaTypeFromStaticType(staticType)
+
+	compositeValue := target.(interpreter.TypeIndexableValue)
+	compositeValue.SetTypeKey(
+		vm.context,
+		EmptyLocationRange,
+		typ,
+		fieldValue,
+	)
+	vm.push(compositeValue)
+}
+
+func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
+	target := vm.pop()
+
+	// Get attachment type
+	typeIndex := ins.Type
+	staticType := vm.loadType(typeIndex)
+	typ := vm.context.SemaTypeFromStaticType(staticType)
+
+	compositeValue := target.(interpreter.TypeIndexableValue)
+	removed := compositeValue.RemoveTypeKey(
+		vm.context,
+		EmptyLocationRange,
+		typ,
+	)
+	// attachment not present on this base
+	if removed == nil {
+		return
+	}
+	attachment, ok := removed.(*interpreter.CompositeValue)
+	// we enforce this in the checker
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	if attachment.IsResourceKinded(vm.context) {
+		// this attachment is no longer attached to its base, but the `base` variable is still available in the destructor
+		// TODO: attachment.setBaseValue(base)
+		attachment.Destroy(vm.context, EmptyLocationRange)
+	}
+}
+
 func (vm *VM) run() {
 
 	defer func() {
@@ -1652,6 +1723,12 @@ func (vm *VM) run() {
 			opStatement(vm)
 		case opcode.InstructionTemplateString:
 			opStringTemplate(vm, ins)
+		case opcode.InstructionGetTypeIndex:
+			opGetTypeIndex(vm, ins)
+		case opcode.InstructionSetTypeIndex:
+			opSetTypeIndex(vm, ins)
+		case opcode.InstructionRemoveTypeIndex:
+			opRemoveTypeIndex(vm, ins)
 		default:
 			panic(errors.NewUnexpectedError("cannot execute instruction of type %T", ins))
 		}
