@@ -1064,7 +1064,7 @@ func generateErrors() []namedError {
 				Range: placeholderRange,
 			},
 		},
-		{"sema.InvalidNonEntitlementTypeInMapError",
+		{"sema.InvalidNonEntitlementTypeInMappingError",
 			&sema.InvalidNonEntitlementTypeInMappingError{
 				Pos: placeholderPosition,
 			},
@@ -1529,7 +1529,7 @@ func generateErrors() []namedError {
 				Range:          placeholderRange,
 			},
 		},
-		{"sema.UnconvertableTypeError",
+		{"sema.UnconvertibleTypeError",
 			&sema.UnconvertibleTypeError{
 				Type:  placeholderAstType,
 				Range: placeholderRange,
