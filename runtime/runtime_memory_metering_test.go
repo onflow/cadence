@@ -1220,6 +1220,56 @@ func TestRuntimeMemoryMeteringErrors(t *testing.T) {
 
 		require.Error(t, err)
 	})
+
+	t.Run("go runtime error returned", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            access(all) event Foo()
+
+            access(all) fun main() {
+                emit Foo()
+            }
+        `)
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+		}
+
+		memoryGauge := common.FunctionMemoryGauge(
+			func(_ common.MemoryUsage) (err error) {
+				// Cause a runtime error. Catch it and return.
+				var x any = "hello"
+				defer func() {
+					if r := recover(); r != nil {
+						if r, ok := r.(error); ok {
+							err = r
+						}
+					}
+				}()
+
+				_ = x.(int)
+
+				return
+			},
+		)
+
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface:   runtimeInterface,
+				Location:    nextScriptLocation(),
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
+			},
+		)
+
+		require.Error(t, err)
+	})
 }
 
 func TestRuntimeMeterEncoding(t *testing.T) {
