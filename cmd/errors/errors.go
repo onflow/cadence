@@ -225,10 +225,30 @@ func generateErrors() []namedError {
 				GotToken: placeholderToken,
 			},
 		},
+		{"parser.MissingAmpersandInAuthReferenceError",
+			&parser.MissingAmpersandInAuthReferenceError{
+				GotToken: placeholderToken,
+			},
+		},
 		{"parser.MissingClosingBraceError",
 			&parser.MissingClosingBraceError{
 				Description: placeholderString,
 				GotToken:    placeholderToken,
+			},
+		},
+		{"parser.MissingClosingBraceInIntersectionOrDictionaryTypeError",
+			&parser.MissingClosingBraceInIntersectionOrDictionaryTypeError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.MissingClosingBracketInArrayTypeError",
+			&parser.MissingClosingBracketInArrayTypeError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingClosingGreaterInTypeArgumentsError",
+			&parser.MissingClosingGreaterInTypeArgumentsError{
+				Pos: placeholderPosition,
 			},
 		},
 		{"parser.MissingClosingGreaterInTypeParameterListError",
@@ -239,6 +259,16 @@ func generateErrors() []namedError {
 		{"parser.MissingClosingParenInArgumentListError",
 			&parser.MissingClosingParenInArgumentListError{
 				Pos: placeholderPosition,
+			},
+		},
+		{"parser.MissingClosingParenInAuthError",
+			&parser.MissingClosingParenInAuthError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingClosingParenInFunctionTypeError",
+			&parser.MissingClosingParenInFunctionTypeError{
+				GotToken: placeholderToken,
 			},
 		},
 		{"parser.MissingClosingParenInParameterListError",
@@ -296,6 +326,11 @@ func generateErrors() []namedError {
 				Pos: placeholderPosition,
 			},
 		},
+		{"parser.MissingEndOfParenthesizedTypeError",
+			&parser.MissingEndOfParenthesizedTypeError{
+				GotToken: placeholderToken,
+			},
+		},
 		{"parser.MissingEnumCaseNameError",
 			&parser.MissingEnumCaseNameError{
 				GotToken: placeholderToken,
@@ -330,6 +365,16 @@ func generateErrors() []namedError {
 			&parser.MissingOpeningBraceError{
 				Description: placeholderString,
 				GotToken:    placeholderToken,
+			},
+		},
+		{"parser.MissingOpeningParenInFunctionTypeError",
+			&parser.MissingOpeningParenInFunctionTypeError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingOpeningParenInNominalTypeInvocationError",
+			&parser.MissingOpeningParenInNominalTypeInvocationError{
+				GotToken: placeholderToken,
 			},
 		},
 		{"parser.MissingPubClosingParenError",
@@ -482,12 +527,6 @@ func generateErrors() []namedError {
 		{"parser.UnexpectedEOFError",
 			parser.UnexpectedEOFError{
 				Pos: placeholderPosition,
-			},
-		},
-		{"parser.UnexpectedEOFExpectedTokenError",
-			&parser.UnexpectedEOFExpectedTokenError{
-				ExpectedToken: placeholderTokenType,
-				Pos:           placeholderPosition,
 			},
 		},
 		{"parser.UnexpectedEOFExpectedTypeAnnotationError",
