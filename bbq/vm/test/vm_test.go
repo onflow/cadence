@@ -9142,4 +9142,41 @@ func TestAttachments(t *testing.T) {
 
 		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(42), value)
 	})
+
+	t.Run("call function in initializer", func(t *testing.T) {
+		t.Parallel()
+
+		value, err := CompileAndInvoke(t, `
+		struct S {
+			var value: Int
+			init(value: Int) {
+				self.value = value
+			}
+			fun getValue(): Int {
+				return self.value
+			}
+		}
+		attachment A for S {
+			var value: Int
+			init() {
+				self.value = self.foo()
+			}
+			fun foo(): Int { 
+				return base.getValue() 
+			}
+			fun getValue(): Int {
+				return self.value
+			}
+		}
+		fun test(): Int {
+			let s = S(value: 3)
+			let s2 = attach A() to s
+			let i = s2[A]?.getValue()!
+			return i
+		}
+		`, "test")
+		require.NoError(t, err)
+
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), value)
+	})
 }
