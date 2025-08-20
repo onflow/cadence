@@ -21,7 +21,6 @@ package parser
 import (
 	"encoding/hex"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/onflow/cadence/ast"
