@@ -1001,38 +1001,35 @@ func TestRuntimeMemoryMeteringErrors(t *testing.T) {
 
 	runtime := NewTestRuntime()
 
-	type memoryMeter map[common.MemoryKind]uint64
+	executeScript := func(script []byte, args ...cadence.Value) error {
 
-	runtimeInterface := func(memoryMeter) *TestRuntimeInterface {
-		return &TestRuntimeInterface{
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		runtimeInterface := &TestRuntimeInterface{
 			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(nil, b)
 			},
 		}
-	}
 
-	nextScriptLocation := NewScriptLocationGenerator()
+		memoryGauge := common.FunctionMemoryGauge(
+			func(usage common.MemoryUsage) error {
+				if usage.Kind == common.MemoryKindStringValue ||
+					usage.Kind == common.MemoryKindArrayValueBase ||
+					usage.Kind == common.MemoryKindErrorToken {
 
-	memoryGauge := common.FunctionMemoryGauge(
-		func(usage common.MemoryUsage) error {
-			if usage.Kind == common.MemoryKindStringValue ||
-				usage.Kind == common.MemoryKindArrayValueBase ||
-				usage.Kind == common.MemoryKindErrorToken {
+					return testMemoryError{}
+				}
+				return nil
+			},
+		)
 
-				return testMemoryError{}
-			}
-			return nil
-		},
-	)
-
-	executeScript := func(script []byte, meter memoryMeter, args ...cadence.Value) error {
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source:    script,
 				Arguments: encodeArgs(args),
 			},
 			Context{
-				Interface:   runtimeInterface(meter),
+				Interface:   runtimeInterface,
 				Location:    nextScriptLocation(),
 				MemoryGauge: memoryGauge,
 				UseVM:       *compile,
@@ -1049,7 +1046,7 @@ func TestRuntimeMemoryMeteringErrors(t *testing.T) {
             access(all) fun main() {}
         `)
 
-		err := executeScript(script, memoryMeter{})
+		err := executeScript(script)
 		assert.NoError(t, err)
 	})
 
@@ -1062,7 +1059,6 @@ func TestRuntimeMemoryMeteringErrors(t *testing.T) {
 
 		err := executeScript(
 			script,
-			memoryMeter{},
 			cadence.String("hello"),
 		)
 		RequireError(t, err)
@@ -1079,7 +1075,7 @@ func TestRuntimeMemoryMeteringErrors(t *testing.T) {
             }
         `)
 
-		err := executeScript(script, memoryMeter{})
+		err := executeScript(script)
 
 		require.IsType(t, Error{}, err)
 		runtimeError := err.(Error)
@@ -1099,10 +1095,130 @@ func TestRuntimeMemoryMeteringErrors(t *testing.T) {
             }
         `)
 
-		err := executeScript(script, memoryMeter{})
+		err := executeScript(script)
 		RequireError(t, err)
 
 		assert.ErrorIs(t, err, testMemoryError{})
+	})
+
+	t.Run("regular error returned", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            access(all) fun foo() {}
+
+            access(all) fun main() {
+                foo()
+            }
+        `)
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+		}
+
+		memoryGauge := common.FunctionMemoryGauge(
+			func(_ common.MemoryUsage) error {
+				return fmt.Errorf("memory limit exceeded")
+			},
+		)
+
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface:   runtimeInterface,
+				Location:    nextScriptLocation(),
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
+			},
+		)
+
+		require.Error(t, err)
+
+		var meteringErr errors.MemoryMeteringError
+		require.ErrorAs(t, err, &meteringErr)
+	})
+
+	t.Run("regular error panicked", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+	       access(all) fun foo() {}
+
+	       access(all) fun main() {
+	           foo()
+	       }
+	   `)
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+		}
+
+		memoryGauge := common.FunctionMemoryGauge(
+			func(_ common.MemoryUsage) error {
+				panic(fmt.Errorf("memory limit exceeded"))
+			},
+		)
+
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface:   runtimeInterface,
+				Location:    nextScriptLocation(),
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
+			},
+		)
+
+		require.Error(t, err)
+	})
+
+	t.Run("go runtime error panicked", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+	       access(all) fun foo() {}
+
+	       access(all) fun main() {
+	           foo()
+	       }
+	   `)
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+		}
+
+		memoryGauge := common.FunctionMemoryGauge(
+			func(_ common.MemoryUsage) error {
+				// Cause a runtime error
+				var x any = "hello"
+				_ = x.(int)
+				return nil
+			},
+		)
+
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface:   runtimeInterface,
+				Location:    nextScriptLocation(),
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
+			},
+		)
+
+		require.Error(t, err)
 	})
 }
 
