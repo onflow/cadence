@@ -19,8 +19,6 @@
 package vm
 
 import (
-	"strings"
-
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/bbq/commons"
@@ -290,8 +288,7 @@ func AttachmentBaseAndSelfValues(
 	var unqualifiedName string
 	switch functionValue := method.(type) {
 	case CompiledFunctionValue:
-		parts := strings.Split(functionValue.Function.Name, ".")
-		unqualifiedName = parts[len(parts)-1]
+		unqualifiedName = functionValue.Function.Name
 	case *NativeFunctionValue:
 		unqualifiedName = functionValue.Name
 	}

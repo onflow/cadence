@@ -3090,7 +3090,7 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 	functionType := c.DesugaredElaboration.FunctionDeclarationFunctionType(declaration)
 
 	function := c.addFunction(
-		functionName,
+		identifier,
 		functionName,
 		uint16(parameterCount),
 		functionType,
