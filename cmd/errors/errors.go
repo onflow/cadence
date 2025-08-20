@@ -236,13 +236,28 @@ func generateErrors() []namedError {
 				GotToken:    placeholderToken,
 			},
 		},
+		{"parser.MissingClosingBraceInDictionaryExpressionError",
+			&parser.MissingClosingBraceInDictionaryExpressionError{
+				GotToken: placeholderToken,
+			},
+		},
 		{"parser.MissingClosingBraceInIntersectionOrDictionaryTypeError",
 			&parser.MissingClosingBraceInIntersectionOrDictionaryTypeError{
 				Pos: placeholderPosition,
 			},
 		},
+		{"parser.MissingClosingBracketInArrayExpressionError",
+			&parser.MissingClosingBracketInArrayExpressionError{
+				GotToken: placeholderToken,
+			},
+		},
 		{"parser.MissingClosingBracketInArrayTypeError",
 			&parser.MissingClosingBracketInArrayTypeError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingClosingBracketInIndexExpressionError",
+			&parser.MissingClosingBracketInIndexExpressionError{
 				GotToken: placeholderToken,
 			},
 		},
@@ -286,6 +301,16 @@ func generateErrors() []namedError {
 				GotToken: placeholderToken,
 			},
 		},
+		{"parser.MissingColonInConditionalExpressionError",
+			&parser.MissingColonInConditionalExpressionError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingColonInDictionaryEntryError",
+			&parser.MissingColonInDictionaryEntryError{
+				GotToken: placeholderToken,
+			},
+		},
 		{"parser.MissingColonInSwitchCaseError",
 			&parser.MissingColonInSwitchCaseError{
 				GotToken: placeholderToken,
@@ -324,6 +349,11 @@ func generateErrors() []namedError {
 		{"parser.MissingDictionaryValueTypeError",
 			&parser.MissingDictionaryValueTypeError{
 				Pos: placeholderPosition,
+			},
+		},
+		{"parser.MissingEndOfParenthesizedExpressionError",
+			&parser.MissingEndOfParenthesizedExpressionError{
+				GotToken: placeholderToken,
 			},
 		},
 		{"parser.MissingEndOfParenthesizedTypeError",
@@ -389,6 +419,11 @@ func generateErrors() []namedError {
 		},
 		{"parser.MissingSeparatorInIntersectionOrDictionaryTypeError",
 			&parser.MissingSeparatorInIntersectionOrDictionaryTypeError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingSlashInPathExpressionError",
+			&parser.MissingSlashInPathExpressionError{
 				GotToken: placeholderToken,
 			},
 		},

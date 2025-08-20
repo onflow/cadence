@@ -4097,6 +4097,43 @@ func (*MissingEndOfParenthesizedTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
+// MissingEndOfParenthesizedExpressionError is reported when a parenthesized expression is missing a closing parenthesis.
+type MissingEndOfParenthesizedExpressionError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingEndOfParenthesizedExpressionError{}
+var _ errors.UserError = &MissingEndOfParenthesizedExpressionError{}
+var _ errors.SecondaryError = &MissingEndOfParenthesizedExpressionError{}
+var _ errors.HasDocumentationLink = &MissingEndOfParenthesizedExpressionError{}
+
+func (*MissingEndOfParenthesizedExpressionError) isParseError() {}
+
+func (*MissingEndOfParenthesizedExpressionError) IsUserError() {}
+
+func (e *MissingEndOfParenthesizedExpressionError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingEndOfParenthesizedExpressionError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingEndOfParenthesizedExpressionError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf("expected %s at end of parenthesized expression", lexer.TokenParenClose),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingEndOfParenthesizedExpressionError) SecondaryError() string {
+	return "parenthesized expressions must be properly closed with a closing parenthesis"
+}
+
+func (*MissingEndOfParenthesizedExpressionError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
 // MissingClosingBracketInArrayTypeError is reported when an array type is missing a closing bracket.
 type MissingClosingBracketInArrayTypeError struct {
 	GotToken lexer.Token
@@ -4132,6 +4169,228 @@ func (*MissingClosingBracketInArrayTypeError) SecondaryError() string {
 
 func (*MissingClosingBracketInArrayTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/values-and-types/arrays#array-types"
+}
+
+// MissingClosingBracketInArrayExpressionError is reported when an array expression is missing a closing bracket.
+type MissingClosingBracketInArrayExpressionError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingClosingBracketInArrayExpressionError{}
+var _ errors.UserError = &MissingClosingBracketInArrayExpressionError{}
+var _ errors.SecondaryError = &MissingClosingBracketInArrayExpressionError{}
+var _ errors.HasDocumentationLink = &MissingClosingBracketInArrayExpressionError{}
+
+func (*MissingClosingBracketInArrayExpressionError) isParseError() {}
+
+func (*MissingClosingBracketInArrayExpressionError) IsUserError() {}
+
+func (e *MissingClosingBracketInArrayExpressionError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingClosingBracketInArrayExpressionError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingClosingBracketInArrayExpressionError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf("expected %s at end of array expression", lexer.TokenBracketClose),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingClosingBracketInArrayExpressionError) SecondaryError() string {
+	return "array expressions must be properly closed with a closing bracket (])"
+}
+
+func (*MissingClosingBracketInArrayExpressionError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types/arrays#array-literals"
+}
+
+// MissingClosingBraceInDictionaryExpressionError is reported when a dictionary expression is missing a closing brace.
+type MissingClosingBraceInDictionaryExpressionError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingClosingBraceInDictionaryExpressionError{}
+var _ errors.UserError = &MissingClosingBraceInDictionaryExpressionError{}
+var _ errors.SecondaryError = &MissingClosingBraceInDictionaryExpressionError{}
+var _ errors.HasDocumentationLink = &MissingClosingBraceInDictionaryExpressionError{}
+
+func (*MissingClosingBraceInDictionaryExpressionError) isParseError() {}
+
+func (*MissingClosingBraceInDictionaryExpressionError) IsUserError() {}
+
+func (e *MissingClosingBraceInDictionaryExpressionError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingClosingBraceInDictionaryExpressionError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingClosingBraceInDictionaryExpressionError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf("expected %s at end of dictionary expression", lexer.TokenBraceClose),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingClosingBraceInDictionaryExpressionError) SecondaryError() string {
+	return "dictionary expressions must be properly closed with a closing brace (})"
+}
+
+func (*MissingClosingBraceInDictionaryExpressionError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types/dictionaries#dictionary-literals"
+}
+
+// MissingColonInDictionaryEntryError is reported when a dictionary entry is missing a colon.
+type MissingColonInDictionaryEntryError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingColonInDictionaryEntryError{}
+var _ errors.UserError = &MissingColonInDictionaryEntryError{}
+var _ errors.SecondaryError = &MissingColonInDictionaryEntryError{}
+var _ errors.HasDocumentationLink = &MissingColonInDictionaryEntryError{}
+
+func (*MissingColonInDictionaryEntryError) isParseError() {}
+
+func (*MissingColonInDictionaryEntryError) IsUserError() {}
+
+func (e *MissingColonInDictionaryEntryError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingColonInDictionaryEntryError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingColonInDictionaryEntryError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf("expected %s in dictionary entry", lexer.TokenColon),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingColonInDictionaryEntryError) SecondaryError() string {
+	return "a colon (:) is required to separate the key and value in a dictionary entry"
+}
+
+func (*MissingColonInDictionaryEntryError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types/dictionaries#dictionary-literals"
+}
+
+// MissingColonInConditionalExpressionError is reported when a conditional expression is missing a colon.
+type MissingColonInConditionalExpressionError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingColonInConditionalExpressionError{}
+var _ errors.UserError = &MissingColonInConditionalExpressionError{}
+var _ errors.SecondaryError = &MissingColonInConditionalExpressionError{}
+var _ errors.HasDocumentationLink = &MissingColonInConditionalExpressionError{}
+
+func (*MissingColonInConditionalExpressionError) isParseError() {}
+
+func (*MissingColonInConditionalExpressionError) IsUserError() {}
+
+func (e *MissingColonInConditionalExpressionError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingColonInConditionalExpressionError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingColonInConditionalExpressionError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf("expected %s in conditional expression", lexer.TokenColon),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingColonInConditionalExpressionError) SecondaryError() string {
+	return "a colon (:) is required to separate the 'then' and 'else' expressions"
+}
+
+func (*MissingColonInConditionalExpressionError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/operators/bitwise-ternary-operators#ternary-conditional-operator"
+}
+
+// MissingSlashInPathExpressionError is reported when a path expression is missing a slash.
+type MissingSlashInPathExpressionError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingSlashInPathExpressionError{}
+var _ errors.UserError = &MissingSlashInPathExpressionError{}
+var _ errors.SecondaryError = &MissingSlashInPathExpressionError{}
+var _ errors.HasDocumentationLink = &MissingSlashInPathExpressionError{}
+
+func (*MissingSlashInPathExpressionError) isParseError() {}
+
+func (*MissingSlashInPathExpressionError) IsUserError() {}
+
+func (e *MissingSlashInPathExpressionError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingSlashInPathExpressionError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingSlashInPathExpressionError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf("expected %s in path expression", lexer.TokenSlash),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingSlashInPathExpressionError) SecondaryError() string {
+	return "a slash (/) is required to separate the domain and identifier in a path expression"
+}
+
+func (*MissingSlashInPathExpressionError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/accounts/paths"
+}
+
+// MissingClosingBracketInIndexExpressionError is reported when an index expression is missing a closing bracket.
+type MissingClosingBracketInIndexExpressionError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingClosingBracketInIndexExpressionError{}
+var _ errors.UserError = &MissingClosingBracketInIndexExpressionError{}
+var _ errors.SecondaryError = &MissingClosingBracketInIndexExpressionError{}
+var _ errors.HasDocumentationLink = &MissingClosingBracketInIndexExpressionError{}
+
+func (*MissingClosingBracketInIndexExpressionError) isParseError() {}
+
+func (*MissingClosingBracketInIndexExpressionError) IsUserError() {}
+
+func (e *MissingClosingBracketInIndexExpressionError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingClosingBracketInIndexExpressionError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingClosingBracketInIndexExpressionError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf("expected %s at end of index expression", lexer.TokenBracketClose),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingClosingBracketInIndexExpressionError) SecondaryError() string {
+	return "index expressions must be properly closed with a closing bracket (])"
+}
+
+func (*MissingClosingBracketInIndexExpressionError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types/arrays#array-indexing"
 }
 
 // MissingClosingBraceInIntersectionOrDictionaryTypeError is reported when an intersection or dictionary type
