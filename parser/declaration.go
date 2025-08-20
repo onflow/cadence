@@ -218,7 +218,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				}
 
 				if nativePos != nil {
-					p.reportSyntaxError("invalid second native modifier")
+					p.reportSyntaxError("invalid second `native` modifier")
 				}
 				pos := p.current.StartPos
 				nativePos = &pos
@@ -256,29 +256,37 @@ func handlePub(p *parser) error {
 	// Skip the opening paren
 	p.nextSemanticToken()
 
-	const keywordSet = "set"
+	var isPubSet bool
 
-	if !p.isToken(p.current, lexer.TokenIdentifier, keywordSet) {
-		return &InvalidPubSetModifierError{
-			GotToken: p.current,
+	if p.current.Type == lexer.TokenIdentifier {
+		const keywordSet = "set"
+
+		isPubSet = string(p.currentTokenSource()) == keywordSet
+
+		if !isPubSet {
+			p.report(&InvalidPubModifierError{
+				GotToken: p.current,
+			})
 		}
-	}
 
-	// Skip the `set` keyword
-	p.nextSemanticToken()
+		// Assume it is a keyword, skip it
+		p.nextSemanticToken()
+	}
 
 	endToken, err := p.mustOne(lexer.TokenParenClose)
 	if err != nil {
 		return err
 	}
 
-	p.report(&PubSetAccessError{
-		Range: ast.NewRange(
-			p.memoryGauge,
-			pubToken.StartPos,
-			endToken.EndPos,
-		),
-	})
+	if isPubSet {
+		p.report(&PubSetAccessError{
+			Range: ast.NewRange(
+				p.memoryGauge,
+				pubToken.StartPos,
+				endToken.EndPos,
+			),
+		})
+	}
 
 	return nil
 }
@@ -1005,17 +1013,16 @@ func parseFieldWithVariableKind(
 // parseEntitlementMapping parses an entitlement mapping
 //
 //	entitlementMapping : nominalType '->' nominalType
-func parseEntitlementMapping(p *parser, docString string) (*ast.EntitlementMapRelation, error) {
+func parseEntitlementMapping(p *parser) (*ast.EntitlementMapRelation, error) {
 	inputType, err := parseType(p, lowestBindingPower)
 	if err != nil {
 		return nil, err
 	}
 	inputNominalType, ok := inputType.(*ast.NominalType)
 	if !ok {
-		p.reportSyntaxError(
-			"expected nominal type, got %s",
-			inputType,
-		)
+		p.report(&InvalidEntitlementMappingTypeError{
+			Range: ast.NewRangeFromPositioned(p.memoryGauge, inputType),
+		})
 	}
 
 	p.skipSpaceAndComments()
@@ -1034,15 +1041,18 @@ func parseEntitlementMapping(p *parser, docString string) (*ast.EntitlementMapRe
 
 	outputNominalType, ok := outputType.(*ast.NominalType)
 	if !ok {
-		p.reportSyntaxError(
-			"expected nominal type, got %s",
-			outputType,
-		)
+		p.report(&InvalidEntitlementMappingTypeError{
+			Range: ast.NewRangeFromPositioned(p.memoryGauge, outputType),
+		})
 	}
 
 	p.skipSpaceAndComments()
 
-	return ast.NewEntitlementMapRelation(p.memoryGauge, inputNominalType, outputNominalType), nil
+	return ast.NewEntitlementMapRelation(
+		p.memoryGauge,
+		inputNominalType,
+		outputNominalType,
+	), nil
 }
 
 // parseEntitlementMappings parses entitlement mappings
@@ -1053,10 +1063,7 @@ func parseEntitlementMappingsAndInclusions(p *parser, endTokenType lexer.TokenTy
 
 	for p.checkProgress(&progress) {
 
-		_, docString := p.parseTrivia(triviaOptions{
-			skipNewlines:    true,
-			parseDocStrings: true,
-		})
+		p.skipSpaceAndComments()
 
 		switch p.current.Type {
 
@@ -1064,26 +1071,25 @@ func parseEntitlementMappingsAndInclusions(p *parser, endTokenType lexer.TokenTy
 			return elements, nil
 
 		default:
-			if string(p.currentTokenSource()) == KeywordInclude {
+			if p.isToken(p.current, lexer.TokenIdentifier, KeywordInclude) {
 				// Skip the `include` keyword
 				p.nextSemanticToken()
-				outputType, err := parseType(p, lowestBindingPower)
+
+				includedType, err := parseType(p, lowestBindingPower)
 				if err != nil {
 					return nil, err
 				}
 
-				outputNominalType, ok := outputType.(*ast.NominalType)
+				includedNominalType, ok := includedType.(*ast.NominalType)
 				if !ok {
-					p.reportSyntaxError(
-						"expected nominal type, got %s",
-						outputType,
-					)
+					p.report(&InvalidEntitlementMappingIncludeTypeError{
+						Range: ast.NewRangeFromPositioned(p.memoryGauge, includedType),
+					})
 				}
 
-				p.skipSpaceAndComments()
-				elements = append(elements, outputNominalType)
+				elements = append(elements, includedNominalType)
 			} else {
-				mapping, err := parseEntitlementMapping(p, docString)
+				mapping, err := parseEntitlementMapping(p)
 				if err != nil {
 					return nil, err
 				}
@@ -1131,6 +1137,7 @@ func parseEntitlementOrMappingDeclaration(
 		// we are parsing an entitlement mapping
 		// Skip the `mapping` keyword
 		p.nextSemanticToken()
+
 		isMapping = true
 		expectString = "following entitlement mapping declaration"
 	}
@@ -1159,6 +1166,7 @@ func parseEntitlementOrMappingDeclaration(
 		if err != nil {
 			return nil, err
 		}
+
 		declarationRange := ast.NewRange(
 			p.memoryGauge,
 			startPos,
@@ -1359,34 +1367,25 @@ func parseAttachmentDeclaration(
 
 	p.skipSpaceAndComments()
 
-	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordFor) {
-		return nil, p.newSyntaxError(
-			"expected 'for', got %s",
-			p.current.Type,
-		)
-	}
-
-	// skip the `for` keyword
-	p.nextSemanticToken()
-
-	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, p.newSyntaxError(
-			"expected %s, got %s",
-			lexer.TokenIdentifier,
-			p.current.Type,
-		)
+	if p.isToken(p.current, lexer.TokenIdentifier, KeywordFor) {
+		// Skip the `for` keyword
+		p.nextSemanticToken()
+	} else {
+		p.report(&MissingForKeywordInAttachmentDeclarationError{
+			GotToken: p.current,
+		})
 	}
 
 	baseType, err := parseType(p, lowestBindingPower)
-	baseNominalType, ok := baseType.(*ast.NominalType)
-	if !ok {
-		p.reportSyntaxError(
-			"expected nominal type, got %s",
-			baseType,
-		)
-	}
 	if err != nil {
 		return nil, err
+	}
+
+	baseNominalType, ok := baseType.(*ast.NominalType)
+	if !ok {
+		p.report(&InvalidAttachmentBaseTypeError{
+			Range: ast.NewRangeFromPositioned(p.memoryGauge, baseType),
+		})
 	}
 
 	p.skipSpaceAndComments()
@@ -1649,7 +1648,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				}
 
 				if nativePos != nil {
-					p.reportSyntaxError("invalid second native modifier")
+					p.reportSyntaxError("invalid second `native` modifier")
 				}
 				pos := p.current.StartPos
 				nativePos = &pos
@@ -1679,7 +1678,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				).
 					WithSecondary("remove the identifier before the pragma declaration")
 			}
-			rejectAllModifiers(p, access, accessPos, staticPos, nativePos, nil, common.DeclarationKindPragma)
+			rejectAllModifiers(p, access, accessPos, staticPos, nativePos, purityPos, common.DeclarationKindPragma)
 			return parsePragmaDeclaration(p)
 
 		case lexer.TokenColon:

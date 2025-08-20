@@ -1277,7 +1277,44 @@ func (*MissingFromKeywordInRemoveStatementError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/attachments#removing-attachments"
 }
 
-// InvalidAttachmentTypeError is reported when a removed attachment type is not nominal.
+// MissingToKeywordInAttachExpressionError is reported when the 'to' keyword is missing in an attach expression.
+type MissingToKeywordInAttachExpressionError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingToKeywordInAttachExpressionError{}
+var _ errors.UserError = &MissingToKeywordInAttachExpressionError{}
+var _ errors.SecondaryError = &MissingToKeywordInAttachExpressionError{}
+var _ errors.HasDocumentationLink = &MissingToKeywordInAttachExpressionError{}
+
+func (*MissingToKeywordInAttachExpressionError) isParseError() {}
+
+func (*MissingToKeywordInAttachExpressionError) IsUserError() {}
+
+func (e *MissingToKeywordInAttachExpressionError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingToKeywordInAttachExpressionError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingToKeywordInAttachExpressionError) Error() string {
+	return expectedButGotToken(
+		"expected 'to' keyword",
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingToKeywordInAttachExpressionError) SecondaryError() string {
+	return "the 'attach' expression requires the 'to' keyword to specify the value to attach to"
+}
+
+func (*MissingToKeywordInAttachExpressionError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/attachments#creating-attachments"
+}
+
+// InvalidAttachmentRemovalTypeError is reported when a removed attachment type is not nominal.
 type InvalidAttachmentRemovalTypeError struct {
 	ast.Range
 }
@@ -1573,6 +1610,58 @@ func (*UnexpectedColonInIntersectionTypeError) SecondaryError() string {
 
 func (*UnexpectedColonInIntersectionTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
+}
+
+// InvalidEntitlementMappingTypeError is reported when an entitlement mapping type is not nominal.
+type InvalidEntitlementMappingTypeError struct {
+	ast.Range
+}
+
+var _ ParseError = &InvalidEntitlementMappingTypeError{}
+var _ errors.UserError = &InvalidEntitlementMappingTypeError{}
+var _ errors.SecondaryError = &InvalidEntitlementMappingTypeError{}
+var _ errors.HasDocumentationLink = &InvalidEntitlementMappingTypeError{}
+
+func (*InvalidEntitlementMappingTypeError) isParseError() {}
+
+func (*InvalidEntitlementMappingTypeError) IsUserError() {}
+
+func (e *InvalidEntitlementMappingTypeError) Error() string {
+	return "expected entitlement type"
+}
+
+func (*InvalidEntitlementMappingTypeError) SecondaryError() string {
+	return "only entitlement types can be used in entitlement mappings"
+}
+
+func (*InvalidEntitlementMappingTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control#entitlement-mappings"
+}
+
+// InvalidEntitlementMappingIncludeTypeError is reported when an included entitlement mapping type is not nominal.
+type InvalidEntitlementMappingIncludeTypeError struct {
+	ast.Range
+}
+
+var _ ParseError = &InvalidEntitlementMappingIncludeTypeError{}
+var _ errors.UserError = &InvalidEntitlementMappingIncludeTypeError{}
+var _ errors.SecondaryError = &InvalidEntitlementMappingIncludeTypeError{}
+var _ errors.HasDocumentationLink = &InvalidEntitlementMappingIncludeTypeError{}
+
+func (*InvalidEntitlementMappingIncludeTypeError) isParseError() {}
+
+func (*InvalidEntitlementMappingIncludeTypeError) IsUserError() {}
+
+func (e *InvalidEntitlementMappingIncludeTypeError) Error() string {
+	return "expected entitlement mapping type"
+}
+
+func (*InvalidEntitlementMappingIncludeTypeError) SecondaryError() string {
+	return "only entitlement mapping types can be included in entitlement mappings"
+}
+
+func (*InvalidEntitlementMappingIncludeTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/access-control#mapping-composition"
 }
 
 // InvalidNonNominalTypeInIntersectionError is reported when a non-nominal type is found in an intersection type.
@@ -2475,40 +2564,40 @@ func (*PubSetAccessError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/cadence-migration-guide/improvements#-motivation-11"
 }
 
-// InvalidPubSetModifierError is reported when the modifier for `pub` is not `set`.
-type InvalidPubSetModifierError struct {
+// InvalidPubModifierError is reported when the modifier for `pub` is not `set`.
+type InvalidPubModifierError struct {
 	GotToken lexer.Token
 }
 
-var _ ParseError = &InvalidPubSetModifierError{}
-var _ errors.UserError = &InvalidPubSetModifierError{}
-var _ errors.SecondaryError = &InvalidPubSetModifierError{}
-var _ errors.HasDocumentationLink = &InvalidPubSetModifierError{}
+var _ ParseError = &InvalidPubModifierError{}
+var _ errors.UserError = &InvalidPubModifierError{}
+var _ errors.SecondaryError = &InvalidPubModifierError{}
+var _ errors.HasDocumentationLink = &InvalidPubModifierError{}
 
-func (*InvalidPubSetModifierError) isParseError() {}
+func (*InvalidPubModifierError) isParseError() {}
 
-func (*InvalidPubSetModifierError) IsUserError() {}
+func (*InvalidPubModifierError) IsUserError() {}
 
-func (e *InvalidPubSetModifierError) StartPosition() ast.Position {
+func (e *InvalidPubModifierError) StartPosition() ast.Position {
 	return e.GotToken.StartPos
 }
 
-func (e *InvalidPubSetModifierError) EndPosition(_ common.MemoryGauge) ast.Position {
+func (e *InvalidPubModifierError) EndPosition(_ common.MemoryGauge) ast.Position {
 	return e.GotToken.EndPos
 }
 
-func (e *InvalidPubSetModifierError) Error() string {
+func (e *InvalidPubModifierError) Error() string {
 	return expectedButGotToken(
 		`expected keyword "set"`,
 		e.GotToken.Type,
 	)
 }
 
-func (*InvalidPubSetModifierError) SecondaryError() string {
+func (*InvalidPubModifierError) SecondaryError() string {
 	return "the 'set' keyword is used in access control modifiers to specify settable access"
 }
 
-func (*InvalidPubSetModifierError) DocumentationLink() string {
+func (*InvalidPubModifierError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control"
 }
 
@@ -3383,7 +3472,7 @@ func (e *InvalidStaticModifierError) StartPosition() ast.Position {
 }
 
 func (e *InvalidStaticModifierError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
-	return e.Pos.Shifted(memoryGauge, len(KeywordNative)-1)
+	return e.Pos.Shifted(memoryGauge, len(KeywordStatic)-1)
 }
 
 func (e *InvalidStaticModifierError) Error() string {
@@ -3538,4 +3627,67 @@ func (*NestedTypeMissingNameError) SecondaryError() string {
 
 func (*NestedTypeMissingNameError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+// MissingForKeywordInAttachmentDeclarationError is reported when the 'for' keyword is missing in an attachment declaration.
+type MissingForKeywordInAttachmentDeclarationError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingForKeywordInAttachmentDeclarationError{}
+var _ errors.UserError = &MissingForKeywordInAttachmentDeclarationError{}
+var _ errors.SecondaryError = &MissingForKeywordInAttachmentDeclarationError{}
+var _ errors.HasDocumentationLink = &MissingForKeywordInAttachmentDeclarationError{}
+
+func (*MissingForKeywordInAttachmentDeclarationError) isParseError() {}
+
+func (*MissingForKeywordInAttachmentDeclarationError) IsUserError() {}
+
+func (e *MissingForKeywordInAttachmentDeclarationError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingForKeywordInAttachmentDeclarationError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingForKeywordInAttachmentDeclarationError) Error() string {
+	return expectedButGotToken(
+		"expected 'for' keyword",
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingForKeywordInAttachmentDeclarationError) SecondaryError() string {
+	return "the 'attachment' declaration requires the 'for' keyword to specify the target"
+}
+
+func (*MissingForKeywordInAttachmentDeclarationError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/attachments#declaring-attachments"
+}
+
+// InvalidAttachmentBaseTypeError is reported when an attachment declaration has an invalid base type.
+type InvalidAttachmentBaseTypeError struct {
+	ast.Range
+}
+
+var _ ParseError = &InvalidAttachmentBaseTypeError{}
+var _ errors.UserError = &InvalidAttachmentBaseTypeError{}
+var _ errors.SecondaryError = &InvalidAttachmentBaseTypeError{}
+var _ errors.HasDocumentationLink = &InvalidAttachmentBaseTypeError{}
+
+func (*InvalidAttachmentBaseTypeError) isParseError() {}
+
+func (*InvalidAttachmentBaseTypeError) IsUserError() {}
+
+func (e *InvalidAttachmentBaseTypeError) Error() string {
+	return "expected nominal type"
+}
+
+func (*InvalidAttachmentBaseTypeError) SecondaryError() string {
+	return "attachments can only be declared for nominal types"
+}
+
+func (*InvalidAttachmentBaseTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/attachments#declaring-attachments"
 }

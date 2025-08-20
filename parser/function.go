@@ -26,9 +26,12 @@ import (
 func parsePurityAnnotation(p *parser) ast.FunctionPurity {
 	// get the purity annotation (if one exists) and skip it
 	if p.isToken(p.current, lexer.TokenIdentifier, KeywordView) {
+		// Skip the `view` keyword
 		p.nextSemanticToken()
+
 		return ast.FunctionPurityView
 	}
+
 	return ast.FunctionPurityUnspecified
 }
 

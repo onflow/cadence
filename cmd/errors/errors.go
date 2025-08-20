@@ -87,6 +87,11 @@ func generateErrors() []namedError {
 				DeclarationKind: placeholderDeclarationKind,
 			},
 		},
+		{"parser.InvalidAttachmentBaseTypeError",
+			&parser.InvalidAttachmentBaseTypeError{
+				Range: placeholderRange,
+			},
+		},
 		{"parser.InvalidAttachmentRemovalTypeError",
 			&parser.InvalidAttachmentRemovalTypeError{
 				Range: placeholderRange,
@@ -94,6 +99,16 @@ func generateErrors() []namedError {
 		},
 		{"parser.InvalidConstantSizedTypeSizeError",
 			&parser.InvalidConstantSizedTypeSizeError{
+				Range: placeholderRange,
+			},
+		},
+		{"parser.InvalidEntitlementMappingIncludeTypeError",
+			&parser.InvalidEntitlementMappingIncludeTypeError{
+				Range: placeholderRange,
+			},
+		},
+		{"parser.InvalidEntitlementMappingTypeError",
+			&parser.InvalidEntitlementMappingTypeError{
 				Range: placeholderRange,
 			},
 		},
@@ -151,8 +166,8 @@ func generateErrors() []namedError {
 				Range: placeholderRange,
 			},
 		},
-		{"parser.InvalidPubSetModifierError",
-			&parser.InvalidPubSetModifierError{
+		{"parser.InvalidPubModifierError",
+			&parser.InvalidPubModifierError{
 				GotToken: placeholderToken,
 			},
 		},
@@ -258,6 +273,11 @@ func generateErrors() []namedError {
 				GotToken: placeholderToken,
 			},
 		},
+		{"parser.MissingForKeywordInAttachmentDeclarationError",
+			&parser.MissingForKeywordInAttachmentDeclarationError{
+				GotToken: placeholderToken,
+			},
+		},
 		{"parser.MissingFromKeywordInRemoveStatementError",
 			&parser.MissingFromKeywordInRemoveStatementError{
 				GotToken: placeholderToken,
@@ -285,6 +305,11 @@ func generateErrors() []namedError {
 		},
 		{"parser.MissingStartOfParameterListError",
 			&parser.MissingStartOfParameterListError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingToKeywordInAttachExpressionError",
+			&parser.MissingToKeywordInAttachExpressionError{
 				GotToken: placeholderToken,
 			},
 		},
