@@ -13,6 +13,8 @@ changelog:
     - title: 🛠 Improvements
       labels:
         - Improvement
+        - Performance
+        - Technical Debt
     - title: 🐞 Bug Fixes
       labels:
         - Bugfix
