@@ -1064,8 +1064,8 @@ func generateErrors() []namedError {
 				Range: placeholderRange,
 			},
 		},
-		{"sema.InvalidNonEntitlementTypeInMapError",
-			&sema.InvalidNonEntitlementTypeInMapError{
+		{"sema.InvalidNonEntitlementTypeInMappingError",
+			&sema.InvalidNonEntitlementTypeInMappingError{
 				Pos: placeholderPosition,
 			},
 		},
@@ -1325,8 +1325,8 @@ func generateErrors() []namedError {
 		},
 		{"sema.MissingTypeArgumentError",
 			&sema.MissingTypeArgumentError{
-				TypeArgumentName: placeholderString,
-				Range:            placeholderRange,
+				TypeParameterName: placeholderString,
+				Range:             placeholderRange,
 			},
 		},
 		{"sema.MultipleInterfaceDefaultImplementationsError",
@@ -1529,8 +1529,8 @@ func generateErrors() []namedError {
 				Range:          placeholderRange,
 			},
 		},
-		{"sema.UnconvertableTypeError",
-			&sema.UnconvertableTypeError{
+		{"sema.UnconvertibleTypeError",
+			&sema.UnconvertibleTypeError{
 				Type:  placeholderAstType,
 				Range: placeholderRange,
 			},
