@@ -43,6 +43,11 @@ func generateErrors() []namedError {
 				Range: placeholderRange,
 			},
 		},
+		{"parser.ExpectedCaseOrDefaultError",
+			&parser.ExpectedCaseOrDefaultError{
+				GotToken: placeholderToken,
+			},
+		},
 		{"parser.ExpectedCommaOrEndOfParameterListError",
 			&parser.ExpectedCommaOrEndOfParameterListError{
 				GotToken: placeholderToken,
@@ -82,6 +87,11 @@ func generateErrors() []namedError {
 				DeclarationKind: placeholderDeclarationKind,
 			},
 		},
+		{"parser.InvalidAttachmentRemovalTypeError",
+			&parser.InvalidAttachmentRemovalTypeError{
+				Range: placeholderRange,
+			},
+		},
 		{"parser.InvalidConstantSizedTypeSizeError",
 			&parser.InvalidConstantSizedTypeSizeError{
 				Range: placeholderRange,
@@ -110,6 +120,11 @@ func generateErrors() []namedError {
 		{"parser.InvalidImportLocationError",
 			&parser.InvalidImportLocationError{
 				GotToken: placeholderToken,
+			},
+		},
+		{"parser.InvalidInKeywordAsIdentifierError",
+			&parser.InvalidInKeywordAsIdentifierError{
+				Pos: placeholderPosition,
 			},
 		},
 		{"parser.InvalidIntegerLiteralError",
@@ -193,6 +208,11 @@ func generateErrors() []namedError {
 				GotToken: placeholderToken,
 			},
 		},
+		{"parser.MissingColonInSwitchCaseError",
+			&parser.MissingColonInSwitchCaseError{
+				GotToken: placeholderToken,
+			},
+		},
 		{"parser.MissingCommaInArgumentListError",
 			&parser.MissingCommaInArgumentListError{
 				GotToken: placeholderToken,
@@ -205,6 +225,11 @@ func generateErrors() []namedError {
 		},
 		{"parser.MissingCommaInTypeParameterListError",
 			&parser.MissingCommaInTypeParameterListError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.MissingCommentEndError",
+			&parser.MissingCommentEndError{
 				Pos: placeholderPosition,
 			},
 		},
@@ -233,9 +258,19 @@ func generateErrors() []namedError {
 				GotToken: placeholderToken,
 			},
 		},
+		{"parser.MissingFromKeywordInRemoveStatementError",
+			&parser.MissingFromKeywordInRemoveStatementError{
+				GotToken: placeholderToken,
+			},
+		},
 		{"parser.MissingImportLocationError",
 			&parser.MissingImportLocationError{
 				Pos: placeholderPosition,
+			},
+		},
+		{"parser.MissingInKeywordInForStatementError",
+			&parser.MissingInKeywordInForStatementError{
+				GotToken: placeholderToken,
 			},
 		},
 		{"parser.MissingSeparatorInIntersectionOrDictionaryTypeError",
@@ -404,6 +439,11 @@ func generateErrors() []namedError {
 		{"parser.UnexpectedTokenAtEndError",
 			&parser.UnexpectedTokenAtEndError{
 				Token: placeholderToken,
+			},
+		},
+		{"parser.UnexpectedTokenInBlockCommentError",
+			&parser.UnexpectedTokenInBlockCommentError{
+				GotToken: placeholderToken,
 			},
 		},
 		{"parser.UnexpectedTokenInExpressionError",
