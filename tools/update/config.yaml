@@ -41,6 +41,15 @@ repos:
         - onflow/flow-go-sdk
         - onflow/flow-go
 
+- repo: onflow/rosetta
+  needsRelease: true
+  mods:
+    - path: ""
+      deps:
+        - onflow/cadence
+        - onflow/flow-go-sdk
+        - onflow/flow-go
+
 - repo: onflow/cadence-tools
   needsRelease: true
   prefixPRTitle: true
