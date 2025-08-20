@@ -60,10 +60,8 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	}
 
 	p.skipSpaceAndComments()
-	_, err = p.mustOne(lexer.TokenBraceOpen)
-	if err != nil {
-		return nil, err
-	}
+
+	parseDeclarationOpeningBrace(p, common.DeclarationKindTransaction)
 
 	// Fields
 
