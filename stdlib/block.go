@@ -117,7 +117,7 @@ func NewVMGetBlockFunction(provider BlockAtHeightProvider) StandardLibraryValue 
 		getBlockFunctionName,
 		getBlockFunctionType,
 		getBlockFunctionDocString,
-		func(context *vm.Context, _ []bbq.StaticType, arguments ...vm.Value) vm.Value {
+		func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
 			heightValue, ok := arguments[0].(interpreter.UInt64Value)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -260,7 +260,7 @@ func NewVMGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibrary
 		getCurrentBlockFunctionName,
 		getCurrentBlockFunctionType,
 		getCurrentBlockFunctionDocString,
-		func(context *vm.Context, _ []bbq.StaticType, arguments ...vm.Value) vm.Value {
+		func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
 			height, err := provider.GetCurrentBlockHeight()
 			if err != nil {
 				panic(err)

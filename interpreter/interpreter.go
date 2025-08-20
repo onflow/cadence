@@ -82,7 +82,6 @@ type OnInvokedFunctionReturnFunc func(inter *Interpreter)
 
 // OnRecordTraceFunc is a function that records a trace.
 type OnRecordTraceFunc func(
-	inter *Interpreter,
 	operationName string,
 	duration time.Duration,
 	attrs []attribute.KeyValue,
@@ -247,6 +246,7 @@ type Interpreter struct {
 	activations  *VariableActivations
 	Transactions []*HostFunctionValue
 	interpreted  bool
+	Tracer
 }
 
 var _ common.MemoryGauge = &Interpreter{}
@@ -283,10 +283,16 @@ func NewInterpreterWithSharedState(
 	sharedState *SharedState,
 ) (*Interpreter, error) {
 
+	var tracer Tracer
+	if sharedState.Config.TracingEnabled {
+		tracer = CallbackTracer(sharedState.Config.OnRecordTrace)
+	}
+
 	interpreter := &Interpreter{
 		Program:     program,
 		Location:    location,
 		SharedState: sharedState,
+		Tracer:      tracer,
 	}
 
 	// Register self
@@ -548,7 +554,7 @@ func (interpreter *Interpreter) InvokeTransaction(arguments []Value, signers ...
 func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	if r := recover(); r != nil {
 		// Recover all errors, because interpreter can be directly invoked by FVM.
-		err := asCadenceError(r)
+		err := AsCadenceError(r)
 
 		// if the error is not yet an interpreter error, wrap it
 		if _, ok := err.(Error); !ok {
@@ -572,13 +578,13 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 		}
 
 		interpreterErr := err.(Error)
-		interpreterErr.StackTrace = interpreter.CallStack()
+		interpreterErr.StackTrace = interpreter.CallStackLocations()
 
 		onError(interpreterErr)
 	}
 }
 
-func asCadenceError(r any) error {
+func AsCadenceError(r any) error {
 	err, isError := r.(error)
 	if !isError {
 		return errors.NewUnexpectedError("%s", r)
@@ -605,6 +611,19 @@ func asCadenceError(r any) error {
 
 func (interpreter *Interpreter) CallStack() []Invocation {
 	return interpreter.SharedState.callStack.Invocations[:]
+}
+
+func (interpreter *Interpreter) CallStackLocations() []LocationRange {
+	callstack := interpreter.CallStack()
+	if len(callstack) == 0 {
+		return nil
+	}
+
+	locationRanges := make([]LocationRange, 0, len(callstack))
+	for _, invocation := range callstack {
+		locationRanges = append(locationRanges, invocation.LocationRange)
+	}
+	return locationRanges
 }
 
 func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
@@ -5066,31 +5085,24 @@ func (interpreter *Interpreter) AllElaborations() (elaborations map[common.Locat
 	return
 }
 
-func (interpreter *Interpreter) GetContractValue(contractLocation common.AddressLocation) (*CompositeValue, error) {
+func (interpreter *Interpreter) GetContractValue(contractLocation common.AddressLocation) *CompositeValue {
 	inter := interpreter.EnsureLoaded(contractLocation)
 	return inter.GetContractComposite(contractLocation)
 }
 
 // GetContractComposite gets the composite value of the contract at the address location.
-func (interpreter *Interpreter) GetContractComposite(contractLocation common.AddressLocation) (*CompositeValue, error) {
+func (interpreter *Interpreter) GetContractComposite(contractLocation common.AddressLocation) *CompositeValue {
 	contractGlobal := interpreter.Globals.Get(contractLocation.Name)
 	if contractGlobal == nil {
-		return nil, NotDeclaredError{
-			ExpectedKind: common.DeclarationKindContract,
-			Name:         contractLocation.Name,
-		}
+		return nil
 	}
 
-	// get contract value
 	contractValue, ok := contractGlobal.GetValue(interpreter).(*CompositeValue)
 	if !ok {
-		return nil, NotDeclaredError{
-			ExpectedKind: common.DeclarationKindContract,
-			Name:         contractLocation.Name,
-		}
+		return nil
 	}
 
-	return contractValue, nil
+	return contractValue
 }
 
 func GetNativeCompositeValueComputedFields(qualifiedIdentifier string) map[string]ComputedField {
@@ -6059,7 +6071,7 @@ func (interpreter *Interpreter) OnResourceOwnerChange(resource *CompositeValue, 
 }
 
 func (interpreter *Interpreter) TracingEnabled() bool {
-	return interpreter.SharedState.Config.TracingEnabled
+	return interpreter.Tracer != nil
 }
 
 func (interpreter *Interpreter) IsTypeInfoRecovered(location common.Location) bool {
@@ -6173,4 +6185,51 @@ func (interpreter *Interpreter) DefaultDestroyEvents(
 
 func (interpreter *Interpreter) SemaTypeFromStaticType(staticType StaticType) sema.Type {
 	return MustConvertStaticToSemaType(staticType, interpreter)
+}
+
+func (interpreter *Interpreter) MaybeUpdateStorageReferenceMemberReceiver(
+	storageReference *StorageReferenceValue,
+	referencedValue Value,
+	member Value,
+) Value {
+	if boundFunction, isBoundFunction := member.(BoundFunctionValue); isBoundFunction {
+		boundFunction.SelfReference = StorageReference(
+			interpreter,
+			storageReference,
+			referencedValue,
+		)
+		return boundFunction
+	}
+
+	return member
+}
+
+func StorageReference(
+	context ValueStaticTypeContext,
+	storageReference *StorageReferenceValue,
+	referencedValue Value,
+) *StorageReferenceValue {
+
+	// As also mentioned in `(StorageReference).GetMember` method,
+	// we cannot use the storage reference as-is here.
+	// This is because since we look up the member on the referenced value,
+	// we also must use its type as the borrowed type for the `SelfReference` type,
+	// because during invocation the bound function can only be invoked
+	// if the type of the dereferenced value at that time still matches
+	// the type of the dereferenced value at the time of binding (here).
+	//
+	// For example, imagine storing a value of type T (e.g. `String`),
+	// creating a reference with a supertype (e.g. `AnyStruct`),
+	// and then creating a bound function on it.
+	// Then, if we change the storage location to store a value of unrelated type U instead (e.g. `Int`),
+	// and invoke the bound function, the bound function is potentially invalid.
+
+	referencedValueStaticType := referencedValue.StaticType(context)
+	return NewStorageReferenceValue(
+		context,
+		storageReference.Authorization,
+		storageReference.TargetStorageAddress,
+		storageReference.TargetPath,
+		context.SemaTypeFromStaticType(referencedValueStaticType),
+	)
 }

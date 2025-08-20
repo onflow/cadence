@@ -84,7 +84,7 @@ func compiledFTTransfer(tb testing.TB) {
 	}
 
 	compilerConfig := &compiler.Config{
-		LocationHandler: commons.LocationHandler(locationHandler),
+		LocationHandler: locationHandler,
 		ImportHandler:   importHandler,
 		ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 			imported, ok := compiledPrograms[location]
@@ -93,7 +93,7 @@ func compiledFTTransfer(tb testing.TB) {
 			}
 			return imported.DesugaredElaboration, nil
 		},
-		BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
+		BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
 			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 
 			activation.Set(
@@ -107,6 +107,13 @@ func compiledFTTransfer(tb testing.TB) {
 				stdlib.GetAccountFunctionName,
 				compiler.GlobalImport{
 					Name: stdlib.GetAccountFunctionName,
+				},
+			)
+
+			activation.Set(
+				stdlib.PanicFunctionName,
+				compiler.GlobalImport{
+					Name: stdlib.PanicFunctionName,
 				},
 			)
 
@@ -131,8 +138,8 @@ func compiledFTTransfer(tb testing.TB) {
 			location,
 			ParseCheckAndCompileOptions{
 				ParseAndCheckOptions: &ParseAndCheckOptions{
-					Location: location,
-					Config:   semaConfig,
+					Location:      location,
+					CheckerConfig: semaConfig,
 				},
 				CompilerConfig: compilerConfig,
 			},
@@ -223,7 +230,7 @@ func compiledFTTransfer(tb testing.TB) {
 		return contractValues[location]
 	}
 
-	vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[vm.Variable] {
+	vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
 		activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 		panicVariable := &interpreter.SimpleVariable{}
@@ -300,8 +307,8 @@ func compiledFTTransfer(tb testing.TB) {
 			txLocation,
 			ParseCheckAndCompileOptions{
 				ParseAndCheckOptions: &ParseAndCheckOptions{
-					Location: txLocation,
-					Config:   semaConfig,
+					Location:      txLocation,
+					CheckerConfig: semaConfig,
 				},
 				CompilerConfig: compilerConfig,
 			},
@@ -332,8 +339,8 @@ func compiledFTTransfer(tb testing.TB) {
 		txLocation,
 		ParseCheckAndCompileOptions{
 			ParseAndCheckOptions: &ParseAndCheckOptions{
-				Location: txLocation,
-				Config:   semaConfig,
+				Location:      txLocation,
+				CheckerConfig: semaConfig,
 			},
 			CompilerConfig: compilerConfig,
 		},
@@ -380,8 +387,8 @@ func compiledFTTransfer(tb testing.TB) {
 		txLocation,
 		ParseCheckAndCompileOptions{
 			ParseAndCheckOptions: &ParseAndCheckOptions{
-				Location: txLocation,
-				Config:   semaConfig,
+				Location:      txLocation,
+				CheckerConfig: semaConfig,
 			},
 			CompilerConfig: compilerConfig,
 		},
@@ -452,8 +459,8 @@ func compiledFTTransfer(tb testing.TB) {
 			scriptLocation,
 			ParseCheckAndCompileOptions{
 				ParseAndCheckOptions: &ParseAndCheckOptions{
-					Location: scriptLocation,
-					Config:   semaConfig,
+					Location:      scriptLocation,
+					CheckerConfig: semaConfig,
 				},
 				CompilerConfig: compilerConfig,
 			},

@@ -31,6 +31,7 @@ import (
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestInterpretArrayMutation(t *testing.T) {
@@ -325,7 +326,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun test() {
                 let array: [AnyStruct] = [nil] as [(fun(AnyStruct):Void)?]
 
@@ -335,12 +336,14 @@ func TestInterpretArrayMutation(t *testing.T) {
                 logger("hello")
             }`,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -478,12 +481,14 @@ func TestInterpretArrayMutation(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -723,7 +728,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun test() {
                 let dict: {String: AnyStruct} = {}
 
@@ -733,12 +738,14 @@ func TestInterpretDictionaryMutation(t *testing.T) {
                 logger("hello")
             }`,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -876,12 +883,14 @@ func TestInterpretDictionaryMutation(t *testing.T) {
                }
            `,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},

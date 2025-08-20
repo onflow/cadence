@@ -32,6 +32,7 @@ import (
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestInterpretMetaTypeEquality(t *testing.T) {
@@ -142,12 +143,14 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
               let result = Type<Int>() == unknownType
             `,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -202,12 +205,14 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
               let result = unknownType1 == unknownType2
             `,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -295,12 +300,14 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
               let identifier = unknownType.identifier
             `,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -454,12 +461,14 @@ func TestInterpretIsInstance(t *testing.T) {
 			inter, err := parseCheckAndPrepareWithOptions(t,
 				testCase.code,
 				ParseCheckAndInterpretOptions{
-					CheckerConfig: &sema.Config{
-						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-							return baseValueActivation
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						CheckerConfig: &sema.Config{
+							BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+								return baseValueActivation
+							},
 						},
 					},
-					Config: &interpreter.Config{
+					InterpreterConfig: &interpreter.Config{
 						BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 							return baseActivation
 						},
@@ -601,12 +610,14 @@ func TestInterpretMetaTypeIsSubtype(t *testing.T) {
 			inter, err := parseCheckAndPrepareWithOptions(t,
 				testCase.code,
 				ParseCheckAndInterpretOptions{
-					CheckerConfig: &sema.Config{
-						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-							return baseValueActivation
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						CheckerConfig: &sema.Config{
+							BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+								return baseValueActivation
+							},
 						},
 					},
-					Config: &interpreter.Config{
+					InterpreterConfig: &interpreter.Config{
 						BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 							return baseActivation
 						},
@@ -1014,12 +1025,14 @@ func TestInterpretMetaTypeIsRecovered(t *testing.T) {
 	         let isRecovered = unknownType.isRecovered
 	       `,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -1040,14 +1053,14 @@ func TestInterpretMetaTypeIsRecovered(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO: Need type `IsRecovered` to be implemented in VM.
-		inter, err := parseCheckAndInterpretWithOptions(t, `
-	      fun test(_ type: Type): Bool {
-	          return type.isRecovered
-	      }
-	   `,
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+               fun test(_ type: Type): Bool {
+                   return type.isRecovered
+               }
+            `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					ImportLocationHandler: func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
 						elaboration := sema.NewElaboration(nil)
 						elaboration.IsRecovered = true
@@ -1081,14 +1094,14 @@ func TestInterpretMetaTypeIsRecovered(t *testing.T) {
 
 		importErr := errors.New("import failure")
 
-		// TODO: Need type `IsRecovered` to be implemented in VM.
-		inter, err := parseCheckAndInterpretWithOptions(t, `
-	      fun test(_ type: Type): Bool {
-	          return type.isRecovered
-	      }
-	   `,
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+              fun test(_ type: Type): Bool {
+                  return type.isRecovered
+              }
+           `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					ImportLocationHandler: func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
 						panic(importErr)
 					},
@@ -1144,7 +1157,7 @@ func TestInterpretMetaTypeAddress(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					ImportLocationHandler: func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
 						elaboration := sema.NewElaboration(nil)
 						elaboration.SetCompositeType(
@@ -1189,7 +1202,7 @@ func TestInterpretMetaTypeAddress(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					ImportLocationHandler: func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
 						elaboration := sema.NewElaboration(nil)
 						elaboration.SetCompositeType(
@@ -1249,12 +1262,14 @@ func TestInterpretMetaTypeAddress(t *testing.T) {
 	         let address = unknownType.address
 	       `,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -1322,7 +1337,7 @@ func TestInterpretMetaTypeContractName(t *testing.T) {
               }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					ImportLocationHandler: func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
 						elaboration := sema.NewElaboration(nil)
 						elaboration.SetCompositeType(
@@ -1381,7 +1396,7 @@ func TestInterpretMetaTypeContractName(t *testing.T) {
           }
         `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					ImportLocationHandler: func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
 						elaboration := sema.NewElaboration(nil)
 						elaboration.SetCompositeType(
@@ -1444,12 +1459,14 @@ func TestInterpretMetaTypeContractName(t *testing.T) {
 	         let contractName = unknownType.contractName
 	       `,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},

@@ -67,6 +67,36 @@ func invokeFunctionValue(
 	typeParameterTypes *sema.TypeParameterTypeOrderedMap,
 	invocationPosition ast.HasPosition,
 ) Value {
+	return invokeFunctionValueWithEval(
+		context,
+		function,
+		arguments,
+		func(argument Value) Value {
+			return argument
+		},
+		nil, // no implicit argument
+		expressions,
+		argumentTypes,
+		parameterTypes,
+		returnType,
+		typeParameterTypes,
+		invocationPosition,
+	)
+}
+
+func invokeFunctionValueWithEval[T any](
+	context InvocationContext,
+	function FunctionValue,
+	arguments []T,
+	evaluate func(T) Value,
+	implicitArgumentValue Value,
+	expressions []ast.Expression,
+	argumentTypes []sema.Type,
+	parameterTypes []sema.Type,
+	returnType sema.Type,
+	typeParameterTypes *sema.TypeParameterTypeOrderedMap,
+	invocationPosition ast.HasPosition,
+) Value {
 
 	parameterTypeCount := len(parameterTypes)
 
@@ -93,17 +123,19 @@ func invokeFunctionValue(
 				HasPosition: locationPos,
 			}
 
+			argumentValue := evaluate(argument)
+
 			if i < parameterTypeCount {
 				parameterType := parameterTypes[i]
 				transferredArguments[i] = TransferAndConvert(
 					context,
-					argument,
+					argumentValue,
 					argumentType,
 					parameterType,
 					locationRange,
 				)
 			} else {
-				transferredArguments[i] = argument.Transfer(
+				transferredArguments[i] = argumentValue.Transfer(
 					context,
 					locationRange,
 					atree.Address{},
@@ -114,6 +146,25 @@ func invokeFunctionValue(
 				)
 			}
 		}
+	}
+
+	// add the implicit argument to the end of the argument list, if it exists
+	if implicitArgumentValue != nil {
+		transferredImplicitArgument := implicitArgumentValue.Transfer(
+			context,
+			LocationRange{
+				Location:    location,
+				HasPosition: invocationPosition,
+			},
+			atree.Address{},
+			false,
+			nil,
+			nil,
+			true, // argument is standalone.
+		)
+		transferredArguments = append(transferredArguments, transferredImplicitArgument)
+		argumentType := MustSemaTypeOfValue(implicitArgumentValue, context)
+		argumentTypes = append(argumentTypes, argumentType)
 	}
 
 	locationRange := LocationRange{

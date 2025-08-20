@@ -17074,7 +17074,7 @@ func TestDecodeFunctionTypeBackwardCompatibility(t *testing.T) {
 			TypeParameters: []cadence.TypeParameter{},
 			Parameters:     []cadence.Parameter{},
 			ReturnType:     cadence.VoidType,
-			Purity:         cadence.FunctionPurityUnspecified,
+			Purity:         cadence.FunctionPurityImpure,
 		},
 	}
 

@@ -29,7 +29,7 @@ import (
 
 func init() {
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		commons.TypeQualifierOptional,
 		NewNativeFunctionValueWithDerivedType(
 			sema.OptionalTypeMapFunctionName,
@@ -41,12 +41,11 @@ func init() {
 					innerValueType,
 				)
 			},
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				value := arguments[ReceiverIndex]
-				optionalValue := value.(interpreter.OptionalValue)
+			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
+				optionalValue := receiver.(interpreter.OptionalValue)
 				innerValueType := optionalValue.InnerValueType(context)
 
-				transformFunction := arguments[1].(FunctionValue)
+				transformFunction := arguments[0].(FunctionValue)
 
 				transformFunctionType := transformFunction.FunctionType(context)
 

@@ -50,24 +50,37 @@ func LinkGlobals(
 
 	for _, programImport := range program.Imports {
 		importLocation := programImport.Location
-		linkedGlobals, ok := linkedGlobalsCache[importLocation]
 
-		if !ok {
-			importedProgram := context.ImportHandler(importLocation)
+		var indexedGlobals *activations.Activation[Variable]
 
-			// Link and get all globals at the import location.
-			linkedGlobals = LinkGlobals(
-				memoryGauge,
-				importLocation,
-				importedProgram,
-				context,
-				linkedGlobalsCache,
-			)
+		if importLocation == nil {
+			if context.BuiltinGlobalsProvider == nil {
+				indexedGlobals = DefaultBuiltinGlobals()
+			} else {
+				indexedGlobals = context.BuiltinGlobalsProvider(location)
+			}
+		} else {
 
-			linkedGlobalsCache[importLocation] = linkedGlobals
+			linkedGlobals, ok := linkedGlobalsCache[importLocation]
+			if !ok {
+				importedProgram := context.ImportHandler(importLocation)
+
+				// Link and get all globals at the import location.
+				linkedGlobals = LinkGlobals(
+					memoryGauge,
+					importLocation,
+					importedProgram,
+					context,
+					linkedGlobalsCache,
+				)
+
+				linkedGlobalsCache[importLocation] = linkedGlobals
+			}
+
+			indexedGlobals = linkedGlobals.indexedGlobals
 		}
 
-		global := linkedGlobals.indexedGlobals.Find(programImport.Name)
+		global := indexedGlobals.Find(programImport.Name)
 		if global == nil {
 			panic(LinkerError{
 				Message: fmt.Sprintf("cannot find import '%s'", programImport.Name),

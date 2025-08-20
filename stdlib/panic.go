@@ -33,12 +33,17 @@ type PanicError struct {
 	Message string
 }
 
-var _ errors.UserError = PanicError{}
+var _ errors.UserError = &PanicError{}
+var _ interpreter.HasLocationRange = &PanicError{}
 
-func (PanicError) IsUserError() {}
+func (*PanicError) IsUserError() {}
 
-func (e PanicError) Error() string {
+func (e *PanicError) Error() string {
 	return fmt.Sprintf("panic: %s", e.Message)
+}
+
+func (e *PanicError) SetLocationRange(locationRange interpreter.LocationRange) {
+	e.LocationRange = locationRange
 }
 
 const panicFunctionDocString = `
@@ -74,7 +79,7 @@ var VMPanicFunction = NewVMStandardLibraryStaticFunction(
 	PanicFunctionName,
 	PanicFunctionType,
 	panicFunctionDocString,
-	func(context *vm.Context, _ []bbq.StaticType, arguments ...interpreter.Value) interpreter.Value {
+	func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...interpreter.Value) interpreter.Value {
 		message := arguments[0]
 		return PanicWithError(message, interpreter.EmptyLocationRange)
 	},
@@ -85,7 +90,7 @@ func PanicWithError(message interpreter.Value, locationRange interpreter.Locatio
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	panic(PanicError{
+	panic(&PanicError{
 		Message:       messageValue.Str,
 		LocationRange: locationRange,
 	})

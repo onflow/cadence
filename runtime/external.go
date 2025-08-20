@@ -133,21 +133,6 @@ func (e ExternalInterface) GetOrLoadProgram(
 	return
 }
 
-func (e ExternalInterface) SetInterpreterSharedState(state *interpreter.SharedState) {
-	errors.WrapPanic(func() {
-		e.Interface.SetInterpreterSharedState(state)
-	})
-	// No error to wrap
-}
-
-func (e ExternalInterface) GetInterpreterSharedState() (state *interpreter.SharedState) {
-	errors.WrapPanic(func() {
-		state = e.Interface.GetInterpreterSharedState()
-	})
-	// No error to wrap
-	return
-}
-
 func (e ExternalInterface) GetValue(owner, key []byte) (value []byte, err error) {
 	errors.WrapPanic(func() {
 		value, err = e.Interface.GetValue(owner, key)
@@ -470,14 +455,12 @@ func (e ExternalInterface) GetAccountContractNames(address Address) (names []str
 
 func (e ExternalInterface) RecordTrace(
 	operation string,
-	location Location,
 	duration time.Duration,
 	attrs []attribute.KeyValue,
 ) {
 	errors.WrapPanic(func() {
 		e.Interface.RecordTrace(
 			operation,
-			location,
 			duration,
 			attrs,
 		)
