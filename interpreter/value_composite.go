@@ -1674,9 +1674,9 @@ func (v *CompositeValue) getBaseValue(
 		baseType = ty
 	}
 
-	// during initialization of an attachment in the compiler, base is not set yet
-	// any method which needs base will request again after initialization
-	// so we can safely return nil
+	// During initialization of an attachment in the compiler, base is not set yet.
+	// Any method which needs base will request again after initialization.
+	// So we can safely return nil.
 	if v.base == nil {
 		return nil
 	}

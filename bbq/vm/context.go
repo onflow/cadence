@@ -383,7 +383,12 @@ func (c *Context) DefaultDestroyEvents(
 	var arguments []Value
 
 	if resourceValue.Kind == common.CompositeKindAttachment {
-		base, self := interpreter.AttachmentBaseAndSelfValues(c, sema.UnauthorizedAccess, resourceValue, EmptyLocationRange)
+		base, self := interpreter.AttachmentBaseAndSelfValues(
+			c,
+			sema.UnauthorizedAccess,
+			resourceValue,
+			EmptyLocationRange,
+		)
 		arguments = []Value{self, base}
 	} else {
 		// Always have the receiver as the first argument.
