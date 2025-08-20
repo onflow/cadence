@@ -45,6 +45,8 @@ type FunctionValue interface {
 	// if the function has a generic type. This would panic if the function is not a generic function.
 	// Use `HasGenericType` to determine whether this method should be called or not.
 	ResolvedFunctionType(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType
+
+	IsNative() bool
 }
 
 type CompiledFunctionValue struct {
@@ -162,6 +164,10 @@ func (v CompiledFunctionValue) Invoke(invocation interpreter.Invocation) interpr
 		v,
 		invocation.Arguments,
 	)
+}
+
+func (v CompiledFunctionValue) IsNative() bool {
+	return v.Function.IsNative()
 }
 
 type NativeFunction func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value
@@ -384,6 +390,11 @@ func (v *NativeFunctionValue) GetMethod(
 	panic(errors.NewUnreachableError())
 }
 
+func (v *NativeFunctionValue) IsNative() bool {
+	// Native functions are always native.
+	return true
+}
+
 // BoundFunctionValue is a function-wrapper which captures the receivers of an object-method.
 type BoundFunctionValue struct {
 	receiverReference   interpreter.ReferenceValue
@@ -562,4 +573,10 @@ func (v *BoundFunctionValue) Receiver(context interpreter.ValueStaticTypeContext
 		EmptyLocationRange,
 	)
 	return maybeDereferenceReceiver(context, *receiver, v.IsNative())
+}
+
+func (v *BoundFunctionValue) IsNative() bool {
+	// BoundFunctionValue is a wrapper around a function value, which can be either native or compiled.
+	// So, we delegate the call to the underlying function value.
+	return v.Method.IsNative()
 }

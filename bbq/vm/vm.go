@@ -974,8 +974,11 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
 		funcName,
 	)
 
-	_, ok := functionValue.(*NativeFunctionValue)
-	arguments[ReceiverIndex] = maybeDereferenceReceiver(vm.context, receiver, ok)
+	fValue, ok := functionValue.(FunctionValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	arguments[ReceiverIndex] = maybeDereferenceReceiver(vm.context, receiver, fValue.IsNative())
 
 	invokeFunction(
 		vm,
