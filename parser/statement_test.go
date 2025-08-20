@@ -882,7 +882,6 @@ func TestParseForStatementIndexBinding(t *testing.T) {
 			[]error{
 				&MissingInKeywordInForStatementError{
 					GotToken: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
 							EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},

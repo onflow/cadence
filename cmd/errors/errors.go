@@ -23,6 +23,18 @@ func generateErrors() []namedError {
 				DestructorRange: placeholderRange,
 			},
 		},
+		{"parser.DeclarationMissingClosingBraceError",
+			&parser.DeclarationMissingClosingBraceError{
+				Kind:     placeholderDeclarationKind,
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.DeclarationMissingOpeningBraceError",
+			&parser.DeclarationMissingOpeningBraceError{
+				Kind:     placeholderDeclarationKind,
+				GotToken: placeholderToken,
+			},
+		},
 		{"parser.DuplicateAccessModifierError",
 			&parser.DuplicateAccessModifierError{
 				Range: placeholderRange,
@@ -198,8 +210,18 @@ func generateErrors() []namedError {
 				GotToken: placeholderToken,
 			},
 		},
+		{"parser.MissingAccessClosingParenError",
+			&parser.MissingAccessClosingParenError{
+				GotToken: placeholderToken,
+			},
+		},
 		{"parser.MissingAccessKeywordError",
 			&parser.MissingAccessKeywordError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingAccessOpeningParenError",
+			&parser.MissingAccessOpeningParenError{
 				GotToken: placeholderToken,
 			},
 		},
@@ -216,6 +238,11 @@ func generateErrors() []namedError {
 		{"parser.MissingClosingParenInParameterListError",
 			&parser.MissingClosingParenInParameterListError{
 				Pos: placeholderPosition,
+			},
+		},
+		{"parser.MissingColonAfterFieldNameError",
+			&parser.MissingColonAfterFieldNameError{
+				GotToken: placeholderToken,
 			},
 		},
 		{"parser.MissingColonAfterParameterNameError",
@@ -290,6 +317,16 @@ func generateErrors() []namedError {
 		},
 		{"parser.MissingInKeywordInForStatementError",
 			&parser.MissingInKeywordInForStatementError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingPubClosingParenError",
+			&parser.MissingPubClosingParenError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.MissingRightArrowInEntitlementMappingError",
+			&parser.MissingRightArrowInEntitlementMappingError{
 				GotToken: placeholderToken,
 			},
 		},
