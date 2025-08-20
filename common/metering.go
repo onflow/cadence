@@ -52,6 +52,14 @@ type ComputationGauge interface {
 	MeterComputation(usage ComputationUsage) error
 }
 
+type FunctionComputationGauge func(usage ComputationUsage) error
+
+var _ ComputationGauge = FunctionComputationGauge(nil)
+
+func (f FunctionComputationGauge) MeterComputation(usage ComputationUsage) error {
+	return f(usage)
+}
+
 // Gauge combines a memory and computation gauge.
 // Metering-sites can use this combined interface
 // if they need to do both memory and computation metering.

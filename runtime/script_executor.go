@@ -115,7 +115,7 @@ func (executor *scriptExecutor) preprocess() (err error) {
 		runtimeInterface,
 		common.NewCombinedGauge(
 			context.MemoryGauge,
-			runtimeInterface,
+			context.ComputationGauge,
 		),
 		StorageConfig{},
 	)
@@ -135,6 +135,7 @@ func (executor *scriptExecutor) preprocess() (err error) {
 		codesAndPrograms,
 		storage,
 		context.MemoryGauge,
+		context.ComputationGauge,
 		context.CoverageReport,
 	)
 	executor.environment = environment
