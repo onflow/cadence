@@ -27,6 +27,7 @@ import (
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/parser/lexer"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
@@ -73,6 +74,32 @@ func TestParseNominalType(t *testing.T) {
 				},
 			},
 			result,
+		)
+	})
+}
+
+func TestParseInvalidType(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("number literal", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("123")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedTypeStartError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+							EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+						},
+					},
+				},
+			},
+			errs,
 		)
 	})
 }
@@ -151,8 +178,10 @@ func TestParseArrayType(t *testing.T) {
 				},
 				// TODO: improve/avoid error by skipping full negative integer literal
 				&SyntaxError{
-					Message: `expected token ']'`,
-					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
+					Message:       `expected token ']'`,
+					Pos:           ast.Position{Offset: 8, Line: 1, Column: 8},
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -426,9 +455,16 @@ func TestParseReferenceType(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token in type: ')'",
-					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+				// TODO: improve
+				&UnexpectedTypeStartError{
+					GotToken: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+						},
+						Type: lexer.TokenParenClose,
+					},
 				},
 			},
 			errs,
@@ -504,9 +540,14 @@ func TestParseReferenceType(t *testing.T) {
 		_, errs := testParseType("auth( mapping ) &Int")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token in type: ')'",
-					Pos:     ast.Position{Offset: 15, Line: 1, Column: 15},
+				&UnexpectedTypeStartError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 14, Line: 1, Column: 14},
+							EndPos:   ast.Position{Offset: 14, Line: 1, Column: 14},
+						},
+						Type: lexer.TokenParenClose,
+					},
 				},
 			},
 			errs,
@@ -706,9 +747,8 @@ func TestParseIntersectionType(t *testing.T) {
 		result, errs := testParseType("{ T , U : V }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected colon in intersection type",
-					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
+				&UnexpectedColonInIntersectionTypeError{
+					Pos: ast.Position{Offset: 8, Line: 1, Column: 8},
 				},
 			},
 			errs,
@@ -725,9 +765,8 @@ func TestParseIntersectionType(t *testing.T) {
 		result, errs := testParseType("{U , V : W }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: `unexpected colon in intersection type`,
-					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				&UnexpectedColonInIntersectionTypeError{
+					Pos: ast.Position{Offset: 7, Line: 1, Column: 7},
 				},
 			},
 			errs,
@@ -744,9 +783,11 @@ func TestParseIntersectionType(t *testing.T) {
 		result, errs := testParseType("{[T]}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "non-nominal type in intersection list: [T]",
-					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+				&InvalidNonNominalTypeInIntersectionError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+						EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+					},
 				},
 			},
 			errs,
@@ -763,9 +804,11 @@ func TestParseIntersectionType(t *testing.T) {
 		result, errs := testParseType("{T, [U]}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "non-nominal type in intersection list: [U]",
-					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				&InvalidNonNominalTypeInIntersectionError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+						EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+					},
 				},
 			},
 			errs,
@@ -782,9 +825,8 @@ func TestParseIntersectionType(t *testing.T) {
 		result, errs := testParseType("{")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "invalid end of input, expected type",
-					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
+				&UnexpectedEOFExpectedTypeError{
+					Pos: ast.Position{Offset: 1, Line: 1, Column: 1},
 				},
 			},
 			errs,
@@ -818,9 +860,8 @@ func TestParseIntersectionType(t *testing.T) {
 		result, errs := testParseType("{U,")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "invalid end of input, expected type",
-					Pos:     ast.Position{Offset: 3, Line: 1, Column: 3},
+				&UnexpectedEOFExpectedTypeError{
+					Pos: ast.Position{Offset: 3, Line: 1, Column: 3},
 				},
 			},
 			errs,
@@ -836,9 +877,8 @@ func TestParseIntersectionType(t *testing.T) {
 		result, errs := testParseType("{,}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected comma in intersection type",
-					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
+				&UnexpectedCommaInIntersectionTypeError{
+					Pos: ast.Position{Offset: 1, Line: 1, Column: 1},
 				},
 			},
 			errs,
@@ -922,9 +962,8 @@ func TestParseDictionaryType(t *testing.T) {
 		result, errs := testParseType("{:}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected colon in dictionary type",
-					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
+				&UnexpectedColonInDictionaryTypeError{
+					Pos: ast.Position{Offset: 1, Line: 1, Column: 1},
 				},
 			},
 			errs,
@@ -940,9 +979,8 @@ func TestParseDictionaryType(t *testing.T) {
 		result, errs := testParseType("{:U}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected colon in dictionary type",
-					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
+				&UnexpectedColonInDictionaryTypeError{
+					Pos: ast.Position{Offset: 1, Line: 1, Column: 1},
 				},
 			},
 			errs,
@@ -959,9 +997,8 @@ func TestParseDictionaryType(t *testing.T) {
 		result, errs := testParseType("{T:U,}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected comma in dictionary type",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				&UnexpectedCommaInDictionaryTypeError{
+					Pos: ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
 			},
 			errs,
@@ -978,9 +1015,8 @@ func TestParseDictionaryType(t *testing.T) {
 		result, errs := testParseType("{T:U:}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected colon in dictionary type",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				&MultipleColonInDictionaryTypeError{
+					Pos: ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
 			},
 			errs,
@@ -997,9 +1033,8 @@ func TestParseDictionaryType(t *testing.T) {
 		result, errs := testParseType("{T::U}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected colon in dictionary type",
-					Pos:     ast.Position{Offset: 3, Line: 1, Column: 3},
+				&UnexpectedColonInDictionaryTypeError{
+					Pos: ast.Position{Offset: 3, Line: 1, Column: 3},
 				},
 			},
 			errs,
@@ -1016,9 +1051,8 @@ func TestParseDictionaryType(t *testing.T) {
 		result, errs := testParseType("{T:")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "invalid end of input, expected type",
-					Pos:     ast.Position{Offset: 3, Line: 1, Column: 3},
+				&UnexpectedEOFExpectedTypeError{
+					Pos: ast.Position{Offset: 3, Line: 1, Column: 3},
 				},
 			},
 			errs,
@@ -1388,6 +1422,64 @@ func TestParseInstantiationType(t *testing.T) {
 				},
 				TypeArgumentsStartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 				EndPos:                ast.Position{Line: 1, Column: 11, Offset: 11},
+			},
+			result,
+		)
+	})
+
+	t.Run("invalid: unexpected comma", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("T<,U>")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedCommaInTypeAnnotationListError{
+					Pos: ast.Position{Offset: 2, Line: 1, Column: 2},
+				},
+			},
+			errs,
+		)
+
+		assert.Nil(t, result)
+	})
+
+	t.Run("invalid: missing type after comma", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("T<U,>")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingTypeAnnotationAfterCommaError{
+					Pos: ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
+			},
+			errs,
+		)
+
+		AssertEqualWithDiff(t,
+			&ast.InstantiationType{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+					},
+				},
+				TypeArguments: []*ast.TypeAnnotation{
+					{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "U",
+								Pos:        ast.Position{Offset: 2, Line: 1, Column: 2},
+							},
+						},
+						StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+					},
+				},
+				TypeArgumentsStartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+				EndPos:                ast.Position{Offset: 4, Line: 1, Column: 4},
 			},
 			result,
 		)

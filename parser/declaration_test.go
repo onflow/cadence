@@ -365,7 +365,6 @@ func TestParseVariableDeclaration(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
 							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
@@ -438,13 +437,27 @@ func TestParseVariableDeclaration(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
 							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
 						},
 						Type: lexer.TokenIdentifier,
 					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing transfer", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("let x 1")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingTransferError{
+					Pos: ast.Position{Offset: 6, Line: 1, Column: 6},
 				},
 			},
 			errs,
@@ -753,6 +766,130 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("missing parameter list start", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("fun foo} {}")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingStartOfParameterListError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenBraceClose,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+							EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("unexpected token in parameter list", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("fun foo(-) {}")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedTokenInParameterListError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenMinus,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+							EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing parameter list end", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("fun foo(")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingClosingParenInParameterListError{
+					Pos: ast.Position{Offset: 8, Line: 1, Column: 8},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid parameter list continuation", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("fun foo(a: Int -) {}")
+		AssertEqualWithDiff(t,
+			[]error{
+				&ExpectedCommaOrEndOfParameterListError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenMinus,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 15, Line: 1, Column: 15},
+							EndPos:   ast.Position{Offset: 15, Line: 1, Column: 15},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing colon after parameter name", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("fun foo(a Int) {}")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingColonAfterParameterNameError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenParenClose,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+							EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid type parameter list continuation", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarationsWithConfig(
+			"fun foo  < A ,, > () {}",
+			Config{
+				TypeParametersEnabled: true,
+			},
+		)
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedTokenInTypeParameterListError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenComma,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 14, Line: 1, Column: 14},
+							EndPos:   ast.Position{Offset: 14, Line: 1, Column: 14},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
 	t.Run("with return type", func(t *testing.T) {
 
 		t.Parallel()
@@ -1264,7 +1401,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
 							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
@@ -1330,7 +1466,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
 							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
@@ -1397,7 +1532,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
 							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
@@ -1442,7 +1576,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
 							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
@@ -1538,7 +1671,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
 							EndPos:   ast.Position{Offset: 17, Line: 1, Column: 17},
@@ -1735,9 +1867,14 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected '(' as start of parameter list, got '<'",
-					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				&MissingStartOfParameterListError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+							EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+						},
+						Type: lexer.TokenLess,
+					},
 				},
 			},
 			errs,
@@ -1757,9 +1894,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "missing '>' at end of type parameter list",
-					Pos:     ast.Position{Offset: 11, Line: 1, Column: 11},
+				&MissingClosingGreaterInTypeParameterListError{
+					Pos: ast.Position{Offset: 11, Line: 1, Column: 11},
 				},
 			},
 			errs,
@@ -1779,8 +1915,35 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&MissingCommaInParameterListError{
+				&MissingCommaInTypeParameterListError{
 					Pos: ast.Position{Offset: 13, Line: 1, Column: 13},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid type parameter list separator", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarationsWithConfig(
+			"fun foo  < A - > () { } ",
+			Config{
+				TypeParametersEnabled: true,
+			},
+		)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&ExpectedCommaOrEndOfTypeParameterListError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenMinus,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+							EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+						},
+					},
 				},
 			},
 			errs,
@@ -1863,9 +2026,14 @@ func TestParseAccess(t *testing.T) {
 		result, errs := parse("access ( ")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected keyword \"all\", \"account\", \"contract\", or \"self\", got EOF",
-					Pos:     ast.Position{Offset: 9, Line: 1, Column: 9},
+				&MissingAccessKeywordError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 9, Line: 1, Column: 9},
+							EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+						},
+					},
 				},
 			},
 			errs,
@@ -1885,8 +2053,10 @@ func TestParseAccess(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token ')'",
-					Pos:     ast.Position{Offset: 14, Line: 1, Column: 14},
+					Message:       "expected token ')'",
+					Pos:           ast.Position{Offset: 14, Line: 1, Column: 14},
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -2032,8 +2202,10 @@ func TestParseAccess(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token ')'",
-					Pos:     ast.Position{Offset: 14, Line: 1, Column: 14},
+					Message:       "expected token ')'",
+					Pos:           ast.Position{Offset: 14, Line: 1, Column: 14},
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -2053,8 +2225,10 @@ func TestParseAccess(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token ')'",
-					Pos:     ast.Position{Offset: 14, Line: 1, Column: 14},
+					Message:       "expected token ')'",
+					Pos:           ast.Position{Offset: 14, Line: 1, Column: 14},
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -2228,9 +2402,14 @@ func TestParseAccess(t *testing.T) {
 		result, errs := parse("access ( mapping )")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token in type: ')'",
-					Pos:     ast.Position{Offset: 18, Line: 1, Column: 18},
+				&UnexpectedTypeStartError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
+							EndPos:   ast.Position{Offset: 17, Line: 1, Column: 17},
+						},
+						Type: lexer.TokenParenClose,
+					},
 				},
 			},
 			errs,
@@ -2255,9 +2434,8 @@ func TestParseImportDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations(` import`)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected end in import declaration: expected string, address, or identifier",
-					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				&MissingImportLocationError{
+					Pos: ast.Position{Offset: 7, Line: 1, Column: 7},
 				},
 			},
 			errs,
@@ -2361,10 +2539,14 @@ func TestParseImportDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations(` import 1`)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token in import declaration: " +
-						"got decimal integer, expected string, address, or identifier",
-					Pos: ast.Position{Offset: 8, Line: 1, Column: 8},
+				&InvalidImportLocationError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+							EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+						},
+					},
 				},
 			},
 			errs,
@@ -2414,10 +2596,14 @@ func TestParseImportDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations(` import foo "bar"`)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token in import declaration: " +
-						"got string, expected keyword \"from\" or ','",
-					Pos: ast.Position{Offset: 12, Line: 1, Column: 12},
+				&InvalidImportContinuationError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
+							EndPos:   ast.Position{Offset: 16, Line: 1, Column: 16},
+						},
+					},
 				},
 			},
 			errs,
@@ -2476,9 +2662,14 @@ func TestParseImportDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations(` import foo , bar , from 0x42`)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: `expected identifier, got keyword "from"`,
-					Pos:     ast.Position{Offset: 20, Line: 1, Column: 20},
+				&InvalidFromKeywordAsIdentifierError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 20, Line: 1, Column: 20},
+							EndPos:   ast.Position{Offset: 23, Line: 1, Column: 23},
+						},
+					},
 				},
 			},
 			errs,
@@ -2498,9 +2689,14 @@ func TestParseImportDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations(`import foo, , bar from 0xaaaa`)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Pos:     ast.Position{Line: 1, Column: 12, Offset: 12},
-					Message: `expected identifier or keyword "from", got ','`,
+				&InvalidTokenInImportListError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenComma,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
+							EndPos:   ast.Position{Offset: 12, Line: 1, Column: 12},
+						},
+					},
 				},
 			},
 			errs,
@@ -2538,13 +2734,36 @@ func TestParseImportDeclaration(t *testing.T) {
 
 		_, errs := testParseDeclarations(`import foo, bar, baz, @ from 0x42`)
 
-		AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Pos:     ast.Position{Line: 1, Column: 22, Offset: 22},
-				Message: `unexpected token in import declaration: got '@', expected keyword "from" or ','`,
+		AssertEqualWithDiff(t,
+			[]error{
+				&InvalidImportContinuationError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenAt,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 22, Line: 1, Column: 22},
+							EndPos:   ast.Position{Offset: 22, Line: 1, Column: 22},
+						},
+					},
+				},
 			},
-		}, errs)
+			errs,
+		)
+	})
 
+	t.Run("one identifier, missing second identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`import foo , `)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedEOFInImportListError{
+					Pos: ast.Position{Offset: 13, Line: 1, Column: 13},
+				},
+			},
+			errs,
+		)
 	})
 
 	t.Run("from keyword as second identifier", func(t *testing.T) {
@@ -2911,12 +3130,20 @@ func TestParseEvent(t *testing.T) {
 
 		_, errs := testParseDeclarations(" access(all) event ResourceDestroyed ( a : Int )")
 
-		AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Pos:     ast.Position{Line: 1, Column: 47, Offset: 47},
-				Message: "expected a default argument after type annotation, got ')'",
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingDefaultArgumentError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenParenClose,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 47, Offset: 47},
+							EndPos:   ast.Position{Line: 1, Column: 47, Offset: 47},
+						},
+					},
+				},
 			},
-		}, errs)
+			errs,
+		)
 	})
 
 	t.Run("non-default event with default arg", func(t *testing.T) {
@@ -2925,23 +3152,28 @@ func TestParseEvent(t *testing.T) {
 
 		_, errs := testParseDeclarations(" access(all) event Foo ( a : Int = 3)")
 
-		AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Pos:     ast.Position{Line: 1, Column: 33, Offset: 33},
-				Message: "cannot use a default argument for this function",
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedDefaultArgumentError{
+					Pos: ast.Position{Line: 1, Column: 33, Offset: 33},
+				},
 			},
-		}, errs)
+			errs,
+		)
 	})
 
 	t.Run("invalid event name", func(t *testing.T) {
 		_, errs := testParseDeclarations(`event continue {}`)
 
-		AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Pos:     ast.Position{Line: 1, Column: 6, Offset: 6},
-				Message: "expected identifier after start of event declaration, got keyword continue",
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Pos:     ast.Position{Line: 1, Column: 6, Offset: 6},
+					Message: "expected identifier after start of event declaration, got keyword continue",
+				},
 			},
-		}, errs)
+			errs,
+		)
 	})
 }
 
@@ -3032,6 +3264,29 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 				},
 			},
 			result,
+		)
+	})
+
+	t.Run("missing identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := parse("let : Int")
+		require.Len(t, errs, 1)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingFieldNameError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+							EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+						},
+						Type: lexer.TokenColon,
+					},
+				},
+			},
+			errs,
 		)
 	})
 }
@@ -3912,17 +4167,42 @@ func TestParseInvalidCompositeFunctionWithSelfParameter(t *testing.T) {
 	}
 }
 
+func TestParseInvalidPubSetModifier(t *testing.T) {
+
+	t.Parallel()
+
+	_, errs := testParseDeclarations("pub(foo) fun x() {}")
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&InvalidPubSetModifierError{
+				GotToken: lexer.Token{
+					Type: lexer.TokenIdentifier,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+						EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
 func TestParseInvalidParameterWithoutLabel(t *testing.T) {
 	t.Parallel()
 
 	_, errs := testParseDeclarations(`access(all) fun foo(continue: Int) {}`)
 
-	AssertEqualWithDiff(t, []error{
-		&SyntaxError{
-			Pos:     ast.Position{Line: 1, Column: 20, Offset: 20},
-			Message: "expected identifier for argument label or parameter name, got keyword continue",
+	AssertEqualWithDiff(t,
+		[]error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 1, Column: 20, Offset: 20},
+				Message: "expected identifier for argument label or parameter name, got keyword continue",
+			},
 		},
-	}, errs)
+		errs,
+	)
 }
 
 func TestParseParametersWithExtraLabels(t *testing.T) {
@@ -3930,12 +4210,20 @@ func TestParseParametersWithExtraLabels(t *testing.T) {
 
 	_, errs := testParseDeclarations(`access(all) fun foo(_ foo: String, label fable table: Int) {}`)
 
-	AssertEqualWithDiff(t, []error{
-		&SyntaxError{
-			Pos:     ast.Position{Line: 1, Column: 47, Offset: 47},
-			Message: "expected ':' after parameter name, got identifier",
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingColonAfterParameterNameError{
+				GotToken: lexer.Token{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 47, Line: 1, Column: 47},
+						EndPos:   ast.Position{Offset: 51, Line: 1, Column: 51},
+					},
+					Type: lexer.TokenIdentifier,
+				},
+			},
 		},
-	}, errs)
+		errs,
+	)
 }
 
 func TestParseAttachmentDeclaration(t *testing.T) {
@@ -4371,12 +4659,15 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		_, errs := testParseDeclarations(`access(all) attachment E for S {
 			require entitlement X
 		}`)
-		AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Pos:     ast.Position{Line: 2, Column: 3, Offset: 36},
-				Message: "unexpected identifier",
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Pos:     ast.Position{Line: 2, Column: 3, Offset: 36},
+					Message: "unexpected identifier",
+				},
 			},
-		}, errs)
+			errs,
+		)
 	})
 
 	t.Run("entitlement access", func(t *testing.T) {
@@ -4528,9 +4819,14 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations(" access(all) struct interface interface { }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected interface name, got keyword \"interface\"",
-					Pos:     ast.Position{Offset: 30, Line: 1, Column: 30},
+				&InvalidInterfaceNameError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 30, Line: 1, Column: 30},
+							EndPos:   ast.Position{Offset: 38, Line: 1, Column: 38},
+						},
+					},
 				},
 			},
 			errs,
@@ -4825,12 +5121,15 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 	t.Run("invalid interface name", func(t *testing.T) {
 		_, errs := testParseDeclarations(`access(all) struct interface continue {}`)
 
-		AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Pos:     ast.Position{Line: 1, Column: 29, Offset: 29},
-				Message: "expected identifier following struct declaration, got keyword continue",
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Pos:     ast.Position{Line: 1, Column: 29, Offset: 29},
+					Message: "expected identifier following struct declaration, got keyword continue",
+				},
 			},
-		}, errs)
+			errs,
+		)
 	})
 
 	t.Run("struct with view member", func(t *testing.T) {
@@ -5094,7 +5393,106 @@ func TestParseTransactionDeclaration(t *testing.T) {
 		)
 	})
 
-	t.Run("EmptyTransaction", func(t *testing.T) {
+	t.Run("duplicate execute", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("transaction { execute {}  execute {}}")
+		AssertEqualWithDiff(t,
+			[]error{
+				&DuplicateExecuteBlockError{
+					Pos: ast.Position{Offset: 26, Line: 1, Column: 26},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("unexpected initial identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("transaction { foo }")
+		AssertEqualWithDiff(t,
+			[]error{
+				&ExpectedPrepareOrExecuteError{
+					GotIdentifier: "foo",
+					Pos:           ast.Position{Offset: 14, Line: 1, Column: 14},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("duplicate post", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("transaction { execute {} post {} post {} }")
+		AssertEqualWithDiff(t,
+			[]error{
+				&DuplicatePostConditionsError{
+					Pos: ast.Position{Offset: 33, Line: 1, Column: 33},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("unexpected identifier after prepare", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("transaction { prepare() {} foo }")
+		AssertEqualWithDiff(t,
+			[]error{
+				&ExpectedExecuteOrPostError{
+					GotIdentifier: "foo",
+					Pos:           ast.Position{Offset: 27, Line: 1, Column: 27},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("unexpected identifier after execute", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("transaction { execute {} foo }")
+		AssertEqualWithDiff(t,
+			[]error{
+				&ExpectedExecuteOrPostError{
+					GotIdentifier: "foo",
+					Pos:           ast.Position{Offset: 25, Line: 1, Column: 25},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("unexpected token at end", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("transaction { execute {} .")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 25, Line: 1, Column: 25},
+							EndPos:   ast.Position{Offset: 25, Line: 1, Column: 25},
+						},
+						Type: lexer.TokenDot,
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("empty", func(t *testing.T) {
 
 		const code = `
 		  transaction {}
@@ -5826,8 +6224,13 @@ func TestParseTransactionDeclaration(t *testing.T) {
 		_, errs := testParseDeclarations(code)
 
 		AssertEqualWithDiff(t,
-			`unexpected identifier, expected keyword "prepare" or "execute", got "uwu"`,
-			errs[0].Error(),
+			[]error{
+				&ExpectedPrepareOrExecuteError{
+					GotIdentifier: "uwu",
+					Pos:           ast.Position{Offset: 35, Line: 5, Column: 3},
+				},
+			},
+			errs,
 		)
 	})
 }
@@ -6728,8 +7131,10 @@ func TestParseInvalidEmitConditionNonInvocation(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token '('",
-					Pos:     ast.Position{Offset: 91, Line: 5, Column: 14},
+					Message:       "expected token '('",
+					Pos:           ast.Position{Offset: 91, Line: 5, Column: 14},
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -6751,8 +7156,10 @@ func TestParseInvalidEmitConditionNonInvocation(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token '('",
-					Pos:     ast.Position{Offset: 92, Line: 5, Column: 14},
+					Message:       "expected token '('",
+					Pos:           ast.Position{Offset: 92, Line: 5, Column: 14},
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -7134,7 +7541,6 @@ func TestParsePragmaNoArguments(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
 							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
@@ -7177,7 +7583,6 @@ func TestParsePragmaNoArguments(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
 							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
@@ -7455,12 +7860,14 @@ func TestParseInvalidDefaultArgument(t *testing.T) {
 
 		_, errs := testParseDeclarations(" access(all) fun foo ( a : Int = 3) { } ")
 
-		AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Pos:     ast.Position{Line: 1, Column: 31, Offset: 31},
-				Message: "cannot use a default argument for this function",
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedDefaultArgumentError{
+					Pos: ast.Position{Line: 1, Column: 31, Offset: 31},
+				},
 			},
-		}, errs)
+			errs,
+		)
 	})
 
 	t.Run("function expression ", func(t *testing.T) {
@@ -7469,12 +7876,14 @@ func TestParseInvalidDefaultArgument(t *testing.T) {
 
 		_, errs := testParseDeclarations(" let foo = fun ( a : Int = 3) { } ")
 
-		AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Pos:     ast.Position{Line: 1, Column: 25, Offset: 25},
-				Message: "cannot use a default argument for this function",
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedDefaultArgumentError{
+					Pos: ast.Position{Line: 1, Column: 25, Offset: 25},
+				},
 			},
-		}, errs)
+			errs,
+		)
 	})
 }
 
@@ -8536,7 +8945,6 @@ func TestParseInvalidImportWithModifier(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
 							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
@@ -8585,7 +8993,6 @@ func TestParseInvalidImportWithModifier(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
 							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
@@ -8639,7 +9046,6 @@ func TestParseInvalidEventWithModifier(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
 							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
@@ -8688,7 +9094,6 @@ func TestParseInvalidEventWithModifier(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
 							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
@@ -8743,7 +9148,6 @@ func TestParseCompositeWithModifier(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
 							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
@@ -8792,7 +9196,6 @@ func TestParseCompositeWithModifier(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
 							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
@@ -8846,7 +9249,6 @@ func TestParseTransactionWithModifier(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
 							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
@@ -8895,7 +9297,6 @@ func TestParseTransactionWithModifier(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
 							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
@@ -9798,7 +10199,6 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
 							EndPos:   ast.Position{Offset: 19, Line: 1, Column: 19},
@@ -9820,7 +10220,6 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 27, Line: 1, Column: 27},
 							EndPos:   ast.Position{Offset: 27, Line: 1, Column: 27},
@@ -9841,8 +10240,10 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token '{'",
-					Pos:     ast.Position{Offset: 35, Line: 1, Column: 35},
+					Message:       "expected token '{'",
+					Pos:           ast.Position{Offset: 35, Line: 1, Column: 35},
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -9857,8 +10258,10 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token '}'",
-					Pos:     ast.Position{Offset: 36, Line: 1, Column: 36},
+					Message:       "expected token '}'",
+					Pos:           ast.Position{Offset: 36, Line: 1, Column: 36},
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -9873,8 +10276,10 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token '{'",
-					Pos:     ast.Position{Offset: 35, Line: 1, Column: 35},
+					Message:       "expected token '{'",
+					Pos:           ast.Position{Offset: 35, Line: 1, Column: 35},
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -9946,8 +10351,10 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token '->'",
-					Pos:     ast.Position{Offset: 43, Line: 2, Column: 5},
+					Message:       "expected token '->'",
+					Pos:           ast.Position{Offset: 43, Line: 2, Column: 5},
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -9965,8 +10372,10 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token '->'",
-					Pos:     ast.Position{Offset: 43, Line: 2, Column: 5},
+					Message:       "expected token '->'",
+					Pos:           ast.Position{Offset: 43, Line: 2, Column: 5},
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -9996,15 +10405,22 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations(` access(all) entitlement mapping M { 
-			include -> B
-		} `)
+		_, errs := testParseDeclarations(`
+            access(all) entitlement mapping M {
+                include -> B
+            }
+        `)
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token in type: '->'",
-					Pos:     ast.Position{Offset: 51, Line: 2, Column: 13},
+				&UnexpectedTypeStartError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 73, Line: 3, Column: 24},
+							EndPos:   ast.Position{Offset: 74, Line: 3, Column: 25},
+						},
+						Type: lexer.TokenRightArrow,
+					},
 				},
 			},
 			errs,
@@ -10230,13 +10646,11 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 		_, errs := testParseDeclarations(" pub(set) fun foo ( ) { }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "`pub(set)` is no longer a valid access modifier",
-					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
-					Migration: "This is pre-Cadence 1.0 syntax. " +
-						"The `pub(set)` modifier was deprecated and has no direct equivalent in the new access control system. " +
-						"Consider adding a setter method that allows updating the field.",
-					Documentation: "https://cadence-lang.org/docs/cadence-migration-guide/improvements#-motivation-11",
+				&PubSetAccessError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+						EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+					},
 				},
 			},
 			errs,
