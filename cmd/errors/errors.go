@@ -225,6 +225,12 @@ func generateErrors() []namedError {
 				GotToken: placeholderToken,
 			},
 		},
+		{"parser.MissingClosingBraceError",
+			&parser.MissingClosingBraceError{
+				Description: placeholderString,
+				GotToken:    placeholderToken,
+			},
+		},
 		{"parser.MissingClosingGreaterInTypeParameterListError",
 			&parser.MissingClosingGreaterInTypeParameterListError{
 				Pos: placeholderPosition,
@@ -318,6 +324,12 @@ func generateErrors() []namedError {
 		{"parser.MissingInKeywordInForStatementError",
 			&parser.MissingInKeywordInForStatementError{
 				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingOpeningBraceError",
+			&parser.MissingOpeningBraceError{
+				Description: placeholderString,
+				GotToken:    placeholderToken,
 			},
 		},
 		{"parser.MissingPubClosingParenError",
