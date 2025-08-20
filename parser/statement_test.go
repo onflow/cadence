@@ -1293,7 +1293,7 @@ func TestParseStatements(t *testing.T) {
 			t,
 			[]errors.SuggestedFix[ast.TextEdit]{
 				{
-					Message: "Add semicolon to separate statements",
+					Message: "Insert semicolon",
 					TextEdits: []ast.TextEdit{
 						{
 							Insertion: "; ",
@@ -1383,11 +1383,62 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 		)
 	})
 
-	t.Run("no from", func(t *testing.T) {
+	t.Run("missing from", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseStatements("remove A")
+		const code = "remove A b"
+		_, errs := testParseStatements(code)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingFromKeywordInRemoveStatementError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 9, Line: 1, Column: 9},
+							EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+						},
+					},
+				},
+			},
+			errs,
+		)
+
+		var missingFromErr *MissingFromKeywordInRemoveStatementError
+		require.ErrorAs(t, errs[0], &missingFromErr)
+
+		fixes := missingFromErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert 'from'",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "from ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 9, Line: 1, Column: 9},
+								EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"remove A from b",
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+	})
+
+	t.Run("missing from at end", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "remove A"
+		_, errs := testParseStatements(code)
 
 		AssertEqualWithDiff(t,
 			[]error{
@@ -1405,6 +1456,33 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingFromErr *MissingFromKeywordInRemoveStatementError
+		require.ErrorAs(t, errs[0], &missingFromErr)
+
+		fixes := missingFromErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert 'from'",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: " from ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+								EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"remove A from ",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
@@ -1644,7 +1722,8 @@ func TestParseSwitchStatement(t *testing.T) {
 	t.Run("missing colon", func(t *testing.T) {
 		t.Parallel()
 
-		_, errs := testParseStatements("switch 1 { case 2 break }")
+		const code = "switch 1 { case 2 break }"
+		_, errs := testParseStatements(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingColonInSwitchCaseError{
@@ -1658,6 +1737,33 @@ func TestParseSwitchStatement(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingColonErr *MissingColonInSwitchCaseError
+		require.ErrorAs(t, errs[0], &missingColonErr)
+
+		fixes := missingColonErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert colon",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ": ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 18, Line: 1, Column: 18},
+								EndPos:   ast.Position{Offset: 18, Line: 1, Column: 18},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"switch 1 { case 2 : break }",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 }

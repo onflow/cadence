@@ -32,7 +32,7 @@ import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/parser/lexer"
+	"github.com/onflow/cadence/old_parser/lexer"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
@@ -732,13 +732,12 @@ func TestParseArgumentList(t *testing.T) {
 		gauge := makeLimitingMemoryGauge()
 		gauge.Limit(common.MemoryKindTypeToken, 0)
 
-		_, err := ParseArgumentList(gauge, []byte(`(1, b: true)`), Config{})
-		require.Len(t, err, 1)
-		require.IsType(t, errors.MemoryMeteringError{}, err[0])
+		defer func() {
+			r := recover()
+			assert.IsType(t, errors.MemoryMeteringError{}, r)
+		}()
 
-		fatalError, _ := err[0].(errors.MemoryMeteringError)
-		var expectedError limitingMemoryGaugeError
-		assert.ErrorAs(t, fatalError, &expectedError)
+		_, _ = ParseArgumentList(gauge, []byte(`(1, b: true)`), Config{})
 	})
 
 	t.Run("valid", func(t *testing.T) {

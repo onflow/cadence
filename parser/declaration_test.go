@@ -726,20 +726,50 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations("fun foo} {}")
+		const code = "fun foo x: Int) {}"
+		_, errs := testParseDeclarations(code)
+		require.Len(t, errs, 1)
+
+		var missingStartErr *MissingStartOfParameterListError
+		require.ErrorAs(t, errs[0], &missingStartErr)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingStartOfParameterListError{
 					GotToken: lexer.Token{
-						Type: lexer.TokenBraceClose,
+						Type: lexer.TokenIdentifier,
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
-							EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+							StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+							EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
 						},
 					},
 				},
 			},
 			errs,
+		)
+
+		fixes := missingStartErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert opening parenthesis",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "(",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+								EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			`fun foo (x: Int) {}`,
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
@@ -768,7 +798,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations("fun foo(")
+		const code = "fun foo("
+		_, errs := testParseDeclarations(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingClosingParenInParameterListError{
@@ -777,13 +808,51 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			},
 			errs,
 		)
+
+		var missingClosingParen *MissingClosingParenInParameterListError
+		require.ErrorAs(t, errs[0], &missingClosingParen)
+
+		assert.Equal(t,
+			&MissingClosingParenInParameterListError{
+				Pos: ast.Position{Offset: 8, Line: 1, Column: 8},
+			},
+			missingClosingParen,
+		)
+
+		fixes := missingClosingParen.SuggestFixes(code)
+
+		require.Equal(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing parenthesis",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ")",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+								EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		const expected = "fun foo()"
+		assert.Equal(t,
+			expected,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
 	})
 
 	t.Run("invalid parameter list continuation", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations("fun foo(a: Int -) {}")
+		const code = "fun foo(a: Int -) {}"
+
+		_, errs := testParseDeclarations(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&ExpectedCommaOrEndOfParameterListError{
@@ -798,13 +867,42 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			},
 			errs,
 		)
+
+		var expectedErr *ExpectedCommaOrEndOfParameterListError
+		require.ErrorAs(t, errs[0], &expectedErr)
+
+		fixes := expectedErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert comma",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ", ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 15, Line: 1, Column: 15},
+								EndPos:   ast.Position{Offset: 15, Line: 1, Column: 15},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"fun foo(a: Int , -) {}",
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
 	})
 
 	t.Run("missing colon after parameter name", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations("fun foo(a Int) {}")
+		const code = "fun foo(a Int) {}"
+
+		_, errs := testParseDeclarations(code)
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingColonAfterParameterNameError{
@@ -818,6 +916,33 @@ func TestParseFunctionDeclaration(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingColonErr *MissingColonAfterParameterNameError
+		require.ErrorAs(t, errs[0], &missingColonErr)
+
+		fixes := missingColonErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert colon",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ": ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+								EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"fun foo(a Int: ) {}",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
@@ -1817,8 +1942,9 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		t.Parallel()
 
+		const code = "fun foo  < "
 		_, errs := testParseDeclarationsWithConfig(
-			"fun foo  < ",
+			code,
 			Config{
 				TypeParametersEnabled: true,
 			},
@@ -1832,14 +1958,43 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			},
 			errs,
 		)
+
+		var missingClosingGreater *MissingClosingGreaterInTypeParameterListError
+		require.ErrorAs(t, errs[0], &missingClosingGreater)
+
+		fixes := missingClosingGreater.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing angle bracket",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ">",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
+								EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			`fun foo  < >`,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
 	})
 
 	t.Run("missing type parameter list separator, enabled", func(t *testing.T) {
 
 		t.Parallel()
 
+		const code = "fun foo  < A B > () { } "
+
 		_, errs := testParseDeclarationsWithConfig(
-			"fun foo  < A B > () { } ",
+			code,
 			Config{
 				TypeParametersEnabled: true,
 			},
@@ -1853,14 +2008,43 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			},
 			errs,
 		)
+
+		var missingCommaErr *MissingCommaInTypeParameterListError
+		require.ErrorAs(t, errs[0], &missingCommaErr)
+
+		fixes := missingCommaErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert comma",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ", ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+								EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			`fun foo  < A , B > () { } `,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
 	})
 
 	t.Run("invalid type parameter list separator", func(t *testing.T) {
 
 		t.Parallel()
 
+		const code = "fun foo  < A - > () { } "
+
 		_, errs := testParseDeclarationsWithConfig(
-			"fun foo  < A - > () { } ",
+			code,
 			Config{
 				TypeParametersEnabled: true,
 			},
@@ -1879,6 +2063,83 @@ func TestParseFunctionDeclaration(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var expectedErr *ExpectedCommaOrEndOfTypeParameterListError
+		require.ErrorAs(t, errs[0], &expectedErr)
+
+		fixes := expectedErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert comma",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ", ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+								EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			`fun foo  < A , - > () { } `,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+	})
+
+	t.Run("missing closing > in type arguments", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "let x: Foo<Bar"
+		_, errs := testParseDeclarations(code)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingClosingGreaterInTypeArgumentsError{
+					Pos: ast.Position{Offset: 14, Line: 1, Column: 14},
+				},
+				&MissingTransferError{
+					Pos: ast.Position{Offset: 14, Line: 1, Column: 14},
+				},
+				UnexpectedEOFError{
+					Pos: ast.Position{Offset: 14, Line: 1, Column: 14},
+				},
+			},
+			errs,
+		)
+
+		var missingClosingGreater *MissingClosingGreaterInTypeArgumentsError
+		require.ErrorAs(t, errs[0], &missingClosingGreater)
+
+		fixes := missingClosingGreater.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing angle bracket",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ">",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 14, Line: 1, Column: 14},
+								EndPos:   ast.Position{Offset: 14, Line: 1, Column: 14},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			`let x: Foo<Bar>`,
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 }
@@ -5169,6 +5430,8 @@ func TestParseTransactionDeclaration(t *testing.T) {
 
 	t.Run("empty", func(t *testing.T) {
 
+		t.Parallel()
+
 		const code = `
           transaction {}
         `
@@ -5189,6 +5452,9 @@ func TestParseTransactionDeclaration(t *testing.T) {
 	})
 
 	t.Run("SimpleTransaction", func(t *testing.T) {
+
+		t.Parallel()
+
 		const code = `
           transaction {
 
@@ -5377,6 +5643,9 @@ func TestParseTransactionDeclaration(t *testing.T) {
 	})
 
 	t.Run("PreExecutePost", func(t *testing.T) {
+
+		t.Parallel()
+
 		const code = `
           transaction {
 
@@ -5624,6 +5893,9 @@ func TestParseTransactionDeclaration(t *testing.T) {
 	})
 
 	t.Run("PrePostExecute", func(t *testing.T) {
+
+		t.Parallel()
+
 		const code = `
           transaction {
 
@@ -7983,17 +8255,15 @@ func TestParseDestructor(t *testing.T) {
         }
     `
 
-	destructorRange := ast.Range{
-		StartPos: ast.Position{Offset: 37, Line: 3, Column: 12},
-		EndPos:   ast.Position{Offset: 48, Line: 3, Column: 23},
-	}
-
 	_, errs := testParseDeclarations(code)
 	AssertEqualWithDiff(t,
 		[]error{
 			&CustomDestructorError{
-				Pos:             destructorRange.StartPos,
-				DestructorRange: destructorRange,
+				Pos: ast.Position{Offset: 37, Line: 3, Column: 12},
+				DestructorRange: ast.Range{
+					StartPos: ast.Position{Offset: 37, Line: 3, Column: 12},
+					EndPos:   ast.Position{Offset: 48, Line: 3, Column: 23},
+				},
 			},
 		},
 		errs,
@@ -8010,7 +8280,10 @@ func TestParseDestructor(t *testing.T) {
 				TextEdits: []ast.TextEdit{
 					{
 						Replacement: "",
-						Range:       destructorRange,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 37, Line: 3, Column: 12},
+							EndPos:   ast.Position{Offset: 48, Line: 3, Column: 23},
+						},
 					},
 				},
 			},
@@ -9837,11 +10110,12 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseDeclarations(`
+		const code = `
           access(all) entitlement mapping M {
               A B
           }
-        `)
+        `
+		_, errs := testParseDeclarations(code)
 
 		AssertEqualWithDiff(t,
 			[]error{
@@ -9856,6 +10130,39 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingArrowErr *MissingRightArrowInEntitlementMappingError
+		require.ErrorAs(t, errs[0], &missingArrowErr)
+
+		fixes := missingArrowErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert '->'",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "-> ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 63, Line: 3, Column: 16},
+								EndPos:   ast.Position{Offset: 63, Line: 3, Column: 16},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		const expected = `
+          access(all) entitlement mapping M {
+              A -> B
+          }
+        `
+
+		assert.Equal(t,
+			expected,
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
@@ -10240,7 +10547,7 @@ func TestParseMissingCommaInParameterListError(t *testing.T) {
 	require.Equal(t,
 		[]errors.SuggestedFix[ast.TextEdit]{
 			{
-				Message: "Add comma to separate parameters",
+				Message: "Insert comma",
 				TextEdits: []ast.TextEdit{
 					{
 						Insertion: ", ",
