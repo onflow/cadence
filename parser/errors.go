@@ -29,6 +29,17 @@ import (
 	"github.com/onflow/cadence/pretty"
 )
 
+func expectedButGotToken(message string, tokenType lexer.TokenType) string {
+	if tokenType == lexer.TokenEOF {
+		return message
+	}
+	return fmt.Sprintf(
+		"%s, got %s",
+		message,
+		tokenType,
+	)
+}
+
 // Error
 
 type Error struct {
@@ -286,7 +297,8 @@ func (UnexpectedEOFError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
-// UnexpectedEOFExpectedTypeError is reported when the end of the program is reached unexpectedly, but a type was expected.
+// UnexpectedEOFExpectedTypeError is reported when the end of the program is reached unexpectedly,
+// but a type was expected.
 type UnexpectedEOFExpectedTypeError struct {
 	Pos ast.Position
 }
@@ -309,7 +321,7 @@ func (e *UnexpectedEOFExpectedTypeError) EndPosition(_ common.MemoryGauge) ast.P
 }
 
 func (*UnexpectedEOFExpectedTypeError) Error() string {
-	return "invalid end of input, expected type"
+	return "unexpected end of input, expected type"
 }
 
 func (*UnexpectedEOFExpectedTypeError) SecondaryError() string {
@@ -317,6 +329,80 @@ func (*UnexpectedEOFExpectedTypeError) SecondaryError() string {
 }
 
 func (*UnexpectedEOFExpectedTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+// UnexpectedEOFExpectedTypeAnnotationError is reported when the end of the program is reached unexpectedly,
+// but a type annotation was expected.
+type UnexpectedEOFExpectedTypeAnnotationError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &UnexpectedEOFExpectedTypeAnnotationError{}
+var _ errors.UserError = &UnexpectedEOFExpectedTypeAnnotationError{}
+var _ errors.SecondaryError = &UnexpectedEOFExpectedTypeAnnotationError{}
+var _ errors.HasDocumentationLink = &UnexpectedEOFExpectedTypeAnnotationError{}
+
+func (*UnexpectedEOFExpectedTypeAnnotationError) isParseError() {}
+
+func (*UnexpectedEOFExpectedTypeAnnotationError) IsUserError() {}
+
+func (e *UnexpectedEOFExpectedTypeAnnotationError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *UnexpectedEOFExpectedTypeAnnotationError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*UnexpectedEOFExpectedTypeAnnotationError) Error() string {
+	return "unexpected end of input, expected type annotation"
+}
+
+func (*UnexpectedEOFExpectedTypeAnnotationError) SecondaryError() string {
+	return "check for incomplete expressions, missing tokens, or unterminated strings/comments"
+}
+
+func (*UnexpectedEOFExpectedTypeAnnotationError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+// UnexpectedEOFExpectedTokenError is reported when the end of the program is reached unexpectedly,
+// but a specific token was expected.
+type UnexpectedEOFExpectedTokenError struct {
+	ExpectedToken lexer.TokenType
+	Pos           ast.Position
+}
+
+var _ ParseError = &UnexpectedEOFExpectedTokenError{}
+var _ errors.UserError = &UnexpectedEOFExpectedTokenError{}
+var _ errors.SecondaryError = &UnexpectedEOFExpectedTokenError{}
+var _ errors.HasDocumentationLink = &UnexpectedEOFExpectedTokenError{}
+
+func (*UnexpectedEOFExpectedTokenError) isParseError() {}
+
+func (*UnexpectedEOFExpectedTokenError) IsUserError() {}
+
+func (e *UnexpectedEOFExpectedTokenError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *UnexpectedEOFExpectedTokenError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (e *UnexpectedEOFExpectedTokenError) Error() string {
+	return fmt.Sprintf(
+		"unexpected end of input, expected %s",
+		e.ExpectedToken,
+	)
+}
+
+func (*UnexpectedEOFExpectedTokenError) SecondaryError() string {
+	return "check for incomplete expressions, missing tokens, or unterminated strings/comments"
+}
+
+func (*UnexpectedEOFExpectedTokenError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
@@ -449,9 +535,8 @@ func (e *MissingStartOfParameterListError) EndPosition(_ common.MemoryGauge) ast
 }
 
 func (e *MissingStartOfParameterListError) Error() string {
-	return fmt.Sprintf(
-		"expected %s as start of parameter list, got %s",
-		lexer.TokenParenOpen,
+	return expectedButGotToken(
+		"expected open parenthesis '(' as start of parameter list",
 		e.GotToken.Type,
 	)
 }
@@ -462,6 +547,46 @@ func (*MissingStartOfParameterListError) SecondaryError() string {
 
 func (*MissingStartOfParameterListError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions"
+}
+
+// MissingStartOfAuthorizationError is reported when an authorization list is missing a start token.
+type MissingStartOfAuthorizationError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingStartOfAuthorizationError{}
+var _ errors.UserError = &MissingStartOfAuthorizationError{}
+var _ errors.SecondaryError = &MissingStartOfAuthorizationError{}
+var _ errors.HasDocumentationLink = &MissingStartOfAuthorizationError{}
+
+func (*MissingStartOfAuthorizationError) isParseError() {}
+
+func (*MissingStartOfAuthorizationError) IsUserError() {}
+
+func (e *MissingStartOfAuthorizationError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingStartOfAuthorizationError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingStartOfAuthorizationError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf(
+			"expected %s as start of authorization",
+			lexer.TokenParenOpen,
+		),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingStartOfAuthorizationError) SecondaryError() string {
+	return "authorized references must have an authorization list enclosed in parentheses (`auth(...)`)"
+}
+
+func (*MissingStartOfAuthorizationError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/references#authorized-references"
 }
 
 // UnexpectedTokenInParameterListError is reported when an unexpected token is found in a parameter list.
@@ -487,8 +612,8 @@ func (e *UnexpectedTokenInParameterListError) EndPosition(_ common.MemoryGauge) 
 }
 
 func (e *UnexpectedTokenInParameterListError) Error() string {
-	return fmt.Sprintf(
-		"expected parameter or end of parameter list, got %s",
+	return expectedButGotToken(
+		"expected parameter or end of parameter list",
 		e.GotToken.Type,
 	)
 }
@@ -561,8 +686,8 @@ func (e *ExpectedCommaOrEndOfParameterListError) EndPosition(_ common.MemoryGaug
 }
 
 func (e *ExpectedCommaOrEndOfParameterListError) Error() string {
-	return fmt.Sprintf(
-		"expected comma or end of parameter list, got %s",
+	return expectedButGotToken(
+		"expected comma or end of parameter list",
 		e.GotToken.Type,
 	)
 }
@@ -598,9 +723,8 @@ func (e *MissingColonAfterParameterNameError) EndPosition(_ common.MemoryGauge) 
 }
 
 func (e *MissingColonAfterParameterNameError) Error() string {
-	return fmt.Sprintf(
-		"expected %s after parameter name, got %s",
-		lexer.TokenColon,
+	return expectedButGotToken(
+		"expected colon (:) after parameter name",
 		e.GotToken.Type,
 	)
 }
@@ -636,8 +760,8 @@ func (e *MissingDefaultArgumentError) EndPosition(_ common.MemoryGauge) ast.Posi
 }
 
 func (e *MissingDefaultArgumentError) Error() string {
-	return fmt.Sprintf(
-		"expected a default argument after type annotation, got %s",
+	return expectedButGotToken(
+		"expected a default argument after type annotation",
 		e.GotToken.Type,
 	)
 }
@@ -760,8 +884,8 @@ func (e *UnexpectedTokenInTypeParameterListError) EndPosition(_ common.MemoryGau
 }
 
 func (e *UnexpectedTokenInTypeParameterListError) Error() string {
-	return fmt.Sprintf(
-		"expected type parameter or end of type parameter list, got %s",
+	return expectedButGotToken(
+		"expected type parameter or end of type parameter list",
 		e.GotToken.Type,
 	)
 }
@@ -834,8 +958,8 @@ func (e *ExpectedCommaOrEndOfTypeParameterListError) EndPosition(_ common.Memory
 }
 
 func (e *ExpectedCommaOrEndOfTypeParameterListError) Error() string {
-	return fmt.Sprintf(
-		"expected comma or end of type parameter list, got %s",
+	return expectedButGotToken(
+		"expected comma (,) or end of type parameter list",
 		e.GotToken.Type,
 	)
 }
@@ -871,8 +995,8 @@ func (e *InvalidTypeParameterNameError) EndPosition(_ common.MemoryGauge) ast.Po
 }
 
 func (e *InvalidTypeParameterNameError) Error() string {
-	return fmt.Sprintf(
-		"expected type parameter name, got %s",
+	return expectedButGotToken(
+		"expected type parameter name",
 		e.GotToken.Type,
 	)
 }
@@ -982,7 +1106,7 @@ func (e *ExpectedPrepareOrExecuteError) EndPosition(memoryGauge common.MemoryGau
 
 func (e *ExpectedPrepareOrExecuteError) Error() string {
 	return fmt.Sprintf(
-		"unexpected identifier, expected keyword %q or %q, got %q",
+		"unexpected identifier: expected keyword %q or %q, got %q",
 		KeywordPrepare,
 		KeywordExecute,
 		e.GotIdentifier,
@@ -1023,7 +1147,7 @@ func (e *ExpectedExecuteOrPostError) EndPosition(memoryGauge common.MemoryGauge)
 
 func (e *ExpectedExecuteOrPostError) Error() string {
 	return fmt.Sprintf(
-		"unexpected identifier, expected keyword %q or %q, got %q",
+		"unexpected identifier: expected keyword %q or %q, got %q",
 		KeywordExecute,
 		KeywordPost,
 		e.GotIdentifier,
@@ -1137,7 +1261,41 @@ func (*MultipleColonInDictionaryTypeError) SecondaryError() string {
 }
 
 func (*MultipleColonInDictionaryTypeError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/values-and-types/dictionaries"
+	return "https://cadence-lang.org/docs/language/values-and-types/dictionaries#dictionary-types"
+}
+
+// MissingDictionaryValueTypeError is reported when a dictionary type is missing a value type.
+type MissingDictionaryValueTypeError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &MissingDictionaryValueTypeError{}
+var _ errors.UserError = &MissingDictionaryValueTypeError{}
+var _ errors.SecondaryError = &MissingDictionaryValueTypeError{}
+var _ errors.HasDocumentationLink = &MissingDictionaryValueTypeError{}
+
+func (*MissingDictionaryValueTypeError) isParseError() {}
+
+func (*MissingDictionaryValueTypeError) IsUserError() {}
+
+func (e *MissingDictionaryValueTypeError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *MissingDictionaryValueTypeError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*MissingDictionaryValueTypeError) Error() string {
+	return "missing dictionary value type"
+}
+
+func (*MissingDictionaryValueTypeError) SecondaryError() string {
+	return "a value type is expected after the colon (:)"
+}
+
+func (*MissingDictionaryValueTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types/dictionaries#dictionary-types"
 }
 
 // UnexpectedCommaInTypeAnnotationListError is reported when a comma is found at an unexpected position in a type annotation list.
@@ -1302,6 +1460,198 @@ func (*InvalidNonNominalTypeInIntersectionError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
 }
 
+// MissingTypeAfterCommaInIntersectionError is reported when a type is missing after a comma in an intersection type.
+type MissingTypeAfterCommaInIntersectionError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &MissingTypeAfterCommaInIntersectionError{}
+var _ errors.UserError = &MissingTypeAfterCommaInIntersectionError{}
+var _ errors.SecondaryError = &MissingTypeAfterCommaInIntersectionError{}
+var _ errors.HasDocumentationLink = &MissingTypeAfterCommaInIntersectionError{}
+
+func (*MissingTypeAfterCommaInIntersectionError) isParseError() {}
+
+func (*MissingTypeAfterCommaInIntersectionError) IsUserError() {}
+
+func (e *MissingTypeAfterCommaInIntersectionError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *MissingTypeAfterCommaInIntersectionError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*MissingTypeAfterCommaInIntersectionError) Error() string {
+	return "missing type after comma"
+}
+
+func (*MissingTypeAfterCommaInIntersectionError) SecondaryError() string {
+	return "a type is expected after the comma"
+}
+
+func (*MissingTypeAfterCommaInIntersectionError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
+}
+
+// MissingTypeAfterSeparatorError is reported when a type is missing after a separator.
+type MissingTypeAfterSeparatorError struct {
+	Pos       ast.Position
+	Separator lexer.TokenType
+}
+
+var _ ParseError = &MissingTypeAfterSeparatorError{}
+var _ errors.UserError = &MissingTypeAfterSeparatorError{}
+var _ errors.SecondaryError = &MissingTypeAfterSeparatorError{}
+var _ errors.HasDocumentationLink = &MissingTypeAfterSeparatorError{}
+
+func (*MissingTypeAfterSeparatorError) isParseError() {}
+
+func (*MissingTypeAfterSeparatorError) IsUserError() {}
+
+func (e *MissingTypeAfterSeparatorError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *MissingTypeAfterSeparatorError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (e *MissingTypeAfterSeparatorError) Error() string {
+	return fmt.Sprintf("missing type after separator: %s", e.Separator)
+}
+
+func (e *MissingTypeAfterSeparatorError) SecondaryError() string {
+	return fmt.Sprintf("a type is expected after the %s separator", e.Separator)
+}
+
+func (*MissingTypeAfterSeparatorError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+// MissingSeparatorInIntersectionOrDictionaryTypeError is reported when a separator is missing
+// between types in an intersection or dictionary type.
+type MissingSeparatorInIntersectionOrDictionaryTypeError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingSeparatorInIntersectionOrDictionaryTypeError{}
+var _ errors.UserError = &MissingSeparatorInIntersectionOrDictionaryTypeError{}
+var _ errors.SecondaryError = &MissingSeparatorInIntersectionOrDictionaryTypeError{}
+var _ errors.HasDocumentationLink = &MissingSeparatorInIntersectionOrDictionaryTypeError{}
+
+func (*MissingSeparatorInIntersectionOrDictionaryTypeError) isParseError() {}
+
+func (*MissingSeparatorInIntersectionOrDictionaryTypeError) IsUserError() {}
+
+func (e *MissingSeparatorInIntersectionOrDictionaryTypeError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingSeparatorInIntersectionOrDictionaryTypeError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingSeparatorInIntersectionOrDictionaryTypeError) Error() string {
+	return expectedButGotToken(
+		"missing separator in type list",
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingSeparatorInIntersectionOrDictionaryTypeError) SecondaryError() string {
+	return "types in an intersection type must be separated by a comma (,) " +
+		"and types in a dictionary type must be separated by a colon (:)"
+}
+
+func (*MissingSeparatorInIntersectionOrDictionaryTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
+}
+
+// ExpectedTypeInsteadSeparatorError is reported when a separator is found at an unexpected position,
+// where a type was expected.
+type ExpectedTypeInsteadSeparatorError struct {
+	Pos       ast.Position
+	Separator lexer.TokenType
+}
+
+var _ ParseError = &ExpectedTypeInsteadSeparatorError{}
+var _ errors.UserError = &ExpectedTypeInsteadSeparatorError{}
+var _ errors.SecondaryError = &ExpectedTypeInsteadSeparatorError{}
+var _ errors.HasDocumentationLink = &ExpectedTypeInsteadSeparatorError{}
+
+func (*ExpectedTypeInsteadSeparatorError) isParseError() {}
+
+func (*ExpectedTypeInsteadSeparatorError) IsUserError() {}
+
+func (e *ExpectedTypeInsteadSeparatorError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *ExpectedTypeInsteadSeparatorError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (e *ExpectedTypeInsteadSeparatorError) Error() string {
+	return fmt.Sprintf("expected type, got separator '%s'", e.Separator)
+}
+
+func (e *ExpectedTypeInsteadSeparatorError) SecondaryError() string {
+	return "a type was expected, but a separator was found instead"
+}
+
+func (*ExpectedTypeInsteadSeparatorError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+// UnexpectedTokenInsteadOfSeparatorError is reported when an unexpected token is found,
+// where a separator or an end token was expected.
+type UnexpectedTokenInsteadOfSeparatorError struct {
+	GotToken          lexer.Token
+	ExpectedSeparator lexer.TokenType
+	ExpectedEndToken  lexer.TokenType
+}
+
+var _ ParseError = &UnexpectedTokenInsteadOfSeparatorError{}
+var _ errors.UserError = &UnexpectedTokenInsteadOfSeparatorError{}
+var _ errors.SecondaryError = &UnexpectedTokenInsteadOfSeparatorError{}
+var _ errors.HasDocumentationLink = &UnexpectedTokenInsteadOfSeparatorError{}
+
+func (*UnexpectedTokenInsteadOfSeparatorError) isParseError() {}
+
+func (*UnexpectedTokenInsteadOfSeparatorError) IsUserError() {}
+
+func (e *UnexpectedTokenInsteadOfSeparatorError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *UnexpectedTokenInsteadOfSeparatorError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *UnexpectedTokenInsteadOfSeparatorError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf(
+			"unexpected token: expected %s or separator %s",
+			e.ExpectedEndToken,
+			e.ExpectedSeparator,
+		),
+		e.GotToken.Type,
+	)
+}
+
+func (e *UnexpectedTokenInsteadOfSeparatorError) SecondaryError() string {
+	return fmt.Sprintf(
+		"did you miss a separator ('%s') or a closing token ('%s')?",
+		e.ExpectedSeparator,
+		e.ExpectedEndToken,
+	)
+}
+
+func (*UnexpectedTokenInsteadOfSeparatorError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
 // MissingClosingParenInArgumentListError is reported when an argument list is missing a closing parenthesis.
 type MissingClosingParenInArgumentListError struct {
 	Pos ast.Position
@@ -1394,8 +1744,8 @@ func (e *MissingCommaInArgumentListError) EndPosition(_ common.MemoryGauge) ast.
 }
 
 func (e *MissingCommaInArgumentListError) Error() string {
-	return fmt.Sprintf(
-		"unexpected argument in argument list (expecting delimiter or end of argument list), got %s",
+	return expectedButGotToken(
+		"unexpected argument in argument list: expected delimiter or end of argument list",
 		e.GotToken.Type,
 	)
 }
@@ -1580,6 +1930,33 @@ func (*UnexpectedTokenInTypeError) SecondaryError() string {
 
 func (*UnexpectedTokenInTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+// InvalidConstantSizedTypeSizeError
+
+type InvalidConstantSizedTypeSizeError struct {
+	ast.Range
+}
+
+var _ ParseError = &InvalidConstantSizedTypeSizeError{}
+var _ errors.UserError = &InvalidConstantSizedTypeSizeError{}
+var _ errors.SecondaryError = &InvalidConstantSizedTypeSizeError{}
+var _ errors.HasDocumentationLink = &InvalidConstantSizedTypeSizeError{}
+
+func (*InvalidConstantSizedTypeSizeError) isParseError() {}
+
+func (*InvalidConstantSizedTypeSizeError) IsUserError() {}
+
+func (*InvalidConstantSizedTypeSizeError) Error() string {
+	return "expected positive integer size for constant sized type"
+}
+
+func (*InvalidConstantSizedTypeSizeError) SecondaryError() string {
+	return "the size of a constant-sized array must be a positive integer literal"
+}
+
+func (*InvalidConstantSizedTypeSizeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types/arrays#array-types"
 }
 
 // CustomDestructorError
@@ -1980,7 +2357,10 @@ func (e *InvalidPubSetModifierError) EndPosition(_ common.MemoryGauge) ast.Posit
 }
 
 func (e *InvalidPubSetModifierError) Error() string {
-	return fmt.Sprintf("expected keyword %q, got %s", "set", e.GotToken.Type)
+	return expectedButGotToken(
+		`expected keyword "set"`,
+		e.GotToken.Type,
+	)
 }
 
 func (*InvalidPubSetModifierError) SecondaryError() string {
@@ -2018,9 +2398,11 @@ func (e *MissingAccessKeywordError) Error() string {
 		[]string{`"all"`, `"account"`, `"contract"`, `"self"`},
 		"or",
 	)
-	return fmt.Sprintf(
-		"expected keyword %s, got %s",
-		keywords,
+	return expectedButGotToken(
+		fmt.Sprintf(
+			"expected keyword %s",
+			keywords,
+		),
 		e.GotToken.Type,
 	)
 }
@@ -2056,7 +2438,10 @@ func (e *MissingEnumCaseNameError) EndPosition(_ common.MemoryGauge) ast.Positio
 }
 
 func (e *MissingEnumCaseNameError) Error() string {
-	return fmt.Sprintf("expected identifier after start of enum case declaration, got %s", e.GotToken.Type)
+	return expectedButGotToken(
+		"expected identifier after start of enum case declaration",
+		e.GotToken.Type,
+	)
 }
 
 func (*MissingEnumCaseNameError) SecondaryError() string {
@@ -2090,7 +2475,10 @@ func (e *MissingFieldNameError) EndPosition(_ common.MemoryGauge) ast.Position {
 }
 
 func (e *MissingFieldNameError) Error() string {
-	return fmt.Sprintf("expected identifier after start of field declaration, got %s", e.GotToken.Type)
+	return expectedButGotToken(
+		"expected identifier after start of field declaration",
+		e.GotToken.Type,
+	)
 }
 
 func (*MissingFieldNameError) SecondaryError() string {
@@ -2159,8 +2547,8 @@ func (e *InvalidImportLocationError) EndPosition(_ common.MemoryGauge) ast.Posit
 }
 
 func (e *InvalidImportLocationError) Error() string {
-	return fmt.Sprintf(
-		"unexpected token in import declaration: got %s, expected address, string, or identifier",
+	return expectedButGotToken(
+		"unexpected token in import declaration: expected address, string, or identifier",
 		e.GotToken.Type,
 	)
 }
@@ -2197,16 +2585,19 @@ func (e *InvalidImportContinuationError) EndPosition(_ common.MemoryGauge) ast.P
 }
 
 func (e *InvalidImportContinuationError) Error() string {
-	return fmt.Sprintf(
-		"unexpected token in import declaration: got %s, expected keyword %q or %s",
+	return expectedButGotToken(
+		fmt.Sprintf(
+			"unexpected token in import declaration: expected keyword %q or %s",
+			KeywordFrom,
+			lexer.TokenComma,
+		),
 		e.GotToken.Type,
-		KeywordFrom,
-		lexer.TokenComma,
 	)
 }
 
 func (*InvalidImportContinuationError) SecondaryError() string {
-	return "after an imported identifier, use either a comma to import more items or the 'from' keyword to specify the import location"
+	return "after an imported identifier, use either a comma to import more items " +
+		"or the 'from' keyword to specify the import location"
 }
 
 func (*InvalidImportContinuationError) DocumentationLink() string {
@@ -2308,9 +2699,11 @@ func (e *InvalidTokenInImportListError) EndPosition(_ common.MemoryGauge) ast.Po
 }
 
 func (e *InvalidTokenInImportListError) Error() string {
-	return fmt.Sprintf(
-		"expected identifier or keyword %q, got %s",
-		KeywordFrom,
+	return expectedButGotToken(
+		fmt.Sprintf(
+			"expected identifier or keyword %q",
+			KeywordFrom,
+		),
 		e.GotToken.Type,
 	)
 }
@@ -2416,7 +2809,7 @@ func (e *InvalidInterfaceNameError) EndPosition(_ common.MemoryGauge) ast.Positi
 }
 
 func (e *InvalidInterfaceNameError) Error() string {
-	return fmt.Sprintf("expected interface name, got keyword %q", "interface")
+	return fmt.Sprintf("expected interface name, got keyword %q", KeywordInterface)
 }
 
 func (*InvalidInterfaceNameError) SecondaryError() string {
@@ -2615,11 +3008,10 @@ func (e *MemberAccessMissingNameError) EndPosition(_ common.MemoryGauge) ast.Pos
 }
 
 func (e *MemberAccessMissingNameError) Error() string {
-	tokenType := e.GotToken.Type
-	if tokenType == lexer.TokenEOF {
-		return "expected member name"
-	}
-	return fmt.Sprintf("expected member name, got %s", tokenType)
+	return expectedButGotToken(
+		"expected member name",
+		e.GotToken.Type,
+	)
 }
 
 func (*MemberAccessMissingNameError) SecondaryError() string {
@@ -2819,4 +3211,41 @@ func (*NonNominalTypeError) SecondaryError() string {
 
 func (*NonNominalTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system/"
+}
+
+// NestedTypeMissingNameError is reported when a nested type is missing a name.
+type NestedTypeMissingNameError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &NestedTypeMissingNameError{}
+var _ errors.UserError = &NestedTypeMissingNameError{}
+var _ errors.SecondaryError = &NestedTypeMissingNameError{}
+var _ errors.HasDocumentationLink = &NestedTypeMissingNameError{}
+
+func (*NestedTypeMissingNameError) isParseError() {}
+
+func (*NestedTypeMissingNameError) IsUserError() {}
+
+func (e *NestedTypeMissingNameError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *NestedTypeMissingNameError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *NestedTypeMissingNameError) Error() string {
+	return expectedButGotToken(
+		"expected nested type name after dot (.)",
+		e.GotToken.Type,
+	)
+}
+
+func (*NestedTypeMissingNameError) SecondaryError() string {
+	return "after a dot (.), you must provide a valid identifier for the nested type name"
+}
+
+func (*NestedTypeMissingNameError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
 }

@@ -2159,9 +2159,17 @@ func TestParseAccess(t *testing.T) {
 		result, errs := parse("access ( foo | bar , baz )")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token: got ',', expected '|' or ')'",
-					Pos:     ast.Position{Offset: 19, Line: 1, Column: 19},
+				&UnexpectedTokenInsteadOfSeparatorError{
+					GotToken: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 19, Line: 1, Column: 19},
+							EndPos:   ast.Position{Offset: 19, Line: 1, Column: 19},
+						},
+						Type: lexer.TokenComma,
+					},
+					ExpectedSeparator: lexer.TokenVerticalBar,
+					ExpectedEndToken:  lexer.TokenParenClose,
 				},
 			},
 			errs,
@@ -2180,9 +2188,17 @@ func TestParseAccess(t *testing.T) {
 		result, errs := parse("access ( foo , bar | baz )")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token: got '|', expected ',' or ')'",
-					Pos:     ast.Position{Offset: 19, Line: 1, Column: 19},
+				&UnexpectedTokenInsteadOfSeparatorError{
+					GotToken: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 19, Line: 1, Column: 19},
+							EndPos:   ast.Position{Offset: 19, Line: 1, Column: 19},
+						},
+						Type: lexer.TokenVerticalBar,
+					},
+					ExpectedSeparator: lexer.TokenComma,
+					ExpectedEndToken:  lexer.TokenParenClose,
 				},
 			},
 			errs,
@@ -2277,6 +2293,93 @@ func TestParseAccess(t *testing.T) {
 					},
 				},
 			},
+			result,
+		)
+	})
+
+	t.Run("access, conjunctive entitlements list with trailing comma", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( foo , bar , )")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingTypeAfterSeparatorError{
+					Pos:       ast.Position{Offset: 21, Line: 1, Column: 21},
+					Separator: lexer.TokenComma,
+				},
+			},
+			errs,
+		)
+
+		AssertEqualWithDiff(t,
+			ast.EntitlementAccess{
+				EntitlementSet: &ast.ConjunctiveEntitlementSet{
+					Elements: []*ast.NominalType{
+						{
+							Identifier: ast.Identifier{
+								Identifier: "foo",
+								Pos:        ast.Position{Offset: 9, Line: 1, Column: 9},
+							},
+						},
+						{
+							Identifier: ast.Identifier{
+								Identifier: "bar",
+								Pos:        ast.Position{Offset: 15, Line: 1, Column: 15},
+							},
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("access, conjunctive entitlements list with leading comma", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( foo , , )")
+		AssertEqualWithDiff(t,
+			[]error{
+				&ExpectedTypeInsteadSeparatorError{
+					Pos:       ast.Position{Offset: 15, Line: 1, Column: 15},
+					Separator: lexer.TokenComma,
+				},
+			},
+			errs,
+		)
+
+		AssertEqualWithDiff(t,
+			ast.AccessNotSpecified,
+			result,
+		)
+	})
+
+	t.Run("access, conjunctive entitlements list with missing separator", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( foo, bar baz )")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedTokenInsteadOfSeparatorError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 18, Line: 1, Column: 18},
+							EndPos:   ast.Position{Offset: 20, Line: 1, Column: 20},
+						},
+					},
+					ExpectedSeparator: lexer.TokenComma,
+					ExpectedEndToken:  lexer.TokenParenClose,
+				},
+			},
+			errs,
+		)
+
+		AssertEqualWithDiff(t,
+			ast.AccessNotSpecified,
 			result,
 		)
 	})
@@ -3175,6 +3278,21 @@ func TestParseEvent(t *testing.T) {
 			errs,
 		)
 	})
+
+	t.Run("leading separator in conformances", func(t *testing.T) {
+		t.Parallel()
+
+		_, errs := testParseDeclarations("struct Test: , I {}")
+		AssertEqualWithDiff(t,
+			[]error{
+				&ExpectedTypeInsteadSeparatorError{
+					Pos:       ast.Position{Offset: 13, Line: 1, Column: 13},
+					Separator: lexer.TokenComma,
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseFieldWithVariableKind(t *testing.T) {
@@ -3659,6 +3777,37 @@ func TestParseCompositeDeclaration(t *testing.T) {
 				},
 			},
 			result,
+		)
+	})
+
+	t.Run("struct, one conformance, missing body", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("access(all) struct S: RI")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedEOFExpectedTokenError{
+					ExpectedToken: lexer.TokenBraceOpen,
+					Pos:           ast.Position{Offset: 24, Line: 1, Column: 24},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("struct, one conformance, missing type after comma", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations("access(all) struct S: RI, ")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedEOFExpectedTypeError{
+					Pos: ast.Position{Offset: 26, Line: 1, Column: 26},
+				},
+			},
+			errs,
 		)
 	})
 
@@ -6782,15 +6931,34 @@ func TestParseInvalidConformances(t *testing.T) {
 
 	t.Parallel()
 
-	_, errs := testParseDeclarations("struct Test: {}")
-	AssertEqualWithDiff(t,
-		[]error{
-			&MissingConformanceError{
-				Pos: ast.Position{Offset: 13, Line: 1, Column: 13},
+	t.Run("no conformances", func(t *testing.T) {
+		t.Parallel()
+
+		_, errs := testParseDeclarations("struct Test: {}")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingConformanceError{
+					Pos: ast.Position{Offset: 13, Line: 1, Column: 13},
+				},
 			},
-		},
-		errs,
-	)
+			errs,
+		)
+	})
+
+	t.Run("missing type after comma", func(t *testing.T) {
+		t.Parallel()
+
+		_, errs := testParseDeclarations("struct Test: I, {}")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingTypeAfterSeparatorError{
+					Pos:       ast.Position{Offset: 16, Line: 1, Column: 16},
+					Separator: lexer.TokenComma,
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseInvalidMember(t *testing.T) {
