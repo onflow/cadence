@@ -4390,7 +4390,7 @@ func (*MissingClosingBracketInIndexExpressionError) SecondaryError() string {
 }
 
 func (*MissingClosingBracketInIndexExpressionError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/expressions#indexing-expressions"
+	return "https://cadence-lang.org/docs/language/values-and-types/arrays#array-indexing"
 }
 
 // MissingClosingBraceInIntersectionOrDictionaryTypeError is reported when an intersection or dictionary type
