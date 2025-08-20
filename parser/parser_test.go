@@ -648,7 +648,29 @@ func TestParseBuffering(t *testing.T) {
             }`
 
 		_, err := testParseProgram(src)
-		assert.NoError(t, err)
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingEndOfParenthesizedTypeError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 283, Line: 9, Column: 36},
+							EndPos:   ast.Position{Offset: 283, Line: 9, Column: 36},
+						},
+						Type: lexer.TokenGreater,
+					},
+				},
+				&UnexpectedExpressionStartError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 289, Line: 9, Column: 42},
+							EndPos:   ast.Position{Offset: 289, Line: 9, Column: 42},
+						},
+						Type: lexer.TokenParenClose,
+					},
+				},
+			},
+			err.(Error).Errors,
+		)
 	})
 
 }
@@ -1035,6 +1057,18 @@ func TestParseGlobalReplayLimit(t *testing.T) {
 		Error{
 			Code: []byte(code),
 			Errors: []error{
+				&MissingClosingGreaterInTypeArgumentsError{
+					Pos: ast.Position{Offset: 84, Line: 1, Column: 84},
+				},
+				&MissingClosingGreaterInTypeArgumentsError{
+					Pos: ast.Position{Offset: 84, Line: 1, Column: 84},
+				},
+				&MissingClosingGreaterInTypeArgumentsError{
+					Pos: ast.Position{Offset: 84, Line: 1, Column: 84},
+				},
+				&MissingClosingGreaterInTypeArgumentsError{
+					Pos: ast.Position{Offset: 84, Line: 1, Column: 84},
+				},
 				&SyntaxError{
 					Message: fmt.Sprintf(
 						"program too ambiguous, global replay limit of %d tokens exceeded",

@@ -327,33 +327,41 @@ func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
 	case lexer.TokenComma, lexer.TokenVerticalBar:
 		separator = p.current.Type
 		p.nextSemanticToken()
+
 	case lexer.TokenParenClose:
 		// it is impossible to disambiguate at parsing time between an access that is a single
 		// conjunctive entitlement, a single disjunctive entitlement, and the name of an entitlement mapping.
 		// Luckily, however, the former two are just equivalent, and the latter we can disambiguate in the type checker.
 		return ast.NewConjunctiveEntitlementSet(entitlements), nil
+
 	default:
-		return nil, &InvalidEntitlementSeparatorError{
+		p.report(&InvalidEntitlementSeparatorError{
 			Token: p.current,
-		}
+		})
+		// Assume comma separator and continue parsing
+		separator = lexer.TokenComma
 	}
 
 	remainingEntitlements, _, err := parseNominalTypes(p, lexer.TokenParenClose, separator)
 	if err != nil {
 		return nil, err
 	}
+
 	for _, entitlement := range remainingEntitlements {
 		rejectAccessKeywordEntitlementType(p, entitlement)
 		entitlements = append(entitlements, entitlement)
 	}
 
-	var entitlementSet ast.EntitlementSet
-	if separator == lexer.TokenComma {
-		entitlementSet = ast.NewConjunctiveEntitlementSet(entitlements)
-	} else {
-		entitlementSet = ast.NewDisjunctiveEntitlementSet(entitlements)
+	switch separator {
+	case lexer.TokenComma:
+		return ast.NewConjunctiveEntitlementSet(entitlements), nil
+
+	case lexer.TokenVerticalBar:
+		return ast.NewDisjunctiveEntitlementSet(entitlements), nil
+
+	default:
+		panic(errors.NewUnexpectedError(fmt.Sprintf("unexpected separator: %s", separator)))
 	}
-	return entitlementSet, nil
 }
 
 // parseAccess parses an access modifier
@@ -476,7 +484,6 @@ func parseVariableDeclaration(
 	var typeAnnotation *ast.TypeAnnotation
 
 	if p.current.Is(lexer.TokenColon) {
-		// Skip the colon
 		p.nextSemanticToken()
 
 		typeAnnotation, err = parseTypeAnnotation(p)
@@ -489,9 +496,9 @@ func parseVariableDeclaration(
 
 	transfer := parseTransfer(p)
 	if transfer == nil {
-		return nil, &MissingTransferError{
+		p.report(&MissingTransferError{
 			Pos: p.current.StartPos,
-		}
+		})
 	}
 
 	value, err := parseExpression(p, lowestBindingPower)
@@ -977,15 +984,18 @@ func parseFieldWithVariableKind(
 
 	// Skip the `let` or `var` keyword
 	p.nextSemanticToken()
-	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, &MissingFieldNameError{
-			GotToken: p.current,
-		}
-	}
 
-	identifier := p.tokenToIdentifier(p.current)
-	// Skip the identifier
-	p.nextSemanticToken()
+	var identifier ast.Identifier
+
+	if p.current.Is(lexer.TokenIdentifier) {
+		identifier = p.tokenToIdentifier(p.current)
+		// Skip the identifier
+		p.nextSemanticToken()
+	} else {
+		p.report(&MissingFieldNameError{
+			GotToken: p.current,
+		})
+	}
 
 	if p.current.Is(lexer.TokenColon) {
 		p.nextSemanticToken()
@@ -1251,7 +1261,6 @@ func parseConformances(p *parser) ([]*ast.NominalType, error) {
 	var err error
 
 	if p.current.Is(lexer.TokenColon) {
-		// Skip the colon
 		p.next()
 
 		conformances, _, err = parseNominalTypes(p, lexer.TokenBraceOpen, lexer.TokenComma)

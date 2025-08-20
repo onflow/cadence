@@ -368,45 +368,6 @@ func (*UnexpectedEOFExpectedTypeAnnotationError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
-// UnexpectedEOFExpectedTokenError is reported when the end of the program is reached unexpectedly,
-// but a specific token was expected.
-type UnexpectedEOFExpectedTokenError struct {
-	ExpectedToken lexer.TokenType
-	Pos           ast.Position
-}
-
-var _ ParseError = &UnexpectedEOFExpectedTokenError{}
-var _ errors.UserError = &UnexpectedEOFExpectedTokenError{}
-var _ errors.SecondaryError = &UnexpectedEOFExpectedTokenError{}
-var _ errors.HasDocumentationLink = &UnexpectedEOFExpectedTokenError{}
-
-func (*UnexpectedEOFExpectedTokenError) isParseError() {}
-
-func (*UnexpectedEOFExpectedTokenError) IsUserError() {}
-
-func (e *UnexpectedEOFExpectedTokenError) StartPosition() ast.Position {
-	return e.Pos
-}
-
-func (e *UnexpectedEOFExpectedTokenError) EndPosition(_ common.MemoryGauge) ast.Position {
-	return e.Pos
-}
-
-func (e *UnexpectedEOFExpectedTokenError) Error() string {
-	return fmt.Sprintf(
-		"unexpected end of input, expected %s",
-		e.ExpectedToken,
-	)
-}
-
-func (*UnexpectedEOFExpectedTokenError) SecondaryError() string {
-	return "check for incomplete expressions, missing tokens, or unterminated strings/comments"
-}
-
-func (*UnexpectedEOFExpectedTokenError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/syntax"
-}
-
 // StatementSeparationError is reported when two statements on the same line
 // are not separated by a semicolon.
 type StatementSeparationError struct {
@@ -543,7 +504,8 @@ func (e *MissingStartOfParameterListError) Error() string {
 }
 
 func (*MissingStartOfParameterListError) SecondaryError() string {
-	return "function parameters must be enclosed in parentheses"
+	return "function parameters must be enclosed in parentheses (`(...)`); " +
+		"add the missing opening parenthesis"
 }
 
 func (*MissingStartOfParameterListError) DocumentationLink() string {
@@ -933,6 +895,40 @@ func (*MissingClosingGreaterInTypeParameterListError) SecondaryError() string {
 }
 
 func (*MissingClosingGreaterInTypeParameterListError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+// MissingClosingGreaterInTypeArgumentsError is reported when a type arguments is missing a closing angle bracket.
+type MissingClosingGreaterInTypeArgumentsError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &MissingClosingGreaterInTypeArgumentsError{}
+var _ errors.UserError = &MissingClosingGreaterInTypeArgumentsError{}
+var _ errors.SecondaryError = &MissingClosingGreaterInTypeArgumentsError{}
+var _ errors.HasDocumentationLink = &MissingClosingGreaterInTypeArgumentsError{}
+
+func (*MissingClosingGreaterInTypeArgumentsError) isParseError() {}
+
+func (*MissingClosingGreaterInTypeArgumentsError) IsUserError() {}
+
+func (e *MissingClosingGreaterInTypeArgumentsError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *MissingClosingGreaterInTypeArgumentsError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*MissingClosingGreaterInTypeArgumentsError) Error() string {
+	return "missing `>` at end of type arguments"
+}
+
+func (*MissingClosingGreaterInTypeArgumentsError) SecondaryError() string {
+	return "type arguments must be enclosed in angle brackets (`<...>`)"
+}
+
+func (*MissingClosingGreaterInTypeArgumentsError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
@@ -4062,4 +4058,306 @@ func (e *MissingClosingBraceError) SecondaryError() string {
 func (*MissingClosingBraceError) DocumentationLink() string {
 	// TODO: improve this link to point to the specific page
 	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+// MissingEndOfParenthesizedTypeError is reported when a parenthesized type is missing a closing parenthesis.
+type MissingEndOfParenthesizedTypeError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingEndOfParenthesizedTypeError{}
+var _ errors.UserError = &MissingEndOfParenthesizedTypeError{}
+var _ errors.SecondaryError = &MissingEndOfParenthesizedTypeError{}
+var _ errors.HasDocumentationLink = &MissingEndOfParenthesizedTypeError{}
+
+func (*MissingEndOfParenthesizedTypeError) isParseError() {}
+
+func (*MissingEndOfParenthesizedTypeError) IsUserError() {}
+
+func (e *MissingEndOfParenthesizedTypeError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingEndOfParenthesizedTypeError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingEndOfParenthesizedTypeError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf("expected %s at end of parenthesized type", lexer.TokenParenClose),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingEndOfParenthesizedTypeError) SecondaryError() string {
+	return "parenthesized types must be properly closed with a closing parenthesis"
+}
+
+func (*MissingEndOfParenthesizedTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+// MissingClosingBracketInArrayTypeError is reported when an array type is missing a closing bracket.
+type MissingClosingBracketInArrayTypeError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingClosingBracketInArrayTypeError{}
+var _ errors.UserError = &MissingClosingBracketInArrayTypeError{}
+var _ errors.SecondaryError = &MissingClosingBracketInArrayTypeError{}
+var _ errors.HasDocumentationLink = &MissingClosingBracketInArrayTypeError{}
+
+func (*MissingClosingBracketInArrayTypeError) isParseError() {}
+
+func (*MissingClosingBracketInArrayTypeError) IsUserError() {}
+
+func (e *MissingClosingBracketInArrayTypeError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingClosingBracketInArrayTypeError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingClosingBracketInArrayTypeError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf("expected %s at end of array type", lexer.TokenBracketClose),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingClosingBracketInArrayTypeError) SecondaryError() string {
+	return "array types must be properly closed with a closing bracket (])"
+}
+
+func (*MissingClosingBracketInArrayTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/values-and-types/arrays#array-types"
+}
+
+// MissingClosingBraceInIntersectionOrDictionaryTypeError is reported when an intersection or dictionary type
+// is missing a closing brace.
+type MissingClosingBraceInIntersectionOrDictionaryTypeError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &MissingClosingBraceInIntersectionOrDictionaryTypeError{}
+var _ errors.UserError = &MissingClosingBraceInIntersectionOrDictionaryTypeError{}
+var _ errors.SecondaryError = &MissingClosingBraceInIntersectionOrDictionaryTypeError{}
+var _ errors.HasDocumentationLink = &MissingClosingBraceInIntersectionOrDictionaryTypeError{}
+
+func (*MissingClosingBraceInIntersectionOrDictionaryTypeError) isParseError() {}
+
+func (*MissingClosingBraceInIntersectionOrDictionaryTypeError) IsUserError() {}
+
+func (e *MissingClosingBraceInIntersectionOrDictionaryTypeError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *MissingClosingBraceInIntersectionOrDictionaryTypeError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (*MissingClosingBraceInIntersectionOrDictionaryTypeError) Error() string {
+	return fmt.Sprintf(
+		"missing %s at end of intersection type or dictionary type",
+		lexer.TokenBraceClose,
+	)
+}
+
+func (*MissingClosingBraceInIntersectionOrDictionaryTypeError) SecondaryError() string {
+	return "intersection types and dictionary type must be properly closed with a closing brace (})"
+}
+
+func (*MissingClosingBraceInIntersectionOrDictionaryTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/types-and-type-system/intersection-types"
+}
+
+// MissingClosingParenInAuthError is reported when an authorization is missing a closing parenthesis.
+type MissingClosingParenInAuthError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingClosingParenInAuthError{}
+var _ errors.UserError = &MissingClosingParenInAuthError{}
+var _ errors.SecondaryError = &MissingClosingParenInAuthError{}
+var _ errors.HasDocumentationLink = &MissingClosingParenInAuthError{}
+
+func (*MissingClosingParenInAuthError) isParseError() {}
+
+func (*MissingClosingParenInAuthError) IsUserError() {}
+
+func (e *MissingClosingParenInAuthError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingClosingParenInAuthError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingClosingParenInAuthError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf("expected %s at end of authorization", lexer.TokenParenClose),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingClosingParenInAuthError) SecondaryError() string {
+	return "the authorization must be properly closed with a closing parenthesis (`auth(...)`)"
+}
+
+func (*MissingClosingParenInAuthError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/references#authorized-references"
+}
+
+// MissingAmpersandInAuthReferenceError is reported when an authorized reference is missing an ampersand.
+type MissingAmpersandInAuthReferenceError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingAmpersandInAuthReferenceError{}
+var _ errors.UserError = &MissingAmpersandInAuthReferenceError{}
+var _ errors.SecondaryError = &MissingAmpersandInAuthReferenceError{}
+var _ errors.HasDocumentationLink = &MissingAmpersandInAuthReferenceError{}
+
+func (*MissingAmpersandInAuthReferenceError) isParseError() {}
+
+func (*MissingAmpersandInAuthReferenceError) IsUserError() {}
+
+func (e *MissingAmpersandInAuthReferenceError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingAmpersandInAuthReferenceError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingAmpersandInAuthReferenceError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf("expected %s in authorized reference", lexer.TokenAmpersand),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingAmpersandInAuthReferenceError) SecondaryError() string {
+	return "authorized references must contain an ampersand (&); insert the missing ampersand"
+}
+
+func (*MissingAmpersandInAuthReferenceError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/references#authorized-references"
+}
+
+// MissingOpeningParenInNominalTypeInvocationError is reported when a nominal type invocation
+// is missing an opening parenthesis.
+type MissingOpeningParenInNominalTypeInvocationError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingOpeningParenInNominalTypeInvocationError{}
+var _ errors.UserError = &MissingOpeningParenInNominalTypeInvocationError{}
+var _ errors.SecondaryError = &MissingOpeningParenInNominalTypeInvocationError{}
+var _ errors.HasDocumentationLink = &MissingOpeningParenInNominalTypeInvocationError{}
+
+func (*MissingOpeningParenInNominalTypeInvocationError) isParseError() {}
+
+func (*MissingOpeningParenInNominalTypeInvocationError) IsUserError() {}
+
+func (e *MissingOpeningParenInNominalTypeInvocationError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingOpeningParenInNominalTypeInvocationError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingOpeningParenInNominalTypeInvocationError) Error() string {
+	return expectedButGotToken(
+		"expected '(' to construct an instance of the type",
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingOpeningParenInNominalTypeInvocationError) SecondaryError() string {
+	return "an instance of the nominal type is expected here; call the constructor by adding comma-separated arguments in parentheses `(...)`"
+}
+
+func (*MissingOpeningParenInNominalTypeInvocationError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+// MissingOpeningParenInFunctionTypeError is reported when a function type parameter list
+// is missing a opening parenthesis.
+type MissingOpeningParenInFunctionTypeError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingOpeningParenInFunctionTypeError{}
+var _ errors.UserError = &MissingOpeningParenInFunctionTypeError{}
+var _ errors.SecondaryError = &MissingOpeningParenInFunctionTypeError{}
+var _ errors.HasDocumentationLink = &MissingOpeningParenInFunctionTypeError{}
+
+func (*MissingOpeningParenInFunctionTypeError) isParseError() {}
+
+func (*MissingOpeningParenInFunctionTypeError) IsUserError() {}
+
+func (e *MissingOpeningParenInFunctionTypeError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingOpeningParenInFunctionTypeError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingOpeningParenInFunctionTypeError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf("expected %s at start of function type parameter list", lexer.TokenParenOpen),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingOpeningParenInFunctionTypeError) SecondaryError() string {
+	return "function type parameter lists must be wrapped in parentheses (`(...)`); " +
+		"add the missing opening parenthesis (`(`)"
+}
+
+func (*MissingOpeningParenInFunctionTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/functions#function-types"
+}
+
+// MissingClosingParenInFunctionTypeError is reported when a function type parameter list
+// is missing a opening parenthesis.
+type MissingClosingParenInFunctionTypeError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &MissingClosingParenInFunctionTypeError{}
+var _ errors.UserError = &MissingClosingParenInFunctionTypeError{}
+var _ errors.SecondaryError = &MissingClosingParenInFunctionTypeError{}
+var _ errors.HasDocumentationLink = &MissingClosingParenInFunctionTypeError{}
+
+func (*MissingClosingParenInFunctionTypeError) isParseError() {}
+
+func (*MissingClosingParenInFunctionTypeError) IsUserError() {}
+
+func (e *MissingClosingParenInFunctionTypeError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *MissingClosingParenInFunctionTypeError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *MissingClosingParenInFunctionTypeError) Error() string {
+	return expectedButGotToken(
+		fmt.Sprintf("expected %s at start of function type parameter list", lexer.TokenParenClose),
+		e.GotToken.Type,
+	)
+}
+
+func (*MissingClosingParenInFunctionTypeError) SecondaryError() string {
+	return "function type parameter lists must be wrapped in parentheses (`(...)`); " +
+		"add the missing closing parenthesis (`)`)"
+}
+
+func (*MissingClosingParenInFunctionTypeError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/functions#function-types"
 }

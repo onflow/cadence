@@ -153,8 +153,17 @@ func defineParenthesizedTypes() {
 		if err != nil {
 			return nil, err
 		}
+
 		p.skipSpaceAndComments()
-		_, err = p.mustOne(lexer.TokenParenClose)
+
+		if p.current.Is(lexer.TokenParenClose) {
+			p.next()
+		} else {
+			p.report(&MissingEndOfParenthesizedTypeError{
+				GotToken: p.current,
+			})
+		}
+
 		return innerType, err
 	})
 }
@@ -211,7 +220,6 @@ func defineArrayType() {
 			var size *ast.IntegerExpression
 
 			if p.current.Is(lexer.TokenSemicolon) {
-				// Skip the semicolon
 				p.nextSemanticToken()
 
 				sizeExpression, err := parseExpression(p, lowestBindingPower)
@@ -231,9 +239,13 @@ func defineArrayType() {
 
 			p.skipSpaceAndComments()
 
-			endToken, err := p.mustOne(lexer.TokenBracketClose)
-			if err != nil {
-				return nil, err
+			endToken := p.current
+			if p.current.Is(lexer.TokenBracketClose) {
+				p.next()
+			} else {
+				p.report(&MissingClosingBracketInArrayTypeError{
+					GotToken: p.current,
+				})
 			}
 
 			typeRange := ast.NewRange(
@@ -427,12 +439,12 @@ func defineIntersectionOrDictionaryType() {
 						return nil, &UnexpectedEOFExpectedTypeError{
 							Pos: p.current.StartPos,
 						}
-					} else {
-						return nil, &UnexpectedEOFExpectedTokenError{
-							ExpectedToken: lexer.TokenBraceClose,
-							Pos:           p.current.StartPos,
-						}
 					}
+
+					p.report(&MissingClosingBraceInIntersectionOrDictionaryTypeError{
+						Pos: p.current.StartPos,
+					})
+					atEnd = true
 
 				default:
 					if !expectType {
@@ -590,12 +602,10 @@ func parseNominalTypes(
 				return nil, ast.EmptyPosition, &UnexpectedEOFExpectedTypeError{
 					Pos: p.current.StartPos,
 				}
-			} else {
-				return nil, ast.EmptyPosition, &UnexpectedEOFExpectedTokenError{
-					ExpectedToken: endTokenType,
-					Pos:           p.current.StartPos,
-				}
 			}
+			atEnd = true
+			// NOTE: not reporting an error here,
+			// caller of parseNominalTypes is responsible for it
 
 		default:
 			if !expectType {
@@ -617,18 +627,6 @@ func parseNominalTypes(
 		}
 	}
 
-	return
-}
-
-func parseParameterTypeAnnotations(p *parser) (typeAnnotations []*ast.TypeAnnotation, err error) {
-
-	p.skipSpaceAndComments()
-	_, err = p.mustOne(lexer.TokenParenOpen)
-	if err != nil {
-		return
-	}
-
-	typeAnnotations, err = parseCommaSeparatedTypeAnnotations(p, lexer.TokenParenClose)
 	return
 }
 
@@ -726,7 +724,6 @@ func parseTypeAnnotation(p *parser) (*ast.TypeAnnotation, error) {
 
 	isResource := false
 	if p.current.Is(lexer.TokenAt) {
-		// Skip the `@`
 		p.next()
 		isResource = true
 	}
@@ -777,9 +774,14 @@ func parseNominalTypeInvocationRemainder(p *parser) (*ast.InvocationExpression, 
 	}
 
 	p.skipSpaceAndComments()
-	parenOpenToken, err := p.mustOne(lexer.TokenParenOpen)
-	if err != nil {
-		return nil, err
+
+	parenOpenToken := p.current
+	if p.current.Is(lexer.TokenParenOpen) {
+		p.next()
+	} else {
+		p.report(&MissingOpeningParenInNominalTypeInvocationError{
+			GotToken: p.current,
+		})
 	}
 
 	argumentsStartPos := parenOpenToken.EndPos
@@ -854,12 +856,10 @@ func parseCommaSeparatedTypeAnnotations(
 				return nil, &UnexpectedEOFExpectedTypeAnnotationError{
 					Pos: p.current.StartPos,
 				}
-			} else {
-				return nil, &UnexpectedEOFExpectedTokenError{
-					ExpectedToken: endTokenType,
-					Pos:           p.current.StartPos,
-				}
 			}
+			atEnd = true
+			// NOTE: not reporting an error here,
+			// caller of parseCommaSeparatedTypeAnnotations is responsible for it
 
 		default:
 			if !expectTypeAnnotation {
@@ -896,9 +896,13 @@ func defineInstantiationType() {
 				return nil, err
 			}
 
-			endToken, err := p.mustOne(lexer.TokenGreater)
-			if err != nil {
-				return nil, err
+			endToken := p.current
+			if p.current.Is(lexer.TokenGreater) {
+				p.next()
+			} else {
+				p.report(&MissingClosingGreaterInTypeArgumentsError{
+					Pos: p.current.StartPos,
+				})
 			}
 
 			return ast.NewInstantiationType(
@@ -940,9 +944,12 @@ func defineIdentifierTypes() {
 
 				p.skipSpaceAndComments()
 
-				_, err := p.mustOne(lexer.TokenAmpersand)
-				if err != nil {
-					return nil, err
+				if p.current.Is(lexer.TokenAmpersand) {
+					p.next()
+				} else {
+					p.report(&MissingAmpersandInAuthReferenceError{
+						GotToken: p.current,
+					})
 				}
 
 				right, err := parseType(p, typeLeftBindingPowerReference)
@@ -1009,9 +1016,12 @@ func parseAuthorization(p *parser) (auth ast.Authorization, err error) {
 		auth = entitlements
 	}
 
-	_, err = p.mustOne(lexer.TokenParenClose)
-	if err != nil {
-		return nil, err
+	if p.current.Is(lexer.TokenParenClose) {
+		p.next()
+	} else {
+		p.report(&MissingClosingParenInAuthError{
+			GotToken: p.current,
+		})
 	}
 
 	return auth, nil
@@ -1024,19 +1034,35 @@ func parseAuthorization(p *parser) (auth ast.Authorization, err error) {
 //	'(' ( type ( ',' type )* )? ')'
 //	( ':' type )?
 func parseFunctionType(p *parser, startPos ast.Position, purity ast.FunctionPurity) (ast.Type, error) {
-	parameterTypeAnnotations, err := parseParameterTypeAnnotations(p)
+
+	p.skipSpaceAndComments()
+
+	if p.current.Is(lexer.TokenParenOpen) {
+		p.nextSemanticToken()
+	} else {
+		p.report(&MissingOpeningParenInFunctionTypeError{
+			GotToken: p.current,
+		})
+	}
+
+	parameterTypeAnnotations, err := parseCommaSeparatedTypeAnnotations(p, lexer.TokenParenClose)
 	if err != nil {
 		return nil, err
 	}
 
 	endPos := p.current.EndPos
-	// skip the closing parenthesis of the argument tuple
-	p.nextSemanticToken()
+
+	if p.current.Is(lexer.TokenParenClose) {
+		p.nextSemanticToken()
+	} else {
+		p.report(&MissingClosingParenInFunctionTypeError{
+			GotToken: p.current,
+		})
+	}
 
 	var returnTypeAnnotation *ast.TypeAnnotation
 	// return type annotation is optional in function types too
 	if p.current.Is(lexer.TokenColon) {
-		// skip the colon
 		p.nextSemanticToken()
 
 		returnTypeAnnotation, err = parseTypeAnnotation(p)

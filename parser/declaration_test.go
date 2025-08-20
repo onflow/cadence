@@ -2421,7 +2421,7 @@ func TestParseAccess(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := parse("access ( foo bar )")
+		_, errs := parse("access ( foo bar )")
 		AssertEqualWithDiff(t,
 			[]error{
 				&InvalidEntitlementSeparatorError{
@@ -2436,18 +2436,13 @@ func TestParseAccess(t *testing.T) {
 			},
 			errs,
 		)
-
-		AssertEqualWithDiff(t,
-			ast.AccessNotSpecified,
-			result,
-		)
 	})
 
 	t.Run("access, invalid separator", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := parse("access ( foo & bar )")
+		_, errs := parse("access ( foo & bar )")
 		AssertEqualWithDiff(t,
 			[]error{
 				&InvalidEntitlementSeparatorError{
@@ -2459,13 +2454,22 @@ func TestParseAccess(t *testing.T) {
 						Type: lexer.TokenAmpersand,
 					},
 				},
+				// & bar is parsed as a reference type
+				&NonNominalTypeError{
+					Pos: ast.Position{Offset: 13, Line: 1, Column: 13},
+					Type: &ast.ReferenceType{
+						Type: &ast.NominalType{
+							NestedIdentifiers: []ast.Identifier{},
+							Identifier: ast.Identifier{
+								Identifier: "bar",
+								Pos:        ast.Position{Offset: 15, Line: 1, Column: 15},
+							},
+						},
+						StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+					},
+				},
 			},
 			errs,
-		)
-
-		AssertEqualWithDiff(t,
-			ast.AccessNotSpecified,
-			result,
 		)
 	})
 
@@ -3673,9 +3677,25 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		_, errs := testParseDeclarations("access(all) struct S: RI")
 		AssertEqualWithDiff(t,
 			[]error{
-				&UnexpectedEOFExpectedTokenError{
-					ExpectedToken: lexer.TokenBraceOpen,
-					Pos:           ast.Position{Offset: 24, Line: 1, Column: 24},
+				&DeclarationMissingOpeningBraceError{
+					Kind: common.DeclarationKindStructure,
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 24, Line: 1, Column: 24},
+							EndPos:   ast.Position{Offset: 24, Line: 1, Column: 24},
+						},
+						Type: lexer.TokenEOF,
+					},
+				},
+				&DeclarationMissingClosingBraceError{
+					Kind: common.DeclarationKindStructure,
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 24, Line: 1, Column: 24},
+							EndPos:   ast.Position{Offset: 24, Line: 1, Column: 24},
+						},
+						Type: lexer.TokenEOF,
+					},
 				},
 			},
 			errs,
@@ -6653,11 +6673,23 @@ func TestParseInvalidEmitConditionNonInvocation(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "expected token '('",
-					Pos:           ast.Position{Offset: 91, Line: 5, Column: 14},
-					Secondary:     "check for missing punctuation, operators, or syntax elements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
+				&MissingOpeningParenInNominalTypeInvocationError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 91, Line: 5, Column: 14},
+							EndPos:   ast.Position{Offset: 91, Line: 5, Column: 14},
+						},
+						Type: lexer.TokenBraceClose,
+					},
+				},
+				&UnexpectedExpressionStartError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 91, Line: 5, Column: 14},
+							EndPos:   ast.Position{Offset: 91, Line: 5, Column: 14},
+						},
+						Type: lexer.TokenBraceClose,
+					},
 				},
 			},
 			errs,
@@ -6678,11 +6710,23 @@ func TestParseInvalidEmitConditionNonInvocation(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "expected token '('",
-					Pos:           ast.Position{Offset: 92, Line: 5, Column: 14},
-					Secondary:     "check for missing punctuation, operators, or syntax elements",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
+				&MissingOpeningParenInNominalTypeInvocationError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 92, Line: 5, Column: 14},
+							EndPos:   ast.Position{Offset: 92, Line: 5, Column: 14},
+						},
+						Type: lexer.TokenBraceClose,
+					},
+				},
+				&UnexpectedExpressionStartError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 92, Line: 5, Column: 14},
+							EndPos:   ast.Position{Offset: 92, Line: 5, Column: 14},
+						},
+						Type: lexer.TokenBraceClose,
+					},
 				},
 			},
 			errs,

@@ -394,9 +394,10 @@ func parseFunctionParameterListAndRest(
 
 	current := p.current
 	cursor := p.tokens.Cursor()
+
 	p.skipSpaceAndComments()
+
 	if p.current.Is(lexer.TokenColon) {
-		// Skip the colon
 		p.nextSemanticToken()
 
 		returnTypeAnnotation, err = parseTypeAnnotation(p)
