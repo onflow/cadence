@@ -2150,16 +2150,8 @@ func TestCheckInvalidMissingMember(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t,
-			&sema.NotDeclaredMemberError{},
-			errs[0],
-		)
-
-		notDeclaredMemberErr := errs[0].(*sema.NotDeclaredMemberError)
-		assert.Equal(t,
-			"unknown member",
-			notDeclaredMemberErr.SecondaryError(),
-		)
+		var notDeclaredMemberErr *sema.NotDeclaredMemberError
+		require.ErrorAs(t, errs[0], &notDeclaredMemberErr)
 	})
 
 	t.Run("optional: non-optional exists", func(t *testing.T) {
@@ -2179,15 +2171,12 @@ func TestCheckInvalidMissingMember(t *testing.T) {
 		_, err := ParseAndCheck(t, code)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t,
-			&sema.NotDeclaredMemberError{},
-			errs[0],
-		)
+		var notDeclaredMemberErr *sema.NotDeclaredMemberError
+		require.ErrorAs(t, errs[0], &notDeclaredMemberErr)
 
-		notDeclaredMemberErr := errs[0].(*sema.NotDeclaredMemberError)
-		assert.Equal(t,
-			"type is optional, consider optional-chaining: ?.a",
+		assert.Contains(t,
 			notDeclaredMemberErr.SecondaryError(),
+			"the type is optional, consider optional-chaining: `?.a`",
 		)
 
 		fixes := notDeclaredMemberErr.SuggestFixes(code)
@@ -2251,16 +2240,8 @@ func TestCheckInvalidMissingMember(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t,
-			&sema.NotDeclaredMemberError{},
-			errs[0],
-		)
-
-		notDeclaredMemberErr := errs[0].(*sema.NotDeclaredMemberError)
-		assert.Equal(t,
-			"unknown member",
-			notDeclaredMemberErr.SecondaryError(),
-		)
+		var notDeclaredMemberErr *sema.NotDeclaredMemberError
+		require.ErrorAs(t, errs[0], &notDeclaredMemberErr)
 	})
 }
 

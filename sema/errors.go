@@ -1098,7 +1098,7 @@ func (e *MissingAccessModifierError) EndPosition(common.MemoryGauge) ast.Positio
 
 func (*MissingAccessModifierError) SecondaryError() string {
 	return "an access modifier is required for this declaration; " +
-		"add an access modifier, like `all`, `account`, `contract`, or `self`"
+		"add an access modifier, like e.g. `access(all)` or `access(self)`"
 }
 
 func (*MissingAccessModifierError) DocumentationLink() string {
@@ -1312,7 +1312,7 @@ func (e *InvalidDeclarationError) SecondaryError() string {
 	return fmt.Sprintf(
 		"only function and variable declarations are allowed in this scope, "+
 			"%s declarations must be at the top level or within composite types; "+
-			"move the declaration to a valid scope",
+			"move this declaration to a valid scope",
 		e.Kind.Name(),
 	)
 }
@@ -4749,7 +4749,7 @@ func (e *InvalidNonEnumCaseError) Error() string {
 }
 
 func (*InvalidNonEnumCaseError) SecondaryError() string {
-	return "move the declaration outside the enum or convert it to an enum case"
+	return "move this declaration outside the enum or convert it to an enum case"
 }
 
 func (*InvalidNonEnumCaseError) DocumentationLink() string {
@@ -4779,7 +4779,7 @@ func (e *InvalidTopLevelDeclarationError) Error() string {
 }
 
 func (*InvalidTopLevelDeclarationError) SecondaryError() string {
-	return "move the declaration to a contract"
+	return "move this declaration to a contract"
 }
 
 // InvalidSelfInvalidationError
