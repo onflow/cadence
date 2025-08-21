@@ -2723,7 +2723,8 @@ func (*MissingReturnStatementError) Error() string {
 }
 
 func (*MissingReturnStatementError) SecondaryError() string {
-	return "not all code paths return a value; add a return statement to return a value"
+	return "not all code paths return a value; " +
+		"add a return statement to return a value"
 }
 
 func (*MissingReturnStatementError) DocumentationLink() string {
@@ -3589,7 +3590,8 @@ func (e *EmitNonEventError) Error() string {
 }
 
 func (*EmitNonEventError) SecondaryError() string {
-	return "only event types can be emitted; consider declaring the type as an event"
+	return "only event types can be emitted; " +
+		"consider declaring the type as an event"
 }
 
 func (*EmitNonEventError) DocumentationLink() string {
@@ -5009,8 +5011,6 @@ type InvalidMoveError struct {
 
 var _ SemanticError = &InvalidMoveError{}
 var _ errors.UserError = &InvalidMoveError{}
-var _ errors.SecondaryError = &InvalidMoveError{}
-var _ errors.HasDocumentationLink = &InvalidMoveError{}
 
 func (*InvalidMoveError) isSemanticError() {}
 
@@ -5022,15 +5022,6 @@ func (e *InvalidMoveError) Error() string {
 		e.DeclarationKind.Name(),
 		e.Name,
 	)
-}
-
-func (*InvalidMoveError) SecondaryError() string {
-	return "only resource-typed values can be moved; " +
-		"use the copy (`=`) operator for non-resource types"
-}
-
-func (*InvalidMoveError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/operators/assign-move-force-swap"
 }
 
 func (e *InvalidMoveError) StartPosition() ast.Position {
