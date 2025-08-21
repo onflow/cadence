@@ -31,16 +31,16 @@ func init() {
 
 	typeName := commons.TypeQualifier(sema.CharacterType)
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValue(
 			sema.ToStringFunctionName,
 			sema.ToStringFunctionType,
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				address := arguments[ReceiverIndex].(interpreter.CharacterValue)
+			func(context *Context, _ []bbq.StaticType, receiver Value, _ ...Value) Value {
+				character := receiver.(interpreter.CharacterValue)
 				return interpreter.CharacterValueToString(
 					context,
-					address,
+					character,
 				)
 			},
 		),

@@ -1894,7 +1894,7 @@ func TestParseMemberExpression(t *testing.T) {
 						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
 					},
 				},
-				AccessPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+				AccessEndPos: ast.Position{Offset: 1, Line: 1, Column: 1},
 				Identifier: ast.Identifier{
 					Identifier: "n",
 					Pos:        ast.Position{Offset: 2, Line: 1, Column: 2},
@@ -1919,7 +1919,7 @@ func TestParseMemberExpression(t *testing.T) {
 						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
 					},
 				},
-				AccessPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+				AccessEndPos: ast.Position{Offset: 2, Line: 1, Column: 2},
 				Identifier: ast.Identifier{
 					Identifier: "n",
 					Pos:        ast.Position{Offset: 3, Line: 1, Column: 3},
@@ -1936,9 +1936,14 @@ func TestParseMemberExpression(t *testing.T) {
 		result, errs := testParseExpression("f.")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected member name, got EOF",
-					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
+				&MemberAccessMissingNameError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+							EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+						},
+						Type: lexer.TokenEOF,
+					},
 				},
 			},
 			errs,
@@ -1952,9 +1957,33 @@ func TestParseMemberExpression(t *testing.T) {
 						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
 					},
 				},
-				AccessPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+				AccessEndPos: ast.Position{Offset: 1, Line: 1, Column: 1},
 			},
 			result,
+		)
+	})
+
+	t.Run("not a name", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("f.-")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MemberAccessMissingNameError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+							EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+						},
+						Type: lexer.TokenMinus,
+					},
+				},
+				UnexpectedEOFError{
+					Pos: ast.Position{Offset: 3, Line: 1, Column: 3},
+				},
+			},
+			errs,
 		)
 	})
 
@@ -1975,7 +2004,7 @@ func TestParseMemberExpression(t *testing.T) {
 							Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
 						},
 					},
-					AccessPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+					AccessEndPos: ast.Position{Offset: 1, Line: 1, Column: 1},
 					Identifier: ast.Identifier{
 						Identifier: "n",
 						Pos:        ast.Position{Offset: 2, Line: 1, Column: 2},
@@ -2021,7 +2050,7 @@ func TestParseMemberExpression(t *testing.T) {
 							Pos:        ast.Position{Offset: 4, Line: 1, Column: 4},
 						},
 					},
-					AccessPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+					AccessEndPos: ast.Position{Offset: 5, Line: 1, Column: 5},
 					Identifier: ast.Identifier{
 						Identifier: "n",
 						Pos:        ast.Position{Offset: 6, Line: 1, Column: 6},
@@ -2048,7 +2077,7 @@ func TestParseMemberExpression(t *testing.T) {
 						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
 					},
 				},
-				AccessPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+				AccessEndPos: ast.Position{Offset: 2, Line: 1, Column: 2},
 				Identifier: ast.Identifier{
 					Identifier: "n",
 					Pos:        ast.Position{Offset: 3, Line: 1, Column: 3},
@@ -2092,7 +2121,7 @@ func TestParseMemberExpression(t *testing.T) {
 							Identifier: "c",
 							Pos:        ast.Position{Offset: 21, Line: 2, Column: 20},
 						},
-						AccessPos: ast.Position{Offset: 20, Line: 2, Column: 19},
+						AccessEndPos: ast.Position{Offset: 20, Line: 2, Column: 19},
 					},
 					StartPos: ast.Position{Offset: 11, Line: 2, Column: 10},
 				},
@@ -2214,13 +2243,8 @@ func TestParseBlockComment(t *testing.T) {
 						Column: 33,
 					},
 				},
-				&SyntaxError{
-					Message: "unexpected end of program",
-					Pos: ast.Position{
-						Offset: 33,
-						Line:   1,
-						Column: 33,
-					},
+				UnexpectedEOFError{
+					Pos: ast.Position{Offset: 33, Line: 1, Column: 33},
 				},
 			},
 			errs,
@@ -2432,13 +2456,8 @@ func TestParseReference(t *testing.T) {
 		_, errs := testParseExpression(code)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected end of program",
-					Pos: ast.Position{
-						Offset: 13,
-						Line:   1,
-						Column: 13,
-					},
+				UnexpectedEOFError{
+					Pos: ast.Position{Offset: 13, Line: 1, Column: 13},
 				},
 			},
 			errs,
@@ -2811,7 +2830,7 @@ func TestParseForceExpression(t *testing.T) {
 									Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
 								},
 							},
-							AccessPos: ast.Position{Line: 2, Column: 0, Offset: 2},
+							AccessEndPos: ast.Position{Line: 2, Column: 0, Offset: 2},
 							Identifier: ast.Identifier{
 								Identifier: "y",
 								Pos:        ast.Position{Line: 2, Column: 1, Offset: 3},
@@ -2829,12 +2848,17 @@ func TestParseForceExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseStatements("x. y")
+		const code = "x.  y"
+
+		result, errs := testParseStatements(code)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "invalid whitespace after '.'",
-					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
+				&WhitespaceAfterMemberAccessError{
+					OperatorTokenType: lexer.TokenDot,
+					WhitespaceRange: ast.Range{
+						StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+						EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+					},
 				},
 			},
 			errs,
@@ -2850,15 +2874,114 @@ func TestParseForceExpression(t *testing.T) {
 								Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
 							},
 						},
-						AccessPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						AccessEndPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 						Identifier: ast.Identifier{
 							Identifier: "y",
-							Pos:        ast.Position{Line: 1, Column: 3, Offset: 3},
+							Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
 						},
 					},
 				},
 			},
 			result,
+		)
+
+		var whitespaceError *WhitespaceAfterMemberAccessError
+		require.ErrorAs(t, errs[0], &whitespaceError)
+
+		fixes := whitespaceError.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove whitespace",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+								EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			`x.y`,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+	})
+
+	t.Run("member access, optional, whitespace", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "x?.  y"
+
+		result, errs := testParseStatements(code)
+		AssertEqualWithDiff(t,
+			[]error{
+				&WhitespaceAfterMemberAccessError{
+					OperatorTokenType: lexer.TokenQuestionMarkDot,
+					WhitespaceRange: ast.Range{
+						StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+						EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+					},
+				},
+			},
+			errs,
+		)
+
+		AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.ExpressionStatement{
+					Expression: &ast.MemberExpression{
+						Expression: &ast.IdentifierExpression{
+							Identifier: ast.Identifier{
+								Identifier: "x",
+								Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+							},
+						},
+						Optional:     true,
+						AccessEndPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+						Identifier: ast.Identifier{
+							Identifier: "y",
+							Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
+						},
+					},
+				},
+			},
+			result,
+		)
+
+		var whitespaceError *WhitespaceAfterMemberAccessError
+		require.ErrorAs(t, errs[0], &whitespaceError)
+
+		fixes := whitespaceError.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove whitespace",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			`x?.y`,
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 }
@@ -2976,9 +3099,15 @@ func TestParseAttach(t *testing.T) {
 		_, errs := testParseExpression("attach E() to r with (X)")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 16, Line: 1, Column: 16},
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 16, Line: 1, Column: 16},
+							EndPos:   ast.Position{Offset: 19, Line: 1, Column: 19},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
@@ -3052,9 +3181,8 @@ func TestParseAttach(t *testing.T) {
 		_, errs := testParseExpression("attach E() to")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected end of program",
-					Pos:     ast.Position{Offset: 13, Line: 1, Column: 13},
+				UnexpectedEOFError{
+					Pos: ast.Position{Offset: 13, Line: 1, Column: 13},
 				},
 			},
 			errs,
@@ -3215,9 +3343,15 @@ func TestParseFunctionExpression(t *testing.T) {
 		_, errs := testParseExpression("view for (): X { }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token: identifier",
-					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						SpaceOrError: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+							EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
@@ -4621,6 +4755,13 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 			},
 			errs,
 		)
+
+		require.Len(t, errs, 1)
+
+		var restrictedTypeErr *RestrictedTypeError
+		require.ErrorAs(t, errs[0], &restrictedTypeErr)
+
+		assert.NotEmpty(t, restrictedTypeErr.MigrationNote())
 	})
 }
 
@@ -5015,7 +5156,7 @@ func TestParseOptionalMemberExpression(t *testing.T) {
 						Identifier: "c",
 						Pos:        ast.Position{Offset: 17, Line: 2, Column: 16},
 					},
-					AccessPos: ast.Position{Offset: 16, Line: 2, Column: 15},
+					AccessEndPos: ast.Position{Offset: 16, Line: 2, Column: 15},
 				},
 				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
 			},
@@ -6201,6 +6342,7 @@ func TestParseStringTemplate(t *testing.T) {
 		AssertEqualWithDiff(t, expected, actual)
 
 	})
+
 	t.Run("invalid, empty", func(t *testing.T) {
 
 		t.Parallel()
@@ -6460,13 +6602,8 @@ func TestParseStringTemplate(t *testing.T) {
 						Column: 24,
 					},
 				},
-				&SyntaxError{
-					Message: "statements on the same line must be separated with a semicolon",
-					Pos: ast.Position{
-						Offset: 24,
-						Line:   2,
-						Column: 23,
-					},
+				&StatementSeparationError{
+					Pos: ast.Position{Offset: 24, Line: 2, Column: 23},
 				},
 			},
 			errs,
@@ -6492,13 +6629,8 @@ func TestParseStringTemplate(t *testing.T) {
 						Column: 38,
 					},
 				},
-				&SyntaxError{
-					Message: "statements on the same line must be separated with a semicolon",
-					Pos: ast.Position{
-						Offset: 33,
-						Line:   2,
-						Column: 32,
-					},
+				&StatementSeparationError{
+					Pos: ast.Position{Offset: 33, Line: 2, Column: 32},
 				},
 			},
 			errs,
@@ -7020,7 +7152,7 @@ func TestParseReferenceInVariableDeclaration(t *testing.T) {
 								Pos:        ast.Position{Offset: 17, Line: 2, Column: 16},
 							},
 						},
-						AccessPos: ast.Position{Offset: 24, Line: 2, Column: 23},
+						AccessEndPos: ast.Position{Offset: 24, Line: 2, Column: 23},
 						Identifier: ast.Identifier{
 							Identifier: "storage",
 							Pos:        ast.Position{Offset: 25, Line: 2, Column: 24},

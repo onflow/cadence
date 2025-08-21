@@ -104,9 +104,7 @@ func (v IteratorWrapperValue) MeteredString(
 }
 
 func (v IteratorWrapperValue) IsResourceKinded(_ interpreter.ValueStaticTypeContext) bool {
-	// Iterator is an internal-only value.
-	// Hence, this should never be called.
-	panic(errors.NewUnreachableError())
+	return false
 }
 
 func (v IteratorWrapperValue) NeedsStoreTo(_ atree.Address) bool {

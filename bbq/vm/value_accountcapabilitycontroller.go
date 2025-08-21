@@ -31,17 +31,12 @@ import (
 func init() {
 	accountCapabilityControllerTypeName := commons.TypeQualifier(sema.AccountCapabilityControllerType)
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		accountCapabilityControllerTypeName,
 		NewNativeFunctionValue(
 			sema.AccountCapabilityControllerTypeSetTagFunctionName,
 			sema.AccountCapabilityControllerTypeSetTagFunctionType,
-			func(context *Context, _ []bbq.StaticType, args ...Value) Value {
-
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[ReceiverIndex], args[TypeBoundFunctionArgumentOffset:]
+			func(context *Context, _ []bbq.StaticType, receiver Value, args ...Value) Value {
 
 				newTagValue, ok := args[0].(*interpreter.StringValue)
 				if !ok {
@@ -57,17 +52,12 @@ func init() {
 		),
 	)
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		accountCapabilityControllerTypeName,
 		NewNativeFunctionValue(
 			sema.AccountCapabilityControllerTypeDeleteFunctionName,
 			sema.AccountCapabilityControllerTypeDeleteFunctionType,
-			func(context *Context, _ []bbq.StaticType, args ...Value) Value {
-
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[ReceiverIndex], args[TypeBoundFunctionArgumentOffset:] // nolint:staticcheck
+			func(context *Context, _ []bbq.StaticType, receiver Value, _ ...Value) Value {
 
 				v := getCheckedAccountCapabilityControllerReceiver(receiver)
 

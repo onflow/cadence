@@ -782,7 +782,7 @@ func TestCheckContractEnumAccessRestricted(t *testing.T) {
             let x = foo.bar()!
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				AccessCheckMode: sema.AccessCheckModeStrict,
 			},
 		},

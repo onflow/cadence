@@ -383,7 +383,7 @@ func (t *testEmulatorBackendType) newGetAccountFunction(
 			account, err := blockchain.GetAccount(address)
 			if err != nil {
 				msg := fmt.Sprintf("account with address: %s was not found", address)
-				panic(PanicError{
+				panic(&PanicError{
 					Message:       msg,
 					LocationRange: invocation.LocationRange,
 				})

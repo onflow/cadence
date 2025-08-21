@@ -62,23 +62,6 @@ func (e Error) Error() string {
 	return sb.String()
 }
 
-// CallStackLimitExceededError
-
-type CallStackLimitExceededError struct {
-	Limit uint64
-}
-
-var _ errors.UserError = CallStackLimitExceededError{}
-
-func (CallStackLimitExceededError) IsUserError() {}
-
-func (e CallStackLimitExceededError) Error() string {
-	return fmt.Sprintf(
-		"call stack limit exceeded: %d",
-		e.Limit,
-	)
-}
-
 // InvalidTransactionCountError
 
 type InvalidTransactionCountError struct {

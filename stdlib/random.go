@@ -139,7 +139,7 @@ func NewVMRevertibleRandomFunction(generator RandomGenerator) StandardLibraryVal
 		revertibleRandomFunctionName,
 		revertibleRandomFunctionType,
 		revertibleRandomFunctionDocString,
-		func(context *vm.Context, typeArguments []bbq.StaticType, arguments ...vm.Value) vm.Value {
+		func(context *vm.Context, typeArguments []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
 
 			returnIntegerType := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
 

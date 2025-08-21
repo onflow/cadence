@@ -44,7 +44,7 @@ func TestCheckErrorShortCircuiting(t *testing.T) {
               let x: Type<X<X<X>>>? = nil
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					ErrorShortCircuitingEnabled: true,
 				},
 			},
@@ -72,7 +72,7 @@ func TestCheckErrorShortCircuiting(t *testing.T) {
                let b = B
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					ErrorShortCircuitingEnabled: true,
 					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 
@@ -83,7 +83,7 @@ func TestCheckErrorShortCircuiting(t *testing.T) {
                             `,
 							ParseAndCheckOptions{
 								Location: ImportedLocation,
-								Config: &sema.Config{
+								CheckerConfig: &sema.Config{
 									ErrorShortCircuitingEnabled: true,
 								},
 							},
@@ -163,7 +163,7 @@ func TestCheckEntitlementsErrorMessage(t *testing.T) {
 		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
 		require.ErrorAs(t, errs[1], &invalidAccess)
 		require.Equal(t,
-			"cannot access `foo`: function requires `E` authorization, but reference only has `F` authorization",
+			"access denied: cannot access `foo` because function requires `E` authorization, but reference only has `F` authorization",
 			invalidAccess.Error(),
 		)
 	})

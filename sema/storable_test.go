@@ -44,7 +44,7 @@ func TestCheckStorable(t *testing.T) {
 		_, err := ParseAndCheckWithOptions(t,
 			code,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 						return baseValueActivation
 					},

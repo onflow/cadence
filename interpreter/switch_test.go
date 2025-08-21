@@ -21,13 +21,10 @@ package interpreter_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
-	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestInterpretSwitchStatement(t *testing.T) {
@@ -36,29 +33,20 @@ func TestInterpretSwitchStatement(t *testing.T) {
 
 	t.Run("Bool", func(t *testing.T) {
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
-			`
-              fun test(_ x: Bool): Int {
-                  switch x {
-                  case true:
-                      return 1
-                  case false:
-                      return 2
-                  default:
-                      return 3
-                  }
-                  return 4
-              }
-            `,
-			ParseCheckAndInterpretOptions{
-				HandleCheckerError: func(err error) {
-					errs := RequireCheckerErrors(t, err, 1)
+		t.Parallel()
 
-					assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
-				},
-			},
-		)
-		require.NoError(t, err)
+		inter := parseCheckAndPrepare(t, `
+          fun test(_ x: Bool): Int {
+              switch x {
+              case true:
+                  return 1
+              case false:
+                  return 2
+              default:
+                  return 3
+              }
+          }
+        `)
 
 		for argument, expected := range map[interpreter.Value]interpreter.Value{
 			interpreter.TrueValue:  interpreter.NewUnmeteredIntValueFromInt64(1),
@@ -74,29 +62,20 @@ func TestInterpretSwitchStatement(t *testing.T) {
 
 	t.Run("Int", func(t *testing.T) {
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
-			`
-              fun test(_ x: Int): String {
-                  switch x {
-                  case 1:
-                      return "1"
-                  case 2:
-                      return "2"
-                  default:
-                      return "3"
-                  }
-                  return "4"
-              }
-            `,
-			ParseCheckAndInterpretOptions{
-				HandleCheckerError: func(err error) {
-					errs := RequireCheckerErrors(t, err, 1)
+		t.Parallel()
 
-					assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
-				},
-			},
-		)
-		require.NoError(t, err)
+		inter := parseCheckAndPrepare(t, `
+          fun test(_ x: Int): String {
+              switch x {
+              case 1:
+                  return "1"
+              case 2:
+                  return "2"
+              default:
+                  return "3"
+              }
+          }
+        `)
 
 		for argument, expected := range map[interpreter.Value]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1): interpreter.NewUnmeteredStringValue("1"),
@@ -114,30 +93,21 @@ func TestInterpretSwitchStatement(t *testing.T) {
 
 	t.Run("break", func(t *testing.T) {
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
-			`
-              fun test(_ x: Int): String {
-                  switch x {
-                  case 1:
-                      break
-                      return "1"
-                  case 2:
-                      return "2"
-                  default:
-                      return "3"
-                  }
-                  return "4"
-              }
-            `,
-			ParseCheckAndInterpretOptions{
-				HandleCheckerError: func(err error) {
-					errs := RequireCheckerErrors(t, err, 1)
+		t.Parallel()
 
-					assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
-				},
-			},
-		)
-		require.NoError(t, err)
+		inter := parseCheckAndPrepare(t, `
+          fun test(_ x: Int): String {
+              switch x {
+              case 1:
+                  break
+              case 2:
+                  return "2"
+              default:
+                  return "3"
+              }
+			  return "4"
+          }
+        `)
 
 		for argument, expected := range map[interpreter.Value]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1): interpreter.NewUnmeteredStringValue("4"),
@@ -154,6 +124,8 @@ func TestInterpretSwitchStatement(t *testing.T) {
 	})
 
 	t.Run("no-implicit fallthrough", func(t *testing.T) {
+
+		t.Parallel()
 
 		inter := parseCheckAndPrepare(t, `
           fun test(_ x: Int): [String] {
@@ -202,29 +174,20 @@ func TestInterpretSwitchStatement(t *testing.T) {
 
 	t.Run("optional", func(t *testing.T) {
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
-			`
-              fun test(_ x: Int?, _ y: Int?): String {
-                  switch x {
-                  case y:
-                      return "1"
-                  case nil:
-                      return "2"
-                  default:
-                      return "3"
-                  }
-                  return "4"
-              }
-            `,
-			ParseCheckAndInterpretOptions{
-				HandleCheckerError: func(err error) {
-					errs := RequireCheckerErrors(t, err, 1)
+		t.Parallel()
 
-					assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
-				},
-			},
-		)
-		require.NoError(t, err)
+		inter := parseCheckAndPrepare(t, `
+          fun test(_ x: Int?, _ y: Int?): String {
+              switch x {
+              case y:
+                  return "1"
+              case nil:
+                  return "2"
+              default:
+                  return "3"
+              }
+          }
+        `)
 
 		type testCase struct {
 			arguments []interpreter.Value

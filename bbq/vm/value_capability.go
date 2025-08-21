@@ -31,7 +31,7 @@ func init() {
 	typeName := interpreter.PrimitiveStaticTypeCapability.String()
 
 	// Capability.borrow
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValueWithDerivedType(
 			sema.CapabilityTypeBorrowFunctionName,
@@ -40,12 +40,10 @@ func init() {
 				borrowType := context.SemaTypeFromStaticType(capability.BorrowType).(*sema.ReferenceType)
 				return sema.CapabilityTypeBorrowFunctionType(borrowType)
 			},
-			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
-				capabilityValue := args[ReceiverIndex]
-
+			func(context *Context, typeArguments []bbq.StaticType, receiver Value, args ...Value) Value {
 				var idCapabilityValue *interpreter.IDCapabilityValue
 
-				switch capabilityValue := capabilityValue.(type) {
+				switch capabilityValue := receiver.(type) {
 				case *interpreter.PathCapabilityValue: //nolint:staticcheck
 					// Borrowing of path values is never allowed
 					return interpreter.Nil
@@ -85,7 +83,7 @@ func init() {
 	)
 
 	// Capability.check
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValueWithDerivedType(
 			sema.CapabilityTypeCheckFunctionName,
@@ -94,13 +92,11 @@ func init() {
 				borrowType := context.SemaTypeFromStaticType(capability.BorrowType).(*sema.ReferenceType)
 				return sema.CapabilityTypeCheckFunctionType(borrowType)
 			},
-			func(context *Context, typeArguments []bbq.StaticType, args ...Value) Value {
-
-				capabilityValue := args[ReceiverIndex]
+			func(context *Context, typeArguments []bbq.StaticType, receiver Value, args ...Value) Value {
 
 				var idCapabilityValue *interpreter.IDCapabilityValue
 
-				switch capabilityValue := capabilityValue.(type) {
+				switch capabilityValue := receiver.(type) {
 				case *interpreter.PathCapabilityValue: //nolint:staticcheck
 					// Borrowing of path values is never allowed
 					return interpreter.FalseValue
