@@ -609,12 +609,17 @@ func (v Fix128Value) ToBigInt() *big.Int {
 }
 
 func handleFixedpointError(err error, _ LocationRange) {
-	if err == nil {
+	switch err {
+	// `fix.ErrUnderflow` happens when the value is within the range but is too small
+	// to be represented using the current bit-length.
+	// These should be treated as non-errors, and should return the truncated value
+	// (assumes that the value returned is already the truncated value).
+	case nil, fix.ErrUnderflow:
 		return
+	default:
+		// TODO: wrap external error with a cadence overflow/underflow error.
+		panic(err)
 	}
-
-	// TODO: handle/wrap external error with a cadence overflow/underflow error.
-	panic(err)
 }
 
 func performFix128SaturationArithmatic(

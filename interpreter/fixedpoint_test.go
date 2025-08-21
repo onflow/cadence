@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -1054,7 +1055,7 @@ func TestInterpretFixedPointLiteral(t *testing.T) {
 
 	for ty, values := range testCases {
 		for _, value := range values {
-
+			ty := ty
 			literal := value.literal
 			expectedValue := value.expectedValue
 			expectedError := value.expectedError
@@ -1086,6 +1087,218 @@ func TestInterpretFixedPointLiteral(t *testing.T) {
 				}
 			})
 		}
-
 	}
+}
+
+func TestInterpretFixedPointLeastSignificantDecimalHandling(t *testing.T) {
+	t.Parallel()
+
+	type testValue struct {
+		a, b   string
+		result string
+	}
+
+	test := func(tt *testing.T, testCases map[sema.Type][]testValue, operation ast.Operation) {
+		for typ, values := range testCases {
+			for _, value := range values {
+				typ := typ
+				a := value.a
+				b := value.b
+				expectedResult := value.result
+
+				tt.Run(typ.String(), func(ttt *testing.T) {
+					ttt.Parallel()
+
+					code := fmt.Sprintf(`
+                        fun main(): %[1]s {
+                            return %[2]s %[4]s %[3]s
+                        }`,
+						typ,
+						a,
+						b,
+						operation.Symbol(),
+					)
+
+					invokable := parseCheckAndPrepare(t, code)
+
+					result, err := invokable.Invoke("main")
+					require.NoError(t, err)
+
+					assert.Equal(
+						ttt,
+						expectedResult,
+						result.String(),
+					)
+				})
+			}
+		}
+	}
+
+	t.Run("multiplication", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("truncate", func(t *testing.T) {
+			t.Parallel()
+
+			// Should truncate the least significant decimal point,
+			// but doesn't underflow (truncated value is big enough to be representable).
+
+			testCases := map[sema.Type][]testValue{
+				sema.Fix64Type: {
+					{
+						a:      "45.6",
+						b:      "0.00000001",
+						result: "0.00000045",
+					},
+				},
+				sema.UFix64Type: {
+					{
+						a:      "45.6",
+						b:      "0.00000001",
+						result: "0.00000045",
+					},
+				},
+				sema.Fix128Type: {
+					{
+						a:      "45.6",
+						b:      "0.000000000000000000000001",
+						result: "0.000000000000000000000045",
+					},
+				},
+				sema.UFix128Type: {
+					{
+						a:      "45.6",
+						b:      "0.000000000000000000000001",
+						result: "0.000000000000000000000045",
+					},
+				},
+			}
+
+			test(t, testCases, ast.OperationMul)
+		})
+
+		t.Run("truncate and underflow", func(t *testing.T) {
+			t.Parallel()
+
+			// Underflows - Truncated value is too small to represent.
+			// Result must always be zero.
+
+			testCases := map[sema.Type][]testValue{
+				sema.Fix64Type: {
+					{
+						a:      "0.6",
+						b:      "0.00000001",
+						result: "0.00000000",
+					},
+				},
+				sema.UFix64Type: {
+					{
+						a:      "0.6",
+						b:      "0.00000001",
+						result: "0.00000000",
+					},
+				},
+				sema.Fix128Type: {
+					{
+						a:      "0.6",
+						b:      "0.000000000000000000000001",
+						result: "0.000000000000000000000000",
+					},
+				},
+				sema.UFix128Type: {
+					{
+						a:      "0.6",
+						b:      "0.000000000000000000000001",
+						result: "0.000000000000000000000000",
+					},
+				},
+			}
+
+			test(t, testCases, ast.OperationMul)
+		})
+	})
+
+	t.Run("division", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("truncate", func(t *testing.T) {
+			t.Parallel()
+
+			// Should truncate the least significant decimal point,
+			// but doesn't underflow (truncated value is big enough to be representable).
+
+			testCases := map[sema.Type][]testValue{
+				sema.Fix64Type: {
+					{
+						a:      "0.00000456",
+						b:      "10.0",
+						result: "0.00000045",
+					},
+				},
+				sema.UFix64Type: {
+					{
+						a:      "0.00000456",
+						b:      "10.0",
+						result: "0.00000045",
+					},
+				},
+				sema.Fix128Type: {
+					{
+						a:      "0.000000000000000000000456",
+						b:      "10.0",
+						result: "0.000000000000000000000045",
+					},
+				},
+				sema.UFix128Type: {
+					{
+						a:      "0.000000000000000000000456",
+						b:      "10.0",
+						result: "0.000000000000000000000045",
+					},
+				},
+			}
+
+			test(t, testCases, ast.OperationDiv)
+		})
+
+		t.Run("truncate and underflow", func(t *testing.T) {
+			t.Parallel()
+
+			// Underflows - Truncated value is too small to represent.
+			// Result must always be zero.
+
+			testCases := map[sema.Type][]testValue{
+				sema.Fix64Type: {
+					{
+						a:      "0.00000006",
+						b:      "10.0",
+						result: "0.00000000",
+					},
+				},
+				sema.UFix64Type: {
+					{
+						a:      "0.00000006",
+						b:      "10.0",
+						result: "0.00000000",
+					},
+				},
+				sema.Fix128Type: {
+					{
+						a:      "0.000000000000000000000006",
+						b:      "10.0",
+						result: "0.000000000000000000000000",
+					},
+				},
+				sema.UFix128Type: {
+					{
+						a:      "0.000000000000000000000006",
+						b:      "10.0",
+						result: "0.000000000000000000000000",
+					},
+				},
+			}
+
+			test(t, testCases, ast.OperationDiv)
+		})
+	})
 }
