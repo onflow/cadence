@@ -19,7 +19,7 @@
 package old_parser
 
 import (
-	"github.com/onflow/cadence/parser/lexer"
+	"github.com/onflow/cadence/old_parser/lexer"
 )
 
 func (p *parser) parseBlockComment() (endToken lexer.Token, ok bool) {
