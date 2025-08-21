@@ -2503,14 +2503,14 @@ func (*UnsupportedOverloadingError) IsUserError() {}
 
 func (e *UnsupportedOverloadingError) Error() string {
 	return fmt.Sprintf(
-		"overloading a %s is not allowed",
+		"%s overloading is not allowed",
 		e.DeclarationKind.Name(),
 	)
 }
 
 func (e *UnsupportedOverloadingError) SecondaryError() string {
 	return fmt.Sprintf(
-		"redeclaring a %s with the same name as another declaration; "+
+		"%s redeclared with the same name as another declaration; "+
 			"use unique names for each declaration",
 		e.DeclarationKind.Name(),
 	)

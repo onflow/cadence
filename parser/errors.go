@@ -1330,7 +1330,7 @@ func (e *ExpectedPrepareOrExecuteError) Error() string {
 }
 
 func (*ExpectedPrepareOrExecuteError) SecondaryError() string {
-	return "transaction declarations can only contain `prepare` and `execute` blocks"
+	return "the first block in a transaction declaration must be a `prepare` or an `execute` block"
 }
 
 func (*ExpectedPrepareOrExecuteError) DocumentationLink() string {
@@ -1369,7 +1369,7 @@ func (e *ExpectedExecuteOrPostError) Error() string {
 }
 
 func (*ExpectedExecuteOrPostError) SecondaryError() string {
-	return "transaction declarations can only contain `execute` and `post` blocks in this context"
+	return "transaction declarations may only define an `execute` or a `post` block here"
 }
 
 func (*ExpectedExecuteOrPostError) DocumentationLink() string {
@@ -1681,7 +1681,7 @@ func (*UnexpectedColonInDictionaryTypeError) Error() string {
 
 func (*UnexpectedColonInDictionaryTypeError) SecondaryError() string {
 	return "dictionary types use a colon (`:`) to separate key and value types, " +
-		"but a value type is expected after the colon"
+		"both types must be provided (`{K: V}`)"
 }
 
 func (*UnexpectedColonInDictionaryTypeError) DocumentationLink() string {
@@ -1869,8 +1869,8 @@ func (*UnexpectedCommaInIntersectionTypeError) Error() string {
 }
 
 func (*UnexpectedCommaInIntersectionTypeError) SecondaryError() string {
-	return "intersection types use commas (`,`) to separate multiple types, " +
-		"but a type is expected after the comma (`,`)"
+	return "intersection types use commas (`,`) to separate multiple types; " +
+		"check for missing types or remove the comma"
 }
 
 func (*UnexpectedCommaInIntersectionTypeError) DocumentationLink() string {
@@ -3454,7 +3454,7 @@ func (e *InvalidImportContinuationError) Error() string {
 }
 
 func (*InvalidImportContinuationError) SecondaryError() string {
-	return "after an imported identifier, add either a comma (`,`) to import more items " +
+	return "after an imported identifier, use either a comma (`,`) to import more items " +
 		"or the `from` keyword to specify the import location"
 }
 
@@ -5086,7 +5086,7 @@ func (*MissingClosingBracketInIndexExpressionError) SecondaryError() string {
 }
 
 func (*MissingClosingBracketInIndexExpressionError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/expressions#indexing-expressions"
+	return "https://cadence-lang.org/docs/language/values-and-types/arrays#array-indexing"
 }
 
 func (e *MissingClosingBracketInIndexExpressionError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
@@ -5286,13 +5286,14 @@ func (e *MissingOpeningParenInNominalTypeInvocationError) EndPosition(_ common.M
 
 func (e *MissingOpeningParenInNominalTypeInvocationError) Error() string {
 	return expectedButGotToken(
-		"expected opening parenthesis (`(`) for invocation",
+		"expected opening parenthesis (`(`) to construct an instance of the type",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingOpeningParenInNominalTypeInvocationError) SecondaryError() string {
-	return "type instantiations must be followed by an argument list enclosed in parentheses `(...)`"
+	return "an instance of the nominal type is expected here; " +
+		"call the constructor by adding comma-separated arguments in parentheses `(...)`"
 }
 
 func (*MissingOpeningParenInNominalTypeInvocationError) DocumentationLink() string {
