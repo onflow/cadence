@@ -178,11 +178,6 @@ func generateErrors() []namedError {
 				Range: placeholderRange,
 			},
 		},
-		{"parser.InvalidPubModifierError",
-			&parser.InvalidPubModifierError{
-				GotToken: placeholderToken,
-			},
-		},
 		{"parser.InvalidStaticModifierError",
 			&parser.InvalidStaticModifierError{
 				Pos:             placeholderPosition,
@@ -405,11 +400,6 @@ func generateErrors() []namedError {
 		{"parser.MissingOpeningParenInNominalTypeInvocationError",
 			&parser.MissingOpeningParenInNominalTypeInvocationError{
 				GotToken: placeholderToken,
-			},
-		},
-		{"parser.MissingPubClosingParenError",
-			&parser.MissingPubClosingParenError{
-				Pos: placeholderPosition,
 			},
 		},
 		{"parser.MissingRightArrowInEntitlementMappingError",
