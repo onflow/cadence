@@ -43,11 +43,6 @@ const fix128Size = int(unsafe.Sizeof(Fix128Value{}))
 
 var fix128MemoryUsage = common.NewNumberMemoryUsage(fix128Size)
 
-func NewFix128ValueWithInteger(gauge common.MemoryGauge, constructor func() int64, locationRange LocationRange) Fix128Value {
-	common.UseMemory(gauge, fix128MemoryUsage)
-	return NewUnmeteredFix128ValueWithInteger(constructor(), locationRange)
-}
-
 // NewUnmeteredFix128ValueWithInteger construct a Fix128Value from an int64.
 // Note that this function uses the default scaling of 24.
 func NewUnmeteredFix128ValueWithInteger(integer int64, locationRange LocationRange) Fix128Value {
@@ -57,7 +52,7 @@ func NewUnmeteredFix128ValueWithInteger(integer int64, locationRange LocationRan
 		sema.Fix128FactorIntBig,
 	)
 
-	return NewFix128ValueFromBigInt(nil, bigInt)
+	return NewFix128ValueFromBigIntWithRangeCheck(nil, bigInt, locationRange)
 }
 
 func NewUnmeteredFix128ValueWithIntegerAndScale(integer int64, scale int64) Fix128Value {
@@ -77,7 +72,7 @@ func NewUnmeteredFix128ValueWithIntegerAndScale(integer int64, scale int64) Fix1
 }
 
 func NewFix128Value(gauge common.MemoryGauge, valueGetter func() fix.Fix128) Fix128Value {
-	common.UseMemory(gauge, fix64MemoryUsage)
+	common.UseMemory(gauge, fix128MemoryUsage)
 	return NewUnmeteredFix128Value(valueGetter())
 }
 
@@ -86,7 +81,6 @@ func NewUnmeteredFix128Value(fix128 fix.Fix128) Fix128Value {
 }
 
 func NewFix128ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
-	// TODO: Validate bounds
 	return NewFix128Value(
 		gauge,
 		func() fix.Fix128 {
@@ -99,13 +93,28 @@ func NewFix128ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value 
 }
 
 func NewFix128ValueFromBigInt(gauge common.MemoryGauge, v *big.Int) Fix128Value {
-	// TODO: Validate bounds
 	return NewFix128Value(
 		gauge,
 		func() fix.Fix128 {
 			return fixedpoint.Fix128FromBigInt(v)
 		},
 	)
+}
+
+func NewFix128ValueFromBigIntWithRangeCheck(gauge common.MemoryGauge, v *big.Int, locationRange LocationRange) Fix128Value {
+	if v.Cmp(fixedpoint.Fix128TypeMinIntBig) == -1 {
+		panic(&UnderflowError{
+			LocationRange: locationRange,
+		})
+	}
+
+	if v.Cmp(fixedpoint.Fix128TypeMaxIntBig) == 1 {
+		panic(&OverflowError{
+			LocationRange: locationRange,
+		})
+	}
+
+	return NewFix128ValueFromBigInt(gauge, v)
 }
 
 var _ Value = Fix128Value{}
@@ -432,14 +441,14 @@ func (v Fix128Value) Equal(_ ValueComparisonContext, _ LocationRange, other Valu
 
 // HashInput returns a byte slice containing:
 // - HashInputTypeFix64 (1 byte)
-// - low 64 bits encoded in big-endian (8 bytes)
 // - high 64 bits encoded in big-endian (8 bytes)
+// - low 64 bits encoded in big-endian (8 bytes)
 func (v Fix128Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeFix128)
 
 	fix128 := fix.Fix128(v)
-	binary.BigEndian.PutUint64(scratch[1:], uint64(fix128.Lo))
-	binary.BigEndian.PutUint64(scratch[9:], uint64(fix128.Hi))
+	binary.BigEndian.PutUint64(scratch[1:], uint64(fix128.Hi))
+	binary.BigEndian.PutUint64(scratch[9:], uint64(fix128.Lo))
 	return scratch[:17]
 }
 
@@ -482,7 +491,7 @@ func ConvertFix128(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 		panic(fmt.Sprintf("can't convert Fix64: %s", value))
 	}
 
-	return NewFix128ValueFromBigInt(memoryGauge, scaledInt)
+	return NewFix128ValueFromBigIntWithRangeCheck(memoryGauge, scaledInt, locationRange)
 }
 
 func (v Fix128Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {

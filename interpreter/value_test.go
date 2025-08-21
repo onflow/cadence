@@ -34,6 +34,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/fixedpoint"
 	. "github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
@@ -1027,6 +1028,12 @@ func TestStringer(t *testing.T) {
 			},
 			expected: "-32.00000000",
 		},
+		"Fix1284": {
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredFix128ValueWithInteger(-32, EmptyLocationRange)
+			},
+			expected: "-32.000000000000000000000000",
+		},
 		"Void": {
 			value: func(_ *Interpreter) Value {
 				return Void
@@ -1698,6 +1705,27 @@ func TestGetHashInput(t *testing.T) {
 		"Fix64 max": {
 			value:    NewUnmeteredFix64ValueWithInteger(sema.Fix64TypeMaxInt, EmptyLocationRange),
 			expected: []byte{byte(HashInputTypeFix64), 0x7f, 0xff, 0xff, 0xff, 0xfc, 0xbc, 0x30, 0x00},
+		},
+		"Fix128": {
+			value: NewUnmeteredFix128ValueWithInteger(-32, EmptyLocationRange),
+			expected: []byte{
+				byte(HashInputTypeFix128),
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xe5, 0x87, 0xbc, 0x86, 0x26, 0x62, 0x4b, 0xe0, 0x0, 0x0, 0x0,
+			},
+		},
+		"Fix128 min": {
+			value: NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
+			expected: []byte{
+				byte(HashInputTypeFix128),
+				0x80, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+			},
+		},
+		"Fix128 max": {
+			value: NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
+			expected: []byte{
+				byte(HashInputTypeFix128),
+				0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			},
 		},
 		"true": {
 			value:    TrueValue,
@@ -4043,7 +4071,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		testCases := map[*sema.FixedPointNumericType]NumberValue{
 			sema.UFix64Type: NewUnmeteredUFix64ValueWithInteger(42, EmptyLocationRange),
 			sema.Fix64Type:  NewUnmeteredFix64ValueWithInteger(42, EmptyLocationRange),
-			sema.Fix128Type:  NewUnmeteredFix128ValueWithInteger(42, EmptyLocationRange),
+			sema.Fix128Type: NewUnmeteredFix128ValueWithInteger(42, EmptyLocationRange),
 		}
 
 		for _, ty := range sema.AllFixedPointTypes {
@@ -4686,4 +4714,78 @@ func checkRootSlabIDsInStorage(t *testing.T, storage atree.SlabStorage, expected
 	}
 
 	require.ElementsMatch(t, expectedRootSlabIDs, nontempSlabIDs)
+}
+
+func TestFixedpointValueRangeCheck(t *testing.T) {
+	t.Parallel()
+
+	type testCase[T any] struct {
+		name          string
+		value         T
+		expectedError error
+	}
+
+	t.Run("fix64", func(t *testing.T) {
+		t.Parallel()
+
+		for _, test := range []testCase[int64]{
+			{
+				name:          "overflow",
+				value:         sema.Fix64TypeMaxInt + 1,
+				expectedError: &OverflowError{},
+			},
+			{
+				name:          "underflow",
+				value:         sema.Fix64TypeMinInt - 1,
+				expectedError: &UnderflowError{},
+			},
+		} {
+
+			test := test
+
+			t.Run(test.name, func(t *testing.T) {
+				t.Parallel()
+
+				defer func() {
+					r := recover()
+					assert.NotNil(t, r)
+					require.IsType(t, test.expectedError, r)
+				}()
+
+				_ = NewUnmeteredFix64ValueWithInteger(test.value, EmptyLocationRange)
+			})
+		}
+	})
+
+	t.Run("fix128", func(t *testing.T) {
+		t.Parallel()
+
+		for _, test := range []testCase[*big.Int]{
+			{
+				name:          "overflow",
+				value:         new(big.Int).Add(fixedpoint.Fix128TypeMaxIntBig, big.NewInt(1)),
+				expectedError: &OverflowError{},
+			},
+			{
+				name:          "underflow",
+				value:         new(big.Int).Sub(fixedpoint.Fix128TypeMinIntBig, big.NewInt(1)),
+				expectedError: &UnderflowError{},
+			},
+		} {
+
+			testCase := test
+
+			t.Run(testCase.name, func(t *testing.T) {
+				t.Parallel()
+
+				defer func() {
+					r := recover()
+					assert.NotNil(t, r)
+					require.IsType(t, testCase.expectedError, r)
+				}()
+
+				_ = NewFix128ValueFromBigIntWithRangeCheck(nil, testCase.value, EmptyLocationRange)
+			})
+		}
+	})
 }
