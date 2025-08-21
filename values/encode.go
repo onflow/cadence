@@ -127,7 +127,7 @@ const (
 	_ // future: UFix16
 	_ // future: UFix32
 	CBORTagUFix64Value
-	_ // future: UFix128
+	CBORTagUFix128Value
 	_ // future: UFix256
 	_
 

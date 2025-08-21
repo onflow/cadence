@@ -415,9 +415,27 @@ func TestRuntimeExportValue(t *testing.T) {
 			expected: cadence.Fix64(-123000000),
 		},
 		{
+			label: "Fix128",
+			value: interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(-123, 22),
+			expected: func() cadence.Fix128 {
+				v, err := cadence.NewUnmeteredFix128FromString("-1.23")
+				require.NoError(t, err)
+				return v
+			}(),
+		},
+		{
 			label:    "UFix64",
 			value:    interpreter.NewUnmeteredUFix64Value(123000000),
 			expected: cadence.UFix64(123000000),
+		},
+		{
+			label: "UFix128",
+			value: interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(123, 22),
+			expected: func() cadence.UFix128 {
+				v, err := cadence.NewUnmeteredUFix128FromString("1.23")
+				require.NoError(t, err)
+				return v
+			}(),
 		},
 		{
 			label: "Path",
@@ -881,9 +899,27 @@ func TestRuntimeImportValue(t *testing.T) {
 			expected: interpreter.NewUnmeteredFix64Value(-123000000),
 		},
 		{
+			label: "Fix128",
+			value: func() cadence.Fix128 {
+				v, err := cadence.NewUnmeteredFix128FromString("-1.23")
+				require.NoError(t, err)
+				return v
+			}(),
+			expected: interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(-123, 22),
+		},
+		{
 			label:    "UFix64",
 			value:    cadence.UFix64(123000000),
 			expected: interpreter.NewUnmeteredUFix64Value(123000000),
+		},
+		{
+			label: "UFix128",
+			value: func() cadence.UFix128 {
+				v, err := cadence.NewUnmeteredUFix128FromString("1.23")
+				require.NoError(t, err)
+				return v
+			}(),
+			expected: interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(123, 22),
 		},
 		{
 			label: "Path",

@@ -23,8 +23,6 @@ import (
 	"math/big"
 
 	fix "github.com/onflow/fixed-point"
-
-	"github.com/onflow/cadence/integer"
 )
 
 const Fix64Scale = 8
@@ -43,6 +41,20 @@ const Fix64TypeMaxFractional = math.MaxInt64 % Fix64Factor
 
 var Fix64TypeMinFractionalBig = new(big.Int).SetInt64(Fix64TypeMinFractional)
 var Fix64TypeMaxFractionalBig = new(big.Int).SetInt64(Fix64TypeMaxFractional)
+
+
+var Fix64TypeMin = new(big.Int).SetInt64(math.MinInt64)
+var Fix64TypeMax = new(big.Int).SetInt64(math.MaxInt64)
+
+var Fix64TypeMinScaledTo128 = new(big.Int).Mul(
+	Fix64TypeMin,
+	Fix64ToFix128FactorAsBigInt,
+)
+
+var Fix64TypeMaxScaledTo128 = new(big.Int).Mul(
+	Fix64TypeMax,
+	Fix64ToFix128FactorAsBigInt,
+)
 
 // Fix128
 
@@ -68,22 +80,34 @@ var (
 		nil,
 	)
 
-	Fix128TypeMin = fix.NewFix128(0x8000000000000000, 0x0000000000000000)
-	Fix128TypeMax = fix.NewFix128(0x7FFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF)
+	Fix128TypeMin = fix.Fix128Min
+	Fix128TypeMax = fix.Fix128Max
 
-	Fix128TypeMinIntBig = Fix128ToBigInt(Fix128TypeMin)
-	Fix128TypeMaxIntBig = Fix128ToBigInt(Fix128TypeMax)
+	Fix128TypeMinBig = Fix128ToBigInt(Fix128TypeMin)
+	Fix128TypeMaxBig = Fix128ToBigInt(Fix128TypeMax)
 
-	Fix128TypeMinFractionalBig = func() *big.Int {
-		fix128TypeMinFractional := new(big.Int)
-		fix128TypeMinFractional.Mod(integer.Int128TypeMinIntBig, Fix128FactorAsBigInt)
-		return fix128TypeMinFractional
+	Fix128TypeMinIntBig, Fix128TypeMinFractionalBig = func() (*big.Int, *big.Int) {
+		quotient := new(big.Int)
+		remainder := new(big.Int)
+
+		// Use `QuoRem` (truncated division and modulus), instead of `DivMod`,
+		// to be consistent with to Go's division used in Fix64.
+		quotient, remainder = quotient.QuoRem(Fix128TypeMinBig, Fix128FactorAsBigInt, remainder)
+		remainder = remainder.Abs(remainder)
+
+		return quotient, remainder
 	}()
 
-	Fix128TypeMaxFractionalBig = func() *big.Int {
-		fix128TypeMaxFractional := new(big.Int)
-		fix128TypeMaxFractional.Mod(integer.Int128TypeMaxIntBig, Fix128FactorAsBigInt)
-		return fix128TypeMaxFractional
+	Fix128TypeMaxIntBig, Fix128TypeMaxFractionalBig = func() (*big.Int, *big.Int) {
+		quotient := new(big.Int)
+		remainder := new(big.Int)
+
+		// Use `QuoRem` (truncated division and modulus), instead of `DivMod`,
+		// to be consistent with to Go's division used in Fix64.
+		quotient, remainder = quotient.QuoRem(Fix128TypeMaxBig, Fix128FactorAsBigInt, remainder)
+		remainder = remainder.Abs(remainder)
+
+		return quotient, remainder
 	}()
 )
 
@@ -100,6 +124,47 @@ const UFix64TypeMaxFractional = math.MaxUint64 % uint64(Fix64Factor)
 
 var UFix64TypeMinFractionalBig = new(big.Int).SetUint64(UFix64TypeMinFractional)
 var UFix64TypeMaxFractionalBig = new(big.Int).SetUint64(UFix64TypeMaxFractional)
+
+var UFix64TypeMinScaledTo128 = new(big.Int).Mul(
+	new(big.Int).SetUint64(0),
+	Fix64ToFix128FactorAsBigInt,
+)
+
+var UFix64TypeMaxScaledTo128 = new(big.Int).Mul(
+	new(big.Int).SetUint64(math.MaxUint64),
+	Fix64ToFix128FactorAsBigInt,
+)
+
+// UFix128
+
+const (
+	UFix128Scale = Fix128Scale
+)
+
+var (
+	UFix128FactorAsBigInt = Fix128FactorAsBigInt
+
+	UFix128TypeMin = fix.UFix128Zero
+	UFix128TypeMax = fix.UFix128Max
+
+	UFix128TypeMinBig = UFix128ToBigInt(UFix128TypeMin)
+	UFix128TypeMaxBig = UFix128ToBigInt(UFix128TypeMax)
+
+	UFix128TypeMinIntBig        = big.NewInt(0)
+	UFix128TypeMinFractionalBig = big.NewInt(0)
+
+	UFix128TypeMaxIntBig, UFix128TypeMaxFractionalBig = func() (*big.Int, *big.Int) {
+		quotient := new(big.Int)
+		remainder := new(big.Int)
+
+		// Use `QuoRem` (truncated division and modulus), instead of `DivMod`,
+		// to be consistent with to Go's division used in Fix64.
+		quotient, remainder = quotient.QuoRem(UFix128TypeMaxBig, UFix128FactorAsBigInt, remainder)
+		remainder = remainder.Abs(remainder)
+
+		return quotient, remainder
+	}()
+)
 
 func init() {
 	Fix64TypeMinFractionalBig.Abs(Fix64TypeMinFractionalBig)

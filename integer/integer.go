@@ -35,4 +35,12 @@ var (
 		int128TypeMax.Sub(int128TypeMax, big.NewInt(1))
 		return int128TypeMax
 	}()
+
+	UInt128TypeMaxIntBig = func() *big.Int {
+		uInt128TypeMax := big.NewInt(1)
+		uInt128TypeMax.Lsh(uInt128TypeMax, 128)
+		uInt128TypeMax.Sub(uInt128TypeMax, big.NewInt(1))
+		return uInt128TypeMax
+
+	}()
 )

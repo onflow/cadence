@@ -3027,6 +3027,7 @@ var StringValueParsers = func() map[string]TypedStringValueParser {
 					return NilOptionalValue
 				}
 
+				// No need to check ranges, as `ParseFix128` already does that.
 				val := NewFix128ValueFromBigInt(memoryGauge, n)
 				return NewSomeValueNonCopying(memoryGauge, val)
 
@@ -3043,6 +3044,20 @@ var StringValueParsers = func() map[string]TypedStringValueParser {
 				}
 				val := NewUFix64Value(memoryGauge, n.Uint64)
 				return NewSomeValueNonCopying(memoryGauge, val)
+			},
+		},
+		{
+			ReceiverType: sema.UFix128Type,
+			Parser: func(memoryGauge common.MemoryGauge, input string) OptionalValue {
+				n, err := fixedpoint.ParseUFix128(input)
+				if err != nil {
+					return NilOptionalValue
+				}
+
+				// No need to check ranges, as `ParseUFix128` already does that.
+				val := NewUFix128ValueFromBigInt(memoryGauge, n)
+				return NewSomeValueNonCopying(memoryGauge, val)
+
 			},
 		},
 	} {
@@ -3251,6 +3266,11 @@ var BigEndianBytesConverters = func() map[string]TypedBigEndianBytesConverter {
 			ByteLength:   sema.UFix64TypeSize,
 			Converter:    NewUFix64ValueFromBigEndianBytes,
 		},
+		{
+			ReceiverType: sema.UFix128Type,
+			ByteLength:   sema.UFix128TypeSize,
+			Converter:    NewUFix128ValueFromBigEndianBytes,
+		},
 	} {
 		// index by type name
 		typeName := converter.ReceiverType.String()
@@ -3450,6 +3470,14 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		},
 		Min: NewUnmeteredUFix64Value(0),
 		Max: NewUnmeteredUFix64Value(math.MaxUint64),
+	},
+	{
+		Name: sema.UFix128TypeName,
+		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+			return ConvertUFix128(gauge, value, locationRange)
+		},
+		Min: NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMin),
+		Max: NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMax),
 	},
 	{
 		Name: sema.AddressTypeName,

@@ -898,7 +898,7 @@ func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedP
 
 	var scale uint
 	switch fixedPointSubType {
-	case sema.Fix128Type:
+	case sema.Fix128Type, sema.UFix128Type:
 		scale = sema.Fix128Scale
 	default:
 		scale = sema.Fix64Scale
@@ -916,9 +916,13 @@ func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedP
 	case sema.Fix64Type, sema.SignedFixedPointType:
 		return NewFix64Value(interpreter, value.Int64)
 	case sema.Fix128Type:
+		// No need to check ranges here again, as the checker already does that.
 		return NewFix128ValueFromBigInt(interpreter, value)
 	case sema.UFix64Type:
 		return NewUFix64Value(interpreter, value.Uint64)
+	case sema.UFix128Type:
+		// No need to check ranges here again, as the checker already does that.
+		return NewUFix128ValueFromBigInt(interpreter, value)
 	case sema.FixedPointType:
 		if expression.Negative {
 			return NewFix64Value(interpreter, value.Int64)
