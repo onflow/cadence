@@ -4267,6 +4267,7 @@ var _ SemanticError = &InvalidOptionalChainingError{}
 var _ errors.UserError = &InvalidOptionalChainingError{}
 var _ errors.SecondaryError = &InvalidOptionalChainingError{}
 var _ errors.HasDocumentationLink = &InvalidOptionalChainingError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &InvalidOptionalChainingError{}
 
 func (*InvalidOptionalChainingError) isSemanticError() {}
 
@@ -4286,6 +4287,20 @@ func (*InvalidOptionalChainingError) SecondaryError() string {
 
 func (*InvalidOptionalChainingError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/values-and-types/anystruct-anyresource-opts-never#optionals"
+}
+
+func (e *InvalidOptionalChainingError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Remove optional chaining",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: ".",
+					Range:       e.Range,
+				},
+			},
+		},
+	}
 }
 
 // InvalidAccessError
