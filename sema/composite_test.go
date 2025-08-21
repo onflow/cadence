@@ -1826,7 +1826,7 @@ func TestCheckInvalidCompositeFieldMissingVariableKind(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.InvalidVariableKindError{}, errs[0])
+			assert.IsType(t, &sema.InvalidFieldVariableKindError{}, errs[0])
 		})
 	}
 }

@@ -880,8 +880,8 @@ func generateErrors() []namedError {
 				Operation:               placeholderOperation,
 			},
 		},
-		{"sema.InvalidVariableKindError",
-			&sema.InvalidVariableKindError{
+		{"sema.InvalidFieldVariableKindError",
+			&sema.InvalidFieldVariableKindError{
 				Kind:  placeholderVariableKind,
 				Range: placeholderRange,
 			},
