@@ -3263,8 +3263,8 @@ func TestParseAttach(t *testing.T) {
 						{
 							Insertion: "to ",
 							Range: ast.Range{
-								StartPos: missingToErr.GotToken.StartPos,
-								EndPos:   missingToErr.GotToken.StartPos,
+								StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
+								EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
 							},
 						},
 					},
@@ -3315,8 +3315,8 @@ func TestParseAttach(t *testing.T) {
 						{
 							Insertion: " to ",
 							Range: ast.Range{
-								StartPos: missingToErr.GotToken.StartPos,
-								EndPos:   missingToErr.GotToken.StartPos,
+								StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+								EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
 							},
 						},
 					},

@@ -3116,6 +3116,7 @@ var _ ParseError = &MissingAccessOpeningParenError{}
 var _ errors.UserError = &MissingAccessOpeningParenError{}
 var _ errors.SecondaryError = &MissingAccessOpeningParenError{}
 var _ errors.HasDocumentationLink = &MissingAccessOpeningParenError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingAccessOpeningParenError{}
 
 func (*MissingAccessOpeningParenError) isParseError() {}
 
@@ -3144,6 +3145,38 @@ func (*MissingAccessOpeningParenError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control"
 }
 
+func (e *MissingAccessOpeningParenError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
+	if e.GotToken.Is(lexer.TokenIdentifier) {
+		tokenSource := code[e.GotToken.StartPos.Offset : e.GotToken.EndPos.Offset+1]
+		return []errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Enclose in parentheses",
+				TextEdits: []ast.TextEdit{
+					{
+						Replacement: fmt.Sprintf("(%s)", tokenSource),
+						Range:       e.GotToken.Range,
+					},
+				},
+			},
+		}
+	} else {
+		return []errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening parenthesis",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: "(",
+						Range: ast.Range{
+							StartPos: e.GotToken.StartPos,
+							EndPos:   e.GotToken.StartPos,
+						},
+					},
+				},
+			},
+		}
+	}
+}
+
 // MissingAccessClosingParenError is reported when an access modifier is missing a closing parenthesis.
 type MissingAccessClosingParenError struct {
 	GotToken lexer.Token
@@ -3153,6 +3186,7 @@ var _ ParseError = &MissingAccessClosingParenError{}
 var _ errors.UserError = &MissingAccessClosingParenError{}
 var _ errors.SecondaryError = &MissingAccessClosingParenError{}
 var _ errors.HasDocumentationLink = &MissingAccessClosingParenError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingAccessClosingParenError{}
 
 func (*MissingAccessClosingParenError) isParseError() {}
 
@@ -3181,6 +3215,23 @@ func (*MissingAccessClosingParenError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control"
 }
 
+func (e *MissingAccessClosingParenError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert closing parenthesis",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: ")",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
 // MissingAccessKeywordError is reported when an access modifier keyword is missing.
 type MissingAccessKeywordError struct {
 	GotToken lexer.Token
@@ -3190,6 +3241,7 @@ var _ ParseError = &MissingAccessKeywordError{}
 var _ errors.UserError = &MissingAccessKeywordError{}
 var _ errors.SecondaryError = &MissingAccessKeywordError{}
 var _ errors.HasDocumentationLink = &MissingAccessKeywordError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingAccessKeywordError{}
 
 func (*MissingAccessKeywordError) isParseError() {}
 
@@ -3203,14 +3255,22 @@ func (e *MissingAccessKeywordError) EndPosition(_ common.MemoryGauge) ast.Positi
 	return e.GotToken.EndPos
 }
 
-var enumeratedAccessModifierKeywords = common.EnumerateWords(
-	[]string{
-		strconv.Quote(KeywordAll),
-		strconv.Quote(KeywordAccount),
-		strconv.Quote(KeywordContract),
-		strconv.Quote(KeywordSelf),
-	},
-	"or",
+var (
+	accessModifierKeywords = []string{
+		KeywordAll,
+		KeywordAccount,
+		KeywordContract,
+		KeywordSelf,
+	}
+	enumeratedAccessModifierKeywords = common.EnumerateWords(
+		[]string{
+			strconv.Quote(KeywordAll),
+			strconv.Quote(KeywordAccount),
+			strconv.Quote(KeywordContract),
+			strconv.Quote(KeywordSelf),
+		},
+		"or",
+	)
 )
 
 func (e *MissingAccessKeywordError) Error() string {
@@ -3223,12 +3283,41 @@ func (e *MissingAccessKeywordError) Error() string {
 	)
 }
 
-func (*MissingAccessKeywordError) SecondaryError() string {
-	return "access control modifiers must be one of: 'all', 'account', 'contract', or 'self'"
+func (e *MissingAccessKeywordError) SecondaryError() string {
+	if e.GotToken.Is(lexer.TokenIdentifier) {
+		return "replace with one of the access modifier keywords"
+	} else {
+		return "add one of the access modifier keywords"
+	}
 }
 
 func (*MissingAccessKeywordError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control"
+}
+
+func (e *MissingAccessKeywordError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	var fixes []errors.SuggestedFix[ast.TextEdit]
+
+	for _, keyword := range accessModifierKeywords {
+
+		fixes = append(
+			fixes,
+			errors.SuggestedFix[ast.TextEdit]{
+				Message: fmt.Sprintf("Insert '%s'", keyword),
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: keyword,
+						Range: ast.Range{
+							StartPos: e.GotToken.StartPos,
+							EndPos:   e.GotToken.StartPos,
+						},
+					},
+				},
+			},
+		)
+	}
+
+	return fixes
 }
 
 // MissingEnumCaseNameError is reported when an enum case is missing a name.
@@ -3314,6 +3403,7 @@ var _ ParseError = &MissingColonAfterFieldNameError{}
 var _ errors.UserError = &MissingColonAfterFieldNameError{}
 var _ errors.SecondaryError = &MissingColonAfterFieldNameError{}
 var _ errors.HasDocumentationLink = &MissingColonAfterFieldNameError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingColonAfterFieldNameError{}
 
 func (*MissingColonAfterFieldNameError) isParseError() {}
 
@@ -3342,6 +3432,23 @@ func (*MissingColonAfterFieldNameError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/types-and-type-system/composite-types#composite-type-fields"
 }
 
+func (e *MissingColonAfterFieldNameError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert colon",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: ": ",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
 // MissingTransferError is reported when a transfer is missing in a variable declaration.
 type MissingTransferError struct {
 	Pos ast.Position
@@ -3351,6 +3458,7 @@ var _ ParseError = &MissingTransferError{}
 var _ errors.UserError = &MissingTransferError{}
 var _ errors.SecondaryError = &MissingTransferError{}
 var _ errors.HasDocumentationLink = &MissingTransferError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingTransferError{}
 
 func (*MissingTransferError) isParseError() {}
 
@@ -3375,6 +3483,35 @@ func (*MissingTransferError) SecondaryError() string {
 
 func (*MissingTransferError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/constants-and-variables"
+}
+
+func (e *MissingTransferError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert '=' (for struct)",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "= ",
+					Range: ast.Range{
+						StartPos: e.Pos,
+						EndPos:   e.Pos,
+					},
+				},
+			},
+		},
+		{
+			Message: "Insert '<-' (for resource)",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "<- ",
+					Range: ast.Range{
+						StartPos: e.Pos,
+						EndPos:   e.Pos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // InvalidImportLocationError is reported when an import declaration has an invalid location.
@@ -3522,7 +3659,8 @@ func (*UnexpectedEOFInImportListError) Error() string {
 }
 
 func (*UnexpectedEOFInImportListError) SecondaryError() string {
-	return "import declarations cannot end abruptly - use either an identifier to import or a comma to continue the import list"
+	return "import declarations cannot end abruptly - " +
+		"add either an identifier to import or a comma to continue the import list"
 }
 
 func (*UnexpectedEOFInImportListError) DocumentationLink() string {
@@ -3562,7 +3700,8 @@ func (e *InvalidTokenInImportListError) Error() string {
 }
 
 func (*InvalidTokenInImportListError) SecondaryError() string {
-	return "import declarations expect either an identifier to import or the 'from' keyword to specify the import location"
+	return "import declarations expect either an identifier to import " +
+		"or the 'from' keyword to specify the import location"
 }
 
 func (*InvalidTokenInImportListError) DocumentationLink() string {
@@ -3648,6 +3787,7 @@ var _ ParseError = &MissingInKeywordInForStatementError{}
 var _ errors.UserError = &MissingInKeywordInForStatementError{}
 var _ errors.SecondaryError = &MissingInKeywordInForStatementError{}
 var _ errors.HasDocumentationLink = &MissingInKeywordInForStatementError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingInKeywordInForStatementError{}
 
 func (*MissingInKeywordInForStatementError) isParseError() {}
 
@@ -3673,6 +3813,23 @@ func (e *MissingInKeywordInForStatementError) Error() string {
 
 func (*MissingInKeywordInForStatementError) SecondaryError() string {
 	return "for-loops require the 'in' keyword to separate the loop variable from the iterated value"
+}
+
+func (e *MissingInKeywordInForStatementError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert 'in'",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: keywordInsertion(KeywordIn, e.GotToken.Type),
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 func (*MissingInKeywordInForStatementError) DocumentationLink() string {
@@ -3784,6 +3941,7 @@ type InvalidEntitlementSeparatorError struct {
 var _ ParseError = &InvalidEntitlementSeparatorError{}
 var _ errors.UserError = &InvalidEntitlementSeparatorError{}
 var _ errors.SecondaryError = &InvalidEntitlementSeparatorError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &InvalidEntitlementSeparatorError{}
 var _ errors.HasDocumentationLink = &InvalidEntitlementSeparatorError{}
 
 func (*InvalidEntitlementSeparatorError) isParseError() {}
@@ -3799,15 +3957,48 @@ func (e *InvalidEntitlementSeparatorError) EndPosition(_ common.MemoryGauge) ast
 }
 
 func (e *InvalidEntitlementSeparatorError) Error() string {
-	return fmt.Sprintf("unexpected entitlement separator %s", e.Token.Type.String())
+	return expectedButGotToken(
+		"expected entitlement separator",
+		e.Token.Type,
+	)
 }
 
 func (*InvalidEntitlementSeparatorError) SecondaryError() string {
-	return "use a comma (,) for conjunctive entitlements or a vertical bar (|) for disjunctive entitlements"
+	return "use a comma (,) for conjunctive entitlements " +
+		"or a vertical bar (|) for disjunctive entitlements"
 }
 
 func (*InvalidEntitlementSeparatorError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control#entitlements"
+}
+
+func (e *InvalidEntitlementSeparatorError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert comma (conjunction)",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: ", ",
+					Range: ast.Range{
+						StartPos: e.Token.StartPos,
+						EndPos:   e.Token.StartPos,
+					},
+				},
+			},
+		},
+		{
+			Message: "Insert vertical bar (disjunction)",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: " | ",
+					Range: ast.Range{
+						StartPos: e.Token.StartPos,
+						EndPos:   e.Token.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // UnexpectedTokenAtEndError is reported when there is an unexpected token at the end of the program
@@ -3853,6 +4044,7 @@ var _ ParseError = &MissingCommentEndError{}
 var _ errors.UserError = &MissingCommentEndError{}
 var _ errors.SecondaryError = &MissingCommentEndError{}
 var _ errors.HasDocumentationLink = &MissingCommentEndError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingCommentEndError{}
 
 func (*MissingCommentEndError) isParseError() {}
 
@@ -3879,6 +4071,23 @@ func (*MissingCommentEndError) SecondaryError() string {
 
 func (*MissingCommentEndError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax#comments"
+}
+
+func (e *MissingCommentEndError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert '*/'",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "*/",
+					Range: ast.Range{
+						StartPos: e.Pos,
+						EndPos:   e.Pos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // UnexpectedTokenInBlockCommentError is reported when an unexpected token is found in a block comment.
@@ -4261,6 +4470,7 @@ var _ ParseError = &MissingForKeywordInAttachmentDeclarationError{}
 var _ errors.UserError = &MissingForKeywordInAttachmentDeclarationError{}
 var _ errors.SecondaryError = &MissingForKeywordInAttachmentDeclarationError{}
 var _ errors.HasDocumentationLink = &MissingForKeywordInAttachmentDeclarationError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingForKeywordInAttachmentDeclarationError{}
 
 func (*MissingForKeywordInAttachmentDeclarationError) isParseError() {}
 
@@ -4282,11 +4492,28 @@ func (e *MissingForKeywordInAttachmentDeclarationError) Error() string {
 }
 
 func (*MissingForKeywordInAttachmentDeclarationError) SecondaryError() string {
-	return "the 'attachment' declaration requires the 'for' keyword to specify the target"
+	return "the attachment declaration requires the 'for' keyword to specify the target"
 }
 
 func (*MissingForKeywordInAttachmentDeclarationError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/attachments#declaring-attachments"
+}
+
+func (e *MissingForKeywordInAttachmentDeclarationError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert 'for'",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: keywordInsertion(KeywordFor, e.GotToken.Type),
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // InvalidAttachmentBaseTypeError is reported when an attachment declaration has an invalid base type.
@@ -4325,6 +4552,7 @@ var _ ParseError = &DeclarationMissingOpeningBraceError{}
 var _ errors.UserError = &DeclarationMissingOpeningBraceError{}
 var _ errors.SecondaryError = &DeclarationMissingOpeningBraceError{}
 var _ errors.HasDocumentationLink = &DeclarationMissingOpeningBraceError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &DeclarationMissingOpeningBraceError{}
 
 func (*DeclarationMissingOpeningBraceError) isParseError() {}
 
@@ -4360,6 +4588,23 @@ func (*DeclarationMissingOpeningBraceError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/syntax"
 }
 
+func (e *DeclarationMissingOpeningBraceError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert opening brace",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "{",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
+}
+
 // DeclarationMissingClosingBraceError is reported when a declaration is missing a closing brace.
 type DeclarationMissingClosingBraceError struct {
 	Kind     common.DeclarationKind
@@ -4370,6 +4615,7 @@ var _ ParseError = &DeclarationMissingClosingBraceError{}
 var _ errors.UserError = &DeclarationMissingClosingBraceError{}
 var _ errors.SecondaryError = &DeclarationMissingClosingBraceError{}
 var _ errors.HasDocumentationLink = &DeclarationMissingClosingBraceError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &DeclarationMissingClosingBraceError{}
 
 func (*DeclarationMissingClosingBraceError) isParseError() {}
 
@@ -4403,6 +4649,23 @@ func (e *DeclarationMissingClosingBraceError) SecondaryError() string {
 func (*DeclarationMissingClosingBraceError) DocumentationLink() string {
 	// TODO: improve this link to point to the specific page based on the declaration kind
 	return "https://cadence-lang.org/docs/language/syntax"
+}
+
+func (e *DeclarationMissingClosingBraceError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert closing brace",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "}",
+					Range: ast.Range{
+						StartPos: e.GotToken.StartPos,
+						EndPos:   e.GotToken.StartPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // MissingOpeningBraceError is reported when an opening brace is missing .
