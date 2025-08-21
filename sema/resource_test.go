@@ -10640,3 +10640,50 @@ func TestCheckMissingResourceAnnotation(t *testing.T) {
 		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
+
+func TestCheckInvalidResourceAnnotation(t *testing.T) {
+	t.Parallel()
+
+	const code = `
+      struct S {}
+
+      fun test(s: @S) {}
+    `
+	_, err := ParseAndCheck(t, code)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	var invalidAnnotationErr *sema.InvalidResourceAnnotationError
+	require.ErrorAs(t, errs[0], &invalidAnnotationErr)
+
+	fixes := invalidAnnotationErr.SuggestFixes(code)
+
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Remove `@`",
+				TextEdits: []ast.TextEdit{
+					{
+						Replacement: "",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 38, Line: 4, Column: 18},
+							EndPos:   ast.Position{Offset: 38, Line: 4, Column: 18},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	const expected = `
+      struct S {}
+
+      fun test(s: S) {}
+    `
+
+	assert.Equal(t,
+		expected,
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}

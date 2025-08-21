@@ -2874,6 +2874,7 @@ var _ SemanticError = &InvalidResourceAnnotationError{}
 var _ errors.UserError = &InvalidResourceAnnotationError{}
 var _ errors.SecondaryError = &InvalidResourceAnnotationError{}
 var _ errors.HasDocumentationLink = &InvalidResourceAnnotationError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &InvalidResourceAnnotationError{}
 
 func (*InvalidResourceAnnotationError) isSemanticError() {}
 
@@ -2897,6 +2898,23 @@ func (e *InvalidResourceAnnotationError) SecondaryError() string {
 
 func (*InvalidResourceAnnotationError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/resources"
+}
+
+func (e *InvalidResourceAnnotationError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Remove `@`",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "",
+					Range: ast.NewUnmeteredRange(
+						e.StartPos,
+						e.StartPos,
+					),
+				},
+			},
+		},
+	}
 }
 
 // InvalidInterfaceTypeError
