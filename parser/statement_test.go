@@ -979,7 +979,9 @@ func TestParseEmit(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseStatements("emit T")
+		const code = "emit T"
+		_, errs := testParseStatements(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingOpeningParenInNominalTypeInvocationError{
@@ -996,6 +998,33 @@ func TestParseEmit(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingParenErr *MissingOpeningParenInNominalTypeInvocationError
+		require.ErrorAs(t, errs[0], &missingParenErr)
+
+		fixes := missingParenErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert opening parenthesis",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "(",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+								EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"emit T(",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 }
@@ -1253,6 +1282,7 @@ func TestParseStatements(t *testing.T) {
 
 		const code = `assert true`
 		result, errs := testParseStatements(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&StatementSeparationError{
@@ -1296,10 +1326,10 @@ func TestParseStatements(t *testing.T) {
 					Message: "Insert semicolon",
 					TextEdits: []ast.TextEdit{
 						{
-							Insertion: "; ",
+							Insertion: ";",
 							Range: ast.Range{
-								StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
-								EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+								StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+								EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
 							},
 						},
 					},
@@ -1309,7 +1339,7 @@ func TestParseStatements(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			`assert ; true`,
+			`assert; true`,
 			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
@@ -1724,6 +1754,7 @@ func TestParseSwitchStatement(t *testing.T) {
 
 		const code = "switch 1 { case 2 break }"
 		_, errs := testParseStatements(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingColonInSwitchCaseError{
@@ -1749,10 +1780,10 @@ func TestParseSwitchStatement(t *testing.T) {
 					Message: "Insert colon",
 					TextEdits: []ast.TextEdit{
 						{
-							Insertion: ": ",
+							Insertion: ":",
 							Range: ast.Range{
-								StartPos: ast.Position{Offset: 18, Line: 1, Column: 18},
-								EndPos:   ast.Position{Offset: 18, Line: 1, Column: 18},
+								StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
+								EndPos:   ast.Position{Offset: 17, Line: 1, Column: 17},
 							},
 						},
 					},
@@ -1762,7 +1793,7 @@ func TestParseSwitchStatement(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			"switch 1 { case 2 : break }",
+			"switch 1 { case 2: break }",
 			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
@@ -3138,7 +3169,8 @@ func TestParseForStatementMissingInKeywordAtEnd(t *testing.T) {
 func TestParseIfStatementMissingOpeningBrace(t *testing.T) {
 	t.Parallel()
 
-	_, errs := testParseStatements(`if true }`)
+	const code = `if true }`
+	_, errs := testParseStatements(code)
 
 	AssertEqualWithDiff(t,
 		[]error{
@@ -3155,12 +3187,40 @@ func TestParseIfStatementMissingOpeningBrace(t *testing.T) {
 		},
 		errs,
 	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+							EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"if true { }",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestParseWhileStatementMissingOpeningBrace(t *testing.T) {
 	t.Parallel()
 
-	_, errs := testParseStatements(`while true }`)
+	const code = `while true }`
+	_, errs := testParseStatements(code)
 
 	AssertEqualWithDiff(t,
 		[]error{
@@ -3176,13 +3236,41 @@ func TestParseWhileStatementMissingOpeningBrace(t *testing.T) {
 			},
 		},
 		errs,
+	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"while true { }",
+		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
 
 func TestParseForStatementMissingOpeningBrace(t *testing.T) {
 	t.Parallel()
 
-	_, errs := testParseStatements(`for x in y }`)
+	const code = `for x in y }`
+	_, errs := testParseStatements(code)
 
 	AssertEqualWithDiff(t,
 		[]error{
@@ -3199,12 +3287,40 @@ func TestParseForStatementMissingOpeningBrace(t *testing.T) {
 		},
 		errs,
 	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"for x in y { }",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestParseIfStatementMissingClosingBrace(t *testing.T) {
 	t.Parallel()
 
-	_, errs := testParseStatements(`if true { `)
+	const code = `if true { `
+	_, errs := testParseStatements(code)
 
 	AssertEqualWithDiff(t,
 		[]error{
@@ -3221,12 +3337,40 @@ func TestParseIfStatementMissingClosingBrace(t *testing.T) {
 		},
 		errs,
 	)
+
+	var missingBraceErr *MissingClosingBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert closing brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: "}",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 9, Line: 1, Column: 9},
+							EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"if true {} ",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestParseWhileStatementMissingClosingBrace(t *testing.T) {
 	t.Parallel()
 
-	_, errs := testParseStatements(`while true { `)
+	const code = `while true { `
+	_, errs := testParseStatements(code)
 
 	AssertEqualWithDiff(t,
 		[]error{
@@ -3242,13 +3386,41 @@ func TestParseWhileStatementMissingClosingBrace(t *testing.T) {
 			},
 		},
 		errs,
+	)
+
+	var missingBraceErr *MissingClosingBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert closing brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: "}",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
+							EndPos:   ast.Position{Offset: 12, Line: 1, Column: 12},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"while true {} ",
+		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
 
 func TestParseForStatementMissingClosingBrace(t *testing.T) {
 	t.Parallel()
 
-	_, errs := testParseStatements(`for x in y { `)
+	const code = `for x in y { `
+	_, errs := testParseStatements(code)
 
 	AssertEqualWithDiff(t,
 		[]error{
@@ -3265,12 +3437,40 @@ func TestParseForStatementMissingClosingBrace(t *testing.T) {
 		},
 		errs,
 	)
+
+	var missingBraceErr *MissingClosingBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert closing brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: "}",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
+							EndPos:   ast.Position{Offset: 12, Line: 1, Column: 12},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"for x in y {} ",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestParseFunctionDeclarationMissingOpeningBrace(t *testing.T) {
 	t.Parallel()
 
-	_, errs := testParseStatements(`fun test() }`)
+	const code = `fun test() }`
+	_, errs := testParseStatements(code)
 
 	AssertEqualWithDiff(t,
 		[]error{
@@ -3287,12 +3487,40 @@ func TestParseFunctionDeclarationMissingOpeningBrace(t *testing.T) {
 		},
 		errs,
 	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"fun test() { }",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestParseFunctionDeclarationMissingClosingBrace(t *testing.T) {
 	t.Parallel()
 
-	_, errs := testParseStatements(`fun test() { `)
+	const code = `fun test() { `
+	_, errs := testParseStatements(code)
 
 	AssertEqualWithDiff(t,
 		[]error{
@@ -3309,12 +3537,40 @@ func TestParseFunctionDeclarationMissingClosingBrace(t *testing.T) {
 		},
 		errs,
 	)
+
+	var missingBraceErr *MissingClosingBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert closing brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: "}",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
+							EndPos:   ast.Position{Offset: 12, Line: 1, Column: 12},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"fun test() {} ",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestParsePreConditionsMissingOpeningBrace(t *testing.T) {
 	t.Parallel()
 
-	_, errs := testParseStatements(`fun test() { pre } }`)
+	const code = `fun test() { pre } }`
+	_, errs := testParseStatements(code)
 
 	AssertEqualWithDiff(t,
 		[]error{
@@ -3331,12 +3587,40 @@ func TestParsePreConditionsMissingOpeningBrace(t *testing.T) {
 		},
 		errs,
 	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 16, Line: 1, Column: 16},
+							EndPos:   ast.Position{Offset: 16, Line: 1, Column: 16},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"fun test() { pre { } }",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestParsePreConditionsMissingClosingBrace(t *testing.T) {
 	t.Parallel()
 
-	_, errs := testParseStatements(`fun test() { pre { `)
+	const code = `fun test() { pre { `
+	_, errs := testParseStatements(code)
 
 	AssertEqualWithDiff(t,
 		[]error{
@@ -3363,12 +3647,40 @@ func TestParsePreConditionsMissingClosingBrace(t *testing.T) {
 		},
 		errs,
 	)
+
+	var missingBraceErr *MissingClosingBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert closing brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: "}",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 18, Line: 1, Column: 18},
+							EndPos:   ast.Position{Offset: 18, Line: 1, Column: 18},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"fun test() { pre {} ",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestParsePostConditionsMissingOpeningBrace(t *testing.T) {
 	t.Parallel()
 
-	_, errs := testParseStatements(`fun test() { post } }`)
+	const code = `fun test() { post } }`
+	_, errs := testParseStatements(code)
 
 	AssertEqualWithDiff(t,
 		[]error{
@@ -3385,12 +3697,40 @@ func TestParsePostConditionsMissingOpeningBrace(t *testing.T) {
 		},
 		errs,
 	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
+							EndPos:   ast.Position{Offset: 17, Line: 1, Column: 17},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"fun test() { post { } }",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestParsePostConditionsMissingClosingBrace(t *testing.T) {
 	t.Parallel()
 
-	_, errs := testParseStatements(`fun test() { post { `)
+	const code = `fun test() { post { `
+	_, errs := testParseStatements(code)
 
 	AssertEqualWithDiff(t,
 		[]error{
@@ -3417,12 +3757,40 @@ func TestParsePostConditionsMissingClosingBrace(t *testing.T) {
 		},
 		errs,
 	)
+
+	var missingBraceErr *MissingClosingBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert closing brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: "}",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 19, Line: 1, Column: 19},
+							EndPos:   ast.Position{Offset: 19, Line: 1, Column: 19},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"fun test() { post {} ",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestParseSwitchStatementMissingOpeningBrace(t *testing.T) {
 	t.Parallel()
 
-	_, errs := testParseStatements(`switch x }`)
+	const code = `switch x }`
+	_, errs := testParseStatements(code)
 
 	AssertEqualWithDiff(t,
 		[]error{
@@ -3439,12 +3807,40 @@ func TestParseSwitchStatementMissingOpeningBrace(t *testing.T) {
 		},
 		errs,
 	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+							EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"switch x { }",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestParseSwitchStatementMissingClosingBrace(t *testing.T) {
 	t.Parallel()
 
-	_, errs := testParseStatements(`switch x { `)
+	const code = `switch x { `
+	_, errs := testParseStatements(code)
 
 	AssertEqualWithDiff(t,
 		[]error{
@@ -3461,12 +3857,40 @@ func TestParseSwitchStatementMissingClosingBrace(t *testing.T) {
 		},
 		errs,
 	)
+
+	var missingBraceErr *MissingClosingBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert closing brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: "}",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"switch x {} ",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestParseIfStatementMissingOpeningBraceEOF(t *testing.T) {
 	t.Parallel()
 
-	_, errs := testParseStatements(`if true`)
+	const code = `if true`
+	_, errs := testParseStatements(code)
 
 	AssertEqualWithDiff(t,
 		[]error{
@@ -3492,13 +3916,41 @@ func TestParseIfStatementMissingOpeningBraceEOF(t *testing.T) {
 			},
 		},
 		errs,
+	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+							EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"if true {",
+		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
 
 func TestParseWhileStatementMissingOpeningBraceEOF(t *testing.T) {
 	t.Parallel()
 
-	_, errs := testParseStatements(`while true`)
+	const code = `while true`
+	_, errs := testParseStatements(code)
 
 	AssertEqualWithDiff(t,
 		[]error{
@@ -3524,13 +3976,41 @@ func TestParseWhileStatementMissingOpeningBraceEOF(t *testing.T) {
 			},
 		},
 		errs,
+	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"while true {",
+		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
 
 func TestParseForStatementMissingOpeningBraceEOF(t *testing.T) {
 	t.Parallel()
 
-	_, errs := testParseStatements(`for x in y`)
+	const code = `for x in y`
+	_, errs := testParseStatements(code)
 
 	AssertEqualWithDiff(t,
 		[]error{
@@ -3556,13 +4036,41 @@ func TestParseForStatementMissingOpeningBraceEOF(t *testing.T) {
 			},
 		},
 		errs,
+	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"for x in y {",
+		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
 
 func TestParseFunctionDeclarationMissingOpeningBraceEOF(t *testing.T) {
 	t.Parallel()
 
-	_, errs := testParseStatements(`fun test()`)
+	const code = `fun test()`
+	_, errs := testParseStatements(code)
 
 	AssertEqualWithDiff(t,
 		[]error{
@@ -3588,13 +4096,41 @@ func TestParseFunctionDeclarationMissingOpeningBraceEOF(t *testing.T) {
 			},
 		},
 		errs,
+	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"fun test() {",
+		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
 
 func TestParsePreConditionsMissingOpeningBraceEOF(t *testing.T) {
 	t.Parallel()
 
-	_, errs := testParseStatements(`fun test() { pre`)
+	const code = `fun test() { pre`
+	_, errs := testParseStatements(code)
 
 	AssertEqualWithDiff(t,
 		[]error{
@@ -3630,13 +4166,41 @@ func TestParsePreConditionsMissingOpeningBraceEOF(t *testing.T) {
 			},
 		},
 		errs,
+	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 16, Line: 1, Column: 16},
+							EndPos:   ast.Position{Offset: 16, Line: 1, Column: 16},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"fun test() { pre {",
+		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
 
 func TestParsePostConditionsMissingOpeningBraceEOF(t *testing.T) {
 	t.Parallel()
 
-	_, errs := testParseStatements(`fun test() { post`)
+	const code = `fun test() { post`
+	_, errs := testParseStatements(code)
 
 	AssertEqualWithDiff(t,
 		[]error{
@@ -3673,12 +4237,40 @@ func TestParsePostConditionsMissingOpeningBraceEOF(t *testing.T) {
 		},
 		errs,
 	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
+							EndPos:   ast.Position{Offset: 17, Line: 1, Column: 17},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"fun test() { post {",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestParseSwitchStatementMissingOpeningBraceEOF(t *testing.T) {
 	t.Parallel()
 
-	_, errs := testParseStatements(`switch x`)
+	const code = `switch x`
+	_, errs := testParseStatements(code)
 
 	AssertEqualWithDiff(t,
 		[]error{
@@ -3704,5 +4296,32 @@ func TestParseSwitchStatementMissingOpeningBraceEOF(t *testing.T) {
 			},
 		},
 		errs,
+	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+							EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"switch x {",
+		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }

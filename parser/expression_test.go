@@ -445,7 +445,9 @@ func TestParseAdvancedExpression(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression("a ? b c")
+		const code = "a ? b c"
+		_, errs := testParseExpression(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingColonInConditionalExpressionError{
@@ -459,6 +461,33 @@ func TestParseAdvancedExpression(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingColonErr *MissingColonInConditionalExpressionError
+		require.ErrorAs(t, errs[0], &missingColonErr)
+
+		fixes := missingColonErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert colon",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: " :",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+								EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"a ? b : c",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
@@ -622,7 +651,9 @@ func TestParseAdvancedExpression(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression("{1: 2")
+		const code = "{1: 2"
+		_, errs := testParseExpression(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingClosingBraceInDictionaryExpressionError{
@@ -636,6 +667,33 @@ func TestParseAdvancedExpression(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingBraceErr *MissingClosingBraceInDictionaryExpressionError
+		require.ErrorAs(t, errs[0], &missingBraceErr)
+
+		fixes := missingBraceErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing brace",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "}",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+								EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"{1: 2}",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
@@ -782,7 +840,9 @@ func TestParseArrayExpression(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression("[1, 2")
+		const code = "[1, 2"
+		_, errs := testParseExpression(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingClosingBracketInArrayExpressionError{
@@ -796,6 +856,33 @@ func TestParseArrayExpression(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingBracketErr *MissingClosingBracketInArrayExpressionError
+		require.ErrorAs(t, errs[0], &missingBracketErr)
+
+		fixes := missingBracketErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing bracket",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "]",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+								EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"[1, 2]",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
@@ -979,7 +1066,9 @@ func TestParseDictionaryExpression(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression(`{"a" 1}`)
+		const code = `{"a" 1}`
+		_, errs := testParseExpression(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingColonInDictionaryEntryError{
@@ -993,6 +1082,33 @@ func TestParseDictionaryExpression(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingColonErr *MissingColonInDictionaryEntryError
+		require.ErrorAs(t, errs[0], &missingColonErr)
+
+		fixes := missingColonErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert colon",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ":",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			`{"a": 1}`,
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 }
@@ -1097,7 +1213,9 @@ func TestParseIndexExpression(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression("a[0")
+		const code = "a[0"
+		_, errs := testParseExpression(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingClosingBracketInIndexExpressionError{
@@ -1111,6 +1229,33 @@ func TestParseIndexExpression(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingBracketErr *MissingClosingBracketInIndexExpressionError
+		require.ErrorAs(t, errs[0], &missingBracketErr)
+
+		fixes := missingBracketErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing bracket",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "]",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+								EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"a[0]",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 }
@@ -1181,7 +1326,9 @@ func TestParsePath(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression("/foo")
+		const code = "/foo"
+		_, errs := testParseExpression(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingSlashInPathExpressionError{
@@ -1201,6 +1348,33 @@ func TestParsePath(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingSlashErr *MissingSlashInPathExpressionError
+		require.ErrorAs(t, errs[0], &missingSlashErr)
+
+		fixes := missingSlashErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert slash",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "/",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"/foo/",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 }
@@ -1868,6 +2042,7 @@ func TestParseInvocation(t *testing.T) {
 
 		const code = "f(1 2)"
 		_, errs := testParseExpression(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingCommaInArgumentListError{
@@ -1893,10 +2068,10 @@ func TestParseInvocation(t *testing.T) {
 					Message: "Insert comma",
 					TextEdits: []ast.TextEdit{
 						{
-							Insertion: ", ",
+							Insertion: ",",
 							Range: ast.Range{
-								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
-								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+								StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+								EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
 							},
 						},
 					},
@@ -1906,7 +2081,7 @@ func TestParseInvocation(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			"f(1 , 2)",
+			"f(1, 2)",
 			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
@@ -2047,6 +2222,7 @@ func TestParseInvocation(t *testing.T) {
 
 		const code = "f(1"
 		_, errs := testParseExpression(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingClosingParenInArgumentListError{
@@ -2458,7 +2634,6 @@ func TestParseReference(t *testing.T) {
 		t.Parallel()
 
 		const code = `&y[z]`
-
 		result, errs := testParseExpression(code)
 		require.Empty(t, errs)
 
@@ -3236,6 +3411,7 @@ func TestParseAttach(t *testing.T) {
 
 		const code = "attach A() b"
 		_, errs := testParseExpression(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingToKeywordInAttachExpressionError{
@@ -3285,6 +3461,7 @@ func TestParseAttach(t *testing.T) {
 
 		const code = "attach A()"
 		_, errs := testParseExpression(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingToKeywordInAttachExpressionError{
@@ -5637,8 +5814,8 @@ func TestParseUnaryExpression(t *testing.T) {
 		t.Parallel()
 
 		const code = ` % boo`
-
 		_, errs := testParseExpression(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&UnexpectedExpressionStartError{
@@ -5664,7 +5841,9 @@ func TestParseNestedExpression(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression("(1")
+		const code = "(1"
+		_, errs := testParseExpression(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
 				&MissingEndOfParenthesizedExpressionError{
@@ -5678,6 +5857,33 @@ func TestParseNestedExpression(t *testing.T) {
 				},
 			},
 			errs,
+		)
+
+		var missingParenErr *MissingEndOfParenthesizedExpressionError
+		require.ErrorAs(t, errs[0], &missingParenErr)
+
+		fixes := missingParenErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing parenthesis",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ")",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+								EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"(1)",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 }
@@ -7282,7 +7488,6 @@ func TestParseFunctionExpressionWithResourceTypeAnnotation(t *testing.T) {
 
 	AssertEqualWithDiff(t,
 		[]ast.Declaration{
-
 			&ast.VariableDeclaration{
 				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
