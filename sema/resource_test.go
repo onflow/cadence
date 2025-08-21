@@ -1584,17 +1584,53 @@ func TestCheckInvalidDestroy(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
+	const code = `
       struct X {}
 
       fun test() {
-          destroy X()
+          destroy X()// after
       }
-    `)
+    `
+	_, err := ParseAndCheck(t, code)
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.InvalidDestructionError{}, errs[0])
+	var destructionError *sema.InvalidDestructionError
+	require.ErrorAs(t, errs[0], &destructionError)
+
+	fixes := destructionError.SuggestFixes(code)
+
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Remove `destroy` expression",
+				TextEdits: []ast.TextEdit{
+					{
+						Replacement: "",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 49, Line: 5, Column: 10},
+							EndPos:   ast.Position{Offset: 59, Line: 5, Column: 20},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	const expected = `
+      struct X {}
+
+      fun test() {
+          // after
+      }
+    `
+
+	assert.Equal(t,
+		expected,
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+
 }
 
 func TestCheckUnaryCreateAndDestroy(t *testing.T) {

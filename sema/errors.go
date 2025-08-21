@@ -3087,6 +3087,7 @@ var _ SemanticError = &InvalidDestructionError{}
 var _ errors.UserError = &InvalidDestructionError{}
 var _ errors.SecondaryError = &InvalidDestructionError{}
 var _ errors.HasDocumentationLink = &InvalidDestructionError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &InvalidDestructionError{}
 
 func (*InvalidDestructionError) isSemanticError() {}
 
@@ -3103,6 +3104,20 @@ func (*InvalidDestructionError) SecondaryError() string {
 
 func (*InvalidDestructionError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/resources"
+}
+
+func (e *InvalidDestructionError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Remove `destroy` expression",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "",
+					Range:       e.Range,
+				},
+			},
+		},
+	}
 }
 
 // ResourceLossError
