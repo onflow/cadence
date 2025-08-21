@@ -953,6 +953,11 @@ func generateErrors() []namedError {
 				Range:  placeholderRange,
 			},
 		},
+		{"sema.InvalidConditionalResourceOperandError",
+			&sema.InvalidConditionalResourceOperandError{
+				Range: placeholderRange,
+			},
+		},
 		{"sema.InvalidConformanceError",
 			&sema.InvalidConformanceError{
 				Type:  placeholderSemaType,
@@ -1051,6 +1056,12 @@ func generateErrors() []namedError {
 		},
 		{"sema.InvalidFailableResourceDowncastOutsideOptionalBindingError",
 			&sema.InvalidFailableResourceDowncastOutsideOptionalBindingError{
+				Range: placeholderRange,
+			},
+		},
+		{"sema.InvalidFieldVariableKindError",
+			&sema.InvalidFieldVariableKindError{
+				Kind:  placeholderVariableKind,
 				Range: placeholderRange,
 			},
 		},
@@ -1169,6 +1180,11 @@ func generateErrors() []namedError {
 		{"sema.InvalidNestedTypeError",
 			&sema.InvalidNestedTypeError{
 				Type: placeholderNominalType,
+			},
+		},
+		{"sema.InvalidNilCoalescingRightResourceOperandError",
+			&sema.InvalidNilCoalescingRightResourceOperandError{
+				Range: placeholderRange,
 			},
 		},
 		{"sema.InvalidNonEntitlementAccessError",
@@ -1343,12 +1359,6 @@ func generateErrors() []namedError {
 				ActualType:              placeholderSemaType,
 				Range:                   placeholderRange,
 				Operation:               placeholderOperation,
-			},
-		},
-		{"sema.InvalidFieldVariableKindError",
-			&sema.InvalidFieldVariableKindError{
-				Kind:  placeholderVariableKind,
-				Range: placeholderRange,
 			},
 		},
 		{"sema.InvalidatedResourceReferenceError",
