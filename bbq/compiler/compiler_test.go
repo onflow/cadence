@@ -9145,8 +9145,12 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.InstructionSetLocal{Local: returnLocalIndex},
 				// get a reference to attachment
 				opcode.InstructionGetLocal{Local: returnLocalIndex},
-				opcode.InstructionNewRef{Type: 10, IsImplicit: false},
+				// set base to be the attachment
+				opcode.InstructionGetLocal{Local: baseLocalIndex},
+				opcode.InstructionGetLocal{Local: returnLocalIndex},
+				opcode.InstructionSetAttachmentBase{},
 				// set self to be the reference
+				opcode.InstructionNewRef{Type: 10, IsImplicit: false},
 				opcode.InstructionSetLocal{Local: selfLocalIndex},
 
 				// self.x = x

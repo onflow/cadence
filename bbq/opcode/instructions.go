@@ -2859,6 +2859,35 @@ func DecodeSetTypeIndex(ip *uint16, code []byte) (i InstructionSetTypeIndex) {
 	return i
 }
 
+// InstructionSetAttachmentBase
+//
+// Pops two values off the stack, the attachment and the base, sets the attachment's base value to base.
+type InstructionSetAttachmentBase struct {
+}
+
+var _ Instruction = InstructionSetAttachmentBase{}
+
+func (InstructionSetAttachmentBase) Opcode() Opcode {
+	return SetAttachmentBase
+}
+
+func (i InstructionSetAttachmentBase) String() string {
+	return i.Opcode().String()
+}
+
+func (i InstructionSetAttachmentBase) OperandsString(sb *strings.Builder, colorize bool) {}
+
+func (i InstructionSetAttachmentBase) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.Constant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+}
+
+func (i InstructionSetAttachmentBase) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+}
+
 func DecodeInstruction(ip *uint16, code []byte) Instruction {
 	switch Opcode(decodeByte(ip, code)) {
 	case Unknown:
@@ -3013,6 +3042,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return DecodeRemoveTypeIndex(ip, code)
 	case SetTypeIndex:
 		return DecodeSetTypeIndex(ip, code)
+	case SetAttachmentBase:
+		return InstructionSetAttachmentBase{}
 	}
 
 	panic(errors.NewUnreachableError())

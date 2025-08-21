@@ -1674,13 +1674,6 @@ func (v *CompositeValue) getBaseValue(
 		baseType = ty
 	}
 
-	// During initialization of an attachment in the compiler, base is not set yet.
-	// Any method which needs base will request again after initialization.
-	// So we can safely return nil.
-	if v.base == nil {
-		return nil
-	}
-
 	return NewEphemeralReferenceValue(context, functionAuthorization, v.base, baseType, locationRange)
 }
 

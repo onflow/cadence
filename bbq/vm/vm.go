@@ -1556,6 +1556,26 @@ func opSetTypeIndex(vm *VM, ins opcode.InstructionSetTypeIndex) {
 	vm.push(base)
 }
 
+func opSetAttachmentBase(vm *VM, ins opcode.Instruction) {
+	b, a := vm.pop2()
+
+	// Set attachment base
+	// sanity check all type conversions
+	attachment, ok := a.(*interpreter.CompositeValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	bRef, ok := b.(*interpreter.EphemeralReferenceValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	base, ok := bRef.Value.(*interpreter.CompositeValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	attachment.SetBaseValue(base)
+}
+
 func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 	target := vm.pop()
 
@@ -1778,6 +1798,8 @@ func (vm *VM) run() {
 			opSetTypeIndex(vm, ins)
 		case opcode.InstructionRemoveTypeIndex:
 			opRemoveTypeIndex(vm, ins)
+		case opcode.InstructionSetAttachmentBase:
+			opSetAttachmentBase(vm, ins)
 		default:
 			panic(errors.NewUnexpectedError("cannot execute instruction of type %T", ins))
 		}
