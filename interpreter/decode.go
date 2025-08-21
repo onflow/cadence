@@ -353,6 +353,8 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 
 		case values.CBORTagUFix64Value:
 			storable, err = d.decodeUFix64()
+		case values.CBORTagUFix128Value:
+			storable, err = d.decodeUFix128()
 
 		// Storage
 
@@ -874,7 +876,6 @@ func (d StorableDecoder) decodeFix128() (Fix128Value, error) {
 		)
 	}
 
-
 	high, err := decodeUint64(d.decoder, d.memoryGauge)
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -912,6 +913,55 @@ func (d StorableDecoder) decodeUFix64() (UFix64Value, error) {
 
 	// Already metered at `decodeUint64`
 	return NewUnmeteredUFix64Value(value), nil
+}
+
+func (d StorableDecoder) decodeUFix128() (UFix128Value, error) {
+	const expectedLength = encodedFix128ValueLength
+
+	size, err := d.decoder.DecodeArrayHead()
+	if err != nil {
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return UFix128Value{}, errors.NewUnexpectedError(
+				"invalid ufix128 encoding: expected [%d]any, got %s",
+				expectedLength,
+				e.ActualType.String(),
+			)
+		}
+		return UFix128Value{}, err
+	}
+
+	if size != expectedLength {
+		return UFix128Value{}, errors.NewUnexpectedError(
+			"invalid ufix128 encoding: expected [%d]any, got [%d]any",
+			expectedLength,
+			size,
+		)
+	}
+
+	high, err := decodeUint64(d.decoder, d.memoryGauge)
+	if err != nil {
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return UFix128Value{},
+				errors.NewUnexpectedError("unknown Fix128 high-bits encoding: %s", e.ActualType.String())
+		}
+		return UFix128Value{}, err
+	}
+
+	low, err := decodeUint64(d.decoder, d.memoryGauge)
+	if err != nil {
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return UFix128Value{},
+				errors.NewUnexpectedError("unknown Fix128 low-bits encoding: %s", e.ActualType.String())
+		}
+		return UFix128Value{}, err
+	}
+
+	return NewUFix128Value(
+		d.memoryGauge,
+		func() fix.UFix128 {
+			return fix.NewUFix128(high, low)
+		},
+	), nil
 }
 
 func (d StorableDecoder) decodeSome() (SomeStorable, error) {

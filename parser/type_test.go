@@ -3131,3 +3131,48 @@ func TestParseFix128Type(t *testing.T) {
 
 	AssertEqualWithDiff(t, expected, prog.Declarations())
 }
+
+func TestParseUFix128Type(t *testing.T) {
+	t.Parallel()
+
+	code := `let x: UFix128 = 42`
+
+	prog, errs := testParseProgram(code)
+	require.Empty(t, errs)
+
+	expected := []ast.Declaration{
+		&ast.VariableDeclaration{
+			Access:     ast.AccessNotSpecified,
+			IsConstant: true,
+			Identifier: ast.Identifier{
+				Identifier: "x",
+				Pos:        ast.Position{Offset: 4, Line: 1, Column: 4},
+			},
+			TypeAnnotation: &ast.TypeAnnotation{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "UFix128",
+						Pos:        ast.Position{Offset: 7, Line: 1, Column: 7},
+					},
+				},
+				StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+			},
+			Value: &ast.IntegerExpression{
+				PositiveLiteral: []uint8("42"),
+				Value:           big.NewInt(42),
+				Base:            10,
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
+					EndPos:   ast.Position{Offset: 18, Line: 1, Column: 18},
+				},
+			},
+			Transfer: &ast.Transfer{
+				Operation: 1,
+				Pos:       ast.Position{Offset: 15, Line: 1, Column: 15},
+			},
+			StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+		},
+	}
+
+	AssertEqualWithDiff(t, expected, prog.Declarations())
+}

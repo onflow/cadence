@@ -191,6 +191,8 @@ func exportValue(
 		return cadence.Fix64(v), nil
 	case interpreter.Fix128Value:
 		return cadence.Fix128(v), nil
+	case interpreter.UFix128Value:
+		return cadence.UFix128(v), nil
 	case interpreter.UFix64Value:
 		return cadence.UFix64(v.UFix64Value), nil
 	case *interpreter.CompositeValue:
@@ -886,6 +888,8 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 		return i.importFix128(v), nil
 	case cadence.UFix64:
 		return i.importUFix64(v), nil
+	case cadence.UFix128:
+		return i.importUFix128(v), nil
 	case cadence.Path:
 		return i.importPathValue(v), nil
 	case cadence.Array:
@@ -1155,6 +1159,15 @@ func (i valueImporter) importUFix64(v cadence.UFix64) interpreter.UFix64Value {
 		i.context,
 		func() uint64 {
 			return uint64(v)
+		},
+	)
+}
+
+func (i valueImporter) importUFix128(v cadence.UFix128) interpreter.UFix128Value {
+	return interpreter.NewUFix128Value(
+		i.context,
+		func() fix.UFix128 {
+			return fix.UFix128(v)
 		},
 	)
 }

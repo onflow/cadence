@@ -429,6 +429,15 @@ func TestRuntimeExportValue(t *testing.T) {
 			expected: cadence.UFix64(123000000),
 		},
 		{
+			label: "UFix128",
+			value: interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(123, 22),
+			expected: func() cadence.UFix128 {
+				v, err := cadence.NewUnmeteredUFix128FromString("1.23")
+				require.NoError(t, err)
+				return v
+			}(),
+		},
+		{
 			label: "Path",
 			value: interpreter.PathValue{
 				Domain:     common.PathDomainStorage,
@@ -902,6 +911,15 @@ func TestRuntimeImportValue(t *testing.T) {
 			label:    "UFix64",
 			value:    cadence.UFix64(123000000),
 			expected: interpreter.NewUnmeteredUFix64Value(123000000),
+		},
+		{
+			label: "UFix128",
+			value: func() cadence.UFix128 {
+				v, err := cadence.NewUnmeteredUFix128FromString("1.23")
+				require.NoError(t, err)
+				return v
+			}(),
+			expected: interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(123, 22),
 		},
 		{
 			label: "Path",

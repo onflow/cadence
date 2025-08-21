@@ -157,7 +157,7 @@ const (
 	_ // future: UFix16
 	_ // future: UFix32
 	PrimitiveStaticTypeUFix64
-	_ // future: UFix128
+	PrimitiveStaticTypeUFix128
 	_ // future: UFix256
 	_
 
@@ -331,7 +331,8 @@ func (t PrimitiveStaticType) elementSize() uint {
 		PrimitiveStaticTypeUFix64:
 		return values.CBORTagSize + 9
 
-	case PrimitiveStaticTypeFix128:
+	case PrimitiveStaticTypeFix128,
+		PrimitiveStaticTypeUFix128:
 		return values.CBORTagSize + 17
 
 	case PrimitiveStaticTypePath,
@@ -582,6 +583,8 @@ func (t PrimitiveStaticType) SemaType() sema.Type {
 	// UFix*
 	case PrimitiveStaticTypeUFix64:
 		return sema.UFix64Type
+	case PrimitiveStaticTypeUFix128:
+		return sema.UFix128Type
 
 	// Storage
 
@@ -830,6 +833,8 @@ func ConvertSemaToPrimitiveStaticType(
 	// UFix*
 	case sema.UFix64Type:
 		typ = PrimitiveStaticTypeUFix64
+	case sema.UFix128Type:
+		typ = PrimitiveStaticTypeUFix128
 
 	case sema.PathType:
 		typ = PrimitiveStaticTypePath

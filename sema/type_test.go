@@ -725,6 +725,7 @@ func TestCommonSuperType(t *testing.T) {
 					Fix64Type,
 					Fix128Type,
 					UFix64Type,
+					UFix128Type,
 					FixedPointType,
 				},
 				expectedSuperType: FixedPointType,
@@ -738,12 +739,28 @@ func TestCommonSuperType(t *testing.T) {
 				expectedSuperType: Fix128Type,
 			},
 			{
+				name: "homogenous ufix128 types",
+				types: []Type{
+					UFix128Type,
+					UFix128Type,
+				},
+				expectedSuperType: UFix128Type,
+			},
+			{
 				name: "heterogeneous signed fixed-point types",
 				types: []Type{
 					Fix64Type,
 					Fix128Type,
 				},
 				expectedSuperType: SignedFixedPointType,
+			},
+			{
+				name: "heterogeneous unsigned fixed-point types",
+				types: []Type{
+					UFix64Type,
+					UFix128Type,
+				},
+				expectedSuperType: FixedPointType,
 			},
 			{
 				name: "heterogeneous numeric types",

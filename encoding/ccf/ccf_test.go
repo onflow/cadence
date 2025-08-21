@@ -2986,6 +2986,102 @@ func TestEncodeUFix64(t *testing.T) {
 	}...)
 }
 
+func TestEncodeUFix128(t *testing.T) {
+
+	t.Parallel()
+
+	newUFix128Value := func(s string) cadence.UFix128 {
+		v, err := cadence.NewUnmeteredUFix128FromString(s)
+		require.NoError(t, err)
+		return v
+	}
+
+	testAllEncodeAndDecode(t, []encodeTest{
+		{
+			name:        "Zero",
+			val:         newUFix128Value("0.0"),
+			expectedVal: cadence.UFix128(fix.NewUFix128(0, 0)),
+			expected: []byte{
+				// language=json, format=json-cdc
+				// {"type":"UFix128","value":"0.000000000000000000000000"}
+				//
+				// language=edn, format=ccf
+				// 130([137(22), [0, 0]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// UFix128 type ID (101)
+				0x18, 0x65,
+				// array, 2 elements follow
+				0x82,
+				// hi-bits
+				0x0,
+				// low-bits
+				0x0,
+			},
+		},
+		{
+			name: "789.00123010",
+			val:  newUFix128Value("789.00123010"),
+			expected: []byte{
+				// language=json, format=json-cdc
+				// {"type":"UFix128","value":"789.001230100000000000000000"}
+				//
+				// language=edn, format=ccf
+				// 130([137(99), [42771842, 7164858704389603328]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// UFix128 type ID (101)
+				0x18, 0x65,
+				// array, 2 elements follow
+				0x82,
+				// high-bits (42771842)
+				0x1a, 0x02, 0x8c, 0xa5, 0x82, 0x1b,
+				// low-bits (7164858704389603328)
+				0x63, 0x6E, 0xB1, 0x07, 0xD5, 0x02, 0x00, 0x00,
+			},
+		},
+		{
+			name: "1234.056",
+			val:  newUFix128Value("1234.056"),
+			expected: []byte{
+				// language=json, format=json-cdc
+				// {"type":"UFix128","value":"1234.056000000000000000000000"}
+				//
+				// language=edn, format=ccf
+				// 130([137(22), [66898309, 14913059639741382656]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// UFix128 type ID (101)
+				0x18, 0x65,
+				// array, 2 elements follow
+				0x82,
+				// high-bits (66898309)
+				0x1a, 0x03, 0xfc, 0xc9, 0x85,
+				// low-bits (14913059639741382656)
+				0x1b, 0xCE, 0xF5, 0xD4, 0xBA, 0xC5, 0x00, 0x00, 0x00,
+			},
+		},
+	}...)
+}
+
 func TestEncodeArray(t *testing.T) {
 
 	t.Parallel()
@@ -8631,6 +8727,7 @@ func TestEncodeSimpleTypes(t *testing.T) {
 		ccf.SimpleTypeFix64:                            cadence.Fix64Type,
 		ccf.SimpleTypeFix128:                           cadence.Fix128Type,
 		ccf.SimpleTypeUFix64:                           cadence.UFix64Type,
+		ccf.SimpleTypeUFix128:                          cadence.UFix128Type,
 		ccf.SimpleTypeBlock:                            cadence.BlockType,
 		ccf.SimpleTypePath:                             cadence.PathType,
 		ccf.SimpleTypeCapabilityPath:                   cadence.CapabilityPathType,
