@@ -2929,6 +2929,7 @@ var _ SemanticError = &InvalidInterfaceTypeError{}
 var _ errors.UserError = &InvalidInterfaceTypeError{}
 var _ errors.SecondaryError = &InvalidInterfaceTypeError{}
 var _ errors.HasDocumentationLink = &InvalidInterfaceTypeError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &InvalidInterfaceTypeError{}
 
 func (*InvalidInterfaceTypeError) isSemanticError() {}
 
@@ -2940,7 +2941,9 @@ func (*InvalidInterfaceTypeError) Error() string {
 
 func (e *InvalidInterfaceTypeError) SecondaryError() string {
 	return fmt.Sprintf(
-		"got %#q; consider using %#q",
+		"interfaces can not be used as types directly; "+
+			"wrap interfaces in intersection types (e.g., `{Interface}`); "+
+			"got %#q, consider using %#q",
 		e.ActualType.QualifiedString(),
 		e.ExpectedType.QualifiedString(),
 	)
@@ -2948,6 +2951,21 @@ func (e *InvalidInterfaceTypeError) SecondaryError() string {
 
 func (*InvalidInterfaceTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/interfaces"
+}
+
+func (e *InvalidInterfaceTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	replacement := e.ExpectedType.QualifiedString()
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: fmt.Sprintf("Replace with `%s`", replacement),
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: replacement,
+					Range:       e.Range,
+				},
+			},
+		},
+	}
 }
 
 // InvalidInterfaceDeclarationError
