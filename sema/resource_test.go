@@ -1698,17 +1698,52 @@ func TestCheckInvalidUnaryCreateStruct(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
+	const code = `
       struct X {}
 
       fun test() {
           create X()
       }
-    `)
+    `
+	_, err := ParseAndCheck(t, code)
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.InvalidConstructionError{}, errs[0])
+	var invalidConstructionErr *sema.InvalidConstructionError
+	require.ErrorAs(t, errs[0], &invalidConstructionErr)
+
+	fixes := invalidConstructionErr.SuggestFixes(code)
+
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Remove `create`",
+				TextEdits: []ast.TextEdit{
+					{
+						Replacement: "",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 49, Line: 5, Column: 10},
+							EndPos:   ast.Position{Offset: 55, Line: 5, Column: 16},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	const expected = `
+      struct X {}
+
+      fun test() {
+          X()
+      }
+    `
+
+	assert.Equal(t,
+		expected,
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestCheckInvalidCreateImportedResource(t *testing.T) {

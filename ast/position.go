@@ -96,6 +96,22 @@ func (p Position) AttachLeft(code string) Position {
 	return NewPositionAtCodeOffset(nil, code, newOffset)
 }
 
+func (p Position) SlurpWhitespaceSuffix(code string) Position {
+	var length int
+	for offset := p.Offset + 1; offset < len(code); offset++ {
+		if code[offset] == ' ' {
+			length++
+		} else {
+			break
+		}
+	}
+
+	if length == 0 {
+		return p
+	}
+	return p.Shifted(nil, length)
+}
+
 func (p Position) String() string {
 	return fmt.Sprintf(
 		"%d(%d:%d)",

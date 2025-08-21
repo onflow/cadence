@@ -663,18 +663,6 @@ func (e *IncorrectArgumentLabelError) SuggestFixes(code string) []errors.Suggest
 			},
 		}
 	} else {
-		endPos := e.Range.EndPos
-
-		var whitespaceSuffixLength int
-		for offset := endPos.Offset + 1; offset < len(code); offset++ {
-			if code[offset] == ' ' {
-				whitespaceSuffixLength++
-			} else {
-				break
-			}
-		}
-
-		adjustedEndPos := endPos.Shifted(nil, whitespaceSuffixLength)
 
 		return []errors.SuggestedFix[ast.TextEdit]{
 			{
@@ -683,8 +671,8 @@ func (e *IncorrectArgumentLabelError) SuggestFixes(code string) []errors.Suggest
 					{
 						Replacement: "",
 						Range: ast.Range{
-							StartPos: e.Range.StartPos,
-							EndPos:   adjustedEndPos,
+							StartPos: e.StartPos,
+							EndPos:   e.EndPos.SlurpWhitespaceSuffix(code),
 						},
 					},
 				},
@@ -3053,17 +3041,27 @@ func (e *IncorrectTransferOperationError) SuggestFixes(_ string) []errors.Sugges
 // InvalidConstructionError
 
 type InvalidConstructionError struct {
-	ast.Range
+	Pos ast.Position
 }
 
 var _ SemanticError = &InvalidConstructionError{}
 var _ errors.UserError = &InvalidConstructionError{}
 var _ errors.SecondaryError = &InvalidConstructionError{}
 var _ errors.HasDocumentationLink = &InvalidConstructionError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &InvalidConstructionError{}
 
 func (*InvalidConstructionError) isSemanticError() {}
 
 func (*InvalidConstructionError) IsUserError() {}
+
+func (e *InvalidConstructionError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidConstructionError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
+	const length = len(`create`)
+	return e.Pos.Shifted(memoryGauge, length-1)
+}
 
 func (*InvalidConstructionError) Error() string {
 	return "cannot create value: not a resource"
@@ -3076,6 +3074,23 @@ func (*InvalidConstructionError) SecondaryError() string {
 
 func (*InvalidConstructionError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/resources"
+}
+
+func (e *InvalidConstructionError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Remove `create`",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "",
+					Range: ast.Range{
+						StartPos: e.Pos,
+						EndPos:   e.EndPosition(nil).SlurpWhitespaceSuffix(code),
+					},
+				},
+			},
+		},
+	}
 }
 
 // InvalidDestructionError
@@ -6058,8 +6073,7 @@ func (*MappingAccessMissingKeywordError) Error() string {
 
 func (e *MappingAccessMissingKeywordError) SecondaryError() string {
 	return fmt.Sprintf(
-		"replace %#q with `mapping %s`",
-		e.Type.QualifiedString(),
+		"replace %#[1]q with `mapping %[1]s`",
 		e.Type.QualifiedString(),
 	)
 }
