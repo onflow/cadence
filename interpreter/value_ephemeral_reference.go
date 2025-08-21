@@ -355,20 +355,29 @@ func (v *EphemeralReferenceValue) Iterator(context ValueStaticTypeContext, locat
 	}
 
 	return &ReferenceValueIterator{
-		iterator: referencedIterable.Iterator(context, locationRange),
+		reference: v,
+		iterator:  referencedIterable.Iterator(context, locationRange),
 	}
 }
 
 type ReferenceValueIterator struct {
-	iterator ValueIterator
+	reference Value
+	iterator  ValueIterator
 }
 
 var _ ValueIterator = &ReferenceValueIterator{}
 
 func (i *ReferenceValueIterator) Next(context ValueIteratorContext, locationRange LocationRange) Value {
+	// Iterator implicitly captures the reference.
+	// Therefore, check whether the reference is valid, everytime the iterator is used.
+	CheckInvalidatedResourceOrResourceReference(i.reference, locationRange, context)
 	return i.iterator.Next(context, locationRange)
 }
 
 func (i *ReferenceValueIterator) HasNext() bool {
 	return i.iterator.HasNext()
+}
+
+func (i *ReferenceValueIterator) ValueID() (atree.ValueID, bool) {
+	return i.iterator.ValueID()
 }

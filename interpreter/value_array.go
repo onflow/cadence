@@ -108,12 +108,12 @@ func NewArrayValueWithIterator(
 				return
 			}
 
-			typeInfo := v.Type.String()
-			count := v.Count()
+			valueID := v.ValueID().String()
+			typeID := string(v.Type.ID())
 
 			context.ReportArrayValueConstructTrace(
-				typeInfo,
-				count,
+				valueID,
+				typeID,
 				time.Since(startTime),
 			)
 		}()
@@ -282,15 +282,19 @@ func (v *ArrayValue) iterate(
 		}
 	}
 
-	context.WithMutationPrevention(v.ValueID(), iterate)
+	context.WithContainerMutationPrevention(v.ValueID(), iterate)
 }
 
 func (v *ArrayValue) Iterator(_ ValueStaticTypeContext, _ LocationRange) ValueIterator {
+	valueID := v.array.ValueID()
+
 	arrayIterator, err := v.array.Iterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+
 	return &ArrayIterator{
+		valueID:       valueID,
 		atreeIterator: arrayIterator,
 	}
 }
@@ -358,13 +362,13 @@ func (v *ArrayValue) Destroy(context ResourceDestructionContext, locationRange L
 	if context.TracingEnabled() {
 		startTime := time.Now()
 
-		typeInfo := v.Type.String()
-		count := v.Count()
+		valueID := v.ValueID().String()
+		typeID := string(v.Type.ID())
 
 		defer func() {
 			context.ReportArrayValueDestroyTrace(
-				typeInfo,
-				count,
+				valueID,
+				typeID,
 				time.Since(startTime),
 			)
 		}()
@@ -519,7 +523,7 @@ func (v *ArrayValue) SetKey(context ContainerMutationContext, locationRange Loca
 
 func (v *ArrayValue) Set(context ContainerMutationContext, locationRange LocationRange, index int, element Value) {
 
-	context.ValidateMutation(v.ValueID(), locationRange)
+	context.ValidateContainerMutation(v.ValueID(), locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Set function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -604,7 +608,7 @@ func (v *ArrayValue) MeteredString(context ValueStringContext, seenReferences Se
 
 func (v *ArrayValue) Append(context ValueTransferContext, locationRange LocationRange, element Value) {
 
-	context.ValidateMutation(v.ValueID(), locationRange)
+	context.ValidateContainerMutation(v.ValueID(), locationRange)
 
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
@@ -660,7 +664,7 @@ func (v *ArrayValue) InsertWithoutTransfer(
 	index int,
 	element Value,
 ) {
-	context.ValidateMutation(v.ValueID(), locationRange)
+	context.ValidateContainerMutation(v.ValueID(), locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Insert function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -732,7 +736,7 @@ func (v *ArrayValue) RemoveWithoutTransfer(
 	index int,
 ) atree.Storable {
 
-	context.ValidateMutation(v.ValueID(), locationRange)
+	context.ValidateContainerMutation(v.ValueID(), locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Remove function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -1193,17 +1197,17 @@ func (v *ArrayValue) ConformsToStaticType(
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
-	count := v.Count()
 
 	if context.TracingEnabled() {
 		startTime := time.Now()
 
-		typeInfo := v.Type.String()
+		valueID := v.ValueID().String()
+		typeID := string(v.Type.ID())
 
 		defer func() {
 			context.ReportArrayValueConformsToStaticTypeTrace(
-				typeInfo,
-				count,
+				valueID,
+				typeID,
 				time.Since(startTime),
 			)
 		}()
@@ -1328,13 +1332,13 @@ func (v *ArrayValue) Transfer(
 	if context.TracingEnabled() {
 		startTime := time.Now()
 
-		typeInfo := v.Type.String()
-		count := v.Count()
+		valueID := v.ValueID().String()
+		typeID := string(v.Type.ID())
 
 		defer func() {
 			context.ReportArrayValueTransferTrace(
-				typeInfo,
-				count,
+				valueID,
+				typeID,
 				time.Since(startTime),
 			)
 		}()
@@ -1500,13 +1504,13 @@ func (v *ArrayValue) DeepRemove(context ValueRemoveContext, hasNoParentContainer
 	if context.TracingEnabled() {
 		startTime := time.Now()
 
-		typeInfo := v.Type.String()
-		count := v.Count()
+		valueID := v.ValueID().String()
+		typeID := string(v.Type.ID())
 
 		defer func() {
 			context.ReportArrayValueDeepRemoveTrace(
-				typeInfo,
-				count,
+				valueID,
+				typeID,
 				time.Since(startTime),
 			)
 		}()
@@ -1696,7 +1700,7 @@ func (v *ArrayValue) Filter(
 	procedure FunctionValue,
 ) Value {
 
-	elementType := v.semaType.ElementType(false)
+	elementType := v.SemaType(context).ElementType(false)
 
 	argumentTypes := []sema.Type{elementType}
 
@@ -1783,7 +1787,7 @@ func (v *ArrayValue) Map(
 	procedure FunctionValue,
 ) Value {
 
-	elementType := v.semaType.ElementType(false)
+	elementType := v.SemaType(context).ElementType(false)
 
 	argumentTypes := []sema.Type{elementType}
 
@@ -2028,6 +2032,7 @@ func (v *ArrayValue) Inlined() bool {
 // Array iterator
 
 type ArrayIterator struct {
+	valueID       atree.ValueID
 	atreeIterator atree.ArrayIterator
 	next          atree.Value
 }
@@ -2072,4 +2077,8 @@ func (i *ArrayIterator) Next(context ValueIteratorContext, _ LocationRange) Valu
 	// atree.Array iterator returns low-level atree.Value,
 	// convert to high-level interpreter.Value
 	return MustConvertStoredValue(context, atreeValue)
+}
+
+func (i *ArrayIterator) ValueID() (atree.ValueID, bool) {
+	return i.valueID, true
 }

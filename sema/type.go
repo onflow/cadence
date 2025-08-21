@@ -3606,7 +3606,7 @@ func (arity *Arity) Equal(other *Arity) bool {
 type FunctionPurity int
 
 const (
-	FunctionPurityImpure = iota
+	FunctionPurityImpure FunctionPurity = iota
 	FunctionPurityView
 )
 
@@ -8071,7 +8071,10 @@ func IsNilType(ty Type) bool {
 	return true
 }
 
+const TransactionTypeName = "transaction"
+
 type TransactionType struct {
+	Location            common.Location
 	Fields              []string
 	PrepareParameters   []Parameter
 	Parameters          []Parameter
@@ -8116,15 +8119,15 @@ func (t *TransactionType) Tag() TypeTag {
 }
 
 func (*TransactionType) String() string {
-	return "Transaction"
+	return TransactionTypeName
 }
 
 func (*TransactionType) QualifiedString() string {
-	return "Transaction"
+	return TransactionTypeName
 }
 
-func (*TransactionType) ID() TypeID {
-	return "Transaction"
+func (t *TransactionType) ID() TypeID {
+	return t.Location.TypeID(nil, TransactionTypeName)
 }
 
 func (*TransactionType) Equal(other Type) bool {
@@ -8295,9 +8298,21 @@ func formatIntersectionType[T ~string](separator string, interfaceStrings []T) s
 	return result.String()
 }
 
+func formatIntersectionTypeWithSingleInterface[T ~string](interfaceString T) string {
+	var result strings.Builder
+	result.WriteByte('{')
+	result.WriteString(string(interfaceString))
+	result.WriteByte('}')
+	return result.String()
+}
+
 func FormatIntersectionTypeID[T ~string](interfaceTypeIDs []T) T {
 	slices.Sort(interfaceTypeIDs)
 	return T(formatIntersectionType("", interfaceTypeIDs))
+}
+
+func FormatIntersectionTypeIDWithSingleInterface[T ~string](interfaceTypeID T) T {
+	return T(formatIntersectionTypeWithSingleInterface(interfaceTypeID))
 }
 
 func (t *IntersectionType) string(separator string, typeFormatter func(Type) string) string {
@@ -8950,7 +8965,7 @@ var AccountKeyTypeAnnotation = NewTypeAnnotation(AccountKeyType)
 
 const PublicKeyTypeName = "PublicKey"
 const PublicKeyTypePublicKeyFieldName = "publicKey"
-const PublicKeyTypeSignAlgoFieldName = "signatureAlgorithm"
+const PublicKeyTypeSignatureAlgorithmFieldName = "signatureAlgorithm"
 const PublicKeyTypeVerifyFunctionName = "verify"
 const PublicKeyTypeVerifyPoPFunctionName = "verifyPoP"
 
@@ -8962,12 +8977,12 @@ const publicKeySignAlgoFieldDocString = `
 The signature algorithm to be used with the key
 `
 
-const publicKeyVerifyFunctionDocString = `
+const publicKeyTypeVerifyFunctionDocString = `
 Verifies a signature. Checks whether the signature was produced by signing
 the given tag and data, using this public key and the given hash algorithm
 `
 
-const publicKeyVerifyPoPFunctionDocString = `
+const publicKeyTypeVerifyPoPFunctionDocString = `
 Verifies the proof of possession of the private key.
 This function is only implemented if the signature algorithm
 of the public key is BLS (BLS_BLS12_381).
@@ -8993,21 +9008,21 @@ var PublicKeyType = func() *CompositeType {
 		),
 		NewUnmeteredPublicConstantFieldMember(
 			publicKeyType,
-			PublicKeyTypeSignAlgoFieldName,
+			PublicKeyTypeSignatureAlgorithmFieldName,
 			SignatureAlgorithmType,
 			publicKeySignAlgoFieldDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			publicKeyType,
 			PublicKeyTypeVerifyFunctionName,
-			PublicKeyVerifyFunctionType,
-			publicKeyVerifyFunctionDocString,
+			PublicKeyTypeVerifyFunctionType,
+			publicKeyTypeVerifyFunctionDocString,
 		),
 		NewUnmeteredPublicFunctionMember(
 			publicKeyType,
 			PublicKeyTypeVerifyPoPFunctionName,
-			PublicKeyVerifyPoPFunctionType,
-			publicKeyVerifyPoPFunctionDocString,
+			PublicKeyTypeVerifyPoPFunctionType,
+			publicKeyTypeVerifyPoPFunctionDocString,
 		),
 	}
 
@@ -9025,7 +9040,7 @@ var PublicKeyArrayType = &VariableSizedType{
 
 var PublicKeyArrayTypeAnnotation = NewTypeAnnotation(PublicKeyArrayType)
 
-var PublicKeyVerifyFunctionType = NewSimpleFunctionType(
+var PublicKeyTypeVerifyFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]Parameter{
 		{
@@ -9048,7 +9063,7 @@ var PublicKeyVerifyFunctionType = NewSimpleFunctionType(
 	BoolTypeAnnotation,
 )
 
-var PublicKeyVerifyPoPFunctionType = NewSimpleFunctionType(
+var PublicKeyTypeVerifyPoPFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]Parameter{
 		{

@@ -35,7 +35,7 @@ import (
 func TestRuntimeContractUpdateWithDependencies(t *testing.T) {
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 	accountCodes := map[common.Location][]byte{}
 	signerAccount := common.MustBytesToAddress([]byte{0x1})
 	fooLocation := common.AddressLocation{
@@ -150,6 +150,7 @@ func TestRuntimeContractUpdateWithDependencies(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -171,6 +172,7 @@ func TestRuntimeContractUpdateWithDependencies(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -188,6 +190,7 @@ func TestRuntimeContractUpdateWithDependencies(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -209,6 +212,7 @@ func TestRuntimeContractUpdateWithDependencies(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -217,7 +221,7 @@ func TestRuntimeContractUpdateWithDependencies(t *testing.T) {
 func TestRuntimeContractUpdateWithPrecedingIdentifiers(t *testing.T) {
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	signerAccount := common.MustBytesToAddress([]byte{0x1})
 
@@ -288,6 +292,7 @@ func TestRuntimeContractUpdateWithPrecedingIdentifiers(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -347,7 +352,7 @@ func TestRuntimeContractRedeployInSameTransaction(t *testing.T) {
             }
         `)
 
-		runtime := NewTestInterpreterRuntimeWithConfig(Config{
+		runtime := NewTestRuntimeWithConfig(Config{
 			AtreeValidationEnabled: false,
 		})
 
@@ -392,6 +397,7 @@ func TestRuntimeContractRedeployInSameTransaction(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -422,7 +428,7 @@ func TestRuntimeNestedContractDeployment(t *testing.T) {
             }
         `)
 
-		runtime := NewTestInterpreterRuntimeWithConfig(Config{
+		runtime := NewTestRuntimeWithConfig(Config{
 			AtreeValidationEnabled: false,
 		})
 
@@ -462,6 +468,7 @@ func TestRuntimeNestedContractDeployment(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -487,7 +494,7 @@ func TestRuntimeNestedContractDeployment(t *testing.T) {
             }
         `)
 
-		runtime := NewTestInterpreterRuntimeWithConfig(Config{
+		runtime := NewTestRuntimeWithConfig(Config{
 			AtreeValidationEnabled: false,
 		})
 
@@ -527,6 +534,7 @@ func TestRuntimeNestedContractDeployment(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -561,7 +569,7 @@ func TestRuntimeNestedContractDeployment(t *testing.T) {
             }
         `)
 
-		runtime := NewTestInterpreterRuntimeWithConfig(Config{
+		runtime := NewTestRuntimeWithConfig(Config{
 			AtreeValidationEnabled: false,
 		})
 
@@ -602,6 +610,7 @@ func TestRuntimeNestedContractDeployment(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
 			},
 		)
 
@@ -620,7 +629,7 @@ func TestRuntimeContractRedeploymentInSeparateTransactions(t *testing.T) {
             }
         `)
 
-	runtime := NewTestInterpreterRuntimeWithConfig(Config{
+	runtime := NewTestRuntimeWithConfig(Config{
 		AtreeValidationEnabled: false,
 	})
 
@@ -661,6 +670,7 @@ func TestRuntimeContractRedeploymentInSeparateTransactions(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -676,6 +686,7 @@ func TestRuntimeContractRedeploymentInSeparateTransactions(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -684,7 +695,7 @@ func TestRuntimeContractRedeploymentInSeparateTransactions(t *testing.T) {
 func TestRuntimeContractUpdateWithOldProgramError(t *testing.T) {
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestRuntime()
 
 	accountCodes := map[common.Location][]byte{}
 	signerAccount := common.MustBytesToAddress([]byte{0x1})
@@ -788,6 +799,7 @@ func TestRuntimeContractUpdateWithOldProgramError(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	RequireError(t, err)
@@ -797,6 +809,15 @@ func TestRuntimeContractUpdateWithOldProgramError(t *testing.T) {
 
 	require.ErrorContains(t,
 		err,
-		"pub contract Foo {\n  | \t\t^^^\n\nerror: `pub` is no longer a valid access keyword",
+		"error: `pub` is no longer a valid access modifier\n"+
+			" --> 0000000000000001.Foo:2:2\n"+
+			"  |\n"+
+			"2 | \t\tpub contract Foo {\n"+
+			"  | \t\t^^^ use `access(all)` instead\n"+
+			"\n"+
+			"  Migration note: This is pre-Cadence 1.0 syntax. The `pub` modifier was replaced with `access(all)`\n"+
+			"\n"+
+			"  See documentation at: https://cadence-lang.org/docs/language/access-control\n"+
+			"\n",
 	)
 }

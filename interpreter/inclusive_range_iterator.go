@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
@@ -55,22 +57,20 @@ func NewInclusiveRangeIterator(
 	stepValue := getFieldAsIntegerValue(context, v, sema.InclusiveRangeTypeStepFieldName)
 	stepNegative := stepValue.Less(context, zeroValue, locationRange)
 
-	return &InclusiveRangeIterator{
+	i := &InclusiveRangeIterator{
 		rangeValue:   v,
-		next:         startValue,
 		stepNegative: bool(stepNegative),
 		step:         stepValue,
 		end:          endValue,
 	}
+	i.next = i.validate(startValue, context, locationRange)
+
+	return i
 }
 
 func (i *InclusiveRangeIterator) Next(context ValueIteratorContext, locationRange LocationRange) Value {
 	valueToReturn := i.next
-
-	// Ensure that valueToReturn is within the bounds.
-	if i.stepNegative && bool(valueToReturn.Less(context, i.end, locationRange)) {
-		return nil
-	} else if !i.stepNegative && bool(valueToReturn.Greater(context, i.end, locationRange)) {
+	if valueToReturn == nil {
 		return nil
 	}
 
@@ -80,11 +80,30 @@ func (i *InclusiveRangeIterator) Next(context ValueIteratorContext, locationRang
 		panic(errors.NewUnreachableError())
 	}
 
-	i.next = nextValueToReturn
+	i.next = i.validate(nextValueToReturn, context, locationRange)
+
 	return valueToReturn
 }
 
+func (i *InclusiveRangeIterator) validate(
+	element IntegerValue,
+	context ValueIteratorContext,
+	locationRange LocationRange,
+) IntegerValue {
+	// Ensure that element is within the bounds.
+	if i.stepNegative && bool(element.Less(context, i.end, locationRange)) {
+		return nil
+	} else if !i.stepNegative && bool(element.Greater(context, i.end, locationRange)) {
+		return nil
+	}
+
+	return element
+}
+
 func (i *InclusiveRangeIterator) HasNext() bool {
-	// TODO: Not implemented yet
-	panic(errors.NewUnreachableError())
+	return i.next != nil
+}
+
+func (*InclusiveRangeIterator) ValueID() (atree.ValueID, bool) {
+	return atree.ValueID{}, false
 }

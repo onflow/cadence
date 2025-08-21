@@ -26,6 +26,7 @@ import (
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
@@ -89,7 +90,7 @@ func TestCheckInvalidFunctionCallWithNotRequiredArgumentLabel(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
+	const code = `
       fun f(_ x: Int): Int {
           return x
       }
@@ -97,11 +98,45 @@ func TestCheckInvalidFunctionCallWithNotRequiredArgumentLabel(t *testing.T) {
       fun test(): Int {
           return f(x: 1)
       }
-    `)
-
+    `
+	_, err := ParseAndCheck(t, code)
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[0])
+	var incorrectArgumentLabelErr *sema.IncorrectArgumentLabelError
+	require.ErrorAs(t, errs[0], &incorrectArgumentLabelErr)
+
+	fixes := incorrectArgumentLabelErr.SuggestFixes(code)
+	require.Equal(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "remove argument label",
+				TextEdits: []ast.TextEdit{
+					{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 101, Line: 7, Column: 19},
+							EndPos:   ast.Position{Offset: 103, Line: 7, Column: 21},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	const expected = `
+      fun f(_ x: Int): Int {
+          return x
+      }
+
+      fun test(): Int {
+          return f(1)
+      }
+    `
+
+	assert.Equal(t,
+		expected,
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestCheckIndirectFunctionCallWithoutArgumentLabel(t *testing.T) {
@@ -126,7 +161,7 @@ func TestCheckFunctionCallMissingArgumentLabel(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
+	const code = `
       fun f(x: Int): Int {
           return x
       }
@@ -134,18 +169,54 @@ func TestCheckFunctionCallMissingArgumentLabel(t *testing.T) {
       fun test(): Int {
           return f(1)
       }
-    `)
+    `
+	_, err := ParseAndCheck(t, code)
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[0])
+	var missingArgumentLabelErr *sema.MissingArgumentLabelError
+	require.ErrorAs(t, errs[0], &missingArgumentLabelErr)
+
+	fixes := missingArgumentLabelErr.SuggestFixes(code)
+	require.Equal(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "insert argument label",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: "x: ",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 99, Line: 7, Column: 19},
+							EndPos:   ast.Position{Offset: 99, Line: 7, Column: 19},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	const expected = `
+      fun f(x: Int): Int {
+          return x
+      }
+
+      fun test(): Int {
+          return f(x: 1)
+      }
+    `
+
+	assert.Equal(t,
+		expected,
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestCheckFunctionCallIncorrectArgumentLabel(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
+	const code = `
       fun f(x: Int): Int {
           return x
       }
@@ -153,11 +224,46 @@ func TestCheckFunctionCallIncorrectArgumentLabel(t *testing.T) {
       fun test(): Int {
           return f(y: 1)
       }
-    `)
-
+    `
+	_, err := ParseAndCheck(t, code)
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[0])
+	var incorrectArgumentLabelErr *sema.IncorrectArgumentLabelError
+	require.ErrorAs(t, errs[0], &incorrectArgumentLabelErr)
+
+	fixes := incorrectArgumentLabelErr.SuggestFixes(code)
+	require.Equal(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "replace argument label",
+				TextEdits: []ast.TextEdit{
+					{
+						Replacement: "x:",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 99, Line: 7, Column: 19},
+							EndPos:   ast.Position{Offset: 100, Line: 7, Column: 20},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	const expected = `
+      fun f(x: Int): Int {
+          return x
+      }
+
+      fun test(): Int {
+          return f(x: 1)
+      }
+    `
+
+	assert.Equal(t,
+		expected,
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestCheckInvalidFunctionCallWithTooManyArguments(t *testing.T) {
@@ -316,7 +422,7 @@ func TestCheckInvocationWithOnlyVarargs(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
+	baseValueActivation.DeclareValue(stdlib.NewInterpreterStandardLibraryStaticFunction(
 		"foo",
 		&sema.FunctionType{
 			ReturnTypeAnnotation: sema.VoidTypeAnnotation,
@@ -333,7 +439,7 @@ func TestCheckInvocationWithOnlyVarargs(t *testing.T) {
             }
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},
@@ -388,7 +494,7 @@ func TestCheckArgumentLabels(t *testing.T) {
                   let t = test(x: 1, "2")
                 `,
 				ParseAndCheckOptions{
-					Config: &sema.Config{
+					CheckerConfig: &sema.Config{
 						ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 							return sema.ElaborationImport{
 								Elaboration: importedChecker.Elaboration,
@@ -449,7 +555,7 @@ func TestCheckArgumentLabels(t *testing.T) {
                   let t = Test().test(x: 1, "2")
                 `,
 				ParseAndCheckOptions{
-					Config: &sema.Config{
+					CheckerConfig: &sema.Config{
 						ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 							return sema.ElaborationImport{
 								Elaboration: importedChecker.Elaboration,
@@ -510,7 +616,7 @@ func TestCheckArgumentLabels(t *testing.T) {
                   let t = Test(x: 1, "2")
                 `,
 				ParseAndCheckOptions{
-					Config: &sema.Config{
+					CheckerConfig: &sema.Config{
 						ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 							return sema.ElaborationImport{
 								Elaboration: importedChecker.Elaboration,
@@ -575,7 +681,7 @@ func TestCheckArgumentLabels(t *testing.T) {
                   let t = C.S(x: 1, "2")
                 `,
 				ParseAndCheckOptions{
-					Config: &sema.Config{
+					CheckerConfig: &sema.Config{
 						ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 							return sema.ElaborationImport{
 								Elaboration: importedChecker.Elaboration,
@@ -626,7 +732,7 @@ func TestCheckInvocationWithIncorrectTypeParameter(t *testing.T) {
 	}
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
+	baseValueActivation.DeclareValue(stdlib.NewInterpreterStandardLibraryStaticFunction(
 		"foo",
 		funcType,
 		"",
@@ -640,7 +746,7 @@ func TestCheckInvocationWithIncorrectTypeParameter(t *testing.T) {
             }
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},

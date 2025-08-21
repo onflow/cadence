@@ -330,6 +330,20 @@ func (interpreter *Interpreter) checkMemberAccess(
 	memberInfo, _ := interpreter.Program.Elaboration.MemberExpressionMemberAccessInfo(memberExpression)
 	expectedType := memberInfo.AccessedType
 
+	CheckMemberAccessTargetType(
+		interpreter,
+		target,
+		expectedType,
+		locationRange,
+	)
+}
+
+func CheckMemberAccessTargetType(
+	context ValueStaticTypeContext,
+	target Value,
+	expectedType sema.Type,
+	locationRange LocationRange,
+) {
 	switch expectedType := expectedType.(type) {
 	case *sema.TransactionType:
 		// TODO: maybe also check transactions.
@@ -359,11 +373,11 @@ func (interpreter *Interpreter) checkMemberAccess(
 		return
 	}
 
-	targetStaticType := target.StaticType(interpreter)
+	targetStaticType := target.StaticType(context)
 
 	if _, ok := expectedType.(*sema.OptionalType); ok {
 		if _, ok := targetStaticType.(*OptionalStaticType); !ok {
-			targetSemaType := MustConvertStaticToSemaType(targetStaticType, interpreter)
+			targetSemaType := MustConvertStaticToSemaType(targetStaticType, context)
 
 			panic(&MemberAccessTypeError{
 				ExpectedType:  expectedType,
@@ -373,8 +387,8 @@ func (interpreter *Interpreter) checkMemberAccess(
 		}
 	}
 
-	if !IsSubTypeOfSemaType(interpreter, targetStaticType, expectedType) {
-		targetSemaType := MustConvertStaticToSemaType(targetStaticType, interpreter)
+	if !IsSubTypeOfSemaType(context, targetStaticType, expectedType) {
+		targetSemaType := MustConvertStaticToSemaType(targetStaticType, context)
 
 		panic(&MemberAccessTypeError{
 			ExpectedType:  expectedType,
@@ -934,49 +948,69 @@ func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpr
 	return NewUnmeteredStringValue(expression.Value)
 }
 
-func (interpreter *Interpreter) VisitStringTemplateExpression(expression *ast.StringTemplateExpression) Value {
-	values := interpreter.visitExpressionsNonCopying(expression.Expressions)
-
+func BuildStringTemplate(values []string, exprs []Value) Value {
 	var builder strings.Builder
-	for i, str := range expression.Values {
+	for i, str := range values {
 		builder.WriteString(str)
-		if i < len(values) {
+		if i < len(exprs) {
 			// switch on value instead of type
-			switch value := values[i].(type) {
+			switch expr := exprs[i].(type) {
 			case *StringValue:
-				builder.WriteString(value.Str)
+				builder.WriteString(expr.Str)
 			case CharacterValue:
-				builder.WriteString(value.Str)
+				builder.WriteString(expr.Str)
 			default:
-				builder.WriteString(value.String())
+				builder.WriteString(expr.String())
 			}
 		}
 	}
-
 	return NewUnmeteredStringValue(builder.String())
 }
 
-func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpression) Value {
-	values := interpreter.visitExpressionsNonCopying(expression.Values)
+func (interpreter *Interpreter) VisitStringTemplateExpression(expression *ast.StringTemplateExpression) Value {
 
+	var values []Value
+	if len(expression.Expressions) > 0 {
+		// TODO: optimize: avoid allocation
+		values = make([]Value, 0, len(expression.Expressions))
+
+		for _, expr := range expression.Expressions {
+			value := interpreter.evalExpression(expr)
+			values = append(values, value)
+		}
+	}
+
+	return BuildStringTemplate(expression.Values, values)
+}
+
+func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpression) Value {
 	arrayExpressionTypes := interpreter.Program.Elaboration.ArrayExpressionTypes(expression)
 	argumentTypes := arrayExpressionTypes.ArgumentTypes
 	arrayType := arrayExpressionTypes.ArrayType
 	elementType := arrayType.ElementType(false)
 
-	var copies []Value
+	var values []Value
 
-	count := len(values)
+	count := len(expression.Values)
 	if count > 0 {
-		copies = make([]Value, count)
-		for i, argument := range values {
+
+		// TODO: optimize: avoid allocation, use NewArrayValueWithIterator
+		values = make([]Value, count)
+
+		for i, valueExpression := range expression.Values {
 			argumentType := argumentTypes[i]
-			argumentExpression := expression.Values[i]
-			locationRange := LocationRange{
-				Location:    interpreter.Location,
-				HasPosition: argumentExpression,
-			}
-			copies[i] = TransferAndConvert(interpreter, argument, argumentType, elementType, locationRange)
+			value := interpreter.evalExpression(valueExpression)
+
+			values[i] = TransferAndConvert(
+				interpreter,
+				value,
+				argumentType,
+				elementType,
+				LocationRange{
+					Location:    interpreter.Location,
+					HasPosition: valueExpression,
+				},
+			)
 		}
 	}
 
@@ -993,50 +1027,60 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 		locationRange,
 		arrayStaticType,
 		common.ZeroAddress,
-		copies...,
+		values...,
 	)
 }
 
 func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.DictionaryExpression) Value {
-	values := interpreter.visitEntries(expression.Entries)
 
 	dictionaryExpressionTypes := interpreter.Program.Elaboration.DictionaryExpressionTypes(expression)
 	entryTypes := dictionaryExpressionTypes.EntryTypes
 	dictionaryType := dictionaryExpressionTypes.DictionaryType
 
 	var keyValuePairs []Value
+	if len(expression.Entries) > 0 {
 
-	for i, dictionaryEntryValues := range values {
-		entryType := entryTypes[i]
-		entry := expression.Entries[i]
+		// TODO: optimize: avoid allocation, use newDictionaryValueWithIterator
+		keyValuePairs = make([]Value, 0, len(expression.Entries)*2)
 
-		key := TransferAndConvert(
-			interpreter,
-			dictionaryEntryValues.Key,
-			entryType.KeyType,
-			dictionaryType.KeyType,
-			LocationRange{
-				Location:    interpreter.Location,
-				HasPosition: entry.Key,
-			},
-		)
+		keyType := dictionaryType.KeyType
+		valueType := dictionaryType.ValueType
 
-		value := TransferAndConvert(
-			interpreter,
-			dictionaryEntryValues.Value,
-			entryType.ValueType,
-			dictionaryType.ValueType,
-			LocationRange{
-				Location:    interpreter.Location,
-				HasPosition: entry.Value,
-			},
-		)
+		for i, entry := range expression.Entries {
+			entryType := entryTypes[i]
 
-		keyValuePairs = append(
-			keyValuePairs,
-			key,
-			value,
-		)
+			key := interpreter.evalExpression(entry.Key)
+
+			key = TransferAndConvert(
+				interpreter,
+				key,
+				entryType.KeyType,
+				keyType,
+				LocationRange{
+					Location:    interpreter.Location,
+					HasPosition: entry.Key,
+				},
+			)
+
+			value := interpreter.evalExpression(entry.Value)
+
+			value = TransferAndConvert(
+				interpreter,
+				value,
+				entryType.ValueType,
+				valueType,
+				LocationRange{
+					Location:    interpreter.Location,
+					HasPosition: entry.Value,
+				},
+			)
+
+			keyValuePairs = append(
+				keyValuePairs,
+				key,
+				value,
+			)
+		}
 	}
 
 	dictionaryStaticType := ConvertSemaDictionaryTypeToStaticDictionaryType(interpreter, dictionaryType)
@@ -1139,15 +1183,13 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 	return interpreter.visitInvocationExpressionWithImplicitArgument(invocationExpression, nil)
 }
 
-func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(invocationExpression *ast.InvocationExpression, implicitArg *Value) Value {
-	config := interpreter.SharedState.Config
-
+func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(invocationExpression *ast.InvocationExpression, implicitArg Value) Value {
 	// tracing
-	if config.TracingEnabled {
+	if interpreter.TracingEnabled() {
 		startTime := time.Now()
 		invokedExpression := invocationExpression.InvokedExpression.String()
 		defer func() {
-			interpreter.reportFunctionTrace(
+			interpreter.ReportFunctionTrace(
 				invokedExpression,
 				time.Since(startTime),
 			)
@@ -1198,8 +1240,6 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 		}
 	}
 
-	arguments := interpreter.visitExpressionsNonCopying(argumentExpressions)
-
 	elaboration := interpreter.Program.Elaboration
 
 	invocationExpressionTypes := elaboration.InvocationExpressionTypes(invocationExpression)
@@ -1209,19 +1249,16 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 	parameterTypes := invocationExpressionTypes.ParameterTypes
 	returnType := invocationExpressionTypes.ReturnType
 
-	// add the implicit argument to the end of the argument list, if it exists
-	if implicitArg != nil {
-		arguments = append(arguments, *implicitArg)
-		argumentType := MustSemaTypeOfValue(*implicitArg, interpreter)
-		argumentTypes = append(argumentTypes, argumentType)
-	}
-
 	interpreter.reportFunctionInvocation()
 
-	resultValue := invokeFunctionValue(
+	resultValue := invokeFunctionValueWithEval(
 		interpreter,
 		function,
-		arguments,
+		argumentExpressions,
+		func(expression ast.Expression) Value {
+			return interpreter.evalExpression(expression)
+		},
+		implicitArg,
 		argumentExpressions,
 		argumentTypes,
 		parameterTypes,
@@ -1239,45 +1276,6 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 	}
 
 	return resultValue
-}
-
-func (interpreter *Interpreter) visitExpressionsNonCopying(expressions []ast.Expression) []Value {
-	var values []Value
-
-	count := len(expressions)
-	if count > 0 {
-		values = make([]Value, 0, count)
-		for _, expression := range expressions {
-			value := interpreter.evalExpression(expression)
-			values = append(values, value)
-		}
-	}
-
-	return values
-}
-
-func (interpreter *Interpreter) visitEntries(entries []ast.DictionaryEntry) []DictionaryEntryValues {
-	var values []DictionaryEntryValues
-
-	count := len(entries)
-	if count > 0 {
-		values = make([]DictionaryEntryValues, 0, count)
-
-		for _, entry := range entries {
-			key := interpreter.evalExpression(entry.Key)
-			value := interpreter.evalExpression(entry.Value)
-
-			values = append(
-				values,
-				DictionaryEntryValues{
-					Key:   key,
-					Value: value,
-				},
-			)
-		}
-	}
-
-	return values
 }
 
 func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.FunctionExpression) Value {
@@ -1647,7 +1645,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 
 	attachmentType := interpreter.Program.Elaboration.AttachTypes(attachExpression)
 
-	var baseValue Value = NewEphemeralReferenceValue(
+	baseValue := NewEphemeralReferenceValue(
 		interpreter,
 		auth,
 		base,
@@ -1657,7 +1655,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 
 	attachment, ok := interpreter.visitInvocationExpressionWithImplicitArgument(
 		attachExpression.Attachment,
-		&baseValue,
+		baseValue,
 	).(*CompositeValue)
 	// attached expressions must be composite constructors, as enforced in the checker
 	if !ok {

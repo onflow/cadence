@@ -2382,7 +2382,7 @@ func (d *Decoder) decodeFunctionTypeValue(visited *cadenceTypeByCCFTypeID) (cade
 		return nil, errors.New("unexpected nil function return type")
 	}
 
-	purity := cadence.FunctionPurityUnspecified
+	purity := cadence.FunctionPurityImpure
 
 	// optional element 3: purity
 	if c == functionTypeWithPurityArrayCount {

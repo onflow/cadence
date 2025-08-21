@@ -31,6 +31,7 @@ import (
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func parseCheckAndPrepareWithConditionLogs(
@@ -55,7 +56,7 @@ func parseCheckAndPrepareWithConditionLogs(
 
 	var logs []string
 
-	valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
+	valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
 		"conditionLog",
 		conditionLogFunctionType,
 		"",
@@ -75,12 +76,14 @@ func parseCheckAndPrepareWithConditionLogs(
 	invokable, err = parseCheckAndPrepareWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
-			CheckerConfig: &sema.Config{
-				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-					return baseValueActivation
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 			},
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
 					return baseActivation
 				},
@@ -1272,8 +1275,7 @@ func TestInterpretNestedInterfaceCast(t *testing.T) {
           }
         `,
 		ParseCheckAndInterpretOptions{
-			CheckerConfig: &sema.Config{},
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 			},
 		},

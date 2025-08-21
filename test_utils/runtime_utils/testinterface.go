@@ -46,12 +46,10 @@ type TestRuntimeInterface struct {
 		location runtime.Location,
 		load func() (*runtime.Program, error),
 	) (*runtime.Program, error)
-	OnSetInterpreterSharedState func(state *interpreter.SharedState)
-	OnGetInterpreterSharedState func() *interpreter.SharedState
-	OnCreateAccount             func(payer runtime.Address) (address runtime.Address, err error)
-	OnAddEncodedAccountKey      func(address runtime.Address, publicKey []byte) error
-	OnRemoveEncodedAccountKey   func(address runtime.Address, index int) (publicKey []byte, err error)
-	OnAddAccountKey             func(
+	OnCreateAccount           func(payer runtime.Address) (address runtime.Address, err error)
+	OnAddEncodedAccountKey    func(address runtime.Address, publicKey []byte) error
+	OnRemoveEncodedAccountKey func(address runtime.Address, index int) (publicKey []byte, err error)
+	OnAddAccountKey           func(
 		address runtime.Address,
 		publicKey *stdlib.PublicKey,
 		hashAlgo runtime.HashAlgorithm,
@@ -106,7 +104,6 @@ type TestRuntimeInterface struct {
 	OnGetAccountContractNames    func(address runtime.Address) ([]string, error)
 	OnRecordTrace                func(
 		operation string,
-		location runtime.Location,
 		duration time.Duration,
 		attrs []attribute.KeyValue,
 	)
@@ -192,22 +189,6 @@ func (i *TestRuntimeInterface) GetOrLoadProgram(
 	}
 
 	return i.OnGetOrLoadProgram(location, load)
-}
-
-func (i *TestRuntimeInterface) SetInterpreterSharedState(state *interpreter.SharedState) {
-	if i.OnSetInterpreterSharedState == nil {
-		return
-	}
-
-	i.OnSetInterpreterSharedState(state)
-}
-
-func (i *TestRuntimeInterface) GetInterpreterSharedState() *interpreter.SharedState {
-	if i.OnGetInterpreterSharedState == nil {
-		return nil
-	}
-
-	return i.OnGetInterpreterSharedState()
 }
 
 func (i *TestRuntimeInterface) ValueExists(owner, key []byte) (exists bool, err error) {
@@ -558,14 +539,13 @@ func (i *TestRuntimeInterface) GenerateAccountID(address common.Address) (uint64
 
 func (i *TestRuntimeInterface) RecordTrace(
 	operation string,
-	location runtime.Location,
 	duration time.Duration,
 	attrs []attribute.KeyValue,
 ) {
 	if i.OnRecordTrace == nil {
 		return
 	}
-	i.OnRecordTrace(operation, location, duration, attrs)
+	i.OnRecordTrace(operation, duration, attrs)
 }
 
 func (i *TestRuntimeInterface) MeterMemory(usage common.MemoryUsage) error {

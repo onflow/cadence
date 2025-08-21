@@ -22,9 +22,11 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
@@ -411,4 +413,49 @@ func TestCheckConformanceAccessModifierMatches(t *testing.T) {
 			test(t, access1, access2)
 		}
 	}
+}
+
+func TestCheckConformanceKindMismatch(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("same contract", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract A {
+                access(all) struct interface I {}
+
+                access(all) resource R: I {}
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		compositeKindMismatchError := &sema.CompositeKindMismatchError{}
+		require.ErrorAs(t, errs[0], &compositeKindMismatchError)
+		assert.Equal(t, common.CompositeKindResource, compositeKindMismatchError.ExpectedKind)
+		assert.Equal(t, common.CompositeKindStructure, compositeKindMismatchError.ActualKind)
+	})
+
+	t.Run("different contract", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract A {
+                access(all) struct interface I {}
+            }
+
+            contract B {
+                access(all) resource R: A.I {}
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		compositeKindMismatchError := &sema.CompositeKindMismatchError{}
+		require.ErrorAs(t, errs[0], &compositeKindMismatchError)
+		assert.Equal(t, common.CompositeKindResource, compositeKindMismatchError.ExpectedKind)
+		assert.Equal(t, common.CompositeKindStructure, compositeKindMismatchError.ActualKind)
+	})
 }

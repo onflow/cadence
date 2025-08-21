@@ -22,6 +22,8 @@ import (
 	"fmt"
 
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -114,73 +116,134 @@ var inclusiveRangeConstructorFunctionType = func() *sema.FunctionType {
 	}
 }()
 
-var InclusiveRangeConstructorFunction = NewStandardLibraryStaticFunction(
+var InterpreterInclusiveRangeConstructor = NewInterpreterStandardLibraryStaticFunction(
 	"InclusiveRange",
 	inclusiveRangeConstructorFunctionType,
 	inclusiveRangeConstructorFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
-		start, startOk := invocation.Arguments[0].(interpreter.IntegerValue)
-		end, endOk := invocation.Arguments[1].(interpreter.IntegerValue)
-
-		if !startOk || !endOk {
-			panic(errors.NewUnreachableError())
-		}
-
 		invocationContext := invocation.InvocationContext
 		locationRange := invocation.LocationRange
 
-		startStaticType := start.StaticType(invocationContext)
-		endStaticType := end.StaticType(invocationContext)
-		if !startStaticType.Equal(endStaticType) {
-			panic(&interpreter.InclusiveRangeConstructionError{
-				LocationRange: locationRange,
-				Message: fmt.Sprintf(
-					"start and end are of different types. start: %s and end: %s",
-					startStaticType,
-					endStaticType,
-				),
-			})
+		start, ok := invocation.Arguments[0].(interpreter.IntegerValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
 		}
 
-		rangeStaticType := interpreter.NewInclusiveRangeStaticType(invocation.InvocationContext, startStaticType)
-		rangeSemaType := sema.NewInclusiveRangeType(invocation.InvocationContext, invocation.ArgumentTypes[0])
+		end, ok := invocation.Arguments[1].(interpreter.IntegerValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 
+		var step interpreter.IntegerValue
 		if len(invocation.Arguments) > 2 {
-			step, ok := invocation.Arguments[2].(interpreter.IntegerValue)
+			step, ok = invocation.Arguments[2].(interpreter.IntegerValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
-
-			stepStaticType := step.StaticType(invocationContext)
-			if stepStaticType != startStaticType {
-				panic(&interpreter.InclusiveRangeConstructionError{
-					LocationRange: locationRange,
-					Message: fmt.Sprintf(
-						"step must be of the same type as start and end. start/end: %s and step: %s",
-						startStaticType,
-						stepStaticType,
-					),
-				})
-			}
-
-			return interpreter.NewInclusiveRangeValueWithStep(
-				invocationContext,
-				locationRange,
-				start,
-				end,
-				step,
-				rangeStaticType,
-				rangeSemaType,
-			)
 		}
 
-		return interpreter.NewInclusiveRangeValue(
+		return NewInclusiveRange(
 			invocationContext,
 			locationRange,
 			start,
 			end,
-			rangeStaticType,
-			rangeSemaType,
+			step,
 		)
 	},
 )
+
+var VMInclusiveRangeConstructor = NewVMStandardLibraryStaticFunction(
+	"InclusiveRange",
+	inclusiveRangeConstructorFunctionType,
+	inclusiveRangeConstructorFunctionDocString,
+	func(context *vm.Context, typeArguments []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
+
+		start, ok := arguments[0].(interpreter.IntegerValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		end, ok := arguments[1].(interpreter.IntegerValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		var step interpreter.IntegerValue
+		if len(arguments) > 2 {
+			step, ok = arguments[2].(interpreter.IntegerValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+		}
+
+		return NewInclusiveRange(
+			context,
+			interpreter.EmptyLocationRange,
+			start,
+			end,
+			step,
+		)
+	},
+)
+
+func NewInclusiveRange(
+	invocationContext interpreter.InvocationContext,
+	locationRange interpreter.LocationRange,
+	start interpreter.IntegerValue,
+	end interpreter.IntegerValue,
+	step interpreter.IntegerValue,
+) interpreter.Value {
+
+	startStaticType := start.StaticType(invocationContext)
+	endStaticType := end.StaticType(invocationContext)
+	if !startStaticType.Equal(endStaticType) {
+		panic(&interpreter.InclusiveRangeConstructionError{
+			LocationRange: locationRange,
+			Message: fmt.Sprintf(
+				"start and end are of different types. start: %s and end: %s",
+				startStaticType,
+				endStaticType,
+			),
+		})
+	}
+
+	rangeStaticType := interpreter.NewInclusiveRangeStaticType(invocationContext, startStaticType)
+	rangeSemaType := interpreter.MustConvertStaticToSemaType(
+		rangeStaticType,
+		invocationContext,
+	).(*sema.InclusiveRangeType)
+
+	if step != nil {
+
+		stepStaticType := step.StaticType(invocationContext)
+		if stepStaticType != startStaticType {
+			panic(&interpreter.InclusiveRangeConstructionError{
+				LocationRange: locationRange,
+				Message: fmt.Sprintf(
+					"step must be of the same type as start and end. start/end: %s and step: %s",
+					startStaticType,
+					stepStaticType,
+				),
+			})
+		}
+
+		return interpreter.NewInclusiveRangeValueWithStep(
+			invocationContext,
+			locationRange,
+			start,
+			end,
+			step,
+			rangeStaticType,
+			rangeSemaType,
+		)
+	}
+
+	return interpreter.NewInclusiveRangeValue(
+		invocationContext,
+		locationRange,
+		start,
+		end,
+		rangeStaticType,
+		rangeSemaType,
+	)
+}

@@ -2905,6 +2905,38 @@ func TestParseAuthorizedReferenceTypeWithNoEntitlements(t *testing.T) {
 	)
 }
 
+func TestParseAuthorizedReferenceTypeWithNonNominalType(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+       let x: auth([Int]) &R = 1
+	`
+	_, errs := testParseProgram(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&NonNominalTypeError{
+				Pos: ast.Position{Offset: 20, Line: 2, Column: 19},
+				Type: &ast.VariableSizedType{
+					Type: &ast.NominalType{
+						NestedIdentifiers: []ast.Identifier{},
+						Identifier: ast.Identifier{
+							Identifier: "Int",
+							Pos:        ast.Position{Offset: 21, Line: 2, Column: 20},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 20, Line: 2, Column: 19},
+						EndPos:   ast.Position{Offset: 24, Line: 2, Column: 23},
+					},
+				},
+			},
+		},
+		errs.(Error).Errors,
+	)
+}
+
 func TestParseInstantiationTypeInVariableDeclaration(t *testing.T) {
 
 	t.Parallel()

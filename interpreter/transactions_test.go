@@ -42,15 +42,23 @@ func TestInterpretTransactions(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndPrepare(t, `
-          transaction {
-            execute {
-              let x = 1 + 2
-            }
-          }
-        `)
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+              transaction {
+                execute {
+                  let x = 1 + 2
+                }
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+			},
+		)
+		require.NoError(t, err)
 
-		err := inter.InvokeTransaction(nil)
+		err = inter.InvokeTransaction(nil)
 		assert.NoError(t, err)
 	})
 
@@ -58,22 +66,30 @@ func TestInterpretTransactions(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndPrepare(t, `
-          transaction {
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+              transaction {
 
-            var x: Int
+                var x: Int
 
-            prepare() {
-              self.x = 5
-            }
+                prepare() {
+                  self.x = 5
+                }
 
-            execute {
-              let y = self.x + 1
-            }
-          }
-        `)
+                execute {
+                  let y = self.x + 1
+                }
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+			},
+		)
+		require.NoError(t, err)
 
-		err := inter.InvokeTransaction(nil)
+		err = inter.InvokeTransaction(nil)
 		assert.NoError(t, err)
 	})
 
@@ -81,22 +97,30 @@ func TestInterpretTransactions(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndPrepare(t, `
-          transaction {
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+              transaction {
 
-            var x: Int
+                var x: Int
 
-            prepare() {
-              self.x = 5
-            }
+                prepare() {
+                  self.x = 5
+                }
 
-            pre {
-              self.x > 1
-            }
-          }
-        `)
+                pre {
+                  self.x > 1
+                }
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+			},
+		)
+		require.NoError(t, err)
 
-		err := inter.InvokeTransaction(nil)
+		err = inter.InvokeTransaction(nil)
 		assert.NoError(t, err)
 	})
 
@@ -104,22 +128,30 @@ func TestInterpretTransactions(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndPrepare(t, `
-          transaction {
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+              transaction {
 
-            var x: Int
+                var x: Int
 
-            prepare() {
-              self.x = 5
-            }
+                prepare() {
+                  self.x = 5
+                }
 
-            pre {
-              self.x > 10
-            }
-          }
-        `)
+                pre {
+                  self.x > 10
+                }
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+			},
+		)
+		require.NoError(t, err)
 
-		err := inter.InvokeTransaction(nil)
+		err = inter.InvokeTransaction(nil)
 		RequireError(t, err)
 
 		assertConditionError(
@@ -133,26 +165,34 @@ func TestInterpretTransactions(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndPrepare(t, `
-          transaction {
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+              transaction {
 
-            var x: Int
+                var x: Int
 
-            prepare() {
-              self.x = 5
-            }
+                prepare() {
+                  self.x = 5
+                }
 
-            execute {
-              self.x = 10
-            }
+                execute {
+                  self.x = 10
+                }
 
-            post {
-              self.x == 10
-            }
-          }
-        `)
+                post {
+                  self.x == 10
+                }
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+			},
+		)
+		require.NoError(t, err)
 
-		err := inter.InvokeTransaction(nil)
+		err = inter.InvokeTransaction(nil)
 		assert.NoError(t, err)
 	})
 
@@ -160,26 +200,34 @@ func TestInterpretTransactions(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndPrepare(t, `
-          transaction {
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+              transaction {
 
-            var x: Int
+                var x: Int
 
-            prepare() {
-              self.x = 5
-            }
+                prepare() {
+                  self.x = 5
+                }
 
-            execute {
-              self.x = 10
-            }
+                execute {
+                  self.x = 10
+                }
 
-            post {
-              self.x == 5
-            }
-          }
-        `)
+                post {
+                  self.x == 5
+                }
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+			},
+		)
+		require.NoError(t, err)
 
-		err := inter.InvokeTransaction(nil)
+		err = inter.InvokeTransaction(nil)
 		RequireError(t, err)
 
 		assertConditionError(
@@ -193,11 +241,19 @@ func TestInterpretTransactions(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndPrepare(t, `
-          transaction {
-            prepare(signer: &Account) {}
-          }
-        `)
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+              transaction {
+                prepare(signer: &Account) {}
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+			},
+		)
+		require.NoError(t, err)
 
 		signer := stdlib.NewAccountReferenceValue(
 			inter,
@@ -207,7 +263,7 @@ func TestInterpretTransactions(t *testing.T) {
 			interpreter.EmptyLocationRange,
 		)
 
-		err := inter.InvokeTransaction(nil)
+		err = inter.InvokeTransaction(nil)
 		assert.IsType(t, interpreter.ArgumentCountError{}, err)
 
 		err = inter.InvokeTransaction(nil, signer)
@@ -218,11 +274,19 @@ func TestInterpretTransactions(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndPrepare(t, `
-          transaction {
-            execute {}
-          }
-        `)
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+              transaction {
+                execute {}
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+			},
+		)
+		require.NoError(t, err)
 
 		signer1 := stdlib.NewAccountReferenceValue(
 			inter,
@@ -240,7 +304,7 @@ func TestInterpretTransactions(t *testing.T) {
 			interpreter.EmptyLocationRange,
 		)
 
-		err := inter.InvokeTransaction(nil)
+		err = inter.InvokeTransaction(nil)
 		assert.NoError(t, err)
 
 		err = inter.InvokeTransaction(nil, signer1)
@@ -254,13 +318,21 @@ func TestInterpretTransactions(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndPrepare(t, `
-          transaction {
-            prepare(signer: &Account) {}
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+              transaction {
+                prepare(signer: &Account) {}
 
-            execute {}
-          }
-        `)
+                execute {}
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+			},
+		)
+		require.NoError(t, err)
 
 		signer1 := stdlib.NewAccountReferenceValue(
 			inter,
@@ -278,7 +350,7 @@ func TestInterpretTransactions(t *testing.T) {
 			interpreter.EmptyLocationRange,
 		)
 
-		err := inter.InvokeTransaction(nil, signer1)
+		err = inter.InvokeTransaction(nil, signer1)
 		require.NoError(t, err)
 
 		err = inter.InvokeTransaction(nil, signer1, signer2)
@@ -289,18 +361,26 @@ func TestInterpretTransactions(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndPrepare(t, `
-          let values: [AnyStruct] = []
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+              let values: [AnyStruct] = []
 
-          transaction(x: Int, y: Bool) {
+              transaction(x: Int, y: Bool) {
 
-            prepare(signer: &Account) {
-              values.append(signer.address)
-              values.append(y)
-              values.append(x)
-            }
-          }
-        `)
+                prepare(signer: &Account) {
+                  values.append(signer.address)
+                  values.append(y)
+                  values.append(x)
+                }
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+			},
+		)
+		require.NoError(t, err)
 
 		arguments := []interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
@@ -317,7 +397,7 @@ func TestInterpretTransactions(t *testing.T) {
 			interpreter.EmptyLocationRange,
 		)
 
-		err := inter.InvokeTransaction(arguments, signer)
+		err = inter.InvokeTransaction(arguments, signer)
 		require.NoError(t, err)
 
 		values := inter.GetGlobal("values")
@@ -340,30 +420,38 @@ func TestInterpretTransactions(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
-            enum Alpha: Int {
-                case A
-                case B
-            }
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+                enum Alpha: Int {
+                    case A
+                    case B
+                }
 
-            let a = Alpha.A
-            let b = Alpha.B
+                let a = Alpha.A
+                let b = Alpha.B
 
-            let values: [AnyStruct] = []
+                let values: [AnyStruct] = []
 
-            transaction(x: Alpha) {
+                transaction(x: Alpha) {
 
-                prepare(signer: &Account) {
-                    values.append(signer.address)
-                    values.append(x)
-                    if x == Alpha.A {
-                        values.append(Alpha.B)
-                    } else {
-                        values.append(-1)
+                    prepare(signer: &Account) {
+                        values.append(signer.address)
+                        values.append(x)
+                        if x == Alpha.A {
+                            values.append(Alpha.B)
+                        } else {
+                            values.append(-1)
+                        }
                     }
                 }
-            }
-        `)
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+			},
+		)
+		require.NoError(t, err)
 
 		arguments := []interpreter.Value{
 			inter.GetGlobal("a"),
@@ -379,7 +467,7 @@ func TestInterpretTransactions(t *testing.T) {
 			interpreter.EmptyLocationRange,
 		)
 
-		err := inter.InvokeTransaction(arguments, signer)
+		err = inter.InvokeTransaction(arguments, signer)
 		require.NoError(t, err)
 
 		values := inter.GetGlobal("values")
@@ -403,7 +491,7 @@ func TestInterpretInvalidTransferInExecute(t *testing.T) {
 
 	t.Parallel()
 
-	inter, _ := parseCheckAndInterpretWithOptions(t,
+	inter, _ := parseCheckAndPrepareWithOptions(t,
 		`
           resource Dummy {}
 
@@ -429,6 +517,9 @@ func TestInterpretInvalidTransferInExecute(t *testing.T) {
           }
         `,
 		ParseCheckAndInterpretOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				Location: common.TransactionLocation{},
+			},
 			HandleCheckerError: func(err error) {
 				errs := RequireCheckerErrors(t, err, 3)
 				require.IsType(t, &sema.ResourceCapturingError{}, errs[0])
@@ -447,6 +538,7 @@ func TestInterpretInvalidTransferInExecute(t *testing.T) {
 	)
 
 	err := inter.InvokeTransaction(nil, signer1)
+
 	var invalidatedResourceError *interpreter.InvalidatedResourceError
 	require.ErrorAs(t, err, &invalidatedResourceError)
 }
@@ -459,21 +551,29 @@ func TestInterpretInvalidRecursiveTransferInExecute(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
-            transaction {
-                var arr: @[AnyResource]
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+                transaction {
+                    var arr: @[AnyResource]
 
-                prepare() {
-                    self.arr <- []
+                    prepare() {
+                        self.arr <- []
+                    }
+
+                    execute {
+                        self.arr.append(<-self.arr)
+                    }
                 }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+			},
+		)
+		require.NoError(t, err)
 
-                execute {
-                    self.arr.append(<-self.arr)
-                }
-            }
-        `)
-
-		err := inter.InvokeTransaction(nil)
+		err = inter.InvokeTransaction(nil)
 		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
 		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
@@ -482,21 +582,29 @@ func TestInterpretInvalidRecursiveTransferInExecute(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
-            transaction {
-                var dict: @{String: AnyResource}
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+                transaction {
+                    var dict: @{String: AnyResource}
 
-                prepare() {
-                    self.dict <- {}
+                    prepare() {
+                        self.dict <- {}
+                    }
+
+                    execute {
+                        destroy self.dict.insert(key: "", <-self.dict)
+                    }
                 }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+			},
+		)
+		require.NoError(t, err)
 
-                execute {
-                    destroy self.dict.insert(key: "", <-self.dict)
-                }
-            }
-        `)
-
-		err := inter.InvokeTransaction(nil)
+		err = inter.InvokeTransaction(nil)
 		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
 		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})
@@ -505,27 +613,35 @@ func TestInterpretInvalidRecursiveTransferInExecute(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
-            resource R {
-                fun foo(_ r: @R) {
-                    destroy r
-                }
-            }
-
-            transaction {
-                var r: @R
-
-                prepare() {
-                    self.r <- create R()
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+                resource R {
+                    fun foo(_ r: @R) {
+                        destroy r
+                    }
                 }
 
-                execute {
-                    self.r.foo(<-self.r)
-                }
-            }
-        `)
+                transaction {
+                    var r: @R
 
-		err := inter.InvokeTransaction(nil)
+                    prepare() {
+                        self.r <- create R()
+                    }
+
+                    execute {
+                        self.r.foo(<-self.r)
+                    }
+                }
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.TransactionLocation{},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		err = inter.InvokeTransaction(nil)
 		var invalidatedResourceReferenceError *interpreter.InvalidatedResourceReferenceError
 		require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 	})

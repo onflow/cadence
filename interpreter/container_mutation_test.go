@@ -31,6 +31,7 @@ import (
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestInterpretArrayMutation(t *testing.T) {
@@ -308,7 +309,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 
 		invoked := false
 
-		valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
+		valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
 			"log",
 			stdlib.LogFunctionType,
 			"",
@@ -325,7 +326,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun test() {
                 let array: [AnyStruct] = [nil] as [(fun(AnyStruct):Void)?]
 
@@ -335,12 +336,14 @@ func TestInterpretArrayMutation(t *testing.T) {
                 logger("hello")
             }`,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -454,7 +457,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 
 		t.Parallel()
 
-		valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
+		valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
 			"log",
 			stdlib.LogFunctionType,
 			"",
@@ -470,7 +473,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
                 fun test() {
                     let array: [AnyStruct] = [nil] as [(fun():Void)?]
 
@@ -478,12 +481,14 @@ func TestInterpretArrayMutation(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -706,7 +711,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 
 		invoked := false
 
-		valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
+		valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
 			"log",
 			stdlib.LogFunctionType,
 			"",
@@ -723,7 +728,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             fun test() {
                 let dict: {String: AnyStruct} = {}
 
@@ -733,12 +738,14 @@ func TestInterpretDictionaryMutation(t *testing.T) {
                 logger("hello")
             }`,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -852,7 +859,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 
 		t.Parallel()
 
-		valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
+		valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
 			"log",
 			stdlib.LogFunctionType,
 			"",
@@ -868,7 +875,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
                fun test() {
                    let dict: {String: AnyStruct} = {} as {String: fun():Void}
 
@@ -876,12 +883,14 @@ func TestInterpretDictionaryMutation(t *testing.T) {
                }
            `,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -978,7 +987,7 @@ func TestInterpretContainerMutationWhileIterating(t *testing.T) {
 	t.Run("array, append", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): [String] {
                 let array: [String] = ["foo", "bar"]
 
@@ -1005,7 +1014,7 @@ func TestInterpretContainerMutationWhileIterating(t *testing.T) {
 	t.Run("array, remove", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test() {
                 let array: [String] = ["foo", "bar", "baz"]
 
@@ -1027,7 +1036,7 @@ func TestInterpretContainerMutationWhileIterating(t *testing.T) {
 	t.Run("dictionary, add", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): {String: String} {
                 let dictionary: {String: String} = {"a": "foo", "b": "bar"}
 
@@ -1054,7 +1063,7 @@ func TestInterpretContainerMutationWhileIterating(t *testing.T) {
 	t.Run("dictionary, remove", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             fun test(): {String: String} {
                 let dictionary: {String: String} = {"a": "foo", "b": "bar", "c": "baz"}
 
@@ -1079,7 +1088,7 @@ func TestInterpretContainerMutationWhileIterating(t *testing.T) {
 	t.Run("resource dictionary, remove", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource Foo {}
 
             fun test(): @{String: Foo} {

@@ -114,6 +114,7 @@ type ExpressionTypes struct {
 type ForStatementTypes struct {
 	IndexVariableType Type
 	ValueVariableType Type
+	ContainerType     Type
 }
 
 type Elaboration struct {
@@ -148,7 +149,7 @@ type Elaboration struct {
 	nestedResourceMoveExpressions       map[ast.Expression]struct{}
 	compositeNestedDeclarations         map[ast.CompositeLikeDeclaration]map[string]ast.Declaration
 	interfaceNestedDeclarations         map[*ast.InterfaceDeclaration]map[string]ast.Declaration
-	defaultDestroyDeclarations          map[ast.Declaration]ast.CompositeLikeDeclaration
+	defaultDestroyDeclarations          map[ast.Declaration]*ast.CompositeDeclaration
 	postConditionsRewrites              map[*ast.Conditions]PostConditionsRewrite
 	emitStatementEventTypes             map[*ast.EmitStatement]*CompositeType
 	compositeTypes                      map[TypeID]*CompositeType
@@ -741,7 +742,7 @@ func (e *Elaboration) SetInterfaceNestedDeclarations(
 	e.interfaceNestedDeclarations[declaration] = nestedDeclaration
 }
 
-func (e *Elaboration) DefaultDestroyDeclaration(declaration ast.Declaration) ast.CompositeLikeDeclaration {
+func (e *Elaboration) DefaultDestroyDeclaration(declaration ast.Declaration) *ast.CompositeDeclaration {
 	if e.defaultDestroyDeclarations == nil {
 		return nil
 	}
@@ -750,10 +751,10 @@ func (e *Elaboration) DefaultDestroyDeclaration(declaration ast.Declaration) ast
 
 func (e *Elaboration) SetDefaultDestroyDeclaration(
 	declaration ast.Declaration,
-	eventDeclaration ast.CompositeLikeDeclaration,
+	eventDeclaration *ast.CompositeDeclaration,
 ) {
 	if e.defaultDestroyDeclarations == nil {
-		e.defaultDestroyDeclarations = map[ast.Declaration]ast.CompositeLikeDeclaration{}
+		e.defaultDestroyDeclarations = map[ast.Declaration]*ast.CompositeDeclaration{}
 	}
 	e.defaultDestroyDeclarations[declaration] = eventDeclaration
 }

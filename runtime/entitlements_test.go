@@ -36,7 +36,7 @@ func TestRuntimeAccountEntitlementSaveAndLoadSuccess(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -96,6 +96,7 @@ func TestRuntimeAccountEntitlementSaveAndLoadSuccess(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -107,6 +108,7 @@ func TestRuntimeAccountEntitlementSaveAndLoadSuccess(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -118,6 +120,7 @@ func TestRuntimeAccountEntitlementSaveAndLoadSuccess(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -128,7 +131,7 @@ func TestRuntimeAccountEntitlementSaveAndLoadFail(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -188,6 +191,7 @@ func TestRuntimeAccountEntitlementSaveAndLoadFail(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -199,6 +203,7 @@ func TestRuntimeAccountEntitlementSaveAndLoadFail(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -210,6 +215,7 @@ func TestRuntimeAccountEntitlementSaveAndLoadFail(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -221,7 +227,7 @@ func TestRuntimeAccountEntitlementAttachment(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -295,6 +301,8 @@ func TestRuntimeAccountEntitlementAttachment(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			// TODO: requires support for attachments in the VM
+			//UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -306,6 +314,8 @@ func TestRuntimeAccountEntitlementAttachment(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			// TODO: requires support for attachments in the VM
+			//UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -317,6 +327,8 @@ func TestRuntimeAccountEntitlementAttachment(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			// TODO: requires support for attachments in the VM
+			//UseVM:     *compile,
 		},
 	)
 
@@ -327,7 +339,7 @@ func TestRuntimeAccountExportEntitledRef(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -383,6 +395,7 @@ func TestRuntimeAccountExportEntitledRef(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -394,6 +407,7 @@ func TestRuntimeAccountExportEntitledRef(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -404,7 +418,7 @@ func TestRuntimeAccountEntitlementNamingConflict(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -469,6 +483,7 @@ func TestRuntimeAccountEntitlementNamingConflict(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -480,6 +495,7 @@ func TestRuntimeAccountEntitlementNamingConflict(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -491,6 +507,7 @@ func TestRuntimeAccountEntitlementNamingConflict(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -507,7 +524,7 @@ func TestRuntimeAccountEntitlementCapabilityCasting(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -575,6 +592,7 @@ func TestRuntimeAccountEntitlementCapabilityCasting(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -586,6 +604,7 @@ func TestRuntimeAccountEntitlementCapabilityCasting(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -597,6 +616,7 @@ func TestRuntimeAccountEntitlementCapabilityCasting(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -608,7 +628,7 @@ func TestRuntimeAccountEntitlementCapabilityDictionary(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -691,6 +711,7 @@ func TestRuntimeAccountEntitlementCapabilityDictionary(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -702,6 +723,7 @@ func TestRuntimeAccountEntitlementCapabilityDictionary(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -713,6 +735,7 @@ func TestRuntimeAccountEntitlementCapabilityDictionary(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -724,7 +747,7 @@ func TestRuntimeAccountEntitlementGenericCapabilityDictionary(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -807,6 +830,7 @@ func TestRuntimeAccountEntitlementGenericCapabilityDictionary(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -818,6 +842,7 @@ func TestRuntimeAccountEntitlementGenericCapabilityDictionary(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -829,6 +854,7 @@ func TestRuntimeAccountEntitlementGenericCapabilityDictionary(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -842,7 +868,7 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 	address := common.MustBytesToAddress([]byte{0x1})
 
 	test := func(t *testing.T, script string) {
-		runtime := NewTestInterpreterRuntime()
+		runtime := NewTestRuntime()
 
 		accountCodes := map[common.Location][]byte{}
 
@@ -872,6 +898,7 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 			Context{
 				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1121,7 +1148,7 @@ func TestRuntimeImportedEntitlementMapInclude(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	furtherUpstreamDeployTx := DeploymentTransaction("FurtherUpstream", []byte(`
@@ -1256,6 +1283,7 @@ func TestRuntimeImportedEntitlementMapInclude(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1267,6 +1295,7 @@ func TestRuntimeImportedEntitlementMapInclude(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1278,6 +1307,7 @@ func TestRuntimeImportedEntitlementMapInclude(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -1289,6 +1319,7 @@ func TestRuntimeImportedEntitlementMapInclude(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 
@@ -1299,7 +1330,7 @@ func TestRuntimeEntitlementMapIncludeDeduped(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 	accountCodes := map[Location][]byte{}
 
 	script := []byte(`
@@ -1518,6 +1549,7 @@ func TestRuntimeEntitlementMapIncludeDeduped(t *testing.T) {
 		Context{
 			Interface: runtimeInterface1,
 			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 

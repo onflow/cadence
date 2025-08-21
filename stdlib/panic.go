@@ -21,6 +21,8 @@ package stdlib
 import (
 	"fmt"
 
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -31,17 +33,24 @@ type PanicError struct {
 	Message string
 }
 
-var _ errors.UserError = PanicError{}
+var _ errors.UserError = &PanicError{}
+var _ interpreter.HasLocationRange = &PanicError{}
 
-func (PanicError) IsUserError() {}
+func (*PanicError) IsUserError() {}
 
-func (e PanicError) Error() string {
+func (e *PanicError) Error() string {
 	return fmt.Sprintf("panic: %s", e.Message)
+}
+
+func (e *PanicError) SetLocationRange(locationRange interpreter.LocationRange) {
+	e.LocationRange = locationRange
 }
 
 const panicFunctionDocString = `
 Terminates the program unconditionally and reports a message which explains why the unrecoverable error occurred.
 `
+
+const PanicFunctionName = "panic"
 
 var PanicFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityView,
@@ -55,14 +64,24 @@ var PanicFunctionType = sema.NewSimpleFunctionType(
 	sema.NeverTypeAnnotation,
 )
 
-var PanicFunction = NewStandardLibraryStaticFunction(
-	"panic",
+var InterpreterPanicFunction = NewInterpreterStandardLibraryStaticFunction(
+	PanicFunctionName,
 	PanicFunctionType,
 	panicFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		locationRange := invocation.LocationRange
-		arguments := invocation.Arguments
-		return PanicWithError(arguments[0], locationRange)
+		message := invocation.Arguments[0]
+		return PanicWithError(message, locationRange)
+	},
+)
+
+var VMPanicFunction = NewVMStandardLibraryStaticFunction(
+	PanicFunctionName,
+	PanicFunctionType,
+	panicFunctionDocString,
+	func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...interpreter.Value) interpreter.Value {
+		message := arguments[0]
+		return PanicWithError(message, interpreter.EmptyLocationRange)
 	},
 )
 
@@ -71,7 +90,7 @@ func PanicWithError(message interpreter.Value, locationRange interpreter.Locatio
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	panic(PanicError{
+	panic(&PanicError{
 		Message:       messageValue.Str,
 		LocationRange: locationRange,
 	})

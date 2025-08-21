@@ -52,7 +52,7 @@ func (c *LocationCoverage) AddLineHit(line int) {
 func (c *LocationCoverage) Percentage() string {
 	coveredLines := c.CoveredLines()
 	// The ground truth of which statements are interpreted/executed
-	// is the `interpreterEnvironment.newOnStatementHandler()` function.
+	// is the `InterpreterEnvironment.newOnStatementHandler()` function.
 	// This means that every call of `CoverageReport.AddLineHit()` from
 	// that callback, should be respected. The `CoverageReport.InspectProgram()`
 	// may have failed, for whatever reason, to find a specific line.

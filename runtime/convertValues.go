@@ -1637,7 +1637,7 @@ func (i valueImporter) importPublicKey(
 
 			publicKeyValue = arrayValue
 
-		case sema.PublicKeyTypeSignAlgoFieldName:
+		case sema.PublicKeyTypeSignatureAlgorithmFieldName:
 			compositeValue, ok := field.Value.(*interpreter.SimpleCompositeValue)
 			if !ok {
 				return nil, errors.NewDefaultUserError(
@@ -1672,7 +1672,7 @@ func (i valueImporter) importPublicKey(
 		return nil, errors.NewDefaultUserError(
 			"cannot import value of type '%s'. missing field '%s'",
 			ty,
-			sema.PublicKeyTypeSignAlgoFieldName,
+			sema.PublicKeyTypeSignatureAlgorithmFieldName,
 		)
 	}
 

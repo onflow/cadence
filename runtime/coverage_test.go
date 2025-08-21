@@ -1409,7 +1409,7 @@ func TestRuntimeCoverage(t *testing.T) {
 
 	config := DefaultTestInterpreterConfig
 	config.CoverageReport = coverageReport
-	runtime := NewTestInterpreterRuntimeWithConfig(config)
+	runtime := NewTestRuntimeWithConfig(config)
 
 	value, err := runtime.ExecuteScript(
 		Script{
@@ -1567,7 +1567,7 @@ func TestRuntimeCoverageWithExcludedLocation(t *testing.T) {
 
 	config := DefaultTestInterpreterConfig
 	config.CoverageReport = coverageReport
-	runtime := NewTestInterpreterRuntimeWithConfig(config)
+	runtime := NewTestRuntimeWithConfig(config)
 
 	value, err := runtime.ExecuteScript(
 		Script{
@@ -1951,7 +1951,7 @@ func TestRuntimeCoverageReportLCOVFormat(t *testing.T) {
 
 		config := DefaultTestInterpreterConfig
 		config.CoverageReport = coverageReport
-		runtime := NewTestInterpreterRuntimeWithConfig(config)
+		runtime := NewTestRuntimeWithConfig(config)
 
 		value, err := runtime.ExecuteScript(
 			Script{
@@ -2022,7 +2022,7 @@ end_of_record
 
 		config := DefaultTestInterpreterConfig
 		config.CoverageReport = coverageReport
-		runtime := NewTestInterpreterRuntimeWithConfig(config)
+		runtime := NewTestRuntimeWithConfig(config)
 
 		value, err := runtime.ExecuteScript(
 			Script{

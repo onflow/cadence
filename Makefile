@@ -85,7 +85,8 @@ test-tools:
 
 .PHONY: test-with-compiler
 test-with-compiler:
-	#(go test -parallel 8 ./interpreter/... -compile=true)
+	(go test -parallel 8 ./interpreter/... -compile=true)
+	(go test -parallel 8 ./runtime/... -compile=true)
 
 .PHONY: lint
 lint: build-linter
@@ -130,6 +131,11 @@ generate:
 check-tidy: generate
 	go mod tidy
 	git diff --exit-code
+	git diff --exit-code
+
+.PHONY: validate-error-doc-links
+validate-error-doc-links:
+	go run ./cmd/errors validate-doc-links
 
 .PHONY: release
 release:

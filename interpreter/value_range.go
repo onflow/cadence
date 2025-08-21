@@ -173,7 +173,7 @@ func createInclusiveRange(
 			func(rangeValue *CompositeValue, invocation Invocation) Value {
 				needleInteger := convertAndAssertIntegerValue(invocation.Arguments[0])
 
-				return rangeContains(
+				return InclusiveRangeContains(
 					rangeValue,
 					rangeType,
 					invocation.InvocationContext,
@@ -187,7 +187,7 @@ func createInclusiveRange(
 	return rangeValue
 }
 
-func rangeContains(
+func InclusiveRangeContains(
 	rangeValue *CompositeValue,
 	rangeType InclusiveRangeStaticType,
 	context ValueComparisonContext,

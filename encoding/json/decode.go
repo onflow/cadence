@@ -1046,7 +1046,7 @@ func (d *Decoder) decodePurity(purity any) cadence.FunctionPurity {
 	if functionPurity == "view" {
 		return cadence.FunctionPurityView
 	}
-	return cadence.FunctionPurityUnspecified
+	return cadence.FunctionPurityImpure
 }
 
 func (d *Decoder) decodeFunctionType(typeParametersValue, parametersValue, returnValue any, purity any, results typeDecodingResults) cadence.Type {

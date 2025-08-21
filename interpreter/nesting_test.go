@@ -30,7 +30,7 @@ func TestInterpretContractWithNestedDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := parseCheckAndInterpretWithOptions(t,
+	_, err := parseCheckAndPrepareWithOptions(t,
 		`
 	      contract C {
 
@@ -42,7 +42,7 @@ func TestInterpretContractWithNestedDeclaration(t *testing.T) {
 	      }
 	    `,
 		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 			},
 		},

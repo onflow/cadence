@@ -35,7 +35,7 @@ func TestRuntimeAccountAttachmentSaveAndLoad(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var logs []string
 	var events []string
@@ -146,7 +146,7 @@ func TestRuntimeAccountAttachmentExportFailure(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	logs := make([]string, 0)
 	events := make([]string, 0)
@@ -238,7 +238,7 @@ func TestRuntimeAccountAttachmentExport(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var logs []string
 	var events []string
@@ -323,7 +323,7 @@ func TestRuntimeAccountAttachedExport(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var logs []string
 	var events []string
@@ -411,7 +411,7 @@ func TestRuntimeAccountAttachmentSaveAndBorrow(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var logs []string
 	var events []string
@@ -525,7 +525,7 @@ func TestRuntimeAccountAttachmentCapability(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
-	rt := NewTestInterpreterRuntime()
+	rt := NewTestRuntime()
 
 	var logs []string
 	var events []string
@@ -665,8 +665,8 @@ func TestRuntimeAttachmentStorage(t *testing.T) {
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	newRuntime := func() (TestInterpreterRuntime, *TestRuntimeInterface) {
-		runtime := NewTestInterpreterRuntime()
+	newRuntime := func() (TestRuntime, *TestRuntimeInterface) {
+		runtime := NewTestRuntime()
 
 		accountCodes := map[common.Location][]byte{}
 

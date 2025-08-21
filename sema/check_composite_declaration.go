@@ -852,7 +852,12 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 
 			if ast.IsResourceDestructionDefaultEvent(identifier.Identifier) {
 				// Find the default event's type declaration
-				checker.Elaboration.SetDefaultDestroyDeclaration(declaration, nestedCompositeDeclaration)
+				compositeDecl, ok := nestedCompositeDeclaration.(*ast.CompositeDeclaration)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				checker.Elaboration.SetDefaultDestroyDeclaration(declaration, compositeDecl)
 				defaultEventType :=
 					checker.typeActivations.Find(identifier.Identifier)
 				defaultEventComposite, ok := defaultEventType.Type.(*CompositeType)
@@ -1501,19 +1506,35 @@ func (checker *Checker) checkConformanceKindMatch(
 		// Otherwise, find the conformance which resulted in the mismatch,
 		// and log the error there.
 		for _, conformance := range conformances {
-			if conformance.Identifier.Identifier == interfaceConformance.Identifier {
+			// If the conformance-type-name is a single identifier, e.g: `A`
+			// (i.e: type is defined in the same contract),
+			// then compare with that single identifier.
+			if len(conformance.NestedIdentifiers) == 0 &&
+				conformance.Identifier.Identifier == interfaceConformance.Identifier {
 				compositeKindMismatchIdentifier = &conformance.Identifier
 				break
+			} else {
+				// Otherwise: If the conformance-type-name has nested identifiers, e.g: `A.B`
+				// (i.e: type is defined in a different contract),
+				// then compare with the nested identifiers.
+				for _, identifier := range conformance.NestedIdentifiers {
+					if identifier.Identifier == interfaceConformance.Identifier {
+						compositeKindMismatchIdentifier = &conformance.Identifier
+						break
+					}
+				}
 			}
 		}
-
-		// If not found, then that means, the mismatching interface is a grandparent.
-		// Then it should have already been reported when checking the parent.
-		// Hence, no need to report an error here again.
 	}
 
+	// For some reason, if it couldn't find the identifier that doesn't match AND,
+	// if there were no previous errors reported either, then report and error to be safe.
 	if compositeKindMismatchIdentifier == nil {
-		return
+		if len(checker.errors) != 0 {
+			return
+		}
+
+		compositeKindMismatchIdentifier = conformingDeclaration.DeclarationIdentifier()
 	}
 
 	checker.report(

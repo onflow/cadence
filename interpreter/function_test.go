@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
@@ -177,7 +178,7 @@ func TestInterpretResultVariable(t *testing.T) {
 
 		var checkerErrors []error
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             access(all) resource R {
                 access(all) var id: UInt8
 				access(all) fun setID(_ id: UInt8) {
@@ -239,7 +240,7 @@ func TestInterpretResultVariable(t *testing.T) {
 
 		var checkerErrors []error
 
-		inter, err := parseCheckAndInterpretWithOptions(t, `
+		inter, err := parseCheckAndPrepareWithOptions(t, `
             access(all) resource R {
                 access(all) var id: UInt8
 
@@ -332,18 +333,18 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 
 	t.Parallel()
 
-	parseCheckAndInterpretWithGenericFunction := func(
+	parseCheckAndPrepareWithGenericFunction := func(
 		tt *testing.T,
 		code string,
 		boundType sema.Type,
-	) (*interpreter.Interpreter, error) {
+	) (Invokable, error) {
 
 		typeParameter := &sema.TypeParameter{
 			Name:      "T",
 			TypeBound: boundType,
 		}
 
-		function1 := stdlib.NewStandardLibraryStaticFunction(
+		function1 := stdlib.NewInterpreterStandardLibraryStaticFunction(
 			"foo",
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
@@ -361,15 +362,17 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, function1)
 
-		return parseCheckAndInterpretWithOptions(t,
+		return parseCheckAndPrepareWithOptions(t,
 			code,
 			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
@@ -381,7 +384,7 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 	t.Run("generic function as non-generic function", func(t *testing.T) {
 		t.Parallel()
 
-		inter, err := parseCheckAndInterpretWithGenericFunction(t, `
+		inter, err := parseCheckAndPrepareWithGenericFunction(t, `
             fun test() {
                 var boxedFunc: AnyStruct = foo  // fun<T Integer>(): Void
 
@@ -398,4 +401,30 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 		var typeErr *interpreter.ForceCastTypeMismatchError
 		require.ErrorAs(t, err, &typeErr)
 	})
+}
+
+func TestInvokeBoundFunctionsExternally(t *testing.T) {
+
+	t.Parallel()
+
+	invokable := parseCheckAndPrepare(
+		t,
+		`
+            access(all) fun test(): Bool? {
+                let opt: Type? = Type<Int>()
+                return opt.map(opt.isInstance)
+            }
+        `,
+	)
+
+	result, err := invokable.Invoke("test")
+	require.NoError(t, err)
+
+	assert.Equal(
+		t,
+		interpreter.NewUnmeteredSomeValueNonCopying(
+			interpreter.BoolValue(false),
+		),
+		result,
+	)
 }
