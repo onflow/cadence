@@ -8150,7 +8150,12 @@ func TestInterpretFix128Metering(t *testing.T) {
 
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
-		assert.Equal(t, uint64(112), meter.getMemory(common.MemoryKindNumberValue))
+		assert.Equal(
+			t,
+			// The VM initializes the constant (1.0) only once. So this difference is expected.
+			ifCompile[uint64](16, 112),
+			meter.getMemory(common.MemoryKindNumberValue),
+		)
 		assert.Equal(t, uint64(224), meter.getMemory(common.MemoryKindBigInt))
 	})
 }
@@ -8700,7 +8705,12 @@ func TestInterpretUFix128Metering(t *testing.T) {
 
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
-		assert.Equal(t, uint64(112), meter.getMemory(common.MemoryKindNumberValue))
+		assert.Equal(
+			t,
+			// The VM initializes the constant (1.0) only once. So this difference is expected.
+			ifCompile[uint64](16, 112),
+			meter.getMemory(common.MemoryKindNumberValue),
+		)
 		assert.Equal(t, uint64(224), meter.getMemory(common.MemoryKindBigInt))
 	})
 }

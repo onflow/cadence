@@ -21,13 +21,14 @@ package ccf
 import (
 	"errors"
 	"fmt"
-	fix "github.com/onflow/fixed-point"
 	"math"
 	"math/big"
 	goRuntime "runtime"
 	_ "unsafe"
 
 	"github.com/fxamacker/cbor/v2"
+
+	fix "github.com/onflow/fixed-point"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
