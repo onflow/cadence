@@ -119,8 +119,7 @@ func TestCheckOptionalChainingNonOptionalFieldAccess(t *testing.T) {
 		var invalidOptionalChainingErr *sema.InvalidOptionalChainingError
 		require.ErrorAs(t, errs[0], &invalidOptionalChainingErr)
 
-		// Test suggested fixes
-		fixes := invalidOptionalChainingErr.SuggestFixes("")
+		fixes := invalidOptionalChainingErr.SuggestFixes(code)
 
 		AssertEqualWithDiff(t,
 			[]errors.SuggestedFix[ast.TextEdit]{
@@ -170,59 +169,88 @@ func TestCheckOptionalChainingNonOptionalFieldAccess(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheck(t,
-			`
-              fun test() {
-                  let bar = Bar()
-                  // Two issues:
-                  //    - Field Bar.foo is not optional, but access through optional chaining
-                  //    - Field Foo.id is not a function, yet invoke as a function
-                  bar.foo?.id()
-              }
+		const code = `
+          fun test() {
+              let bar = Bar()
+              // Two issues:
+              //    - Field Bar.foo is not optional, but access through optional chaining
+              //    - Field Foo.id is not a function, yet invoke as a function
+              bar.foo?.id()
+          }
 
-              struct Bar {
-                  var foo: Foo
-                  init() {
-                      self.foo = Foo()
-                  }
+          struct Bar {
+              var foo: Foo
+              init() {
+                  self.foo = Foo()
               }
+          }
 
-              struct Foo {
-                  var id: String
+          struct Foo {
+              var id: String
 
-                  init() {
-                      self.id = ""
-                  }
+              init() {
+                  self.id = ""
               }
-            `,
-		)
+          }
+        `
+
+		_, err := ParseAndCheck(t, code)
 
 		errs := RequireCheckerErrors(t, err, 2)
 
 		var invalidOptionalChainingErr *sema.InvalidOptionalChainingError
 		require.ErrorAs(t, errs[0], &invalidOptionalChainingErr)
+
 		assert.IsType(t, &sema.NotCallableError{}, errs[1])
 
-		// Test suggested fixes for the optional chaining error
-		fixes := invalidOptionalChainingErr.SuggestFixes("")
-		require.Len(t, fixes, 1)
+		fixes := invalidOptionalChainingErr.SuggestFixes(code)
 
-		expectedFix := errors.SuggestedFix[ast.TextEdit]{
-			Message: "Remove optional chaining",
-			TextEdits: []ast.TextEdit{
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
 				{
-					Replacement: ".",
-					Range:       invalidOptionalChainingErr.Range,
+					Message: "Remove optional chaining",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: ".",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 273, Line: 7, Column: 21},
+								EndPos:   ast.Position{Offset: 274, Line: 7, Column: 22},
+							},
+						},
+					},
 				},
 			},
-		}
+			fixes,
+		)
 
-		AssertEqualWithDiff(t, expectedFix, fixes[0])
+		const expected = `
+          fun test() {
+              let bar = Bar()
+              // Two issues:
+              //    - Field Bar.foo is not optional, but access through optional chaining
+              //    - Field Foo.id is not a function, yet invoke as a function
+              bar.foo.id()
+          }
 
-		// Test applying the fix
-		code := `bar.foo?.id()`
-		expected := `bar.foo.id()`
-		assert.Equal(t, expected, fixes[0].TextEdits[0].ApplyTo(code))
+          struct Bar {
+              var foo: Foo
+              init() {
+                  self.foo = Foo()
+              }
+          }
+
+          struct Foo {
+              var id: String
+
+              init() {
+                  self.id = ""
+              }
+          }
+        `
+		assert.Equal(t,
+			expected,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
 	})
 }
 
