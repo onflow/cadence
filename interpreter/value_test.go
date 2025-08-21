@@ -41,9 +41,9 @@ import (
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
-func newTestCompositeValue(inter *Interpreter, owner common.Address) *CompositeValue {
+func newTestCompositeValue(context MemberAccessibleContext, owner common.Address) *CompositeValue {
 	return NewCompositeValue(
-		inter,
+		context,
 		EmptyLocationRange,
 		TestLocation,
 		"Test",

@@ -4408,7 +4408,7 @@ func TestCheckEntitlementConditions(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					SuggestionsEnabled: true,
 				},
 			},
@@ -4437,7 +4437,7 @@ func TestCheckEntitlementConditions(t *testing.T) {
 
 		require.ErrorAs(t, errs[2], &invalidAccessErr)
 		assert.Equal(t,
-			"reference needs entitlement `X`",
+			"add entitlement `X` to your reference",
 			invalidAccessErr.SecondaryError(),
 		)
 	})
@@ -4486,7 +4486,7 @@ func TestCheckEntitlementConditions(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					SuggestionsEnabled: true,
 				},
 			},
@@ -4510,7 +4510,7 @@ func TestCheckEntitlementConditions(t *testing.T) {
 			invalidAccessErr.PossessedAccess,
 		)
 		assert.Equal(t,
-			"reference needs entitlement `X`",
+			"add entitlement `X` to your reference",
 			invalidAccessErr.SecondaryError(),
 		)
 	})
@@ -4926,7 +4926,7 @@ func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					SuggestionsEnabled: true,
 				},
 			},
@@ -4951,7 +4951,7 @@ func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
 			invalidAccessErr.PossessedAccess,
 		)
 		assert.Equal(t,
-			"reference needs one of entitlements `Insert` or `Mutate`",
+			"add one of these entitlements to your reference: `Insert` or `Mutate`",
 			invalidAccessErr.SecondaryError(),
 		)
 	})
@@ -5888,7 +5888,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
                 }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					SuggestionsEnabled: true,
 				},
 			},
@@ -5920,7 +5920,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 			invalidAccessErr.PossessedAccess,
 		)
 		assert.Equal(t,
-			"reference needs all of entitlements `X`, `Y`, and `Z`",
+			"add all of these entitlements to your reference: `X`, `Y`, and `Z`",
 			invalidAccessErr.SecondaryError(),
 		)
 	})
@@ -5946,7 +5946,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					SuggestionsEnabled: true,
 				},
 			},
@@ -5979,7 +5979,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 			invalidAccessErr.PossessedAccess,
 		)
 		assert.Equal(t,
-			"reference needs all of entitlements `X` and `Z`",
+			"add all of these entitlements to your reference: `X` and `Z`",
 			invalidAccessErr.SecondaryError(),
 		)
 	})
@@ -6005,7 +6005,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					SuggestionsEnabled: true,
 				},
 			},
@@ -6037,7 +6037,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 			invalidAccessErr.PossessedAccess,
 		)
 		assert.Equal(t,
-			"reference needs one of entitlements `X`, `Y`, or `Z`",
+			"add one of these entitlements to your reference: `X`, `Y`, or `Z`",
 			invalidAccessErr.SecondaryError(),
 		)
 	})
@@ -6062,7 +6062,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					SuggestionsEnabled: true,
 				},
 			},
@@ -6094,7 +6094,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 			invalidAccessErr.PossessedAccess,
 		)
 		assert.Equal(t,
-			"",
+			"ensure your reference has the required authorization by using the appropriate access modifier or entitlement",
 			invalidAccessErr.SecondaryError(),
 		)
 	})
@@ -6118,7 +6118,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
                 }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					SuggestionsEnabled: true,
 				},
 			},
@@ -6138,7 +6138,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 		)
 		assert.Equal(
 			t,
-			"",
+			"ensure your reference has the required authorization by using the appropriate access modifier or entitlement",
 			invalidAccessErr.SecondaryError(),
 		)
 	})

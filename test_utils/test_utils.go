@@ -19,6 +19,7 @@
 package test_utils
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -32,7 +33,7 @@ import (
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
-	"github.com/onflow/cadence/test_utils/sema_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 
 	"github.com/onflow/cadence/bbq/compiler"
 	. "github.com/onflow/cadence/bbq/test_utils"
@@ -41,9 +42,9 @@ import (
 )
 
 type ParseCheckAndInterpretOptions struct {
-	Config             *interpreter.Config
-	CheckerConfig      *sema.Config
-	HandleCheckerError func(error)
+	ParseAndCheckOptions *ParseAndCheckOptions
+	InterpreterConfig    *interpreter.Config
+	HandleCheckerError   func(error)
 }
 
 type VMInvokable struct {
@@ -137,7 +138,7 @@ func ParseCheckAndPrepareWithEvents(tb testing.TB, code string, compile bool) (
 	}
 
 	parseCheckAndInterpretOptions := ParseCheckAndInterpretOptions{
-		Config: interpreterConfig,
+		InterpreterConfig: interpreterConfig,
 	}
 
 	if !compile {
@@ -187,12 +188,14 @@ func ParseCheckAndPrepareWithLogs(
 	invokable, err = ParseCheckAndPrepareWithOptions(tb,
 		code,
 		ParseCheckAndInterpretOptions{
-			CheckerConfig: &sema.Config{
-				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-					return baseValueActivation
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 			},
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
 					return baseActivation
 				},
@@ -223,11 +226,22 @@ func ParseCheckAndPrepareWithOptions(
 		return ParseCheckAndInterpretWithOptions(tb, code, options)
 	}
 
-	interpreterConfig := options.Config
+	var memoryGauge common.MemoryGauge
+	if options.InterpreterConfig != nil {
+		memoryGauge = options.InterpreterConfig.MemoryGauge
+	}
+	if memoryGauge == nil && options.ParseAndCheckOptions != nil {
+		memoryGauge = options.ParseAndCheckOptions.MemoryGauge
+	}
+
+	interpreterConfig := options.InterpreterConfig
 
 	var storage interpreter.Storage
 	if interpreterConfig != nil {
 		storage = interpreterConfig.Storage
+	}
+	if storage == nil {
+		storage = interpreter.NewInMemoryStorage(memoryGauge)
 	}
 
 	programs := CompiledPrograms{}
@@ -238,15 +252,15 @@ func ParseCheckAndPrepareWithOptions(
 
 	typeLoader := compilerUtils.CompiledProgramsTypeLoader(programs)
 
-	if options.CheckerConfig != nil {
-		typeActivationHandler := options.CheckerConfig.BaseTypeActivationHandler
+	if options.ParseAndCheckOptions != nil && options.ParseAndCheckOptions.CheckerConfig != nil {
+		typeActivationHandler := options.ParseAndCheckOptions.CheckerConfig.BaseTypeActivationHandler
 		if typeActivationHandler != nil {
-			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 				activation := typeActivationHandler(location)
 				typeName := location.QualifiedIdentifier(typeID)
 				variable := activation.Find(typeName)
 				if variable != nil {
-					return variable.Type.(sema.ContainedType)
+					return variable.Type, nil
 				}
 
 				return typeLoader(location, typeID)
@@ -278,7 +292,7 @@ func ParseCheckAndPrepareWithOptions(
 			// (i.e: only get the values that were added externally for tests)
 			interpreterBaseActivationVariables := interpreterBaseActivation.ValuesInCurrentLevel()
 
-			vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[vm.Variable] {
+			vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
 
 				activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
@@ -298,13 +312,23 @@ func ParseCheckAndPrepareWithOptions(
 						value = vm.NewNativeFunctionValue(
 							name,
 							functionValue.Type,
-							func(context *vm.Context, _ []interpreter.StaticType, arguments ...vm.Value) vm.Value {
+							func(context *vm.Context, _ []interpreter.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
+
+								var argumentTypes []sema.Type
+								if len(arguments) > 0 {
+									argumentTypes = make([]sema.Type, len(arguments))
+									for i, argument := range arguments {
+										staticType := argument.StaticType(context)
+										argumentTypes[i] = interpreter.MustConvertStaticToSemaType(staticType, context)
+									}
+								}
+
 								invocation := interpreter.NewInvocation(
 									context,
 									nil,
 									nil,
 									arguments,
-									nil,
+									argumentTypes,
 									// TODO: provide these if they are needed for tests.
 									nil,
 									interpreter.EmptyLocationRange,
@@ -328,7 +352,7 @@ func ParseCheckAndPrepareWithOptions(
 
 			// Register externally provided globals in compiler.
 			compilerConfig = &compiler.Config{
-				BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
+				BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
 					baseActivation := compiler.DefaultBuiltinGlobals()
 					activation := activations.NewActivation(nil, baseActivation)
 					for name := range interpreterBaseActivationVariables { //nolint:maprange
@@ -349,16 +373,58 @@ func ParseCheckAndPrepareWithOptions(
 		}
 
 		if interpreterConfig.ImportLocationHandler != nil {
-			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) sema.ContainedType {
+			originalTypeLoader := vmConfig.TypeLoader
+			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
 				impt := interpreterConfig.ImportLocationHandler(nil, location)
 				switch impt := impt.(type) {
 				case interpreter.VirtualImport:
-					return impt.Elaboration.CompositeType(typeID)
+					return impt.Elaboration.CompositeType(typeID), nil
 				case interpreter.InterpreterImport:
-					return impt.Interpreter.Program.Elaboration.CompositeType(typeID)
+					return impt.Interpreter.Program.Elaboration.CompositeType(typeID), nil
 				}
 
-				return typeLoader(location, typeID)
+				if originalTypeLoader != nil {
+					return originalTypeLoader(location, typeID)
+				}
+
+				return nil, interpreter.TypeLoadingError{
+					TypeID: typeID,
+				}
+			}
+
+			vmConfig.ElaborationResolver = func(location common.Location) (*sema.Elaboration, error) {
+				impt := interpreterConfig.ImportLocationHandler(nil, location)
+
+				var elaboration *sema.Elaboration
+				switch impt := impt.(type) {
+				case interpreter.VirtualImport:
+					elaboration = impt.Elaboration
+				case interpreter.InterpreterImport:
+					elaboration = impt.Interpreter.Program.Elaboration
+				}
+				if elaboration == nil {
+					return nil, fmt.Errorf("cannot find elaboration for %s", location)
+				}
+
+				return elaboration, nil
+			}
+		}
+
+		if interpreterConfig.CompositeTypeHandler != nil {
+			originalTypeLoader := vmConfig.TypeLoader
+			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+				ty := interpreterConfig.CompositeTypeHandler(location, typeID)
+				if ty != nil {
+					return ty, nil
+				}
+
+				if originalTypeLoader != nil {
+					return originalTypeLoader(location, typeID)
+				}
+
+				return nil, interpreter.TypeLoadingError{
+					TypeID: typeID,
+				}
 			}
 		}
 	}
@@ -368,7 +434,7 @@ func ParseCheckAndPrepareWithOptions(
 	}
 
 	if vmConfig.BuiltinGlobalsProvider == nil {
-		vmConfig.BuiltinGlobalsProvider = func() *activations.Activation[vm.Variable] {
+		vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
 			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 			panicVariable := interpreter.NewVariableWithValue(
@@ -381,25 +447,35 @@ func ParseCheckAndPrepareWithOptions(
 		}
 	}
 
-	parseAndCheckOptions := &sema_utils.ParseAndCheckOptions{
-		Config: options.CheckerConfig,
-	}
-
-	vmInstance := compilerUtils.CompileAndPrepareToInvoke(
+	vmInstance, err := compilerUtils.CompileAndPrepareToInvoke(
 		tb,
 		code,
 		compilerUtils.CompilerAndVMOptions{
 			VMConfig: vmConfig,
 			ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
-				ParseAndCheckOptions: parseAndCheckOptions,
+				ParseAndCheckOptions: options.ParseAndCheckOptions,
 				CompilerConfig:       compilerConfig,
 				CheckerErrorHandler:  options.HandleCheckerError,
 			},
 			Programs: programs,
 		},
 	)
+	if err != nil {
+		return nil, err
+	}
 
-	elaboration := programs[parseAndCheckOptions.Location].DesugaredElaboration
+	var location common.Location
+
+	parseAndCheckOptions := options.ParseAndCheckOptions
+	if parseAndCheckOptions != nil {
+		location = parseAndCheckOptions.Location
+	}
+
+	if location == nil {
+		location = TestLocation
+	}
+
+	elaboration := programs[location].DesugaredElaboration
 
 	return NewVMInvokable(vmInstance, elaboration), nil
 }
@@ -416,10 +492,10 @@ func ParseCheckAndPrepareWithAtreeValidationsDisabled(
 		return ParseCheckAndInterpretWithAtreeValidationsDisabled(tb, code, options)
 	}
 
-	interpreterConfig := options.Config
+	interpreterConfig := options.InterpreterConfig
 	if interpreterConfig == nil {
 		interpreterConfig = &interpreter.Config{}
-		options.Config = interpreterConfig
+		options.InterpreterConfig = interpreterConfig
 	}
 
 	interpreterConfig.AtreeStorageValidationEnabled = false
@@ -447,7 +523,12 @@ func ParseCheckAndInterpretWithOptions(
 	inter *interpreter.Interpreter,
 	err error,
 ) {
-	return ParseCheckAndInterpretWithOptionsAndMemoryMetering(t, code, options, nil)
+	// Atree validation should be disabled for memory metering tests.
+	// Otherwise, validation may also affect the memory consumption.
+	enableAtreeValidations := (options.ParseAndCheckOptions == nil || options.ParseAndCheckOptions.MemoryGauge == nil) &&
+		(options.InterpreterConfig == nil || options.InterpreterConfig.MemoryGauge == nil)
+
+	return parseCheckAndInterpretWithOptionsAndAtreeValidations(t, code, options, enableAtreeValidations)
 }
 
 func ParseCheckAndInterpretWithAtreeValidationsDisabled(
@@ -458,80 +539,40 @@ func ParseCheckAndInterpretWithAtreeValidationsDisabled(
 	inter *interpreter.Interpreter,
 	err error,
 ) {
-	return parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
+	return parseCheckAndInterpretWithOptionsAndAtreeValidations(
 		t,
 		code,
 		options,
-		nil,
 		false,
 	)
 }
 
-func ParseCheckAndInterpretWithMemoryMetering(
-	t testing.TB,
-	code string,
-	memoryGauge common.MemoryGauge,
-) *interpreter.Interpreter {
-
-	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.InterpreterPanicFunction)
-
-	inter, err := ParseCheckAndInterpretWithOptionsAndMemoryMetering(
-		t,
-		code,
-		ParseCheckAndInterpretOptions{
-			CheckerConfig: &sema.Config{
-				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-					return baseValueActivation
-				},
-			},
-		},
-		memoryGauge,
-	)
-	require.NoError(t, err)
-	return inter
-}
-
-func ParseCheckAndInterpretWithOptionsAndMemoryMetering(
+func parseCheckAndInterpretWithOptionsAndAtreeValidations(
 	t testing.TB,
 	code string,
 	options ParseCheckAndInterpretOptions,
-	memoryGauge common.MemoryGauge,
-) (
-	inter *interpreter.Interpreter,
-	err error,
-) {
-
-	// Atree validation should be disabled for memory metering tests.
-	// Otherwise, validation may also affect the memory consumption.
-	enableAtreeValidations := memoryGauge == nil
-
-	return parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
-		t,
-		code,
-		options,
-		memoryGauge,
-		enableAtreeValidations,
-	)
-}
-
-func parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
-	t testing.TB,
-	code string,
-	options ParseCheckAndInterpretOptions,
-	memoryGauge common.MemoryGauge,
 	enableAtreeValidations bool,
 ) (
 	inter *interpreter.Interpreter,
 	err error,
 ) {
 
-	checker, err := sema_utils.ParseAndCheckWithOptionsAndMemoryMetering(t,
+	var memoryGauge common.MemoryGauge
+	if options.InterpreterConfig != nil {
+		memoryGauge = options.InterpreterConfig.MemoryGauge
+	}
+	if memoryGauge == nil && options.ParseAndCheckOptions != nil {
+		memoryGauge = options.ParseAndCheckOptions.MemoryGauge
+	}
+
+	var parseAndCheckOptions ParseAndCheckOptions
+	if options.ParseAndCheckOptions != nil {
+		parseAndCheckOptions = *options.ParseAndCheckOptions
+	}
+
+	checker, err := ParseAndCheckWithOptions(t,
 		code,
-		sema_utils.ParseAndCheckOptions{
-			Config: options.CheckerConfig,
-		},
-		memoryGauge,
+		parseAndCheckOptions,
 	)
 
 	if options.HandleCheckerError != nil {
@@ -551,8 +592,8 @@ func parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
 	var uuid uint64 = 0
 
 	var config interpreter.Config
-	if options.Config != nil {
-		config = *options.Config
+	if options.InterpreterConfig != nil {
+		config = *options.InterpreterConfig
 	}
 
 	if enableAtreeValidations {
@@ -571,10 +612,6 @@ func parseCheckAndInterpretWithOptionsAndMemoryMeteringAndAtreeValidations(
 	}
 	if config.Storage == nil {
 		config.Storage = interpreter.NewInMemoryStorage(memoryGauge)
-	}
-
-	if memoryGauge != nil && config.MemoryGauge == nil {
-		config.MemoryGauge = memoryGauge
 	}
 
 	inter, err = interpreter.NewInterpreter(

@@ -124,6 +124,7 @@ func (executor *contractFunctionExecutor) preprocess() (err error) {
 			environment = NewBaseInterpreterEnvironment(config)
 		}
 	}
+
 	environment.Configure(
 		runtimeInterface,
 		codesAndPrograms,
@@ -134,9 +135,22 @@ func (executor *contractFunctionExecutor) preprocess() (err error) {
 
 	switch environment := environment.(type) {
 	case *InterpreterEnvironment:
+		if context.UseVM {
+			panic(errors.NewUnexpectedError(
+				"expected to run with the VM, but found an incompatible environment: %T",
+				environment,
+			))
+		}
+
 		// NO-OP
 
 	case *vmEnvironment:
+		if !context.UseVM {
+			panic(errors.NewUnexpectedError(
+				"expected to run with the interpreter, but found an incompatible environment: %T",
+				environment,
+			))
+		}
 		contractLocation := executor.contractLocation
 		program := environment.importProgram(contractLocation)
 		executor.vm = environment.newVM(contractLocation, program)
@@ -211,9 +225,12 @@ func (executor *contractFunctionExecutor) executeWithInterpreter(
 		return nil, err
 	}
 
-	contractValue, err := inter.GetContractComposite(executor.contractLocation)
-	if err != nil {
-		return nil, err
+	contractValue := inter.GetContractComposite(executor.contractLocation)
+	if contractValue == nil {
+		return nil, interpreter.NotDeclaredError{
+			ExpectedKind: common.DeclarationKindContract,
+			Name:         executor.contractLocation.Name,
+		}
 	}
 
 	var self interpreter.Value = contractValue
@@ -279,6 +296,12 @@ func (executor *contractFunctionExecutor) executeWithVM(
 		contractLocation,
 		environment.storage,
 	)
+	if contractValue == nil {
+		return nil, interpreter.NotDeclaredError{
+			ExpectedKind: common.DeclarationKindContract,
+			Name:         executor.contractLocation.Name,
+		}
+	}
 
 	// receiver + arguments
 	arguments := make([]interpreter.Value, 0, len(executor.arguments))

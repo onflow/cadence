@@ -25,7 +25,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
@@ -473,7 +475,7 @@ func TestCheckTopLevelContractRestriction(t *testing.T) {
           contract C {}
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				ValidTopLevelDeclarationsHandler: func(_ common.Location) common.DeclarationKindSet {
 					return common.NewDeclarationKindSet(
 						common.DeclarationKindContract,
@@ -508,7 +510,7 @@ func TestCheckInvalidTopLevelContractRestriction(t *testing.T) {
 			_, err := ParseAndCheckWithOptions(t,
 				code,
 				ParseAndCheckOptions{
-					Config: &sema.Config{
+					CheckerConfig: &sema.Config{
 						ValidTopLevelDeclarationsHandler: func(_ common.Location) common.DeclarationKindSet {
 							return common.NewDeclarationKindSet(
 								common.DeclarationKindContractInterface,
@@ -611,7 +613,7 @@ func TestCheckVariableDeclarationTypeAnnotationRequired(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
           let a = []
-	    `)
+        `)
 		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
@@ -623,7 +625,7 @@ func TestCheckVariableDeclarationTypeAnnotationRequired(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
           let d = {}
-	    `)
+        `)
 		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
@@ -713,4 +715,58 @@ func TestCheckSetToDictWithType(t *testing.T) {
 
 	_, err := ParseAndCheck(t, "var j={0.0:Type}")
 	assert.Nil(t, err)
+}
+
+func TestCheckIncorrectArgumentLabelError(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+        fun test(x: Int): Int {
+            return x
+        }
+
+        fun main(): Int {
+            return test(y: 1)
+        }
+    `
+
+	_, err := ParseAndCheck(t, code)
+	errs := RequireCheckerErrors(t, err, 1)
+
+	var incorrectArgumentLabelErr *sema.IncorrectArgumentLabelError
+	require.ErrorAs(t, errs[0], &incorrectArgumentLabelErr)
+
+	assert.Equal(t, "x", incorrectArgumentLabelErr.ExpectedArgumentLabel)
+	assert.Equal(t, "y", incorrectArgumentLabelErr.ActualArgumentLabel)
+
+	fixes := incorrectArgumentLabelErr.SuggestFixes(code)
+	require.Equal(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Replace argument label",
+				TextEdits: []ast.TextEdit{
+					{
+						Replacement: "x:",
+						Range:       incorrectArgumentLabelErr.Range,
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	const expected = `
+        fun test(x: Int): Int {
+            return x
+        }
+
+        fun main(): Int {
+            return test(x: 1)
+        }
+    `
+	assert.Equal(t,
+		expected,
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }

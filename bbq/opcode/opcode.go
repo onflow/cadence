@@ -77,6 +77,7 @@ const (
 	_
 	_
 	_
+	Wrap
 	Unwrap
 	Destroy
 	TransferAndConvert
@@ -89,7 +90,6 @@ const (
 	_
 	_
 	_
-	_
 
 	// Value/Constant loading
 
@@ -97,13 +97,14 @@ const (
 	False
 	Void
 	Nil
-	New
+	NewSimpleComposite
+	NewComposite
+	NewCompositeAt
 	NewPath
 	NewArray
 	NewDictionary
 	NewRef
 	NewClosure
-	_
 	_
 	_
 	_
@@ -140,8 +141,8 @@ const (
 	// Invocations
 
 	Invoke
-	InvokeMethodStatic
-	InvokeMethodDynamic
+	InvokeDynamic
+	_
 	_
 	_
 	_
@@ -188,8 +189,7 @@ func (i Opcode) IsControlFlow() bool {
 		JumpIfTrue,
 		JumpIfNil,
 		Invoke,
-		InvokeMethodStatic,
-		InvokeMethodDynamic:
+		InvokeDynamic:
 
 		return true
 

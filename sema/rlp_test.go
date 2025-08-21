@@ -41,7 +41,7 @@ func TestCheckRLPDecodeString(t *testing.T) {
            let l: [UInt8] = RLP.decodeString([0, 1, 2])
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},
@@ -63,7 +63,7 @@ func TestCheckInvalidRLPDecodeString(t *testing.T) {
            let l: String = RLP.decodeString("string")
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},
@@ -89,7 +89,7 @@ func TestCheckRLPDecodeList(t *testing.T) {
            let l: [[UInt8]] = RLP.decodeList([0, 1, 2])
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},
@@ -111,7 +111,7 @@ func TestCheckInvalidRLPDecodeList(t *testing.T) {
            let l: String = RLP.decodeList("string")
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},

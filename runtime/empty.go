@@ -75,14 +75,6 @@ func (EmptyRuntimeInterface) GetCode(_ Location) ([]byte, error) {
 	panic("unexpected call to GetCode")
 }
 
-func (EmptyRuntimeInterface) SetInterpreterSharedState(_ *interpreter.SharedState) {
-	panic("unexpected call to SetInterpreterSharedState")
-}
-
-func (EmptyRuntimeInterface) GetInterpreterSharedState() *interpreter.SharedState {
-	panic("unexpected call to GetInterpreterSharedState")
-}
-
 func (EmptyRuntimeInterface) GetValue(_, _ []byte) (value []byte, err error) {
 	panic("unexpected call to GetValue")
 }
@@ -207,7 +199,7 @@ func (EmptyRuntimeInterface) GetAccountContractNames(_ Address) ([]string, error
 	panic("unexpected call to GetAccountContractNames")
 }
 
-func (EmptyRuntimeInterface) RecordTrace(_ string, _ Location, _ time.Duration, _ []attribute.KeyValue) {
+func (EmptyRuntimeInterface) RecordTrace(_ string, _ time.Duration, _ []attribute.KeyValue) {
 	panic("unexpected call to RecordTrace")
 }
 

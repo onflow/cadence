@@ -35,22 +35,14 @@ func init() {
 
 	// Methods on `DeployedContract` value.
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		deployedContractTypeName,
 		NewNativeFunctionValue(
 			sema.DeployedContractTypePublicTypesFunctionName,
 			sema.DeployedContractTypePublicTypesFunctionType,
-			func(context *Context, _ []bbq.StaticType, args ...Value) Value {
+			func(context *Context, _ []bbq.StaticType, receiver Value, _ ...Value) Value {
 
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[ReceiverIndex], args[TypeBoundFunctionArgumentOffset:] // nolint:staticcheck
-
-				deployedContract, ok := receiver.(*interpreter.SimpleCompositeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
+				deployedContract := receiver.(*interpreter.SimpleCompositeValue)
 
 				addressFieldValue := deployedContract.GetMember(
 					context,

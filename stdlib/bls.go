@@ -72,12 +72,9 @@ func NewVMBLSAggregatePublicKeysFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			BLSTypeAggregatePublicKeysFunctionName,
 			BLSTypeAggregatePublicKeysFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
+			func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
 
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				args = args[vm.TypeBoundFunctionArgumentOffset:]
-
-				publicKeysValue, ok := args[0].(*interpreter.ArrayValue)
+				publicKeysValue, ok := arguments[0].(*interpreter.ArrayValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -190,12 +187,9 @@ func NewVMBLSAggregateSignaturesFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			BLSTypeAggregateSignaturesFunctionName,
 			BLSTypeAggregateSignaturesFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
+			func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
 
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				args = args[vm.TypeBoundFunctionArgumentOffset:]
-
-				signaturesValue, ok := args[0].(*interpreter.ArrayValue)
+				signaturesValue, ok := arguments[0].(*interpreter.ArrayValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}

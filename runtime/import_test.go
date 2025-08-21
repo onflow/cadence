@@ -153,7 +153,7 @@ func TestRuntimeCheckCyclicImportsAfterUpdate(t *testing.T) {
 		},
 	}
 
-	environment := NewBaseInterpreterEnvironment(Config{})
+	environment := newTransactionEnvironment()
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
@@ -174,6 +174,7 @@ func TestRuntimeCheckCyclicImportsAfterUpdate(t *testing.T) {
 				Interface:   runtimeInterface,
 				Location:    nextTransactionLocation(),
 				Environment: environment,
+				UseVM:       *compile,
 			},
 		)
 	}
@@ -270,7 +271,7 @@ func TestRuntimeCheckCyclicImportAddress(t *testing.T) {
 		},
 	}
 
-	environment := NewBaseInterpreterEnvironment(Config{})
+	environment := newTransactionEnvironment()
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
@@ -291,6 +292,7 @@ func TestRuntimeCheckCyclicImportAddress(t *testing.T) {
 				Interface:   runtimeInterface,
 				Location:    nextTransactionLocation(),
 				Environment: environment,
+				UseVM:       *compile,
 			},
 		)
 	}
@@ -371,7 +373,7 @@ func TestRuntimeCheckCyclicImportToSelfDuringDeploy(t *testing.T) {
 		},
 	}
 
-	environment := NewBaseInterpreterEnvironment(Config{})
+	environment := newTransactionEnvironment()
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
@@ -392,6 +394,7 @@ func TestRuntimeCheckCyclicImportToSelfDuringDeploy(t *testing.T) {
 				Interface:   runtimeInterface,
 				Location:    nextTransactionLocation(),
 				Environment: environment,
+				UseVM:       *compile,
 			},
 		)
 	}
@@ -485,6 +488,7 @@ func TestRuntimeContractImport(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)
@@ -498,6 +502,7 @@ func TestRuntimeContractImport(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextScriptLocation(),
+			UseVM:     *compile,
 		},
 	)
 	require.NoError(t, err)

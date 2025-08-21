@@ -27,8 +27,6 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/stdlib"
-	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 )
@@ -1111,13 +1109,8 @@ func TestInterpretEntitledResult(t *testing.T) {
 		_, err := invokable.Invoke("test")
 		RequireError(t, err)
 
-		if _, compiled := invokable.(*test_utils.VMInvokable); compiled {
-			var panicError stdlib.PanicError
-			require.ErrorAs(t, err, &panicError)
-		} else {
-			var conditionError *interpreter.ConditionError
-			require.ErrorAs(t, err, &conditionError)
-		}
+		var conditionError *interpreter.ConditionError
+		require.ErrorAs(t, err, &conditionError)
 	})
 }
 
@@ -1419,6 +1412,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		t.Parallel()
 
+		// TODO: requires support for attachments in the VM
 		inter := parseCheckAndInterpret(t, `
             entitlement Y
             entitlement Z
@@ -1453,6 +1447,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		t.Parallel()
 
+		// TODO: requires support for attachments in the VM
 		inter := parseCheckAndInterpret(t, `
             entitlement Y
             entitlement Z
@@ -1492,6 +1487,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		t.Parallel()
 
+		// TODO: requires support for attachments in the VM
 		inter := parseCheckAndInterpret(t, `
             entitlement Y
             entitlement Z
@@ -1530,6 +1526,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		t.Parallel()
 
+		// TODO: requires support for attachments in the VM
 		inter := parseCheckAndInterpret(t, `
             entitlement Y
             entitlement Z
@@ -1569,6 +1566,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		t.Parallel()
 
+		// TODO: requires support for attachments in the VM
 		inter := parseCheckAndInterpret(t, `
             entitlement Y
             entitlement Z
@@ -1608,6 +1606,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		t.Parallel()
 
+		// TODO: requires support for attachments in the VM
 		inter := parseCheckAndInterpret(t, `
             entitlement X
             entitlement E
@@ -1644,6 +1643,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		t.Parallel()
 
+		// TODO: requires support for attachments in the VM
 		inter := parseCheckAndInterpret(t, `
             entitlement X
             entitlement E
@@ -1684,6 +1684,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		t.Parallel()
 
+		// TODO: requires support for attachments in the VM
 		inter := parseCheckAndInterpret(t, `
             entitlement X
             entitlement E
@@ -1724,6 +1725,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		t.Parallel()
 
+		// TODO: requires support for attachments in the VM
 		inter := parseCheckAndInterpret(t, `
             entitlement X
             entitlement E
@@ -1764,6 +1766,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		t.Parallel()
 
+		// TODO: requires support for attachments in the VM
 		inter := parseCheckAndInterpret(t, `
             entitlement X
             entitlement E
@@ -1938,6 +1941,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		t.Parallel()
 
+		// TODO: requires support for attachments in the VM
 		inter := parseCheckAndInterpret(t, `
             entitlement X
             entitlement E
@@ -1969,6 +1973,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		t.Parallel()
 
+		// TODO: requires support for attachments in the VM
 		inter := parseCheckAndInterpret(t, `
             entitlement Z
             entitlement Y

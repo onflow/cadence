@@ -31,13 +31,13 @@ func init() {
 	for _, pathType := range sema.AllNumberTypes {
 		typeName := commons.TypeQualifier(pathType)
 
-		RegisterBuiltinTypeBoundFunction(
+		registerBuiltinTypeBoundFunction(
 			typeName,
 			NewNativeFunctionValue(
 				sema.ToStringFunctionName,
 				sema.ToStringFunctionType,
-				func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-					number := arguments[ReceiverIndex].(interpreter.NumberValue)
+				func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
+					number := receiver.(interpreter.NumberValue)
 					return interpreter.NumberValueToString(
 						context,
 						number,
@@ -46,13 +46,13 @@ func init() {
 			),
 		)
 
-		RegisterBuiltinTypeBoundFunction(
+		registerBuiltinTypeBoundFunction(
 			typeName,
 			NewNativeFunctionValue(
 				sema.ToBigEndianBytesFunctionName,
 				sema.ToBigEndianBytesFunctionType,
-				func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-					number := arguments[ReceiverIndex].(interpreter.NumberValue)
+				func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
+					number := receiver.(interpreter.NumberValue)
 					return interpreter.ByteSliceToByteArrayValue(
 						context,
 						number.ToBigEndianBytes(),

@@ -41,6 +41,7 @@ func init() {
 type Invokable interface {
 	interpreter.ValueComparisonContext
 	interpreter.InvocationContext
+	interpreter.ResourceDestructionContext
 	Invoke(functionName string, arguments ...interpreter.Value) (value interpreter.Value, err error)
 	InvokeTransaction(arguments []interpreter.Value, signers ...interpreter.Value) error
 	GetGlobal(name string) interpreter.Value

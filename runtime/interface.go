@@ -58,11 +58,6 @@ type Interface interface {
 		location Location,
 		load func() (*Program, error),
 	) (*Program, error)
-	// SetInterpreterSharedState sets the shared state of all interpreters.
-	SetInterpreterSharedState(state *interpreter.SharedState)
-	// GetInterpreterSharedState gets the shared state of all interpreters.
-	// May return nil if none is available or use is not applicable.
-	GetInterpreterSharedState() *interpreter.SharedState
 	// GetValue gets a value for the given key in the storage, owned by the given account.
 	GetValue(owner, key []byte) (value []byte, err error)
 	// SetValue sets a value for the given key in the storage, owned by the given account.
@@ -128,8 +123,8 @@ type Interface interface {
 	ValidatePublicKey(key *PublicKey) error
 	// GetAccountContractNames returns the names of all contracts deployed in an account.
 	GetAccountContractNames(address Address) ([]string, error)
-	// RecordTrace records an opentelemetry trace.
-	RecordTrace(operation string, location Location, duration time.Duration, attrs []attribute.KeyValue)
+	// RecordTrace records an OpenTelemetry trace.
+	RecordTrace(operation string, duration time.Duration, attrs []attribute.KeyValue)
 	// BLSVerifyPOP verifies a proof of possession (PoP) for the receiver public key.
 	BLSVerifyPOP(publicKey *PublicKey, signature []byte) (bool, error)
 	// BLSAggregateSignatures aggregate multiple BLS signatures into one.
