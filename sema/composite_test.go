@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/parser"
 	"github.com/onflow/cadence/sema"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -1933,15 +1934,48 @@ func TestCheckInvalidStructureFunctionWithMissingBody(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
+	const code = `
         struct Test {
             access(all) fun getFoo(): Int
         }
-	`)
+	`
+	_, err := ParseAndCheck(t, code)
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.MissingFunctionBodyError{}, errs[0])
+	var missingErr *sema.MissingFunctionBodyError
+	require.ErrorAs(t, errs[0], &missingErr)
+
+	fixes := missingErr.SuggestFixes(code)
+
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert function body",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {}",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 64, Line: 3, Column: 41},
+							EndPos:   ast.Position{Offset: 64, Line: 3, Column: 41},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	const expected = `
+        struct Test {
+            access(all) fun getFoo(): Int {}
+        }
+	`
+
+	assert.Equal(t,
+		expected,
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestCheckInvalidStructureInitializerWithMissingBody(t *testing.T) {
