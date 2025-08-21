@@ -199,7 +199,7 @@ func TestInterpretAttachmentStruct(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         struct S {
             let i: Int
             init(i: Int) {
@@ -438,7 +438,7 @@ func TestInterpretAttachmentResource(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         resource R {
             let i: Int
             init(i: Int) {
@@ -481,7 +481,7 @@ func TestInterpretAttachExecutionOrdering(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             struct S {}
             attachment A for S {
                 let x: Int
@@ -542,7 +542,7 @@ func TestInterpretAttachExecutionOrdering(t *testing.T) {
 func TestInterpretAttachmentNestedBaseUse(t *testing.T) {
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         resource R {
             let x: Int
             init (x: Int) {
@@ -580,7 +580,7 @@ func TestInterpretAttachmentNestedBaseUse(t *testing.T) {
 func TestInterpretNestedAttach(t *testing.T) {
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         resource X {
             let i: Int
             init() {
@@ -619,7 +619,7 @@ func TestInterpretNestedAttach(t *testing.T) {
 func TestInterpretNestedAttachFunction(t *testing.T) {
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
         resource X {
             let i: Int
             init() {
@@ -666,7 +666,7 @@ func TestInterpretAttachmentBaseUse(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {
           let x: Int
           init (x: Int) {
@@ -695,7 +695,7 @@ func TestInterpretAttachmentBaseUse(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {
           let x: Int
           init (x: Int) {
@@ -728,7 +728,7 @@ func TestInterpretAttachmentBaseUse(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {
           let x: Int
           init (x: Int) {
@@ -771,7 +771,7 @@ func TestInterpretAttachmentBaseUse(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {
           let x: Int
           init (x: Int) {
@@ -807,7 +807,7 @@ func TestInterpretAttachmentBaseUse(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
 	            resource interface I {
 	                fun foo(): Int
 	            }
@@ -840,7 +840,7 @@ func TestInterpretAttachmentBaseUse(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource interface I {
                 fun foo(): Int
             }
@@ -873,7 +873,7 @@ func TestInterpretAttachmentBaseUse(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource interface I {
                 fun foo(): Int
             }
@@ -941,7 +941,7 @@ func TestInterpretAttachmentSelfUse(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
        resource R {
           let x: Int
           init (x: Int) {
@@ -1064,7 +1064,7 @@ func TestInterpretAttachmentNameConflict(t *testing.T) {
 	t.Run("base field", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R {
                 let A: Int
                 init (a: Int) {
@@ -1101,7 +1101,7 @@ func TestInterpretAttachmentIntersectionType(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         resource interface I {
             fun foo(): Int
         }
@@ -1134,7 +1134,7 @@ func TestInterpretAttachmentIntersectionType(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         resource interface I {
             fun foo(): Int
         }
@@ -1168,7 +1168,7 @@ func TestInterpretAttachmentIntersectionType(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         resource interface I {
             fun foo(): Int
         }
@@ -1203,7 +1203,7 @@ func TestInterpretAttachmentIntersectionType(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
         resource interface I {
             fun foo(): Int
         }
@@ -1247,7 +1247,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 
 		var eventTypes []*sema.CompositeType
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                 resource R {
                     event ResourceDestroyed()
@@ -1291,7 +1291,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 
 		var eventTypes []*sema.CompositeType
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                 resource R {
                     event ResourceDestroyed()
@@ -1345,7 +1345,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 
 		var eventTypes []*sema.CompositeType
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                 resource R {
                     event ResourceDestroyed()
@@ -1389,7 +1389,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 
 		var eventTypes []*sema.CompositeType
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                 resource R {
                     event ResourceDestroyed()
@@ -1443,7 +1443,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 
 		var eventTypes []*sema.CompositeType
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                 resource R {
                     event ResourceDestroyed()
@@ -1505,7 +1505,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 		var eventTypes []*sema.CompositeType
 		var eventsFields [][]interpreter.Value
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
                 resource R {
                     var foo: String
@@ -2005,7 +2005,7 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 func TestInterpretAttachmentSelfAccessMembers(t *testing.T) {
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter := parseCheckAndPrepare(t, `
             access(all) resource R{
                 access(all) fun baz() {}
             }

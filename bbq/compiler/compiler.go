@@ -731,6 +731,12 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 			qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
 			c.addGlobal(qualifiedName)
 		}
+
+		if enclosingType.GetCompositeKind().SupportsAttachments() {
+			functionName := sema.CompositeForEachAttachmentFunctionName
+			qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
+			c.addGlobal(qualifiedName)
+		}
 	}
 
 	for _, declaration := range functionDecls {
@@ -2277,6 +2283,7 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 			panic(errors.NewDefaultUserError("invalid number of arguments"))
 		}
 		// Load implicit argument from locals
+		// Base is at the back of the argument list, only for attachment initialization.
 		c.emitGetLocal(implicitArgIndex)
 	}
 
@@ -2874,7 +2881,7 @@ func (c *Compiler[_, _]) VisitFunctionExpression(expression *ast.FunctionExpress
 		c.targetFunction(function)
 		defer c.targetFunction(previousFunction)
 
-		c.declareParameters(parameterList, false)
+		c.declareParameters(parameterList, false, false)
 		c.compileFunctionBlock(
 			desugaredExpression.FunctionBlock,
 			common.DeclarationKindFunction,
@@ -3051,7 +3058,16 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	c.targetFunction(function)
 	defer c.targetFunction(previousFunction)
 
-	c.declareParameters(parameterList, false)
+	// cannot declare base as parameter because it is at the end of the argument list
+	// this is only true for initialization of attachments.
+	// otherwise, base is declared as the second parameter after self.
+	c.declareParameters(parameterList, false, false)
+
+	// must do this before declaring self
+	if kind == common.CompositeKindAttachment {
+		// base is provided as an argument at the end of the argument list implicitly
+		c.currentFunction.declareLocal(sema.BaseIdentifier)
+	}
 
 	// Declare `self`
 	self := c.currentFunction.declareLocal(sema.SelfIdentifier)
@@ -3121,8 +3137,6 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 			Type:       c.getOrAddType(refType),
 			IsImplicit: false,
 		})
-
-		// TODO: expose base, a reference to the attachment's base value
 	} else {
 		returnLocalIndex = self.index
 	}
@@ -3170,6 +3184,7 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 	var (
 		parameterCount int
 		isObjectMethod bool
+		isAttachment   bool
 		functionName   string
 	)
 
@@ -3192,6 +3207,13 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 
 			// Declare a receiver if this is an object method.
 			parameterCount++
+
+			if typ, ok := enclosingType.(*sema.CompositeType); ok {
+				if typ.Kind == common.CompositeKindAttachment {
+					parameterCount++
+					isAttachment = true
+				}
+			}
 		}
 
 		functionName = commons.TypeQualifiedName(enclosingType, identifier)
@@ -3230,7 +3252,7 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 		c.targetFunction(function)
 		defer c.targetFunction(previousFunction)
 
-		c.declareParameters(declaration.ParameterList, isObjectMethod)
+		c.declareParameters(declaration.ParameterList, isObjectMethod, isAttachment)
 
 		c.compileFunctionBlock(
 			declaration.FunctionBlock,
@@ -3344,6 +3366,22 @@ func (c *Compiler[_, _]) addBuiltinMethods(typ sema.Type) {
 			uint16(len(boundFunction.Type.Parameters)+1),
 			boundFunction.Type,
 		)
+	}
+
+	// add native function .forEachAttachment for composite types supporting attachments
+	if t, ok := typ.(sema.CompositeKindedType); ok {
+		kind := t.GetCompositeKind()
+		if kind.SupportsAttachments() {
+			name := sema.CompositeForEachAttachmentFunctionName
+			qualifiedName := commons.TypeQualifiedName(typ, name)
+			functionType := sema.CompositeForEachAttachmentFunctionType(kind)
+			c.addFunction(
+				name,
+				qualifiedName,
+				uint16(len(functionType.Parameters)),
+				functionType,
+			)
+		}
 	}
 }
 
@@ -3538,7 +3576,6 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 
 	// base back on stack
 	c.emitGetLocal(baseLocalIndex)
-	// TODO: do attachment.setbaseValue(...)
 	// base should now be transferred
 	c.emitTransfer()
 
@@ -3640,11 +3677,17 @@ func (c *Compiler[_, T]) addCompiledType(ty sema.Type, data T) uint16 {
 	return uint16(count)
 }
 
-func (c *Compiler[_, _]) declareParameters(paramList *ast.ParameterList, declareReceiver bool) {
+func (c *Compiler[E, T]) declareParameters(paramList *ast.ParameterList, declareReceiver bool, declareBase bool) {
 	if declareReceiver {
 		// Declare receiver as `self`.
 		// Receiver is always at the zero-th index of params.
 		c.currentFunction.declareLocal(sema.SelfIdentifier)
+	}
+
+	if declareBase {
+		// Declare base receiver as `base`
+		// Always at index one of params.
+		c.currentFunction.declareLocal(sema.BaseIdentifier)
 	}
 
 	if paramList != nil {

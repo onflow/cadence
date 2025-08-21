@@ -375,6 +375,12 @@ func registerBuiltinCommonTypeBoundFunctions() {
 	for _, function := range CommonBuiltinTypeBoundFunctions {
 		IndexedCommonBuiltinTypeBoundFunctions[function.Name] = function
 	}
+
+	// this only available for Composites which support attachments
+	// as enforced in the compiler
+	for _, function := range compositeBuiltInFunctions {
+		IndexedCommonBuiltinTypeBoundFunctions[function.Name] = function
+	}
 }
 
 func registerBuiltinTypeBoundFunctions(
@@ -388,7 +394,34 @@ func registerBuiltinTypeBoundFunctions(
 	}
 }
 
-// CommonBuiltinTypeBoundFunctions are the built-in functions that are common to all the types.
+// Built-in functions for composites
+var compositeBuiltInFunctions = []*NativeFunctionValue{
+	// `forEachAttachment` function
+	NewNativeFunctionValueWithDerivedType(
+		sema.CompositeForEachAttachmentFunctionName,
+		func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
+			compositeValue := receiver.(*interpreter.CompositeValue)
+			compositeType := interpreter.MustSemaTypeOfValue(compositeValue, context).(*sema.CompositeType)
+
+			return sema.CompositeForEachAttachmentFunctionType(
+				compositeType.GetCompositeKind(),
+			)
+		},
+		func(context *Context, typeArguments []bbq.StaticType, value Value, args ...Value) Value {
+			compositeValue := value.(*interpreter.CompositeValue)
+
+			functionValue, ok := args[0].(FunctionValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			compositeValue.ForEachAttachment(context, EmptyLocationRange, functionValue)
+			return interpreter.Void
+		},
+	),
+}
+
+// Built-in functions that are common to all the types.
 var CommonBuiltinTypeBoundFunctions = []*NativeFunctionValue{
 
 	// `isInstance` function
