@@ -3808,6 +3808,7 @@ var _ SemanticError = &UnreachableStatementError{}
 var _ errors.UserError = &UnreachableStatementError{}
 var _ errors.SecondaryError = &UnreachableStatementError{}
 var _ errors.HasDocumentationLink = &UnreachableStatementError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &UnreachableStatementError{}
 
 func (*UnreachableStatementError) isSemanticError() {}
 
@@ -3824,6 +3825,20 @@ func (*UnreachableStatementError) SecondaryError() string {
 
 func (*UnreachableStatementError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/control-flow"
+}
+
+func (e *UnreachableStatementError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Remove unreachable statement",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "",
+					Range: e.Range,
+				},
+			},
+		},
+	}
 }
 
 // UninitializedUseError
