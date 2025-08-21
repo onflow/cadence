@@ -160,7 +160,7 @@ func TestParseBlockComment(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]errors.SuggestedFix[ast.TextEdit]{
 				{
-					Message: "Insert '*/'",
+					Message: "Insert `*/`",
 					TextEdits: []ast.TextEdit{
 						{
 							Insertion: "*/",

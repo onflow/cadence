@@ -790,7 +790,7 @@ func TestParseArgumentList(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message:       "expected token '('",
+					Message:       "expected token `(`",
 					Pos:           ast.Position{Offset: 0, Line: 1, Column: 0},
 					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",

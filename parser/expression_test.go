@@ -1419,7 +1419,7 @@ func TestParseString(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid end of string literal: missing '\"'",
+					Message: "invalid end of string literal: missing `\"`",
 					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
 				},
 			},
@@ -1446,7 +1446,7 @@ func TestParseString(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid end of string literal: missing '\"'",
+					Message: "invalid end of string literal: missing `\"`",
 					Pos:     ast.Position{Line: 1, Column: 1, Offset: 1},
 				},
 			},
@@ -1472,7 +1472,7 @@ func TestParseString(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid end of string literal: missing '\"'",
+					Message: "invalid end of string literal: missing `\"`",
 					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
 				},
 			},
@@ -1499,7 +1499,7 @@ func TestParseString(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid end of string literal: missing '\"'",
+					Message: "invalid end of string literal: missing `\"`",
 					Pos:     ast.Position{Line: 1, Column: 2, Offset: 2},
 				},
 			},
@@ -1530,7 +1530,7 @@ func TestParseString(t *testing.T) {
 					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
 				},
 				&SyntaxError{
-					Message: "invalid end of string literal: missing '\"'",
+					Message: "invalid end of string literal: missing `\"`",
 					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
 				},
 			},
@@ -1576,7 +1576,7 @@ func TestParseString(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid escape character: 'X'",
+					Message: "invalid escape character: `X`",
 					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
 				},
 			},
@@ -1595,7 +1595,7 @@ func TestParseString(t *testing.T) {
 		)
 	})
 
-	t.Run("invalid, missing '{' after Unicode escape character", func(t *testing.T) {
+	t.Run("invalid, missing `{` after Unicode escape character", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1603,11 +1603,11 @@ func TestParseString(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "incomplete Unicode escape sequence: missing character '{' after escape character",
+					Message: "incomplete Unicode escape sequence: missing character `{` after escape character",
 					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
 				},
 				&SyntaxError{
-					Message: "invalid end of string literal: missing '\"'",
+					Message: "invalid end of string literal: missing `\"`",
 					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
 				},
 			},
@@ -1634,11 +1634,11 @@ func TestParseString(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid Unicode escape sequence: expected '{', got 's'",
+					Message: "invalid Unicode escape sequence: expected `{`, got `s`",
 					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
 				},
 				&SyntaxError{
-					Message: "invalid end of string literal: missing '\"'",
+					Message: "invalid end of string literal: missing `\"`",
 					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
 				},
 			},
@@ -1657,7 +1657,7 @@ func TestParseString(t *testing.T) {
 		)
 	})
 
-	t.Run("invalid, missing '}' after Unicode escape sequence digits", func(t *testing.T) {
+	t.Run("invalid, missing `}` after Unicode escape sequence digits", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1665,11 +1665,11 @@ func TestParseString(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "incomplete Unicode escape sequence: missing character '}' after escape character",
+					Message: "incomplete Unicode escape sequence: missing character `}` after escape character",
 					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
 				},
 				&SyntaxError{
-					Message: "invalid end of string literal: missing '\"'",
+					Message: "invalid end of string literal: missing `\"`",
 					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
 				},
 			},
@@ -1742,7 +1742,7 @@ func TestParseString(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid Unicode escape sequence: expected hex digit, got 'X'",
+					Message: "invalid Unicode escape sequence: expected hex digit, got `X`",
 					Pos:     ast.Position{Offset: 11, Line: 1, Column: 11},
 				},
 			},
@@ -3443,7 +3443,7 @@ func TestParseAttach(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]errors.SuggestedFix[ast.TextEdit]{
 				{
-					Message: "Insert 'to'",
+					Message: "Insert `to`",
 					TextEdits: []ast.TextEdit{
 						{
 							Insertion: "to ",
@@ -3496,7 +3496,7 @@ func TestParseAttach(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]errors.SuggestedFix[ast.TextEdit]{
 				{
-					Message: "Insert 'to'",
+					Message: "Insert `to`",
 					TextEdits: []ast.TextEdit{
 						{
 							Insertion: " to ",
@@ -4573,7 +4573,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]errors.SuggestedFix[ast.TextEdit]{
 				{
-					Message: "Use hexadecimal prefix (0x)",
+					Message: "Use hexadecimal prefix (`0x`)",
 					TextEdits: []ast.TextEdit{
 						{
 							Replacement: "0x456",
@@ -4585,7 +4585,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 					},
 				},
 				{
-					Message: "Use binary prefix (0b)",
+					Message: "Use binary prefix (`0b`)",
 					TextEdits: []ast.TextEdit{
 						{
 							Replacement: "0b456",
@@ -4597,7 +4597,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 					},
 				},
 				{
-					Message: "Use octal prefix (0o)",
+					Message: "Use octal prefix (`0o`)",
 					TextEdits: []ast.TextEdit{
 						{
 							Replacement: "0o456",
@@ -6857,7 +6857,7 @@ func TestParseStringTemplate(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid end of string literal: missing '\"'",
+					Message: "invalid end of string literal: missing `\"`",
 					Pos:     ast.Position{Offset: 27, Line: 2, Column: 27},
 				},
 			},
@@ -6978,7 +6978,7 @@ func TestParseStringTemplate(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message:       "expected token ')'",
+					Message:       "expected token `)`",
 					Pos:           ast.Position{Offset: 10, Line: 2, Column: 9},
 					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
@@ -7000,7 +7000,7 @@ func TestParseStringTemplate(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message:       "expected token ')'",
+					Message:       "expected token `)`",
 					Pos:           ast.Position{Offset: 16, Line: 2, Column: 15},
 					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
@@ -7022,7 +7022,7 @@ func TestParseStringTemplate(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message:       "expected token ')'",
+					Message:       "expected token `)`",
 					Pos:           ast.Position{Offset: 30, Line: 2, Column: 29},
 					Secondary:     "check for missing punctuation, operators, or syntax elements",
 					Documentation: "https://cadence-lang.org/docs/language/syntax",
@@ -7193,7 +7193,7 @@ func TestParseStringTemplate(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid end of string literal: missing '\"'",
+					Message: "invalid end of string literal: missing `\"`",
 					Pos: ast.Position{
 						Offset: 25,
 						Line:   2,
@@ -7220,7 +7220,7 @@ func TestParseStringTemplate(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid end of string literal: missing '\"'",
+					Message: "invalid end of string literal: missing `\"`",
 					Pos: ast.Position{
 						Offset: 38,
 						Line:   2,
@@ -7247,7 +7247,7 @@ func TestParseStringTemplate(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid end of string literal: missing '\"'",
+					Message: "invalid end of string literal: missing `\"`",
 					Pos: ast.Position{
 						Offset: 27,
 						Line:   2,

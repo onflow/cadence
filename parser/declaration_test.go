@@ -450,7 +450,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]errors.SuggestedFix[ast.TextEdit]{
 				{
-					Message: "Insert '=' (for struct)",
+					Message: "Insert `=` (for struct)",
 					TextEdits: []ast.TextEdit{
 						{
 							Insertion: " =",
@@ -462,7 +462,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 					},
 				},
 				{
-					Message: "Insert '<-' (for resource)",
+					Message: "Insert `<-` (for resource)",
 					TextEdits: []ast.TextEdit{
 						{
 							Insertion: " <-",
@@ -2311,7 +2311,7 @@ func TestParseAccess(t *testing.T) {
 		for i, keyword := range keywords {
 			AssertEqualWithDiff(t,
 				errors.SuggestedFix[ast.TextEdit]{
-					Message: fmt.Sprintf("Insert '%s'", keyword),
+					Message: fmt.Sprintf("Insert `%s`", keyword),
 					TextEdits: []ast.TextEdit{
 						{
 							Insertion: keyword,
@@ -4869,7 +4869,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]errors.SuggestedFix[ast.TextEdit]{
 				{
-					Message: "Insert 'for'",
+					Message: "Insert `for`",
 					TextEdits: []ast.TextEdit{
 						{
 							Insertion: "for ",
@@ -4933,7 +4933,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]errors.SuggestedFix[ast.TextEdit]{
 				{
-					Message: "Insert 'for'",
+					Message: "Insert `for`",
 					TextEdits: []ast.TextEdit{
 						{
 							Insertion: " for ",
@@ -10541,7 +10541,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected identifier following entitlement mapping declaration, got '{'",
+					Message: "expected identifier following entitlement mapping declaration, got `{`",
 					Pos:     ast.Position{Offset: 33, Line: 1, Column: 33},
 				},
 			},
@@ -10628,7 +10628,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]errors.SuggestedFix[ast.TextEdit]{
 				{
-					Message: "Insert '->'",
+					Message: "Insert `->`",
 					TextEdits: []ast.TextEdit{
 						{
 							Insertion: " ->",

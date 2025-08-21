@@ -20,7 +20,6 @@ package parser
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/onflow/cadence/ast"
@@ -181,14 +180,14 @@ func (*InvalidIntegerLiteralError) IsUserError() {}
 func (e *InvalidIntegerLiteralError) Error() string {
 	if e.IntegerLiteralKind == common.IntegerLiteralKindUnknown {
 		return fmt.Sprintf(
-			"invalid integer literal `%s`: %s",
+			"invalid integer literal %#q: %s",
 			e.Literal,
 			e.InvalidIntegerLiteralKind.Description(),
 		)
 	}
 
 	return fmt.Sprintf(
-		"invalid %s integer literal `%s`: %s",
+		"invalid %s integer literal %#q: %s",
 		e.IntegerLiteralKind.Name(),
 		e.Literal,
 		e.InvalidIntegerLiteralKind.Description(),
@@ -200,13 +199,13 @@ func (e *InvalidIntegerLiteralError) SecondaryError() string {
 	case InvalidNumberLiteralKindUnknown:
 		return ""
 	case InvalidNumberLiteralKindLeadingUnderscore:
-		return "remove the leading underscore"
+		return "underscores (`_`) may not be used at the start of a number; remove the leading underscore"
 	case InvalidNumberLiteralKindTrailingUnderscore:
-		return "remove the trailing underscore"
+		return "underscores (`_`) may not be used at the end of a number; remove the trailing underscore"
 	case InvalidNumberLiteralKindUnknownPrefix:
-		return "did you mean `0x` (hexadecimal), `0b` (binary), or `0o` (octal)?"
+		return "the prefix is unknown; use `0x` for hexadecimal, `0b` for binary, or `0o` for octal"
 	case InvalidNumberLiteralKindMissingDigits:
-		return "consider adding a 0"
+		return "digits are missing after the prefix; add a `0` or other valid digits"
 	}
 
 	panic(errors.NewUnreachableError())
@@ -275,7 +274,7 @@ func (e *InvalidIntegerLiteralError) SuggestFixes(_ string) []errors.SuggestedFi
 
 		// Suggest hexadecimal
 		fixes = append(fixes, errors.SuggestedFix[ast.TextEdit]{
-			Message: "Use hexadecimal prefix (0x)",
+			Message: "Use hexadecimal prefix (`0x`)",
 			TextEdits: []ast.TextEdit{
 				{
 					Replacement: "0x" + suffix,
@@ -286,7 +285,7 @@ func (e *InvalidIntegerLiteralError) SuggestFixes(_ string) []errors.SuggestedFi
 
 		// Suggest binary
 		fixes = append(fixes, errors.SuggestedFix[ast.TextEdit]{
-			Message: "Use binary prefix (0b)",
+			Message: "Use binary prefix (`0b`)",
 			TextEdits: []ast.TextEdit{
 				{
 					Replacement: "0b" + suffix,
@@ -297,7 +296,7 @@ func (e *InvalidIntegerLiteralError) SuggestFixes(_ string) []errors.SuggestedFi
 
 		// Suggest octal
 		fixes = append(fixes, errors.SuggestedFix[ast.TextEdit]{
-			Message: "Use octal prefix (0o)",
+			Message: "Use octal prefix (`0o`)",
 			TextEdits: []ast.TextEdit{
 				{
 					Replacement: "0o" + suffix,
@@ -341,7 +340,7 @@ func (ExpressionDepthLimitReachedError) Error() string {
 }
 
 func (ExpressionDepthLimitReachedError) SecondaryError() string {
-	return "Consider extracting the sub-expressions out and storing the intermediate results in local variables"
+	return "consider extracting the sub-expressions out and storing the intermediate results in local variables"
 }
 
 func (e ExpressionDepthLimitReachedError) StartPosition() ast.Position {
@@ -359,7 +358,6 @@ type TypeDepthLimitReachedError struct {
 
 var _ ParseError = TypeDepthLimitReachedError{}
 var _ errors.UserError = TypeDepthLimitReachedError{}
-var _ errors.SecondaryError = TypeDepthLimitReachedError{}
 
 func (TypeDepthLimitReachedError) isParseError() {}
 
@@ -370,10 +368,6 @@ func (TypeDepthLimitReachedError) Error() string {
 		"type too deeply nested, exceeded depth limit of %d",
 		typeDepthLimit,
 	)
-}
-
-func (TypeDepthLimitReachedError) SecondaryError() string {
-	return "Refactor the type so that the depth of nesting is less than the limit"
 }
 
 func (e TypeDepthLimitReachedError) StartPosition() ast.Position {
@@ -513,11 +507,11 @@ func (e *StatementSeparationError) EndPosition(_ common.MemoryGauge) ast.Positio
 }
 
 func (*StatementSeparationError) Error() string {
-	return "statements on the same line must be separated with a semicolon"
+	return "statements on the same line must be separated with a semicolon (`;`)"
 }
 
 func (*StatementSeparationError) SecondaryError() string {
-	return "add a semicolon (;) between statements or place each statement on a separate line"
+	return "add a semicolon (`;`) between statements or place each statement on a separate line"
 }
 
 func (e *StatementSeparationError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
@@ -563,11 +557,11 @@ func (e *MissingCommaInParameterListError) EndPosition(_ common.MemoryGauge) ast
 }
 
 func (*MissingCommaInParameterListError) Error() string {
-	return "missing comma after parameter"
+	return "missing comma (`,`) after parameter"
 }
 
 func (*MissingCommaInParameterListError) SecondaryError() string {
-	return "add a comma to separate parameters in the parameter list"
+	return "add a comma (`,`) to separate parameters in the parameter list"
 }
 
 func (e *MissingCommaInParameterListError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
@@ -613,14 +607,14 @@ func (e *MissingStartOfParameterListError) EndPosition(_ common.MemoryGauge) ast
 
 func (e *MissingStartOfParameterListError) Error() string {
 	return expectedButGotToken(
-		"expected open parenthesis '(' as start of parameter list",
+		"expected open parenthesis (`(`) as start of parameter list",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingStartOfParameterListError) SecondaryError() string {
 	return "function parameters must be enclosed in parentheses (`(...)`); " +
-		"add the missing opening parenthesis"
+		"add the missing opening parenthesis (`(`)"
 }
 
 func (*MissingStartOfParameterListError) DocumentationLink() string {
@@ -666,10 +660,7 @@ func (e *MissingStartOfAuthorizationError) EndPosition(_ common.MemoryGauge) ast
 
 func (e *MissingStartOfAuthorizationError) Error() string {
 	return expectedButGotToken(
-		fmt.Sprintf(
-			"expected %s as start of authorization",
-			lexer.TokenParenOpen,
-		),
+		"expected open parenthesis (`(`) as start of authorization",
 		e.GotToken.Type,
 	)
 }
@@ -720,13 +711,14 @@ func (e *UnexpectedTokenInParameterListError) EndPosition(_ common.MemoryGauge) 
 
 func (e *UnexpectedTokenInParameterListError) Error() string {
 	return expectedButGotToken(
-		"expected parameter or end of parameter list",
+		"expected parameter or end of parameter list (`)`)",
 		e.GotToken.Type,
 	)
 }
 
 func (*UnexpectedTokenInParameterListError) SecondaryError() string {
-	return "parameters must be separated by commas, and the list must end with a closing parenthesis"
+	return "parameters must be separated by commas (`,`), " +
+		"and the list must end with a closing parenthesis (`)`)"
 }
 
 func (*UnexpectedTokenInParameterListError) DocumentationLink() string {
@@ -757,14 +749,12 @@ func (e *MissingClosingParenInParameterListError) EndPosition(_ common.MemoryGau
 }
 
 func (*MissingClosingParenInParameterListError) Error() string {
-	return fmt.Sprintf(
-		"missing %s at end of parameter list",
-		lexer.TokenParenClose,
-	)
+	return "missing closing parenthesis (`)`) at end of parameter list"
 }
 
 func (*MissingClosingParenInParameterListError) SecondaryError() string {
-	return "function parameter lists must be properly closed with a closing parenthesis"
+	return "function parameter lists must be properly closed with a closing parenthesis (`)`); " +
+		"add the missing closing parenthesis (`)`)"
 }
 
 func (e *MissingClosingParenInParameterListError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
@@ -810,13 +800,14 @@ func (e *ExpectedCommaOrEndOfParameterListError) EndPosition(_ common.MemoryGaug
 
 func (e *ExpectedCommaOrEndOfParameterListError) Error() string {
 	return expectedButGotToken(
-		"expected comma or end of parameter list",
+		"expected comma (`,`), or closing parenthesis (`)`) at end of parameter list",
 		e.GotToken.Type,
 	)
 }
 
 func (*ExpectedCommaOrEndOfParameterListError) SecondaryError() string {
-	return "multiple parameters must be separated by commas, and the parameter list must end with a closing parenthesis"
+	return "multiple parameters must be separated by commas (`,`), " +
+		"and the parameter list must end with a closing parenthesis (`)`)"
 }
 
 func (*ExpectedCommaOrEndOfParameterListError) DocumentationLink() string {
@@ -862,14 +853,14 @@ func (e *MissingColonAfterParameterNameError) EndPosition(_ common.MemoryGauge) 
 
 func (e *MissingColonAfterParameterNameError) Error() string {
 	return expectedButGotToken(
-		"expected colon (:) after parameter name",
+		"expected colon (`:`) after parameter name",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingColonAfterParameterNameError) SecondaryError() string {
-	return "function parameters must have a colon (:) after the parameter name; " +
-		"add a colon (:) after the parameter name"
+	return "function parameters must have a colon (`:`) after the parameter name; " +
+		"add a colon (`:`) after the parameter name"
 }
 
 func (*MissingColonAfterParameterNameError) DocumentationLink() string {
@@ -920,7 +911,8 @@ func (e *MissingDefaultArgumentError) Error() string {
 }
 
 func (*MissingDefaultArgumentError) SecondaryError() string {
-	return "default arguments must be specified with an equals sign (=) followed by the default value"
+	return "default arguments must be specified with an equals sign (`=`) followed by the default value; " +
+		"add the default argument"
 }
 
 func (*MissingDefaultArgumentError) DocumentationLink() string {
@@ -954,7 +946,7 @@ func (*UnexpectedDefaultArgumentError) Error() string {
 }
 
 func (*UnexpectedDefaultArgumentError) SecondaryError() string {
-	return "default arguments are only allowed in ResourceDestroyed events, not in functions"
+	return "default arguments are only allowed in `ResourceDestroyed` events, not in functions; remove the default argument"
 }
 
 func (*UnexpectedDefaultArgumentError) DocumentationLink() string {
@@ -986,7 +978,7 @@ func (e *MissingCommaInTypeParameterListError) EndPosition(_ common.MemoryGauge)
 }
 
 func (*MissingCommaInTypeParameterListError) Error() string {
-	return "missing comma after type parameter"
+	return "missing comma (`,`) after type parameter"
 }
 
 func (*MissingCommaInTypeParameterListError) SecondaryError() string {
@@ -1035,13 +1027,14 @@ func (e *UnexpectedTokenInTypeParameterListError) EndPosition(_ common.MemoryGau
 
 func (e *UnexpectedTokenInTypeParameterListError) Error() string {
 	return expectedButGotToken(
-		"expected type parameter or end of type parameter list",
+		"expected type parameter, or closing angle bracket (`>`) end of type parameter list",
 		e.GotToken.Type,
 	)
 }
 
 func (*UnexpectedTokenInTypeParameterListError) SecondaryError() string {
-	return "type parameters must be separated by commas, and the list must end with a closing angle bracket (>)"
+	return "type parameters must be separated by commas (`,`), " +
+		"and the list must end with a closing angle bracket (`>`)"
 }
 
 func (*UnexpectedTokenInTypeParameterListError) DocumentationLink() string {
@@ -1072,14 +1065,12 @@ func (e *MissingClosingGreaterInTypeParameterListError) EndPosition(_ common.Mem
 }
 
 func (*MissingClosingGreaterInTypeParameterListError) Error() string {
-	return fmt.Sprintf(
-		"missing %s at end of type parameter list",
-		lexer.TokenGreater,
-	)
+	return "missing closing angle bracket (`>`) at end of type parameter list"
 }
 
 func (*MissingClosingGreaterInTypeParameterListError) SecondaryError() string {
-	return "type parameters must be separated by commas, and the list must end with a closing angle bracket (>)"
+	return "type parameters must be separated by commas (`,`), " +
+		"and the list must end with a closing angle bracket (`>`)"
 }
 
 func (e *MissingClosingGreaterInTypeParameterListError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
@@ -1124,7 +1115,7 @@ func (e *MissingClosingGreaterInTypeArgumentsError) EndPosition(_ common.MemoryG
 }
 
 func (*MissingClosingGreaterInTypeArgumentsError) Error() string {
-	return "missing `>` at end of type arguments"
+	return "missing closing angle bracket (`>`) at end of type arguments"
 }
 
 func (*MissingClosingGreaterInTypeArgumentsError) SecondaryError() string {
@@ -1174,14 +1165,14 @@ func (e *ExpectedCommaOrEndOfTypeParameterListError) EndPosition(_ common.Memory
 
 func (e *ExpectedCommaOrEndOfTypeParameterListError) Error() string {
 	return expectedButGotToken(
-		"expected comma (,) or end of type parameter list",
+		"expected comma (`,`), or closing angle bracket (`>`) end of type parameter list",
 		e.GotToken.Type,
 	)
 }
 
 func (*ExpectedCommaOrEndOfTypeParameterListError) SecondaryError() string {
-	return "type parameters must be separated by commas, " +
-		"and the list must end with a closing angle bracket (>)"
+	return "type parameters must be separated by commas (`,`), " +
+		"and the list must end with a closing angle bracket (`>`)"
 }
 
 func (*ExpectedCommaOrEndOfTypeParameterListError) DocumentationLink() string {
@@ -1262,14 +1253,11 @@ func (e *DuplicateExecuteBlockError) EndPosition(_ common.MemoryGauge) ast.Posit
 }
 
 func (e *DuplicateExecuteBlockError) Error() string {
-	return fmt.Sprintf(
-		"unexpected second %q block",
-		KeywordExecute,
-	)
+	return "unexpected second `execute` block"
 }
 
 func (*DuplicateExecuteBlockError) SecondaryError() string {
-	return "transaction declarations can only have one 'execute' block"
+	return "transaction declarations can only have one `execute` block"
 }
 
 func (*DuplicateExecuteBlockError) DocumentationLink() string {
@@ -1303,7 +1291,7 @@ func (e *DuplicatePostConditionsError) Error() string {
 }
 
 func (*DuplicatePostConditionsError) SecondaryError() string {
-	return "transaction declarations can only have one 'post' block"
+	return "transaction declarations can only have one `post` block"
 }
 
 func (*DuplicatePostConditionsError) DocumentationLink() string {
@@ -1336,15 +1324,13 @@ func (e *ExpectedPrepareOrExecuteError) EndPosition(memoryGauge common.MemoryGau
 
 func (e *ExpectedPrepareOrExecuteError) Error() string {
 	return fmt.Sprintf(
-		"unexpected identifier: expected keyword %q or %q, got %q",
-		KeywordPrepare,
-		KeywordExecute,
+		"unexpected identifier: expected keyword `prepare` or `execute`, got %#q",
 		e.GotIdentifier,
 	)
 }
 
 func (*ExpectedPrepareOrExecuteError) SecondaryError() string {
-	return "transaction declarations can only contain 'prepare' and 'execute' blocks"
+	return "transaction declarations can only contain `prepare` and `execute` blocks"
 }
 
 func (*ExpectedPrepareOrExecuteError) DocumentationLink() string {
@@ -1377,15 +1363,13 @@ func (e *ExpectedExecuteOrPostError) EndPosition(memoryGauge common.MemoryGauge)
 
 func (e *ExpectedExecuteOrPostError) Error() string {
 	return fmt.Sprintf(
-		"unexpected identifier: expected keyword %q or %q, got %q",
-		KeywordExecute,
-		KeywordPost,
+		"unexpected identifier: expected keyword `execute` or `post`, got %#q",
 		e.GotIdentifier,
 	)
 }
 
 func (*ExpectedExecuteOrPostError) SecondaryError() string {
-	return "transaction declarations can only contain 'execute' and 'post' blocks in this context"
+	return "transaction declarations can only contain `execute` and `post` blocks in this context"
 }
 
 func (*ExpectedExecuteOrPostError) DocumentationLink() string {
@@ -1416,17 +1400,13 @@ func (e *ExpectedCaseOrDefaultError) EndPosition(_ common.MemoryGauge) ast.Posit
 
 func (e *ExpectedCaseOrDefaultError) Error() string {
 	return expectedButGotToken(
-		fmt.Sprintf(
-			"unexpected token: expected keyword %q or %q",
-			KeywordCase,
-			KeywordDefault,
-		),
+		"unexpected token: expected keyword `case` or `default`",
 		e.GotToken.Type,
 	)
 }
 
 func (*ExpectedCaseOrDefaultError) SecondaryError() string {
-	return "switch statements can only contain 'case' and 'default' blocks"
+	return "switch statements can only contain `case` and `default` blocks"
 }
 
 func (*ExpectedCaseOrDefaultError) DocumentationLink() string {
@@ -1458,13 +1438,13 @@ func (e *MissingColonInSwitchCaseError) EndPosition(_ common.MemoryGauge) ast.Po
 
 func (e *MissingColonInSwitchCaseError) Error() string {
 	return expectedButGotToken(
-		fmt.Sprintf("expected %s", lexer.TokenColon),
+		"expected colon (`:`)",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingColonInSwitchCaseError) SecondaryError() string {
-	return "a colon (:) is required after the case expression in a switch statement"
+	return "a colon (`:`) is required after the case expression in a switch statement"
 }
 
 func (e *MissingColonInSwitchCaseError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
@@ -1510,19 +1490,19 @@ func (e *MissingFromKeywordInRemoveStatementError) EndPosition(_ common.MemoryGa
 
 func (e *MissingFromKeywordInRemoveStatementError) Error() string {
 	return expectedButGotToken(
-		"expected 'from' keyword",
+		"expected keyword `from`",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingFromKeywordInRemoveStatementError) SecondaryError() string {
-	return "the 'remove' statement requires the 'from' keyword to specify the value to remove the attachment from"
+	return "the `remove` statement requires the `from` keyword to specify the value to remove the attachment from"
 }
 
 func (e *MissingFromKeywordInRemoveStatementError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
-			Message: "Insert 'from'",
+			Message: "Insert `from`",
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: keywordInsertion(KeywordFrom, e.GotToken.Type),
@@ -1565,19 +1545,19 @@ func (e *MissingToKeywordInAttachExpressionError) EndPosition(_ common.MemoryGau
 
 func (e *MissingToKeywordInAttachExpressionError) Error() string {
 	return expectedButGotToken(
-		"expected 'to' keyword",
+		"expected keyword `to`",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingToKeywordInAttachExpressionError) SecondaryError() string {
-	return "the 'attach' expression requires the 'to' keyword to specify the value to attach to"
+	return "the `attach` expression requires the `to` keyword to specify the value to attach to"
 }
 
 func (e *MissingToKeywordInAttachExpressionError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
-			Message: "Insert 'to'",
+			Message: "Insert `to`",
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: keywordInsertion(KeywordTo, e.GotToken.Type),
@@ -1645,11 +1625,11 @@ func (e *UnexpectedCommaInDictionaryTypeError) EndPosition(_ common.MemoryGauge)
 }
 
 func (*UnexpectedCommaInDictionaryTypeError) Error() string {
-	return "unexpected comma in dictionary type"
+	return "unexpected comma (`,`) in dictionary type"
 }
 
 func (*UnexpectedCommaInDictionaryTypeError) SecondaryError() string {
-	return "dictionary types use a colon (:) to separate key and value types, not commas (,)"
+	return "dictionary types use a colon (`:`) to separate key and value types, not commas (`,`)"
 }
 
 func (e *UnexpectedCommaInDictionaryTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
@@ -1696,11 +1676,12 @@ func (e *UnexpectedColonInDictionaryTypeError) EndPosition(_ common.MemoryGauge)
 }
 
 func (*UnexpectedColonInDictionaryTypeError) Error() string {
-	return "unexpected colon in dictionary type"
+	return "unexpected colon (`:`) in dictionary type"
 }
 
 func (*UnexpectedColonInDictionaryTypeError) SecondaryError() string {
-	return "dictionary types use a colon (:) to separate key and value types, but a value type is expected after the colon"
+	return "dictionary types use a colon (`:`) to separate key and value types, " +
+		"but a value type is expected after the colon"
 }
 
 func (*UnexpectedColonInDictionaryTypeError) DocumentationLink() string {
@@ -1731,11 +1712,11 @@ func (e *MultipleColonInDictionaryTypeError) EndPosition(_ common.MemoryGauge) a
 }
 
 func (*MultipleColonInDictionaryTypeError) Error() string {
-	return "unexpected colon in dictionary type"
+	return "unexpected colon (`:`) in dictionary type"
 }
 
 func (*MultipleColonInDictionaryTypeError) SecondaryError() string {
-	return "dictionary types can only have one colon (:) to separate key and value types"
+	return "dictionary types can only have one colon (`:`) to separate key and value types"
 }
 
 func (e *MultipleColonInDictionaryTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
@@ -1786,7 +1767,7 @@ func (*MissingDictionaryValueTypeError) Error() string {
 }
 
 func (*MissingDictionaryValueTypeError) SecondaryError() string {
-	return "a value type is expected after the colon (:)"
+	return "a value type is expected after the colon (`:`)"
 }
 
 func (*MissingDictionaryValueTypeError) DocumentationLink() string {
@@ -1816,11 +1797,11 @@ func (e *UnexpectedCommaInTypeAnnotationListError) EndPosition(_ common.MemoryGa
 }
 
 func (*UnexpectedCommaInTypeAnnotationListError) Error() string {
-	return "unexpected comma"
+	return "unexpected comma (`,`) in type annotation list"
 }
 
 func (*UnexpectedCommaInTypeAnnotationListError) SecondaryError() string {
-	return "a comma is used to separate multiple types, but a type is expected here"
+	return "a comma (`,`) is used to separate multiple types, but a type is expected here"
 }
 
 func (*UnexpectedCommaInTypeAnnotationListError) DocumentationLink() string {
@@ -1850,11 +1831,11 @@ func (e *MissingTypeAnnotationAfterCommaError) EndPosition(_ common.MemoryGauge)
 }
 
 func (*MissingTypeAnnotationAfterCommaError) Error() string {
-	return "missing type annotation after comma"
+	return "missing type annotation after comma (`,`)"
 }
 
 func (*MissingTypeAnnotationAfterCommaError) SecondaryError() string {
-	return "after a comma, a type annotation is required to complete the list"
+	return "after a comma (`,`), a type annotation is required to complete the list"
 }
 
 func (*MissingTypeAnnotationAfterCommaError) DocumentationLink() string {
@@ -1884,11 +1865,12 @@ func (e *UnexpectedCommaInIntersectionTypeError) EndPosition(_ common.MemoryGaug
 }
 
 func (*UnexpectedCommaInIntersectionTypeError) Error() string {
-	return "unexpected comma in intersection type"
+	return "unexpected comma (`,`) in intersection type"
 }
 
 func (*UnexpectedCommaInIntersectionTypeError) SecondaryError() string {
-	return "intersection types use commas to separate multiple types, but a type is expected after the comma"
+	return "intersection types use commas (`,`) to separate multiple types, " +
+		"but a type is expected after the comma (`,`)"
 }
 
 func (*UnexpectedCommaInIntersectionTypeError) DocumentationLink() string {
@@ -1919,11 +1901,11 @@ func (e *UnexpectedColonInIntersectionTypeError) EndPosition(_ common.MemoryGaug
 }
 
 func (*UnexpectedColonInIntersectionTypeError) Error() string {
-	return "unexpected colon in intersection type"
+	return "unexpected colon (`:`) in intersection type"
 }
 
 func (*UnexpectedColonInIntersectionTypeError) SecondaryError() string {
-	return "intersection types use commas (,) to separate multiple types, not colons (:)"
+	return "intersection types use commas (`,`) to separate multiple types, not colons (`:`)"
 }
 
 func (e *UnexpectedColonInIntersectionTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
@@ -2024,19 +2006,19 @@ func (e *MissingRightArrowInEntitlementMappingError) EndPosition(_ common.Memory
 
 func (e *MissingRightArrowInEntitlementMappingError) Error() string {
 	return expectedButGotToken(
-		fmt.Sprintf("expected %s in entitlement mapping", lexer.TokenRightArrow),
+		"expected right arrow (`->`) in entitlement mapping",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingRightArrowInEntitlementMappingError) SecondaryError() string {
-	return "entitlement mappings must use '->' to separate the input and output types"
+	return "entitlement mappings must use `->` to separate the input and output types"
 }
 
 func (e *MissingRightArrowInEntitlementMappingError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
-			Message: "Insert '->'",
+			Message: "Insert `->`",
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: ` ->`,
@@ -2100,11 +2082,11 @@ func (e *MissingTypeAfterCommaInIntersectionError) EndPosition(_ common.MemoryGa
 }
 
 func (*MissingTypeAfterCommaInIntersectionError) Error() string {
-	return "missing type after comma"
+	return "missing type after comma (`,`)"
 }
 
 func (*MissingTypeAfterCommaInIntersectionError) SecondaryError() string {
-	return "a type is expected after the comma"
+	return "a type is expected after the comma (`,`)"
 }
 
 func (*MissingTypeAfterCommaInIntersectionError) DocumentationLink() string {
@@ -2135,11 +2117,11 @@ func (e *MissingTypeAfterSeparatorError) EndPosition(_ common.MemoryGauge) ast.P
 }
 
 func (e *MissingTypeAfterSeparatorError) Error() string {
-	return fmt.Sprintf("missing type after separator: %s", e.Separator)
+	return fmt.Sprintf("missing type after separator %#q", e.Separator)
 }
 
 func (e *MissingTypeAfterSeparatorError) SecondaryError() string {
-	return fmt.Sprintf("a type is expected after the %s separator", e.Separator)
+	return fmt.Sprintf("a type is expected after the %#q separator", e.Separator)
 }
 
 func (*MissingTypeAfterSeparatorError) DocumentationLink() string {
@@ -2172,14 +2154,14 @@ func (e *MissingSeparatorInIntersectionOrDictionaryTypeError) EndPosition(_ comm
 
 func (e *MissingSeparatorInIntersectionOrDictionaryTypeError) Error() string {
 	return expectedButGotToken(
-		"missing separator in type list",
+		"missing separator (`,`) in type list",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingSeparatorInIntersectionOrDictionaryTypeError) SecondaryError() string {
-	return "types in an intersection type must be separated by a comma (,) " +
-		"and types in a dictionary type must be separated by a colon (:)"
+	return "types in an intersection type must be separated by a comma (`,`) " +
+		"and types in a dictionary type must be separated by a colon (`:`)"
 }
 
 func (e *MissingSeparatorInIntersectionOrDictionaryTypeError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
@@ -2235,11 +2217,11 @@ func (e *ExpectedTypeInsteadSeparatorError) EndPosition(_ common.MemoryGauge) as
 }
 
 func (e *ExpectedTypeInsteadSeparatorError) Error() string {
-	return fmt.Sprintf("expected type, got separator '%s'", e.Separator)
+	return fmt.Sprintf("expected type, got separator %#q", e.Separator)
 }
 
 func (e *ExpectedTypeInsteadSeparatorError) SecondaryError() string {
-	return "a type was expected, but a separator was found instead"
+	return "a type was expected, but a separator was found instead; remove the separator"
 }
 
 func (*ExpectedTypeInsteadSeparatorError) DocumentationLink() string {
@@ -2274,7 +2256,7 @@ func (e *UnexpectedTokenInsteadOfSeparatorError) EndPosition(_ common.MemoryGaug
 func (e *UnexpectedTokenInsteadOfSeparatorError) Error() string {
 	return expectedButGotToken(
 		fmt.Sprintf(
-			"unexpected token: expected %s or separator %s",
+			"expected %#q or separator %#q",
 			e.ExpectedEndToken,
 			e.ExpectedSeparator,
 		),
@@ -2284,7 +2266,7 @@ func (e *UnexpectedTokenInsteadOfSeparatorError) Error() string {
 
 func (e *UnexpectedTokenInsteadOfSeparatorError) SecondaryError() string {
 	return fmt.Sprintf(
-		"did you miss a separator ('%s') or a closing token ('%s')?",
+		"did you miss a separator (%#q) or an end (%#q)?",
 		e.ExpectedSeparator,
 		e.ExpectedEndToken,
 	)
@@ -2318,11 +2300,11 @@ func (e *MissingClosingParenInArgumentListError) EndPosition(_ common.MemoryGaug
 }
 
 func (*MissingClosingParenInArgumentListError) Error() string {
-	return "missing ')' at end of invocation argument list"
+	return "missing closing parenthesis (`)`) at end of invocation argument list"
 }
 
 func (*MissingClosingParenInArgumentListError) SecondaryError() string {
-	return "function calls and type instantiations must be properly closed with a closing parenthesis"
+	return "function calls and type instantiations must be properly closed with a closing parenthesis (`)`)"
 }
 
 func (*MissingClosingParenInArgumentListError) DocumentationLink() string {
@@ -2366,12 +2348,12 @@ func (e *UnexpectedCommaInArgumentListError) EndPosition(_ common.MemoryGauge) a
 }
 
 func (*UnexpectedCommaInArgumentListError) Error() string {
-	return "unexpected comma in argument list"
+	return "unexpected comma (`,`) in argument list"
 }
 
 func (*UnexpectedCommaInArgumentListError) SecondaryError() string {
-	return "commas are used to separate arguments; " +
-		"did you add a superfluous comma, or is an argument missing?"
+	return "commas (`,`) are used to separate arguments; " +
+		"did you add a superfluous comma, or is an argument missing"
 }
 
 func (*UnexpectedCommaInArgumentListError) DocumentationLink() string {
@@ -2404,13 +2386,13 @@ func (e *MissingCommaInArgumentListError) EndPosition(_ common.MemoryGauge) ast.
 
 func (e *MissingCommaInArgumentListError) Error() string {
 	return expectedButGotToken(
-		"unexpected argument in argument list: expected delimiter or end of argument list",
+		"unexpected argument in argument list: expected delimiter (`,`) or end of argument list (`)`)",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingCommaInArgumentListError) SecondaryError() string {
-	return "arguments in function calls must be separated by commas"
+	return "arguments in function calls must be separated by commas (`,`)"
 }
 
 func (*MissingCommaInArgumentListError) DocumentationLink() string {
@@ -2487,7 +2469,8 @@ func (e *UnexpectedExpressionStartError) Error() string {
 }
 
 func (*UnexpectedExpressionStartError) SecondaryError() string {
-	return "this token cannot be used to start an expression - check for missing operators, parentheses, or invalid syntax"
+	return "this token cannot be used to start an expression; " +
+		"check for missing operators, parentheses, or invalid syntax"
 }
 
 func (*UnexpectedExpressionStartError) DocumentationLink() string {
@@ -2524,7 +2507,7 @@ func (e *UnexpectedTokenInExpressionError) Error() string {
 }
 
 func (*UnexpectedTokenInExpressionError) SecondaryError() string {
-	return "this token cannot be used as an operator in an expression - " +
+	return "this token cannot be used as an operator in an expression; " +
 		"check for missing operators, parentheses, or invalid syntax"
 }
 
@@ -2562,7 +2545,7 @@ func (e *UnexpectedTypeStartError) Error() string {
 }
 
 func (*UnexpectedTypeStartError) SecondaryError() string {
-	return "this token cannot be used to start a type - " +
+	return "this token cannot be used to start a type; " +
 		"check for missing operators, parentheses, or invalid syntax"
 }
 
@@ -2600,7 +2583,8 @@ func (e *UnexpectedTokenInTypeError) Error() string {
 }
 
 func (*UnexpectedTokenInTypeError) SecondaryError() string {
-	return "this token cannot be used as an operator in a type - check for missing operators, parentheses, or invalid syntax"
+	return "this token cannot be used as an operator in a type; " +
+		"check for missing operators, parentheses, or invalid syntax"
 }
 
 func (*UnexpectedTokenInTypeError) DocumentationLink() string {
@@ -3034,13 +3018,13 @@ func (e *MissingAccessOpeningParenError) EndPosition(_ common.MemoryGauge) ast.P
 
 func (e *MissingAccessOpeningParenError) Error() string {
 	return expectedButGotToken(
-		fmt.Sprintf("expected %s after `access` keyword", lexer.TokenParenOpen),
+		"expected opening parenthesis (`(`) after `access` keyword",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingAccessOpeningParenError) SecondaryError() string {
-	return "access modifiers must be enclosed in parentheses, for example `access(all)`"
+	return "access modifiers must be enclosed in parentheses (`(...)`), for example `access(all)`"
 }
 
 func (*MissingAccessOpeningParenError) DocumentationLink() string {
@@ -3101,13 +3085,13 @@ func (e *MissingAccessClosingParenError) EndPosition(_ common.MemoryGauge) ast.P
 
 func (e *MissingAccessClosingParenError) Error() string {
 	return expectedButGotToken(
-		fmt.Sprintf("expected %s at end of `access` modifier", lexer.TokenParenClose),
+		"expected closing parenthesis (`)`) at end of `access` modifier",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingAccessClosingParenError) SecondaryError() string {
-	return "the `access` modifier must be properly closed with a closing parenthesis"
+	return "the `access` modifier must be properly closed with a closing parenthesis (`)`)"
 }
 
 func (*MissingAccessClosingParenError) DocumentationLink() string {
@@ -3160,10 +3144,10 @@ var (
 	}
 	enumeratedAccessModifierKeywords = common.EnumerateWords(
 		[]string{
-			strconv.Quote(KeywordAll),
-			strconv.Quote(KeywordAccount),
-			strconv.Quote(KeywordContract),
-			strconv.Quote(KeywordSelf),
+			fmt.Sprintf("%#q", KeywordAll),
+			fmt.Sprintf("%#q", KeywordAccount),
+			fmt.Sprintf("%#q", KeywordContract),
+			fmt.Sprintf("%#q", KeywordSelf),
 		},
 		"or",
 	)
@@ -3199,7 +3183,7 @@ func (e *MissingAccessKeywordError) SuggestFixes(_ string) []errors.SuggestedFix
 		fixes = append(
 			fixes,
 			errors.SuggestedFix[ast.TextEdit]{
-				Message: fmt.Sprintf("Insert '%s'", keyword),
+				Message: fmt.Sprintf("Insert %#q", keyword),
 				TextEdits: []ast.TextEdit{
 					{
 						Insertion: keyword,
@@ -3283,7 +3267,7 @@ func (e *MissingFieldNameError) Error() string {
 }
 
 func (*MissingFieldNameError) SecondaryError() string {
-	return "field declarations must have a valid identifier name after the variable kind keyword (let/var)"
+	return "field declarations must have a valid identifier name after the variable kind keyword (`let`/`var`)"
 }
 
 func (*MissingFieldNameError) DocumentationLink() string {
@@ -3315,13 +3299,13 @@ func (e *MissingColonAfterFieldNameError) EndPosition(_ common.MemoryGauge) ast.
 
 func (e *MissingColonAfterFieldNameError) Error() string {
 	return expectedButGotToken(
-		"expected colon (:) after field name",
+		"expected colon (`:`) after field name",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingColonAfterFieldNameError) SecondaryError() string {
-	return "field declarations must have a type annotation separated by a colon (:)"
+	return "field declarations must have a type annotation separated by a colon (`:`)"
 }
 
 func (*MissingColonAfterFieldNameError) DocumentationLink() string {
@@ -3370,8 +3354,8 @@ func (*MissingTransferError) Error() string {
 }
 
 func (*MissingTransferError) SecondaryError() string {
-	return "variable declarations must specify how to transfer the value: " +
-		"use '=' for copy (struct), '<-' for move (resource), or '<-!' for forced move (resource)"
+	return "variable declarations must specify how to transfer the value; " +
+		"use `=` for copy (struct), `<-` for move (resource), or `<-!` for forced move (resource)"
 }
 
 func (*MissingTransferError) DocumentationLink() string {
@@ -3382,7 +3366,7 @@ func (e *MissingTransferError) SuggestFixes(code string) []errors.SuggestedFix[a
 	r := newLeftAttachedRange(e.Pos, code)
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
-			Message: "Insert '=' (for struct)",
+			Message: "Insert `=` (for struct)",
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: " =",
@@ -3391,7 +3375,7 @@ func (e *MissingTransferError) SuggestFixes(code string) []errors.SuggestedFix[a
 			},
 		},
 		{
-			Message: "Insert '<-' (for resource)",
+			Message: "Insert `<-` (for resource)",
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: " <-",
@@ -3464,18 +3448,14 @@ func (e *InvalidImportContinuationError) EndPosition(_ common.MemoryGauge) ast.P
 
 func (e *InvalidImportContinuationError) Error() string {
 	return expectedButGotToken(
-		fmt.Sprintf(
-			"unexpected token in import declaration: expected keyword %q or %s",
-			KeywordFrom,
-			lexer.TokenComma,
-		),
+		"unexpected token in import declaration: expected keyword `from` or comma (`,`)",
 		e.GotToken.Type,
 	)
 }
 
 func (*InvalidImportContinuationError) SecondaryError() string {
-	return "after an imported identifier, add either a comma to import more items " +
-		"or the 'from' keyword to specify the import location"
+	return "after an imported identifier, add either a comma (`,`) to import more items " +
+		"or the `from` keyword to specify the import location"
 }
 
 func (*InvalidImportContinuationError) DocumentationLink() string {
@@ -3509,7 +3489,7 @@ func (*MissingImportLocationError) Error() string {
 }
 
 func (*MissingImportLocationError) SecondaryError() string {
-	return "import declarations must specify what to import - provide a string literal, hexadecimal address, or identifier"
+	return "import declarations must specify what to import; provide a string literal, hexadecimal address, or identifier"
 }
 
 func (*MissingImportLocationError) DocumentationLink() string {
@@ -3539,16 +3519,13 @@ func (e *UnexpectedEOFInImportListError) EndPosition(_ common.MemoryGauge) ast.P
 }
 
 func (*UnexpectedEOFInImportListError) Error() string {
-	return fmt.Sprintf(
-		"unexpected end in import declaration: expected %s or %s",
-		lexer.TokenIdentifier,
-		lexer.TokenComma,
-	)
+	return "unexpected end in import declaration: expected identifier or comma (`,`)"
 }
 
 func (*UnexpectedEOFInImportListError) SecondaryError() string {
-	return "import declarations cannot end abruptly - " +
-		"add either an identifier to import or a comma to continue the import list"
+	return "import declarations cannot end abruptly; " +
+		"add either an identifier to import or a comma (`,`) " +
+		"to continue the import list"
 }
 
 func (*UnexpectedEOFInImportListError) DocumentationLink() string {
@@ -3579,17 +3556,14 @@ func (e *InvalidTokenInImportListError) EndPosition(_ common.MemoryGauge) ast.Po
 
 func (e *InvalidTokenInImportListError) Error() string {
 	return expectedButGotToken(
-		fmt.Sprintf(
-			"expected identifier or keyword %q",
-			KeywordFrom,
-		),
+		"expected identifier or keyword `from`",
 		e.GotToken.Type,
 	)
 }
 
 func (*InvalidTokenInImportListError) SecondaryError() string {
-	return "import declarations expect either an identifier to import " +
-		"or the 'from' keyword to specify the import location"
+	return "import declarations expect either an identifier to import, " +
+		"or the `from` keyword to specify the import location"
 }
 
 func (*InvalidTokenInImportListError) DocumentationLink() string {
@@ -3620,11 +3594,11 @@ func (e *InvalidFromKeywordAsIdentifierError) EndPosition(_ common.MemoryGauge) 
 }
 
 func (*InvalidFromKeywordAsIdentifierError) Error() string {
-	return fmt.Sprintf("expected identifier, got keyword %q", KeywordFrom)
+	return "expected identifier, got keyword `from`"
 }
 
 func (*InvalidFromKeywordAsIdentifierError) SecondaryError() string {
-	return "import declarations expect an identifier to import, not the 'from' keyword in this position"
+	return "import declarations expect an identifier to import, not the `from` keyword in this position"
 }
 
 func (*InvalidFromKeywordAsIdentifierError) DocumentationLink() string {
@@ -3655,11 +3629,11 @@ func (e *InvalidInKeywordAsIdentifierError) EndPosition(_ common.MemoryGauge) as
 }
 
 func (*InvalidInKeywordAsIdentifierError) Error() string {
-	return fmt.Sprintf("expected identifier, got keyword %q", KeywordIn)
+	return "expected identifier, got keyword `in`"
 }
 
 func (*InvalidInKeywordAsIdentifierError) SecondaryError() string {
-	return "the 'in' keyword cannot be used as an identifier in a for-loop"
+	return "the `in` keyword cannot be used as an identifier in a for-loop"
 }
 
 func (*InvalidInKeywordAsIdentifierError) DocumentationLink() string {
@@ -3691,22 +3665,19 @@ func (e *MissingInKeywordInForStatementError) EndPosition(_ common.MemoryGauge) 
 
 func (e *MissingInKeywordInForStatementError) Error() string {
 	return expectedButGotToken(
-		fmt.Sprintf(
-			"expected keyword %q",
-			KeywordIn,
-		),
+		"expected keyword `in`",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingInKeywordInForStatementError) SecondaryError() string {
-	return "for-loops require the 'in' keyword to separate the loop variable from the iterated value"
+	return "for-loops require the `in` keyword to separate the loop variable from the iterated value"
 }
 
 func (e *MissingInKeywordInForStatementError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
-			Message: "Insert 'in'",
+			Message: "Insert `in`",
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: keywordInsertion(KeywordIn, e.GotToken.Type),
@@ -3748,11 +3719,11 @@ func (e *MissingConformanceError) EndPosition(_ common.MemoryGauge) ast.Position
 }
 
 func (*MissingConformanceError) Error() string {
-	return "expected at least one conformance after :"
+	return "expected at least one conformance after colon (`:`)"
 }
 
 func (*MissingConformanceError) SecondaryError() string {
-	return "provide at least one interface or type to conform to, or remove the colon if no conformances are needed"
+	return "provide at least one interface or type to conform to, or remove the colon (`:`) if no conformances are needed"
 }
 
 func (*MissingConformanceError) DocumentationLink() string {
@@ -3782,11 +3753,11 @@ func (e *InvalidInterfaceNameError) EndPosition(_ common.MemoryGauge) ast.Positi
 }
 
 func (e *InvalidInterfaceNameError) Error() string {
-	return fmt.Sprintf("expected interface name, got keyword %q", KeywordInterface)
+	return "expected interface name, got keyword `interface`"
 }
 
 func (*InvalidInterfaceNameError) SecondaryError() string {
-	return "interface declarations must have a unique name after the 'interface' keyword"
+	return "interface declarations must have a unique name after the `interface` keyword"
 }
 
 func (*InvalidInterfaceNameError) DocumentationLink() string {
@@ -3852,8 +3823,8 @@ func (e *InvalidEntitlementSeparatorError) Error() string {
 }
 
 func (*InvalidEntitlementSeparatorError) SecondaryError() string {
-	return "use a comma (,) for conjunctive entitlements " +
-		"or a vertical bar (|) for disjunctive entitlements"
+	return "use a comma (`,`) for conjunctive entitlements " +
+		"or a vertical bar (`|`) for disjunctive entitlements"
 }
 
 func (*InvalidEntitlementSeparatorError) DocumentationLink() string {
@@ -3943,13 +3914,13 @@ func (e *MissingCommentEndError) EndPosition(_ common.MemoryGauge) ast.Position 
 
 func (e *MissingCommentEndError) Error() string {
 	return fmt.Sprintf(
-		"missing comment end %s",
+		"missing comment end (%#q)",
 		lexer.TokenBlockCommentEnd,
 	)
 }
 
 func (*MissingCommentEndError) SecondaryError() string {
-	return "ensure all block comments are properly closed with '*/'"
+	return "ensure all block comments are properly closed with `*/`"
 }
 
 func (*MissingCommentEndError) DocumentationLink() string {
@@ -3959,7 +3930,7 @@ func (*MissingCommentEndError) DocumentationLink() string {
 func (e *MissingCommentEndError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
-			Message: "Insert '*/'",
+			Message: "Insert `*/`",
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: "*/",
@@ -4109,7 +4080,7 @@ func (e *MemberAccessMissingNameError) Error() string {
 }
 
 func (*MemberAccessMissingNameError) SecondaryError() string {
-	return "after a dot (.), you must provide a valid identifier for the member name"
+	return "after a dot (`.`), you must provide a valid identifier for the member name"
 }
 
 func (*MemberAccessMissingNameError) DocumentationLink() string {
@@ -4141,11 +4112,11 @@ func (e *WhitespaceAfterMemberAccessError) EndPosition(_ common.MemoryGauge) ast
 }
 
 func (e *WhitespaceAfterMemberAccessError) Error() string {
-	return fmt.Sprintf("invalid whitespace after %s", e.OperatorTokenType)
+	return fmt.Sprintf("invalid whitespace after %#q", e.OperatorTokenType)
 }
 
 func (e *WhitespaceAfterMemberAccessError) SecondaryError() string {
-	return fmt.Sprintf("remove the space between %s and the member name", e.OperatorTokenType)
+	return fmt.Sprintf("remove the space between %#q and the member name", e.OperatorTokenType)
 }
 
 func (e *WhitespaceAfterMemberAccessError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
@@ -4265,8 +4236,7 @@ func (e *InvalidNativeModifierError) SuggestFixes(_ string) []errors.SuggestedFi
 
 func (e *InvalidNativeModifierError) SecondaryError() string {
 	return fmt.Sprintf(
-		"the `native` modifier can only be used on on fields and functions, "+
-			"not on %s declarations",
+		"the `native` modifier can only be used on fields and functions, not on %s declarations",
 		e.DeclarationKind.Name(),
 	)
 }
@@ -4296,7 +4266,7 @@ func (e *NonNominalTypeError) EndPosition(_ common.MemoryGauge) ast.Position {
 }
 
 func (e *NonNominalTypeError) Error() string {
-	return fmt.Sprintf("expected nominal type, got non-nominal type `%s`", e.Type)
+	return fmt.Sprintf("expected nominal type, got non-nominal type %#q", e.Type)
 }
 
 func (*NonNominalTypeError) SecondaryError() string {
@@ -4331,13 +4301,13 @@ func (e *NestedTypeMissingNameError) EndPosition(_ common.MemoryGauge) ast.Posit
 
 func (e *NestedTypeMissingNameError) Error() string {
 	return expectedButGotToken(
-		"expected nested type name after dot (.)",
+		"expected nested type name after dot (`.`)",
 		e.GotToken.Type,
 	)
 }
 
 func (*NestedTypeMissingNameError) SecondaryError() string {
-	return "after a dot (.), you must provide a valid identifier for the nested type name"
+	return "after a dot (`.`), you must provide a valid identifier for the nested type name"
 }
 
 func (*NestedTypeMissingNameError) DocumentationLink() string {
@@ -4369,13 +4339,13 @@ func (e *MissingForKeywordInAttachmentDeclarationError) EndPosition(_ common.Mem
 
 func (e *MissingForKeywordInAttachmentDeclarationError) Error() string {
 	return expectedButGotToken(
-		"expected 'for' keyword",
+		"expected keyword `for`",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingForKeywordInAttachmentDeclarationError) SecondaryError() string {
-	return "the attachment declaration requires the 'for' keyword to specify the target"
+	return "the attachment declaration requires the `for` keyword to specify the target"
 }
 
 func (*MissingForKeywordInAttachmentDeclarationError) DocumentationLink() string {
@@ -4385,7 +4355,7 @@ func (*MissingForKeywordInAttachmentDeclarationError) DocumentationLink() string
 func (e *MissingForKeywordInAttachmentDeclarationError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
-			Message: "Insert 'for'",
+			Message: "Insert `for`",
 			TextEdits: []ast.TextEdit{
 				{
 					Insertion: keywordInsertion(KeywordFor, e.GotToken.Type),
@@ -4452,7 +4422,7 @@ func (e *DeclarationMissingOpeningBraceError) EndPosition(_ common.MemoryGauge) 
 func (e *DeclarationMissingOpeningBraceError) Error() string {
 	return expectedButGotToken(
 		fmt.Sprintf(
-			"expected opening brace ({) at start of %s declaration",
+			"expected opening brace (`{`) at start of %s declaration",
 			e.Kind.Name(),
 		),
 		e.GotToken.Type,
@@ -4461,7 +4431,7 @@ func (e *DeclarationMissingOpeningBraceError) Error() string {
 
 func (e *DeclarationMissingOpeningBraceError) SecondaryError() string {
 	return fmt.Sprintf(
-		"%s declarations must be enclosed in braces `{ ... }`; add the missing opening brace ({)",
+		"%s declarations must be enclosed in braces `{ ... }`; add the missing opening brace (`{`)",
 		e.Kind.Name(),
 	)
 }
@@ -4512,7 +4482,7 @@ func (e *DeclarationMissingClosingBraceError) EndPosition(_ common.MemoryGauge) 
 func (e *DeclarationMissingClosingBraceError) Error() string {
 	return expectedButGotToken(
 		fmt.Sprintf(
-			"expected closing brace (}) at end of %s declaration",
+			"expected closing brace (`}`) at end of %s declaration",
 			e.Kind.Name(),
 		),
 		e.GotToken.Type,
@@ -4521,7 +4491,7 @@ func (e *DeclarationMissingClosingBraceError) Error() string {
 
 func (e *DeclarationMissingClosingBraceError) SecondaryError() string {
 	return fmt.Sprintf(
-		"%s declarations must be enclosed in braces `{ ... }`; add the missing closing brace ({)",
+		"%s declarations must be enclosed in braces `{ ... }`; add the missing closing brace (`}`)",
 		e.Kind.Name(),
 	)
 }
@@ -4572,7 +4542,7 @@ func (e *MissingOpeningBraceError) EndPosition(_ common.MemoryGauge) ast.Positio
 func (e *MissingOpeningBraceError) Error() string {
 	return expectedButGotToken(
 		fmt.Sprintf(
-			"expected opening brace ({) at start of %s",
+			"expected opening brace (`{`) at start of %s",
 			e.Description,
 		),
 		e.GotToken.Type,
@@ -4581,7 +4551,7 @@ func (e *MissingOpeningBraceError) Error() string {
 
 func (e *MissingOpeningBraceError) SecondaryError() string {
 	return fmt.Sprintf(
-		"%s must be enclosed in braces `{ ... }`; add the missing opening brace ({)",
+		"%s must be enclosed in braces `{ ... }`; add the missing opening brace (`{`)",
 		e.Description,
 	)
 }
@@ -4632,7 +4602,7 @@ func (e *MissingClosingBraceError) EndPosition(_ common.MemoryGauge) ast.Positio
 func (e *MissingClosingBraceError) Error() string {
 	return expectedButGotToken(
 		fmt.Sprintf(
-			"expected closing brace (}) at end of %s",
+			"expected closing brace (`}`) at end of %s",
 			e.Description,
 		),
 		e.GotToken.Type,
@@ -4641,7 +4611,7 @@ func (e *MissingClosingBraceError) Error() string {
 
 func (e *MissingClosingBraceError) SecondaryError() string {
 	return fmt.Sprintf(
-		"%s must be enclosed in braces `{ ... }`; add the missing closing brace ({)",
+		"%s must be enclosed in braces `{ ... }`; add the missing closing brace (`}`)",
 		e.Description,
 	)
 }
@@ -4690,13 +4660,13 @@ func (e *MissingEndOfParenthesizedTypeError) EndPosition(_ common.MemoryGauge) a
 
 func (e *MissingEndOfParenthesizedTypeError) Error() string {
 	return expectedButGotToken(
-		fmt.Sprintf("expected %s at end of parenthesized type", lexer.TokenParenClose),
+		"expected closing parenthesis (`)`) at end of parenthesized type",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingEndOfParenthesizedTypeError) SecondaryError() string {
-	return "parenthesized types must be properly closed with a closing parenthesis"
+	return "parenthesized types must be properly closed with a closing parenthesis (`)`)"
 }
 
 func (*MissingEndOfParenthesizedTypeError) DocumentationLink() string {
@@ -4742,13 +4712,13 @@ func (e *MissingEndOfParenthesizedExpressionError) EndPosition(_ common.MemoryGa
 
 func (e *MissingEndOfParenthesizedExpressionError) Error() string {
 	return expectedButGotToken(
-		fmt.Sprintf("expected %s at end of parenthesized expression", lexer.TokenParenClose),
+		"expected closing parenthesis (`)`) at end of parenthesized expression",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingEndOfParenthesizedExpressionError) SecondaryError() string {
-	return "parenthesized expressions must be properly closed with a closing parenthesis"
+	return "parenthesized expressions must be properly closed with a closing parenthesis (`)`)"
 }
 
 func (*MissingEndOfParenthesizedExpressionError) DocumentationLink() string {
@@ -4794,13 +4764,13 @@ func (e *MissingClosingBracketInArrayTypeError) EndPosition(_ common.MemoryGauge
 
 func (e *MissingClosingBracketInArrayTypeError) Error() string {
 	return expectedButGotToken(
-		fmt.Sprintf("expected %s at end of array type", lexer.TokenBracketClose),
+		"expected closing bracket (`]`) at end of array type",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingClosingBracketInArrayTypeError) SecondaryError() string {
-	return "array types must be properly closed with a closing bracket (])"
+	return "array types must be properly closed with a closing bracket (`]`)"
 }
 
 func (*MissingClosingBracketInArrayTypeError) DocumentationLink() string {
@@ -4846,13 +4816,13 @@ func (e *MissingClosingBracketInArrayExpressionError) EndPosition(_ common.Memor
 
 func (e *MissingClosingBracketInArrayExpressionError) Error() string {
 	return expectedButGotToken(
-		fmt.Sprintf("expected %s at end of array expression", lexer.TokenBracketClose),
+		"expected closing bracket (`]`) at end of array expression",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingClosingBracketInArrayExpressionError) SecondaryError() string {
-	return "array expressions must be properly closed with a closing bracket (])"
+	return "array expressions must be properly closed with a closing bracket (`]`)"
 }
 
 func (*MissingClosingBracketInArrayExpressionError) DocumentationLink() string {
@@ -4898,13 +4868,13 @@ func (e *MissingClosingBraceInDictionaryExpressionError) EndPosition(_ common.Me
 
 func (e *MissingClosingBraceInDictionaryExpressionError) Error() string {
 	return expectedButGotToken(
-		fmt.Sprintf("expected %s at end of dictionary expression", lexer.TokenBraceClose),
+		"expected closing brace (`}`) at end of dictionary expression",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingClosingBraceInDictionaryExpressionError) SecondaryError() string {
-	return "dictionary expressions must be properly closed with a closing brace (})"
+	return "dictionary expressions must be properly closed with a closing brace (`}`)"
 }
 
 func (*MissingClosingBraceInDictionaryExpressionError) DocumentationLink() string {
@@ -4950,13 +4920,13 @@ func (e *MissingColonInDictionaryEntryError) EndPosition(_ common.MemoryGauge) a
 
 func (e *MissingColonInDictionaryEntryError) Error() string {
 	return expectedButGotToken(
-		fmt.Sprintf("expected %s in dictionary entry", lexer.TokenColon),
+		"expected colon (`:`) in dictionary entry",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingColonInDictionaryEntryError) SecondaryError() string {
-	return "a colon (:) is required to separate the key and value in a dictionary entry"
+	return "a colon (`:`) is required to separate the key and value in a dictionary entry"
 }
 
 func (*MissingColonInDictionaryEntryError) DocumentationLink() string {
@@ -5002,13 +4972,13 @@ func (e *MissingColonInConditionalExpressionError) EndPosition(_ common.MemoryGa
 
 func (e *MissingColonInConditionalExpressionError) Error() string {
 	return expectedButGotToken(
-		fmt.Sprintf("expected %s in conditional expression", lexer.TokenColon),
+		"expected colon (`:`) in conditional expression",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingColonInConditionalExpressionError) SecondaryError() string {
-	return "a colon (:) is required to separate the 'then' and 'else' expressions"
+	return "a colon (`:`) is required to separate the 'then' and 'else' expressions"
 }
 
 func (*MissingColonInConditionalExpressionError) DocumentationLink() string {
@@ -5054,13 +5024,13 @@ func (e *MissingSlashInPathExpressionError) EndPosition(_ common.MemoryGauge) as
 
 func (e *MissingSlashInPathExpressionError) Error() string {
 	return expectedButGotToken(
-		fmt.Sprintf("expected %s in path expression", lexer.TokenSlash),
+		"expected slash (`/`) in path expression",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingSlashInPathExpressionError) SecondaryError() string {
-	return "a slash (/) is required to separate the domain and identifier in a path expression"
+	return "a slash (`/`) is required to separate the domain and identifier in a path expression"
 }
 
 func (*MissingSlashInPathExpressionError) DocumentationLink() string {
@@ -5106,13 +5076,13 @@ func (e *MissingClosingBracketInIndexExpressionError) EndPosition(_ common.Memor
 
 func (e *MissingClosingBracketInIndexExpressionError) Error() string {
 	return expectedButGotToken(
-		fmt.Sprintf("expected %s at end of index expression", lexer.TokenBracketClose),
+		"expected closing bracket (`]`) at end of index expression",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingClosingBracketInIndexExpressionError) SecondaryError() string {
-	return "index expressions must be properly closed with a closing bracket (])"
+	return "index expressions must be properly closed with a closing bracket (`]`)"
 }
 
 func (*MissingClosingBracketInIndexExpressionError) DocumentationLink() string {
@@ -5158,14 +5128,11 @@ func (e *MissingClosingBraceInIntersectionOrDictionaryTypeError) EndPosition(_ c
 }
 
 func (*MissingClosingBraceInIntersectionOrDictionaryTypeError) Error() string {
-	return fmt.Sprintf(
-		"missing %s at end of intersection type or dictionary type",
-		lexer.TokenBraceClose,
-	)
+	return "missing closing brace (`}`) at end of intersection type or dictionary type"
 }
 
 func (*MissingClosingBraceInIntersectionOrDictionaryTypeError) SecondaryError() string {
-	return "intersection types and dictionary type must be properly closed with a closing brace (})"
+	return "intersection types and dictionary type must be properly closed with a closing brace (`}`)"
 }
 
 func (*MissingClosingBraceInIntersectionOrDictionaryTypeError) DocumentationLink() string {
@@ -5211,7 +5178,7 @@ func (e *MissingClosingParenInAuthError) EndPosition(_ common.MemoryGauge) ast.P
 
 func (e *MissingClosingParenInAuthError) Error() string {
 	return expectedButGotToken(
-		fmt.Sprintf("expected %s at end of authorization", lexer.TokenParenClose),
+		"expected closing parenthesis (`)`) at end of authorization",
 		e.GotToken.Type,
 	)
 }
@@ -5263,13 +5230,13 @@ func (e *MissingAmpersandInAuthReferenceError) EndPosition(_ common.MemoryGauge)
 
 func (e *MissingAmpersandInAuthReferenceError) Error() string {
 	return expectedButGotToken(
-		fmt.Sprintf("expected %s in authorized reference", lexer.TokenAmpersand),
+		"expected ampersand (`&`) in authorized reference",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingAmpersandInAuthReferenceError) SecondaryError() string {
-	return "authorized references must contain an ampersand (&); insert the missing ampersand"
+	return "authorized references must contain an ampersand (`&`); insert the missing ampersand"
 }
 
 func (*MissingAmpersandInAuthReferenceError) DocumentationLink() string {
@@ -5319,7 +5286,7 @@ func (e *MissingOpeningParenInNominalTypeInvocationError) EndPosition(_ common.M
 
 func (e *MissingOpeningParenInNominalTypeInvocationError) Error() string {
 	return expectedButGotToken(
-		"expected '(' for invocation",
+		"expected opening parenthesis (`(`) for invocation",
 		e.GotToken.Type,
 	)
 }
@@ -5372,7 +5339,7 @@ func (e *MissingOpeningParenInFunctionTypeError) EndPosition(_ common.MemoryGaug
 
 func (e *MissingOpeningParenInFunctionTypeError) Error() string {
 	return expectedButGotToken(
-		fmt.Sprintf("expected %s at start of function type parameter list", lexer.TokenParenOpen),
+		"expected opening parenthesis (`(`) at start of function type parameter list",
 		e.GotToken.Type,
 	)
 }
@@ -5426,13 +5393,13 @@ func (e *MissingClosingParenInFunctionTypeError) EndPosition(_ common.MemoryGaug
 
 func (e *MissingClosingParenInFunctionTypeError) Error() string {
 	return expectedButGotToken(
-		fmt.Sprintf("expected %s at end of function type parameter list", lexer.TokenParenClose),
+		"expected closing parenthesis (`)`) at end of function type parameter list",
 		e.GotToken.Type,
 	)
 }
 
 func (*MissingClosingParenInFunctionTypeError) SecondaryError() string {
-	return "function type parameter lists must be wrapped in parentheses (`(...)`); " +
+	return "function type parameter lists must be enclosed in parentheses (`(...)`); " +
 		"add the missing closing parenthesis (`)`)"
 }
 
