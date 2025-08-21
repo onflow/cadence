@@ -37,6 +37,7 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -822,6 +823,7 @@ func TestCompileIfLet(t *testing.T) {
 
 			// let y' = x
 			opcode.InstructionGetLocal{Local: xIndex},
+			opcode.InstructionTransferAndConvert{Type: 1},
 			opcode.InstructionSetLocal{Local: tempYIndex},
 
 			// if nil
@@ -831,20 +833,19 @@ func TestCompileIfLet(t *testing.T) {
 			// let y = y'
 			opcode.InstructionGetLocal{Local: tempYIndex},
 			opcode.InstructionUnwrap{},
-			opcode.InstructionTransferAndConvert{Type: 1},
 			opcode.InstructionSetLocal{Local: yIndex},
 
 			// then { return y }
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: yIndex},
-			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionReturnValue{},
 			opcode.InstructionJump{Target: 18},
 
 			// else { return 2 }
 			opcode.InstructionStatement{},
 			opcode.InstructionGetConstant{Constant: 0},
-			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionReturnValue{},
 
 			opcode.InstructionReturn{},
@@ -920,6 +921,7 @@ func TestCompileIfLetScope(t *testing.T) {
 			// if let x = y
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: yIndex},
+			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionSetLocal{Local: tempIfLetIndex},
 
 			opcode.InstructionGetLocal{Local: tempIfLetIndex},
@@ -928,7 +930,6 @@ func TestCompileIfLetScope(t *testing.T) {
 			// then
 			opcode.InstructionGetLocal{Local: tempIfLetIndex},
 			opcode.InstructionUnwrap{},
-			opcode.InstructionTransferAndConvert{Type: 1},
 			opcode.InstructionSetLocal{Local: x2Index},
 
 			// z = x
@@ -1866,7 +1867,7 @@ func TestCompileMember(t *testing.T) {
 		assert.Equal(t,
 			[]opcode.Instruction{
 				// let self = Test()
-				opcode.InstructionNew{
+				opcode.InstructionNewComposite{
 					Kind: common.CompositeKindStructure,
 					Type: 1,
 				},
@@ -2803,7 +2804,7 @@ func TestCompileMethodInvocation(t *testing.T) {
 				opcode.InstructionGetMethod{Method: fFuncIndex},
 				opcode.InstructionTrue{},
 				opcode.InstructionTransferAndConvert{Type: 2},
-				opcode.InstructionInvokeMethodStatic{
+				opcode.InstructionInvoke{
 					TypeArgs: nil,
 					ArgCount: 1,
 				},
@@ -2823,7 +2824,7 @@ func TestCompileMethodInvocation(t *testing.T) {
 		assert.Equal(t,
 			[]opcode.Instruction{
 				// Foo()
-				opcode.InstructionNew{
+				opcode.InstructionNewComposite{
 					Kind: common.CompositeKindStructure,
 					Type: 1,
 				},
@@ -2913,7 +2914,7 @@ func TestCompileResourceCreateAndDestroy(t *testing.T) {
 		assert.Equal(t,
 			[]opcode.Instruction{
 				// Foo()
-				opcode.InstructionNew{
+				opcode.InstructionNewComposite{
 					Kind: common.CompositeKindResource,
 					Type: 1,
 				},
@@ -3260,7 +3261,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 			// self.test()
 			opcode.InstructionGetLocal{Local: selfIndex},
 			opcode.InstructionGetMethod{Method: interfaceFunctionIndex}, // must be interface method's index
-			opcode.InstructionInvokeMethodStatic{
+			opcode.InstructionInvoke{
 				TypeArgs: nil,
 				ArgCount: 0,
 			},
@@ -3321,11 +3322,11 @@ func TestCompileFunctionConditions(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-        fun test(x: Int): Int {
-            pre {x > 0}
-            return 5
-        }
-    `)
+            fun test(x: Int): Int {
+                pre { x > 0 }
+                return 5
+            }
+        `)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(
@@ -3344,7 +3345,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		// Would be equivalent to:
 		// fun test(x: Int): Int {
 		//    if !(x > 0) {
-		//        panic("pre/post condition failed")
+		//        $failPreCondition("")
 		//    }
 		//    return 5
 		// }
@@ -3361,7 +3362,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 12},
 
-				// panic("pre/post condition failed")
+				// $failPreCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 1}, // error message
@@ -3385,11 +3386,11 @@ func TestCompileFunctionConditions(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-        fun test(x: Int): Int {
-            post {x > 0}
-            return 5
-        }
-    `)
+            fun test(x: Int): Int {
+                post { x > 0 }
+                return 5
+            }
+        `)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(
@@ -3413,7 +3414,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		//    $_result = 5
 		//    let result = $_result
 		//    if !(x > 0) {
-		//        panic("pre/post condition failed")
+		//       $failPostCondition("")
 		//    }
 		//    return $_result
 		// }
@@ -3446,7 +3447,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 21},
 
-				// panic("pre/post condition failed")
+				// $failPostCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 2}, // error message
@@ -3469,11 +3470,11 @@ func TestCompileFunctionConditions(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-        fun test(x: @AnyResource?): @AnyResource? {
-            post {result != nil}
-            return <- x
-        }
-    `)
+            fun test(x: @AnyResource?): @AnyResource? {
+                post { result != nil }
+                return <- x
+            }
+        `)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(
@@ -3497,7 +3498,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		//    var $_result <-x
 		//    let result = &$_result
 		//    if !(result != nil) {
-		//        panic("pre/post condition failed")
+		//        $failPostCondition("")
 		//    }
 		//    return <-$_result
 		//}
@@ -3533,7 +3534,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 23},
 
-				// panic("pre/post condition failed")
+				// $failPostCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 0}, // error message
@@ -3557,8 +3558,8 @@ func TestCompileFunctionConditions(t *testing.T) {
 		checker, err := ParseAndCheck(t, `
             struct interface IA {
                 fun test(x: Int, y: Int): Int {
-                    pre {x > 0}
-                    post {y > 0}
+                    pre { x > 0 }
+                    post { y > 0 }
                 }
             }
 
@@ -3600,7 +3601,8 @@ func TestCompileFunctionConditions(t *testing.T) {
 			_
 			_
 			_
-			panicFunctionIndex
+			failPreConditionFunctionIndex
+			failPostConditionFunctionIndex
 		)
 
 		// 	`Test` type's constructor
@@ -3640,14 +3642,14 @@ func TestCompileFunctionConditions(t *testing.T) {
 		// ```
 		//     fun test(x: Int, y: Int): Int {
 		//        if !(x > 0) {
-		//            panic("pre/post condition failed")
+		//            $failPreCondition("")
 		//        }
 		//
 		//        var $_result = 42
 		//        let result = $_result
 		//
 		//        if !(y > 0) {
-		//            panic("pre/post condition failed")
+		//            $failPostCondition("")
 		//        }
 		//
 		//        return $_result
@@ -3668,9 +3670,9 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 12},
 
-				// panic("pre/post condition failed")
+				// $failPreCondition("")
 				opcode.InstructionStatement{},
-				opcode.InstructionGetGlobal{Global: panicFunctionIndex},
+				opcode.InstructionGetGlobal{Global: failPreConditionFunctionIndex},
 				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
 				opcode.InstructionTransferAndConvert{Type: 6},
 				opcode.InstructionInvoke{ArgCount: 1},
@@ -3709,9 +3711,9 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 33},
 
-				// panic("pre/post condition failed")
+				// $failPostCondition("")
 				opcode.InstructionStatement{},
-				opcode.InstructionGetGlobal{Global: panicFunctionIndex},
+				opcode.InstructionGetGlobal{Global: failPostConditionFunctionIndex},
 				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
 				opcode.InstructionTransferAndConvert{Type: 6},
 				opcode.InstructionInvoke{ArgCount: 1},
@@ -3733,7 +3735,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		checker, err := ParseAndCheck(t, `
             struct interface IA {
                 fun test(x: Int): Int {
-                    post {before(x) < x}
+                    post { before(x) < x }
                 }
             }
 
@@ -3775,7 +3777,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 			_
 			_
 			_
-			panicFunctionIndex
+			failPostConditionFunctionIndex
 		)
 
 		// 	`Test` type's constructor
@@ -3819,7 +3821,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		//        var $_result = 42
 		//        let result = $_result
 		//        if !($before_0 < x) {
-		//            panic("pre/post condition failed")
+		//            $failPostCondition("")
 		//        }
 		//        return $_result
 		//    }
@@ -3867,9 +3869,9 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 25},
 
-				// panic("pre/post condition failed")
+				// $failPostCondition("")
 				opcode.InstructionStatement{},
-				opcode.InstructionGetGlobal{Global: panicFunctionIndex},
+				opcode.InstructionGetGlobal{Global: failPostConditionFunctionIndex},
 				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
 				opcode.InstructionTransferAndConvert{Type: 7},
 				opcode.InstructionInvoke{ArgCount: 1},
@@ -3941,14 +3943,14 @@ func TestCompileFunctionConditions(t *testing.T) {
 			aLocation,
 			ParseCheckAndCompileOptions{
 				ParseAndCheckOptions: &ParseAndCheckOptions{
-					Config: &sema.Config{
+					CheckerConfig: &sema.Config{
 						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
 							return baseValueActivation
 						},
 					},
 				},
 				CompilerConfig: &compiler.Config{
-					BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
+					BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
 						activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 						activation.Set(
 							stdlib.LogFunctionName,
@@ -4038,8 +4040,8 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		// Function indexes
 		const (
-			concreteTypeFunctionIndex = 8
-			panicFunctionIndex        = 12
+			concreteTypeFunctionIndex     = 8
+			failPreConditionFunctionIndex = 12
 		)
 
 		// `D.Vault` type's `getBalance` function.
@@ -4051,7 +4053,8 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		// Constant indexes
 		const (
-			panicMessageIndex = 1
+			fieldNameIndex    = 1
+			panicMessageIndex = 2
 		)
 
 		const concreteTypeTestFuncName = "D.Vault.getBalance"
@@ -4062,7 +4065,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		// ```
 		//  fun getBalance(): Int {
 		//	  if !A.TestStruct().test() {
-		//	    panic("pre/post condition failed")
+		//	    $failPreCondition("")
 		//    }
 		//	  return self.balance
 		//  }
@@ -4078,7 +4081,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// Get function value `A.TestStruct.test()`
 				opcode.InstructionGetMethod{Method: 11},
-				opcode.InstructionInvokeMethodStatic{
+				opcode.InstructionInvoke{
 					ArgCount: 0,
 				},
 
@@ -4086,9 +4089,9 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 13},
 
-				// panic("pre/post condition failed")
+				// $failPreCondition("")
 				opcode.InstructionStatement{},
-				opcode.InstructionGetGlobal{Global: panicFunctionIndex},
+				opcode.InstructionGetGlobal{Global: failPreConditionFunctionIndex},
 				opcode.InstructionGetConstant{Constant: panicMessageIndex},
 				opcode.InstructionTransferAndConvert{Type: 10},
 				opcode.InstructionInvoke{ArgCount: 1},
@@ -4099,7 +4102,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// return self.balance
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: selfIndex},
-				opcode.InstructionGetField{FieldName: 0, AccessedType: 6},
+				opcode.InstructionGetField{
+					FieldName:    fieldNameIndex,
+					AccessedType: 6,
+				},
 				opcode.InstructionTransferAndConvert{Type: 5},
 				opcode.InstructionReturnValue{},
 			},
@@ -4122,7 +4128,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				},
 				{
 					Location: nil,
-					Name:     "panic",
+					Name:     "$failPreCondition",
 				},
 			},
 			dProgram.Imports,
@@ -4769,27 +4775,32 @@ func TestCompileTransaction(t *testing.T) {
 
 	t.Parallel()
 
-	checker, err := ParseAndCheck(t, `
-        transaction {
-            var count: Int
+	checker, err := ParseAndCheckWithOptions(t,
+		`
+            transaction {
+                var count: Int
 
-            prepare() {
-                self.count = 2
-            }
+                prepare() {
+                    self.count = 2
+                }
 
-            pre {
-                self.count == 2
-            }
+                pre {
+                    self.count == 2
+                }
 
-            execute {
-                self.count = 10
-            }
+                execute {
+                    self.count = 10
+                }
 
-            post {
-                self.count == 10
+                post {
+                    self.count == 10
+                }
             }
-        }
-    `)
+        `,
+		ParseAndCheckOptions{
+			Location: common.TransactionLocation{},
+		},
+	)
 	require.NoError(t, err)
 
 	comp := compiler.NewInstructionCompilerWithConfig(
@@ -4819,16 +4830,36 @@ func TestCompileTransaction(t *testing.T) {
 		_
 		prepareFunctionIndex
 		executeFunctionIndex
-		panicFunctionIndex
+		failPreConditionFunctionIndex
+		failPostConditionFunctionIndex
 	)
 
 	// Transaction constructor
 	// Not interested in the content of the constructor.
 	constructor := program.Functions[transactionInitFunctionIndex]
-	require.Equal(t, commons.TransactionWrapperCompositeName, constructor.QualifiedName)
+	require.Equal(t,
+		commons.TransactionWrapperCompositeName,
+		constructor.QualifiedName,
+	)
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, transactionInitFunctionIndex, comp.Globals[commons.TransactionWrapperCompositeName].Index)
+	assert.Equal(t,
+		transactionInitFunctionIndex,
+		comp.Globals[commons.TransactionWrapperCompositeName].Index,
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionNewSimpleComposite{
+				Kind: common.CompositeKindStructure,
+				Type: 1,
+			},
+			opcode.InstructionSetLocal{Local: 0},
+			opcode.InstructionGetLocal{Local: 0},
+			opcode.InstructionReturnValue{},
+		},
+		constructor.Code,
+	)
 
 	// constant indexes
 	const (
@@ -4845,10 +4876,16 @@ func TestCompileTransaction(t *testing.T) {
 	)
 
 	prepareFunction := program.Functions[prepareFunctionIndex]
-	require.Equal(t, commons.TransactionPrepareFunctionName, prepareFunction.QualifiedName)
+	require.Equal(t,
+		commons.TransactionPrepareFunctionName,
+		prepareFunction.QualifiedName,
+	)
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, prepareFunctionIndex, comp.Globals[commons.TransactionPrepareFunctionName].Index)
+	assert.Equal(t,
+		prepareFunctionIndex,
+		comp.Globals[commons.TransactionPrepareFunctionName].Index,
+	)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -4870,14 +4907,14 @@ func TestCompileTransaction(t *testing.T) {
 	// Would be equivalent to:
 	//    fun execute {
 	//        if !(self.count == 2) {
-	//            panic("pre/post condition failed")
+	//            $failPreCondition("")
 	//        }
 	//
 	//        var $_result
 	//        self.count = 10
 	//
 	//        if !(self.count == 10) {
-	//            panic("pre/post condition failed")
+	//            $failPostCondition("")
 	//        }
 	//        return
 	//    }
@@ -4902,9 +4939,9 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionNot{},
 			opcode.InstructionJumpIfFalse{Target: 13},
 
-			// panic("pre/post condition failed")
+			// $failPreCondition("")
 			opcode.InstructionStatement{},
-			opcode.InstructionGetGlobal{Global: panicFunctionIndex},
+			opcode.InstructionGetGlobal{Global: failPreConditionFunctionIndex},
 			opcode.InstructionGetConstant{Constant: constErrorMsgIndex},
 			opcode.InstructionTransferAndConvert{Type: 6},
 			opcode.InstructionInvoke{ArgCount: 1},
@@ -4931,9 +4968,9 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionNot{},
 			opcode.InstructionJumpIfFalse{Target: 31},
 
-			// panic("pre/post condition failed")
+			// $failPostCondition("")
 			opcode.InstructionStatement{},
-			opcode.InstructionGetGlobal{Global: panicFunctionIndex},
+			opcode.InstructionGetGlobal{Global: failPostConditionFunctionIndex},
 			opcode.InstructionGetConstant{Constant: constErrorMsgIndex},
 			opcode.InstructionTransferAndConvert{Type: 6},
 			opcode.InstructionInvoke{ArgCount: 1},
@@ -6955,7 +6992,7 @@ func TestCompileOptionalChaining(t *testing.T) {
 
 				// Nil check
 				opcode.InstructionGetLocal{Local: optionalValueTempIndex},
-				opcode.InstructionJumpIfNil{Target: 14},
+				opcode.InstructionJumpIfNil{Target: 15},
 
 				// If `foo != nil`
 				// Unwrap the optional. (Loads receiver)
@@ -6964,8 +7001,9 @@ func TestCompileOptionalChaining(t *testing.T) {
 
 				// Load `Foo.bar` function
 				opcode.InstructionGetMethod{Method: 5},
-				opcode.InstructionInvokeMethodStatic{ArgCount: 0},
-				opcode.InstructionJump{Target: 15},
+				opcode.InstructionInvoke{ArgCount: 0},
+				opcode.InstructionWrap{},
+				opcode.InstructionJump{Target: 16},
 
 				// If `foo == nil`
 				opcode.InstructionNil{},
@@ -7034,7 +7072,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 
 				opcode.InstructionStatement{},
 
-				// <- y
+				// Load `y` onto the stack.
 				opcode.InstructionGetLocal{Local: yIndex},
 				opcode.InstructionTransferAndConvert{Type: 2},
 
@@ -7044,7 +7082,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionSetLocal{Local: yIndex},
 
-				// Store the transferred y-value above, to z.
+				// Transfer and store the loaded y-value above, to z.
 				// z <- y
 				opcode.InstructionSetLocal{Local: zIndex},
 
@@ -7094,6 +7132,8 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 		const (
 			xIndex = iota
 			yIndex
+			tempYIndex
+			tempIndexingValueIndex
 			zIndex
 		)
 
@@ -7121,17 +7161,27 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				opcode.InstructionStatement{},
 
 				// <- y["r"]
+
+				// Evaluate `y` and store in a temp local.
 				opcode.InstructionGetLocal{Local: yIndex},
+				opcode.InstructionSetLocal{Local: tempYIndex},
+
+				// evaluate "r", and store in a temp local.
 				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionSetLocal{Local: tempIndexingValueIndex},
+
+				// Evaluate the index expression, `y["r"]`, using temp locals.
+				opcode.InstructionGetLocal{Local: tempYIndex},
+				opcode.InstructionGetLocal{Local: tempIndexingValueIndex},
 				opcode.InstructionTransferAndConvert{Type: 3},
 				opcode.InstructionRemoveIndex{},
 				opcode.InstructionTransferAndConvert{Type: 4},
 
 				// Second value assignment.
 				// y["r"] <- x
-				opcode.InstructionGetLocal{Local: yIndex},
-				opcode.InstructionGetConstant{Constant: 0},
-				opcode.InstructionTransferAndConvert{Type: 3},
+				// `y` and "r" must be loaded from temp locals.
+				opcode.InstructionGetLocal{Local: tempYIndex},
+				opcode.InstructionGetLocal{Local: tempIndexingValueIndex},
 				opcode.InstructionGetLocal{Local: xIndex},
 				opcode.InstructionTransferAndConvert{Type: 4},
 				opcode.InstructionSetIndex{},
@@ -7193,6 +7243,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 		const (
 			xIndex = iota
 			yIndex
+			tempYIndex
 			zIndex
 		)
 
@@ -7215,13 +7266,20 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				opcode.InstructionStatement{},
 
 				// <- y.bar
+
+				// Evaluate `y` and store in a temp local.
 				opcode.InstructionGetLocal{Local: yIndex},
+				opcode.InstructionSetLocal{Local: tempYIndex},
+
+				// Evaluate the member access, `y.bar`, using temp local.
+				opcode.InstructionGetLocal{Local: tempYIndex},
 				opcode.InstructionRemoveField{FieldName: 0},
 				opcode.InstructionTransferAndConvert{Type: 1},
 
 				// Second value assignment.
-				// y.bar <- x
-				opcode.InstructionGetLocal{Local: yIndex},
+				//  `y.bar <- x`
+				// `y` must be loaded from the temp local.
+				opcode.InstructionGetLocal{Local: tempYIndex},
 				opcode.InstructionGetLocal{Local: xIndex},
 				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionSetField{FieldName: 0, AccessedType: 2},
@@ -7303,25 +7361,24 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 
 				// store y in temp index for nil check
 				opcode.InstructionGetLocal{Local: yIndex},
-				opcode.InstructionSetLocal{Local: tempIndex},
+				opcode.InstructionTransferAndConvert{Type: 2},
 
-				// nil check on temp y
-				opcode.InstructionGetLocal{Local: tempIndex},
-				opcode.InstructionJumpIfNil{Target: 29},
-
-				// If not-nil, transfer the temp y (i.e: <- y)
-				opcode.InstructionGetLocal{Local: tempIndex},
-				opcode.InstructionUnwrap{},
-				opcode.InstructionTransferAndConvert{Type: 1},
-
-				// Second value assignment.
+				// Second value assignment. Store `x` in `y`.
 				// y <- x
 				opcode.InstructionGetLocal{Local: xIndex},
 				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionSetLocal{Local: yIndex},
 
-				// Store the transferred y-value above, to z.
-				// z <- y
+				// Store the previously loaded `y`s old value on the temp local.
+				opcode.InstructionSetLocal{Local: tempIndex},
+
+				// nil check on temp y.
+				opcode.InstructionGetLocal{Local: tempIndex},
+				opcode.InstructionJumpIfNil{Target: 29},
+
+				// If not-nil, transfer the temp `y` and store in `z` (i.e: y <- y)
+				opcode.InstructionGetLocal{Local: tempIndex},
+				opcode.InstructionUnwrap{},
 				opcode.InstructionSetLocal{Local: zIndex},
 
 				// let res: @R <- z
@@ -7424,7 +7481,7 @@ func TestCompileEnum(t *testing.T) {
 		assert.Equal(t,
 			[]opcode.Instruction{
 				// let self = Test()
-				opcode.InstructionNew{
+				opcode.InstructionNewComposite{
 					Kind: common.CompositeKindEnum,
 					Type: 1,
 				},
@@ -7617,7 +7674,7 @@ func TestCompileOptionalArgument(t *testing.T) {
             }
             `,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
 						return baseValueActivation
 					},
@@ -7627,7 +7684,7 @@ func TestCompileOptionalArgument(t *testing.T) {
 		require.NoError(t, err)
 
 		config := &compiler.Config{
-			BuiltinGlobalsProvider: func() *activations.Activation[compiler.GlobalImport] {
+			BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
 				activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 				activation.Set(
 					stdlib.AssertFunctionName,
@@ -7715,14 +7772,30 @@ func TestCompileOptionalArgument(t *testing.T) {
 		functions := program.Functions
 		require.Len(t, functions, 4)
 
+		const (
+			_ = iota
+			accountFieldNameIndex
+			contractsFieldNameIndex
+			contractNameIndex
+			contractCodeIndex
+			utf8FieldNameIndex
+			optionalArgIndex
+		)
+
 		assert.Equal(t,
 			[]opcode.Instruction{
 				opcode.InstructionStatement{},
 
 				// Load receiver `self.account.contracts`.
 				opcode.InstructionGetLocal{Local: 0},
-				opcode.InstructionGetField{FieldName: 0, AccessedType: 1},
-				opcode.InstructionGetField{FieldName: 1, AccessedType: 4},
+				opcode.InstructionGetField{
+					FieldName:    accountFieldNameIndex,
+					AccessedType: 1,
+				},
+				opcode.InstructionGetField{
+					FieldName:    contractsFieldNameIndex,
+					AccessedType: 4,
+				},
 				opcode.InstructionNewRef{Type: 5, IsImplicit: true},
 
 				// Load function value `add()`
@@ -7731,19 +7804,22 @@ func TestCompileOptionalArgument(t *testing.T) {
 				// Load arguments.
 
 				// Name: "Foo",
-				opcode.InstructionGetConstant{Constant: 2},
+				opcode.InstructionGetConstant{Constant: contractNameIndex},
 				opcode.InstructionTransferAndConvert{Type: 6},
 
 				// Contract code
-				opcode.InstructionGetConstant{Constant: 3},
-				opcode.InstructionGetField{FieldName: 4, AccessedType: 6},
+				opcode.InstructionGetConstant{Constant: contractCodeIndex},
+				opcode.InstructionGetField{
+					FieldName:    utf8FieldNameIndex,
+					AccessedType: 6,
+				},
 				opcode.InstructionTransferAndConvert{Type: 7},
 
 				// Message: "Optional arg"
-				opcode.InstructionGetConstant{Constant: 5},
+				opcode.InstructionGetConstant{Constant: optionalArgIndex},
 				opcode.InstructionTransfer{},
 
-				opcode.InstructionInvokeMethodStatic{ArgCount: 3},
+				opcode.InstructionInvoke{ArgCount: 3},
 				opcode.InstructionDrop{},
 
 				opcode.InstructionReturn{}},
@@ -7752,6 +7828,10 @@ func TestCompileOptionalArgument(t *testing.T) {
 
 		assert.Equal(t,
 			[]constant.Constant{
+				{
+					Data: []byte{0x1},
+					Kind: constant.Address,
+				},
 				{
 					Data: []byte("account"),
 					Kind: constant.String,
@@ -7781,6 +7861,89 @@ func TestCompileOptionalArgument(t *testing.T) {
 		)
 	})
 
+}
+
+func TestCompileContract(t *testing.T) {
+	t.Parallel()
+
+	aContract := `
+        contract A {
+            let x: Int
+
+            init() {
+                self.x = 1
+            }
+        }
+    `
+
+	programs := CompiledPrograms{}
+
+	contractsAddress := common.MustBytesToAddress([]byte{0x1})
+
+	aLocation := common.NewAddressLocation(nil, contractsAddress, "A")
+
+	program := ParseCheckAndCompile(
+		t,
+		aContract,
+		aLocation,
+		programs,
+	)
+
+	functions := program.Functions
+	require.Len(t, functions, 3)
+
+	const (
+		addressIndex = iota
+		oneIndex
+		xFieldNameIndex
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// let self = A()
+			opcode.InstructionNewCompositeAt{
+				Kind:    common.CompositeKindContract,
+				Type:    1,
+				Address: addressIndex,
+			},
+			opcode.InstructionDup{},
+			opcode.InstructionSetGlobal{Global: 0},
+			opcode.InstructionSetLocal{Local: 0},
+
+			// self.x = 1
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: 0},
+			opcode.InstructionGetConstant{Constant: oneIndex},
+			opcode.InstructionTransferAndConvert{Type: 2},
+			opcode.InstructionSetField{
+				FieldName:    xFieldNameIndex,
+				AccessedType: 1,
+			},
+
+			// return self
+			opcode.InstructionGetLocal{Local: 0},
+			opcode.InstructionReturnValue{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]constant.Constant{
+			{
+				Data: []byte{0x1},
+				Kind: constant.Address,
+			},
+			{
+				Data: []byte{1},
+				Kind: constant.Int,
+			},
+			{
+				Data: []byte("x"),
+				Kind: constant.String,
+			},
+		},
+		program.Constants,
+	)
 }
 
 func TestCompileSwapIdentifiers(t *testing.T) {
@@ -8097,10 +8260,10 @@ func TestCompileStringTemplate(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-			fun test() {
-				let str = "2+2=\(2+2)"
-			}
-		`)
+            fun test() {
+                let str = "2+2=\(2+2)"
+            }
+        `)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(
@@ -8155,13 +8318,13 @@ func TestCompileStringTemplate(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-			fun test() {
-				let a = "A"
-				let b = "B"
-				let c = 4
-				let str = "\(a) + \(b) = \(c)"
-			}
-		`)
+            fun test() {
+                let a = "A"
+                let b = "B"
+                let c = 4
+                let str = "\(a) + \(b) = \(c)"
+            }
+        `)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(
@@ -8244,7 +8407,7 @@ func TestForStatementCapturing(t *testing.T) {
 	t.Parallel()
 
 	checker, err := ParseAndCheck(t, `
-	    fun test() {
+        fun test() {
            for i, x in [1, 2, 3] {
                let f = fun (): Int {
                    return x + i
@@ -8392,7 +8555,7 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 		checker, err := ParseAndCheck(t, `
         fun test() {
             var foo = fun(x: Int): Int {
-                pre {x > 0}
+                pre { x > 0 }
                 return 5
             }
         }
@@ -8428,7 +8591,7 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 		// Function expression. Would be equivalent to:
 		// fun foo(x: Int): Int {
 		//    if !(x > 0) {
-		//        panic("pre/post condition failed")
+		//        $failPreCondition("")
 		//    }
 		//    return 5
 		// }
@@ -8450,7 +8613,7 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 12},
 
-				// panic("pre/post condition failed")
+				// $failPreCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 1}, // error message
@@ -8476,7 +8639,7 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 		checker, err := ParseAndCheck(t, `
         fun test() {
             var foo = fun(x: Int): Int {
-                post {x > 0}
+                post { x > 0 }
                 return 5
             }
         }
@@ -8521,7 +8684,7 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 		//    $_result = 5
 		//    let result = $_result
 		//    if !(x > 0) {
-		//        panic("pre/post condition failed")
+		//        $failPostCondition("")
 		//    }
 		//    return $_result
 		// }
@@ -8554,7 +8717,7 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 21},
 
-				// panic("pre/post condition failed")
+				// $failPostCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 2}, // error message
@@ -8582,13 +8745,13 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-        fun test() {
-            fun foo(x: Int): Int {
-                pre {x > 0}
-                return 5
+            fun test() {
+                fun foo(x: Int): Int {
+                    pre { x > 0 }
+                    return 5
+                }
             }
-        }
-    `)
+        `)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(
@@ -8619,7 +8782,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 		// Function expression. Would be equivalent to:
 		// fun foo(x: Int): Int {
 		//    if !(x > 0) {
-		//        panic("pre/post condition failed")
+		//        $failPreCondition("")
 		//    }
 		//    return 5
 		// }
@@ -8641,7 +8804,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 12},
 
-				// panic("pre/post condition failed")
+				// $failPreCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 1}, // error message
@@ -8665,13 +8828,13 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-        fun test() {
-            fun foo(x: Int): Int {
-                post {x > 0}
-                return 5
+            fun test() {
+                fun foo(x: Int): Int {
+                    post { x > 0 }
+                    return 5
+                }
             }
-        }
-    `)
+        `)
 		require.NoError(t, err)
 
 		comp := compiler.NewInstructionCompiler(
@@ -8711,7 +8874,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 		//    $_result = 5
 		//    let result = $_result
 		//    if !(x > 0) {
-		//        panic("pre/post condition failed")
+		//        $failPostCondition("")
 		//    }
 		//    return $_result
 		// }
@@ -8744,7 +8907,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 21},
 
-				// panic("pre/post condition failed")
+				// $failPostCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 2}, // error message
@@ -8771,7 +8934,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
             if true {
                 if true {
                     fun foo(x: Int): Int {
-                        pre {x > 0}
+                        pre { x > 0 }
                         return 5
                     }
                 }
@@ -8814,7 +8977,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 		// Function expression. Would be equivalent to:
 		// fun foo(x: Int): Int {
 		//    if !(x > 0) {
-		//        panic("pre/post condition failed")
+		//        $failPreCondition("")
 		//    }
 		//    return 5
 		// }
@@ -8836,7 +8999,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 				opcode.InstructionNot{},
 				opcode.InstructionJumpIfFalse{Target: 12},
 
-				// panic("pre/post condition failed")
+				// $failPreCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 1}, // error message
@@ -8949,13 +9112,14 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.InstructionGetTypeIndex{Type: 4},
 				opcode.InstructionSetLocal{Local: attachmentLocalIndex},
 				opcode.InstructionGetLocal{Local: attachmentLocalIndex},
-				opcode.InstructionJumpIfNil{Target: 31},
+				opcode.InstructionJumpIfNil{Target: 32},
 				opcode.InstructionGetLocal{Local: attachmentLocalIndex},
 				opcode.InstructionUnwrap{},
 				// call foo if not nil
 				opcode.InstructionGetMethod{Method: 8},
-				opcode.InstructionInvokeMethodStatic{TypeArgs: []uint16(nil), ArgCount: 0},
-				opcode.InstructionJump{Target: 32},
+				opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0},
+				opcode.InstructionWrap{},
+				opcode.InstructionJump{Target: 33},
 				opcode.InstructionNil{},
 				opcode.InstructionUnwrap{},
 				opcode.InstructionTransferAndConvert{Type: 3},
@@ -8976,7 +9140,7 @@ func TestCompileAttachments(t *testing.T) {
 		assert.Equal(t,
 			[]opcode.Instruction{
 				// create attachment
-				opcode.InstructionNew{Kind: 6, Type: 4},
+				opcode.InstructionNewComposite{Kind: 6, Type: 4},
 				// set returnLocalIndex to attachment
 				opcode.InstructionSetLocal{Local: returnLocalIndex},
 				// get a reference to attachment
@@ -9064,5 +9228,436 @@ func TestCompileImportEnumCase(t *testing.T) {
 			},
 		},
 		bProgram.Imports,
+	)
+}
+
+func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      struct interface SI {
+          fun answer(): Int
+      }
+
+      fun answer(_ si: {SI}?): Int? {
+          return si?.answer()
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 4)
+
+	const (
+		siIndex = iota
+		tempIndex
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionStatement{},
+			opcode.InstructionGetLocal{Local: siIndex},
+			opcode.InstructionSetLocal{Local: tempIndex},
+			opcode.InstructionGetLocal{Local: tempIndex},
+			opcode.InstructionJumpIfNil{Target: 10},
+			opcode.InstructionGetLocal{Local: tempIndex},
+			opcode.InstructionUnwrap{},
+			opcode.InstructionInvokeDynamic{
+				Name:     0,
+				ArgCount: 0,
+			},
+			opcode.InstructionWrap{},
+			opcode.InstructionJump{Target: 11},
+			opcode.InstructionNil{},
+			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionReturnValue{},
+		},
+		functions[0].Code,
+	)
+
+	assert.Equal(t,
+		[]constant.Constant{
+			{
+				Data: []byte("answer"),
+				Kind: constant.String,
+			},
+		},
+		program.Constants,
+	)
+
+}
+
+func TestCompileInjectedContract(t *testing.T) {
+
+	t.Parallel()
+
+	cType := &sema.FunctionType{
+		Parameters: []sema.Parameter{
+			{
+				Label:          sema.ArgumentLabelNotRequired,
+				Identifier:     "n",
+				TypeAnnotation: sema.IntTypeAnnotation,
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+	}
+
+	bType := &sema.CompositeType{
+		Identifier: "B",
+		Kind:       common.CompositeKindContract,
+	}
+
+	bType.Members = sema.MembersAsMap([]*sema.Member{
+		sema.NewUnmeteredPublicFunctionMember(
+			bType,
+			"c",
+			cType,
+			"",
+		),
+		sema.NewUnmeteredPublicConstantFieldMember(
+			bType,
+			"d",
+			sema.IntType,
+			"",
+		),
+	})
+
+	bStaticType := interpreter.ConvertSemaCompositeTypeToStaticCompositeType(nil, bType)
+
+	bValue := interpreter.NewSimpleCompositeValue(
+		nil,
+		bType.ID(),
+		bStaticType,
+		[]string{"d"},
+		map[string]interpreter.Value{
+			"d": interpreter.NewUnmeteredIntValueFromInt64(1),
+		},
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.StandardLibraryValue{
+		Name:  bType.Identifier,
+		Type:  bType,
+		Value: bValue,
+		Kind:  common.DeclarationKindContract,
+	})
+
+	checker, err := ParseAndCheckWithOptions(t,
+		`
+          contract A {
+              fun test(): Int {
+                  return B.c(B.d)
+              }
+          }
+        `,
+		ParseAndCheckOptions{
+			Location: TestLocation,
+			CheckerConfig: &sema.Config{
+				BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+					assert.Equal(t, TestLocation, location)
+					return baseValueActivation
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	config := &compiler.Config{
+		BuiltinGlobalsProvider: func(location common.Location) *activations.Activation[compiler.GlobalImport] {
+			assert.Equal(t, TestLocation, location)
+			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+			activation.Set(
+				"B",
+				compiler.GlobalImport{
+					Name: "B",
+				},
+			)
+			activation.Set(
+				"B.c",
+				compiler.GlobalImport{
+					Name: "B.c",
+				},
+			)
+			return activation
+		},
+	}
+
+	comp := compiler.NewInstructionCompilerWithConfig(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+		config,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 4)
+
+	aTestFunction := functions[3]
+
+	require.Equal(t, aTestFunction.QualifiedName, "A.test")
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// return B.c(B.d)
+			opcode.InstructionStatement{},
+			// B.c(...)
+			opcode.InstructionGetGlobal{Global: 5},
+			opcode.InstructionGetMethod{Method: 6},
+			// B.d
+			opcode.InstructionGetGlobal{Global: 5},
+			opcode.InstructionGetField{
+				FieldName:    0,
+				AccessedType: 5,
+			},
+			opcode.InstructionTransferAndConvert{Type: 6},
+			opcode.InstructionInvoke{ArgCount: 1},
+			opcode.InstructionTransferAndConvert{Type: 6},
+			// return
+			opcode.InstructionReturnValue{},
+		},
+		aTestFunction.Code,
+	)
+
+	assert.Equal(t,
+		[]constant.Constant{
+			{
+				Data: []byte("d"),
+				Kind: constant.String,
+			},
+		},
+		program.Constants,
+	)
+
+	assert.Equal(t,
+		[]bbq.Import{
+			{
+				Name: "B",
+			},
+			{
+				Name: "B.c",
+			},
+		},
+		program.Imports,
+	)
+}
+
+func TestNestedLoops(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+         fun test() {
+             for x in [1, 2] {
+                 for y in [1] {}
+             }
+         }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 1)
+
+	const (
+		outerIterIndex = iota
+		xIndex
+		innerIterIndex
+		yIndex
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// for x in [1, 2]
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0},
+			opcode.InstructionTransferAndConvert{Type: 2},
+			opcode.InstructionGetConstant{Constant: 1},
+			opcode.InstructionTransferAndConvert{Type: 2},
+			opcode.InstructionNewArray{
+				Type: 1,
+				Size: 2,
+			},
+			opcode.InstructionIterator{},
+			opcode.InstructionSetLocal{Local: outerIterIndex},
+			opcode.InstructionGetLocal{Local: outerIterIndex},
+			opcode.InstructionIteratorHasNext{},
+			opcode.InstructionJumpIfFalse{Target: 34},
+
+			opcode.InstructionLoop{},
+			opcode.InstructionGetLocal{Local: outerIterIndex},
+			opcode.InstructionIteratorNext{},
+			opcode.InstructionTransferAndConvert{Type: 2},
+			opcode.InstructionSetLocal{Local: xIndex},
+
+			// for y in [1]
+			opcode.InstructionStatement{},
+			opcode.InstructionGetConstant{Constant: 0},
+			opcode.InstructionTransferAndConvert{Type: 2},
+			opcode.InstructionNewArray{
+				Type: 1,
+				Size: 1,
+			},
+			opcode.InstructionIterator{},
+			opcode.InstructionSetLocal{Local: innerIterIndex},
+			opcode.InstructionGetLocal{Local: innerIterIndex},
+			opcode.InstructionIteratorHasNext{},
+			opcode.InstructionJumpIfFalse{Target: 31},
+
+			opcode.InstructionLoop{},
+			opcode.InstructionGetLocal{Local: innerIterIndex},
+			opcode.InstructionIteratorNext{},
+			opcode.InstructionTransferAndConvert{Type: 2},
+			opcode.InstructionSetLocal{Local: yIndex},
+
+			opcode.InstructionJump{Target: 22},
+			opcode.InstructionGetLocal{Local: innerIterIndex},
+			opcode.InstructionIteratorEnd{},
+
+			opcode.InstructionJump{Target: 8},
+			opcode.InstructionGetLocal{Local: outerIterIndex},
+			opcode.InstructionIteratorEnd{},
+
+			opcode.InstructionReturn{},
+		},
+		functions[0].Code,
+	)
+}
+
+func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
+
+	t.Parallel()
+
+	// Deploy contract interface
+
+	barContract := `
+        contract interface Bar {
+            resource interface XYZ {
+                var x: Int
+                event ResourceDestroyed(x: Int = self.x)
+            }
+        }
+    `
+
+	programs := CompiledPrograms{}
+
+	contractsAddress := common.MustBytesToAddress([]byte{0x1})
+
+	barLocation := common.NewAddressLocation(nil, contractsAddress, "Bar")
+	fooLocation := common.NewAddressLocation(nil, contractsAddress, "Foo")
+
+	barProgram := ParseCheckAndCompile(
+		t,
+		barContract,
+		barLocation,
+		programs,
+	)
+
+	functions := barProgram.Functions
+	require.Len(t, functions, 8)
+
+	defaultDestroyEventConstructor := functions[5]
+	require.Equal(t, "Bar.XYZ.ResourceDestroyed", defaultDestroyEventConstructor.Name)
+
+	const (
+		xIndex = iota
+		selfIndex
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// Create a `Bar.XYZ.ResourceDestroyed` event value.
+			opcode.InstructionNewComposite{Kind: 4, Type: 4},
+			opcode.InstructionSetLocal{Local: selfIndex},
+			opcode.InstructionStatement{},
+
+			// Set the parameter to the field.
+			//  `self.x = x`
+			opcode.InstructionGetLocal{Local: selfIndex},
+			opcode.InstructionGetLocal{Local: xIndex},
+			opcode.InstructionTransferAndConvert{Type: 5},
+			opcode.InstructionSetField{
+				FieldName:    0,
+				AccessedType: 4,
+			},
+
+			// Return the constructed event value.
+			opcode.InstructionGetLocal{Local: selfIndex},
+			opcode.InstructionReturnValue{},
+		},
+		defaultDestroyEventConstructor.Code,
+	)
+
+	// Deploy contract implementation
+
+	fooContract := fmt.Sprintf(
+		`
+        import Bar from %[1]s
+
+        contract Foo {
+
+            resource ABC: Bar.XYZ {
+                var x: Int
+
+                init() {
+                    self.x = 6
+                }
+            }
+
+            fun createABC(): @ABC {
+                return <- create ABC()
+            }
+        }
+            `,
+		contractsAddress.HexWithPrefix(),
+	)
+
+	fooProgram := ParseCheckAndCompile(t, fooContract, fooLocation, programs)
+
+	functions = fooProgram.Functions
+	require.Len(t, functions, 9)
+
+	defaultDestroyEventEmittingFunction := functions[8]
+	require.Equal(t, "Foo.ABC.$ResourceDestroyed", defaultDestroyEventEmittingFunction.QualifiedName)
+
+	const inheritedEventConstructorIndex = 10
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			opcode.InstructionStatement{},
+
+			// Construct the inherited event
+			// Bar.XYZ.ResourceDestroyed(self.x)
+			opcode.InstructionGetGlobal{Global: inheritedEventConstructorIndex},
+			opcode.InstructionGetLocal{Local: 0},
+			opcode.InstructionGetField{FieldName: 2, AccessedType: 9},
+			opcode.InstructionTransferAndConvert{Type: 6},
+			opcode.InstructionInvoke{ArgCount: 1},
+
+			// Create the array with the above event.
+			// `[Bar.XYZ.ResourceDestroyed(self.x)]`
+			opcode.InstructionTransferAndConvert{Type: 10},
+			opcode.InstructionNewArray{Type: 8, Size: 1, IsResource: false},
+			opcode.InstructionTransferAndConvert{Type: 8},
+
+			// return the array
+			opcode.InstructionReturnValue{},
+		},
+		defaultDestroyEventEmittingFunction.Code,
 	)
 }

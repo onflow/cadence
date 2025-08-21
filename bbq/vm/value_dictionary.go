@@ -29,7 +29,7 @@ import (
 
 func init() {
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		commons.TypeQualifierDictionary,
 		NewNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeRemoveFunctionName,
@@ -37,16 +37,15 @@ func init() {
 				dictionaryType := dictionaryType(receiver, context)
 				return sema.DictionaryRemoveFunctionType(dictionaryType)
 			},
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				value := arguments[ReceiverIndex]
-				dictionary := value.(*interpreter.DictionaryValue)
-				key := arguments[1]
+			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
+				dictionary := receiver.(*interpreter.DictionaryValue)
+				key := arguments[0]
 				return dictionary.Remove(context, EmptyLocationRange, key)
 			},
 		),
 	)
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		commons.TypeQualifierDictionary,
 		NewNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeInsertFunctionName,
@@ -54,11 +53,10 @@ func init() {
 				dictionaryType := dictionaryType(receiver, context)
 				return sema.DictionaryInsertFunctionType(dictionaryType)
 			},
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				value := arguments[ReceiverIndex]
-				dictionary := value.(*interpreter.DictionaryValue)
-				keyValue := arguments[1]
-				newValue := arguments[2]
+			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
+				dictionary := receiver.(*interpreter.DictionaryValue)
+				keyValue := arguments[0]
+				newValue := arguments[1]
 
 				return dictionary.Insert(
 					context,
@@ -70,7 +68,7 @@ func init() {
 		),
 	)
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		commons.TypeQualifierDictionary,
 		NewNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeContainsKeyFunctionName,
@@ -78,10 +76,9 @@ func init() {
 				dictionaryType := dictionaryType(receiver, context)
 				return sema.DictionaryContainsKeyFunctionType(dictionaryType)
 			},
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				value := arguments[ReceiverIndex]
-				dictionary := value.(*interpreter.DictionaryValue)
-				key := arguments[1]
+			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
+				dictionary := receiver.(*interpreter.DictionaryValue)
+				key := arguments[0]
 				return dictionary.ContainsKey(
 					context,
 					EmptyLocationRange,
@@ -91,7 +88,7 @@ func init() {
 		),
 	)
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		commons.TypeQualifierDictionary,
 		NewNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeForEachKeyFunctionName,
@@ -100,10 +97,9 @@ func init() {
 				dictionaryType := dictionaryValue.SemaType(context)
 				return sema.DictionaryRemoveFunctionType(dictionaryType)
 			},
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				value := arguments[ReceiverIndex]
-				dictionary := value.(*interpreter.DictionaryValue)
-				funcArgument := arguments[1].(FunctionValue)
+			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
+				dictionary := receiver.(*interpreter.DictionaryValue)
+				funcArgument := arguments[0].(FunctionValue)
 				dictionary.ForEachKey(
 					context,
 					EmptyLocationRange,

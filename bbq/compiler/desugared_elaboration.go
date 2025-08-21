@@ -29,9 +29,12 @@ type DesugaredElaboration struct {
 	// since that would make it easy to mistakenly modify the original elaboration.
 	elaboration *sema.Elaboration
 
-	// Holds the elaborations associated with inherited pre-/post-conditions and
-	// before-statements of those post conditions.
-	conditionsElaborations map[ast.Statement]*DesugaredElaboration
+	// Holds the elaborations associated with inherited codes.
+	// e.g:
+	//  - inherited pre-/post-conditions.
+	//  - inherited before-statements of post conditions.
+	//  - inherited event default parameters.
+	inheritedCodeElaborations map[ast.Element]*DesugaredElaboration
 
 	interfaceMethodStaticCalls        map[*ast.InvocationExpression]struct{}
 	interfaceDeclarationTypes         map[*ast.InterfaceDeclaration]*sema.InterfaceType
@@ -52,8 +55,8 @@ type DesugaredElaboration struct {
 
 func NewDesugaredElaboration(elaboration *sema.Elaboration) *DesugaredElaboration {
 	return &DesugaredElaboration{
-		elaboration:            elaboration,
-		conditionsElaborations: map[ast.Statement]*DesugaredElaboration{},
+		elaboration:               elaboration,
+		inheritedCodeElaborations: map[ast.Element]*DesugaredElaboration{},
 	}
 }
 

@@ -19,6 +19,8 @@
 package vm
 
 import (
+	"math"
+
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
@@ -28,12 +30,15 @@ import (
 // Config contains the VM configurations that is safe to be re-used across VMs/executions.
 // It does not hold data specific to a single execution. i.e: No state is maintained.
 type Config struct {
-	Tracer
-	storage                interpreter.Storage
-	ImportHandler          commons.ImportHandler
-	ContractValueHandler   ContractValueHandler
+	interpreter.Tracer
+	storage              interpreter.Storage
+	ImportHandler        commons.ImportHandler
+	ElaborationResolver  ElaborationResolver
+	ContractValueHandler ContractValueHandler
+	// BuiltinGlobalsProvider provides the built-in globals for a given location.
+	// NOTE: all global must be defined for location nil!
 	BuiltinGlobalsProvider BuiltinGlobalsProvider
-	TypeLoader             func(location common.Location, typeID interpreter.TypeID) sema.ContainedType
+	TypeLoader             func(location common.Location, typeID interpreter.TypeID) (sema.Type, error)
 
 	MemoryGauge      common.MemoryGauge
 	ComputationGauge common.ComputationGauge
@@ -57,13 +62,16 @@ type Config struct {
 	AtreeStorageValidationEnabled bool
 	// AtreeValueValidationEnabled determines if the validation of atree values is enabled
 	AtreeValueValidationEnabled bool
+	// StackDepthLimit is the maximum depth of the call stack
+	StackDepthLimit uint64
 
 	debugEnabled bool
 }
 
 func NewConfig(storage interpreter.Storage) *Config {
 	return &Config{
-		storage: storage,
+		storage:         storage,
+		StackDepthLimit: math.MaxInt,
 	}
 }
 
@@ -98,7 +106,11 @@ func (c *Config) GetInterfaceType(
 		}
 	}
 
-	ty := c.TypeLoader(location, typeID)
+	ty, err := c.TypeLoader(location, typeID)
+	if err != nil {
+		return nil, err
+	}
+
 	interfaceType, ok := ty.(*sema.InterfaceType)
 	if !ok {
 		return nil, interpreter.TypeLoadingError{
@@ -122,7 +134,11 @@ func (c *Config) GetCompositeType(
 		}
 	}
 
-	ty := c.TypeLoader(location, typeID)
+	ty, err := c.TypeLoader(location, typeID)
+	if err != nil {
+		return nil, err
+	}
+
 	compositeType, ok := ty.(*sema.CompositeType)
 	if !ok {
 		return nil, interpreter.TypeLoadingError{
@@ -150,7 +166,11 @@ func (c *Config) GetEntitlementType(typeID interpreter.TypeID) (*sema.Entitlemen
 		return ty, nil
 	}
 
-	ty := c.TypeLoader(location, typeID)
+	ty, err := c.TypeLoader(location, typeID)
+	if err != nil {
+		return nil, err
+	}
+
 	entitlementType, ok := ty.(*sema.EntitlementType)
 	if !ok {
 		return nil, interpreter.TypeLoadingError{
@@ -178,7 +198,11 @@ func (c *Config) GetEntitlementMapType(typeID interpreter.TypeID) (*sema.Entitle
 		return ty, nil
 	}
 
-	ty := c.TypeLoader(location, typeID)
+	ty, err := c.TypeLoader(location, typeID)
+	if err != nil {
+		return nil, err
+	}
+
 	entitlementMapType, ok := ty.(*sema.EntitlementMapType)
 	if !ok {
 		return nil, interpreter.TypeLoadingError{
@@ -203,11 +227,6 @@ func (c *Config) GetInjectedCompositeFieldsHandler() interpreter.InjectedComposi
 
 func (c *Config) GetAccountHandlerFunc() interpreter.AccountHandlerFunc {
 	return c.AccountHandlerFunc
-}
-
-func (c *Config) GetContractValue(contractLocation common.AddressLocation) (*interpreter.CompositeValue, error) {
-	//TODO
-	return nil, nil
 }
 
 func (c *Config) GetValidateAccountCapabilitiesGetHandler() interpreter.ValidateAccountCapabilitiesGetHandlerFunc {
@@ -266,3 +285,5 @@ type ContractValueHandler func(
 	context *Context,
 	location common.Location,
 ) *interpreter.CompositeValue
+
+type ElaborationResolver func(location common.Location) (*sema.Elaboration, error)

@@ -403,7 +403,7 @@ func TestCheckNonIntegerComparisonOperations(t *testing.T) {
 							test.ty, test.leftType, test.left, test.rightType, test.right, operation.Symbol(),
 						),
 						ParseAndCheckOptions{
-							Config: &sema.Config{
+							CheckerConfig: &sema.Config{
 								BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
 									return baseValueActivation
 								},

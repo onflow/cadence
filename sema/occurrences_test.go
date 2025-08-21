@@ -41,7 +41,7 @@ func TestCheckOccurrencesVariableDeclarations(t *testing.T) {
         var y = x
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				PositionInfoEnabled: true,
 			},
 		},
@@ -113,7 +113,7 @@ func TestCheckOccurrencesFunction(t *testing.T) {
         }
 		`,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				PositionInfoEnabled: true,
 			},
 		},
@@ -254,7 +254,7 @@ func TestCheckOccurrencesStructAndInterface(t *testing.T) {
 	    }
 		`,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				PositionInfoEnabled: true,
 			},
 		},

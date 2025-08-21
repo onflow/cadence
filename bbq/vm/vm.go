@@ -57,31 +57,15 @@ func NewVM(
 	program *bbq.InstructionProgram,
 	config *Config,
 ) *VM {
-	// TODO: Remove initializing config. Following is for testing purpose only.
-	if config == nil {
-		config = &Config{}
-	}
 
 	context := NewContext(config)
-
-	if context.storage == nil {
-		context.storage = interpreter.NewInMemoryStorage(nil)
-	}
-
-	if context.BuiltinGlobalsProvider == nil {
-		context.BuiltinGlobalsProvider = DefaultBuiltinGlobals
-	}
 
 	if context.referencedResourceKindedValues == nil {
 		context.referencedResourceKindedValues = ReferencedResourceKindedValues{}
 	}
 
 	// linkedGlobalsCache is a local cache-alike that is being used to hold already linked imports.
-	linkedGlobalsCache := map[common.Location]LinkedGlobals{
-		BuiltInLocation: {
-			indexedGlobals: context.BuiltinGlobalsProvider(),
-		},
-	}
+	linkedGlobalsCache := map[common.Location]LinkedGlobals{}
 
 	vm := &VM{
 		linkedGlobalsCache: linkedGlobalsCache,
@@ -90,7 +74,9 @@ func NewVM(
 
 	// Delegate the function invocations to the vm.
 	context.invokeFunction = vm.invokeFunction
-	context.lookupFunction = vm.maybeLookupFunction
+	context.lookupFunction = vm.lookupFunction
+
+	context.recoverErrors = vm.RecoverErrors
 
 	// Link global variables and functions.
 	linkedGlobals := LinkGlobals(
@@ -223,11 +209,23 @@ func fill(slice []Value, n int) []Value {
 	return slice
 }
 
-func (vm *VM) pushCallFrame(functionValue CompiledFunctionValue, arguments []Value) {
+func (vm *VM) pushCallFrame(functionValue CompiledFunctionValue, receiver Value, arguments []Value) {
+	if uint64(len(vm.callstack)) == vm.context.StackDepthLimit {
+		panic(&interpreter.CallStackLimitExceededError{
+			Limit: vm.context.StackDepthLimit,
+		})
+	}
+
 	localsCount := functionValue.Function.LocalCount
 
+	passedInLocalsCount := len(arguments)
+	if receiver != nil {
+		vm.locals = append(vm.locals, receiver)
+		passedInLocalsCount++
+	}
+
 	vm.locals = append(vm.locals, arguments...)
-	vm.locals = fill(vm.locals, int(localsCount)-len(arguments))
+	vm.locals = fill(vm.locals, int(localsCount)-passedInLocalsCount)
 
 	// Calculate the offset for local variable for the new callframe.
 	// This is equal to: (local var offset + local var count) of previous callframe.
@@ -283,15 +281,9 @@ func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err er
 		}
 	}
 
-	defer func() {
-		recovered := recover()
-		if recovered == nil {
-			return
-		}
-
-		// TODO:
-		err, _ = recovered.(error)
-	}()
+	defer vm.RecoverErrors(func(internalErr error) {
+		err = internalErr
+	})
 
 	function := functionVariable.GetValue(vm.context)
 
@@ -320,15 +312,9 @@ func (vm *VM) InvokeMethodExternally(
 		}
 	}
 
-	defer func() {
-		recovered := recover()
-		if recovered == nil {
-			return
-		}
-
-		// TODO:
-		err, _ = recovered.(error)
-	}()
+	defer vm.RecoverErrors(func(internalErr error) {
+		err = internalErr
+	})
 
 	context := vm.context
 
@@ -360,15 +346,10 @@ func (vm *VM) validateAndInvokeExternally(functionValue FunctionValue, arguments
 		return nil, err
 	}
 
-	if boundFunction, ok := functionValue.(*BoundFunctionValue); ok {
-		receiver := boundFunction.Receiver(vm.context)
-		preparedArguments = append([]Value{receiver}, preparedArguments...)
-	}
-
 	return vm.invokeExternally(functionValue, preparedArguments)
 }
 
-func (vm *VM) invokeExternally(functionValue Value, arguments []Value) (Value, error) {
+func (vm *VM) invokeExternally(functionValue FunctionValue, arguments []Value) (Value, error) {
 	invokeFunction(
 		vm,
 		functionValue,
@@ -376,10 +357,13 @@ func (vm *VM) invokeExternally(functionValue Value, arguments []Value) (Value, e
 		nil,
 	)
 
-	vm.run()
+	// Runs the VM for compiled functions.
+	if !functionValue.IsNative() {
+		vm.run()
 
-	if len(vm.stack) == 0 {
-		return nil, nil
+		if len(vm.stack) == 0 {
+			return nil, nil
+		}
 	}
 
 	return vm.pop(), nil
@@ -401,15 +385,10 @@ func (vm *VM) InitializeContract(contractName string, arguments ...Value) (*inte
 }
 
 func (vm *VM) InvokeTransaction(arguments []Value, signers ...Value) (err error) {
-	defer func() {
-		recovered := recover()
-		if recovered == nil {
-			return
-		}
 
-		// TODO:
-		err, _ = recovered.(error)
-	}()
+	defer vm.RecoverErrors(func(internalErr error) {
+		err = internalErr
+	})
 
 	// Create transaction value
 	transaction, err := vm.InvokeTransactionWrapper()
@@ -428,9 +407,10 @@ func (vm *VM) InvokeTransaction(arguments []Value, signers ...Value) (err error)
 		return err
 	}
 
-	// TODO: Invoke pre/post conditions
-
 	// Invoke 'execute', if exists.
+	// NOTE: pre and post conditions of the transaction were already
+	// desugared into the execution function.
+	// If no `execute` function was defined, a synthetic one was created.
 	err = vm.InvokeTransactionExecute(transaction)
 	if err != nil {
 		return err
@@ -439,13 +419,13 @@ func (vm *VM) InvokeTransaction(arguments []Value, signers ...Value) (err error)
 	return nil
 }
 
-func (vm *VM) InvokeTransactionWrapper() (*interpreter.CompositeValue, error) {
+func (vm *VM) InvokeTransactionWrapper() (*interpreter.SimpleCompositeValue, error) {
 	wrapperResult, err := vm.InvokeExternally(commons.TransactionWrapperCompositeName)
 	if err != nil {
 		return nil, err
 	}
 
-	transaction := wrapperResult.(*interpreter.CompositeValue)
+	transaction := wrapperResult.(*interpreter.SimpleCompositeValue)
 
 	return transaction, nil
 }
@@ -476,7 +456,7 @@ func (vm *VM) InvokeTransactionInit(transactionArgs []Value) error {
 	return nil
 }
 
-func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.CompositeValue, signers []Value) error {
+func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.SimpleCompositeValue, signers []Value) error {
 	context := vm.context
 
 	prepareVariable := vm.globals.Find(commons.TransactionPrepareFunctionName)
@@ -508,7 +488,7 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.CompositeValue, 
 	return nil
 }
 
-func (vm *VM) InvokeTransactionExecute(transaction *interpreter.CompositeValue) error {
+func (vm *VM) InvokeTransactionExecute(transaction *interpreter.SimpleCompositeValue) error {
 	context := vm.context
 
 	executeVariable := vm.globals.Find(commons.TransactionExecuteFunctionName)
@@ -756,17 +736,25 @@ func opFalse(vm *VM) {
 
 func opGetConstant(vm *VM, ins opcode.InstructionGetConstant) {
 	constantIndex := ins.Constant
-	constant := vm.callFrame.function.Executable.Constants[constantIndex]
-	if constant == nil {
-		constant = vm.initializeConstant(constantIndex)
+	executable := vm.callFrame.function.Executable
+	c := executable.Constants[constantIndex]
+	if c == nil {
+		c = vm.initializeConstant(constantIndex)
 	}
-	vm.push(constant)
+	vm.push(c)
 }
 
 func opGetLocal(vm *VM, ins opcode.InstructionGetLocal) {
 	localIndex := ins.Local
 	absoluteIndex := vm.callFrame.localsOffset + localIndex
 	local := vm.locals[absoluteIndex]
+
+	// Some local variables can be implicit references. e.g: receiver of a bound function.
+	// TODO: maybe perform this check only if `localIndex == 0`?
+	if implicitReference, ok := local.(ImplicitReferenceValue); ok {
+		local = implicitReference.ReferencedValue(vm.context)
+	}
+
 	vm.push(local)
 }
 
@@ -859,7 +847,9 @@ func opRemoveIndex(vm *VM) {
 		EmptyLocationRange,
 		index,
 	)
-	containerValue.SetKey(
+
+	// Note: Must use `InsertKey` here, not `SetKey`.
+	containerValue.InsertKey(
 		context,
 		EmptyLocationRange,
 		index,
@@ -869,6 +859,7 @@ func opRemoveIndex(vm *VM) {
 }
 
 func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
+	// Load type arguments
 	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 
 	// Load arguments
@@ -877,16 +868,12 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	// Load the invoked value
 	functionValue := vm.pop()
 
-	// If the function is a pointer to an object-method, then the receiver is implicitly captured.
+	// Add base to front of arguments if the function is bound and base is defined.
 	if boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue); isBoundFunction {
-		functionValue = boundFunction.Method
-		receiver := boundFunction.Receiver(vm.context)
-		values := []Value{receiver}
 		base := boundFunction.Base
 		if base != nil {
-			values = append(values, base)
+			arguments = append([]Value{base}, arguments...)
 		}
-		arguments = append(values, arguments...)
 	}
 
 	invokeFunction(
@@ -923,35 +910,7 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 	vm.push(boundFunction)
 }
 
-func opInvokeMethodStatic(vm *VM, ins opcode.InstructionInvokeMethodStatic) {
-	// Load type arguments
-	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
-
-	// Load arguments
-	arguments := vm.popN(int(ins.ArgCount))
-
-	// Load the invoked value
-	boundFunction := vm.pop().(*BoundFunctionValue)
-
-	functionValue := boundFunction.Method
-	receiver := boundFunction.Receiver(vm.context)
-	values := []Value{receiver}
-	base := boundFunction.Base
-	if base != nil {
-		values = append(values, base)
-	}
-
-	arguments = append(values, arguments...)
-
-	invokeFunction(
-		vm,
-		functionValue,
-		arguments,
-		typeArguments,
-	)
-}
-
-func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
+func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
 	// TODO: This method is now equivalent to: `GetField` + `Invoke` instructions.
 	// See if it can be replaced. That will reduce the complexity of `invokeFunction` method below.
 
@@ -960,7 +919,9 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
 
 	// Load arguments
 	arguments := vm.popN(int(ins.ArgCount))
-	receiver := arguments[ReceiverIndex]
+
+	// Load the invoked value
+	receiver := vm.pop()
 
 	// Get function
 	nameIndex := ins.Name
@@ -973,12 +934,6 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeMethodDynamic) {
 		EmptyLocationRange,
 		funcName,
 	)
-
-	fValue, ok := functionValue.(FunctionValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	arguments[ReceiverIndex] = maybeDereferenceReceiver(vm.context, receiver, fValue.IsNative())
 
 	invokeFunction(
 		vm,
@@ -999,24 +954,33 @@ func invokeFunction(
 
 	// Handle all function types in a single place, so this can be re-used everywhere.
 
-	if boundFunction, ok := functionValue.(*BoundFunctionValue); ok {
+	boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue)
+	if isBoundFunction {
 		functionValue = boundFunction.Method
 	}
 
+	var receiver Value
+
 	switch functionValue := functionValue.(type) {
 	case CompiledFunctionValue:
-		vm.pushCallFrame(functionValue, arguments)
+		if isBoundFunction {
+			// For compiled functions, pass the receiver as an implicit-reference.
+			// Because the `self` value can be accessed by user-code.
+			receiver = boundFunction.Receiver(vm.context)
+		}
+		vm.pushCallFrame(functionValue, receiver, arguments)
 
 	case *NativeFunctionValue:
-		result := functionValue.Function(context, typeArguments, arguments...)
+		if isBoundFunction {
+			// For built-in functions, pass the dereferenced receiver.
+			receiver = boundFunction.DereferencedReceiver(vm.context)
+		}
+		result := functionValue.Function(context, typeArguments, receiver, arguments...)
 		vm.push(result)
 
 	default:
 		panic(errors.NewUnreachableError())
 	}
-
-	// We do not need to drop the receiver explicitly,
-	// as the `explicitArgumentsCount` already includes it.
 }
 
 func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
@@ -1063,32 +1027,75 @@ func opDup(vm *VM) {
 	vm.push(top)
 }
 
-func opNew(vm *VM, ins opcode.InstructionNew) {
-	compositeKind := ins.Kind
+func opNewSimpleComposite(vm *VM, ins opcode.InstructionNewSimpleComposite) {
+	staticType := vm.loadType(ins.Type)
 
-	// decode location
-	typeIndex := ins.Type
-	staticType := vm.loadType(typeIndex)
-
-	// TODO: Support inclusive-range type
 	compositeStaticType := staticType.(*interpreter.CompositeStaticType)
 
-	config := vm.context
+	context := vm.context
 
-	compositeFields := newCompositeValueFields(config, compositeKind)
+	compositeValue := interpreter.NewSimpleCompositeValue(
+		context,
+		compositeStaticType.TypeID,
+		compositeStaticType,
+		nil,
+		map[string]Value{},
+		nil,
+		nil,
+		nil,
+		nil,
+	)
 
-	value := interpreter.NewCompositeValue(
-		config,
+	vm.push(compositeValue)
+}
+
+func opNewComposite(vm *VM, ins opcode.InstructionNewComposite) {
+	compositeValue := newCompositeValue(
+		vm,
+		ins.Kind,
+		ins.Type,
+		common.ZeroAddress,
+	)
+	vm.push(compositeValue)
+}
+
+func opNewCompositeAt(vm *VM, ins opcode.InstructionNewCompositeAt) {
+	executable := vm.callFrame.function.Executable
+	c := executable.Program.Constants[ins.Address]
+
+	compositeValue := newCompositeValue(
+		vm,
+		ins.Kind,
+		ins.Type,
+		common.MustBytesToAddress(c.Data),
+	)
+	vm.push(compositeValue)
+}
+
+func newCompositeValue(
+	vm *VM,
+	compositeKind common.CompositeKind,
+	typeIndex uint16,
+	address common.Address,
+) *interpreter.CompositeValue {
+	// decode location
+	staticType := vm.loadType(typeIndex)
+
+	compositeStaticType := staticType.(*interpreter.CompositeStaticType)
+
+	context := vm.context
+
+	compositeFields := newCompositeValueFields(context, compositeKind)
+
+	return interpreter.NewCompositeValue(
+		context,
 		EmptyLocationRange,
 		compositeStaticType.Location,
 		compositeStaticType.QualifiedIdentifier,
 		compositeKind,
 		compositeFields,
-		// Newly created values are always on stack.
-		// Need to 'Transfer' if needed to be stored in an account.
-		common.ZeroAddress,
+		address,
 	)
-	vm.push(value)
 }
 
 func opSetField(vm *VM, ins opcode.InstructionSetField) {
@@ -1174,8 +1181,9 @@ func opRemoveField(vm *VM, ins opcode.InstructionRemoveField) {
 }
 
 func getStringConstant(vm *VM, index uint16) string {
-	constant := vm.callFrame.function.Executable.Program.Constants[index]
-	return string(constant.Data)
+	executable := vm.callFrame.function.Executable
+	c := executable.Program.Constants[index]
+	return string(c.Data)
 }
 
 func opTransferAndConvert(vm *VM, ins opcode.InstructionTransferAndConvert) {
@@ -1260,10 +1268,6 @@ func opFailableCast(vm *VM, ins opcode.InstructionFailableCast) {
 		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
 		result = ConvertAndBox(vm.context, value, valueType, targetType)
 
-		// TODO:
-		// Failable casting is a resource invalidation
-		//interpreter.invalidateResource(value)
-
 		result = interpreter.NewSomeValueNonCopying(
 			vm.context.MemoryGauge,
 			result,
@@ -1314,10 +1318,6 @@ func castValueAndValueType(context *Context, targetType bbq.StaticType, value Va
 	// thus this is the only place where it becomes necessary to "instantiate" the result of a map to its
 	// concrete outputs. In other places (e.g. interface conformance checks) we want to leave maps generic,
 	// so we don't substitute them.
-
-	// TODO: Substitute entitlements
-	//valueSemaType := interpreter.SubstituteMappedEntitlements(interpreter.MustSemaTypeOfValue(value))
-	//valueType = ConvertSemaToStaticType(interpreter, valueSemaType)
 
 	// If the target is `AnyStruct` or `AnyResource` we want to preserve optionals
 	unboxedExpectedType := UnwrapOptionalType(targetType)
@@ -1377,6 +1377,12 @@ func opUnwrap(vm *VM) {
 	default:
 		// Non-optional. Leave as is.
 	}
+}
+
+func opWrap(vm *VM) {
+	value := vm.peek()
+	optional := interpreter.NewSomeValueNonCopying(vm.context, value)
+	vm.replaceTop(optional)
 }
 
 func opNewArray(vm *VM, ins opcode.InstructionNewArray) {
@@ -1595,29 +1601,6 @@ func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 
 func (vm *VM) run() {
 
-	defer func() {
-		if r := recover(); r != nil {
-			if locatedError, ok := r.(interpreter.HasLocationRange); ok {
-				locatedError.SetLocationRange(vm.LocationRange())
-			}
-
-			if vm.context.debugEnabled {
-				switch r.(type) {
-				case errors.UserError, errors.ExternalError:
-					// do nothing
-				default:
-					printInstructionError(
-						vm.callFrame.function.Function,
-						int(vm.ip),
-						r,
-					)
-				}
-			}
-
-			panic(r)
-		}
-	}()
-
 	entryPointCallStackSize := len(vm.callstack)
 
 	for {
@@ -1717,16 +1700,18 @@ func (vm *VM) run() {
 			opGetMethod(vm, ins)
 		case opcode.InstructionInvoke:
 			opInvoke(vm, ins)
-		case opcode.InstructionInvokeMethodStatic:
-			opInvokeMethodStatic(vm, ins)
-		case opcode.InstructionInvokeMethodDynamic:
+		case opcode.InstructionInvokeDynamic:
 			opInvokeMethodDynamic(vm, ins)
 		case opcode.InstructionDrop:
 			opDrop(vm)
 		case opcode.InstructionDup:
 			opDup(vm)
-		case opcode.InstructionNew:
-			opNew(vm, ins)
+		case opcode.InstructionNewSimpleComposite:
+			opNewSimpleComposite(vm, ins)
+		case opcode.InstructionNewComposite:
+			opNewComposite(vm, ins)
+		case opcode.InstructionNewCompositeAt:
+			opNewCompositeAt(vm, ins)
 		case opcode.InstructionNewArray:
 			opNewArray(vm, ins)
 		case opcode.InstructionNewDictionary:
@@ -1763,6 +1748,8 @@ func (vm *VM) run() {
 			opNotEqual(vm)
 		case opcode.InstructionNot:
 			opNot(vm)
+		case opcode.InstructionWrap:
+			opWrap(vm)
 		case opcode.InstructionUnwrap:
 			opUnwrap(vm)
 		case opcode.InstructionEmitEvent:
@@ -1880,8 +1867,8 @@ func opStatement(vm *VM) {
 
 func (vm *VM) initializeConstant(index uint16) (value Value) {
 	executable := vm.callFrame.function.Executable
-
 	c := executable.Program.Constants[index]
+
 	memoryGauge := vm.context.MemoryGauge
 
 	switch c.Kind {
@@ -1985,58 +1972,59 @@ func (vm *VM) loadType(index uint16) bbq.StaticType {
 }
 
 func (vm *VM) invokeFunction(function Value, arguments []Value) (Value, error) {
-	// invokeExternally runs the VM, which is incorrect for native functions.
-	if function, ok := function.(*NativeFunctionValue); ok {
-		result := function.Function(vm.context, nil, arguments...)
-		return result, nil
-	}
-
-	return vm.invokeExternally(function, arguments)
+	functionValue := function.(FunctionValue)
+	return vm.invokeExternally(functionValue, arguments)
 }
 
-func (vm *VM) maybeLookupFunction(location common.Location, name string) FunctionValue {
-	funcValue, ok := vm.lookupFunction(location, name)
-	if !ok {
-		return nil
-	}
-	return funcValue
-}
-
-func (vm *VM) lookupFunction(location common.Location, name string) (FunctionValue, bool) {
+func (vm *VM) lookupFunction(location common.Location, name string) FunctionValue {
 	context := vm.context
 
 	// First check in current program.
 	global := vm.globals.Find(name)
 	if global != nil {
 		value := global.GetValue(context)
-		return value.(FunctionValue), true
+		return value.(FunctionValue)
 	}
 
-	// If not found, check in already linked imported functions.
-	linkedGlobals, ok := vm.linkedGlobalsCache[location]
+	// If not found, check in already linked imported functions,
+	// or link the function now, dynamically.
 
-	// If not found, link the function now, dynamically.
-	if !ok {
-		// TODO: This currently link all functions in program, unnecessarily.
-		//   Link only the requested function.
-		program := context.ImportHandler(location)
+	var indexedGlobals *activations.Activation[Variable]
 
-		linkedGlobals = LinkGlobals(
-			context.MemoryGauge,
-			location,
-			program,
-			context,
-			vm.linkedGlobalsCache,
-		)
+	if location == nil {
+		if context.BuiltinGlobalsProvider == nil {
+			indexedGlobals = DefaultBuiltinGlobals()
+		} else {
+			indexedGlobals = context.BuiltinGlobalsProvider(location)
+		}
+	} else {
+
+		linkedGlobals, ok := vm.linkedGlobalsCache[location]
+
+		if !ok {
+			// TODO: This currently link all functions in program, unnecessarily.
+			//   Link only the requested function.
+			program := context.ImportHandler(location)
+
+			linkedGlobals = LinkGlobals(
+				context.MemoryGauge,
+				location,
+				program,
+				context,
+				vm.linkedGlobalsCache,
+			)
+		}
+
+		indexedGlobals = linkedGlobals.indexedGlobals
 	}
 
-	global = linkedGlobals.indexedGlobals.Find(name)
+	global = indexedGlobals.Find(name)
 	if global == nil {
-		return nil, false
+		return nil
 	}
 
 	value := global.GetValue(context)
-	return value.(FunctionValue), true
+	return value.(FunctionValue)
 }
 
 func (vm *VM) StackSize() int {
@@ -2051,7 +2039,7 @@ func (vm *VM) Reset() {
 
 	context := NewContext(vm.context.Config)
 	context.invokeFunction = vm.invokeFunction
-	context.lookupFunction = vm.maybeLookupFunction
+	context.lookupFunction = vm.lookupFunction
 	vm.context = context
 }
 
@@ -2073,17 +2061,90 @@ func (vm *VM) Global(name string) Value {
 // LocationRange returns the location of the currently executing instruction.
 // This is an expensive operation and must be only used on-demand.
 func (vm *VM) LocationRange() interpreter.LocationRange {
+	// If the error occurs even before the VM starts executing,
+	// e.g: computation/memory metering errors,
+	// then use an empty-location-range, which points to the start of the program.
+	if vm.callFrame == nil {
+		return EmptyLocationRange
+	}
+
 	currentFunction := vm.callFrame.function
-	lineNumbers := currentFunction.Function.LineNumbers
 
 	// `vm.ip` always points to the next instruction.
 	lastInstructionIndex := vm.ip - 1
 
-	position := lineNumbers.GetSourcePosition(lastInstructionIndex)
+	return locationRangeOfInstruction(currentFunction, lastInstructionIndex)
+}
+
+func locationRangeOfInstruction(function CompiledFunctionValue, instructionIndex uint16) interpreter.LocationRange {
+	lineNumbers := function.Function.LineNumbers
+	position := lineNumbers.GetSourcePosition(instructionIndex)
 
 	return interpreter.LocationRange{
-		Location:    currentFunction.Executable.Location,
+		Location:    function.Executable.Location,
 		HasPosition: position,
+	}
+}
+
+func (vm *VM) callStackLocations() []interpreter.LocationRange {
+	if len(vm.callstack) <= 1 {
+		return nil
+	}
+
+	// Skip the current level. It is already included in the parent error.
+	callstack := vm.callstack[:len(vm.callstack)-1]
+
+	locationRanges := make([]interpreter.LocationRange, 0, len(vm.stack))
+
+	for index, stackFrame := range callstack {
+		function := stackFrame.function
+		ip := vm.ipStack[index]
+		locationRange := locationRangeOfInstruction(function, ip)
+
+		locationRanges = append(locationRanges, locationRange)
+	}
+
+	return locationRanges
+}
+
+func (vm *VM) RecoverErrors(onError func(error)) {
+	if r := recover(); r != nil {
+		// Recover all errors, because VM can be directly invoked by FVM.
+		cadenceError := interpreter.AsCadenceError(r)
+
+		currentLocation := vm.LocationRange()
+
+		if locatedError, ok := cadenceError.(interpreter.HasLocationRange); ok {
+			locatedError.SetLocationRange(currentLocation)
+		}
+
+		// if the error is not yet an interpreter error, wrap it
+		if _, ok := cadenceError.(interpreter.Error); !ok {
+			cadenceError = interpreter.Error{
+				Err:      cadenceError,
+				Location: currentLocation.Location,
+			}
+		}
+
+		err := cadenceError.(interpreter.Error)
+		err.StackTrace = vm.callStackLocations()
+
+		// For debug purpose only
+
+		if vm.context.debugEnabled {
+			switch r.(type) {
+			case errors.UserError, errors.ExternalError:
+				// do nothing
+			default:
+				printInstructionError(
+					vm.callFrame.function.Function,
+					int(vm.ip),
+					r,
+				)
+			}
+		}
+
+		onError(err)
 	}
 }
 

@@ -111,7 +111,7 @@ func NewVMPublicKeyConstructor(
 		sema.PublicKeyTypeName,
 		publicKeyConstructorFunctionType,
 		publicKeyConstructorFunctionDocString,
-		func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
+		func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, args ...vm.Value) vm.Value {
 
 			publicKey, ok := args[0].(*interpreter.ArrayValue)
 			if !ok {
@@ -289,12 +289,7 @@ func NewVMPublicKeyVerifySignatureFunction(verifier PublicKeySignatureVerifier) 
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.PublicKeyTypeVerifyFunctionName,
 			sema.PublicKeyTypeVerifyFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
-
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
 
 				publicKeyValue, ok := receiver.(*interpreter.CompositeValue)
 				if !ok {
@@ -427,12 +422,7 @@ func NewVMPublicKeyVerifyPoPFunction(verifier BLSPoPVerifier) VMFunction {
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.PublicKeyTypeVerifyPoPFunctionName,
 			sema.PublicKeyTypeVerifyPoPFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
-
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
 
 				publicKeyValue, ok := receiver.(*interpreter.CompositeValue)
 				if !ok {

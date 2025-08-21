@@ -31,6 +31,7 @@ import (
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestInterpretCompositeValue(t *testing.T) {
@@ -145,24 +146,26 @@ func testCompositeValue(t *testing.T, code string) Invokable {
 	inter, err := parseCheckAndPrepareWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
-			CheckerConfig: &sema.Config{
-				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-					return baseValueActivation
-				},
-				BaseTypeActivationHandler: func(_ common.Location) *sema.VariableActivation {
-					return baseTypeActivation
-				},
-				CheckHandler: func(checker *sema.Checker, check func()) {
-					if checker.Location == TestLocation {
-						checker.Elaboration.SetCompositeType(
-							fruitType.ID(),
-							fruitType,
-						)
-					}
-					check()
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+					BaseTypeActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseTypeActivation
+					},
+					CheckHandler: func(checker *sema.Checker, check func()) {
+						if checker.Location == TestLocation {
+							checker.Elaboration.SetCompositeType(
+								fruitType.ID(),
+								fruitType,
+							)
+						}
+						check()
+					},
 				},
 			},
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				Storage: storage,
 				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 					return baseActivation

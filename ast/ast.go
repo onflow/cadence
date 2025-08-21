@@ -24,8 +24,29 @@
 // so can be serialized to a standardized/stable JSON format.
 package ast
 
+import "github.com/onflow/cadence/errors"
+
 type TextEdit struct {
 	Replacement string
 	Insertion   string
 	Range
+}
+
+func (edit TextEdit) ApplyTo(code string) string {
+	runes := []rune(code)
+	start := edit.Range.StartPos.Offset
+	end := edit.Range.EndPos.Offset
+
+	if edit.Insertion != "" {
+		if edit.Replacement != "" {
+			panic(errors.NewUnexpectedError("TextEdit with Insertion should not have a Replacement"))
+		}
+		if start != end {
+			panic(errors.NewUnexpectedError("TextEdit with Insertion should have a zero-length range"))
+		}
+
+		return string(runes[:start]) + edit.Insertion + string(runes[end:])
+	}
+
+	return string(runes[:start]) + edit.Replacement + string(runes[end+1:])
 }

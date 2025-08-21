@@ -43,10 +43,10 @@ func newCompositeValueFields(context *Context, compositeKind common.CompositeKin
 		fields = append(
 			fields,
 			interpreter.NewCompositeField(
-				nil,
+				context,
 				sema.ResourceUUIDFieldName,
 				interpreter.NewUInt64Value(
-					nil,
+					context,
 					func() uint64 {
 						return uuid
 					},

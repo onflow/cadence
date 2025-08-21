@@ -90,6 +90,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct
 	checker.Elaboration.SetForStatementType(statement, ForStatementTypes{
 		IndexVariableType: indexType,
 		ValueVariableType: loopVariableType,
+		ContainerType:     valueType,
 	})
 
 	// The body of the loop will maybe be evaluated.

@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	. "github.com/onflow/cadence/test_utils/sema_utils"
 
 	"github.com/stretchr/testify/require"
 )
@@ -1262,7 +1263,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
 						_ interpreter.LocationRange,
@@ -1316,7 +1317,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
 						_ interpreter.LocationRange,
@@ -1363,7 +1364,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
 						_ interpreter.LocationRange,
@@ -1417,7 +1418,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
 						_ interpreter.LocationRange,
@@ -1475,7 +1476,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
 						_ interpreter.LocationRange,
@@ -1544,7 +1545,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
 						_ interpreter.LocationRange,
@@ -2604,12 +2605,14 @@ func TestInterpretBuiltinCompositeAttachment(t *testing.T) {
           }
         `,
 		ParseCheckAndInterpretOptions{
-			CheckerConfig: &sema.Config{
-				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-					return baseValueActivation
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 			},
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 					return baseActivation
 				},

@@ -43,7 +43,7 @@ func TestCheckAssertWithoutMessage(t *testing.T) {
             }
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},
@@ -68,7 +68,7 @@ func TestCheckAssertWithMessage(t *testing.T) {
             }
         `,
 		ParseAndCheckOptions{
-			Config: &sema.Config{
+			CheckerConfig: &sema.Config{
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},

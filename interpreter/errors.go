@@ -59,7 +59,7 @@ type HasLocationRange interface {
 type Error struct {
 	Err        error
 	Location   common.Location
-	StackTrace []Invocation
+	StackTrace []LocationRange
 }
 
 func (e Error) Unwrap() error {
@@ -81,8 +81,7 @@ func (e Error) Error() string {
 func (e Error) ChildErrors() []error {
 	errs := make([]error, 0, 1+len(e.StackTrace))
 
-	for _, invocation := range e.StackTrace {
-		locationRange := invocation.LocationRange
+	for _, locationRange := range e.StackTrace {
 		if locationRange.Location == nil {
 			continue
 		}
@@ -1443,5 +1442,27 @@ func (e *GetCapabilityError) Error() string {
 }
 
 func (e *GetCapabilityError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
+// CallStackLimitExceededError
+
+type CallStackLimitExceededError struct {
+	Limit uint64
+	LocationRange
+}
+
+var _ errors.UserError = &CallStackLimitExceededError{}
+
+func (*CallStackLimitExceededError) IsUserError() {}
+
+func (e *CallStackLimitExceededError) Error() string {
+	return fmt.Sprintf(
+		"call stack limit exceeded: %d",
+		e.Limit,
+	)
+}
+
+func (e *CallStackLimitExceededError) SetLocationRange(locationRange LocationRange) {
 	e.LocationRange = locationRange
 }

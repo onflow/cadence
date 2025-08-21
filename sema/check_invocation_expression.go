@@ -54,7 +54,8 @@ func (checker *Checker) checkInvokedExpression(ty Type, pos ast.HasPosition) boo
 		case common.CompositeKindEvent:
 			checker.report(
 				&InvalidEventUsageError{
-					Range: ast.NewRangeFromPositioned(checker.memoryGauge, pos),
+					EventName: compositeType.Identifier,
+					Range:     ast.NewRangeFromPositioned(checker.memoryGauge, pos),
 				},
 			)
 			return false

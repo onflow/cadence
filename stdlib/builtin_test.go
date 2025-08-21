@@ -68,7 +68,7 @@ func newInterpreter(t *testing.T, code string, valueDeclarations ...StandardLibr
 
 	storage := newUnmeteredInMemoryStorage()
 
-	baseActivation := activations.NewActivation[interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	for _, valueDeclaration := range valueDeclarations {
 		interpreter.Declare(baseActivation, valueDeclaration)
 	}
@@ -102,7 +102,7 @@ func TestCheckAssert(t *testing.T) {
 		return ParseAndCheckWithOptions(t,
 			code,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 						return baseValueActivation
 					},
@@ -220,7 +220,7 @@ func TestCheckPanic(t *testing.T) {
 		return ParseAndCheckWithOptions(t,
 			code,
 			ParseAndCheckOptions{
-				Config: &sema.Config{
+				CheckerConfig: &sema.Config{
 					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 						return baseValueActivation
 					},
@@ -274,7 +274,7 @@ func TestInterpretPanic(t *testing.T) {
 	_, err := inter.Invoke("test", interpreter.NewUnmeteredStringValue("oops"))
 	assert.Equal(t,
 		interpreter.Error{
-			Err: PanicError{
+			Err: &PanicError{
 				Message: "oops",
 			},
 			Location: TestLocation,

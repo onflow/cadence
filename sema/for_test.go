@@ -110,7 +110,7 @@ func TestCheckForInclusiveRange(t *testing.T) {
 
 			_, err := ParseAndCheckWithOptions(t, code,
 				ParseAndCheckOptions{
-					Config: &sema.Config{
+					CheckerConfig: &sema.Config{
 						BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
 							return baseValueActivation
 						},

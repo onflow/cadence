@@ -32,7 +32,8 @@ func TestVM_pop(t *testing.T) {
 	t.Parallel()
 
 	program := &bbq.InstructionProgram{}
-	vm := NewVM(nil, program, nil)
+	conf := NewConfig(nil)
+	vm := NewVM(nil, program, conf)
 
 	vm.push(interpreter.NewUnmeteredIntValueFromInt64(1))
 	vm.push(interpreter.NewUnmeteredIntValueFromInt64(2))
@@ -61,7 +62,8 @@ func TestVM_peekPop(t *testing.T) {
 	t.Parallel()
 
 	program := &bbq.InstructionProgram{}
-	vm := NewVM(nil, program, nil)
+	conf := NewConfig(nil)
+	vm := NewVM(nil, program, conf)
 
 	vm.push(interpreter.NewUnmeteredIntValueFromInt64(1))
 	vm.push(interpreter.NewUnmeteredIntValueFromInt64(2))
@@ -94,7 +96,8 @@ func TestVM_replaceTop(t *testing.T) {
 	t.Parallel()
 
 	program := &bbq.InstructionProgram{}
-	vm := NewVM(nil, program, nil)
+	conf := NewConfig(nil)
+	vm := NewVM(nil, program, conf)
 
 	vm.push(interpreter.NewUnmeteredIntValueFromInt64(1))
 	vm.push(interpreter.NewUnmeteredIntValueFromInt64(2))
@@ -122,7 +125,8 @@ func TestVM_pop2(t *testing.T) {
 	t.Parallel()
 
 	program := &bbq.InstructionProgram{}
-	vm := NewVM(nil, program, nil)
+	conf := NewConfig(nil)
+	vm := NewVM(nil, program, conf)
 
 	vm.push(interpreter.NewUnmeteredIntValueFromInt64(1))
 	vm.push(interpreter.NewUnmeteredIntValueFromInt64(2))
@@ -145,7 +149,8 @@ func TestVM_pop3(t *testing.T) {
 	t.Parallel()
 
 	program := &bbq.InstructionProgram{}
-	vm := NewVM(nil, program, nil)
+	conf := NewConfig(nil)
+	vm := NewVM(nil, program, conf)
 
 	vm.push(interpreter.NewUnmeteredIntValueFromInt64(1))
 	vm.push(interpreter.NewUnmeteredIntValueFromInt64(2))
@@ -180,7 +185,8 @@ func TestVM_peek(t *testing.T) {
 	t.Parallel()
 
 	program := &bbq.InstructionProgram{}
-	vm := NewVM(nil, program, nil)
+	conf := NewConfig(nil)
+	vm := NewVM(nil, program, conf)
 
 	vm.push(interpreter.NewUnmeteredIntValueFromInt64(1))
 	vm.push(interpreter.NewUnmeteredIntValueFromInt64(2))
@@ -213,7 +219,8 @@ func TestVM_peekN(t *testing.T) {
 	t.Parallel()
 
 	program := &bbq.InstructionProgram{}
-	vm := NewVM(nil, program, nil)
+	conf := NewConfig(nil)
+	vm := NewVM(nil, program, conf)
 
 	vm.push(interpreter.NewUnmeteredIntValueFromInt64(1))
 	vm.push(interpreter.NewUnmeteredIntValueFromInt64(2))
@@ -247,7 +254,8 @@ func TestVM_dropN(t *testing.T) {
 	t.Parallel()
 
 	program := &bbq.InstructionProgram{}
-	vm := NewVM(nil, program, nil)
+	conf := NewConfig(nil)
+	vm := NewVM(nil, program, conf)
 
 	vm.push(interpreter.NewUnmeteredIntValueFromInt64(1))
 	vm.push(interpreter.NewUnmeteredIntValueFromInt64(2))
@@ -267,7 +275,8 @@ func TestVM_popN(t *testing.T) {
 	t.Parallel()
 
 	program := &bbq.InstructionProgram{}
-	vm := NewVM(nil, program, nil)
+	conf := NewConfig(nil)
+	vm := NewVM(nil, program, conf)
 
 	vm.push(interpreter.NewUnmeteredIntValueFromInt64(1))
 	vm.push(interpreter.NewUnmeteredIntValueFromInt64(2))

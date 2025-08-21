@@ -231,7 +231,8 @@ func (p ErrorPrettyPrinter) prettyPrintError(err error, location common.Location
 
 	if errorNotes, ok := err.(errors.ErrorNotes); ok {
 		for _, errorNote := range errorNotes.ErrorNotes() {
-			excerpts = append(excerpts,
+			excerpts = append(
+				excerpts,
 				newExcerpt(errorNote, errorNote.Message(), false),
 			)
 		}
@@ -240,6 +241,32 @@ func (p ErrorPrettyPrinter) prettyPrintError(err error, location common.Location
 	sortExcerpts(excerpts)
 
 	p.writeCodeExcerpts(excerpts, location, code)
+
+	if hasMigrationNote, ok := err.(errors.HasMigrationNote); ok {
+		migrationNote := hasMigrationNote.MigrationNote()
+		if migrationNote != "" {
+			p.writeString("\n  Migration note: ")
+			if p.useColor {
+				p.writeString(colorizeNote(migrationNote))
+			} else {
+				p.writeString(migrationNote)
+			}
+			p.writeString("\n")
+		}
+	}
+
+	if hasDocumentationLink, ok := err.(errors.HasDocumentationLink); ok {
+		documentationLink := hasDocumentationLink.DocumentationLink()
+		if documentationLink != "" {
+			p.writeString("\n  See documentation at: ")
+			if p.useColor {
+				p.writeString(aurora.Hyperlink(documentationLink, documentationLink).String())
+			} else {
+				p.writeString(documentationLink)
+			}
+			p.writeString("\n")
+		}
+	}
 }
 
 func (p ErrorPrettyPrinter) writeCodeExcerpts(

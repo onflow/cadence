@@ -3583,7 +3583,7 @@ func (arity *Arity) Equal(other *Arity) bool {
 type FunctionPurity int
 
 const (
-	FunctionPurityImpure = iota
+	FunctionPurityImpure FunctionPurity = iota
 	FunctionPurityView
 )
 

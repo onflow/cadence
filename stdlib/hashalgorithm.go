@@ -114,11 +114,7 @@ func NewVMHashAlgorithmHashFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.HashAlgorithmTypeHashFunctionName,
 			sema.HashAlgorithmTypeHashFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
 
 				hashAlgoValue, ok := receiver.(interpreter.MemberAccessibleValue)
 				if !ok {
@@ -187,11 +183,7 @@ func NewVMHashAlgorithmHashWithTagFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.HashAlgorithmTypeHashWithTagFunctionName,
 			sema.HashAlgorithmTypeHashWithTagFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
-				var receiver interpreter.Value
-
-				// arg[0] is the receiver. Actual arguments starts from 1.
-				receiver, args = args[vm.ReceiverIndex], args[vm.TypeBoundFunctionArgumentOffset:]
+			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
 
 				hashAlgoValue, ok := receiver.(interpreter.MemberAccessibleValue)
 				if !ok {
@@ -283,7 +275,7 @@ func NewVMHashAlgorithmConstructor(hasher Hasher) StandardLibraryValue {
 	function := vm.NewNativeFunctionValue(
 		sema.HashAlgorithmTypeName,
 		hashAlgorithmLookupType,
-		func(context *vm.Context, _ []bbq.StaticType, args ...vm.Value) vm.Value {
+		func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, args ...vm.Value) vm.Value {
 			rawValue := args[0].(interpreter.UInt8Value)
 
 			caseValue, ok := cases[rawValue]

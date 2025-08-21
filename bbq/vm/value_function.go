@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/opcode"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -167,10 +168,15 @@ func (v CompiledFunctionValue) Invoke(invocation interpreter.Invocation) interpr
 }
 
 func (v CompiledFunctionValue) IsNative() bool {
-	return v.Function.IsNative()
+	return false
 }
 
-type NativeFunction func(context *Context, typeArguments []bbq.StaticType, arguments ...Value) Value
+type NativeFunction func(
+	context *Context,
+	typeArguments []bbq.StaticType,
+	receiver Value,
+	arguments ...Value,
+) Value
 
 type NativeFunctionValue struct {
 	Name     string
@@ -397,13 +403,15 @@ func (v *NativeFunctionValue) IsNative() bool {
 
 // BoundFunctionValue is a function-wrapper which captures the receivers of an object-method.
 type BoundFunctionValue struct {
-	receiverReference   interpreter.ReferenceValue
+	ReceiverReference   interpreter.ReferenceValue
 	receiverIsReference bool
 
 	Method       FunctionValue
 	functionType *sema.FunctionType
 	Base         *interpreter.EphemeralReferenceValue
 }
+
+var boundFunctionMemoryUsage = common.NewConstantMemoryUsage(common.MemoryKindBoundFunctionVMValue)
 
 func NewBoundFunctionValue(
 	context interpreter.ReferenceCreationContext,
@@ -412,15 +420,23 @@ func NewBoundFunctionValue(
 	base *interpreter.EphemeralReferenceValue,
 ) FunctionValue {
 
+	common.UseMemory(context, boundFunctionMemoryUsage)
+
 	// Since 'self' work as an implicit reference, create an explicit one and hold it.
 	// This reference is later used to check the validity of the referenced value/resource.
 	// For attachments, 'self' is already a reference. So no need to create a reference again.
 
 	receiverRef, receiverIsRef := interpreter.ReceiverReference(context, receiver)
 
+	if compositeValue, ok := receiver.(*interpreter.CompositeValue); ok && compositeValue.Kind == common.CompositeKindAttachment {
+		// Force the receiver to be a reference if it is an attachment.
+		// This is because self in attachments are always references.
+		receiverIsRef = true
+	}
+
 	return &BoundFunctionValue{
 		Method:              method,
-		receiverReference:   receiverRef,
+		ReceiverReference:   receiverRef,
 		receiverIsReference: receiverIsRef,
 		Base:                base,
 	}
@@ -544,7 +560,7 @@ func (v *BoundFunctionValue) initializeFunctionType(context interpreter.ValueSta
 	// Or would needs to be derived based on the receiver (e.g: `[Int8].append()`).
 	if method.HasGenericType() {
 		v.functionType = method.ResolvedFunctionType(
-			v.Receiver(context),
+			v.DereferencedReceiver(context),
 			context,
 		)
 	} else {
@@ -555,8 +571,7 @@ func (v *BoundFunctionValue) initializeFunctionType(context interpreter.ValueSta
 func (v *BoundFunctionValue) Invoke(invocation interpreter.Invocation) interpreter.Value {
 	context := invocation.InvocationContext
 
-	arguments := make([]Value, 0, 1+len(invocation.Arguments))
-	arguments = append(arguments, v.Receiver(context))
+	arguments := make([]Value, 0, len(invocation.Arguments))
 	arguments = append(arguments, invocation.Arguments...)
 
 	return context.InvokeFunction(
@@ -565,9 +580,9 @@ func (v *BoundFunctionValue) Invoke(invocation interpreter.Invocation) interpret
 	)
 }
 
-func (v *BoundFunctionValue) Receiver(context interpreter.ValueStaticTypeContext) Value {
+func (v *BoundFunctionValue) DereferencedReceiver(context interpreter.ValueStaticTypeContext) Value {
 	receiver := interpreter.GetReceiver(
-		v.receiverReference,
+		v.ReceiverReference,
 		v.receiverIsReference,
 		context,
 		EmptyLocationRange,
@@ -579,4 +594,9 @@ func (v *BoundFunctionValue) IsNative() bool {
 	// BoundFunctionValue is a wrapper around a function value, which can be either native or compiled.
 	// So, we delegate the call to the underlying function value.
 	return v.Method.IsNative()
+}
+
+func (v *BoundFunctionValue) Receiver(context interpreter.ReferenceCreationContext) ImplicitReferenceValue {
+	receiverValue := v.DereferencedReceiver(context)
+	return NewImplicitReferenceValue(context, receiverValue)
 }

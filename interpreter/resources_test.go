@@ -1741,11 +1741,6 @@ func assertErrorPosition(
 	err ast.HasPosition,
 	expectedStartPos int,
 ) {
-	if *compile {
-		// TODO: position info not supported yet
-		return
-	}
-
 	assert.Equal(
 		t,
 		expectedStartPos,
@@ -2366,7 +2361,7 @@ func TestInterpretResourceInterfaceDefaultDestroyEvent(t *testing.T) {
             }
         `,
 		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
 					_ interpreter.LocationRange,
@@ -2445,7 +2440,7 @@ func TestInterpretResourceInterfaceDefaultDestroyEventMultipleInheritance(t *tes
             }
         `,
 		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
 					_ interpreter.LocationRange,
@@ -2522,7 +2517,7 @@ func TestInterpretResourceInterfaceDefaultDestroyEventIndirectInheritance(t *tes
             }
         `,
 		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
 					_ interpreter.LocationRange,
@@ -2595,7 +2590,7 @@ func TestInterpretResourceInterfaceDefaultDestroyEventNoCompositeEvent(t *testin
             }
         `,
 		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
 					_ interpreter.LocationRange,
@@ -2671,7 +2666,7 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
 						_ interpreter.LocationRange,
@@ -2737,7 +2732,7 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
                 }
             `,
 			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
+				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
 						_ interpreter.LocationRange,
@@ -2793,7 +2788,7 @@ func TestInterpretDefaultDestroyEventArgumentScoping(t *testing.T) {
             }
         `,
 		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
 					_ interpreter.LocationRange,
@@ -3982,4 +3977,44 @@ func TestForceAssignment(t *testing.T) {
 		var resourceLossError *interpreter.ResourceLossError
 		assert.ErrorAs(t, err, &resourceLossError)
 	})
+}
+
+func TestInterpretRecursiveTransfers(t *testing.T) {
+
+	t.Parallel()
+
+	inter, _ := parseCheckAndPrepareWithOptions(t,
+		`
+        resource Dummy {}
+
+        resource Wrapper {
+            var vaults: @[AnyResource]
+            init(_ vaults: @[AnyResource]) {
+                self.vaults <- vaults
+            }
+        }
+
+        fun main() {
+            var vaultsWrapper <- create Wrapper( <- [
+                <-create Dummy(),
+                <-create Dummy()
+            ])
+
+            var r <- vaultsWrapper.vaults[0] <- vaultsWrapper.vaults
+            destroy r
+            destroy vaultsWrapper
+        }
+        `,
+		ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(err error) {
+				errs := RequireCheckerErrors(t, err, 1)
+				require.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[0])
+			},
+		},
+	)
+
+	_, err := inter.Invoke("main")
+
+	var recursiveTransferError *interpreter.RecursiveTransferError
+	require.ErrorAs(t, err, &recursiveTransferError)
 }

@@ -31,15 +31,15 @@ import (
 func init() {
 	typeName := commons.TypeQualifier(sema.MetaType)
 
-	RegisterBuiltinTypeBoundFunction(
+	registerBuiltinTypeBoundFunction(
 		typeName,
 		NewNativeFunctionValue(
 			sema.MetaTypeIsSubtypeFunctionName,
 			sema.MetaTypeIsSubtypeFunctionType,
-			func(context *Context, _ []bbq.StaticType, arguments ...Value) Value {
-				typeValue := arguments[ReceiverIndex].(interpreter.TypeValue)
+			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
+				typeValue := receiver.(interpreter.TypeValue)
 
-				otherTypeValue, ok := arguments[TypeBoundFunctionArgumentOffset].(interpreter.TypeValue)
+				otherTypeValue, ok := arguments[0].(interpreter.TypeValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}

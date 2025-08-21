@@ -18,6 +18,8 @@
 
 package runtime
 
+import "github.com/onflow/cadence/interpreter"
+
 const defaultStackDepthLimit = 2000
 
 type stackDepthLimiter struct {
@@ -41,7 +43,7 @@ func (limiter *stackDepthLimiter) OnFunctionInvocation() {
 		return
 	}
 
-	panic(CallStackLimitExceededError{
+	panic(&interpreter.CallStackLimitExceededError{
 		Limit: limiter.limit,
 	})
 }
