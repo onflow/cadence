@@ -981,7 +981,7 @@ func generateErrors() []namedError {
 		},
 		{"sema.InvalidConstructionError",
 			&sema.InvalidConstructionError{
-				Range: placeholderRange,
+				Pos: placeholderPosition,
 			},
 		},
 		{"sema.InvalidDeclarationError",
