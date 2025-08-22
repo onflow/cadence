@@ -1027,7 +1027,7 @@ func (e *UnexpectedTokenInTypeParameterListError) EndPosition(_ common.MemoryGau
 
 func (e *UnexpectedTokenInTypeParameterListError) Error() string {
 	return expectedButGotToken(
-		"expected type parameter, or closing angle bracket (`>`) end of type parameter list",
+		"expected type parameter, or closing angle bracket (`>`) to end the type parameter list",
 		e.GotToken.Type,
 	)
 }
@@ -1165,7 +1165,7 @@ func (e *ExpectedCommaOrEndOfTypeParameterListError) EndPosition(_ common.Memory
 
 func (e *ExpectedCommaOrEndOfTypeParameterListError) Error() string {
 	return expectedButGotToken(
-		"expected comma (`,`), or closing angle bracket (`>`) end of type parameter list",
+		"expected comma (`,`), or closing angle bracket (`>`) to end the type parameter list",
 		e.GotToken.Type,
 	)
 }
