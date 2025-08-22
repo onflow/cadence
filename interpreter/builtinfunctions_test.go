@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
@@ -81,18 +82,26 @@ func TestInterpretToString(t *testing.T) {
 
 		t.Run(ty.String(), func(t *testing.T) {
 
-			var literal string
 			var expected interpreter.Value
 
 			isSigned := sema.IsSubType(ty, sema.SignedFixedPointType)
 
-			if isSigned {
-				literal = "-12.34"
-				expected = interpreter.NewUnmeteredStringValue("-12.34000000")
-			} else {
-				literal = "12.34"
-				expected = interpreter.NewUnmeteredStringValue("12.34000000")
+			literal := "12.34"
+			var expectedStr string
+
+			switch ty {
+			case sema.Fix128Type, sema.UFix128Type:
+				expectedStr = "12.340000000000000000000000"
+			default:
+				expectedStr = "12.34000000"
 			}
+
+			if isSigned {
+				literal = "-" + literal
+				expectedStr = "-" + expectedStr
+			}
+
+			expected = interpreter.NewUnmeteredStringValue(expectedStr)
 
 			inter := parseCheckAndPrepare(t,
 				fmt.Sprintf(
@@ -541,11 +550,25 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 			"42.24": {0, 0, 0, 0, 251, 197, 32, 0},
 			"-1.0":  {255, 255, 255, 255, 250, 10, 31, 0},
 		},
+		"Fix128": {
+			"0.0":   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			"42.0":  {0, 0, 0, 0, 0, 34, 189, 216, 143, 237, 158, 252, 106, 0, 0, 0},
+			"42.24": {0, 0, 0, 0, 0, 34, 240, 170, 253, 0, 136, 125, 32, 0, 0, 0},
+			"-1.0":  {255, 255, 255, 255, 255, 255, 44, 61, 228, 49, 51, 18, 95, 0, 0, 0},
+			"170141183460469.231731687303715884105727":  {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			"-170141183460469.231731687303715884105728": {128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		},
 		// UFix*
 		"UFix64": {
 			"0.0":   {0, 0, 0, 0, 0, 0, 0, 0},
 			"42.0":  {0, 0, 0, 0, 250, 86, 234, 0},
 			"42.24": {0, 0, 0, 0, 251, 197, 32, 0},
+		},
+		"UFix128": {
+			"0.0":   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			"42.0":  {0, 0, 0, 0, 0, 34, 189, 216, 143, 237, 158, 252, 106, 0, 0, 0},
+			"42.24": {0, 0, 0, 0, 0, 34, 240, 170, 253, 0, 136, 125, 32, 0, 0, 0},
+			"340282366920938.463463374607431768211455": {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 		},
 	}
 
@@ -562,7 +585,9 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 		"Int64":   sema.Int64TypeSize,
 		"UInt64":  sema.UInt64TypeSize,
 		"Fix64":   sema.Fix64TypeSize,
+		"Fix128":  sema.Fix128TypeSize,
 		"UFix64":  sema.UFix64TypeSize,
+		"UFix128": sema.UFix128TypeSize,
 		"Word64":  sema.Word64TypeSize,
 		"Int128":  sema.Int128TypeSize,
 		"UInt128": sema.UInt128TypeSize,
@@ -805,12 +830,29 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 			"[0, 0, 0, 0, 251, 197, 32, 0]":        interpreter.NewUnmeteredFix64Value(4224_000_000),          // 42.24
 			"[255, 255, 255, 255, 250, 10, 31, 0]": interpreter.NewUnmeteredFix64Value(-1 * sema.Fix64Factor), // -1.0
 		},
+		"Fix128": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]":                                 interpreter.NewUnmeteredFix128ValueWithInteger(0, interpreter.EmptyLocationRange),
+			"[34, 189, 216, 143, 237, 158, 252, 106, 0, 0, 0]":                                 interpreter.NewUnmeteredFix128ValueWithInteger(42, interpreter.EmptyLocationRange), // 42.0 with padding
+			"[0, 0, 0, 0, 0, 34, 189, 216, 143, 237, 158, 252, 106, 0, 0, 0]":                  interpreter.NewUnmeteredFix128ValueWithInteger(42, interpreter.EmptyLocationRange), // 42.0
+			"[0, 0, 0, 0, 0, 34, 240, 170, 253, 0, 136, 125, 32, 0, 0, 0]":                     interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(4224, 22),                   // 42.24
+			"[255, 255, 255, 255, 255, 255, 44, 61, 228, 49, 51, 18, 95, 0, 0, 0]":             interpreter.NewUnmeteredFix128ValueWithInteger(-1, interpreter.EmptyLocationRange), // -1.0
+			"[127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
+			"[128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]":                               interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
+		},
+
 		// UFix*
 		"UFix64": {
 			"[0, 0, 0, 0, 0, 0, 0, 0]":      interpreter.NewUnmeteredUFix64Value(0),
 			"[250, 86, 234, 0]":             interpreter.NewUnmeteredUFix64Value(42 * sema.Fix64Factor), // 42.0 with padding
 			"[0, 0, 0, 0, 250, 86, 234, 0]": interpreter.NewUnmeteredUFix64Value(42 * sema.Fix64Factor), // 42.0
 			"[0, 0, 0, 0, 251, 197, 32, 0]": interpreter.NewUnmeteredUFix64Value(4224_000_000),          // 42.24
+		},
+		"UFix128": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]":                                 interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMin),
+			"[34, 189, 216, 143, 237, 158, 252, 106, 0, 0, 0]":                                 interpreter.NewUnmeteredUFix128ValueWithInteger(42, interpreter.EmptyLocationRange), // 42.0 with padding
+			"[0, 0, 0, 0, 0, 34, 189, 216, 143, 237, 158, 252, 106, 0, 0, 0]":                  interpreter.NewUnmeteredUFix128ValueWithInteger(42, interpreter.EmptyLocationRange), // 42.0
+			"[0, 0, 0, 0, 0, 34, 240, 170, 253, 0, 136, 125, 32, 0, 0, 0]":                     interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(4224, 22),                   // 42.24
+			"[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMax),
 		},
 	}
 
@@ -897,10 +939,18 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 			"[0, 0, 0, 0, 0, 0, 0, 0, 0]",
 			"[0, 22, 0, 0, 0, 0, 0, 0, 0]",
 		},
+		"Fix128": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+		},
 		// UFix*
 		"UFix64": {
 			"[0, 0, 0, 0, 0, 0, 0, 0, 0]",
 			"[0, 22, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		"UFix128": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
 		},
 	}
 

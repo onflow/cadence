@@ -5347,6 +5347,14 @@ func TestFixedPoint(t *testing.T) {
 
 			t.Parallel()
 
+			var expected string
+			switch fixedPointType {
+			case sema.Fix128Type, sema.UFix128Type:
+				expected = "10.000000000000000000000000"
+			default:
+				expected = "10.00000000"
+			}
+
 			result, err := CompileAndInvoke(t,
 				fmt.Sprintf(`
                         fun test(): %s {
@@ -5359,7 +5367,7 @@ func TestFixedPoint(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			assert.Equal(t, "10.00000000", result.String())
+			assert.Equal(t, expected, result.String())
 			assert.Equal(t,
 				fixedPointType,
 				interpreter.MustConvertStaticToSemaType(result.StaticType(nil), nil),

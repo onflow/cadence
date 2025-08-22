@@ -20,8 +20,11 @@ package format
 
 import (
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
+
+	fix "github.com/onflow/fixed-point"
 
 	"github.com/onflow/cadence/fixedpoint"
 )
@@ -52,4 +55,44 @@ func UFix64(v uint64) string {
 		integer,
 		PadLeft(strconv.Itoa(int(fraction)), '0', fixedpoint.Fix64Scale),
 	)
+}
+
+func Fix128(v fix.Fix128) string {
+	// TODO: Maybe compute this without the use of `big.Int`
+	fix128AsBigInt := fixedpoint.Fix128ToBigInt(v)
+	return formatFixedPointBigInt(fix128AsBigInt)
+}
+
+func formatFixedPointBigInt(fixedpointAsBigInt *big.Int) string {
+	fraction := new(big.Int)
+	integer, fraction := new(big.Int).QuoRem(
+		fixedpointAsBigInt,
+		fixedpoint.Fix128FactorAsBigInt,
+		fraction,
+	)
+
+	negative := fraction.Sign() < 0
+	var builder strings.Builder
+	if negative {
+		fraction = fraction.Neg(fraction)
+		if integer.Sign() == 0 {
+			builder.WriteByte('-')
+		}
+	}
+	builder.WriteString(fmt.Sprint(integer))
+	builder.WriteByte('.')
+
+	builder.WriteString(
+		PadLeft(
+			fraction.String(),
+			'0',
+			fixedpoint.Fix128Scale,
+		),
+	)
+	return builder.String()
+}
+
+func UFix128(v fix.UFix128) string {
+	ufix128AsBigInt := fixedpoint.UFix128ToBigInt(v)
+	return formatFixedPointBigInt(ufix128AsBigInt)
 }
