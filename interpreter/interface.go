@@ -360,8 +360,7 @@ type CapabilityHandlers interface {
 var _ CapabilityHandlers = &Interpreter{}
 
 type StringValueFunctionContext interface {
-	common.MemoryGauge
-	common.ComputationGauge
+	common.Gauge
 }
 
 var _ StringValueFunctionContext = &Interpreter{}
