@@ -60,6 +60,14 @@ func (f FunctionComputationGauge) MeterComputation(usage ComputationUsage) error
 	return f(usage)
 }
 
+// Gauge combines a memory and computation gauge.
+// Metering-sites can use this combined interface
+// if they need to do both memory and computation metering.
+type Gauge interface {
+	MemoryGauge
+	ComputationGauge
+}
+
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
 	if gauge == nil || usage.Amount == 0 {
 		return
