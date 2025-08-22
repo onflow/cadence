@@ -107,10 +107,7 @@ type TestRuntimeInterface struct {
 		duration time.Duration,
 		attrs []attribute.KeyValue,
 	)
-	OnMeterMemory                    func(usage common.MemoryUsage) error
 	OnComputationUsed                func() (uint64, error)
-	OnMemoryUsed                     func() (uint64, error)
-	OnInteractionUsed                func() (uint64, error)
 	OnGenerateAccountID              func(address common.Address) (uint64, error)
 	OnRecoverProgram                 func(program *ast.Program, location common.Location) ([]byte, error)
 	OnValidateAccountCapabilitiesGet func(
@@ -548,36 +545,12 @@ func (i *TestRuntimeInterface) RecordTrace(
 	i.OnRecordTrace(operation, duration, attrs)
 }
 
-func (i *TestRuntimeInterface) MeterMemory(usage common.MemoryUsage) error {
-	if i.OnMeterMemory == nil {
-		return nil
-	}
-
-	return i.OnMeterMemory(usage)
-}
-
 func (i *TestRuntimeInterface) ComputationUsed() (uint64, error) {
 	if i.OnComputationUsed == nil {
 		return 0, nil
 	}
 
 	return i.OnComputationUsed()
-}
-
-func (i *TestRuntimeInterface) MemoryUsed() (uint64, error) {
-	if i.OnMemoryUsed == nil {
-		return 0, nil
-	}
-
-	return i.OnMemoryUsed()
-}
-
-func (i *TestRuntimeInterface) InteractionUsed() (uint64, error) {
-	if i.OnInteractionUsed == nil {
-		return 0, nil
-	}
-
-	return i.OnInteractionUsed()
 }
 
 func (i *TestRuntimeInterface) onTransactionExecutionStart() {

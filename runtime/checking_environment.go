@@ -36,6 +36,7 @@ import (
 type checkingEnvironmentReconfigured struct {
 	runtimeInterface Interface
 	codesAndPrograms CodesAndPrograms
+	memoryGauge      common.MemoryGauge
 }
 
 type CheckingEnvironment struct {
@@ -89,9 +90,14 @@ func (e *CheckingEnvironment) newConfig() *sema.Config {
 	}
 }
 
-func (e *CheckingEnvironment) configure(runtimeInterface Interface, codesAndPrograms CodesAndPrograms) {
+func (e *CheckingEnvironment) configure(
+	runtimeInterface Interface,
+	codesAndPrograms CodesAndPrograms,
+	memoryGauge common.MemoryGauge,
+) {
 	e.runtimeInterface = runtimeInterface
 	e.codesAndPrograms = codesAndPrograms
+	e.memoryGauge = memoryGauge
 }
 
 // getBaseValueActivation returns the base activation for the given location.
@@ -235,7 +241,7 @@ func (e *CheckingEnvironment) check(
 	checker, err := sema.NewChecker(
 		program,
 		location,
-		e,
+		e.memoryGauge,
 		e.Config,
 	)
 	if err != nil {
@@ -250,10 +256,6 @@ func (e *CheckingEnvironment) check(
 	}
 
 	return elaboration, nil
-}
-
-func (e *CheckingEnvironment) MeterMemory(usage common.MemoryUsage) error {
-	return e.runtimeInterface.MeterMemory(usage)
 }
 
 func (e *CheckingEnvironment) ParseAndCheckProgram(
@@ -309,7 +311,7 @@ func (e *CheckingEnvironment) parseAndCheckProgram(
 
 	reportMetric(
 		func() {
-			program, err = parser.ParseProgram(e, code, parser.Config{})
+			program, err = parser.ParseProgram(e.memoryGauge, code, parser.Config{})
 		},
 		e.runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
@@ -476,7 +478,7 @@ func (e *CheckingEnvironment) recoverProgram(
 	var err error
 	reportMetric(
 		func() {
-			program, err = old_parser.ParseProgram(e, oldCode, old_parser.Config{})
+			program, err = old_parser.ParseProgram(e.memoryGauge, oldCode, old_parser.Config{})
 		},
 		e.runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
@@ -499,7 +501,7 @@ func (e *CheckingEnvironment) recoverProgram(
 
 	// Parse and check the recovered program
 
-	program, err = parser.ParseProgram(e, newCode, parser.Config{})
+	program, err = parser.ParseProgram(e.memoryGauge, newCode, parser.Config{})
 	if err != nil {
 		return nil, nil
 	}

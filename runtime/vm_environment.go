@@ -82,7 +82,6 @@ var _ stdlib.BLSPublicKeyAggregator = &vmEnvironment{}
 var _ stdlib.BLSSignatureAggregator = &vmEnvironment{}
 var _ stdlib.Hasher = &vmEnvironment{}
 var _ ArgumentDecoder = &vmEnvironment{}
-var _ common.MemoryGauge = &vmEnvironment{}
 
 func newVMEnvironment(config Config) *vmEnvironment {
 	env := &vmEnvironment{
@@ -136,7 +135,6 @@ func NewScriptVMEnvironment(config Config) Environment {
 
 func (e *vmEnvironment) newVMConfig() *vm.Config {
 	conf := vm.NewConfig(nil)
-	conf.MemoryGauge = e
 	conf.ComputationGauge = e
 	conf.TypeLoader = e.loadType
 	conf.BuiltinGlobalsProvider = e.vmBuiltinGlobals
@@ -193,7 +191,6 @@ func (e *vmEnvironment) loadContractValue(
 
 func (e *vmEnvironment) newCompilerConfig() *compiler.Config {
 	return &compiler.Config{
-		MemoryGauge:            e,
 		BuiltinGlobalsProvider: e.compilerBuiltinGlobals,
 		LocationHandler:        e.ResolveLocation,
 		ImportHandler:          e.importProgram,
@@ -205,15 +202,19 @@ func (e *vmEnvironment) Configure(
 	runtimeInterface Interface,
 	codesAndPrograms CodesAndPrograms,
 	storage *Storage,
+	memoryGauge common.MemoryGauge,
 	coverageReport *CoverageReport,
 ) {
 	e.Interface = runtimeInterface
 	e.storage = storage
 	e.VMConfig.SetStorage(storage)
+	e.VMConfig.MemoryGauge = memoryGauge
+	e.compilerConfig.MemoryGauge = memoryGauge
 
 	e.checkingEnvironment.configure(
 		runtimeInterface,
 		codesAndPrograms,
+		memoryGauge,
 	)
 
 	// TODO: add support for coverage report

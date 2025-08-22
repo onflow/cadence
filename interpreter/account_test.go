@@ -420,11 +420,11 @@ type NoOpReferenceCreationContext struct{}
 
 var _ interpreter.ReferenceCreationContext = NoOpReferenceCreationContext{}
 
-func (n NoOpReferenceCreationContext) ClearReferencedResourceKindedValues(valueID atree.ValueID) {
+func (n NoOpReferenceCreationContext) ClearReferencedResourceKindedValues(_ atree.ValueID) {
 	// NO-OP
 }
 
-func (n NoOpReferenceCreationContext) ReferencedResourceKindedValues(valueID atree.ValueID) map[*interpreter.EphemeralReferenceValue]struct{} {
+func (n NoOpReferenceCreationContext) ReferencedResourceKindedValues(_ atree.ValueID) map[*interpreter.EphemeralReferenceValue]struct{} {
 	// NO-OP
 	return nil
 }
@@ -433,51 +433,51 @@ func (n NoOpReferenceCreationContext) CheckInvalidatedResourceOrResourceReferenc
 	// NO-OP
 }
 
-func (n NoOpReferenceCreationContext) MaybeTrackReferencedResourceKindedValue(ref *interpreter.EphemeralReferenceValue) {
+func (n NoOpReferenceCreationContext) MaybeTrackReferencedResourceKindedValue(_ *interpreter.EphemeralReferenceValue) {
 	// NO-OP
 }
 
-func (n NoOpReferenceCreationContext) MeterMemory(usage common.MemoryUsage) error {
-	// NO-OP
-	return nil
-}
-
-func (n NoOpReferenceCreationContext) MeterComputation(usage common.ComputationUsage) error {
+func (n NoOpReferenceCreationContext) MeterMemory(_ common.MemoryUsage) error {
 	// NO-OP
 	return nil
 }
 
-func (n NoOpReferenceCreationContext) ReadStored(storageAddress common.Address, domain common.StorageDomain, identifier interpreter.StorageMapKey) interpreter.Value {
+func (n NoOpReferenceCreationContext) MeterComputation(_ common.ComputationUsage) error {
 	// NO-OP
 	return nil
 }
 
-func (n NoOpReferenceCreationContext) GetEntitlementType(typeID interpreter.TypeID) (*sema.EntitlementType, error) {
+func (n NoOpReferenceCreationContext) ReadStored(_ common.Address, _ common.StorageDomain, _ interpreter.StorageMapKey) interpreter.Value {
+	// NO-OP
+	return nil
+}
+
+func (n NoOpReferenceCreationContext) GetEntitlementType(_ interpreter.TypeID) (*sema.EntitlementType, error) {
 	// NO-OP
 	return nil, nil
 }
 
-func (n NoOpReferenceCreationContext) GetEntitlementMapType(typeID interpreter.TypeID) (*sema.EntitlementMapType, error) {
+func (n NoOpReferenceCreationContext) GetEntitlementMapType(_ interpreter.TypeID) (*sema.EntitlementMapType, error) {
 	// NO-OP
 	return nil, nil
 }
 
-func (n NoOpReferenceCreationContext) GetInterfaceType(location common.Location, qualifiedIdentifier string, typeID interpreter.TypeID) (*sema.InterfaceType, error) {
+func (n NoOpReferenceCreationContext) GetInterfaceType(_ common.Location, _ string, _ interpreter.TypeID) (*sema.InterfaceType, error) {
 	// NO-OP
 	return nil, nil
 }
 
-func (n NoOpReferenceCreationContext) GetCompositeType(location common.Location, qualifiedIdentifier string, typeID interpreter.TypeID) (*sema.CompositeType, error) {
+func (n NoOpReferenceCreationContext) GetCompositeType(_ common.Location, _ string, _ interpreter.TypeID) (*sema.CompositeType, error) {
 	// NO-OP
 	return nil, nil
 }
 
-func (n NoOpReferenceCreationContext) IsTypeInfoRecovered(location common.Location) bool {
+func (n NoOpReferenceCreationContext) IsTypeInfoRecovered(_ common.Location) bool {
 	// NO-OP
 	return false
 }
 
-func (n NoOpReferenceCreationContext) SemaTypeFromStaticType(staticType interpreter.StaticType) sema.Type {
+func (n NoOpReferenceCreationContext) SemaTypeFromStaticType(_ interpreter.StaticType) sema.Type {
 	// NO-OP
 	return nil
 }
@@ -489,7 +489,7 @@ type NoOpFunctionCreationContext struct {
 
 var _ interpreter.FunctionCreationContext = NoOpFunctionCreationContext{}
 
-func (n NoOpFunctionCreationContext) ClearReferencedResourceKindedValues(valueID atree.ValueID) {
+func (n NoOpFunctionCreationContext) ClearReferencedResourceKindedValues(_ atree.ValueID) {
 	// NO-OP
 }
 
@@ -511,7 +511,7 @@ func (n NoOpFunctionCreationContext) MaybeTrackReferencedResourceKindedValue(_ *
 	// NO-OP
 }
 
-func (n NoOpFunctionCreationContext) MeterMemory(usage common.MemoryUsage) error {
+func (n NoOpFunctionCreationContext) MeterMemory(_ common.MemoryUsage) error {
 	// NO-OP
 	return nil
 }

@@ -48,6 +48,7 @@ type Environment interface {
 		runtimeInterface Interface,
 		codesAndPrograms CodesAndPrograms,
 		storage *Storage,
+		memoryGauge common.MemoryGauge,
 		coverageReport *CoverageReport,
 	)
 	ParseAndCheckProgram(
@@ -111,7 +112,6 @@ var _ stdlib.BLSPublicKeyAggregator = &InterpreterEnvironment{}
 var _ stdlib.BLSSignatureAggregator = &InterpreterEnvironment{}
 var _ stdlib.Hasher = &InterpreterEnvironment{}
 var _ ArgumentDecoder = &InterpreterEnvironment{}
-var _ common.MemoryGauge = &InterpreterEnvironment{}
 var _ common.ComputationGauge = &InterpreterEnvironment{}
 
 func NewInterpreterEnvironment(config Config) *InterpreterEnvironment {
@@ -132,7 +132,6 @@ func NewInterpreterEnvironment(config Config) *InterpreterEnvironment {
 
 func (e *InterpreterEnvironment) NewInterpreterConfig() *interpreter.Config {
 	return &interpreter.Config{
-		MemoryGauge:                    e,
 		ComputationGauge:               e,
 		BaseActivationHandler:          e.getBaseActivation,
 		OnEventEmitted:                 newOnEventEmittedHandler(&e.Interface),
@@ -189,17 +188,20 @@ func (e *InterpreterEnvironment) Configure(
 	runtimeInterface Interface,
 	codesAndPrograms CodesAndPrograms,
 	storage *Storage,
+	memoryGauge common.MemoryGauge,
 	coverageReport *CoverageReport,
 ) {
 	e.Interface = runtimeInterface
 	e.storage = storage
 	e.InterpreterConfig.Storage = storage
+	e.InterpreterConfig.MemoryGauge = memoryGauge
 	e.coverageReport = coverageReport
 	e.stackDepthLimiter.depth = 0
 
 	e.CheckingEnvironment.configure(
 		runtimeInterface,
 		codesAndPrograms,
+		memoryGauge,
 	)
 
 	configureVersionedFeatures(runtimeInterface)

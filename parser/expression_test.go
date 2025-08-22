@@ -322,7 +322,6 @@ func TestParseAdvancedExpression(t *testing.T) {
 		t.Parallel()
 
 		gauge := makeLimitingMemoryGauge()
-		gauge.debug = true
 		gauge.Limit(common.MemoryKindPosition, 11)
 
 		_, errs := ParseExpression(gauge, []byte("1 < 2"), Config{})

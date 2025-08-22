@@ -161,17 +161,11 @@ type Interface interface {
 }
 
 type MeterInterface interface {
-	// MeterMemory gets called when new memory is allocated or used by the interpreter
-	MeterMemory(usage common.MemoryUsage) error
 	// MeterComputation is a callback method for metering computation, it returns error
 	// when computation passes the limit (set by the environment)
 	MeterComputation(usage common.ComputationUsage) error
 	// ComputationUsed returns the total computation used in the current runtime.
 	ComputationUsed() (uint64, error)
-	// MemoryUsed returns the total memory (estimate) used in the current runtime.
-	MemoryUsed() (uint64, error)
-	// InteractionUsed returns the total storage interaction used in the current runtime.
-	InteractionUsed() (uint64, error)
 }
 
 type Metrics interface {

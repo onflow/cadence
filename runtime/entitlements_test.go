@@ -1531,7 +1531,10 @@ func TestRuntimeEntitlementMapIncludeDeduped(t *testing.T) {
 			code = accountCodes[location]
 			return code, nil
 		},
-		OnMeterMemory: func(usage common.MemoryUsage) error {
+	}
+
+	memoryGauge := common.FunctionMemoryGauge(
+		func(usage common.MemoryUsage) error {
 			if usage.Kind == common.MemoryKindEntitlementRelationSemaType {
 				totalRelations++
 			}
@@ -1540,16 +1543,17 @@ func TestRuntimeEntitlementMapIncludeDeduped(t *testing.T) {
 			}
 			return nil
 		},
-	}
+	)
 
 	_, err := rt.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
-			Interface: runtimeInterface1,
-			Location:  nextScriptLocation(),
-			UseVM:     *compile,
+			Interface:   runtimeInterface1,
+			Location:    nextScriptLocation(),
+			MemoryGauge: memoryGauge,
+			UseVM:       *compile,
 		},
 	)
 
