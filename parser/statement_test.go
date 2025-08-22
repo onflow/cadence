@@ -1442,7 +1442,7 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]errors.SuggestedFix[ast.TextEdit]{
 				{
-					Message: "Insert 'from'",
+					Message: "Insert `from`",
 					TextEdits: []ast.TextEdit{
 						{
 							Insertion: "from ",
@@ -1495,7 +1495,7 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]errors.SuggestedFix[ast.TextEdit]{
 				{
-					Message: "Insert 'from'",
+					Message: "Insert `from`",
 					TextEdits: []ast.TextEdit{
 						{
 							Insertion: " from ",
@@ -3093,7 +3093,7 @@ func TestParseForStatementMissingInKeyword(t *testing.T) {
 	AssertEqualWithDiff(t,
 		[]errors.SuggestedFix[ast.TextEdit]{
 			{
-				Message: "Insert 'in'",
+				Message: "Insert `in`",
 				TextEdits: []ast.TextEdit{
 					{
 						Insertion: "in ",
@@ -3145,7 +3145,7 @@ func TestParseForStatementMissingInKeywordAtEnd(t *testing.T) {
 	AssertEqualWithDiff(t,
 		[]errors.SuggestedFix[ast.TextEdit]{
 			{
-				Message: "Insert 'in'",
+				Message: "Insert `in`",
 				TextEdits: []ast.TextEdit{
 					{
 						Insertion: " in ",

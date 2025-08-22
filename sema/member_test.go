@@ -307,24 +307,31 @@ func TestCheckMemberNotDeclaredSecondaryError(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t, `
-            struct Test {
-                fun foo(): Int { return 3 }
-            }
+		_, err := ParseAndCheckWithOptions(t,
+			`
+                struct Test {
+                    fun foo(): Int { return 3 }
+                }
 
-            let test: Test = Test()
-            let x = test.foop()
-        `, ParseAndCheckOptions{
-			CheckerConfig: &sema.Config{
-				SuggestionsEnabled: true,
+                let test: Test = Test()
+                let x = test.foop()
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					SuggestionsEnabled: true,
+				},
 			},
-		})
+		)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
 		var memberErr *sema.NotDeclaredMemberError
 		require.ErrorAs(t, errs[0], &memberErr)
-		assert.Equal(t, "did you mean `foo`?", memberErr.SecondaryError())
+		assert.Contains(
+			t,
+			memberErr.SecondaryError(),
+			"did you mean member `foo` instead?",
+		)
 	})
 
 	t.Run("without option", func(t *testing.T) {
@@ -344,81 +351,103 @@ func TestCheckMemberNotDeclaredSecondaryError(t *testing.T) {
 
 		var memberErr *sema.NotDeclaredMemberError
 		require.ErrorAs(t, errs[0], &memberErr)
-		assert.Equal(t, "unknown member", memberErr.SecondaryError())
+
+		assert.NotContains(t,
+			memberErr.SecondaryError(),
+			"did you mean",
+		)
 	})
 
 	t.Run("selects closest", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t, `
-            struct Test {
-                fun fou(): Int { return 1 }
-                fun bar(): Int { return 2 }
-                fun foo(): Int { return 3 }
-            }
+		_, err := ParseAndCheckWithOptions(t,
+			`
+                struct Test {
+                    fun fou(): Int { return 1 }
+                    fun bar(): Int { return 2 }
+                    fun foo(): Int { return 3 }
+                }
 
-            let test: Test = Test()
-            let x = test.foop()
-        `, ParseAndCheckOptions{
-			CheckerConfig: &sema.Config{
-				SuggestionsEnabled: true,
+                let test: Test = Test()
+                let x = test.foop()
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					SuggestionsEnabled: true,
+				},
 			},
-		})
+		)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
 		var memberErr *sema.NotDeclaredMemberError
 		require.ErrorAs(t, errs[0], &memberErr)
-		assert.Equal(t, "did you mean `foo`?", memberErr.SecondaryError())
+		assert.Contains(t,
+			memberErr.SecondaryError(),
+			"did you mean member `foo` instead?",
+		)
 	})
 
 	t.Run("no members = no suggestion", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t, `
-            struct Test {
-                
-            }
+		_, err := ParseAndCheckWithOptions(t,
+			`
+                struct Test {}
 
-            let test: Test = Test()
-            let x = test.foop()
-        `, ParseAndCheckOptions{
-			CheckerConfig: &sema.Config{
-				SuggestionsEnabled: true,
+                let test: Test = Test()
+                let x = test.foop()
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					SuggestionsEnabled: true,
+				},
 			},
-		})
+		)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
 		var memberErr *sema.NotDeclaredMemberError
 		require.ErrorAs(t, errs[0], &memberErr)
-		assert.Equal(t, "unknown member", memberErr.SecondaryError())
+
+		assert.NotContains(t,
+			memberErr.SecondaryError(),
+			"did you mean",
+		)
 	})
 
 	t.Run("no similarity = no suggestion", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t, `
-            struct Test {
-                fun bar(): Int { return 1 }
-            }
+		_, err := ParseAndCheckWithOptions(t,
+			`
+                struct Test {
+                    fun bar(): Int { return 1 }
+                }
 
-            let test: Test = Test()
-            let x = test.foop()
-        `, ParseAndCheckOptions{
-			CheckerConfig: &sema.Config{
-				SuggestionsEnabled: true,
+                let test: Test = Test()
+                let x = test.foop()
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					SuggestionsEnabled: true,
+				},
 			},
-		})
+		)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
 		var memberErr *sema.NotDeclaredMemberError
 		require.ErrorAs(t, errs[0], &memberErr)
-		assert.Equal(t, "unknown member", memberErr.SecondaryError())
+
+		assert.NotContains(t,
+			memberErr.SecondaryError(),
+			"did you mean",
+		)
 	})
 }
 

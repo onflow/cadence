@@ -130,11 +130,15 @@ func TestCheckEntitlementsErrorMessage(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 2)
 
-		var mismatchError *sema.TypeMismatchError
-
 		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+
+		var mismatchError *sema.TypeMismatchError
 		require.ErrorAs(t, errs[1], &mismatchError)
-		require.Equal(t, "expected `auth(E) &Int`, got `auth(F) &Int`", mismatchError.SecondaryError())
+
+		require.Contains(t,
+			mismatchError.SecondaryError(),
+			"expected `auth(E) &Int`, got `auth(F) &Int`",
+		)
 	})
 
 	t.Run("invalid access", func(t *testing.T) {

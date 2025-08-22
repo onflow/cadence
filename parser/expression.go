@@ -1163,7 +1163,7 @@ func defineStringExpression() {
 			literal := p.tokenSource(curToken)
 			length := len(literal)
 			if length == 0 {
-				p.reportSyntaxError("invalid end of string literal: missing '\"'")
+				p.reportSyntaxError("invalid end of string literal: missing `\"`")
 				return ast.NewStringExpression(
 					p.memoryGauge,
 					"",
@@ -1174,7 +1174,7 @@ func defineStringExpression() {
 			if length >= 1 {
 				first := literal[0]
 				if first != '"' {
-					p.reportSyntaxError("invalid start of string literal: expected '\"', got %q", first)
+					p.reportSyntaxError("invalid start of string literal: expected `\"`, got %#q", first)
 				}
 			}
 
@@ -1242,7 +1242,7 @@ func defineStringExpression() {
 
 			// check for end " of string literal
 			if missingEnd {
-				p.reportSyntaxError("invalid end of string literal: missing '\"'")
+				p.reportSyntaxError("invalid end of string literal: missing `\"`")
 			}
 
 			if len(values) == 0 {
@@ -1723,14 +1723,14 @@ func applyExprLeftDenotation(p *parser, token lexer.Token, left ast.Expression) 
 func parseStringLiteral(p *parser, literal []byte) (result string) {
 	length := len(literal)
 	if length == 0 {
-		p.reportSyntaxError("missing start of string literal: expected '\"'")
+		p.reportSyntaxError("missing start of string literal: expected `\"`")
 		return
 	}
 
 	if length >= 1 {
 		first := literal[0]
 		if first != '"' {
-			p.reportSyntaxError("invalid start of string literal: expected '\"', got %q", first)
+			p.reportSyntaxError("invalid start of string literal: expected `\"`, got %#q", first)
 		}
 	}
 
@@ -1751,7 +1751,7 @@ func parseStringLiteral(p *parser, literal []byte) (result string) {
 	result = parseStringLiteralContent(p, literal[1:endOffset])
 
 	if missingEnd {
-		p.reportSyntaxError("invalid end of string literal: missing '\"'")
+		p.reportSyntaxError("invalid end of string literal: missing `\"`")
 	}
 
 	return
@@ -1818,13 +1818,13 @@ func parseStringLiteralContent(p *parser, s []byte) (result string) {
 		case 'u':
 			if atEnd {
 				p.reportSyntaxError(
-					"incomplete Unicode escape sequence: missing character '{' after escape character",
+					"incomplete Unicode escape sequence: missing character `{` after escape character",
 				)
 				return
 			}
 			advance()
 			if r != '{' {
-				p.reportSyntaxError("invalid Unicode escape sequence: expected '{', got %q", r)
+				p.reportSyntaxError("invalid Unicode escape sequence: expected `{`, got %#q", string(r))
 				continue
 			}
 
@@ -1840,7 +1840,7 @@ func parseStringLiteralContent(p *parser, s []byte) (result string) {
 				parsed := parseHex(r)
 
 				if parsed < 0 {
-					p.reportSyntaxError("invalid Unicode escape sequence: expected hex digit, got %q", r)
+					p.reportSyntaxError("invalid Unicode escape sequence: expected hex digit, got %#q", string(r))
 					valid = false
 				} else {
 					r2 = r2<<4 | parsed
@@ -1860,15 +1860,15 @@ func parseStringLiteralContent(p *parser, s []byte) (result string) {
 				break
 			case lexer.EOF:
 				p.reportSyntaxError(
-					"incomplete Unicode escape sequence: missing character '}' after escape character",
+					"incomplete Unicode escape sequence: missing character `}` after escape character",
 				)
 			default:
-				p.reportSyntaxError("incomplete Unicode escape sequence: expected '}', got %q", r)
+				p.reportSyntaxError("incomplete Unicode escape sequence: expected `}`, got %#q", string(r))
 			}
 
 		default:
 			// TODO: include index/column in error
-			p.reportSyntaxError("invalid escape character: %q", r)
+			p.reportSyntaxError("invalid escape character: %#q", string(r))
 			// skip invalid escape character, don't write to result
 		}
 	}
