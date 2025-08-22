@@ -32,8 +32,6 @@ import (
 )
 
 type Interface interface {
-	MeterInterface
-
 	// ResolveLocation resolves an import location.
 	ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
 	// GetCode returns the code at a given location
@@ -158,14 +156,6 @@ type Interface interface {
 	) (bool, error)
 
 	MinimumRequiredVersion() (string, error)
-}
-
-type MeterInterface interface {
-	// MeterComputation is a callback method for metering computation, it returns error
-	// when computation passes the limit (set by the environment)
-	MeterComputation(usage common.ComputationUsage) error
-	// ComputationUsed returns the total computation used in the current runtime.
-	ComputationUsed() (uint64, error)
 }
 
 type Metrics interface {

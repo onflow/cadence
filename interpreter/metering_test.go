@@ -398,14 +398,6 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 	)
 }
 
-type computationGaugeFunc func(usage common.ComputationUsage) error
-
-var _ common.ComputationGauge = computationGaugeFunc(nil)
-
-func (f computationGaugeFunc) MeterComputation(usage common.ComputationUsage) error {
-	return f(usage)
-}
-
 func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
 
 	t.Parallel()
@@ -422,10 +414,12 @@ func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				InterpreterConfig: &interpreter.Config{
-					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
-						computationMeteredValues[usage.Kind] += usage.Intensity
-						return nil
-					}),
+					ComputationGauge: common.FunctionComputationGauge(
+						func(usage common.ComputationUsage) error {
+							computationMeteredValues[usage.Kind] += usage.Intensity
+							return nil
+						},
+					),
 				},
 			},
 		)

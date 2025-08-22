@@ -49,15 +49,6 @@ func (EmptyRuntimeInterface) GetAccountContractCode(_ common.AddressLocation) (c
 	panic("unexpected call to GetAccountContractCode")
 }
 
-func (EmptyRuntimeInterface) MeterComputation(_ common.ComputationUsage) error {
-	// NO-OP
-	return nil
-}
-
-func (EmptyRuntimeInterface) ComputationUsed() (uint64, error) {
-	panic("unexpected call to ComputationUsed")
-}
-
 func (EmptyRuntimeInterface) GetCode(_ Location) ([]byte, error) {
 	panic("unexpected call to GetCode")
 }
