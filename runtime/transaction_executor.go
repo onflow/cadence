@@ -23,7 +23,6 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/bbq/vm"
-	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -112,10 +111,7 @@ func (executor *transactionExecutor) preprocess() (err error) {
 
 	storage := NewStorage(
 		runtimeInterface,
-		common.NewCombinedGauge(
-			context.MemoryGauge,
-			context.ComputationGauge,
-		),
+		context.MemoryGauge,
 		StorageConfig{},
 	)
 	executor.storage = storage

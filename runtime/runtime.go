@@ -359,10 +359,7 @@ func (r *runtime) Storage(context Context) (*Storage, *interpreter.Interpreter, 
 
 	storage := NewStorage(
 		runtimeInterface,
-		common.NewCombinedGauge(
-			context.MemoryGauge,
-			context.ComputationGauge,
-		),
+		context.MemoryGauge,
 		StorageConfig{},
 	)
 
