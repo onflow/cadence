@@ -981,7 +981,7 @@ func generateErrors() []namedError {
 		},
 		{"sema.InvalidConstructionError",
 			&sema.InvalidConstructionError{
-				Range: placeholderRange,
+				Pos: placeholderPosition,
 			},
 		},
 		{"sema.InvalidDeclarationError",
@@ -1151,7 +1151,7 @@ func generateErrors() []namedError {
 		},
 		{"sema.InvalidMoveOperationError",
 			&sema.InvalidMoveOperationError{
-				Range: placeholderRange,
+				Pos: placeholderPosition,
 			},
 		},
 		{"sema.InvalidNameError",

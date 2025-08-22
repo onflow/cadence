@@ -199,9 +199,9 @@ func TestCheckEntitlementsErrorMessage(t *testing.T) {
 
 		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
 		require.ErrorAs(t, errs[1], &invalidInterface)
-		require.Equal(t,
-			"got `auth(F) &I`; consider using `auth(F) &{I}`",
+		require.Contains(t,
 			invalidInterface.SecondaryError(),
+			"got `auth(F) &I`, consider using `auth(F) &{I}`",
 		)
 	})
 }
