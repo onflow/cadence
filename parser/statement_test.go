@@ -27,6 +27,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/parser/lexer"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
@@ -573,7 +575,6 @@ func TestParseIfStatement(t *testing.T) {
 			result,
 		)
 	})
-
 }
 
 func TestParseWhileStatement(t *testing.T) {
@@ -878,13 +879,40 @@ func TestParseForStatementIndexBinding(t *testing.T) {
 		_, errs := testParseStatements("for i x in y { }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected keyword \"in\", got identifier",
-					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+				&MissingInKeywordInForStatementError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+							EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
-				&SyntaxError{
-					Message: "expected token '{'",
-					Pos:     ast.Position{Offset: 11, Line: 1, Column: 11},
+				&MissingOpeningBraceError{
+					Description: "block",
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+							EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+						},
+						Type: lexer.TokenIdentifier,
+					},
+				},
+				&StatementSeparationError{
+					Pos: ast.Position{Offset: 11, Line: 1, Column: 11},
+				},
+				&StatementSeparationError{
+					Pos: ast.Position{Offset: 13, Line: 1, Column: 13},
+				},
+				&MissingClosingBraceError{
+					Description: "block",
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 16, Line: 1, Column: 16},
+							EndPos:   ast.Position{Offset: 16, Line: 1, Column: 16},
+						},
+						Type: lexer.TokenEOF,
+					},
 				},
 			},
 			errs,
@@ -898,13 +926,17 @@ func TestParseForStatementIndexBinding(t *testing.T) {
 		_, errs := testParseStatements("for in y { }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected identifier, got keyword \"in\"",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				&InvalidInKeywordAsIdentifierError{
+					Pos: ast.Position{Offset: 6, Line: 1, Column: 6},
 				},
-				&SyntaxError{
-					Message: "expected token identifier",
-					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+				&MissingInKeywordInForStatementError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+							EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
@@ -940,6 +972,59 @@ func TestParseEmit(t *testing.T) {
 				},
 			},
 			result,
+		)
+	})
+
+	t.Run("missing parens", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "emit T"
+		_, errs := testParseStatements(code)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingOpeningParenInNominalTypeInvocationError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+							EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+						},
+					},
+				},
+				&MissingClosingParenInArgumentListError{
+					Pos: ast.Position{Offset: 6, Line: 1, Column: 6},
+				},
+			},
+			errs,
+		)
+
+		var missingParenErr *MissingOpeningParenInNominalTypeInvocationError
+		require.ErrorAs(t, errs[0], &missingParenErr)
+
+		fixes := missingParenErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert opening parenthesis",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "(",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+								EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"emit T(",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 }
@@ -1095,12 +1180,15 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 
 		require.Empty(t, result)
 
-		AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Message: "expected identifier after start of function declaration, got keyword continue",
-				Pos:     ast.Position{Line: 1, Column: 4, Offset: 4},
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected identifier after start of function declaration, got keyword continue",
+					Pos:     ast.Position{Line: 1, Column: 4, Offset: 4},
+				},
 			},
-		}, errs)
+			errs,
+		)
 	})
 
 	t.Run("function expression with purity, and keyword as name", func(t *testing.T) {
@@ -1110,12 +1198,15 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 
 		require.Empty(t, result)
 
-		AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Message: "expected identifier after start of function declaration, got keyword break",
-				Pos:     ast.Position{Line: 1, Column: 9, Offset: 9},
+		AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected identifier after start of function declaration, got keyword break",
+					Pos:     ast.Position{Line: 1, Column: 9, Offset: 9},
+				},
 			},
-		}, errs)
+			errs,
+		)
 	})
 }
 
@@ -1125,11 +1216,8 @@ func TestParseViewNonFunction(t *testing.T) {
 	_, errs := testParseStatements("view return 3")
 	AssertEqualWithDiff(t,
 		[]error{
-			&SyntaxError{
-				Message:       "statements on the same line must be separated with a semicolon",
-				Secondary:     "add a semicolon (;) between statements or place each statement on a separate line",
-				Documentation: "https://cadence-lang.org/docs/language/syntax#semicolons",
-				Pos:           ast.Position{Offset: 5, Line: 1, Column: 5},
+			&StatementSeparationError{
+				Pos: ast.Position{Offset: 5, Line: 1, Column: 5},
 			},
 		},
 		errs,
@@ -1192,14 +1280,13 @@ func TestParseStatements(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseStatements(`assert true`)
+		const code = `assert true`
+		result, errs := testParseStatements(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "statements on the same line must be separated with a semicolon",
-					Secondary:     "add a semicolon (;) between statements or place each statement on a separate line",
-					Documentation: "https://cadence-lang.org/docs/language/syntax#semicolons",
-					Pos:           ast.Position{Offset: 7, Line: 1, Column: 7},
+				&StatementSeparationError{
+					Pos: ast.Position{Offset: 7, Line: 1, Column: 7},
 				},
 			},
 			errs,
@@ -1226,6 +1313,34 @@ func TestParseStatements(t *testing.T) {
 				},
 			},
 			result,
+		)
+
+		var statementSeparationError *StatementSeparationError
+		require.ErrorAs(t, errs[0], &statementSeparationError)
+
+		fixes := statementSeparationError.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert semicolon",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ";",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+								EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			`assert; true`,
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 }
@@ -1298,26 +1413,106 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 		)
 	})
 
-	t.Run("no from", func(t *testing.T) {
+	t.Run("missing from", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseStatements("remove A")
+		const code = "remove A b"
+		_, errs := testParseStatements(code)
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected from keyword, got EOF",
-					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
-				},
-				&SyntaxError{
-					Message:       "unexpected end of program",
-					Secondary:     "check for incomplete expressions, missing tokens, or unterminated strings/comments",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 8, Line: 1, Column: 8},
+				&MissingFromKeywordInRemoveStatementError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 9, Line: 1, Column: 9},
+							EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+						},
+					},
 				},
 			},
 			errs,
+		)
+
+		var missingFromErr *MissingFromKeywordInRemoveStatementError
+		require.ErrorAs(t, errs[0], &missingFromErr)
+
+		fixes := missingFromErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert `from`",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "from ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 9, Line: 1, Column: 9},
+								EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"remove A from b",
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+	})
+
+	t.Run("missing from at end", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "remove A"
+		_, errs := testParseStatements(code)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingFromKeywordInRemoveStatementError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+							EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+						},
+					},
+				},
+				UnexpectedEOFError{
+					Pos: ast.Position{Offset: 8, Line: 1, Column: 8},
+				},
+			},
+			errs,
+		)
+
+		var missingFromErr *MissingFromKeywordInRemoveStatementError
+		require.ErrorAs(t, errs[0], &missingFromErr)
+
+		fixes := missingFromErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert `from`",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: " from ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+								EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"remove A from ",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
@@ -1329,11 +1524,8 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message:       "unexpected end of program",
-					Secondary:     "check for incomplete expressions, missing tokens, or unterminated strings/comments",
-					Documentation: "https://cadence-lang.org/docs/language/syntax",
-					Pos:           ast.Position{Offset: 13, Line: 1, Column: 13},
+				UnexpectedEOFError{
+					Pos: ast.Position{Offset: 13, Line: 1, Column: 13},
 				},
 			},
 			errs,
@@ -1348,9 +1540,11 @@ func TestParseRemoveAttachmentStatement(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected attachment nominal type, got [A]",
-					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				&InvalidAttachmentRemovalTypeError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+						EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+					},
 				},
 			},
 			errs,
@@ -1508,12 +1702,99 @@ func TestParseSwitchStatement(t *testing.T) {
 		)
 	})
 
-	t.Run("Invalid identifiers in switch cases", func(t *testing.T) {
-		code := "switch 1 {AAAAA: break; case 3: break; default: break}"
-		_, errs := testParseStatements(code)
+	t.Run("invalid identifiers in switch cases", func(t *testing.T) {
+		t.Parallel()
+
+		_, errs := testParseStatements("switch 1 {AAAAA: break; case 3: break; default: break}")
 		AssertEqualWithDiff(t,
-			`unexpected token: got identifier, expected "case" or "default"`,
-			errs[0].Error(),
+			[]error{
+				&ExpectedCaseOrDefaultError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 14, Line: 1, Column: 14},
+						},
+					},
+				},
+				&ExpectedCaseOrDefaultError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenColon,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 15, Line: 1, Column: 15},
+							EndPos:   ast.Position{Offset: 15, Line: 1, Column: 15},
+						},
+					},
+				},
+				&ExpectedCaseOrDefaultError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
+							EndPos:   ast.Position{Offset: 21, Line: 1, Column: 21},
+						},
+					},
+				},
+				&ExpectedCaseOrDefaultError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenSemicolon,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 22, Line: 1, Column: 22},
+							EndPos:   ast.Position{Offset: 22, Line: 1, Column: 22},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing colon", func(t *testing.T) {
+		t.Parallel()
+
+		const code = "switch 1 { case 2 break }"
+		_, errs := testParseStatements(code)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingColonInSwitchCaseError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 18, Line: 1, Column: 18},
+							EndPos:   ast.Position{Offset: 22, Line: 1, Column: 22},
+						},
+					},
+				},
+			},
+			errs,
+		)
+
+		var missingColonErr *MissingColonInSwitchCaseError
+		require.ErrorAs(t, errs[0], &missingColonErr)
+
+		fixes := missingColonErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert colon",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ":",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
+								EndPos:   ast.Position{Offset: 17, Line: 1, Column: 17},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"switch 1 { case 2: break }",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 }
@@ -2092,13 +2373,13 @@ func TestParseAccessAssignment(t *testing.T) {
 															Pos:        ast.Position{Offset: 31, Line: 3, Column: 12},
 														},
 													},
-													AccessPos: ast.Position{Offset: 32, Line: 3, Column: 13},
+													AccessEndPos: ast.Position{Offset: 32, Line: 3, Column: 13},
 													Identifier: ast.Identifier{
 														Identifier: "foo",
 														Pos:        ast.Position{Offset: 33, Line: 3, Column: 14},
 													},
 												},
-												AccessPos: ast.Position{Offset: 36, Line: 3, Column: 17},
+												AccessEndPos: ast.Position{Offset: 36, Line: 3, Column: 17},
 												Identifier: ast.Identifier{
 													Identifier: "bar",
 													Pos:        ast.Position{Offset: 37, Line: 3, Column: 18},
@@ -2132,7 +2413,7 @@ func TestParseAccessAssignment(t *testing.T) {
 											EndPos:   ast.Position{Offset: 45, Line: 3, Column: 26},
 										},
 									},
-									AccessPos: ast.Position{Offset: 46, Line: 3, Column: 27},
+									AccessEndPos: ast.Position{Offset: 46, Line: 3, Column: 27},
 									Identifier: ast.Identifier{
 										Identifier: "baz",
 										Pos:        ast.Position{Offset: 47, Line: 3, Column: 28},
@@ -2205,13 +2486,13 @@ func TestParseExpressionStatementWithAccess(t *testing.T) {
 															Pos:        ast.Position{Offset: 19, Line: 2, Column: 18},
 														},
 													},
-													AccessPos: ast.Position{Offset: 20, Line: 2, Column: 19},
+													AccessEndPos: ast.Position{Offset: 20, Line: 2, Column: 19},
 													Identifier: ast.Identifier{
 														Identifier: "foo",
 														Pos:        ast.Position{Offset: 21, Line: 2, Column: 20},
 													},
 												},
-												AccessPos: ast.Position{Offset: 24, Line: 2, Column: 23},
+												AccessEndPos: ast.Position{Offset: 24, Line: 2, Column: 23},
 												Identifier: ast.Identifier{
 													Identifier: "bar",
 													Pos:        ast.Position{Offset: 25, Line: 2, Column: 24},
@@ -2245,7 +2526,7 @@ func TestParseExpressionStatementWithAccess(t *testing.T) {
 											EndPos:   ast.Position{Offset: 33, Line: 2, Column: 32},
 										},
 									},
-									AccessPos: ast.Position{Offset: 34, Line: 2, Column: 33},
+									AccessEndPos: ast.Position{Offset: 34, Line: 2, Column: 33},
 									Identifier: ast.Identifier{
 										Identifier: "baz",
 										Pos:        ast.Position{Offset: 35, Line: 2, Column: 34},
@@ -2550,7 +2831,7 @@ func TestParseSwapStatementInFunctionDeclaration(t *testing.T) {
 											Pos:        ast.Position{Offset: 41, Line: 3, Column: 21},
 										},
 									},
-									AccessPos: ast.Position{Offset: 44, Line: 3, Column: 24},
+									AccessEndPos: ast.Position{Offset: 44, Line: 3, Column: 24},
 									Identifier: ast.Identifier{
 										Identifier: "baz",
 										Pos:        ast.Position{Offset: 45, Line: 3, Column: 25},
@@ -2767,4 +3048,1280 @@ func TestParseStatementsWithWhitespace(t *testing.T) {
 
 		require.Len(t, statements, 1)
 	})
+}
+
+func TestParseForInKeywordAsIdentifier(t *testing.T) {
+	t.Parallel()
+
+	_, errs := testParseStatements(`for in in [] {}`)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&InvalidInKeywordAsIdentifierError{
+				Pos: ast.Position{Offset: 6, Line: 1, Column: 6},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseForStatementMissingInKeyword(t *testing.T) {
+	t.Parallel()
+
+	const code = `for i [] {}`
+	_, errs := testParseStatements(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingInKeywordInForStatementError{
+				GotToken: lexer.Token{
+					Type: lexer.TokenBracketOpen,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+						EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+					},
+				},
+			},
+		},
+		errs,
+	)
+
+	var missingInErr *MissingInKeywordInForStatementError
+	require.ErrorAs(t, errs[0], &missingInErr)
+
+	fixes := missingInErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert `in`",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: "in ",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+							EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"for i in [] {}",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
+func TestParseForStatementMissingInKeywordAtEnd(t *testing.T) {
+	t.Parallel()
+
+	const code = `for i`
+	_, errs := testParseStatements(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingInKeywordInForStatementError{
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+						EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+					},
+				},
+			},
+			UnexpectedEOFError{
+				Pos: ast.Position{Offset: 5, Line: 1, Column: 5},
+			},
+		},
+		errs,
+	)
+
+	var missingInErr *MissingInKeywordInForStatementError
+	require.ErrorAs(t, errs[0], &missingInErr)
+
+	fixes := missingInErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert `in`",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " in ",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"for i in ",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
+func TestParseIfStatementMissingOpeningBrace(t *testing.T) {
+	t.Parallel()
+
+	const code = `if true }`
+	_, errs := testParseStatements(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenBraceClose,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+						EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+					},
+				},
+			},
+		},
+		errs,
+	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+							EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"if true { }",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
+func TestParseWhileStatementMissingOpeningBrace(t *testing.T) {
+	t.Parallel()
+
+	const code = `while true }`
+	_, errs := testParseStatements(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenBraceClose,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
+						EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+					},
+				},
+			},
+		},
+		errs,
+	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"while true { }",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
+func TestParseForStatementMissingOpeningBrace(t *testing.T) {
+	t.Parallel()
+
+	const code = `for x in y }`
+	_, errs := testParseStatements(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenBraceClose,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
+						EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+					},
+				},
+			},
+		},
+		errs,
+	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"for x in y { }",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
+func TestParseIfStatementMissingClosingBrace(t *testing.T) {
+	t.Parallel()
+
+	const code = `if true { `
+	_, errs := testParseStatements(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingClosingBraceError{
+				Description: "block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+						EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+					},
+				},
+			},
+		},
+		errs,
+	)
+
+	var missingBraceErr *MissingClosingBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert closing brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: "}",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 9, Line: 1, Column: 9},
+							EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"if true {} ",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
+func TestParseWhileStatementMissingClosingBrace(t *testing.T) {
+	t.Parallel()
+
+	const code = `while true { `
+	_, errs := testParseStatements(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingClosingBraceError{
+				Description: "block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+						EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+					},
+				},
+			},
+		},
+		errs,
+	)
+
+	var missingBraceErr *MissingClosingBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert closing brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: "}",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
+							EndPos:   ast.Position{Offset: 12, Line: 1, Column: 12},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"while true {} ",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
+func TestParseForStatementMissingClosingBrace(t *testing.T) {
+	t.Parallel()
+
+	const code = `for x in y { `
+	_, errs := testParseStatements(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingClosingBraceError{
+				Description: "block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+						EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+					},
+				},
+			},
+		},
+		errs,
+	)
+
+	var missingBraceErr *MissingClosingBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert closing brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: "}",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
+							EndPos:   ast.Position{Offset: 12, Line: 1, Column: 12},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"for x in y {} ",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
+func TestParseFunctionDeclarationMissingOpeningBrace(t *testing.T) {
+	t.Parallel()
+
+	const code = `fun test() }`
+	_, errs := testParseStatements(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "function block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenBraceClose,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
+						EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+					},
+				},
+			},
+		},
+		errs,
+	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"fun test() { }",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
+func TestParseFunctionDeclarationMissingClosingBrace(t *testing.T) {
+	t.Parallel()
+
+	const code = `fun test() { `
+	_, errs := testParseStatements(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingClosingBraceError{
+				Description: "function block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+						EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+					},
+				},
+			},
+		},
+		errs,
+	)
+
+	var missingBraceErr *MissingClosingBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert closing brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: "}",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 12, Line: 1, Column: 12},
+							EndPos:   ast.Position{Offset: 12, Line: 1, Column: 12},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"fun test() {} ",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
+func TestParsePreConditionsMissingOpeningBrace(t *testing.T) {
+	t.Parallel()
+
+	const code = `fun test() { pre } }`
+	_, errs := testParseStatements(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "conditions",
+				GotToken: lexer.Token{
+					Type: lexer.TokenBraceClose,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
+						EndPos:   ast.Position{Offset: 17, Line: 1, Column: 17},
+					},
+				},
+			},
+		},
+		errs,
+	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 16, Line: 1, Column: 16},
+							EndPos:   ast.Position{Offset: 16, Line: 1, Column: 16},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"fun test() { pre { } }",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
+func TestParsePreConditionsMissingClosingBrace(t *testing.T) {
+	t.Parallel()
+
+	const code = `fun test() { pre { `
+	_, errs := testParseStatements(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingClosingBraceError{
+				Description: "conditions",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 19, Line: 1, Column: 19},
+						EndPos:   ast.Position{Offset: 19, Line: 1, Column: 19},
+					},
+				},
+			},
+			&MissingClosingBraceError{
+				Description: "function block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 19, Line: 1, Column: 19},
+						EndPos:   ast.Position{Offset: 19, Line: 1, Column: 19},
+					},
+				},
+			},
+		},
+		errs,
+	)
+
+	var missingBraceErr *MissingClosingBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert closing brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: "}",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 18, Line: 1, Column: 18},
+							EndPos:   ast.Position{Offset: 18, Line: 1, Column: 18},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"fun test() { pre {} ",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
+func TestParsePostConditionsMissingOpeningBrace(t *testing.T) {
+	t.Parallel()
+
+	const code = `fun test() { post } }`
+	_, errs := testParseStatements(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "conditions",
+				GotToken: lexer.Token{
+					Type: lexer.TokenBraceClose,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 18, Line: 1, Column: 18},
+						EndPos:   ast.Position{Offset: 18, Line: 1, Column: 18},
+					},
+				},
+			},
+		},
+		errs,
+	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
+							EndPos:   ast.Position{Offset: 17, Line: 1, Column: 17},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"fun test() { post { } }",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
+func TestParsePostConditionsMissingClosingBrace(t *testing.T) {
+	t.Parallel()
+
+	const code = `fun test() { post { `
+	_, errs := testParseStatements(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingClosingBraceError{
+				Description: "conditions",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 20, Line: 1, Column: 20},
+						EndPos:   ast.Position{Offset: 20, Line: 1, Column: 20},
+					},
+				},
+			},
+			&MissingClosingBraceError{
+				Description: "function block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 20, Line: 1, Column: 20},
+						EndPos:   ast.Position{Offset: 20, Line: 1, Column: 20},
+					},
+				},
+			},
+		},
+		errs,
+	)
+
+	var missingBraceErr *MissingClosingBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert closing brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: "}",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 19, Line: 1, Column: 19},
+							EndPos:   ast.Position{Offset: 19, Line: 1, Column: 19},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"fun test() { post {} ",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
+func TestParseSwitchStatementMissingOpeningBrace(t *testing.T) {
+	t.Parallel()
+
+	const code = `switch x }`
+	_, errs := testParseStatements(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "switch cases",
+				GotToken: lexer.Token{
+					Type: lexer.TokenBraceClose,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 9, Line: 1, Column: 9},
+						EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+					},
+				},
+			},
+		},
+		errs,
+	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+							EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"switch x { }",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
+func TestParseSwitchStatementMissingClosingBrace(t *testing.T) {
+	t.Parallel()
+
+	const code = `switch x { `
+	_, errs := testParseStatements(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingClosingBraceError{
+				Description: "switch cases",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
+						EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+					},
+				},
+			},
+		},
+		errs,
+	)
+
+	var missingBraceErr *MissingClosingBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert closing brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: "}",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"switch x {} ",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
+func TestParseIfStatementMissingOpeningBraceEOF(t *testing.T) {
+	t.Parallel()
+
+	const code = `if true`
+	_, errs := testParseStatements(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+						EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+					},
+				},
+			},
+			&MissingClosingBraceError{
+				Description: "block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+						EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+					},
+				},
+			},
+		},
+		errs,
+	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+							EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"if true {",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
+func TestParseWhileStatementMissingOpeningBraceEOF(t *testing.T) {
+	t.Parallel()
+
+	const code = `while true`
+	_, errs := testParseStatements(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+						EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+					},
+				},
+			},
+			&MissingClosingBraceError{
+				Description: "block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+						EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+					},
+				},
+			},
+		},
+		errs,
+	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"while true {",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
+func TestParseForStatementMissingOpeningBraceEOF(t *testing.T) {
+	t.Parallel()
+
+	const code = `for x in y`
+	_, errs := testParseStatements(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+						EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+					},
+				},
+			},
+			&MissingClosingBraceError{
+				Description: "block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+						EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+					},
+				},
+			},
+		},
+		errs,
+	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"for x in y {",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
+func TestParseFunctionDeclarationMissingOpeningBraceEOF(t *testing.T) {
+	t.Parallel()
+
+	const code = `fun test()`
+	_, errs := testParseStatements(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "function block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+						EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+					},
+				},
+			},
+			&MissingClosingBraceError{
+				Description: "function block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+						EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+					},
+				},
+			},
+		},
+		errs,
+	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"fun test() {",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
+func TestParsePreConditionsMissingOpeningBraceEOF(t *testing.T) {
+	t.Parallel()
+
+	const code = `fun test() { pre`
+	_, errs := testParseStatements(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "conditions",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 16, Line: 1, Column: 16},
+						EndPos:   ast.Position{Offset: 16, Line: 1, Column: 16},
+					},
+				},
+			},
+			&MissingClosingBraceError{
+				Description: "conditions",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 16, Line: 1, Column: 16},
+						EndPos:   ast.Position{Offset: 16, Line: 1, Column: 16},
+					},
+				},
+			},
+			&MissingClosingBraceError{
+				Description: "function block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 16, Line: 1, Column: 16},
+						EndPos:   ast.Position{Offset: 16, Line: 1, Column: 16},
+					},
+				},
+			},
+		},
+		errs,
+	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 16, Line: 1, Column: 16},
+							EndPos:   ast.Position{Offset: 16, Line: 1, Column: 16},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"fun test() { pre {",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
+func TestParsePostConditionsMissingOpeningBraceEOF(t *testing.T) {
+	t.Parallel()
+
+	const code = `fun test() { post`
+	_, errs := testParseStatements(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "conditions",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
+						EndPos:   ast.Position{Offset: 17, Line: 1, Column: 17},
+					},
+				},
+			},
+			&MissingClosingBraceError{
+				Description: "conditions",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
+						EndPos:   ast.Position{Offset: 17, Line: 1, Column: 17},
+					},
+				},
+			},
+			&MissingClosingBraceError{
+				Description: "function block",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
+						EndPos:   ast.Position{Offset: 17, Line: 1, Column: 17},
+					},
+				},
+			},
+		},
+		errs,
+	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
+							EndPos:   ast.Position{Offset: 17, Line: 1, Column: 17},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"fun test() { post {",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
+func TestParseSwitchStatementMissingOpeningBraceEOF(t *testing.T) {
+	t.Parallel()
+
+	const code = `switch x`
+	_, errs := testParseStatements(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingOpeningBraceError{
+				Description: "switch cases",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+						EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+					},
+				},
+			},
+			&MissingClosingBraceError{
+				Description: "switch cases",
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+						EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+					},
+				},
+			},
+		},
+		errs,
+	)
+
+	var missingBraceErr *MissingOpeningBraceError
+	require.ErrorAs(t, errs[0], &missingBraceErr)
+
+	fixes := missingBraceErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert opening brace",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+							EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t,
+		"switch x {",
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }

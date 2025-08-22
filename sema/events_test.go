@@ -222,17 +222,52 @@ func TestCheckEmitEvent(t *testing.T) {
 	t.Run("missing emit statement", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := ParseAndCheck(t, `
+		const code = `
             event Transfer(to: Int, from: Int)
 
             fun test() {
                 Transfer(to: 1, from: 2)
             }
-        `)
+        `
+		_, err := ParseAndCheck(t, code)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidEventUsageError{}, errs[0])
+		var usageError *sema.InvalidEventUsageError
+		require.ErrorAs(t, errs[0], &usageError)
+
+		fixes := usageError.SuggestFixes(code)
+
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert `emit`",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "emit ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 90, Line: 5, Column: 16},
+								EndPos:   ast.Position{Offset: 90, Line: 5, Column: 16},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		const expected = `
+            event Transfer(to: Int, from: Int)
+
+            fun test() {
+                emit Transfer(to: 1, from: 2)
+            }
+        `
+
+		assert.Equal(t,
+			expected,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
 	})
 
 	t.Run("missing emit statement, optional chaining", func(t *testing.T) {
@@ -691,7 +726,7 @@ func TestCheckDefaultEventDeclaration(t *testing.T) {
 		require.Equal(t,
 			[]errors.SuggestedFix[ast.TextEdit]{
 				{
-					Message: "remove explicit emit statement",
+					Message: "Remove explicit emit statement",
 					TextEdits: []ast.TextEdit{
 						{
 							Range: ast.Range{

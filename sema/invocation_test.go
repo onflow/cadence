@@ -109,7 +109,7 @@ func TestCheckInvalidFunctionCallWithNotRequiredArgumentLabel(t *testing.T) {
 	require.Equal(t,
 		[]errors.SuggestedFix[ast.TextEdit]{
 			{
-				Message: "remove argument label",
+				Message: "Remove argument label",
 				TextEdits: []ast.TextEdit{
 					{
 						Range: ast.Range{
@@ -181,7 +181,7 @@ func TestCheckFunctionCallMissingArgumentLabel(t *testing.T) {
 	require.Equal(t,
 		[]errors.SuggestedFix[ast.TextEdit]{
 			{
-				Message: "insert argument label",
+				Message: "Insert argument label",
 				TextEdits: []ast.TextEdit{
 					{
 						Insertion: "x: ",
@@ -235,7 +235,7 @@ func TestCheckFunctionCallIncorrectArgumentLabel(t *testing.T) {
 	require.Equal(t,
 		[]errors.SuggestedFix[ast.TextEdit]{
 			{
-				Message: "replace argument label",
+				Message: "Replace argument label",
 				TextEdits: []ast.TextEdit{
 					{
 						Replacement: "x:",
