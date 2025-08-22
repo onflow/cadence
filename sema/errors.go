@@ -3834,7 +3834,7 @@ func (e *UnreachableStatementError) SuggestFixes(code string) []errors.Suggested
 			TextEdits: []ast.TextEdit{
 				{
 					Replacement: "",
-					Range: e.Range,
+					Range:       e.Range,
 				},
 			},
 		},
