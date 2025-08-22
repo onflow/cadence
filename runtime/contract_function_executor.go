@@ -111,10 +111,7 @@ func (executor *contractFunctionExecutor) preprocess() (err error) {
 
 	storage := NewStorage(
 		runtimeInterface,
-		common.NewCombinedGauge(
-			context.MemoryGauge,
-			runtimeInterface,
-		),
+		context.MemoryGauge,
 		StorageConfig{},
 	)
 	executor.storage = storage
