@@ -547,7 +547,6 @@ func TestInterpretFixedPointToFixedPointConversions(t *testing.T) {
 
 		if expectedError != nil {
 			RequireError(t, err)
-
 			require.ErrorAs(t, err, &expectedError)
 		} else {
 			require.NoError(t, err)

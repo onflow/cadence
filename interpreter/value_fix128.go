@@ -608,7 +608,7 @@ func (v Fix128Value) ToBigInt() *big.Int {
 	return fixedpoint.Fix128ToBigInt(fix.Fix128(v))
 }
 
-func handleFixedpointError(err error, _ LocationRange) {
+func handleFixedpointError(err error, locationRange LocationRange) {
 	switch err {
 	// `fix.ErrUnderflow` happens when the value is within the range but is too small
 	// to be represented using the current bit-length.
@@ -616,8 +616,15 @@ func handleFixedpointError(err error, _ LocationRange) {
 	// (assumes that the value returned is already the truncated value).
 	case nil, fix.ErrUnderflow:
 		return
+	case fix.ErrOverflow:
+		panic(&OverflowError{
+			LocationRange: locationRange,
+		})
+	case fix.ErrNegOverflow:
+		panic(&UnderflowError{
+			LocationRange: locationRange,
+		})
 	default:
-		// TODO: wrap external error with a cadence overflow/underflow error.
 		panic(err)
 	}
 }

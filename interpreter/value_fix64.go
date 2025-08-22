@@ -208,11 +208,11 @@ func (v Fix64Value) Minus(context NumberValueArithmeticContext, other NumberValu
 	valueGetter := func() int64 {
 		// INT32-C
 		if (o > 0) && (v < (math.MinInt64 + o)) {
-			panic(&OverflowError{
+			panic(&UnderflowError{
 				LocationRange: locationRange,
 			})
 		} else if (o < 0) && (v > (math.MaxInt64 + o)) {
-			panic(&UnderflowError{
+			panic(&OverflowError{
 				LocationRange: locationRange,
 			})
 		}

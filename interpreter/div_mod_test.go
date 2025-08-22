@@ -27,7 +27,6 @@ import (
 
 	. "github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
-	"github.com/onflow/cadence/values"
 )
 
 func TestDivModUInt8(t *testing.T) {
@@ -3292,7 +3291,7 @@ func TestDivModUFix64(t *testing.T) {
 		{0, ufix64ZeroDotOne, nil},
 		{1, ufix64ZeroDotOne, nil},
 		{2, ufix64ZeroDotOne, nil},
-		{ufix64MaxIntDividend, ufix64ZeroDotOne, values.OverflowError{}},
+		{ufix64MaxIntDividend, ufix64ZeroDotOne, &OverflowError{}},
 		{ufix64MaxIntDividend + 1, ufix64ZeroDotOne, &OverflowError{}},
 
 		// 1.0
