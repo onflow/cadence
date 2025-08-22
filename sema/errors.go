@@ -663,18 +663,6 @@ func (e *IncorrectArgumentLabelError) SuggestFixes(code string) []errors.Suggest
 			},
 		}
 	} else {
-		endPos := e.Range.EndPos
-
-		var whitespaceSuffixLength int
-		for offset := endPos.Offset + 1; offset < len(code); offset++ {
-			if code[offset] == ' ' {
-				whitespaceSuffixLength++
-			} else {
-				break
-			}
-		}
-
-		adjustedEndPos := endPos.Shifted(nil, whitespaceSuffixLength)
 
 		return []errors.SuggestedFix[ast.TextEdit]{
 			{
@@ -683,8 +671,8 @@ func (e *IncorrectArgumentLabelError) SuggestFixes(code string) []errors.Suggest
 					{
 						Replacement: "",
 						Range: ast.Range{
-							StartPos: e.Range.StartPos,
-							EndPos:   adjustedEndPos,
+							StartPos: e.StartPos,
+							EndPos:   e.EndPos.SlurpWhitespaceSuffix(code),
 						},
 					},
 				},
@@ -2723,7 +2711,8 @@ func (*MissingReturnStatementError) Error() string {
 }
 
 func (*MissingReturnStatementError) SecondaryError() string {
-	return "not all code paths return a value; add a return statement to return a value"
+	return "not all code paths return a value; " +
+		"add a return statement to return a value"
 }
 
 func (*MissingReturnStatementError) DocumentationLink() string {
@@ -2760,8 +2749,6 @@ func (*UnsupportedOptionalChainingAssignmentError) DocumentationLink() string {
 
 // MissingResourceAnnotationError
 
-// TODO: Add suggested fix for missing resource annotation
-
 type MissingResourceAnnotationError struct {
 	ast.Range
 }
@@ -2770,6 +2757,7 @@ var _ SemanticError = &MissingResourceAnnotationError{}
 var _ errors.UserError = &MissingResourceAnnotationError{}
 var _ errors.SecondaryError = &MissingResourceAnnotationError{}
 var _ errors.HasDocumentationLink = &MissingResourceAnnotationError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingResourceAnnotationError{}
 
 func (*MissingResourceAnnotationError) isSemanticError() {}
 
@@ -2789,6 +2777,23 @@ func (*MissingResourceAnnotationError) SecondaryError() string {
 
 func (*MissingResourceAnnotationError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/resources"
+}
+
+func (e *MissingResourceAnnotationError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert `@`",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "@",
+					Range: ast.NewUnmeteredRange(
+						e.StartPos,
+						e.StartPos,
+					),
+				},
+			},
+		},
+	}
 }
 
 // InvalidNestedResourceMoveError
@@ -2858,6 +2863,7 @@ var _ SemanticError = &InvalidResourceAnnotationError{}
 var _ errors.UserError = &InvalidResourceAnnotationError{}
 var _ errors.SecondaryError = &InvalidResourceAnnotationError{}
 var _ errors.HasDocumentationLink = &InvalidResourceAnnotationError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &InvalidResourceAnnotationError{}
 
 func (*InvalidResourceAnnotationError) isSemanticError() {}
 
@@ -2883,6 +2889,23 @@ func (*InvalidResourceAnnotationError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/resources"
 }
 
+func (e *InvalidResourceAnnotationError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Remove `@`",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "",
+					Range: ast.NewUnmeteredRange(
+						e.StartPos,
+						e.StartPos,
+					),
+				},
+			},
+		},
+	}
+}
+
 // InvalidInterfaceTypeError
 
 type InvalidInterfaceTypeError struct {
@@ -2895,6 +2918,7 @@ var _ SemanticError = &InvalidInterfaceTypeError{}
 var _ errors.UserError = &InvalidInterfaceTypeError{}
 var _ errors.SecondaryError = &InvalidInterfaceTypeError{}
 var _ errors.HasDocumentationLink = &InvalidInterfaceTypeError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &InvalidInterfaceTypeError{}
 
 func (*InvalidInterfaceTypeError) isSemanticError() {}
 
@@ -2906,7 +2930,9 @@ func (*InvalidInterfaceTypeError) Error() string {
 
 func (e *InvalidInterfaceTypeError) SecondaryError() string {
 	return fmt.Sprintf(
-		"got %#q; consider using %#q",
+		"interfaces can not be used as types directly; "+
+			"wrap interfaces in intersection types (e.g., `{Interface}`); "+
+			"got %#q, consider using %#q",
 		e.ActualType.QualifiedString(),
 		e.ExpectedType.QualifiedString(),
 	)
@@ -2914,6 +2940,21 @@ func (e *InvalidInterfaceTypeError) SecondaryError() string {
 
 func (*InvalidInterfaceTypeError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/interfaces"
+}
+
+func (e *InvalidInterfaceTypeError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	replacement := e.ExpectedType.QualifiedString()
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: fmt.Sprintf("Replace with `%s`", replacement),
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: replacement,
+					Range:       e.Range,
+				},
+			},
+		},
+	}
 }
 
 // InvalidInterfaceDeclarationError
@@ -2950,7 +2991,6 @@ func (*InvalidInterfaceDeclarationError) DocumentationLink() string {
 
 // IncorrectTransferOperationError
 
-// TODO: Add suggested fix for this error
 type IncorrectTransferOperationError struct {
 	ActualOperation   ast.TransferOperation
 	ExpectedOperation ast.TransferOperation
@@ -2961,6 +3001,7 @@ var _ SemanticError = &IncorrectTransferOperationError{}
 var _ errors.UserError = &IncorrectTransferOperationError{}
 var _ errors.SecondaryError = &IncorrectTransferOperationError{}
 var _ errors.HasDocumentationLink = &IncorrectTransferOperationError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &IncorrectTransferOperationError{}
 
 func (*IncorrectTransferOperationError) isSemanticError() {}
 
@@ -2972,8 +3013,9 @@ func (*IncorrectTransferOperationError) Error() string {
 
 func (e *IncorrectTransferOperationError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected %#q; replace the operator with the expected one",
+		"expected %#q, got %#q; replace the operator with the expected one",
 		e.ExpectedOperation.Operator(),
+		e.ActualOperation.Operator(),
 	)
 }
 
@@ -2981,20 +3023,45 @@ func (*IncorrectTransferOperationError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/resources"
 }
 
+func (e *IncorrectTransferOperationError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	op := e.ExpectedOperation.Operator()
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: fmt.Sprintf("Replace with %#q", op),
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: op,
+					Range:       e.Range,
+				},
+			},
+		},
+	}
+}
+
 // InvalidConstructionError
 
 type InvalidConstructionError struct {
-	ast.Range
+	Pos ast.Position
 }
 
 var _ SemanticError = &InvalidConstructionError{}
 var _ errors.UserError = &InvalidConstructionError{}
 var _ errors.SecondaryError = &InvalidConstructionError{}
 var _ errors.HasDocumentationLink = &InvalidConstructionError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &InvalidConstructionError{}
 
 func (*InvalidConstructionError) isSemanticError() {}
 
 func (*InvalidConstructionError) IsUserError() {}
+
+func (e *InvalidConstructionError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidConstructionError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
+	const length = len(`create`)
+	return e.Pos.Shifted(memoryGauge, length-1)
+}
 
 func (*InvalidConstructionError) Error() string {
 	return "cannot create value: not a resource"
@@ -3009,6 +3076,23 @@ func (*InvalidConstructionError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/resources"
 }
 
+func (e *InvalidConstructionError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Remove `create`",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "",
+					Range: ast.Range{
+						StartPos: e.Pos,
+						EndPos:   e.EndPosition(nil).SlurpWhitespaceSuffix(code),
+					},
+				},
+			},
+		},
+	}
+}
+
 // InvalidDestructionError
 
 type InvalidDestructionError struct {
@@ -3019,6 +3103,7 @@ var _ SemanticError = &InvalidDestructionError{}
 var _ errors.UserError = &InvalidDestructionError{}
 var _ errors.SecondaryError = &InvalidDestructionError{}
 var _ errors.HasDocumentationLink = &InvalidDestructionError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &InvalidDestructionError{}
 
 func (*InvalidDestructionError) isSemanticError() {}
 
@@ -3035,6 +3120,20 @@ func (*InvalidDestructionError) SecondaryError() string {
 
 func (*InvalidDestructionError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/resources"
+}
+
+func (e *InvalidDestructionError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Remove `destroy` expression",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "",
+					Range:       e.Range,
+				},
+			},
+		},
+	}
 }
 
 // ResourceLossError
@@ -3140,6 +3239,7 @@ var _ SemanticError = &MissingCreateError{}
 var _ errors.UserError = &MissingCreateError{}
 var _ errors.SecondaryError = &MissingCreateError{}
 var _ errors.HasDocumentationLink = &MissingCreateError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingCreateError{}
 
 func (*MissingCreateError) isSemanticError() {}
 
@@ -3158,9 +3258,21 @@ func (*MissingCreateError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/resources"
 }
 
-// MissingMoveOperationError
+func (e *MissingCreateError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert `create`",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "create ",
+					Range:     ast.NewUnmeteredRange(e.StartPos, e.StartPos),
+				},
+			},
+		},
+	}
+}
 
-// TODO: Add suggested fix for missing move operation
+// MissingMoveOperationError
 
 type MissingMoveOperationError struct {
 	Pos ast.Position
@@ -3170,6 +3282,7 @@ var _ SemanticError = &MissingMoveOperationError{}
 var _ errors.UserError = &MissingMoveOperationError{}
 var _ errors.SecondaryError = &MissingMoveOperationError{}
 var _ errors.HasDocumentationLink = &MissingMoveOperationError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingMoveOperationError{}
 
 func (*MissingMoveOperationError) isSemanticError() {}
 
@@ -3196,20 +3309,48 @@ func (*MissingMoveOperationError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/operators/assign-move-force-swap"
 }
 
+func (e *MissingMoveOperationError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert `<-`",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "<-",
+					Range: ast.NewUnmeteredRange(
+						e.Pos,
+						e.Pos,
+					),
+				},
+			},
+		},
+	}
+}
+
 // InvalidMoveOperationError
 
 type InvalidMoveOperationError struct {
-	ast.Range
+	Pos ast.Position
 }
 
 var _ SemanticError = &InvalidMoveOperationError{}
 var _ errors.UserError = &InvalidMoveOperationError{}
 var _ errors.SecondaryError = &InvalidMoveOperationError{}
 var _ errors.HasDocumentationLink = &InvalidMoveOperationError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &InvalidMoveOperationError{}
 
 func (*InvalidMoveOperationError) isSemanticError() {}
 
 func (*InvalidMoveOperationError) IsUserError() {}
+
+func (e *InvalidMoveOperationError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidMoveOperationError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
+	// length of `<-`
+	const length = 2
+	return e.Pos.Shifted(memoryGauge, length-1)
+}
 
 func (*InvalidMoveOperationError) Error() string {
 	return "invalid move operation (`<-`) for non-resource"
@@ -3222,6 +3363,20 @@ func (*InvalidMoveOperationError) SecondaryError() string {
 
 func (*InvalidMoveOperationError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/operators/assign-move-force-swap"
+}
+
+func (e *InvalidMoveOperationError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Remove `<-`",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "",
+					Range:       ast.NewRangeFromPositioned(nil, e),
+				},
+			},
+		},
+	}
 }
 
 // ResourceCapturingError
@@ -3382,6 +3537,7 @@ var _ SemanticError = &InvalidEventUsageError{}
 var _ errors.UserError = &InvalidEventUsageError{}
 var _ errors.SecondaryError = &InvalidEventUsageError{}
 var _ errors.HasDocumentationLink = &InvalidEventUsageError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &InvalidEventUsageError{}
 
 func (*InvalidEventUsageError) isSemanticError() {}
 
@@ -3408,6 +3564,23 @@ func (*InvalidEventUsageError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/events"
 }
 
+func (e *InvalidEventUsageError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert `emit`",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: "emit ",
+					Range: ast.NewUnmeteredRange(
+						e.StartPos,
+						e.StartPos,
+					),
+				},
+			},
+		},
+	}
+}
+
 // EmitNonEventError
 
 type EmitNonEventError struct {
@@ -3432,7 +3605,8 @@ func (e *EmitNonEventError) Error() string {
 }
 
 func (*EmitNonEventError) SecondaryError() string {
-	return "only event types can be emitted; consider declaring the type as an event"
+	return "only event types can be emitted; " +
+		"consider declaring the type as an event"
 }
 
 func (*EmitNonEventError) DocumentationLink() string {
@@ -3634,6 +3808,7 @@ var _ SemanticError = &UnreachableStatementError{}
 var _ errors.UserError = &UnreachableStatementError{}
 var _ errors.SecondaryError = &UnreachableStatementError{}
 var _ errors.HasDocumentationLink = &UnreachableStatementError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &UnreachableStatementError{}
 
 func (*UnreachableStatementError) isSemanticError() {}
 
@@ -3650,6 +3825,20 @@ func (*UnreachableStatementError) SecondaryError() string {
 
 func (*UnreachableStatementError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/control-flow"
+}
+
+func (e *UnreachableStatementError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Remove unreachable statement",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "",
+					Range:       e.Range,
+				},
+			},
+		},
+	}
 }
 
 // UninitializedUseError
@@ -4026,6 +4215,7 @@ var _ SemanticError = &MissingFunctionBodyError{}
 var _ errors.UserError = &MissingFunctionBodyError{}
 var _ errors.SecondaryError = &MissingFunctionBodyError{}
 var _ errors.HasDocumentationLink = &MissingFunctionBodyError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingFunctionBodyError{}
 
 func (*MissingFunctionBodyError) isSemanticError() {}
 
@@ -4051,6 +4241,21 @@ func (*MissingFunctionBodyError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/functions"
 }
 
+func (e *MissingFunctionBodyError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	pos := e.Pos.Shifted(nil, 1)
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Insert function body",
+			TextEdits: []ast.TextEdit{
+				{
+					Insertion: " {}",
+					Range:     ast.NewUnmeteredRange(pos, pos),
+				},
+			},
+		},
+	}
+}
+
 // InvalidOptionalChainingError
 
 type InvalidOptionalChainingError struct {
@@ -4062,6 +4267,7 @@ var _ SemanticError = &InvalidOptionalChainingError{}
 var _ errors.UserError = &InvalidOptionalChainingError{}
 var _ errors.SecondaryError = &InvalidOptionalChainingError{}
 var _ errors.HasDocumentationLink = &InvalidOptionalChainingError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &InvalidOptionalChainingError{}
 
 func (*InvalidOptionalChainingError) isSemanticError() {}
 
@@ -4081,6 +4287,20 @@ func (*InvalidOptionalChainingError) SecondaryError() string {
 
 func (*InvalidOptionalChainingError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/values-and-types/anystruct-anyresource-opts-never#optionals"
+}
+
+func (e *InvalidOptionalChainingError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Remove optional chaining",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: ".",
+					Range:       e.Range,
+				},
+			},
+		},
+	}
 }
 
 // InvalidAccessError
@@ -4836,8 +5056,6 @@ type InvalidMoveError struct {
 
 var _ SemanticError = &InvalidMoveError{}
 var _ errors.UserError = &InvalidMoveError{}
-var _ errors.SecondaryError = &InvalidMoveError{}
-var _ errors.HasDocumentationLink = &InvalidMoveError{}
 
 func (*InvalidMoveError) isSemanticError() {}
 
@@ -4849,15 +5067,6 @@ func (e *InvalidMoveError) Error() string {
 		e.DeclarationKind.Name(),
 		e.Name,
 	)
-}
-
-func (*InvalidMoveError) SecondaryError() string {
-	return "only resource-typed values can be moved; " +
-		"use the copy (`=`) operator for non-resource types"
-}
-
-func (*InvalidMoveError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/operators/assign-move-force-swap"
 }
 
 func (e *InvalidMoveError) StartPosition() ast.Position {
@@ -5894,8 +6103,7 @@ func (*MappingAccessMissingKeywordError) Error() string {
 
 func (e *MappingAccessMissingKeywordError) SecondaryError() string {
 	return fmt.Sprintf(
-		"replace %#q with `mapping %s`",
-		e.Type.QualifiedString(),
+		"replace %#[1]q with `mapping %[1]s`",
 		e.Type.QualifiedString(),
 	)
 }

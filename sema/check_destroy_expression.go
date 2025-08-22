@@ -44,7 +44,7 @@ func (checker *Checker) VisitDestroyExpression(expression *ast.DestroyExpression
 
 		checker.report(
 			&InvalidDestructionError{
-				Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression.Expression),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 			},
 		)
 
