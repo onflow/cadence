@@ -214,3 +214,7 @@ func (p *Program) Doc() prettier.Doc {
 
 	return prettier.Join(programSeparatorDoc, docs...)
 }
+
+func (p *Program) String() string {
+	return Prettier(p)
+}

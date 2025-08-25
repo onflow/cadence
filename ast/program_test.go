@@ -106,5 +106,54 @@ func TestProgram_Doc(t *testing.T) {
 			program.Doc(),
 		)
 	})
+}
+
+func TestProgram_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+
+		program := NewProgram(nil, []Declaration{})
+
+		assert.Equal(t,
+			"",
+			program.String(),
+		)
+	})
+
+	t.Run("with nil declaration", func(t *testing.T) {
+		t.Parallel()
+
+		program := NewProgram(nil, []Declaration{
+			nil,
+		})
+
+		assert.Equal(t,
+			"",
+			program.String(),
+		)
+	})
+
+	t.Run("with declarations", func(t *testing.T) {
+		t.Parallel()
+
+		program := NewProgram(nil, []Declaration{
+			&PragmaDeclaration{
+				Expression: &BoolExpression{Value: true},
+			},
+			&PragmaDeclaration{
+				Expression: &BoolExpression{Value: false},
+			},
+		})
+
+		assert.Equal(t,
+			"#true\n"+
+				"\n"+
+				"#false",
+			program.String(),
+		)
+	})
 
 }
