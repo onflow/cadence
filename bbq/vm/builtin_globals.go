@@ -429,7 +429,10 @@ var CommonBuiltinTypeBoundFunctions = []*NativeFunctionValue{
 		sema.IsInstanceFunctionName,
 		sema.IsInstanceFunctionType,
 		func(context *Context, _ []bbq.StaticType, value Value, arguments ...Value) Value {
-			typeValue, ok := arguments[0].(interpreter.TypeValue)
+			// Retrieve the type from the end of arguments without using a fixed offset.
+			// This is because this function can be invoked on attachments
+			// which will have `base` as the first argument instead of the type.
+			typeValue, ok := arguments[len(arguments)-1].(interpreter.TypeValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}

@@ -1064,8 +1064,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("resource reference, attachment", func(t *testing.T) {
 		t.Parallel()
 
-		// TODO: requires support for attachments in the VM
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R {}
 
             attachment A for R {}
@@ -1086,8 +1085,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Run("attachment nested member", func(t *testing.T) {
 		t.Parallel()
 
-		// TODO: requires support for attachments in the VM
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             resource R {}
 
             attachment A for R {
