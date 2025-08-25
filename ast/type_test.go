@@ -595,58 +595,192 @@ func TestConstantSizedType_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &ConstantSizedType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "T",
-			},
-		},
-		Size: &IntegerExpression{
-			PositiveLiteral: []byte("42"),
-			Value:           big.NewInt(42),
-			Base:            10,
-		},
-	}
+	t.Run("with type, with size", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		prettier.Concat{
-			prettier.Text("["),
-			prettier.Indent{
-				Doc: prettier.Concat{
-					prettier.SoftLine{},
-					prettier.Text("T"),
-					prettier.Text("; "),
-					prettier.Text("42"),
+		ty := &ConstantSizedType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
 				},
 			},
-			prettier.SoftLine{},
-			prettier.Text("]"),
-		},
-		ty.Doc(),
-	)
+			Size: &IntegerExpression{
+				PositiveLiteral: []byte("42"),
+				Value:           big.NewInt(42),
+				Base:            10,
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("["),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.SoftLine{},
+						prettier.Text("T"),
+						prettier.Text("; "),
+						prettier.Text("42"),
+					},
+				},
+				prettier.SoftLine{},
+				prettier.Text("]"),
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("nil type, with size", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &ConstantSizedType{
+			Size: &IntegerExpression{
+				PositiveLiteral: []byte("42"),
+				Value:           big.NewInt(42),
+				Base:            10,
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("["),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.SoftLine{},
+						prettier.Text(""),
+						prettier.Text("; "),
+						prettier.Text("42"),
+					},
+				},
+				prettier.SoftLine{},
+				prettier.Text("]"),
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("with type, nil size", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &ConstantSizedType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("["),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.SoftLine{},
+						prettier.Text("T"),
+						prettier.Text("; "),
+						prettier.Text(""),
+					},
+				},
+				prettier.SoftLine{},
+				prettier.Text("]"),
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("nil type, nil size", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &ConstantSizedType{}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("["),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.SoftLine{},
+						prettier.Text(""),
+						prettier.Text("; "),
+						prettier.Text(""),
+					},
+				},
+				prettier.SoftLine{},
+				prettier.Text("]"),
+			},
+			ty.Doc(),
+		)
+	})
 }
 
 func TestConstantSizedType_String(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &ConstantSizedType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "T",
-			},
-		},
-		Size: &IntegerExpression{
-			PositiveLiteral: []byte("42"),
-			Value:           big.NewInt(42),
-			Base:            10,
-		},
-	}
+	t.Run("with type, with size", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		"[T; 42]",
-		ty.String(),
-	)
+		ty := &ConstantSizedType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+			Size: &IntegerExpression{
+				PositiveLiteral: []byte("42"),
+				Value:           big.NewInt(42),
+				Base:            10,
+			},
+		}
+
+		assert.Equal(t,
+			"[T; 42]",
+			ty.String(),
+		)
+	})
+
+	t.Run("nil type, with size", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &ConstantSizedType{
+			Size: &IntegerExpression{
+				PositiveLiteral: []byte("42"),
+				Value:           big.NewInt(42),
+				Base:            10,
+			},
+		}
+
+		assert.Equal(t,
+			"[; 42]",
+			ty.String(),
+		)
+	})
+
+	t.Run("with type, nil size", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &ConstantSizedType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"[T; ]",
+			ty.String(),
+		)
+	})
+
+	t.Run("nil type, nil size", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &ConstantSizedType{}
+
+		assert.Equal(t,
+			"[; ]",
+			ty.String(),
+		)
+	})
 }
 
 func TestConstantSizedType_MarshalJSON(t *testing.T) {

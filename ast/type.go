@@ -357,14 +357,28 @@ func (t *ConstantSizedType) String() string {
 const constantSizedTypeSeparatorSpaceDoc = prettier.Text("; ")
 
 func (t *ConstantSizedType) Doc() prettier.Doc {
+	var typeDoc prettier.Doc
+	if t.Type == nil {
+		typeDoc = prettier.Text("")
+	} else {
+		typeDoc = t.Type.Doc()
+	}
+
+	var sizeDoc prettier.Doc
+	if t.Size == nil {
+		sizeDoc = prettier.Text("")
+	} else {
+		sizeDoc = t.Size.Doc()
+	}
+
 	return prettier.Concat{
 		arrayTypeStartDoc,
 		prettier.Indent{
 			Doc: prettier.Concat{
 				prettier.SoftLine{},
-				t.Type.Doc(),
+				typeDoc,
 				constantSizedTypeSeparatorSpaceDoc,
-				t.Size.Doc(),
+				sizeDoc,
 			},
 		},
 		prettier.SoftLine{},
