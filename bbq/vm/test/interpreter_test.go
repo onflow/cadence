@@ -541,7 +541,8 @@ func interpreterFTTransfer(tb testing.TB) {
 		}
 	}
 
-	enablePrintTrace = true
+	// Uncomment to enable tracing.
+	//enablePrintTrace = true
 
 	for loop() {
 

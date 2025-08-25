@@ -752,7 +752,8 @@ func testRuntimeFungibleTokenTransfer(tb testing.TB, useVM bool) {
 		}
 	}
 
-	enablePrintTrace = true
+	// Uncomment to enable tracing.
+	//enablePrintTrace = true
 
 	for loop() {
 

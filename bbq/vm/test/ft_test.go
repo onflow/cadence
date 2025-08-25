@@ -434,7 +434,8 @@ func compiledFTTransfer(tb testing.TB) {
 		}
 	}
 
-	vmConfig.Tracer = interpreter.CallbackTracer(printTrace)
+	// Uncomment to enable tracing.
+	//vmConfig.Tracer = interpreter.CallbackTracer(printTrace)
 
 	for loop() {
 		err := tokenTransferTxVM.InvokeTransaction(tokenTransferTxArgs, tokenTransferTxAuthorizer)

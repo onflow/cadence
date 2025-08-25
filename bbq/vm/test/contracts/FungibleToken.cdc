@@ -304,7 +304,6 @@ access(all) contract interface FungibleToken: ViewResolver {
         }
     }
 
-
     /// createEmptyVault allows any user to create a new Vault that has a zero balance
     ///
     /// @return A Vault of the requested type that has a balance of zero
