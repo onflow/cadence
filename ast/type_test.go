@@ -354,39 +354,72 @@ func TestOptionalType_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &OptionalType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "R",
-			},
-		},
-	}
+	t.Run("with type", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		prettier.Concat{
-			prettier.Text("R"),
-			prettier.Text("?"),
-		},
-		ty.Doc(),
-	)
+		ty := &OptionalType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "R",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("R"),
+				prettier.Text("?"),
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("nil type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalType{}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text(""),
+				prettier.Text("?"),
+			},
+			ty.Doc(),
+		)
+	})
 }
 
 func TestOptionalType_String(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &OptionalType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "R",
-			},
-		},
-	}
+	t.Run("with type", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		"R?",
-		ty.String(),
-	)
+		ty := &OptionalType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "R",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"R?",
+			ty.String(),
+		)
+	})
+
+	t.Run("nil type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &OptionalType{}
+
+		assert.Equal(t,
+			"?",
+			ty.String(),
+		)
+	})
 }
 
 func TestOptionalType_MarshalJSON(t *testing.T) {

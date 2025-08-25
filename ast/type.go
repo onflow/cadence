@@ -230,8 +230,14 @@ func (t *OptionalType) EndPosition(memoryGauge common.MemoryGauge) Position {
 const optionalTypeSymbolDoc = prettier.Text("?")
 
 func (t *OptionalType) Doc() prettier.Doc {
+	var typeDoc prettier.Doc
+	if t.Type == nil {
+		typeDoc = prettier.Text("")
+	} else {
+		typeDoc = t.Type.Doc()
+	}
 	return prettier.Concat{
-		t.Type.Doc(),
+		typeDoc,
 		optionalTypeSymbolDoc,
 	}
 }
