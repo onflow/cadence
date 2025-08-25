@@ -808,6 +808,7 @@ const instantiationTypeEndDoc = prettier.Text(">")
 const instantiationTypeSeparatorDoc = prettier.Text(",")
 
 func (t *InstantiationType) Doc() prettier.Doc {
+
 	typeArgumentsDoc := prettier.Concat{
 		prettier.SoftLine{},
 	}
@@ -820,14 +821,29 @@ func (t *InstantiationType) Doc() prettier.Doc {
 				prettier.Line{},
 			)
 		}
+
+		var typeArgumentDoc prettier.Doc
+		if typeArgument == nil {
+			typeArgumentDoc = prettier.Text("")
+		} else {
+			typeArgumentDoc = typeArgument.Doc()
+		}
+
 		typeArgumentsDoc = append(
 			typeArgumentsDoc,
-			typeArgument.Doc(),
+			typeArgumentDoc,
 		)
 	}
 
+	var typeDoc prettier.Doc
+	if t.Type == nil {
+		typeDoc = prettier.Text("")
+	} else {
+		typeDoc = t.Type.Doc()
+	}
+
 	return prettier.Concat{
-		t.Type.Doc(),
+		typeDoc,
 		prettier.Group{
 			Doc: prettier.Concat{
 				instantiationTypeStartDoc,

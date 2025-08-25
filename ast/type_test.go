@@ -1819,93 +1819,240 @@ func TestInstantiationType_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &InstantiationType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "AB",
-			},
-		},
-		TypeArguments: []*TypeAnnotation{
-			{
-				IsResource: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "CD",
-					},
-				},
-			},
-			{
-				IsResource: false,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "EF",
-					},
-				},
-			},
-		},
-	}
+	t.Run("with type, no type arguments", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		prettier.Concat{
-			prettier.Text("AB"),
-			prettier.Group{
-				Doc: prettier.Concat{
-					prettier.Text("<"),
-					prettier.Indent{
-						Doc: prettier.Concat{
-							prettier.SoftLine{},
-							prettier.Concat{
-								prettier.Text("@"),
-								prettier.Text("CD"),
+		ty := &InstantiationType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "AB",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("AB"),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("<"),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
 							},
-							prettier.Text(","),
-							prettier.Line{},
-							prettier.Text("EF"),
+						},
+						prettier.SoftLine{},
+						prettier.Text(">"),
+					},
+				},
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("nil type, no type arguments", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &InstantiationType{}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text(""),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("<"),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text(">"),
+					},
+				},
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("with type, type arguments", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &InstantiationType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "AB",
+				},
+			},
+			TypeArguments: []*TypeAnnotation{
+				{
+					IsResource: true,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "CD",
 						},
 					},
-					prettier.SoftLine{},
-					prettier.Text(">"),
+				},
+				{
+					IsResource: false,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "EF",
+						},
+					},
 				},
 			},
-		},
-		ty.Doc(),
-	)
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("AB"),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("<"),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Concat{
+									prettier.Text("@"),
+									prettier.Text("CD"),
+								},
+								prettier.Text(","),
+								prettier.Line{},
+								prettier.Text("EF"),
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text(">"),
+					},
+				},
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("with type, nil type argument", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &InstantiationType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "AB",
+				},
+			},
+			TypeArguments: []*TypeAnnotation{
+				nil,
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("AB"),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("<"),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Text(""),
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text(">"),
+					},
+				},
+			},
+			ty.Doc(),
+		)
+	})
 }
 
 func TestInstantiationType_String(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &InstantiationType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "AB",
-			},
-		},
-		TypeArguments: []*TypeAnnotation{
-			{
-				IsResource: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "CD",
-					},
-				},
-			},
-			{
-				IsResource: false,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "EF",
-					},
-				},
-			},
-		},
-	}
+	t.Run("with type, no type arguments", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		"AB<@CD, EF>",
-		ty.String(),
-	)
+		ty := &InstantiationType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "AB",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"AB<>",
+			ty.String(),
+		)
+	})
+
+	t.Run("nil type, no type arguments", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &InstantiationType{}
+
+		assert.Equal(t,
+			"<>",
+			ty.String(),
+		)
+	})
+
+	t.Run("with type, type arguments", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &InstantiationType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "AB",
+				},
+			},
+			TypeArguments: []*TypeAnnotation{
+				{
+					IsResource: true,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "CD",
+						},
+					},
+				},
+				{
+					IsResource: false,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "EF",
+						},
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"AB<@CD, EF>",
+			ty.String(),
+		)
+	})
+
+	t.Run("with type, nil type argument", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &InstantiationType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "AB",
+				},
+			},
+			TypeArguments: []*TypeAnnotation{
+				nil,
+			},
+		}
+
+		assert.Equal(t,
+			"AB<>",
+			ty.String(),
+		)
+	})
 }
 
 func TestInstantiationType_MarshalJSON(t *testing.T) {
