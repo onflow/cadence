@@ -1315,7 +1315,38 @@ func TestReferenceType_Doc(t *testing.T) {
 				prettier.Text("("),
 				prettier.Text("X"),
 				prettier.Text(")"),
-				prettier.Space,
+				prettier.Line{},
+				prettier.Text("&"),
+				prettier.Text("T"),
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("auth with nil entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Authorization: &ConjunctiveEntitlementSet{
+				Elements: []*NominalType{
+					nil,
+				},
+			},
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("auth"),
+				prettier.Text("("),
+				prettier.Text(""),
+				prettier.Text(")"),
+				prettier.Line{},
 				prettier.Text("&"),
 				prettier.Text("T"),
 			},
@@ -1349,7 +1380,37 @@ func TestReferenceType_Doc(t *testing.T) {
 				prettier.Text("mapping "),
 				prettier.Text("X"),
 				prettier.Text(")"),
-				prettier.Space,
+				prettier.Line{},
+				prettier.Text("&"),
+				prettier.Text("T"),
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("auth with nil mapping", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Authorization: &MappedAccess{
+				EntitlementMap: nil,
+			},
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("auth"),
+				prettier.Text("("),
+				prettier.Text("mapping "),
+				prettier.Text(""),
+				prettier.Text(")"),
+				prettier.Line{},
 				prettier.Text("&"),
 				prettier.Text("T"),
 			},
@@ -1389,10 +1450,10 @@ func TestReferenceType_Doc(t *testing.T) {
 				prettier.Text("("),
 				prettier.Text("X"),
 				prettier.Text(","),
-				prettier.Space,
+				prettier.Line{},
 				prettier.Text("Y"),
 				prettier.Text(")"),
-				prettier.Space,
+				prettier.Line{},
 				prettier.Text("&"),
 				prettier.Text("T"),
 			},
@@ -1432,10 +1493,10 @@ func TestReferenceType_Doc(t *testing.T) {
 				prettier.Text("("),
 				prettier.Text("X"),
 				prettier.Text(" |"),
-				prettier.Space,
+				prettier.Line{},
 				prettier.Text("Y"),
 				prettier.Text(")"),
-				prettier.Space,
+				prettier.Line{},
 				prettier.Text("&"),
 				prettier.Text("T"),
 			},
@@ -1459,6 +1520,21 @@ func TestReferenceType_Doc(t *testing.T) {
 			prettier.Concat{
 				prettier.Text("&"),
 				prettier.Text("T"),
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("un-auth, nil type", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("&"),
+				prettier.Text(""),
 			},
 			ty.Doc(),
 		)
@@ -1496,6 +1572,29 @@ func TestReferenceType_String(t *testing.T) {
 		)
 	})
 
+	t.Run("auth with nil entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Authorization: &ConjunctiveEntitlementSet{
+				Elements: []*NominalType{
+					nil,
+				},
+			},
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"auth() &T",
+			ty.String(),
+		)
+	})
+
 	t.Run("auth with mapping", func(t *testing.T) {
 
 		t.Parallel()
@@ -1517,6 +1616,27 @@ func TestReferenceType_String(t *testing.T) {
 
 		assert.Equal(t,
 			"auth(mapping X) &T",
+			ty.String(),
+		)
+	})
+
+	t.Run("auth with nil mapping", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Authorization: &MappedAccess{
+				EntitlementMap: nil,
+			},
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"auth(mapping ) &T",
 			ty.String(),
 		)
 	})
@@ -1603,6 +1723,17 @@ func TestReferenceType_String(t *testing.T) {
 		)
 	})
 
+	t.Run("un-auth, nil type", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{}
+
+		assert.Equal(t,
+			"&",
+			ty.String(),
+		)
+	})
 }
 
 func TestReferenceType_MarshalJSON(t *testing.T) {

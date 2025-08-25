@@ -626,39 +626,76 @@ const referenceTypeSymbolDoc = prettier.Text("&")
 
 func (t *ReferenceType) Doc() prettier.Doc {
 	var doc prettier.Concat
+
 	if t.Authorization != nil {
-		doc = append(doc, referenceTypeAuthKeywordDoc)
-		doc = append(doc, prettier.Text("("))
+		doc = append(doc,
+			referenceTypeAuthKeywordDoc,
+			prettier.Text("("),
+		)
+
 		switch authorization := t.Authorization.(type) {
 		case EntitlementSet:
-			if len(authorization.Entitlements()) > 0 {
-				entitlements := authorization.Entitlements()
+
+			entitlements := authorization.Entitlements()
+			if len(entitlements) > 0 {
 				// TODO: add indentation, improve separators. follow e.g. ParameterList.Doc()
+
+				separatorDoc := prettier.Text(authorization.Separator().String())
+
 				for i, entitlement := range entitlements {
-					doc = append(doc, entitlement.Doc())
+					var entitlementDoc prettier.Doc
+					if entitlement == nil {
+						entitlementDoc = prettier.Text("")
+					} else {
+						entitlementDoc = entitlement.Doc()
+					}
+
+					doc = append(doc, entitlementDoc)
 					if i < len(entitlements)-1 {
-						doc = append(doc, prettier.Text(authorization.Separator().String()), prettier.Space)
+						doc = append(
+							doc,
+							separatorDoc,
+							prettier.Line{},
+						)
 					}
 				}
 			}
+
 		case *MappedAccess:
+			var entitlementMapDoc prettier.Doc
+			if authorization.EntitlementMap == nil {
+				entitlementMapDoc = prettier.Text("")
+			} else {
+				entitlementMapDoc = authorization.EntitlementMap.Doc()
+			}
+
 			doc = append(doc,
 				referenceTypeMappingKeywordDoc,
-				authorization.EntitlementMap.Doc(),
+				entitlementMapDoc,
 			)
+
 		default:
 			panic(errors.NewUnreachableError())
 		}
-		doc = append(doc,
+
+		doc = append(
+			doc,
 			prettier.Text(")"),
-			prettier.Space,
+			prettier.Line{},
 		)
+	}
+
+	var typeDoc prettier.Doc
+	if t.Type == nil {
+		typeDoc = prettier.Text("")
+	} else {
+		typeDoc = t.Type.Doc()
 	}
 
 	return append(
 		doc,
 		referenceTypeSymbolDoc,
-		t.Type.Doc(),
+		typeDoc,
 	)
 }
 
