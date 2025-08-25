@@ -142,7 +142,9 @@ func desugarList[T any](
 		// If at-least one entry is desugared already, then add the current entry
 		// to the desugared entries list (regardless whether the current entry was desugared or not).
 		if desugared {
-			desugaredList = append(desugaredList, desugaredEntry)
+			if any(desugaredEntry) != nil {
+				desugaredList = append(desugaredList, desugaredEntry)
+			}
 			continue
 		}
 
@@ -237,9 +239,8 @@ func (d *Desugar) desugarFunctionBlock(
 	)
 
 	modifiedStatements := make([]ast.Statement, 0)
-	modifiedStatements = append(modifiedStatements, preConditions...)
-
 	modifiedStatements = append(modifiedStatements, beforeStatements...)
+	modifiedStatements = append(modifiedStatements, preConditions...)
 
 	returnType := functionType.ReturnTypeAnnotation.Type
 

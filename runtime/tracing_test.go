@@ -103,12 +103,21 @@ func TestRuntimeTracing(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			[]string{
-				"dictionary.construct",
-				"dictionary.transfer",
-				"array.construct",
-				"array.transfer",
-			},
+			ifCompile[[]string](
+				[]string{
+					"function.transaction",
+					"dictionary.construct",
+					"dictionary.transfer",
+					"array.construct",
+					"array.transfer",
+					"function.transaction.prepare",
+				}, []string{
+					"dictionary.construct",
+					"dictionary.transfer",
+					"array.construct",
+					"array.transfer",
+				},
+			),
 			traces,
 		)
 	})
