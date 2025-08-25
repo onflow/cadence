@@ -1688,67 +1688,147 @@ func TestIntersectionType_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &IntersectionType{
-		Types: []*NominalType{
-			{
-				Identifier: Identifier{
-					Identifier: "CD",
-				},
-			},
-			{
-				Identifier: Identifier{
-					Identifier: "EF",
-				},
-			},
-		},
-	}
+	t.Run("no types", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		prettier.Concat{
-			prettier.Group{
-				Doc: prettier.Concat{
-					prettier.Text("{"),
-					prettier.Indent{
-						Doc: prettier.Concat{
-							prettier.SoftLine{},
-							prettier.Text("CD"),
-							prettier.Text(","),
-							prettier.Line{},
-							prettier.Text("EF"),
-						},
+		ty := &IntersectionType{}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("{"),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.SoftLine{},
 					},
-					prettier.SoftLine{},
-					prettier.Text("}"),
+				},
+				prettier.SoftLine{},
+				prettier.Text("}"),
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("nil type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &IntersectionType{
+			Types: []*NominalType{
+				nil,
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("{"),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.SoftLine{},
+						prettier.Text(""),
+					},
+				},
+				prettier.SoftLine{},
+				prettier.Text("}"),
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("with types", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &IntersectionType{
+			Types: []*NominalType{
+				{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+				{
+					Identifier: Identifier{
+						Identifier: "EF",
+					},
 				},
 			},
-		},
-		ty.Doc(),
-	)
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("{"),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.SoftLine{},
+						prettier.Text("CD"),
+						prettier.Text(","),
+						prettier.Line{},
+						prettier.Text("EF"),
+					},
+				},
+				prettier.SoftLine{},
+				prettier.Text("}"),
+			},
+			ty.Doc(),
+		)
+	})
 }
 
 func TestIntersectionType_String(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &IntersectionType{
-		Types: []*NominalType{
-			{
-				Identifier: Identifier{
-					Identifier: "CD",
-				},
-			},
-			{
-				Identifier: Identifier{
-					Identifier: "EF",
-				},
-			},
-		},
-	}
+	t.Run("no types", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		"{CD, EF}",
-		ty.String(),
-	)
+		ty := &IntersectionType{}
+
+		assert.Equal(t,
+			"{}",
+			ty.String(),
+		)
+	})
+
+	t.Run("nil type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &IntersectionType{
+			Types: []*NominalType{
+				{
+					Identifier: Identifier{
+						Identifier: "T",
+					},
+				},
+				nil,
+			},
+		}
+
+		assert.Equal(t,
+			"{T, }",
+			ty.String(),
+		)
+	})
+
+	t.Run("with types", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &IntersectionType{
+			Types: []*NominalType{
+				{
+					Identifier: Identifier{
+						Identifier: "CD",
+					},
+				},
+				{
+					Identifier: Identifier{
+						Identifier: "EF",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"{CD, EF}",
+			ty.String(),
+		)
+	})
 }
 
 func TestIntersectionType_MarshalJSON(t *testing.T) {

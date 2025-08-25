@@ -712,6 +712,7 @@ const intersectionTypeEndDoc = prettier.Text("}")
 const intersectionTypeSeparatorDoc = prettier.Text(",")
 
 func (t *IntersectionType) Doc() prettier.Doc {
+
 	intersectionDoc := prettier.Concat{
 		prettier.SoftLine{},
 	}
@@ -724,27 +725,28 @@ func (t *IntersectionType) Doc() prettier.Doc {
 				prettier.Line{},
 			)
 		}
+
+		var typDoc prettier.Doc
+		if typ == nil {
+			typDoc = prettier.Text("")
+		} else {
+			typDoc = typ.Doc()
+		}
+
 		intersectionDoc = append(
 			intersectionDoc,
-			typ.Doc(),
+			typDoc,
 		)
 	}
 
-	var doc prettier.Concat
-
-	return append(doc,
-		prettier.Group{
-			Doc: prettier.Concat{
-				intersectionTypeStartDoc,
-				prettier.Indent{
-					Doc: intersectionDoc,
-				},
-				prettier.SoftLine{},
-				intersectionTypeEndDoc,
-			},
+	return prettier.Concat{
+		intersectionTypeStartDoc,
+		prettier.Indent{
+			Doc: intersectionDoc,
 		},
-	)
-
+		prettier.SoftLine{},
+		intersectionTypeEndDoc,
+	}
 }
 
 func (t *IntersectionType) MarshalJSON() ([]byte, error) {
