@@ -245,9 +245,8 @@ func (v UFix64Value) Plus(context NumberValueArithmeticContext, other NumberValu
 		})
 	}
 	result, err := v.UFix64Value.Plus(context, o.UFix64Value)
-	if err != nil {
-		panic(err)
-	}
+	handleFix64Error(err, locationRange)
+
 	return UFix64Value{UFix64Value: result}
 }
 
@@ -263,9 +262,8 @@ func (v UFix64Value) SaturatingPlus(context NumberValueArithmeticContext, other 
 	}
 
 	result, err := v.UFix64Value.SaturatingPlus(context, o.UFix64Value)
-	if err != nil {
-		panic(err)
-	}
+	handleFix64Error(err, locationRange)
+
 	return UFix64Value{UFix64Value: result}
 }
 
@@ -281,9 +279,8 @@ func (v UFix64Value) Minus(context NumberValueArithmeticContext, other NumberVal
 	}
 
 	result, err := v.UFix64Value.Minus(context, o.UFix64Value)
-	if err != nil {
-		panic(err)
-	}
+	handleFix64Error(err, locationRange)
+
 	return UFix64Value{UFix64Value: result}
 }
 
@@ -299,9 +296,8 @@ func (v UFix64Value) SaturatingMinus(context NumberValueArithmeticContext, other
 	}
 
 	result, err := v.UFix64Value.SaturatingMinus(context, o.UFix64Value)
-	if err != nil {
-		panic(err)
-	}
+	handleFix64Error(err, locationRange)
+
 	return UFix64Value{UFix64Value: result}
 }
 
@@ -317,9 +313,8 @@ func (v UFix64Value) Mul(context NumberValueArithmeticContext, other NumberValue
 	}
 
 	result, err := v.UFix64Value.Mul(context, o.UFix64Value)
-	if err != nil {
-		panic(err)
-	}
+	handleFix64Error(err, locationRange)
+
 	return UFix64Value{UFix64Value: result}
 }
 
@@ -335,9 +330,8 @@ func (v UFix64Value) SaturatingMul(context NumberValueArithmeticContext, other N
 	}
 
 	result, err := v.UFix64Value.SaturatingMul(context, o.UFix64Value)
-	if err != nil {
-		panic(err)
-	}
+	handleFix64Error(err, locationRange)
+
 	return UFix64Value{UFix64Value: result}
 }
 
@@ -353,9 +347,8 @@ func (v UFix64Value) Div(context NumberValueArithmeticContext, other NumberValue
 	}
 
 	result, err := v.UFix64Value.Div(context, o.UFix64Value)
-	if err != nil {
-		panic(err)
-	}
+	handleFix64Error(err, locationRange)
+
 	return UFix64Value{UFix64Value: result}
 }
 
@@ -376,9 +369,8 @@ func (v UFix64Value) Mod(context NumberValueArithmeticContext, other NumberValue
 	}
 
 	result, err := v.UFix64Value.Mod(context, o.UFix64Value)
-	if err != nil {
-		panic(err)
-	}
+	handleFix64Error(err, locationRange)
+
 	return UFix64Value{UFix64Value: result}
 }
 
@@ -547,4 +539,21 @@ func fix128BigIntToUFix64(
 			return bigInt.Uint64()
 		},
 	)
+}
+
+func handleFix64Error(err error, locationRange LocationRange) {
+	switch err.(type) {
+	case nil:
+		return
+	case values.OverflowError:
+		panic(&OverflowError{
+			LocationRange: locationRange,
+		})
+	case values.UnderflowError:
+		panic(&UnderflowError{
+			LocationRange: locationRange,
+		})
+	default:
+		panic(err)
+	}
 }
