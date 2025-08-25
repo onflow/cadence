@@ -18,7 +18,11 @@
 
 package ast
 
-import "github.com/onflow/cadence/common"
+import (
+	"github.com/turbolent/prettier"
+
+	"github.com/onflow/cadence/common"
+)
 
 type TypeParameter struct {
 	Identifier Identifier
@@ -48,4 +52,28 @@ func (t *TypeParameter) EndPosition(memoryGauge common.MemoryGauge) Position {
 		return t.TypeBound.EndPosition(memoryGauge)
 	}
 	return t.Identifier.EndPosition(memoryGauge)
+}
+
+func (t *TypeParameter) Doc() prettier.Doc {
+	var doc prettier.Doc = prettier.Text(t.Identifier.Identifier)
+
+	if t.TypeBound != nil {
+		var typeBoundDoc prettier.Doc
+		if t.TypeBound == nil {
+			typeBoundDoc = prettier.Text("")
+		} else {
+			typeBoundDoc = t.TypeBound.Doc()
+		}
+		doc = prettier.Concat{
+			doc,
+			typeSeparatorSpaceDoc,
+			typeBoundDoc,
+		}
+	}
+
+	return doc
+}
+
+func (t *TypeParameter) String() string {
+	return Prettier(t)
 }
