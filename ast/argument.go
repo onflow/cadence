@@ -84,7 +84,13 @@ func (a *Argument) MarshalJSON() ([]byte, error) {
 }
 
 func (a *Argument) Doc() prettier.Doc {
-	argumentDoc := a.Expression.Doc()
+	var argumentDoc prettier.Doc
+	if a.Expression == nil {
+		argumentDoc = prettier.Text("")
+	} else {
+		argumentDoc = a.Expression.Doc()
+	}
+
 	if a.Label == "" {
 		return argumentDoc
 	}

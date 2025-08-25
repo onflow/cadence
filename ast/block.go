@@ -77,10 +77,18 @@ func StatementsDoc(statements []Statement) prettier.Doc {
 	var doc prettier.Concat
 
 	for _, statement := range statements {
+
+		var statementDoc prettier.Doc
+		if statement == nil {
+			statementDoc = prettier.Text("")
+		} else {
+			statementDoc = statement.Doc()
+		}
+
 		doc = append(
 			doc,
 			prettier.HardLine{},
-			statement.Doc(),
+			statementDoc,
 		)
 	}
 
@@ -289,15 +297,25 @@ func (c TestCondition) MarshalJSON() ([]byte, error) {
 }
 
 func (c TestCondition) Doc() prettier.Doc {
-	doc := c.Test.Doc()
+	var testDoc prettier.Doc
+	if c.Test == nil {
+		testDoc = prettier.Text("")
+	} else {
+		testDoc = c.Test.Doc()
+	}
+
+	doc := testDoc
+
 	if c.Message != nil {
+		messageDoc := c.Message.Doc()
+
 		doc = prettier.Concat{
 			doc,
 			prettier.Text(":"),
 			prettier.Indent{
 				Doc: prettier.Concat{
 					prettier.HardLine{},
-					c.Message.Doc(),
+					messageDoc,
 				},
 			},
 		}
@@ -372,10 +390,18 @@ func (c *Conditions) Doc(keywordDoc prettier.Doc) prettier.Doc {
 	var doc prettier.Concat
 
 	for _, condition := range c.Conditions {
+
+		var conditionDoc prettier.Doc
+		if condition == nil {
+			conditionDoc = prettier.Text("")
+		} else {
+			conditionDoc = condition.Doc()
+		}
+
 		doc = append(
 			doc,
 			prettier.HardLine{},
-			condition.Doc(),
+			conditionDoc,
 		)
 	}
 
