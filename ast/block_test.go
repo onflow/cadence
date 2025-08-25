@@ -803,17 +803,9 @@ func TestTestCondition_Doc(t *testing.T) {
 		condition := TestCondition{
 			Test: &BoolExpression{
 				Value: true,
-				Range: Range{
-					StartPos: Position{Offset: 1, Line: 2, Column: 3},
-					EndPos:   Position{Offset: 4, Line: 5, Column: 6},
-				},
 			},
 			Message: &StringExpression{
 				Value: "Test condition",
-				Range: Range{
-					StartPos: Position{Offset: 7, Line: 8, Column: 9},
-					EndPos:   Position{Offset: 10, Line: 11, Column: 12},
-				},
 			},
 		}
 
