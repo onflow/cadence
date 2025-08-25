@@ -238,10 +238,16 @@ func (vm *VM) pushCallFrame(functionValue CompiledFunctionValue, receiver Value,
 		vm.ipStack[len(vm.ipStack)-1] = vm.ip
 	}
 
+	var startTime time.Time
+	if vm.context.TracingEnabled() {
+		startTime = time.Now()
+	}
+
 	callFrame := callFrame{
 		localsCount:  localsCount,
 		localsOffset: offset,
 		function:     functionValue,
+		startTime:    startTime,
 	}
 
 	vm.ipStack = append(vm.ipStack, 0)
@@ -252,13 +258,14 @@ func (vm *VM) pushCallFrame(functionValue CompiledFunctionValue, receiver Value,
 }
 
 func (vm *VM) popCallFrame() {
+
 	if vm.context.TracingEnabled() {
-		context := vm.context
+		startTime := vm.callFrame.startTime
 		functionName := vm.callFrame.function.Function.QualifiedName
 		defer func() {
-			context.ReportFunctionTrace(
+			vm.context.ReportFunctionTrace(
 				functionName,
-				time.Duration(0),
+				time.Since(startTime),
 			)
 		}()
 	}
@@ -969,16 +976,17 @@ func invokeFunction(
 			// For built-in functions, pass the dereferenced receiver.
 			receiver = boundFunction.DereferencedReceiver(vm.context)
 		}
-		result := functionValue.Function(context, typeArguments, receiver, arguments...)
 
-		if vm.context.TracingEnabled() {
-			context := vm.context
-			defer func() {
-				context.ReportFunctionTrace(
-					functionValue.Name,
-					time.Duration(0),
-				)
-			}()
+		var result Value
+		if context.TracingEnabled() {
+			startTime := time.Now()
+			result = functionValue.Function(context, typeArguments, receiver, arguments...)
+			context.ReportFunctionTrace(
+				functionValue.Name,
+				time.Since(startTime),
+			)
+		} else {
+			result = functionValue.Function(context, typeArguments, receiver, arguments...)
 		}
 
 		vm.push(result)
