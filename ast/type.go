@@ -290,12 +290,18 @@ const arrayTypeStartDoc = prettier.Text("[")
 const arrayTypeEndDoc = prettier.Text("]")
 
 func (t *VariableSizedType) Doc() prettier.Doc {
+	var typeDoc prettier.Doc
+	if t.Type == nil {
+		typeDoc = prettier.Text("")
+	} else {
+		typeDoc = t.Type.Doc()
+	}
 	return prettier.Concat{
 		arrayTypeStartDoc,
 		prettier.Indent{
 			Doc: prettier.Concat{
 				prettier.SoftLine{},
-				t.Type.Doc(),
+				typeDoc,
 			},
 		},
 		prettier.SoftLine{},

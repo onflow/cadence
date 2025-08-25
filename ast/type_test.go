@@ -466,46 +466,86 @@ func TestVariableSizedType_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &VariableSizedType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "T",
-			},
-		},
-	}
+	t.Run("with type", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		prettier.Concat{
-			prettier.Text("["),
-			prettier.Indent{
-				Doc: prettier.Concat{
-					prettier.SoftLine{},
-					prettier.Text("T"),
+		ty := &VariableSizedType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
 				},
 			},
-			prettier.SoftLine{},
-			prettier.Text("]"),
-		},
-		ty.Doc(),
-	)
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("["),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.SoftLine{},
+						prettier.Text("T"),
+					},
+				},
+				prettier.SoftLine{},
+				prettier.Text("]"),
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("nil type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &VariableSizedType{}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("["),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.SoftLine{},
+						prettier.Text(""),
+					},
+				},
+				prettier.SoftLine{},
+				prettier.Text("]"),
+			},
+			ty.Doc(),
+		)
+	})
 }
 
 func TestVariableSizedType_String(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &VariableSizedType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "T",
-			},
-		},
-	}
+	t.Run("with type", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		"[T]",
-		ty.String(),
-	)
+		ty := &VariableSizedType{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"[T]",
+			ty.String(),
+		)
+	})
+
+	t.Run("nil type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &VariableSizedType{}
+
+		assert.Equal(t,
+			"[]",
+			ty.String(),
+		)
+	})
 }
 
 func TestVariableSizedType_MarshalJSON(t *testing.T) {
