@@ -32,41 +32,134 @@ func TestTypeAnnotation_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &TypeAnnotation{
-		IsResource: true,
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "R",
-			},
-		},
-	}
+	t.Run("non-resource, no type", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		prettier.Concat{
-			prettier.Text("@"),
-			prettier.Text("R"),
-		},
-		ty.Doc(),
-	)
+		ty := &TypeAnnotation{}
+
+		assert.Equal(t,
+			prettier.Text(""),
+			ty.Doc(),
+		)
+	})
+
+	t.Run("non-resource, with type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &TypeAnnotation{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Text("T"),
+			ty.Doc(),
+		)
+	})
+
+	t.Run("resource, no type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &TypeAnnotation{
+			IsResource: true,
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("@"),
+				prettier.Text(""),
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("resource, with type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &TypeAnnotation{
+			IsResource: true,
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "R",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("@"),
+				prettier.Text("R"),
+			},
+			ty.Doc(),
+		)
+	})
 }
 
 func TestTypeAnnotation_String(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &TypeAnnotation{
-		IsResource: true,
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "R",
-			},
-		},
-	}
+	t.Run("non-resource, no type", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		"@R",
-		ty.String(),
-	)
+		ty := &TypeAnnotation{}
+
+		assert.Equal(t,
+			"",
+			ty.String(),
+		)
+	})
+
+	t.Run("non-resource, with type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &TypeAnnotation{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"T",
+			ty.String(),
+		)
+	})
+
+	t.Run("resource, no type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &TypeAnnotation{
+			IsResource: true,
+		}
+
+		assert.Equal(t,
+			"@",
+			ty.String(),
+		)
+	})
+
+	t.Run("resource, with type", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &TypeAnnotation{
+			IsResource: true,
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "R",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"@R",
+			ty.String(),
+		)
+	})
 }
 
 func TestTypeAnnotation_MarshalJSON(t *testing.T) {

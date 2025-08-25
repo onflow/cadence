@@ -68,13 +68,20 @@ func (t *TypeAnnotation) EndPosition(memoryGauge common.MemoryGauge) Position {
 const typeAnnotationResourceSymbolDoc = prettier.Text("@")
 
 func (t *TypeAnnotation) Doc() prettier.Doc {
+	var typeDoc prettier.Doc
+	if t.Type == nil {
+		typeDoc = prettier.Text("")
+	} else {
+		typeDoc = t.Type.Doc()
+	}
+
 	if !t.IsResource {
-		return t.Type.Doc()
+		return typeDoc
 	}
 
 	return prettier.Concat{
 		typeAnnotationResourceSymbolDoc,
-		t.Type.Doc(),
+		typeDoc,
 	}
 }
 
