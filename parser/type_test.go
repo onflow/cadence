@@ -27,6 +27,8 @@ import (
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/parser/lexer"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
@@ -75,6 +77,68 @@ func TestParseNominalType(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("invalid nested", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("Foo.1")
+		AssertEqualWithDiff(t,
+			[]error{
+				&NestedTypeMissingNameError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+							EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("incomplete parameter list", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("fun(T,")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedEOFExpectedTypeAnnotationError{
+					Pos: ast.Position{Offset: 6, Line: 1, Column: 6},
+				},
+			},
+			errs,
+		)
+	})
+}
+
+func TestParseInvalidType(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("number literal", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("123")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedTypeStartError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+							EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseArrayType(t *testing.T) {
@@ -103,6 +167,52 @@ func TestParseArrayType(t *testing.T) {
 			},
 			result,
 		)
+	})
+
+	t.Run("variable, missing end", func(t *testing.T) {
+		t.Parallel()
+
+		const code = "[Int"
+		_, errs := testParseType(code)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingClosingBracketInArrayTypeError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+							EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+						},
+					},
+				},
+			},
+			errs,
+		)
+
+		var missingBracketErr *MissingClosingBracketInArrayTypeError
+		require.ErrorAs(t, errs[0], &missingBracketErr)
+
+		fixes := missingBracketErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing bracket",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "]",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t, "[Int]", fixes[0].TextEdits[0].ApplyTo(code))
 	})
 
 	t.Run("constant", func(t *testing.T) {
@@ -145,20 +255,29 @@ func TestParseArrayType(t *testing.T) {
 		result, errs := testParseType("[Int ; -2 ]")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: `expected positive integer size for constant sized type`,
-					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
-				},
-				// TODO: improve/avoid error by skipping full negative integer literal
-				&SyntaxError{
-					Message: `expected token ']'`,
-					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
+				&InvalidConstantSizedTypeSizeError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+						EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+					},
 				},
 			},
 			errs,
 		)
 
-		require.Nil(t, result)
+		// The parser recovers and returns a variable-sized array type
+		AssertEqualWithDiff(t,
+			&ast.VariableSizedType{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{Identifier: "Int", Pos: ast.Position{Offset: 1, Line: 1, Column: 1}},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+					EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			result,
+		)
 	})
 
 	t.Run("constant, invalid size", func(t *testing.T) {
@@ -168,9 +287,11 @@ func TestParseArrayType(t *testing.T) {
 		result, errs := testParseType("[Int ; X ]")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: `expected positive integer size for constant sized type`,
-					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				&InvalidConstantSizedTypeSizeError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+						EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+					},
 				},
 			},
 			errs,
@@ -193,6 +314,94 @@ func TestParseArrayType(t *testing.T) {
 		)
 	})
 
+	t.Run("invalid, dot", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("[.")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedTypeStartError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenDot,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+							EndPos:   ast.Position{Offset: 1, Line: 1, Column: 1},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("constant, invalid size, dot", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("[T;.")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedExpressionStartError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenDot,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+							EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+						},
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("constant, missing end", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "[T;1"
+		_, errs := testParseType(code)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingClosingBracketInArrayTypeError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+							EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+						},
+						Type: lexer.TokenEOF,
+					},
+				},
+			},
+			errs,
+		)
+
+		var missingBracketErr *MissingClosingBracketInArrayTypeError
+		require.ErrorAs(t, errs[0], &missingBracketErr)
+
+		fixes := missingBracketErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing bracket",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "]",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t, "[T;1]", fixes[0].TextEdits[0].ApplyTo(code))
+	})
 }
 
 func TestParseOptionalType(t *testing.T) {
@@ -297,19 +506,100 @@ func TestParseReferenceType(t *testing.T) {
 		)
 	})
 
-	t.Run("authorized, no entitlements", func(t *testing.T) {
+	t.Run("authorized, missing parens", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseType("auth &Int")
+		const code = "auth &Int"
+		_, errs := testParseType(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected authorization (entitlement list)",
-					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+				&MissingStartOfAuthorizationError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenAmpersand,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+						},
+					},
 				},
 			},
 			errs,
+		)
+
+		var missingParenErr *MissingStartOfAuthorizationError
+		require.ErrorAs(t, errs[0], &missingParenErr)
+
+		fixes := missingParenErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert opening parenthesis",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "(",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t, "auth( &Int", fixes[0].TextEdits[0].ApplyTo(code))
+	})
+
+	t.Run("authorized, missing ampersand", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "auth(X) Int"
+		_, errs := testParseType(code)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingAmpersandInAuthReferenceError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+						},
+					},
+				},
+			},
+			errs,
+		)
+
+		var missingAmpersandErr *MissingAmpersandInAuthReferenceError
+		require.ErrorAs(t, errs[0], &missingAmpersandErr)
+
+		fixes := missingAmpersandErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert ampersand",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "&",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+								EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"auth(X) &Int",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
@@ -426,9 +716,15 @@ func TestParseReferenceType(t *testing.T) {
 
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token in type: ')'",
-					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+				// TODO: improve
+				&UnexpectedTypeStartError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+						},
+						Type: lexer.TokenParenClose,
+					},
 				},
 			},
 			errs,
@@ -442,9 +738,16 @@ func TestParseReferenceType(t *testing.T) {
 		_, errs := testParseType("auth(X, Y | Z) &Int")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token: got '|', expected ',' or ')'",
-					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				&UnexpectedTokenInsteadOfSeparatorError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+						},
+						Type: lexer.TokenVerticalBar,
+					},
+					ExpectedSeparator: lexer.TokenComma,
+					ExpectedEndToken:  lexer.TokenParenClose,
 				},
 			},
 			errs,
@@ -458,12 +761,87 @@ func TestParseReferenceType(t *testing.T) {
 		_, errs := testParseType("auth(X | Y, Z) &Int")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token: got ',', expected '|' or ')'",
-					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				&UnexpectedTokenInsteadOfSeparatorError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+						},
+						Type: lexer.TokenComma,
+					},
+					ExpectedSeparator: lexer.TokenVerticalBar,
+					ExpectedEndToken:  lexer.TokenParenClose,
 				},
 			},
 			errs,
+		)
+	})
+
+	t.Run("authorized, missing closing paren after entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "auth(X, Y"
+		_, errs := testParseType(code)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingClosingParenInAuthError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 9, Line: 1, Column: 9},
+							EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+						},
+						Type: lexer.TokenEOF,
+					},
+				},
+				&MissingAmpersandInAuthReferenceError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 9, Line: 1, Column: 9},
+							EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+						},
+						Type: lexer.TokenEOF,
+					},
+				},
+				&UnexpectedTypeStartError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 9, Line: 1, Column: 9},
+							EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+						},
+						Type: lexer.TokenEOF,
+					},
+				},
+			},
+			errs,
+		)
+
+		var missingParenErr *MissingClosingParenInAuthError
+		require.ErrorAs(t, errs[0], &missingParenErr)
+
+		fixes := missingParenErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing parenthesis",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ")",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 9, Line: 1, Column: 9},
+								EndPos:   ast.Position{Offset: 9, Line: 1, Column: 9},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"auth(X, Y)",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
@@ -504,9 +882,35 @@ func TestParseReferenceType(t *testing.T) {
 		_, errs := testParseType("auth( mapping ) &Int")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token in type: ')'",
-					Pos:     ast.Position{Offset: 15, Line: 1, Column: 15},
+				&UnexpectedTypeStartError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 14, Line: 1, Column: 14},
+							EndPos:   ast.Position{Offset: 14, Line: 1, Column: 14},
+						},
+						Type: lexer.TokenParenClose,
+					},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid, dot", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("&.")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedTypeStartError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenDot,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+							EndPos:   ast.Position{Offset: 1, Line: 1, Column: 1},
+						},
+					},
 				},
 			},
 			errs,
@@ -653,9 +1057,8 @@ func TestParseIntersectionType(t *testing.T) {
 		result, errs := testParseType("{ T , }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "missing type after comma",
-					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+				&MissingTypeAfterCommaInIntersectionError{
+					Pos: ast.Position{Offset: 6, Line: 1, Column: 6},
 				},
 			},
 			errs,
@@ -684,12 +1087,19 @@ func TestParseIntersectionType(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseType("{ T U }")
+		const code = "{ T U }"
+		result, errs := testParseType(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected type",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				&MissingSeparatorInIntersectionOrDictionaryTypeError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+							EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
@@ -697,18 +1107,57 @@ func TestParseIntersectionType(t *testing.T) {
 
 		// TODO: return type
 		assert.Nil(t, result)
+
+		var missingSepErr *MissingSeparatorInIntersectionOrDictionaryTypeError
+		require.ErrorAs(t, errs[0], &missingSepErr)
+
+		fixes := missingSepErr.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert comma",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ",",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+								EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+							},
+						},
+					},
+				},
+				{
+					Message: "Insert colon",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ":",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+								EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t, "{ T, U }", fixes[0].TextEdits[0].ApplyTo(code))
+		assert.Equal(t, "{ T: U }", fixes[1].TextEdits[0].ApplyTo(code))
 	})
 
 	t.Run("invalid: colon", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseType("{ T , U : V }")
+		const code = "{ T , U : V }"
+		result, errs := testParseType(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected colon in intersection type",
-					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
+				&UnexpectedColonInIntersectionTypeError{
+					Pos: ast.Position{Offset: 8, Line: 1, Column: 8},
 				},
 			},
 			errs,
@@ -716,6 +1165,34 @@ func TestParseIntersectionType(t *testing.T) {
 
 		// TODO: return type
 		assert.Nil(t, result)
+
+		var unexpectedColonErr *UnexpectedColonInIntersectionTypeError
+		require.ErrorAs(t, errs[0], &unexpectedColonErr)
+
+		fixes := unexpectedColonErr.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Replace colon with comma",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: ",",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+								EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"{ T , U , V }",
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
 	})
 
 	t.Run("invalid: colon", func(t *testing.T) {
@@ -725,9 +1202,8 @@ func TestParseIntersectionType(t *testing.T) {
 		result, errs := testParseType("{U , V : W }")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: `unexpected colon in intersection type`,
-					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				&UnexpectedColonInIntersectionTypeError{
+					Pos: ast.Position{Offset: 7, Line: 1, Column: 7},
 				},
 			},
 			errs,
@@ -744,9 +1220,11 @@ func TestParseIntersectionType(t *testing.T) {
 		result, errs := testParseType("{[T]}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "non-nominal type in intersection list: [T]",
-					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+				&InvalidNonNominalTypeInIntersectionError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+						EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+					},
 				},
 			},
 			errs,
@@ -763,9 +1241,32 @@ func TestParseIntersectionType(t *testing.T) {
 		result, errs := testParseType("{T, [U]}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "non-nominal type in intersection list: [U]",
-					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				&InvalidNonNominalTypeInIntersectionError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+						EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+					},
+				},
+			},
+			errs,
+		)
+
+		// TODO: return type
+		assert.Nil(t, result)
+	})
+
+	t.Run("invalid: two, first is non-nominal", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("{[U], T}")
+		AssertEqualWithDiff(t,
+			[]error{
+				&InvalidNonNominalTypeInIntersectionError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+						EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+					},
 				},
 			},
 			errs,
@@ -782,9 +1283,8 @@ func TestParseIntersectionType(t *testing.T) {
 		result, errs := testParseType("{")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "invalid end of input, expected type",
-					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
+				&UnexpectedEOFExpectedTypeError{
+					Pos: ast.Position{Offset: 1, Line: 1, Column: 1},
 				},
 			},
 			errs,
@@ -797,18 +1297,44 @@ func TestParseIntersectionType(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseType("{U")
+		const code = "{U"
+		_, errs := testParseType(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "invalid end of input, expected '}'",
-					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
+				&MissingClosingBraceInIntersectionOrDictionaryTypeError{
+					Pos: ast.Position{Offset: 2, Line: 1, Column: 2},
 				},
 			},
 			errs,
 		)
 
-		assert.Nil(t, result)
+		var missingBraceErr *MissingClosingBraceInIntersectionOrDictionaryTypeError
+		require.ErrorAs(t, errs[0], &missingBraceErr)
+
+		fixes := missingBraceErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing brace",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "}",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+								EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"{U}",
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
 	})
 
 	t.Run("invalid: missing end after comma", func(t *testing.T) {
@@ -818,9 +1344,8 @@ func TestParseIntersectionType(t *testing.T) {
 		result, errs := testParseType("{U,")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "invalid end of input, expected type",
-					Pos:     ast.Position{Offset: 3, Line: 1, Column: 3},
+				&UnexpectedEOFExpectedTypeError{
+					Pos: ast.Position{Offset: 3, Line: 1, Column: 3},
 				},
 			},
 			errs,
@@ -836,14 +1361,31 @@ func TestParseIntersectionType(t *testing.T) {
 		result, errs := testParseType("{,}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected comma in intersection type",
-					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
+				&UnexpectedCommaInIntersectionTypeError{
+					Pos: ast.Position{Offset: 1, Line: 1, Column: 1},
 				},
 			},
 			errs,
 		)
 
+		assert.Nil(t, result)
+	})
+
+	t.Run("invalid: leading comma", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("{ , T }")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedCommaInIntersectionTypeError{
+					Pos: ast.Position{Offset: 2, Line: 1, Column: 2},
+				},
+			},
+			errs,
+		)
+
+		// TODO: return type
 		assert.Nil(t, result)
 	})
 }
@@ -889,9 +1431,8 @@ func TestParseDictionaryType(t *testing.T) {
 		result, errs := testParseType("{T:}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "missing dictionary value type",
-					Pos:     ast.Position{Offset: 3, Line: 1, Column: 3},
+				&MissingDictionaryValueTypeError{
+					Pos: ast.Position{Offset: 3, Line: 1, Column: 3},
 				},
 			},
 			errs,
@@ -922,9 +1463,8 @@ func TestParseDictionaryType(t *testing.T) {
 		result, errs := testParseType("{:}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected colon in dictionary type",
-					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
+				&UnexpectedColonInDictionaryTypeError{
+					Pos: ast.Position{Offset: 1, Line: 1, Column: 1},
 				},
 			},
 			errs,
@@ -940,9 +1480,8 @@ func TestParseDictionaryType(t *testing.T) {
 		result, errs := testParseType("{:U}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected colon in dictionary type",
-					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
+				&UnexpectedColonInDictionaryTypeError{
+					Pos: ast.Position{Offset: 1, Line: 1, Column: 1},
 				},
 			},
 			errs,
@@ -956,12 +1495,13 @@ func TestParseDictionaryType(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseType("{T:U,}")
+		const code = "{T:U,}"
+		result, errs := testParseType(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected comma in dictionary type",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				&UnexpectedCommaInDictionaryTypeError{
+					Pos: ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
 			},
 			errs,
@@ -969,18 +1509,47 @@ func TestParseDictionaryType(t *testing.T) {
 
 		// TODO: return type
 		assert.Nil(t, result)
+
+		var unexpectedCommaErr *UnexpectedCommaInDictionaryTypeError
+		require.ErrorAs(t, errs[0], &unexpectedCommaErr)
+
+		fixes := unexpectedCommaErr.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove comma",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"{T:U}",
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
 	})
 
 	t.Run("invalid, unexpected colon after value type", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseType("{T:U:}")
+		const code = "{T:U:}"
+		result, errs := testParseType(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected colon in dictionary type",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				&MultipleColonInDictionaryTypeError{
+					Pos: ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
 			},
 			errs,
@@ -988,6 +1557,34 @@ func TestParseDictionaryType(t *testing.T) {
 
 		// TODO: return type
 		assert.Nil(t, result)
+
+		var multipleColonErr *MultipleColonInDictionaryTypeError
+		require.ErrorAs(t, errs[0], &multipleColonErr)
+
+		fixes := multipleColonErr.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove extra colon",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"{T:U}",
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
 	})
 
 	t.Run("invalid, unexpected colon after colon", func(t *testing.T) {
@@ -997,9 +1594,8 @@ func TestParseDictionaryType(t *testing.T) {
 		result, errs := testParseType("{T::U}")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected colon in dictionary type",
-					Pos:     ast.Position{Offset: 3, Line: 1, Column: 3},
+				&UnexpectedColonInDictionaryTypeError{
+					Pos: ast.Position{Offset: 3, Line: 1, Column: 3},
 				},
 			},
 			errs,
@@ -1016,9 +1612,8 @@ func TestParseDictionaryType(t *testing.T) {
 		result, errs := testParseType("{T:")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "invalid end of input, expected type",
-					Pos:     ast.Position{Offset: 3, Line: 1, Column: 3},
+				&UnexpectedEOFExpectedTypeError{
+					Pos: ast.Position{Offset: 3, Line: 1, Column: 3},
 				},
 			},
 			errs,
@@ -1031,18 +1626,44 @@ func TestParseDictionaryType(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseType("{T:U")
+		const code = "{T:U"
+		_, errs := testParseType(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "invalid end of input, expected '}'",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				&MissingClosingBraceInIntersectionOrDictionaryTypeError{
+					Pos: ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
 			},
 			errs,
 		)
 
-		assert.Nil(t, result)
+		var missingBraceErr *MissingClosingBraceInIntersectionOrDictionaryTypeError
+		require.ErrorAs(t, errs[0], &missingBraceErr)
+
+		fixes := missingBraceErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing brace",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "}",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"{T:U}",
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
 	})
 }
 
@@ -1080,6 +1701,88 @@ func TestParseFunctionType(t *testing.T) {
 		)
 	})
 
+	t.Run("no parameters, no return type", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("fun()")
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			&ast.FunctionType{
+				PurityAnnotation: ast.FunctionPurityUnspecified,
+				ReturnTypeAnnotation: &ast.TypeAnnotation{
+					IsResource: false,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "",
+							Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("no parameter list", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "fun"
+		_, errs := testParseType(code)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingOpeningParenInFunctionTypeError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+							EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+						},
+						Type: lexer.TokenEOF,
+					},
+				},
+				&UnexpectedEOFExpectedTypeAnnotationError{
+					Pos: ast.Position{Offset: 3, Line: 1, Column: 3},
+				},
+			},
+			errs,
+		)
+
+		var missingParenErr *MissingOpeningParenInFunctionTypeError
+		require.ErrorAs(t, errs[0], &missingParenErr)
+
+		fixes := missingParenErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert opening parenthesis",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "(",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+								EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"fun(",
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+	})
+
 	t.Run("view function type", func(t *testing.T) {
 
 		t.Parallel()
@@ -1107,6 +1810,83 @@ func TestParseFunctionType(t *testing.T) {
 				},
 			},
 			result,
+		)
+	})
+
+	t.Run("missing closing paren, no types", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("fun(")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedEOFExpectedTypeAnnotationError{
+					Pos: ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing closing paren, one type", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "fun(Int"
+		_, errs := testParseType(code)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingClosingParenInFunctionTypeError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+							EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+						},
+						Type: lexer.TokenEOF,
+					},
+				},
+			},
+			errs,
+		)
+
+		var missingParenErr *MissingClosingParenInFunctionTypeError
+		require.ErrorAs(t, errs[0], &missingParenErr)
+
+		fixes := missingParenErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing parenthesis",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ")",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+								EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t, "fun(Int)", fixes[0].TextEdits[0].ApplyTo(code))
+	})
+
+	t.Run("invalid, leading comma", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("fun(,) : Void")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedCommaInTypeAnnotationListError{
+					Pos: ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
+			},
+			errs,
 		)
 	})
 
@@ -1388,6 +2168,104 @@ func TestParseInstantiationType(t *testing.T) {
 				},
 				TypeArgumentsStartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 				EndPos:                ast.Position{Line: 1, Column: 11, Offset: 11},
+			},
+			result,
+		)
+	})
+
+	t.Run("invalid: unexpected comma", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("T<,U>")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedCommaInTypeAnnotationListError{
+					Pos: ast.Position{Offset: 2, Line: 1, Column: 2},
+				},
+			},
+			errs,
+		)
+
+		assert.Nil(t, result)
+	})
+
+	t.Run("invalid: missing separator", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("T<U V>")
+		AssertEqualWithDiff(t,
+			[]error{
+				&UnexpectedTokenInsteadOfSeparatorError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+							EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+						},
+					},
+					ExpectedSeparator: lexer.TokenComma,
+					ExpectedEndToken:  lexer.TokenGreater,
+				},
+			},
+			errs,
+		)
+
+		assert.Nil(t, result)
+	})
+
+	t.Run("invalid: missing closing greater", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("T<U")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingClosingGreaterInTypeArgumentsError{
+					Pos: ast.Position{Offset: 3, Line: 1, Column: 3},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid: missing type after comma", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("T<U,>")
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingTypeAnnotationAfterCommaError{
+					Pos: ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
+			},
+			errs,
+		)
+
+		AssertEqualWithDiff(t,
+			&ast.InstantiationType{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+					},
+				},
+				TypeArguments: []*ast.TypeAnnotation{
+					{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "U",
+								Pos:        ast.Position{Offset: 2, Line: 1, Column: 2},
+							},
+						},
+						StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+					},
+				},
+				TypeArgumentsStartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+				EndPos:                ast.Position{Offset: 4, Line: 1, Column: 4},
 			},
 			result,
 		)
@@ -2896,9 +3774,46 @@ func TestParseAuthorizedReferenceTypeWithNoEntitlements(t *testing.T) {
 
 	AssertEqualWithDiff(t,
 		[]error{
-			&SyntaxError{
-				Message: "expected authorization (entitlement list)",
-				Pos:     ast.Position{Offset: 20, Line: 2, Column: 19},
+			&MissingStartOfAuthorizationError{
+				GotToken: lexer.Token{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 20, Line: 2, Column: 19},
+						EndPos:   ast.Position{Offset: 20, Line: 2, Column: 19},
+					},
+					Type: lexer.TokenAmpersand,
+				},
+			},
+		},
+		errs.(Error).Errors,
+	)
+}
+
+func TestParseAuthorizedReferenceTypeWithNonNominalType(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+       let x: auth([Int]) &R = 1
+	`
+	_, errs := testParseProgram(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&NonNominalTypeError{
+				Pos: ast.Position{Offset: 20, Line: 2, Column: 19},
+				Type: &ast.VariableSizedType{
+					Type: &ast.NominalType{
+						NestedIdentifiers: []ast.Identifier{},
+						Identifier: ast.Identifier{
+							Identifier: "Int",
+							Pos:        ast.Position{Offset: 21, Line: 2, Column: 20},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 20, Line: 2, Column: 19},
+						EndPos:   ast.Position{Offset: 24, Line: 2, Column: 23},
+					},
+				},
 			},
 		},
 		errs.(Error).Errors,
@@ -3085,4 +4000,72 @@ func TestParseNestedParenthesizedTypes(t *testing.T) {
 	}
 
 	AssertEqualWithDiff(t, expected, prog.Declarations())
+}
+
+func TestParseParenthesizedTypeWithInvalidType(t *testing.T) {
+
+	t.Parallel()
+
+	_, errs := testParseType("(.")
+	AssertEqualWithDiff(t,
+		[]error{
+			&UnexpectedTypeStartError{
+				GotToken: lexer.Token{
+					Type: lexer.TokenDot,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+						EndPos:   ast.Position{Offset: 1, Line: 1, Column: 1},
+					},
+				},
+			},
+		},
+		errs,
+	)
+}
+
+func TestParseMissingEndOfParenthesizedType(t *testing.T) {
+
+	t.Parallel()
+
+	const code = "(Int"
+	_, errs := testParseType(code)
+
+	AssertEqualWithDiff(t,
+		[]error{
+			&MissingEndOfParenthesizedTypeError{
+				GotToken: lexer.Token{
+					Type: lexer.TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+						EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+					},
+				},
+			},
+		},
+		errs,
+	)
+
+	var missingParenErr *MissingEndOfParenthesizedTypeError
+	require.ErrorAs(t, errs[0], &missingParenErr)
+
+	fixes := missingParenErr.SuggestFixes(code)
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert closing parenthesis",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: ")",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+							EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	assert.Equal(t, "(Int)", fixes[0].TextEdits[0].ApplyTo(code))
 }

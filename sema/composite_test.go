@@ -25,10 +25,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/parser"
 	"github.com/onflow/cadence/sema"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -1825,7 +1827,7 @@ func TestCheckInvalidCompositeFieldMissingVariableKind(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.InvalidVariableKindError{}, errs[0])
+			assert.IsType(t, &sema.InvalidFieldVariableKindError{}, errs[0])
 		})
 	}
 }
@@ -1932,15 +1934,48 @@ func TestCheckInvalidStructureFunctionWithMissingBody(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
+	const code = `
         struct Test {
             access(all) fun getFoo(): Int
         }
-	`)
+	`
+	_, err := ParseAndCheck(t, code)
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.MissingFunctionBodyError{}, errs[0])
+	var missingErr *sema.MissingFunctionBodyError
+	require.ErrorAs(t, errs[0], &missingErr)
+
+	fixes := missingErr.SuggestFixes(code)
+
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert function body",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: " {}",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 64, Line: 3, Column: 41},
+							EndPos:   ast.Position{Offset: 64, Line: 3, Column: 41},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	const expected = `
+        struct Test {
+            access(all) fun getFoo(): Int {}
+        }
+	`
+
+	assert.Equal(t,
+		expected,
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestCheckInvalidStructureInitializerWithMissingBody(t *testing.T) {
@@ -2149,23 +2184,15 @@ func TestCheckInvalidMissingMember(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t,
-			&sema.NotDeclaredMemberError{},
-			errs[0],
-		)
-
-		notDeclaredMemberErr := errs[0].(*sema.NotDeclaredMemberError)
-		assert.Equal(t,
-			"unknown member",
-			notDeclaredMemberErr.SecondaryError(),
-		)
+		var notDeclaredMemberErr *sema.NotDeclaredMemberError
+		require.ErrorAs(t, errs[0], &notDeclaredMemberErr)
 	})
 
 	t.Run("optional: non-optional exists", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheck(t, `
+		const code = `
           struct S {
               fun a() {}
           }
@@ -2174,19 +2201,59 @@ func TestCheckInvalidMissingMember(t *testing.T) {
 		     let s: S? = S()
 		     s.a
 		  }
-        `)
-
+        `
+		_, err := ParseAndCheck(t, code)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t,
-			&sema.NotDeclaredMemberError{},
-			errs[0],
+		var notDeclaredMemberErr *sema.NotDeclaredMemberError
+		require.ErrorAs(t, errs[0], &notDeclaredMemberErr)
+
+		assert.Contains(t,
+			notDeclaredMemberErr.SecondaryError(),
+			"the type is optional, consider optional-chaining: `?.a`",
 		)
 
-		notDeclaredMemberErr := errs[0].(*sema.NotDeclaredMemberError)
+		fixes := notDeclaredMemberErr.SuggestFixes(code)
+		require.Equal(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Use optional chaining",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "?",
+							Range: ast.Range{
+								StartPos: ast.Position{
+									Offset: 108,
+									Line:   8,
+									Column: 8,
+								},
+								EndPos: ast.Position{
+									Offset: 108,
+									Line:   8,
+									Column: 8,
+								},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		const expected = `
+          struct S {
+              fun a() {}
+          }
+
+		  fun test() {
+		     let s: S? = S()
+		     s?.a
+		  }
+        `
+
 		assert.Equal(t,
-			"type is optional, consider optional-chaining: ?.a",
-			notDeclaredMemberErr.SecondaryError(),
+			expected,
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
@@ -2207,16 +2274,8 @@ func TestCheckInvalidMissingMember(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t,
-			&sema.NotDeclaredMemberError{},
-			errs[0],
-		)
-
-		notDeclaredMemberErr := errs[0].(*sema.NotDeclaredMemberError)
-		assert.Equal(t,
-			"unknown member",
-			notDeclaredMemberErr.SecondaryError(),
-		)
+		var notDeclaredMemberErr *sema.NotDeclaredMemberError
+		require.ErrorAs(t, errs[0], &notDeclaredMemberErr)
 	})
 }
 

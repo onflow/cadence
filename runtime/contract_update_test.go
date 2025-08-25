@@ -809,6 +809,15 @@ func TestRuntimeContractUpdateWithOldProgramError(t *testing.T) {
 
 	require.ErrorContains(t,
 		err,
-		"pub contract Foo {\n  | \t\t^^^\n\nerror: `pub` is no longer a valid access keyword",
+		"error: `pub` is no longer a valid access modifier\n"+
+			" --> 0000000000000001.Foo:2:2\n"+
+			"  |\n"+
+			"2 | \t\tpub contract Foo {\n"+
+			"  | \t\t^^^ use `access(all)` instead\n"+
+			"\n"+
+			"  Migration note: This is pre-Cadence 1.0 syntax. The `pub` modifier was replaced with `access(all)`\n"+
+			"\n"+
+			"  See documentation at: https://cadence-lang.org/docs/language/access-control\n"+
+			"\n",
 	)
 }

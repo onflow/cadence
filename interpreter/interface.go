@@ -444,7 +444,6 @@ type InvocationContext interface {
 	VariableResolver
 
 	GetLocation() common.Location
-	CallStack() []Invocation
 
 	InvokeFunction(
 		fn FunctionValue,

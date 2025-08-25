@@ -131,6 +131,11 @@ generate:
 check-tidy: generate
 	go mod tidy
 	git diff --exit-code
+	git diff --exit-code
+
+.PHONY: validate-error-doc-links
+validate-error-doc-links:
+	go run ./cmd/errors validate-doc-links
 
 .PHONY: release
 release:

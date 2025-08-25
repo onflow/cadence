@@ -2718,7 +2718,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 																Pos:        ast.Position{Offset: 111, Line: 6, Column: 18},
 															},
 														},
-														AccessPos: ast.Position{Offset: 115, Line: 6, Column: 22},
+														AccessEndPos: ast.Position{Offset: 115, Line: 6, Column: 22},
 														Identifier: ast.Identifier{
 															Identifier: "foo",
 															Pos:        ast.Position{Offset: 116, Line: 6, Column: 23},
@@ -2778,7 +2778,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 															Pos:        ast.Position{Offset: 206, Line: 10, Column: 25},
 														},
 													},
-													AccessPos: ast.Position{Offset: 210, Line: 10, Column: 29},
+													AccessEndPos: ast.Position{Offset: 210, Line: 10, Column: 29},
 													Identifier: ast.Identifier{
 														Identifier: "foo",
 														Pos:        ast.Position{Offset: 211, Line: 10, Column: 30},
@@ -4501,7 +4501,7 @@ func TestParseStructure(t *testing.T) {
 															Pos:        ast.Position{Offset: 103, Line: 6, Column: 16},
 														},
 													},
-													AccessPos: ast.Position{Offset: 107, Line: 6, Column: 20},
+													AccessEndPos: ast.Position{Offset: 107, Line: 6, Column: 20},
 													Identifier: ast.Identifier{
 														Identifier: "foo",
 														Pos:        ast.Position{Offset: 108, Line: 6, Column: 21},
@@ -4561,7 +4561,7 @@ func TestParseStructure(t *testing.T) {
 														Pos:        ast.Position{Offset: 192, Line: 10, Column: 23},
 													},
 												},
-												AccessPos: ast.Position{Offset: 196, Line: 10, Column: 27},
+												AccessEndPos: ast.Position{Offset: 196, Line: 10, Column: 27},
 												Identifier: ast.Identifier{
 													Identifier: "foo",
 													Pos:        ast.Position{Offset: 197, Line: 10, Column: 28},
@@ -5997,7 +5997,7 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 															Pos:        ast.Position{Offset: 54, Line: 2, Column: 53},
 														},
 													},
-													AccessPos: ast.Position{Offset: 58, Line: 2, Column: 57},
+													AccessEndPos: ast.Position{Offset: 58, Line: 2, Column: 57},
 													Identifier: ast.Identifier{
 														Identifier: "id",
 														Pos:        ast.Position{Offset: 59, Line: 2, Column: 58},

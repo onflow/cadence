@@ -25,9 +25,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -1633,15 +1635,17 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 
 	t.Parallel()
 
-	checker, err := ParseAndCheckWithPanic(t, `
+	const code = `
       struct interface I {}
 
       let s: fun(I): {Int: I} = panic("")
-    `)
+    `
+	checker, err := ParseAndCheckWithPanic(t, code)
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	require.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[0])
+	var invalidInterfaceTypeErr *sema.InvalidInterfaceTypeError
+	require.ErrorAs(t, errs[0], &invalidInterfaceTypeErr)
 
 	iType := RequireGlobalType(t, checker.Elaboration, "I").(*sema.InterfaceType)
 
@@ -1670,6 +1674,37 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 			),
 		},
 		errs[0].(*sema.InvalidInterfaceTypeError).ExpectedType,
+	)
+
+	fixes := invalidInterfaceTypeErr.SuggestFixes(code)
+
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Replace with `fun({I}): {Int: {I}}`",
+				TextEdits: []ast.TextEdit{
+					{
+						Replacement: "fun({I}): {Int: {I}}",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 43, Line: 4, Column: 13},
+							EndPos:   ast.Position{Offset: 58, Line: 4, Column: 28},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	const expected = `
+      struct interface I {}
+
+      let s: fun({I}): {Int: {I}} = panic("")
+    `
+
+	assert.Equal(t,
+		expected,
+		fixes[0].TextEdits[0].ApplyTo(code),
 	)
 }
 
