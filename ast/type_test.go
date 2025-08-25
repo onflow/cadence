@@ -847,58 +847,194 @@ func TestDictionaryType_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &DictionaryType{
-		KeyType: &NominalType{
-			Identifier: Identifier{
-				Identifier: "AB",
-			},
-		},
-		ValueType: &NominalType{
-			Identifier: Identifier{
-				Identifier: "CD",
-			},
-		},
-	}
+	t.Run("with key, with value", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		prettier.Concat{
-			prettier.Text("{"),
-			prettier.Indent{
-				Doc: prettier.Concat{
-					prettier.SoftLine{},
-					prettier.Text("AB"),
-					prettier.Text(": "),
-					prettier.Text("CD"),
+		ty := &DictionaryType{
+			KeyType: &NominalType{
+				Identifier: Identifier{
+					Identifier: "AB",
 				},
 			},
-			prettier.SoftLine{},
-			prettier.Text("}"),
-		},
-		ty.Doc(),
-	)
+			ValueType: &NominalType{
+				Identifier: Identifier{
+					Identifier: "CD",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("{"),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.SoftLine{},
+						prettier.Text("AB"),
+						prettier.Text(": "),
+						prettier.Text("CD"),
+					},
+				},
+				prettier.SoftLine{},
+				prettier.Text("}"),
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("without key, with value", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &DictionaryType{
+			ValueType: &NominalType{
+				Identifier: Identifier{
+					Identifier: "CD",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("{"),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.SoftLine{},
+						prettier.Text(""),
+						prettier.Text(": "),
+						prettier.Text("CD"),
+					},
+				},
+				prettier.SoftLine{},
+				prettier.Text("}"),
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("with key, without value", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &DictionaryType{
+			KeyType: &NominalType{
+				Identifier: Identifier{
+					Identifier: "AB",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("{"),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.SoftLine{},
+						prettier.Text("AB"),
+						prettier.Text(": "),
+						prettier.Text(""),
+					},
+				},
+				prettier.SoftLine{},
+				prettier.Text("}"),
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("without key, without value", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &DictionaryType{}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("{"),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.SoftLine{},
+						prettier.Text(""),
+						prettier.Text(": "),
+						prettier.Text(""),
+					},
+				},
+				prettier.SoftLine{},
+				prettier.Text("}"),
+			},
+			ty.Doc(),
+		)
+	})
+
 }
 
 func TestDictionaryType_String(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &DictionaryType{
-		KeyType: &NominalType{
-			Identifier: Identifier{
-				Identifier: "AB",
-			},
-		},
-		ValueType: &NominalType{
-			Identifier: Identifier{
-				Identifier: "CD",
-			},
-		},
-	}
+	t.Run("with key, with value", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		"{AB: CD}",
-		ty.String(),
-	)
+		ty := &DictionaryType{
+			KeyType: &NominalType{
+				Identifier: Identifier{
+					Identifier: "AB",
+				},
+			},
+			ValueType: &NominalType{
+				Identifier: Identifier{
+					Identifier: "CD",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"{AB: CD}",
+			ty.String(),
+		)
+	})
+
+	t.Run("without key, with value", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &DictionaryType{
+			ValueType: &NominalType{
+				Identifier: Identifier{
+					Identifier: "CD",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"{: CD}",
+			ty.String(),
+		)
+	})
+
+	t.Run("with key, without value", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &DictionaryType{
+			KeyType: &NominalType{
+				Identifier: Identifier{
+					Identifier: "AB",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"{AB: }",
+			ty.String(),
+		)
+	})
+
+	t.Run("without key, without value", func(t *testing.T) {
+		t.Parallel()
+
+		ty := &DictionaryType{}
+
+		assert.Equal(t,
+			"{: }",
+			ty.String(),
+		)
+	})
+
 }
 
 func TestDictionaryType_MarshalJSON(t *testing.T) {

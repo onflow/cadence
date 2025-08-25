@@ -435,14 +435,28 @@ const dictionaryTypeStartDoc = prettier.Text("{")
 const dictionaryTypeEndDoc = prettier.Text("}")
 
 func (t *DictionaryType) Doc() prettier.Doc {
+	var keyTypeDoc prettier.Doc
+	if t.KeyType == nil {
+		keyTypeDoc = prettier.Text("")
+	} else {
+		keyTypeDoc = t.KeyType.Doc()
+	}
+
+	var valueTypeDoc prettier.Doc
+	if t.ValueType == nil {
+		valueTypeDoc = prettier.Text("")
+	} else {
+		valueTypeDoc = t.ValueType.Doc()
+	}
+
 	return prettier.Concat{
 		dictionaryTypeStartDoc,
 		prettier.Indent{
 			Doc: prettier.Concat{
 				prettier.SoftLine{},
-				t.KeyType.Doc(),
+				keyTypeDoc,
 				typeSeparatorSpaceDoc,
-				t.ValueType.Doc(),
+				valueTypeDoc,
 			},
 		},
 		prettier.SoftLine{},
