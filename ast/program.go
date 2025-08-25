@@ -196,10 +196,20 @@ var programSeparatorDoc = prettier.Concat{
 func (p *Program) Doc() prettier.Doc {
 	declarations := p.Declarations()
 
+	if len(declarations) == 0 {
+		return prettier.Text("")
+	}
+
 	docs := make([]prettier.Doc, 0, len(declarations))
 
 	for _, declaration := range declarations {
-		docs = append(docs, declaration.Doc())
+		var declarationDoc prettier.Doc
+		if declaration == nil {
+			declarationDoc = prettier.Text("")
+		} else {
+			declarationDoc = declaration.Doc()
+		}
+		docs = append(docs, declarationDoc)
 	}
 
 	return prettier.Join(programSeparatorDoc, docs...)
