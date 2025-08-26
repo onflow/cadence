@@ -5073,7 +5073,8 @@ func TestFunctionExpression_Doc(t *testing.T) {
 		}
 
 		expected := prettier.Concat{
-			prettier.Text("fun "),
+			prettier.Text("fun"),
+			prettier.Line{},
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("()"),
@@ -5146,7 +5147,8 @@ func TestFunctionExpression_Doc(t *testing.T) {
 		}
 
 		expected := prettier.Concat{
-			prettier.Text("fun "),
+			prettier.Text("fun"),
+			prettier.Line{},
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Group{
@@ -5259,7 +5261,8 @@ func TestFunctionExpression_Doc(t *testing.T) {
 		}
 
 		expected := prettier.Concat{
-			prettier.Text("fun "),
+			prettier.Text("fun"),
+			prettier.Line{},
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("()"),
@@ -5359,8 +5362,9 @@ func TestFunctionExpression_Doc(t *testing.T) {
 
 		expected := prettier.Concat{
 			prettier.Text("view"),
-			prettier.Space,
-			prettier.Text("fun "),
+			prettier.Line{},
+			prettier.Text("fun"),
+			prettier.Line{},
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("()"),

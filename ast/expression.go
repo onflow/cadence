@@ -1516,7 +1516,7 @@ func (e *FunctionExpression) String() string {
 	return Prettier(e)
 }
 
-var functionFunKeywordSpaceDoc prettier.Doc = prettier.Text("fun ")
+var functionFunKeywordDoc prettier.Doc = prettier.Text("fun")
 
 func FunctionDocument(
 	access Access,
@@ -1534,19 +1534,15 @@ func FunctionDocument(
 	var signatureDoc prettier.Concat
 
 	if typeParameterList != nil {
-		typeParameterListDoc := typeParameterList.Doc()
-		if typeParameterListDoc != nil {
-			signatureDoc = append(
-				signatureDoc,
-				typeParameterListDoc,
-			)
-		}
+		signatureDoc = append(
+			signatureDoc,
+			typeParameterList.Doc(),
+		)
 	}
 
 	// NOTE: not all functions have a parameter list,
 	// e.g. the `init` (initializer, special function)
 	if parameterList != nil {
-
 		signatureDoc = append(
 			signatureDoc,
 			parameterList.Doc(),
@@ -1577,7 +1573,7 @@ func FunctionDocument(
 		doc = append(
 			doc,
 			prettier.Text(purity.Keyword()),
-			prettier.Space,
+			prettier.Line{},
 		)
 	}
 
@@ -1585,7 +1581,7 @@ func FunctionDocument(
 		doc = append(
 			doc,
 			staticKeywordDoc,
-			prettier.Space,
+			prettier.Line{},
 		)
 	}
 
@@ -1593,14 +1589,15 @@ func FunctionDocument(
 		doc = append(
 			doc,
 			nativeKeywordDoc,
-			prettier.Space,
+			prettier.Line{},
 		)
 	}
 
 	if includeKeyword {
 		doc = append(
 			doc,
-			functionFunKeywordSpaceDoc,
+			functionFunKeywordDoc,
+			prettier.Line{},
 		)
 	}
 
@@ -1621,12 +1618,10 @@ func FunctionDocument(
 	}
 
 	if block != nil {
-		blockDoc := block.Doc()
-
 		doc = append(
 			doc,
 			prettier.Space,
-			blockDoc,
+			block.Doc(),
 		)
 	}
 
@@ -2158,7 +2153,7 @@ func (v *VoidExpression) StartPosition() Position {
 	return v.StartPos
 }
 
-func (v *VoidExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
+func (v *VoidExpression) EndPosition(_ common.MemoryGauge) Position {
 	return v.EndPos
 }
 
@@ -2166,7 +2161,7 @@ func (v *VoidExpression) ElementType() ElementType {
 	return ElementTypeVoidExpression
 }
 
-func (v *VoidExpression) Walk(walkChild func(Element)) {
+func (v *VoidExpression) Walk(_ func(Element)) {
 	// NO-OP
 }
 
