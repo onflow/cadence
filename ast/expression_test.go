@@ -1284,6 +1284,34 @@ func TestMemberExpression_Doc(t *testing.T) {
 			expr.Doc(),
 		)
 	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &MemberExpression{
+			Identifier: Identifier{
+				Identifier: "bar",
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text(""),
+				prettier.Group{
+					Doc: prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text("."),
+							prettier.Text("bar"),
+						},
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
 }
 
 func TestMemberExpression_String(t *testing.T) {
@@ -1387,6 +1415,23 @@ func TestMemberExpression_String(t *testing.T) {
 			expr.String(),
 		)
 	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &MemberExpression{
+			Identifier: Identifier{
+				Identifier: "bar",
+			},
+		}
+
+		assert.Equal(t,
+			".bar",
+			expr.String(),
+		)
+	})
+
 }
 
 func TestIndexExpression_MarshalJSON(t *testing.T) {
