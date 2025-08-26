@@ -24,9 +24,30 @@ import (
 	"github.com/turbolent/prettier"
 )
 
-func Prettier(element interface{ Doc() prettier.Doc }) string {
+type Pretty interface {
+	Doc() prettier.Doc
+}
+
+func Prettier(element Pretty) string {
 	var builder strings.Builder
 	doc := element.Doc().Flatten()
 	prettier.Prettier(&builder, doc, 80, "    ")
 	return builder.String()
+}
+
+// docOrEmpty returns the document of the given element,
+// or an empty text document if the element is the zero value.
+//
+// NOTE: The function is generic because the version which takes an interface
+// will not properly allow for a nil check: When passing a pointer typed value as an interface,
+// a typed nil is created, which is not equal to nil.
+func docOrEmpty[T interface {
+	Pretty
+	comparable
+}](element T) prettier.Doc {
+	var empty T
+	if element == empty {
+		return prettier.Text("")
+	}
+	return element.Doc()
 }

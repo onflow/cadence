@@ -221,7 +221,7 @@ func (d *VariableDeclaration) Doc() prettier.Doc {
 	if d.Access != AccessNotSpecified {
 		doc = append(
 			doc,
-			prettier.Text(d.Access.Keyword()),
+			docOrEmpty(d.Access),
 			prettier.HardLine{},
 		)
 	}
