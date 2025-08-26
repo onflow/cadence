@@ -519,7 +519,7 @@ const emitStatementKeywordSpaceDoc = prettier.Text("emit ")
 func (s *EmitStatement) Doc() prettier.Doc {
 	return prettier.Concat{
 		emitStatementKeywordSpaceDoc,
-		s.InvocationExpression.Doc(),
+		docOrEmpty(s.InvocationExpression),
 	}
 }
 

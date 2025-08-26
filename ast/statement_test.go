@@ -1327,46 +1327,79 @@ func TestEmitStatement_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &EmitStatement{
-		InvocationExpression: &InvocationExpression{
-			InvokedExpression: &IdentifierExpression{
-				Identifier: Identifier{
-					Identifier: "foobar",
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &EmitStatement{
+			InvocationExpression: &InvocationExpression{
+				InvokedExpression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "foobar",
+					},
 				},
 			},
-		},
-	}
+		}
 
-	require.Equal(t,
-		prettier.Concat{
-			prettier.Text("emit "),
+		require.Equal(t,
 			prettier.Concat{
-				prettier.Text("foobar"),
-				prettier.Text("()"),
+				prettier.Text("emit "),
+				prettier.Concat{
+					prettier.Text("foobar"),
+					prettier.Text("()"),
+				},
 			},
-		},
-		stmt.Doc(),
-	)
+			stmt.Doc(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &EmitStatement{}
+
+		require.Equal(t,
+			prettier.Concat{
+				prettier.Text("emit "),
+				prettier.Text(""),
+			},
+			stmt.Doc(),
+		)
+	})
+
 }
 
 func TestEmitStatement_String(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &EmitStatement{
-		InvocationExpression: &InvocationExpression{
-			InvokedExpression: &IdentifierExpression{
-				Identifier: Identifier{
-					Identifier: "foobar",
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+		stmt := &EmitStatement{
+			InvocationExpression: &InvocationExpression{
+				InvokedExpression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "foobar",
+					},
 				},
 			},
-		},
-	}
+		}
 
-	require.Equal(t,
-		"emit foobar()",
-		stmt.String(),
-	)
+		require.Equal(t,
+			"emit foobar()",
+			stmt.String(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &EmitStatement{}
+
+		require.Equal(t,
+			"emit ",
+			stmt.String(),
+		)
+	})
 }
 
 func TestSwitchStatement_MarshalJSON(t *testing.T) {
