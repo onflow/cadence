@@ -2958,6 +2958,21 @@ func TestForceExpression_Doc(t *testing.T) {
 			expr.Doc(),
 		)
 	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &ForceExpression{}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text(""),
+				prettier.Text("!"),
+			},
+			expr.Doc(),
+		)
+	})
 }
 
 func TestForceExpression_String(t *testing.T) {
@@ -3019,6 +3034,18 @@ func TestForceExpression_String(t *testing.T) {
 
 		assert.Equal(t,
 			"(-foo)!",
+			expr.String(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &ForceExpression{}
+
+		assert.Equal(t,
+			"!",
 			expr.String(),
 		)
 	})
