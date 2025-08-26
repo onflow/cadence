@@ -477,6 +477,25 @@ func TestIfStatement_Doc(t *testing.T) {
 			stmt.Doc(),
 		)
 	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		stmt := &IfStatement{}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("if "),
+					prettier.Text(""),
+					prettier.Text(" "),
+					prettier.Text("{}"),
+				},
+			},
+			stmt.Doc(),
+		)
+	})
 }
 
 func TestIfStatement_String(t *testing.T) {
@@ -532,6 +551,18 @@ func TestIfStatement_String(t *testing.T) {
 
 		assert.Equal(t,
 			"if false {} else if true {}",
+			stmt.String(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		stmt := &IfStatement{}
+
+		assert.Equal(t,
+			"if  {}",
 			stmt.String(),
 		)
 	})

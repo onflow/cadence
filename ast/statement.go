@@ -252,13 +252,19 @@ const ifStatementIfKeywordSpaceDoc = prettier.Text("if ")
 const ifStatementSpaceElseKeywordSpaceDoc = prettier.Text(" else ")
 
 func (s *IfStatement) Doc() prettier.Doc {
-	testDoc := s.Test.Doc()
+
+	var thenDoc prettier.Doc
+	if s.Then == nil {
+		thenDoc = blockEmptyDoc
+	} else {
+		thenDoc = s.Then.Doc()
+	}
 
 	doc := prettier.Concat{
 		ifStatementIfKeywordSpaceDoc,
-		testDoc,
+		docOrEmpty(s.Test),
 		prettier.Space,
-		s.Then.Doc(),
+		thenDoc,
 	}
 
 	if s.Else != nil && len(s.Else.Statements) > 0 {
