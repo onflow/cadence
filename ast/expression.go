@@ -1133,25 +1133,43 @@ func (e *ConditionalExpression) Doc() prettier.Doc {
 
 	// NOTE: right associative
 
-	testDoc := e.Test.Doc()
-	testPrecedence := e.Test.precedence()
-
-	if ownPrecedence >= testPrecedence {
-		testDoc = prettier.WrapParentheses(testDoc, prettier.SoftLine{})
+	var testDoc prettier.Doc
+	if e.Test == nil {
+		testDoc = prettier.Text("")
+	} else {
+		testDoc = e.Test.Doc()
+		if ownPrecedence >= e.Test.precedence() {
+			testDoc = prettier.WrapParentheses(
+				testDoc,
+				prettier.SoftLine{},
+			)
+		}
 	}
 
-	thenDoc := e.Then.Doc()
-	thenPrecedence := e.Then.precedence()
-
-	if ownPrecedence >= thenPrecedence {
-		thenDoc = prettier.WrapParentheses(thenDoc, prettier.SoftLine{})
+	var thenDoc prettier.Doc
+	if e.Then == nil {
+		thenDoc = prettier.Text("")
+	} else {
+		thenDoc = e.Then.Doc()
+		if ownPrecedence >= e.Then.precedence() {
+			thenDoc = prettier.WrapParentheses(
+				thenDoc,
+				prettier.SoftLine{},
+			)
+		}
 	}
 
-	elseDoc := e.Else.Doc()
-	elsePrecedence := e.Else.precedence()
-
-	if ownPrecedence > elsePrecedence {
-		elseDoc = prettier.WrapParentheses(elseDoc, prettier.SoftLine{})
+	var elseDoc prettier.Doc
+	if e.Else == nil {
+		elseDoc = prettier.Text("")
+	} else {
+		elseDoc = e.Else.Doc()
+		if ownPrecedence > e.Else.precedence() {
+			elseDoc = prettier.WrapParentheses(
+				elseDoc,
+				prettier.SoftLine{},
+			)
+		}
 	}
 
 	return prettier.Group{

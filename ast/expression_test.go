@@ -3271,6 +3271,40 @@ func TestConditionalExpression_Doc(t *testing.T) {
 		)
 	})
 
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &ConditionalExpression{}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text(""),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.Concat{
+								prettier.Line{},
+								prettier.Text("? "),
+							},
+							prettier.Indent{
+								Doc: prettier.Text(""),
+							},
+							prettier.Concat{
+								prettier.Line{},
+								prettier.Text(": "),
+							},
+							prettier.Indent{
+								Doc: prettier.Text(""),
+							},
+						},
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
 }
 
 func TestConditionalExpression_String(t *testing.T) {
@@ -3409,6 +3443,18 @@ func TestConditionalExpression_String(t *testing.T) {
 
 		assert.Equal(t,
 			"false ? 1 : false ? 2 : 3",
+			expr.String(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &ConditionalExpression{}
+
+		assert.Equal(t,
+			" ?  : ",
 			expr.String(),
 		)
 	})
