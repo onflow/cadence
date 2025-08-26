@@ -227,6 +227,13 @@ func CompositeDocument(
 		prettier.Text(identifier),
 	)
 
+	var membersDoc prettier.Doc
+	if members == nil {
+		membersDoc = membersEmptyDoc
+	} else {
+		membersDoc = members.Doc()
+	}
+
 	if len(conformances) > 0 {
 
 		conformancesDoc := prettier.Concat{
@@ -243,7 +250,7 @@ func CompositeDocument(
 
 			conformancesDoc = append(
 				conformancesDoc,
-				conformance.Doc(),
+				docOrEmpty(conformance),
 			)
 		}
 
@@ -252,7 +259,7 @@ func CompositeDocument(
 			prettier.Dedent{
 				Doc: prettier.Concat{
 					prettier.Line{},
-					members.Doc(),
+					membersDoc,
 				},
 			},
 		)
@@ -271,7 +278,7 @@ func CompositeDocument(
 		doc = append(
 			doc,
 			prettier.Space,
-			members.Doc(),
+			membersDoc,
 		)
 	}
 

@@ -155,14 +155,11 @@ var arrowKeywordSpaceDoc = prettier.Text(" -> ")
 func (*EntitlementMapRelation) isEntitlementMapElement() {}
 
 func (d *EntitlementMapRelation) Doc() prettier.Doc {
-	var doc prettier.Concat
-
-	return append(
-		doc,
-		d.Input.Doc(),
+	return prettier.Concat{
+		docOrEmpty(d.Input),
 		arrowKeywordSpaceDoc,
-		d.Output.Doc(),
-	)
+		docOrEmpty(d.Output),
+	}
 }
 
 // EntitlementMappingDeclaration
@@ -274,19 +271,25 @@ func (d *EntitlementMappingDeclaration) Doc() prettier.Doc {
 		)
 	}
 
-	var mappingElementsDoc prettier.Concat
+	var elementsDocs prettier.Concat
 
 	for _, element := range d.Elements {
-		var elementDoc prettier.Concat
+
+		var elementDoc prettier.Doc
 
 		if _, isNominalType := element.(*NominalType); isNominalType {
-			elementDoc = append(elementDoc, includeKeywordSpaceDoc)
+			elementDoc = prettier.Concat{
+				includeKeywordSpaceDoc,
+				element.Doc(),
+			}
+		} else if element == nil {
+			elementDoc = prettier.Text("")
+		} else {
+			elementDoc = element.Doc()
 		}
 
-		elementDoc = append(elementDoc, element.Doc())
-
-		mappingElementsDoc = append(
-			mappingElementsDoc,
+		elementsDocs = append(
+			elementsDocs,
 			elementDoc,
 		)
 	}
@@ -302,7 +305,7 @@ func (d *EntitlementMappingDeclaration) Doc() prettier.Doc {
 		prettier.Indent{
 			Doc: prettier.Join(
 				prettier.HardLine{},
-				mappingElementsDoc...,
+				elementsDocs...,
 			),
 		},
 		prettier.HardLine{},

@@ -24,6 +24,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/turbolent/prettier"
 )
 
 func TestMembers_MarshalJSON(t *testing.T) {
@@ -44,4 +45,181 @@ func TestMembers_MarshalJSON(t *testing.T) {
         `,
 		string(actual),
 	)
+}
+
+func TestMembers_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+
+		members := NewUnmeteredMembers([]Declaration{})
+
+		require.Equal(t,
+			prettier.Text("{}"),
+			members.Doc(),
+		)
+	})
+
+	t.Run("with members", func(t *testing.T) {
+		t.Parallel()
+
+		members := NewUnmeteredMembers([]Declaration{
+			&VariableDeclaration{
+				Access: AccessNotSpecified,
+				Identifier: Identifier{
+					Identifier: "x",
+				},
+				Transfer: &Transfer{
+					Operation: TransferOperationCopy,
+				},
+				Value: &BoolExpression{
+					Value: true,
+				},
+			},
+			&VariableDeclaration{
+				Access: AccessNotSpecified,
+				Identifier: Identifier{
+					Identifier: "y",
+				},
+				Transfer: &Transfer{
+					Operation: TransferOperationCopy,
+				},
+				Value: &BoolExpression{
+					Value: false,
+				},
+			},
+		})
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("{"),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.Concat{
+							prettier.HardLine{},
+							prettier.Group{
+								Doc: prettier.Concat{
+									prettier.Text("var"),
+									prettier.Text(" "),
+									prettier.Group{
+										Doc: prettier.Concat{
+											prettier.Group{
+												Doc: prettier.Concat{
+													prettier.Text("x"),
+												},
+											},
+											prettier.Text(" "),
+											prettier.Text("="),
+											prettier.Group{
+												Doc: prettier.Indent{
+													Doc: prettier.Concat{
+														prettier.Line{},
+														prettier.Text("true"),
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+						prettier.HardLine{},
+						prettier.Concat{
+							prettier.HardLine{},
+							prettier.Group{
+								Doc: prettier.Concat{
+									prettier.Text("var"),
+									prettier.Text(" "),
+									prettier.Group{
+										Doc: prettier.Concat{
+											prettier.Group{
+												Doc: prettier.Concat{
+													prettier.Text("y"),
+												},
+											},
+											prettier.Text(" "),
+											prettier.Text("="),
+											prettier.Group{
+												Doc: prettier.Indent{
+													Doc: prettier.Concat{
+														prettier.Line{},
+														prettier.Text("false"),
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				prettier.HardLine{},
+				prettier.Text("}"),
+			},
+			members.Doc(),
+		)
+	})
+
+}
+
+func TestMembers_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+
+		members := NewUnmeteredMembers([]Declaration{})
+
+		require.Equal(t,
+			prettier.Text("{}"),
+			members.Doc(),
+		)
+	})
+
+	t.Run("with members", func(t *testing.T) {
+		t.Parallel()
+
+		members := NewUnmeteredMembers([]Declaration{
+			&VariableDeclaration{
+				Access: AccessNotSpecified,
+				Identifier: Identifier{
+					Identifier: "x",
+				},
+				Transfer: &Transfer{
+					Operation: TransferOperationCopy,
+				},
+				Value: &BoolExpression{
+					Value: true,
+				},
+			},
+			&VariableDeclaration{
+				Access: AccessNotSpecified,
+				Identifier: Identifier{
+					Identifier: "y",
+				},
+				Transfer: &Transfer{
+					Operation: TransferOperationCopy,
+				},
+				Value: &BoolExpression{
+					Value: false,
+				},
+			},
+		})
+
+		require.Equal(
+			t,
+			`{
+    var x = true
+    
+    var y = false
+}`,
+			members.String(),
+		)
+	})
+
 }
