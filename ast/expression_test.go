@@ -4201,6 +4201,33 @@ func TestCastingExpression_Doc(t *testing.T) {
 			expr.Doc(),
 		)
 	})
+
+	t.Run("nil expression and type", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &CastingExpression{
+			Expression:     nil,
+			Operation:      OperationFailableCast,
+			TypeAnnotation: nil,
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Group{
+						Doc: prettier.Text(""),
+					},
+					prettier.Line{},
+					prettier.Text("as?"),
+					prettier.Line{},
+					prettier.Text(""),
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
 }
 
 func TestCastingExpression_String(t *testing.T) {
@@ -4302,6 +4329,23 @@ func TestCastingExpression_String(t *testing.T) {
 			expr.String(),
 		)
 	})
+
+	t.Run("nil expression and type", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &CastingExpression{
+			Expression:     nil,
+			Operation:      OperationFailableCast,
+			TypeAnnotation: nil,
+		}
+
+		assert.Equal(t,
+			" as? ",
+			expr.String(),
+		)
+	})
+
 }
 
 func TestCreateExpression_MarshalJSON(t *testing.T) {

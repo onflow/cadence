@@ -1733,7 +1733,7 @@ func (e *CastingExpression) Doc() prettier.Doc {
 			prettier.Line{},
 			e.Operation.Doc(),
 			prettier.Line{},
-			e.TypeAnnotation.Doc(),
+			docOrEmpty(e.TypeAnnotation),
 		},
 	}
 }
