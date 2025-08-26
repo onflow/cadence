@@ -603,6 +603,33 @@ func TestArrayExpression_Doc(t *testing.T) {
 			expr.Doc(),
 		)
 	})
+
+	t.Run("nil element", func(t *testing.T) {
+		t.Parallel()
+
+		expr := &ArrayExpression{
+			Values: []Expression{
+				nil,
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("["),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text(""),
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text("]"),
+				},
+			},
+			expr.Doc(),
+		)
+	})
 }
 
 func TestArrayExpression_String(t *testing.T) {
@@ -633,6 +660,21 @@ func TestArrayExpression_String(t *testing.T) {
 
 		assert.Equal(t,
 			`[nil, true, "test"]`,
+			expr.String(),
+		)
+	})
+
+	t.Run("nil element", func(t *testing.T) {
+		t.Parallel()
+
+		expr := &ArrayExpression{
+			Values: []Expression{
+				nil,
+			},
+		}
+
+		assert.Equal(t,
+			"[]",
 			expr.String(),
 		)
 	})

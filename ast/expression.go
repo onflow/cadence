@@ -503,6 +503,8 @@ func (e *ArrayExpression) String() string {
 	return Prettier(e)
 }
 
+var arrayExpressionEmptyDoc = prettier.Text("[]")
+
 var arrayExpressionSeparatorDoc prettier.Doc = prettier.Concat{
 	prettier.Text(","),
 	prettier.Line{},
@@ -510,15 +512,18 @@ var arrayExpressionSeparatorDoc prettier.Doc = prettier.Concat{
 
 func (e *ArrayExpression) Doc() prettier.Doc {
 	if len(e.Values) == 0 {
-		return prettier.Text("[]")
+		return arrayExpressionEmptyDoc
 	}
 
 	elementDocs := make([]prettier.Doc, len(e.Values))
 	for i, value := range e.Values {
-		elementDocs[i] = value.Doc()
+		elementDocs[i] = docOrEmpty(value)
 	}
 	return prettier.WrapBrackets(
-		prettier.Join(arrayExpressionSeparatorDoc, elementDocs...),
+		prettier.Join(
+			arrayExpressionSeparatorDoc,
+			elementDocs...,
+		),
 		prettier.SoftLine{},
 	)
 }
