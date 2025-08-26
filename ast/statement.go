@@ -720,7 +720,7 @@ func (s *ExpressionStatement) Walk(walkChild func(Element)) {
 }
 
 func (s *ExpressionStatement) Doc() prettier.Doc {
-	return s.Expression.Doc()
+	return docOrEmpty(s.Expression)
 }
 
 func (s *ExpressionStatement) MarshalJSON() ([]byte, error) {

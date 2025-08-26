@@ -67,32 +67,67 @@ func TestExpressionStatement_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &ExpressionStatement{
-		Expression: &BoolExpression{
-			Value: false,
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		prettier.Text("false"),
-		stmt.Doc(),
-	)
+		stmt := &ExpressionStatement{
+			Expression: &BoolExpression{
+				Value: false,
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Text("false"),
+			stmt.Doc(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &ExpressionStatement{
+			Expression: nil,
+		}
+
+		assert.Equal(t,
+			prettier.Text(""),
+			stmt.Doc(),
+		)
+	})
 }
 
 func TestExpressionStatement_String(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &ExpressionStatement{
-		Expression: &BoolExpression{
-			Value: false,
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		"false",
-		stmt.String(),
-	)
+		stmt := &ExpressionStatement{
+			Expression: &BoolExpression{
+				Value: false,
+			},
+		}
+
+		assert.Equal(t,
+			"false",
+			stmt.String(),
+		)
+
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &ExpressionStatement{
+			Expression: nil,
+		}
+
+		assert.Equal(t,
+			"",
+			stmt.String(),
+		)
+	})
 }
 
 func TestReturnStatement_MarshalJSON(t *testing.T) {
