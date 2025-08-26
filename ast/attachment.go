@@ -340,12 +340,12 @@ const removeStatementFromKeywordDoc = prettier.Text("from")
 func (s *RemoveStatement) Doc() prettier.Doc {
 	return prettier.Concat{
 		removeStatementRemoveKeywordDoc,
-		prettier.Space,
-		s.Attachment.Doc(),
-		prettier.Space,
+		prettier.Line{},
+		docOrEmpty(s.Attachment),
+		prettier.Line{},
 		removeStatementFromKeywordDoc,
-		prettier.Space,
-		s.Value.Doc(),
+		prettier.Line{},
+		docOrEmpty(s.Value),
 	}
 }
 

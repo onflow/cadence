@@ -381,40 +381,101 @@ func TestRemoveStatement_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	decl := &RemoveStatement{
-		Attachment: NewNominalType(
-			nil,
-			NewIdentifier(
-				nil,
-				"E",
-				Position{Offset: 1, Line: 2, Column: 3},
-			),
-			[]Identifier{},
-		),
-		Value: NewIdentifierExpression(
-			nil,
-			NewIdentifier(
-				nil,
-				"baz",
-				Position{Offset: 1, Line: 2, Column: 3},
-			),
-		),
-		StartPos: Position{Offset: 1, Line: 2, Column: 3},
-	}
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
 
-	require.Equal(
-		t,
-		prettier.Concat{
-			prettier.Text("remove"),
-			prettier.Text(" "),
-			prettier.Text("E"),
-			prettier.Text(" "),
-			prettier.Text("from"),
-			prettier.Text(" "),
-			prettier.Text("baz"),
-		},
-		decl.Doc(),
-	)
+		decl := &RemoveStatement{
+			Attachment: &NominalType{
+				Identifier: Identifier{
+					Identifier: "E",
+				},
+			},
+			Value: NewIdentifierExpression(
+				nil,
+				Identifier{
+					Identifier: "baz",
+				},
+			),
+		}
 
-	require.Equal(t, "remove E from baz", decl.String())
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("remove"),
+				prettier.Line{},
+				prettier.Text("E"),
+				prettier.Line{},
+				prettier.Text("from"),
+				prettier.Line{},
+				prettier.Text("baz"),
+			},
+			decl.Doc(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		decl := &RemoveStatement{
+			Attachment: nil,
+			Value:      nil,
+		}
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("remove"),
+				prettier.Line{},
+				prettier.Text(""),
+				prettier.Line{},
+				prettier.Text("from"),
+				prettier.Line{},
+				prettier.Text(""),
+			},
+			decl.Doc(),
+		)
+	})
+}
+
+func TestRemoveStatement_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+
+		decl := &RemoveStatement{
+			Attachment: &NominalType{
+				Identifier: Identifier{
+					Identifier: "E",
+				},
+			},
+			Value: NewIdentifierExpression(
+				nil,
+				Identifier{
+					Identifier: "baz",
+				},
+			),
+		}
+
+		require.Equal(t,
+			"remove E from baz",
+			decl.String(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		decl := &RemoveStatement{
+			Attachment: nil,
+			Value:      nil,
+		}
+
+		require.Equal(
+			t,
+			"remove  from ",
+			decl.String(),
+		)
+	})
 }
