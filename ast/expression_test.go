@@ -811,6 +811,46 @@ func TestDictionaryExpression_Doc(t *testing.T) {
 		)
 	})
 
+	t.Run("nil key and value", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &DictionaryExpression{
+			Entries: []DictionaryEntry{
+				{
+					Key:   nil,
+					Value: nil,
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("{"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Group{
+								Doc: prettier.Concat{
+									prettier.Text(""),
+									prettier.Concat{
+										prettier.Text(":"),
+										prettier.Line{},
+									},
+									prettier.Text(""),
+								},
+							},
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text("}"),
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
 }
 
 func TestDictionaryExpression_String(t *testing.T) {
@@ -850,6 +890,24 @@ func TestDictionaryExpression_String(t *testing.T) {
 		)
 	})
 
+	t.Run("nil key and value", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &DictionaryExpression{
+			Entries: []DictionaryEntry{
+				{
+					Key:   nil,
+					Value: nil,
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"{: }",
+			expr.String(),
+		)
+	})
 }
 
 func TestIdentifierExpression_MarshalJSON(t *testing.T) {

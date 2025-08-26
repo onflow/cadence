@@ -590,9 +590,11 @@ var dictionaryExpressionSeparatorDoc prettier.Doc = prettier.Concat{
 	prettier.Line{},
 }
 
+var dictionaryExpressionEmptyDoc = prettier.Text("{}")
+
 func (e *DictionaryExpression) Doc() prettier.Doc {
 	if len(e.Entries) == 0 {
-		return prettier.Text("{}")
+		return dictionaryExpressionEmptyDoc
 	}
 
 	entryDocs := make([]prettier.Doc, len(e.Entries))
@@ -601,7 +603,10 @@ func (e *DictionaryExpression) Doc() prettier.Doc {
 	}
 
 	return prettier.WrapBraces(
-		prettier.Join(dictionaryExpressionSeparatorDoc, entryDocs...),
+		prettier.Join(
+			dictionaryExpressionSeparatorDoc,
+			entryDocs...,
+		),
 		prettier.SoftLine{},
 	)
 }
@@ -656,14 +661,11 @@ var dictionaryKeyValueSeparatorDoc prettier.Doc = prettier.Concat{
 }
 
 func (e DictionaryEntry) Doc() prettier.Doc {
-	keyDoc := e.Key.Doc()
-	valueDoc := e.Value.Doc()
-
 	return prettier.Group{
 		Doc: prettier.Concat{
-			keyDoc,
+			docOrEmpty(e.Key),
 			dictionaryKeyValueSeparatorDoc,
-			valueDoc,
+			docOrEmpty(e.Value),
 		},
 	}
 }
