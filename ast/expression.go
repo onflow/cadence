@@ -1052,7 +1052,7 @@ func (e *IndexExpression) Doc() prettier.Doc {
 			e.precedence(),
 		),
 		prettier.WrapBrackets(
-			e.IndexingExpression.Doc(),
+			docOrEmpty(e.IndexingExpression),
 			prettier.SoftLine{},
 		),
 	}

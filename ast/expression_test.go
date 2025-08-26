@@ -1609,6 +1609,33 @@ func TestIndexExpression_Doc(t *testing.T) {
 		)
 	})
 
+	t.Run("nil target expression and indexing expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &IndexExpression{}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text(""),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("["),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Text(""),
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text("]"),
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
 }
 
 func TestIndexExpression_String(t *testing.T) {
@@ -1695,6 +1722,18 @@ func TestIndexExpression_String(t *testing.T) {
 
 		assert.Equal(t,
 			"(foo - bar)[baz]",
+			expr.String(),
+		)
+	})
+
+	t.Run("nil target expression and indexing expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &IndexExpression{}
+
+		assert.Equal(t,
+			"[]",
 			expr.String(),
 		)
 	})
