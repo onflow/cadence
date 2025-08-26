@@ -2729,6 +2729,22 @@ func TestDestroyExpression_Doc(t *testing.T) {
 			expr.Doc(),
 		)
 	})
+
+	t.Run("simple", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &DestroyExpression{}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("destroy "),
+				prettier.Text(""),
+			},
+			expr.Doc(),
+		)
+	})
+
 }
 
 func TestDestroyExpression_String(t *testing.T) {
@@ -2796,6 +2812,18 @@ func TestDestroyExpression_String(t *testing.T) {
 
 		assert.Equal(t,
 			"destroy (foo - bar)",
+			expr.String(),
+		)
+	})
+
+	t.Run("simple", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &DestroyExpression{}
+
+		assert.Equal(t,
+			"destroy ",
 			expr.String(),
 		)
 	})
