@@ -128,10 +128,17 @@ func (d *Desugar) desugarDeclaration(declaration ast.Declaration) (result ast.De
 	return desugaredDeclaration, desugared
 }
 
-func desugarList[T any](
+type comparableElement interface {
+	comparable
+	ast.Element
+}
+
+func desugarList[T comparableElement](
 	list []T,
 	listEntryDesugarFunction func(entry T) (desugaredEntry T, desugared bool),
 ) (desugaredList []T, desugared bool) {
+
+	var zeroValue T
 
 	for index, entry := range list {
 		desugaredEntry, ok := listEntryDesugarFunction(entry)
@@ -142,7 +149,7 @@ func desugarList[T any](
 		// If at-least one entry is desugared already, then add the current entry
 		// to the desugared entries list (regardless whether the current entry was desugared or not).
 		if desugared {
-			if any(desugaredEntry) != nil {
+			if desugaredEntry != zeroValue {
 				desugaredList = append(desugaredList, desugaredEntry)
 			}
 			continue
@@ -158,7 +165,7 @@ func desugarList[T any](
 		desugared = true
 		desugaredList = append(desugaredList, list[:index]...)
 
-		if any(desugaredEntry) != nil {
+		if desugaredEntry != zeroValue {
 			desugaredList = append(desugaredList, desugaredEntry)
 		}
 	}
