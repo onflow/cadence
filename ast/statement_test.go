@@ -1057,60 +1057,102 @@ func TestAssignmentStatement_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &AssignmentStatement{
-		Target: &IdentifierExpression{
-			Identifier: Identifier{
-				Identifier: "foobar",
-			},
-		},
-		Transfer: &Transfer{
-			Operation: TransferOperationCopy,
-		},
-		Value: &BoolExpression{
-			Value: false,
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
 
-	require.Equal(t,
-		prettier.Group{
-			Doc: prettier.Concat{
-				prettier.Text("foobar"),
-				prettier.Text(" "),
-				prettier.Text("="),
-				prettier.Text(" "),
-				prettier.Group{
-					Doc: prettier.Indent{
-						Doc: prettier.Text("false"),
+		stmt := &AssignmentStatement{
+			Target: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foobar",
+				},
+			},
+			Transfer: &Transfer{
+				Operation: TransferOperationCopy,
+			},
+			Value: &BoolExpression{
+				Value: false,
+			},
+		}
+
+		require.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("foobar"),
+					prettier.Text(" "),
+					prettier.Text("="),
+					prettier.Text(" "),
+					prettier.Group{
+						Doc: prettier.Indent{
+							Doc: prettier.Text("false"),
+						},
 					},
 				},
 			},
-		},
-		stmt.Doc(),
-	)
+			stmt.Doc(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &AssignmentStatement{}
+
+		require.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text(""),
+					prettier.Text(" "),
+					prettier.Text(""),
+					prettier.Text(" "),
+					prettier.Group{
+						Doc: prettier.Indent{
+							Doc: prettier.Text(""),
+						},
+					},
+				},
+			},
+			stmt.Doc(),
+		)
+	})
 }
 
 func TestAssignmentStatement_String(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &AssignmentStatement{
-		Target: &IdentifierExpression{
-			Identifier: Identifier{
-				Identifier: "foobar",
-			},
-		},
-		Transfer: &Transfer{
-			Operation: TransferOperationCopy,
-		},
-		Value: &BoolExpression{
-			Value: false,
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
 
-	require.Equal(t,
-		"foobar = false",
-		stmt.String(),
-	)
+		stmt := &AssignmentStatement{
+			Target: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foobar",
+				},
+			},
+			Transfer: &Transfer{
+				Operation: TransferOperationCopy,
+			},
+			Value: &BoolExpression{
+				Value: false,
+			},
+		}
+
+		require.Equal(t,
+			"foobar = false",
+			stmt.String(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &AssignmentStatement{}
+
+		require.Equal(t,
+			"  ",
+			stmt.String(),
+		)
+	})
 }
 
 func TestSwapStatement_MarshalJSON(t *testing.T) {

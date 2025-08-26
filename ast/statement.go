@@ -588,13 +588,13 @@ func (s *AssignmentStatement) Walk(walkChild func(Element)) {
 func (s *AssignmentStatement) Doc() prettier.Doc {
 	return prettier.Group{
 		Doc: prettier.Concat{
-			s.Target.Doc(),
+			docOrEmpty(s.Target),
 			prettier.Space,
-			s.Transfer.Doc(),
+			docOrEmpty(s.Transfer),
 			prettier.Space,
 			prettier.Group{
 				Doc: prettier.Indent{
-					Doc: s.Value.Doc(),
+					Doc: docOrEmpty(s.Value),
 				},
 			},
 		},
