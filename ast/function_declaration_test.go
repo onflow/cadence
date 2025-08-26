@@ -334,12 +334,13 @@ func TestFunctionDeclaration_Doc(t *testing.T) {
 			prettier.Text("access(all)"),
 			prettier.HardLine{},
 			prettier.Text("view"),
-			prettier.Space,
+			prettier.Text(" "),
 			prettier.Text("static"),
-			prettier.Space,
+			prettier.Text(" "),
 			prettier.Text("native"),
-			prettier.Space,
-			prettier.Text("fun "),
+			prettier.Text(" "),
+			prettier.Text("fun"),
+			prettier.Text(" "),
 			prettier.Text("xyz"),
 			prettier.Group{
 				Doc: prettier.Concat{

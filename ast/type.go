@@ -484,14 +484,14 @@ func (t *FunctionType) Doc() prettier.Doc {
 		result = append(
 			result,
 			prettier.Text(t.PurityAnnotation.Keyword()),
-			prettier.Line{},
+			prettier.Space,
 		)
 	}
 
 	result = append(
 		result,
 		functionTypeKeywordDoc,
-		prettier.Line{},
+		prettier.Space,
 	)
 
 	for i, parameterTypeAnnotation := range t.ParameterTypeAnnotations {
@@ -608,7 +608,7 @@ func (t *ReferenceType) Doc() prettier.Doc {
 						doc = append(
 							doc,
 							separatorDoc,
-							prettier.Line{},
+							prettier.Space,
 						)
 					}
 					doc = append(doc, docOrEmpty(entitlement))
@@ -628,7 +628,7 @@ func (t *ReferenceType) Doc() prettier.Doc {
 		doc = append(
 			doc,
 			prettier.Text(")"),
-			prettier.Line{},
+			prettier.Space,
 		)
 	}
 

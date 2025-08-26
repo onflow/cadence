@@ -251,7 +251,7 @@ func TestEntitlementMappingDeclaration_Doc(t *testing.T) {
 				prettier.Text("entitlement "),
 				prettier.Text("mapping "),
 				prettier.Text("AB"),
-				prettier.Space,
+				prettier.Text(" "),
 				prettier.Text("{"),
 				prettier.HardLine{},
 				prettier.Indent{
@@ -313,7 +313,7 @@ func TestEntitlementMappingDeclaration_Doc(t *testing.T) {
 				prettier.Text("entitlement "),
 				prettier.Text("mapping "),
 				prettier.Text("AB"),
-				prettier.Space,
+				prettier.Text(" "),
 				prettier.Text("{"),
 				prettier.HardLine{},
 				prettier.Indent{
