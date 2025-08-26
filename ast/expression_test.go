@@ -4799,6 +4799,25 @@ func TestReferenceExpression_Doc(t *testing.T) {
 			expr.Doc(),
 		)
 	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &ReferenceExpression{}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("&"),
+					prettier.Group{
+						Doc: prettier.Text(""),
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
 }
 
 func TestReferenceExpression_String(t *testing.T) {
@@ -4865,6 +4884,18 @@ func TestReferenceExpression_String(t *testing.T) {
 
 		assert.Equal(t,
 			"&(foo - bar)",
+			expr.String(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &ReferenceExpression{}
+
+		assert.Equal(t,
+			"&",
 			expr.String(),
 		)
 	})
