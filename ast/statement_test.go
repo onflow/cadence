@@ -1617,139 +1617,228 @@ func TestSwitchStatement_MarshalJSON(t *testing.T) {
 	)
 }
 
-func TestSwitchStatement_String(t *testing.T) {
-
-	t.Parallel()
-
-	stmt := &SwitchStatement{
-		Expression: &IdentifierExpression{
-			Identifier: Identifier{
-				Identifier: "foo",
-			},
-		},
-		Cases: []*SwitchCase{
-			{
-				Expression: &BoolExpression{
-					Value: false,
-				},
-				Statements: []Statement{
-					&ExpressionStatement{
-						Expression: &IdentifierExpression{
-							Identifier: Identifier{
-								Identifier: "bar",
-							},
-						},
-					},
-				},
-			},
-			{
-				Statements: []Statement{
-					&ExpressionStatement{
-						Expression: &IdentifierExpression{
-							Identifier: Identifier{
-								Identifier: "baz",
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	assert.Equal(t,
-		prettier.Concat{
-			prettier.Group{
-				Doc: prettier.Concat{
-					switchStatementKeywordSpaceDoc,
-					prettier.Indent{
-						Doc: prettier.Concat{
-							prettier.SoftLine{},
-							prettier.Text("foo"),
-						},
-					},
-					prettier.Line{},
-				},
-			},
-			prettier.Text("{"),
-			prettier.Indent{
-				Doc: prettier.Concat{
-					prettier.HardLine{},
-					prettier.Concat{
-						switchCaseKeywordSpaceDoc,
-						prettier.Text("false"),
-						switchCaseColonSymbolDoc,
-						prettier.Indent{
-							Doc: prettier.Concat{
-								prettier.HardLine{},
-								prettier.Text("bar"),
-							},
-						},
-					},
-					prettier.HardLine{},
-					prettier.Concat{
-						switchCaseDefaultKeywordSpaceDoc,
-						prettier.Indent{
-							Doc: prettier.Concat{
-								prettier.HardLine{},
-								prettier.Text("baz"),
-							},
-						},
-					},
-				},
-			},
-			prettier.HardLine{},
-			prettier.Text("}"),
-		},
-		stmt.Doc(),
-	)
-}
-
 func TestSwitchStatement_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &SwitchStatement{
-		Expression: &IdentifierExpression{
-			Identifier: Identifier{
-				Identifier: "foo",
-			},
-		},
-		Cases: []*SwitchCase{
-			{
-				Expression: &BoolExpression{
-					Value: false,
-				},
-				Statements: []Statement{
-					&ExpressionStatement{
-						Expression: &IdentifierExpression{
-							Identifier: Identifier{
-								Identifier: "bar",
-							},
-						},
-					},
-				},
-			},
-			{
-				Statements: []Statement{
-					&ExpressionStatement{
-						Expression: &IdentifierExpression{
-							Identifier: Identifier{
-								Identifier: "baz",
-							},
-						},
-					},
-				},
-			},
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		"switch foo {\n"+
-			"    case false:\n"+
-			"        bar\n"+
-			"    default:\n"+
-			"        baz\n"+
-			"}",
-		stmt.String(),
-	)
+		stmt := &SwitchStatement{
+			Expression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foo",
+				},
+			},
+			Cases: []*SwitchCase{
+				{
+					Expression: &BoolExpression{
+						Value: false,
+					},
+					Statements: []Statement{
+						&ExpressionStatement{
+							Expression: &IdentifierExpression{
+								Identifier: Identifier{
+									Identifier: "bar",
+								},
+							},
+						},
+					},
+				},
+				{
+					Statements: []Statement{
+						&ExpressionStatement{
+							Expression: &IdentifierExpression{
+								Identifier: Identifier{
+									Identifier: "baz",
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Group{
+					Doc: prettier.Concat{
+						switchStatementKeywordSpaceDoc,
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Text("foo"),
+							},
+						},
+						prettier.Line{},
+					},
+				},
+				prettier.Text("{"),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.HardLine{},
+						prettier.Concat{
+							switchCaseKeywordSpaceDoc,
+							prettier.Text("false"),
+							switchCaseColonSymbolDoc,
+							prettier.Indent{
+								Doc: prettier.Concat{
+									prettier.HardLine{},
+									prettier.Text("bar"),
+								},
+							},
+						},
+						prettier.HardLine{},
+						prettier.Concat{
+							switchCaseDefaultKeywordSpaceDoc,
+							prettier.Indent{
+								Doc: prettier.Concat{
+									prettier.HardLine{},
+									prettier.Text("baz"),
+								},
+							},
+						},
+					},
+				},
+				prettier.HardLine{},
+				prettier.Text("}"),
+			},
+			stmt.Doc(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &SwitchStatement{
+			Expression: nil,
+			Cases: []*SwitchCase{
+				{
+					Expression: nil,
+				},
+				{
+					Expression: nil,
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("switch "),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Text(""),
+							},
+						},
+						prettier.Line{},
+					},
+				},
+				prettier.Text("{"),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.HardLine{},
+						prettier.Concat{
+							prettier.Text("case "),
+							prettier.Text(""),
+							prettier.Text(":"),
+							prettier.Indent{
+								Doc: prettier.Concat(nil),
+							},
+						},
+						prettier.HardLine{},
+						prettier.Concat{
+							prettier.Text("default:"),
+							prettier.Indent{
+								Doc: prettier.Concat(nil),
+							},
+						},
+					},
+				},
+				prettier.HardLine{},
+				prettier.Text("}"),
+			},
+			stmt.Doc(),
+		)
+	})
+}
+
+func TestSwitchStatement_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &SwitchStatement{
+			Expression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foo",
+				},
+			},
+			Cases: []*SwitchCase{
+				{
+					Expression: &BoolExpression{
+						Value: false,
+					},
+					Statements: []Statement{
+						&ExpressionStatement{
+							Expression: &IdentifierExpression{
+								Identifier: Identifier{
+									Identifier: "bar",
+								},
+							},
+						},
+					},
+				},
+				{
+					Statements: []Statement{
+						&ExpressionStatement{
+							Expression: &IdentifierExpression{
+								Identifier: Identifier{
+									Identifier: "baz",
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"switch foo {\n"+
+				"    case false:\n"+
+				"        bar\n"+
+				"    default:\n"+
+				"        baz\n"+
+				"}",
+			stmt.String(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &SwitchStatement{
+			Expression: nil,
+			Cases: []*SwitchCase{
+				{
+					Expression: nil,
+				},
+				{
+					Expression: nil,
+				},
+			},
+		}
+
+		assert.Equal(t,
+			`switch  {
+    case :
+    default:
+}`,
+			stmt.String(),
+		)
+	})
 }

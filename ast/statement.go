@@ -788,11 +788,13 @@ func (s *SwitchStatement) Doc() prettier.Doc {
 
 	bodyDoc := make(prettier.Concat, 0, len(s.Cases))
 
-	for _, switchCase := range s.Cases {
+	for i, switchCase := range s.Cases {
+		isLast := i == len(s.Cases)-1
+
 		bodyDoc = append(
 			bodyDoc,
 			prettier.HardLine{},
-			switchCase.Doc(),
+			switchCase.Doc(isLast),
 		)
 	}
 
@@ -803,7 +805,7 @@ func (s *SwitchStatement) Doc() prettier.Doc {
 				prettier.Indent{
 					Doc: prettier.Concat{
 						prettier.SoftLine{},
-						s.Expression.Doc(),
+						docOrEmpty(s.Expression),
 					},
 				},
 				prettier.Line{},
@@ -870,12 +872,12 @@ const switchCaseKeywordSpaceDoc = prettier.Text("case ")
 const switchCaseColonSymbolDoc = prettier.Text(":")
 const switchCaseDefaultKeywordSpaceDoc = prettier.Text("default:")
 
-func (s *SwitchCase) Doc() prettier.Doc {
+func (s *SwitchCase) Doc(isLast bool) prettier.Doc {
 	statementsDoc := prettier.Indent{
 		Doc: StatementsDoc(s.Statements),
 	}
 
-	if s.Expression == nil {
+	if isLast && s.Expression == nil {
 		return prettier.Concat{
 			switchCaseDefaultKeywordSpaceDoc,
 			statementsDoc,
@@ -884,7 +886,7 @@ func (s *SwitchCase) Doc() prettier.Doc {
 
 	return prettier.Concat{
 		switchCaseKeywordSpaceDoc,
-		s.Expression.Doc(),
+		docOrEmpty(s.Expression),
 		switchCaseColonSymbolDoc,
 		statementsDoc,
 	}
