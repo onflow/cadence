@@ -4538,46 +4538,79 @@ func TestCreateExpression_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	expr := &CreateExpression{
-		InvocationExpression: &InvocationExpression{
-			InvokedExpression: &IdentifierExpression{
-				Identifier: Identifier{
-					Identifier: "foo",
+	t.Run("nil invocation expression", func(t *testing.T) {
+		t.Parallel()
+
+		expr := &CreateExpression{}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("create "),
+				prettier.Text(""),
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("with expression", func(t *testing.T) {
+		t.Parallel()
+
+		expr := &CreateExpression{
+			InvocationExpression: &InvocationExpression{
+				InvokedExpression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
 				},
 			},
-		},
-	}
+		}
 
-	assert.Equal(t,
-		prettier.Concat{
-			prettier.Text("create "),
+		assert.Equal(t,
 			prettier.Concat{
-				prettier.Text("foo"),
-				prettier.Text("()"),
+				prettier.Text("create "),
+				prettier.Concat{
+					prettier.Text("foo"),
+					prettier.Text("()"),
+				},
 			},
-		},
-		expr.Doc(),
-	)
+			expr.Doc(),
+		)
+	})
 }
 
 func TestCreateExpression_String(t *testing.T) {
 
 	t.Parallel()
 
-	expr := &CreateExpression{
-		InvocationExpression: &InvocationExpression{
-			InvokedExpression: &IdentifierExpression{
-				Identifier: Identifier{
-					Identifier: "foo",
+	t.Run("nil invocation expression", func(t *testing.T) {
+		t.Parallel()
+
+		expr := &CreateExpression{}
+
+		assert.Equal(t,
+			"create ",
+			expr.String(),
+		)
+	})
+
+	t.Run("with expression", func(t *testing.T) {
+		t.Parallel()
+
+		expr := &CreateExpression{
+			InvocationExpression: &InvocationExpression{
+				InvokedExpression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
 				},
 			},
-		},
-	}
+		}
 
-	assert.Equal(t,
-		"create foo()",
-		expr.String(),
-	)
+		assert.Equal(t,
+			"create foo()",
+			expr.String(),
+		)
+	})
 }
 
 func TestReferenceExpression_MarshalJSON(t *testing.T) {

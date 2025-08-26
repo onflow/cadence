@@ -1807,7 +1807,7 @@ var createKeywordSpaceDoc = prettier.Text("create ")
 func (e *CreateExpression) Doc() prettier.Doc {
 	return prettier.Concat{
 		createKeywordSpaceDoc,
-		e.InvocationExpression.Doc(),
+		docOrEmpty(e.InvocationExpression),
 	}
 }
 
