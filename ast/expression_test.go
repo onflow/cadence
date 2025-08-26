@@ -2311,6 +2311,31 @@ func TestBinaryExpression_Doc(t *testing.T) {
 		)
 	})
 
+	t.Run("nil left and right", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &BinaryExpression{
+			Operation: OperationPlus,
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Group{
+						Doc: prettier.Text(""),
+					},
+					prettier.Line{},
+					prettier.Text("+"),
+					prettier.Space,
+					prettier.Group{
+						Doc: prettier.Text(""),
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
 }
 
 func TestBinaryExpression_String(t *testing.T) {
@@ -2469,6 +2494,19 @@ func TestBinaryExpression_String(t *testing.T) {
 		)
 	})
 
+	t.Run("nil left and right", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &BinaryExpression{
+			Operation: OperationPlus,
+		}
+
+		assert.Equal(t,
+			" + ",
+			expr.String(),
+		)
+	})
 }
 
 func TestDestroyExpression_MarshalJSON(t *testing.T) {

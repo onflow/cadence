@@ -1358,22 +1358,40 @@ func (e *BinaryExpression) Doc() prettier.Doc {
 	isLeftAssociative := e.IsLeftAssociative()
 	isRightAssociative := !isLeftAssociative
 
-	leftDoc := e.Left.Doc()
-	leftPrecedence := e.Left.precedence()
+	var leftDoc prettier.Doc
+	if e.Left == nil {
+		leftDoc = prettier.Text("")
+	} else {
+		leftDoc = e.Left.Doc()
 
-	if (isLeftAssociative && ownPrecedence > leftPrecedence) ||
-		(isRightAssociative && ownPrecedence >= leftPrecedence) {
+		leftPrecedence := e.Left.precedence()
 
-		leftDoc = prettier.WrapParentheses(leftDoc, prettier.SoftLine{})
+		if (isLeftAssociative && ownPrecedence > leftPrecedence) ||
+			(isRightAssociative && ownPrecedence >= leftPrecedence) {
+
+			leftDoc = prettier.WrapParentheses(
+				leftDoc,
+				prettier.SoftLine{},
+			)
+		}
 	}
 
-	rightDoc := e.Right.Doc()
-	rightPrecedence := e.Right.precedence()
+	var rightDoc prettier.Doc
+	if e.Right == nil {
+		rightDoc = prettier.Text("")
+	} else {
+		rightDoc = e.Right.Doc()
 
-	if (isLeftAssociative && ownPrecedence >= rightPrecedence) ||
-		(isRightAssociative && ownPrecedence > rightPrecedence) {
+		rightPrecedence := e.Right.precedence()
 
-		rightDoc = prettier.WrapParentheses(rightDoc, prettier.SoftLine{})
+		if (isLeftAssociative && ownPrecedence >= rightPrecedence) ||
+			(isRightAssociative && ownPrecedence > rightPrecedence) {
+
+			rightDoc = prettier.WrapParentheses(
+				rightDoc,
+				prettier.SoftLine{},
+			)
+		}
 	}
 
 	return prettier.Group{
