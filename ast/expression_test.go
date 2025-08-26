@@ -1934,6 +1934,23 @@ func TestUnaryExpression_Doc(t *testing.T) {
 			expr.Doc(),
 		)
 	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &UnaryExpression{
+			Operation: OperationMinus,
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("-"),
+				prettier.Text(""),
+			},
+			expr.Doc(),
+		)
+	})
 }
 
 func TestUnaryExpression_String(t *testing.T) {
@@ -2004,6 +2021,20 @@ func TestUnaryExpression_String(t *testing.T) {
 
 		assert.Equal(t,
 			"-(foo - bar)",
+			expr.String(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &UnaryExpression{
+			Operation: OperationMinus,
+		}
+
+		assert.Equal(t,
+			"-",
 			expr.String(),
 		)
 	})
