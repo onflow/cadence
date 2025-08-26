@@ -3625,6 +3625,91 @@ func TestInvocationExpression_Doc(t *testing.T) {
 			expr.Doc(),
 		)
 	})
+
+	t.Run("nil invoked expression", func(t *testing.T) {
+		t.Parallel()
+
+		expr := &InvocationExpression{}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text(""),
+				prettier.Text("()"),
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nil argument", func(t *testing.T) {
+		t.Parallel()
+
+		expr := &InvocationExpression{
+			InvokedExpression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foo",
+				},
+			},
+			Arguments: []*Argument{
+				nil,
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("foo"),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("("),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Text(""),
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text(")"),
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("nil type argument", func(t *testing.T) {
+		t.Parallel()
+
+		expr := &InvocationExpression{
+			InvokedExpression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foo",
+				},
+			},
+			TypeArguments: []*TypeAnnotation{
+				nil,
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("foo"),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("<"),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Text(""),
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text(">"),
+					},
+				},
+				prettier.Text("()"),
+			},
+			expr.Doc(),
+		)
+	})
 }
 
 func TestInvocationExpression_String(t *testing.T) {
@@ -3709,6 +3794,57 @@ func TestInvocationExpression_String(t *testing.T) {
 
 		assert.Equal(t,
 			"foobar<@AB>(ok: false)",
+			expr.String(),
+		)
+	})
+
+	t.Run("nil invoked expression", func(t *testing.T) {
+		t.Parallel()
+
+		expr := &InvocationExpression{}
+
+		assert.Equal(t,
+			"()",
+			expr.String(),
+		)
+	})
+
+	t.Run("nil argument", func(t *testing.T) {
+		t.Parallel()
+
+		expr := &InvocationExpression{
+			InvokedExpression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foo",
+				},
+			},
+			Arguments: []*Argument{
+				nil,
+			},
+		}
+
+		assert.Equal(t,
+			"foo()",
+			expr.String(),
+		)
+	})
+
+	t.Run("nil type argument", func(t *testing.T) {
+		t.Parallel()
+
+		expr := &InvocationExpression{
+			InvokedExpression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foo",
+				},
+			},
+			TypeArguments: []*TypeAnnotation{
+				nil,
+			},
+		}
+
+		assert.Equal(t,
+			"foo<>()",
 			expr.String(),
 		)
 	})

@@ -743,6 +743,8 @@ func (args Arguments) String() string {
 	return Prettier(args)
 }
 
+var argumentsEmptyDoc prettier.Doc = prettier.Text("()")
+
 var argumentsSeparatorDoc prettier.Doc = prettier.Concat{
 	prettier.Text(","),
 	prettier.Line{},
@@ -750,13 +752,14 @@ var argumentsSeparatorDoc prettier.Doc = prettier.Concat{
 
 func (args Arguments) Doc() prettier.Doc {
 	if len(args) == 0 {
-		return prettier.Text("()")
+		return argumentsEmptyDoc
 	}
 
 	argumentDocs := make([]prettier.Doc, len(args))
 	for i, argument := range args {
-		argumentDocs[i] = argument.Doc()
+		argumentDocs[i] = docOrEmpty(argument)
 	}
+
 	return prettier.WrapParentheses(
 		prettier.Join(
 			argumentsSeparatorDoc,
@@ -829,13 +832,16 @@ func (e *InvocationExpression) Doc() prettier.Doc {
 	if len(e.TypeArguments) > 0 {
 		typeArgumentDocs := make([]prettier.Doc, len(e.TypeArguments))
 		for i, typeArgument := range e.TypeArguments {
-			typeArgumentDocs[i] = typeArgument.Doc()
+			typeArgumentDocs[i] = docOrEmpty(typeArgument)
 		}
 
 		result = append(result,
 			prettier.Wrap(
 				prettier.Text("<"),
-				prettier.Join(arrayExpressionSeparatorDoc, typeArgumentDocs...),
+				prettier.Join(
+					parameterSeparatorDoc,
+					typeArgumentDocs...,
+				),
 				prettier.Text(">"),
 				prettier.SoftLine{},
 			),
