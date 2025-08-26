@@ -24,6 +24,7 @@ import (
 	"github.com/turbolent/prettier"
 
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 )
 
 // Transfer represents the operation in variable declarations
@@ -69,11 +70,19 @@ var forceMoveTransferDoc prettier.Doc = prettier.Text("<-!")
 
 func (f Transfer) Doc() prettier.Doc {
 	switch f.Operation {
+	case TransferOperationCopy:
+		return copyTransferDoc
 	case TransferOperationMove:
 		return moveTransferDoc
 	case TransferOperationMoveForced:
 		return forceMoveTransferDoc
-	default:
-		return copyTransferDoc
+	case TransferOperationUnknown:
+		return prettier.Text("")
 	}
+
+	panic(errors.NewUnreachableError())
+}
+
+func (f Transfer) String() string {
+	return Prettier(f)
 }

@@ -65,28 +65,22 @@ func (l *TypeParameterList) IsEmpty() bool {
 func (l *TypeParameterList) Doc() prettier.Doc {
 
 	if len(l.TypeParameters) == 0 {
-		return nil
+		return prettier.Text("")
 	}
 
 	typeParameterDocs := make([]prettier.Doc, 0, len(l.TypeParameters))
 
 	for _, typeParameter := range l.TypeParameters {
-		var parameterDoc prettier.Concat
-
-		parameterDoc = append(
-			parameterDoc,
-			prettier.Text(typeParameter.Identifier.Identifier),
-		)
-
-		if typeParameter.TypeBound != nil {
-			parameterDoc = append(
-				parameterDoc,
-				typeSeparatorSpaceDoc,
-				typeParameter.TypeBound.Doc(),
-			)
+		var typeParameterDoc prettier.Doc
+		if typeParameter == nil {
+			typeParameterDoc = prettier.Text("")
+		} else {
+			typeParameterDoc = typeParameter.Doc()
 		}
-
-		typeParameterDocs = append(typeParameterDocs, parameterDoc)
+		typeParameterDocs = append(
+			typeParameterDocs,
+			typeParameterDoc,
+		)
 	}
 
 	return prettier.Wrap(

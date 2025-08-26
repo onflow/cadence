@@ -24,6 +24,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/turbolent/prettier"
 )
 
 func TestProgram_MarshalJSON(t *testing.T) {
@@ -45,4 +46,114 @@ func TestProgram_MarshalJSON(t *testing.T) {
         `,
 		string(actual),
 	)
+}
+
+func TestProgram_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+
+		program := NewProgram(nil, []Declaration{})
+
+		assert.Equal(t,
+			prettier.Text(""),
+			program.Doc(),
+		)
+	})
+
+	t.Run("with nil declaration", func(t *testing.T) {
+		t.Parallel()
+
+		program := NewProgram(nil, []Declaration{
+			nil,
+		})
+
+		assert.Equal(t,
+			prettier.Text(""),
+			program.Doc(),
+		)
+	})
+
+	t.Run("with declarations", func(t *testing.T) {
+		t.Parallel()
+
+		program := NewProgram(nil, []Declaration{
+			&PragmaDeclaration{
+				Expression: &BoolExpression{Value: true},
+			},
+			&PragmaDeclaration{
+				Expression: &BoolExpression{Value: false},
+			},
+		})
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Concat{
+					prettier.Text("#"),
+					prettier.Text("true"),
+				},
+				prettier.Concat{
+					prettier.HardLine{},
+					prettier.HardLine{},
+				},
+				prettier.Concat{
+					prettier.Text("#"),
+					prettier.Text("false"),
+				},
+			},
+			program.Doc(),
+		)
+	})
+}
+
+func TestProgram_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+
+		program := NewProgram(nil, []Declaration{})
+
+		assert.Equal(t,
+			"",
+			program.String(),
+		)
+	})
+
+	t.Run("with nil declaration", func(t *testing.T) {
+		t.Parallel()
+
+		program := NewProgram(nil, []Declaration{
+			nil,
+		})
+
+		assert.Equal(t,
+			"",
+			program.String(),
+		)
+	})
+
+	t.Run("with declarations", func(t *testing.T) {
+		t.Parallel()
+
+		program := NewProgram(nil, []Declaration{
+			&PragmaDeclaration{
+				Expression: &BoolExpression{Value: true},
+			},
+			&PragmaDeclaration{
+				Expression: &BoolExpression{Value: false},
+			},
+		})
+
+		assert.Equal(t,
+			"#true\n"+
+				"\n"+
+				"#false",
+			program.String(),
+		)
+	})
+
 }

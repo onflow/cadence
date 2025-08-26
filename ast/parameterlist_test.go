@@ -91,120 +91,188 @@ func TestParameterList_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	params := &ParameterList{
-		Parameters: []*Parameter{
-			{
-				Identifier: Identifier{Identifier: "e"},
-				TypeAnnotation: &TypeAnnotation{
-					Type: &NominalType{
-						Identifier: Identifier{Identifier: "E"},
-					},
-				},
-			},
-			{
-				Label:      "c",
-				Identifier: Identifier{Identifier: "d"},
-				TypeAnnotation: &TypeAnnotation{
-					Type: &NominalType{
-						Identifier: Identifier{Identifier: "D"},
-					},
-				},
-			},
-			{
-				Label:      "a",
-				Identifier: Identifier{Identifier: "b"},
-				TypeAnnotation: &TypeAnnotation{
-					Type: &NominalType{
-						Identifier: Identifier{Identifier: "B"},
-					},
-				},
-			},
-		},
-	}
+	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
 
-	require.Equal(t,
-		prettier.Group{
-			Doc: prettier.Concat{
-				prettier.Text("("),
-				prettier.Indent{
-					Doc: prettier.Concat{
-						prettier.SoftLine{},
-						prettier.Concat{
-							prettier.Concat{
-								prettier.Text("e"),
-								prettier.Text(": "),
-								prettier.Text("E"),
-							},
-							prettier.Concat{
-								prettier.Text(","),
-								prettier.Line{},
-							},
-							prettier.Concat{
-								prettier.Text("c"),
-								prettier.Text(" "),
-								prettier.Text("d"),
-								prettier.Text(": "),
-								prettier.Text("D"),
-							},
-							prettier.Concat{
-								prettier.Text(","),
-								prettier.Line{},
-							},
-							prettier.Concat{
-								prettier.Text("a"),
-								prettier.Text(" "),
-								prettier.Text("b"),
-								prettier.Text(": "),
-								prettier.Text("B"),
-							},
+		params := &ParameterList{}
+		require.Equal(t,
+			prettier.Text("()"),
+			params.Doc(),
+		)
+	})
+
+	t.Run("with nil parameter", func(t *testing.T) {
+		t.Parallel()
+
+		params := &ParameterList{
+			Parameters: []*Parameter{
+				nil,
+			},
+		}
+		require.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("("),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text(""),
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text(")"),
+				},
+			},
+			params.Doc(),
+		)
+	})
+
+	t.Run("with parameters", func(t *testing.T) {
+		t.Parallel()
+
+		params := &ParameterList{
+			Parameters: []*Parameter{
+				{
+					Identifier: Identifier{Identifier: "e"},
+					TypeAnnotation: &TypeAnnotation{
+						Type: &NominalType{
+							Identifier: Identifier{Identifier: "E"},
 						},
 					},
 				},
-				prettier.SoftLine{},
-				prettier.Text(")"),
+				{
+					Label:      "c",
+					Identifier: Identifier{Identifier: "d"},
+					TypeAnnotation: &TypeAnnotation{
+						Type: &NominalType{
+							Identifier: Identifier{Identifier: "D"},
+						},
+					},
+				},
+				{
+					Label:      "a",
+					Identifier: Identifier{Identifier: "b"},
+					TypeAnnotation: &TypeAnnotation{
+						Type: &NominalType{
+							Identifier: Identifier{Identifier: "B"},
+						},
+					},
+				},
 			},
-		},
-		params.Doc(),
-	)
+		}
+
+		require.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("("),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Concat{
+								prettier.Concat{
+									prettier.Text("e"),
+									prettier.Text(": "),
+									prettier.Text("E"),
+								},
+								prettier.Concat{
+									prettier.Text(","),
+									prettier.Line{},
+								},
+								prettier.Concat{
+									prettier.Text("c"),
+									prettier.Text(" "),
+									prettier.Text("d"),
+									prettier.Text(": "),
+									prettier.Text("D"),
+								},
+								prettier.Concat{
+									prettier.Text(","),
+									prettier.Line{},
+								},
+								prettier.Concat{
+									prettier.Text("a"),
+									prettier.Text(" "),
+									prettier.Text("b"),
+									prettier.Text(": "),
+									prettier.Text("B"),
+								},
+							},
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text(")"),
+				},
+			},
+			params.Doc(),
+		)
+	})
 }
 
 func TestParameterList_String(t *testing.T) {
 
 	t.Parallel()
 
-	params := &ParameterList{
-		Parameters: []*Parameter{
-			{
-				Identifier: Identifier{Identifier: "e"},
-				TypeAnnotation: &TypeAnnotation{
-					Type: &NominalType{
-						Identifier: Identifier{Identifier: "E"},
-					},
-				},
-			},
-			{
-				Label:      "c",
-				Identifier: Identifier{Identifier: "d"},
-				TypeAnnotation: &TypeAnnotation{
-					Type: &NominalType{
-						Identifier: Identifier{Identifier: "D"},
-					},
-				},
-			},
-			{
-				Label:      "a",
-				Identifier: Identifier{Identifier: "b"},
-				TypeAnnotation: &TypeAnnotation{
-					Type: &NominalType{
-						Identifier: Identifier{Identifier: "B"},
-					},
-				},
-			},
-		},
-	}
+	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
 
-	require.Equal(t,
-		"(e: E, c d: D, a b: B)",
-		params.String(),
-	)
+		params := &ParameterList{}
+		require.Equal(t,
+			"()",
+			params.String(),
+		)
+	})
+
+	t.Run("with nil parameter", func(t *testing.T) {
+		t.Parallel()
+
+		params := &ParameterList{
+			Parameters: []*Parameter{
+				nil,
+			},
+		}
+		require.Equal(t,
+			"()",
+			params.String(),
+		)
+	})
+
+	t.Run("with parameters", func(t *testing.T) {
+		t.Parallel()
+
+		params := &ParameterList{
+			Parameters: []*Parameter{
+				{
+					Identifier: Identifier{Identifier: "e"},
+					TypeAnnotation: &TypeAnnotation{
+						Type: &NominalType{
+							Identifier: Identifier{Identifier: "E"},
+						},
+					},
+				},
+				{
+					Label:      "c",
+					Identifier: Identifier{Identifier: "d"},
+					TypeAnnotation: &TypeAnnotation{
+						Type: &NominalType{
+							Identifier: Identifier{Identifier: "D"},
+						},
+					},
+				},
+				{
+					Label:      "a",
+					Identifier: Identifier{Identifier: "b"},
+					TypeAnnotation: &TypeAnnotation{
+						Type: &NominalType{
+							Identifier: Identifier{Identifier: "B"},
+						},
+					},
+				},
+			},
+		}
+
+		require.Equal(t,
+			"(e: E, c d: D, a b: B)",
+			params.String(),
+		)
+	})
 }

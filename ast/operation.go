@@ -21,6 +21,8 @@ package ast
 import (
 	"encoding/json"
 
+	"github.com/turbolent/prettier"
+
 	"github.com/onflow/cadence/errors"
 )
 
@@ -110,6 +112,8 @@ func (s Operation) Symbol() string {
 		return "<<"
 	case OperationBitwiseRightShift:
 		return ">>"
+	case OperationUnknown:
+		return ""
 	}
 
 	panic(errors.NewUnreachableError())
@@ -161,4 +165,8 @@ func (s Operation) Category() string {
 
 func (s Operation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
+}
+
+func (s Operation) Doc() prettier.Doc {
+	return prettier.Text(s.Symbol())
 }

@@ -105,9 +105,16 @@ func (d *EntitlementDeclaration) Doc() prettier.Doc {
 	var doc prettier.Concat
 
 	if d.Access != AccessNotSpecified {
+		var accessDoc prettier.Doc
+		if d.Access == nil {
+			accessDoc = prettier.Text("")
+		} else {
+			accessDoc = d.Access.Doc()
+		}
+
 		doc = append(
 			doc,
-			prettier.Text(d.Access.Keyword()),
+			accessDoc,
 			prettier.HardLine{},
 		)
 	}
@@ -267,9 +274,16 @@ func (d *EntitlementMappingDeclaration) Doc() prettier.Doc {
 	var doc prettier.Concat
 
 	if d.Access != AccessNotSpecified {
+		var accessDoc prettier.Doc
+		if d.Access == nil {
+			accessDoc = prettier.Text("")
+		} else {
+			accessDoc = d.Access.Doc()
+		}
+
 		doc = append(
 			doc,
-			prettier.Text(d.Access.Keyword()),
+			accessDoc,
 			prettier.HardLine{},
 		)
 	}

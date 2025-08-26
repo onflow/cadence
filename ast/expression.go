@@ -1241,7 +1241,7 @@ func parenthesizedExpressionDoc(e Expression, parentPrecedence precedence) prett
 
 func (e *UnaryExpression) Doc() prettier.Doc {
 	return prettier.Concat{
-		prettier.Text(e.Operation.Symbol()),
+		e.Operation.Doc(),
 		parenthesizedExpressionDoc(
 			e.Expression,
 			e.precedence(),
@@ -1347,7 +1347,7 @@ func (e *BinaryExpression) Doc() prettier.Doc {
 				Doc: leftDoc,
 			},
 			prettier.Line{},
-			prettier.Text(e.Operation.Symbol()),
+			e.Operation.Doc(),
 			prettier.Space,
 			prettier.Group{
 				Doc: rightDoc,
@@ -1513,9 +1513,16 @@ func FunctionDocument(
 	var doc prettier.Concat
 
 	if access != AccessNotSpecified {
+		var accessDoc prettier.Doc
+		if access == nil {
+			accessDoc = prettier.Text("")
+		} else {
+			accessDoc = access.Doc()
+		}
+
 		doc = append(
 			doc,
-			prettier.Text(access.Keyword()),
+			accessDoc,
 			prettier.HardLine{},
 		)
 	}
@@ -1678,7 +1685,7 @@ func (e *CastingExpression) Doc() prettier.Doc {
 				Doc: doc,
 			},
 			prettier.Line{},
-			prettier.Text(e.Operation.Symbol()),
+			e.Operation.Doc(),
 			prettier.Line{},
 			e.TypeAnnotation.Doc(),
 		},

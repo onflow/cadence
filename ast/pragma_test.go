@@ -71,35 +71,62 @@ func TestPragmaDeclaration_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	decl := &PragmaDeclaration{
-		Expression: &BoolExpression{
-			Value: false,
-		},
-	}
+	t.Run("nil expression", func(t *testing.T) {
+		decl := &PragmaDeclaration{}
 
-	require.Equal(
-		t,
-		prettier.Concat{
+		require.Equal(
+			t,
 			prettier.Text("#"),
-			prettier.Text("false"),
-		},
-		decl.Doc(),
-	)
+			decl.Doc(),
+		)
+	})
+
+	t.Run("with expression", func(t *testing.T) {
+
+		decl := &PragmaDeclaration{
+			Expression: &BoolExpression{
+				Value: false,
+			},
+		}
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("#"),
+				prettier.Text("false"),
+			},
+			decl.Doc(),
+		)
+	})
 }
 
 func TestPragmaDeclaration_String(t *testing.T) {
 
 	t.Parallel()
 
-	decl := &PragmaDeclaration{
-		Expression: &BoolExpression{
-			Value: false,
-		},
-	}
+	t.Run("nil expression", func(t *testing.T) {
+		decl := &PragmaDeclaration{}
 
-	require.Equal(
-		t,
-		"#false",
-		decl.String(),
-	)
+		require.Equal(
+			t,
+			"#",
+			decl.String(),
+		)
+	})
+
+	t.Run("with expression", func(t *testing.T) {
+		t.Parallel()
+
+		decl := &PragmaDeclaration{
+			Expression: &BoolExpression{
+				Value: false,
+			},
+		}
+
+		require.Equal(
+			t,
+			"#false",
+			decl.String(),
+		)
+	})
 }
