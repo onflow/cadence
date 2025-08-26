@@ -257,12 +257,12 @@ const attachExpressionToDoc = prettier.Text("to")
 func (e *AttachExpression) Doc() prettier.Doc {
 	return prettier.Concat{
 		attachExpressionDoc,
-		prettier.Space,
-		e.Attachment.Doc(),
-		prettier.Space,
+		prettier.Line{},
+		docOrEmpty(e.Attachment),
+		prettier.Line{},
 		attachExpressionToDoc,
-		prettier.Space,
-		e.Base.Doc(),
+		prettier.Line{},
+		docOrEmpty(e.Base),
 	}
 }
 

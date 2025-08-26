@@ -269,51 +269,101 @@ func TestAttachExpression_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	decl := &AttachExpression{
-		Base: NewIdentifierExpression(
-			nil,
-			NewIdentifier(
-				nil,
-				"foo",
-				Position{Offset: 1, Line: 2, Column: 3},
-			),
-		),
-		Attachment: NewInvocationExpression(
-			nil,
-			NewIdentifierExpression(
-				nil,
-				NewIdentifier(
-					nil,
-					"bar",
-					Position{Offset: 1, Line: 2, Column: 3},
-				),
-			),
-			[]*TypeAnnotation{},
-			Arguments{},
-			Position{Offset: 1, Line: 2, Column: 3},
-			Position{Offset: 1, Line: 2, Column: 3},
-		),
-		StartPos: Position{Offset: 1, Line: 2, Column: 3},
-	}
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
 
-	require.Equal(
-		t,
-		prettier.Concat{
-			prettier.Text("attach"),
-			prettier.Text(" "),
-			prettier.Concat{
-				prettier.Text("bar"),
-				prettier.Text("()"),
+		decl := &AttachExpression{
+			Base: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foo",
+				},
 			},
-			prettier.Text(" "),
-			prettier.Text("to"),
-			prettier.Text(" "),
-			prettier.Text("foo"),
-		},
-		decl.Doc(),
-	)
+			Attachment: &InvocationExpression{
+				InvokedExpression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "bar",
+					},
+				},
+			},
+		}
 
-	require.Equal(t, "attach bar() to foo", decl.String())
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("attach"),
+				prettier.Line{},
+				prettier.Concat{
+					prettier.Text("bar"),
+					prettier.Text("()"),
+				},
+				prettier.Line{},
+				prettier.Text("to"),
+				prettier.Line{},
+				prettier.Text("foo"),
+			},
+			decl.Doc(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		decl := &AttachExpression{}
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("attach"),
+				prettier.Line{},
+				prettier.Text(""),
+				prettier.Line{},
+				prettier.Text("to"),
+				prettier.Line{},
+				prettier.Text(""),
+			},
+			decl.Doc(),
+		)
+	})
+}
+
+func TestAttachExpression_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+
+		decl := &AttachExpression{
+			Base: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foo",
+				},
+			},
+			Attachment: &InvocationExpression{
+				InvokedExpression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "bar",
+					},
+				},
+			},
+		}
+
+		require.Equal(t,
+			"attach bar() to foo",
+			decl.String(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		decl := &AttachExpression{}
+
+		require.Equal(t,
+			"attach  to ",
+			decl.String(),
+		)
+	})
 }
 
 func TestRemoveStatement_MarshallJSON(t *testing.T) {
