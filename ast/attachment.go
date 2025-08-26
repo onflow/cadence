@@ -127,11 +127,11 @@ func (d *AttachmentDeclaration) Doc() prettier.Doc {
 	doc = append(
 		doc,
 		attachmentStatementDoc,
-		prettier.Line{},
+		prettier.Space,
 		prettier.Text(d.Identifier.Identifier),
-		prettier.Line{},
+		prettier.Space,
 		attachmentStatementForDoc,
-		prettier.Line{},
+		prettier.Space,
 		docOrEmpty(d.BaseType),
 	)
 
@@ -251,11 +251,11 @@ const attachExpressionToDoc = prettier.Text("to")
 func (e *AttachExpression) Doc() prettier.Doc {
 	return prettier.Concat{
 		attachExpressionDoc,
-		prettier.Line{},
+		prettier.Space,
 		docOrEmpty(e.Attachment),
-		prettier.Line{},
+		prettier.Space,
 		attachExpressionToDoc,
-		prettier.Line{},
+		prettier.Space,
 		docOrEmpty(e.Base),
 	}
 }
@@ -334,11 +334,11 @@ const removeStatementFromKeywordDoc = prettier.Text("from")
 func (s *RemoveStatement) Doc() prettier.Doc {
 	return prettier.Concat{
 		removeStatementRemoveKeywordDoc,
-		prettier.Line{},
+		prettier.Space,
 		docOrEmpty(s.Attachment),
-		prettier.Line{},
+		prettier.Space,
 		removeStatementFromKeywordDoc,
-		prettier.Line{},
+		prettier.Space,
 		docOrEmpty(s.Value),
 	}
 }
