@@ -1259,6 +1259,10 @@ func (e *UnaryExpression) String() string {
 }
 
 func parenthesizedExpressionDoc(e Expression, parentPrecedence precedence) prettier.Doc {
+	if e == nil {
+		return prettier.Text("")
+	}
+
 	doc := e.Doc()
 	subPrecedence := e.precedence()
 	if parentPrecedence <= subPrecedence {
