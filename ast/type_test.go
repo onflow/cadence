@@ -1100,106 +1100,169 @@ func TestFunctionType_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &FunctionType{
-		PurityAnnotation: FunctionPurityView,
-		ParameterTypeAnnotations: []*TypeAnnotation{
-			{
-				IsResource: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "AB",
-					},
-				},
-			},
-			{
-				IsResource: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "CD",
-					},
-				},
-			},
-		},
-		ReturnTypeAnnotation: &TypeAnnotation{
-			Type: &NominalType{
-				Identifier: Identifier{
-					Identifier: "EF",
-				},
-			},
-		},
-	}
+	t.Run("with parameter types, with return type", func(t *testing.T) {
 
-	assert.Equal(t,
-		prettier.Concat{
-			prettier.Text("view"),
-			prettier.Space,
-			prettier.Text("fun"),
-			prettier.Space,
-			prettier.Group{
-				Doc: prettier.Concat{
-					prettier.Text("("),
-					prettier.Indent{
-						Doc: prettier.Concat{
-							prettier.SoftLine{},
-							prettier.Concat{
-								prettier.Text("@"),
-								prettier.Text("AB"),
-							},
-							prettier.Text(","),
-							prettier.Line{},
-							prettier.Concat{
-								prettier.Text("@"),
-								prettier.Text("CD"),
-							},
+		t.Parallel()
+
+		ty := &FunctionType{
+			PurityAnnotation: FunctionPurityView,
+			ParameterTypeAnnotations: []*TypeAnnotation{
+				{
+					IsResource: true,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "AB",
 						},
 					},
-					prettier.SoftLine{},
-					prettier.Text(")"),
+				},
+				{
+					IsResource: true,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "CD",
+						},
+					},
 				},
 			},
-			prettier.Text(": "),
-			prettier.Text("EF"),
-		},
-		ty.Doc(),
-	)
+			ReturnTypeAnnotation: &TypeAnnotation{
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "EF",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("view"),
+				prettier.Line{},
+				prettier.Text("fun"),
+				prettier.Line{},
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("("),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Concat{
+									prettier.Text("@"),
+									prettier.Text("AB"),
+								},
+								prettier.Text(","),
+								prettier.Line{},
+								prettier.Concat{
+									prettier.Text("@"),
+									prettier.Text("CD"),
+								},
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text(")"),
+					},
+				},
+				prettier.Text(": "),
+				prettier.Text("EF"),
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("nil parameter type, nil return type", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &FunctionType{
+			ParameterTypeAnnotations: []*TypeAnnotation{
+				nil,
+			},
+			ReturnTypeAnnotation: nil,
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("fun"),
+				prettier.Line{},
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("("),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Text(""),
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text(")"),
+					},
+				},
+				prettier.Text(": "),
+				prettier.Text(""),
+			},
+			ty.Doc(),
+		)
+	})
+
 }
 
 func TestFunctionType_String(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &FunctionType{
-		ParameterTypeAnnotations: []*TypeAnnotation{
-			{
-				IsResource: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "AB",
-					},
-				},
-			},
-			{
-				IsResource: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "CD",
-					},
-				},
-			},
-		},
-		ReturnTypeAnnotation: &TypeAnnotation{
-			Type: &NominalType{
-				Identifier: Identifier{
-					Identifier: "EF",
-				},
-			},
-		},
-	}
+	t.Run("with parameter types, with return type", func(t *testing.T) {
 
-	assert.Equal(t,
-		"fun (@AB, @CD): EF",
-		ty.String(),
-	)
+		t.Parallel()
+
+		ty := &FunctionType{
+			ParameterTypeAnnotations: []*TypeAnnotation{
+				{
+					IsResource: true,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "AB",
+						},
+					},
+				},
+				{
+					IsResource: true,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "CD",
+						},
+					},
+				},
+			},
+			ReturnTypeAnnotation: &TypeAnnotation{
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "EF",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"fun (@AB, @CD): EF",
+			ty.String(),
+		)
+	})
+
+	t.Run("nil parameter type, nil return type", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &FunctionType{
+			ParameterTypeAnnotations: []*TypeAnnotation{
+				nil,
+			},
+			ReturnTypeAnnotation: nil,
+		}
+
+		assert.Equal(t,
+			"fun (): ",
+			ty.String(),
+		)
+	})
 }
 
 func TestFunctionType_MarshalJSON(t *testing.T) {

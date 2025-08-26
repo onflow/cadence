@@ -528,11 +528,15 @@ func (t *FunctionType) Doc() prettier.Doc {
 		result = append(
 			result,
 			prettier.Text(t.PurityAnnotation.Keyword()),
-			prettier.Space,
+			prettier.Line{},
 		)
 	}
 
-	result = append(result, functionTypeKeywordDoc, prettier.Space)
+	result = append(
+		result,
+		functionTypeKeywordDoc,
+		prettier.Line{},
+	)
 
 	for i, parameterTypeAnnotation := range t.ParameterTypeAnnotations {
 		if i > 0 {
@@ -542,10 +546,25 @@ func (t *FunctionType) Doc() prettier.Doc {
 				prettier.Line{},
 			)
 		}
+
+		var parameterTypeAnnotationDoc prettier.Doc
+		if parameterTypeAnnotation == nil {
+			parameterTypeAnnotationDoc = prettier.Text("")
+		} else {
+			parameterTypeAnnotationDoc = parameterTypeAnnotation.Doc()
+		}
+
 		parametersDoc = append(
 			parametersDoc,
-			parameterTypeAnnotation.Doc(),
+			parameterTypeAnnotationDoc,
 		)
+	}
+
+	var returnTypeAnnotationDoc prettier.Doc
+	if t.ReturnTypeAnnotation == nil {
+		returnTypeAnnotationDoc = prettier.Text("")
+	} else {
+		returnTypeAnnotationDoc = t.ReturnTypeAnnotation.Doc()
 	}
 
 	result = append(
@@ -561,7 +580,7 @@ func (t *FunctionType) Doc() prettier.Doc {
 			},
 		},
 		typeSeparatorSpaceDoc,
-		t.ReturnTypeAnnotation.Doc(),
+		returnTypeAnnotationDoc,
 	)
 
 	return result
