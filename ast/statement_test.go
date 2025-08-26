@@ -1211,48 +1211,84 @@ func TestSwapStatement_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &SwapStatement{
-		Left: &IdentifierExpression{
-			Identifier: Identifier{
-				Identifier: "foobar",
-			},
-		},
-		Right: &BoolExpression{
-			Value: false,
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		prettier.Group{
-			Doc: prettier.Concat{
-				prettier.Text("foobar"),
-				swapStatementSpaceSymbolSpaceDoc,
-				prettier.Text("false"),
+		stmt := &SwapStatement{
+			Left: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foobar",
+				},
 			},
-		},
-		stmt.Doc(),
-	)
+			Right: &BoolExpression{
+				Value: false,
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("foobar"),
+					prettier.Text(" <-> "),
+					prettier.Text("false"),
+				},
+			},
+			stmt.Doc(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &SwapStatement{}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text(""),
+					prettier.Text(" <-> "),
+					prettier.Text(""),
+				},
+			},
+			stmt.Doc(),
+		)
+	})
 }
 
 func TestSwapStatement_String(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &SwapStatement{
-		Left: &IdentifierExpression{
-			Identifier: Identifier{
-				Identifier: "foobar",
-			},
-		},
-		Right: &BoolExpression{
-			Value: false,
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		"foobar <-> false",
-		stmt.String(),
-	)
+		stmt := &SwapStatement{
+			Left: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foobar",
+				},
+			},
+			Right: &BoolExpression{
+				Value: false,
+			},
+		}
+
+		assert.Equal(t,
+			"foobar <-> false",
+			stmt.String(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &SwapStatement{}
+
+		assert.Equal(t,
+			" <-> ",
+			stmt.String(),
+		)
+	})
 }
 
 func TestEmitStatement_MarshalJSON(t *testing.T) {

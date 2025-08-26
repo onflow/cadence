@@ -660,9 +660,9 @@ const swapStatementSpaceSymbolSpaceDoc = prettier.Text(" <-> ")
 func (s *SwapStatement) Doc() prettier.Doc {
 	return prettier.Group{
 		Doc: prettier.Concat{
-			s.Left.Doc(),
+			docOrEmpty(s.Left),
 			swapStatementSpaceSymbolSpaceDoc,
-			s.Right.Doc(),
+			docOrEmpty(s.Right),
 		},
 	}
 }
