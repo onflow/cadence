@@ -835,12 +835,6 @@ func printTrace(
 	if attributesLength > 0 {
 		sb.WriteString(": ")
 		for i, attr := range attrs {
-
-			key := string(attr.Key)
-			if key == "value" {
-				continue
-			}
-
 			sb.WriteString(string(attr.Key))
 			sb.WriteString(":")
 			sb.WriteString(attr.Value.AsString())
