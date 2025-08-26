@@ -248,16 +248,9 @@ func CompositeDocument(
 				)
 			}
 
-			var conformanceDoc prettier.Doc
-			if conformance == nil {
-				conformanceDoc = prettier.Text("")
-			} else {
-				conformanceDoc = conformance.Doc()
-			}
-
 			conformancesDoc = append(
 				conformancesDoc,
-				conformanceDoc,
+				docOrEmpty(conformance),
 			)
 		}
 

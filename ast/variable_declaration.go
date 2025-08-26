@@ -161,19 +161,8 @@ func (d *VariableDeclaration) Doc() prettier.Doc {
 	// Transfer and value might be nil.
 	// For example, a desugared `result` variable is uninitialized at first.
 
-	var transferDoc prettier.Doc
-	if d.Transfer == nil {
-		transferDoc = prettier.Text("")
-	} else {
-		transferDoc = d.Transfer.Doc()
-	}
-
-	var valueDoc prettier.Doc
-	if d.Value == nil {
-		valueDoc = prettier.Text("")
-	} else {
-		valueDoc = d.Value.Doc()
-	}
+	transferDoc := docOrEmpty(d.Transfer)
+	valueDoc := docOrEmpty(d.Value)
 
 	var valuesDoc prettier.Doc
 
@@ -196,14 +185,8 @@ func (d *VariableDeclaration) Doc() prettier.Doc {
 			},
 		}
 	} else {
+		secondTransferDoc := docOrEmpty(d.SecondTransfer)
 		secondValueDoc := d.SecondValue.Doc()
-
-		var secondTransferDoc prettier.Doc
-		if d.SecondTransfer == nil {
-			secondTransferDoc = prettier.Text("")
-		} else {
-			secondTransferDoc = d.SecondTransfer.Doc()
-		}
 
 		// Put transfers at start of value lines,
 		// and break both values at once

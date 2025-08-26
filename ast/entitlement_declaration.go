@@ -155,24 +155,10 @@ var arrowKeywordSpaceDoc = prettier.Text(" -> ")
 func (*EntitlementMapRelation) isEntitlementMapElement() {}
 
 func (d *EntitlementMapRelation) Doc() prettier.Doc {
-	var inputDoc prettier.Doc
-	if d.Input == nil {
-		inputDoc = prettier.Text("")
-	} else {
-		inputDoc = d.Input.Doc()
-	}
-
-	var outputDoc prettier.Doc
-	if d.Output == nil {
-		outputDoc = prettier.Text("")
-	} else {
-		outputDoc = d.Output.Doc()
-	}
-
 	return prettier.Concat{
-		inputDoc,
+		docOrEmpty(d.Input),
 		arrowKeywordSpaceDoc,
-		outputDoc,
+		docOrEmpty(d.Output),
 	}
 }
 
