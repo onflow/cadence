@@ -904,6 +904,27 @@ func TestForStatement_Doc(t *testing.T) {
 			stmt.Doc(),
 		)
 	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		stmt := &ForStatement{}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("for "),
+					prettier.Text(""),
+					prettier.Text(" in "),
+					prettier.Text(""),
+					prettier.Text(" "),
+					prettier.Text("{}"),
+				},
+			},
+			stmt.Doc(),
+		)
+	})
 }
 
 func TestForStatement_String(t *testing.T) {
@@ -953,6 +974,18 @@ func TestForStatement_String(t *testing.T) {
 
 		assert.Equal(t,
 			"for i, foobar in false {}",
+			stmt.String(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		stmt := &ForStatement{}
+
+		assert.Equal(t,
+			"for  in  {}",
 			stmt.String(),
 		)
 	})

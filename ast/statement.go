@@ -447,7 +447,7 @@ func (s *ForStatement) Doc() prettier.Doc {
 		doc,
 		prettier.Text(s.Identifier.Identifier),
 		forStatementSpaceInKeywordSpaceDoc,
-		s.Value.Doc(),
+		docOrEmpty(s.Value),
 		prettier.Space,
 		s.Block.Doc(),
 	)
