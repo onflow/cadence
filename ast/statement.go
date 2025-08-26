@@ -359,7 +359,7 @@ func (s *WhileStatement) Doc() prettier.Doc {
 	return prettier.Group{
 		Doc: prettier.Concat{
 			whileStatementKeywordSpaceDoc,
-			s.Test.Doc(),
+			docOrEmpty(s.Test),
 			prettier.Space,
 			s.Block.Doc(),
 		},

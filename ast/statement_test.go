@@ -622,45 +622,82 @@ func TestWhileStatement_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &WhileStatement{
-		Test: &BoolExpression{
-			Value: false,
-		},
-		Block: &Block{
-			Statements: []Statement{},
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		prettier.Group{
-			Doc: prettier.Concat{
-				prettier.Text("while "),
-				prettier.Text("false"),
-				prettier.Text(" "),
-				prettier.Text("{}"),
+		stmt := &WhileStatement{
+			Test: &BoolExpression{
+				Value: false,
 			},
-		},
-		stmt.Doc(),
-	)
+			Block: &Block{
+				Statements: []Statement{},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("while "),
+					prettier.Text("false"),
+					prettier.Text(" "),
+					prettier.Text("{}"),
+				},
+			},
+			stmt.Doc(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &WhileStatement{}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("while "),
+					prettier.Text(""),
+					prettier.Text(" "),
+					prettier.Text("{}"),
+				},
+			},
+			stmt.Doc(),
+		)
+	})
 }
 
 func TestWhileStatement_String(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &WhileStatement{
-		Test: &BoolExpression{
-			Value: false,
-		},
-		Block: &Block{
-			Statements: []Statement{},
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		"while false {}",
-		stmt.String(),
-	)
+		stmt := &WhileStatement{
+			Test: &BoolExpression{
+				Value: false,
+			},
+			Block: &Block{
+				Statements: []Statement{},
+			},
+		}
+
+		assert.Equal(t,
+			"while false {}",
+			stmt.String(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &WhileStatement{}
+
+		assert.Equal(t,
+			"while  {}",
+			stmt.String(),
+		)
+	})
 }
 
 func TestForStatement_MarshalJSON(t *testing.T) {
