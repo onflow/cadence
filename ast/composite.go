@@ -227,12 +227,7 @@ func CompositeDocument(
 		prettier.Text(identifier),
 	)
 
-	var membersDoc prettier.Doc
-	if members == nil {
-		membersDoc = membersEmptyDoc
-	} else {
-		membersDoc = members.Doc()
-	}
+	membersDoc := members.Doc()
 
 	if len(conformances) > 0 {
 
