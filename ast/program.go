@@ -203,13 +203,7 @@ func (p *Program) Doc() prettier.Doc {
 	docs := make([]prettier.Doc, 0, len(declarations))
 
 	for _, declaration := range declarations {
-		var declarationDoc prettier.Doc
-		if declaration == nil {
-			declarationDoc = prettier.Text("")
-		} else {
-			declarationDoc = declaration.Doc()
-		}
-		docs = append(docs, declarationDoc)
+		docs = append(docs, docOrEmpty(declaration))
 	}
 
 	return prettier.Join(programSeparatorDoc, docs...)

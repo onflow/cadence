@@ -104,18 +104,11 @@ func (p *Parameter) Doc() prettier.Doc {
 		)
 	}
 
-	var typeAnnotationDoc prettier.Doc
-	if p.TypeAnnotation == nil {
-		typeAnnotationDoc = prettier.Text("")
-	} else {
-		typeAnnotationDoc = p.TypeAnnotation.Doc()
-	}
-
 	parameterDoc = append(
 		parameterDoc,
 		prettier.Text(p.Identifier.Identifier),
 		typeSeparatorSpaceDoc,
-		typeAnnotationDoc,
+		docOrEmpty(p.TypeAnnotation),
 	)
 
 	if p.DefaultArgument != nil {

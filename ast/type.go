@@ -68,12 +68,7 @@ func (t *TypeAnnotation) EndPosition(memoryGauge common.MemoryGauge) Position {
 const typeAnnotationResourceSymbolDoc = prettier.Text("@")
 
 func (t *TypeAnnotation) Doc() prettier.Doc {
-	var typeDoc prettier.Doc
-	if t.Type == nil {
-		typeDoc = prettier.Text("")
-	} else {
-		typeDoc = t.Type.Doc()
-	}
+	typeDoc := docOrEmpty(t.Type)
 
 	if !t.IsResource {
 		return typeDoc
@@ -230,12 +225,7 @@ func (t *OptionalType) EndPosition(memoryGauge common.MemoryGauge) Position {
 const optionalTypeSymbolDoc = prettier.Text("?")
 
 func (t *OptionalType) Doc() prettier.Doc {
-	var typeDoc prettier.Doc
-	if t.Type == nil {
-		typeDoc = prettier.Text("")
-	} else {
-		typeDoc = t.Type.Doc()
-	}
+	typeDoc := docOrEmpty(t.Type)
 	return prettier.Concat{
 		typeDoc,
 		optionalTypeSymbolDoc,
@@ -290,18 +280,12 @@ const arrayTypeStartDoc = prettier.Text("[")
 const arrayTypeEndDoc = prettier.Text("]")
 
 func (t *VariableSizedType) Doc() prettier.Doc {
-	var typeDoc prettier.Doc
-	if t.Type == nil {
-		typeDoc = prettier.Text("")
-	} else {
-		typeDoc = t.Type.Doc()
-	}
 	return prettier.Concat{
 		arrayTypeStartDoc,
 		prettier.Indent{
 			Doc: prettier.Concat{
 				prettier.SoftLine{},
-				typeDoc,
+				docOrEmpty(t.Type),
 			},
 		},
 		prettier.SoftLine{},
@@ -357,28 +341,14 @@ func (t *ConstantSizedType) String() string {
 const constantSizedTypeSeparatorSpaceDoc = prettier.Text("; ")
 
 func (t *ConstantSizedType) Doc() prettier.Doc {
-	var typeDoc prettier.Doc
-	if t.Type == nil {
-		typeDoc = prettier.Text("")
-	} else {
-		typeDoc = t.Type.Doc()
-	}
-
-	var sizeDoc prettier.Doc
-	if t.Size == nil {
-		sizeDoc = prettier.Text("")
-	} else {
-		sizeDoc = t.Size.Doc()
-	}
-
 	return prettier.Concat{
 		arrayTypeStartDoc,
 		prettier.Indent{
 			Doc: prettier.Concat{
 				prettier.SoftLine{},
-				typeDoc,
+				docOrEmpty(t.Type),
 				constantSizedTypeSeparatorSpaceDoc,
-				sizeDoc,
+				docOrEmpty(t.Size),
 			},
 		},
 		prettier.SoftLine{},
@@ -435,28 +405,14 @@ const dictionaryTypeStartDoc = prettier.Text("{")
 const dictionaryTypeEndDoc = prettier.Text("}")
 
 func (t *DictionaryType) Doc() prettier.Doc {
-	var keyTypeDoc prettier.Doc
-	if t.KeyType == nil {
-		keyTypeDoc = prettier.Text("")
-	} else {
-		keyTypeDoc = t.KeyType.Doc()
-	}
-
-	var valueTypeDoc prettier.Doc
-	if t.ValueType == nil {
-		valueTypeDoc = prettier.Text("")
-	} else {
-		valueTypeDoc = t.ValueType.Doc()
-	}
-
 	return prettier.Concat{
 		dictionaryTypeStartDoc,
 		prettier.Indent{
 			Doc: prettier.Concat{
 				prettier.SoftLine{},
-				keyTypeDoc,
+				docOrEmpty(t.KeyType),
 				typeSeparatorSpaceDoc,
-				valueTypeDoc,
+				docOrEmpty(t.ValueType),
 			},
 		},
 		prettier.SoftLine{},
@@ -547,24 +503,10 @@ func (t *FunctionType) Doc() prettier.Doc {
 			)
 		}
 
-		var parameterTypeAnnotationDoc prettier.Doc
-		if parameterTypeAnnotation == nil {
-			parameterTypeAnnotationDoc = prettier.Text("")
-		} else {
-			parameterTypeAnnotationDoc = parameterTypeAnnotation.Doc()
-		}
-
 		parametersDoc = append(
 			parametersDoc,
-			parameterTypeAnnotationDoc,
+			docOrEmpty(parameterTypeAnnotation),
 		)
-	}
-
-	var returnTypeAnnotationDoc prettier.Doc
-	if t.ReturnTypeAnnotation == nil {
-		returnTypeAnnotationDoc = prettier.Text("")
-	} else {
-		returnTypeAnnotationDoc = t.ReturnTypeAnnotation.Doc()
 	}
 
 	result = append(
@@ -580,7 +522,7 @@ func (t *FunctionType) Doc() prettier.Doc {
 			},
 		},
 		typeSeparatorSpaceDoc,
-		returnTypeAnnotationDoc,
+		docOrEmpty(t.ReturnTypeAnnotation),
 	)
 
 	return result
@@ -662,35 +604,21 @@ func (t *ReferenceType) Doc() prettier.Doc {
 				separatorDoc := prettier.Text(authorization.Separator().String())
 
 				for i, entitlement := range entitlements {
-					var entitlementDoc prettier.Doc
-					if entitlement == nil {
-						entitlementDoc = prettier.Text("")
-					} else {
-						entitlementDoc = entitlement.Doc()
-					}
-
-					doc = append(doc, entitlementDoc)
-					if i < len(entitlements)-1 {
+					if i > 0 {
 						doc = append(
 							doc,
 							separatorDoc,
 							prettier.Line{},
 						)
 					}
+					doc = append(doc, docOrEmpty(entitlement))
 				}
 			}
 
 		case *MappedAccess:
-			var entitlementMapDoc prettier.Doc
-			if authorization.EntitlementMap == nil {
-				entitlementMapDoc = prettier.Text("")
-			} else {
-				entitlementMapDoc = authorization.EntitlementMap.Doc()
-			}
-
 			doc = append(doc,
 				referenceTypeMappingKeywordDoc,
-				entitlementMapDoc,
+				docOrEmpty(authorization.EntitlementMap),
 			)
 
 		default:
@@ -704,17 +632,10 @@ func (t *ReferenceType) Doc() prettier.Doc {
 		)
 	}
 
-	var typeDoc prettier.Doc
-	if t.Type == nil {
-		typeDoc = prettier.Text("")
-	} else {
-		typeDoc = t.Type.Doc()
-	}
-
 	return append(
 		doc,
 		referenceTypeSymbolDoc,
-		typeDoc,
+		docOrEmpty(t.Type),
 	)
 }
 
@@ -782,16 +703,9 @@ func (t *IntersectionType) Doc() prettier.Doc {
 			)
 		}
 
-		var typDoc prettier.Doc
-		if typ == nil {
-			typDoc = prettier.Text("")
-		} else {
-			typDoc = typ.Doc()
-		}
-
 		intersectionDoc = append(
 			intersectionDoc,
-			typDoc,
+			docOrEmpty(typ),
 		)
 	}
 
@@ -880,28 +794,14 @@ func (t *InstantiationType) Doc() prettier.Doc {
 			)
 		}
 
-		var typeArgumentDoc prettier.Doc
-		if typeArgument == nil {
-			typeArgumentDoc = prettier.Text("")
-		} else {
-			typeArgumentDoc = typeArgument.Doc()
-		}
-
 		typeArgumentsDoc = append(
 			typeArgumentsDoc,
-			typeArgumentDoc,
+			docOrEmpty(typeArgument),
 		)
 	}
 
-	var typeDoc prettier.Doc
-	if t.Type == nil {
-		typeDoc = prettier.Text("")
-	} else {
-		typeDoc = t.Type.Doc()
-	}
-
 	return prettier.Concat{
-		typeDoc,
+		docOrEmpty(t.Type),
 		prettier.Group{
 			Doc: prettier.Concat{
 				instantiationTypeStartDoc,

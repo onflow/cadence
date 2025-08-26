@@ -58,16 +58,10 @@ func (t *TypeParameter) Doc() prettier.Doc {
 	var doc prettier.Doc = prettier.Text(t.Identifier.Identifier)
 
 	if t.TypeBound != nil {
-		var typeBoundDoc prettier.Doc
-		if t.TypeBound == nil {
-			typeBoundDoc = prettier.Text("")
-		} else {
-			typeBoundDoc = t.TypeBound.Doc()
-		}
 		doc = prettier.Concat{
 			doc,
 			typeSeparatorSpaceDoc,
-			typeBoundDoc,
+			t.TypeBound.Doc(),
 		}
 	}
 
