@@ -954,6 +954,31 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 		declaration.Range,
 	)
 
+	hasInit := false
+	for _, member := range desugaredMembers {
+		if member, ok := member.(*ast.SpecialFunctionDeclaration); ok && member.Kind == common.DeclarationKindInitializer {
+			hasInit = true
+			break
+		}
+	}
+
+	if !hasInit {
+		// If the initializer is not declared, generate
+		// - a synthetic initializer for enum types, otherwise
+		// - an empty initializer
+		if compositeType.Kind == common.CompositeKindEnum {
+			// TODO: ENUM
+			// c.generateEnumInit(compositeType)
+			// c.generateEnumLookup(
+			// 	compositeType,
+			// 	declaration.Members.EnumCases(),
+			// )
+		} else {
+			membersDesugared = true
+			d.addEmptyInitializer(&desugaredMembers)
+		}
+	}
+
 	// Optimization: If none of the existing members got updated or,
 	// if there are no inherited members, then return the same declaration as-is.
 	if !membersDesugared && len(inheritedDefaultFuncs) == 0 {
@@ -1595,6 +1620,8 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 		members = append(members, desugaredExecuteFunc)
 	}
 
+	d.addEmptyInitializer(&members)
+
 	compositeDecl := ast.NewCompositeDeclaration(
 		d.memoryGauge,
 		ast.AccessNotSpecified,
@@ -1733,6 +1760,12 @@ var emptyInitializerFuncType = sema.NewSimpleFunctionType(
 	nil,
 	sema.VoidTypeAnnotation,
 )
+
+func (d *Desugar) addEmptyInitializer(members *[]ast.Declaration) {
+	// Add an empty initializer
+	*members = append(*members, emptyInitializer)
+	d.elaboration.SetFunctionDeclarationFunctionType(emptyInitializer.FunctionDeclaration, emptyInitializerFuncType)
+}
 
 func newEnumInitializer(
 	gauge common.MemoryGauge,

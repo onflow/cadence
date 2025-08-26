@@ -3195,8 +3195,6 @@ func (c *Compiler[_, _]) VisitCompositeDeclaration(declaration *ast.CompositeDec
 				compositeType,
 				declaration.Members.EnumCases(),
 			)
-		} else {
-			c.generateEmptyInit()
 		}
 	}
 
@@ -3498,14 +3496,6 @@ func (c *Compiler[_, _]) declareParameters(paramList *ast.ParameterList, declare
 			c.currentFunction.declareLocal(parameterName)
 		}
 	}
-}
-
-func (c *Compiler[_, _]) generateEmptyInit() {
-	c.DesugaredElaboration.SetFunctionDeclarationFunctionType(
-		emptyInitializer.FunctionDeclaration,
-		emptyInitializerFuncType,
-	)
-	c.VisitSpecialFunctionDeclaration(emptyInitializer)
 }
 
 func (c *Compiler[_, _]) generateEnumInit(enumType *sema.CompositeType) {
