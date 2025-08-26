@@ -1513,16 +1513,9 @@ func FunctionDocument(
 	var doc prettier.Concat
 
 	if access != AccessNotSpecified {
-		var accessDoc prettier.Doc
-		if access == nil {
-			accessDoc = prettier.Text("")
-		} else {
-			accessDoc = access.Doc()
-		}
-
 		doc = append(
 			doc,
-			accessDoc,
+			docOrEmpty(access),
 			prettier.HardLine{},
 		)
 	}

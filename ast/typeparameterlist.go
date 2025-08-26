@@ -71,15 +71,9 @@ func (l *TypeParameterList) Doc() prettier.Doc {
 	typeParameterDocs := make([]prettier.Doc, 0, len(l.TypeParameters))
 
 	for _, typeParameter := range l.TypeParameters {
-		var typeParameterDoc prettier.Doc
-		if typeParameter == nil {
-			typeParameterDoc = prettier.Text("")
-		} else {
-			typeParameterDoc = typeParameter.Doc()
-		}
 		typeParameterDocs = append(
 			typeParameterDocs,
-			typeParameterDoc,
+			docOrEmpty(typeParameter),
 		)
 	}
 
