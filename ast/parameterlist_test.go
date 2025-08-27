@@ -180,7 +180,7 @@ func TestParameterList_Doc(t *testing.T) {
 								},
 								prettier.Concat{
 									prettier.Text("c"),
-									prettier.Text(" "),
+									prettier.Space,
 									prettier.Text("d"),
 									prettier.Text(": "),
 									prettier.Text("D"),
@@ -191,7 +191,7 @@ func TestParameterList_Doc(t *testing.T) {
 								},
 								prettier.Concat{
 									prettier.Text("a"),
-									prettier.Text(" "),
+									prettier.Space,
 									prettier.Text("b"),
 									prettier.Text(": "),
 									prettier.Text("B"),

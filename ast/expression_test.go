@@ -1259,7 +1259,7 @@ func TestMemberExpression_Doc(t *testing.T) {
 										},
 										prettier.Line{},
 										prettier.Text("-"),
-										prettier.Text(" "),
+										prettier.Space,
 										prettier.Group{
 											Doc: prettier.Text("bar"),
 										},
@@ -1624,7 +1624,7 @@ func TestIndexExpression_Doc(t *testing.T) {
 										},
 										prettier.Line{},
 										prettier.Text("-"),
-										prettier.Text(" "),
+										prettier.Space,
 										prettier.Group{
 											Doc: prettier.Text("bar"),
 										},
@@ -1918,7 +1918,7 @@ func TestUnaryExpression_Doc(t *testing.T) {
 										},
 										prettier.Line{},
 										prettier.Text("-"),
-										prettier.Text(" "),
+										prettier.Space,
 										prettier.Group{
 											Doc: prettier.Text("bar"),
 										},
@@ -2129,7 +2129,7 @@ func TestBinaryExpression_Doc(t *testing.T) {
 					},
 					prettier.Line{},
 					prettier.Text("+"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Group{
 						Doc: prettier.Text("99"),
 					},
@@ -2176,7 +2176,7 @@ func TestBinaryExpression_Doc(t *testing.T) {
 								},
 								prettier.Line{},
 								prettier.Text("+"),
-								prettier.Text(" "),
+								prettier.Space,
 								prettier.Group{
 									Doc: prettier.Text("1"),
 								},
@@ -2185,7 +2185,7 @@ func TestBinaryExpression_Doc(t *testing.T) {
 					},
 					prettier.Line{},
 					prettier.Text("+"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Group{
 						Doc: prettier.Text("99"),
 					},
@@ -2238,7 +2238,7 @@ func TestBinaryExpression_Doc(t *testing.T) {
 												},
 												prettier.Line{},
 												prettier.Text("|"),
-												prettier.Text(" "),
+												prettier.Space,
 												prettier.Group{
 													Doc: prettier.Text("1"),
 												},
@@ -2253,7 +2253,7 @@ func TestBinaryExpression_Doc(t *testing.T) {
 					},
 					prettier.Line{},
 					prettier.Text("+"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Group{
 						Doc: prettier.Text("99"),
 					},
@@ -2297,7 +2297,7 @@ func TestBinaryExpression_Doc(t *testing.T) {
 					},
 					prettier.Line{},
 					prettier.Text("??"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Group{
 						Doc: prettier.Group{
 							Doc: prettier.Concat{
@@ -2306,7 +2306,7 @@ func TestBinaryExpression_Doc(t *testing.T) {
 								},
 								prettier.Line{},
 								prettier.Text("??"),
-								prettier.Text(" "),
+								prettier.Space,
 								prettier.Group{
 									Doc: prettier.Text("1"),
 								},
@@ -2362,7 +2362,7 @@ func TestBinaryExpression_Doc(t *testing.T) {
 												},
 												prettier.Line{},
 												prettier.Text("||"),
-												prettier.Text(" "),
+												prettier.Space,
 												prettier.Group{
 													Doc: prettier.Text("1"),
 												},
@@ -2377,7 +2377,7 @@ func TestBinaryExpression_Doc(t *testing.T) {
 					},
 					prettier.Line{},
 					prettier.Text("??"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Group{
 						Doc: prettier.Text("99"),
 					},
@@ -2403,7 +2403,7 @@ func TestBinaryExpression_Doc(t *testing.T) {
 					},
 					prettier.Line{},
 					prettier.Text("+"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Group{
 						Doc: prettier.Text(""),
 					},
@@ -2713,7 +2713,7 @@ func TestDestroyExpression_Doc(t *testing.T) {
 										},
 										prettier.Line{},
 										prettier.Text("-"),
-										prettier.Text(" "),
+										prettier.Space,
 										prettier.Group{
 											Doc: prettier.Text("bar"),
 										},
@@ -3794,7 +3794,7 @@ func TestInvocationExpression_Doc(t *testing.T) {
 										},
 										prettier.Line{},
 										prettier.Text("as"),
-										prettier.Text(" "),
+										prettier.Space,
 										prettier.Text("T"),
 									},
 								},
@@ -4202,7 +4202,7 @@ func TestCastingExpression_Doc(t *testing.T) {
 					},
 					prettier.Line{},
 					prettier.Text("as?"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Text("Int"),
 				},
 			},
@@ -4251,14 +4251,14 @@ func TestCastingExpression_Doc(t *testing.T) {
 								},
 								prettier.Line{},
 								prettier.Text("as?"),
-								prettier.Text(" "),
+								prettier.Space,
 								prettier.Text("AnyStruct"),
 							},
 						},
 					},
 					prettier.Line{},
 					prettier.Text("as?"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Text("Int"),
 				},
 			},
@@ -4311,7 +4311,7 @@ func TestCastingExpression_Doc(t *testing.T) {
 												},
 												prettier.Line{},
 												prettier.Text("-"),
-												prettier.Text(" "),
+												prettier.Space,
 												prettier.Group{
 													Doc: prettier.Text("bar"),
 												},
@@ -4325,7 +4325,7 @@ func TestCastingExpression_Doc(t *testing.T) {
 					},
 					prettier.Line{},
 					prettier.Text("as?"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Text("Int"),
 				},
 			},
@@ -4351,7 +4351,7 @@ func TestCastingExpression_Doc(t *testing.T) {
 					},
 					prettier.Line{},
 					prettier.Text("as?"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Text(""),
 				},
 			},
@@ -4809,7 +4809,7 @@ func TestReferenceExpression_Doc(t *testing.T) {
 												},
 												prettier.Line{},
 												prettier.Text("-"),
-												prettier.Text(" "),
+												prettier.Space,
 												prettier.Group{
 													Doc: prettier.Text("bar"),
 												},
@@ -5074,13 +5074,13 @@ func TestFunctionExpression_Doc(t *testing.T) {
 
 		expected := prettier.Concat{
 			prettier.Text("fun"),
-			prettier.Text(" "),
+			prettier.Space,
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("()"),
 				},
 			},
-			prettier.Text(" "),
+			prettier.Space,
 			prettier.Text("{}"),
 		}
 
@@ -5148,7 +5148,7 @@ func TestFunctionExpression_Doc(t *testing.T) {
 
 		expected := prettier.Concat{
 			prettier.Text("fun"),
-			prettier.Text(" "),
+			prettier.Space,
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Group{
@@ -5160,7 +5160,7 @@ func TestFunctionExpression_Doc(t *testing.T) {
 									prettier.Concat{
 										prettier.Concat{
 											prettier.Text("a"),
-											prettier.Text(" "),
+											prettier.Space,
 											prettier.Text("b"),
 											prettier.Text(": "),
 											prettier.Text("C"),
@@ -5188,7 +5188,7 @@ func TestFunctionExpression_Doc(t *testing.T) {
 					},
 				},
 			},
-			prettier.Text(" "),
+			prettier.Space,
 			prettier.Concat{
 				prettier.Text("{"),
 				prettier.Indent{
@@ -5262,7 +5262,7 @@ func TestFunctionExpression_Doc(t *testing.T) {
 
 		expected := prettier.Concat{
 			prettier.Text("fun"),
-			prettier.Text(" "),
+			prettier.Space,
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("()"),
@@ -5270,7 +5270,7 @@ func TestFunctionExpression_Doc(t *testing.T) {
 					prettier.Text("Void"),
 				},
 			},
-			prettier.Text(" "),
+			prettier.Space,
 			prettier.Concat{
 				prettier.Text("{"),
 				prettier.Indent{
@@ -5279,7 +5279,7 @@ func TestFunctionExpression_Doc(t *testing.T) {
 						prettier.Group{
 							Doc: prettier.Concat{
 								prettier.Text("pre"),
-								prettier.Text(" "),
+								prettier.Space,
 								prettier.Text("{"),
 								prettier.Indent{
 									Doc: prettier.Concat{
@@ -5306,7 +5306,7 @@ func TestFunctionExpression_Doc(t *testing.T) {
 						prettier.Group{
 							Doc: prettier.Concat{
 								prettier.Text("post"),
-								prettier.Text(" "),
+								prettier.Space,
 								prettier.Text("{"),
 								prettier.Indent{
 									Doc: prettier.Concat{
@@ -5362,15 +5362,15 @@ func TestFunctionExpression_Doc(t *testing.T) {
 
 		expected := prettier.Concat{
 			prettier.Text("view"),
-			prettier.Text(" "),
+			prettier.Space,
 			prettier.Text("fun"),
-			prettier.Text(" "),
+			prettier.Space,
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("()"),
 				},
 			},
-			prettier.Text(" "),
+			prettier.Space,
 			prettier.Text("{}"),
 		}
 
