@@ -446,10 +446,12 @@ func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				InterpreterConfig: &interpreter.Config{
-					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
-						computationMeteredValues[usage.Kind] += usage.Intensity
-						return nil
-					}),
+					ComputationGauge: common.FunctionComputationGauge(
+						func(usage common.ComputationUsage) error {
+							computationMeteredValues[usage.Kind] += usage.Intensity
+							return nil
+						},
+					),
 				},
 			},
 		)
@@ -476,10 +478,12 @@ func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				InterpreterConfig: &interpreter.Config{
-					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
-						computationMeteredValues[usage.Kind] += usage.Intensity
-						return nil
-					}),
+					ComputationGauge: common.FunctionComputationGauge(
+						func(usage common.ComputationUsage) error {
+							computationMeteredValues[usage.Kind] += usage.Intensity
+							return nil
+						},
+					),
 				},
 			},
 		)
@@ -502,10 +506,12 @@ func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				InterpreterConfig: &interpreter.Config{
-					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
-						computationMeteredValues[usage.Kind] += usage.Intensity
-						return nil
-					}),
+					ComputationGauge: common.FunctionComputationGauge(
+						func(usage common.ComputationUsage) error {
+							computationMeteredValues[usage.Kind] += usage.Intensity
+							return nil
+						},
+					),
 				},
 			},
 		)
@@ -528,10 +534,12 @@ func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				InterpreterConfig: &interpreter.Config{
-					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
-						computationMeteredValues[usage.Kind] += usage.Intensity
-						return nil
-					}),
+					ComputationGauge: common.FunctionComputationGauge(
+						func(usage common.ComputationUsage) error {
+							computationMeteredValues[usage.Kind] += usage.Intensity
+							return nil
+						},
+					),
 				},
 			},
 		)
@@ -561,10 +569,12 @@ func TestInterpretStdlibComputationMetering(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				InterpreterConfig: &interpreter.Config{
-					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
-						computationMeteredValues[usage.Kind] += usage.Intensity
-						return nil
-					}),
+					ComputationGauge: common.FunctionComputationGauge(
+						func(usage common.ComputationUsage) error {
+							computationMeteredValues[usage.Kind] += usage.Intensity
+							return nil
+						},
+					),
 				},
 			},
 		)
@@ -587,10 +597,12 @@ func TestInterpretStdlibComputationMetering(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				InterpreterConfig: &interpreter.Config{
-					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
-						computationMeteredValues[usage.Kind] += usage.Intensity
-						return nil
-					}),
+					ComputationGauge: common.FunctionComputationGauge(
+						func(usage common.ComputationUsage) error {
+							computationMeteredValues[usage.Kind] += usage.Intensity
+							return nil
+						},
+					),
 				},
 			},
 		)
@@ -613,10 +625,12 @@ func TestInterpretStdlibComputationMetering(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				InterpreterConfig: &interpreter.Config{
-					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
-						computationMeteredValues[usage.Kind] += usage.Intensity
-						return nil
-					}),
+					ComputationGauge: common.FunctionComputationGauge(
+						func(usage common.ComputationUsage) error {
+							computationMeteredValues[usage.Kind] += usage.Intensity
+							return nil
+						},
+					),
 				},
 			},
 		)
@@ -639,10 +653,12 @@ func TestInterpretStdlibComputationMetering(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				InterpreterConfig: &interpreter.Config{
-					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
-						computationMeteredValues[usage.Kind] += usage.Intensity
-						return nil
-					}),
+					ComputationGauge: common.FunctionComputationGauge(
+						func(usage common.ComputationUsage) error {
+							computationMeteredValues[usage.Kind] += usage.Intensity
+							return nil
+						},
+					),
 				},
 			},
 		)
@@ -665,10 +681,12 @@ func TestInterpretStdlibComputationMetering(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				InterpreterConfig: &interpreter.Config{
-					ComputationGauge: computationGaugeFunc(func(usage common.ComputationUsage) error {
-						computationMeteredValues[usage.Kind] += usage.Intensity
-						return nil
-					}),
+					ComputationGauge: common.FunctionComputationGauge(
+						func(usage common.ComputationUsage) error {
+							computationMeteredValues[usage.Kind] += usage.Intensity
+							return nil
+						},
+					),
 				},
 			},
 		)
