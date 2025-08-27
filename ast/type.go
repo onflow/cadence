@@ -280,16 +280,18 @@ const arrayTypeStartDoc = prettier.Text("[")
 const arrayTypeEndDoc = prettier.Text("]")
 
 func (t *VariableSizedType) Doc() prettier.Doc {
-	return prettier.Concat{
-		arrayTypeStartDoc,
-		prettier.Indent{
-			Doc: prettier.Concat{
-				prettier.SoftLine{},
-				docOrEmpty(t.Type),
+	return prettier.Group{
+		Doc: prettier.Concat{
+			arrayTypeStartDoc,
+			prettier.Indent{
+				Doc: prettier.Concat{
+					prettier.SoftLine{},
+					docOrEmpty(t.Type),
+				},
 			},
+			prettier.SoftLine{},
+			arrayTypeEndDoc,
 		},
-		prettier.SoftLine{},
-		arrayTypeEndDoc,
 	}
 }
 
@@ -341,18 +343,20 @@ func (t *ConstantSizedType) String() string {
 const constantSizedTypeSeparatorSpaceDoc = prettier.Text("; ")
 
 func (t *ConstantSizedType) Doc() prettier.Doc {
-	return prettier.Concat{
-		arrayTypeStartDoc,
-		prettier.Indent{
-			Doc: prettier.Concat{
-				prettier.SoftLine{},
-				docOrEmpty(t.Type),
-				constantSizedTypeSeparatorSpaceDoc,
-				docOrEmpty(t.Size),
+	return prettier.Group{
+		Doc: prettier.Concat{
+			arrayTypeStartDoc,
+			prettier.Indent{
+				Doc: prettier.Concat{
+					prettier.SoftLine{},
+					docOrEmpty(t.Type),
+					constantSizedTypeSeparatorSpaceDoc,
+					docOrEmpty(t.Size),
+				},
 			},
+			prettier.SoftLine{},
+			arrayTypeEndDoc,
 		},
-		prettier.SoftLine{},
-		arrayTypeEndDoc,
 	}
 }
 
@@ -405,18 +409,20 @@ const dictionaryTypeStartDoc = prettier.Text("{")
 const dictionaryTypeEndDoc = prettier.Text("}")
 
 func (t *DictionaryType) Doc() prettier.Doc {
-	return prettier.Concat{
-		dictionaryTypeStartDoc,
-		prettier.Indent{
-			Doc: prettier.Concat{
-				prettier.SoftLine{},
-				docOrEmpty(t.KeyType),
-				typeSeparatorSpaceDoc,
-				docOrEmpty(t.ValueType),
+	return prettier.Group{
+		Doc: prettier.Concat{
+			dictionaryTypeStartDoc,
+			prettier.Indent{
+				Doc: prettier.Concat{
+					prettier.SoftLine{},
+					docOrEmpty(t.KeyType),
+					typeSeparatorSpaceDoc,
+					docOrEmpty(t.ValueType),
+				},
 			},
+			prettier.SoftLine{},
+			dictionaryTypeEndDoc,
 		},
-		prettier.SoftLine{},
-		dictionaryTypeEndDoc,
 	}
 }
 
@@ -484,14 +490,14 @@ func (t *FunctionType) Doc() prettier.Doc {
 		result = append(
 			result,
 			prettier.Text(t.PurityAnnotation.Keyword()),
-			prettier.Line{},
+			prettier.Space,
 		)
 	}
 
 	result = append(
 		result,
 		functionTypeKeywordDoc,
-		prettier.Line{},
+		prettier.Space,
 	)
 
 	for i, parameterTypeAnnotation := range t.ParameterTypeAnnotations {
@@ -608,7 +614,7 @@ func (t *ReferenceType) Doc() prettier.Doc {
 						doc = append(
 							doc,
 							separatorDoc,
-							prettier.Line{},
+							prettier.Space,
 						)
 					}
 					doc = append(doc, docOrEmpty(entitlement))
@@ -628,7 +634,7 @@ func (t *ReferenceType) Doc() prettier.Doc {
 		doc = append(
 			doc,
 			prettier.Text(")"),
-			prettier.Line{},
+			prettier.Space,
 		)
 	}
 
@@ -709,13 +715,15 @@ func (t *IntersectionType) Doc() prettier.Doc {
 		)
 	}
 
-	return prettier.Concat{
-		intersectionTypeStartDoc,
-		prettier.Indent{
-			Doc: intersectionDoc,
+	return prettier.Group{
+		Doc: prettier.Concat{
+			intersectionTypeStartDoc,
+			prettier.Indent{
+				Doc: intersectionDoc,
+			},
+			prettier.SoftLine{},
+			intersectionTypeEndDoc,
 		},
-		prettier.SoftLine{},
-		intersectionTypeEndDoc,
 	}
 }
 

@@ -132,11 +132,11 @@ func TestFieldDeclaration_Doc(t *testing.T) {
 					prettier.HardLine{},
 					prettier.Concat{
 						prettier.Text("static"),
-						prettier.Text(" "),
+						prettier.Space,
 						prettier.Text("native"),
-						prettier.Text(" "),
+						prettier.Space,
 						prettier.Text("let"),
-						prettier.Text(" "),
+						prettier.Space,
 						prettier.Group{
 							Doc: prettier.Concat{
 								prettier.Text("xyz"),
@@ -179,7 +179,7 @@ func TestFieldDeclaration_Doc(t *testing.T) {
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("let"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Group{
 						Doc: prettier.Concat{
 							prettier.Text("xyz"),
@@ -527,7 +527,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 				prettier.Text("access(all)"),
 				prettier.HardLine{},
 				prettier.Text("resource"),
-				prettier.Text(" "),
+				prettier.Space,
 				prettier.Text("AB"),
 				prettier.Text(":"),
 				prettier.Group{
@@ -575,7 +575,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 				prettier.Text("access(all)"),
 				prettier.HardLine{},
 				prettier.Text("resource"),
-				prettier.Text(" "),
+				prettier.Space,
 				prettier.Text("AB"),
 				prettier.Text(":"),
 				prettier.Group{
@@ -642,7 +642,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 				prettier.Text("access(all)"),
 				prettier.HardLine{},
 				prettier.Text("resource"),
-				prettier.Text(" "),
+				prettier.Space,
 				prettier.Text("AB"),
 				prettier.Text(":"),
 				prettier.Group{
@@ -723,7 +723,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 				prettier.Text("access(all)"),
 				prettier.HardLine{},
 				prettier.Text("event"),
-				prettier.Text(" "),
+				prettier.Space,
 				prettier.Text("AB"),
 				prettier.Group{
 					Doc: prettier.Concat{
@@ -780,7 +780,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 				prettier.Text("access(all)"),
 				prettier.HardLine{},
 				prettier.Text("enum"),
-				prettier.Text(" "),
+				prettier.Space,
 				prettier.Text("AB"),
 				prettier.Text(":"),
 				prettier.Group{

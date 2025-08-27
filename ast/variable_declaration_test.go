@@ -173,7 +173,7 @@ func TestVariableDeclaration_Doc(t *testing.T) {
 					prettier.Text("access(all)"),
 					prettier.HardLine{},
 					prettier.Text("let"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Group{
 						Doc: prettier.Concat{
 							prettier.Group{
@@ -186,7 +186,7 @@ func TestVariableDeclaration_Doc(t *testing.T) {
 									},
 								},
 							},
-							prettier.Text(" "),
+							prettier.Space,
 							prettier.Text("<-"),
 							prettier.Group{
 								Doc: prettier.Indent{
@@ -242,7 +242,7 @@ func TestVariableDeclaration_Doc(t *testing.T) {
 					prettier.Text("access(all)"),
 					prettier.HardLine{},
 					prettier.Text("let"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Group{
 						Doc: prettier.Concat{
 							prettier.Group{
@@ -260,11 +260,11 @@ func TestVariableDeclaration_Doc(t *testing.T) {
 									Doc: prettier.Concat{
 										prettier.Line{},
 										prettier.Text("<-"),
-										prettier.Text(" "),
+										prettier.Space,
 										prettier.Text("true"),
 										prettier.Line{},
 										prettier.Text("<-"),
-										prettier.Text(" "),
+										prettier.Space,
 										prettier.Text("false"),
 									},
 								},
@@ -293,7 +293,7 @@ func TestVariableDeclaration_Doc(t *testing.T) {
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("let"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Group{
 						Doc: prettier.Concat{
 							prettier.Group{
@@ -301,7 +301,7 @@ func TestVariableDeclaration_Doc(t *testing.T) {
 									prettier.Text("foo"),
 								},
 							},
-							prettier.Text(" "),
+							prettier.Space,
 							prettier.Text(""),
 							prettier.Group{
 								Doc: prettier.Indent{

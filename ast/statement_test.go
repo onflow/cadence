@@ -421,7 +421,7 @@ func TestIfStatement_Doc(t *testing.T) {
 				Doc: prettier.Concat{
 					prettier.Text("if "),
 					prettier.Text("false"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Text("{}"),
 				},
 			},
@@ -459,7 +459,7 @@ func TestIfStatement_Doc(t *testing.T) {
 				Doc: prettier.Concat{
 					prettier.Text("if "),
 					prettier.Text("false"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Text("{}"),
 					prettier.Text(" else "),
 					prettier.Group{
@@ -467,7 +467,7 @@ func TestIfStatement_Doc(t *testing.T) {
 							Doc: prettier.Concat{
 								prettier.Text("if "),
 								prettier.Text("true"),
-								prettier.Text(" "),
+								prettier.Space,
 								prettier.Text("{}"),
 							},
 						},
@@ -489,7 +489,7 @@ func TestIfStatement_Doc(t *testing.T) {
 				Doc: prettier.Concat{
 					prettier.Text("if "),
 					prettier.Text(""),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Text("{}"),
 				},
 			},
@@ -639,7 +639,7 @@ func TestWhileStatement_Doc(t *testing.T) {
 				Doc: prettier.Concat{
 					prettier.Text("while "),
 					prettier.Text("false"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Text("{}"),
 				},
 			},
@@ -657,7 +657,7 @@ func TestWhileStatement_Doc(t *testing.T) {
 				Doc: prettier.Concat{
 					prettier.Text("while "),
 					prettier.Text(""),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Text("{}"),
 				},
 			},
@@ -861,7 +861,7 @@ func TestForStatement_Doc(t *testing.T) {
 					prettier.Text("foobar"),
 					prettier.Text(" in "),
 					prettier.Text("false"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Text("{}"),
 				},
 			},
@@ -897,7 +897,7 @@ func TestForStatement_Doc(t *testing.T) {
 					prettier.Text("foobar"),
 					prettier.Text(" in "),
 					prettier.Text("false"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Text("{}"),
 				},
 			},
@@ -918,7 +918,7 @@ func TestForStatement_Doc(t *testing.T) {
 					prettier.Text(""),
 					prettier.Text(" in "),
 					prettier.Text(""),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Text("{}"),
 				},
 			},
@@ -1078,9 +1078,9 @@ func TestAssignmentStatement_Doc(t *testing.T) {
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("foobar"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Text("="),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Group{
 						Doc: prettier.Indent{
 							Doc: prettier.Text("false"),
@@ -1101,9 +1101,9 @@ func TestAssignmentStatement_Doc(t *testing.T) {
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text(""),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Text(""),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Group{
 						Doc: prettier.Indent{
 							Doc: prettier.Text(""),

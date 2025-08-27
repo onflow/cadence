@@ -1573,7 +1573,7 @@ func FunctionDocument(
 		doc = append(
 			doc,
 			prettier.Text(purity.Keyword()),
-			prettier.Line{},
+			prettier.Space,
 		)
 	}
 
@@ -1581,7 +1581,7 @@ func FunctionDocument(
 		doc = append(
 			doc,
 			staticKeywordDoc,
-			prettier.Line{},
+			prettier.Space,
 		)
 	}
 
@@ -1589,7 +1589,7 @@ func FunctionDocument(
 		doc = append(
 			doc,
 			nativeKeywordDoc,
-			prettier.Line{},
+			prettier.Space,
 		)
 	}
 
@@ -1597,7 +1597,7 @@ func FunctionDocument(
 		doc = append(
 			doc,
 			functionFunKeywordDoc,
-			prettier.Line{},
+			prettier.Space,
 		)
 	}
 
@@ -1727,7 +1727,7 @@ func (e *CastingExpression) Doc() prettier.Doc {
 			},
 			prettier.Line{},
 			e.Operation.Doc(),
-			prettier.Line{},
+			prettier.Space,
 			docOrEmpty(e.TypeAnnotation),
 		},
 	}

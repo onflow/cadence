@@ -525,7 +525,7 @@ func TestFunctionBlock_Doc(t *testing.T) {
 						prettier.Group{
 							Doc: prettier.Concat{
 								prettier.Text("pre"),
-								prettier.Text(" "),
+								prettier.Space,
 								prettier.Text("{"),
 								prettier.Indent{
 									Doc: prettier.Concat{
@@ -560,7 +560,7 @@ func TestFunctionBlock_Doc(t *testing.T) {
 						prettier.Group{
 							Doc: prettier.Concat{
 								prettier.Text("post"),
-								prettier.Text(" "),
+								prettier.Space,
 								prettier.Text("{"),
 								prettier.Indent{
 									Doc: prettier.Concat{
@@ -619,7 +619,7 @@ func TestFunctionBlock_Doc(t *testing.T) {
 						prettier.Group{
 							Doc: prettier.Concat{
 								prettier.Text("pre"),
-								prettier.Text(" "),
+								prettier.Space,
 								prettier.Text("{"),
 								prettier.Indent{
 									Doc: prettier.Concat{
@@ -635,7 +635,7 @@ func TestFunctionBlock_Doc(t *testing.T) {
 						prettier.Group{
 							Doc: prettier.Concat{
 								prettier.Text("post"),
-								prettier.Text(" "),
+								prettier.Space,
 								prettier.Text("{"),
 								prettier.Indent{
 									Doc: prettier.Concat{

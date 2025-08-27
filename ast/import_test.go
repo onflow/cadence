@@ -92,7 +92,7 @@ func TestImportDeclaration_Doc(t *testing.T) {
 			t,
 			prettier.Concat{
 				prettier.Text("import"),
-				prettier.Text(" "),
+				prettier.Space,
 				prettier.Text("\"test\""),
 			},
 			decl.Doc(),
