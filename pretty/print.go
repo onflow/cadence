@@ -347,10 +347,7 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 			// indicator line
 			p.writeString(emptyLineNumbers)
 
-			indicatorLength := excerpt.startPos.Column
-			if indicatorLength > maxLineLength {
-				indicatorLength = maxLineLength
-			}
+			indicatorLength := min(excerpt.startPos.Column, maxLineLength)
 			if indicatorLength > len(line) {
 				indicatorLength = len(line)
 			}

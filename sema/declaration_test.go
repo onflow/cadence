@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
+	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -284,38 +285,159 @@ func TestCheckInvalidVariableDeclarationSecondValueNotTarget(t *testing.T) {
 	assert.IsType(t, &sema.InvalidAssignmentTargetError{}, errs[0])
 }
 
+func TestCheckInvalidVariableDeclarationStructMove(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+     struct R {}
+
+     let x <- R()
+   `
+	_, err := ParseAndCheck(t, code)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	var opErr *sema.IncorrectTransferOperationError
+	require.ErrorAs(t, errs[0], &opErr)
+
+	fixes := opErr.SuggestFixes(code)
+
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Replace with `=`",
+				TextEdits: []ast.TextEdit{
+					{
+						Replacement: "=",
+						Insertion:   "",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 30, Line: 4, Column: 11},
+							EndPos:   ast.Position{Offset: 31, Line: 4, Column: 12},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	const expected = `
+     struct R {}
+
+     let x = R()
+   `
+
+	assert.Equal(t,
+		expected,
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
 func TestCheckInvalidVariableDeclarationSecondValueCopyTransferSecond(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
+	const code = `
      resource R {}
 
      let x <- create R()
      var y <- create R()
      let z <- y = x
-   `)
+   `
+	_, err := ParseAndCheck(t, code)
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.IncorrectTransferOperationError{}, errs[0])
+	var opErr *sema.IncorrectTransferOperationError
+	require.ErrorAs(t, errs[0], &opErr)
+
+	fixes := opErr.SuggestFixes(code)
+
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Replace with `<-`",
+				TextEdits: []ast.TextEdit{
+					{
+						Replacement: "<-",
+						Insertion:   "",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 87, Line: 6, Column: 16},
+							EndPos:   ast.Position{Offset: 87, Line: 6, Column: 16},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	const expected = `
+     resource R {}
+
+     let x <- create R()
+     var y <- create R()
+     let z <- y <- x
+   `
+
+	assert.Equal(t,
+		expected,
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestCheckInvalidVariableDeclarationSecondValueCopyTransferFirst(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
+	const code = `
      resource R {}
 
      let x <- create R()
      var y <- create R()
      let z = y <- x
-   `)
+   `
+	_, err := ParseAndCheck(t, code)
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.IncorrectTransferOperationError{}, errs[0])
+	var opErr *sema.IncorrectTransferOperationError
+	require.ErrorAs(t, errs[0], &opErr)
+
+	fixes := opErr.SuggestFixes(code)
+
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Replace with `<-`",
+				TextEdits: []ast.TextEdit{
+					{
+						Replacement: "<-",
+						Insertion:   "",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 82, Line: 6, Column: 11},
+							EndPos:   ast.Position{Offset: 82, Line: 6, Column: 11},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	const expected = `
+     resource R {}
+
+     let x <- create R()
+     var y <- create R()
+     let z <- y <- x
+   `
+
+	assert.Equal(t,
+		expected,
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestCheckInvalidVariableDeclarationSecondValueConstant(t *testing.T) {
