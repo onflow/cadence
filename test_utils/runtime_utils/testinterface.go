@@ -71,7 +71,6 @@ type TestRuntimeInterface struct {
 		newAddress common.Address,
 	)
 	OnGenerateUUID       func() (uint64, error)
-	OnMeterComputation   func(usage common.ComputationUsage) error
 	OnDecodeArgument     func(b []byte, t cadence.Type) (cadence.Value, error)
 	OnProgramParsed      func(location runtime.Location, duration time.Duration)
 	OnProgramChecked     func(location runtime.Location, duration time.Duration)
@@ -107,7 +106,6 @@ type TestRuntimeInterface struct {
 		duration time.Duration,
 		attrs []attribute.KeyValue,
 	)
-	OnComputationUsed                func() (uint64, error)
 	OnGenerateAccountID              func(address common.Address) (uint64, error)
 	OnRecoverProgram                 func(program *ast.Program, location common.Location) ([]byte, error)
 	OnValidateAccountCapabilitiesGet func(
@@ -345,13 +343,6 @@ func (i *TestRuntimeInterface) GenerateUUID() (uint64, error) {
 	return i.OnGenerateUUID()
 }
 
-func (i *TestRuntimeInterface) MeterComputation(usage common.ComputationUsage) error {
-	if i.OnMeterComputation == nil {
-		return nil
-	}
-	return i.OnMeterComputation(usage)
-}
-
 func (i *TestRuntimeInterface) DecodeArgument(b []byte, t cadence.Type) (cadence.Value, error) {
 	if i.OnDecodeArgument == nil {
 		panic("must specify TestRuntimeInterface.OnDecodeArgument")
@@ -543,14 +534,6 @@ func (i *TestRuntimeInterface) RecordTrace(
 		return
 	}
 	i.OnRecordTrace(operation, duration, attrs)
-}
-
-func (i *TestRuntimeInterface) ComputationUsed() (uint64, error) {
-	if i.OnComputationUsed == nil {
-		return 0, nil
-	}
-
-	return i.OnComputationUsed()
 }
 
 func (i *TestRuntimeInterface) onTransactionExecutionStart() {

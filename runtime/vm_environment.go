@@ -135,7 +135,6 @@ func NewScriptVMEnvironment(config Config) Environment {
 
 func (e *vmEnvironment) newVMConfig() *vm.Config {
 	conf := vm.NewConfig(nil)
-	conf.ComputationGauge = e
 	conf.TypeLoader = e.loadType
 	conf.BuiltinGlobalsProvider = e.vmBuiltinGlobals
 	conf.ContractValueHandler = e.loadContractValue
@@ -203,12 +202,14 @@ func (e *vmEnvironment) Configure(
 	codesAndPrograms CodesAndPrograms,
 	storage *Storage,
 	memoryGauge common.MemoryGauge,
+	computationGauge common.ComputationGauge,
 	coverageReport *CoverageReport,
 ) {
 	e.Interface = runtimeInterface
 	e.storage = storage
 	e.VMConfig.SetStorage(storage)
 	e.VMConfig.MemoryGauge = memoryGauge
+	e.VMConfig.ComputationGauge = computationGauge
 	e.compilerConfig.MemoryGauge = memoryGauge
 
 	e.checkingEnvironment.configure(

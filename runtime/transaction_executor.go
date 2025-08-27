@@ -130,6 +130,7 @@ func (executor *transactionExecutor) preprocess() (err error) {
 		codesAndPrograms,
 		storage,
 		context.MemoryGauge,
+		context.ComputationGauge,
 		context.CoverageReport,
 	)
 	executor.environment = environment

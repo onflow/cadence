@@ -8041,17 +8041,19 @@ func TestRuntimeComputationMetering(t *testing.T) {
 			var hits uint
 			var totalIntensity uint64
 
-			meterComputationFunc := func(usage common.ComputationUsage) error {
-				hits++
-				totalIntensity += usage.Intensity
-				if hits >= hitLimit {
-					return computationHitsExceededError{
-						hits:     hits,
-						hitLimit: hitLimit,
+			computationGauge := common.FunctionComputationGauge(
+				func(usage common.ComputationUsage) error {
+					hits++
+					totalIntensity += usage.Intensity
+					if hits >= hitLimit {
+						return computationHitsExceededError{
+							hits:     hits,
+							hitLimit: hitLimit,
+						}
 					}
-				}
-				return nil
-			}
+					return nil
+				},
+			)
 
 			address := common.MustBytesToAddress([]byte{0x1})
 
@@ -8060,7 +8062,6 @@ func TestRuntimeComputationMetering(t *testing.T) {
 				OnGetSigningAccounts: func() ([]Address, error) {
 					return []Address{address}, nil
 				},
-				OnMeterComputation: meterComputationFunc,
 			}
 
 			nextTransactionLocation := NewTransactionLocationGenerator()
@@ -8070,9 +8071,10 @@ func TestRuntimeComputationMetering(t *testing.T) {
 					Source: script,
 				},
 				Context{
-					Interface: runtimeInterface,
-					Location:  nextTransactionLocation(),
-					UseVM:     *compile,
+					Interface:        runtimeInterface,
+					Location:         nextTransactionLocation(),
+					ComputationGauge: computationGauge,
+					UseVM:            *compile,
 				},
 			)
 			if testCase.ok {
@@ -9226,10 +9228,13 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
-			OnMeterComputation: func(_ common.ComputationUsage) error {
+		}
+
+		computationGauge := common.FunctionComputationGauge(
+			func(_ common.ComputationUsage) error {
 				return fmt.Errorf("computation limit exceeded")
 			},
-		}
+		)
 
 		nextScriptLocation := NewScriptLocationGenerator()
 
@@ -9238,36 +9243,39 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 				Source: script,
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  nextScriptLocation(),
-				UseVM:     *compile,
+				Interface:        runtimeInterface,
+				Location:         nextScriptLocation(),
+				ComputationGauge: computationGauge,
+				UseVM:            *compile,
 			},
 		)
 
 		require.Error(t, err)
 
-		// Returned error MUST be an external error.
-		// It can NOT be an internal error.
-		assertRuntimeErrorIsExternalError(t, err)
+		var meteringError runtimeErrors.ComputationMeteringError
+		require.ErrorAs(t, err, &meteringError)
 	})
 
 	t.Run("regular error panicked", func(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            access(all) fun foo() {}
+	       access(all) fun foo() {}
 
-            access(all) fun main() {
-                foo()
-            }
-        `)
+	       access(all) fun main() {
+	           foo()
+	       }
+	   `)
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
-			OnMeterComputation: func(usage common.ComputationUsage) error {
+		}
+
+		computationGauge := common.FunctionComputationGauge(
+			func(_ common.ComputationUsage) error {
 				panic(fmt.Errorf("computation limit exceeded"))
 			},
-		}
+		)
 
 		nextScriptLocation := NewScriptLocationGenerator()
 
@@ -9276,17 +9284,14 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 				Source: script,
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  nextScriptLocation(),
-				UseVM:     *compile,
+				Interface:        runtimeInterface,
+				Location:         nextScriptLocation(),
+				ComputationGauge: computationGauge,
+				UseVM:            *compile,
 			},
 		)
 
 		require.Error(t, err)
-
-		// Returned error MUST be an external error.
-		// It can NOT be an internal error.
-		assertRuntimeErrorIsExternalError(t, err)
 	})
 
 	t.Run("go runtime error panicked", func(t *testing.T) {
@@ -9302,13 +9307,16 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
-			OnMeterComputation: func(usage common.ComputationUsage) error {
+		}
+
+		computationGauge := common.FunctionComputationGauge(
+			func(usage common.ComputationUsage) error {
 				// Cause a runtime error
 				var x any = "hello"
 				_ = x.(int)
 				return nil
 			},
-		}
+		)
 
 		nextScriptLocation := NewScriptLocationGenerator()
 
@@ -9317,9 +9325,10 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 				Source: script,
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  nextScriptLocation(),
-				UseVM:     *compile,
+				Interface:        runtimeInterface,
+				Location:         nextScriptLocation(),
+				ComputationGauge: computationGauge,
+				UseVM:            *compile,
 			},
 		)
 
@@ -9342,7 +9351,10 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
-			OnEmitEvent: func(event cadence.Event) (err error) {
+		}
+
+		computationGauge := common.FunctionComputationGauge(
+			func(usage common.ComputationUsage) (err error) {
 
 				// Cause a runtime error. Catch it and return.
 				var x any = "hello"
@@ -9358,7 +9370,7 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 
 				return
 			},
-		}
+		)
 
 		nextScriptLocation := NewScriptLocationGenerator()
 
@@ -9367,16 +9379,14 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 				Source: script,
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  nextScriptLocation(),
-				UseVM:     *compile,
+				Interface:        runtimeInterface,
+				Location:         nextScriptLocation(),
+				ComputationGauge: computationGauge,
+				UseVM:            *compile,
 			},
 		)
 
 		require.Error(t, err)
-
-		// Returned error MUST be an internal error.
-		assertRuntimeErrorIsInternalError(t, err)
 	})
 }
 
@@ -13504,8 +13514,6 @@ func TestRuntimeMetering(t *testing.T) {
 	memoryGauge := newTestMemoryGauge()
 	computationGauge := newTestComputationGauge()
 
-	runtimeInterface.OnMeterComputation = computationGauge.MeterComputation
-
 	_, err = runtime.InvokeContractFunction(
 		common.AddressLocation{
 			Address: addressValue,
@@ -13515,10 +13523,11 @@ func TestRuntimeMetering(t *testing.T) {
 		nil,
 		nil,
 		Context{
-			Interface:   runtimeInterface,
-			Location:    nextTransactionLocation(),
-			MemoryGauge: memoryGauge,
-			UseVM:       *compile,
+			Interface:        runtimeInterface,
+			Location:         nextTransactionLocation(),
+			MemoryGauge:      memoryGauge,
+			ComputationGauge: computationGauge,
+			UseVM:            *compile,
 		},
 	)
 	require.NoError(t, err)

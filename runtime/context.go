@@ -24,11 +24,12 @@ import (
 )
 
 type Context struct {
-	Interface      Interface
-	Location       Location
-	Environment    Environment
-	CoverageReport *CoverageReport
-	MemoryGauge    common.MemoryGauge
+	Interface        Interface
+	Location         Location
+	Environment      Environment
+	CoverageReport   *CoverageReport
+	MemoryGauge      common.MemoryGauge
+	ComputationGauge common.ComputationGauge
 
 	// UseVM configures if the VM should be used
 	UseVM bool
