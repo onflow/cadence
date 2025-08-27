@@ -322,7 +322,6 @@ func TestParseAdvancedExpression(t *testing.T) {
 		t.Parallel()
 
 		gauge := makeLimitingMemoryGauge()
-		gauge.debug = true
 		gauge.Limit(common.MemoryKindPosition, 11)
 
 		_, errs := ParseExpression(gauge, []byte("1 < 2"), Config{})
@@ -438,6 +437,56 @@ func TestParseAdvancedExpression(t *testing.T) {
 				},
 			},
 			result,
+		)
+	})
+
+	t.Run("conditional, missing colon", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "a ? b c"
+		_, errs := testParseExpression(code)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingColonInConditionalExpressionError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+							EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+						},
+					},
+				},
+			},
+			errs,
+		)
+
+		var missingColonErr *MissingColonInConditionalExpressionError
+		require.ErrorAs(t, errs[0], &missingColonErr)
+
+		fixes := missingColonErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert colon",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: " :",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+								EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"a ? b : c",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
@@ -597,6 +646,65 @@ func TestParseAdvancedExpression(t *testing.T) {
 		)
 	})
 
+	t.Run("missing closing brace", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "{1: 2\nfoo"
+		_, errs := testParseExpression(code)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingClosingBraceInDictionaryExpressionError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 6, Line: 2, Column: 0},
+							EndPos:   ast.Position{Offset: 8, Line: 2, Column: 2},
+						},
+						Type: lexer.TokenIdentifier,
+					},
+				},
+				&UnexpectedTokenAtEndError{
+					Token: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 6, Line: 2, Column: 0},
+							EndPos:   ast.Position{Offset: 8, Line: 2, Column: 2},
+						},
+						Type: lexer.TokenIdentifier,
+					},
+				},
+			},
+			errs,
+		)
+
+		var missingBraceErr *MissingClosingBraceInDictionaryExpressionError
+		require.ErrorAs(t, errs[0], &missingBraceErr)
+
+		fixes := missingBraceErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing brace",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "}",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+								EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"{1: 2}\nfoo",
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+	})
+
 }
 
 func TestParseArrayExpression(t *testing.T) {
@@ -733,6 +841,56 @@ func TestParseArrayExpression(t *testing.T) {
 				},
 			},
 			result,
+		)
+	})
+
+	t.Run("missing closing bracket", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "[1, 2"
+		_, errs := testParseExpression(code)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingClosingBracketInArrayExpressionError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+						},
+					},
+				},
+			},
+			errs,
+		)
+
+		var missingBracketErr *MissingClosingBracketInArrayExpressionError
+		require.ErrorAs(t, errs[0], &missingBracketErr)
+
+		fixes := missingBracketErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing bracket",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "]",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+								EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"[1, 2]",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
@@ -911,6 +1069,56 @@ func TestParseDictionaryExpression(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("missing colon", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = `{"a" 1}`
+		_, errs := testParseExpression(code)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingColonInDictionaryEntryError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+							EndPos:   ast.Position{Offset: 5, Line: 1, Column: 5},
+						},
+					},
+				},
+			},
+			errs,
+		)
+
+		var missingColonErr *MissingColonInDictionaryEntryError
+		require.ErrorAs(t, errs[0], &missingColonErr)
+
+		fixes := missingColonErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert colon",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ":",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			`{"a": 1}`,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+	})
 }
 
 func TestParseIndexExpression(t *testing.T) {
@@ -1008,6 +1216,56 @@ func TestParseIndexExpression(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("missing closing bracket", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "a[0"
+		_, errs := testParseExpression(code)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingClosingBracketInIndexExpressionError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+							EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+						},
+					},
+				},
+			},
+			errs,
+		)
+
+		var missingBracketErr *MissingClosingBracketInIndexExpressionError
+		require.ErrorAs(t, errs[0], &missingBracketErr)
+
+		fixes := missingBracketErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing bracket",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "]",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+								EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"a[0]",
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+	})
 }
 
 func TestParseIdentifier(t *testing.T) {
@@ -1049,23 +1307,84 @@ func TestParsePath(t *testing.T) {
 
 	t.Parallel()
 
-	result, errs := testParseExpression("/foo/bar")
-	require.Empty(t, errs)
+	t.Run("valid", func(t *testing.T) {
 
-	AssertEqualWithDiff(t,
-		&ast.PathExpression{
-			Domain: ast.Identifier{
-				Identifier: "foo",
-				Pos:        ast.Position{Line: 1, Column: 1, Offset: 1},
+		t.Parallel()
+
+		result, errs := testParseExpression("/foo/bar")
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			&ast.PathExpression{
+				Domain: ast.Identifier{
+					Identifier: "foo",
+					Pos:        ast.Position{Line: 1, Column: 1, Offset: 1},
+				},
+				Identifier: ast.Identifier{
+					Identifier: "bar",
+					Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 			},
-			Identifier: ast.Identifier{
-				Identifier: "bar",
-				Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
+			result,
+		)
+	})
+
+	t.Run("missing slash", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "/foo"
+		_, errs := testParseExpression(code)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingSlashInPathExpressionError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+							EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+						},
+						Type: lexer.TokenEOF,
+					},
+				},
+				&SyntaxError{
+					Message:       "expected token identifier",
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
+					Pos:           ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
 			},
-			StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-		},
-		result,
-	)
+			errs,
+		)
+
+		var missingSlashErr *MissingSlashInPathExpressionError
+		require.ErrorAs(t, errs[0], &missingSlashErr)
+
+		fixes := missingSlashErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert slash",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "/",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"/foo/",
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+	})
 }
 
 func TestParseString(t *testing.T) {
@@ -1099,7 +1418,7 @@ func TestParseString(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid end of string literal: missing '\"'",
+					Message: "invalid end of string literal: missing `\"`",
 					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
 				},
 			},
@@ -1126,7 +1445,7 @@ func TestParseString(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid end of string literal: missing '\"'",
+					Message: "invalid end of string literal: missing `\"`",
 					Pos:     ast.Position{Line: 1, Column: 1, Offset: 1},
 				},
 			},
@@ -1152,7 +1471,7 @@ func TestParseString(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid end of string literal: missing '\"'",
+					Message: "invalid end of string literal: missing `\"`",
 					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
 				},
 			},
@@ -1179,7 +1498,7 @@ func TestParseString(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid end of string literal: missing '\"'",
+					Message: "invalid end of string literal: missing `\"`",
 					Pos:     ast.Position{Line: 1, Column: 2, Offset: 2},
 				},
 			},
@@ -1210,7 +1529,7 @@ func TestParseString(t *testing.T) {
 					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
 				},
 				&SyntaxError{
-					Message: "invalid end of string literal: missing '\"'",
+					Message: "invalid end of string literal: missing `\"`",
 					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
 				},
 			},
@@ -1256,7 +1575,7 @@ func TestParseString(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid escape character: 'X'",
+					Message: "invalid escape character: `X`",
 					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
 				},
 			},
@@ -1275,7 +1594,7 @@ func TestParseString(t *testing.T) {
 		)
 	})
 
-	t.Run("invalid, missing '{' after Unicode escape character", func(t *testing.T) {
+	t.Run("invalid, missing `{` after Unicode escape character", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1283,11 +1602,11 @@ func TestParseString(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "incomplete Unicode escape sequence: missing character '{' after escape character",
+					Message: "incomplete Unicode escape sequence: missing character `{` after escape character",
 					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
 				},
 				&SyntaxError{
-					Message: "invalid end of string literal: missing '\"'",
+					Message: "invalid end of string literal: missing `\"`",
 					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
 				},
 			},
@@ -1314,11 +1633,11 @@ func TestParseString(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid Unicode escape sequence: expected '{', got 's'",
+					Message: "invalid Unicode escape sequence: expected `{`, got `s`",
 					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
 				},
 				&SyntaxError{
-					Message: "invalid end of string literal: missing '\"'",
+					Message: "invalid end of string literal: missing `\"`",
 					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
 				},
 			},
@@ -1337,7 +1656,7 @@ func TestParseString(t *testing.T) {
 		)
 	})
 
-	t.Run("invalid, missing '}' after Unicode escape sequence digits", func(t *testing.T) {
+	t.Run("invalid, missing `}` after Unicode escape sequence digits", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1345,11 +1664,11 @@ func TestParseString(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "incomplete Unicode escape sequence: missing character '}' after escape character",
+					Message: "incomplete Unicode escape sequence: missing character `}` after escape character",
 					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
 				},
 				&SyntaxError{
-					Message: "invalid end of string literal: missing '\"'",
+					Message: "invalid end of string literal: missing `\"`",
 					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
 				},
 			},
@@ -1422,7 +1741,7 @@ func TestParseString(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid Unicode escape sequence: expected hex digit, got 'X'",
+					Message: "invalid Unicode escape sequence: expected hex digit, got `X`",
 					Pos:     ast.Position{Offset: 11, Line: 1, Column: 11},
 				},
 			},
@@ -1702,9 +2021,8 @@ func TestParseInvocation(t *testing.T) {
 		_, errs := testParseExpression("f(,,)")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected argument or end of argument list, got ','",
-					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
+				&UnexpectedCommaInArgumentListError{
+					Pos: ast.Position{Offset: 2, Line: 1, Column: 2},
 				},
 			},
 			errs,
@@ -1718,9 +2036,8 @@ func TestParseInvocation(t *testing.T) {
 		_, errs := testParseExpression("f(1,,)")
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected argument or end of argument list, got ','",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				&UnexpectedCommaInArgumentListError{
+					Pos: ast.Position{Offset: 4, Line: 1, Column: 4},
 				},
 			},
 			errs,
@@ -1731,16 +2048,49 @@ func TestParseInvocation(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression("f(1 2)")
+		const code = "f(1 2)"
+		_, errs := testParseExpression(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected argument in argument list (expecting delimiter or end of argument list)," +
-						" got decimal integer",
-					Pos: ast.Position{Offset: 4, Line: 1, Column: 4},
+				&MissingCommaInArgumentListError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+							EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+						},
+					},
 				},
 			},
 			errs,
+		)
+
+		var missingCommaErr *MissingCommaInArgumentListError
+		require.ErrorAs(t, errs[0], &missingCommaErr)
+
+		fixes := missingCommaErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert comma",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ",",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+								EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"f(1, 2)",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
@@ -1871,6 +2221,68 @@ func TestParseInvocation(t *testing.T) {
 				EndPos:            ast.Position{Offset: 13, Line: 1, Column: 13},
 			},
 			result,
+		)
+	})
+
+	t.Run("invalid: missing closing paren", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "f(1"
+		_, errs := testParseExpression(code)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingClosingParenInArgumentListError{
+					Pos: ast.Position{Offset: 3, Line: 1, Column: 3},
+				},
+			},
+			errs,
+		)
+
+		var missingParenErr *MissingClosingParenInArgumentListError
+		require.ErrorAs(t, errs[0], &missingParenErr)
+
+		fixes := missingParenErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing parenthesis",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ")",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+								EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"f(1)",
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+	})
+
+	t.Run("invalid: non-identifier label", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("f(1+2: 3)")
+		AssertEqualWithDiff(t,
+			[]error{
+				&InvalidExpressionAsLabelError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+						EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+					},
+				},
+			},
+			errs,
 		)
 	})
 }
@@ -2131,193 +2543,6 @@ func TestParseMemberExpression(t *testing.T) {
 	})
 }
 
-func TestParseBlockComment(t *testing.T) {
-
-	t.Parallel()
-
-	t.Run("nested", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := testParseExpression(" /* test  foo/* bar  */ asd*/ true")
-		require.Empty(t, errs)
-
-		AssertEqualWithDiff(t,
-			&ast.BoolExpression{
-				Value: true,
-				Range: ast.Range{
-					StartPos: ast.Position{Line: 1, Column: 30, Offset: 30},
-					EndPos:   ast.Position{Line: 1, Column: 33, Offset: 33},
-				},
-			},
-			result,
-		)
-	})
-
-	t.Run("two comments", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := testParseExpression(" /*test  foo*/ /* bar  */ true")
-		require.Empty(t, errs)
-
-		AssertEqualWithDiff(t,
-			&ast.BoolExpression{
-				Value: true,
-				Range: ast.Range{
-					StartPos: ast.Position{Line: 1, Column: 26, Offset: 26},
-					EndPos:   ast.Position{Line: 1, Column: 29, Offset: 29},
-				},
-			},
-			result,
-		)
-	})
-
-	t.Run("in infix", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := testParseExpression(" 1/*test  foo*/+/* bar  */ 2  ")
-		require.Empty(t, errs)
-
-		AssertEqualWithDiff(t,
-			&ast.BinaryExpression{
-				Operation: ast.OperationPlus,
-				Left: &ast.IntegerExpression{
-					PositiveLiteral: []byte("1"),
-					Value:           big.NewInt(1),
-					Base:            10,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
-					},
-				},
-				Right: &ast.IntegerExpression{
-					PositiveLiteral: []byte("2"),
-					Value:           big.NewInt(2),
-					Base:            10,
-					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 27, Offset: 27},
-						EndPos:   ast.Position{Line: 1, Column: 27, Offset: 27},
-					},
-				},
-			},
-			result,
-		)
-	})
-
-	t.Run("nested, extra closing", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, errs := testParseExpression(" /* test  foo/* bar  */ asd*/ true */ bar")
-		AssertEqualWithDiff(t,
-			[]error{
-				// `true */ bar` is parsed as infix operation of path
-				&SyntaxError{
-					Message: "expected token identifier",
-					Pos: ast.Position{
-						Offset: 37,
-						Line:   1,
-						Column: 37,
-					},
-				},
-			},
-			errs,
-		)
-	})
-
-	t.Run("nested, missing closing", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, errs := testParseExpression(" /* test  foo/* bar  */ asd true ")
-		AssertEqualWithDiff(t,
-			[]error{
-				// `true */ bar` is parsed as infix operation of path
-				&SyntaxError{
-					Message: "missing comment end '*/'",
-					Pos: ast.Position{
-						Offset: 33,
-						Line:   1,
-						Column: 33,
-					},
-				},
-				UnexpectedEOFError{
-					Pos: ast.Position{Offset: 33, Line: 1, Column: 33},
-				},
-			},
-			errs,
-		)
-	})
-
-	t.Run("invalid content", func(t *testing.T) {
-
-		t.Parallel()
-
-		// The lexer should never produce such an invalid token stream in the first place
-
-		tokens := &testTokenStream{
-			tokens: []lexer.Token{
-				{
-					Type: lexer.TokenBlockCommentStart,
-					Range: ast.Range{
-						StartPos: ast.Position{
-							Line:   1,
-							Offset: 0,
-							Column: 0,
-						},
-						EndPos: ast.Position{
-							Line:   1,
-							Offset: 1,
-							Column: 1,
-						},
-					},
-				},
-				{
-					Type: lexer.TokenIdentifier,
-					Range: ast.Range{
-						StartPos: ast.Position{
-							Line:   1,
-							Offset: 2,
-							Column: 2,
-						},
-						EndPos: ast.Position{
-							Line:   1,
-							Offset: 4,
-							Column: 4,
-						},
-					},
-				},
-				{Type: lexer.TokenEOF},
-			},
-			input: []byte(`/*foo`),
-		}
-
-		_, errs := ParseTokenStream(
-			nil,
-			tokens,
-			func(p *parser) (ast.Expression, error) {
-				return parseExpression(p, lowestBindingPower)
-			},
-			Config{},
-		)
-		AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "unexpected token identifier in block comment",
-					Pos: ast.Position{
-						Line:   1,
-						Offset: 2,
-						Column: 2,
-					},
-				},
-			},
-			errs,
-		)
-	})
-}
-
 func TestParseMulInfixExpression(t *testing.T) {
 
 	t.Parallel()
@@ -2417,7 +2642,6 @@ func TestParseReference(t *testing.T) {
 		t.Parallel()
 
 		const code = `&y[z]`
-
 		result, errs := testParseExpression(code)
 		require.Empty(t, errs)
 
@@ -3014,6 +3238,38 @@ func TestParseCreate(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("nested", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseExpression("create Foo.Bar()")
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			&ast.CreateExpression{
+				InvocationExpression: &ast.InvocationExpression{
+					InvokedExpression: &ast.MemberExpression{
+						Expression: &ast.IdentifierExpression{
+							Identifier: ast.Identifier{
+								Identifier: "Foo",
+								Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+							},
+						},
+						AccessEndPos: ast.Position{Line: 1, Column: 11, Offset: 11},
+						Identifier: ast.Identifier{
+							Identifier: "Bar",
+							Pos:        ast.Position{Line: 1, Column: 11, Offset: 11},
+						},
+					},
+					ArgumentsStartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
+					EndPos:            ast.Position{Line: 1, Column: 15, Offset: 15},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
 }
 
 func TestParseNil(t *testing.T) {
@@ -3101,7 +3357,6 @@ func TestParseAttach(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 16, Line: 1, Column: 16},
 							EndPos:   ast.Position{Offset: 19, Line: 1, Column: 19},
@@ -3162,15 +3417,102 @@ func TestParseAttach(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression("attach A()")
+		const code = "attach A() b"
+		_, errs := testParseExpression(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected 'to', got EOF",
-					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				&MissingToKeywordInAttachExpressionError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
+							EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+						},
+						Type: lexer.TokenIdentifier,
+					},
 				},
 			},
 			errs,
+		)
+
+		var missingToErr *MissingToKeywordInAttachExpressionError
+		require.ErrorAs(t, errs[0], &missingToErr)
+
+		fixes := missingToErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert `to`",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: "to ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 11, Line: 1, Column: 11},
+								EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"attach A() to b",
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+	})
+
+	t.Run("missing to at end", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "attach A()"
+		_, errs := testParseExpression(code)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingToKeywordInAttachExpressionError{
+					GotToken: lexer.Token{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+							EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+						},
+						Type: lexer.TokenEOF,
+					},
+				},
+				UnexpectedEOFError{
+					Pos: ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			errs,
+		)
+
+		var missingToErr *MissingToKeywordInAttachExpressionError
+		require.ErrorAs(t, errs[0], &missingToErr)
+
+		fixes := missingToErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert `to`",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: " to ",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 10, Line: 1, Column: 10},
+								EndPos:   ast.Position{Offset: 10, Line: 1, Column: 10},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"attach A() to ",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 
@@ -3345,7 +3687,6 @@ func TestParseFunctionExpression(t *testing.T) {
 			[]error{
 				&UnexpectedTokenAtEndError{
 					Token: lexer.Token{
-						SpaceOrError: nil,
 						Range: ast.Range{
 							StartPos: ast.Position{Offset: 5, Line: 1, Column: 5},
 							EndPos:   ast.Position{Offset: 7, Line: 1, Column: 7},
@@ -3405,10 +3746,6 @@ func TestParseIntegerLiterals(t *testing.T) {
 		result, errs := testParseExpression(`0b`)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "missing digits",
-					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
-				},
 				&InvalidIntegerLiteralError{
 					Literal:                   "0b",
 					IntegerLiteralKind:        common.IntegerLiteralKindBinary,
@@ -3572,10 +3909,6 @@ func TestParseIntegerLiterals(t *testing.T) {
 		result, errs := testParseExpression(`0o`)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "missing digits",
-					Pos:     ast.Position{Line: 1, Column: 1, Offset: 1},
-				},
 				&InvalidIntegerLiteralError{
 					Literal:                   `0o`,
 					IntegerLiteralKind:        common.IntegerLiteralKindOctal,
@@ -3796,10 +4129,6 @@ func TestParseIntegerLiterals(t *testing.T) {
 		result, errs := testParseExpression(`0x`)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "missing digits",
-					Pos:     ast.Position{Line: 1, Column: 1, Offset: 1},
-				},
 				&InvalidIntegerLiteralError{
 					Literal:                   `0x`,
 					IntegerLiteralKind:        common.IntegerLiteralKindHexadecimal,
@@ -4028,10 +4357,6 @@ func TestParseIntegerLiterals(t *testing.T) {
 		result, errs := testParseExpression(`0z123`)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "invalid number literal prefix: 'z'",
-					Pos:     ast.Position{Line: 1, Column: 1, Offset: 1},
-				},
 				&InvalidIntegerLiteralError{
 					Literal:                   `0z123`,
 					IntegerLiteralKind:        common.IntegerLiteralKindUnknown,
@@ -4119,6 +4444,206 @@ func TestParseIntegerLiterals(t *testing.T) {
 			},
 			result,
 		)
+	})
+
+	t.Run("suggest fixes - leading underscore, prefixed", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "0b_101010"
+		_, errs := testParseExpression(code)
+		require.Len(t, errs, 1)
+
+		var invalidIntegerLiteralError *InvalidIntegerLiteralError
+		require.ErrorAs(t, errs[0], &invalidIntegerLiteralError)
+
+		fixes := invalidIntegerLiteralError.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove leading underscore",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "0b101010",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+								EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			`0b101010`,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+	})
+
+	t.Run("suggest fixes - trailing underscore", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "101010_"
+		_, errs := testParseExpression(code)
+		require.Len(t, errs, 1)
+
+		var invalidIntegerLiteralError *InvalidIntegerLiteralError
+		require.ErrorAs(t, errs[0], &invalidIntegerLiteralError)
+
+		fixes := invalidIntegerLiteralError.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Remove trailing underscore",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "101010",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+								EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			`101010`,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+	})
+
+	t.Run("suggest fixes - missing digits", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "0o"
+		_, errs := testParseExpression(code)
+		require.Len(t, errs, 1)
+
+		var invalidIntegerLiteralError *InvalidIntegerLiteralError
+		require.ErrorAs(t, errs[0], &invalidIntegerLiteralError)
+
+		fixes := invalidIntegerLiteralError.SuggestFixes(code)
+		AssertEqualWithDiff(
+			t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert missing digit",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "0o0",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+								EndPos:   ast.Position{Offset: 1, Line: 1, Column: 1},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			`0o0`,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+	})
+
+	t.Run("suggest fixes - unknown prefix", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "0z456"
+		_, errs := testParseExpression(code)
+		require.Len(t, errs, 1)
+
+		var invalidIntegerLiteralError *InvalidIntegerLiteralError
+		require.ErrorAs(t, errs[0], &invalidIntegerLiteralError)
+
+		fixes := invalidIntegerLiteralError.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Use hexadecimal prefix (`0x`)",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "0x456",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+				{
+					Message: "Use binary prefix (`0b`)",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "0b456",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+				{
+					Message: "Use octal prefix (`0o`)",
+					TextEdits: []ast.TextEdit{
+						{
+							Replacement: "0o456",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			`0x456`,
+			fixes[0].TextEdits[0].ApplyTo(code),
+		)
+
+		assert.Equal(t,
+			`0b456`,
+			fixes[1].TextEdits[0].ApplyTo(code),
+		)
+
+		assert.Equal(t,
+			`0o456`,
+			fixes[2].TextEdits[0].ApplyTo(code),
+		)
+	})
+
+	t.Run("suggest fixes - unknown error kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		// Create an InvalidIntegerLiteralError with InvalidNumberLiteralKindUnknown
+		err := &InvalidIntegerLiteralError{
+			Literal:                   "test",
+			IntegerLiteralKind:        common.IntegerLiteralKindDecimal,
+			InvalidIntegerLiteralKind: InvalidNumberLiteralKindUnknown,
+			Range: ast.Range{
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+			},
+		}
+
+		fixes := err.SuggestFixes("")
+		assert.Empty(t, fixes)
 	})
 }
 
@@ -5297,16 +5822,76 @@ func TestParseUnaryExpression(t *testing.T) {
 		t.Parallel()
 
 		const code = ` % boo`
-
 		_, errs := testParseExpression(code)
+
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token in expression: '%'",
-					Pos:     ast.Position{Line: 1, Column: 2, Offset: 2},
+				&UnexpectedExpressionStartError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenPercent,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+							EndPos:   ast.Position{Offset: 1, Line: 1, Column: 1},
+						},
+					},
 				},
 			},
 			errs,
+		)
+	})
+}
+
+func TestParseNestedExpression(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("parenthesized expression, missing closing paren", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = "(1"
+		_, errs := testParseExpression(code)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&MissingEndOfParenthesizedExpressionError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+							EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+						},
+					},
+				},
+			},
+			errs,
+		)
+
+		var missingParenErr *MissingEndOfParenthesizedExpressionError
+		require.ErrorAs(t, errs[0], &missingParenErr)
+
+		fixes := missingParenErr.SuggestFixes(code)
+		AssertEqualWithDiff(t,
+			[]errors.SuggestedFix[ast.TextEdit]{
+				{
+					Message: "Insert closing parenthesis",
+					TextEdits: []ast.TextEdit{
+						{
+							Insertion: ")",
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+								EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+							},
+						},
+					},
+				},
+			},
+			fixes,
+		)
+
+		assert.Equal(t,
+			"(1)",
+			fixes[0].TextEdits[0].ApplyTo(code),
 		)
 	})
 }
@@ -6271,7 +6856,7 @@ func TestParseStringTemplate(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid end of string literal: missing '\"'",
+					Message: "invalid end of string literal: missing `\"`",
 					Pos:     ast.Position{Offset: 27, Line: 2, Column: 27},
 				},
 			},
@@ -6283,16 +6868,19 @@ func TestParseStringTemplate(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression(`
-		  "\(.)"
-		`)
+		_, errs := testParseExpression(`"\(.)"`)
 
 		require.NotEmpty(t, errs)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token in expression: '.'",
-					Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
+				&UnexpectedExpressionStartError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenDot,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+							EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+						},
+					},
 				},
 			},
 			errs,
@@ -6347,16 +6935,19 @@ func TestParseStringTemplate(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression(`
-		  "\()"
-		`)
+		_, errs := testParseExpression(`"\()"`)
 
 		require.NotEmpty(t, errs)
 		AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "unexpected token in expression: ')'",
-					Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
+				&UnexpectedExpressionStartError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenParenClose,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+							EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+						},
+					},
 				},
 			},
 			errs,
@@ -6386,8 +6977,10 @@ func TestParseStringTemplate(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token ')'",
-					Pos:     ast.Position{Offset: 10, Line: 2, Column: 9},
+					Message:       "expected token `)`",
+					Pos:           ast.Position{Offset: 10, Line: 2, Column: 9},
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -6406,8 +6999,10 @@ func TestParseStringTemplate(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token ')'",
-					Pos:     ast.Position{Offset: 16, Line: 2, Column: 15},
+					Message:       "expected token `)`",
+					Pos:           ast.Position{Offset: 16, Line: 2, Column: 15},
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -6426,8 +7021,10 @@ func TestParseStringTemplate(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token ')'",
-					Pos:     ast.Position{Offset: 30, Line: 2, Column: 29},
+					Message:       "expected token `)`",
+					Pos:           ast.Position{Offset: 30, Line: 2, Column: 29},
+					Secondary:     "check for missing punctuation, operators, or syntax elements",
+					Documentation: "https://cadence-lang.org/docs/language/syntax",
 				},
 			},
 			errs,
@@ -6595,7 +7192,7 @@ func TestParseStringTemplate(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid end of string literal: missing '\"'",
+					Message: "invalid end of string literal: missing `\"`",
 					Pos: ast.Position{
 						Offset: 25,
 						Line:   2,
@@ -6622,7 +7219,7 @@ func TestParseStringTemplate(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid end of string literal: missing '\"'",
+					Message: "invalid end of string literal: missing `\"`",
 					Pos: ast.Position{
 						Offset: 38,
 						Line:   2,
@@ -6649,7 +7246,7 @@ func TestParseStringTemplate(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid end of string literal: missing '\"'",
+					Message: "invalid end of string literal: missing `\"`",
 					Pos: ast.Position{
 						Offset: 27,
 						Line:   2,
@@ -6899,7 +7496,6 @@ func TestParseFunctionExpressionWithResourceTypeAnnotation(t *testing.T) {
 
 	AssertEqualWithDiff(t,
 		[]ast.Declaration{
-
 			&ast.VariableDeclaration{
 				Access:     ast.AccessNotSpecified,
 				IsConstant: true,

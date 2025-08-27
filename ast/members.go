@@ -147,7 +147,11 @@ var membersStartDoc prettier.Doc = prettier.Text("{")
 var membersEndDoc prettier.Doc = prettier.Text("}")
 var membersEmptyDoc prettier.Doc = prettier.Text("{}")
 
-func (m *Members) docWithNoBraces() prettier.Concat {
+func (m *Members) Doc() prettier.Doc {
+	if m == nil || len(m.declarations) == 0 {
+		return membersEmptyDoc
+	}
+
 	var docs []prettier.Doc
 
 	for _, decl := range m.declarations {
@@ -161,6 +165,7 @@ func (m *Members) docWithNoBraces() prettier.Concat {
 	}
 
 	return prettier.Concat{
+		membersStartDoc,
 		prettier.Indent{
 			Doc: prettier.Join(
 				prettier.HardLine{},
@@ -168,16 +173,10 @@ func (m *Members) docWithNoBraces() prettier.Concat {
 			),
 		},
 		prettier.HardLine{},
+		membersEndDoc,
 	}
 }
 
-func (m *Members) Doc() prettier.Doc {
-	if len(m.declarations) == 0 {
-		return membersEmptyDoc
-	}
-
-	membersDoc := m.docWithNoBraces()
-	membersDoc = append(prettier.Concat{membersStartDoc}, membersDoc...)
-	membersDoc = append(membersDoc, membersEndDoc)
-	return membersDoc
+func (m *Members) String() string {
+	return Prettier(m)
 }

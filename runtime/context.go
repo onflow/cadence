@@ -20,13 +20,16 @@ package runtime
 
 import (
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
 )
 
 type Context struct {
-	Interface      Interface
-	Location       Location
-	Environment    Environment
-	CoverageReport *CoverageReport
+	Interface        Interface
+	Location         Location
+	Environment      Environment
+	CoverageReport   *CoverageReport
+	MemoryGauge      common.MemoryGauge
+	ComputationGauge common.ComputationGauge
 
 	// UseVM configures if the VM should be used
 	UseVM bool

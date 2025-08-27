@@ -59,7 +59,7 @@ var blockEndDoc prettier.Doc = prettier.Text("}")
 var blockEmptyDoc prettier.Doc = prettier.Text("{}")
 
 func (b *Block) Doc() prettier.Doc {
-	if b.IsEmpty() {
+	if b == nil || b.IsEmpty() {
 		return blockEmptyDoc
 	}
 
@@ -80,7 +80,7 @@ func StatementsDoc(statements []Statement) prettier.Doc {
 		doc = append(
 			doc,
 			prettier.HardLine{},
-			statement.Doc(),
+			docOrEmpty(statement),
 		)
 	}
 
@@ -289,15 +289,18 @@ func (c TestCondition) MarshalJSON() ([]byte, error) {
 }
 
 func (c TestCondition) Doc() prettier.Doc {
-	doc := c.Test.Doc()
+	doc := docOrEmpty(c.Test)
+
 	if c.Message != nil {
+		messageDoc := c.Message.Doc()
+
 		doc = prettier.Concat{
 			doc,
 			prettier.Text(":"),
 			prettier.Indent{
 				Doc: prettier.Concat{
 					prettier.HardLine{},
-					c.Message.Doc(),
+					messageDoc,
 				},
 			},
 		}
@@ -375,7 +378,7 @@ func (c *Conditions) Doc(keywordDoc prettier.Doc) prettier.Doc {
 		doc = append(
 			doc,
 			prettier.HardLine{},
-			condition.Doc(),
+			docOrEmpty(condition),
 		)
 	}
 
