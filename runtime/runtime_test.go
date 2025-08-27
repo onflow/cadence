@@ -7922,7 +7922,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		runtime := NewTestRuntime()
 
 		runtimeInterface := &TestRuntimeInterface{
-			OnMeterMemory: func(usage common.MemoryUsage) error {
+			OnGetOrLoadProgram: func(_ Location, _ func() (*Program, error)) (*Program, error) {
 				// panic with a non-error type
 				panic("crasher")
 			},
@@ -7943,7 +7943,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 
 		RequireError(t, err)
 
-		assertRuntimeErrorIsInternalError(t, err)
+		assertRuntimeErrorIsExternalError(t, err)
 	})
 
 }
@@ -13504,7 +13504,6 @@ func TestRuntimeMetering(t *testing.T) {
 	memoryGauge := newTestMemoryGauge()
 	computationGauge := newTestComputationGauge()
 
-	runtimeInterface.OnMeterMemory = memoryGauge.MeterMemory
 	runtimeInterface.OnMeterComputation = computationGauge.MeterComputation
 
 	_, err = runtime.InvokeContractFunction(
@@ -13516,9 +13515,10 @@ func TestRuntimeMetering(t *testing.T) {
 		nil,
 		nil,
 		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-			UseVM:     *compile,
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			MemoryGauge: memoryGauge,
+			UseVM:       *compile,
 		},
 	)
 	require.NoError(t, err)
