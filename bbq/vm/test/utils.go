@@ -33,6 +33,7 @@ import (
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 
@@ -504,7 +505,7 @@ func CompileAndInvokeWithLogs(
 		BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndLog,
 	}
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := NewUnmeteredInMemoryStorage()
 	vmConfig := vm.NewConfig(storage)
 
 	vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndLog(&logs)
@@ -578,7 +579,7 @@ func CompileAndInvokeWithConditionLogs(
 		BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog,
 	}
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := NewUnmeteredInMemoryStorage()
 	vmConfig := vm.NewConfig(storage)
 
 	vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(&logs)
@@ -783,7 +784,7 @@ func PrepareVMConfig(
 ) *vm.Config {
 
 	if config == nil {
-		storage := interpreter.NewInMemoryStorage(nil)
+		storage := NewUnmeteredInMemoryStorage()
 		config = vm.NewConfig(storage)
 	}
 

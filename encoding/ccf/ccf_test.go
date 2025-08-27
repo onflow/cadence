@@ -39,6 +39,7 @@ import (
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
@@ -4964,7 +4965,7 @@ func exportFromScript(t *testing.T, code string) cadence.Value {
 			},
 			AtreeStorageValidationEnabled: true,
 			AtreeValueValidationEnabled:   true,
-			Storage:                       interpreter.NewInMemoryStorage(nil),
+			Storage:                       NewUnmeteredInMemoryStorage(),
 		},
 	)
 	require.NoError(t, err)

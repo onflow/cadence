@@ -245,8 +245,10 @@ func ParseCheckAndPrepareWithOptions(
 		storage = interpreterConfig.Storage
 	}
 	if storage == nil {
-		gauge := common.NewCombinedGauge(memoryGauge, computationGauge)
-		storage = interpreter.NewInMemoryStorage(gauge)
+		storage = interpreter.NewInMemoryStorage(
+			memoryGauge,
+			computationGauge,
+		)
 	}
 
 	programs := CompiledPrograms{}
@@ -621,8 +623,10 @@ func parseCheckAndInterpretWithOptionsAndAtreeValidations(
 		}
 	}
 	if config.Storage == nil {
-		gauge := common.NewCombinedGauge(memoryGauge, computationGauge)
-		config.Storage = interpreter.NewInMemoryStorage(gauge)
+		config.Storage = interpreter.NewInMemoryStorage(
+			memoryGauge,
+			computationGauge,
+		)
 	}
 
 	inter, err = interpreter.NewInterpreter(

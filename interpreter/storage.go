@@ -172,22 +172,32 @@ func (k StorageKey) IsLess(o StorageKey) bool {
 type InMemoryStorage struct {
 	*atree.BasicSlabStorage
 	DomainStorageMaps map[StorageDomainKey]*DomainStorageMap
-	gauge             common.Gauge
+	memoryGauge       common.MemoryGauge
+	computationGauge  common.ComputationGauge
 }
 
 var _ Storage = InMemoryStorage{}
 
-func NewInMemoryStorage(gauge common.Gauge) InMemoryStorage {
+func NewInMemoryStorage(
+	memoryGauge common.MemoryGauge,
+	computationGauge common.ComputationGauge,
+) InMemoryStorage {
+
 	decodeStorable := func(
 		decoder *cbor.StreamDecoder,
 		storableSlabStorageID atree.SlabID,
 		inlinedExtraData []atree.ExtraData,
 	) (atree.Storable, error) {
-		return DecodeStorable(decoder, storableSlabStorageID, inlinedExtraData, gauge)
+		return DecodeStorable(
+			decoder,
+			storableSlabStorageID,
+			inlinedExtraData,
+			memoryGauge,
+		)
 	}
 
 	decodeTypeInfo := func(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {
-		return DecodeTypeInfo(decoder, gauge)
+		return DecodeTypeInfo(decoder, memoryGauge)
 	}
 
 	slabStorage := atree.NewBasicSlabStorage(
@@ -200,7 +210,8 @@ func NewInMemoryStorage(gauge common.Gauge) InMemoryStorage {
 	return InMemoryStorage{
 		BasicSlabStorage:  slabStorage,
 		DomainStorageMaps: make(map[StorageDomainKey]*DomainStorageMap),
-		gauge:             gauge,
+		memoryGauge:       memoryGauge,
+		computationGauge:  computationGauge,
 	}
 }
 
@@ -212,10 +223,15 @@ func (i InMemoryStorage) GetDomainStorageMap(
 ) (
 	domainStorageMap *DomainStorageMap,
 ) {
-	key := NewStorageDomainKey(i.gauge, address, domain)
+	key := NewStorageDomainKey(i.memoryGauge, address, domain)
 	domainStorageMap = i.DomainStorageMaps[key]
 	if domainStorageMap == nil && createIfNotExists {
-		domainStorageMap = NewDomainStorageMap(i.gauge, i, atree.Address(address))
+		domainStorageMap = NewDomainStorageMap(
+			i.memoryGauge,
+			i.computationGauge,
+			i,
+			atree.Address(address),
+		)
 		i.DomainStorageMaps[key] = domainStorageMap
 	}
 	return domainStorageMap

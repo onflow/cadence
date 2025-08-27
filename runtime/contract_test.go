@@ -224,6 +224,7 @@ func TestRuntimeContract(t *testing.T) {
 			storageMap := NewStorage(
 				storage,
 				nil,
+				nil,
 				StorageConfig{},
 			).GetDomainStorageMap(
 				inter,

@@ -34,14 +34,19 @@ type DomainStorageMap struct {
 
 // NewDomainStorageMap creates new domain storage map for given address.
 func NewDomainStorageMap(
-	gauge common.Gauge,
+	memoryGauge common.MemoryGauge,
+	computationGauge common.ComputationGauge,
 	storage atree.SlabStorage,
 	address atree.Address,
 ) *DomainStorageMap {
-	common.UseMemory(gauge, common.StorageMapMemoryUsage)
+
+	common.UseMemory(
+		memoryGauge,
+		common.StorageMapMemoryUsage,
+	)
 
 	common.UseComputation(
-		gauge,
+		computationGauge,
 		common.ComputationUsage{
 			Kind:      common.ComputationKindAtreeMapConstruction,
 			Intensity: 1,

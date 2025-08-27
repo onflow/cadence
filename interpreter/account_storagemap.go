@@ -34,14 +34,19 @@ type AccountStorageMap struct {
 
 // NewAccountStorageMap creates account storage map.
 func NewAccountStorageMap(
-	gauge common.Gauge,
+	memoryGauge common.MemoryGauge,
+	computationGauge common.ComputationGauge,
 	storage atree.SlabStorage,
 	address atree.Address,
 ) *AccountStorageMap {
-	common.UseMemory(gauge, common.StorageMapMemoryUsage)
+
+	common.UseMemory(
+		memoryGauge,
+		common.StorageMapMemoryUsage,
+	)
 
 	common.UseComputation(
-		gauge,
+		computationGauge,
 		common.ComputationUsage{
 			Kind:      common.ComputationKindAtreeMapConstruction,
 			Intensity: 1,
@@ -65,11 +70,15 @@ func NewAccountStorageMap(
 
 // NewAccountStorageMapWithRootID loads existing account storage map with given atree SlabID.
 func NewAccountStorageMapWithRootID(
-	gauge common.Gauge,
+	memoryGauge common.MemoryGauge,
 	storage atree.SlabStorage,
 	slabID atree.SlabID,
 ) *AccountStorageMap {
-	common.UseMemory(gauge, common.StorageMapMemoryUsage)
+
+	common.UseMemory(
+		memoryGauge,
+		common.StorageMapMemoryUsage,
+	)
 
 	orderedMap, err := atree.NewMapWithRootID(
 		storage,
@@ -113,7 +122,8 @@ func (s *AccountStorageMap) DomainExists(gauge common.ComputationGauge, domain c
 // If createIfNotExists is true and domain doesn't exist, new domain storage map
 // is created and inserted into account storage map with given domain as key.
 func (s *AccountStorageMap) GetDomain(
-	gauge common.Gauge,
+	memoryGauge common.MemoryGauge,
+	computationGauge common.ComputationGauge,
 	storageMutationTracker StorageMutationTracker,
 	domain common.StorageDomain,
 	createIfNotExists bool,
@@ -121,7 +131,7 @@ func (s *AccountStorageMap) GetDomain(
 	key := Uint64StorageMapKey(domain)
 
 	common.UseComputation(
-		gauge,
+		computationGauge,
 		common.ComputationUsage{
 			Kind:      common.ComputationKindAtreeMapGet,
 			Intensity: 1,
@@ -139,7 +149,12 @@ func (s *AccountStorageMap) GetDomain(
 			// Create domain storage map if needed.
 
 			if createIfNotExists {
-				return s.NewDomain(gauge, storageMutationTracker, domain)
+				return s.NewDomain(
+					memoryGauge,
+					computationGauge,
+					storageMutationTracker,
+					domain,
+				)
 			}
 
 			return nil
@@ -154,18 +169,24 @@ func (s *AccountStorageMap) GetDomain(
 
 // NewDomain creates new domain storage map and inserts it to AccountStorageMap with given domain as key.
 func (s *AccountStorageMap) NewDomain(
-	gauge common.Gauge,
+	memoryGauge common.MemoryGauge,
+	computationGauge common.ComputationGauge,
 	storageMutationTracker StorageMutationTracker,
 	domain common.StorageDomain,
 ) *DomainStorageMap {
 	storageMutationTracker.RecordStorageMutation()
 
-	domainStorageMap := NewDomainStorageMap(gauge, s.orderedMap.Storage, s.orderedMap.Address())
+	domainStorageMap := NewDomainStorageMap(
+		memoryGauge,
+		computationGauge,
+		s.orderedMap.Storage,
+		s.orderedMap.Address(),
+	)
 
 	key := Uint64StorageMapKey(domain)
 
 	common.UseComputation(
-		gauge,
+		computationGauge,
 		common.ComputationUsage{
 			Kind:      common.ComputationKindAtreeMapSet,
 			Intensity: 1,

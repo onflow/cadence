@@ -31,6 +31,7 @@ import (
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -60,7 +61,7 @@ func TestInterpretReturnType(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			InterpreterConfig: &interpreter.Config{
-				Storage: newUnmeteredInMemoryStorage(),
+				Storage: NewUnmeteredInMemoryStorage(),
 				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 					return baseActivation
 				},
@@ -141,7 +142,7 @@ func TestInterpretSelfDeclaration(t *testing.T) {
 					},
 				},
 				InterpreterConfig: &interpreter.Config{
-					Storage: newUnmeteredInMemoryStorage(),
+					Storage: NewUnmeteredInMemoryStorage(),
 					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},

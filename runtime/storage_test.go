@@ -55,6 +55,7 @@ func withWritesToStorage(
 	storage := NewStorage(
 		ledger,
 		nil,
+		nil,
 		StorageConfig{},
 	)
 
@@ -6457,6 +6458,7 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 		storage := NewStorage(
 			ledger,
 			nil,
+			nil,
 			StorageConfig{},
 		)
 
@@ -6509,6 +6511,7 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 			ledger := NewTestLedger(nil, LedgerOnWriteEntries(&writeEntries))
 			storage := NewStorage(
 				ledger,
+				nil,
 				nil,
 				StorageConfig{},
 			)
@@ -6591,6 +6594,7 @@ func TestRuntimeStorageForNewAccount(t *testing.T) {
 		ledger := NewTestLedger(nil, nil)
 		storage := NewStorage(
 			ledger,
+			nil,
 			nil,
 			StorageConfig{},
 		)
@@ -6730,6 +6734,7 @@ func TestRuntimeStorage2(t *testing.T) {
 		storage := NewStorage(
 			ledger,
 			nil,
+			nil,
 			StorageConfig{},
 		)
 
@@ -6767,6 +6772,7 @@ func TestRuntimeStorage2(t *testing.T) {
 			domainStorageMapCount)
 		storage := NewStorage(
 			ledger,
+			nil,
 			nil,
 			StorageConfig{},
 		)
@@ -6817,6 +6823,7 @@ func TestRuntimeStorage2(t *testing.T) {
 			)
 			storage := NewStorage(
 				ledger,
+				nil,
 				nil,
 				StorageConfig{},
 			)
@@ -6906,6 +6913,7 @@ func TestRuntimeStorage2(t *testing.T) {
 			storage := NewStorage(
 				ledger,
 				nil,
+				nil,
 				StorageConfig{},
 			)
 
@@ -6994,6 +7002,7 @@ func TestRuntimeStorage2(t *testing.T) {
 		)
 		storage := NewStorage(
 			ledger,
+			nil,
 			nil,
 			StorageConfig{},
 		)
@@ -7091,6 +7100,7 @@ func TestRuntimeStorage2(t *testing.T) {
 		)
 		storage := NewStorage(
 			ledger,
+			nil,
 			nil,
 			StorageConfig{},
 		)
@@ -7233,6 +7243,7 @@ func TestRuntimeStorageDomainStorageMapInlinedState(t *testing.T) {
 	storage := NewStorage(
 		ledger,
 		nil,
+		nil,
 		StorageConfig{},
 	)
 
@@ -7358,6 +7369,7 @@ func TestRuntimeStorageLargeDomainValues(t *testing.T) {
 	ledger := NewTestLedger(nil, nil)
 	storage := NewStorage(
 		ledger,
+		nil,
 		nil,
 		StorageConfig{},
 	)
@@ -7554,6 +7566,7 @@ func TestGetDomainStorageMapRegisterReadsForNewAccount(t *testing.T) {
 
 			storage := NewStorage(
 				ledger,
+				nil,
 				nil,
 				StorageConfig{},
 			)
@@ -7805,6 +7818,7 @@ func TestGetDomainStorageMapRegisterReads(t *testing.T) {
 			storage := NewStorage(
 				ledger,
 				nil,
+				nil,
 				StorageConfig{},
 			)
 
@@ -7901,6 +7915,7 @@ func checkAccountStorageMapData(
 	ledger := NewTestLedgerWithData(nil, nil, storedValues, storageIndices)
 	storage := NewStorage(
 		ledger,
+		nil,
 		nil,
 		StorageConfig{},
 	)

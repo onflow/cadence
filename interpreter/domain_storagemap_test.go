@@ -46,10 +46,16 @@ func TestDomainStorageMapValueExists(t *testing.T) {
 		storage := runtime.NewStorage(
 			ledger,
 			nil,
+			nil,
 			runtime.StorageConfig{},
 		)
 
-		domainStorageMap := interpreter.NewDomainStorageMap(nil, storage, atree.Address(address))
+		domainStorageMap := interpreter.NewDomainStorageMap(
+			nil,
+			nil,
+			storage,
+			atree.Address(address),
+		)
 		require.NotNil(t, domainStorageMap)
 		require.Equal(t, uint64(0), domainStorageMap.Count())
 
@@ -69,6 +75,7 @@ func TestDomainStorageMapValueExists(t *testing.T) {
 		ledger := NewTestLedger(nil, nil)
 		storage := runtime.NewStorage(
 			ledger,
+			nil,
 			nil,
 			runtime.StorageConfig{},
 		)
@@ -121,10 +128,16 @@ func TestDomainStorageMapReadValue(t *testing.T) {
 		storage := runtime.NewStorage(
 			ledger,
 			nil,
+			nil,
 			runtime.StorageConfig{},
 		)
 
-		domainStorageMap := interpreter.NewDomainStorageMap(nil, storage, atree.Address(address))
+		domainStorageMap := interpreter.NewDomainStorageMap(
+			nil,
+			nil,
+			storage,
+			atree.Address(address),
+		)
 		require.NotNil(t, domainStorageMap)
 		require.Equal(t, uint64(0), domainStorageMap.Count())
 
@@ -144,6 +157,7 @@ func TestDomainStorageMapReadValue(t *testing.T) {
 		ledger := NewTestLedger(nil, nil)
 		storage := runtime.NewStorage(
 			ledger,
+			nil,
 			nil,
 			runtime.StorageConfig{},
 		)
@@ -201,6 +215,7 @@ func TestDomainStorageMapSetAndUpdateValue(t *testing.T) {
 		storage := runtime.NewStorage(
 			ledger,
 			nil,
+			nil,
 			runtime.StorageConfig{},
 		)
 
@@ -216,7 +231,12 @@ func TestDomainStorageMapSetAndUpdateValue(t *testing.T) {
 			atreeStorageValidationEnabled,
 		)
 
-		domainStorageMap := interpreter.NewDomainStorageMap(nil, storage, atree.Address(address))
+		domainStorageMap := interpreter.NewDomainStorageMap(
+			nil,
+			nil,
+			storage,
+			atree.Address(address),
+		)
 		require.NotNil(t, domainStorageMap)
 		require.Equal(t, uint64(0), domainStorageMap.Count())
 
@@ -237,6 +257,7 @@ func TestDomainStorageMapSetAndUpdateValue(t *testing.T) {
 		ledger := NewTestLedger(nil, nil)
 		storage := runtime.NewStorage(
 			ledger,
+			nil,
 			nil,
 			runtime.StorageConfig{},
 		)
@@ -287,6 +308,7 @@ func TestDomainStorageMapRemoveValue(t *testing.T) {
 		storage := runtime.NewStorage(
 			ledger,
 			nil,
+			nil,
 			runtime.StorageConfig{},
 		)
 
@@ -302,7 +324,12 @@ func TestDomainStorageMapRemoveValue(t *testing.T) {
 			atreeStorageValidationEnabled,
 		)
 
-		domainStorageMap := interpreter.NewDomainStorageMap(nil, storage, atree.Address(address))
+		domainStorageMap := interpreter.NewDomainStorageMap(
+			nil,
+			nil,
+			storage,
+			atree.Address(address),
+		)
 		require.NotNil(t, domainStorageMap)
 		require.Equal(t, uint64(0), domainStorageMap.Count())
 
@@ -322,6 +349,7 @@ func TestDomainStorageMapRemoveValue(t *testing.T) {
 		ledger := NewTestLedger(nil, nil)
 		storage := runtime.NewStorage(
 			ledger,
+			nil,
 			nil,
 			runtime.StorageConfig{},
 		)
@@ -379,6 +407,7 @@ func TestDomainStorageMapIteratorNext(t *testing.T) {
 		storage := runtime.NewStorage(
 			ledger,
 			nil,
+			nil,
 			runtime.StorageConfig{},
 		)
 
@@ -396,7 +425,12 @@ func TestDomainStorageMapIteratorNext(t *testing.T) {
 
 		domainValues := make(domainStorageMapValues)
 
-		domainStorageMap := interpreter.NewDomainStorageMap(nil, storage, atree.Address(address))
+		domainStorageMap := interpreter.NewDomainStorageMap(
+			nil,
+			nil,
+			storage,
+			atree.Address(address),
+		)
 		require.NotNil(t, domainStorageMap)
 		require.Equal(t, uint64(0), domainStorageMap.Count())
 
@@ -423,6 +457,7 @@ func TestDomainStorageMapIteratorNext(t *testing.T) {
 		ledger := NewTestLedger(nil, nil)
 		storage := runtime.NewStorage(
 			ledger,
+			nil,
 			nil,
 			runtime.StorageConfig{},
 		)
@@ -488,6 +523,7 @@ func TestDomainStorageMapIteratorNextKey(t *testing.T) {
 		storage := runtime.NewStorage(
 			ledger,
 			nil,
+			nil,
 			runtime.StorageConfig{},
 		)
 
@@ -505,7 +541,12 @@ func TestDomainStorageMapIteratorNextKey(t *testing.T) {
 
 		domainValues := make(domainStorageMapValues)
 
-		domainStorageMap := interpreter.NewDomainStorageMap(nil, storage, atree.Address(address))
+		domainStorageMap := interpreter.NewDomainStorageMap(
+			nil,
+			nil,
+			storage,
+			atree.Address(address),
+		)
 		require.NotNil(t, domainStorageMap)
 		require.Equal(t, uint64(0), domainStorageMap.Count())
 
@@ -531,6 +572,7 @@ func TestDomainStorageMapIteratorNextKey(t *testing.T) {
 		ledger := NewTestLedger(nil, nil)
 		storage := runtime.NewStorage(
 			ledger,
+			nil,
 			nil,
 			runtime.StorageConfig{},
 		)
@@ -593,6 +635,7 @@ func TestDomainStorageMapIteratorNextValue(t *testing.T) {
 		storage := runtime.NewStorage(
 			ledger,
 			nil,
+			nil,
 			runtime.StorageConfig{},
 		)
 
@@ -610,7 +653,12 @@ func TestDomainStorageMapIteratorNextValue(t *testing.T) {
 
 		domainValues := make(domainStorageMapValues)
 
-		domainStorageMap := interpreter.NewDomainStorageMap(nil, storage, atree.Address(address))
+		domainStorageMap := interpreter.NewDomainStorageMap(
+			nil,
+			nil,
+			storage,
+			atree.Address(address),
+		)
 		require.NotNil(t, domainStorageMap)
 		require.Equal(t, uint64(0), domainStorageMap.Count())
 
@@ -636,6 +684,7 @@ func TestDomainStorageMapIteratorNextValue(t *testing.T) {
 		ledger := NewTestLedger(nil, nil)
 		storage := runtime.NewStorage(
 			ledger,
+			nil,
 			nil,
 			runtime.StorageConfig{},
 		)
@@ -706,12 +755,18 @@ func TestDomainStorageMapLoadFromRootSlabID(t *testing.T) {
 			storage := runtime.NewStorage(
 				ledger,
 				nil,
+				nil,
 				runtime.StorageConfig{},
 			)
 
 			inter := NewTestInterpreterWithStorage(t, storage)
 
-			domainStorageMap := interpreter.NewDomainStorageMap(nil, storage, atree.Address(address))
+			domainStorageMap := interpreter.NewDomainStorageMap(
+				nil,
+				nil,
+				storage,
+				atree.Address(address),
+			)
 			require.NotNil(t, domainStorageMap)
 			require.Equal(t, uint64(0), domainStorageMap.Count())
 
@@ -727,6 +782,7 @@ func TestDomainStorageMapLoadFromRootSlabID(t *testing.T) {
 		ledger := NewTestLedgerWithData(nil, nil, storedValues, storageIndices)
 		storage := runtime.NewStorage(
 			ledger,
+			nil,
 			nil,
 			runtime.StorageConfig{},
 		)
@@ -750,6 +806,7 @@ func TestDomainStorageMapLoadFromRootSlabID(t *testing.T) {
 			ledger := NewTestLedger(nil, nil)
 			storage := runtime.NewStorage(
 				ledger,
+				nil,
 				nil,
 				runtime.StorageConfig{},
 			)
@@ -776,6 +833,7 @@ func TestDomainStorageMapLoadFromRootSlabID(t *testing.T) {
 		storage := runtime.NewStorage(
 			ledger,
 			nil,
+			nil,
 			runtime.StorageConfig{},
 		)
 
@@ -798,7 +856,12 @@ func createDomainStorageMap(
 ) (*interpreter.DomainStorageMap, domainStorageMapValues) {
 
 	// Create domain storage map
-	domainStorageMap := interpreter.NewDomainStorageMap(nil, storage, atree.Address(address))
+	domainStorageMap := interpreter.NewDomainStorageMap(
+		nil,
+		nil,
+		storage,
+		atree.Address(address),
+	)
 
 	// Write to new domain storage map
 	domainValues := writeRandomValuesToDomainStorageMap(inter, domainStorageMap, count, random)

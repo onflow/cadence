@@ -266,7 +266,7 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),

@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -95,7 +96,7 @@ func TestInterpretStatementHandler(t *testing.T) {
 	var nextInterpreterID int
 	interpreterIDs := map[*interpreter.Interpreter]int{}
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
 		importingChecker.Location,
@@ -219,7 +220,7 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
 	var nextInterpreterID int
 	interpreterIDs := map[*interpreter.Interpreter]int{}
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
@@ -349,7 +350,7 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 	var nextInterpreterID int
 	interpreterIDs := map[*interpreter.Interpreter]int{}
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
 		importingChecker.Location,
