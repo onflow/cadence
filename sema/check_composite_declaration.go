@@ -1864,7 +1864,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 			field.VariableKind == ast.VariableKindNotSpecified {
 
 			checker.report(
-				&InvalidVariableKindError{
+				&InvalidFieldVariableKindError{
 					Kind:  field.VariableKind,
 					Range: ast.NewRangeFromPositioned(checker.memoryGauge, field.Identifier),
 				},

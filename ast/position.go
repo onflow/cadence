@@ -45,29 +45,87 @@ func NewPosition(memoryGauge common.MemoryGauge, offset, line, column int) Posit
 	}
 }
 
-func (position Position) Shifted(memoryGauge common.MemoryGauge, length int) Position {
+func NewPositionAtCodeOffset(memoryGauge common.MemoryGauge, code string, offset int) Position {
+	line := 1
+	column := 0
+
+	for i := 0; i < offset; i++ {
+		if code[i] == '\n' {
+			line++
+			column = 0
+		} else {
+			column++
+		}
+	}
+
 	return NewPosition(
 		memoryGauge,
-		position.Offset+length,
-		position.Line,
-		position.Column+length,
+		offset,
+		line,
+		column,
 	)
 }
 
-func (position Position) String() string {
+func (p Position) Shifted(memoryGauge common.MemoryGauge, length int) Position {
+	return NewPosition(
+		memoryGauge,
+		p.Offset+length,
+		p.Line,
+		p.Column+length,
+	)
+}
+
+// AttachLeft moves the position left until it reaches a non-whitespace character.
+func (p Position) AttachLeft(code string) Position {
+
+	newOffset := p.Offset - 1
+	for ; newOffset >= 0; newOffset-- {
+		switch code[newOffset] {
+		case ' ', '\t', '\r', '\n':
+			continue
+		}
+		break
+	}
+
+	newOffset++
+
+	if newOffset == p.Offset {
+		return p
+	}
+
+	return NewPositionAtCodeOffset(nil, code, newOffset)
+}
+
+func (p Position) SlurpWhitespaceSuffix(code string) Position {
+	var length int
+	for offset := p.Offset + 1; offset < len(code); offset++ {
+		if code[offset] == ' ' {
+			length++
+		} else {
+			break
+		}
+	}
+
+	if length == 0 {
+		return p
+	}
+	return p.Shifted(nil, length)
+}
+
+func (p Position) String() string {
 	return fmt.Sprintf(
 		"%d(%d:%d)",
-		position.Offset,
-		position.Line,
-		position.Column,
+		p.Offset,
+		p.Line,
+		p.Column,
 	)
 }
 
-func (position Position) Compare(other Position) int {
+func (p Position) Compare(other Position) int {
 	switch {
-	case position.Offset < other.Offset:
+	case p.Offset < other.Offset:
 		return -1
-	case position.Offset > other.Offset:
+	case p.Offset > other.Offset:
 		return 1
 	default:
 		return 0
@@ -135,12 +193,12 @@ func NewUnmeteredRange(startPos, endPos Position) Range {
 	}
 }
 
-func (e Range) StartPosition() Position {
-	return e.StartPos
+func (r Range) StartPosition() Position {
+	return r.StartPos
 }
 
-func (e Range) EndPosition(common.MemoryGauge) Position {
-	return e.EndPos
+func (r Range) EndPosition(common.MemoryGauge) Position {
+	return r.EndPos
 }
 
 // NewRangeFromPositioned

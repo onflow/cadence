@@ -67,32 +67,67 @@ func TestExpressionStatement_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &ExpressionStatement{
-		Expression: &BoolExpression{
-			Value: false,
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		prettier.Text("false"),
-		stmt.Doc(),
-	)
+		stmt := &ExpressionStatement{
+			Expression: &BoolExpression{
+				Value: false,
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Text("false"),
+			stmt.Doc(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &ExpressionStatement{
+			Expression: nil,
+		}
+
+		assert.Equal(t,
+			prettier.Text(""),
+			stmt.Doc(),
+		)
+	})
 }
 
 func TestExpressionStatement_String(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &ExpressionStatement{
-		Expression: &BoolExpression{
-			Value: false,
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		"false",
-		stmt.String(),
-	)
+		stmt := &ExpressionStatement{
+			Expression: &BoolExpression{
+				Value: false,
+			},
+		}
+
+		assert.Equal(t,
+			"false",
+			stmt.String(),
+		)
+
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &ExpressionStatement{
+			Expression: nil,
+		}
+
+		assert.Equal(t,
+			"",
+			stmt.String(),
+		)
+	})
 }
 
 func TestReturnStatement_MarshalJSON(t *testing.T) {
@@ -386,7 +421,7 @@ func TestIfStatement_Doc(t *testing.T) {
 				Doc: prettier.Concat{
 					prettier.Text("if "),
 					prettier.Text("false"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Text("{}"),
 				},
 			},
@@ -424,7 +459,7 @@ func TestIfStatement_Doc(t *testing.T) {
 				Doc: prettier.Concat{
 					prettier.Text("if "),
 					prettier.Text("false"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Text("{}"),
 					prettier.Text(" else "),
 					prettier.Group{
@@ -432,11 +467,30 @@ func TestIfStatement_Doc(t *testing.T) {
 							Doc: prettier.Concat{
 								prettier.Text("if "),
 								prettier.Text("true"),
-								prettier.Text(" "),
+								prettier.Space,
 								prettier.Text("{}"),
 							},
 						},
 					},
+				},
+			},
+			stmt.Doc(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		stmt := &IfStatement{}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("if "),
+					prettier.Text(""),
+					prettier.Space,
+					prettier.Text("{}"),
 				},
 			},
 			stmt.Doc(),
@@ -500,6 +554,18 @@ func TestIfStatement_String(t *testing.T) {
 			stmt.String(),
 		)
 	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		stmt := &IfStatement{}
+
+		assert.Equal(t,
+			"if  {}",
+			stmt.String(),
+		)
+	})
 }
 
 func TestWhileStatement_MarshalJSON(t *testing.T) {
@@ -556,45 +622,82 @@ func TestWhileStatement_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &WhileStatement{
-		Test: &BoolExpression{
-			Value: false,
-		},
-		Block: &Block{
-			Statements: []Statement{},
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		prettier.Group{
-			Doc: prettier.Concat{
-				prettier.Text("while "),
-				prettier.Text("false"),
-				prettier.Text(" "),
-				prettier.Text("{}"),
+		stmt := &WhileStatement{
+			Test: &BoolExpression{
+				Value: false,
 			},
-		},
-		stmt.Doc(),
-	)
+			Block: &Block{
+				Statements: []Statement{},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("while "),
+					prettier.Text("false"),
+					prettier.Space,
+					prettier.Text("{}"),
+				},
+			},
+			stmt.Doc(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &WhileStatement{}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("while "),
+					prettier.Text(""),
+					prettier.Space,
+					prettier.Text("{}"),
+				},
+			},
+			stmt.Doc(),
+		)
+	})
 }
 
 func TestWhileStatement_String(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &WhileStatement{
-		Test: &BoolExpression{
-			Value: false,
-		},
-		Block: &Block{
-			Statements: []Statement{},
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		"while false {}",
-		stmt.String(),
-	)
+		stmt := &WhileStatement{
+			Test: &BoolExpression{
+				Value: false,
+			},
+			Block: &Block{
+				Statements: []Statement{},
+			},
+		}
+
+		assert.Equal(t,
+			"while false {}",
+			stmt.String(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &WhileStatement{}
+
+		assert.Equal(t,
+			"while  {}",
+			stmt.String(),
+		)
+	})
 }
 
 func TestForStatement_MarshalJSON(t *testing.T) {
@@ -758,7 +861,7 @@ func TestForStatement_Doc(t *testing.T) {
 					prettier.Text("foobar"),
 					prettier.Text(" in "),
 					prettier.Text("false"),
-					prettier.Text(" "),
+					prettier.Space,
 					prettier.Text("{}"),
 				},
 			},
@@ -794,7 +897,28 @@ func TestForStatement_Doc(t *testing.T) {
 					prettier.Text("foobar"),
 					prettier.Text(" in "),
 					prettier.Text("false"),
-					prettier.Text(" "),
+					prettier.Space,
+					prettier.Text("{}"),
+				},
+			},
+			stmt.Doc(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		stmt := &ForStatement{}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("for "),
+					prettier.Text(""),
+					prettier.Text(" in "),
+					prettier.Text(""),
+					prettier.Space,
 					prettier.Text("{}"),
 				},
 			},
@@ -850,6 +974,18 @@ func TestForStatement_String(t *testing.T) {
 
 		assert.Equal(t,
 			"for i, foobar in false {}",
+			stmt.String(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		stmt := &ForStatement{}
+
+		assert.Equal(t,
+			"for  in  {}",
 			stmt.String(),
 		)
 	})
@@ -921,60 +1057,102 @@ func TestAssignmentStatement_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &AssignmentStatement{
-		Target: &IdentifierExpression{
-			Identifier: Identifier{
-				Identifier: "foobar",
-			},
-		},
-		Transfer: &Transfer{
-			Operation: TransferOperationCopy,
-		},
-		Value: &BoolExpression{
-			Value: false,
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
 
-	require.Equal(t,
-		prettier.Group{
-			Doc: prettier.Concat{
-				prettier.Text("foobar"),
-				prettier.Text(" "),
-				prettier.Text("="),
-				prettier.Text(" "),
-				prettier.Group{
-					Doc: prettier.Indent{
-						Doc: prettier.Text("false"),
+		stmt := &AssignmentStatement{
+			Target: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foobar",
+				},
+			},
+			Transfer: &Transfer{
+				Operation: TransferOperationCopy,
+			},
+			Value: &BoolExpression{
+				Value: false,
+			},
+		}
+
+		require.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("foobar"),
+					prettier.Space,
+					prettier.Text("="),
+					prettier.Space,
+					prettier.Group{
+						Doc: prettier.Indent{
+							Doc: prettier.Text("false"),
+						},
 					},
 				},
 			},
-		},
-		stmt.Doc(),
-	)
+			stmt.Doc(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &AssignmentStatement{}
+
+		require.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text(""),
+					prettier.Space,
+					prettier.Text(""),
+					prettier.Space,
+					prettier.Group{
+						Doc: prettier.Indent{
+							Doc: prettier.Text(""),
+						},
+					},
+				},
+			},
+			stmt.Doc(),
+		)
+	})
 }
 
 func TestAssignmentStatement_String(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &AssignmentStatement{
-		Target: &IdentifierExpression{
-			Identifier: Identifier{
-				Identifier: "foobar",
-			},
-		},
-		Transfer: &Transfer{
-			Operation: TransferOperationCopy,
-		},
-		Value: &BoolExpression{
-			Value: false,
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
 
-	require.Equal(t,
-		"foobar = false",
-		stmt.String(),
-	)
+		stmt := &AssignmentStatement{
+			Target: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foobar",
+				},
+			},
+			Transfer: &Transfer{
+				Operation: TransferOperationCopy,
+			},
+			Value: &BoolExpression{
+				Value: false,
+			},
+		}
+
+		require.Equal(t,
+			"foobar = false",
+			stmt.String(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &AssignmentStatement{}
+
+		require.Equal(t,
+			"  ",
+			stmt.String(),
+		)
+	})
 }
 
 func TestSwapStatement_MarshalJSON(t *testing.T) {
@@ -1033,48 +1211,84 @@ func TestSwapStatement_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &SwapStatement{
-		Left: &IdentifierExpression{
-			Identifier: Identifier{
-				Identifier: "foobar",
-			},
-		},
-		Right: &BoolExpression{
-			Value: false,
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		prettier.Group{
-			Doc: prettier.Concat{
-				prettier.Text("foobar"),
-				swapStatementSpaceSymbolSpaceDoc,
-				prettier.Text("false"),
+		stmt := &SwapStatement{
+			Left: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foobar",
+				},
 			},
-		},
-		stmt.Doc(),
-	)
+			Right: &BoolExpression{
+				Value: false,
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("foobar"),
+					prettier.Text(" <-> "),
+					prettier.Text("false"),
+				},
+			},
+			stmt.Doc(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &SwapStatement{}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text(""),
+					prettier.Text(" <-> "),
+					prettier.Text(""),
+				},
+			},
+			stmt.Doc(),
+		)
+	})
 }
 
 func TestSwapStatement_String(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &SwapStatement{
-		Left: &IdentifierExpression{
-			Identifier: Identifier{
-				Identifier: "foobar",
-			},
-		},
-		Right: &BoolExpression{
-			Value: false,
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		"foobar <-> false",
-		stmt.String(),
-	)
+		stmt := &SwapStatement{
+			Left: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foobar",
+				},
+			},
+			Right: &BoolExpression{
+				Value: false,
+			},
+		}
+
+		assert.Equal(t,
+			"foobar <-> false",
+			stmt.String(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &SwapStatement{}
+
+		assert.Equal(t,
+			" <-> ",
+			stmt.String(),
+		)
+	})
 }
 
 func TestEmitStatement_MarshalJSON(t *testing.T) {
@@ -1191,46 +1405,79 @@ func TestEmitStatement_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &EmitStatement{
-		InvocationExpression: &InvocationExpression{
-			InvokedExpression: &IdentifierExpression{
-				Identifier: Identifier{
-					Identifier: "foobar",
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &EmitStatement{
+			InvocationExpression: &InvocationExpression{
+				InvokedExpression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "foobar",
+					},
 				},
 			},
-		},
-	}
+		}
 
-	require.Equal(t,
-		prettier.Concat{
-			prettier.Text("emit "),
+		require.Equal(t,
 			prettier.Concat{
-				prettier.Text("foobar"),
-				prettier.Text("()"),
+				prettier.Text("emit "),
+				prettier.Concat{
+					prettier.Text("foobar"),
+					prettier.Text("()"),
+				},
 			},
-		},
-		stmt.Doc(),
-	)
+			stmt.Doc(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &EmitStatement{}
+
+		require.Equal(t,
+			prettier.Concat{
+				prettier.Text("emit "),
+				prettier.Text(""),
+			},
+			stmt.Doc(),
+		)
+	})
+
 }
 
 func TestEmitStatement_String(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &EmitStatement{
-		InvocationExpression: &InvocationExpression{
-			InvokedExpression: &IdentifierExpression{
-				Identifier: Identifier{
-					Identifier: "foobar",
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+		stmt := &EmitStatement{
+			InvocationExpression: &InvocationExpression{
+				InvokedExpression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "foobar",
+					},
 				},
 			},
-		},
-	}
+		}
 
-	require.Equal(t,
-		"emit foobar()",
-		stmt.String(),
-	)
+		require.Equal(t,
+			"emit foobar()",
+			stmt.String(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &EmitStatement{}
+
+		require.Equal(t,
+			"emit ",
+			stmt.String(),
+		)
+	})
 }
 
 func TestSwitchStatement_MarshalJSON(t *testing.T) {
@@ -1370,139 +1617,228 @@ func TestSwitchStatement_MarshalJSON(t *testing.T) {
 	)
 }
 
-func TestSwitchStatement_String(t *testing.T) {
-
-	t.Parallel()
-
-	stmt := &SwitchStatement{
-		Expression: &IdentifierExpression{
-			Identifier: Identifier{
-				Identifier: "foo",
-			},
-		},
-		Cases: []*SwitchCase{
-			{
-				Expression: &BoolExpression{
-					Value: false,
-				},
-				Statements: []Statement{
-					&ExpressionStatement{
-						Expression: &IdentifierExpression{
-							Identifier: Identifier{
-								Identifier: "bar",
-							},
-						},
-					},
-				},
-			},
-			{
-				Statements: []Statement{
-					&ExpressionStatement{
-						Expression: &IdentifierExpression{
-							Identifier: Identifier{
-								Identifier: "baz",
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	assert.Equal(t,
-		prettier.Concat{
-			prettier.Group{
-				Doc: prettier.Concat{
-					switchStatementKeywordSpaceDoc,
-					prettier.Indent{
-						Doc: prettier.Concat{
-							prettier.SoftLine{},
-							prettier.Text("foo"),
-						},
-					},
-					prettier.Line{},
-				},
-			},
-			prettier.Text("{"),
-			prettier.Indent{
-				Doc: prettier.Concat{
-					prettier.HardLine{},
-					prettier.Concat{
-						switchCaseKeywordSpaceDoc,
-						prettier.Text("false"),
-						switchCaseColonSymbolDoc,
-						prettier.Indent{
-							Doc: prettier.Concat{
-								prettier.HardLine{},
-								prettier.Text("bar"),
-							},
-						},
-					},
-					prettier.HardLine{},
-					prettier.Concat{
-						switchCaseDefaultKeywordSpaceDoc,
-						prettier.Indent{
-							Doc: prettier.Concat{
-								prettier.HardLine{},
-								prettier.Text("baz"),
-							},
-						},
-					},
-				},
-			},
-			prettier.HardLine{},
-			prettier.Text("}"),
-		},
-		stmt.Doc(),
-	)
-}
-
 func TestSwitchStatement_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &SwitchStatement{
-		Expression: &IdentifierExpression{
-			Identifier: Identifier{
-				Identifier: "foo",
-			},
-		},
-		Cases: []*SwitchCase{
-			{
-				Expression: &BoolExpression{
-					Value: false,
-				},
-				Statements: []Statement{
-					&ExpressionStatement{
-						Expression: &IdentifierExpression{
-							Identifier: Identifier{
-								Identifier: "bar",
-							},
-						},
-					},
-				},
-			},
-			{
-				Statements: []Statement{
-					&ExpressionStatement{
-						Expression: &IdentifierExpression{
-							Identifier: Identifier{
-								Identifier: "baz",
-							},
-						},
-					},
-				},
-			},
-		},
-	}
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		"switch foo {\n"+
-			"    case false:\n"+
-			"        bar\n"+
-			"    default:\n"+
-			"        baz\n"+
-			"}",
-		stmt.String(),
-	)
+		stmt := &SwitchStatement{
+			Expression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foo",
+				},
+			},
+			Cases: []*SwitchCase{
+				{
+					Expression: &BoolExpression{
+						Value: false,
+					},
+					Statements: []Statement{
+						&ExpressionStatement{
+							Expression: &IdentifierExpression{
+								Identifier: Identifier{
+									Identifier: "bar",
+								},
+							},
+						},
+					},
+				},
+				{
+					Statements: []Statement{
+						&ExpressionStatement{
+							Expression: &IdentifierExpression{
+								Identifier: Identifier{
+									Identifier: "baz",
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Group{
+					Doc: prettier.Concat{
+						switchStatementKeywordSpaceDoc,
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Text("foo"),
+							},
+						},
+						prettier.Line{},
+					},
+				},
+				prettier.Text("{"),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.HardLine{},
+						prettier.Concat{
+							switchCaseKeywordSpaceDoc,
+							prettier.Text("false"),
+							switchCaseColonSymbolDoc,
+							prettier.Indent{
+								Doc: prettier.Concat{
+									prettier.HardLine{},
+									prettier.Text("bar"),
+								},
+							},
+						},
+						prettier.HardLine{},
+						prettier.Concat{
+							switchCaseDefaultKeywordSpaceDoc,
+							prettier.Indent{
+								Doc: prettier.Concat{
+									prettier.HardLine{},
+									prettier.Text("baz"),
+								},
+							},
+						},
+					},
+				},
+				prettier.HardLine{},
+				prettier.Text("}"),
+			},
+			stmt.Doc(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &SwitchStatement{
+			Expression: nil,
+			Cases: []*SwitchCase{
+				{
+					Expression: nil,
+				},
+				{
+					Expression: nil,
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("switch "),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Text(""),
+							},
+						},
+						prettier.Line{},
+					},
+				},
+				prettier.Text("{"),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.HardLine{},
+						prettier.Concat{
+							prettier.Text("case "),
+							prettier.Text(""),
+							prettier.Text(":"),
+							prettier.Indent{
+								Doc: prettier.Concat(nil),
+							},
+						},
+						prettier.HardLine{},
+						prettier.Concat{
+							prettier.Text("default:"),
+							prettier.Indent{
+								Doc: prettier.Concat(nil),
+							},
+						},
+					},
+				},
+				prettier.HardLine{},
+				prettier.Text("}"),
+			},
+			stmt.Doc(),
+		)
+	})
+}
+
+func TestSwitchStatement_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &SwitchStatement{
+			Expression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foo",
+				},
+			},
+			Cases: []*SwitchCase{
+				{
+					Expression: &BoolExpression{
+						Value: false,
+					},
+					Statements: []Statement{
+						&ExpressionStatement{
+							Expression: &IdentifierExpression{
+								Identifier: Identifier{
+									Identifier: "bar",
+								},
+							},
+						},
+					},
+				},
+				{
+					Statements: []Statement{
+						&ExpressionStatement{
+							Expression: &IdentifierExpression{
+								Identifier: Identifier{
+									Identifier: "baz",
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"switch foo {\n"+
+				"    case false:\n"+
+				"        bar\n"+
+				"    default:\n"+
+				"        baz\n"+
+				"}",
+			stmt.String(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		stmt := &SwitchStatement{
+			Expression: nil,
+			Cases: []*SwitchCase{
+				{
+					Expression: nil,
+				},
+				{
+					Expression: nil,
+				},
+			},
+		}
+
+		assert.Equal(t,
+			`switch  {
+    case :
+    default:
+}`,
+			stmt.String(),
+		)
+	})
 }

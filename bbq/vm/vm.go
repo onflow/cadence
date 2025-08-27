@@ -21,6 +21,7 @@ package vm
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/onflow/atree"
 
@@ -237,10 +238,16 @@ func (vm *VM) pushCallFrame(functionValue CompiledFunctionValue, receiver Value,
 		vm.ipStack[len(vm.ipStack)-1] = vm.ip
 	}
 
+	var startTime time.Time
+	if vm.context.TracingEnabled() {
+		startTime = time.Now()
+	}
+
 	callFrame := callFrame{
 		localsCount:  localsCount,
 		localsOffset: offset,
 		function:     functionValue,
+		startTime:    startTime,
 	}
 
 	vm.ipStack = append(vm.ipStack, 0)
@@ -251,6 +258,18 @@ func (vm *VM) pushCallFrame(functionValue CompiledFunctionValue, receiver Value,
 }
 
 func (vm *VM) popCallFrame() {
+
+	if vm.context.TracingEnabled() {
+		startTime := vm.callFrame.startTime
+		functionName := vm.callFrame.function.Function.QualifiedName
+		defer func() {
+			vm.context.ReportFunctionTrace(
+				functionName,
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	// Close all open upvalues before popping the locals.
 	// The order of the closing does not matter
 	for absoluteLocalsIndex, upvalue := range vm.callFrame.openUpvalues { //nolint:maprange
@@ -957,7 +976,19 @@ func invokeFunction(
 			// For built-in functions, pass the dereferenced receiver.
 			receiver = boundFunction.DereferencedReceiver(vm.context)
 		}
-		result := functionValue.Function(context, typeArguments, receiver, arguments...)
+
+		var result Value
+		if context.TracingEnabled() {
+			startTime := time.Now()
+			result = functionValue.Function(context, typeArguments, receiver, arguments...)
+			context.ReportFunctionTrace(
+				functionValue.Name,
+				time.Since(startTime),
+			)
+		} else {
+			result = functionValue.Function(context, typeArguments, receiver, arguments...)
+		}
+
 		vm.push(result)
 
 	default:

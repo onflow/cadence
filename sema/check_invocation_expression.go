@@ -453,10 +453,7 @@ func (checker *Checker) checkInvocation(
 		invocationExpression,
 	)
 
-	minCount := argumentCount
-	if parameterCount < argumentCount {
-		minCount = parameterCount
-	}
+	minCount := min(parameterCount, argumentCount)
 
 	var parameterTypes []Type
 

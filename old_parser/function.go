@@ -20,7 +20,7 @@ package old_parser
 
 import (
 	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/parser/lexer"
+	"github.com/onflow/cadence/old_parser/lexer"
 )
 
 func parseParameterList(p *parser) (*ast.ParameterList, error) {

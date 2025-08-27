@@ -18,9 +18,15 @@
 
 package vm
 
+import "time"
+
 type callFrame struct {
 	localsOffset uint16
 	localsCount  uint16
 	function     CompiledFunctionValue
 	openUpvalues map[int]*Upvalue
+
+	// For tracing.
+	// TODO: Move this out of callFrame if possible.
+	startTime time.Time
 }

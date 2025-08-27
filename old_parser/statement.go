@@ -21,7 +21,7 @@ package old_parser
 import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/parser/lexer"
+	"github.com/onflow/cadence/old_parser/lexer"
 )
 
 func parseStatements(p *parser, isEndToken func(token lexer.Token) bool) (statements []ast.Statement, err error) {

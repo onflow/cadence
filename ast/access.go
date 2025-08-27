@@ -22,6 +22,8 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/turbolent/prettier"
+
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 )
@@ -34,6 +36,7 @@ type Access interface {
 	Description() string
 	String() string
 	MarshalJSON() ([]byte, error)
+	Doc() prettier.Doc
 }
 
 type Separator uint8
@@ -143,6 +146,10 @@ func (e EntitlementAccess) Keyword() string {
 	return sb.String()
 }
 
+func (e EntitlementAccess) Doc() prettier.Doc {
+	return prettier.Text(e.Keyword())
+}
+
 func (e EntitlementAccess) MarshalJSON() ([]byte, error) {
 	return json.Marshal(e.String())
 }
@@ -192,6 +199,10 @@ func (a *MappedAccess) Keyword() string {
 	str.WriteString(a.String())
 	str.WriteString(")")
 	return str.String()
+}
+
+func (a *MappedAccess) Doc() prettier.Doc {
+	return prettier.Text(a.Keyword())
 }
 
 func (a *MappedAccess) MarshalJSON() ([]byte, error) {
@@ -287,4 +298,8 @@ func (a PrimitiveAccess) Description() string {
 
 func (a PrimitiveAccess) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a.String())
+}
+
+func (a PrimitiveAccess) Doc() prettier.Doc {
+	return prettier.Text(a.Keyword())
 }

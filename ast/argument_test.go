@@ -153,6 +153,37 @@ func TestArgument_Doc(t *testing.T) {
 			argument.Doc(),
 		)
 	})
+
+	t.Run("without expression, without label", func(t *testing.T) {
+
+		t.Parallel()
+
+		argument := &Argument{}
+
+		require.Equal(
+			t,
+			prettier.Text(""),
+			argument.Doc(),
+		)
+	})
+
+	t.Run("without expression, with label", func(t *testing.T) {
+
+		t.Parallel()
+
+		argument := &Argument{
+			Label: "ok",
+		}
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("ok: "),
+				prettier.Text(""),
+			},
+			argument.Doc(),
+		)
+	})
 }
 
 func TestArgument_String(t *testing.T) {
@@ -190,6 +221,34 @@ func TestArgument_String(t *testing.T) {
 		require.Equal(
 			t,
 			"ok: false",
+			argument.String(),
+		)
+	})
+
+	t.Run("without expression, without label", func(t *testing.T) {
+
+		t.Parallel()
+
+		argument := &Argument{}
+
+		require.Equal(
+			t,
+			"",
+			argument.String(),
+		)
+	})
+
+	t.Run("without expression, with label", func(t *testing.T) {
+
+		t.Parallel()
+
+		argument := &Argument{
+			Label: "ok",
+		}
+
+		require.Equal(
+			t,
+			"ok: ",
 			argument.String(),
 		)
 	})
