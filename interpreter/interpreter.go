@@ -5236,7 +5236,7 @@ func (interpreter *Interpreter) GetInterfaceType(
 		if interfaceType != nil {
 			return interfaceType, nil
 		}
-		return nil, &InterfaceMissingLocationError{
+		return nil, InterfaceMissingLocationError{
 			QualifiedIdentifier: qualifiedIdentifier,
 		}
 	}
