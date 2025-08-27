@@ -966,15 +966,25 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 		// If the initializer is not declared, generate
 		// - a synthetic initializer for enum types, otherwise
 		// - an empty initializer
+		membersDesugared = true
 		if compositeType.Kind == common.CompositeKindEnum {
-			// TODO: ENUM
-			// c.generateEnumInit(compositeType)
-			// c.generateEnumLookup(
-			// 	compositeType,
-			// 	declaration.Members.EnumCases(),
-			// )
+			// generate enum initializer
+			enumInitializer := newEnumInitializer(d.memoryGauge, compositeType, d.elaboration)
+			enumInitializerFuncType := newEnumInitializerFuncType(compositeType.EnumRawType)
+			d.elaboration.SetFunctionDeclarationFunctionType(enumInitializer.FunctionDeclaration, enumInitializerFuncType)
+			desugaredMembers = append(desugaredMembers, enumInitializer)
+
+			// generate enum lookup
+			enumLookup := newEnumLookup(
+				d.memoryGauge,
+				compositeType,
+				declaration.Members.EnumCases(),
+				d.elaboration,
+			)
+			enumLookupFuncType := newEnumLookupFuncType(d.memoryGauge, compositeType)
+			d.elaboration.SetFunctionDeclarationFunctionType(enumLookup, enumLookupFuncType)
+			d.modifiedDeclarations = append(d.modifiedDeclarations, enumLookup)
 		} else {
-			membersDesugared = true
 			d.addEmptyInitializer(&desugaredMembers)
 		}
 	}
@@ -1620,6 +1630,8 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 		members = append(members, desugaredExecuteFunc)
 	}
 
+	// Always add empty initializer for transactions.
+	// To be updated later by compilation.
 	d.addEmptyInitializer(&members)
 
 	compositeDecl := ast.NewCompositeDeclaration(
