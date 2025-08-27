@@ -1771,7 +1771,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
-		assert.Contains(t, err.Error(), "error: field add has non-storable type: fun(Int, Int): Int")
+		assert.Contains(t, err.Error(), "error: field `add` has non-storable type: `fun(Int, Int): Int`")
 	})
 
 	testWithValidators(t, "Test conformance", func(t *testing.T, config Config) {

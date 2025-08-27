@@ -503,6 +503,8 @@ func (e *ArrayExpression) String() string {
 	return Prettier(e)
 }
 
+var arrayExpressionEmptyDoc = prettier.Text("[]")
+
 var arrayExpressionSeparatorDoc prettier.Doc = prettier.Concat{
 	prettier.Text(","),
 	prettier.Line{},
@@ -510,15 +512,18 @@ var arrayExpressionSeparatorDoc prettier.Doc = prettier.Concat{
 
 func (e *ArrayExpression) Doc() prettier.Doc {
 	if len(e.Values) == 0 {
-		return prettier.Text("[]")
+		return arrayExpressionEmptyDoc
 	}
 
 	elementDocs := make([]prettier.Doc, len(e.Values))
 	for i, value := range e.Values {
-		elementDocs[i] = value.Doc()
+		elementDocs[i] = docOrEmpty(value)
 	}
 	return prettier.WrapBrackets(
-		prettier.Join(arrayExpressionSeparatorDoc, elementDocs...),
+		prettier.Join(
+			arrayExpressionSeparatorDoc,
+			elementDocs...,
+		),
 		prettier.SoftLine{},
 	)
 }
@@ -585,9 +590,11 @@ var dictionaryExpressionSeparatorDoc prettier.Doc = prettier.Concat{
 	prettier.Line{},
 }
 
+var dictionaryExpressionEmptyDoc = prettier.Text("{}")
+
 func (e *DictionaryExpression) Doc() prettier.Doc {
 	if len(e.Entries) == 0 {
-		return prettier.Text("{}")
+		return dictionaryExpressionEmptyDoc
 	}
 
 	entryDocs := make([]prettier.Doc, len(e.Entries))
@@ -596,7 +603,10 @@ func (e *DictionaryExpression) Doc() prettier.Doc {
 	}
 
 	return prettier.WrapBraces(
-		prettier.Join(dictionaryExpressionSeparatorDoc, entryDocs...),
+		prettier.Join(
+			dictionaryExpressionSeparatorDoc,
+			entryDocs...,
+		),
 		prettier.SoftLine{},
 	)
 }
@@ -651,14 +661,11 @@ var dictionaryKeyValueSeparatorDoc prettier.Doc = prettier.Concat{
 }
 
 func (e DictionaryEntry) Doc() prettier.Doc {
-	keyDoc := e.Key.Doc()
-	valueDoc := e.Value.Doc()
-
 	return prettier.Group{
 		Doc: prettier.Concat{
-			keyDoc,
+			docOrEmpty(e.Key),
 			dictionaryKeyValueSeparatorDoc,
-			valueDoc,
+			docOrEmpty(e.Value),
 		},
 	}
 }
@@ -736,6 +743,8 @@ func (args Arguments) String() string {
 	return Prettier(args)
 }
 
+var argumentsEmptyDoc prettier.Doc = prettier.Text("()")
+
 var argumentsSeparatorDoc prettier.Doc = prettier.Concat{
 	prettier.Text(","),
 	prettier.Line{},
@@ -743,13 +752,14 @@ var argumentsSeparatorDoc prettier.Doc = prettier.Concat{
 
 func (args Arguments) Doc() prettier.Doc {
 	if len(args) == 0 {
-		return prettier.Text("()")
+		return argumentsEmptyDoc
 	}
 
 	argumentDocs := make([]prettier.Doc, len(args))
 	for i, argument := range args {
-		argumentDocs[i] = argument.Doc()
+		argumentDocs[i] = docOrEmpty(argument)
 	}
+
 	return prettier.WrapParentheses(
 		prettier.Join(
 			argumentsSeparatorDoc,
@@ -822,13 +832,16 @@ func (e *InvocationExpression) Doc() prettier.Doc {
 	if len(e.TypeArguments) > 0 {
 		typeArgumentDocs := make([]prettier.Doc, len(e.TypeArguments))
 		for i, typeArgument := range e.TypeArguments {
-			typeArgumentDocs[i] = typeArgument.Doc()
+			typeArgumentDocs[i] = docOrEmpty(typeArgument)
 		}
 
 		result = append(result,
 			prettier.Wrap(
 				prettier.Text("<"),
-				prettier.Join(arrayExpressionSeparatorDoc, typeArgumentDocs...),
+				prettier.Join(
+					parameterSeparatorDoc,
+					typeArgumentDocs...,
+				),
 				prettier.Text(">"),
 				prettier.SoftLine{},
 			),
@@ -1039,7 +1052,7 @@ func (e *IndexExpression) Doc() prettier.Doc {
 			e.precedence(),
 		),
 		prettier.WrapBrackets(
-			e.IndexingExpression.Doc(),
+			docOrEmpty(e.IndexingExpression),
 			prettier.SoftLine{},
 		),
 	}
@@ -1120,25 +1133,43 @@ func (e *ConditionalExpression) Doc() prettier.Doc {
 
 	// NOTE: right associative
 
-	testDoc := e.Test.Doc()
-	testPrecedence := e.Test.precedence()
-
-	if ownPrecedence >= testPrecedence {
-		testDoc = prettier.WrapParentheses(testDoc, prettier.SoftLine{})
+	var testDoc prettier.Doc
+	if e.Test == nil {
+		testDoc = prettier.Text("")
+	} else {
+		testDoc = e.Test.Doc()
+		if ownPrecedence >= e.Test.precedence() {
+			testDoc = prettier.WrapParentheses(
+				testDoc,
+				prettier.SoftLine{},
+			)
+		}
 	}
 
-	thenDoc := e.Then.Doc()
-	thenPrecedence := e.Then.precedence()
-
-	if ownPrecedence >= thenPrecedence {
-		thenDoc = prettier.WrapParentheses(thenDoc, prettier.SoftLine{})
+	var thenDoc prettier.Doc
+	if e.Then == nil {
+		thenDoc = prettier.Text("")
+	} else {
+		thenDoc = e.Then.Doc()
+		if ownPrecedence >= e.Then.precedence() {
+			thenDoc = prettier.WrapParentheses(
+				thenDoc,
+				prettier.SoftLine{},
+			)
+		}
 	}
 
-	elseDoc := e.Else.Doc()
-	elsePrecedence := e.Else.precedence()
-
-	if ownPrecedence > elsePrecedence {
-		elseDoc = prettier.WrapParentheses(elseDoc, prettier.SoftLine{})
+	var elseDoc prettier.Doc
+	if e.Else == nil {
+		elseDoc = prettier.Text("")
+	} else {
+		elseDoc = e.Else.Doc()
+		if ownPrecedence > e.Else.precedence() {
+			elseDoc = prettier.WrapParentheses(
+				elseDoc,
+				prettier.SoftLine{},
+			)
+		}
 	}
 
 	return prettier.Group{
@@ -1228,6 +1259,10 @@ func (e *UnaryExpression) String() string {
 }
 
 func parenthesizedExpressionDoc(e Expression, parentPrecedence precedence) prettier.Doc {
+	if e == nil {
+		return prettier.Text("")
+	}
+
 	doc := e.Doc()
 	subPrecedence := e.precedence()
 	if parentPrecedence <= subPrecedence {
@@ -1241,7 +1276,7 @@ func parenthesizedExpressionDoc(e Expression, parentPrecedence precedence) prett
 
 func (e *UnaryExpression) Doc() prettier.Doc {
 	return prettier.Concat{
-		prettier.Text(e.Operation.Symbol()),
+		e.Operation.Doc(),
 		parenthesizedExpressionDoc(
 			e.Expression,
 			e.precedence(),
@@ -1323,22 +1358,40 @@ func (e *BinaryExpression) Doc() prettier.Doc {
 	isLeftAssociative := e.IsLeftAssociative()
 	isRightAssociative := !isLeftAssociative
 
-	leftDoc := e.Left.Doc()
-	leftPrecedence := e.Left.precedence()
+	var leftDoc prettier.Doc
+	if e.Left == nil {
+		leftDoc = prettier.Text("")
+	} else {
+		leftDoc = e.Left.Doc()
 
-	if (isLeftAssociative && ownPrecedence > leftPrecedence) ||
-		(isRightAssociative && ownPrecedence >= leftPrecedence) {
+		leftPrecedence := e.Left.precedence()
 
-		leftDoc = prettier.WrapParentheses(leftDoc, prettier.SoftLine{})
+		if (isLeftAssociative && ownPrecedence > leftPrecedence) ||
+			(isRightAssociative && ownPrecedence >= leftPrecedence) {
+
+			leftDoc = prettier.WrapParentheses(
+				leftDoc,
+				prettier.SoftLine{},
+			)
+		}
 	}
 
-	rightDoc := e.Right.Doc()
-	rightPrecedence := e.Right.precedence()
+	var rightDoc prettier.Doc
+	if e.Right == nil {
+		rightDoc = prettier.Text("")
+	} else {
+		rightDoc = e.Right.Doc()
 
-	if (isLeftAssociative && ownPrecedence >= rightPrecedence) ||
-		(isRightAssociative && ownPrecedence > rightPrecedence) {
+		rightPrecedence := e.Right.precedence()
 
-		rightDoc = prettier.WrapParentheses(rightDoc, prettier.SoftLine{})
+		if (isLeftAssociative && ownPrecedence >= rightPrecedence) ||
+			(isRightAssociative && ownPrecedence > rightPrecedence) {
+
+			rightDoc = prettier.WrapParentheses(
+				rightDoc,
+				prettier.SoftLine{},
+			)
+		}
 	}
 
 	return prettier.Group{
@@ -1347,7 +1400,7 @@ func (e *BinaryExpression) Doc() prettier.Doc {
 				Doc: leftDoc,
 			},
 			prettier.Line{},
-			prettier.Text(e.Operation.Symbol()),
+			e.Operation.Doc(),
 			prettier.Space,
 			prettier.Group{
 				Doc: rightDoc,
@@ -1463,7 +1516,7 @@ func (e *FunctionExpression) String() string {
 	return Prettier(e)
 }
 
-var functionFunKeywordSpaceDoc prettier.Doc = prettier.Text("fun ")
+var functionFunKeywordDoc prettier.Doc = prettier.Text("fun")
 
 func FunctionDocument(
 	access Access,
@@ -1481,19 +1534,15 @@ func FunctionDocument(
 	var signatureDoc prettier.Concat
 
 	if typeParameterList != nil {
-		typeParameterListDoc := typeParameterList.Doc()
-		if typeParameterListDoc != nil {
-			signatureDoc = append(
-				signatureDoc,
-				typeParameterListDoc,
-			)
-		}
+		signatureDoc = append(
+			signatureDoc,
+			typeParameterList.Doc(),
+		)
 	}
 
 	// NOTE: not all functions have a parameter list,
 	// e.g. the `init` (initializer, special function)
 	if parameterList != nil {
-
 		signatureDoc = append(
 			signatureDoc,
 			parameterList.Doc(),
@@ -1515,7 +1564,7 @@ func FunctionDocument(
 	if access != AccessNotSpecified {
 		doc = append(
 			doc,
-			prettier.Text(access.Keyword()),
+			docOrEmpty(access),
 			prettier.HardLine{},
 		)
 	}
@@ -1524,7 +1573,7 @@ func FunctionDocument(
 		doc = append(
 			doc,
 			prettier.Text(purity.Keyword()),
-			prettier.Space,
+			prettier.Line{},
 		)
 	}
 
@@ -1532,7 +1581,7 @@ func FunctionDocument(
 		doc = append(
 			doc,
 			staticKeywordDoc,
-			prettier.Space,
+			prettier.Line{},
 		)
 	}
 
@@ -1540,14 +1589,15 @@ func FunctionDocument(
 		doc = append(
 			doc,
 			nativeKeywordDoc,
-			prettier.Space,
+			prettier.Line{},
 		)
 	}
 
 	if includeKeyword {
 		doc = append(
 			doc,
-			functionFunKeywordSpaceDoc,
+			functionFunKeywordDoc,
+			prettier.Line{},
 		)
 	}
 
@@ -1568,12 +1618,10 @@ func FunctionDocument(
 	}
 
 	if block != nil {
-		blockDoc := block.Doc()
-
 		doc = append(
 			doc,
 			prettier.Space,
-			blockDoc,
+			block.Doc(),
 		)
 	}
 
@@ -1678,9 +1726,9 @@ func (e *CastingExpression) Doc() prettier.Doc {
 				Doc: doc,
 			},
 			prettier.Line{},
-			prettier.Text(e.Operation.Symbol()),
+			e.Operation.Doc(),
 			prettier.Line{},
-			e.TypeAnnotation.Doc(),
+			docOrEmpty(e.TypeAnnotation),
 		},
 	}
 }
@@ -1754,7 +1802,7 @@ var createKeywordSpaceDoc = prettier.Text("create ")
 func (e *CreateExpression) Doc() prettier.Doc {
 	return prettier.Concat{
 		createKeywordSpaceDoc,
-		e.InvocationExpression.Doc(),
+		docOrEmpty(e.InvocationExpression),
 	}
 }
 
@@ -2105,7 +2153,7 @@ func (v *VoidExpression) StartPosition() Position {
 	return v.StartPos
 }
 
-func (v *VoidExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
+func (v *VoidExpression) EndPosition(_ common.MemoryGauge) Position {
 	return v.EndPos
 }
 
@@ -2113,7 +2161,7 @@ func (v *VoidExpression) ElementType() ElementType {
 	return ElementTypeVoidExpression
 }
 
-func (v *VoidExpression) Walk(walkChild func(Element)) {
+func (v *VoidExpression) Walk(_ func(Element)) {
 	// NO-OP
 }
 

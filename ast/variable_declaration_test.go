@@ -276,6 +276,48 @@ func TestVariableDeclaration_Doc(t *testing.T) {
 			decl.Doc(),
 		)
 	})
+
+	t.Run("without value and transfer", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &VariableDeclaration{
+			Access:     AccessNotSpecified,
+			IsConstant: true,
+			Identifier: Identifier{
+				Identifier: "foo",
+			},
+		}
+
+		require.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("let"),
+					prettier.Text(" "),
+					prettier.Group{
+						Doc: prettier.Concat{
+							prettier.Group{
+								Doc: prettier.Concat{
+									prettier.Text("foo"),
+								},
+							},
+							prettier.Text(" "),
+							prettier.Text(""),
+							prettier.Group{
+								Doc: prettier.Indent{
+									Doc: prettier.Concat{
+										prettier.Line{},
+										prettier.Text(""),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			decl.Doc(),
+		)
+	})
 }
 
 func TestVariableDeclaration_String(t *testing.T) {
@@ -350,6 +392,24 @@ let foo: @AB <- true`,
 		require.Equal(t,
 			`access(all)
 let foo: @AB <- true <- false`,
+			decl.String(),
+		)
+	})
+
+	t.Run("without value and transfer", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &VariableDeclaration{
+			Access:     AccessNotSpecified,
+			IsConstant: true,
+			Identifier: Identifier{
+				Identifier: "foo",
+			},
+		}
+
+		require.Equal(t,
+			"let foo  ",
 			decl.String(),
 		)
 	})
