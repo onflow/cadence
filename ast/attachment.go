@@ -112,12 +112,6 @@ func (d *AttachmentDeclaration) ConformanceList() []*NominalType {
 
 const attachmentStatementDoc = prettier.Text("attachment")
 const attachmentStatementForDoc = prettier.Text("for")
-const attachmentConformancesSeparatorDoc = prettier.Text(":")
-
-var attachmentConformanceSeparatorDoc prettier.Doc = prettier.Concat{
-	prettier.Text(","),
-	prettier.Line{},
-}
 
 func (d *AttachmentDeclaration) Doc() prettier.Doc {
 	var doc prettier.Concat
@@ -133,18 +127,18 @@ func (d *AttachmentDeclaration) Doc() prettier.Doc {
 	doc = append(
 		doc,
 		attachmentStatementDoc,
-		prettier.Space,
+		prettier.Line{},
 		prettier.Text(d.Identifier.Identifier),
-		prettier.Space,
+		prettier.Line{},
 		attachmentStatementForDoc,
-		prettier.Space,
-		d.BaseType.Doc(),
+		prettier.Line{},
+		docOrEmpty(d.BaseType),
 	)
-	var membersDoc prettier.Concat
 
-	membersDoc = append(membersDoc, prettier.Line{}, d.Members.Doc())
+	membersDoc := d.Members.Doc()
 
 	if len(d.Conformances) > 0 {
+
 		conformancesDoc := prettier.Concat{
 			prettier.Line{},
 		}
@@ -153,13 +147,13 @@ func (d *AttachmentDeclaration) Doc() prettier.Doc {
 			if i > 0 {
 				conformancesDoc = append(
 					conformancesDoc,
-					attachmentConformanceSeparatorDoc,
+					compositeConformanceSeparatorDoc,
 				)
 			}
 
 			conformancesDoc = append(
 				conformancesDoc,
-				conformance.Doc(),
+				docOrEmpty(conformance),
 			)
 		}
 
@@ -175,7 +169,7 @@ func (d *AttachmentDeclaration) Doc() prettier.Doc {
 
 		doc = append(
 			doc,
-			attachmentConformancesSeparatorDoc,
+			compositeConformancesSeparatorDoc,
 			prettier.Group{
 				Doc: prettier.Indent{
 					Doc: conformancesDoc,
@@ -257,12 +251,12 @@ const attachExpressionToDoc = prettier.Text("to")
 func (e *AttachExpression) Doc() prettier.Doc {
 	return prettier.Concat{
 		attachExpressionDoc,
-		prettier.Space,
-		e.Attachment.Doc(),
-		prettier.Space,
+		prettier.Line{},
+		docOrEmpty(e.Attachment),
+		prettier.Line{},
 		attachExpressionToDoc,
-		prettier.Space,
-		e.Base.Doc(),
+		prettier.Line{},
+		docOrEmpty(e.Base),
 	}
 }
 
@@ -340,12 +334,12 @@ const removeStatementFromKeywordDoc = prettier.Text("from")
 func (s *RemoveStatement) Doc() prettier.Doc {
 	return prettier.Concat{
 		removeStatementRemoveKeywordDoc,
-		prettier.Space,
-		s.Attachment.Doc(),
-		prettier.Space,
+		prettier.Line{},
+		docOrEmpty(s.Attachment),
+		prettier.Line{},
 		removeStatementFromKeywordDoc,
-		prettier.Space,
-		s.Value.Doc(),
+		prettier.Line{},
+		docOrEmpty(s.Value),
 	}
 }
 
