@@ -8591,14 +8591,17 @@ func TestEnumLookupFailure(t *testing.T) {
 
 	result, err := CompileAndInvoke(t,
 		`
-            enum Test: UInt8 {
-                case a
-                case b
-                case c
-            }
+			contract C {
+				enum Test: UInt8 {
+					case a
+					case b
+					case c
+				}
+			}
+            
 
             fun test(): AnyStruct {
-                return Test(rawValue: 5)
+                return C.Test(rawValue: 5)
             }
         `,
 		"test",
