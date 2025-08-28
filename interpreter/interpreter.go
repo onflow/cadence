@@ -284,7 +284,7 @@ func NewInterpreterWithSharedState(
 ) (*Interpreter, error) {
 
 	var tracer Tracer
-	if sharedState.Config.TracingEnabled {
+	if TracingEnabled {
 		tracer = CallbackTracer(sharedState.Config.OnRecordTrace)
 	}
 
@@ -6068,10 +6068,6 @@ func (interpreter *Interpreter) OnResourceOwnerChange(resource *CompositeValue, 
 	}
 
 	onResourceOwnerChange(interpreter, resource, oldOwner, newOwner)
-}
-
-func (interpreter *Interpreter) TracingEnabled() bool {
-	return interpreter.Tracer != nil
 }
 
 func (interpreter *Interpreter) IsTypeInfoRecovered(location common.Location) bool {

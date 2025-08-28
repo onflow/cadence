@@ -239,7 +239,7 @@ func (vm *VM) pushCallFrame(functionValue CompiledFunctionValue, receiver Value,
 	}
 
 	var startTime time.Time
-	if vm.context.TracingEnabled() {
+	if interpreter.TracingEnabled {
 		startTime = time.Now()
 	}
 
@@ -259,7 +259,7 @@ func (vm *VM) pushCallFrame(functionValue CompiledFunctionValue, receiver Value,
 
 func (vm *VM) popCallFrame() {
 
-	if vm.context.TracingEnabled() {
+	if interpreter.TracingEnabled {
 		startTime := vm.callFrame.startTime
 		functionName := vm.callFrame.function.Function.QualifiedName
 		defer func() {
@@ -978,7 +978,7 @@ func invokeFunction(
 		}
 
 		var result Value
-		if context.TracingEnabled() {
+		if interpreter.TracingEnabled {
 			startTime := time.Now()
 			result = functionValue.Function(context, typeArguments, receiver, arguments...)
 			context.ReportFunctionTrace(

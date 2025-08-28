@@ -363,7 +363,6 @@ func interpreterFTTransfer(tb testing.TB) {
 		AccountHandler: func(context interpreter.AccountCreationContext, address interpreter.AddressValue) interpreter.Value {
 			return stdlib.NewAccountValue(context, nil, address)
 		},
-		TracingEnabled: true,
 		OnRecordTrace: func(operationName string, duration time.Duration, attrs []attribute.KeyValue) {
 			if enablePrintTrace {
 				printTrace(operationName, duration, attrs)
