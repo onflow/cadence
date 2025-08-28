@@ -1,3 +1,5 @@
+//go:build cadence_tracing
+
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -15,22 +17,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package interpreter
 
-package runtime
-
-import (
-	"github.com/onflow/cadence/interpreter"
-)
-
-// Config is a constant/read-only configuration of an environment.
-type Config struct {
-	Debugger *interpreter.Debugger
-	// StackDepthLimit specifies the maximum depth for call stacks
-	StackDepthLimit uint64
-	// AtreeValidationEnabled configures if atree validation is enabled
-	AtreeValidationEnabled bool
-	// ResourceOwnerChangeCallbackEnabled configures if the resource owner change callback is enabled
-	ResourceOwnerChangeHandlerEnabled bool
-	// CoverageReport enables and collects coverage reporting metrics
-	CoverageReport *CoverageReport
-}
+const TracingEnabled = true

@@ -150,7 +150,7 @@ func (e *vmEnvironment) newVMConfig() *vm.Config {
 	conf.ElaborationResolver = e.resolveElaboration
 	conf.StackDepthLimit = defaultStackDepthLimit
 
-	if e.config.TracingEnabled {
+	if interpreter.TracingEnabled {
 		conf.Tracer = interpreter.CallbackTracer(newOnRecordTraceHandler(&e.Interface))
 	}
 

@@ -143,7 +143,6 @@ func (e *InterpreterEnvironment) NewInterpreterConfig() *interpreter.Config {
 		OnResourceOwnerChange:          e.newResourceOwnerChangedHandler(),
 		CompositeTypeHandler:           e.newCompositeTypeHandler(),
 		CompositeValueFunctionsHandler: e.newCompositeValueFunctionsHandler(),
-		TracingEnabled:                 e.config.TracingEnabled,
 		AtreeValueValidationEnabled:    e.config.AtreeValidationEnabled,
 		// NOTE: ignore e.config.AtreeValidationEnabled here,
 		// and disable storage validation after each value modification.
