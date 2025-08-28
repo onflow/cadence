@@ -7577,10 +7577,10 @@ func TestCompileEnum(t *testing.T) {
 	require.Len(t, functions, 6)
 
 	const (
-		testFuncIndex = iota
+		testLookupFuncIndex = iota
+		testFuncIndex
 		test2FuncIndex
 		testConstructorFuncIndex
-		testLookupFuncIndex
 		// Next two indexes are for builtin methods (i.e: getType, isInstance)
 		_
 		_
@@ -7590,10 +7590,10 @@ func TestCompileEnum(t *testing.T) {
 		testAGlobalIndex = iota
 		testBGlobalIndex
 		testCGlobalIndex
+		testLookupGlobalIndex
 		testGlobalIndex
 		test2GlobalIndex
 		testConstructorGlobalIndex
-		testLookupGlobalIndex
 	)
 
 	{
@@ -7616,7 +7616,7 @@ func TestCompileEnum(t *testing.T) {
 				// let self = Test()
 				opcode.InstructionNewComposite{
 					Kind: common.CompositeKindEnum,
-					Type: 1,
+					Type: 3,
 				},
 				opcode.InstructionSetLocal{Local: selfIndex},
 
@@ -7624,8 +7624,8 @@ func TestCompileEnum(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: selfIndex},
 				opcode.InstructionGetLocal{Local: rawValueIndex},
-				opcode.InstructionTransferAndConvert{Type: 2},
-				opcode.InstructionSetField{FieldName: 0, AccessedType: 1},
+				opcode.InstructionTransferAndConvert{Type: 4},
+				opcode.InstructionSetField{FieldName: 3, AccessedType: 3},
 
 				// return self
 				opcode.InstructionGetLocal{Local: selfIndex},
@@ -7654,40 +7654,40 @@ func TestCompileEnum(t *testing.T) {
 
 				// case 1:
 				opcode.InstructionGetLocal{Local: tempIndex},
-				opcode.InstructionGetConstant{Constant: 1},
+				opcode.InstructionGetConstant{Constant: 0},
 				opcode.InstructionEqual{},
 				opcode.InstructionJumpIfFalse{Target: 12},
 
 				// return Test.a
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: testAGlobalIndex},
-				opcode.InstructionTransferAndConvert{Type: 5},
+				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionReturnValue{},
 				opcode.InstructionJump{Target: 34},
 
 				// case 2:
 				opcode.InstructionGetLocal{Local: tempIndex},
-				opcode.InstructionGetConstant{Constant: 2},
+				opcode.InstructionGetConstant{Constant: 1},
 				opcode.InstructionEqual{},
 				opcode.InstructionJumpIfFalse{Target: 21},
 
 				// return Test.b
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: testBGlobalIndex},
-				opcode.InstructionTransferAndConvert{Type: 5},
+				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionReturnValue{},
 				opcode.InstructionJump{Target: 34},
 
 				// case 3:
 				opcode.InstructionGetLocal{Local: tempIndex},
-				opcode.InstructionGetConstant{Constant: 3},
+				opcode.InstructionGetConstant{Constant: 2},
 				opcode.InstructionEqual{},
 				opcode.InstructionJumpIfFalse{Target: 30},
 
 				// return Test.c
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: testCGlobalIndex},
-				opcode.InstructionTransferAndConvert{Type: 5},
+				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionReturnValue{},
 				opcode.InstructionJump{Target: 34},
 
@@ -7695,7 +7695,7 @@ func TestCompileEnum(t *testing.T) {
 				// return nil
 				opcode.InstructionStatement{},
 				opcode.InstructionNil{},
-				opcode.InstructionTransferAndConvert{Type: 5},
+				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionReturnValue{},
 
 				// return
@@ -7709,8 +7709,8 @@ func TestCompileEnum(t *testing.T) {
 		[]opcode.Instruction{
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: testBGlobalIndex},
-			opcode.InstructionGetField{FieldName: 0, AccessedType: 1},
-			opcode.InstructionTransferAndConvert{Type: 2},
+			opcode.InstructionGetField{FieldName: 3, AccessedType: 3},
+			opcode.InstructionTransferAndConvert{Type: 4},
 			opcode.InstructionReturnValue{},
 		},
 		functions[testFuncIndex].Code,
@@ -7725,7 +7725,7 @@ func TestCompileEnum(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: testLookupGlobalIndex},
 				opcode.InstructionGetLocal{Local: rawValueIndex},
-				opcode.InstructionTransferAndConvert{Type: 2},
+				opcode.InstructionTransferAndConvert{Type: 4},
 				opcode.InstructionInvoke{ArgCount: 1},
 				opcode.InstructionDrop{},
 				opcode.InstructionReturn{},
@@ -7737,9 +7737,9 @@ func TestCompileEnum(t *testing.T) {
 	assert.Equal(t,
 		[]opcode.Instruction{
 			opcode.InstructionGetGlobal{Global: testConstructorGlobalIndex},
-			opcode.InstructionGetConstant{Constant: 1},
+			opcode.InstructionGetConstant{Constant: 0},
 			opcode.InstructionInvoke{ArgCount: 1},
-			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionTransferAndConvert{Type: 3},
 			opcode.InstructionReturnValue{},
 		},
 		variables[testAVarIndex].Getter.Code,
@@ -7748,9 +7748,9 @@ func TestCompileEnum(t *testing.T) {
 	assert.Equal(t,
 		[]opcode.Instruction{
 			opcode.InstructionGetGlobal{Global: testConstructorGlobalIndex},
-			opcode.InstructionGetConstant{Constant: 2},
+			opcode.InstructionGetConstant{Constant: 1},
 			opcode.InstructionInvoke{ArgCount: 1},
-			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionTransferAndConvert{Type: 3},
 			opcode.InstructionReturnValue{},
 		},
 		variables[testBVarIndex].Getter.Code,
@@ -7759,9 +7759,9 @@ func TestCompileEnum(t *testing.T) {
 	assert.Equal(t,
 		[]opcode.Instruction{
 			opcode.InstructionGetGlobal{Global: testConstructorGlobalIndex},
-			opcode.InstructionGetConstant{Constant: 3},
+			opcode.InstructionGetConstant{Constant: 2},
 			opcode.InstructionInvoke{ArgCount: 1},
-			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionTransferAndConvert{Type: 3},
 			opcode.InstructionReturnValue{},
 		},
 		variables[testCVarIndex].Getter.Code,
@@ -7769,10 +7769,6 @@ func TestCompileEnum(t *testing.T) {
 
 	assert.Equal(t,
 		[]constant.Constant{
-			{
-				Data: []byte("rawValue"),
-				Kind: constant.String,
-			},
 			{
 				Data: []byte{0x0},
 				Kind: constant.UInt8,
@@ -7784,6 +7780,10 @@ func TestCompileEnum(t *testing.T) {
 			{
 				Data: []byte{0x2},
 				Kind: constant.UInt8,
+			},
+			{
+				Data: []byte("rawValue"),
+				Kind: constant.String,
 			},
 		},
 		program.Constants,
