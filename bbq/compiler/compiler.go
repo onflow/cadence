@@ -766,13 +766,6 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 
 		c.addGlobal(constructorName)
 
-		if declaration.CompositeKind == common.CompositeKindEnum {
-			// For enums, also reserve a global for the "lookup function".
-			// For example, for `enum E: UInt8 { case A; case B }`, the lookup function is `fun E(rawValue: UInt8): E?`.
-			functionName := commons.TypeQualifier(compositeType)
-			c.addGlobal(functionName)
-		}
-
 		members := declaration.Members
 
 		c.reserveFunctionGlobals(
@@ -3206,28 +3199,9 @@ func (c *Compiler[_, _]) VisitCompositeDeclaration(declaration *ast.CompositeDec
 		c.compositeTypeStack.pop()
 	}()
 
-	// Compile members
-	hasInit := false
+	// Compile special function members
 	for _, specialFunc := range declaration.Members.SpecialFunctions() {
-		if specialFunc.Kind == common.DeclarationKindInitializer {
-			hasInit = true
-		}
 		c.compileDeclaration(specialFunc)
-	}
-
-	// If the initializer is not declared, generate
-	// - a synthetic initializer for enum types, otherwise
-	// - an empty initializer
-	if !hasInit {
-		if compositeType.Kind == common.CompositeKindEnum {
-			c.generateEnumInit(compositeType)
-			c.generateEnumLookup(
-				compositeType,
-				declaration.Members.EnumCases(),
-			)
-		} else {
-			c.generateEmptyInit()
-		}
 	}
 
 	// Visit members.
@@ -3528,51 +3502,6 @@ func (c *Compiler[_, _]) declareParameters(paramList *ast.ParameterList, declare
 			c.currentFunction.declareLocal(parameterName)
 		}
 	}
-}
-
-func (c *Compiler[_, _]) generateEmptyInit() {
-	c.DesugaredElaboration.SetFunctionDeclarationFunctionType(
-		emptyInitializer.FunctionDeclaration,
-		emptyInitializerFuncType,
-	)
-	c.VisitSpecialFunctionDeclaration(emptyInitializer)
-}
-
-func (c *Compiler[_, _]) generateEnumInit(enumType *sema.CompositeType) {
-	enumInitializer := newEnumInitializer(c.Config.MemoryGauge, enumType, c.DesugaredElaboration)
-	enumInitializerFuncType := newEnumInitializerFuncType(enumType.EnumRawType)
-
-	c.DesugaredElaboration.SetFunctionDeclarationFunctionType(
-		enumInitializer.FunctionDeclaration,
-		enumInitializerFuncType,
-	)
-	c.VisitSpecialFunctionDeclaration(enumInitializer)
-}
-
-func (c *Compiler[_, _]) generateEnumLookup(enumType *sema.CompositeType, enumCases []*ast.EnumCaseDeclaration) {
-	memoryGauge := c.Config.MemoryGauge
-
-	enumLookup := newEnumLookup(
-		memoryGauge,
-		enumType,
-		enumCases,
-		c.DesugaredElaboration,
-	)
-	enumLookupFuncType := newEnumLookupFuncType(memoryGauge, enumType)
-
-	c.DesugaredElaboration.SetFunctionDeclarationFunctionType(
-		enumLookup,
-		enumLookupFuncType,
-	)
-
-	// TODO: improve
-	previousCompositeTypeStack := c.compositeTypeStack
-	c.compositeTypeStack = &Stack[sema.CompositeKindedType]{}
-	defer func() {
-		c.compositeTypeStack = previousCompositeTypeStack
-	}()
-
-	c.VisitFunctionDeclaration(enumLookup, false)
 }
 
 func (c *Compiler[_, _]) compilePotentiallyInheritedCode(statement ast.Statement, f func()) {

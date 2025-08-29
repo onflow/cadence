@@ -41,56 +41,6 @@ type ExternalInterface struct {
 var _ Interface = ExternalInterface{}
 var _ Metrics = ExternalInterface{}
 
-func (e ExternalInterface) MeterMemory(usage common.MemoryUsage) (err error) {
-	errors.WrapPanic(func() {
-		err = e.Interface.MeterMemory(usage)
-	})
-	if err != nil {
-		err = interpreter.WrappedExternalError(err)
-	}
-	return
-}
-
-func (e ExternalInterface) MeterComputation(usage common.ComputationUsage) (err error) {
-	errors.WrapPanic(func() {
-		err = e.Interface.MeterComputation(usage)
-	})
-	if err != nil {
-		err = interpreter.WrappedExternalError(err)
-	}
-	return
-}
-
-func (e ExternalInterface) ComputationUsed() (usage uint64, err error) {
-	errors.WrapPanic(func() {
-		usage, err = e.Interface.ComputationUsed()
-	})
-	if err != nil {
-		err = interpreter.WrappedExternalError(err)
-	}
-	return
-}
-
-func (e ExternalInterface) MemoryUsed() (usage uint64, err error) {
-	errors.WrapPanic(func() {
-		usage, err = e.Interface.MemoryUsed()
-	})
-	if err != nil {
-		err = interpreter.WrappedExternalError(err)
-	}
-	return
-}
-
-func (e ExternalInterface) InteractionUsed() (usage uint64, err error) {
-	errors.WrapPanic(func() {
-		usage, err = e.Interface.InteractionUsed()
-	})
-	if err != nil {
-		err = interpreter.WrappedExternalError(err)
-	}
-	return
-}
-
 func (e ExternalInterface) ResolveLocation(
 	identifiers []Identifier,
 	location Location,

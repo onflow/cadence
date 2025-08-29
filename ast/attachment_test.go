@@ -116,61 +116,50 @@ func TestAttachmentDeclaration_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	decl := &AttachmentDeclaration{
-		Access: AccessAll,
-		Identifier: NewIdentifier(
-			nil,
-			"Foo",
-			Position{Offset: 1, Line: 2, Column: 3},
-		),
-		BaseType: NewNominalType(
-			nil,
-			NewIdentifier(
-				nil,
-				"Bar",
-				Position{Offset: 1, Line: 2, Column: 3},
-			),
-			[]Identifier{},
-		),
-		Conformances: []*NominalType{
-			{
-				Identifier: NewIdentifier(
-					nil,
-					"Baz",
-					Position{Offset: 1, Line: 2, Column: 3},
-				),
-			},
-		},
-		Members:   NewMembers(nil, []Declaration{}),
-		DocString: "test",
-		Range: Range{
-			StartPos: Position{Offset: 1, Line: 2, Column: 3},
-			EndPos:   Position{Offset: 4, Line: 5, Column: 6},
-		},
-	}
+	t.Run("with elements", func(t *testing.T) {
 
-	require.Equal(
-		t,
-		prettier.Concat{
-			prettier.Text("access(all)"),
-			prettier.HardLine{},
-			prettier.Text("attachment"),
-			prettier.Text(" "),
-			prettier.Text("Foo"),
-			prettier.Text(" "),
-			prettier.Text("for"),
-			prettier.Text(" "),
-			prettier.Text("Bar"),
-			prettier.Text(":"),
-			prettier.Group{
-				Doc: prettier.Indent{
-					Doc: prettier.Concat{
-						prettier.Line{},
-						prettier.Text("Baz"),
-						prettier.Dedent{
-							Doc: prettier.Concat{
-								prettier.Line{},
-								prettier.Concat{
+		t.Parallel()
+
+		decl := &AttachmentDeclaration{
+			Access: AccessAll,
+			Identifier: Identifier{
+				Identifier: "Foo",
+			},
+			BaseType: &NominalType{
+				Identifier: Identifier{
+					Identifier: "Bar",
+				},
+			},
+			Conformances: []*NominalType{
+				{
+					Identifier: Identifier{
+						Identifier: "Baz",
+					},
+				},
+			},
+			Members: NewMembers(nil, []Declaration{}),
+		}
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("access(all)"),
+				prettier.HardLine{},
+				prettier.Text("attachment"),
+				prettier.Space,
+				prettier.Text("Foo"),
+				prettier.Space,
+				prettier.Text("for"),
+				prettier.Space,
+				prettier.Text("Bar"),
+				prettier.Text(":"),
+				prettier.Group{
+					Doc: prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.Line{},
+							prettier.Text("Baz"),
+							prettier.Dedent{
+								Doc: prettier.Concat{
 									prettier.Line{},
 									prettier.Text("{}"),
 								},
@@ -179,15 +168,84 @@ func TestAttachmentDeclaration_Doc(t *testing.T) {
 					},
 				},
 			},
-		},
-		decl.Doc(),
-	)
+			decl.Doc(),
+		)
+	})
 
-	require.Equal(t,
-		`access(all)
-attachment Foo for Bar: Baz  {}`,
-		decl.String(),
-	)
+	t.Run("without elements", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &AttachmentDeclaration{}
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text(""),
+				prettier.HardLine{},
+				prettier.Text("attachment"),
+				prettier.Space,
+				prettier.Text(""),
+				prettier.Space,
+				prettier.Text("for"),
+				prettier.Space,
+				prettier.Text(""),
+				prettier.Space,
+				prettier.Text("{}"),
+			},
+			decl.Doc(),
+		)
+	})
+}
+
+func TestAttachmentDeclaration_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("with elements", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &AttachmentDeclaration{
+			Access: AccessAll,
+			Identifier: Identifier{
+				Identifier: "Foo",
+			},
+			BaseType: &NominalType{
+				Identifier: Identifier{
+					Identifier: "Bar",
+				},
+			},
+			Conformances: []*NominalType{
+				{
+					Identifier: Identifier{
+						Identifier: "Baz",
+					},
+				},
+			},
+			Members: NewMembers(nil, []Declaration{}),
+		}
+
+		require.Equal(t,
+			`access(all)
+attachment Foo for Bar: Baz {}`,
+			decl.String(),
+		)
+	})
+
+	t.Run("without elements", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &AttachmentDeclaration{}
+
+		require.Equal(
+			t,
+			`
+attachment  for  {}`,
+			decl.String(),
+		)
+	})
 }
 
 func TestAttachExpressionMarshallJSON(t *testing.T) {
@@ -269,51 +327,101 @@ func TestAttachExpression_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	decl := &AttachExpression{
-		Base: NewIdentifierExpression(
-			nil,
-			NewIdentifier(
-				nil,
-				"foo",
-				Position{Offset: 1, Line: 2, Column: 3},
-			),
-		),
-		Attachment: NewInvocationExpression(
-			nil,
-			NewIdentifierExpression(
-				nil,
-				NewIdentifier(
-					nil,
-					"bar",
-					Position{Offset: 1, Line: 2, Column: 3},
-				),
-			),
-			[]*TypeAnnotation{},
-			Arguments{},
-			Position{Offset: 1, Line: 2, Column: 3},
-			Position{Offset: 1, Line: 2, Column: 3},
-		),
-		StartPos: Position{Offset: 1, Line: 2, Column: 3},
-	}
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
 
-	require.Equal(
-		t,
-		prettier.Concat{
-			prettier.Text("attach"),
-			prettier.Text(" "),
-			prettier.Concat{
-				prettier.Text("bar"),
-				prettier.Text("()"),
+		decl := &AttachExpression{
+			Base: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foo",
+				},
 			},
-			prettier.Text(" "),
-			prettier.Text("to"),
-			prettier.Text(" "),
-			prettier.Text("foo"),
-		},
-		decl.Doc(),
-	)
+			Attachment: &InvocationExpression{
+				InvokedExpression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "bar",
+					},
+				},
+			},
+		}
 
-	require.Equal(t, "attach bar() to foo", decl.String())
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("attach"),
+				prettier.Space,
+				prettier.Concat{
+					prettier.Text("bar"),
+					prettier.Text("()"),
+				},
+				prettier.Space,
+				prettier.Text("to"),
+				prettier.Space,
+				prettier.Text("foo"),
+			},
+			decl.Doc(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		decl := &AttachExpression{}
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("attach"),
+				prettier.Space,
+				prettier.Text(""),
+				prettier.Space,
+				prettier.Text("to"),
+				prettier.Space,
+				prettier.Text(""),
+			},
+			decl.Doc(),
+		)
+	})
+}
+
+func TestAttachExpression_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+
+		decl := &AttachExpression{
+			Base: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foo",
+				},
+			},
+			Attachment: &InvocationExpression{
+				InvokedExpression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "bar",
+					},
+				},
+			},
+		}
+
+		require.Equal(t,
+			"attach bar() to foo",
+			decl.String(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		decl := &AttachExpression{}
+
+		require.Equal(t,
+			"attach  to ",
+			decl.String(),
+		)
+	})
 }
 
 func TestRemoveStatement_MarshallJSON(t *testing.T) {
@@ -381,40 +489,101 @@ func TestRemoveStatement_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	decl := &RemoveStatement{
-		Attachment: NewNominalType(
-			nil,
-			NewIdentifier(
-				nil,
-				"E",
-				Position{Offset: 1, Line: 2, Column: 3},
-			),
-			[]Identifier{},
-		),
-		Value: NewIdentifierExpression(
-			nil,
-			NewIdentifier(
-				nil,
-				"baz",
-				Position{Offset: 1, Line: 2, Column: 3},
-			),
-		),
-		StartPos: Position{Offset: 1, Line: 2, Column: 3},
-	}
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
 
-	require.Equal(
-		t,
-		prettier.Concat{
-			prettier.Text("remove"),
-			prettier.Text(" "),
-			prettier.Text("E"),
-			prettier.Text(" "),
-			prettier.Text("from"),
-			prettier.Text(" "),
-			prettier.Text("baz"),
-		},
-		decl.Doc(),
-	)
+		decl := &RemoveStatement{
+			Attachment: &NominalType{
+				Identifier: Identifier{
+					Identifier: "E",
+				},
+			},
+			Value: NewIdentifierExpression(
+				nil,
+				Identifier{
+					Identifier: "baz",
+				},
+			),
+		}
 
-	require.Equal(t, "remove E from baz", decl.String())
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("remove"),
+				prettier.Space,
+				prettier.Text("E"),
+				prettier.Space,
+				prettier.Text("from"),
+				prettier.Space,
+				prettier.Text("baz"),
+			},
+			decl.Doc(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		decl := &RemoveStatement{
+			Attachment: nil,
+			Value:      nil,
+		}
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("remove"),
+				prettier.Space,
+				prettier.Text(""),
+				prettier.Space,
+				prettier.Text("from"),
+				prettier.Space,
+				prettier.Text(""),
+			},
+			decl.Doc(),
+		)
+	})
+}
+
+func TestRemoveStatement_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+
+		decl := &RemoveStatement{
+			Attachment: &NominalType{
+				Identifier: Identifier{
+					Identifier: "E",
+				},
+			},
+			Value: NewIdentifierExpression(
+				nil,
+				Identifier{
+					Identifier: "baz",
+				},
+			),
+		}
+
+		require.Equal(t,
+			"remove E from baz",
+			decl.String(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		decl := &RemoveStatement{
+			Attachment: nil,
+			Value:      nil,
+		}
+
+		require.Equal(
+			t,
+			"remove  from ",
+			decl.String(),
+		)
+	})
 }

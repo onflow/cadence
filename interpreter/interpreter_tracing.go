@@ -50,8 +50,6 @@ const (
 )
 
 type Tracer interface {
-	TracingEnabled() bool
-
 	ReportFunctionTrace(functionName string, duration time.Duration)
 	ReportImportTrace(importPath string, duration time.Duration)
 
@@ -80,10 +78,6 @@ type Tracer interface {
 type CallbackTracer OnRecordTraceFunc
 
 var _ Tracer = CallbackTracer(nil)
-
-func (t CallbackTracer) TracingEnabled() bool {
-	return t != nil
-}
 
 func (t CallbackTracer) ReportFunctionTrace(functionName string, duration time.Duration) {
 	t(
@@ -398,10 +392,6 @@ func (t CallbackTracer) ReportCompositeValueRemoveMemberTrace(
 type NoOpTracer struct{}
 
 var _ Tracer = NoOpTracer{}
-
-func (NoOpTracer) TracingEnabled() bool {
-	return false
-}
 
 func (NoOpTracer) ReportFunctionTrace(_ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())

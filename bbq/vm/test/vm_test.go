@@ -8599,14 +8599,39 @@ func TestEnumLookupFailure(t *testing.T) {
 
 	result, err := CompileAndInvoke(t,
 		`
-            enum Test: UInt8 {
-                case a
-                case b
-                case c
-            }
+			enum Test: UInt8 {
+				case a
+				case b
+				case c
+			}
+            
 
             fun test(): AnyStruct {
                 return Test(rawValue: 5)
+            }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.Nil, result)
+}
+
+func TestNestedEnumLookupFailure(t *testing.T) {
+
+	t.Parallel()
+
+	result, err := CompileAndInvoke(t,
+		`
+			contract C {
+				enum Test: UInt8 {
+					case a
+					case b
+					case c
+				}
+			}
+
+            fun test(): AnyStruct {
+                return C.Test(rawValue: 5)
             }
         `,
 		"test",

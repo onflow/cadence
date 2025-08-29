@@ -74,7 +74,7 @@ func NewDictionaryValueWithAddress(
 
 	var v *DictionaryValue
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		defer func() {
@@ -164,7 +164,7 @@ func newDictionaryValueWithIterator(
 
 	var v *DictionaryValue
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		defer func() {
@@ -501,7 +501,7 @@ func (v *DictionaryValue) Destroy(context ResourceDestructionContext, locationRa
 		},
 	)
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -1132,7 +1132,7 @@ func (v *DictionaryValue) ConformsToStaticType(
 	results TypeConformanceResults,
 ) bool {
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -1292,7 +1292,7 @@ func (v *DictionaryValue) Transfer(
 		},
 	)
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -1502,7 +1502,7 @@ func (v *DictionaryValue) Clone(context ValueCloneContext) Value {
 
 func (v *DictionaryValue) DeepRemove(context ValueRemoveContext, hasNoParentContainer bool) {
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()

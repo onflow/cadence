@@ -65,7 +65,7 @@ func getMeterCompFuncWithExpectedKinds(
 	t *testing.T,
 	kinds []common.ComputationKind,
 	intensities []uint64,
-) computationGaugeFunc {
+) common.FunctionComputationGauge {
 	if len(kinds) != len(intensities) {
 		t.Fatal("size of kinds doesn't match size of intensities")
 	}

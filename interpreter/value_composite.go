@@ -136,7 +136,7 @@ func NewCompositeValue(
 
 	var v *CompositeValue
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		defer func() {
@@ -345,7 +345,7 @@ func (v *CompositeValue) Destroy(context ResourceDestructionContext, locationRan
 		},
 	)
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -465,7 +465,7 @@ func (v *CompositeValue) getBuiltinMember(context MemberAccessibleContext, locat
 
 func (v *CompositeValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -653,7 +653,7 @@ func (v *CompositeValue) RemoveMember(
 	name string,
 ) Value {
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -720,7 +720,7 @@ func (v *CompositeValue) SetMemberWithoutTransfer(
 
 	context.EnforceNotResourceDestruction(v.ValueID(), locationRange)
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -976,7 +976,7 @@ func (v *CompositeValue) ConformsToStaticType(
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -1195,7 +1195,7 @@ func (v *CompositeValue) Transfer(
 		},
 	)
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -1438,7 +1438,7 @@ func (v *CompositeValue) Clone(context ValueCloneContext) Value {
 }
 
 func (v *CompositeValue) DeepRemove(context ValueRemoveContext, hasNoParentContainer bool) {
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()

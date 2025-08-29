@@ -284,7 +284,7 @@ func NewInterpreterWithSharedState(
 ) (*Interpreter, error) {
 
 	var tracer Tracer
-	if sharedState.Config.TracingEnabled {
+	if TracingEnabled {
 		tracer = CallbackTracer(sharedState.Config.OnRecordTrace)
 	}
 
@@ -2468,10 +2468,10 @@ func (interpreter *Interpreter) declareInterface(
 	)
 
 	var defaultDestroyEventConstructor FunctionValue
-	if defautlDestroyEvent := interpreter.Program.Elaboration.DefaultDestroyDeclaration(declaration); defautlDestroyEvent != nil {
+	if defaultDestroyEvent := interpreter.Program.Elaboration.DefaultDestroyDeclaration(declaration); defaultDestroyEvent != nil {
 		var nestedVariable Variable
 		lexicalScope, nestedVariable = interpreter.declareCompositeValue(
-			defautlDestroyEvent,
+			defaultDestroyEvent,
 			lexicalScope,
 		)
 		defaultDestroyEventConstructor = nestedVariable.GetValue(interpreter).(FunctionValue)
@@ -5290,7 +5290,7 @@ func (interpreter *Interpreter) GetInterfaceType(
 		if interfaceType != nil {
 			return interfaceType, nil
 		}
-		return nil, &InterfaceMissingLocationError{
+		return nil, InterfaceMissingLocationError{
 			QualifiedIdentifier: qualifiedIdentifier,
 		}
 	}
@@ -6122,10 +6122,6 @@ func (interpreter *Interpreter) OnResourceOwnerChange(resource *CompositeValue, 
 	}
 
 	onResourceOwnerChange(interpreter, resource, oldOwner, newOwner)
-}
-
-func (interpreter *Interpreter) TracingEnabled() bool {
-	return interpreter.Tracer != nil
 }
 
 func (interpreter *Interpreter) IsTypeInfoRecovered(location common.Location) bool {

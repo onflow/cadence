@@ -1,3 +1,5 @@
+//go:build !cadence_tracing
+
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -16,25 +18,6 @@
  * limitations under the License.
  */
 
-package errors
+package interpreter
 
-import (
-	goRuntime "runtime"
-)
-
-func WrapPanic(f func()) {
-	defer func() {
-		if r := recover(); r != nil {
-			// don't wrap Go errors and internal errors
-			switch r := r.(type) {
-			case goRuntime.Error, InternalError:
-				panic(r)
-			case error:
-				panic(NewExternalError(r))
-			default:
-				panic(NewExternalNonError(r))
-			}
-		}
-	}()
-	f()
-}
+const TracingEnabled = false

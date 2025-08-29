@@ -1189,7 +1189,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 
 func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(invocationExpression *ast.InvocationExpression, implicitArg Value) Value {
 	// tracing
-	if interpreter.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 		invokedExpression := invocationExpression.InvokedExpression.String()
 		defer func() {

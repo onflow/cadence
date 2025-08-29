@@ -24,6 +24,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/turbolent/prettier"
 )
 
 func TestTransfer_MarshalJSON(t *testing.T) {
@@ -50,4 +51,118 @@ func TestTransfer_MarshalJSON(t *testing.T) {
         `,
 		string(actual),
 	)
+}
+
+func TestTransfer_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("unknown operation", func(t *testing.T) {
+		t.Parallel()
+
+		transfer := Transfer{
+			Operation: TransferOperationUnknown,
+		}
+
+		assert.Equal(t,
+			prettier.Text(""),
+			transfer.Doc(),
+		)
+	})
+
+	t.Run("copy operation", func(t *testing.T) {
+		t.Parallel()
+
+		transfer := Transfer{
+			Operation: TransferOperationCopy,
+		}
+
+		assert.Equal(t,
+			prettier.Text("="),
+			transfer.Doc(),
+		)
+	})
+
+	t.Run("move operation", func(t *testing.T) {
+		t.Parallel()
+
+		transfer := Transfer{
+			Operation: TransferOperationMove,
+		}
+
+		assert.Equal(t,
+			prettier.Text("<-"),
+			transfer.Doc(),
+		)
+	})
+
+	t.Run("forced move operation", func(t *testing.T) {
+		t.Parallel()
+
+		transfer := Transfer{
+			Operation: TransferOperationMoveForced,
+		}
+
+		assert.Equal(t,
+			prettier.Text("<-!"),
+			transfer.Doc(),
+		)
+	})
+}
+
+func TestTransfer_String(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("unknown operation", func(t *testing.T) {
+		t.Parallel()
+
+		transfer := Transfer{
+			Operation: TransferOperationUnknown,
+		}
+
+		assert.Equal(t,
+			"",
+			transfer.String(),
+		)
+	})
+
+	t.Run("copy operation", func(t *testing.T) {
+		t.Parallel()
+
+		transfer := Transfer{
+			Operation: TransferOperationCopy,
+		}
+
+		assert.Equal(t,
+			"=",
+			transfer.String(),
+		)
+	})
+
+	t.Run("move operation", func(t *testing.T) {
+		t.Parallel()
+
+		transfer := Transfer{
+			Operation: TransferOperationMove,
+		}
+
+		assert.Equal(t,
+			"<-",
+			transfer.String(),
+		)
+	})
+
+	t.Run("forced move operation", func(t *testing.T) {
+		t.Parallel()
+
+		transfer := Transfer{
+			Operation: TransferOperationMoveForced,
+		}
+
+		assert.Equal(t,
+			"<-!",
+			transfer.String(),
+		)
+	})
 }

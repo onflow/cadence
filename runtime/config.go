@@ -29,8 +29,6 @@ type Config struct {
 	StackDepthLimit uint64
 	// AtreeValidationEnabled configures if atree validation is enabled
 	AtreeValidationEnabled bool
-	// TracingEnabled configures if tracing is enabled
-	TracingEnabled bool
 	// ResourceOwnerChangeCallbackEnabled configures if the resource owner change callback is enabled
 	ResourceOwnerChangeHandlerEnabled bool
 	// CoverageReport enables and collects coverage reporting metrics
