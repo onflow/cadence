@@ -33,7 +33,9 @@ func _() {
 	_ = x[Word128-29]
 	_ = x[Word256-30]
 	_ = x[Fix64-36]
+	_ = x[Fix128-37]
 	_ = x[UFix64-44]
+	_ = x[UFix128-45]
 }
 
 const (
@@ -41,8 +43,8 @@ const (
 	_Kind_name_1 = "IntInt8Int16Int32Int64Int128Int256"
 	_Kind_name_2 = "UIntUInt8UInt16UInt32UInt64UInt128UInt256"
 	_Kind_name_3 = "Word8Word16Word32Word64Word128Word256"
-	_Kind_name_4 = "Fix64"
-	_Kind_name_5 = "UFix64"
+	_Kind_name_4 = "Fix64Fix128"
+	_Kind_name_5 = "UFix64UFix128"
 )
 
 var (
@@ -50,6 +52,8 @@ var (
 	_Kind_index_1 = [...]uint8{0, 3, 7, 12, 17, 22, 28, 34}
 	_Kind_index_2 = [...]uint8{0, 4, 9, 15, 21, 27, 34, 41}
 	_Kind_index_3 = [...]uint8{0, 5, 11, 17, 23, 30, 37}
+	_Kind_index_4 = [...]uint8{0, 5, 11}
+	_Kind_index_5 = [...]uint8{0, 6, 13}
 )
 
 func (i Kind) String() string {
@@ -65,10 +69,12 @@ func (i Kind) String() string {
 	case 25 <= i && i <= 30:
 		i -= 25
 		return _Kind_name_3[_Kind_index_3[i]:_Kind_index_3[i+1]]
-	case i == 36:
-		return _Kind_name_4
-	case i == 44:
-		return _Kind_name_5
+	case 36 <= i && i <= 37:
+		i -= 36
+		return _Kind_name_4[_Kind_index_4[i]:_Kind_index_4[i+1]]
+	case 44 <= i && i <= 45:
+		i -= 44
+		return _Kind_name_5[_Kind_index_5[i]:_Kind_index_5[i+1]]
 	default:
 		return "Kind(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
