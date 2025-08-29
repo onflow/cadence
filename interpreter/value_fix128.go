@@ -219,7 +219,8 @@ func (v Fix128Value) SaturatingPlus(context NumberValueArithmeticContext, other 
 	}
 
 	valueGetter := func() fix.Fix128 {
-		return performFix128SaturationArithmatic(fix.Fix128(v).Add, o)
+		result, err := fix.Fix128(v).Add(fix.Fix128(o))
+		return fix128SaturationArithmaticResult(result, err)
 	}
 
 	return NewFix128Value(context, valueGetter)
@@ -258,7 +259,8 @@ func (v Fix128Value) SaturatingMinus(context NumberValueArithmeticContext, other
 	}
 
 	valueGetter := func() fix.Fix128 {
-		return performFix128SaturationArithmatic(fix.Fix128(v).Sub, o)
+		result, err := fix.Fix128(v).Sub(fix.Fix128(o))
+		return fix128SaturationArithmaticResult(result, err)
 	}
 
 	return NewFix128Value(context, valueGetter)
@@ -276,7 +278,11 @@ func (v Fix128Value) Mul(context NumberValueArithmeticContext, other NumberValue
 	}
 
 	valueGetter := func() fix.Fix128 {
-		result, err := fix.Fix128(v).Mul(fix.Fix128(o))
+		result, err := fix.Fix128(v).Mul(
+			fix.Fix128(o),
+			fix.RoundTruncate,
+		)
+
 		// Should panic on overflow/underflow
 		handleFixedpointError(err, locationRange)
 		return result
@@ -297,7 +303,12 @@ func (v Fix128Value) SaturatingMul(context NumberValueArithmeticContext, other N
 	}
 
 	valueGetter := func() fix.Fix128 {
-		return performFix128SaturationArithmatic(fix.Fix128(v).Mul, o)
+		result, err := fix.Fix128(v).Mul(
+			fix.Fix128(o),
+			fix.RoundTruncate,
+		)
+
+		return fix128SaturationArithmaticResult(result, err)
 	}
 
 	return NewFix128Value(context, valueGetter)
@@ -315,7 +326,11 @@ func (v Fix128Value) Div(context NumberValueArithmeticContext, other NumberValue
 	}
 
 	valueGetter := func() fix.Fix128 {
-		result, err := fix.Fix128(v).Div(fix.Fix128(o))
+		result, err := fix.Fix128(v).Div(
+			fix.Fix128(o),
+			fix.RoundTruncate,
+		)
+
 		// Should panic on overflow/underflow
 		handleFixedpointError(err, locationRange)
 		return result
@@ -336,7 +351,11 @@ func (v Fix128Value) SaturatingDiv(context NumberValueArithmeticContext, other N
 	}
 
 	valueGetter := func() fix.Fix128 {
-		return performFix128SaturationArithmatic(fix.Fix128(v).Div, o)
+		result, err := fix.Fix128(v).Div(
+			fix.Fix128(o),
+			fix.RoundTruncate,
+		)
+		return fix128SaturationArithmaticResult(result, err)
 	}
 
 	return NewFix128Value(context, valueGetter)
@@ -629,28 +648,26 @@ func handleFixedpointError(err error, locationRange LocationRange) {
 	}
 }
 
-func performFix128SaturationArithmatic(
-	operation func(value fix.Fix128) (fix.Fix128, error),
-	otherValue Fix128Value,
+func fix128SaturationArithmaticResult(
+	result fix.Fix128,
+	err error,
 ) fix.Fix128 {
-	result, err := operation(fix.Fix128(otherValue))
-
-	if err != nil {
-		// Should not panic on overflow/underflow.
-
-		// TODO: Switch on error type, rather than the value.
-		// 	Need changes to the fixedpoint library.
-		switch err {
-		case fix.ErrOverflow:
-			return fix.Fix128Max
-		case fix.ErrNegOverflow:
-			return fix.Fix128Min
-		case fix.ErrUnderflow:
-			return fix.Fix128Zero
-		default:
-			panic(err)
-		}
+	if err == nil {
+		return result
 	}
 
-	return result
+	// Should not panic on overflow/underflow.
+
+	// TODO: Switch on error type, rather than the value.
+	// 	Need changes to the fixedpoint library.
+	switch err {
+	case fix.ErrOverflow:
+		return fix.Fix128Max
+	case fix.ErrNegOverflow:
+		return fix.Fix128Min
+	case fix.ErrUnderflow:
+		return fix.Fix128Zero
+	default:
+		panic(err)
+	}
 }

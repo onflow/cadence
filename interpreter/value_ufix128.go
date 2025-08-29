@@ -56,7 +56,7 @@ func NewUnmeteredUFix128ValueWithInteger(integer uint64, locationRange LocationR
 }
 
 func NewUnmeteredUFix128ValueWithIntegerAndScale(integer uint64, scale int64) UFix128Value {
-	bigInt :=  new(big.Int).SetUint64(integer)
+	bigInt := new(big.Int).SetUint64(integer)
 
 	bigInt = new(big.Int).Mul(
 		bigInt,
@@ -213,7 +213,8 @@ func (v UFix128Value) SaturatingPlus(context NumberValueArithmeticContext, other
 	}
 
 	valueGetter := func() fix.UFix128 {
-		return performUFix128SaturationArithmatic(fix.UFix128(v).Add, o)
+		result, err := fix.UFix128(v).Add(fix.UFix128(o))
+		return ufix128SaturationArithmaticResult(result, err)
 	}
 
 	return NewUFix128Value(context, valueGetter)
@@ -252,7 +253,8 @@ func (v UFix128Value) SaturatingMinus(context NumberValueArithmeticContext, othe
 	}
 
 	valueGetter := func() fix.UFix128 {
-		return performUFix128SaturationArithmatic(fix.UFix128(v).Sub, o)
+		result, err := fix.UFix128(v).Sub(fix.UFix128(o))
+		return ufix128SaturationArithmaticResult(result, err)
 	}
 
 	return NewUFix128Value(context, valueGetter)
@@ -270,7 +272,10 @@ func (v UFix128Value) Mul(context NumberValueArithmeticContext, other NumberValu
 	}
 
 	valueGetter := func() fix.UFix128 {
-		result, err := fix.UFix128(v).Mul(fix.UFix128(o))
+		result, err := fix.UFix128(v).Mul(
+			fix.UFix128(o),
+			fix.RoundTruncate,
+		)
 		// Should panic on overflow/underflow
 		handleFixedpointError(err, locationRange)
 		return result
@@ -291,7 +296,11 @@ func (v UFix128Value) SaturatingMul(context NumberValueArithmeticContext, other 
 	}
 
 	valueGetter := func() fix.UFix128 {
-		return performUFix128SaturationArithmatic(fix.UFix128(v).Mul, o)
+		result, err := fix.UFix128(v).Mul(
+			fix.UFix128(o),
+			fix.RoundTruncate,
+		)
+		return ufix128SaturationArithmaticResult(result, err)
 	}
 
 	return NewUFix128Value(context, valueGetter)
@@ -309,7 +318,10 @@ func (v UFix128Value) Div(context NumberValueArithmeticContext, other NumberValu
 	}
 
 	valueGetter := func() fix.UFix128 {
-		result, err := fix.UFix128(v).Div(fix.UFix128(o))
+		result, err := fix.UFix128(v).Div(
+			fix.UFix128(o),
+			fix.RoundTruncate,
+		)
 		// Should panic on overflow/underflow
 		handleFixedpointError(err, locationRange)
 		return result
@@ -330,7 +342,11 @@ func (v UFix128Value) SaturatingDiv(context NumberValueArithmeticContext, other 
 	}
 
 	valueGetter := func() fix.UFix128 {
-		return performUFix128SaturationArithmatic(fix.UFix128(v).Div, o)
+		result, err := fix.UFix128(v).Div(
+			fix.UFix128(o),
+			fix.RoundTruncate,
+		)
+		return ufix128SaturationArithmaticResult(result, err)
 	}
 
 	return NewUFix128Value(context, valueGetter)
@@ -604,28 +620,26 @@ func (v UFix128Value) ToBigInt() *big.Int {
 	return fixedpoint.UFix128ToBigInt(fix.UFix128(v))
 }
 
-func performUFix128SaturationArithmatic(
-	operation func(value fix.UFix128) (fix.UFix128, error),
-	otherValue UFix128Value,
+func ufix128SaturationArithmaticResult(
+	result fix.UFix128,
+	err error,
 ) fix.UFix128 {
-	result, err := operation(fix.UFix128(otherValue))
-
-	if err != nil {
-		// Should not panic on overflow/underflow.
-
-		// TODO: Switch on error type, rather than the value.
-		// 	Need changes to the fixedpoint library.
-		switch err {
-		case fix.ErrOverflow:
-			return fixedpoint.UFix128TypeMax
-		case fix.ErrNegOverflow:
-			return fixedpoint.UFix128TypeMin
-		case fix.ErrUnderflow:
-			return fix.UFix128Zero
-		default:
-			panic(err)
-		}
+	if err == nil {
+		return result
 	}
 
-	return result
+	// Should not panic on overflow/underflow.
+
+	// TODO: Switch on error type, rather than the value.
+	// 	Need changes to the fixedpoint library.
+	switch err {
+	case fix.ErrOverflow:
+		return fixedpoint.UFix128TypeMax
+	case fix.ErrNegOverflow:
+		return fixedpoint.UFix128TypeMin
+	case fix.ErrUnderflow:
+		return fix.UFix128Zero
+	default:
+		panic(err)
+	}
 }
