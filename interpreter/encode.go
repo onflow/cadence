@@ -516,7 +516,6 @@ func (v Fix128Value) Encode(e *atree.Encoder) error {
 	return e.CBOR.EncodeUint64(uint64(v.Lo))
 }
 
-
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
 	// !!! *WARNING* !!!
@@ -525,7 +524,7 @@ const (
 	encodedUFix128ValueLength = 2
 )
 
-// Encode encodes Fix128Value as
+// Encode encodes UFix128Value as
 //
 //	cbor.Tag{
 //			Number:  CBORTagUFix128Value,

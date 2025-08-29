@@ -916,7 +916,7 @@ func (d StorableDecoder) decodeUFix64() (UFix64Value, error) {
 }
 
 func (d StorableDecoder) decodeUFix128() (UFix128Value, error) {
-	const expectedLength = encodedFix128ValueLength
+	const expectedLength = encodedUFix128ValueLength
 
 	size, err := d.decoder.DecodeArrayHead()
 	if err != nil {

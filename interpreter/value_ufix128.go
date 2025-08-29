@@ -26,6 +26,8 @@ import (
 
 	"github.com/onflow/atree"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -33,7 +35,6 @@ import (
 	"github.com/onflow/cadence/format"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/values"
-	fix "github.com/onflow/fixed-point"
 )
 
 // UFix128Value
@@ -76,8 +77,8 @@ func NewUFix128Value(gauge common.MemoryGauge, valueGetter func() fix.UFix128) U
 	return NewUnmeteredUFix128Value(valueGetter())
 }
 
-func NewUnmeteredUFix128Value(UFix128 fix.UFix128) UFix128Value {
-	return UFix128Value(UFix128)
+func NewUnmeteredUFix128Value(ufix128 fix.UFix128) UFix128Value {
+	return UFix128Value(ufix128)
 }
 
 func NewUFix128ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
