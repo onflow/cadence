@@ -6847,7 +6847,6 @@ type UnconvertibleTypeError struct {
 var _ SemanticError = &UnconvertibleTypeError{}
 var _ errors.UserError = &UnconvertibleTypeError{}
 var _ errors.SecondaryError = &UnconvertibleTypeError{}
-var _ errors.HasDocumentationLink = &UnconvertibleTypeError{}
 
 func (e *UnconvertibleTypeError) isSemanticError() {}
 
@@ -6858,11 +6857,7 @@ func (e *UnconvertibleTypeError) Error() string {
 }
 
 func (*UnconvertibleTypeError) SecondaryError() string {
-	return "use explicit type conversion or check if the type supports conversion"
-}
-
-func (*UnconvertibleTypeError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/values-and-types"
+	return "report this to the Cadence team at https://github.com/onflow/cadence/issues/new"
 }
 
 // InvalidMappingAuthorizationError
