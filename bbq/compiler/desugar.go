@@ -128,10 +128,17 @@ func (d *Desugar) desugarDeclaration(declaration ast.Declaration) (result ast.De
 	return desugaredDeclaration, desugared
 }
 
-func desugarList[T any](
+type comparableElement interface {
+	comparable
+	ast.Element
+}
+
+func desugarList[T comparableElement](
 	list []T,
 	listEntryDesugarFunction func(entry T) (desugaredEntry T, desugared bool),
 ) (desugaredList []T, desugared bool) {
+
+	var zeroValue T
 
 	for index, entry := range list {
 		desugaredEntry, ok := listEntryDesugarFunction(entry)
@@ -142,7 +149,9 @@ func desugarList[T any](
 		// If at-least one entry is desugared already, then add the current entry
 		// to the desugared entries list (regardless whether the current entry was desugared or not).
 		if desugared {
-			desugaredList = append(desugaredList, desugaredEntry)
+			if desugaredEntry != zeroValue {
+				desugaredList = append(desugaredList, desugaredEntry)
+			}
 			continue
 		}
 
@@ -156,7 +165,7 @@ func desugarList[T any](
 		desugared = true
 		desugaredList = append(desugaredList, list[:index]...)
 
-		if any(desugaredEntry) != nil {
+		if desugaredEntry != zeroValue {
 			desugaredList = append(desugaredList, desugaredEntry)
 		}
 	}
@@ -237,9 +246,8 @@ func (d *Desugar) desugarFunctionBlock(
 	)
 
 	modifiedStatements := make([]ast.Statement, 0)
-	modifiedStatements = append(modifiedStatements, preConditions...)
-
 	modifiedStatements = append(modifiedStatements, beforeStatements...)
+	modifiedStatements = append(modifiedStatements, preConditions...)
 
 	returnType := functionType.ReturnTypeAnnotation.Type
 
@@ -954,6 +962,41 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 		declaration.Range,
 	)
 
+	hasInit := false
+	for _, member := range desugaredMembers {
+		if member, ok := member.(*ast.SpecialFunctionDeclaration); ok && member.Kind == common.DeclarationKindInitializer {
+			hasInit = true
+			break
+		}
+	}
+
+	if !hasInit {
+		// If the initializer is not declared, generate
+		// - a synthetic initializer for enum types, otherwise
+		// - an empty initializer
+		membersDesugared = true
+		if compositeType.Kind == common.CompositeKindEnum {
+			// generate enum initializer
+			enumInitializer := newEnumInitializer(d.memoryGauge, compositeType, d.elaboration)
+			enumInitializerFuncType := newEnumInitializerFuncType(compositeType.EnumRawType)
+			d.elaboration.SetFunctionDeclarationFunctionType(enumInitializer.FunctionDeclaration, enumInitializerFuncType)
+			desugaredMembers = append(desugaredMembers, enumInitializer)
+
+			// generate enum lookup
+			enumLookup := newEnumLookup(
+				d.memoryGauge,
+				compositeType,
+				declaration.Members.EnumCases(),
+				d.elaboration,
+			)
+			enumLookupFuncType := newEnumLookupFuncType(d.memoryGauge, compositeType)
+			d.elaboration.SetFunctionDeclarationFunctionType(enumLookup, enumLookupFuncType)
+			d.modifiedDeclarations = append(d.modifiedDeclarations, enumLookup)
+		} else {
+			d.addEmptyInitializer(&desugaredMembers)
+		}
+	}
+
 	// Optimization: If none of the existing members got updated or,
 	// if there are no inherited members, then return the same declaration as-is.
 	if !membersDesugared && len(inheritedDefaultFuncs) == 0 {
@@ -1388,7 +1431,7 @@ func (d *Desugar) addImport(location common.Location) {
 				[]ast.Identifier{
 					ast.NewIdentifier(d.memoryGauge, location.Name, ast.EmptyPosition),
 				},
-				map[string]string{},
+				nil,
 				location,
 				ast.EmptyRange,
 				ast.EmptyPosition,
@@ -1596,6 +1639,10 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 		members = append(members, desugaredExecuteFunc)
 	}
 
+	// Always add empty initializer for transactions.
+	// To be updated later by compilation.
+	d.addEmptyInitializer(&members)
+
 	compositeDecl := ast.NewCompositeDeclaration(
 		d.memoryGauge,
 		ast.AccessNotSpecified,
@@ -1724,6 +1771,12 @@ var emptyInitializerFuncType = sema.NewSimpleFunctionType(
 	nil,
 	sema.VoidTypeAnnotation,
 )
+
+func (d *Desugar) addEmptyInitializer(members *[]ast.Declaration) {
+	// Add an empty initializer
+	*members = append(*members, emptyInitializer)
+	d.elaboration.SetFunctionDeclarationFunctionType(emptyInitializer.FunctionDeclaration, emptyInitializerFuncType)
+}
 
 func newEnumInitializer(
 	gauge common.MemoryGauge,
@@ -1877,7 +1930,7 @@ func newEnumLookup(
 
 	typeIdentifier := ast.NewIdentifier(
 		gauge,
-		enumType.Identifier,
+		commons.TypeQualifier(enumType),
 		ast.EmptyPosition,
 	)
 

@@ -236,10 +236,21 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 			// Optional chaining was used on a non-optional type, report an error
 
 			if !accessedType.IsInvalidType() {
+
+				// The length of the optional chaining operator `?.` is 2
+				const optionalChainingOperatorLength = 2
+
 				checker.report(
 					&InvalidOptionalChainingError{
-						Type:  accessedType,
-						Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression),
+						Type: accessedType,
+						Range: ast.NewRange(
+							checker.memoryGauge,
+							expression.AccessEndPos.Shifted(
+								checker.memoryGauge,
+								-(optionalChainingOperatorLength-1),
+							),
+							expression.AccessEndPos,
+						),
 					},
 				)
 			}

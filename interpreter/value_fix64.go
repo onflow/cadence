@@ -264,7 +264,7 @@ func (v Fix64Value) Mul(context NumberValueArithmeticContext, other NumberValue,
 
 	valueGetter := func() int64 {
 		result := new(big.Int).Mul(a, b)
-		result.Div(result, sema.Fix64FactorBig)
+		result.Quo(result, sema.Fix64FactorBig)
 
 		if result.Cmp(minInt64Big) < 0 {
 			panic(&UnderflowError{
@@ -298,7 +298,7 @@ func (v Fix64Value) SaturatingMul(context NumberValueArithmeticContext, other Nu
 
 	valueGetter := func() int64 {
 		result := new(big.Int).Mul(a, b)
-		result.Div(result, sema.Fix64FactorBig)
+		result.Quo(result, sema.Fix64FactorBig)
 
 		if result.Cmp(minInt64Big) < 0 {
 			return math.MinInt64
@@ -328,7 +328,7 @@ func (v Fix64Value) Div(context NumberValueArithmeticContext, other NumberValue,
 
 	valueGetter := func() int64 {
 		result := new(big.Int).Mul(a, sema.Fix64FactorBig)
-		result.Div(result, b)
+		result.Quo(result, b)
 
 		if result.Cmp(minInt64Big) < 0 {
 			panic(&UnderflowError{
@@ -362,7 +362,7 @@ func (v Fix64Value) SaturatingDiv(context NumberValueArithmeticContext, other Nu
 
 	valueGetter := func() int64 {
 		result := new(big.Int).Mul(a, sema.Fix64FactorBig)
-		result.Div(result, b)
+		result.Quo(result, b)
 
 		if result.Cmp(minInt64Big) < 0 {
 			return math.MinInt64

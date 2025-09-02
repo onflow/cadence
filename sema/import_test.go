@@ -1077,4 +1077,42 @@ func TestCheckImportAlias(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+
+	t.Run("invalid, alias overridden", func(t *testing.T) {
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
+			access(all) contract Foo {
+			}
+			`,
+			ParseAndCheckOptions{
+				Location: ImportedLocation,
+			},
+		)
+
+		require.NoError(t, err)
+
+		_, err = ParseAndCheckWithOptions(t,
+			`
+			import Foo as Bar, Foo as Baz from "imported"
+
+			var foo = Bar
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		// Bar is not declared, Baz is
+		notDeclaredError := &sema.NotDeclaredError{}
+		assert.ErrorAs(t, errs[0], &notDeclaredError)
+	})
 }

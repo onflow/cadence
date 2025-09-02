@@ -26,9 +26,12 @@ import (
 func parsePurityAnnotation(p *parser) ast.FunctionPurity {
 	// get the purity annotation (if one exists) and skip it
 	if p.isToken(p.current, lexer.TokenIdentifier, KeywordView) {
+		// Skip the `view` keyword
 		p.nextSemanticToken()
+
 		return ast.FunctionPurityView
 	}
+
 	return ast.FunctionPurityUnspecified
 }
 
@@ -38,11 +41,9 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 	p.skipSpaceAndComments()
 
 	if !p.current.Is(lexer.TokenParenOpen) {
-		return nil, p.syntaxError(
-			"expected %s as start of parameter list, got %s",
-			lexer.TokenParenOpen,
-			p.current.Type,
-		)
+		return nil, &MissingStartOfParameterListError{
+			GotToken: p.current,
+		}
 	}
 
 	startPos := p.current.StartPos
@@ -77,10 +78,9 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 
 		case lexer.TokenComma:
 			if expectParameter {
-				return nil, p.syntaxError(
-					"expected parameter or end of parameter list, got %s",
-					p.current.Type,
-				)
+				return nil, &UnexpectedTokenInParameterListError{
+					GotToken: p.current,
+				}
 			}
 			// Skip the comma
 			p.next()
@@ -93,22 +93,19 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 			atEnd = true
 
 		case lexer.TokenEOF:
-			return nil, p.syntaxError(
-				"missing %s at end of parameter list",
-				lexer.TokenParenClose,
-			)
+			return nil, &MissingClosingParenInParameterListError{
+				Pos: p.current.StartPos,
+			}
 
 		default:
 			if expectParameter {
-				return nil, p.syntaxError(
-					"expected parameter or end of parameter list, got %s",
-					p.current.Type,
-				)
+				return nil, &UnexpectedTokenInParameterListError{
+					GotToken: p.current,
+				}
 			} else {
-				return nil, p.syntaxError(
-					"expected comma or end of parameter list, got %s",
-					p.current.Type,
-				)
+				return nil, &ExpectedCommaOrEndOfParameterListError{
+					GotToken: p.current,
+				}
 			}
 		}
 	}
@@ -155,11 +152,9 @@ func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, erro
 	}
 
 	if !p.current.Is(lexer.TokenColon) {
-		return nil, p.syntaxError(
-			"expected %s after parameter name, got %s",
-			lexer.TokenColon,
-			p.current.Type,
-		)
+		return nil, &MissingColonAfterParameterNameError{
+			GotToken: p.current,
+		}
 	}
 
 	// Skip the colon
@@ -177,10 +172,9 @@ func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, erro
 
 	if expectDefaultArgument {
 		if !p.current.Is(lexer.TokenEqual) {
-			return nil, p.syntaxError(
-				"expected a default argument after type annotation, got %s",
-				p.current.Type,
-			)
+			return nil, &MissingDefaultArgumentError{
+				GotToken: p.current,
+			}
 		}
 
 		// Skip the =
@@ -192,7 +186,9 @@ func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, erro
 		}
 
 	} else if p.current.Is(lexer.TokenEqual) {
-		return nil, p.syntaxError("cannot use a default argument for this function")
+		return nil, &UnexpectedDefaultArgumentError{
+			Pos: p.current.StartPos,
+		}
 	}
 
 	return ast.NewParameter(
@@ -232,7 +228,7 @@ func parseTypeParameterList(p *parser) (*ast.TypeParameterList, error) {
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
 			if !expectTypeParameter {
-				p.report(&MissingCommaInParameterListError{
+				p.report(&MissingCommaInTypeParameterListError{
 					Pos: p.current.StartPos,
 				})
 			}
@@ -246,10 +242,9 @@ func parseTypeParameterList(p *parser) (*ast.TypeParameterList, error) {
 
 		case lexer.TokenComma:
 			if expectTypeParameter {
-				return nil, p.syntaxError(
-					"expected type parameter or end of type parameter list, got %s",
-					p.current.Type,
-				)
+				return nil, &UnexpectedTokenInTypeParameterListError{
+					GotToken: p.current,
+				}
 			}
 			// Skip the comma
 			p.next()
@@ -262,22 +257,18 @@ func parseTypeParameterList(p *parser) (*ast.TypeParameterList, error) {
 			atEnd = true
 
 		case lexer.TokenEOF:
-			return nil, p.syntaxError(
-				"missing %s at end of type parameter list",
-				lexer.TokenGreater,
-			)
-
+			return nil, &MissingClosingGreaterInTypeParameterListError{
+				Pos: p.current.StartPos,
+			}
 		default:
 			if expectTypeParameter {
-				return nil, p.syntaxError(
-					"expected parameter or end of type parameter list, got %s",
-					p.current.Type,
-				)
+				return nil, &UnexpectedTokenInTypeParameterListError{
+					GotToken: p.current,
+				}
 			} else {
-				return nil, p.syntaxError(
-					"expected comma or end of type parameter list, got %s",
-					p.current.Type,
-				)
+				return nil, &ExpectedCommaOrEndOfTypeParameterListError{
+					GotToken: p.current,
+				}
 			}
 		}
 	}
@@ -297,10 +288,9 @@ func parseTypeParameter(p *parser) (*ast.TypeParameter, error) {
 	p.skipSpaceAndComments()
 
 	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, p.syntaxError(
-			"expected type parameter name, got %s",
-			p.current.Type,
-		)
+		return nil, &InvalidTypeParameterNameError{
+			GotToken: p.current,
+		}
 	}
 
 	identifier := p.tokenToIdentifier(p.current)
@@ -404,9 +394,10 @@ func parseFunctionParameterListAndRest(
 
 	current := p.current
 	cursor := p.tokens.Cursor()
+
 	p.skipSpaceAndComments()
+
 	if p.current.Is(lexer.TokenColon) {
-		// Skip the colon
 		p.nextSemanticToken()
 
 		returnTypeAnnotation, err = parseTypeAnnotation(p)

@@ -1,3 +1,5 @@
+//go:build cadence_tracing
+
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -25,32 +27,60 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
+	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
-func setupInterpreterWithTracingCallBack(
+func prepareWithTracingCallBack(
 	t *testing.T,
 	tracingCallback func(opName string),
-) *interpreter.Interpreter {
+) Invokable {
 	storage := newUnmeteredInMemoryStorage()
-	inter, err := interpreter.NewInterpreter(
-		nil,
-		TestLocation,
-		&interpreter.Config{
-			OnRecordTrace: func(inter *interpreter.Interpreter,
-				operationName string,
-				duration time.Duration,
-				attrs []attribute.KeyValue) {
-				tracingCallback(operationName)
+
+	onRecordTrace := func(
+		operationName string,
+		_ time.Duration,
+		_ []attribute.KeyValue,
+	) {
+		tracingCallback(operationName)
+	}
+
+	if *compile {
+		config := vm.NewConfig(storage)
+		config.Tracer = interpreter.CallbackTracer(onRecordTrace)
+		config.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+			if typeID == testCompositeValueType.ID() {
+				return testCompositeValueType, nil
+			}
+			t.Fatalf("unexpected type ID: %s", typeID)
+			return nil, nil
+		}
+		config.ImportHandler = func(_ common.Location) *bbq.InstructionProgram {
+			return &bbq.InstructionProgram{}
+		}
+		vm := vm.NewVM(
+			TestLocation,
+			&bbq.InstructionProgram{},
+			config,
+		)
+		return test_utils.NewVMInvokable(vm, nil)
+	} else {
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			TestLocation,
+			&interpreter.Config{
+				Storage:       storage,
+				OnRecordTrace: onRecordTrace,
 			},
-			Storage:        storage,
-			TracingEnabled: true,
-		},
-	)
-	require.NoError(t, err)
-	return inter
+		)
+		require.NoError(t, err)
+		return inter
+	}
 }
 
 func TestInterpreterTracing(t *testing.T) {
@@ -58,8 +88,8 @@ func TestInterpreterTracing(t *testing.T) {
 	t.Parallel()
 
 	t.Run("array tracing", func(t *testing.T) {
-		traceOps := make([]string, 0)
-		inter := setupInterpreterWithTracingCallBack(t, func(opName string) {
+		var traceOps []string
+		inter := prepareWithTracingCallBack(t, func(opName string) {
 			traceOps = append(traceOps, opName)
 		})
 		owner := common.Address{0x1}
@@ -87,8 +117,8 @@ func TestInterpreterTracing(t *testing.T) {
 	})
 
 	t.Run("dictionary tracing", func(t *testing.T) {
-		traceOps := make([]string, 0)
-		inter := setupInterpreterWithTracingCallBack(t, func(opName string) {
+		var traceOps []string
+		inter := prepareWithTracingCallBack(t, func(opName string) {
 			traceOps = append(traceOps, opName)
 		})
 		dict := interpreter.NewDictionaryValue(
@@ -116,8 +146,8 @@ func TestInterpreterTracing(t *testing.T) {
 	})
 
 	t.Run("composite tracing", func(t *testing.T) {
-		traceOps := make([]string, 0)
-		inter := setupInterpreterWithTracingCallBack(t, func(opName string) {
+		var traceOps []string
+		inter := prepareWithTracingCallBack(t, func(opName string) {
 			traceOps = append(traceOps, opName)
 		})
 		owner := common.Address{0x1}

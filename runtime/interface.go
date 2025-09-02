@@ -32,8 +32,6 @@ import (
 )
 
 type Interface interface {
-	MeterInterface
-
 	// ResolveLocation resolves an import location.
 	ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
 	// GetCode returns the code at a given location
@@ -123,8 +121,8 @@ type Interface interface {
 	ValidatePublicKey(key *PublicKey) error
 	// GetAccountContractNames returns the names of all contracts deployed in an account.
 	GetAccountContractNames(address Address) ([]string, error)
-	// RecordTrace records an opentelemetry trace.
-	RecordTrace(operation string, location Location, duration time.Duration, attrs []attribute.KeyValue)
+	// RecordTrace records an OpenTelemetry trace.
+	RecordTrace(operation string, duration time.Duration, attrs []attribute.KeyValue)
 	// BLSVerifyPOP verifies a proof of possession (PoP) for the receiver public key.
 	BLSVerifyPOP(publicKey *PublicKey, signature []byte) (bool, error)
 	// BLSAggregateSignatures aggregate multiple BLS signatures into one.
@@ -158,20 +156,6 @@ type Interface interface {
 	) (bool, error)
 
 	MinimumRequiredVersion() (string, error)
-}
-
-type MeterInterface interface {
-	// MeterMemory gets called when new memory is allocated or used by the interpreter
-	MeterMemory(usage common.MemoryUsage) error
-	// MeterComputation is a callback method for metering computation, it returns error
-	// when computation passes the limit (set by the environment)
-	MeterComputation(usage common.ComputationUsage) error
-	// ComputationUsed returns the total computation used in the current runtime.
-	ComputationUsed() (uint64, error)
-	// MemoryUsed returns the total memory (estimate) used in the current runtime.
-	MemoryUsed() (uint64, error)
-	// InteractionUsed returns the total storage interaction used in the current runtime.
-	InteractionUsed() (uint64, error)
 }
 
 type Metrics interface {

@@ -298,7 +298,7 @@ func (v Word128Value) Div(context NumberValueArithmeticContext, other NumberValu
 					LocationRange: locationRange,
 				})
 			}
-			return res.Div(v.BigInt, o.BigInt)
+			return res.Quo(v.BigInt, o.BigInt)
 		},
 	)
 

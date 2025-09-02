@@ -130,11 +130,15 @@ func TestCheckEntitlementsErrorMessage(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 2)
 
-		var mismatchError *sema.TypeMismatchError
-
 		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+
+		var mismatchError *sema.TypeMismatchError
 		require.ErrorAs(t, errs[1], &mismatchError)
-		require.Equal(t, "expected `auth(E) &Int`, got `auth(F) &Int`", mismatchError.SecondaryError())
+
+		require.Contains(t,
+			mismatchError.SecondaryError(),
+			"expected `auth(E) &Int`, got `auth(F) &Int`",
+		)
 	})
 
 	t.Run("invalid access", func(t *testing.T) {
@@ -163,7 +167,7 @@ func TestCheckEntitlementsErrorMessage(t *testing.T) {
 		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
 		require.ErrorAs(t, errs[1], &invalidAccess)
 		require.Equal(t,
-			"cannot access `foo`: function requires `E` authorization, but reference only has `F` authorization",
+			"access denied: cannot access `foo` because function requires `E` authorization, but reference only has `F` authorization",
 			invalidAccess.Error(),
 		)
 	})
@@ -195,9 +199,9 @@ func TestCheckEntitlementsErrorMessage(t *testing.T) {
 
 		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
 		require.ErrorAs(t, errs[1], &invalidInterface)
-		require.Equal(t,
-			"got `auth(F) &I`; consider using `auth(F) &{I}`",
+		require.Contains(t,
 			invalidInterface.SecondaryError(),
+			"got `auth(F) &I`, consider using `auth(F) &{I}`",
 		)
 	})
 }

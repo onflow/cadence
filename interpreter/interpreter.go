@@ -82,7 +82,6 @@ type OnInvokedFunctionReturnFunc func(inter *Interpreter)
 
 // OnRecordTraceFunc is a function that records a trace.
 type OnRecordTraceFunc func(
-	inter *Interpreter,
 	operationName string,
 	duration time.Duration,
 	attrs []attribute.KeyValue,
@@ -247,6 +246,7 @@ type Interpreter struct {
 	activations  *VariableActivations
 	Transactions []*HostFunctionValue
 	interpreted  bool
+	Tracer
 }
 
 var _ common.MemoryGauge = &Interpreter{}
@@ -283,10 +283,16 @@ func NewInterpreterWithSharedState(
 	sharedState *SharedState,
 ) (*Interpreter, error) {
 
+	var tracer Tracer
+	if TracingEnabled {
+		tracer = CallbackTracer(sharedState.Config.OnRecordTrace)
+	}
+
 	interpreter := &Interpreter{
 		Program:     program,
 		Location:    location,
 		SharedState: sharedState,
+		Tracer:      tracer,
 	}
 
 	// Register self
@@ -2462,10 +2468,10 @@ func (interpreter *Interpreter) declareInterface(
 	)
 
 	var defaultDestroyEventConstructor FunctionValue
-	if defautlDestroyEvent := interpreter.Program.Elaboration.DefaultDestroyDeclaration(declaration); defautlDestroyEvent != nil {
+	if defaultDestroyEvent := interpreter.Program.Elaboration.DefaultDestroyDeclaration(declaration); defaultDestroyEvent != nil {
 		var nestedVariable Variable
 		lexicalScope, nestedVariable = interpreter.declareCompositeValue(
-			defautlDestroyEvent,
+			defaultDestroyEvent,
 			lexicalScope,
 		)
 		defaultDestroyEventConstructor = nestedVariable.GetValue(interpreter).(FunctionValue)
@@ -5230,7 +5236,7 @@ func (interpreter *Interpreter) GetInterfaceType(
 		if interfaceType != nil {
 			return interfaceType, nil
 		}
-		return nil, &InterfaceMissingLocationError{
+		return nil, InterfaceMissingLocationError{
 			QualifiedIdentifier: qualifiedIdentifier,
 		}
 	}
@@ -6062,10 +6068,6 @@ func (interpreter *Interpreter) OnResourceOwnerChange(resource *CompositeValue, 
 	}
 
 	onResourceOwnerChange(interpreter, resource, oldOwner, newOwner)
-}
-
-func (interpreter *Interpreter) TracingEnabled() bool {
-	return interpreter.SharedState.Config.TracingEnabled
 }
 
 func (interpreter *Interpreter) IsTypeInfoRecovered(location common.Location) bool {

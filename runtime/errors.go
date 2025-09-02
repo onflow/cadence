@@ -296,3 +296,16 @@ func (e *ParsingCheckingError) Unwrap() error {
 func (e *ParsingCheckingError) ImportLocation() Location {
 	return e.Location
 }
+
+type MemoryLimitExceededError struct {
+	Limit uint64
+	Usage uint64
+}
+
+var _ errors.UserError = MemoryLimitExceededError{}
+
+func (MemoryLimitExceededError) IsUserError() {}
+
+func (e MemoryLimitExceededError) Error() string {
+	return fmt.Sprintf("memory limit exceeded: %d > %d", e.Usage, e.Limit)
+}

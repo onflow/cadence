@@ -48,7 +48,7 @@ func (checker *Checker) VisitEmitStatement(statement *ast.EmitStatement) (_ stru
 	if ast.IsResourceDestructionDefaultEvent(compositeType.Identifier) {
 		checker.report(
 			&EmitDefaultDestroyEventError{
-				Range: ast.NewRangeFromPositioned(checker.memoryGauge, statement.InvocationExpression),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, statement),
 			},
 		)
 		return

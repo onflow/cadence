@@ -98,7 +98,7 @@ func NewArrayValueWithIterator(
 
 	var v *ArrayValue
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		defer func() {
@@ -108,12 +108,12 @@ func NewArrayValueWithIterator(
 				return
 			}
 
-			typeInfo := v.Type.String()
-			count := v.Count()
+			valueID := v.ValueID().String()
+			typeID := string(v.Type.ID())
 
 			context.ReportArrayValueConstructTrace(
-				typeInfo,
-				count,
+				valueID,
+				typeID,
 				time.Since(startTime),
 			)
 		}()
@@ -359,16 +359,16 @@ func (v *ArrayValue) Destroy(context ResourceDestructionContext, locationRange L
 		},
 	)
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
-		typeInfo := v.Type.String()
-		count := v.Count()
+		valueID := v.ValueID().String()
+		typeID := string(v.Type.ID())
 
 		defer func() {
 			context.ReportArrayValueDestroyTrace(
-				typeInfo,
-				count,
+				valueID,
+				typeID,
 				time.Since(startTime),
 			)
 		}()
@@ -1197,17 +1197,17 @@ func (v *ArrayValue) ConformsToStaticType(
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
-	count := v.Count()
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
-		typeInfo := v.Type.String()
+		valueID := v.ValueID().String()
+		typeID := string(v.Type.ID())
 
 		defer func() {
 			context.ReportArrayValueConformsToStaticTypeTrace(
-				typeInfo,
-				count,
+				valueID,
+				typeID,
 				time.Since(startTime),
 			)
 		}()
@@ -1329,16 +1329,16 @@ func (v *ArrayValue) Transfer(
 		},
 	)
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
-		typeInfo := v.Type.String()
-		count := v.Count()
+		valueID := v.ValueID().String()
+		typeID := string(v.Type.ID())
 
 		defer func() {
 			context.ReportArrayValueTransferTrace(
-				typeInfo,
-				count,
+				valueID,
+				typeID,
 				time.Since(startTime),
 			)
 		}()
@@ -1501,16 +1501,16 @@ func (v *ArrayValue) Clone(context ValueCloneContext) Value {
 }
 
 func (v *ArrayValue) DeepRemove(context ValueRemoveContext, hasNoParentContainer bool) {
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
-		typeInfo := v.Type.String()
-		count := v.Count()
+		valueID := v.ValueID().String()
+		typeID := string(v.Type.ID())
 
 		defer func() {
 			context.ReportArrayValueDeepRemoveTrace(
-				typeInfo,
-				count,
+				valueID,
+				typeID,
 				time.Since(startTime),
 			)
 		}()
