@@ -452,6 +452,11 @@ func (e *vmEnvironment) loadDesugaredElaboration(location common.Location) (*com
 }
 
 func (e *vmEnvironment) loadCompositeType(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+	ty := e.allDeclaredTypes[typeID]
+	if ty != nil {
+		return ty.(*sema.CompositeType)
+	}
+
 	if _, ok := location.(stdlib.FlowLocation); ok {
 		return stdlib.FlowEventTypes[typeID]
 	}
@@ -470,6 +475,11 @@ func (e *vmEnvironment) loadCompositeType(location common.Location, typeID inter
 }
 
 func (e *vmEnvironment) loadInterfaceType(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+	ty := e.allDeclaredTypes[typeID]
+	if ty != nil {
+		return ty.(*sema.InterfaceType)
+	}
+
 	elaboration, err := e.loadDesugaredElaboration(location)
 	if err != nil {
 		return nil
@@ -484,6 +494,11 @@ func (e *vmEnvironment) loadInterfaceType(location common.Location, typeID inter
 }
 
 func (e *vmEnvironment) loadEntitlementType(location common.Location, typeID interpreter.TypeID) *sema.EntitlementType {
+	ty := e.allDeclaredTypes[typeID]
+	if ty != nil {
+		return ty.(*sema.EntitlementType)
+	}
+
 	elaboration, err := e.loadDesugaredElaboration(location)
 	if err != nil {
 		return nil
@@ -498,6 +513,11 @@ func (e *vmEnvironment) loadEntitlementType(location common.Location, typeID int
 }
 
 func (e *vmEnvironment) loadEntitlementMapType(location common.Location, typeID interpreter.TypeID) *sema.EntitlementMapType {
+	ty := e.allDeclaredTypes[typeID]
+	if ty != nil {
+		return ty.(*sema.EntitlementMapType)
+	}
+
 	elaboration, err := e.loadDesugaredElaboration(location)
 	if err != nil {
 		return nil
