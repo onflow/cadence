@@ -698,7 +698,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 	// pass in the identifier which would be aliased
 	parseOptionalImportAlias := func(identifier ast.Identifier) error {
 		// stop early if the current token is not as
-		if p.current.Type != lexer.TokenIdentifier || string(p.currentTokenSource()) != KeywordAs {
+		if !p.isToken(p.current, lexer.TokenIdentifier, KeywordAs) {
 			return nil
 		}
 		// Skip the `as` keyword
