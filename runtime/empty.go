@@ -37,11 +37,6 @@ type EmptyRuntimeInterface struct{}
 
 var _ Interface = EmptyRuntimeInterface{}
 
-func (EmptyRuntimeInterface) MeterMemory(_ common.MemoryUsage) error {
-	// NO-OP
-	return nil
-}
-
 func (EmptyRuntimeInterface) ResolveLocation(_ []Identifier, _ Location) ([]ResolvedLocation, error) {
 	panic("unexpected call to ResolveLocation")
 }
@@ -52,23 +47,6 @@ func (EmptyRuntimeInterface) GetOrLoadProgram(_ Location, _ func() (*Program, er
 
 func (EmptyRuntimeInterface) GetAccountContractCode(_ common.AddressLocation) (code []byte, err error) {
 	panic("unexpected call to GetAccountContractCode")
-}
-
-func (EmptyRuntimeInterface) MeterComputation(_ common.ComputationUsage) error {
-	// NO-OP
-	return nil
-}
-
-func (EmptyRuntimeInterface) ComputationUsed() (uint64, error) {
-	panic("unexpected call to ComputationUsed")
-}
-
-func (EmptyRuntimeInterface) MemoryUsed() (uint64, error) {
-	panic("unexpected call to MemoryUsed")
-}
-
-func (EmptyRuntimeInterface) InteractionUsed() (uint64, error) {
-	panic("unexpected call to InteractionUsed")
 }
 
 func (EmptyRuntimeInterface) GetCode(_ Location) ([]byte, error) {
@@ -199,7 +177,7 @@ func (EmptyRuntimeInterface) GetAccountContractNames(_ Address) ([]string, error
 	panic("unexpected call to GetAccountContractNames")
 }
 
-func (EmptyRuntimeInterface) RecordTrace(_ string, _ Location, _ time.Duration, _ []attribute.KeyValue) {
+func (EmptyRuntimeInterface) RecordTrace(_ string, _ time.Duration, _ []attribute.KeyValue) {
 	panic("unexpected call to RecordTrace")
 }
 

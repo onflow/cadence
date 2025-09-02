@@ -82,38 +82,80 @@ func TestBlock_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	block := &Block{
-		Statements: []Statement{
-			&ExpressionStatement{
-				Expression: &BoolExpression{
-					Value: false,
-				},
-			},
-			&ExpressionStatement{
-				Expression: &StringExpression{
-					Value: "test",
-				},
-			},
-		},
-	}
+	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
 
-	require.Equal(
-		t,
-		prettier.Concat{
-			prettier.Text("{"),
-			prettier.Indent{
-				Doc: prettier.Concat{
-					prettier.HardLine{},
-					prettier.Text("false"),
-					prettier.HardLine{},
-					prettier.Text("\"test\""),
+		block := &Block{}
+
+		require.Equal(
+			t,
+			prettier.Text("{}"),
+			block.Doc(),
+		)
+	})
+
+	t.Run("with statements", func(t *testing.T) {
+		t.Parallel()
+
+		block := &Block{
+			Statements: []Statement{
+				&ExpressionStatement{
+					Expression: &BoolExpression{
+						Value: false,
+					},
+				},
+				&ExpressionStatement{
+					Expression: &StringExpression{
+						Value: "test",
+					},
 				},
 			},
-			prettier.HardLine{},
-			prettier.Text("}"),
-		},
-		block.Doc(),
-	)
+		}
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("{"),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.HardLine{},
+						prettier.Text("false"),
+						prettier.HardLine{},
+						prettier.Text("\"test\""),
+					},
+				},
+				prettier.HardLine{},
+				prettier.Text("}"),
+			},
+			block.Doc(),
+		)
+	})
+
+	t.Run("with nil statement", func(t *testing.T) {
+		t.Parallel()
+
+		block := &Block{
+			Statements: []Statement{
+				nil,
+			},
+		}
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("{"),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.HardLine{},
+						prettier.Text(""),
+					},
+				},
+				prettier.HardLine{},
+				prettier.Text("}"),
+			},
+			block.Doc(),
+		)
+	})
 }
 
 func TestBlock_String(t *testing.T) {
@@ -368,6 +410,20 @@ func TestFunctionBlock_Doc(t *testing.T) {
 
 	t.Parallel()
 
+	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+
+		block := &FunctionBlock{
+			Block: &Block{},
+		}
+
+		require.Equal(
+			t,
+			prettier.Text("{}"),
+			block.Doc(),
+		)
+	})
+
 	t.Run("with statements", func(t *testing.T) {
 
 		t.Parallel()
@@ -399,7 +455,8 @@ func TestFunctionBlock_Doc(t *testing.T) {
 						prettier.Text("false"),
 						prettier.HardLine{},
 						prettier.Text("\"test\""),
-					}},
+					},
+				},
 				prettier.HardLine{},
 				prettier.Text("}"),
 			},
@@ -468,7 +525,7 @@ func TestFunctionBlock_Doc(t *testing.T) {
 						prettier.Group{
 							Doc: prettier.Concat{
 								prettier.Text("pre"),
-								prettier.Text(" "),
+								prettier.Space,
 								prettier.Text("{"),
 								prettier.Indent{
 									Doc: prettier.Concat{
@@ -497,12 +554,13 @@ func TestFunctionBlock_Doc(t *testing.T) {
 								},
 								prettier.HardLine{},
 								prettier.Text("}"),
-							}},
+							},
+						},
 						prettier.HardLine{},
 						prettier.Group{
 							Doc: prettier.Concat{
 								prettier.Text("post"),
-								prettier.Text(" "),
+								prettier.Space,
 								prettier.Text("{"),
 								prettier.Indent{
 									Doc: prettier.Concat{
@@ -514,20 +572,91 @@ func TestFunctionBlock_Doc(t *testing.T) {
 								},
 								prettier.HardLine{},
 								prettier.Text("}"),
-							}},
+							},
+						},
 						prettier.Concat{
 							prettier.HardLine{},
 							prettier.Text("false"),
 							prettier.HardLine{},
 							prettier.Text("\"test\""),
 						},
-					}},
+					},
+				},
 				prettier.HardLine{},
 				prettier.Text("}"),
 			},
 			block.Doc(),
 		)
 	})
+
+	t.Run("with nil precondition and postcondition", func(t *testing.T) {
+
+		t.Parallel()
+
+		block := &FunctionBlock{
+			Block: &Block{
+				Statements: []Statement{},
+			},
+			PreConditions: &Conditions{
+				Conditions: []Condition{
+					nil,
+				},
+			},
+			PostConditions: &Conditions{
+				Conditions: []Condition{
+					nil,
+				},
+			},
+		}
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("{"),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.HardLine{},
+						prettier.Group{
+							Doc: prettier.Concat{
+								prettier.Text("pre"),
+								prettier.Space,
+								prettier.Text("{"),
+								prettier.Indent{
+									Doc: prettier.Concat{
+										prettier.HardLine{},
+										prettier.Text(""),
+									},
+								},
+								prettier.HardLine{},
+								prettier.Text("}"),
+							},
+						},
+						prettier.HardLine{},
+						prettier.Group{
+							Doc: prettier.Concat{
+								prettier.Text("post"),
+								prettier.Space,
+								prettier.Text("{"),
+								prettier.Indent{
+									Doc: prettier.Concat{
+										prettier.HardLine{},
+										prettier.Text(""),
+									},
+								},
+								prettier.HardLine{},
+								prettier.Text("}"),
+							},
+						},
+						prettier.Concat(nil),
+					},
+				},
+				prettier.HardLine{},
+				prettier.Text("}"),
+			},
+			block.Doc(),
+		)
+	})
+
 }
 
 func TestFunctionBlock_String(t *testing.T) {
@@ -625,6 +754,143 @@ func TestFunctionBlock_String(t *testing.T) {
 				"    \"test\"\n"+
 				"}",
 			block.String(),
+		)
+	})
+
+	t.Run("with nil precondition and postcondition", func(t *testing.T) {
+
+		t.Parallel()
+
+		block := &FunctionBlock{
+			Block: &Block{
+				Statements: []Statement{},
+			},
+			PreConditions: &Conditions{
+				Conditions: []Condition{
+					nil,
+				},
+			},
+			PostConditions: &Conditions{
+				Conditions: []Condition{
+					nil,
+				},
+			},
+		}
+
+		require.Equal(
+			t,
+			"{\n"+
+				"    pre {\n"+
+				"        \n"+
+				"    }\n"+
+				"    post {\n"+
+				"        \n"+
+				"    }\n"+
+				"}",
+			block.String(),
+		)
+	})
+
+}
+
+func TestTestCondition_Doc(t *testing.T) {
+	t.Parallel()
+
+	t.Run("with test and message", func(t *testing.T) {
+
+		t.Parallel()
+
+		condition := TestCondition{
+			Test: &BoolExpression{
+				Value: true,
+			},
+			Message: &StringExpression{
+				Value: "Test condition",
+			},
+		}
+
+		require.Equal(
+			t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("true"),
+					prettier.Text(":"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.HardLine{},
+							prettier.Text(`"Test condition"`),
+						},
+					},
+				},
+			},
+			condition.Doc(),
+		)
+	})
+
+	t.Run("with test, without message", func(t *testing.T) {
+
+		t.Parallel()
+
+		condition := TestCondition{
+			Test: &BoolExpression{
+				Value: true,
+				Range: Range{
+					StartPos: Position{Offset: 1, Line: 2, Column: 3},
+					EndPos:   Position{Offset: 4, Line: 5, Column: 6},
+				},
+			},
+		}
+
+		require.Equal(t,
+			prettier.Group{
+				Doc: prettier.Text("true"),
+			},
+			condition.Doc(),
+		)
+	})
+
+	t.Run("without test, with message", func(t *testing.T) {
+
+		t.Parallel()
+
+		condition := TestCondition{
+			Message: &StringExpression{
+				Value: "Test condition",
+				Range: Range{
+					StartPos: Position{Offset: 7, Line: 8, Column: 9},
+					EndPos:   Position{Offset: 10, Line: 11, Column: 12},
+				},
+			},
+		}
+
+		require.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text(""),
+					prettier.Text(":"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.HardLine{},
+							prettier.Text(`"Test condition"`),
+						},
+					},
+				},
+			},
+			condition.Doc(),
+		)
+	})
+
+	t.Run("without test, without message", func(t *testing.T) {
+
+		t.Parallel()
+
+		condition := TestCondition{}
+
+		require.Equal(t,
+			prettier.Group{
+				Doc: prettier.Text(""),
+			},
+			condition.Doc(),
 		)
 	})
 }

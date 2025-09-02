@@ -11,13 +11,146 @@ import (
 
 func generateErrors() []namedError {
 	return []namedError{
+		{"parser.AccessKeywordEntitlementNameError",
+			&parser.AccessKeywordEntitlementNameError{
+				Keyword: placeholderString,
+				Range:   placeholderRange,
+			},
+		},
 		{"parser.CustomDestructorError",
 			&parser.CustomDestructorError{
+				Pos:             placeholderPosition,
+				DestructorRange: placeholderRange,
+			},
+		},
+		{"parser.DeclarationMissingClosingBraceError",
+			&parser.DeclarationMissingClosingBraceError{
+				Kind:     placeholderDeclarationKind,
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.DeclarationMissingOpeningBraceError",
+			&parser.DeclarationMissingOpeningBraceError{
+				Kind:     placeholderDeclarationKind,
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.DuplicateAccessModifierError",
+			&parser.DuplicateAccessModifierError{
+				Range: placeholderRange,
+			},
+		},
+		{"parser.DuplicateExecuteBlockError",
+			&parser.DuplicateExecuteBlockError{
 				Pos: placeholderPosition,
+			},
+		},
+		{"parser.DuplicatePostConditionsError",
+			&parser.DuplicatePostConditionsError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.DuplicateViewModifierError",
+			&parser.DuplicateViewModifierError{
+				Range: placeholderRange,
+			},
+		},
+		{"parser.ExpectedCaseOrDefaultError",
+			&parser.ExpectedCaseOrDefaultError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.ExpectedCommaOrEndOfParameterListError",
+			&parser.ExpectedCommaOrEndOfParameterListError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.ExpectedCommaOrEndOfTypeParameterListError",
+			&parser.ExpectedCommaOrEndOfTypeParameterListError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.ExpectedExecuteOrPostError",
+			&parser.ExpectedExecuteOrPostError{
+				GotIdentifier: placeholderString,
+				Pos:           placeholderPosition,
+			},
+		},
+		{"parser.ExpectedPrepareOrExecuteError",
+			&parser.ExpectedPrepareOrExecuteError{
+				GotIdentifier: placeholderString,
+				Pos:           placeholderPosition,
+			},
+		},
+		{"parser.ExpectedTypeInsteadSeparatorError",
+			&parser.ExpectedTypeInsteadSeparatorError{
+				Pos:       placeholderPosition,
+				Separator: placeholderTokenType,
 			},
 		},
 		{"parser.ExpressionDepthLimitReachedError",
 			parser.ExpressionDepthLimitReachedError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.InvalidAccessModifierError",
+			&parser.InvalidAccessModifierError{
+				Pos:             placeholderPosition,
+				DeclarationKind: placeholderDeclarationKind,
+			},
+		},
+		{"parser.InvalidAttachmentBaseTypeError",
+			&parser.InvalidAttachmentBaseTypeError{
+				Range: placeholderRange,
+			},
+		},
+		{"parser.InvalidAttachmentRemovalTypeError",
+			&parser.InvalidAttachmentRemovalTypeError{
+				Range: placeholderRange,
+			},
+		},
+		{"parser.InvalidConstantSizedTypeSizeError",
+			&parser.InvalidConstantSizedTypeSizeError{
+				Range: placeholderRange,
+			},
+		},
+		{"parser.InvalidEntitlementMappingIncludeTypeError",
+			&parser.InvalidEntitlementMappingIncludeTypeError{
+				Range: placeholderRange,
+			},
+		},
+		{"parser.InvalidEntitlementMappingTypeError",
+			&parser.InvalidEntitlementMappingTypeError{
+				Range: placeholderRange,
+			},
+		},
+		{"parser.InvalidEntitlementSeparatorError",
+			&parser.InvalidEntitlementSeparatorError{
+				Token: placeholderToken,
+			},
+		},
+		{"parser.InvalidExpressionAsLabelError",
+			&parser.InvalidExpressionAsLabelError{
+				Range: placeholderRange,
+			},
+		},
+		{"parser.InvalidFromKeywordAsIdentifierError",
+			&parser.InvalidFromKeywordAsIdentifierError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.InvalidImportContinuationError",
+			&parser.InvalidImportContinuationError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.InvalidImportLocationError",
+			&parser.InvalidImportLocationError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.InvalidInKeywordAsIdentifierError",
+			&parser.InvalidInKeywordAsIdentifierError{
 				Pos: placeholderPosition,
 			},
 		},
@@ -29,9 +162,158 @@ func generateErrors() []namedError {
 				Range:                     placeholderRange,
 			},
 		},
-		{"parser.JuxtaposedUnaryOperatorsError",
-			&parser.JuxtaposedUnaryOperatorsError{
+		{"parser.InvalidInterfaceNameError",
+			&parser.InvalidInterfaceNameError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.InvalidNativeModifierError",
+			&parser.InvalidNativeModifierError{
+				Pos:             placeholderPosition,
+				DeclarationKind: placeholderDeclarationKind,
+			},
+		},
+		{"parser.InvalidNonNominalTypeInIntersectionError",
+			&parser.InvalidNonNominalTypeInIntersectionError{
+				Range: placeholderRange,
+			},
+		},
+		{"parser.InvalidStaticModifierError",
+			&parser.InvalidStaticModifierError{
+				Pos:             placeholderPosition,
+				DeclarationKind: placeholderDeclarationKind,
+			},
+		},
+		{"parser.InvalidTokenInImportListError",
+			&parser.InvalidTokenInImportListError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.InvalidTypeParameterNameError",
+			&parser.InvalidTypeParameterNameError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.InvalidViewModifierError",
+			&parser.InvalidViewModifierError{
+				Pos:             placeholderPosition,
+				DeclarationKind: placeholderDeclarationKind,
+			},
+		},
+		{"parser.MemberAccessMissingNameError",
+			&parser.MemberAccessMissingNameError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingAccessClosingParenError",
+			&parser.MissingAccessClosingParenError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingAccessKeywordError",
+			&parser.MissingAccessKeywordError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingAccessOpeningParenError",
+			&parser.MissingAccessOpeningParenError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingAmpersandInAuthReferenceError",
+			&parser.MissingAmpersandInAuthReferenceError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingClosingBraceError",
+			&parser.MissingClosingBraceError{
+				Description: placeholderString,
+				GotToken:    placeholderToken,
+			},
+		},
+		{"parser.MissingClosingBraceInDictionaryExpressionError",
+			&parser.MissingClosingBraceInDictionaryExpressionError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingClosingBraceInIntersectionOrDictionaryTypeError",
+			&parser.MissingClosingBraceInIntersectionOrDictionaryTypeError{
 				Pos: placeholderPosition,
+			},
+		},
+		{"parser.MissingClosingBracketInArrayExpressionError",
+			&parser.MissingClosingBracketInArrayExpressionError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingClosingBracketInArrayTypeError",
+			&parser.MissingClosingBracketInArrayTypeError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingClosingBracketInIndexExpressionError",
+			&parser.MissingClosingBracketInIndexExpressionError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingClosingGreaterInTypeArgumentsError",
+			&parser.MissingClosingGreaterInTypeArgumentsError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.MissingClosingGreaterInTypeParameterListError",
+			&parser.MissingClosingGreaterInTypeParameterListError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.MissingClosingParenInArgumentListError",
+			&parser.MissingClosingParenInArgumentListError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.MissingClosingParenInAuthError",
+			&parser.MissingClosingParenInAuthError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingClosingParenInFunctionTypeError",
+			&parser.MissingClosingParenInFunctionTypeError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingClosingParenInParameterListError",
+			&parser.MissingClosingParenInParameterListError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.MissingColonAfterFieldNameError",
+			&parser.MissingColonAfterFieldNameError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingColonAfterParameterNameError",
+			&parser.MissingColonAfterParameterNameError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingColonInConditionalExpressionError",
+			&parser.MissingColonInConditionalExpressionError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingColonInDictionaryEntryError",
+			&parser.MissingColonInDictionaryEntryError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingColonInSwitchCaseError",
+			&parser.MissingColonInSwitchCaseError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingCommaInArgumentListError",
+			&parser.MissingCommaInArgumentListError{
+				GotToken: placeholderToken,
 			},
 		},
 		{"parser.MissingCommaInParameterListError",
@@ -39,27 +321,305 @@ func generateErrors() []namedError {
 				Pos: placeholderPosition,
 			},
 		},
+		{"parser.MissingCommaInTypeParameterListError",
+			&parser.MissingCommaInTypeParameterListError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.MissingCommentEndError",
+			&parser.MissingCommentEndError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.MissingConformanceError",
+			&parser.MissingConformanceError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.MissingDefaultArgumentError",
+			&parser.MissingDefaultArgumentError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingDictionaryValueTypeError",
+			&parser.MissingDictionaryValueTypeError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.MissingEndOfParenthesizedExpressionError",
+			&parser.MissingEndOfParenthesizedExpressionError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingEndOfParenthesizedTypeError",
+			&parser.MissingEndOfParenthesizedTypeError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingEnumCaseNameError",
+			&parser.MissingEnumCaseNameError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingFieldNameError",
+			&parser.MissingFieldNameError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingForKeywordInAttachmentDeclarationError",
+			&parser.MissingForKeywordInAttachmentDeclarationError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingFromKeywordInRemoveStatementError",
+			&parser.MissingFromKeywordInRemoveStatementError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingImportLocationError",
+			&parser.MissingImportLocationError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.MissingInKeywordInForStatementError",
+			&parser.MissingInKeywordInForStatementError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingOpeningBraceError",
+			&parser.MissingOpeningBraceError{
+				Description: placeholderString,
+				GotToken:    placeholderToken,
+			},
+		},
+		{"parser.MissingOpeningParenInFunctionTypeError",
+			&parser.MissingOpeningParenInFunctionTypeError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingOpeningParenInNominalTypeInvocationError",
+			&parser.MissingOpeningParenInNominalTypeInvocationError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingRightArrowInEntitlementMappingError",
+			&parser.MissingRightArrowInEntitlementMappingError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingSeparatorInIntersectionOrDictionaryTypeError",
+			&parser.MissingSeparatorInIntersectionOrDictionaryTypeError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingSlashInPathExpressionError",
+			&parser.MissingSlashInPathExpressionError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingStartOfAuthorizationError",
+			&parser.MissingStartOfAuthorizationError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingStartOfParameterListError",
+			&parser.MissingStartOfParameterListError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingToKeywordInAttachExpressionError",
+			&parser.MissingToKeywordInAttachExpressionError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.MissingTransferError",
+			&parser.MissingTransferError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.MissingTypeAfterCommaInIntersectionError",
+			&parser.MissingTypeAfterCommaInIntersectionError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.MissingTypeAfterSeparatorError",
+			&parser.MissingTypeAfterSeparatorError{
+				Pos:       placeholderPosition,
+				Separator: placeholderTokenType,
+			},
+		},
+		{"parser.MissingTypeAnnotationAfterCommaError",
+			&parser.MissingTypeAnnotationAfterCommaError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.MultipleColonInDictionaryTypeError",
+			&parser.MultipleColonInDictionaryTypeError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.NestedTypeMissingNameError",
+			&parser.NestedTypeMissingNameError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.NonNominalTypeError",
+			&parser.NonNominalTypeError{
+				Pos:  placeholderPosition,
+				Type: placeholderAstType,
+			},
+		},
+		{"parser.PrivAccessError",
+			&parser.PrivAccessError{
+				Range: placeholderRange,
+			},
+		},
+		{"parser.PubAccessError",
+			&parser.PubAccessError{
+				Range: placeholderRange,
+			},
+		},
+		{"parser.PubSetAccessError",
+			&parser.PubSetAccessError{
+				Range: placeholderRange,
+			},
+		},
 		{"parser.RestrictedTypeError",
 			&parser.RestrictedTypeError{
 				Range: placeholderRange,
 			},
 		},
-		{"parser.SyntaxError",
-			&parser.SyntaxError{
-				Message: placeholderString,
-				Pos:     placeholderPosition,
+		{"parser.SpecialFunctionReturnTypeError",
+			&parser.SpecialFunctionReturnTypeError{
+				DeclarationKind: placeholderDeclarationKind,
+				Range:           placeholderRange,
 			},
 		},
-		{"parser.SyntaxErrorWithSuggestedReplacement",
-			&parser.SyntaxErrorWithSuggestedReplacement{
-				Message:      placeholderString,
-				SuggestedFix: placeholderString,
-				Range:        placeholderRange,
+		{"parser.StatementSeparationError",
+			&parser.StatementSeparationError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.SyntaxError",
+			&parser.SyntaxError{
+				Message:       placeholderString,
+				Secondary:     placeholderString,
+				Migration:     placeholderString,
+				Documentation: placeholderString,
+				Pos:           placeholderPosition,
 			},
 		},
 		{"parser.TypeDepthLimitReachedError",
 			parser.TypeDepthLimitReachedError{
 				Pos: placeholderPosition,
+			},
+		},
+		{"parser.UnexpectedColonInDictionaryTypeError",
+			&parser.UnexpectedColonInDictionaryTypeError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.UnexpectedColonInIntersectionTypeError",
+			&parser.UnexpectedColonInIntersectionTypeError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.UnexpectedCommaInArgumentListError",
+			&parser.UnexpectedCommaInArgumentListError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.UnexpectedCommaInDictionaryTypeError",
+			&parser.UnexpectedCommaInDictionaryTypeError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.UnexpectedCommaInIntersectionTypeError",
+			&parser.UnexpectedCommaInIntersectionTypeError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.UnexpectedCommaInTypeAnnotationListError",
+			&parser.UnexpectedCommaInTypeAnnotationListError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.UnexpectedDefaultArgumentError",
+			&parser.UnexpectedDefaultArgumentError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.UnexpectedEOFError",
+			parser.UnexpectedEOFError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.UnexpectedEOFExpectedTypeAnnotationError",
+			&parser.UnexpectedEOFExpectedTypeAnnotationError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.UnexpectedEOFExpectedTypeError",
+			&parser.UnexpectedEOFExpectedTypeError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.UnexpectedEOFInImportListError",
+			&parser.UnexpectedEOFInImportListError{
+				Pos: placeholderPosition,
+			},
+		},
+		{"parser.UnexpectedExpressionStartError",
+			&parser.UnexpectedExpressionStartError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.UnexpectedTokenAtEndError",
+			&parser.UnexpectedTokenAtEndError{
+				Token: placeholderToken,
+			},
+		},
+		{"parser.UnexpectedTokenInBlockCommentError",
+			&parser.UnexpectedTokenInBlockCommentError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.UnexpectedTokenInExpressionError",
+			&parser.UnexpectedTokenInExpressionError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.UnexpectedTokenInParameterListError",
+			&parser.UnexpectedTokenInParameterListError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.UnexpectedTokenInTypeError",
+			&parser.UnexpectedTokenInTypeError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.UnexpectedTokenInTypeParameterListError",
+			&parser.UnexpectedTokenInTypeParameterListError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.UnexpectedTokenInsteadOfSeparatorError",
+			&parser.UnexpectedTokenInsteadOfSeparatorError{
+				GotToken:          placeholderToken,
+				ExpectedSeparator: placeholderTokenType,
+				ExpectedEndToken:  placeholderTokenType,
+			},
+		},
+		{"parser.UnexpectedTypeStartError",
+			&parser.UnexpectedTypeStartError{
+				GotToken: placeholderToken,
+			},
+		},
+		{"parser.WhitespaceAfterMemberAccessError",
+			&parser.WhitespaceAfterMemberAccessError{
+				OperatorTokenType: placeholderTokenType,
+				WhitespaceRange:   placeholderRange,
 			},
 		},
 		{"sema.AlwaysFailingNonResourceCastingTypeError",
@@ -393,6 +953,11 @@ func generateErrors() []namedError {
 				Range:  placeholderRange,
 			},
 		},
+		{"sema.InvalidConditionalResourceOperandError",
+			&sema.InvalidConditionalResourceOperandError{
+				Range: placeholderRange,
+			},
+		},
 		{"sema.InvalidConformanceError",
 			&sema.InvalidConformanceError{
 				Type:  placeholderSemaType,
@@ -416,7 +981,7 @@ func generateErrors() []namedError {
 		},
 		{"sema.InvalidConstructionError",
 			&sema.InvalidConstructionError{
-				Range: placeholderRange,
+				Pos: placeholderPosition,
 			},
 		},
 		{"sema.InvalidDeclarationError",
@@ -485,11 +1050,18 @@ func generateErrors() []namedError {
 		},
 		{"sema.InvalidEventUsageError",
 			&sema.InvalidEventUsageError{
-				Range: placeholderRange,
+				EventName: placeholderString,
+				Range:     placeholderRange,
 			},
 		},
 		{"sema.InvalidFailableResourceDowncastOutsideOptionalBindingError",
 			&sema.InvalidFailableResourceDowncastOutsideOptionalBindingError{
+				Range: placeholderRange,
+			},
+		},
+		{"sema.InvalidFieldVariableKindError",
+			&sema.InvalidFieldVariableKindError{
+				Kind:  placeholderVariableKind,
 				Range: placeholderRange,
 			},
 		},
@@ -579,7 +1151,7 @@ func generateErrors() []namedError {
 		},
 		{"sema.InvalidMoveOperationError",
 			&sema.InvalidMoveOperationError{
-				Range: placeholderRange,
+				Pos: placeholderPosition,
 			},
 		},
 		{"sema.InvalidNameError",
@@ -610,13 +1182,19 @@ func generateErrors() []namedError {
 				Type: placeholderNominalType,
 			},
 		},
-		{"sema.InvalidNonEntitlementAccessError",
-			&sema.InvalidNonEntitlementAccessError{
+		{"sema.InvalidNilCoalescingRightResourceOperandError",
+			&sema.InvalidNilCoalescingRightResourceOperandError{
 				Range: placeholderRange,
 			},
 		},
-		{"sema.InvalidNonEntitlementTypeInMapError",
-			&sema.InvalidNonEntitlementTypeInMapError{
+		{"sema.InvalidNonEntitlementAccessError",
+			&sema.InvalidNonEntitlementAccessError{
+				Type:  placeholderSemaType,
+				Range: placeholderRange,
+			},
+		},
+		{"sema.InvalidNonEntitlementTypeInMappingError",
+			&sema.InvalidNonEntitlementTypeInMappingError{
 				Pos: placeholderPosition,
 			},
 		},
@@ -657,6 +1235,7 @@ func generateErrors() []namedError {
 		},
 		{"sema.InvalidResourceAnnotationError",
 			&sema.InvalidResourceAnnotationError{
+				Type:  placeholderSemaType,
 				Range: placeholderRange,
 			},
 		},
@@ -782,12 +1361,6 @@ func generateErrors() []namedError {
 				Operation:               placeholderOperation,
 			},
 		},
-		{"sema.InvalidVariableKindError",
-			&sema.InvalidVariableKindError{
-				Kind:  placeholderVariableKind,
-				Range: placeholderRange,
-			},
-		},
 		{"sema.InvalidatedResourceReferenceError",
 			&sema.InvalidatedResourceReferenceError{
 				Invalidation: placeholderResourceInvalidation,
@@ -875,8 +1448,8 @@ func generateErrors() []namedError {
 		},
 		{"sema.MissingTypeArgumentError",
 			&sema.MissingTypeArgumentError{
-				TypeArgumentName: placeholderString,
-				Range:            placeholderRange,
+				TypeParameterName: placeholderString,
+				Range:             placeholderRange,
 			},
 		},
 		{"sema.MultipleInterfaceDefaultImplementationsError",
@@ -1079,8 +1652,8 @@ func generateErrors() []namedError {
 				Range:          placeholderRange,
 			},
 		},
-		{"sema.UnconvertableTypeError",
-			&sema.UnconvertableTypeError{
+		{"sema.UnconvertibleTypeError",
+			&sema.UnconvertibleTypeError{
 				Type:  placeholderAstType,
 				Range: placeholderRange,
 			},

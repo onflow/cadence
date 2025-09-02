@@ -39,13 +39,11 @@ func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDe
 }
 
 func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.ResolvedLocation, aliases map[string]string) {
-	config := interpreter.SharedState.Config
-
 	// tracing
-	if config.TracingEnabled {
+	if TracingEnabled {
 		startTime := time.Now()
 		defer func() {
-			interpreter.reportImportTrace(
+			interpreter.ReportImportTrace(
 				resolvedLocation.Location.String(),
 				time.Since(startTime),
 			)

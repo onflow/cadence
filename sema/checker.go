@@ -885,7 +885,7 @@ func (checker *Checker) ConvertType(t ast.Type) Type {
 		return checker.convertInstantiationType(t)
 
 	default:
-		checker.report(&UnconvertableTypeError{
+		checker.report(&UnconvertibleTypeError{
 			Range: ast.NewRangeFromPositioned(checker.memoryGauge, t),
 		})
 		return InvalidType
@@ -2072,6 +2072,7 @@ func (checker *Checker) accessFromAstAccess(access ast.Access) (result Access) {
 					} else {
 						checker.report(
 							&InvalidNonEntitlementAccessError{
+								Type:  nominalType,
 								Range: ast.NewRangeFromPositioned(checker.memoryGauge, entitlement),
 							},
 						)
@@ -2254,6 +2255,7 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation TypeAnnotation, pos a
 	case TypeAnnotationStateInvalidResourceAnnotation:
 		checker.report(
 			&InvalidResourceAnnotationError{
+				Type:  typeAnnotation.Type,
 				Range: ast.NewRangeFromPositioned(checker.memoryGauge, pos),
 			},
 		)

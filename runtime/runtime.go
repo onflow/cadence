@@ -328,6 +328,8 @@ func (r *runtime) ParseAndCheckProgram(
 		context.Interface,
 		codesAndPrograms,
 		nil,
+		context.MemoryGauge,
+		context.ComputationGauge,
 		context.CoverageReport,
 	)
 
@@ -357,7 +359,7 @@ func (r *runtime) Storage(context Context) (*Storage, *interpreter.Interpreter, 
 
 	storage := NewStorage(
 		runtimeInterface,
-		runtimeInterface,
+		context.MemoryGauge,
 		StorageConfig{},
 	)
 
@@ -370,6 +372,8 @@ func (r *runtime) Storage(context Context) (*Storage, *interpreter.Interpreter, 
 		runtimeInterface,
 		codesAndPrograms,
 		storage,
+		context.MemoryGauge,
+		context.ComputationGauge,
 		context.CoverageReport,
 	)
 

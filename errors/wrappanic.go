@@ -30,13 +30,9 @@ func WrapPanic(f func()) {
 			case goRuntime.Error, InternalError:
 				panic(r)
 			case error:
-				panic(ExternalError{
-					Recovered: r,
-				})
+				panic(NewExternalError(r))
 			default:
-				panic(ExternalNonError{
-					Recovered: r,
-				})
+				panic(NewExternalNonError(r))
 			}
 		}
 	}()

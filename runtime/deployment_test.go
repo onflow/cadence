@@ -286,13 +286,16 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 					" --> 2a00000000000000.Test:4:18\n" +
 					"  |\n" +
 					"4 |               fun testCase() {}\n" +
-					"  |                   ^^^^^^^^\n" +
+					"  |                   ^^^^^^^^ move this declaration to a contract\n" +
 					"\n" +
 					"error: missing access modifier for function\n" +
 					" --> 2a00000000000000.Test:4:14\n" +
 					"  |\n" +
 					"4 |               fun testCase() {}\n" +
-					"  |               ^\n"
+					"  |               ^ an access modifier is required for this declaration; add an access modifier, like e.g. `access(all)` or `access(self)`\n" +
+					"\n" +
+					"  See documentation at: https://cadence-lang.org/docs/language/access-control\n" +
+					"\n"
 		}
 
 		test(t, testCase{
@@ -326,7 +329,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 					" --> 2a00000000000000.Test:2:14\n" +
 					"  |\n" +
 					"2 |               X\n" +
-					"  |               ^\n"
+					"  |               ^ check for extra characters, missing semicolons, or incomplete statements\n"
 		}
 
 		test(t, testCase{
@@ -357,7 +360,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 					" --> 2a00000000000000.Test:3:43\n" +
 					"  |\n" +
 					"3 |                   access(all) fun test() { X }\n" +
-					"  |                                            ^ not found in this scope\n"
+					"  |                                            ^ not found in this scope; check for typos or declare it\n"
 		}
 
 		test(t, testCase{

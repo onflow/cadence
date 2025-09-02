@@ -1957,13 +1957,13 @@ func TestParseAccessAssignment(t *testing.T) {
 															Pos:        ast.Position{Offset: 31, Line: 3, Column: 12},
 														},
 													},
-													AccessPos: ast.Position{Offset: 32, Line: 3, Column: 13},
+													AccessEndPos: ast.Position{Offset: 32, Line: 3, Column: 13},
 													Identifier: ast.Identifier{
 														Identifier: "foo",
 														Pos:        ast.Position{Offset: 33, Line: 3, Column: 14},
 													},
 												},
-												AccessPos: ast.Position{Offset: 36, Line: 3, Column: 17},
+												AccessEndPos: ast.Position{Offset: 36, Line: 3, Column: 17},
 												Identifier: ast.Identifier{
 													Identifier: "bar",
 													Pos:        ast.Position{Offset: 37, Line: 3, Column: 18},
@@ -1997,7 +1997,7 @@ func TestParseAccessAssignment(t *testing.T) {
 											EndPos:   ast.Position{Offset: 45, Line: 3, Column: 26},
 										},
 									},
-									AccessPos: ast.Position{Offset: 46, Line: 3, Column: 27},
+									AccessEndPos: ast.Position{Offset: 46, Line: 3, Column: 27},
 									Identifier: ast.Identifier{
 										Identifier: "baz",
 										Pos:        ast.Position{Offset: 47, Line: 3, Column: 28},
@@ -2070,13 +2070,13 @@ func TestParseExpressionStatementWithAccess(t *testing.T) {
 															Pos:        ast.Position{Offset: 19, Line: 2, Column: 18},
 														},
 													},
-													AccessPos: ast.Position{Offset: 20, Line: 2, Column: 19},
+													AccessEndPos: ast.Position{Offset: 20, Line: 2, Column: 19},
 													Identifier: ast.Identifier{
 														Identifier: "foo",
 														Pos:        ast.Position{Offset: 21, Line: 2, Column: 20},
 													},
 												},
-												AccessPos: ast.Position{Offset: 24, Line: 2, Column: 23},
+												AccessEndPos: ast.Position{Offset: 24, Line: 2, Column: 23},
 												Identifier: ast.Identifier{
 													Identifier: "bar",
 													Pos:        ast.Position{Offset: 25, Line: 2, Column: 24},
@@ -2110,7 +2110,7 @@ func TestParseExpressionStatementWithAccess(t *testing.T) {
 											EndPos:   ast.Position{Offset: 33, Line: 2, Column: 32},
 										},
 									},
-									AccessPos: ast.Position{Offset: 34, Line: 2, Column: 33},
+									AccessEndPos: ast.Position{Offset: 34, Line: 2, Column: 33},
 									Identifier: ast.Identifier{
 										Identifier: "baz",
 										Pos:        ast.Position{Offset: 35, Line: 2, Column: 34},
@@ -2415,7 +2415,7 @@ func TestParseSwapStatementInFunctionDeclaration(t *testing.T) {
 											Pos:        ast.Position{Offset: 41, Line: 3, Column: 21},
 										},
 									},
-									AccessPos: ast.Position{Offset: 44, Line: 3, Column: 24},
+									AccessEndPos: ast.Position{Offset: 44, Line: 3, Column: 24},
 									Identifier: ast.Identifier{
 										Identifier: "baz",
 										Pos:        ast.Position{Offset: 45, Line: 3, Column: 25},

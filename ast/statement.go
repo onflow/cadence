@@ -252,11 +252,10 @@ const ifStatementIfKeywordSpaceDoc = prettier.Text("if ")
 const ifStatementSpaceElseKeywordSpaceDoc = prettier.Text(" else ")
 
 func (s *IfStatement) Doc() prettier.Doc {
-	testDoc := s.Test.Doc()
 
 	doc := prettier.Concat{
 		ifStatementIfKeywordSpaceDoc,
-		testDoc,
+		docOrEmpty(s.Test),
 		prettier.Space,
 		s.Then.Doc(),
 	}
@@ -353,7 +352,7 @@ func (s *WhileStatement) Doc() prettier.Doc {
 	return prettier.Group{
 		Doc: prettier.Concat{
 			whileStatementKeywordSpaceDoc,
-			s.Test.Doc(),
+			docOrEmpty(s.Test),
 			prettier.Space,
 			s.Block.Doc(),
 		},
@@ -448,7 +447,7 @@ func (s *ForStatement) Doc() prettier.Doc {
 		doc,
 		prettier.Text(s.Identifier.Identifier),
 		forStatementSpaceInKeywordSpaceDoc,
-		s.Value.Doc(),
+		docOrEmpty(s.Value),
 		prettier.Space,
 		s.Block.Doc(),
 	)
@@ -520,7 +519,7 @@ const emitStatementKeywordSpaceDoc = prettier.Text("emit ")
 func (s *EmitStatement) Doc() prettier.Doc {
 	return prettier.Concat{
 		emitStatementKeywordSpaceDoc,
-		s.InvocationExpression.Doc(),
+		docOrEmpty(s.InvocationExpression),
 	}
 }
 
@@ -589,13 +588,13 @@ func (s *AssignmentStatement) Walk(walkChild func(Element)) {
 func (s *AssignmentStatement) Doc() prettier.Doc {
 	return prettier.Group{
 		Doc: prettier.Concat{
-			s.Target.Doc(),
+			docOrEmpty(s.Target),
 			prettier.Space,
-			s.Transfer.Doc(),
+			docOrEmpty(s.Transfer),
 			prettier.Space,
 			prettier.Group{
 				Doc: prettier.Indent{
-					Doc: s.Value.Doc(),
+					Doc: docOrEmpty(s.Value),
 				},
 			},
 		},
@@ -661,9 +660,9 @@ const swapStatementSpaceSymbolSpaceDoc = prettier.Text(" <-> ")
 func (s *SwapStatement) Doc() prettier.Doc {
 	return prettier.Group{
 		Doc: prettier.Concat{
-			s.Left.Doc(),
+			docOrEmpty(s.Left),
 			swapStatementSpaceSymbolSpaceDoc,
-			s.Right.Doc(),
+			docOrEmpty(s.Right),
 		},
 	}
 }
@@ -720,7 +719,7 @@ func (s *ExpressionStatement) Walk(walkChild func(Element)) {
 }
 
 func (s *ExpressionStatement) Doc() prettier.Doc {
-	return s.Expression.Doc()
+	return docOrEmpty(s.Expression)
 }
 
 func (s *ExpressionStatement) MarshalJSON() ([]byte, error) {
@@ -789,11 +788,13 @@ func (s *SwitchStatement) Doc() prettier.Doc {
 
 	bodyDoc := make(prettier.Concat, 0, len(s.Cases))
 
-	for _, switchCase := range s.Cases {
+	for i, switchCase := range s.Cases {
+		isLast := i == len(s.Cases)-1
+
 		bodyDoc = append(
 			bodyDoc,
 			prettier.HardLine{},
-			switchCase.Doc(),
+			switchCase.Doc(isLast),
 		)
 	}
 
@@ -804,7 +805,7 @@ func (s *SwitchStatement) Doc() prettier.Doc {
 				prettier.Indent{
 					Doc: prettier.Concat{
 						prettier.SoftLine{},
-						s.Expression.Doc(),
+						docOrEmpty(s.Expression),
 					},
 				},
 				prettier.Line{},
@@ -871,12 +872,12 @@ const switchCaseKeywordSpaceDoc = prettier.Text("case ")
 const switchCaseColonSymbolDoc = prettier.Text(":")
 const switchCaseDefaultKeywordSpaceDoc = prettier.Text("default:")
 
-func (s *SwitchCase) Doc() prettier.Doc {
+func (s *SwitchCase) Doc(isLast bool) prettier.Doc {
 	statementsDoc := prettier.Indent{
 		Doc: StatementsDoc(s.Statements),
 	}
 
-	if s.Expression == nil {
+	if isLast && s.Expression == nil {
 		return prettier.Concat{
 			switchCaseDefaultKeywordSpaceDoc,
 			statementsDoc,
@@ -885,7 +886,7 @@ func (s *SwitchCase) Doc() prettier.Doc {
 
 	return prettier.Concat{
 		switchCaseKeywordSpaceDoc,
-		s.Expression.Doc(),
+		docOrEmpty(s.Expression),
 		switchCaseColonSymbolDoc,
 		statementsDoc,
 	}

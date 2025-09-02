@@ -68,7 +68,7 @@ func TestRuntimeError(t *testing.T) {
 				" --> 0100000000000000000000000000000000000000000000000000000000000000:1:0\n"+
 				"  |\n"+
 				"1 | X\n"+
-				"  | ^\n",
+				"  | ^ check for extra characters, missing semicolons, or incomplete statements\n",
 		)
 	})
 
@@ -102,7 +102,7 @@ func TestRuntimeError(t *testing.T) {
 				" --> 0100000000000000000000000000000000000000000000000000000000000000:1:0\n"+
 				"  |\n"+
 				"1 | fun test() {}\n"+
-				"  | ^\n",
+				"  | ^ an access modifier is required for this declaration; add an access modifier, like e.g. `access(all)` or `access(self)`\n",
 		)
 	})
 
@@ -311,7 +311,7 @@ error: panic: 42
 				" --> imported:1:0\n"+
 				"  |\n"+
 				"1 | X\n"+
-				"  | ^\n",
+				"  | ^ check for extra characters, missing semicolons, or incomplete statements\n",
 		)
 	})
 
@@ -356,7 +356,7 @@ error: panic: 42
 				" --> imported:1:0\n"+
 				"  |\n"+
 				"1 | fun test() {}\n"+
-				"  | ^\n",
+				"  | ^ an access modifier is required for this declaration; add an access modifier, like e.g. `access(all)` or `access(self)`\n",
 		)
 	})
 
@@ -493,25 +493,30 @@ error: overflow
 				" --> 0000000000000002.B:3:30\n"+
 				"  |\n"+
 				"3 |               access(all) fun bar() {\n"+
-				"  |                               ^^^\n"+
+				"  |                               ^^^ move this declaration to a contract\n"+
 				"\n"+
 				"error: cannot find variable in this scope: `X`\n"+
 				" --> 0000000000000002.B:5:18\n"+
 				"  |\n"+
 				"5 |                   X\n"+
-				"  |                   ^ not found in this scope\n"+
+				"  |                   ^ not found in this scope; check for typos or declare it\n"+
+				"\n"+
+				"  See documentation at: https://cadence-lang.org/docs/language/constants-and-variables\n"+
 				"\n"+
 				"error: function declarations are not valid at the top-level\n"+
 				" --> 0000000000000001.A:8:30\n"+
 				"  |\n"+
 				"8 |               access(all) fun foo() {\n"+
-				"  |                               ^^^\n"+
+				"  |                               ^^^ move this declaration to a contract\n"+
 				"\n"+
 				"error: cannot find variable in this scope: `Y`\n"+
 				"  --> 0000000000000001.A:10:18\n"+
 				"   |\n"+
 				"10 |                   Y\n"+
-				"   |                   ^ not found in this scope\n",
+				"   |                   ^ not found in this scope; check for typos or declare it\n"+
+				"\n"+
+				"  See documentation at: https://cadence-lang.org/docs/language/constants-and-variables\n"+
+				"\n",
 		)
 
 	})

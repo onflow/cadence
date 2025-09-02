@@ -122,11 +122,7 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) Ty
 
 			checker.report(
 				&InvalidMoveOperationError{
-					Range: ast.NewRange(
-						checker.memoryGauge,
-						expression.StartPos,
-						expression.Expression.StartPosition(),
-					),
+					Pos: expression.StartPos,
 				},
 			)
 		}

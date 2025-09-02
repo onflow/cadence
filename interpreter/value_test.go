@@ -41,9 +41,9 @@ import (
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
-func newTestCompositeValue(inter *Interpreter, owner common.Address) *CompositeValue {
+func newTestCompositeValue(context MemberAccessibleContext, owner common.Address) *CompositeValue {
 	return NewCompositeValue(
-		inter,
+		context,
 		EmptyLocationRange,
 		TestLocation,
 		"Test",
@@ -64,7 +64,7 @@ func getMeterCompFuncWithExpectedKinds(
 	t *testing.T,
 	kinds []common.ComputationKind,
 	intensities []uint64,
-) computationGaugeFunc {
+) common.FunctionComputationGauge {
 	if len(kinds) != len(intensities) {
 		t.Fatal("size of kinds doesn't match size of intensities")
 	}

@@ -54,7 +54,8 @@ func (checker *Checker) checkInvokedExpression(ty Type, pos ast.HasPosition) boo
 		case common.CompositeKindEvent:
 			checker.report(
 				&InvalidEventUsageError{
-					Range: ast.NewRangeFromPositioned(checker.memoryGauge, pos),
+					EventName: compositeType.Identifier,
+					Range:     ast.NewRangeFromPositioned(checker.memoryGauge, pos),
 				},
 			)
 			return false
@@ -452,10 +453,7 @@ func (checker *Checker) checkInvocation(
 		invocationExpression,
 	)
 
-	minCount := argumentCount
-	if parameterCount < argumentCount {
-		minCount = parameterCount
-	}
+	minCount := min(parameterCount, argumentCount)
 
 	var parameterTypes []Type
 

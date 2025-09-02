@@ -71,7 +71,6 @@ type TestRuntimeInterface struct {
 		newAddress common.Address,
 	)
 	OnGenerateUUID       func() (uint64, error)
-	OnMeterComputation   func(usage common.ComputationUsage) error
 	OnDecodeArgument     func(b []byte, t cadence.Type) (cadence.Value, error)
 	OnProgramParsed      func(location runtime.Location, duration time.Duration)
 	OnProgramChecked     func(location runtime.Location, duration time.Duration)
@@ -104,14 +103,9 @@ type TestRuntimeInterface struct {
 	OnGetAccountContractNames    func(address runtime.Address) ([]string, error)
 	OnRecordTrace                func(
 		operation string,
-		location runtime.Location,
 		duration time.Duration,
 		attrs []attribute.KeyValue,
 	)
-	OnMeterMemory                    func(usage common.MemoryUsage) error
-	OnComputationUsed                func() (uint64, error)
-	OnMemoryUsed                     func() (uint64, error)
-	OnInteractionUsed                func() (uint64, error)
 	OnGenerateAccountID              func(address common.Address) (uint64, error)
 	OnRecoverProgram                 func(program *ast.Program, location common.Location) ([]byte, error)
 	OnValidateAccountCapabilitiesGet func(
@@ -349,13 +343,6 @@ func (i *TestRuntimeInterface) GenerateUUID() (uint64, error) {
 	return i.OnGenerateUUID()
 }
 
-func (i *TestRuntimeInterface) MeterComputation(usage common.ComputationUsage) error {
-	if i.OnMeterComputation == nil {
-		return nil
-	}
-	return i.OnMeterComputation(usage)
-}
-
 func (i *TestRuntimeInterface) DecodeArgument(b []byte, t cadence.Type) (cadence.Value, error) {
 	if i.OnDecodeArgument == nil {
 		panic("must specify TestRuntimeInterface.OnDecodeArgument")
@@ -540,46 +527,13 @@ func (i *TestRuntimeInterface) GenerateAccountID(address common.Address) (uint64
 
 func (i *TestRuntimeInterface) RecordTrace(
 	operation string,
-	location runtime.Location,
 	duration time.Duration,
 	attrs []attribute.KeyValue,
 ) {
 	if i.OnRecordTrace == nil {
 		return
 	}
-	i.OnRecordTrace(operation, location, duration, attrs)
-}
-
-func (i *TestRuntimeInterface) MeterMemory(usage common.MemoryUsage) error {
-	if i.OnMeterMemory == nil {
-		return nil
-	}
-
-	return i.OnMeterMemory(usage)
-}
-
-func (i *TestRuntimeInterface) ComputationUsed() (uint64, error) {
-	if i.OnComputationUsed == nil {
-		return 0, nil
-	}
-
-	return i.OnComputationUsed()
-}
-
-func (i *TestRuntimeInterface) MemoryUsed() (uint64, error) {
-	if i.OnMemoryUsed == nil {
-		return 0, nil
-	}
-
-	return i.OnMemoryUsed()
-}
-
-func (i *TestRuntimeInterface) InteractionUsed() (uint64, error) {
-	if i.OnInteractionUsed == nil {
-		return 0, nil
-	}
-
-	return i.OnInteractionUsed()
+	i.OnRecordTrace(operation, duration, attrs)
 }
 
 func (i *TestRuntimeInterface) onTransactionExecutionStart() {

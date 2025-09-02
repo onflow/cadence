@@ -33,7 +33,7 @@ import (
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
 )
 
-func testUseMemory(meter map[common.MemoryKind]uint64) func(common.MemoryUsage) error {
+func testUseMemory(meter map[common.MemoryKind]uint64) common.FunctionMemoryGauge {
 	return func(usage common.MemoryUsage) error {
 		meter[usage.Kind] += usage.Amount
 		return nil
@@ -48,11 +48,11 @@ func TestRuntimeImportedValueMemoryMetering(t *testing.T) {
 
 		runtime := NewTestRuntime()
 
-		runtimeInterface := &TestRuntimeInterface{
-			OnMeterMemory: testUseMemory(meter),
-		}
+		memoryGauge := testUseMemory(meter)
+
+		runtimeInterface := &TestRuntimeInterface{}
 		runtimeInterface.OnDecodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(runtimeInterface, b)
+			return json.Decode(memoryGauge, b)
 		}
 
 		_, err := runtime.ExecuteScript(
@@ -61,9 +61,10 @@ func TestRuntimeImportedValueMemoryMetering(t *testing.T) {
 				Arguments: encodeArgs(args),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    common.ScriptLocation{},
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 
@@ -438,12 +439,6 @@ func TestRuntimeImportedValueMemoryMetering(t *testing.T) {
 	})
 }
 
-type testMemoryError struct{}
-
-func (testMemoryError) Error() string {
-	return "memory limit exceeded"
-}
-
 func TestRuntimeImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 
 	t.Parallel()
@@ -527,12 +522,12 @@ func TestRuntimeImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 
 			runtime := NewTestRuntime()
 
-			meter := make(map[common.MemoryKind]uint64)
-			runtimeInterface := &TestRuntimeInterface{
-				OnMeterMemory: testUseMemory(meter),
-			}
+			meter := map[common.MemoryKind]uint64{}
+			memoryGauge := testUseMemory(meter)
+
+			runtimeInterface := &TestRuntimeInterface{}
 			runtimeInterface.OnDecodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(runtimeInterface, b)
+				return json.Decode(memoryGauge, b)
 			}
 
 			script := []byte(fmt.Sprintf(
@@ -551,9 +546,10 @@ func TestRuntimeImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 					}),
 				},
 				Context{
-					Interface: runtimeInterface,
-					Location:  common.ScriptLocation{},
-					UseVM:     *compile,
+					Interface:   runtimeInterface,
+					Location:    common.ScriptLocation{},
+					MemoryGauge: memoryGauge,
+					UseVM:       *compile,
 				},
 			)
 
@@ -601,11 +597,11 @@ func TestRuntimeScriptDecodedLocationMetering(t *testing.T) {
 			runtime := NewTestRuntime()
 
 			meter := make(map[common.MemoryKind]uint64)
-			runtimeInterface := &TestRuntimeInterface{
-				OnMeterMemory: testUseMemory(meter),
-			}
+			memoryGauge := testUseMemory(meter)
+
+			runtimeInterface := &TestRuntimeInterface{}
 			runtimeInterface.OnDecodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(runtimeInterface, b)
+				return json.Decode(memoryGauge, b)
 			}
 
 			value := cadence.NewStruct([]cadence.Value{}).WithType(
@@ -615,9 +611,9 @@ func TestRuntimeScriptDecodedLocationMetering(t *testing.T) {
 				})
 
 			script := []byte(`
-                    access(all) struct S {}
-                    access(all) fun main(x: S) {}
-                `)
+                access(all) struct S {}
+                access(all) fun main(x: S) {}
+            `)
 
 			_, err := runtime.ExecuteScript(
 				Script{
@@ -625,9 +621,10 @@ func TestRuntimeScriptDecodedLocationMetering(t *testing.T) {
 					Arguments: encodeArgs([]cadence.Value{value}),
 				},
 				Context{
-					Interface: runtimeInterface,
-					Location:  common.ScriptLocation{},
-					UseVM:     *compile,
+					Interface:   runtimeInterface,
+					Location:    common.ScriptLocation{},
+					MemoryGauge: memoryGauge,
+					UseVM:       *compile,
 				},
 			)
 

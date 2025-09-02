@@ -1,3 +1,5 @@
+//go:build cadence_tracing
+
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -15,33 +17,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package interpreter
 
-package main
-
-import (
-	"encoding/csv"
-	"log"
-	"os"
-)
-
-type namedError struct {
-	name string
-	error
-}
-
-func main() {
-	w := csv.NewWriter(os.Stdout)
-	defer w.Flush()
-
-	err := w.Write([]string{"name", "example"})
-	if err != nil {
-		log.Fatalf("Failed to write CSV header: %v", err)
-	}
-
-	for _, namedErr := range generateErrors() {
-		err = w.Write([]string{namedErr.name, namedErr.Error()})
-		if err != nil {
-			log.Fatalf("Failed to write CSV row: %v", err)
-		}
-	}
-}
+const TracingEnabled = true

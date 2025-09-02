@@ -75,8 +75,8 @@ type ExternalNonError struct {
 	Recovered any
 }
 
-func NewExternalNonError(recovered error) ExternalError {
-	return ExternalError{
+func NewExternalNonError(recovered any) ExternalNonError {
+	return ExternalNonError{
 		Recovered: recovered,
 	}
 }
@@ -121,6 +121,16 @@ type HasSuggestedFixes[T any] interface {
 type SuggestedFix[T any] struct {
 	Message   string
 	TextEdits []T
+}
+
+// HasDocumentationLink provides structured documentation links for LSP integration
+type HasDocumentationLink interface {
+	DocumentationLink() string
+}
+
+// HasMigrationNote provides structured migration notes for LSP integration
+type HasMigrationNote interface {
+	MigrationNote() string
 }
 
 // MemoryMeteringError indicates a memory limit has reached and should end
