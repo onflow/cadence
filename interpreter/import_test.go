@@ -457,7 +457,7 @@ func TestInterpretImportWithAlias(t *testing.T) {
 		}
         `,
 		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				Storage: storage,
 				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 					require.IsType(t, common.AddressLocation{}, location)
@@ -485,43 +485,45 @@ func TestInterpretImportWithAlias(t *testing.T) {
 					}
 				},
 			},
-			CheckerConfig: &sema.Config{
-				LocationHandler: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					LocationHandler: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
 
-					for _, identifier := range identifiers {
-						result = append(result, sema.ResolvedLocation{
-							Location: common.AddressLocation{
-								Address: location.(common.AddressLocation).Address,
-								Name:    identifier.Identifier,
-							},
-							Identifiers: []ast.Identifier{
-								identifier,
-							},
-						})
-					}
-					return
-				},
-				ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
-					require.IsType(t, common.AddressLocation{}, importedLocation)
-					addressLocation := importedLocation.(common.AddressLocation)
+						for _, identifier := range identifiers {
+							result = append(result, sema.ResolvedLocation{
+								Location: common.AddressLocation{
+									Address: location.(common.AddressLocation).Address,
+									Name:    identifier.Identifier,
+								},
+								Identifiers: []ast.Identifier{
+									identifier,
+								},
+							})
+						}
+						return
+					},
+					ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+						require.IsType(t, common.AddressLocation{}, importedLocation)
+						addressLocation := importedLocation.(common.AddressLocation)
 
-					var importedChecker *sema.Checker
+						var importedChecker *sema.Checker
 
-					switch addressLocation.Address {
-					case address:
-						importedChecker = importedCheckerA
-					case address2:
-						importedChecker = importedCheckerB
-					default:
-						t.Errorf(
-							"invalid address location location name: %s",
-							addressLocation.Name,
-						)
-					}
+						switch addressLocation.Address {
+						case address:
+							importedChecker = importedCheckerA
+						case address2:
+							importedChecker = importedCheckerB
+						default:
+							t.Errorf(
+								"invalid address location location name: %s",
+								addressLocation.Name,
+							)
+						}
 
-					return sema.ElaborationImport{
-						Elaboration: importedChecker.Elaboration,
-					}, nil
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
 				},
 			},
 		},
@@ -571,7 +573,7 @@ func TestInterpretImportAliasGetType(t *testing.T) {
 		}
         `,
 		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				Storage: storage,
 				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 					program := interpreter.ProgramFromChecker(importedChecker)
@@ -585,26 +587,28 @@ func TestInterpretImportAliasGetType(t *testing.T) {
 					}
 				},
 			},
-			CheckerConfig: &sema.Config{
-				LocationHandler: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					LocationHandler: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
 
-					for _, identifier := range identifiers {
-						result = append(result, sema.ResolvedLocation{
-							Location: common.AddressLocation{
-								Address: location.(common.AddressLocation).Address,
-								Name:    identifier.Identifier,
-							},
-							Identifiers: []ast.Identifier{
-								identifier,
-							},
-						})
-					}
-					return
-				},
-				ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
-					return sema.ElaborationImport{
-						Elaboration: importedChecker.Elaboration,
-					}, nil
+						for _, identifier := range identifiers {
+							result = append(result, sema.ResolvedLocation{
+								Location: common.AddressLocation{
+									Address: location.(common.AddressLocation).Address,
+									Name:    identifier.Identifier,
+								},
+								Identifiers: []ast.Identifier{
+									identifier,
+								},
+							})
+						}
+						return
+					},
+					ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
 				},
 			},
 		},
@@ -660,7 +664,7 @@ func TestInterpretImportTypeEquality(t *testing.T) {
 		}
         `,
 		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
+			InterpreterConfig: &interpreter.Config{
 				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 				Storage:              storage,
 				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
@@ -675,26 +679,28 @@ func TestInterpretImportTypeEquality(t *testing.T) {
 					}
 				},
 			},
-			CheckerConfig: &sema.Config{
-				LocationHandler: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					LocationHandler: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
 
-					for _, identifier := range identifiers {
-						result = append(result, sema.ResolvedLocation{
-							Location: common.AddressLocation{
-								Address: location.(common.AddressLocation).Address,
-								Name:    identifier.Identifier,
-							},
-							Identifiers: []ast.Identifier{
-								identifier,
-							},
-						})
-					}
-					return
-				},
-				ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
-					return sema.ElaborationImport{
-						Elaboration: importedCheckerA.Elaboration,
-					}, nil
+						for _, identifier := range identifiers {
+							result = append(result, sema.ResolvedLocation{
+								Location: common.AddressLocation{
+									Address: location.(common.AddressLocation).Address,
+									Name:    identifier.Identifier,
+								},
+								Identifiers: []ast.Identifier{
+									identifier,
+								},
+							})
+						}
+						return
+					},
+					ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedCheckerA.Elaboration,
+						}, nil
+					},
 				},
 			},
 		},
