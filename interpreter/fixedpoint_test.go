@@ -1301,3 +1301,183 @@ func TestInterpretFixedPointLeastSignificantDecimalHandling(t *testing.T) {
 		})
 	})
 }
+
+func TestInterpretFixedPointLeastSignificantDecimalHandling(t *testing.T) {
+	t.Parallel()
+
+	type testValue[T interpreter.Value] struct {
+		operation ast.Operation
+		a, b      T
+		result    T
+	}
+
+	test := func(tt *testing.T, typ sema.Type, a, b, expectedResult interpreter.Value, operation ast.Operation) {
+		testName := fmt.Sprintf("%s (%s%s%s)",
+			typ,
+			a,
+			operation.Symbol(),
+			b,
+		)
+
+		tt.Run(testName, func(ttt *testing.T) {
+			ttt.Parallel()
+
+			code := fmt.Sprintf(`
+            fun main(): %[1]s {
+                return %[2]s %[4]s %[3]s
+            }`,
+				typ,
+				a,
+				b,
+				operation.Symbol(),
+			)
+
+			invokable := parseCheckAndPrepare(ttt, code)
+
+			result, err := invokable.Invoke("main")
+			require.NoError(t, err)
+
+			assert.Equal(
+				ttt,
+				expectedResult,
+				result,
+			)
+		})
+	}
+
+	t.Run("unsigned", func(t *testing.T) {
+		t.Parallel()
+
+		testCases := map[sema.Type][]testValue[interpreter.UFix64Value]{
+			sema.UFix64Type: {
+				{
+					a:         interpreter.NewUnmeteredUFix64Value(4560000000),
+					b:         interpreter.NewUnmeteredUFix64Value(1),
+					operation: ast.OperationMul,
+					result:    interpreter.NewUnmeteredUFix64Value(45),
+				},
+				{
+					a:         interpreter.NewUnmeteredUFix64Value(6),
+					b:         interpreter.NewUnmeteredUFix64Value(1),
+					operation: ast.OperationMul,
+					result:    interpreter.NewUnmeteredUFix64Value(0),
+				},
+				{
+					a:         interpreter.NewUnmeteredUFix64Value(456),
+					b:         interpreter.NewUnmeteredUFix64Value(1000000000),
+					operation: ast.OperationDiv,
+					result:    interpreter.NewUnmeteredUFix64Value(45),
+				},
+				{
+					a:         interpreter.NewUnmeteredUFix64Value(6),
+					b:         interpreter.NewUnmeteredUFix64Value(1000000000),
+					operation: ast.OperationDiv,
+					result:    interpreter.NewUnmeteredUFix64Value(0),
+				},
+			},
+
+			// TODO: UFix128
+		}
+
+		for typ, testValues := range testCases {
+			typ := typ
+
+			for _, testCase := range testValues {
+				test(
+					t,
+					typ,
+					testCase.a,
+					testCase.b,
+					testCase.result,
+					testCase.operation,
+				)
+			}
+		}
+	})
+
+	t.Run("signed", func(t *testing.T) {
+		t.Parallel()
+
+		testCases := map[sema.Type][]testValue[interpreter.Fix64Value]{
+			sema.Fix64Type: {
+				{
+					a:         interpreter.NewUnmeteredFix64Value(4560000000),
+					b:         interpreter.NewUnmeteredFix64Value(1),
+					operation: ast.OperationMul,
+					result:    interpreter.NewUnmeteredFix64Value(45),
+				},
+				{
+					a:         interpreter.NewUnmeteredFix64Value(6),
+					b:         interpreter.NewUnmeteredFix64Value(1),
+					operation: ast.OperationMul,
+					result:    interpreter.NewUnmeteredFix64Value(0),
+				},
+				{
+					a:         interpreter.NewUnmeteredFix64Value(456),
+					b:         interpreter.NewUnmeteredFix64Value(1000000000),
+					operation: ast.OperationDiv,
+					result:    interpreter.NewUnmeteredFix64Value(45),
+				},
+				{
+					a:         interpreter.NewUnmeteredFix64Value(6),
+					b:         interpreter.NewUnmeteredFix64Value(1000000000),
+					operation: ast.OperationDiv,
+					result:    interpreter.NewUnmeteredFix64Value(0),
+				},
+			},
+
+			// TODO: Fix128
+		}
+
+		for typ, testValues := range testCases {
+			typ := typ
+
+			for _, testCase := range testValues {
+				a := testCase.a
+				b := testCase.b
+				operation := testCase.operation
+				result := testCase.result
+
+				// Both `a` and `b` are positive.
+				test(
+					t,
+					typ,
+					a,
+					b,
+					result,
+					operation,
+				)
+
+				// Both `a` and `b` are negative.
+				test(
+					t,
+					typ,
+					a.Negate(nil, interpreter.EmptyLocationRange),
+					b.Negate(nil, interpreter.EmptyLocationRange),
+					result,
+					operation,
+				)
+
+				// `a` is positive and `b` is negative.
+				test(
+					t,
+					typ,
+					a,
+					b.Negate(nil, interpreter.EmptyLocationRange),
+					result.Negate(nil, interpreter.EmptyLocationRange),
+					operation,
+				)
+
+				// `a` is negative and `b` is positive.
+				test(
+					t,
+					typ,
+					a.Negate(nil, interpreter.EmptyLocationRange),
+					b,
+					result.Negate(nil, interpreter.EmptyLocationRange),
+					operation,
+				)
+			}
+		}
+	})
+}
