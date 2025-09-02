@@ -3504,18 +3504,17 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// $_result = x
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: xIndex},
-				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.InstructionJump{Target: 6},
+				opcode.InstructionJump{Target: 5},
 
 				// Get the reference and assign to `result`.
 				// i.e: `let result = &$_result`
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionNewRef{Type: 2},
-				opcode.InstructionTransferAndConvert{Type: 2},
+				opcode.InstructionNewRef{Type: 1},
+				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionSetLocal{Local: resultIndex},
 
 				opcode.InstructionStatement{},
@@ -3527,13 +3526,13 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.InstructionNot{},
-				opcode.InstructionJumpIfFalse{Target: 23},
+				opcode.InstructionJumpIfFalse{Target: 22},
 
 				// $failPostCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 0}, // error message
-				opcode.InstructionTransferAndConvert{Type: 3},
+				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionInvoke{ArgCount: 1},
 
 				// Drop since it's a statement-expression
@@ -3541,7 +3540,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionTransferAndConvert{Type: 3},
 				opcode.InstructionReturnValue{},
 			},
 			program.Functions[0].Code,
@@ -7285,7 +7284,6 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				opcode.InstructionTransferAndConvert{Type: 3},
 				opcode.InstructionGetGlobal{Global: 1},
 				opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0},
-				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionNewDictionary{Type: 2, Size: 1, IsResource: true},
 				opcode.InstructionTransferAndConvert{Type: 2},
