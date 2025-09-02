@@ -654,10 +654,9 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 			// Skip the alias
 			p.nextSemanticToken()
 		default:
-			return p.syntaxError(
-				"expected identifier in import alias: got %s",
-				p.current.Type,
-			)
+			return &InvalidTokenInImportAliasError{
+				GotToken: p.current,
+			}
 		}
 		return nil
 	}

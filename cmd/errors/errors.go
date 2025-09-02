@@ -184,6 +184,11 @@ func generateErrors() []namedError {
 				DeclarationKind: placeholderDeclarationKind,
 			},
 		},
+		{"parser.InvalidTokenInImportAliasError",
+			&parser.InvalidTokenInImportAliasError{
+				GotToken: placeholderToken,
+			},
+		},
 		{"parser.InvalidTokenInImportListError",
 			&parser.InvalidTokenInImportListError{
 				GotToken: placeholderToken,

@@ -3626,9 +3626,14 @@ func TestParseImportDeclaration(t *testing.T) {
 		`)
 
 		AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Pos:     ast.Position{Line: 2, Column: 17, Offset: 18},
-				Message: `expected identifier in import alias: got decimal integer`,
+			&InvalidTokenInImportAliasError{
+				GotToken: lexer.Token{
+					Type: lexer.TokenDecimalIntegerLiteral,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
+						EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
+					},
+				},
 			},
 		}, errs)
 	})
