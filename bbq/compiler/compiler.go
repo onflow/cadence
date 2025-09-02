@@ -2646,12 +2646,8 @@ func (c *Compiler[_, _]) VisitUnaryExpression(expression *ast.UnaryExpression) (
 		c.emit(opcode.InstructionDeref{})
 
 	case ast.OperationMove:
-		// Transfer to the target type.
-		targetType := c.DesugaredElaboration.MoveExpressionTypes(expression)
-		typeIndex := c.getOrAddType(targetType)
-		c.codeGen.Emit(opcode.InstructionTransferAndConvert{
-			Type: typeIndex,
-		})
+		// NO-OP. Eventually we might want to implement a defensive check for resource invalidation
+		// in the VM like in the interpreter, and invalidate the value here.
 
 	default:
 		panic(errors.NewUnreachableError())
