@@ -135,7 +135,10 @@ func NewScriptVMEnvironment(config Config) Environment {
 
 func (e *vmEnvironment) newVMConfig() *vm.Config {
 	conf := vm.NewConfig(nil)
-	conf.TypeLoader = e.loadType
+	conf.CompositeTypeHandler = e.loadCompositeType
+	conf.InterfaceTypeHandler = e.loadInterfaceType
+	conf.EntitlementTypeHandler = e.loadEntitlementType
+	conf.EntitlementMapTypeHandler = e.loadEntitlementMapType
 	conf.BuiltinGlobalsProvider = e.vmBuiltinGlobals
 	conf.ContractValueHandler = e.loadContractValue
 	conf.ImportHandler = e.importProgram
@@ -448,45 +451,64 @@ func (e *vmEnvironment) loadDesugaredElaboration(location common.Location) (*com
 	return program.compiledProgram.desugaredElaboration, nil
 }
 
-// TODO: Maybe split this to four separate methods like in the interpreter.
-func (e *vmEnvironment) loadType(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
-	ty := e.allDeclaredTypes[typeID]
-	if ty != nil {
-		return ty, nil
-	}
-
+func (e *vmEnvironment) loadCompositeType(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 	if _, ok := location.(stdlib.FlowLocation); ok {
-		return stdlib.FlowEventTypes[typeID], nil
+		return stdlib.FlowEventTypes[typeID]
 	}
 
 	elaboration, err := e.loadDesugaredElaboration(location)
 	if err != nil {
-		return nil, err
+		return nil
 	}
 
 	compositeType := elaboration.CompositeType(typeID)
 	if compositeType != nil {
-		return compositeType, nil
+		return compositeType
+	}
+
+	return nil
+}
+
+func (e *vmEnvironment) loadInterfaceType(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+	elaboration, err := e.loadDesugaredElaboration(location)
+	if err != nil {
+		return nil
 	}
 
 	interfaceType := elaboration.InterfaceType(typeID)
 	if interfaceType != nil {
-		return interfaceType, nil
+		return interfaceType
+	}
+
+	return nil
+}
+
+func (e *vmEnvironment) loadEntitlementType(location common.Location, typeID interpreter.TypeID) *sema.EntitlementType {
+	elaboration, err := e.loadDesugaredElaboration(location)
+	if err != nil {
+		return nil
 	}
 
 	entitlementType := elaboration.EntitlementType(typeID)
 	if entitlementType != nil {
-		return entitlementType, nil
+		return entitlementType
+	}
+
+	return nil
+}
+
+func (e *vmEnvironment) loadEntitlementMapType(location common.Location, typeID interpreter.TypeID) *sema.EntitlementMapType {
+	elaboration, err := e.loadDesugaredElaboration(location)
+	if err != nil {
+		return nil
 	}
 
 	entitlementMapType := elaboration.EntitlementMapType(typeID)
 	if entitlementMapType != nil {
-		return entitlementMapType, nil
+		return entitlementMapType
 	}
 
-	return nil, interpreter.TypeLoadingError{
-		TypeID: typeID,
-	}
+	return nil
 }
 
 func (e *vmEnvironment) compileProgram(
