@@ -1093,222 +1093,9 @@ func TestInterpretFixedPointLeastSignificantDecimalHandling(t *testing.T) {
 	t.Parallel()
 
 	type testValue struct {
-		a, b   string
-		result string
-	}
-
-	test := func(tt *testing.T, testCases map[sema.Type][]testValue, operation ast.Operation) {
-		for typ, values := range testCases {
-			for _, value := range values {
-				typ := typ
-				a := value.a
-				b := value.b
-				expectedResult := value.result
-
-				tt.Run(typ.String(), func(ttt *testing.T) {
-					ttt.Parallel()
-
-					code := fmt.Sprintf(`
-                        fun main(): %[1]s {
-                            return %[2]s %[4]s %[3]s
-                        }`,
-						typ,
-						a,
-						b,
-						operation.Symbol(),
-					)
-
-					invokable := parseCheckAndPrepare(t, code)
-
-					result, err := invokable.Invoke("main")
-					require.NoError(t, err)
-
-					assert.Equal(
-						ttt,
-						expectedResult,
-						result.String(),
-					)
-				})
-			}
-		}
-	}
-
-	t.Run("multiplication", func(t *testing.T) {
-		t.Parallel()
-
-		t.Run("truncate", func(t *testing.T) {
-			t.Parallel()
-
-			// Should truncate the least significant decimal point,
-			// but doesn't underflow (truncated value is big enough to be representable).
-
-			testCases := map[sema.Type][]testValue{
-				sema.Fix64Type: {
-					{
-						a:      "45.6",
-						b:      "0.00000001",
-						result: "0.00000045",
-					},
-				},
-				sema.UFix64Type: {
-					{
-						a:      "45.6",
-						b:      "0.00000001",
-						result: "0.00000045",
-					},
-				},
-				sema.Fix128Type: {
-					{
-						a:      "45.6",
-						b:      "0.000000000000000000000001",
-						result: "0.000000000000000000000045",
-					},
-				},
-				sema.UFix128Type: {
-					{
-						a:      "45.6",
-						b:      "0.000000000000000000000001",
-						result: "0.000000000000000000000045",
-					},
-				},
-			}
-
-			test(t, testCases, ast.OperationMul)
-		})
-
-		t.Run("truncate and underflow", func(t *testing.T) {
-			t.Parallel()
-
-			// Underflows - Truncated value is too small to represent.
-			// Result must always be zero.
-
-			testCases := map[sema.Type][]testValue{
-				sema.Fix64Type: {
-					{
-						a:      "0.6",
-						b:      "0.00000001",
-						result: "0.00000000",
-					},
-				},
-				sema.UFix64Type: {
-					{
-						a:      "0.6",
-						b:      "0.00000001",
-						result: "0.00000000",
-					},
-				},
-				sema.Fix128Type: {
-					{
-						a:      "0.6",
-						b:      "0.000000000000000000000001",
-						result: "0.000000000000000000000000",
-					},
-				},
-				sema.UFix128Type: {
-					{
-						a:      "0.6",
-						b:      "0.000000000000000000000001",
-						result: "0.000000000000000000000000",
-					},
-				},
-			}
-
-			test(t, testCases, ast.OperationMul)
-		})
-	})
-
-	t.Run("division", func(t *testing.T) {
-		t.Parallel()
-
-		t.Run("truncate", func(t *testing.T) {
-			t.Parallel()
-
-			// Should truncate the least significant decimal point,
-			// but doesn't underflow (truncated value is big enough to be representable).
-
-			testCases := map[sema.Type][]testValue{
-				sema.Fix64Type: {
-					{
-						a:      "0.00000456",
-						b:      "10.0",
-						result: "0.00000045",
-					},
-				},
-				sema.UFix64Type: {
-					{
-						a:      "0.00000456",
-						b:      "10.0",
-						result: "0.00000045",
-					},
-				},
-				sema.Fix128Type: {
-					{
-						a:      "0.000000000000000000000456",
-						b:      "10.0",
-						result: "0.000000000000000000000045",
-					},
-				},
-				sema.UFix128Type: {
-					{
-						a:      "0.000000000000000000000456",
-						b:      "10.0",
-						result: "0.000000000000000000000045",
-					},
-				},
-			}
-
-			test(t, testCases, ast.OperationDiv)
-		})
-
-		t.Run("truncate and underflow", func(t *testing.T) {
-			t.Parallel()
-
-			// Underflows - Truncated value is too small to represent.
-			// Result must always be zero.
-
-			testCases := map[sema.Type][]testValue{
-				sema.Fix64Type: {
-					{
-						a:      "0.00000006",
-						b:      "10.0",
-						result: "0.00000000",
-					},
-				},
-				sema.UFix64Type: {
-					{
-						a:      "0.00000006",
-						b:      "10.0",
-						result: "0.00000000",
-					},
-				},
-				sema.Fix128Type: {
-					{
-						a:      "0.000000000000000000000006",
-						b:      "10.0",
-						result: "0.000000000000000000000000",
-					},
-				},
-				sema.UFix128Type: {
-					{
-						a:      "0.000000000000000000000006",
-						b:      "10.0",
-						result: "0.000000000000000000000000",
-					},
-				},
-			}
-
-			test(t, testCases, ast.OperationDiv)
-		})
-	})
-}
-
-func TestInterpretFixedPointLeastSignificantDecimalHandling(t *testing.T) {
-	t.Parallel()
-
-	type testValue[T interpreter.Value] struct {
 		operation ast.Operation
-		a, b      T
-		result    T
+		a, b      interpreter.FixedPointValue
+		result    interpreter.FixedPointValue
 	}
 
 	test := func(tt *testing.T, typ sema.Type, a, b, expectedResult interpreter.Value, operation ast.Operation) {
@@ -1348,27 +1135,35 @@ func TestInterpretFixedPointLeastSignificantDecimalHandling(t *testing.T) {
 	t.Run("unsigned", func(t *testing.T) {
 		t.Parallel()
 
-		testCases := map[sema.Type][]testValue[interpreter.UFix64Value]{
+		testCases := map[sema.Type][]testValue{
 			sema.UFix64Type: {
 				{
+					// Multiplication truncates.
+					// 45.6 * 1e-8 =  0.00000045
 					a:         interpreter.NewUnmeteredUFix64Value(4560000000),
 					b:         interpreter.NewUnmeteredUFix64Value(1),
 					operation: ast.OperationMul,
 					result:    interpreter.NewUnmeteredUFix64Value(45),
 				},
 				{
-					a:         interpreter.NewUnmeteredUFix64Value(6),
+					// Multiplication truncates and underflows.
+					// 0.6 * 1e-8 =  0.00000000
+					a:         interpreter.NewUnmeteredUFix64Value(60000000),
 					b:         interpreter.NewUnmeteredUFix64Value(1),
 					operation: ast.OperationMul,
 					result:    interpreter.NewUnmeteredUFix64Value(0),
 				},
 				{
+					// Division truncates.
+					// 0.00000456 / 10 =  0.00000045
 					a:         interpreter.NewUnmeteredUFix64Value(456),
 					b:         interpreter.NewUnmeteredUFix64Value(1000000000),
 					operation: ast.OperationDiv,
 					result:    interpreter.NewUnmeteredUFix64Value(45),
 				},
 				{
+					// Division truncates and underflows.
+					// 0.00000006 / 10 =  0.00000000
 					a:         interpreter.NewUnmeteredUFix64Value(6),
 					b:         interpreter.NewUnmeteredUFix64Value(1000000000),
 					operation: ast.OperationDiv,
@@ -1376,7 +1171,40 @@ func TestInterpretFixedPointLeastSignificantDecimalHandling(t *testing.T) {
 				},
 			},
 
-			// TODO: UFix128
+			sema.UFix128Type: {
+				{
+					// Multiplication truncates.
+					// 45.6 * 1e-24 =  0.00..045
+					a:         interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(456, sema.Fix128Scale-1),
+					b:         interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(1, 0),
+					operation: ast.OperationMul,
+					result:    interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(45, 0),
+				},
+				{
+					// Multiplication truncates and underflows.
+					// 0.6 * 1e-24 =  0.00..000
+					a:         interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(6, sema.Fix128Scale-1),
+					b:         interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(1, 0),
+					operation: ast.OperationMul,
+					result:    interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(0, 0),
+				},
+				{
+					// Division truncates.
+					// 456 / 1e25 =  0.00..045
+					a:         interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(456, 0),
+					b:         interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(1, sema.Fix128Scale+1),
+					operation: ast.OperationDiv,
+					result:    interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(45, 0),
+				},
+				{
+					// Division truncates and underflows.
+					// 6 / 1e25 =  0.00..000
+					a:         interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(6, 0),
+					b:         interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(1, sema.Fix128Scale+1),
+					operation: ast.OperationDiv,
+					result:    interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(0, 0),
+				},
+			},
 		}
 
 		for typ, testValues := range testCases {
@@ -1398,27 +1226,35 @@ func TestInterpretFixedPointLeastSignificantDecimalHandling(t *testing.T) {
 	t.Run("signed", func(t *testing.T) {
 		t.Parallel()
 
-		testCases := map[sema.Type][]testValue[interpreter.Fix64Value]{
+		testCases := map[sema.Type][]testValue{
 			sema.Fix64Type: {
 				{
+					// Multiplication truncates.
+					// 45.6 * 1e-8 =  0.00000045
 					a:         interpreter.NewUnmeteredFix64Value(4560000000),
 					b:         interpreter.NewUnmeteredFix64Value(1),
 					operation: ast.OperationMul,
 					result:    interpreter.NewUnmeteredFix64Value(45),
 				},
 				{
-					a:         interpreter.NewUnmeteredFix64Value(6),
+					// Multiplication truncates and underflows.
+					// 0.6 * 1e-8 =  0.00000000
+					a:         interpreter.NewUnmeteredFix64Value(60000000),
 					b:         interpreter.NewUnmeteredFix64Value(1),
 					operation: ast.OperationMul,
 					result:    interpreter.NewUnmeteredFix64Value(0),
 				},
 				{
+					// Division truncates.
+					// 0.00000456 / 10 =  0.00000045
 					a:         interpreter.NewUnmeteredFix64Value(456),
 					b:         interpreter.NewUnmeteredFix64Value(1000000000),
 					operation: ast.OperationDiv,
 					result:    interpreter.NewUnmeteredFix64Value(45),
 				},
 				{
+					// Division truncates and underflows.
+					// 0.00000006 / 10 =  0.00000000
 					a:         interpreter.NewUnmeteredFix64Value(6),
 					b:         interpreter.NewUnmeteredFix64Value(1000000000),
 					operation: ast.OperationDiv,
@@ -1426,7 +1262,40 @@ func TestInterpretFixedPointLeastSignificantDecimalHandling(t *testing.T) {
 				},
 			},
 
-			// TODO: Fix128
+			sema.Fix128Type: {
+				{
+					// Multiplication truncates.
+					// 45.6 * 1e-24 =  0.00..045
+					a:         interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(456, sema.Fix128Scale-1),
+					b:         interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(1, 0),
+					operation: ast.OperationMul,
+					result:    interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(45, 0),
+				},
+				{
+					// Multiplication truncates and underflows.
+					// 0.6 * 1e-24 =  0.00..000
+					a:         interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(6, sema.Fix128Scale-1),
+					b:         interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(1, 0),
+					operation: ast.OperationMul,
+					result:    interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(0, 0),
+				},
+				{
+					// Division truncates.
+					// 456 / 1e25 =  0.00..045
+					a:         interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(456, 0),
+					b:         interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(1, sema.Fix128Scale+1),
+					operation: ast.OperationDiv,
+					result:    interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(45, 0),
+				},
+				{
+					// Division truncates and underflows.
+					// 6 / 1e25 =  0.00..000
+					a:         interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(6, 0),
+					b:         interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(1, sema.Fix128Scale+1),
+					operation: ast.OperationDiv,
+					result:    interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(0, 0),
+				},
+			},
 		}
 
 		for typ, testValues := range testCases {
