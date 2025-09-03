@@ -26,12 +26,20 @@ import (
 	"github.com/onflow/cadence/common"
 )
 
+// Import
+
+type Import struct {
+	Identifier Identifier
+	// Alias is an optional alias for the imported identifier.
+	// If empty, the imported identifier is used as is.
+	Alias Identifier `json:",omitzero"`
+}
+
 // ImportDeclaration
 
 type ImportDeclaration struct {
-	Location    common.Location
-	Identifiers []Identifier
-	Aliases     map[string]string
+	Location common.Location
+	Imports  []Import
 	Range
 	LocationPos Position
 }
@@ -41,8 +49,7 @@ var _ Declaration = &ImportDeclaration{}
 
 func NewImportDeclaration(
 	gauge common.MemoryGauge,
-	identifiers []Identifier,
-	aliases map[string]string,
+	imports []Import,
 	location common.Location,
 	declRange Range,
 	locationPos Position,
@@ -50,8 +57,7 @@ func NewImportDeclaration(
 	common.UseMemory(gauge, common.ImportDeclarationMemoryUsage)
 
 	return &ImportDeclaration{
-		Identifiers: identifiers,
-		Aliases:     aliases,
+		Imports:     imports,
 		Location:    location,
 		Range:       declRange,
 		LocationPos: locationPos,
@@ -114,28 +120,46 @@ func (d *ImportDeclaration) Doc() prettier.Doc {
 		importDeclarationImportKeywordDoc,
 	}
 
-	if len(d.Identifiers) > 0 {
+	if len(d.Imports) > 0 {
 
-		identifiersDoc := prettier.Concat{
+		importsDoc := prettier.Concat{
 			prettier.Line{},
 		}
 
-		for i, identifier := range d.Identifiers {
+		for i, imp := range d.Imports {
 			if i > 0 {
-				identifiersDoc = append(
-					identifiersDoc,
+				importsDoc = append(
+					importsDoc,
 					importDeclarationSeparatorDoc,
 				)
 			}
 
-			identifiersDoc = append(
-				identifiersDoc,
-				prettier.Text(identifier.Identifier),
+			var importDoc prettier.Doc
+
+			if imp.Alias.Identifier != "" {
+				importDoc = prettier.Group{
+					Doc: prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.Text(imp.Identifier.Identifier),
+							prettier.Line{},
+							prettier.Text("as"),
+							prettier.Space,
+							prettier.Text(imp.Alias.Identifier),
+						},
+					},
+				}
+			} else {
+				importDoc = prettier.Text(imp.Identifier.Identifier)
+			}
+
+			importsDoc = append(
+				importsDoc,
+				importDoc,
 			)
 		}
 
-		identifiersDoc = append(
-			identifiersDoc,
+		importsDoc = append(
+			importsDoc,
 			prettier.Line{},
 			importDeclarationFromKeywordDoc,
 		)
@@ -144,7 +168,7 @@ func (d *ImportDeclaration) Doc() prettier.Doc {
 			doc,
 			prettier.Group{
 				Doc: prettier.Indent{
-					Doc: identifiersDoc,
+					Doc: importsDoc,
 				},
 			},
 		)
