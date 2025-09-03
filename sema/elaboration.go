@@ -146,36 +146,37 @@ type Elaboration struct {
 	variableDeclarationTypes          map[*ast.VariableDeclaration]VariableDeclarationTypes
 	// nestedResourceMoveExpressions indicates the index or member expression
 	// is implicitly moving a resource out of the container, e.g. in a shift or swap statement.
-	nestedResourceMoveExpressions       map[ast.Expression]struct{}
-	compositeNestedDeclarations         map[ast.CompositeLikeDeclaration]map[string]ast.Declaration
-	interfaceNestedDeclarations         map[*ast.InterfaceDeclaration]map[string]ast.Declaration
-	defaultDestroyDeclarations          map[ast.Declaration]*ast.CompositeDeclaration
-	postConditionsRewrites              map[*ast.Conditions]PostConditionsRewrite
-	emitStatementEventTypes             map[*ast.EmitStatement]*CompositeType
-	compositeTypes                      map[TypeID]*CompositeType
-	interfaceTypes                      map[TypeID]*InterfaceType
-	entitlementTypes                    map[TypeID]*EntitlementType
-	entitlementMapTypes                 map[TypeID]*EntitlementMapType
-	identifierInInvocationTypes         map[*ast.IdentifierExpression]Type
-	importDeclarationsResolvedLocations map[*ast.ImportDeclaration][]ResolvedLocation
-	globalValues                        *StringVariableOrderedMap
-	globalTypes                         *StringVariableOrderedMap
-	numberConversionArgumentTypes       map[ast.Expression]NumberConversionArgumentTypes
-	runtimeCastTypes                    map[*ast.CastingExpression]RuntimeCastTypes
-	referenceExpressionBorrowTypes      map[*ast.ReferenceExpression]Type
-	indexExpressionTypes                map[*ast.IndexExpression]IndexExpressionTypes
-	attachmentAccessTypes               map[*ast.IndexExpression]Type
-	attachmentRemoveTypes               map[*ast.RemoveStatement]Type
-	attachTypes                         map[*ast.AttachExpression]*CompositeType
-	forceExpressionTypes                map[*ast.ForceExpression]Type
-	staticCastTypes                     map[*ast.CastingExpression]CastTypes
-	expressionTypes                     map[ast.Expression]ExpressionTypes
-	TransactionTypes                    []*TransactionType
-	semanticAccesses                    map[ast.Access]Access
-	resultVariableTypes                 map[ast.Element]Type
-	moveExpressionTypes                 map[*ast.UnaryExpression]Type
-	enumLookupFunctionTypes             map[*CompositeType]*FunctionType
-	isChecking                          bool
+	nestedResourceMoveExpressions      map[ast.Expression]struct{}
+	compositeNestedDeclarations        map[ast.CompositeLikeDeclaration]map[string]ast.Declaration
+	interfaceNestedDeclarations        map[*ast.InterfaceDeclaration]map[string]ast.Declaration
+	defaultDestroyDeclarations         map[ast.Declaration]*ast.CompositeDeclaration
+	postConditionsRewrites             map[*ast.Conditions]PostConditionsRewrite
+	emitStatementEventTypes            map[*ast.EmitStatement]*CompositeType
+	compositeTypes                     map[TypeID]*CompositeType
+	interfaceTypes                     map[TypeID]*InterfaceType
+	entitlementTypes                   map[TypeID]*EntitlementType
+	entitlementMapTypes                map[TypeID]*EntitlementMapType
+	identifierInInvocationTypes        map[*ast.IdentifierExpression]Type
+	importDeclarationResolvedLocations map[*ast.ImportDeclaration][]ResolvedLocation
+	importDeclarationAliases           map[*ast.ImportDeclaration]map[string]string
+	globalValues                       *StringVariableOrderedMap
+	globalTypes                        *StringVariableOrderedMap
+	numberConversionArgumentTypes      map[ast.Expression]NumberConversionArgumentTypes
+	runtimeCastTypes                   map[*ast.CastingExpression]RuntimeCastTypes
+	referenceExpressionBorrowTypes     map[*ast.ReferenceExpression]Type
+	indexExpressionTypes               map[*ast.IndexExpression]IndexExpressionTypes
+	attachmentAccessTypes              map[*ast.IndexExpression]Type
+	attachmentRemoveTypes              map[*ast.RemoveStatement]Type
+	attachTypes                        map[*ast.AttachExpression]*CompositeType
+	forceExpressionTypes               map[*ast.ForceExpression]Type
+	staticCastTypes                    map[*ast.CastingExpression]CastTypes
+	expressionTypes                    map[ast.Expression]ExpressionTypes
+	TransactionTypes                   []*TransactionType
+	semanticAccesses                   map[ast.Access]Access
+	resultVariableTypes                map[ast.Element]Type
+	moveExpressionTypes                map[*ast.UnaryExpression]Type
+	enumLookupFunctionTypes            map[*CompositeType]*FunctionType
+	isChecking                         bool
 	// IsRecovered is true if the program was recovered (see runtime.Interface.RecoverProgram)
 	IsRecovered bool
 }
@@ -857,25 +858,41 @@ func (e *Elaboration) SetIdentifierInInvocationType(expression *ast.IdentifierEx
 	e.identifierInInvocationTypes[expression] = valueType
 }
 
-func (e *Elaboration) ImportDeclarationsResolvedLocations(declaration *ast.ImportDeclaration) []ResolvedLocation {
-	if e.importDeclarationsResolvedLocations == nil {
+func (e *Elaboration) ImportDeclarationResolvedLocations(declaration *ast.ImportDeclaration) []ResolvedLocation {
+	if e.importDeclarationResolvedLocations == nil {
 		return nil
 	}
-	return e.importDeclarationsResolvedLocations[declaration]
+	return e.importDeclarationResolvedLocations[declaration]
 }
 
 func (e *Elaboration) SetImportDeclarationsResolvedLocations(
 	declaration *ast.ImportDeclaration,
 	locations []ResolvedLocation,
 ) {
-	if e.importDeclarationsResolvedLocations == nil {
-		e.importDeclarationsResolvedLocations = map[*ast.ImportDeclaration][]ResolvedLocation{}
+	if e.importDeclarationResolvedLocations == nil {
+		e.importDeclarationResolvedLocations = map[*ast.ImportDeclaration][]ResolvedLocation{}
 	}
-	e.importDeclarationsResolvedLocations[declaration] = locations
+	e.importDeclarationResolvedLocations[declaration] = locations
+}
+
+func (e *Elaboration) ImportDeclarationAliases(declaration *ast.ImportDeclaration) map[string]string {
+	if e.importDeclarationAliases == nil {
+		return nil
+	}
+	return e.importDeclarationAliases[declaration]
+}
+func (e *Elaboration) SetImportDeclarationAliases(
+	declaration *ast.ImportDeclaration,
+	aliases map[string]string,
+) {
+	if e.importDeclarationAliases == nil {
+		e.importDeclarationAliases = map[*ast.ImportDeclaration]map[string]string{}
+	}
+	e.importDeclarationAliases[declaration] = aliases
 }
 
 func (e *Elaboration) AllImportDeclarationsResolvedLocations() map[*ast.ImportDeclaration][]ResolvedLocation {
-	return e.importDeclarationsResolvedLocations
+	return e.importDeclarationResolvedLocations
 }
 
 func (e *Elaboration) ReferenceExpressionBorrowType(expression *ast.ReferenceExpression) Type {
