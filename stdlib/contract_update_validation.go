@@ -189,6 +189,9 @@ func collectImports(validator UpdateValidator, program *ast.Program) map[string]
 				}
 
 				name := importedName
+				if imp.Alias.Identifier != "" {
+					name = imp.Alias.Identifier
+				}
 
 				importLocations[name] = location
 			}
