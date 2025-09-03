@@ -29,10 +29,11 @@ import (
 
 func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDeclaration) StatementResult {
 
-	resolvedLocations := interpreter.Program.Elaboration.ImportDeclarationsResolvedLocations(declaration)
+	resolvedLocations := interpreter.Program.Elaboration.ImportDeclarationResolvedLocations(declaration)
+	aliases := interpreter.Program.Elaboration.ImportDeclarationAliases(declaration)
 
 	for _, resolvedLocation := range resolvedLocations {
-		interpreter.importResolvedLocation(resolvedLocation, declaration.Aliases)
+		interpreter.importResolvedLocation(resolvedLocation, aliases)
 	}
 
 	return nil
