@@ -365,7 +365,6 @@ func TestPrintRecursionFibWithFlow(t *testing.T) {
 	var builder strings.Builder
 	const resolve = false
 	const colorize = false
-	const showFlow = true
 	err := PrintBytecodeWithFlow(&builder, code, resolve, nil, nil, nil, colorize)
 	require.NoError(t, err)
 
