@@ -19,6 +19,7 @@ require (
 	github.com/logrusorgru/aurora/v4 v4.0.0
 	github.com/onflow/atree v0.10.1
 	github.com/onflow/crypto v0.25.3
+	github.com/onflow/fixed-point v0.1.0
 	github.com/rivo/uniseg v0.4.7
 	github.com/schollz/progressbar/v3 v3.18.0
 	github.com/stretchr/testify v1.10.0
