@@ -625,20 +625,15 @@ func ufix128SaturationArithmaticResult(
 	result fix.UFix128,
 	err error,
 ) fix.UFix128 {
-	if err == nil {
-		return result
-	}
-
 	// Should not panic on overflow/underflow.
-
-	// TODO: Switch on error type, rather than the value.
-	// 	Need changes to the fixedpoint library.
-	switch err {
-	case fix.ErrOverflow:
+	switch err.(type) {
+	case nil:
+		return result
+	case fix.PositiveOverflowError:
 		return fixedpoint.UFix128TypeMax
-	case fix.ErrNegOverflow:
+	case fix.NegativeOverflowError:
 		return fixedpoint.UFix128TypeMin
-	case fix.ErrUnderflow:
+	case fix.UnderflowError:
 		return fix.UFix128Zero
 	default:
 		panic(err)

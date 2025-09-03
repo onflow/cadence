@@ -629,18 +629,18 @@ func (v Fix128Value) ToBigInt() *big.Int {
 }
 
 func handleFixedpointError(err error, locationRange LocationRange) {
-	switch err {
+	switch err.(type) {
 	// `fix.ErrUnderflow` happens when the value is within the range but is too small
 	// to be represented using the current bit-length.
 	// These should be treated as non-errors, and should return the truncated value
 	// (assumes that the value returned is already the truncated value).
-	case nil, fix.ErrUnderflow:
+	case nil, fix.UnderflowError:
 		return
-	case fix.ErrOverflow:
+	case fix.PositiveOverflowError:
 		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
-	case fix.ErrNegOverflow:
+	case fix.NegativeOverflowError:
 		panic(&UnderflowError{
 			LocationRange: locationRange,
 		})
@@ -653,20 +653,15 @@ func fix128SaturationArithmaticResult(
 	result fix.Fix128,
 	err error,
 ) fix.Fix128 {
-	if err == nil {
-		return result
-	}
-
 	// Should not panic on overflow/underflow.
-
-	// TODO: Switch on error type, rather than the value.
-	// 	Need changes to the fixedpoint library.
-	switch err {
-	case fix.ErrOverflow:
+	switch err.(type) {
+	case nil:
+		return result
+	case fix.PositiveOverflowError:
 		return fix.Fix128Max
-	case fix.ErrNegOverflow:
+	case fix.NegativeOverflowError:
 		return fix.Fix128Min
-	case fix.ErrUnderflow:
+	case fix.UnderflowError:
 		return fix.Fix128Zero
 	default:
 		panic(err)

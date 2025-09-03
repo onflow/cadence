@@ -47,7 +47,7 @@ require (
 	github.com/multiformats/go-varint v0.0.7 // indirect
 	github.com/onflow/atree v0.10.1 // indirect
 	github.com/onflow/crypto v0.25.3 // indirect
-	github.com/onflow/fixed-point v0.0.0-20250828224344-9e339b60b326 // indirect
+	github.com/onflow/fixed-point v0.1.0 // indirect
 	github.com/onflow/flow-core-contracts/lib/go/templates v1.3.3-0.20241017220455-79fdc6c8ba53 // indirect
 	github.com/onflow/flow-ft/lib/go/contracts v1.0.1 // indirect
 	github.com/onflow/flow-ft/lib/go/templates v1.0.1 // indirect
