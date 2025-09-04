@@ -52,7 +52,6 @@ func PrintBytecode(
 	)
 }
 
-// PrintBytecodeWithFlowMode prints bytecode in block format with flow visualization
 func PrintBytecodeWithFlow(
 	builder *strings.Builder,
 	code []byte,
@@ -146,7 +145,7 @@ func PrintInstructions(
 	return nil
 }
 
-// PrintInstructionsWithFlowMode prints instructions with specified flow visualization mode
+// PrintInstructionsWithFlowMode prints instructions in block format with flow visualization
 func PrintInstructionsWithFlow(
 	builder *strings.Builder,
 	instructions []Instruction,
@@ -295,7 +294,7 @@ func analyzeControlFlow(instructions []Instruction) *FlowAnalysis {
 				JumpType: JumpReturn,
 			}
 			analysis.JumpInfoMap[i] = jumpInfo
-			// instructions immediately after jumps are leaders
+			// instructions immediately after jumps are leaders, potentially end of program as well
 			if i+1 < len(instructions) {
 				analysis.BlockLeaders = append(analysis.BlockLeaders, i+1)
 			}
@@ -357,7 +356,7 @@ func (r *BlockRenderer) renderBasicBlocks(
 
 		// Show connections to other blocks
 		if connections, hasConnections := blockConnections[i]; hasConnections {
-			r.renderBlockConnections(&builder, i, connections)
+			r.renderBlockConnections(&builder, connections)
 		}
 
 		builder.WriteString("\n")
@@ -529,7 +528,6 @@ func (r *BlockRenderer) renderBlock(
 // renderBlockConnections shows connections from a block to other blocks
 func (r *BlockRenderer) renderBlockConnections(
 	builder *strings.Builder,
-	fromBlock int,
 	connections []BlockConnection,
 ) {
 	if len(connections) == 0 {
