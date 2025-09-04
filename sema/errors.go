@@ -3073,7 +3073,7 @@ func (*InvalidConstructionError) SecondaryError() string {
 }
 
 func (*InvalidConstructionError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/resources"
+	return "https://cadence-lang.org/docs/language/types-and-type-system/composite-types"
 }
 
 func (e *InvalidConstructionError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
@@ -3119,7 +3119,7 @@ func (*InvalidDestructionError) SecondaryError() string {
 }
 
 func (*InvalidDestructionError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/resources"
+	return "https://cadence-lang.org/docs/language/types-and-type-system/composite-types"
 }
 
 func (e *InvalidDestructionError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
@@ -3358,7 +3358,7 @@ func (*InvalidMoveOperationError) Error() string {
 
 func (*InvalidMoveOperationError) SecondaryError() string {
 	return "the move operator (`<-`) can only be used on resources; " +
-		"remove the `<-` operator for the non-resource"
+		"use the assignment operator (`=`) for the non-resource"
 }
 
 func (*InvalidMoveOperationError) DocumentationLink() string {
@@ -3605,8 +3605,7 @@ func (e *EmitNonEventError) Error() string {
 }
 
 func (*EmitNonEventError) SecondaryError() string {
-	return "only event types can be emitted; " +
-		"consider declaring the type as an event"
+	return "only event types can be emitted"
 }
 
 func (*EmitNonEventError) DocumentationLink() string {
@@ -3820,7 +3819,7 @@ func (*UnreachableStatementError) Error() string {
 
 func (*UnreachableStatementError) SecondaryError() string {
 	return "this statement can never be executed; " +
-		"consider removing this code"
+		"consider removing this code or revising control flow"
 }
 
 func (*UnreachableStatementError) DocumentationLink() string {
@@ -4831,7 +4830,7 @@ func (*InvalidTransactionPrepareParameterTypeError) SecondaryError() string {
 }
 
 func (*InvalidTransactionPrepareParameterTypeError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/transactions"
+	return "https://cadence-lang.org/docs/language/transactions#prepare-phase"
 }
 
 // InvalidNestedDeclarationError
@@ -4999,7 +4998,7 @@ func (e *InvalidTopLevelDeclarationError) Error() string {
 }
 
 func (*InvalidTopLevelDeclarationError) SecondaryError() string {
-	return "move this declaration to a contract"
+	return "move this declaration into a contract"
 }
 
 // InvalidSelfInvalidationError
