@@ -192,11 +192,11 @@ func (v Int32Value) Minus(context NumberValueArithmeticContext, other NumberValu
 
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt32 + o)) {
-		panic(&OverflowError{
+		panic(&UnderflowError{
 			LocationRange: locationRange,
 		})
 	} else if (o < 0) && (v > (math.MaxInt32 + o)) {
-		panic(&UnderflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	}

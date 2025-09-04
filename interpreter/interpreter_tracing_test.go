@@ -1,3 +1,5 @@
+//go:build cadence_tracing
+
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -73,9 +75,8 @@ func prepareWithTracingCallBack(
 			nil,
 			TestLocation,
 			&interpreter.Config{
-				Storage:        storage,
-				TracingEnabled: true,
-				OnRecordTrace:  onRecordTrace,
+				Storage:       storage,
+				OnRecordTrace: onRecordTrace,
 			},
 		)
 		require.NoError(t, err)

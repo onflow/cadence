@@ -195,7 +195,7 @@ func (v IntValue) Div(gauge common.Gauge, other IntValue) (IntValue, error) {
 		common.NewDivBigIntMemoryUsage(v.BigInt, other.BigInt),
 		func() *big.Int {
 			res := new(big.Int)
-			return res.Div(v.BigInt, other.BigInt)
+			return res.Quo(v.BigInt, other.BigInt)
 		},
 	), nil
 }

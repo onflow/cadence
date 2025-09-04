@@ -634,13 +634,9 @@ func testRuntimeFungibleTokenTransfer(tb testing.TB, useVM bool) {
 
 	var environment Environment
 	if useVM {
-		environment = NewBaseVMEnvironment(Config{
-			TracingEnabled: true,
-		})
+		environment = NewBaseVMEnvironment(Config{})
 	} else {
-		environment = NewBaseInterpreterEnvironment(Config{
-			TracingEnabled: true,
-		})
+		environment = NewBaseInterpreterEnvironment(Config{})
 	}
 
 	nextTransactionLocation := NewTransactionLocationGenerator()

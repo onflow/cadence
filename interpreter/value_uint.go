@@ -389,7 +389,7 @@ func (v UIntValue) Div(context NumberValueArithmeticContext, other NumberValue, 
 					LocationRange: locationRange,
 				})
 			}
-			return res.Div(v.BigInt, o.BigInt)
+			return res.Quo(v.BigInt, o.BigInt)
 		},
 	)
 }

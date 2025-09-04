@@ -96,7 +96,7 @@ func NewArrayValueWithIterator(
 		},
 	)
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		defer func() {
@@ -367,7 +367,7 @@ func (v *ArrayValue) Destroy(context ResourceDestructionContext, locationRange L
 		},
 	)
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -1253,7 +1253,7 @@ func (v *ArrayValue) ConformsToStaticType(
 	results TypeConformanceResults,
 ) bool {
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -1386,7 +1386,7 @@ func (v *ArrayValue) Transfer(
 		},
 	)
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -1586,7 +1586,7 @@ func (v *ArrayValue) Clone(context ValueCloneContext) Value {
 }
 
 func (v *ArrayValue) DeepRemove(context ValueRemoveContext, hasNoParentContainer bool) {
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()

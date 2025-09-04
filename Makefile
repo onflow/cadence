@@ -60,7 +60,7 @@ build-compatibility-check:
 	(cd ./tools/compatibility-check && go build .)
 
 .PHONY: ci
-ci: test-with-compiler test-tools
+ci: test-with-compiler test-with-tracing test-tools
 	# test all packages
 	go test -coverprofile=coverage.txt -covermode=atomic -parallel 8 -race -coverpkg $(COVERPKGS) ./...
 	# run interpreter smoke tests. results from run above are reused, so no tests runs are duplicated
@@ -87,6 +87,11 @@ test-tools:
 test-with-compiler:
 	(go test -parallel 8 ./interpreter/... -compile=true)
 	(go test -parallel 8 ./runtime/... -compile=true)
+
+.PHONY: test-with-tracing
+test-with-tracing:
+	(go test -parallel 8 ./runtime/... -run TestInterpreterTracing -tags cadence_tracing)
+	(go test -parallel 8 ./runtime/... -run TestRuntimeTracing -tags cadence_tracing)
 
 .PHONY: lint
 lint: build-linter
