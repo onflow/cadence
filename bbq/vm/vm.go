@@ -327,7 +327,7 @@ func (vm *VM) InvokeMethodExternally(
 		}
 	}
 
-	boundFunction := NewBoundFunctionValue(context, receiver, functionValue)
+	boundFunction := NewBoundFunctionValue(context, receiver, functionValue, nil)
 
 	return vm.validateAndInvokeExternally(boundFunction, arguments)
 }
@@ -477,6 +477,7 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.SimpleCompositeV
 		context,
 		transaction,
 		prepareFunction,
+		nil,
 	)
 
 	_, err := vm.validateAndInvokeExternally(boundPrepareFunction, signers)
@@ -501,6 +502,7 @@ func (vm *VM) InvokeTransactionExecute(transaction *interpreter.SimpleCompositeV
 		context,
 		transaction,
 		executeFunction,
+		nil,
 	)
 
 	_, err := vm.validateAndInvokeExternally(boundExecuteFunction, nil)
@@ -866,6 +868,14 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	// Load the invoked value
 	functionValue := vm.pop()
 
+	// Add base to front of arguments if the function is bound and base is defined.
+	if boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue); isBoundFunction {
+		base := boundFunction.Base
+		if base != nil {
+			arguments = append([]Value{base}, arguments...)
+		}
+	}
+
 	invokeFunction(
 		vm,
 		functionValue,
@@ -883,10 +893,29 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 
 	receiver := vm.pop()
 
+	// TODO: Clean this up
+	var base *interpreter.EphemeralReferenceValue
+	if val, ok := receiver.(*interpreter.EphemeralReferenceValue); ok {
+		if refValue, ok := val.Value.(*interpreter.CompositeValue); ok {
+			if refValue.Kind == common.CompositeKindAttachment {
+				base = refValue.GetBaseValue(
+					vm.context,
+					interpreter.ConvertSemaAccessToStaticAuthorization(
+						vm.context,
+						sema.UnauthorizedAccess,
+					),
+					interpreter.EmptyLocationRange,
+				)
+			}
+
+		}
+	}
+
 	boundFunction := NewBoundFunctionValue(
 		vm.context,
 		receiver,
 		method,
+		base,
 	)
 
 	vm.push(boundFunction)
@@ -1504,14 +1533,16 @@ func opSetTypeIndex(vm *VM, ins opcode.InstructionSetTypeIndex) {
 	typeIndex := ins.Type
 	staticType := vm.loadType(typeIndex)
 	typ := vm.context.SemaTypeFromStaticType(staticType)
+	attachment := fieldValue.(*interpreter.CompositeValue)
 
-	compositeValue := target.(interpreter.TypeIndexableValue)
+	compositeValue := target.(*interpreter.CompositeValue)
 	compositeValue.SetTypeKey(
 		vm.context,
 		EmptyLocationRange,
 		typ,
 		fieldValue,
 	)
+	attachment.SetBaseValue(compositeValue)
 	vm.push(compositeValue)
 }
 
@@ -1523,7 +1554,7 @@ func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 	staticType := vm.loadType(typeIndex)
 	typ := vm.context.SemaTypeFromStaticType(staticType)
 
-	compositeValue := target.(interpreter.TypeIndexableValue)
+	compositeValue := target.(*interpreter.CompositeValue)
 	removed := compositeValue.RemoveTypeKey(
 		vm.context,
 		EmptyLocationRange,
@@ -1540,7 +1571,7 @@ func opRemoveTypeIndex(vm *VM, ins opcode.InstructionRemoveTypeIndex) {
 	}
 	if attachment.IsResourceKinded(vm.context) {
 		// this attachment is no longer attached to its base, but the `base` variable is still available in the destructor
-		// TODO: attachment.setBaseValue(base)
+		attachment.SetBaseValue(compositeValue)
 		attachment.Destroy(vm.context, EmptyLocationRange)
 	}
 }

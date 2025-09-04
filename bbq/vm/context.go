@@ -295,6 +295,7 @@ func (c *Context) GetMethod(
 		c,
 		value,
 		method,
+		nil,
 	)
 }
 
@@ -319,8 +320,20 @@ func (c *Context) DefaultDestroyEvents(
 		return nil
 	}
 
-	// The generated function takes no arguments.
-	events := c.InvokeFunction(method, nil)
+	var arguments []Value
+
+	if resourceValue.Kind == common.CompositeKindAttachment {
+		arguments = []Value{
+			resourceValue.GetBaseValue(
+				c,
+				interpreter.UnauthorizedAccess,
+				EmptyLocationRange,
+			),
+		}
+	}
+
+	// The generated function takes no arguments unless its an attachment.
+	events := c.InvokeFunction(method, arguments)
 	eventsArray, ok := events.(*interpreter.ArrayValue)
 	if !ok {
 		panic(errors.NewUnreachableError())

@@ -899,7 +899,81 @@ func (d *Desugar) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFuncti
 }
 
 func (d *Desugar) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) ast.Declaration {
-	return declaration
+	// See `VisitCompositeDeclaration`
+	compositeType := d.elaboration.CompositeDeclarationType(declaration)
+
+	// Recursively de-sugar nested declarations (functions, types, etc.)
+
+	prevInheritedFuncsWithConditions := d.inheritedFuncsWithConditions
+	prevInheritedEvents := d.inheritedEvents
+	prevEnclosingInterfaceType := d.enclosingInterfaceType
+
+	d.inheritedFuncsWithConditions, d.inheritedEvents = d.inheritedFunctionsWithConditionsAndEvents(compositeType)
+	d.enclosingInterfaceType = nil
+
+	defer func() {
+		d.inheritedFuncsWithConditions = prevInheritedFuncsWithConditions
+		d.inheritedEvents = prevInheritedEvents
+		d.enclosingInterfaceType = prevEnclosingInterfaceType
+	}()
+
+	var desugaredMembers []ast.Declaration
+	membersDesugared := false
+
+	// visit and desugar members.
+	existingMembers := declaration.Members.Declarations()
+	for _, member := range existingMembers {
+		desugaredMember, desugared := d.desugarDeclaration(member)
+		if desugaredMember == nil {
+			continue
+		}
+
+		membersDesugared = membersDesugared || desugared
+		desugaredMembers = append(desugaredMembers, desugaredMember)
+	}
+
+	// Add inherited default functions.
+	existingFunctions := declaration.Members.FunctionsByIdentifier()
+	inheritedDefaultFuncs := d.inheritedDefaultFunctions(
+		compositeType,
+		existingFunctions,
+		declaration.StartPos,
+		declaration.Range,
+	)
+
+	// Optimization: If none of the existing members got updated or,
+	// if there are no inherited members, then return the same declaration as-is.
+	if !membersDesugared && len(inheritedDefaultFuncs) == 0 {
+		return declaration
+	}
+
+	desugaredMembers = append(desugaredMembers, inheritedDefaultFuncs...)
+
+	// Generate a getter-function, that will construct and return
+	// all resource-destroyed events, including the inherited ones.
+	destroyEventsReturningFunction := d.generateResourceDestroyedEventsGetterFunction(
+		compositeType,
+		declaration,
+	)
+	if destroyEventsReturningFunction != nil {
+		desugaredMembers = append(desugaredMembers, destroyEventsReturningFunction)
+	}
+
+	modifiedDecl := ast.NewAttachmentDeclaration(
+		d.memoryGauge,
+		declaration.Access,
+		declaration.Identifier,
+		declaration.BaseType,
+		declaration.Conformances,
+		ast.NewMembers(d.memoryGauge, desugaredMembers),
+		declaration.DocString,
+		declaration.Range,
+	)
+
+	// Update elaboration. Type info is needed for later steps.
+	d.elaboration.SetCompositeDeclarationType(modifiedDecl, compositeType)
+
+	return modifiedDecl
 }
 
 func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) ast.Declaration {
@@ -2127,7 +2201,7 @@ func (d *Desugar) transactionCompositeType() *sema.CompositeType {
 // associated with the given composite type, as an array.
 func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 	compositeType sema.Type,
-	compositeDeclaration *ast.CompositeDeclaration,
+	compositeLikeDeclaration ast.CompositeLikeDeclaration,
 ) *ast.FunctionDeclaration {
 
 	// Generate a function:
@@ -2242,7 +2316,7 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 	// is to be equivalent to the interpreter.
 
 	// Construct self defined event
-	defaultDestroyEventDeclaration := d.elaboration.DefaultDestroyDeclaration(compositeDeclaration)
+	defaultDestroyEventDeclaration := d.elaboration.DefaultDestroyDeclaration(compositeLikeDeclaration)
 	if defaultDestroyEventDeclaration != nil {
 		eventType := d.elaboration.CompositeDeclarationType(defaultDestroyEventDeclaration)
 		addEventConstructorInvocation(
@@ -2269,8 +2343,18 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 		return nil
 	}
 
-	astRange := compositeDeclaration.Range
-	startPos := compositeDeclaration.StartPos
+	var astRange ast.Range
+	var startPos ast.Position
+	switch v := compositeLikeDeclaration.(type) {
+	case *ast.CompositeDeclaration:
+		astRange = v.Range
+		startPos = v.StartPos
+	case *ast.AttachmentDeclaration:
+		astRange = v.Range
+		startPos = v.StartPos
+	default:
+		panic(errors.NewUnreachableError())
+	}
 
 	// Put all the events in an array.
 	arrayExpression := ast.NewArrayExpression(

@@ -407,6 +407,7 @@ type BoundFunctionValue struct {
 
 	Method       FunctionValue
 	functionType *sema.FunctionType
+	Base         *interpreter.EphemeralReferenceValue
 }
 
 var boundFunctionMemoryUsage = common.NewConstantMemoryUsage(common.MemoryKindBoundFunctionVMValue)
@@ -415,6 +416,7 @@ func NewBoundFunctionValue(
 	context interpreter.ReferenceCreationContext,
 	receiver interpreter.Value,
 	method FunctionValue,
+	base *interpreter.EphemeralReferenceValue,
 ) FunctionValue {
 
 	common.UseMemory(context, boundFunctionMemoryUsage)
@@ -425,10 +427,17 @@ func NewBoundFunctionValue(
 
 	receiverRef, receiverIsRef := interpreter.ReceiverReference(context, receiver)
 
+	if compositeValue, ok := receiver.(*interpreter.CompositeValue); ok && compositeValue.Kind == common.CompositeKindAttachment {
+		// Force the receiver to be a reference if it is an attachment.
+		// This is because self in attachments are always references.
+		receiverIsRef = true
+	}
+
 	return &BoundFunctionValue{
 		Method:              method,
 		ReceiverReference:   receiverRef,
 		receiverIsReference: receiverIsRef,
+		Base:                base,
 	}
 }
 
