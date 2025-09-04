@@ -102,7 +102,7 @@ const (
 	_ // future: Fix16
 	_ // future: Fix32
 	HashInputTypeFix64
-	_ // future: Fix128
+	HashInputTypeFix128
 	_ // future: Fix256
 	_
 
@@ -112,7 +112,7 @@ const (
 	_ // future: UFix16
 	_ // future: UFix32
 	HashInputTypeUFix64
-	_ // future: UFix128
+	HashInputTypeUFix128
 	_ // future: UFix256
 	_
 

@@ -189,11 +189,11 @@ func (v Int8Value) Minus(context NumberValueArithmeticContext, other NumberValue
 
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt8 + o)) {
-		panic(&OverflowError{
+		panic(&UnderflowError{
 			LocationRange: locationRange,
 		})
 	} else if (o < 0) && (v > (math.MaxInt8 + o)) {
-		panic(&UnderflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	}

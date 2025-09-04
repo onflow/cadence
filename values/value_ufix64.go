@@ -142,7 +142,7 @@ func (v UFix64Value) Mul(gauge common.MemoryGauge, other UFix64Value) (UFix64Val
 
 	valueGetter := func() (uint64, error) {
 		result := new(big.Int).Mul(a, b)
-		result.Div(result, sema.Fix64FactorBig)
+		result.Quo(result, sema.Fix64FactorBig)
 
 		if !result.IsUint64() {
 			return 0, OverflowError{}
@@ -161,7 +161,7 @@ func (v UFix64Value) SaturatingMul(gauge common.MemoryGauge, other UFix64Value) 
 
 	valueGetter := func() (uint64, error) {
 		result := new(big.Int).Mul(a, b)
-		result.Div(result, sema.Fix64FactorBig)
+		result.Quo(result, sema.Fix64FactorBig)
 
 		if !result.IsUint64() {
 			return math.MaxUint64, nil
@@ -180,7 +180,7 @@ func (v UFix64Value) Div(gauge common.MemoryGauge, other UFix64Value) (UFix64Val
 
 	valueGetter := func() (uint64, error) {
 		result := new(big.Int).Mul(a, sema.Fix64FactorBig)
-		result.Div(result, b)
+		result.Quo(result, b)
 
 		if !result.IsUint64() {
 			return 0, OverflowError{}

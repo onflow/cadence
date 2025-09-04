@@ -1,3 +1,4 @@
+[![Release](https://img.shields.io/github/v/release/onflow/cadence)](https://github.com/onflow/cadence/releases)
 [![CI](https://github.com/onflow/cadence/actions/workflows/ci.yml/badge.svg)](https://github.com/onflow/cadence/actions/workflows/ci.yml)
 
 # Cadence

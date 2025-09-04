@@ -995,3 +995,212 @@ func TestInterpretStringIntegerConversion(t *testing.T) {
 		t.Run(typ.String(), func(t *testing.T) { test(t, typ) })
 	}
 }
+
+func TestInterpretIntegerDivisionLeastSignificantDecimalHandling(t *testing.T) {
+	t.Parallel()
+
+	type testCase struct {
+		typ sema.Type
+
+		// Accept int8, so that this value is representable in all integer types.
+		valueConstructor func(int8) interpreter.Value
+	}
+
+	test := func(
+		tt *testing.T,
+		typ sema.Type,
+		a, b, expectedResult int8,
+		valueConstructor func(int8) interpreter.Value,
+	) {
+
+		testName := fmt.Sprintf("%s (%d/%d=%d)",
+			typ,
+			a,
+			b,
+			expectedResult,
+		)
+
+		tt.Run(testName, func(ttt *testing.T) {
+			ttt.Parallel()
+
+			code := fmt.Sprintf(`
+            fun main(): %[1]s {
+                return %[2]d / %[3]d
+            }`,
+				typ,
+				a,
+				b,
+			)
+
+			invokable := parseCheckAndPrepare(ttt, code)
+
+			result, err := invokable.Invoke("main")
+			require.NoError(t, err)
+
+			expectedResultValue := valueConstructor(expectedResult)
+
+			assert.Equal(
+				ttt,
+				expectedResultValue,
+				result,
+			)
+		})
+	}
+
+	a := int8(7)
+	b := int8(2)
+	expectedResult := int8(3)
+
+	t.Run("unsigned", func(t *testing.T) {
+		t.Parallel()
+
+		testCases := []testCase{
+			{
+				typ: sema.UIntType,
+				valueConstructor: func(value int8) interpreter.Value {
+					return interpreter.NewUnmeteredUIntValueFromUint64(uint64(value))
+				},
+			},
+			{
+				typ: sema.UInt8Type,
+				valueConstructor: func(value int8) interpreter.Value {
+					return interpreter.NewUnmeteredUInt8Value(uint8(value))
+				},
+			},
+			{
+				typ: sema.UInt16Type,
+				valueConstructor: func(value int8) interpreter.Value {
+					return interpreter.NewUnmeteredUInt16Value(uint16(value))
+				},
+			},
+			{
+				typ: sema.UInt32Type,
+				valueConstructor: func(value int8) interpreter.Value {
+					return interpreter.NewUnmeteredUInt32Value(uint32(value))
+				},
+			},
+			{
+				typ: sema.UInt64Type,
+				valueConstructor: func(value int8) interpreter.Value {
+					return interpreter.NewUnmeteredUInt64Value(uint64(value))
+				},
+			},
+			{
+				typ: sema.UInt128Type,
+				valueConstructor: func(value int8) interpreter.Value {
+					return interpreter.NewUnmeteredUInt128ValueFromUint64(uint64(value))
+				},
+			},
+			{
+				typ: sema.UInt256Type,
+				valueConstructor: func(value int8) interpreter.Value {
+					return interpreter.NewUnmeteredUInt256ValueFromUint64(uint64(value))
+				},
+			},
+		}
+
+		for _, testCase := range testCases {
+
+			test(
+				t,
+				testCase.typ,
+				a,
+				b,
+				expectedResult,
+				testCase.valueConstructor,
+			)
+		}
+	})
+
+	t.Run("signed", func(t *testing.T) {
+		t.Parallel()
+
+		testCases := []testCase{
+			{
+				typ: sema.IntType,
+				valueConstructor: func(value int8) interpreter.Value {
+					return interpreter.NewUnmeteredIntValueFromInt64(int64(value))
+				},
+			},
+			{
+				typ: sema.Int8Type,
+				valueConstructor: func(value int8) interpreter.Value {
+					return interpreter.NewUnmeteredInt8Value(value)
+				},
+			},
+			{
+				typ: sema.Int16Type,
+				valueConstructor: func(value int8) interpreter.Value {
+					return interpreter.NewUnmeteredInt16Value(int16(value))
+				},
+			},
+			{
+				typ: sema.Int32Type,
+				valueConstructor: func(value int8) interpreter.Value {
+					return interpreter.NewUnmeteredInt32Value(int32(value))
+				},
+			},
+			{
+				typ: sema.Int64Type,
+				valueConstructor: func(value int8) interpreter.Value {
+					return interpreter.NewUnmeteredInt64Value(int64(value))
+				},
+			},
+			{
+				typ: sema.Int128Type,
+				valueConstructor: func(value int8) interpreter.Value {
+					return interpreter.NewUnmeteredInt128ValueFromInt64(int64(value))
+				},
+			},
+			{
+				typ: sema.Int256Type,
+				valueConstructor: func(value int8) interpreter.Value {
+					return interpreter.NewUnmeteredInt256ValueFromInt64(int64(value))
+				},
+			},
+		}
+
+		for _, testCase := range testCases {
+
+			// Both `a` and `b` are positive.
+			test(
+				t,
+				testCase.typ,
+				a,
+				b,
+				expectedResult,
+				testCase.valueConstructor,
+			)
+
+			// Both `a` and `b` are negative.
+			test(
+				t,
+				testCase.typ,
+				-a,
+				-b,
+				expectedResult,
+				testCase.valueConstructor,
+			)
+
+			// `a` is positive and `b` is negative.
+			test(
+				t,
+				testCase.typ,
+				a,
+				-b,
+				-expectedResult,
+				testCase.valueConstructor,
+			)
+
+			// `a` is negative and `b` is positive.
+			test(
+				t,
+				testCase.typ,
+				-a,
+				b,
+				-expectedResult,
+				testCase.valueConstructor,
+			)
+		}
+	})
+}

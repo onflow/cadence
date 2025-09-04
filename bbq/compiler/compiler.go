@@ -766,13 +766,6 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 
 		c.addGlobal(constructorName)
 
-		if declaration.CompositeKind == common.CompositeKindEnum {
-			// For enums, also reserve a global for the "lookup function".
-			// For example, for `enum E: UInt8 { case A; case B }`, the lookup function is `fun E(rawValue: UInt8): E?`.
-			functionName := commons.TypeQualifier(compositeType)
-			c.addGlobal(functionName)
-		}
-
 		members := declaration.Members
 
 		c.reserveFunctionGlobals(
@@ -2015,16 +2008,22 @@ func (c *Compiler[_, _]) emitIntegerConstant(value *big.Int, integerType sema.Ty
 }
 
 func (c *Compiler[_, _]) VisitFixedPointExpression(expression *ast.FixedPointExpression) (_ struct{}) {
-	// TODO: adjust once/if we support more fixed point types
-
 	fixedPointSubType := c.DesugaredElaboration.FixedPointExpressionType(expression)
+
+	var scale uint
+	switch fixedPointSubType {
+	case sema.Fix128Type, sema.UFix128Type:
+		scale = sema.Fix128Scale
+	default:
+		scale = sema.Fix64Scale
+	}
 
 	value := fixedpoint.ConvertToFixedPointBigInt(
 		expression.Negative,
 		expression.UnsignedInteger,
 		expression.Fractional,
 		expression.Scale,
-		sema.Fix64Scale,
+		scale,
 	)
 
 	var constant *Constant
@@ -2035,6 +2034,12 @@ func (c *Compiler[_, _]) VisitFixedPointExpression(expression *ast.FixedPointExp
 
 	case sema.UFix64Type:
 		constant = c.addUFix64Constant(value)
+
+	case sema.Fix128Type:
+		constant = c.addFix128Constant(value)
+
+	case sema.UFix128Type:
+		constant = c.addUFix128Constant(value)
 
 	case sema.FixedPointType:
 		if expression.Negative {
@@ -2059,6 +2064,24 @@ func (c *Compiler[_, _]) addUFix64Constant(value *big.Int) *Constant {
 func (c *Compiler[_, _]) addFix64Constant(value *big.Int) *Constant {
 	data := interpreter.NewUnmeteredFix64Value(value.Int64()).ToBigEndianBytes()
 	return c.addConstant(constant.Fix64, data)
+}
+
+func (c *Compiler[_, _]) addUFix128Constant(value *big.Int) *Constant {
+	ufix128Value := interpreter.NewUFix128ValueFromBigInt(
+		c.Config.MemoryGauge,
+		value,
+	)
+	data := ufix128Value.ToBigEndianBytes()
+	return c.addConstant(constant.UFix128, data)
+}
+
+func (c *Compiler[_, _]) addFix128Constant(value *big.Int) *Constant {
+	fix128Value := interpreter.NewFix128ValueFromBigInt(
+		c.Config.MemoryGauge,
+		value,
+	)
+	data := fix128Value.ToBigEndianBytes()
+	return c.addConstant(constant.Fix128, data)
 }
 
 func (c *Compiler[_, _]) VisitArrayExpression(array *ast.ArrayExpression) (_ struct{}) {
@@ -2653,12 +2676,8 @@ func (c *Compiler[_, _]) VisitUnaryExpression(expression *ast.UnaryExpression) (
 		c.emit(opcode.InstructionDeref{})
 
 	case ast.OperationMove:
-		// Transfer to the target type.
-		targetType := c.DesugaredElaboration.MoveExpressionTypes(expression)
-		typeIndex := c.getOrAddType(targetType)
-		c.codeGen.Emit(opcode.InstructionTransferAndConvert{
-			Type: typeIndex,
-		})
+		// NO-OP. Eventually we might want to implement a defensive check for resource invalidation
+		// in the VM like in the interpreter, and invalidate the value here.
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -3176,28 +3195,9 @@ func (c *Compiler[_, _]) VisitCompositeDeclaration(declaration *ast.CompositeDec
 		c.compositeTypeStack.pop()
 	}()
 
-	// Compile members
-	hasInit := false
+	// Compile special function members
 	for _, specialFunc := range declaration.Members.SpecialFunctions() {
-		if specialFunc.Kind == common.DeclarationKindInitializer {
-			hasInit = true
-		}
 		c.compileDeclaration(specialFunc)
-	}
-
-	// If the initializer is not declared, generate
-	// - a synthetic initializer for enum types, otherwise
-	// - an empty initializer
-	if !hasInit {
-		if compositeType.Kind == common.CompositeKindEnum {
-			c.generateEnumInit(compositeType)
-			c.generateEnumLookup(
-				compositeType,
-				declaration.Members.EnumCases(),
-			)
-		} else {
-			c.generateEmptyInit()
-		}
 	}
 
 	// Visit members.
@@ -3498,51 +3498,6 @@ func (c *Compiler[_, _]) declareParameters(paramList *ast.ParameterList, declare
 			c.currentFunction.declareLocal(parameterName)
 		}
 	}
-}
-
-func (c *Compiler[_, _]) generateEmptyInit() {
-	c.DesugaredElaboration.SetFunctionDeclarationFunctionType(
-		emptyInitializer.FunctionDeclaration,
-		emptyInitializerFuncType,
-	)
-	c.VisitSpecialFunctionDeclaration(emptyInitializer)
-}
-
-func (c *Compiler[_, _]) generateEnumInit(enumType *sema.CompositeType) {
-	enumInitializer := newEnumInitializer(c.Config.MemoryGauge, enumType, c.DesugaredElaboration)
-	enumInitializerFuncType := newEnumInitializerFuncType(enumType.EnumRawType)
-
-	c.DesugaredElaboration.SetFunctionDeclarationFunctionType(
-		enumInitializer.FunctionDeclaration,
-		enumInitializerFuncType,
-	)
-	c.VisitSpecialFunctionDeclaration(enumInitializer)
-}
-
-func (c *Compiler[_, _]) generateEnumLookup(enumType *sema.CompositeType, enumCases []*ast.EnumCaseDeclaration) {
-	memoryGauge := c.Config.MemoryGauge
-
-	enumLookup := newEnumLookup(
-		memoryGauge,
-		enumType,
-		enumCases,
-		c.DesugaredElaboration,
-	)
-	enumLookupFuncType := newEnumLookupFuncType(memoryGauge, enumType)
-
-	c.DesugaredElaboration.SetFunctionDeclarationFunctionType(
-		enumLookup,
-		enumLookupFuncType,
-	)
-
-	// TODO: improve
-	previousCompositeTypeStack := c.compositeTypeStack
-	c.compositeTypeStack = &Stack[sema.CompositeKindedType]{}
-	defer func() {
-		c.compositeTypeStack = previousCompositeTypeStack
-	}()
-
-	c.VisitFunctionDeclaration(enumLookup, false)
 }
 
 func (c *Compiler[_, _]) compilePotentiallyInheritedCode(statement ast.Statement, f func()) {
