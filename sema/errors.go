@@ -2067,6 +2067,7 @@ var _ SemanticError = &DuplicateConformanceError{}
 var _ errors.UserError = &DuplicateConformanceError{}
 var _ errors.SecondaryError = &DuplicateConformanceError{}
 var _ errors.HasDocumentationLink = &DuplicateConformanceError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &DuplicateConformanceError{}
 
 func (*DuplicateConformanceError) isSemanticError() {}
 
@@ -2089,6 +2090,33 @@ func (*DuplicateConformanceError) SecondaryError() string {
 
 func (*DuplicateConformanceError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/interfaces"
+}
+
+func (e *DuplicateConformanceError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
+	startPos := e.StartPos.AttachLeft(code)
+
+	// Include the leading comma
+	if startPos.Offset > 0 &&
+		startPos.Offset < len(code) &&
+		code[startPos.Offset-1] == ',' {
+
+		startPos = startPos.Shifted(nil, -1).AttachLeft(code)
+	}
+
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: "Remove duplicate conformance",
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: "",
+					Range: ast.Range{
+						StartPos: startPos,
+						EndPos:   e.EndPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // CyclicConformanceError
