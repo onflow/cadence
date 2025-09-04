@@ -1642,15 +1642,15 @@ func (*FunctionExpressionInConditionError) isSemanticError() {}
 func (*FunctionExpressionInConditionError) IsUserError() {}
 
 func (*FunctionExpressionInConditionError) Error() string {
-	return "condition contains function"
+	return "condition contains function expression"
 }
 
 func (*FunctionExpressionInConditionError) SecondaryError() string {
-	return "conditions may not contain function expressions"
+	return "pre- and post-conditions may not contain function expressions"
 }
 
 func (*FunctionExpressionInConditionError) DocumentationLink() string {
-	return "https://cadence-lang.org/docs/language/control-flow"
+	return "https://cadence-lang.org/docs/language/pre-and-post-conditions"
 }
 
 // InvalidEmitConditionError
