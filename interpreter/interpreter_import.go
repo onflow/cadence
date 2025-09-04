@@ -32,13 +32,13 @@ func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDe
 	resolvedLocations := interpreter.Program.Elaboration.ImportDeclarationsResolvedLocations(declaration)
 
 	for _, resolvedLocation := range resolvedLocations {
-		interpreter.importResolvedLocation(resolvedLocation)
+		interpreter.importResolvedLocation(resolvedLocation, declaration.Aliases)
 	}
 
 	return nil
 }
 
-func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.ResolvedLocation) {
+func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.ResolvedLocation, aliases map[string]string) {
 	// tracing
 	if TracingEnabled {
 		startTime := time.Now()
@@ -60,7 +60,14 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 	if identifierLength > 0 {
 		variables = make(map[string]Variable, identifierLength)
 		for _, identifier := range resolvedLocation.Identifiers {
-			variables[identifier.Identifier] =
+			name := identifier.Identifier
+			alias, ok := aliases[name]
+			if ok {
+				name = alias
+			}
+
+			// map alias to original
+			variables[name] =
 				subInterpreter.Globals.Get(identifier.Identifier)
 		}
 	} else {

@@ -408,3 +408,314 @@ func TestInterpretResourceConstructionThroughIndirectImport(t *testing.T) {
 		resourceConstructionError.CompositeType,
 	)
 }
+
+// TestInterpretImportWithAlias shows importing two funs of the same name from different addresses
+func TestInterpretImportWithAlias(t *testing.T) {
+
+	t.Parallel()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+	address2 := common.MustBytesToAddress([]byte{0x2})
+
+	importedCheckerA, err := ParseAndCheckWithOptions(t,
+		`
+		access(all) fun a(): Int {
+			return 1
+		}
+        `,
+		ParseAndCheckOptions{
+			Location: common.AddressLocation{
+				Address: address,
+				Name:    "",
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	importedCheckerB, err := ParseAndCheckWithOptions(t,
+		`
+		access(all) fun a(): Int {
+			return 2
+		}
+        `,
+		ParseAndCheckOptions{
+			Location: common.AddressLocation{
+				Address: address2,
+				Name:    "",
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	storage := newUnmeteredInMemoryStorage()
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+		import a as a1 from 0x1
+		import a as a2 from 0x2
+		access(all) fun test(): Int {
+			return a1() + a2()
+		}
+        `,
+		ParseCheckAndInterpretOptions{
+			InterpreterConfig: &interpreter.Config{
+				Storage: storage,
+				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+					require.IsType(t, common.AddressLocation{}, location)
+					addressLocation := location.(common.AddressLocation)
+
+					var importedChecker *sema.Checker
+
+					switch addressLocation.Address {
+					case address:
+						importedChecker = importedCheckerA
+					case address2:
+						importedChecker = importedCheckerB
+					default:
+						return nil
+					}
+
+					program := interpreter.ProgramFromChecker(importedChecker)
+					subInterpreter, err := inter.NewSubInterpreter(program, location)
+					if err != nil {
+						panic(err)
+					}
+
+					return interpreter.InterpreterImport{
+						Interpreter: subInterpreter,
+					}
+				},
+			},
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					LocationHandler: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
+
+						for _, identifier := range identifiers {
+							result = append(result, sema.ResolvedLocation{
+								Location: common.AddressLocation{
+									Address: location.(common.AddressLocation).Address,
+									Name:    identifier.Identifier,
+								},
+								Identifiers: []ast.Identifier{
+									identifier,
+								},
+							})
+						}
+						return
+					},
+					ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+						require.IsType(t, common.AddressLocation{}, importedLocation)
+						addressLocation := importedLocation.(common.AddressLocation)
+
+						var importedChecker *sema.Checker
+
+						switch addressLocation.Address {
+						case address:
+							importedChecker = importedCheckerA
+						case address2:
+							importedChecker = importedCheckerB
+						default:
+							t.Errorf(
+								"invalid address location location name: %s",
+								addressLocation.Name,
+							)
+						}
+
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+	err = inter.Interpret()
+	require.NoError(t, err)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(3),
+		value,
+	)
+}
+
+func TestInterpretImportAliasGetType(t *testing.T) {
+
+	t.Parallel()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	importedChecker, err := ParseAndCheckWithOptions(t,
+		`
+		access(all) struct Foo {
+		}
+		`,
+		ParseAndCheckOptions{
+			Location: common.AddressLocation{
+				Address: address,
+				Name:    "",
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	storage := newUnmeteredInMemoryStorage()
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+		import Foo as Bar from 0x1
+		access(all) fun test(): String {
+			var bar: Bar = Bar()
+			return bar.getType().identifier
+		}
+        `,
+		ParseCheckAndInterpretOptions{
+			InterpreterConfig: &interpreter.Config{
+				Storage: storage,
+				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+					program := interpreter.ProgramFromChecker(importedChecker)
+					subInterpreter, err := inter.NewSubInterpreter(program, location)
+					if err != nil {
+						panic(err)
+					}
+
+					return interpreter.InterpreterImport{
+						Interpreter: subInterpreter,
+					}
+				},
+			},
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					LocationHandler: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
+
+						for _, identifier := range identifiers {
+							result = append(result, sema.ResolvedLocation{
+								Location: common.AddressLocation{
+									Address: location.(common.AddressLocation).Address,
+									Name:    identifier.Identifier,
+								},
+								Identifiers: []ast.Identifier{
+									identifier,
+								},
+							})
+						}
+						return
+					},
+					ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	err = inter.Interpret()
+	require.NoError(t, err)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredStringValue("A.0000000000000001.Foo"),
+		value,
+	)
+}
+
+// TestInterpretImportTypeEquality shows aliasing one func twice and using it interchangeably
+func TestInterpretImportTypeEquality(t *testing.T) {
+
+	t.Parallel()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	importedCheckerA, err := ParseAndCheckWithOptions(t,
+		`
+		access(all) contract Foo {
+			access(all) fun Test(): Int {
+				return 1
+			}
+		}
+        `,
+		ParseAndCheckOptions{
+			Location: common.AddressLocation{
+				Address: address,
+				Name:    "",
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	storage := newUnmeteredInMemoryStorage()
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+		import Foo as Bar from 0x1
+		import Foo as Baz from 0x1
+		access(all) fun test(): Int {
+			var foo: &Bar = Baz
+			return foo.Test()
+		}
+        `,
+		ParseCheckAndInterpretOptions{
+			InterpreterConfig: &interpreter.Config{
+				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
+				Storage:              storage,
+				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+					program := interpreter.ProgramFromChecker(importedCheckerA)
+					subInterpreter, err := inter.NewSubInterpreter(program, location)
+					if err != nil {
+						panic(err)
+					}
+
+					return interpreter.InterpreterImport{
+						Interpreter: subInterpreter,
+					}
+				},
+			},
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					LocationHandler: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
+
+						for _, identifier := range identifiers {
+							result = append(result, sema.ResolvedLocation{
+								Location: common.AddressLocation{
+									Address: location.(common.AddressLocation).Address,
+									Name:    identifier.Identifier,
+								},
+								Identifiers: []ast.Identifier{
+									identifier,
+								},
+							})
+						}
+						return
+					},
+					ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedCheckerA.Elaboration,
+						}, nil
+					},
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+	err = inter.Interpret()
+	require.NoError(t, err)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(1),
+		value,
+	)
+}
