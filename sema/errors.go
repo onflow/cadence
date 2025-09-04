@@ -2051,7 +2051,7 @@ type MemberMismatchNote struct {
 }
 
 func (MemberMismatchNote) Message() string {
-	return "mismatch here"
+	return "conformance mismatch here"
 }
 
 // DuplicateConformanceError
