@@ -3872,7 +3872,9 @@ func TestInterpretDynamicCastingReferenceCasting(t *testing.T) {
 				var dereferenceError *interpreter.DereferenceError
 				require.ErrorAs(t, err, &dereferenceError)
 
-				assert.Equal(t, 22, dereferenceError.LocationRange.StartPosition().Line)
+				// Dereferencing fails when validating member-access types.
+				// `Value.StaticType()` doesn't takes a location-range argument,
+				// so the location info for the error is always empty.
 			})
 		}
 

@@ -4849,7 +4849,7 @@ func AccountStorageRead(
 	if !IsSubTypeOfSemaType(invocationContext, valueStaticType, typeParameter) {
 		valueSemaType := MustConvertStaticToSemaType(valueStaticType, invocationContext)
 
-		panic(&ForceCastTypeMismatchError{
+		panic(&StoredValueTypeMismatchError{
 			ExpectedType:  typeParameter,
 			ActualType:    valueSemaType,
 			LocationRange: locationRange,
