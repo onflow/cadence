@@ -35,6 +35,7 @@ func ByteArrayValueToByteSlice(context ContainerMutationContext, value Value, lo
 
 	count := array.Count()
 	if count > 0 {
+		common.UseMemory(context, common.NewBytesMemoryUsage(count))
 		result = make([]byte, 0, count)
 
 		var err error
@@ -95,54 +96,50 @@ func ByteValueToByte(memoryGauge common.MemoryGauge, element Value, locationRang
 	return b, nil
 }
 
-func ByteSliceToByteArrayValue(context ArrayCreationContext, buf []byte) *ArrayValue {
+func ByteSliceToByteArrayValue(context ArrayCreationContext, bytes []byte) *ArrayValue {
 
-	common.UseMemory(context, common.NewBytesMemoryUsage(len(buf)))
+	count := len(bytes)
 
-	var values []Value
-
-	count := len(buf)
-	if count > 0 {
-		values = make([]Value, count)
-		for i, b := range buf {
-			values[i] = UInt8Value(b)
-		}
-	}
-
-	return NewArrayValue(
+	var index int
+	return NewArrayValueWithIterator(
 		context,
-		EmptyLocationRange,
 		ByteArrayStaticType,
 		common.ZeroAddress,
-		values...,
+		uint64(count),
+		func() Value {
+			if index >= count {
+				return nil
+			}
+			value := UInt8Value(bytes[index])
+			index++
+			return value
+		},
 	)
 }
 
-func ByteSliceToConstantSizedByteArrayValue(context ArrayCreationContext, buf []byte) *ArrayValue {
+func ByteSliceToConstantSizedByteArrayValue(context ArrayCreationContext, bytes []byte) *ArrayValue {
 
-	common.UseMemory(context, common.NewBytesMemoryUsage(len(buf)))
-
-	var values []Value
-
-	count := len(buf)
-	if count > 0 {
-		values = make([]Value, count)
-		for i, b := range buf {
-			values[i] = UInt8Value(b)
-		}
-	}
+	count := len(bytes)
 
 	constantSizedByteArrayStaticType := NewConstantSizedStaticType(
 		context,
 		PrimitiveStaticTypeUInt8,
-		int64(len(buf)),
+		int64(count),
 	)
 
-	return NewArrayValue(
+	var index int
+	return NewArrayValueWithIterator(
 		context,
-		EmptyLocationRange,
 		constantSizedByteArrayStaticType,
 		common.ZeroAddress,
-		values...,
+		uint64(count),
+		func() Value {
+			if index >= count {
+				return nil
+			}
+			value := UInt8Value(bytes[index])
+			index++
+			return value
+		},
 	)
 }

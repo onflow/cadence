@@ -226,9 +226,13 @@ func ParseCheckAndPrepareWithOptions(
 		return ParseCheckAndInterpretWithOptions(tb, code, options)
 	}
 
-	var memoryGauge common.MemoryGauge
+	var (
+		memoryGauge      common.MemoryGauge
+		computationGauge common.ComputationGauge
+	)
 	if options.InterpreterConfig != nil {
 		memoryGauge = options.InterpreterConfig.MemoryGauge
+		computationGauge = options.InterpreterConfig.ComputationGauge
 	}
 	if memoryGauge == nil && options.ParseAndCheckOptions != nil {
 		memoryGauge = options.ParseAndCheckOptions.MemoryGauge
@@ -241,7 +245,10 @@ func ParseCheckAndPrepareWithOptions(
 		storage = interpreterConfig.Storage
 	}
 	if storage == nil {
-		storage = interpreter.NewInMemoryStorage(memoryGauge)
+		storage = interpreter.NewInMemoryStorage(
+			memoryGauge,
+			computationGauge,
+		)
 	}
 
 	programs := CompiledPrograms{}
@@ -250,20 +257,53 @@ func ParseCheckAndPrepareWithOptions(
 	vmConfig := vm.NewConfig(storage).
 		WithDebugEnabled()
 
-	typeLoader := compilerUtils.CompiledProgramsTypeLoader(programs)
+	compositeTypeLoader := compilerUtils.CompiledProgramsCompositeTypeLoader(programs)
+	interfaceTypeLoader := compilerUtils.CompiledProgramsInterfaceTypeLoader(programs)
+	entitlementTypeLoader := compilerUtils.CompiledProgramsEntitlementTypeLoader(programs)
+	entitlementMapTypeLoader := compilerUtils.CompiledProgramsEntitlementMapTypeLoader(programs)
 
 	if options.ParseAndCheckOptions != nil && options.ParseAndCheckOptions.CheckerConfig != nil {
 		typeActivationHandler := options.ParseAndCheckOptions.CheckerConfig.BaseTypeActivationHandler
 		if typeActivationHandler != nil {
-			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+			vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 				activation := typeActivationHandler(location)
 				typeName := location.QualifiedIdentifier(typeID)
 				variable := activation.Find(typeName)
 				if variable != nil {
-					return variable.Type, nil
+					return variable.Type.(*sema.CompositeType)
 				}
 
-				return typeLoader(location, typeID)
+				return compositeTypeLoader(location, typeID)
+			}
+			vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+				activation := typeActivationHandler(location)
+				typeName := location.QualifiedIdentifier(typeID)
+				variable := activation.Find(typeName)
+				if variable != nil {
+					return variable.Type.(*sema.InterfaceType)
+				}
+
+				return interfaceTypeLoader(location, typeID)
+			}
+			vmConfig.EntitlementTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.EntitlementType {
+				activation := typeActivationHandler(location)
+				typeName := location.QualifiedIdentifier(typeID)
+				variable := activation.Find(typeName)
+				if variable != nil {
+					return variable.Type.(*sema.EntitlementType)
+				}
+
+				return entitlementTypeLoader(location, typeID)
+			}
+			vmConfig.EntitlementMapTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.EntitlementMapType {
+				activation := typeActivationHandler(location)
+				typeName := location.QualifiedIdentifier(typeID)
+				variable := activation.Find(typeName)
+				if variable != nil {
+					return variable.Type.(*sema.EntitlementMapType)
+				}
+
+				return entitlementMapTypeLoader(location, typeID)
 			}
 		}
 	}
@@ -373,23 +413,21 @@ func ParseCheckAndPrepareWithOptions(
 		}
 
 		if interpreterConfig.ImportLocationHandler != nil {
-			originalTypeLoader := vmConfig.TypeLoader
-			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+			originalCompositeTypeHandler := vmConfig.CompositeTypeHandler
+			vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 				impt := interpreterConfig.ImportLocationHandler(nil, location)
 				switch impt := impt.(type) {
 				case interpreter.VirtualImport:
-					return impt.Elaboration.CompositeType(typeID), nil
+					return impt.Elaboration.CompositeType(typeID)
 				case interpreter.InterpreterImport:
-					return impt.Interpreter.Program.Elaboration.CompositeType(typeID), nil
+					return impt.Interpreter.Program.Elaboration.CompositeType(typeID)
 				}
 
-				if originalTypeLoader != nil {
-					return originalTypeLoader(location, typeID)
+				if originalCompositeTypeHandler != nil {
+					return originalCompositeTypeHandler(location, typeID)
 				}
 
-				return nil, interpreter.TypeLoadingError{
-					TypeID: typeID,
-				}
+				return nil
 			}
 
 			vmConfig.ElaborationResolver = func(location common.Location) (*sema.Elaboration, error) {
@@ -411,26 +449,33 @@ func ParseCheckAndPrepareWithOptions(
 		}
 
 		if interpreterConfig.CompositeTypeHandler != nil {
-			originalTypeLoader := vmConfig.TypeLoader
-			vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+			originalCompositeTypeHandler := vmConfig.CompositeTypeHandler
+			vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 				ty := interpreterConfig.CompositeTypeHandler(location, typeID)
 				if ty != nil {
-					return ty, nil
+					return ty
 				}
 
-				if originalTypeLoader != nil {
-					return originalTypeLoader(location, typeID)
+				if originalCompositeTypeHandler != nil {
+					return originalCompositeTypeHandler(location, typeID)
 				}
 
-				return nil, interpreter.TypeLoadingError{
-					TypeID: typeID,
-				}
+				return nil
 			}
 		}
 	}
 
-	if vmConfig.TypeLoader == nil {
-		vmConfig.TypeLoader = typeLoader
+	if vmConfig.CompositeTypeHandler == nil {
+		vmConfig.CompositeTypeHandler = compositeTypeLoader
+	}
+	if vmConfig.InterfaceTypeHandler == nil {
+		vmConfig.InterfaceTypeHandler = interfaceTypeLoader
+	}
+	if vmConfig.EntitlementTypeHandler == nil {
+		vmConfig.EntitlementTypeHandler = entitlementTypeLoader
+	}
+	if vmConfig.EntitlementMapTypeHandler == nil {
+		vmConfig.EntitlementMapTypeHandler = entitlementMapTypeLoader
 	}
 
 	if vmConfig.BuiltinGlobalsProvider == nil {
@@ -557,9 +602,14 @@ func parseCheckAndInterpretWithOptionsAndAtreeValidations(
 	err error,
 ) {
 
-	var memoryGauge common.MemoryGauge
+	var (
+		memoryGauge      common.MemoryGauge
+		computationGauge common.ComputationGauge
+	)
+
 	if options.InterpreterConfig != nil {
 		memoryGauge = options.InterpreterConfig.MemoryGauge
+		computationGauge = options.InterpreterConfig.ComputationGauge
 	}
 	if memoryGauge == nil && options.ParseAndCheckOptions != nil {
 		memoryGauge = options.ParseAndCheckOptions.MemoryGauge
@@ -611,7 +661,10 @@ func parseCheckAndInterpretWithOptionsAndAtreeValidations(
 		}
 	}
 	if config.Storage == nil {
-		config.Storage = interpreter.NewInMemoryStorage(memoryGauge)
+		config.Storage = interpreter.NewInMemoryStorage(
+			memoryGauge,
+			computationGauge,
+		)
 	}
 
 	inter, err = interpreter.NewInterpreter(

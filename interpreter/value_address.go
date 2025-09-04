@@ -134,7 +134,7 @@ func (v AddressValue) Equal(_ ValueComparisonContext, _ LocationRange, other Val
 // HashInput returns a byte slice containing:
 // - HashInputTypeAddress (1 byte)
 // - address (8 bytes)
-func (v AddressValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+func (v AddressValue) HashInput(_ common.Gauge, _ LocationRange, scratch []byte) []byte {
 	length := 1 + len(v)
 	var buffer []byte
 	if length <= len(scratch) {
@@ -162,7 +162,7 @@ func (v AddressValue) GetMember(context MemberAccessibleContext, locationRange L
 
 func (v AddressValue) GetMethod(
 	context MemberAccessibleContext,
-	locationRange LocationRange,
+	_ LocationRange,
 	name string,
 ) FunctionValue {
 	switch name {

@@ -189,11 +189,11 @@ func (v Int8Value) Minus(context NumberValueArithmeticContext, other NumberValue
 
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt8 + o)) {
-		panic(&OverflowError{
+		panic(&UnderflowError{
 			LocationRange: locationRange,
 		})
 	} else if (o < 0) && (v > (math.MaxInt8 + o)) {
-		panic(&UnderflowError{
+		panic(&OverflowError{
 			LocationRange: locationRange,
 		})
 	}
@@ -476,7 +476,7 @@ func (v Int8Value) Equal(_ ValueComparisonContext, _ LocationRange, other Value)
 // HashInput returns a byte slice containing:
 // - HashInputTypeInt8 (1 byte)
 // - int8 value (1 byte)
-func (v Int8Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+func (v Int8Value) HashInput(_ common.Gauge, _ LocationRange, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeInt8)
 	scratch[1] = byte(v)
 	return scratch[:2]

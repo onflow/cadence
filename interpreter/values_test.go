@@ -85,7 +85,12 @@ func newRandomValueTestInterpreter(t *testing.T) (inter *interpreter.Interpreter
 			err := storage.Commit(inter, false)
 			require.NoError(t, err)
 		}
-		config.Storage = runtime.NewStorage(ledger, nil, runtime.StorageConfig{})
+		config.Storage = runtime.NewStorage(
+			ledger,
+			nil,
+			nil,
+			runtime.StorageConfig{},
+		)
 	}
 
 	resetStorage()
@@ -3668,6 +3673,7 @@ func TestInterpretSmokeRandomNestedCompositeOperations(t *testing.T) {
 		fieldNames := make([]string, 0, fieldCount)
 
 		actualNestedComposite.ForEachFieldName(
+			inter,
 			func(name string) (resume bool) {
 				fieldNames = append(fieldNames, name)
 				return true
@@ -3794,6 +3800,7 @@ func TestInterpretSmokeRandomNestedCompositeOperations(t *testing.T) {
 		fieldNames := make([]string, 0, fieldCount)
 
 		actualNestedComposite.ForEachFieldName(
+			inter,
 			func(name string) (resume bool) {
 
 				fieldNames = append(fieldNames, name)
@@ -4841,7 +4848,7 @@ func TestCheckStorageHealthInMiddleOfDeepRemove(t *testing.T) {
 
 	t.Parallel()
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 	inter, err := interpreter.NewInterpreter(
 		&interpreter.Program{
 			Program:     ast.NewProgram(nil, []ast.Declaration{}),
@@ -4922,7 +4929,7 @@ func TestInterpretCheckStorageHealthInMiddleOfTransferAndRemove(t *testing.T) {
 	r := newRandomValueGenerator(*smokeTestSeed, defaultRandomValueLimits)
 	t.Logf("seed: %d", r.seed)
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 	inter, err := interpreter.NewInterpreter(
 		&interpreter.Program{
 			Program:     ast.NewProgram(nil, []ast.Declaration{}),

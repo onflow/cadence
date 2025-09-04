@@ -59,7 +59,7 @@ func init() {
 				this := receiver.(*interpreter.StringValue)
 				from := arguments[0].(interpreter.IntValue)
 				to := arguments[1].(interpreter.IntValue)
-				return this.Slice(from, to, EmptyLocationRange)
+				return this.Slice(context, from, to, EmptyLocationRange)
 			},
 		),
 	)

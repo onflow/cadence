@@ -1744,7 +1744,7 @@ func TestCheckInvalidMultipleInterfaceDefaultImplementation(t *testing.T) {
 	})
 }
 
-func TestCheckMultipleInterfaceDefaultImplementationWhenOverriden(t *testing.T) {
+func TestCheckMultipleInterfaceDefaultImplementationWhenOverridden(t *testing.T) {
 
 	t.Parallel()
 

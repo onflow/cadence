@@ -54,10 +54,6 @@ var parseCheckAndInterpretWithOptions = test_utils.ParseCheckAndInterpretWithOpt
 
 type testEvent = test_utils.TestEvent
 
-func newUnmeteredInMemoryStorage() interpreter.InMemoryStorage {
-	return interpreter.NewInMemoryStorage(nil)
-}
-
 func constructorArguments(compositeKind common.CompositeKind, arguments string) string {
 	switch compositeKind {
 	case common.CompositeKindContract:
@@ -4002,7 +3998,7 @@ func TestInterpretImport(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
@@ -4118,7 +4114,7 @@ func TestInterpretImportError(t *testing.T) {
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, stdlib.InterpreterPanicFunction)
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(mainChecker),
@@ -5048,7 +5044,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		var err error
 		inter, err = parseCheckAndPrepareWithOptions(t,
@@ -6307,7 +6303,6 @@ func TestInterpretDictionaryKeyTypes(t *testing.T) {
 	}
 
 	for _, fixedPointType := range sema.AllFixedPointTypes {
-
 		var literal string
 
 		if sema.IsSubType(fixedPointType, sema.SignedFixedPointType) {
@@ -6879,7 +6874,7 @@ func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) 
 	)
 	require.NoError(t, err)
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
@@ -7514,7 +7509,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 		Members:    &sema.StringMemberOrderedMap{},
 	}
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		nil,
@@ -7640,10 +7635,18 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			value: interpreter.NewUnmeteredFix64Value(123000000),
 			ty:    sema.Fix64Type,
 		},
+		"Fix128": {
+			value: interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(123, 22),
+			ty:    sema.Fix128Type,
+		},
 		// UFix*
 		"UFix64": {
 			value: interpreter.NewUnmeteredUFix64Value(123000000),
 			ty:    sema.UFix64Type,
+		},
+		"UFix128": {
+			value: interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(123, 22),
+			ty:    sema.UFix128Type,
 		},
 		// TODO:
 		//// Struct
@@ -8720,7 +8723,7 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
@@ -12796,7 +12799,12 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 				code,
 				ParseCheckAndInterpretOptions{
 					InterpreterConfig: &interpreter.Config{
-						Storage: runtime.NewStorage(ledger, nil, runtime.StorageConfig{}),
+						Storage: runtime.NewStorage(
+							ledger,
+							nil,
+							nil,
+							runtime.StorageConfig{},
+						),
 					},
 				},
 			)

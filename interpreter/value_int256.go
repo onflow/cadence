@@ -428,7 +428,7 @@ func (v Int256Value) Div(context NumberValueArithmeticContext, other NumberValue
 				LocationRange: locationRange,
 			})
 		}
-		res.Div(v.BigInt, o.BigInt)
+		res.Quo(v.BigInt, o.BigInt)
 		return res
 	}
 
@@ -463,7 +463,7 @@ func (v Int256Value) SaturatingDiv(context NumberValueArithmeticContext, other N
 		if (v.BigInt.Cmp(sema.Int256TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
 			return sema.Int256TypeMaxIntBig
 		}
-		res.Div(v.BigInt, o.BigInt)
+		res.Quo(v.BigInt, o.BigInt)
 		return res
 	}
 
@@ -542,7 +542,7 @@ func (v Int256Value) Equal(_ ValueComparisonContext, _ LocationRange, other Valu
 // HashInput returns a byte slice containing:
 // - HashInputTypeInt256 (1 byte)
 // - big int value encoded in big-endian (n bytes)
-func (v Int256Value) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+func (v Int256Value) HashInput(_ common.Gauge, _ LocationRange, scratch []byte) []byte {
 	b := values.SignedBigIntToBigEndianBytes(v.BigInt)
 
 	length := 1 + len(b)

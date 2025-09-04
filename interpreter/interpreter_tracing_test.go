@@ -1,3 +1,5 @@
+//go:build cadence_tracing
+
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -32,13 +34,14 @@ import (
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 )
 
 func prepareWithTracingCallBack(
 	t *testing.T,
 	tracingCallback func(opName string),
 ) Invokable {
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	onRecordTrace := func(
 		operationName string,
@@ -72,9 +75,8 @@ func prepareWithTracingCallBack(
 			nil,
 			TestLocation,
 			&interpreter.Config{
-				Storage:        storage,
-				TracingEnabled: true,
-				OnRecordTrace:  onRecordTrace,
+				Storage:       storage,
+				OnRecordTrace: onRecordTrace,
 			},
 		)
 		require.NoError(t, err)

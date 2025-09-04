@@ -33,6 +33,7 @@ import (
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 
@@ -504,7 +505,7 @@ func CompileAndInvokeWithLogs(
 		BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndLog,
 	}
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := NewUnmeteredInMemoryStorage()
 	vmConfig := vm.NewConfig(storage)
 
 	vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndLog(&logs)
@@ -578,7 +579,7 @@ func CompileAndInvokeWithConditionLogs(
 		BuiltinGlobalsProvider: CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog,
 	}
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := NewUnmeteredInMemoryStorage()
 	vmConfig := vm.NewConfig(storage)
 
 	vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(&logs)
@@ -697,42 +698,77 @@ func ContractValueHandler(contractName string, arguments ...vm.Value) vm.Contrac
 	}
 }
 
-func CompiledProgramsTypeLoader(
+func CompiledProgramsCompositeTypeLoader(
 	programs CompiledPrograms,
-) func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
-	return func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+) func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+	return func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 		program, ok := programs[location]
 		if !ok {
-			return nil, interpreter.TypeLoadingError{
-				TypeID: typeID,
-			}
+			return nil
 		}
 
 		elaboration := program.DesugaredElaboration
 
 		compositeType := elaboration.CompositeType(typeID)
-		if compositeType != nil {
-			return compositeType, nil
+
+		return compositeType
+	}
+}
+
+func CompiledProgramsInterfaceTypeLoader(
+	programs CompiledPrograms,
+) func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+	return func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+		program, ok := programs[location]
+		if !ok {
+			return nil
 		}
 
+		elaboration := program.DesugaredElaboration
+
 		interfaceType := elaboration.InterfaceType(typeID)
-		if interfaceType != nil {
-			return interfaceType, nil
+
+		return interfaceType
+	}
+}
+
+func CompiledProgramsEntitlementTypeLoader(
+	programs CompiledPrograms,
+) func(location common.Location, typeID interpreter.TypeID) *sema.EntitlementType {
+	return func(location common.Location, typeID interpreter.TypeID) *sema.EntitlementType {
+		program, ok := programs[location]
+		if !ok {
+			return nil
 		}
+
+		elaboration := program.DesugaredElaboration
 
 		entitlementType := elaboration.EntitlementType(typeID)
 		if entitlementType != nil {
-			return entitlementType, nil
+			return entitlementType
 		}
+
+		return nil
+	}
+}
+
+func CompiledProgramsEntitlementMapTypeLoader(
+	programs CompiledPrograms,
+) func(location common.Location, typeID interpreter.TypeID) *sema.EntitlementMapType {
+	return func(location common.Location, typeID interpreter.TypeID) *sema.EntitlementMapType {
+		program, ok := programs[location]
+		if !ok {
+			return nil
+		}
+
+		elaboration := program.DesugaredElaboration
 
 		entitlementMapType := elaboration.EntitlementMapType(typeID)
 		if entitlementMapType != nil {
-			return entitlementMapType, nil
+			return entitlementMapType
 		}
 
-		return nil, interpreter.TypeLoadingError{
-			TypeID: typeID,
-		}
+		return nil
 	}
 }
 
@@ -783,7 +819,7 @@ func PrepareVMConfig(
 ) *vm.Config {
 
 	if config == nil {
-		storage := interpreter.NewInMemoryStorage(nil)
+		storage := NewUnmeteredInMemoryStorage()
 		config = vm.NewConfig(storage)
 	}
 
@@ -795,8 +831,20 @@ func PrepareVMConfig(
 		}
 	}
 
-	if config.TypeLoader == nil {
-		config.TypeLoader = CompiledProgramsTypeLoader(programs)
+	if config.CompositeTypeHandler == nil {
+		config.CompositeTypeHandler = CompiledProgramsCompositeTypeLoader(programs)
+	}
+
+	if config.InterfaceTypeHandler == nil {
+		config.InterfaceTypeHandler = CompiledProgramsInterfaceTypeLoader(programs)
+	}
+
+	if config.EntitlementTypeHandler == nil {
+		config.EntitlementTypeHandler = CompiledProgramsEntitlementTypeLoader(programs)
+	}
+
+	if config.EntitlementMapTypeHandler == nil {
+		config.EntitlementMapTypeHandler = CompiledProgramsEntitlementMapTypeLoader(programs)
 	}
 
 	if config.ImportHandler == nil {

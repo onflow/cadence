@@ -360,6 +360,7 @@ func (r *runtime) Storage(context Context) (*Storage, *interpreter.Interpreter, 
 	storage := NewStorage(
 		runtimeInterface,
 		context.MemoryGauge,
+		context.ComputationGauge,
 		StorageConfig{},
 	)
 

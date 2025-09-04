@@ -136,7 +136,7 @@ func NewCompositeValue(
 
 	var v *CompositeValue
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		defer func() {
@@ -160,6 +160,15 @@ func NewCompositeValue(
 	}
 
 	constructor := func() *atree.OrderedMap {
+
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapConstruction,
+				Intensity: 1,
+			},
+		)
+
 		dictionary, err := atree.NewMap(
 			context.Storage(),
 			atree.Address(address),
@@ -345,7 +354,7 @@ func (v *CompositeValue) Destroy(context ResourceDestructionContext, locationRan
 		},
 	)
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -465,7 +474,7 @@ func (v *CompositeValue) getBuiltinMember(context MemberAccessibleContext, locat
 
 func (v *CompositeValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -653,7 +662,7 @@ func (v *CompositeValue) RemoveMember(
 	name string,
 ) Value {
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -670,6 +679,14 @@ func (v *CompositeValue) RemoveMember(
 			)
 		}()
 	}
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapRemove,
+			Intensity: 1,
+		},
+	)
 
 	// No need to clean up storable for passed-in key value,
 	// as atree never calls Storable()
@@ -720,7 +737,7 @@ func (v *CompositeValue) SetMemberWithoutTransfer(
 
 	context.EnforceNotResourceDestruction(v.ValueID(), locationRange)
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -737,6 +754,14 @@ func (v *CompositeValue) SetMemberWithoutTransfer(
 			)
 		}()
 	}
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapSet,
+			Intensity: 1,
+		},
+	)
 
 	existingStorable, err := v.dictionary.Set(
 		StringAtreeValueComparator,
@@ -874,7 +899,16 @@ func formatComposite(
 	return format.Composite(typeId, preparedFields)
 }
 
-func (v *CompositeValue) GetField(memoryGauge common.MemoryGauge, name string) Value {
+func (v *CompositeValue) GetField(gauge common.Gauge, name string) Value {
+
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapGet,
+			Intensity: 1,
+		},
+	)
+
 	storedValue, err := v.dictionary.Get(
 		StringAtreeValueComparator,
 		StringAtreeValueHashInput,
@@ -888,7 +922,7 @@ func (v *CompositeValue) GetField(memoryGauge common.MemoryGauge, name string) V
 		panic(errors.NewExternalError(err))
 	}
 
-	return MustConvertStoredValue(memoryGauge, storedValue)
+	return MustConvertStoredValue(gauge, storedValue)
 }
 
 func (v *CompositeValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
@@ -910,6 +944,14 @@ func (v *CompositeValue) Equal(context ValueComparisonContext, locationRange Loc
 	}
 
 	for {
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapReadIteration,
+				Intensity: 1,
+			},
+		)
+
 		key, value, err := iterator.Next()
 		if err != nil {
 			panic(errors.NewExternalError(err))
@@ -935,13 +977,13 @@ func (v *CompositeValue) Equal(context ValueComparisonContext, locationRange Loc
 // - HashInputTypeEnum (1 byte)
 // - type id (n bytes)
 // - hash input of raw value field name (n bytes)
-func (v *CompositeValue) HashInput(memoryGauge common.MemoryGauge, locationRange LocationRange, scratch []byte) []byte {
+func (v *CompositeValue) HashInput(gauge common.Gauge, locationRange LocationRange, scratch []byte) []byte {
 	if v.Kind == common.CompositeKindEnum {
 		typeID := v.TypeID()
 
-		rawValue := v.GetField(memoryGauge, sema.EnumRawValueFieldName)
+		rawValue := v.GetField(gauge, sema.EnumRawValueFieldName)
 		rawValueHashInput := rawValue.(HashableValue).
-			HashInput(memoryGauge, locationRange, scratch)
+			HashInput(gauge, locationRange, scratch)
 
 		length := 1 + len(typeID) + len(rawValueHashInput)
 		if length <= len(scratch) {
@@ -976,7 +1018,7 @@ func (v *CompositeValue) ConformsToStaticType(
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -1187,15 +1229,17 @@ func (v *CompositeValue) Transfer(
 	hasNoParentContainer bool,
 ) Value {
 
+	count := v.FieldCount()
+
 	common.UseComputation(
 		context,
 		common.ComputationUsage{
 			Kind:      common.ComputationKindTransferCompositeValue,
-			Intensity: 1,
+			Intensity: uint64(count),
 		},
 	)
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -1257,6 +1301,22 @@ func (v *CompositeValue) Transfer(
 		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(elementCount, 0)
 		common.UseMemory(context, elementMemoryUse)
 
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapBatchConstruction,
+				Intensity: uint64(count),
+			},
+		)
+
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapReadIteration,
+				Intensity: uint64(count),
+			},
+		)
+
 		dictionary, err = atree.NewMapFromBatchData(
 			context.Storage(),
 			address,
@@ -1266,6 +1326,8 @@ func (v *CompositeValue) Transfer(
 			StringAtreeValueHashInput,
 			v.dictionary.Seed(),
 			func() (atree.Value, atree.Value, error) {
+
+				// Computation was already metered above
 
 				atreeKey, atreeValue, err := iterator.Next()
 				if err != nil {
@@ -1305,6 +1367,15 @@ func (v *CompositeValue) Transfer(
 		}
 
 		if remove {
+
+			common.UseComputation(
+				context,
+				common.ComputationUsage{
+					Kind:      common.ComputationKindAtreeMapPopIteration,
+					Intensity: v.dictionary.Count(),
+				},
+			)
+
 			err = v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
 				RemoveReferencedSlab(context, nameStorable)
 				RemoveReferencedSlab(context, valueStorable)
@@ -1438,7 +1509,7 @@ func (v *CompositeValue) Clone(context ValueCloneContext) Value {
 }
 
 func (v *CompositeValue) DeepRemove(context ValueRemoveContext, hasNoParentContainer bool) {
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -1458,6 +1529,14 @@ func (v *CompositeValue) DeepRemove(context ValueRemoveContext, hasNoParentConta
 	// Remove nested values and storables
 
 	storage := v.dictionary.Storage
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapPopIteration,
+			Intensity: v.dictionary.Count(),
+		},
+	)
 
 	err := v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
 		// NOTE: key / field name is stringAtreeValue,
@@ -1485,6 +1564,7 @@ func (v *CompositeValue) GetOwner() common.Address {
 // ForEachFieldName iterates over all field names of the composite value.
 // It does NOT iterate over computed fields and functions!
 func (v *CompositeValue) ForEachFieldName(
+	gauge common.ComputationGauge,
 	f func(fieldName string) (resume bool),
 ) {
 	iterate := func(fn atree.MapElementIterationFunc) error {
@@ -1497,14 +1577,24 @@ func (v *CompositeValue) ForEachFieldName(
 			fn,
 		)
 	}
-	v.forEachFieldName(iterate, f)
+	v.forEachFieldName(gauge, iterate, f)
 }
 
 func (v *CompositeValue) forEachFieldName(
+	gauge common.ComputationGauge,
 	atreeIterate func(fn atree.MapElementIterationFunc) error,
 	f func(fieldName string) (resume bool),
 ) {
 	err := atreeIterate(func(key atree.Value) (resume bool, err error) {
+
+		common.UseComputation(
+			gauge,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapReadIteration,
+				Intensity: 1,
+			},
+		)
+
 		resume = f(
 			string(key.(StringAtreeValue)),
 		)
@@ -1592,6 +1682,14 @@ func (v *CompositeValue) RemoveField(
 	locationRange LocationRange,
 	name string,
 ) {
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapRemove,
+			Intensity: 1,
+		},
+	)
 
 	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
 		StringAtreeValueComparator,

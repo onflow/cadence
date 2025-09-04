@@ -286,7 +286,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 					" --> 2a00000000000000.Test:4:18\n" +
 					"  |\n" +
 					"4 |               fun testCase() {}\n" +
-					"  |                   ^^^^^^^^ move this declaration to a contract\n" +
+					"  |                   ^^^^^^^^ move this declaration into a contract\n" +
 					"\n" +
 					"error: missing access modifier for function\n" +
 					" --> 2a00000000000000.Test:4:14\n" +

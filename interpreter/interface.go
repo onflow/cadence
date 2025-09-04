@@ -69,7 +69,7 @@ type StorageWriter interface {
 var _ StorageWriter = &Interpreter{}
 
 type ValueStaticTypeContext interface {
-	common.MemoryGauge
+	common.Gauge
 	StorageReader
 	TypeConverter
 	IsTypeInfoRecovered(location common.Location) bool
@@ -146,6 +146,11 @@ var _ ValueCreationContext = &Interpreter{}
 type ValueRemoveContext = ValueTransferContext
 
 var _ ValueRemoveContext = &Interpreter{}
+
+type ContainerReadContext interface {
+	common.ComputationGauge
+	ValueComparisonContext
+}
 
 type ContainerMutationContext interface {
 	ValueTransferContext
@@ -536,7 +541,7 @@ func (ctx NoOpStringContext) MeterMemory(_ common.MemoryUsage) error {
 }
 
 func (ctx NoOpStringContext) MeterComputation(_ common.ComputationUsage) error {
-	panic(errors.NewUnreachableError())
+	return nil
 }
 
 func (ctx NoOpStringContext) WithContainerMutationPrevention(_ atree.ValueID, f func()) {
