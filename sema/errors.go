@@ -3358,7 +3358,7 @@ func (*InvalidMoveOperationError) Error() string {
 
 func (*InvalidMoveOperationError) SecondaryError() string {
 	return "the move operator (`<-`) can only be used on resources; " +
-		"use the assignment operator (`=`) for the non-resource"
+		"remove the `<-` operator for the non-resource"
 }
 
 func (*InvalidMoveOperationError) DocumentationLink() string {
