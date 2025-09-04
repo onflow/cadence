@@ -6892,3 +6892,83 @@ func (*InvalidMappingAuthorizationError) SecondaryError() string {
 func (*InvalidMappingAuthorizationError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/access-control#entitlement-mappings"
 }
+
+// DuplicateImportAliasError
+
+type DuplicateImportAliasError struct {
+	Alias ast.Identifier
+}
+
+var _ SemanticError = &DuplicateImportAliasError{}
+var _ errors.UserError = &DuplicateImportAliasError{}
+var _ errors.SecondaryError = &DuplicateImportAliasError{}
+var _ errors.HasDocumentationLink = &DuplicateImportAliasError{}
+
+func (*DuplicateImportAliasError) isSemanticError() {}
+
+func (*DuplicateImportAliasError) IsUserError() {}
+
+func (e *DuplicateImportAliasError) StartPosition() ast.Position {
+	return e.Alias.StartPosition()
+}
+
+func (e *DuplicateImportAliasError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
+	return e.Alias.EndPosition(memoryGauge)
+}
+
+func (e *DuplicateImportAliasError) Error() string {
+	return fmt.Sprintf(
+		"import alias %#q is already used",
+		e.Alias,
+	)
+}
+
+func (*DuplicateImportAliasError) SecondaryError() string {
+	return "consider using a different alias"
+}
+
+func (*DuplicateImportAliasError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/imports"
+}
+
+// DuplicateImportError
+
+type DuplicateImportError struct {
+	Location   common.Location
+	Identifier string
+	Pos        ast.Position
+}
+
+var _ SemanticError = &DuplicateImportError{}
+var _ errors.UserError = &DuplicateImportError{}
+var _ errors.SecondaryError = &DuplicateImportError{}
+var _ errors.HasDocumentationLink = &DuplicateImportError{}
+
+func (*DuplicateImportError) isSemanticError() {}
+
+func (*DuplicateImportError) IsUserError() {}
+
+func (e *DuplicateImportError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *DuplicateImportError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (e *DuplicateImportError) Error() string {
+	return fmt.Sprintf(
+		"duplicate import of %#q from %#q",
+		e.Identifier,
+		e.Location,
+	)
+}
+
+func (*DuplicateImportError) SecondaryError() string {
+	return "this element was already previously imported; " +
+		"remove this duplicate import"
+}
+
+func (*DuplicateImportError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/imports"
+}
