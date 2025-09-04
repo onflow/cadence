@@ -72,7 +72,7 @@ const (
 	_ // future: Fix16
 	_ // future: Fix32
 	Fix64
-	_ // future: Fix128
+	Fix128
 	_ // future: Fix256
 	_
 
@@ -82,7 +82,7 @@ const (
 	_ // future: UFix16
 	_ // future: UFix32
 	UFix64
-	_ // future: UFix128
+	UFix128
 	_ // future: UFix256
 )
 
@@ -145,8 +145,13 @@ func FromSemaType(ty sema.Type) Kind {
 	// Fix*
 	case sema.Fix64Type:
 		return Fix64
+	case sema.Fix128Type:
+		return Fix128
+
 	case sema.UFix64Type:
 		return UFix64
+	case sema.UFix128Type:
+		return UFix128
 
 	default:
 		return Unknown

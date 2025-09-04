@@ -2008,16 +2008,22 @@ func (c *Compiler[_, _]) emitIntegerConstant(value *big.Int, integerType sema.Ty
 }
 
 func (c *Compiler[_, _]) VisitFixedPointExpression(expression *ast.FixedPointExpression) (_ struct{}) {
-	// TODO: adjust once/if we support more fixed point types
-
 	fixedPointSubType := c.DesugaredElaboration.FixedPointExpressionType(expression)
+
+	var scale uint
+	switch fixedPointSubType {
+	case sema.Fix128Type, sema.UFix128Type:
+		scale = sema.Fix128Scale
+	default:
+		scale = sema.Fix64Scale
+	}
 
 	value := fixedpoint.ConvertToFixedPointBigInt(
 		expression.Negative,
 		expression.UnsignedInteger,
 		expression.Fractional,
 		expression.Scale,
-		sema.Fix64Scale,
+		scale,
 	)
 
 	var constant *Constant
@@ -2028,6 +2034,12 @@ func (c *Compiler[_, _]) VisitFixedPointExpression(expression *ast.FixedPointExp
 
 	case sema.UFix64Type:
 		constant = c.addUFix64Constant(value)
+
+	case sema.Fix128Type:
+		constant = c.addFix128Constant(value)
+
+	case sema.UFix128Type:
+		constant = c.addUFix128Constant(value)
 
 	case sema.FixedPointType:
 		if expression.Negative {
@@ -2052,6 +2064,24 @@ func (c *Compiler[_, _]) addUFix64Constant(value *big.Int) *Constant {
 func (c *Compiler[_, _]) addFix64Constant(value *big.Int) *Constant {
 	data := interpreter.NewUnmeteredFix64Value(value.Int64()).ToBigEndianBytes()
 	return c.addConstant(constant.Fix64, data)
+}
+
+func (c *Compiler[_, _]) addUFix128Constant(value *big.Int) *Constant {
+	ufix128Value := interpreter.NewUFix128ValueFromBigInt(
+		c.Config.MemoryGauge,
+		value,
+	)
+	data := ufix128Value.ToBigEndianBytes()
+	return c.addConstant(constant.UFix128, data)
+}
+
+func (c *Compiler[_, _]) addFix128Constant(value *big.Int) *Constant {
+	fix128Value := interpreter.NewFix128ValueFromBigInt(
+		c.Config.MemoryGauge,
+		value,
+	)
+	data := fix128Value.ToBigEndianBytes()
+	return c.addConstant(constant.Fix128, data)
 }
 
 func (c *Compiler[_, _]) VisitArrayExpression(array *ast.ArrayExpression) (_ struct{}) {
@@ -2646,12 +2676,8 @@ func (c *Compiler[_, _]) VisitUnaryExpression(expression *ast.UnaryExpression) (
 		c.emit(opcode.InstructionDeref{})
 
 	case ast.OperationMove:
-		// Transfer to the target type.
-		targetType := c.DesugaredElaboration.MoveExpressionTypes(expression)
-		typeIndex := c.getOrAddType(targetType)
-		c.codeGen.Emit(opcode.InstructionTransferAndConvert{
-			Type: typeIndex,
-		})
+		// NO-OP. Eventually we might want to implement a defensive check for resource invalidation
+		// in the VM like in the interpreter, and invalidate the value here.
 
 	default:
 		panic(errors.NewUnreachableError())

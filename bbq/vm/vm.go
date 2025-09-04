@@ -1841,8 +1841,14 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 	case constant.Fix64:
 		value = interpreter.NewFix64ValueFromBigEndianBytes(memoryGauge, c.Data)
 
+	case constant.Fix128:
+		value = interpreter.NewFix128ValueFromBigEndianBytes(memoryGauge, c.Data)
+
 	case constant.UFix64:
 		value = interpreter.NewUFix64ValueFromBigEndianBytes(memoryGauge, c.Data)
+
+	case constant.UFix128:
+		value = interpreter.NewUFix128ValueFromBigEndianBytes(memoryGauge, c.Data)
 
 	case constant.Address:
 		value = interpreter.NewAddressValueFromBytes(

@@ -47,7 +47,9 @@ type Visitor interface {
 	VisitWord128Value(context ValueVisitContext, value Word128Value)
 	VisitWord256Value(context ValueVisitContext, value Word256Value)
 	VisitFix64Value(context ValueVisitContext, value Fix64Value)
+	VisitFix128Value(context ValueVisitContext, v Fix128Value)
 	VisitUFix64Value(context ValueVisitContext, value UFix64Value)
+	VisitUFix128Value(context ValueVisitContext, v UFix128Value)
 	VisitCompositeValue(context ValueVisitContext, value *CompositeValue) bool
 	VisitDictionaryValue(context ValueVisitContext, value *DictionaryValue) bool
 	VisitNilValue(context ValueVisitContext, value NilValue)
@@ -94,7 +96,9 @@ type EmptyVisitor struct {
 	Word128ValueVisitor                     func(context ValueVisitContext, value Word128Value)
 	Word256ValueVisitor                     func(context ValueVisitContext, value Word256Value)
 	Fix64ValueVisitor                       func(context ValueVisitContext, value Fix64Value)
+	Fix128ValueVisitor                      func(context ValueVisitContext, value Fix128Value)
 	UFix64ValueVisitor                      func(context ValueVisitContext, value UFix64Value)
+	UFix128ValueVisitor                     func(context ValueVisitContext, value UFix128Value)
 	CompositeValueVisitor                   func(context ValueVisitContext, value *CompositeValue) bool
 	DictionaryValueVisitor                  func(context ValueVisitContext, value *DictionaryValue) bool
 	NilValueVisitor                         func(context ValueVisitContext, value NilValue)
@@ -338,8 +342,24 @@ func (v EmptyVisitor) VisitFix64Value(context ValueVisitContext, value Fix64Valu
 	visitor(context, value)
 }
 
+func (v EmptyVisitor) VisitFix128Value(context ValueVisitContext, value Fix128Value) {
+	visitor := v.Fix128ValueVisitor
+	if visitor == nil {
+		return
+	}
+	visitor(context, value)
+}
+
 func (v EmptyVisitor) VisitUFix64Value(context ValueVisitContext, value UFix64Value) {
 	visitor := v.UFix64ValueVisitor
+	if visitor == nil {
+		return
+	}
+	visitor(context, value)
+}
+
+func (v EmptyVisitor) VisitUFix128Value(context ValueVisitContext, value UFix128Value) {
+	visitor := v.UFix128ValueVisitor
 	if visitor == nil {
 		return
 	}
