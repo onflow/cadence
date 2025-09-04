@@ -388,21 +388,17 @@ func TestFlowAnalysis(t *testing.T) {
 	analysis := analyzeControlFlow(instructions)
 
 	// Should identify the conditional jump
-	require.Contains(t, analysis.JumpSources, 3)
-	jumpInfo := analysis.JumpSources[3][0]
+	require.Contains(t, analysis.JumpInfoMap, 3)
+	jumpInfo := analysis.JumpInfoMap[3]
 	assert.Equal(t, 6, jumpInfo.Target)
 	assert.Equal(t, JumpConditional, jumpInfo.JumpType)
 	assert.Equal(t, "if false", jumpInfo.Condition)
 
-	// Should identify jump target
-	require.Contains(t, analysis.JumpTargets, 6)
-	assert.Contains(t, analysis.JumpTargets[6], 3)
-
 	// Should identify returns
-	require.Contains(t, analysis.JumpSources, 5) // first return
-	require.Contains(t, analysis.JumpSources, 7) // second return
-	assert.Equal(t, JumpReturn, analysis.JumpSources[5][0].JumpType)
-	assert.Equal(t, JumpReturn, analysis.JumpSources[7][0].JumpType)
+	require.Contains(t, analysis.JumpInfoMap, 5) // first return
+	require.Contains(t, analysis.JumpInfoMap, 7) // second return
+	assert.Equal(t, JumpReturn, analysis.JumpInfoMap[5].JumpType)
+	assert.Equal(t, JumpReturn, analysis.JumpInfoMap[7].JumpType)
 
 	// Should identify basic blocks
 	assert.Len(t, analysis.BasicBlocks, 3)

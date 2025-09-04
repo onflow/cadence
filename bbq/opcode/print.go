@@ -20,6 +20,7 @@ package opcode
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"text/tabwriter"
 
@@ -196,9 +197,9 @@ const (
 
 // FlowAnalysis contains control flow information for a sequence of instructions
 type FlowAnalysis struct {
-	JumpSources map[int][]JumpInfo // instruction index -> list of jumps from this instruction
-	JumpTargets map[int][]int      // instruction index -> list of instructions that jump here
-	BasicBlocks []BasicBlock       // identified basic blocks
+	JumpInfoMap  map[int]JumpInfo // instruction index -> info for jump from this instruction
+	BlockLeaders []int            // instruction indexes which are start instructions of basic blocks
+	BasicBlocks  []BasicBlock     // identified basic blocks
 }
 
 // JumpInfo describes a jump from one instruction to another
@@ -219,9 +220,12 @@ type BasicBlock struct {
 // analyzeControlFlow performs control flow analysis on a sequence of instructions
 func analyzeControlFlow(instructions []Instruction) *FlowAnalysis {
 	analysis := &FlowAnalysis{
-		JumpSources: make(map[int][]JumpInfo),
-		JumpTargets: make(map[int][]int),
+		JumpInfoMap:  make(map[int]JumpInfo),
+		BlockLeaders: []int{},
 	}
+
+	// First instruction is always a leader
+	analysis.BlockLeaders = append(analysis.BlockLeaders, 0)
 
 	// First pass: identify all jumps
 	for i, instr := range instructions {
@@ -233,8 +237,9 @@ func analyzeControlFlow(instructions []Instruction) *FlowAnalysis {
 					Target:   target,
 					JumpType: JumpUnconditional,
 				}
-				analysis.JumpSources[i] = append(analysis.JumpSources[i], jumpInfo)
-				analysis.JumpTargets[target] = append(analysis.JumpTargets[target], i)
+				analysis.JumpInfoMap[i] = jumpInfo
+				// instructions that are jump targets are leaders and instructions immediately after jumps are leaders
+				analysis.BlockLeaders = append(analysis.BlockLeaders, target, i+1)
 			}
 		case JumpIfFalse:
 			if jumpInstr, ok := instr.(InstructionJumpIfFalse); ok {
@@ -244,8 +249,9 @@ func analyzeControlFlow(instructions []Instruction) *FlowAnalysis {
 					JumpType:  JumpConditional,
 					Condition: "if false",
 				}
-				analysis.JumpSources[i] = append(analysis.JumpSources[i], jumpInfo)
-				analysis.JumpTargets[target] = append(analysis.JumpTargets[target], i)
+				analysis.JumpInfoMap[i] = jumpInfo
+				// instructions that are jump targets are leaders and instructions immediately after jumps are leaders
+				analysis.BlockLeaders = append(analysis.BlockLeaders, target, i+1)
 			}
 		case JumpIfTrue:
 			if jumpInstr, ok := instr.(InstructionJumpIfTrue); ok {
@@ -255,8 +261,9 @@ func analyzeControlFlow(instructions []Instruction) *FlowAnalysis {
 					JumpType:  JumpConditional,
 					Condition: "if true",
 				}
-				analysis.JumpSources[i] = append(analysis.JumpSources[i], jumpInfo)
-				analysis.JumpTargets[target] = append(analysis.JumpTargets[target], i)
+				analysis.JumpInfoMap[i] = jumpInfo
+				// instructions that are jump targets are leaders and instructions immediately after jumps are leaders
+				analysis.BlockLeaders = append(analysis.BlockLeaders, target, i+1)
 			}
 		case JumpIfNil:
 			if jumpInstr, ok := instr.(InstructionJumpIfNil); ok {
@@ -266,8 +273,9 @@ func analyzeControlFlow(instructions []Instruction) *FlowAnalysis {
 					JumpType:  JumpConditional,
 					Condition: "if nil",
 				}
-				analysis.JumpSources[i] = append(analysis.JumpSources[i], jumpInfo)
-				analysis.JumpTargets[target] = append(analysis.JumpTargets[target], i)
+				analysis.JumpInfoMap[i] = jumpInfo
+				// instructions that are jump targets are leaders and instructions immediately after jumps are leaders
+				analysis.BlockLeaders = append(analysis.BlockLeaders, target, i+1)
 			}
 		case Invoke, InvokeDynamic:
 			// Function calls
@@ -278,15 +286,25 @@ func analyzeControlFlow(instructions []Instruction) *FlowAnalysis {
 
 			// could analyze for call targets here, complicated
 
-			analysis.JumpSources[i] = append(analysis.JumpSources[i], jumpInfo)
+			analysis.JumpInfoMap[i] = jumpInfo
+			// instructions immediately after jumps are leaders
+			analysis.BlockLeaders = append(analysis.BlockLeaders, i+1)
 		case Return, ReturnValue:
 			jumpInfo := JumpInfo{
 				Target:   -1, // function exit
 				JumpType: JumpReturn,
 			}
-			analysis.JumpSources[i] = append(analysis.JumpSources[i], jumpInfo)
+			analysis.JumpInfoMap[i] = jumpInfo
+			// instructions immediately after jumps are leaders
+			if i+1 < len(instructions) {
+				analysis.BlockLeaders = append(analysis.BlockLeaders, i+1)
+			}
 		}
 	}
+
+	// sort BlockLeaders and remove duplicates
+	slices.Sort(analysis.BlockLeaders)
+	analysis.BlockLeaders = slices.Compact(analysis.BlockLeaders)
 
 	// Second pass: identify basic blocks
 	analysis.BasicBlocks = identifyBasicBlocks(instructions, analysis)
@@ -296,46 +314,12 @@ func analyzeControlFlow(instructions []Instruction) *FlowAnalysis {
 
 // identifyBasicBlocks finds basic blocks in the instruction sequence
 func identifyBasicBlocks(instructions []Instruction, analysis *FlowAnalysis) []BasicBlock {
-	leaders := make(map[int]bool)
-
-	// First instruction is always a leader
-	leaders[0] = true
-
-	// Instructions that are jump targets are leaders
-	for target := range analysis.JumpTargets {
-		if target >= 0 && target < len(instructions) {
-			leaders[target] = true
-		}
-	}
-
-	// Instructions immediately after jumps are leaders
-	for source := range analysis.JumpSources {
-		if source+1 < len(instructions) {
-			leaders[source+1] = true
-		}
-	}
-
-	// Build basic blocks
-	var blocks []BasicBlock
-	var leaderIndices []int
-	for i := range leaders {
-		leaderIndices = append(leaderIndices, i)
-	}
-
-	// Sort leader indices
-	for i := 0; i < len(leaderIndices); i++ {
-		for j := i + 1; j < len(leaderIndices); j++ {
-			if leaderIndices[i] > leaderIndices[j] {
-				leaderIndices[i], leaderIndices[j] = leaderIndices[j], leaderIndices[i]
-			}
-		}
-	}
-
 	// Create blocks
-	for i, start := range leaderIndices {
+	var blocks []BasicBlock
+	for i, start := range analysis.BlockLeaders {
 		end := len(instructions) - 1
-		if i+1 < len(leaderIndices) {
-			end = leaderIndices[i+1] - 1
+		if i+1 < len(analysis.BlockLeaders) {
+			end = analysis.BlockLeaders[i+1] - 1
 		}
 
 		block := BasicBlock{
@@ -350,10 +334,9 @@ func identifyBasicBlocks(instructions []Instruction, analysis *FlowAnalysis) []B
 
 // BlockRenderer handles basic block visualization
 type BlockRenderer struct {
-	analysis      *FlowAnalysis
-	colorize      bool
-	instructions  []Instruction
-	functionNames []string
+	analysis     *FlowAnalysis
+	colorize     bool
+	instructions []Instruction
 }
 
 // renderBasicBlocks creates a basic block visualization
@@ -392,29 +375,27 @@ func (r *BlockRenderer) buildBlockConnections() map[int][]BlockConnection {
 
 		// Check jumps from the last instruction of this block
 		lastInstrIndex := block.End
-		if jumps, hasJumps := r.analysis.JumpSources[lastInstrIndex]; hasJumps {
-			for _, jump := range jumps {
-				if jump.JumpType == JumpCall {
-					// Function calls are considered external jumps
+		if jump, hasJump := r.analysis.JumpInfoMap[lastInstrIndex]; hasJump {
+			if jump.JumpType == JumpCall {
+				// Function calls are considered external jumps
+				conn := BlockConnection{
+					TargetBlock: -1,
+					JumpType:    jump.JumpType,
+					Condition:   jump.Condition,
+					IsJump:      true,
+				}
+				blockConnections = append(blockConnections, conn)
+			} else if jump.Target >= 0 {
+				// Regular jumps within the function
+				targetBlock := r.findBlockContaining(jump.Target)
+				if targetBlock >= 0 && targetBlock != blockIndex {
 					conn := BlockConnection{
-						TargetBlock: -1,
+						TargetBlock: targetBlock,
 						JumpType:    jump.JumpType,
 						Condition:   jump.Condition,
 						IsJump:      true,
 					}
 					blockConnections = append(blockConnections, conn)
-				} else if jump.Target >= 0 {
-					// Regular jumps within the function
-					targetBlock := r.findBlockContaining(jump.Target)
-					if targetBlock >= 0 && targetBlock != blockIndex {
-						conn := BlockConnection{
-							TargetBlock: targetBlock,
-							JumpType:    jump.JumpType,
-							Condition:   jump.Condition,
-							IsJump:      true,
-						}
-						blockConnections = append(blockConnections, conn)
-					}
 				}
 			}
 		}
@@ -461,11 +442,9 @@ func (r *BlockRenderer) findBlockContaining(instrIndex int) int {
 
 // hasUnconditionalExit checks if an instruction unconditionally exits (jump/return)
 func (r *BlockRenderer) hasUnconditionalExit(instrIndex int) bool {
-	if jumps, hasJumps := r.analysis.JumpSources[instrIndex]; hasJumps {
-		for _, jump := range jumps {
-			if jump.JumpType == JumpUnconditional || jump.JumpType == JumpReturn || jump.JumpType == JumpCall {
-				return true
-			}
+	if jump, hasJump := r.analysis.JumpInfoMap[instrIndex]; hasJump {
+		if jump.JumpType == JumpUnconditional || jump.JumpType == JumpReturn || jump.JumpType == JumpCall {
+			return true
 		}
 	}
 	return false
@@ -533,11 +512,11 @@ func (r *BlockRenderer) renderBlock(
 
 		// Format instruction line
 		builder.WriteString("│ ")
-		builder.WriteString(fmt.Sprintf("%4s | %-20s | %s",
+		fmt.Fprintf(builder, "%4s | %-22s | %s",
 			formattedOffset,
 			formattedOpcode,
 			operandsBuilder.String(),
-		))
+		)
 		builder.WriteString("\n")
 	}
 
