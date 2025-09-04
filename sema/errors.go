@@ -672,7 +672,7 @@ func (e *IncorrectArgumentLabelError) SuggestFixes(code string) []errors.Suggest
 						Replacement: "",
 						Range: ast.Range{
 							StartPos: e.StartPos,
-							EndPos:   e.EndPos.SlurpWhitespaceSuffix(code),
+							EndPos:   e.EndPos.AttachRight(code),
 						},
 					},
 				},
@@ -3085,7 +3085,7 @@ func (e *InvalidConstructionError) SuggestFixes(code string) []errors.SuggestedF
 					Replacement: "",
 					Range: ast.Range{
 						StartPos: e.Pos,
-						EndPos:   e.EndPosition(nil).SlurpWhitespaceSuffix(code),
+						EndPos:   e.EndPosition(nil).AttachRight(code),
 					},
 				},
 			},

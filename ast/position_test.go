@@ -88,3 +88,68 @@ func TestPosition_AttachLeft(t *testing.T) {
 		)
 	})
 }
+
+func TestPosition_AttachRight(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("nothing", func(t *testing.T) {
+		t.Parallel()
+
+		const code = "bar"
+
+		assert.Equal(
+			t,
+			Position{Offset: 0, Line: 1, Column: 0},
+			Position{Offset: 0, Line: 1, Column: 0}.AttachRight(code),
+		)
+	})
+
+	t.Run("only whitespace", func(t *testing.T) {
+		t.Parallel()
+
+		const code = "bar  "
+
+		assert.Equal(
+			t,
+			Position{Offset: 4, Line: 1, Column: 4},
+			Position{Offset: 2, Line: 1, Column: 2}.AttachRight(code),
+		)
+	})
+
+	t.Run("non-whitespace", func(t *testing.T) {
+		t.Parallel()
+
+		const code = "foo  bar"
+
+		assert.Equal(
+			t,
+			Position{Offset: 4, Line: 1, Column: 4},
+			Position{Offset: 2, Line: 1, Column: 2}.AttachRight(code),
+		)
+	})
+
+	t.Run("whitespace, across newline (\\n)", func(t *testing.T) {
+		t.Parallel()
+
+		const code = "foo\n  bar"
+
+		assert.Equal(
+			t,
+			Position{Offset: 5, Line: 2, Column: 1},
+			Position{Offset: 2, Line: 1, Column: 2}.AttachRight(code),
+		)
+	})
+
+	t.Run("whitespace, across newline (\\r\\n)", func(t *testing.T) {
+		t.Parallel()
+
+		const code = "foo\r\n  bar"
+
+		assert.Equal(
+			t,
+			Position{Offset: 6, Line: 2, Column: 1},
+			Position{Offset: 2, Line: 1, Column: 2}.AttachRight(code),
+		)
+	})
+}
