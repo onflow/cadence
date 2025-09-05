@@ -9810,14 +9810,13 @@ func TestVMImportAliasing(t *testing.T) {
 		vmConfig.ContractValueHandler = func(*vm.Context, common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 			elaboration := importedChecker.Elaboration
-			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType, nil
-			}
-
-			return elaboration.InterfaceType(typeID), nil
+			return elaboration.CompositeType(typeID)
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			elaboration := importedChecker.Elaboration
+			return elaboration.InterfaceType(typeID)
 		}
 
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
@@ -9872,16 +9871,17 @@ func TestVMImportAliasing(t *testing.T) {
 			require.Equal(t, fooLocation, location)
 			return fooContractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 			require.Equal(t, fooLocation, location)
 
 			elaboration := fooChecker.Elaboration
-			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType, nil
-			}
+			return elaboration.CompositeType(typeID)
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			require.Equal(t, fooLocation, location)
 
-			return elaboration.InterfaceType(typeID), nil
+			elaboration := fooChecker.Elaboration
+			return elaboration.InterfaceType(typeID)
 		}
 
 		_, fooContractValue = initializeContract(
@@ -10019,7 +10019,7 @@ func TestVMImportAliasing(t *testing.T) {
 				return nil
 			}
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 
 			var elaboration *sema.Elaboration
 
@@ -10030,14 +10030,26 @@ func TestVMImportAliasing(t *testing.T) {
 				elaboration = barChecker.Elaboration
 			default:
 				assert.FailNow(t, fmt.Sprintf("invalid location %s", location))
+				return nil
 			}
 
-			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType, nil
+			return elaboration.CompositeType(typeID)
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+
+			var elaboration *sema.Elaboration
+
+			switch location {
+			case fooLocation:
+				elaboration = fooChecker.Elaboration
+			case barLocation:
+				elaboration = barChecker.Elaboration
+			default:
+				assert.FailNow(t, fmt.Sprintf("invalid location %s", location))
+				return nil
 			}
 
-			return elaboration.InterfaceType(typeID), nil
+			return elaboration.InterfaceType(typeID)
 		}
 
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
@@ -10092,16 +10104,17 @@ func TestVMImportAliasing(t *testing.T) {
 			require.Equal(t, fooLocation, location)
 			return fooContractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 			require.Equal(t, fooLocation, location)
 
 			elaboration := fooChecker.Elaboration
-			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType, nil
-			}
+			return elaboration.CompositeType(typeID)
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			require.Equal(t, fooLocation, location)
 
-			return elaboration.InterfaceType(typeID), nil
+			elaboration := fooChecker.Elaboration
+			return elaboration.InterfaceType(typeID)
 		}
 
 		_, fooContractValue = initializeContract(
@@ -10239,7 +10252,7 @@ func TestVMImportAliasing(t *testing.T) {
 				return nil
 			}
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 
 			var elaboration *sema.Elaboration
 
@@ -10250,14 +10263,26 @@ func TestVMImportAliasing(t *testing.T) {
 				elaboration = barChecker.Elaboration
 			default:
 				assert.FailNow(t, fmt.Sprintf("invalid location %s", location))
+				return nil
 			}
 
-			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType, nil
+			return elaboration.CompositeType(typeID)
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+
+			var elaboration *sema.Elaboration
+
+			switch location {
+			case fooLocation:
+				elaboration = fooChecker.Elaboration
+			case barLocation:
+				elaboration = barChecker.Elaboration
+			default:
+				assert.FailNow(t, fmt.Sprintf("invalid location %s", location))
+				return nil
 			}
 
-			return elaboration.InterfaceType(typeID), nil
+			return elaboration.InterfaceType(typeID)
 		}
 
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
@@ -10312,16 +10337,17 @@ func TestVMImportAliasing(t *testing.T) {
 			require.Equal(t, fooLocation, location)
 			return fooContractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 			require.Equal(t, fooLocation, location)
 
 			elaboration := fooChecker.Elaboration
-			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType, nil
-			}
+			return elaboration.CompositeType(typeID)
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			require.Equal(t, fooLocation, location)
 
-			return elaboration.InterfaceType(typeID), nil
+			elaboration := fooChecker.Elaboration
+			return elaboration.InterfaceType(typeID)
 		}
 
 		_, fooContractValue = initializeContract(
@@ -10459,7 +10485,7 @@ func TestVMImportAliasing(t *testing.T) {
 				return nil
 			}
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 
 			var elaboration *sema.Elaboration
 
@@ -10470,14 +10496,26 @@ func TestVMImportAliasing(t *testing.T) {
 				elaboration = barChecker.Elaboration
 			default:
 				assert.FailNow(t, fmt.Sprintf("invalid location %s", location))
+				return nil
 			}
 
-			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType, nil
+			return elaboration.CompositeType(typeID)
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+
+			var elaboration *sema.Elaboration
+
+			switch location {
+			case fooLocation:
+				elaboration = fooChecker.Elaboration
+			case barLocation:
+				elaboration = barChecker.Elaboration
+			default:
+				assert.FailNow(t, fmt.Sprintf("invalid location %s", location))
+				return nil
 			}
 
-			return elaboration.InterfaceType(typeID), nil
+			return elaboration.InterfaceType(typeID)
 		}
 
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
@@ -10570,20 +10608,35 @@ func TestVMImportAliasing(t *testing.T) {
 		vmConfig.ContractValueHandler = func(*vm.Context, common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 			elaboration := importedChecker.Elaboration
 			compositeType := elaboration.CompositeType(typeID)
 			if compositeType != nil {
-				return compositeType, nil
+				return compositeType
 			}
 
 			elaboration = checker.Elaboration
 			compositeType = elaboration.CompositeType(typeID)
 			if compositeType != nil {
-				return compositeType, nil
+				return compositeType
 			}
 
-			return elaboration.InterfaceType(typeID), nil
+			return nil
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			elaboration := importedChecker.Elaboration
+			interfaceType := elaboration.InterfaceType(typeID)
+			if interfaceType != nil {
+				return interfaceType
+			}
+
+			elaboration = checker.Elaboration
+			interfaceType = elaboration.InterfaceType(typeID)
+			if interfaceType != nil {
+				return interfaceType
+			}
+
+			return nil
 		}
 
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
@@ -10775,23 +10828,17 @@ func TestVMImportAliasing(t *testing.T) {
 				return nil
 			}
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+			require.Equal(t, barLocation, location)
 
-			var elaboration *sema.Elaboration
+			elaboration := barChecker.Elaboration
+			return elaboration.CompositeType(typeID)
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			require.Equal(t, barLocation, location)
 
-			switch location {
-			case barLocation:
-				elaboration = barChecker.Elaboration
-			default:
-				assert.FailNow(t, fmt.Sprintf("invalid location %s", location))
-			}
-
-			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType, nil
-			}
-
-			return elaboration.InterfaceType(typeID), nil
+			elaboration := barChecker.Elaboration
+			return elaboration.InterfaceType(typeID)
 		}
 		vmConfig.BuiltinGlobalsProvider = VMBuiltinGlobalsProviderWithDefaultsAndPanic
 
@@ -10947,16 +10994,17 @@ func TestVMImportAliasing(t *testing.T) {
 		vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 			return fooContractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+			require.Equal(t, fooChecker.Location, location)
 
 			elaboration := fooChecker.Elaboration
+			return elaboration.CompositeType(typeID)
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			require.Equal(t, fooChecker.Location, location)
 
-			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType, nil
-			}
-
-			return elaboration.InterfaceType(typeID), nil
+			elaboration := fooChecker.Elaboration
+			return elaboration.InterfaceType(typeID)
 		}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
@@ -11085,16 +11133,17 @@ func TestVMImportAliasing(t *testing.T) {
 			return fooProgram
 		}
 		vmConfig.BuiltinGlobalsProvider = VMBuiltinGlobalsProviderWithDefaultsAndPanic
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+			require.Equal(t, fooChecker.Location, location)
 
 			elaboration := fooChecker.Elaboration
+			return elaboration.CompositeType(typeID)
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			require.Equal(t, fooChecker.Location, location)
 
-			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType, nil
-			}
-
-			return elaboration.InterfaceType(typeID), nil
+			elaboration := fooChecker.Elaboration
+			return elaboration.InterfaceType(typeID)
 		}
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
@@ -11241,18 +11290,19 @@ func TestVMImportAliasing(t *testing.T) {
 		vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 			return fooContractValue
 		}
-
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+			require.Equal(t, fooChecker.Location, location)
 
 			elaboration := fooChecker.Elaboration
-
-			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType, nil
-			}
-
-			return elaboration.InterfaceType(typeID), nil
+			return elaboration.CompositeType(typeID)
 		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			require.Equal(t, fooChecker.Location, location)
+
+			elaboration := fooChecker.Elaboration
+			return elaboration.InterfaceType(typeID)
+		}
+
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 		result, err := vmInstance.InvokeExternally("test")
