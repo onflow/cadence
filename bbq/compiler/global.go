@@ -18,12 +18,16 @@
 
 package compiler
 
-import "github.com/onflow/cadence/common"
+import (
+	"github.com/onflow/cadence/bbq/commons"
+	"github.com/onflow/cadence/common"
+)
 
 type Global struct {
 	Name     string
 	Location common.Location
 	Index    uint16
+	Category commons.GlobalCategory
 }
 
 func NewGlobal(
@@ -31,11 +35,27 @@ func NewGlobal(
 	name string,
 	location common.Location,
 	index uint16,
+	category commons.GlobalCategory,
 ) *Global {
 	common.UseMemory(memoryGauge, common.CompilerGlobalMemoryUsage)
 	return &Global{
 		Name:     name,
 		Location: location,
 		Index:    index,
+		Category: category,
 	}
+}
+
+var _ commons.SortableGlobal = &Global{}
+
+func (g *Global) GetCategory() commons.GlobalCategory {
+	return g.Category
+}
+
+func (g *Global) GetName() string {
+	return g.Name
+}
+
+func (g *Global) SetIndex(index uint16) {
+	g.Index = index
 }

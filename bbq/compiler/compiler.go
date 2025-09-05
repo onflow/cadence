@@ -49,6 +49,7 @@ type Compiler[E, T any] struct {
 	globalVariables    []*globalVariable[E]
 	constants          []*Constant
 	Globals            map[string]*Global
+	pendingGlobals     []commons.SortableGlobal // Track globals for deferred index assignment
 	globalImports      *activations.Activation[GlobalImport]
 	importedGlobals    []*Global
 	controlFlows       []controlFlow
@@ -216,6 +217,9 @@ func (c *Compiler[_, _]) findGlobal(name string) *Global {
 	//
 	// If a global is found in imported globals, that means the index is not set.
 	// So set an index and add it to the 'globals'.
+
+	// This is separate from the two phase approach in compile,
+	// these imported globals will not be sorted with the globals defined in the current program.
 	count := len(c.Globals)
 	if count >= math.MaxUint16 {
 		panic(errors.NewUnexpectedError("invalid global declaration '%s'", name))
@@ -224,7 +228,9 @@ func (c *Compiler[_, _]) findGlobal(name string) *Global {
 		c.Config.MemoryGauge,
 		name,
 		importedGlobal.Location,
-		uint16(count),
+		(uint16)(count),
+		// type does not matter for imported globals
+		commons.VariableGlobal,
 	)
 	c.Globals[name] = global
 
@@ -241,19 +247,28 @@ func (c *Compiler[_, _]) findGlobal(name string) *Global {
 	return global
 }
 
-func (c *Compiler[_, _]) addGlobal(name string) *Global {
-	count := len(c.Globals)
-	if count >= math.MaxUint16 {
-		panic(errors.NewDefaultUserError("invalid global declaration"))
+// addGlobalWithCategory adds a global with deferred index assignment
+func (c *Compiler[_, _]) addGlobalWithCategory(name string, category commons.GlobalCategory) *Global {
+	// Check if already exists
+	if existing, exists := c.Globals[name]; exists {
+		return existing
 	}
 
+	if len(c.pendingGlobals) >= math.MaxUint16 {
+		panic(errors.NewDefaultUserError("too many globals"))
+	}
+
+	// Create with placeholder index - will be assigned later
 	global := NewGlobal(
 		c.Config.MemoryGauge,
 		name,
 		nil,
-		uint16(count),
+		0, // Placeholder index
+		category,
 	)
 	c.Globals[name] = global
+	c.pendingGlobals = append(c.pendingGlobals, global)
+
 	return global
 }
 
@@ -592,8 +607,8 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 	functionDeclarations := c.Program.FunctionDeclarations()
 	interfaceDeclarations := c.Program.InterfaceDeclarations()
 
-	// Reserve globals for functions/types before visiting their implementations.
-	c.reserveGlobals(
+	// Phase 1: Collect all global symbols
+	c.initializeAllGlobals(
 		contracts,
 		variableDeclarations,
 		functionDeclarations,
@@ -601,7 +616,10 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 		interfaceDeclarations,
 	)
 
-	// Compile declarations
+	// Assign deterministic indices to all collected globals
+	c.finalizeGlobalIndices()
+
+	// Phase 2: Compile declarations, all globals must be initialized at this point.
 	for _, declaration := range variableDeclarations {
 		c.compileDeclaration(declaration)
 	}
@@ -631,7 +649,18 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 	}
 }
 
-func (c *Compiler[_, _]) reserveGlobals(
+func (c *Compiler[_, _]) finalizeGlobalIndices() {
+	// Sort globals deterministically: contracts -> variables -> functions
+	// Within each category, sort by name for consistency
+	commons.SortGlobals(c.pendingGlobals)
+
+	// Assign sequential indices
+	for i, global := range c.pendingGlobals {
+		global.SetIndex(uint16(i))
+	}
+}
+
+func (c *Compiler[_, _]) initializeAllGlobals(
 	contract []*bbq.Contract,
 	variableDecls []*ast.VariableDeclaration,
 	functionDecls []*ast.FunctionDeclaration,
@@ -641,17 +670,17 @@ func (c *Compiler[_, _]) reserveGlobals(
 	// Reserve globals for the contract values before everything.
 	// Contract values must be always start at the zero-th index.
 	for _, contract := range contract {
-		c.addGlobal(contract.Name)
+		c.addGlobalWithCategory(contract.Name, commons.ContractGlobal)
 	}
 
-	c.reserveVariableGlobals(
+	c.initializeVariableGlobals(
 		nil,
 		variableDecls,
 		nil,
 		compositeDecls,
 	)
 
-	c.reserveFunctionGlobals(
+	c.initializeFunctionGlobals(
 		nil,
 		nil,
 		functionDecls,
@@ -660,7 +689,7 @@ func (c *Compiler[_, _]) reserveGlobals(
 	)
 }
 
-func (c *Compiler[_, _]) reserveVariableGlobals(
+func (c *Compiler[_, _]) initializeVariableGlobals(
 	enclosingType sema.CompositeKindedType,
 	variableDecls []*ast.VariableDeclaration,
 	enumCaseDecls []*ast.EnumCaseDeclaration,
@@ -668,7 +697,7 @@ func (c *Compiler[_, _]) reserveVariableGlobals(
 ) {
 	for _, declaration := range variableDecls {
 		variableName := declaration.Identifier.Identifier
-		c.addGlobal(variableName)
+		c.addGlobalWithCategory(variableName, commons.VariableGlobal)
 	}
 
 	for _, declaration := range enumCaseDecls {
@@ -677,7 +706,7 @@ func (c *Compiler[_, _]) reserveVariableGlobals(
 		// e.g: `enum E: UInt8 { case A; case B }` will reserve globals `E.A`, `E.B`.
 		enumCaseName := declaration.Identifier.Identifier
 		qualifiedName := commons.TypeQualifiedName(enclosingType, enumCaseName)
-		c.addGlobal(qualifiedName)
+		c.addGlobalWithCategory(qualifiedName, commons.VariableGlobal)
 	}
 
 	for _, declaration := range compositeDecls {
@@ -685,7 +714,7 @@ func (c *Compiler[_, _]) reserveVariableGlobals(
 
 		members := declaration.Members
 
-		c.reserveVariableGlobals(
+		c.initializeVariableGlobals(
 			compositeType,
 			nil,
 			members.EnumCases(),
@@ -694,7 +723,7 @@ func (c *Compiler[_, _]) reserveVariableGlobals(
 	}
 }
 
-func (c *Compiler[_, _]) reserveFunctionGlobals(
+func (c *Compiler[_, _]) initializeFunctionGlobals(
 	enclosingType sema.CompositeKindedType,
 	specialFunctionDecls []*ast.SpecialFunctionDeclaration,
 	functionDecls []*ast.FunctionDeclaration,
@@ -706,10 +735,10 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 		case common.DeclarationKindDestructorLegacy,
 			common.DeclarationKindPrepare:
 			// Important: All special functions visited within `VisitSpecialFunctionDeclaration`
-			// must be also visited here. And must be visited only them. e.g: Don't visit inits.
+			// must be also visited here. And must be visited only then. e.g: Don't visit inits.
 			functionName := declaration.FunctionDeclaration.Identifier.Identifier
 			qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
-			c.addGlobal(qualifiedName)
+			c.addGlobalWithCategory(qualifiedName, commons.FunctionGlobal)
 		}
 	}
 
@@ -719,14 +748,14 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 		for _, boundFunction := range CommonBuiltinTypeBoundFunctions {
 			functionName := boundFunction.Name
 			qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
-			c.addGlobal(qualifiedName)
+			c.addGlobalWithCategory(qualifiedName, commons.FunctionGlobal)
 		}
 	}
 
 	for _, declaration := range functionDecls {
 		functionName := declaration.Identifier.Identifier
 		qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
-		c.addGlobal(qualifiedName)
+		c.addGlobalWithCategory(qualifiedName, commons.FunctionGlobal)
 	}
 
 	for _, declaration := range compositeDecls {
@@ -764,11 +793,11 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 			constructorName = commons.TypeQualifier(compositeType)
 		}
 
-		c.addGlobal(constructorName)
+		c.addGlobalWithCategory(constructorName, commons.FunctionGlobal)
 
 		members := declaration.Members
 
-		c.reserveFunctionGlobals(
+		c.initializeFunctionGlobals(
 			compositeType,
 			members.SpecialFunctions(),
 			members.Functions(),
@@ -783,7 +812,7 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 		members := declaration.Members
 		interfaceType := c.DesugaredElaboration.InterfaceDeclarationType(declaration)
 
-		c.reserveFunctionGlobals(
+		c.initializeFunctionGlobals(
 			interfaceType,
 			members.SpecialFunctions(),
 			members.Functions(),
@@ -2978,6 +3007,9 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		// The VM will load the contract and assign to that global variable during imports resolution.
 		identifier := declaration.DeclarationIdentifier().Identifier
 		functionName = commons.QualifiedName(typeName, identifier)
+	} else if kind == common.CompositeKindEnum {
+		// For consistency with the associated global variable, use the same function name for the initializer.
+		functionName = commons.TypeQualifiedName(enclosingType, commons.InitFunctionName)
 	} else {
 		// Use the type name as the function name for initializer.
 		// So `x = Foo()` would directly call the init method.
