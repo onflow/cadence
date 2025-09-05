@@ -488,18 +488,7 @@ async function getGitHubToken(): Promise<string | undefined> {
         return process.env.GITHUB_TOKEN
     }
 
-    // 2. Try git config
-    try {
-        const result = await exec.quiet('git config --get github.token')
-        if (result.stdout?.trim()) {
-            console.log("🔑 Using GitHub token from git config")
-            return result.stdout.trim()
-        }
-    } catch (error) {
-        // Git config doesn't have github.token, continue
-    }
-
-    // 3. Try GitHub CLI auth token
+    // 2. Try GitHub CLI auth token
     try {
         const result = await exec.quiet('gh auth token')
         if (result.stdout?.trim()) {
@@ -510,7 +499,7 @@ async function getGitHubToken(): Promise<string | undefined> {
         // GitHub CLI not available or not authenticated, continue
     }
 
-    // 4. Try macOS keychain (if on macOS)
+    // 3. Try macOS keychain (if on macOS)
     if (process.platform === 'darwin') {
         try {
             // Try to get github.com token from keychain
@@ -534,9 +523,8 @@ async function authenticate(): Promise<Octokit> {
         console.error("❌ No GitHub token found!")
         console.error("Please set up authentication using one of these methods:")
         console.error("  1. Set GH_TOKEN or GITHUB_TOKEN environment variable")
-        console.error("  2. Run: git config --global github.token YOUR_TOKEN")
-        console.error("  3. Install and authenticate with GitHub CLI: gh auth login")
-        console.error("  4. Add token to macOS Keychain for github.com")
+        console.error("  2. Install and authenticate with GitHub CLI: gh auth login")
+        console.error("  3. Add token to macOS Keychain for github.com")
         process.exit(1)
     }
 
