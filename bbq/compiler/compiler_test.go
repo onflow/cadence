@@ -9649,3 +9649,219 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 		defaultDestroyEventEmittingFunction.Code,
 	)
 }
+
+func TestCompileImportAlias(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple alias", func(t *testing.T) {
+
+		importLocation := common.NewAddressLocation(nil, common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}, "")
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
+				contract Foo {
+					fun hello(): String {
+						return "hello"
+					}
+				}
+            `,
+			ParseAndCheckOptions{
+				Location: importLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		importCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(importedChecker),
+			importedChecker.Location,
+		)
+		importedProgram := importCompiler.Compile()
+
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+				import Foo as Bar from 0x01
+
+				fun test(): String {
+					return Bar.hello()
+				}
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			return importedProgram
+		}
+
+		program := comp.Compile()
+
+		assert.Equal(
+			t,
+			[]bbq.Import{
+				{
+					Location: importLocation,
+					Name:     "Foo",
+				},
+				{
+					Location: importLocation,
+					Name:     "Foo.hello",
+				},
+			},
+			program.Imports,
+		)
+
+		// Imported types are location qualified.
+		assert.Equal(
+			t,
+			map[string]*compiler.Global{
+				"test": {
+					Location: nil,
+					Name:     "test",
+					Index:    0,
+				},
+				"A.0000000000000001.Foo": {
+					Location: importLocation,
+					Name:     "A.0000000000000001.Foo",
+					Index:    1,
+				},
+				"A.0000000000000001.Foo.hello": {
+					Location: importLocation,
+					Name:     "A.0000000000000001.Foo.hello",
+					Index:    2,
+				},
+			},
+			comp.Globals,
+		)
+
+	})
+
+	t.Run("interface", func(t *testing.T) {
+
+		importLocation := common.NewAddressLocation(nil, common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}, "")
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
+				struct interface FooInterface {
+					fun hello(): String
+
+					fun defaultHello(): String {
+						return "hi"
+					}
+				}
+            `,
+			ParseAndCheckOptions{
+				Location: importLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		importCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(importedChecker),
+			importedChecker.Location,
+		)
+		importedProgram := importCompiler.Compile()
+
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+				import FooInterface as FI from 0x01
+
+				struct Bar: FI {
+					fun hello(): String {
+						return "hello"
+					}
+				}
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			return importedProgram
+		}
+		comp.Config.ElaborationResolver = func(location common.Location) (*compiler.DesugaredElaboration, error) {
+			switch location {
+			case importLocation:
+				return compiler.NewDesugaredElaboration(importedChecker.Elaboration), nil
+			default:
+				return nil, fmt.Errorf("cannot find elaboration for %s", location)
+			}
+		}
+
+		program := comp.Compile()
+
+		assert.Equal(
+			t,
+			[]bbq.Import{
+				{
+					Location: importLocation,
+					Name:     "FooInterface.defaultHello",
+				},
+			},
+			program.Imports,
+		)
+
+		// only imported function is a location qualified global.
+		assert.Equal(
+			t,
+			map[string]*compiler.Global{
+				"Bar": {
+					Location: nil,
+					Name:     "Bar",
+					Index:    0,
+				},
+				"Bar.getType": {
+					Location: nil,
+					Name:     "Bar.getType",
+					Index:    1,
+				},
+				"Bar.hello": {
+					Location: nil,
+					Name:     "Bar.hello",
+					Index:    3,
+				},
+				"Bar.isInstance": {
+					Location: nil,
+					Name:     "Bar.isInstance",
+					Index:    2,
+				},
+				"Bar.defaultHello": {
+					Location: nil,
+					Name:     "Bar.defaultHello",
+					Index:    4,
+				},
+				"A.0000000000000001.FooInterface.defaultHello": {
+					Location: importLocation,
+					Name:     "A.0000000000000001.FooInterface.defaultHello",
+					Index:    5,
+				},
+			},
+			comp.Globals,
+		)
+
+	})
+}
