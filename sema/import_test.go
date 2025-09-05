@@ -1041,9 +1041,10 @@ func TestCheckImportAlias(t *testing.T) {
 			},
 		)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.DuplicateImportAliasError{}, errs[0])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[1])
 	})
 
 	t.Run("invalid missing aliased import", func(t *testing.T) {
@@ -1127,4 +1128,84 @@ func TestCheckImportAlias(t *testing.T) {
 
 		assert.Equal(t, "a", notDeclaredError.Name)
 	})
+
+	t.Run("invalid alias and non-alias conflict, same import", func(t *testing.T) {
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
+              fun a(): Int {
+                  return 42
+              }
+
+              fun b(): Int {
+                  return 50
+              }
+            `,
+			ParseAndCheckOptions{
+				Location: ImportedLocation,
+			},
+		)
+
+		require.NoError(t, err)
+
+		_, err = ParseAndCheckWithOptions(t,
+			`
+              import a as b, b from "imported"
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.RedeclarationError{}, errs[0])
+	})
+
+	t.Run("invalid alias and non-alias conflict, multiple imports", func(t *testing.T) {
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
+              fun a(): Int {
+                  return 42
+              }
+
+              fun b(): Int {
+                  return 50
+              }
+            `,
+			ParseAndCheckOptions{
+				Location: ImportedLocation,
+			},
+		)
+
+		require.NoError(t, err)
+
+		_, err = ParseAndCheckWithOptions(t,
+			`
+              import a as b from "imported"
+              import b from "imported"
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.RedeclarationError{}, errs[0])
+	})
+
 }
