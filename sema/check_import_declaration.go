@@ -126,7 +126,7 @@ func (checker *Checker) declareImportDeclaration(
 		}
 	}
 
-	checker.Elaboration.SetImportDeclarationsResolvedLocations(declaration, resolvedLocations)
+	checker.Elaboration.SetImportDeclarationResolvedLocations(declaration, resolvedLocations)
 	checker.Elaboration.SetImportDeclarationAliases(declaration, aliases)
 
 	for _, resolvedLocation := range resolvedLocations {

@@ -865,7 +865,7 @@ func (e *Elaboration) ImportDeclarationResolvedLocations(declaration *ast.Import
 	return e.importDeclarationResolvedLocations[declaration]
 }
 
-func (e *Elaboration) SetImportDeclarationsResolvedLocations(
+func (e *Elaboration) SetImportDeclarationResolvedLocations(
 	declaration *ast.ImportDeclaration,
 	locations []ResolvedLocation,
 ) {

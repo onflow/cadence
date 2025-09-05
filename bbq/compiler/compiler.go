@@ -3335,18 +3335,15 @@ func (c *Compiler[_, _]) VisitPragmaDeclaration(_ *ast.PragmaDeclaration) (_ str
 
 func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclaration) (_ struct{}) {
 
+	// Resolve and add globals from transitive imports.
+
+	// TODO: Is it possible to reuse the resolved locations from the elaboration?
+	// resolvedLocations := c.DesugaredElaboration.elaboration.ImportDeclarationResolvedLocations(declaration)
+
 	var identifiers []ast.Identifier
-	// generate a map for aliases because when creating globals we need to associate each name with its alias
-	// each alias can be used multiple times, for example: for functions of the aliased type
-	aliases := make(map[string]string)
 	for _, imp := range declaration.Imports {
 		identifiers = append(identifiers, imp.Identifier)
-		if imp.Alias.Identifier != "" {
-			aliases[imp.Identifier.Identifier] = imp.Alias.Identifier
-		}
 	}
-
-	// Resolve and add globals from transitive imports.
 
 	resolvedLocations, err := commons.ResolveLocation(
 		c.Config.LocationHandler,
@@ -3356,6 +3353,8 @@ func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclarati
 	if err != nil {
 		panic(err)
 	}
+
+	aliases := c.DesugaredElaboration.elaboration.ImportDeclarationAliases(declaration)
 
 	for _, location := range resolvedLocations {
 		c.addGlobalsFromImportedProgram(location.Location, aliases)
