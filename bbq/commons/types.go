@@ -94,3 +94,14 @@ func TypeQualifier(typ sema.Type) string {
 		return typ.QualifiedString()
 	}
 }
+
+func LocationQualifier(typ sema.Type) string {
+	switch typ := typ.(type) {
+	case *sema.ReferenceType:
+		return LocationQualifier(typ.Type)
+	case *sema.IntersectionType:
+		return LocationQualifier(typ.Types[0])
+	default:
+		return string(typ.ID())
+	}
+}

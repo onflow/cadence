@@ -34,17 +34,29 @@ func TestImportDeclaration_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	decl := &ImportDeclaration{
-		Identifiers: []Identifier{
+		Imports: []Import{
 			{
-				Identifier: "foo",
-				Pos:        Position{Offset: 1, Line: 2, Column: 3},
+				Identifier: Identifier{
+					Identifier: "foo",
+					Pos:        Position{Offset: 1, Line: 2, Column: 3},
+				},
+			},
+			{
+				Identifier: Identifier{
+					Identifier: "bar",
+					Pos:        Position{Offset: 4, Line: 5, Column: 6},
+				},
+				Alias: Identifier{
+					Identifier: "baz",
+					Pos:        Position{Offset: 7, Line: 8, Column: 9},
+				},
 			},
 		},
 		Location:    common.StringLocation("test"),
-		LocationPos: Position{Offset: 4, Line: 5, Column: 6},
+		LocationPos: Position{Offset: 10, Line: 11, Column: 12},
 		Range: Range{
-			StartPos: Position{Offset: 7, Line: 8, Column: 9},
-			EndPos:   Position{Offset: 10, Line: 11, Column: 12},
+			StartPos: Position{Offset: 13, Line: 14, Column: 15},
+			EndPos:   Position{Offset: 16, Line: 17, Column: 18},
 		},
 	}
 
@@ -55,21 +67,35 @@ func TestImportDeclaration_MarshalJSON(t *testing.T) {
 		// language=json
 		`
         {
-            "Type": "ImportDeclaration", 
-            "Identifiers": [
+            "Type": "ImportDeclaration",
+            "Imports": [
                 {
-                    "Identifier": "foo",
-                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-                    "EndPos": {"Offset": 3, "Line": 2, "Column": 5}
+                    "Identifier": {
+                        "Identifier": "foo",
+                        "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                        "EndPos": {"Offset": 3, "Line": 2, "Column": 5}
+                    }
+                },
+                {
+                    "Identifier": {
+                        "Identifier": "bar",
+                        "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
+                        "EndPos": {"Offset": 6, "Line": 5, "Column": 8}
+                    },
+                    "Alias": {
+                        "Identifier": "baz",
+                        "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
+                        "EndPos": {"Offset": 9, "Line": 8, "Column": 11}
+                    }
                 }
             ],
             "Location": {
                 "Type": "StringLocation",
                 "String": "test"
             },
-            "LocationPos": {"Offset": 4, "Line": 5, "Column": 6},
-            "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
-            "EndPos": {"Offset": 10, "Line": 11, "Column": 12}
+            "LocationPos": {"Offset": 10, "Line": 11, "Column": 12},
+            "StartPos": {"Offset": 13, "Line": 14, "Column": 15},
+            "EndPos": {"Offset": 16, "Line": 17, "Column": 18}
         }
         `,
 		string(actual),
@@ -104,9 +130,11 @@ func TestImportDeclaration_Doc(t *testing.T) {
 		t.Parallel()
 
 		decl := &ImportDeclaration{
-			Identifiers: []Identifier{
+			Imports: []Import{
 				{
-					Identifier: "foo",
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
 				},
 			},
 			Location: common.AddressLocation{
@@ -139,12 +167,16 @@ func TestImportDeclaration_Doc(t *testing.T) {
 		t.Parallel()
 
 		decl := &ImportDeclaration{
-			Identifiers: []Identifier{
+			Imports: []Import{
 				{
-					Identifier: "foo",
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
 				},
 				{
-					Identifier: "bar",
+					Identifier: Identifier{
+						Identifier: "bar",
+					},
 				},
 			},
 			Location: common.IdentifierLocation("test"),
@@ -174,13 +206,72 @@ func TestImportDeclaration_Doc(t *testing.T) {
 			decl.Doc(),
 		)
 	})
+
+	t.Run("two imports, one with alias", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &ImportDeclaration{
+			Imports: []Import{
+				{
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
+				},
+				{
+					Identifier: Identifier{
+						Identifier: "bar",
+					},
+					Alias: Identifier{
+						Identifier: "baz",
+					},
+				},
+			},
+			Location: common.IdentifierLocation("test"),
+		}
+
+		require.Equal(
+			t,
+			prettier.Concat{
+				prettier.Text("import"),
+				prettier.Group{
+					Doc: prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.Line{},
+							prettier.Text("foo"),
+							prettier.Concat{
+								prettier.Text(","),
+								prettier.Line{},
+							},
+							prettier.Group{
+								Doc: prettier.Indent{
+									Doc: prettier.Concat{
+										prettier.Text("bar"),
+										prettier.Line{},
+										prettier.Text("as"),
+										prettier.Space,
+										prettier.Text("baz"),
+									},
+								},
+							},
+							prettier.Line{},
+							prettier.Text("from "),
+						},
+					},
+				},
+				prettier.Text("test"),
+			},
+			decl.Doc(),
+		)
+	})
+
 }
 
 func TestImportDeclaration_String(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("no identifiers", func(t *testing.T) {
+	t.Run("no imports", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -195,14 +286,16 @@ func TestImportDeclaration_String(t *testing.T) {
 		)
 	})
 
-	t.Run("one identifier", func(t *testing.T) {
+	t.Run("one import", func(t *testing.T) {
 
 		t.Parallel()
 
 		decl := &ImportDeclaration{
-			Identifiers: []Identifier{
+			Imports: []Import{
 				{
-					Identifier: "foo",
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
 				},
 			},
 			Location: common.AddressLocation{
@@ -217,17 +310,21 @@ func TestImportDeclaration_String(t *testing.T) {
 		)
 	})
 
-	t.Run("two identifiers", func(t *testing.T) {
+	t.Run("two imports", func(t *testing.T) {
 
 		t.Parallel()
 
 		decl := &ImportDeclaration{
-			Identifiers: []Identifier{
+			Imports: []Import{
 				{
-					Identifier: "foo",
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
 				},
 				{
-					Identifier: "bar",
+					Identifier: Identifier{
+						Identifier: "bar",
+					},
 				},
 			},
 			Location: common.IdentifierLocation("test"),
@@ -236,6 +333,36 @@ func TestImportDeclaration_String(t *testing.T) {
 		require.Equal(
 			t,
 			`import foo, bar from test`,
+			decl.String(),
+		)
+	})
+
+	t.Run("two imports, one with alias", func(t *testing.T) {
+
+		t.Parallel()
+
+		decl := &ImportDeclaration{
+			Imports: []Import{
+				{
+					Identifier: Identifier{
+						Identifier: "foo",
+					},
+				},
+				{
+					Identifier: Identifier{
+						Identifier: "bar",
+					},
+					Alias: Identifier{
+						Identifier: "baz",
+					},
+				},
+			},
+			Location: common.IdentifierLocation("test"),
+		}
+
+		require.Equal(
+			t,
+			`import foo, bar as baz from test`,
 			decl.String(),
 		)
 	})
