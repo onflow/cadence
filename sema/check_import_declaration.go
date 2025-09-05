@@ -406,10 +406,7 @@ func (checker *Checker) importElements(
 			if !ok {
 				continue
 			}
-			alias, ok := aliases[name]
-			if ok {
-				name = alias
-			}
+
 			elements.Set(name, element)
 			found[identifier] = true
 			explicitlyImported[name] = identifier
@@ -448,6 +445,10 @@ func (checker *Checker) importElements(
 				}
 			}
 
+			alias, ok := aliases[name]
+			if ok {
+				name = alias
+			}
 			_, err := valueActivations.declare(variableDeclaration{
 				identifier: name,
 				ty:         elementType,
