@@ -401,7 +401,7 @@ func (v *CompositeValue) Destroy(context ResourceDestructionContext, locationRan
 			// destroy every nested resource in this composite; note that this iteration includes attachments
 			v.ForEachField(contextForLocation, func(_ string, fieldValue Value) bool {
 				if compositeFieldValue, ok := fieldValue.(*CompositeValue); ok && compositeFieldValue.Kind == common.CompositeKindAttachment {
-					compositeFieldValue.setBaseValue(v)
+					compositeFieldValue.SetBaseValue(v)
 				}
 				maybeDestroy(contextForLocation, locationRange, fieldValue)
 				return true
@@ -1025,7 +1025,7 @@ func (v *CompositeValue) CompositeStaticTypeConformsToStaticType(
 	}
 
 	if compositeType.Kind == common.CompositeKindAttachment {
-		base := v.getBaseValue(context, UnauthorizedAccess, locationRange).Value
+		base := v.GetBaseValue(context, UnauthorizedAccess, locationRange).Value
 		if base == nil || !base.ConformsToStaticType(context, locationRange, results) {
 			return false
 		}
@@ -1284,7 +1284,7 @@ func (v *CompositeValue) Transfer(
 				if compositeValue, ok := value.(*CompositeValue); ok &&
 					compositeValue.Kind == common.CompositeKindAttachment {
 
-					compositeValue.setBaseValue(v)
+					compositeValue.SetBaseValue(v)
 				}
 
 				value = value.Transfer(
@@ -1656,7 +1656,7 @@ func NewEnumCaseValue(
 	return v
 }
 
-func (v *CompositeValue) getBaseValue(
+func (v *CompositeValue) GetBaseValue(
 	context StaticTypeAndReferenceContext,
 	functionAuthorization Authorization,
 	locationRange LocationRange,
@@ -1677,7 +1677,7 @@ func (v *CompositeValue) getBaseValue(
 	return NewEphemeralReferenceValue(context, functionAuthorization, v.base, baseType, locationRange)
 }
 
-func (v *CompositeValue) setBaseValue(base *CompositeValue) {
+func (v *CompositeValue) SetBaseValue(base *CompositeValue) {
 	v.base = base
 }
 
@@ -1724,48 +1724,56 @@ func (v *CompositeValue) forEachAttachmentFunction(context FunctionCreationConte
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
-
-			functionValueType := functionValue.FunctionType(invocationContext)
-			parameterTypes := functionValueType.ParameterTypes()
-			returnType := functionValueType.ReturnTypeAnnotation.Type
-
-			fn := func(attachment *CompositeValue) {
-
-				attachmentType := MustSemaTypeOfValue(attachment, invocationContext).(*sema.CompositeType)
-
-				attachmentReference := NewEphemeralReferenceValue(
-					invocationContext,
-					// attachments are unauthorized during iteration
-					UnauthorizedAccess,
-					attachment,
-					attachmentType,
-					locationRange,
-				)
-
-				referenceType := sema.NewReferenceType(
-					invocationContext,
-					// attachments are unauthorized during iteration
-					sema.UnauthorizedAccess,
-					attachmentType,
-				)
-
-				invokeFunctionValue(
-					invocationContext,
-					functionValue,
-					[]Value{attachmentReference},
-					nil,
-					[]sema.Type{referenceType},
-					parameterTypes,
-					returnType,
-					nil,
-					locationRange,
-				)
-			}
-
-			v.forEachAttachment(invocationContext, locationRange, fn)
+			v.ForEachAttachment(invocationContext, locationRange, functionValue)
 			return Void
 		},
 	)
+}
+
+func (v *CompositeValue) ForEachAttachment(
+	invocationContext InvocationContext,
+	locationRange LocationRange,
+	functionValue FunctionValue,
+) {
+	functionValueType := functionValue.FunctionType(invocationContext)
+	parameterTypes := functionValueType.ParameterTypes()
+	returnType := functionValueType.ReturnTypeAnnotation.Type
+
+	fn := func(attachment *CompositeValue) {
+
+		attachmentType := MustSemaTypeOfValue(attachment, invocationContext).(*sema.CompositeType)
+
+		attachmentReference := NewEphemeralReferenceValue(
+			invocationContext,
+			// attachments are unauthorized during iteration
+			UnauthorizedAccess,
+			attachment,
+			attachmentType,
+			locationRange,
+		)
+
+		referenceType := sema.NewReferenceType(
+			invocationContext,
+			// attachments are unauthorized during iteration
+			sema.UnauthorizedAccess,
+			attachmentType,
+		)
+
+		invokeFunctionValue(
+			invocationContext,
+			functionValue,
+			[]Value{attachmentReference},
+			nil,
+			[]sema.Type{referenceType},
+			parameterTypes,
+			returnType,
+			nil,
+			locationRange,
+		)
+	}
+
+	v.forEachAttachment(invocationContext, locationRange, fn)
+
 }
 
 func attachmentBaseAndSelfValues(
@@ -1776,7 +1784,7 @@ func attachmentBaseAndSelfValues(
 ) (base *EphemeralReferenceValue, self *EphemeralReferenceValue) {
 	attachmentReferenceAuth := ConvertSemaAccessToStaticAuthorization(context, fnAccess)
 
-	base = v.getBaseValue(context, attachmentReferenceAuth, locationRange)
+	base = v.GetBaseValue(context, attachmentReferenceAuth, locationRange)
 	// in attachment functions, self is a reference value
 	self = NewEphemeralReferenceValue(
 		context,
@@ -1845,7 +1853,7 @@ func forEachAttachment(
 			// attachments is added that takes a `fun (&Attachment): Void` callback, the `f` provided here
 			// should convert the provided attachment value into a reference before passing it to the user
 			// callback
-			attachment.setBaseValue(composite)
+			attachment.SetBaseValue(composite)
 			f(attachment)
 		}
 	}
@@ -1863,7 +1871,7 @@ func (v *CompositeValue) getTypeKey(
 	}
 	attachmentType := keyType.(*sema.CompositeType)
 	// dynamically set the attachment's base to this composite
-	attachment.setBaseValue(v)
+	attachment.SetBaseValue(v)
 
 	// The attachment reference has the same entitlements as the base access
 	attachmentRef := NewEphemeralReferenceValue(

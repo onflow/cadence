@@ -9235,6 +9235,34 @@ func TestStringTemplate(t *testing.T) {
 	})
 }
 
+func TestAttachments(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("supported", func(t *testing.T) {
+		t.Parallel()
+
+		a, err := CompileAndInvoke(t, `
+		resource R {}
+            attachment A for R {}
+            attachment B for R {}
+            attachment C for R {}
+            fun test(): Int {
+                var r <- attach C() to <- attach B() to <- attach A() to <- create R()
+                var i = 0
+                r.forEachAttachment(fun(attachmentRef: &AnyResourceAttachment) {
+                    i = i + 1
+                })
+                destroy r
+                return i
+            }
+		`, "test")
+		require.NoError(t, err)
+
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), a)
+	})
+}
+
 func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
 
 	t.Parallel()

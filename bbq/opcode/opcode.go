@@ -131,9 +131,9 @@ const (
 	GetIndex
 	RemoveIndex
 	GetMethod
-	_
-	_
-	_
+	GetTypeIndex
+	SetTypeIndex
+	RemoveTypeIndex
 	_
 	_
 	_

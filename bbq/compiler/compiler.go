@@ -591,6 +591,7 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 	variableDeclarations := c.Program.VariableDeclarations()
 	functionDeclarations := c.Program.FunctionDeclarations()
 	interfaceDeclarations := c.Program.InterfaceDeclarations()
+	attachmentDeclarations := c.Program.AttachmentDeclarations()
 
 	// Reserve globals for functions/types before visiting their implementations.
 	c.reserveGlobals(
@@ -599,6 +600,7 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 		functionDeclarations,
 		compositeDeclarations,
 		interfaceDeclarations,
+		attachmentDeclarations,
 	)
 
 	// Compile declarations
@@ -612,6 +614,9 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 		c.compileDeclaration(declaration)
 	}
 	for _, declaration := range interfaceDeclarations {
+		c.compileDeclaration(declaration)
+	}
+	for _, declaration := range attachmentDeclarations {
 		c.compileDeclaration(declaration)
 	}
 
@@ -637,6 +642,7 @@ func (c *Compiler[_, _]) reserveGlobals(
 	functionDecls []*ast.FunctionDeclaration,
 	compositeDecls []*ast.CompositeDeclaration,
 	interfaceDecls []*ast.InterfaceDeclaration,
+	attachmentDecls []*ast.AttachmentDeclaration,
 ) {
 	// Reserve globals for the contract values before everything.
 	// Contract values must be always start at the zero-th index.
@@ -657,6 +663,7 @@ func (c *Compiler[_, _]) reserveGlobals(
 		functionDecls,
 		compositeDecls,
 		interfaceDecls,
+		attachmentDecls,
 	)
 }
 
@@ -692,6 +699,8 @@ func (c *Compiler[_, _]) reserveVariableGlobals(
 			members.Composites(),
 		)
 	}
+
+	// attachments will not have nested enum/composite declarations
 }
 
 func (c *Compiler[_, _]) reserveFunctionGlobals(
@@ -700,6 +709,7 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 	functionDecls []*ast.FunctionDeclaration,
 	compositeDecls []*ast.CompositeDeclaration,
 	interfaceDecls []*ast.InterfaceDeclaration,
+	attachmentDecls []*ast.AttachmentDeclaration,
 ) {
 	for _, declaration := range specialFunctionDecls {
 		switch declaration.Kind {
@@ -718,6 +728,12 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 	if enclosingType != nil {
 		for _, boundFunction := range CommonBuiltinTypeBoundFunctions {
 			functionName := boundFunction.Name
+			qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
+			c.addGlobal(qualifiedName)
+		}
+
+		if enclosingType.GetCompositeKind().SupportsAttachments() {
+			functionName := sema.CompositeForEachAttachmentFunctionName
 			qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
 			c.addGlobal(qualifiedName)
 		}
@@ -774,6 +790,7 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 			members.Functions(),
 			members.Composites(),
 			members.Interfaces(),
+			members.Attachments(),
 		)
 	}
 
@@ -789,6 +806,26 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 			members.Functions(),
 			members.Composites(),
 			members.Interfaces(),
+			members.Attachments(),
+		)
+	}
+
+	for _, declaration := range attachmentDecls {
+		compositeType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
+		// Reserve a global for the constructor function.
+
+		constructorName := commons.TypeQualifier(compositeType)
+		c.addGlobal(constructorName)
+
+		members := declaration.Members
+
+		c.reserveFunctionGlobals(
+			compositeType,
+			members.SpecialFunctions(),
+			members.Functions(),
+			members.Composites(),
+			members.Interfaces(),
+			members.Attachments(),
 		)
 	}
 }
@@ -2210,7 +2247,13 @@ func (c *Compiler[_, _]) emitVariableStore(name string) {
 	})
 }
 
-func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExpression) (_ struct{}) {
+func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
+	expression *ast.InvocationExpression,
+	implicitArgIndex uint16,
+	implicitArgType sema.Type,
+) (_ struct{}) {
+	// TODO: copy
+
 	invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(expression)
 
 	argumentCount := len(expression.Arguments)
@@ -2252,10 +2295,30 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 	c.compileArguments(expression.Arguments, invocationTypes)
 
 	typeArgs := c.loadTypeArguments(invocationTypes)
+	if implicitArgType != nil {
+		// Add the implicit argument to the end of the argument list, if it exists.
+		// Used in attachments, the attachment constructor/init expects an implicit argument:
+		// a reference to the base value used to set base.
+		// This hides the base argument away from the user.
+		typeArgs = append(typeArgs, c.getOrAddType(implicitArgType))
+		argumentCount += 1
+		if argumentCount >= math.MaxUint16 {
+			panic(errors.NewDefaultUserError("invalid number of arguments"))
+		}
+		// Load implicit argument from locals
+		// Base is at the back of the argument list, only for attachment initialization.
+		c.emitGetLocal(implicitArgIndex)
+	}
+
 	c.emit(opcode.InstructionInvoke{
 		TypeArgs: typeArgs,
 		ArgCount: uint16(argumentCount),
 	})
+	return
+}
+
+func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExpression) (_ struct{}) {
+	c.visitInvocationExpressionWithImplicitArgument(expression, 0, nil)
 
 	return
 }
@@ -2609,9 +2672,16 @@ func (c *Compiler[_, _]) compileMemberAccess(expression *ast.MemberExpression) {
 
 func (c *Compiler[_, _]) VisitIndexExpression(expression *ast.IndexExpression) (_ struct{}) {
 	c.compileExpression(expression.TargetExpression)
-	c.compileExpression(expression.IndexingExpression)
 
-	c.compileIndexAccess(expression)
+	if attachmentType, ok := c.DesugaredElaboration.AttachmentAccessTypes(expression); ok {
+		c.emit(opcode.InstructionGetTypeIndex{
+			Type: c.getOrAddType(attachmentType),
+		})
+	} else {
+		c.compileExpression(expression.IndexingExpression)
+
+		c.compileIndexAccess(expression)
+	}
 
 	return
 }
@@ -2830,7 +2900,7 @@ func (c *Compiler[_, _]) VisitFunctionExpression(expression *ast.FunctionExpress
 		c.targetFunction(function)
 		defer c.targetFunction(previousFunction)
 
-		c.declareParameters(parameterList, false)
+		c.declareParameters(parameterList, false, false)
 		c.compileFunctionBlock(
 			desugaredExpression.FunctionBlock,
 			common.DeclarationKindFunction,
@@ -3007,7 +3077,16 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	c.targetFunction(function)
 	defer c.targetFunction(previousFunction)
 
-	c.declareParameters(parameterList, false)
+	// cannot declare base as parameter because it is at the end of the argument list
+	// this is only true for initialization of attachments.
+	// otherwise, base is declared as the second parameter after self.
+	c.declareParameters(parameterList, false, false)
+
+	// must do this before declaring self
+	if kind == common.CompositeKindAttachment {
+		// base is provided as an argument at the end of the argument list implicitly
+		c.currentFunction.declareLocal(sema.BaseIdentifier)
+	}
 
 	// Declare `self`
 	self := c.currentFunction.declareLocal(sema.SelfIdentifier)
@@ -3058,6 +3137,29 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		)
 	}
 
+	// stores the return value of the constructor
+	var returnLocalIndex uint16
+	// `self` in attachments is a reference.
+	if kind == common.CompositeKindAttachment {
+		// Store the new composite as the return value.
+		returnLocalIndex = c.currentFunction.generateLocalIndex()
+		c.emitSetLocal(returnLocalIndex)
+		c.emitGetLocal(returnLocalIndex)
+		baseTyp := enclosingType.(sema.EntitlementSupportingType)
+		baseAccess := baseTyp.SupportedEntitlements().Access()
+		refType := &sema.ReferenceType{
+			Type:          baseTyp,
+			Authorization: baseAccess,
+		}
+		// Set `self` to be a reference.
+		c.emit(opcode.InstructionNewRef{
+			Type:       c.getOrAddType(refType),
+			IsImplicit: false,
+		})
+	} else {
+		returnLocalIndex = self.index
+	}
+
 	if kind == common.CompositeKindContract {
 		// During contract init, update the global variable with the newly initialized contract value.
 		// So accessing the contract through the global variable while initializing itself, would work.
@@ -3089,7 +3191,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	)
 
 	// Constructor should return the created the struct. i.e: return `self`
-	c.emitGetLocal(self.index)
+	c.emitGetLocal(returnLocalIndex)
 
 	// No need to transfer, since the type is same as the constructed value, for initializers.
 	c.emit(opcode.InstructionReturnValue{})
@@ -3101,6 +3203,7 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 	var (
 		parameterCount int
 		isObjectMethod bool
+		isAttachment   bool
 		functionName   string
 	)
 
@@ -3123,6 +3226,13 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 
 			// Declare a receiver if this is an object method.
 			parameterCount++
+
+			if typ, ok := enclosingType.(*sema.CompositeType); ok {
+				if typ.Kind == common.CompositeKindAttachment {
+					parameterCount++
+					isAttachment = true
+				}
+			}
 		}
 
 		functionName = commons.TypeQualifiedName(enclosingType, identifier)
@@ -3161,7 +3271,7 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 		c.targetFunction(function)
 		defer c.targetFunction(previousFunction)
 
-		c.declareParameters(declaration.ParameterList, isObjectMethod)
+		c.declareParameters(declaration.ParameterList, isObjectMethod, isAttachment)
 
 		c.compileFunctionBlock(
 			declaration.FunctionBlock,
@@ -3191,9 +3301,7 @@ func (c *Compiler[_, _]) VisitCompositeDeclaration(declaration *ast.CompositeDec
 	}
 
 	c.compositeTypeStack.push(compositeType)
-	defer func() {
-		c.compositeTypeStack.pop()
-	}()
+	defer c.compositeTypeStack.pop()
 
 	// Compile special function members
 	for _, specialFunc := range declaration.Members.SpecialFunctions() {
@@ -3232,14 +3340,15 @@ func (c *Compiler[_, _]) compileCompositeMembers(
 	for _, nestedType := range members.Interfaces() {
 		c.compileDeclaration(nestedType)
 	}
+	for _, nestedAttachments := range members.Attachments() {
+		c.compileDeclaration(nestedAttachments)
+	}
 }
 
 func (c *Compiler[_, _]) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) (_ struct{}) {
 	interfaceType := c.DesugaredElaboration.InterfaceDeclarationType(declaration)
 	c.compositeTypeStack.push(interfaceType)
-	defer func() {
-		c.compositeTypeStack.pop()
-	}()
+	defer c.compositeTypeStack.pop()
 
 	// Visit members.
 	c.compileCompositeMembers(interfaceType, declaration.Members)
@@ -3257,6 +3366,22 @@ func (c *Compiler[_, _]) addBuiltinMethods(typ sema.Type) {
 			uint16(len(boundFunction.Type.Parameters)+1),
 			boundFunction.Type,
 		)
+	}
+
+	// add native function .forEachAttachment for composite types supporting attachments
+	if t, ok := typ.(sema.CompositeKindedType); ok {
+		kind := t.GetCompositeKind()
+		if kind.SupportsAttachments() {
+			name := sema.CompositeForEachAttachmentFunctionName
+			qualifiedName := commons.TypeQualifiedName(typ, name)
+			functionType := sema.CompositeForEachAttachmentFunctionType(kind)
+			c.addFunction(
+				name,
+				qualifiedName,
+				uint16(len(functionType.Parameters)),
+				functionType,
+			)
+		}
 	}
 }
 
@@ -3370,9 +3495,32 @@ func (c *Compiler[_, _]) compileEnumCaseDeclaration(
 	return
 }
 
-func (c *Compiler[_, _]) VisitAttachmentDeclaration(_ *ast.AttachmentDeclaration) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler[_, _]) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) (_ struct{}) {
+	// Similar to VisitCompositeDeclaration
+	// Not combined because need to access fields not accessible in CompositeLikeDeclaration
+	compositeType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
+
+	c.compositeTypeStack.push(compositeType)
+	defer c.compositeTypeStack.pop()
+
+	// Compile members
+	hasInit := false
+	for _, specialFunc := range declaration.Members.SpecialFunctions() {
+		if specialFunc.Kind == common.DeclarationKindInitializer {
+			hasInit = true
+		}
+		c.compileDeclaration(specialFunc)
+	}
+
+	// If the initializer is not declared, generate an empty initializer
+	if !hasInit {
+		c.generateEmptyInit()
+	}
+
+	// Visit members.
+	c.compileCompositeMembers(compositeType, declaration.Members)
+
+	return
 }
 
 func (c *Compiler[_, _]) VisitEntitlementDeclaration(_ *ast.EntitlementDeclaration) (_ struct{}) {
@@ -3385,14 +3533,58 @@ func (c *Compiler[_, _]) VisitEntitlementMappingDeclaration(_ *ast.EntitlementMa
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler[_, _]) VisitRemoveStatement(_ *ast.RemoveStatement) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler[_, _]) VisitRemoveStatement(statement *ast.RemoveStatement) (_ struct{}) {
+	// load base onto stack
+	c.compileExpression(statement.Value)
+	// remove attachment from base
+	nominalType := c.DesugaredElaboration.AttachmentRemoveTypes(statement)
+	c.emit(opcode.InstructionRemoveTypeIndex{
+		Type: c.getOrAddType(nominalType),
+	})
+	return
 }
 
-func (c *Compiler[_, _]) VisitAttachExpression(_ *ast.AttachExpression) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression) (_ struct{}) {
+	types := c.DesugaredElaboration.AttachTypes(expression)
+	baseType := types.BaseType
+	attachmentType := types.AttachType
+
+	// base on stack
+	c.compileExpression(expression.Base)
+	// store base locally
+	baseLocalIndex := c.currentFunction.generateLocalIndex()
+	c.emitSetLocal(baseLocalIndex)
+	// get base back on stack
+	c.emitGetLocal(baseLocalIndex)
+	baseTyp := baseType.(sema.EntitlementSupportingType)
+	baseAccess := baseTyp.SupportedEntitlements().Access()
+	refType := &sema.ReferenceType{
+		Type:          baseTyp,
+		Authorization: baseAccess,
+	}
+	// create reference to base to pass as implicit arg
+	c.emit(opcode.InstructionNewRef{
+		Type:       c.getOrAddType(refType),
+		IsImplicit: false,
+	})
+	refLocalIndex := c.currentFunction.generateLocalIndex()
+	c.emitSetLocal(refLocalIndex)
+
+	// create the attachment
+	c.visitInvocationExpressionWithImplicitArgument(expression.Attachment, refLocalIndex, baseType)
+	// attachment on stack
+
+	// base back on stack
+	c.emitGetLocal(baseLocalIndex)
+	// base should now be transferred
+	c.emitTransfer()
+
+	// add attachment value as a member of transferred base
+	// returns the result
+	c.emit(opcode.InstructionSetTypeIndex{
+		Type: c.getOrAddType(attachmentType),
+	})
+	return
 }
 
 func (c *Compiler[_, _]) emitTransferAndConvert(targetType sema.Type) {
@@ -3485,11 +3677,17 @@ func (c *Compiler[_, T]) addCompiledType(ty sema.Type, data T) uint16 {
 	return uint16(count)
 }
 
-func (c *Compiler[_, _]) declareParameters(paramList *ast.ParameterList, declareReceiver bool) {
+func (c *Compiler[E, T]) declareParameters(paramList *ast.ParameterList, declareReceiver bool, declareBase bool) {
 	if declareReceiver {
 		// Declare receiver as `self`.
 		// Receiver is always at the zero-th index of params.
 		c.currentFunction.declareLocal(sema.SelfIdentifier)
+	}
+
+	if declareBase {
+		// Declare base receiver as `base`
+		// Always at index one of params.
+		c.currentFunction.declareLocal(sema.BaseIdentifier)
 	}
 
 	if paramList != nil {

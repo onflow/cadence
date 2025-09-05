@@ -1553,7 +1553,6 @@ func CreateReferenceValue(
 
 		// Case (4): target type is non-optional, actual value is also non-optional.
 		return newEphemeralReference(context, value, typ, locationRange)
-
 	default:
 		panic(errors.NewUnreachableError())
 	}
@@ -1676,7 +1675,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		true, // base is standalone.
 	).(*CompositeValue)
 
-	attachment.setBaseValue(base)
+	attachment.SetBaseValue(base)
 
 	// we enforce this in the checker
 	if !ok {
@@ -1686,7 +1685,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	base.SetTypeKey(
 		interpreter,
 		locationRange,
-		attachmentType,
+		attachmentType.AttachType,
 		attachment,
 	)
 
