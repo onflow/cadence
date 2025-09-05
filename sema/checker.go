@@ -345,8 +345,10 @@ func (checker *Checker) report(err error) {
 
 func (checker *Checker) CheckProgram(program *ast.Program) {
 
+	// Declare imports
+	allImported := map[Imported]struct{}{}
 	for _, declaration := range program.ImportDeclarations() {
-		checker.declareImportDeclaration(declaration)
+		checker.declareImportDeclaration(declaration, allImported)
 	}
 
 	// Declare interface and composite types

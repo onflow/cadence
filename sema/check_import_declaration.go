@@ -45,15 +45,55 @@ func (checker *Checker) VisitImportDeclaration(declaration *ast.ImportDeclaratio
 	})
 }
 
-func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclaration) {
+func (checker *Checker) declareImportDeclaration(
+	declaration *ast.ImportDeclaration,
+	allImported map[Imported]struct{},
+) {
 	locationRange := ast.NewRange(
 		checker.memoryGauge,
 		declaration.LocationPos,
-		// TODO: improve
-		declaration.LocationPos,
+		declaration.EndPos,
 	)
 
-	identifiers := declaration.Identifiers
+	var (
+		aliases     map[string]string
+		usedAliases map[string]struct{}
+	)
+
+	var identifiers []ast.Identifier
+	if len(declaration.Imports) > 0 {
+		identifiers = make([]ast.Identifier, 0, len(declaration.Imports))
+
+		for _, imp := range declaration.Imports {
+			identifiers = append(identifiers, imp.Identifier)
+
+			// Ensure that an alias is only used once
+
+			aliasName := imp.Alias.Identifier
+			if aliasName != "" {
+				importName := imp.Identifier.Identifier
+
+				if aliases == nil {
+					aliases = make(map[string]string)
+				}
+				aliases[importName] = aliasName
+
+				if usedAliases == nil {
+					usedAliases = make(map[string]struct{})
+				}
+
+				if _, ok := usedAliases[aliasName]; ok {
+					checker.report(
+						&DuplicateImportAliasError{
+							Alias: imp.Alias,
+						},
+					)
+				} else {
+					usedAliases[aliasName] = struct{}{}
+				}
+			}
+		}
+	}
 
 	resolvedLocations, err := checker.resolveLocation(identifiers, declaration.Location)
 	if err != nil {
@@ -87,13 +127,22 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 	}
 
 	checker.Elaboration.SetImportDeclarationsResolvedLocations(declaration, resolvedLocations)
+	checker.Elaboration.SetImportDeclarationAliases(declaration, aliases)
 
 	for _, resolvedLocation := range resolvedLocations {
-		checker.importResolvedLocation(resolvedLocation, locationRange, declaration.Aliases)
+		checker.importResolvedLocation(
+			resolvedLocation,
+			locationRange,
+			aliases,
+			allImported,
+		)
 	}
 }
 
-func (checker *Checker) resolveLocation(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error) {
+func (checker *Checker) resolveLocation(
+	identifiers []ast.Identifier,
+	location common.Location,
+) ([]ResolvedLocation, error) {
 
 	// If no location handler is available,
 	// default to resolving to a single location that declares all identifiers
@@ -113,8 +162,17 @@ func (checker *Checker) resolveLocation(identifiers []ast.Identifier, location c
 	return locationHandler(identifiers, location)
 }
 
-func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation, locationRange ast.Range, aliases map[string]string) {
+type Imported struct {
+	Location   common.Location
+	Identifier string
+}
 
+func (checker *Checker) importResolvedLocation(
+	resolvedLocation ResolvedLocation,
+	locationRange ast.Range,
+	aliases map[string]string,
+	allImported map[Imported]struct{},
+) {
 	// First, get the Import for the resolved location
 
 	location := resolvedLocation.Location
@@ -169,6 +227,25 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 			},
 		)
 		return
+	}
+
+	// Ensure the import is only declared once
+
+	for _, identifier := range resolvedLocation.Identifiers {
+		imported := Imported{
+			Location:   location,
+			Identifier: identifier.Identifier,
+		}
+		if _, ok := allImported[imported]; ok {
+			checker.report(
+				&DuplicateImportError{
+					Location:   location,
+					Identifier: identifier.Identifier,
+					Pos:        identifier.Pos,
+				},
+			)
+		}
+		allImported[imported] = struct{}{}
 	}
 
 	// Attempt to import the requested value declarations
@@ -329,10 +406,7 @@ func (checker *Checker) importElements(
 			if !ok {
 				continue
 			}
-			alias, ok := aliases[name]
-			if ok {
-				name = alias
-			}
+
 			elements.Set(name, element)
 			found[identifier] = true
 			explicitlyImported[name] = identifier
@@ -371,6 +445,10 @@ func (checker *Checker) importElements(
 				}
 			}
 
+			alias, ok := aliases[name]
+			if ok {
+				name = alias
+			}
 			_, err := valueActivations.declare(variableDeclaration{
 				identifier: name,
 				ty:         elementType,

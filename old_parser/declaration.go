@@ -488,7 +488,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 
 	startPosition := p.current.StartPos
 
-	var identifiers []ast.Identifier
+	var imports []ast.Import
 
 	var location common.Location
 	var locationPos ast.Position
@@ -591,7 +591,9 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 				}
 
 				identifier := p.tokenToIdentifier(p.current)
-				identifiers = append(identifiers, identifier)
+				imports = append(imports, ast.Import{
+					Identifier: identifier,
+				})
 
 				expectCommaOrFrom = true
 
@@ -624,7 +626,12 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 		// the given (previous) identifier is the import location.
 
 		if string(p.currentTokenSource()) == keywordFrom {
-			identifiers = append(identifiers, identifier)
+			imports = append(
+				imports,
+				ast.Import{
+					Identifier: identifier,
+				},
+			)
 			// Skip the `from` keyword
 			p.nextSemanticToken()
 
@@ -655,7 +662,12 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 		case lexer.TokenComma:
 			// The previous identifier is an imported identifier,
 			// not the import location
-			identifiers = append(identifiers, identifier)
+			imports = append(
+				imports,
+				ast.Import{
+					Identifier: identifier,
+				},
+			)
 			err := parseMoreIdentifiers()
 			if err != nil {
 				return nil, err
@@ -690,8 +702,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 
 	return ast.NewImportDeclaration(
 		p.memoryGauge,
-		identifiers,
-		nil,
+		imports,
 		location,
 		ast.NewRange(
 			p.memoryGauge,

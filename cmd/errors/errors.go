@@ -759,6 +759,18 @@ func generateErrors() []namedError {
 				Range:        placeholderRange,
 			},
 		},
+		{"sema.DuplicateImportAliasError",
+			&sema.DuplicateImportAliasError{
+				Alias: placeholderIdentifier,
+			},
+		},
+		{"sema.DuplicateImportError",
+			&sema.DuplicateImportError{
+				Location:   placeholderLocation,
+				Identifier: placeholderString,
+				Pos:        placeholderPosition,
+			},
+		},
 		{"sema.EmitDefaultDestroyEventError",
 			&sema.EmitDefaultDestroyEventError{
 				Range: placeholderRange,
@@ -1600,7 +1612,7 @@ func generateErrors() []namedError {
 		{"sema.SpecialFunctionDefaultImplementationError",
 			&sema.SpecialFunctionDefaultImplementationError{
 				Container:  placeholderDeclaration,
-				Identifier: placeholderIdentifier,
+				Identifier: placeholderIdentifierPointer,
 				KindName:   placeholderString,
 			},
 		},

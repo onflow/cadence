@@ -3271,9 +3271,17 @@ func (c *Compiler[_, _]) VisitPragmaDeclaration(_ *ast.PragmaDeclaration) (_ str
 }
 
 func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclaration) (_ struct{}) {
+
+	var identifiers []ast.Identifier
+	for _, imp := range declaration.Imports {
+		identifiers = append(identifiers, imp.Identifier)
+	}
+
+	// Resolve and add globals from transitive imports.
+
 	resolvedLocations, err := commons.ResolveLocation(
 		c.Config.LocationHandler,
-		declaration.Identifiers,
+		identifiers,
 		declaration.Location,
 	)
 	if err != nil {
