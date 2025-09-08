@@ -311,6 +311,14 @@ func (d *Desugar) tempResultVariable(
 	returnType sema.Type,
 	pos ast.Position,
 ) *ast.VariableDeclaration {
+
+	var transferOperation ast.TransferOperation
+	if returnType.IsResourceType() {
+		transferOperation = ast.TransferOperationMove
+	} else {
+		transferOperation = ast.TransferOperationCopy
+	}
+
 	tempResultVarDecl := ast.NewVariableDeclaration(
 		d.memoryGauge,
 		ast.AccessNotSpecified,
@@ -327,7 +335,7 @@ func (d *Desugar) tempResultVariable(
 
 		ast.NewTransfer(
 			d.memoryGauge,
-			ast.TransferOperationCopy, // TODO: determine based on return value (if resource, this should be a move)
+			transferOperation,
 			pos,
 		),
 		pos,
