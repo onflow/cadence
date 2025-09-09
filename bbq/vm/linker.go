@@ -23,7 +23,6 @@ import (
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -37,24 +36,6 @@ type LinkedGlobals struct {
 	// globals defined in the program, indexed by name.
 	indexedGlobals *activations.Activation[Variable]
 }
-
-type SortableLinkedGlobal struct {
-	Name     string
-	Category commons.GlobalCategory
-	Variable Variable
-}
-
-var _ commons.SortableGlobal = &SortableLinkedGlobal{}
-
-func (g *SortableLinkedGlobal) GetCategory() commons.GlobalCategory {
-	return g.Category
-}
-
-func (g *SortableLinkedGlobal) GetName() string {
-	return g.Name
-}
-
-func (g *SortableLinkedGlobal) SetIndex(index uint16) {}
 
 // LinkGlobals performs the linking of global functions and variables for a given program.
 func LinkGlobals(
@@ -139,99 +120,77 @@ func LinkGlobals(
 
 	executable := NewExecutableProgram(location, program, nil)
 
-	var allGlobals []commons.SortableGlobal
+	// reserved globals for the current program (exact)
+	globalCount := len(program.Globals) - len(importedGlobals)
+	globals := make([]Variable, globalCount, len(program.Globals))
 	indexedGlobals := activations.NewActivation[Variable](memoryGauge, nil)
 
 	// NOTE: ensure both the context and the mapping are updated
-
-	for _, contract := range program.Contracts {
-		contractVariable := interpreter.NewContractVariableWithGetter(
-			memoryGauge,
-			func() interpreter.Value {
-				return loadContractValue(contract, context)
-			},
-		)
-
-		allGlobals = append(allGlobals, &SortableLinkedGlobal{
-			Name:     contract.Name,
-			Category: commons.ContractGlobal,
-			Variable: contractVariable,
-		})
-		indexedGlobals.Set(contract.Name, contractVariable)
-	}
-
-	for _, variable := range program.Variables {
-		simpleVariable := &interpreter.SimpleVariable{}
-
-		// Some globals variables may not have initial values.
-		// e.g: Transaction parameters are converted global variables,
-		// where the values are being set in the transaction initializer.
-		if variable.Getter != nil {
-			valueGetter := functionValueFromBBQFunction(executable, variable.Getter)
-			simpleVariable.InitializeWithGetter(func() interpreter.Value {
-				return context.InvokeFunction(
-					valueGetter,
-					nil,
-				)
-			})
-		}
-
-		allGlobals = append(allGlobals, &SortableLinkedGlobal{
-			Name:     variable.Name,
-			Category: commons.VariableGlobal,
-			Variable: simpleVariable,
-		})
-		indexedGlobals.Set(variable.Name, simpleVariable)
-	}
-
-	// Iterate through `program.Functions` to be deterministic.
-	// Order of globals must be same as index set at `Compiler.addGlobal()`.
-	for i := range program.Functions {
-		function := &program.Functions[i]
-
-		// Anonymous functions are not needed as global variables.
-		// Compiler doesn't reserve global variable for them either.
-		if function.IsAnonymous() {
+	// iteration of globals is in arbitrary order, does not matter as long as all (nonimported) globals are visited
+	for _, global := range program.Globals { //nolint:maprange
+		// ignore imported globals, they will be linked later
+		if global.Kind == bbq.GlobalKindImported {
 			continue
 		}
 
-		var value FunctionValue
+		switch global.Kind {
+		case bbq.GlobalKindFunction:
+			function := global.Function
+			// Anonymous functions are not needed as global variables.
+			// Compiler doesn't reserve global variable for them either.
+			if function.IsAnonymous() {
+				continue
+			}
 
-		if function.IsNative() {
-			// Look-up using the unqualified name, in the common-builtin functions.
-			value = IndexedCommonBuiltinTypeBoundFunctions[function.Name]
-		} else {
-			value = functionValueFromBBQFunction(executable, function)
+			var value FunctionValue
+
+			if function.IsNative() {
+				// Look-up using the unqualified name, in the common-builtin functions.
+				value = IndexedCommonBuiltinTypeBoundFunctions[function.Name]
+			} else {
+				value = functionValueFromBBQFunction(executable, function)
+			}
+
+			variable := &interpreter.SimpleVariable{}
+			variable.InitializeWithValue(value)
+			// Linker matches the compiled function index with the linked function index
+			globals[global.Index] = variable
+			indexedGlobals.Set(function.QualifiedName, variable)
+		case bbq.GlobalKindVariable:
+			variable := global.Variable
+			simpleVariable := &interpreter.SimpleVariable{}
+
+			// Some globals variables may not have initial values.
+			// e.g: Transaction parameters are converted global variables,
+			// where the values are being set in the transaction initializer.
+			if variable.Getter != nil {
+				valueGetter := functionValueFromBBQFunction(executable, variable.Getter)
+				simpleVariable.InitializeWithGetter(func() interpreter.Value {
+					return context.InvokeFunction(
+						valueGetter,
+						nil,
+					)
+				})
+			}
+			// Linker matches the compiled variable index with the linked variable index
+			globals[global.Index] = simpleVariable
+			indexedGlobals.Set(variable.Name, simpleVariable)
+		case bbq.GlobalKindContract:
+			contract := global.Contract
+			contractVariable := interpreter.NewContractVariableWithGetter(
+				memoryGauge,
+				func() interpreter.Value {
+					return loadContractValue(contract, context)
+				},
+			)
+			// Linker matches the compiled contract index with the linked contract index
+			globals[global.Index] = contractVariable
+			indexedGlobals.Set(contract.Name, contractVariable)
 		}
-
-		variable := &interpreter.SimpleVariable{}
-		variable.InitializeWithValue(value)
-
-		allGlobals = append(allGlobals, &SortableLinkedGlobal{
-			Name:     function.QualifiedName,
-			Category: commons.FunctionGlobal,
-			Variable: variable,
-		})
-		indexedGlobals.Set(function.QualifiedName, variable)
 	}
 
-	commons.SortGlobals(allGlobals)
-
-	// Build arrays in sorted order
-	globalsLen := len(program.Contracts) + len(program.Variables) + len(program.Functions) + len(importedGlobals)
-	globals := make([]Variable, globalsLen)
-
-	for i, sortableGlobal := range allGlobals {
-		if sg, ok := sortableGlobal.(*SortableLinkedGlobal); ok {
-			globals[i] = sg.Variable
-		} else {
-			panic(errors.NewUnexpectedError("sortableGlobal is not a SortableLinkedGlobal"))
-		}
-	}
-
-	for i, importedGlobal := range importedGlobals {
-		globals[len(allGlobals)+i] = importedGlobal
-	}
+	// add imported globals to the end of the globals
+	globals = append(globals, importedGlobals...)
 
 	executable.Globals = globals
 

@@ -16,46 +16,57 @@
  * limitations under the License.
  */
 
-package compiler
+package bbq
 
 import (
-	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
 )
 
-type Global struct {
+type GlobalKind int
+
+const (
+	GlobalKindFunction GlobalKind = iota
+	GlobalKindVariable
+	GlobalKindContract
+	GlobalKindImported
+)
+
+type Global[E any] struct {
 	Name     string
 	Location common.Location
 	Index    uint16
-	Category commons.GlobalCategory
+	// used for linking to retrieve the function/variable/contract from the current program
+	Function *Function[E]
+	Variable *Variable[E]
+	Contract *Contract
+	// used for linking of the current program's globals
+	Kind GlobalKind
 }
 
-func NewGlobal(
+func NewGlobal[E any](
 	memoryGauge common.MemoryGauge,
 	name string,
 	location common.Location,
 	index uint16,
-	category commons.GlobalCategory,
-) *Global {
+	kind GlobalKind,
+) *Global[E] {
 	common.UseMemory(memoryGauge, common.CompilerGlobalMemoryUsage)
-	return &Global{
+	return &Global[E]{
 		Name:     name,
 		Location: location,
 		Index:    index,
-		Category: category,
+		Kind:     kind,
 	}
 }
 
-var _ commons.SortableGlobal = &Global{}
-
-func (g *Global) GetCategory() commons.GlobalCategory {
-	return g.Category
+func (g *Global[E]) GetFunction() *Function[E] {
+	return g.Function
 }
 
-func (g *Global) GetName() string {
-	return g.Name
+func (g *Global[E]) GetVariable() *Variable[E] {
+	return g.Variable
 }
 
-func (g *Global) SetIndex(index uint16) {
-	g.Index = index
+func (g *Global[E]) GetContract() *Contract {
+	return g.Contract
 }
