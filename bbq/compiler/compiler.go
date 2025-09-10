@@ -79,9 +79,8 @@ type Compiler[E, T any] struct {
 	lastChangedPosition bbq.Position
 	currentPosition     bbq.Position
 
-	// Cache alike for compiledTypes and constants in the pool.
-	typesInPool     map[sema.TypeID]uint16
-	constantsInPool map[constant.ConstantData]*DecodedConstant
+	// Cache alike for compiledTypes in the pool.
+	typesInPool map[sema.TypeID]uint16
 
 	codeGen CodeGen[E]
 	typeGen TypeGen[T]
@@ -186,7 +185,6 @@ func newCompiler[E, T any](
 		Globals:              make(map[string]*Global),
 		globalImports:        globalImports,
 		typesInPool:          make(map[sema.TypeID]uint16),
-		constantsInPool:      make(map[constant.ConstantData]*DecodedConstant),
 		compositeTypeStack: &Stack[sema.CompositeKindedType]{
 			elements: make([]sema.CompositeKindedType, 0),
 		},
@@ -370,13 +368,36 @@ func (c *Compiler[_, _]) addConstant(kind constant.Kind, data constant.ConstantD
 	}
 
 	// Optimization: Reuse the constant if it is already added to the constant pool.
-	for constantData, decodedConstant := range c.constantsInPool {
-		// TODO: improve: `interpreter.Value` typed constants are not comparable
-		// using `==`.
-		// At the moment this will only optimize the raw-string typed constants.
-		// (that are used for names in dynamic dispatching, member-access, etc.)
-		if constantData == data {
-			return decodedConstant
+	// Use to corresponding comparator function, depending on the type of the constant.
+	var newConstantEqualsTo func(existingConstData constant.ConstantData) bool
+	switch newConstData := data.(type) {
+	case string:
+		// If the newly adding constant is a raw-string constant,
+		// then use the `==` as the comparator function.
+		newConstantEqualsTo = func(existingConstData constant.ConstantData) bool {
+			return existingConstData == newConstData
+		}
+	case interpreter.EquatableValue:
+		// If the newly adding constant is an `interpreter.Value` typed constant,
+		// then use the `Equal` method as the comparator function.
+		newConstantEqualsTo = func(existingConstData constant.ConstantData) bool {
+			existingEquatableConstant, ok := existingConstData.(interpreter.EquatableValue)
+			if !ok {
+				return false
+			}
+
+			return newConstData.Equal(
+				nil, // OK to pass nil for the context for constant-types (numbers, string, char)
+				interpreter.EmptyLocationRange,
+				existingEquatableConstant,
+			)
+		}
+	default:
+		panic(errors.NewUnreachableError())
+	}
+	for _, existingDecodedConst := range c.constants {
+		if newConstantEqualsTo(existingDecodedConst.data) {
+			return existingDecodedConst
 		}
 	}
 
@@ -387,7 +408,6 @@ func (c *Compiler[_, _]) addConstant(kind constant.Kind, data constant.ConstantD
 		data,
 	)
 	c.constants = append(c.constants, constant)
-	c.constantsInPool[data] = constant
 	return constant
 }
 
