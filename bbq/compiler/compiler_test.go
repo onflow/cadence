@@ -41,6 +41,24 @@ import (
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
+// assertGlobalsEqualIgnoringFields compares globals while ignoring Kind, Function, Variable, and Contract fields
+func assertGlobalsEqualIgnoringFields(t *testing.T, expected, actual map[string]*bbq.Global[opcode.Instruction]) {
+	// Check that both maps have the same keys
+	assert.Equal(t, len(expected), len(actual), "globals maps have different lengths")
+
+	for key, expectedGlobal := range expected {
+		actualGlobal, exists := actual[key]
+		if !assert.True(t, exists, "expected global %s not found in actual", key) {
+			continue
+		}
+
+		// Compare only Name, Location, and Index - ignore Kind, Function, Variable, Contract
+		assert.Equal(t, expectedGlobal.Name, actualGlobal.Name, "global %s has different Name", key)
+		assert.Equal(t, expectedGlobal.Location, actualGlobal.Location, "global %s has different Location", key)
+		assert.Equal(t, expectedGlobal.Index, actualGlobal.Index, "global %s has different Index", key)
+	}
+}
+
 func TestCompileRecursionFib(t *testing.T) {
 
 	t.Parallel()
@@ -9724,9 +9742,9 @@ func TestCompileImportAlias(t *testing.T) {
 		)
 
 		// Imported types are location qualified.
-		assert.Equal(
+		assertGlobalsEqualIgnoringFields(
 			t,
-			map[string]*compiler.Global{
+			map[string]*bbq.Global[opcode.Instruction]{
 				"test": {
 					Location: nil,
 					Name:     "test",
@@ -9826,9 +9844,9 @@ func TestCompileImportAlias(t *testing.T) {
 		)
 
 		// only imported function is a location qualified global.
-		assert.Equal(
+		assertGlobalsEqualIgnoringFields(
 			t,
-			map[string]*compiler.Global{
+			map[string]*bbq.Global[opcode.Instruction]{
 				"Bar": {
 					Location: nil,
 					Name:     "Bar",
