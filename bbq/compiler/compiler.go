@@ -854,6 +854,7 @@ func (c *Compiler[_, T]) exportTypes() []T {
 func (c *Compiler[E, _]) exportGlobals() []*bbq.Global[E] {
 	// create a sorted global slice by index for linker efficiency
 	// tradeoff: compiler does more work to sort the globals, but linker does less work to link the globals
+	// ignore linting, order doesn't matter since its sorted after
 	globalsSlice := slices.Collect(maps.Values(c.Globals)) //nolint:forbidigo
 	slices.SortFunc(globalsSlice, func(a, b *bbq.Global[E]) int {
 		return int(a.Index) - int(b.Index)
