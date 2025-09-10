@@ -48,7 +48,7 @@ type Compiler[E, T any] struct {
 
 	functions          []*function[E]
 	globalVariables    []*globalVariable[E]
-	constants          []*Constant
+	constants          []*DecodedConstant
 	Globals            map[string]*Global
 	globalImports      *activations.Activation[GlobalImport]
 	importedGlobals    []*Global
@@ -81,7 +81,7 @@ type Compiler[E, T any] struct {
 
 	// Cache alike for compiledTypes and constants in the pool.
 	typesInPool     map[sema.TypeID]uint16
-	constantsInPool map[constantsCacheKey]*Constant
+	constantsInPool map[constant.ConstantData]*DecodedConstant
 
 	codeGen CodeGen[E]
 	typeGen TypeGen[T]
@@ -186,7 +186,7 @@ func newCompiler[E, T any](
 		Globals:              make(map[string]*Global),
 		globalImports:        globalImports,
 		typesInPool:          make(map[sema.TypeID]uint16),
-		constantsInPool:      make(map[constantsCacheKey]*Constant),
+		constantsInPool:      make(map[constant.ConstantData]*DecodedConstant),
 		compositeTypeStack: &Stack[sema.CompositeKindedType]{
 			elements: make([]sema.CompositeKindedType, 0),
 		},
@@ -363,33 +363,29 @@ func (c *Compiler[E, _]) targetFunction(function *function[E]) {
 	c.codeGen.SetTarget(code)
 }
 
-func (c *Compiler[_, _]) addConstant(kind constant.Kind, data []byte) *Constant {
+func (c *Compiler[_, _]) addConstant(kind constant.Kind, data constant.ConstantData) *DecodedConstant {
 	count := len(c.constants)
 	if count >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid constant declaration"))
 	}
 
 	// Optimization: Reuse the constant if it is already added to the constant pool.
-	cacheKey := constantsCacheKey{
-		data: string(data),
-		kind: kind,
-	}
-	if constant, ok := c.constantsInPool[cacheKey]; ok {
+	if constant, ok := c.constantsInPool[data]; ok {
 		return constant
 	}
 
-	constant := NewConstant(
+	constant := NewDecodedConstant(
 		c.Config.MemoryGauge,
 		uint16(count),
 		kind,
 		data,
 	)
 	c.constants = append(c.constants, constant)
-	c.constantsInPool[cacheKey] = constant
+	c.constantsInPool[data] = constant
 	return constant
 }
 
-func (c *Compiler[_, _]) emitGetConstant(constant *Constant) {
+func (c *Compiler[_, _]) emitGetConstant(constant *DecodedConstant) {
 	c.emit(opcode.InstructionGetConstant{
 		Constant: constant.index,
 	})
@@ -399,26 +395,21 @@ func (c *Compiler[_, _]) emitStringConst(str string) {
 	c.emitGetConstant(c.addStringConst(str))
 }
 
-func (c *Compiler[_, _]) addStringConst(str string) *Constant {
-	return c.addConstant(constant.String, []byte(str))
+func (c *Compiler[_, _]) addStringConst(str string) *DecodedConstant {
+	return c.addConstant(constant.String, str)
 }
 
 func (c *Compiler[_, _]) emitCharacterConst(str string) {
 	c.emitGetConstant(c.addCharacterConst(str))
 }
 
-func (c *Compiler[_, _]) addCharacterConst(str string) *Constant {
-	return c.addConstant(constant.Character, []byte(str))
+func (c *Compiler[_, _]) addCharacterConst(str string) *DecodedConstant {
+	return c.addConstant(constant.Character, str)
 }
 
 func (c *Compiler[_, _]) emitIntConst(i int64) {
-	c.emitGetConstant(c.addIntConst(i))
-}
-
-func (c *Compiler[_, _]) addIntConst(i int64) *Constant {
-	// NOTE: also adjust VisitIntegerExpression!
-	data := interpreter.NewUnmeteredIntValueFromInt64(i).ToBigEndianBytes()
-	return c.addConstant(constant.Int, data)
+	value := big.NewInt(i)
+	c.emitIntegerConstant(value, sema.IntegerType)
 }
 
 func (c *Compiler[_, _]) emitJump(target int) int {
@@ -809,16 +800,16 @@ func (c *Compiler[_, _]) reserveFunctionGlobals(
 	}
 }
 
-func (c *Compiler[_, _]) exportConstants() []constant.Constant {
-	var constants []constant.Constant
+func (c *Compiler[_, _]) exportConstants() []constant.DecodedConstant {
+	var constants []constant.DecodedConstant
 
 	count := len(c.constants)
 	if count > 0 {
-		constants = make([]constant.Constant, 0, count)
+		constants = make([]constant.DecodedConstant, 0, count)
 		for _, c := range c.constants {
 			constants = append(
 				constants,
-				constant.Constant{
+				constant.DecodedConstant{
 					Data: c.data,
 					Kind: c.kind,
 				},
@@ -1958,72 +1949,76 @@ func (c *Compiler[_, _]) VisitIntegerExpression(expression *ast.IntegerExpressio
 func (c *Compiler[_, _]) emitIntegerConstant(value *big.Int, integerType sema.Type) {
 	constantKind := constant.FromSemaType(integerType)
 
-	var data []byte
+	var data constant.ConstantData
 
 	switch constantKind {
 	case constant.Int:
-		// NOTE: also adjust addIntConst!
-		data = interpreter.NewUnmeteredIntValueFromBigInt(value).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredIntValueFromBigInt(value)
 
 	case constant.Int8:
-		data = interpreter.NewUnmeteredInt8Value(int8(value.Int64())).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredInt8Value(int8(value.Int64()))
 
 	case constant.Int16:
-		data = interpreter.NewUnmeteredInt16Value(int16(value.Int64())).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredInt16Value(int16(value.Int64()))
 
 	case constant.Int32:
-		data = interpreter.NewUnmeteredInt32Value(int32(value.Int64())).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredInt32Value(int32(value.Int64()))
 
 	case constant.Int64:
-		data = interpreter.NewUnmeteredInt64Value(value.Int64()).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredInt64Value(value.Int64())
 
 	case constant.Int128:
-		data = interpreter.NewUnmeteredInt128ValueFromBigInt(value).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredInt128ValueFromBigInt(value)
 
 	case constant.Int256:
-		data = interpreter.NewUnmeteredInt256ValueFromBigInt(value).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredInt256ValueFromBigInt(value)
 
 	case constant.UInt:
-		data = interpreter.NewUnmeteredUIntValueFromBigInt(value).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredUIntValueFromBigInt(value)
 
 	case constant.UInt8:
-		data = interpreter.NewUnmeteredUInt8Value(uint8(value.Uint64())).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredUInt8Value(uint8(value.Uint64()))
 
 	case constant.UInt16:
-		data = interpreter.NewUnmeteredUInt16Value(uint16(value.Uint64())).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredUInt16Value(uint16(value.Uint64()))
 
 	case constant.UInt32:
-		data = interpreter.NewUnmeteredUInt32Value(uint32(value.Uint64())).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredUInt32Value(uint32(value.Uint64()))
 
 	case constant.UInt64:
-		data = interpreter.NewUnmeteredUInt64Value(value.Uint64()).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredUInt64Value(value.Uint64())
 
 	case constant.UInt128:
-		data = interpreter.NewUnmeteredUInt128ValueFromBigInt(value).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredUInt128ValueFromBigInt(value)
 
 	case constant.UInt256:
-		data = interpreter.NewUnmeteredUInt256ValueFromBigInt(value).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredUInt256ValueFromBigInt(value)
 
 	case constant.Word8:
-		data = interpreter.NewUnmeteredWord8Value(uint8(value.Uint64())).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredWord8Value(uint8(value.Uint64()))
 
 	case constant.Word16:
-		data = interpreter.NewUnmeteredWord16Value(uint16(value.Uint64())).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredWord16Value(uint16(value.Uint64()))
 
 	case constant.Word32:
-		data = interpreter.NewUnmeteredWord32Value(uint32(value.Uint64())).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredWord32Value(uint32(value.Uint64()))
 
 	case constant.Word64:
-		data = interpreter.NewUnmeteredWord64Value(value.Uint64()).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredWord64Value(value.Uint64())
 
 	case constant.Word128:
-		data = interpreter.NewUnmeteredWord128ValueFromBigInt(value).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredWord128ValueFromBigInt(value)
 
 	case constant.Word256:
-		data = interpreter.NewUnmeteredWord256ValueFromBigInt(value).ToBigEndianBytes()
+		data = interpreter.NewUnmeteredWord256ValueFromBigInt(value)
 
 	case constant.Address:
-		data = value.Bytes()
+		data = interpreter.NewAddressValueFromBytes(
+			c.Config.MemoryGauge,
+			func() []byte {
+				return value.Bytes()
+			},
+		)
 
 	default:
 		panic(errors.NewUnexpectedError(
@@ -2055,7 +2050,7 @@ func (c *Compiler[_, _]) VisitFixedPointExpression(expression *ast.FixedPointExp
 		scale,
 	)
 
-	var constant *Constant
+	var constant *DecodedConstant
 
 	switch fixedPointSubType {
 	case sema.Fix64Type, sema.SignedFixedPointType:
@@ -2085,32 +2080,30 @@ func (c *Compiler[_, _]) VisitFixedPointExpression(expression *ast.FixedPointExp
 	return
 }
 
-func (c *Compiler[_, _]) addUFix64Constant(value *big.Int) *Constant {
-	data := interpreter.NewUnmeteredUFix64Value(value.Uint64()).ToBigEndianBytes()
-	return c.addConstant(constant.UFix64, data)
+func (c *Compiler[_, _]) addUFix64Constant(value *big.Int) *DecodedConstant {
+	uFix64Value := interpreter.NewUnmeteredUFix64Value(value.Uint64())
+	return c.addConstant(constant.UFix64, uFix64Value)
 }
 
-func (c *Compiler[_, _]) addFix64Constant(value *big.Int) *Constant {
-	data := interpreter.NewUnmeteredFix64Value(value.Int64()).ToBigEndianBytes()
-	return c.addConstant(constant.Fix64, data)
+func (c *Compiler[_, _]) addFix64Constant(value *big.Int) *DecodedConstant {
+	fix64Value := interpreter.NewUnmeteredFix64Value(value.Int64())
+	return c.addConstant(constant.Fix64, fix64Value)
 }
 
-func (c *Compiler[_, _]) addUFix128Constant(value *big.Int) *Constant {
+func (c *Compiler[_, _]) addUFix128Constant(value *big.Int) *DecodedConstant {
 	ufix128Value := interpreter.NewUFix128ValueFromBigInt(
 		c.Config.MemoryGauge,
 		value,
 	)
-	data := ufix128Value.ToBigEndianBytes()
-	return c.addConstant(constant.UFix128, data)
+	return c.addConstant(constant.UFix128, ufix128Value)
 }
 
-func (c *Compiler[_, _]) addFix128Constant(value *big.Int) *Constant {
+func (c *Compiler[_, _]) addFix128Constant(value *big.Int) *DecodedConstant {
 	fix128Value := interpreter.NewFix128ValueFromBigInt(
 		c.Config.MemoryGauge,
 		value,
 	)
-	data := fix128Value.ToBigEndianBytes()
-	return c.addConstant(constant.Fix128, data)
+	return c.addConstant(constant.Fix128, fix128Value)
 }
 
 func (c *Compiler[_, _]) VisitArrayExpression(array *ast.ArrayExpression) (_ struct{}) {
@@ -3111,7 +3104,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 			)
 		}
 	} else {
-		addressConstant := c.addConstant(constant.Address, address.Bytes())
+		addressConstant := c.addConstant(constant.Address, address)
 		c.emit(
 			opcode.InstructionNewCompositeAt{
 				Kind:    kind,

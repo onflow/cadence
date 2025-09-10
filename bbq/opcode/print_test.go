@@ -128,7 +128,7 @@ func TestPrintResolved(t *testing.T) {
 		&builder,
 		instructions,
 		resolve,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte("foo"),
 				Kind: constant.String,

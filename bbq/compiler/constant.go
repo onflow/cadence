@@ -23,20 +23,22 @@ import (
 	"github.com/onflow/cadence/common"
 )
 
-type Constant struct {
+type Constant[T any] struct {
 	index uint16
-	data  []byte
+	data  T
 	kind  constant.Kind
 }
 
-func NewConstant(
+type DecodedConstant = Constant[constant.ConstantData]
+
+func NewDecodedConstant(
 	gauge common.MemoryGauge,
 	index uint16,
 	kind constant.Kind,
-	data []byte,
-) *Constant {
+	data any,
+) *DecodedConstant {
 	common.UseMemory(gauge, common.CompilerConstantMemoryUsage)
-	return &Constant{
+	return &DecodedConstant{
 		index: index,
 		kind:  kind,
 		data:  data,

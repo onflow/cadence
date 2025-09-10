@@ -30,7 +30,7 @@ func (i InstructionUnknown) String() string {
 func (i InstructionUnknown) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionUnknown) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -66,7 +66,7 @@ func (i InstructionGetLocal) OperandsString(sb *strings.Builder, colorize bool) 
 }
 
 func (i InstructionGetLocal) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -110,7 +110,7 @@ func (i InstructionSetLocal) OperandsString(sb *strings.Builder, colorize bool) 
 }
 
 func (i InstructionSetLocal) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -154,7 +154,7 @@ func (i InstructionGetUpvalue) OperandsString(sb *strings.Builder, colorize bool
 }
 
 func (i InstructionGetUpvalue) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -198,7 +198,7 @@ func (i InstructionSetUpvalue) OperandsString(sb *strings.Builder, colorize bool
 }
 
 func (i InstructionSetUpvalue) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -242,7 +242,7 @@ func (i InstructionCloseUpvalue) OperandsString(sb *strings.Builder, colorize bo
 }
 
 func (i InstructionCloseUpvalue) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -286,7 +286,7 @@ func (i InstructionGetGlobal) OperandsString(sb *strings.Builder, colorize bool)
 }
 
 func (i InstructionGetGlobal) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -330,7 +330,7 @@ func (i InstructionSetGlobal) OperandsString(sb *strings.Builder, colorize bool)
 }
 
 func (i InstructionSetGlobal) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -377,7 +377,7 @@ func (i InstructionGetField) OperandsString(sb *strings.Builder, colorize bool) 
 }
 
 func (i InstructionGetField) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -425,7 +425,7 @@ func (i InstructionRemoveField) OperandsString(sb *strings.Builder, colorize boo
 }
 
 func (i InstructionRemoveField) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -472,7 +472,7 @@ func (i InstructionSetField) OperandsString(sb *strings.Builder, colorize bool) 
 }
 
 func (i InstructionSetField) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -513,7 +513,7 @@ func (i InstructionGetIndex) String() string {
 func (i InstructionGetIndex) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionGetIndex) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -542,7 +542,7 @@ func (i InstructionRemoveIndex) String() string {
 func (i InstructionRemoveIndex) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionRemoveIndex) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -571,7 +571,7 @@ func (i InstructionSetIndex) String() string {
 func (i InstructionSetIndex) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionSetIndex) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -600,7 +600,7 @@ func (i InstructionVoid) String() string {
 func (i InstructionVoid) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionVoid) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -629,7 +629,7 @@ func (i InstructionTrue) String() string {
 func (i InstructionTrue) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionTrue) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -658,7 +658,7 @@ func (i InstructionFalse) String() string {
 func (i InstructionFalse) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionFalse) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -687,7 +687,7 @@ func (i InstructionNil) String() string {
 func (i InstructionNil) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionNil) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -726,7 +726,7 @@ func (i InstructionNewSimpleComposite) OperandsString(sb *strings.Builder, color
 }
 
 func (i InstructionNewSimpleComposite) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -777,7 +777,7 @@ func (i InstructionNewComposite) OperandsString(sb *strings.Builder, colorize bo
 }
 
 func (i InstructionNewComposite) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -831,7 +831,7 @@ func (i InstructionNewCompositeAt) OperandsString(sb *strings.Builder, colorize 
 }
 
 func (i InstructionNewCompositeAt) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -886,7 +886,7 @@ func (i InstructionNewPath) OperandsString(sb *strings.Builder, colorize bool) {
 }
 
 func (i InstructionNewPath) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -940,7 +940,7 @@ func (i InstructionNewArray) OperandsString(sb *strings.Builder, colorize bool) 
 }
 
 func (i InstructionNewArray) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -998,7 +998,7 @@ func (i InstructionNewDictionary) OperandsString(sb *strings.Builder, colorize b
 }
 
 func (i InstructionNewDictionary) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -1053,7 +1053,7 @@ func (i InstructionNewRef) OperandsString(sb *strings.Builder, colorize bool) {
 }
 
 func (i InstructionNewRef) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -1101,7 +1101,7 @@ func (i InstructionGetConstant) OperandsString(sb *strings.Builder, colorize boo
 }
 
 func (i InstructionGetConstant) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -1148,7 +1148,7 @@ func (i InstructionNewClosure) OperandsString(sb *strings.Builder, colorize bool
 }
 
 func (i InstructionNewClosure) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -1199,7 +1199,7 @@ func (i InstructionInvoke) OperandsString(sb *strings.Builder, colorize bool) {
 }
 
 func (i InstructionInvoke) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -1253,7 +1253,7 @@ func (i InstructionInvokeDynamic) OperandsString(sb *strings.Builder, colorize b
 }
 
 func (i InstructionInvokeDynamic) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -1305,7 +1305,7 @@ func (i InstructionGetMethod) OperandsString(sb *strings.Builder, colorize bool)
 }
 
 func (i InstructionGetMethod) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -1342,7 +1342,7 @@ func (i InstructionDup) String() string {
 func (i InstructionDup) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionDup) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -1371,7 +1371,7 @@ func (i InstructionDrop) String() string {
 func (i InstructionDrop) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionDrop) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -1400,7 +1400,7 @@ func (i InstructionDestroy) String() string {
 func (i InstructionDestroy) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionDestroy) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -1429,7 +1429,7 @@ func (i InstructionUnwrap) String() string {
 func (i InstructionUnwrap) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionUnwrap) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -1458,7 +1458,7 @@ func (i InstructionWrap) String() string {
 func (i InstructionWrap) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionWrap) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -1487,7 +1487,7 @@ func (i InstructionTransfer) String() string {
 func (i InstructionTransfer) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionTransfer) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -1523,7 +1523,7 @@ func (i InstructionTransferAndConvert) OperandsString(sb *strings.Builder, color
 }
 
 func (i InstructionTransferAndConvert) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -1567,7 +1567,7 @@ func (i InstructionSimpleCast) OperandsString(sb *strings.Builder, colorize bool
 }
 
 func (i InstructionSimpleCast) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -1611,7 +1611,7 @@ func (i InstructionFailableCast) OperandsString(sb *strings.Builder, colorize bo
 }
 
 func (i InstructionFailableCast) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -1655,7 +1655,7 @@ func (i InstructionForceCast) OperandsString(sb *strings.Builder, colorize bool)
 }
 
 func (i InstructionForceCast) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -1692,7 +1692,7 @@ func (i InstructionDeref) String() string {
 func (i InstructionDeref) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionDeref) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -1728,7 +1728,7 @@ func (i InstructionJump) OperandsString(sb *strings.Builder, colorize bool) {
 }
 
 func (i InstructionJump) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -1772,7 +1772,7 @@ func (i InstructionJumpIfFalse) OperandsString(sb *strings.Builder, colorize boo
 }
 
 func (i InstructionJumpIfFalse) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -1816,7 +1816,7 @@ func (i InstructionJumpIfTrue) OperandsString(sb *strings.Builder, colorize bool
 }
 
 func (i InstructionJumpIfTrue) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -1860,7 +1860,7 @@ func (i InstructionJumpIfNil) OperandsString(sb *strings.Builder, colorize bool)
 }
 
 func (i InstructionJumpIfNil) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -1897,7 +1897,7 @@ func (i InstructionReturn) String() string {
 func (i InstructionReturn) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionReturn) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -1926,7 +1926,7 @@ func (i InstructionReturnValue) String() string {
 func (i InstructionReturnValue) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionReturnValue) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -1955,7 +1955,7 @@ func (i InstructionEqual) String() string {
 func (i InstructionEqual) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionEqual) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -1984,7 +1984,7 @@ func (i InstructionNotEqual) String() string {
 func (i InstructionNotEqual) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionNotEqual) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -2013,7 +2013,7 @@ func (i InstructionNot) String() string {
 func (i InstructionNot) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionNot) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -2042,7 +2042,7 @@ func (i InstructionAdd) String() string {
 func (i InstructionAdd) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionAdd) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -2071,7 +2071,7 @@ func (i InstructionSubtract) String() string {
 func (i InstructionSubtract) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionSubtract) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -2100,7 +2100,7 @@ func (i InstructionMultiply) String() string {
 func (i InstructionMultiply) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionMultiply) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -2129,7 +2129,7 @@ func (i InstructionDivide) String() string {
 func (i InstructionDivide) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionDivide) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -2158,7 +2158,7 @@ func (i InstructionMod) String() string {
 func (i InstructionMod) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionMod) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -2187,7 +2187,7 @@ func (i InstructionNegate) String() string {
 func (i InstructionNegate) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionNegate) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -2216,7 +2216,7 @@ func (i InstructionLess) String() string {
 func (i InstructionLess) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionLess) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -2245,7 +2245,7 @@ func (i InstructionLessOrEqual) String() string {
 func (i InstructionLessOrEqual) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionLessOrEqual) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -2274,7 +2274,7 @@ func (i InstructionGreater) String() string {
 func (i InstructionGreater) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionGreater) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -2303,7 +2303,7 @@ func (i InstructionGreaterOrEqual) String() string {
 func (i InstructionGreaterOrEqual) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionGreaterOrEqual) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -2332,7 +2332,7 @@ func (i InstructionBitwiseOr) String() string {
 func (i InstructionBitwiseOr) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionBitwiseOr) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -2361,7 +2361,7 @@ func (i InstructionBitwiseXor) String() string {
 func (i InstructionBitwiseXor) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionBitwiseXor) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -2390,7 +2390,7 @@ func (i InstructionBitwiseAnd) String() string {
 func (i InstructionBitwiseAnd) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionBitwiseAnd) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -2419,7 +2419,7 @@ func (i InstructionBitwiseLeftShift) String() string {
 func (i InstructionBitwiseLeftShift) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionBitwiseLeftShift) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -2448,7 +2448,7 @@ func (i InstructionBitwiseRightShift) String() string {
 func (i InstructionBitwiseRightShift) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionBitwiseRightShift) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -2477,7 +2477,7 @@ func (i InstructionIterator) String() string {
 func (i InstructionIterator) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionIterator) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -2506,7 +2506,7 @@ func (i InstructionIteratorHasNext) String() string {
 func (i InstructionIteratorHasNext) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionIteratorHasNext) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -2535,7 +2535,7 @@ func (i InstructionIteratorNext) String() string {
 func (i InstructionIteratorNext) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionIteratorNext) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -2564,7 +2564,7 @@ func (i InstructionIteratorEnd) String() string {
 func (i InstructionIteratorEnd) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionIteratorEnd) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -2603,7 +2603,7 @@ func (i InstructionEmitEvent) OperandsString(sb *strings.Builder, colorize bool)
 }
 
 func (i InstructionEmitEvent) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -2644,7 +2644,7 @@ func (i InstructionLoop) String() string {
 func (i InstructionLoop) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionLoop) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -2673,7 +2673,7 @@ func (i InstructionStatement) String() string {
 func (i InstructionStatement) OperandsString(sb *strings.Builder, colorize bool) {}
 
 func (i InstructionStatement) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {
@@ -2709,7 +2709,7 @@ func (i InstructionTemplateString) OperandsString(sb *strings.Builder, colorize 
 }
 
 func (i InstructionTemplateString) ResolvedOperandsString(sb *strings.Builder,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []interpreter.StaticType,
 	functionNames []string,
 	colorize bool) {

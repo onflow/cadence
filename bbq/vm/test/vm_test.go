@@ -8883,7 +8883,7 @@ func TestMetering(t *testing.T) {
 	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(28657), result)
 	assert.Equal(t, 0, vmInstance.StackSize())
 
-	assert.Equal(t, uint64(2032), memoryGauge.getMemory(common.MemoryKindBigInt))
+	assert.Equal(t, uint64(2016), memoryGauge.getMemory(common.MemoryKindBigInt))
 	assert.Equal(t, uint64(21), computationGauge.getComputation(common.ComputationKindLoop))
 }
 

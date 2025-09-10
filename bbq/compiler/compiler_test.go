@@ -110,7 +110,7 @@ func TestCompileRecursionFib(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{0x2},
 				Kind: constant.Int,
@@ -276,7 +276,7 @@ func TestCompileImperativeFib(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{0x1},
 				Kind: constant.Int,
@@ -387,7 +387,7 @@ func TestCompileBreak(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{0x0},
 				Kind: constant.Int,
@@ -487,7 +487,7 @@ func TestCompileContinue(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{0x0},
 				Kind: constant.Int,
@@ -685,7 +685,7 @@ func TestCompileArray(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{0x1},
 				Kind: constant.Int,
@@ -758,7 +758,7 @@ func TestCompileDictionary(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{'a'},
 				Kind: constant.String,
@@ -854,7 +854,7 @@ func TestCompileIfLet(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{0x2},
 				Kind: constant.Int,
@@ -955,7 +955,7 @@ func TestCompileIfLetScope(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{1},
 				Kind: constant.Int,
@@ -1067,7 +1067,7 @@ func TestCompileSwitch(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{0x0},
 				Kind: constant.Int,
@@ -1163,7 +1163,7 @@ func TestSwitchBreak(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{0x1},
 				Kind: constant.Int,
@@ -1265,7 +1265,7 @@ func TestWhileSwitchBreak(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{0x0},
 				Kind: constant.Int,
@@ -1574,7 +1574,7 @@ func TestCompileNestedLoop(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{0x0},
 				Kind: constant.Int,
@@ -1636,7 +1636,7 @@ func TestCompileAssignLocal(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{0x0},
 				Kind: constant.Int,
@@ -1709,7 +1709,7 @@ func TestCompileAssignGlobal(t *testing.T) {
 
 	// Constants
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{0x0},
 				Kind: constant.Int,
@@ -1904,7 +1904,7 @@ func TestCompileMember(t *testing.T) {
 	}
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte("foo"),
 				Kind: constant.String,
@@ -2039,7 +2039,7 @@ func TestCompileString(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte("Hello, world!"),
 				Kind: constant.String,
@@ -2100,7 +2100,7 @@ func TestCompilePositiveIntegers(t *testing.T) {
 			expectedConstantKind := constant.FromSemaType(integerType)
 
 			assert.Equal(t,
-				[]constant.Constant{
+				[]constant.DecodedConstant{
 					{
 						Data: expectedData,
 						Kind: expectedConstantKind,
@@ -2223,7 +2223,7 @@ func TestCompileNegativeIntegers(t *testing.T) {
 			expectedConstantKind := constant.FromSemaType(integerType)
 
 			assert.Equal(t,
-				[]constant.Constant{
+				[]constant.DecodedConstant{
 					{
 						Data: expectedData,
 						Kind: expectedConstantKind,
@@ -2302,7 +2302,7 @@ func TestCompileAddress(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{0x1},
 				Kind: constant.Address,
@@ -2363,7 +2363,7 @@ func TestCompilePositiveFixedPoint(t *testing.T) {
 			expectedConstantKind := constant.FromSemaType(fixedPointType)
 
 			assert.Equal(t,
-				[]constant.Constant{
+				[]constant.DecodedConstant{
 					{
 						Data: expectedData,
 						Kind: expectedConstantKind,
@@ -2446,7 +2446,7 @@ func TestCompileNegativeFixedPoint(t *testing.T) {
 			expectedConstantKind := constant.FromSemaType(fixedPointType)
 
 			assert.Equal(t,
-				[]constant.Constant{
+				[]constant.DecodedConstant{
 					{
 						Data: expectedData,
 						Kind: expectedConstantKind,
@@ -2649,7 +2649,7 @@ func TestCompileBinary(t *testing.T) {
 			)
 
 			assert.Equal(t,
-				[]constant.Constant{
+				[]constant.DecodedConstant{
 					{
 						Data: []byte{0x6},
 						Kind: constant.Int,
@@ -2740,7 +2740,7 @@ func TestCompileNilCoalesce(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{0},
 				Kind: constant.Int,
@@ -2969,7 +2969,7 @@ func TestCompilePath(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte("foo"),
 				Kind: constant.String,
@@ -3053,7 +3053,7 @@ func TestCompileBlockScope(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{1},
 				Kind: constant.Int,
@@ -3159,7 +3159,7 @@ func TestCompileBlockScope2(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{1},
 				Kind: constant.Int,
@@ -3302,7 +3302,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{42},
 				Kind: constant.Int,
@@ -4419,7 +4419,7 @@ func TestForLoop(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
 					Data: []byte{0xff},
 					Kind: constant.Int,
@@ -4728,7 +4728,7 @@ func TestCompileIf(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{0x0},
 				Kind: constant.Int,
@@ -4793,7 +4793,7 @@ func TestCompileConditional(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{0x1},
 				Kind: constant.Int,
@@ -5508,7 +5508,7 @@ func TestCompileFunctionExpression(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{0x1},
 				Kind: constant.Int,
@@ -5596,7 +5596,7 @@ func TestCompileInnerFunction(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{0x1},
 				Kind: constant.Int,
@@ -5781,7 +5781,7 @@ func TestCompileInnerFunctionOuterVariableUse(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{0x1},
 				Kind: constant.Int,
@@ -5903,7 +5903,7 @@ func TestCompileInnerFunctionOuterOuterVariableUse(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{0x1},
 				Kind: constant.Int,
@@ -6179,7 +6179,7 @@ func TestCompileFunctionExpressionOuterOuterVariableUse(t *testing.T) {
 	}
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{0x1},
 				Kind: constant.Int,
@@ -6247,7 +6247,7 @@ func TestCompileTransferConstant(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
 					Data: []byte{0x1},
 					Kind: constant.Int,
@@ -6291,7 +6291,7 @@ func TestCompileTransferConstant(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
 					Data: []byte{0x1},
 					Kind: constant.Int,
@@ -6344,7 +6344,7 @@ func TestCompileTransferNewPath(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
 					Data: []byte("foo"),
 					Kind: constant.String,
@@ -6391,7 +6391,7 @@ func TestCompileTransferNewPath(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
 					Data: []byte("foo"),
 					Kind: constant.String,
@@ -7069,7 +7069,7 @@ func TestCompileOptionalChaining(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
 					Data: []byte("bar"),
 					Kind: constant.String,
@@ -7769,7 +7769,7 @@ func TestCompileEnum(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{0x0},
 				Kind: constant.UInt8,
@@ -7865,7 +7865,7 @@ func TestCompileOptionalArgument(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
 					Data: []byte("hello"),
 					Kind: constant.String,
@@ -7961,7 +7961,7 @@ func TestCompileOptionalArgument(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
 					Data: []byte{0x1},
 					Kind: constant.Address,
@@ -8062,7 +8062,7 @@ func TestCompileContract(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{0x1},
 				Kind: constant.Address,
@@ -8155,7 +8155,7 @@ func TestCompileSwapIdentifiers(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte{0x1},
 				Kind: constant.Int,
@@ -8251,7 +8251,7 @@ func TestCompileSwapMembers(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte("x"),
 				Kind: constant.String,
@@ -8364,7 +8364,7 @@ func TestCompileSwapIndex(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte("a"),
 				Kind: constant.String,
@@ -8429,7 +8429,7 @@ func TestCompileStringTemplate(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
 					Data: []byte("2+2="),
 					Kind: constant.String,
@@ -8505,7 +8505,7 @@ func TestCompileStringTemplate(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
 					Data: []byte("A"),
 					Kind: constant.String,
@@ -9271,7 +9271,7 @@ func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte("answer"),
 				Kind: constant.String,
@@ -9418,7 +9418,7 @@ func TestCompileInjectedContract(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
 				Data: []byte("d"),
 				Kind: constant.String,

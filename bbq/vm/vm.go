@@ -1073,7 +1073,7 @@ func opNewCompositeAt(vm *VM, ins opcode.InstructionNewCompositeAt) {
 		vm,
 		ins.Kind,
 		ins.Type,
-		common.MustBytesToAddress(c.Data),
+		c.Data.(common.Address),
 	)
 	vm.push(compositeValue)
 }
@@ -1189,7 +1189,7 @@ func opRemoveField(vm *VM, ins opcode.InstructionRemoveField) {
 func getStringConstant(vm *VM, index uint16) string {
 	executable := vm.callFrame.function.Executable
 	c := executable.Program.Constants[index]
-	return string(c.Data)
+	return c.Data.(string)
 }
 
 func opTransferAndConvert(vm *VM, ins opcode.InstructionTransferAndConvert) {
@@ -1769,97 +1769,16 @@ func (vm *VM) initializeConstant(index uint16) (value Value) {
 	executable := vm.callFrame.function.Executable
 	c := executable.Program.Constants[index]
 
-	memoryGauge := vm.context.MemoryGauge
-
 	switch c.Kind {
 	case constant.String:
-		value = interpreter.NewUnmeteredStringValue(string(c.Data))
+		value = interpreter.NewUnmeteredStringValue(c.Data.(string))
 
 	case constant.Character:
-		value = interpreter.NewUnmeteredCharacterValue(string(c.Data))
+		value = interpreter.NewUnmeteredCharacterValue(c.Data.(string))
 
-	case constant.Int:
-		value = interpreter.NewIntValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Int8:
-		value = interpreter.NewInt8ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Int16:
-		value = interpreter.NewInt16ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Int32:
-		value = interpreter.NewInt32ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Int64:
-		value = interpreter.NewInt64ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Int128:
-		value = interpreter.NewInt128ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Int256:
-		value = interpreter.NewInt256ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt:
-		value = interpreter.NewUIntValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt8:
-		value = interpreter.NewUInt8ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt16:
-		value = interpreter.NewUInt16ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt32:
-		value = interpreter.NewUInt32ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt64:
-		value = interpreter.NewUInt64ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt128:
-		value = interpreter.NewUInt128ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt256:
-		value = interpreter.NewUInt256ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Word8:
-		value = interpreter.NewWord8ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Word16:
-		value = interpreter.NewWord16ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Word32:
-		value = interpreter.NewWord32ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Word64:
-		value = interpreter.NewWord64ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Word128:
-		value = interpreter.NewWord128ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Word256:
-		value = interpreter.NewWord256ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Fix64:
-		value = interpreter.NewFix64ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Fix128:
-		value = interpreter.NewFix128ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UFix64:
-		value = interpreter.NewUFix64ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UFix128:
-		value = interpreter.NewUFix128ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Address:
-		value = interpreter.NewAddressValueFromBytes(
-			memoryGauge,
-			func() []byte {
-				return c.Data
-			},
-		)
-
+	// All values are stored in constants as-is (decoded value).
 	default:
-		panic(errors.NewUnexpectedError("unsupported constant kind: %s", c.Kind))
+		value = c.Data.(Value)
 	}
 
 	executable.Constants[index] = value
