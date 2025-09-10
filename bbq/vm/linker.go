@@ -126,9 +126,9 @@ func LinkGlobals(
 	indexedGlobals := activations.NewActivation[Variable](memoryGauge, nil)
 
 	// NOTE: ensure both the context and the mapping are updated
-	// iteration of globals is in arbitrary order, does not matter as long as all (nonimported) globals are visited
-	for _, global := range program.Globals { //nolint:maprange
-		// ignore imported globals, they will be linked later
+
+	for i, global := range program.Globals {
+		// ignore imported globals, they are already linked and will be added later
 		if global.Kind == bbq.GlobalKindImported {
 			continue
 		}
@@ -136,12 +136,6 @@ func LinkGlobals(
 		switch global.Kind {
 		case bbq.GlobalKindFunction:
 			function := global.Function
-			// Anonymous functions are not needed as global variables.
-			// Compiler doesn't reserve global variable for them either.
-			if function.IsAnonymous() {
-				continue
-			}
-
 			var value FunctionValue
 
 			if function.IsNative() {
@@ -154,7 +148,7 @@ func LinkGlobals(
 			variable := &interpreter.SimpleVariable{}
 			variable.InitializeWithValue(value)
 			// Linker matches the compiled function index with the linked function index
-			globals[global.Index] = variable
+			globals[i] = variable
 			indexedGlobals.Set(function.QualifiedName, variable)
 		case bbq.GlobalKindVariable:
 			variable := global.Variable
@@ -173,7 +167,7 @@ func LinkGlobals(
 				})
 			}
 			// Linker matches the compiled variable index with the linked variable index
-			globals[global.Index] = simpleVariable
+			globals[i] = simpleVariable
 			indexedGlobals.Set(variable.Name, simpleVariable)
 		case bbq.GlobalKindContract:
 			contract := global.Contract
@@ -184,7 +178,7 @@ func LinkGlobals(
 				},
 			)
 			// Linker matches the compiled contract index with the linked contract index
-			globals[global.Index] = contractVariable
+			globals[i] = contractVariable
 			indexedGlobals.Set(contract.Name, contractVariable)
 		}
 	}

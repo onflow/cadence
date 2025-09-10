@@ -19,8 +19,10 @@
 package compiler
 
 import (
+	"maps"
 	"math"
 	"math/big"
+	"slices"
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
@@ -224,7 +226,7 @@ func (c *Compiler[E, _]) findGlobal(name string) *bbq.Global[E] {
 		c.Config.MemoryGauge,
 		name,
 		importedGlobal.Location,
-		(uint16)(count),
+		uint16(count),
 		bbq.GlobalKindImported,
 	)
 	c.Globals[name] = global
@@ -626,6 +628,16 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 	variables := c.exportGlobalVariables()
 	globals := c.exportGlobals()
 
+	// associate the contract with the global for linking
+	// can't do this in exportContracts because it's called before initializeAllGlobals
+	for _, contract := range contracts {
+		global := c.Globals[contract.Name]
+		if global.Location != nil && global == nil {
+			panic(errors.NewUnexpectedError("global not found for contract %s", contract.Name))
+		}
+		global.Contract = contract
+	}
+
 	return &bbq.Program[E, T]{
 		Functions: functions,
 		Constants: constants,
@@ -823,8 +835,14 @@ func (c *Compiler[_, T]) exportTypes() []T {
 	return c.compiledTypes
 }
 
-func (c *Compiler[E, _]) exportGlobals() map[string]*bbq.Global[E] {
-	return c.Globals
+func (c *Compiler[E, _]) exportGlobals() []*bbq.Global[E] {
+	// create a sorted global slice by index for linker efficiency
+	// tradeoff: compiler does more work to sort the globals, but linker does less work to link the globals
+	globalsSlice := slices.Collect(maps.Values(c.Globals))
+	slices.SortFunc(globalsSlice, func(a, b *bbq.Global[E]) int {
+		return int(a.Index) - int(b.Index)
+	})
+	return globalsSlice
 }
 
 func (c *Compiler[_, _]) exportImports() []bbq.Import {
@@ -853,16 +871,21 @@ func (c *Compiler[E, _]) exportFunctions() []bbq.Function[E] {
 		functions = make([]bbq.Function[E], 0, count)
 		for _, function := range c.functions {
 			newFunction := c.newBBQFunction(function)
-			// associate the function with the global for linking
-			global := c.Globals[function.qualifiedName]
-			if global == nil {
-				panic(errors.NewUnexpectedError("global not found for function %s", function.qualifiedName))
-			}
-			global.Function = &newFunction
 			functions = append(
 				functions,
 				newFunction,
 			)
+			// associate the function with the global for linking
+			global := c.Globals[function.qualifiedName]
+			// function expressions do not have globals
+			// see VisitFunctionExpression
+			if function.qualifiedName == "" {
+				continue
+			}
+			if global == nil {
+				panic(errors.NewUnexpectedError("global not found for function %s", function.qualifiedName))
+			}
+			global.Function = &newFunction
 		}
 	}
 	return functions
@@ -906,7 +929,7 @@ func (c *Compiler[E, _]) exportGlobalVariables() []bbq.Variable[E] {
 			// associate the variable with the global for linking
 			global := c.Globals[variable.Name]
 			if global == nil {
-				panic(errors.NewUnexpectedError("global not found for variable %s", variable.Name))
+				panic(errors.NewUnexpectedError("global not found for global variable %s", variable.Name))
 			}
 			global.Variable = &variable
 
@@ -945,14 +968,6 @@ func (c *Compiler[_, _]) exportContracts() []*bbq.Contract {
 			Name:    name,
 			Address: addressBytes,
 		}
-
-		// associate the contract with the global for linking
-		global := c.Globals[name]
-		if global == nil {
-			panic(errors.NewUnexpectedError("global not found for contract %s", name))
-		}
-		global.Contract = &contract
-
 		contracts = append(
 			contracts,
 			&contract,

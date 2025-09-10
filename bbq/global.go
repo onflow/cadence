@@ -35,12 +35,11 @@ type Global[E any] struct {
 	Name     string
 	Location common.Location
 	Index    uint16
-	// used for linking to retrieve the function/variable/contract from the current program
+	// used for linking
 	Function *Function[E]
 	Variable *Variable[E]
 	Contract *Contract
-	// used for linking of the current program's globals
-	Kind GlobalKind
+	Kind     GlobalKind
 }
 
 func NewGlobal[E any](
@@ -57,16 +56,4 @@ func NewGlobal[E any](
 		Index:    index,
 		Kind:     kind,
 	}
-}
-
-func (g *Global[E]) GetFunction() *Function[E] {
-	return g.Function
-}
-
-func (g *Global[E]) GetVariable() *Variable[E] {
-	return g.Variable
-}
-
-func (g *Global[E]) GetContract() *Contract {
-	return g.Contract
 }

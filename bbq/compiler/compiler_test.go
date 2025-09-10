@@ -7593,8 +7593,8 @@ func TestCompileEnum(t *testing.T) {
 		testCGlobalIndex
 		testLookupGlobalIndex
 		testGlobalIndex
-		testConstructorGlobalIndex
 		test2GlobalIndex
+		testConstructorGlobalIndex
 	)
 
 	{
