@@ -854,7 +854,7 @@ func (c *Compiler[_, T]) exportTypes() []T {
 func (c *Compiler[E, _]) exportGlobals() []*bbq.Global[E] {
 	// create a sorted global slice by index for linker efficiency
 	// tradeoff: compiler does more work to sort the globals, but linker does less work to link the globals
-	globalsSlice := slices.Collect(maps.Values(c.Globals))
+	globalsSlice := slices.Collect(maps.Values(c.Globals)) //nolint:forbidigo
 	slices.SortFunc(globalsSlice, func(a, b *bbq.Global[E]) int {
 		return int(a.Index) - int(b.Index)
 	})
@@ -3083,16 +3083,17 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	typeName := commons.TypeQualifier(enclosingType)
 
 	var functionName string
-	if kind == common.CompositeKindContract {
+	switch kind {
+	case common.CompositeKindContract:
 		// For contracts, add the initializer as `init()`.
 		// A global variable with the same name as contract is separately added.
 		// The VM will load the contract and assign to that global variable during imports resolution.
 		identifier := declaration.DeclarationIdentifier().Identifier
 		functionName = commons.QualifiedName(typeName, identifier)
-	} else if kind == common.CompositeKindEnum {
+	case common.CompositeKindEnum:
 		// Match the associated global variable for enums, `Enum.init()`.
 		functionName = commons.TypeQualifiedName(enclosingType, commons.InitFunctionName)
-	} else {
+	default:
 		// Use the type name as the function name for initializer.
 		// So `x = Foo()` would directly call the init method.
 		functionName = typeName
