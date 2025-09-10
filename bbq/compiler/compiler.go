@@ -370,8 +370,14 @@ func (c *Compiler[_, _]) addConstant(kind constant.Kind, data constant.ConstantD
 	}
 
 	// Optimization: Reuse the constant if it is already added to the constant pool.
-	if constant, ok := c.constantsInPool[data]; ok {
-		return constant
+	for constantData, decodedConstant := range c.constantsInPool {
+		// TODO: improve: `interpreter.Value` typed constants are not comparable
+		// using `==`.
+		// At the moment this will only optimize the raw-string typed constants.
+		// (that are used for names in dynamic dispatching, member-access, etc.)
+		if constantData == data {
+			return decodedConstant
+		}
 	}
 
 	constant := NewDecodedConstant(
@@ -396,7 +402,13 @@ func (c *Compiler[_, _]) emitStringConst(str string) {
 }
 
 func (c *Compiler[_, _]) addStringConst(str string) *DecodedConstant {
-	return c.addConstant(constant.String, str)
+	// NOTE: already metered in lexer/parser. This is also equivalent in the interpreter.
+	stringValue := interpreter.NewUnmeteredStringValue(str)
+	return c.addConstant(constant.String, stringValue)
+}
+
+func (c *Compiler[_, _]) addRawStringConst(str string) *DecodedConstant {
+	return c.addConstant(constant.RawString, str)
 }
 
 func (c *Compiler[_, _]) emitCharacterConst(str string) {
@@ -404,7 +416,9 @@ func (c *Compiler[_, _]) emitCharacterConst(str string) {
 }
 
 func (c *Compiler[_, _]) addCharacterConst(str string) *DecodedConstant {
-	return c.addConstant(constant.Character, str)
+	// NOTE: already metered in lexer/parser. This is also equivalent in the interpreter.
+	stringValue := interpreter.NewUnmeteredCharacterValue(str)
+	return c.addConstant(constant.Character, stringValue)
 }
 
 func (c *Compiler[_, _]) emitIntConst(i int64) {
@@ -1584,7 +1598,7 @@ func (c *Compiler[_, _]) compileVariableDeclaration(
 		}
 		memberAccessedTypeIndex := c.getOrAddType(memberAccessInfo.AccessedType)
 
-		constant := c.addStringConst(firstValue.Identifier.Identifier)
+		constant := c.addRawStringConst(firstValue.Identifier.Identifier)
 		c.emit(opcode.InstructionSetField{
 			FieldName:    constant.index,
 			AccessedType: memberAccessedTypeIndex,
@@ -1690,7 +1704,7 @@ func (c *Compiler[_, _]) compileAssignment(
 		c.compileExpression(target.Expression)
 		c.compileExpression(value)
 		c.emitTransferAndConvert(targetType)
-		constant := c.addStringConst(target.Identifier.Identifier)
+		constant := c.addRawStringConst(target.Identifier.Identifier)
 
 		memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(target)
 		if !ok {
@@ -1870,7 +1884,7 @@ func (c *Compiler[_, _]) compileSwapSet(
 		c.emitGetLocal(valueIndex)
 
 		name := sideExpression.Identifier.Identifier
-		constant := c.addStringConst(name)
+		constant := c.addRawStringConst(name)
 
 		memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(sideExpression)
 		if !ok {
@@ -2371,7 +2385,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 				// Compile arguments
 				c.compileArguments(expression.Arguments, invocationTypes)
 
-				funcNameConst := c.addStringConst(funcName)
+				funcNameConst := c.addRawStringConst(funcName)
 
 				c.emit(
 					opcode.InstructionInvokeDynamic{
@@ -2627,7 +2641,7 @@ func (c *Compiler[_, _]) compileMemberAccess(expression *ast.MemberExpression) {
 
 	identifier := expression.Identifier.Identifier
 
-	constant := c.addStringConst(identifier)
+	constant := c.addRawStringConst(identifier)
 
 	memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(expression)
 	if !ok {
@@ -2995,7 +3009,7 @@ func (c *Compiler[_, _]) VisitPathExpression(expression *ast.PathExpression) (_ 
 		panic(errors.NewDefaultUserError("invalid identifier"))
 	}
 
-	identifierConst := c.addStringConst(identifier)
+	identifierConst := c.addRawStringConst(identifier)
 	identifierIndex := identifierConst.index
 
 	c.emit(
@@ -3104,7 +3118,8 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 			)
 		}
 	} else {
-		addressConstant := c.addConstant(constant.Address, address)
+		addressValue := interpreter.NewAddressValue(c.Config.MemoryGauge, address)
+		addressConstant := c.addConstant(constant.Address, addressValue)
 		c.emit(
 			opcode.InstructionNewCompositeAt{
 				Kind:    kind,

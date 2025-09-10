@@ -35,7 +35,7 @@ func NewDecodedConstant(
 	gauge common.MemoryGauge,
 	index uint16,
 	kind constant.Kind,
-	data any,
+	data constant.ConstantData,
 ) *DecodedConstant {
 	common.UseMemory(gauge, common.CompilerConstantMemoryUsage)
 	return &DecodedConstant{

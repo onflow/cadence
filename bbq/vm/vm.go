@@ -28,7 +28,6 @@ import (
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
-	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -751,7 +750,7 @@ func opFalse(vm *VM) {
 	vm.push(interpreter.FalseValue)
 }
 
-func opGetConstant(vm *VM, ins opcode.InstructionGetConstant) {
+func opGetValueConstant(vm *VM, ins opcode.InstructionGetConstant) {
 	constantIndex := ins.Constant
 	executable := vm.callFrame.function.Executable
 	c := executable.Constants[constantIndex]
@@ -926,7 +925,7 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
 
 	// Get function
 	nameIndex := ins.Name
-	funcName := getStringConstant(vm, nameIndex)
+	funcName := getRawStringConstant(vm, nameIndex)
 
 	// Load the invoked value
 	memberAccessibleValue := receiver.(interpreter.MemberAccessibleValue)
@@ -1069,11 +1068,13 @@ func opNewCompositeAt(vm *VM, ins opcode.InstructionNewCompositeAt) {
 	executable := vm.callFrame.function.Executable
 	c := executable.Program.Constants[ins.Address]
 
+	addressValue := c.Data.(interpreter.AddressValue)
+
 	compositeValue := newCompositeValue(
 		vm,
 		ins.Kind,
 		ins.Type,
-		c.Data.(common.Address),
+		addressValue.ToAddress(),
 	)
 	vm.push(compositeValue)
 }
@@ -1115,7 +1116,7 @@ func opSetField(vm *VM, ins opcode.InstructionSetField) {
 
 	// VM assumes the field name is always a string.
 	fieldNameIndex := ins.FieldName
-	fieldName := getStringConstant(vm, fieldNameIndex)
+	fieldName := getRawStringConstant(vm, fieldNameIndex)
 
 	memberAccessibleValue := target.(interpreter.MemberAccessibleValue)
 	memberAccessibleValue.SetMember(
@@ -1137,7 +1138,7 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 
 	// VM assumes the field name is always a string.
 	fieldNameIndex := ins.FieldName
-	fieldName := getStringConstant(vm, fieldNameIndex)
+	fieldName := getRawStringConstant(vm, fieldNameIndex)
 
 	fieldValue := memberAccessibleValue.GetMember(vm.context, EmptyLocationRange, fieldName)
 	if fieldValue == nil {
@@ -1174,7 +1175,7 @@ func opRemoveField(vm *VM, ins opcode.InstructionRemoveField) {
 
 	// VM assumes the field name is always a string.
 	fieldNameIndex := ins.FieldName
-	fieldName := getStringConstant(vm, fieldNameIndex)
+	fieldName := getRawStringConstant(vm, fieldNameIndex)
 
 	fieldValue := memberAccessibleValue.RemoveMember(vm.context, EmptyLocationRange, fieldName)
 	if fieldValue == nil {
@@ -1186,7 +1187,7 @@ func opRemoveField(vm *VM, ins opcode.InstructionRemoveField) {
 	vm.push(fieldValue)
 }
 
-func getStringConstant(vm *VM, index uint16) string {
+func getRawStringConstant(vm *VM, index uint16) string {
 	executable := vm.callFrame.function.Executable
 	c := executable.Program.Constants[index]
 	return c.Data.(string)
@@ -1237,7 +1238,7 @@ func opDestroy(vm *VM) {
 
 func opNewPath(vm *VM, ins opcode.InstructionNewPath) {
 	identifierIndex := ins.Identifier
-	identifier := getStringConstant(vm, identifierIndex)
+	identifier := getRawStringConstant(vm, identifierIndex)
 	value := interpreter.NewPathValue(
 		vm.context.MemoryGauge,
 		ins.Domain,
@@ -1581,7 +1582,7 @@ func (vm *VM) run() {
 		case opcode.InstructionFalse:
 			opFalse(vm)
 		case opcode.InstructionGetConstant:
-			opGetConstant(vm, ins)
+			opGetValueConstant(vm, ins)
 		case opcode.InstructionGetLocal:
 			opGetLocal(vm, ins)
 		case opcode.InstructionSetLocal:
@@ -1765,22 +1766,11 @@ func opStatement(vm *VM) {
 	common.UseComputation(vm.context, common.StatementComputationUsage)
 }
 
-func (vm *VM) initializeConstant(index uint16) (value Value) {
+func (vm *VM) initializeConstant(index uint16) Value {
 	executable := vm.callFrame.function.Executable
 	c := executable.Program.Constants[index]
 
-	switch c.Kind {
-	case constant.String:
-		value = interpreter.NewUnmeteredStringValue(c.Data.(string))
-
-	case constant.Character:
-		value = interpreter.NewUnmeteredCharacterValue(c.Data.(string))
-
-	// All values are stored in constants as-is (decoded value).
-	default:
-		value = c.Data.(Value)
-	}
-
+	value := c.Data.(Value)
 	executable.Constants[index] = value
 
 	return value

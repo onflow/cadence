@@ -130,11 +130,11 @@ func TestPrintResolved(t *testing.T) {
 		resolve,
 		[]constant.DecodedConstant{
 			{
-				Data: []byte("foo"),
+				Data: interpreter.NewUnmeteredStringValue("foo"),
 				Kind: constant.String,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 		},
