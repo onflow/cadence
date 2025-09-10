@@ -53,12 +53,12 @@ func prepareWithTracingCallBack(
 	if *compile {
 		config := vm.NewConfig(storage)
 		config.Tracer = interpreter.CallbackTracer(onRecordTrace)
-		config.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+		config.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 			if typeID == testCompositeValueType.ID() {
-				return testCompositeValueType, nil
+				return testCompositeValueType
 			}
 			t.Fatalf("unexpected type ID: %s", typeID)
-			return nil, nil
+			return nil
 		}
 		config.ImportHandler = func(_ common.Location) *bbq.InstructionProgram {
 			return &bbq.InstructionProgram{}

@@ -184,6 +184,11 @@ func generateErrors() []namedError {
 				DeclarationKind: placeholderDeclarationKind,
 			},
 		},
+		{"parser.InvalidTokenInImportAliasError",
+			&parser.InvalidTokenInImportAliasError{
+				GotToken: placeholderToken,
+			},
+		},
 		{"parser.InvalidTokenInImportListError",
 			&parser.InvalidTokenInImportListError{
 				GotToken: placeholderToken,
@@ -752,6 +757,18 @@ func generateErrors() []namedError {
 				Map:          placeholderEntitlementMapType,
 				IncludedType: placeholderEntitlementMapType,
 				Range:        placeholderRange,
+			},
+		},
+		{"sema.DuplicateImportAliasError",
+			&sema.DuplicateImportAliasError{
+				Alias: placeholderIdentifier,
+			},
+		},
+		{"sema.DuplicateImportError",
+			&sema.DuplicateImportError{
+				Location:   placeholderLocation,
+				Identifier: placeholderString,
+				Pos:        placeholderPosition,
 			},
 		},
 		{"sema.EmitDefaultDestroyEventError",
@@ -1595,7 +1612,7 @@ func generateErrors() []namedError {
 		{"sema.SpecialFunctionDefaultImplementationError",
 			&sema.SpecialFunctionDefaultImplementationError{
 				Container:  placeholderDeclaration,
-				Identifier: placeholderIdentifier,
+				Identifier: placeholderIdentifierPointer,
 				KindName:   placeholderString,
 			},
 		},

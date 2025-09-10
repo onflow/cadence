@@ -51,8 +51,8 @@ type Desugar struct {
 	inheritedConditionParamBinding map[ast.Statement]map[string]string
 	isInheritedFunction            bool
 
-	importsSet map[common.Location]struct{}
-	newImports []ast.Declaration
+	importedLocationsSet map[common.Location]struct{}
+	newImports           []ast.Declaration
 }
 
 type inheritedFunction struct {
@@ -85,7 +85,7 @@ func NewDesugar(
 		elaboration:                    elaboration,
 		program:                        program,
 		location:                       location,
-		importsSet:                     map[common.Location]struct{}{},
+		importedLocationsSet:           map[common.Location]struct{}{},
 		inheritedFuncsWithConditions:   map[string][]*inheritedFunction{},
 		postConditionIndices:           map[*ast.FunctionBlock]int{},
 		inheritedConditionParamBinding: map[ast.Statement]map[string]string{},
@@ -1419,24 +1419,33 @@ func (d *Desugar) addImport(location common.Location) {
 
 	switch location := location.(type) {
 	case common.AddressLocation:
-		_, exists := d.importsSet[location]
+		_, exists := d.importedLocationsSet[location]
 		if exists {
 			return
 		}
 
+		importDeclaration := ast.NewImportDeclaration(
+			d.memoryGauge,
+			[]ast.Import{
+				{
+					Identifier: ast.NewIdentifier(
+						d.memoryGauge,
+						location.Name,
+						ast.EmptyPosition,
+					),
+				},
+			},
+			location,
+			ast.EmptyRange,
+			ast.EmptyPosition,
+		)
+
 		d.newImports = append(
 			d.newImports,
-			ast.NewImportDeclaration(
-				d.memoryGauge,
-				[]ast.Identifier{
-					ast.NewIdentifier(d.memoryGauge, location.Name, ast.EmptyPosition),
-				},
-				location,
-				ast.EmptyRange,
-				ast.EmptyPosition,
-			))
+			importDeclaration,
+		)
 
-		d.importsSet[location] = struct{}{}
+		d.importedLocationsSet[location] = struct{}{}
 	default:
 		panic(errors.NewUnreachableError())
 	}
@@ -1684,9 +1693,15 @@ func (d *Desugar) VisitPragmaDeclaration(declaration *ast.PragmaDeclaration) ast
 }
 
 func (d *Desugar) VisitImportDeclaration(declaration *ast.ImportDeclaration) ast.Declaration {
+
+	var identifiers []ast.Identifier
+	for _, imp := range declaration.Imports {
+		identifiers = append(identifiers, imp.Identifier)
+	}
+
 	resolvedLocations, err := commons.ResolveLocation(
 		d.config.LocationHandler,
-		declaration.Identifiers,
+		identifiers,
 		declaration.Location,
 	)
 	if err != nil {
@@ -1695,12 +1710,12 @@ func (d *Desugar) VisitImportDeclaration(declaration *ast.ImportDeclaration) ast
 
 	for _, resolvedLocation := range resolvedLocations {
 		location := resolvedLocation.Location
-		_, exists := d.importsSet[location]
+		_, exists := d.importedLocationsSet[location]
 		if exists {
 			return nil
 		}
 
-		d.importsSet[location] = struct{}{}
+		d.importedLocationsSet[location] = struct{}{}
 	}
 
 	return declaration

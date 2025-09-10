@@ -189,9 +189,11 @@ var placeholderOptionalType = &sema.OptionalType{
 
 var placeholderDeclaration = placeholderCompositeLikeDeclaration
 
-var placeholderIdentifier = &ast.Identifier{
+var placeholderIdentifier = ast.Identifier{
 	Identifier: "placeholder",
 }
+
+var placeholderIdentifierPointer = &placeholderIdentifier
 
 var placeholderReferenceType = &sema.ReferenceType{
 	Type:          sema.IntType,
