@@ -3054,7 +3054,7 @@ func TestInterpretMovedResourceInOptionalBinding(t *testing.T) {
 	// Error must be thrown at `copy2: <- victim`
 	errorStartPos := invalidResourceError.LocationRange.StartPosition()
 	assert.Equal(t, 15, errorStartPos.Line)
-	assert.Equal(t, 58, errorStartPos.Column)
+	assert.Equal(t, ifCompile(55, 58), errorStartPos.Column)
 }
 
 func TestInterpretMovedResourceInSecondValue(t *testing.T) {
@@ -3100,7 +3100,7 @@ func TestInterpretMovedResourceInSecondValue(t *testing.T) {
 	// Error must be thrown at `copy2: <- victim`
 	errorStartPos := invalidResourceError.LocationRange.StartPosition()
 	assert.Equal(t, 15, errorStartPos.Line)
-	assert.Equal(t, 55, errorStartPos.Column)
+	assert.Equal(t, ifCompile(52, 55), errorStartPos.Column)
 }
 
 func TestInterpretResourceLoss(t *testing.T) {
