@@ -380,6 +380,25 @@ func (v UIntValue) SaturatingDiv(context NumberValueArithmeticContext, other Num
 	return v.Div(context, other, locationRange)
 }
 
+func minSliceLength[T []U, U any](a, b T) int {
+	if len(a) < len(b) {
+		return len(a)
+	}
+	return len(b)
+}
+
+func (v UIntValue) compare(context ValueComparisonContext, o UIntValue) int {
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindWordSliceComparison,
+			Intensity: uint64(minSliceLength(v.BigInt.Bits(), o.BigInt.Bits())),
+		},
+	)
+
+	return v.BigInt.Cmp(o.BigInt)
+}
+
 func (v UIntValue) Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UIntValue)
 	if !ok {
@@ -391,8 +410,7 @@ func (v UIntValue) Less(context ValueComparisonContext, other ComparableValue, l
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == -1
+	return v.compare(context, o) == -1
 }
 
 func (v UIntValue) LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -406,8 +424,7 @@ func (v UIntValue) LessEqual(context ValueComparisonContext, other ComparableVal
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp <= 0
+	return v.compare(context, o) <= 0
 }
 
 func (v UIntValue) Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -421,8 +438,7 @@ func (v UIntValue) Greater(context ValueComparisonContext, other ComparableValue
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp == 1
+	return v.compare(context, o) == 1
 }
 
 func (v UIntValue) GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -436,23 +452,22 @@ func (v UIntValue) GreaterEqual(context ValueComparisonContext, other Comparable
 		})
 	}
 
-	cmp := v.BigInt.Cmp(o.BigInt)
-	return cmp >= 0
+	return v.compare(context, o) >= 0
 }
 
-func (v UIntValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
-	otherUInt, ok := other.(UIntValue)
+func (v UIntValue) Equal(context ValueComparisonContext, _ LocationRange, other Value) bool {
+	o, ok := other.(UIntValue)
 	if !ok {
 		return false
 	}
-	cmp := v.BigInt.Cmp(otherUInt.BigInt)
-	return cmp == 0
+
+	return v.compare(context, o) == 0
 }
 
 // HashInput returns a byte slice containing:
 // - HashInputTypeUInt (1 byte)
 // - big int value encoded in big-endian (n bytes)
-func (v UIntValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+func (v UIntValue) HashInput(_ common.Gauge, _ LocationRange, scratch []byte) []byte {
 	b := values.UnsignedBigIntToBigEndianBytes(v.BigInt)
 
 	length := 1 + len(b)

@@ -4385,7 +4385,7 @@ func getStorageCapabilityControllerIDsIterator(
 		}, 0
 	}
 
-	iterator := capabilityIDSet.Iterator()
+	iterator := capabilityIDSet.Iterator(context)
 
 	count = uint64(capabilityIDSet.Count())
 	nextCapabilityID = func() (uint64, bool) {

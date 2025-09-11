@@ -27,8 +27,7 @@ type ComputationKind uint
 const ComputationKindRangeStart = 1000
 
 const (
-	ComputationKindUnknown ComputationKind = 0
-	// interpreter - base
+	ComputationKindUnknown   ComputationKind = 0
 	ComputationKindStatement ComputationKind = ComputationKindRangeStart + iota
 	ComputationKindLoop
 	ComputationKindFunctionInvocation
@@ -38,7 +37,6 @@ const (
 	_
 	_
 	_
-	// interpreter value operations
 	ComputationKindCreateCompositeValue
 	ComputationKindTransferCompositeValue
 	ComputationKindDestroyCompositeValue
@@ -84,10 +82,10 @@ const (
 	_
 	_
 	_
-	_
-	_
-	_
-	_
+	ComputationKindStringToLower
+	ComputationKindStringDecodeHex
+	ComputationKindGraphemesIteration
+	ComputationKindStringComparison
 	_
 	_
 	_
@@ -110,6 +108,12 @@ const (
 	_
 	_
 	ComputationKindEncodeValue
+	ComputationKindWordSliceComparison
+	ComputationKindUintParse
+	ComputationKindIntParse
+	ComputationKindBigIntParse
+	ComputationKindUfixParse
+	ComputationKindFixParse
 	_
 	_
 	_
@@ -123,13 +127,7 @@ const (
 	_
 	_
 	_
-	_
-	_
-	_
-	_
-	_
-	_
-	// stdlibs computation kinds
+	// stdlib
 	//
 	ComputationKindSTDLIBPanic
 	ComputationKindSTDLIBAssert
@@ -142,4 +140,122 @@ const (
 	// RLP
 	ComputationKindSTDLIBRLPDecodeString
 	ComputationKindSTDLIBRLPDecodeList
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	// atree array
+	_
+	ComputationKindAtreeArrayBatchConstruction
+	ComputationKindAtreeArrayGet
+	ComputationKindAtreeArraySet
+	ComputationKindAtreeArrayAppend
+	ComputationKindAtreeArrayInsert
+	ComputationKindAtreeArrayRemove
+	ComputationKindAtreeArrayReadIteration
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	ComputationKindAtreeMapConstruction
+	ComputationKindAtreeMapBatchConstruction
+	ComputationKindAtreeMapHas
+	ComputationKindAtreeMapGet
+	ComputationKindAtreeMapSet
+	ComputationKindAtreeMapRemove
+	ComputationKindAtreeMapReadIteration
 )

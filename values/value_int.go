@@ -171,34 +171,47 @@ func (v IntValue) SaturatingDiv(gauge common.MemoryGauge, other IntValue) (IntVa
 	return v.Div(gauge, other)
 }
 
-func (v IntValue) Less(other IntValue) bool {
-	cmp := v.BigInt.Cmp(other.BigInt)
-	return cmp == -1
+func minSliceLength[T []U, U any](a, b T) int {
+	if len(a) < len(b) {
+		return len(a)
+	}
+	return len(b)
 }
 
-func (v IntValue) LessEqual(other IntValue) bool {
-	cmp := v.BigInt.Cmp(other.BigInt)
-	return cmp <= 0
+func (v IntValue) compare(gauge common.ComputationGauge, other IntValue) int {
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindWordSliceComparison,
+			Intensity: uint64(minSliceLength(v.BigInt.Bits(), other.BigInt.Bits())),
+		},
+	)
+	return v.BigInt.Cmp(other.BigInt)
 }
 
-func (v IntValue) Greater(other IntValue) bool {
-	cmp := v.BigInt.Cmp(other.BigInt)
-	return cmp == 1
-
+func (v IntValue) Less(gauge common.Gauge, other IntValue) bool {
+	return v.compare(gauge, other) == -1
 }
 
-func (v IntValue) GreaterEqual(other IntValue) bool {
-	cmp := v.BigInt.Cmp(other.BigInt)
-	return cmp >= 0
+func (v IntValue) LessEqual(gauge common.Gauge, other IntValue) bool {
+	return v.compare(gauge, other) <= 0
 }
 
-func (v IntValue) Equal(other Value) bool {
+func (v IntValue) Greater(gauge common.Gauge, other IntValue) bool {
+	return v.compare(gauge, other) == 1
+}
+
+func (v IntValue) GreaterEqual(gauge common.Gauge, other IntValue) bool {
+	return v.compare(gauge, other) >= 0
+}
+
+func (v IntValue) Equal(gauge common.Gauge, other Value) bool {
 	otherInt, ok := other.(IntValue)
 	if !ok {
 		return false
 	}
-	cmp := v.BigInt.Cmp(otherInt.BigInt)
-	return cmp == 0
+
+	return v.compare(gauge, otherInt) == 0
 }
 
 func (v IntValue) BitwiseOr(gauge common.MemoryGauge, other IntValue) (IntValue, error) {

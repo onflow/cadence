@@ -101,6 +101,15 @@ func NewDictionaryValueWithAddress(
 	}
 
 	constructor := func() *atree.OrderedMap {
+
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapConstruction,
+				Intensity: 1,
+			},
+		)
+
 		dictionary, err := atree.NewMap(
 			context.Storage(),
 			atree.Address(address),
@@ -152,7 +161,7 @@ func newDictionaryValueWithIterator(
 	seed uint64,
 	address common.Address,
 	values func() (Value, Value),
-) *DictionaryValue {
+) (v *DictionaryValue) {
 
 	common.UseComputation(
 		context,
@@ -161,8 +170,6 @@ func newDictionaryValueWithIterator(
 			Intensity: 1,
 		},
 	)
-
-	var v *DictionaryValue
 
 	if TracingEnabled {
 		startTime := time.Now()
@@ -185,30 +192,39 @@ func newDictionaryValueWithIterator(
 		}()
 	}
 
-	constructor := func() *atree.OrderedMap {
-		orderedMap, err := atree.NewMapFromBatchData(
-			context.Storage(),
-			atree.Address(address),
-			atree.NewDefaultDigesterBuilder(),
-			staticType,
-			newValueComparator(context, locationRange),
-			newHashInputProvider(context, locationRange),
-			seed,
-			func() (atree.Value, atree.Value, error) {
-				key, value := values()
-				return key, value, nil
-			},
-		)
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
-		return orderedMap
-	}
+	return newDictionaryValueFromConstructor(
+		context,
+		staticType,
+		count,
+		func() *atree.OrderedMap {
 
-	// values are added to the dictionary after creation, not here
-	v = newDictionaryValueFromConstructor(context, staticType, count, constructor)
+			common.UseComputation(
+				context,
+				common.ComputationUsage{
+					Kind:      common.ComputationKindAtreeMapBatchConstruction,
+					Intensity: count,
+				},
+			)
 
-	return v
+			orderedMap, err := atree.NewMapFromBatchData(
+				context.Storage(),
+				atree.Address(address),
+				atree.NewDefaultDigesterBuilder(),
+				staticType,
+				newValueComparator(context, locationRange),
+				newHashInputProvider(context, locationRange),
+				seed,
+				func() (atree.Value, atree.Value, error) {
+					key, value := values()
+					return key, value, nil
+				},
+			)
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+			return orderedMap
+		},
+	)
 }
 
 func newDictionaryValueFromConstructor(
@@ -305,6 +321,15 @@ func (v *DictionaryValue) iterateKeys(
 ) {
 	iterate := func() {
 		err := atreeIterate(func(key atree.Value) (resume bool, err error) {
+
+			common.UseComputation(
+				interpreter,
+				common.ComputationUsage{
+					Kind:      common.ComputationKindAtreeMapReadIteration,
+					Intensity: 1,
+				},
+			)
+
 			// atree.OrderedMap iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
 
@@ -328,9 +353,7 @@ func (v *DictionaryValue) IterateReadOnly(
 	f func(key, value Value) (resume bool),
 ) {
 	iterate := func(fn atree.MapEntryIterationFunc) error {
-		return v.dictionary.IterateReadOnly(
-			fn,
-		)
+		return v.dictionary.IterateReadOnly(fn)
 	}
 	v.iterate(interpreter, iterate, f, locationRange)
 }
@@ -375,6 +398,14 @@ func (v *DictionaryValue) iterate(
 ) {
 	iterate := func() {
 		err := atreeIterate(func(key, value atree.Value) (resume bool, err error) {
+			common.UseComputation(
+				context,
+				common.ComputationUsage{
+					Kind:      common.ComputationKindAtreeMapReadIteration,
+					Intensity: 1,
+				},
+			)
+
 			// atree.OrderedMap iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
 
@@ -399,47 +430,8 @@ func (v *DictionaryValue) iterate(
 	context.WithContainerMutationPrevention(v.ValueID(), iterate)
 }
 
-type DictionaryKeyIterator struct {
-	mapIterator atree.MapIterator
-}
-
-func (i DictionaryKeyIterator) NextKeyUnconverted() atree.Value {
-	atreeValue, err := i.mapIterator.NextKey()
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
-	return atreeValue
-}
-
-func (i DictionaryKeyIterator) NextKey(gauge common.MemoryGauge) Value {
-	atreeValue := i.NextKeyUnconverted()
-	if atreeValue == nil {
-		return nil
-	}
-	return MustConvertStoredValue(gauge, atreeValue)
-}
-
-func (i DictionaryKeyIterator) Next(gauge common.MemoryGauge) (Value, Value) {
-	atreeKeyValue, atreeValue, err := i.mapIterator.Next()
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
-	if atreeKeyValue == nil {
-		return nil, nil
-	}
-	return MustConvertStoredValue(gauge, atreeKeyValue),
-		MustConvertStoredValue(gauge, atreeValue)
-}
-
-func (v *DictionaryValue) Iterator() DictionaryKeyIterator {
-	mapIterator, err := v.dictionary.ReadOnlyIterator()
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
-
-	return DictionaryKeyIterator{
-		mapIterator: mapIterator,
-	}
+func (v *DictionaryValue) Iterator(gauge common.MemoryGauge) DictionaryKeyIterator {
+	return NewDictionaryKeyIterator(gauge, v)
 }
 
 func (v *DictionaryValue) Walk(context ValueWalkContext, walkChild func(Value), locationRange LocationRange) {
@@ -559,6 +551,15 @@ func (v *DictionaryValue) ForEachKey(
 	iterate := func() {
 		err := v.dictionary.IterateReadOnlyKeys(
 			func(item atree.Value) (bool, error) {
+
+				common.UseComputation(
+					context,
+					common.ComputationUsage{
+						Kind:      common.ComputationKindAtreeMapReadIteration,
+						Intensity: 1,
+					},
+				)
+
 				key := MustConvertStoredValue(context, item)
 
 				result := invokeFunctionValue(
@@ -599,6 +600,14 @@ func (v *DictionaryValue) ContainsKey(
 	valueComparator := newValueComparator(context, locationRange)
 	hashInputProvider := newHashInputProvider(context, locationRange)
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapHas,
+			Intensity: 1,
+		},
+	)
+
 	exists, err := v.dictionary.Has(
 		valueComparator,
 		hashInputProvider,
@@ -619,6 +628,14 @@ func (v *DictionaryValue) Get(
 	valueComparator := newValueComparator(context, locationRange)
 	hashInputProvider := newHashInputProvider(context, locationRange)
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapGet,
+			Intensity: 1,
+		},
+	)
+
 	storedValue, err := v.dictionary.Get(
 		valueComparator,
 		hashInputProvider,
@@ -635,7 +652,7 @@ func (v *DictionaryValue) Get(
 	return MustConvertStoredValue(context, storedValue), true
 }
 
-func (v *DictionaryValue) GetKey(context ValueComparisonContext, locationRange LocationRange, keyValue Value) Value {
+func (v *DictionaryValue) GetKey(context ContainerReadContext, locationRange LocationRange, keyValue Value) Value {
 	value, ok := v.Get(context, locationRange, keyValue)
 	if ok {
 		return NewSomeValueNonCopying(context, value)
@@ -742,11 +759,21 @@ func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRan
 			panic(errors.NewExternalError(err))
 		}
 
+		count := v.dictionary.Count()
+
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapReadIteration,
+				Intensity: count,
+			},
+		)
+
 		return NewArrayValueWithIterator(
 			context,
 			NewVariableSizedStaticType(context, v.Type.KeyType),
 			common.ZeroAddress,
-			v.dictionary.Count(),
+			count,
 			func() Value {
 
 				key, err := iterator.NextKey()
@@ -778,11 +805,21 @@ func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRan
 			panic(errors.NewExternalError(err))
 		}
 
+		count := v.dictionary.Count()
+
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapReadIteration,
+				Intensity: count,
+			},
+		)
+
 		return NewArrayValueWithIterator(
 			context,
 			NewVariableSizedStaticType(context, v.Type.ValueType),
 			common.ZeroAddress,
-			v.dictionary.Count(),
+			count,
 			func() Value {
 
 				value, err := iterator.NextValue()
@@ -812,7 +849,7 @@ func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRan
 
 func (v *DictionaryValue) GetMethod(
 	context MemberAccessibleContext,
-	locationRange LocationRange,
+	_ LocationRange,
 	name string,
 ) FunctionValue {
 	switch name {
@@ -930,6 +967,14 @@ func (v *DictionaryValue) RemoveWithoutTransfer(
 	valueComparator := newValueComparator(context, locationRange)
 	hashInputProvider := newHashInputProvider(context, locationRange)
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapRemove,
+			Intensity: 1,
+		},
+	)
+
 	// No need to clean up storable for passed-in key value,
 	// as atree never calls Storable()
 	var err error
@@ -1008,6 +1053,14 @@ func (v *DictionaryValue) InsertWithoutTransfer(
 
 	valueComparator := newValueComparator(context, locationRange)
 	hashInputProvider := newHashInputProvider(context, locationRange)
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapSet,
+			Intensity: 1,
+		},
+	)
 
 	// atree only calls Storable() on keyValue if needed,
 	// i.e., if the key is a new key
@@ -1132,6 +1185,8 @@ func (v *DictionaryValue) ConformsToStaticType(
 	results TypeConformanceResults,
 ) bool {
 
+	count := v.Count()
+
 	if TracingEnabled {
 		startTime := time.Now()
 
@@ -1160,7 +1215,17 @@ func (v *DictionaryValue) ConformsToStaticType(
 		panic(errors.NewExternalError(err))
 	}
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapReadIteration,
+			Intensity: uint64(count),
+		},
+	)
+
 	for {
+		// Computation was already metered above
+
 		key, value, err := iterator.Next()
 		if err != nil {
 			panic(errors.NewExternalError(err))
@@ -1214,7 +1279,9 @@ func (v *DictionaryValue) Equal(context ValueComparisonContext, locationRange Lo
 		return false
 	}
 
-	if v.Count() != otherDictionary.Count() {
+	count := v.Count()
+
+	if count != otherDictionary.Count() {
 		return false
 	}
 
@@ -1227,7 +1294,17 @@ func (v *DictionaryValue) Equal(context ValueComparisonContext, locationRange Lo
 		panic(errors.NewExternalError(err))
 	}
 
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapReadIteration,
+			Intensity: uint64(count),
+		},
+	)
+
 	for {
+		// Computation was already metered above
+
 		key, value, err := iterator.Next()
 		if err != nil {
 			panic(errors.NewExternalError(err))
@@ -1284,11 +1361,13 @@ func (v *DictionaryValue) Transfer(
 	hasNoParentContainer bool,
 ) Value {
 
+	count := v.Count()
+
 	common.UseComputation(
 		context,
 		common.ComputationUsage{
 			Kind:      common.ComputationKindTransferDictionaryValue,
-			Intensity: uint64(v.Count()),
+			Intensity: uint64(count),
 		},
 	)
 
@@ -1351,6 +1430,22 @@ func (v *DictionaryValue) Transfer(
 			v.elementSize,
 		)
 		common.UseMemory(context, elementMemoryUse)
+
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapReadIteration,
+				Intensity: uint64(count),
+			},
+		)
+
+		common.UseComputation(
+			context,
+			common.ComputationUsage{
+				Kind:      common.ComputationKindAtreeMapBatchConstruction,
+				Intensity: uint64(count),
+			},
+		)
 
 		dictionary, err = atree.NewMapFromBatchData(
 			context.Storage(),
@@ -1595,4 +1690,76 @@ func (v *DictionaryValue) ElementSize() uint {
 
 func (v *DictionaryValue) Inlined() bool {
 	return v.dictionary.Inlined()
+}
+
+// DictionaryKeyIterator
+
+type DictionaryKeyIterator struct {
+	mapIterator atree.MapIterator
+}
+
+func NewDictionaryKeyIterator(gauge common.MemoryGauge, v *DictionaryValue) DictionaryKeyIterator {
+
+	common.UseMemory(
+		gauge,
+		common.MemoryUsage{
+			Kind:   common.MemoryKindDictionaryKeyIterator,
+			Amount: 1,
+		},
+	)
+
+	mapIterator, err := v.dictionary.ReadOnlyIterator()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	return DictionaryKeyIterator{
+		mapIterator: mapIterator,
+	}
+}
+
+func (i DictionaryKeyIterator) NextKeyUnconverted(gauge common.ComputationGauge) atree.Value {
+
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapReadIteration,
+			Intensity: 1,
+		},
+	)
+
+	atreeValue, err := i.mapIterator.NextKey()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+	return atreeValue
+}
+
+func (i DictionaryKeyIterator) NextKey(gauge common.Gauge) Value {
+	atreeValue := i.NextKeyUnconverted(gauge)
+	if atreeValue == nil {
+		return nil
+	}
+	return MustConvertStoredValue(gauge, atreeValue)
+}
+
+func (i DictionaryKeyIterator) Next(gauge common.Gauge) (Value, Value) {
+
+	common.UseComputation(
+		gauge,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapReadIteration,
+			Intensity: 1,
+		},
+	)
+
+	atreeKeyValue, atreeValue, err := i.mapIterator.Next()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+	if atreeKeyValue == nil {
+		return nil, nil
+	}
+	return MustConvertStoredValue(gauge, atreeKeyValue),
+		MustConvertStoredValue(gauge, atreeValue)
 }

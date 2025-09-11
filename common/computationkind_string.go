@@ -21,59 +21,89 @@ func _() {
 	_ = x[ComputationKindCreateDictionaryValue-1040]
 	_ = x[ComputationKindTransferDictionaryValue-1041]
 	_ = x[ComputationKindDestroyDictionaryValue-1042]
+	_ = x[ComputationKindStringToLower-1055]
+	_ = x[ComputationKindStringDecodeHex-1056]
+	_ = x[ComputationKindGraphemesIteration-1057]
+	_ = x[ComputationKindStringComparison-1058]
 	_ = x[ComputationKindEncodeValue-1080]
+	_ = x[ComputationKindWordSliceComparison-1081]
+	_ = x[ComputationKindUintParse-1082]
+	_ = x[ComputationKindIntParse-1083]
+	_ = x[ComputationKindBigIntParse-1084]
+	_ = x[ComputationKindUfixParse-1085]
+	_ = x[ComputationKindFixParse-1086]
 	_ = x[ComputationKindSTDLIBPanic-1100]
 	_ = x[ComputationKindSTDLIBAssert-1101]
 	_ = x[ComputationKindSTDLIBRevertibleRandom-1102]
 	_ = x[ComputationKindSTDLIBRLPDecodeString-1108]
 	_ = x[ComputationKindSTDLIBRLPDecodeList-1109]
+	_ = x[ComputationKindAtreeArrayBatchConstruction-1201]
+	_ = x[ComputationKindAtreeArrayGet-1202]
+	_ = x[ComputationKindAtreeArraySet-1203]
+	_ = x[ComputationKindAtreeArrayAppend-1204]
+	_ = x[ComputationKindAtreeArrayInsert-1205]
+	_ = x[ComputationKindAtreeArrayRemove-1206]
+	_ = x[ComputationKindAtreeArrayReadIteration-1207]
+	_ = x[ComputationKindAtreeMapConstruction-1220]
+	_ = x[ComputationKindAtreeMapBatchConstruction-1221]
+	_ = x[ComputationKindAtreeMapHas-1222]
+	_ = x[ComputationKindAtreeMapGet-1223]
+	_ = x[ComputationKindAtreeMapSet-1224]
+	_ = x[ComputationKindAtreeMapRemove-1225]
+	_ = x[ComputationKindAtreeMapReadIteration-1226]
 }
 
-const (
-	_ComputationKind_name_0 = "Unknown"
-	_ComputationKind_name_1 = "StatementLoopFunctionInvocation"
-	_ComputationKind_name_2 = "CreateCompositeValueTransferCompositeValueDestroyCompositeValue"
-	_ComputationKind_name_3 = "CreateArrayValueTransferArrayValueDestroyArrayValue"
-	_ComputationKind_name_4 = "CreateDictionaryValueTransferDictionaryValueDestroyDictionaryValue"
-	_ComputationKind_name_5 = "EncodeValue"
-	_ComputationKind_name_6 = "STDLIBPanicSTDLIBAssertSTDLIBRevertibleRandom"
-	_ComputationKind_name_7 = "STDLIBRLPDecodeStringSTDLIBRLPDecodeList"
-)
+const _ComputationKind_name = "UnknownStatementLoopFunctionInvocationCreateCompositeValueTransferCompositeValueDestroyCompositeValueCreateArrayValueTransferArrayValueDestroyArrayValueCreateDictionaryValueTransferDictionaryValueDestroyDictionaryValueStringToLowerStringDecodeHexGraphemesIterationStringComparisonEncodeValueWordSliceComparisonUintParseIntParseBigIntParseUfixParseFixParseSTDLIBPanicSTDLIBAssertSTDLIBRevertibleRandomSTDLIBRLPDecodeStringSTDLIBRLPDecodeListAtreeArrayBatchConstructionAtreeArrayGetAtreeArraySetAtreeArrayAppendAtreeArrayInsertAtreeArrayRemoveAtreeArrayReadIterationAtreeMapConstructionAtreeMapBatchConstructionAtreeMapHasAtreeMapGetAtreeMapSetAtreeMapRemoveAtreeMapReadIteration"
 
-var (
-	_ComputationKind_index_1 = [...]uint8{0, 9, 13, 31}
-	_ComputationKind_index_2 = [...]uint8{0, 20, 42, 63}
-	_ComputationKind_index_3 = [...]uint8{0, 16, 34, 51}
-	_ComputationKind_index_4 = [...]uint8{0, 21, 44, 66}
-	_ComputationKind_index_6 = [...]uint8{0, 11, 23, 45}
-	_ComputationKind_index_7 = [...]uint8{0, 21, 40}
-)
+var _ComputationKind_map = map[ComputationKind]string{
+	0:    _ComputationKind_name[0:7],
+	1001: _ComputationKind_name[7:16],
+	1002: _ComputationKind_name[16:20],
+	1003: _ComputationKind_name[20:38],
+	1010: _ComputationKind_name[38:58],
+	1011: _ComputationKind_name[58:80],
+	1012: _ComputationKind_name[80:101],
+	1025: _ComputationKind_name[101:117],
+	1026: _ComputationKind_name[117:135],
+	1027: _ComputationKind_name[135:152],
+	1040: _ComputationKind_name[152:173],
+	1041: _ComputationKind_name[173:196],
+	1042: _ComputationKind_name[196:218],
+	1055: _ComputationKind_name[218:231],
+	1056: _ComputationKind_name[231:246],
+	1057: _ComputationKind_name[246:264],
+	1058: _ComputationKind_name[264:280],
+	1080: _ComputationKind_name[280:291],
+	1081: _ComputationKind_name[291:310],
+	1082: _ComputationKind_name[310:319],
+	1083: _ComputationKind_name[319:327],
+	1084: _ComputationKind_name[327:338],
+	1085: _ComputationKind_name[338:347],
+	1086: _ComputationKind_name[347:355],
+	1100: _ComputationKind_name[355:366],
+	1101: _ComputationKind_name[366:378],
+	1102: _ComputationKind_name[378:400],
+	1108: _ComputationKind_name[400:421],
+	1109: _ComputationKind_name[421:440],
+	1201: _ComputationKind_name[440:467],
+	1202: _ComputationKind_name[467:480],
+	1203: _ComputationKind_name[480:493],
+	1204: _ComputationKind_name[493:509],
+	1205: _ComputationKind_name[509:525],
+	1206: _ComputationKind_name[525:541],
+	1207: _ComputationKind_name[541:564],
+	1220: _ComputationKind_name[564:584],
+	1221: _ComputationKind_name[584:609],
+	1222: _ComputationKind_name[609:620],
+	1223: _ComputationKind_name[620:631],
+	1224: _ComputationKind_name[631:642],
+	1225: _ComputationKind_name[642:656],
+	1226: _ComputationKind_name[656:677],
+}
 
 func (i ComputationKind) String() string {
-	switch {
-	case i == 0:
-		return _ComputationKind_name_0
-	case 1001 <= i && i <= 1003:
-		i -= 1001
-		return _ComputationKind_name_1[_ComputationKind_index_1[i]:_ComputationKind_index_1[i+1]]
-	case 1010 <= i && i <= 1012:
-		i -= 1010
-		return _ComputationKind_name_2[_ComputationKind_index_2[i]:_ComputationKind_index_2[i+1]]
-	case 1025 <= i && i <= 1027:
-		i -= 1025
-		return _ComputationKind_name_3[_ComputationKind_index_3[i]:_ComputationKind_index_3[i+1]]
-	case 1040 <= i && i <= 1042:
-		i -= 1040
-		return _ComputationKind_name_4[_ComputationKind_index_4[i]:_ComputationKind_index_4[i+1]]
-	case i == 1080:
-		return _ComputationKind_name_5
-	case 1100 <= i && i <= 1102:
-		i -= 1100
-		return _ComputationKind_name_6[_ComputationKind_index_6[i]:_ComputationKind_index_6[i+1]]
-	case 1108 <= i && i <= 1109:
-		i -= 1108
-		return _ComputationKind_name_7[_ComputationKind_index_7[i]:_ComputationKind_index_7[i+1]]
-	default:
-		return "ComputationKind(" + strconv.FormatInt(int64(i), 10) + ")"
+	if str, ok := _ComputationKind_map[i]; ok {
+		return str
 	}
+	return "ComputationKind(" + strconv.FormatInt(int64(i), 10) + ")"
 }

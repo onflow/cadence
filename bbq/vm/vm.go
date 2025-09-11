@@ -1463,7 +1463,7 @@ func opIterator(vm *VM) {
 func opIteratorHasNext(vm *VM) {
 	value := vm.pop()
 	iterator := value.(*IteratorWrapperValue)
-	result := interpreter.BoolValue(iterator.HasNext())
+	result := interpreter.BoolValue(iterator.HasNext(vm.context))
 	vm.push(result)
 }
 

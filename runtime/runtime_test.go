@@ -7966,7 +7966,7 @@ func TestRuntimeComputationMetering(t *testing.T) {
 		intensity uint64
 	}
 
-	hitLimit := uint(8)
+	hitLimit := uint(11)
 
 	tests := []test{
 		{
@@ -7997,16 +7997,16 @@ func TestRuntimeComputationMetering(t *testing.T) {
             `,
 			ok:        false,
 			hits:      hitLimit,
-			intensity: uint64(hitLimit),
+			intensity: 20,
 		},
 		{
-			name: "statement + createArray + transferArray + two for-in loop iterations",
+			name: "statement + createArray + transferArray + for-in loop iteration",
 			code: `
-              for i in [1, 2] {}
+              for i in [1] {}
             `,
 			ok:        true,
-			hits:      ifCompile[uint](6, 4),
-			intensity: ifCompile[uint64](6, 4),
+			hits:      ifCompile[uint](8, 5),
+			intensity: ifCompile[uint64](8, 5),
 		},
 		{
 			name: "statement + functionInvocation + encoding",

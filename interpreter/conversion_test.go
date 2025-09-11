@@ -36,6 +36,8 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 
 	t.Run("invalid", func(t *testing.T) {
 
+		t.Parallel()
+
 		largeBigInt, ok := new(big.Int).SetString("1000000000000000000000000000000000000000000000", 10)
 		require.True(t, ok)
 
@@ -66,16 +68,20 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 		}
 
 		for _, value := range invalid {
-			_, err := ByteArrayValueToByteSlice(inter, value, EmptyLocationRange)
-			RequireError(t, err)
+			t.Run(value.String(), func(t *testing.T) {
+				_, err := ByteArrayValueToByteSlice(inter, value, EmptyLocationRange)
+				RequireError(t, err)
+			})
 		}
 	})
 
 	t.Run("valid", func(t *testing.T) {
 
+		t.Parallel()
+
 		inter := newTestInterpreter(t)
 
-		invalid := map[Value][]byte{
+		valid := map[Value][]byte{
 			NewArrayValue(
 				inter,
 				EmptyLocationRange,
@@ -106,10 +112,12 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 			): {4, 5},
 		}
 
-		for value, expected := range invalid {
-			result, err := ByteArrayValueToByteSlice(inter, value, EmptyLocationRange)
-			require.NoError(t, err)
-			require.Equal(t, expected, result)
+		for value, expected := range valid {
+			t.Run(value.String(), func(t *testing.T) {
+				result, err := ByteArrayValueToByteSlice(inter, value, EmptyLocationRange)
+				require.NoError(t, err)
+				require.Equal(t, expected, result)
+			})
 		}
 	})
 }
@@ -120,6 +128,8 @@ func TestByteValueToByte(t *testing.T) {
 
 	t.Run("invalid", func(t *testing.T) {
 
+		t.Parallel()
+
 		largeBigInt, ok := new(big.Int).SetString("1000000000000000000000000000000000000000000000", 10)
 		require.True(t, ok)
 
@@ -129,16 +139,20 @@ func TestByteValueToByte(t *testing.T) {
 		}
 
 		for _, value := range invalid {
-			_, err := ByteValueToByte(nil, value, EmptyLocationRange)
-			RequireError(t, err)
+			t.Run(value.String(), func(t *testing.T) {
+				_, err := ByteValueToByte(nil, value, EmptyLocationRange)
+				RequireError(t, err)
+			})
 		}
 	})
 
 	t.Run("valid", func(t *testing.T) {
 
+		t.Parallel()
+
 		const maxInt8Plus2 = math.MaxInt8 + 2
 
-		invalid := map[Value]byte{
+		valid := map[Value]byte{
 			NewUnmeteredUInt64Value(2):            2,
 			NewUnmeteredUInt128ValueFromUint64(3): 3,
 			NewUnmeteredUInt8Value(4):             4,
@@ -146,10 +160,12 @@ func TestByteValueToByte(t *testing.T) {
 			NewUnmeteredUInt8Value(maxInt8Plus2):  maxInt8Plus2,
 		}
 
-		for value, expected := range invalid {
-			result, err := ByteValueToByte(nil, value, EmptyLocationRange)
-			require.NoError(t, err)
-			require.Equal(t, expected, result)
+		for value, expected := range valid {
+			t.Run(value.String(), func(t *testing.T) {
+				result, err := ByteValueToByte(nil, value, EmptyLocationRange)
+				require.NoError(t, err)
+				require.Equal(t, expected, result)
+			})
 		}
 	})
 }
@@ -158,6 +174,9 @@ func TestByteSliceToArrayValue(t *testing.T) {
 	t.Parallel()
 
 	t.Run("variable sized", func(t *testing.T) {
+
+		t.Parallel()
+
 		b := []byte{0, 1, 2}
 
 		inter := newTestInterpreter(t)
@@ -182,6 +201,9 @@ func TestByteSliceToArrayValue(t *testing.T) {
 	})
 
 	t.Run("const sized", func(t *testing.T) {
+
+		t.Parallel()
+
 		b := []byte{0, 1, 2}
 
 		inter := newTestInterpreter(t)
