@@ -361,18 +361,6 @@ func CheckMemberAccessTargetType(
 		}
 	}
 
-	// NOTE: accesses of (optional) storage reference values
-	// are already checked in StorageReferenceValue.dereference
-	_, isStorageReference := target.(*StorageReferenceValue)
-	if !isStorageReference {
-		if optional, ok := target.(*SomeValue); ok {
-			_, isStorageReference = optional.value.(*StorageReferenceValue)
-		}
-	}
-	if isStorageReference {
-		return
-	}
-
 	targetStaticType := target.StaticType(context)
 
 	if _, ok := expectedType.(*sema.OptionalType); ok {
