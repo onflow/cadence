@@ -3532,6 +3532,43 @@ func (*UnexpectedEOFInImportListError) DocumentationLink() string {
 	return "https://cadence-lang.org/docs/language/imports"
 }
 
+// InvalidTokenInImportAliasError is reported when an import alias has an invalid token.
+type InvalidTokenInImportAliasError struct {
+	GotToken lexer.Token
+}
+
+var _ ParseError = &InvalidTokenInImportAliasError{}
+var _ errors.UserError = &InvalidTokenInImportAliasError{}
+var _ errors.SecondaryError = &InvalidTokenInImportAliasError{}
+var _ errors.HasDocumentationLink = &InvalidTokenInImportAliasError{}
+
+func (*InvalidTokenInImportAliasError) isParseError() {}
+
+func (*InvalidTokenInImportAliasError) IsUserError() {}
+
+func (e *InvalidTokenInImportAliasError) StartPosition() ast.Position {
+	return e.GotToken.StartPos
+}
+
+func (e *InvalidTokenInImportAliasError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.GotToken.EndPos
+}
+
+func (e *InvalidTokenInImportAliasError) Error() string {
+	return expectedButGotToken(
+		"expected identifier",
+		e.GotToken.Type,
+	)
+}
+
+func (*InvalidTokenInImportAliasError) SecondaryError() string {
+	return "import declarations expect an identifier after the keyword `as`"
+}
+
+func (*InvalidTokenInImportAliasError) DocumentationLink() string {
+	return "https://cadence-lang.org/docs/language/imports"
+}
+
 // InvalidTokenInImportListError is reported when an import list has an invalid token.
 type InvalidTokenInImportListError struct {
 	GotToken lexer.Token

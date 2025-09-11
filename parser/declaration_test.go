@@ -3071,7 +3071,7 @@ func TestParseImportDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.ImportDeclaration{
-					Identifiers: nil,
+					Imports:     nil,
 					Location:    common.StringLocation("foo"),
 					LocationPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 					Range: ast.Range{
@@ -3094,7 +3094,7 @@ func TestParseImportDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.ImportDeclaration{
-					Identifiers: nil,
+					Imports: nil,
 					Location: common.AddressLocation{
 						Address: common.MustBytesToAddress([]byte{0x42}),
 					},
@@ -3126,7 +3126,7 @@ func TestParseImportDeclaration(t *testing.T) {
 
 		expected := []ast.Declaration{
 			&ast.ImportDeclaration{
-				Identifiers: nil,
+				Imports: nil,
 				Location: common.AddressLocation{
 					Address: common.MustBytesToAddress([]byte{0x0}),
 				},
@@ -3183,10 +3183,12 @@ func TestParseImportDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.ImportDeclaration{
-					Identifiers: []ast.Identifier{
+					Imports: []ast.Import{
 						{
-							Identifier: "foo",
-							Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+							Identifier: ast.Identifier{
+								Identifier: "foo",
+								Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+							},
 						},
 					},
 					Location:    common.StringLocation("bar"),
@@ -3239,18 +3241,24 @@ func TestParseImportDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.ImportDeclaration{
-					Identifiers: []ast.Identifier{
+					Imports: []ast.Import{
 						{
-							Identifier: "foo",
-							Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+							Identifier: ast.Identifier{
+								Identifier: "foo",
+								Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+							},
 						},
 						{
-							Identifier: "bar",
-							Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
+							Identifier: ast.Identifier{
+								Identifier: "bar",
+								Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
+							},
 						},
 						{
-							Identifier: "baz",
-							Pos:        ast.Position{Line: 1, Column: 20, Offset: 20},
+							Identifier: ast.Identifier{
+								Identifier: "baz",
+								Pos:        ast.Position{Line: 1, Column: 20, Offset: 20},
+							},
 						},
 					},
 					Location: common.AddressLocation{
@@ -3328,7 +3336,7 @@ func TestParseImportDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.ImportDeclaration{
-					Identifiers: nil,
+					Imports:     nil,
 					Location:    common.IdentifierLocation("foo"),
 					LocationPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 					Range: ast.Range{
@@ -3391,14 +3399,18 @@ func TestParseImportDeclaration(t *testing.T) {
 		AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.ImportDeclaration{
-					Identifiers: []ast.Identifier{
+					Imports: []ast.Import{
 						{
-							Identifier: "foo",
-							Pos:        ast.Position{Line: 2, Column: 17, Offset: 18},
+							Identifier: ast.Identifier{
+								Identifier: "foo",
+								Pos:        ast.Position{Line: 2, Column: 17, Offset: 18},
+							},
 						},
 						{
-							Identifier: "from",
-							Pos:        ast.Position{Line: 2, Column: 22, Offset: 23},
+							Identifier: ast.Identifier{
+								Identifier: "from",
+								Pos:        ast.Position{Line: 2, Column: 22, Offset: 23},
+							},
 						},
 					},
 					Location: common.AddressLocation{
@@ -3411,18 +3423,24 @@ func TestParseImportDeclaration(t *testing.T) {
 					},
 				},
 				&ast.ImportDeclaration{
-					Identifiers: []ast.Identifier{
+					Imports: []ast.Import{
 						{
-							Identifier: "foo",
-							Pos:        ast.Position{Line: 3, Column: 17, Offset: 55},
+							Identifier: ast.Identifier{
+								Identifier: "foo",
+								Pos:        ast.Position{Line: 3, Column: 17, Offset: 55},
+							},
 						},
 						{
-							Identifier: "from",
-							Pos:        ast.Position{Line: 3, Column: 22, Offset: 60},
+							Identifier: ast.Identifier{
+								Identifier: "from",
+								Pos:        ast.Position{Line: 3, Column: 22, Offset: 60},
+							},
 						},
 						{
-							Identifier: "bar",
-							Pos:        ast.Position{Line: 3, Column: 28, Offset: 66},
+							Identifier: ast.Identifier{
+								Identifier: "bar",
+								Pos:        ast.Position{Line: 3, Column: 28, Offset: 66},
+							},
 						},
 					},
 					Location: common.AddressLocation{
@@ -3436,6 +3454,246 @@ func TestParseImportDeclaration(t *testing.T) {
 				},
 			},
 			result,
+		)
+	})
+
+	t.Run("single import alias", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+			import foo as bar, lorem from 0x42
+		`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.ImportDeclaration{
+					Imports: []ast.Import{
+						{
+							Identifier: ast.Identifier{
+								Identifier: "foo",
+								Pos:        ast.Position{Line: 2, Column: 10, Offset: 11},
+							},
+							Alias: ast.Identifier{
+								Identifier: "bar",
+								Pos:        ast.Position{Line: 2, Column: 17, Offset: 18},
+							},
+						},
+						{
+							Identifier: ast.Identifier{
+								Identifier: "lorem",
+								Pos:        ast.Position{Line: 2, Column: 22, Offset: 23},
+							},
+						},
+					},
+					Location: common.AddressLocation{
+						Address: common.MustBytesToAddress([]byte{0x42}),
+					},
+					LocationPos: ast.Position{Line: 2, Column: 33, Offset: 34},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 2, Column: 3, Offset: 4},
+						EndPos:   ast.Position{Line: 2, Column: 36, Offset: 37},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("multiple import alias", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+			import foo as bar, lorem as ipsum from 0x42
+		`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.ImportDeclaration{
+					Imports: []ast.Import{
+						{
+							Identifier: ast.Identifier{
+								Identifier: "foo",
+								Pos:        ast.Position{Line: 2, Column: 10, Offset: 11},
+							},
+							Alias: ast.Identifier{
+								Identifier: "bar",
+								Pos:        ast.Position{Line: 2, Column: 17, Offset: 18},
+							},
+						},
+						{
+							Identifier: ast.Identifier{
+								Identifier: "lorem",
+								Pos:        ast.Position{Line: 2, Column: 22, Offset: 23},
+							},
+							Alias: ast.Identifier{
+								Identifier: "ipsum",
+								Pos:        ast.Position{Line: 2, Column: 31, Offset: 32},
+							},
+						},
+					},
+					Location: common.AddressLocation{
+						Address: common.MustBytesToAddress([]byte{0x42}),
+					},
+					LocationPos: ast.Position{Line: 2, Column: 42, Offset: 43},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 2, Column: 3, Offset: 4},
+						EndPos:   ast.Position{Line: 2, Column: 45, Offset: 46},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("combination import aliases", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+			import foo as bar, test as from, from from 0x42
+		`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.ImportDeclaration{
+					Imports: []ast.Import{
+						{
+							Identifier: ast.Identifier{
+								Identifier: "foo",
+								Pos:        ast.Position{Line: 2, Column: 10, Offset: 11},
+							},
+							Alias: ast.Identifier{
+								Identifier: "bar",
+								Pos:        ast.Position{Line: 2, Column: 17, Offset: 18},
+							},
+						},
+						{
+							Identifier: ast.Identifier{
+								Identifier: "test",
+								Pos:        ast.Position{Line: 2, Column: 22, Offset: 23},
+							},
+							Alias: ast.Identifier{
+								Identifier: "from",
+								Pos:        ast.Position{Line: 2, Column: 30, Offset: 31},
+							},
+						},
+						{
+							Identifier: ast.Identifier{
+								Identifier: "from",
+								Pos:        ast.Position{Line: 2, Column: 36, Offset: 37},
+							},
+						},
+					},
+					Location: common.AddressLocation{
+						Address: common.MustBytesToAddress([]byte{0x42}),
+					},
+					LocationPos: ast.Position{Line: 2, Column: 46, Offset: 47},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 2, Column: 3, Offset: 4},
+						EndPos:   ast.Position{Line: 2, Column: 49, Offset: 50},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("alias same imported function", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+			import foo as bar from 0x42
+			import foo as cab from 0x42
+		`)
+		require.Empty(t, errs)
+
+		AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.ImportDeclaration{
+					Imports: []ast.Import{
+						{
+							Identifier: ast.Identifier{
+								Identifier: "foo",
+								Pos:        ast.Position{Line: 2, Column: 10, Offset: 11},
+							},
+							Alias: ast.Identifier{
+								Identifier: "bar",
+								Pos:        ast.Position{Line: 2, Column: 17, Offset: 18},
+							},
+						},
+					},
+					Location: common.AddressLocation{
+						Address: common.MustBytesToAddress([]byte{0x42}),
+					},
+					LocationPos: ast.Position{Line: 2, Column: 26, Offset: 27},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 2, Column: 3, Offset: 4},
+						EndPos:   ast.Position{Line: 2, Column: 29, Offset: 30},
+					},
+				},
+				&ast.ImportDeclaration{
+					Imports: []ast.Import{
+						{
+							Identifier: ast.Identifier{
+								Identifier: "foo",
+								Pos:        ast.Position{Line: 3, Column: 10, Offset: 42},
+							},
+							Alias: ast.Identifier{
+								Identifier: "cab",
+								Pos:        ast.Position{Line: 3, Column: 17, Offset: 49},
+							},
+						},
+					},
+					Location: common.AddressLocation{
+						Address: common.MustBytesToAddress([]byte{0x42}),
+					},
+					LocationPos: ast.Position{Line: 3, Column: 26, Offset: 58},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 3, Column: 3, Offset: 35},
+						EndPos:   ast.Position{Line: 3, Column: 29, Offset: 61},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("invalid, non identifier alias", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`
+			import foo as 1 from 0x42
+		`)
+
+		AssertEqualWithDiff(t,
+			[]error{
+				&InvalidTokenInImportAliasError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
+							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
+						},
+					},
+				},
+				&InvalidImportContinuationError{
+					GotToken: lexer.Token{
+						Type: lexer.TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
+							EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
+						},
+					},
+				},
+			},
+			errs,
 		)
 	})
 }
@@ -7922,8 +8180,8 @@ func TestParseImportWithString(t *testing.T) {
 	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.ImportDeclaration{
-				Identifiers: nil,
-				Location:    common.StringLocation("test.cdc"),
+				Imports:  nil,
+				Location: common.StringLocation("test.cdc"),
 				Range: ast.Range{
 					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 					EndPos:   ast.Position{Offset: 25, Line: 2, Column: 24},
@@ -7948,7 +8206,7 @@ func TestParseImportWithAddress(t *testing.T) {
 	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.ImportDeclaration{
-				Identifiers: nil,
+				Imports: nil,
 				Location: common.AddressLocation{
 					Address: common.MustBytesToAddress([]byte{0x12, 0x34}),
 				},
@@ -7976,14 +8234,18 @@ func TestParseImportWithIdentifiers(t *testing.T) {
 	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.ImportDeclaration{
-				Identifiers: []ast.Identifier{
+				Imports: []ast.Import{
 					{
-						Identifier: "A",
-						Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
+						Identifier: ast.Identifier{
+							Identifier: "A",
+							Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
+						},
 					},
 					{
-						Identifier: "b",
-						Pos:        ast.Position{Offset: 19, Line: 2, Column: 18},
+						Identifier: ast.Identifier{
+							Identifier: "b",
+							Pos:        ast.Position{Offset: 19, Line: 2, Column: 18},
+						},
 					},
 				},
 				Location: common.AddressLocation{
@@ -8080,10 +8342,12 @@ func TestParseImportWithFromIdentifier(t *testing.T) {
 	AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.ImportDeclaration{
-				Identifiers: []ast.Identifier{
+				Imports: []ast.Import{
 					{
-						Identifier: "from",
-						Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
+						Identifier: ast.Identifier{
+							Identifier: "from",
+							Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
+						},
 					},
 				},
 				Location: common.AddressLocation{

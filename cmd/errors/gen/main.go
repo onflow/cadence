@@ -366,7 +366,7 @@ func placeholderValue(t types.Type) dst.Expr {
 		return dst.NewIdent("placeholderDeclaration")
 
 	case "*github.com/onflow/cadence/ast.Identifier":
-		return dst.NewIdent("placeholderIdentifier")
+		return dst.NewIdent("placeholderIdentifierPointer")
 
 	case "*github.com/onflow/cadence/sema.TypeParameter":
 		return dst.NewIdent("placeholderTypeParameter")
@@ -388,6 +388,9 @@ func placeholderValue(t types.Type) dst.Expr {
 
 	case "github.com/onflow/cadence/parser/lexer.Token":
 		return dst.NewIdent("placeholderToken")
+
+	case "github.com/onflow/cadence/ast.Identifier":
+		return dst.NewIdent("placeholderIdentifier")
 
 	default:
 		log.Fatalf("unsupported field type: %s", t.String())

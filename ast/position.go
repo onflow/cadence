@@ -79,7 +79,7 @@ func (p Position) Shifted(memoryGauge common.MemoryGauge, length int) Position {
 func (p Position) AttachLeft(code string) Position {
 
 	newOffset := p.Offset - 1
-	for ; newOffset >= 0; newOffset-- {
+	for ; newOffset >= 0 && newOffset < len(code); newOffset-- {
 		switch code[newOffset] {
 		case ' ', '\t', '\r', '\n':
 			continue
@@ -93,23 +93,29 @@ func (p Position) AttachLeft(code string) Position {
 		return p
 	}
 
+	// TODO: optimize by reusing line/column info from p
 	return NewPositionAtCodeOffset(nil, code, newOffset)
 }
 
-func (p Position) SlurpWhitespaceSuffix(code string) Position {
-	var length int
-	for offset := p.Offset + 1; offset < len(code); offset++ {
-		if code[offset] == ' ' {
-			length++
-		} else {
-			break
+// AttachRight moves the position right until it reaches a non-whitespace character.
+func (p Position) AttachRight(code string) Position {
+	newOffset := p.Offset + 1
+	for ; newOffset < len(code); newOffset++ {
+		switch code[newOffset] {
+		case ' ', '\t', '\r', '\n':
+			continue
 		}
+		break
 	}
 
-	if length == 0 {
+	newOffset--
+
+	if newOffset == p.Offset {
 		return p
 	}
-	return p.Shifted(nil, length)
+
+	// TODO: optimize by reusing line/column info from p
+	return NewPositionAtCodeOffset(nil, code, newOffset)
 }
 
 func (p Position) String() string {
