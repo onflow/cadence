@@ -35,6 +35,7 @@ const (
 	tracingArrayPrefix      = "array."
 	tracingDictionaryPrefix = "dictionary."
 	tracingCompositePrefix  = "composite."
+	tracingAtreeMapPrefix   = "atreeMap."
 
 	// Value operation postfixes
 	tracingConstructPostfix            = "construct"
@@ -47,6 +48,8 @@ const (
 	tracingGetMemberPrefix    = "getMember."
 	tracingSetMemberPrefix    = "setMember."
 	tracingRemoveMemberPrefix = "removeMember."
+
+	tracingAtreeMapNewFromBatchDataPostfix = "newFromBatchData"
 )
 
 type Tracer interface {
@@ -73,6 +76,7 @@ type Tracer interface {
 	ReportCompositeValueGetMemberTrace(valueID string, typeID string, kind string, name string, duration time.Duration)
 	ReportCompositeValueSetMemberTrace(valueID string, typeID string, kind string, name string, since time.Duration)
 	ReportCompositeValueRemoveMemberTrace(valueID string, typeID string, kind string, name string, since time.Duration)
+	ReportAtreeNewMapFromBatchData(valueID string, typeID string, seed uint64, duration time.Duration)
 }
 
 type CallbackTracer OnRecordTraceFunc
@@ -389,6 +393,29 @@ func (t CallbackTracer) ReportCompositeValueRemoveMemberTrace(
 	)
 }
 
+func prepareAtreeMapTraceAttrs(valueID string, typeID string, seed uint64) []attribute.KeyValue {
+	return append(
+		prepareContainerValueTraceAttrs(valueID, typeID),
+		// OpenTelemetry does not support unsigned integers, so we use Int64.
+		// The conversion might overflow if the seed is too large,
+		// but this information is only used for debugging purposes.
+		attribute.Int64("seed", int64(seed)),
+	)
+}
+
+func (t CallbackTracer) ReportAtreeNewMapFromBatchData(
+	valueID string,
+	typeID string,
+	seed uint64,
+	duration time.Duration,
+) {
+	t(
+		tracingAtreeMapPrefix+tracingAtreeMapNewFromBatchDataPostfix,
+		duration,
+		prepareAtreeMapTraceAttrs(valueID, typeID, seed),
+	)
+}
+
 type NoOpTracer struct{}
 
 var _ Tracer = NoOpTracer{}
@@ -478,5 +505,9 @@ func (NoOpTracer) ReportCompositeValueRemoveMemberTrace(_ string, _ string, _ st
 }
 
 func (NoOpTracer) ReportDomainStorageMapDeepRemoveTrace(_ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportAtreeNewMapFromBatchData(_ string, _ string, _ uint64, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
