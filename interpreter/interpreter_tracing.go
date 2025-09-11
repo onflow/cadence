@@ -49,6 +49,7 @@ const (
 	tracingSetMemberPrefix    = "setMember."
 	tracingRemoveMemberPrefix = "removeMember."
 
+	tracingAtreeMapNew                     = "new"
 	tracingAtreeMapNewFromBatchDataPostfix = "newFromBatchData"
 )
 
@@ -77,6 +78,7 @@ type Tracer interface {
 	ReportCompositeValueSetMemberTrace(valueID string, typeID string, kind string, name string, duration time.Duration)
 	ReportCompositeValueRemoveMemberTrace(valueID string, typeID string, kind string, name string, duration time.Duration)
 
+	ReportAtreeNewMap(valueID string, typeID string, seed uint64, duration time.Duration)
 	ReportAtreeNewMapFromBatchData(valueID string, typeID string, seed uint64, duration time.Duration)
 }
 
@@ -404,6 +406,19 @@ func prepareAtreeMapTraceAttrs(valueID string, typeID string, seed uint64) []att
 	)
 }
 
+func (t CallbackTracer) ReportAtreeNewMap(
+	valueID string,
+	typeID string,
+	seed uint64,
+	duration time.Duration,
+) {
+	t(
+		tracingAtreeMapPrefix+tracingAtreeMapNew,
+		duration,
+		prepareAtreeMapTraceAttrs(valueID, typeID, seed),
+	)
+}
+
 func (t CallbackTracer) ReportAtreeNewMapFromBatchData(
 	valueID string,
 	typeID string,
@@ -506,6 +521,10 @@ func (NoOpTracer) ReportCompositeValueRemoveMemberTrace(_ string, _ string, _ st
 }
 
 func (NoOpTracer) ReportDomainStorageMapDeepRemoveTrace(_ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportAtreeNewMap(_ string, _ string, _ uint64, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 

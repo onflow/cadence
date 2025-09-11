@@ -159,30 +159,44 @@ func NewCompositeValue(
 		}()
 	}
 
-	constructor := func() *atree.OrderedMap {
-		dictionary, err := atree.NewMap(
-			context.Storage(),
-			atree.Address(address),
-			atree.NewDefaultDigesterBuilder(),
-			NewCompositeTypeInfo(
-				context,
-				location,
-				qualifiedIdentifier,
-				kind,
-			),
-		)
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
-		return dictionary
-	}
-
 	typeInfo := NewCompositeTypeInfo(
 		context,
 		location,
 		qualifiedIdentifier,
 		kind,
 	)
+
+	constructor := func() (dictionary *atree.OrderedMap) {
+
+		if TracingEnabled {
+			startTime := time.Now()
+
+			defer func() {
+				valueID := dictionary.ValueID().String()
+				typeID := string(v.TypeID())
+				seed := dictionary.Seed()
+
+				context.ReportAtreeNewMap(
+					valueID,
+					typeID,
+					seed,
+					time.Since(startTime),
+				)
+			}()
+		}
+
+		var err error
+		dictionary, err = atree.NewMap(
+			context.Storage(),
+			atree.Address(address),
+			atree.NewDefaultDigesterBuilder(),
+			typeInfo,
+		)
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+		return dictionary
+	}
 
 	v = newCompositeValueFromConstructor(context, uint64(len(fields)), typeInfo, constructor)
 

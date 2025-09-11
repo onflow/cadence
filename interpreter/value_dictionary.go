@@ -100,8 +100,27 @@ func NewDictionaryValueWithAddress(
 		panic("uneven number of keys and values")
 	}
 
-	constructor := func() *atree.OrderedMap {
-		dictionary, err := atree.NewMap(
+	constructor := func() (dictionary *atree.OrderedMap) {
+
+		if TracingEnabled {
+			startTime := time.Now()
+
+			defer func() {
+				valueID := dictionary.ValueID().String()
+				typeID := string(v.Type.ID())
+				seed := dictionary.Seed()
+
+				context.ReportAtreeNewMap(
+					valueID,
+					typeID,
+					seed,
+					time.Since(startTime),
+				)
+			}()
+		}
+
+		var err error
+		dictionary, err = atree.NewMap(
 			context.Storage(),
 			atree.Address(address),
 			atree.NewDefaultDigesterBuilder(),
