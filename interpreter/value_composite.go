@@ -173,7 +173,11 @@ func NewCompositeValue(
 
 			defer func() {
 				valueID := dictionary.ValueID().String()
-				typeID := string(v.TypeID())
+				typeID := string(common.NewTypeIDFromQualifiedName(
+					context,
+					location,
+					qualifiedIdentifier,
+				))
 				seed := dictionary.Seed()
 
 				context.ReportAtreeNewMap(

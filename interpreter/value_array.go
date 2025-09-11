@@ -126,7 +126,7 @@ func NewArrayValueWithIterator(
 
 			defer func() {
 				valueID := array.ValueID().String()
-				typeID := string(v.Type.ID())
+				typeID := string(arrayType.ID())
 
 				context.ReportAtreeNewArrayFromBatchData(
 					valueID,

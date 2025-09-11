@@ -107,7 +107,7 @@ func NewDictionaryValueWithAddress(
 
 			defer func() {
 				valueID := dictionary.ValueID().String()
-				typeID := string(v.Type.ID())
+				typeID := string(dictionaryType.ID())
 				seed := dictionary.Seed()
 
 				context.ReportAtreeNewMap(
