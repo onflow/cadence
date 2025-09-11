@@ -7966,7 +7966,7 @@ func TestRuntimeComputationMetering(t *testing.T) {
 		intensity uint64
 	}
 
-	hitLimit := uint(11)
+	hitLimit := uint(13)
 
 	tests := []test{
 		{
@@ -7997,7 +7997,7 @@ func TestRuntimeComputationMetering(t *testing.T) {
             `,
 			ok:        false,
 			hits:      hitLimit,
-			intensity: 20,
+			intensity: 22,
 		},
 		{
 			name: "statement + createArray + transferArray + for-in loop iteration",
@@ -8014,8 +8014,8 @@ func TestRuntimeComputationMetering(t *testing.T) {
               acc.storage.save("A quick brown fox jumps over the lazy dog", to:/storage/some_path)
             `,
 			ok:        true,
-			hits:      ifCompile[uint](5, 3),
-			intensity: ifCompile[uint64](110, 108),
+			hits:      ifCompile[uint](10, 8),
+			intensity: ifCompile[uint64](115, 113),
 		},
 	}
 

@@ -39,6 +39,7 @@ import (
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -63,7 +64,7 @@ var testCompositeValueType = &sema.CompositeType{
 
 func newTestInterpreter(tb testing.TB) *Interpreter {
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	elaboration := sema.NewElaboration(nil)
 	elaboration.SetCompositeType(
@@ -1733,7 +1734,7 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 
 	t.Parallel()
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	// Obtain a self referencing (cyclic) ephemeral reference value.
 
@@ -3243,7 +3244,7 @@ func TestPublicKeyValue(t *testing.T) {
 
 		t.Parallel()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		inter, err := NewInterpreter(
 			nil,
@@ -3290,7 +3291,7 @@ func TestPublicKeyValue(t *testing.T) {
 
 		t.Parallel()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		fakeError := fakeError{}
 
@@ -3457,7 +3458,7 @@ func TestNonStorable(t *testing.T) {
 
 	t.Parallel()
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 
 	code := `
       access(all) struct Foo {
@@ -3622,7 +3623,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 
 	test := func(valueFactory func(*Interpreter) Value, expected bool) {
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		members := &sema.StringMemberOrderedMap{}
 
@@ -4362,7 +4363,7 @@ func TestOverwriteDictionaryValueWhereKeyIsStoredInSeparateAtreeSlab(t *testing.
 			)
 		}
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		elaboration := sema.NewElaboration(nil)
 		elaboration.SetCompositeType(
@@ -4442,7 +4443,7 @@ func TestOverwriteDictionaryValueWhereKeyIsStoredInSeparateAtreeSlab(t *testing.
 			return NewUnmeteredStringValue(strings.Repeat("a", 1024))
 		}
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 
 		elaboration := sema.NewElaboration(nil)
 

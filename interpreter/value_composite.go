@@ -1367,6 +1367,15 @@ func (v *CompositeValue) Transfer(
 		}
 
 		if remove {
+
+			common.UseComputation(
+				context,
+				common.ComputationUsage{
+					Kind:      common.ComputationKindAtreeMapPopIteration,
+					Intensity: v.dictionary.Count(),
+				},
+			)
+
 			err = v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
 				RemoveReferencedSlab(context, nameStorable)
 				RemoveReferencedSlab(context, valueStorable)
@@ -1520,6 +1529,14 @@ func (v *CompositeValue) DeepRemove(context ValueRemoveContext, hasNoParentConta
 	// Remove nested values and storables
 
 	storage := v.dictionary.Storage
+
+	common.UseComputation(
+		context,
+		common.ComputationUsage{
+			Kind:      common.ComputationKindAtreeMapPopIteration,
+			Intensity: v.dictionary.Count(),
+		},
+	)
 
 	err := v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
 		// NOTE: key / field name is stringAtreeValue,

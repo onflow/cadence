@@ -226,9 +226,13 @@ func ParseCheckAndPrepareWithOptions(
 		return ParseCheckAndInterpretWithOptions(tb, code, options)
 	}
 
-	var memoryGauge common.MemoryGauge
+	var (
+		memoryGauge      common.MemoryGauge
+		computationGauge common.ComputationGauge
+	)
 	if options.InterpreterConfig != nil {
 		memoryGauge = options.InterpreterConfig.MemoryGauge
+		computationGauge = options.InterpreterConfig.ComputationGauge
 	}
 	if memoryGauge == nil && options.ParseAndCheckOptions != nil {
 		memoryGauge = options.ParseAndCheckOptions.MemoryGauge
@@ -241,7 +245,10 @@ func ParseCheckAndPrepareWithOptions(
 		storage = interpreterConfig.Storage
 	}
 	if storage == nil {
-		storage = interpreter.NewInMemoryStorage(memoryGauge)
+		storage = interpreter.NewInMemoryStorage(
+			memoryGauge,
+			computationGauge,
+		)
 	}
 
 	programs := CompiledPrograms{}
@@ -595,9 +602,14 @@ func parseCheckAndInterpretWithOptionsAndAtreeValidations(
 	err error,
 ) {
 
-	var memoryGauge common.MemoryGauge
+	var (
+		memoryGauge      common.MemoryGauge
+		computationGauge common.ComputationGauge
+	)
+
 	if options.InterpreterConfig != nil {
 		memoryGauge = options.InterpreterConfig.MemoryGauge
+		computationGauge = options.InterpreterConfig.ComputationGauge
 	}
 	if memoryGauge == nil && options.ParseAndCheckOptions != nil {
 		memoryGauge = options.ParseAndCheckOptions.MemoryGauge
@@ -649,7 +661,10 @@ func parseCheckAndInterpretWithOptionsAndAtreeValidations(
 		}
 	}
 	if config.Storage == nil {
-		config.Storage = interpreter.NewInMemoryStorage(memoryGauge)
+		config.Storage = interpreter.NewInMemoryStorage(
+			memoryGauge,
+			computationGauge,
+		)
 	}
 
 	inter, err = interpreter.NewInterpreter(

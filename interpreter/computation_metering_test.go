@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -160,9 +161,13 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 4},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 4},
@@ -212,14 +217,19 @@ func TestInterpretComputationMeteringArrayFunctions(t *testing.T) {
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 5},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
 				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
 				{Kind: common.ComputationKindTransferArrayValue, Intensity: 2},
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
@@ -653,7 +663,7 @@ func TestInterpretComputationMeteringStatements(t *testing.T) {
 			common.ComputationKindStatement,
 		)
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t, `
               fun a() {
                   true
@@ -712,7 +722,7 @@ func TestInterpretComputationMeteringStatements(t *testing.T) {
 			common.ComputationKindStatement,
 		)
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t, `
               fun test() {
                   pre { true}
@@ -747,7 +757,7 @@ func TestInterpretComputationMeteringStatements(t *testing.T) {
 			common.ComputationKindStatement,
 		)
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		_, err := parseCheckAndInterpretWithOptions(t, `
               let x = 1 + 2
               let y = 3 * 4
@@ -783,7 +793,7 @@ func TestInterpretComputationMeteringLoopIteration(t *testing.T) {
 			common.ComputationKindLoop,
 		)
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               fun test() {
@@ -842,7 +852,7 @@ func TestInterpretComputationMeteringLoopIteration(t *testing.T) {
 			common.ComputationKindLoop,
 		)
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               fun test() {
@@ -882,7 +892,7 @@ func TestInterpretComputationMeteringFunctionInvocation(t *testing.T) {
 		common.ComputationKindFunctionInvocation,
 	)
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
           fun a() {
@@ -970,7 +980,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		_, err := parseCheckAndInterpretWithOptions(t,
 			`
               let x = [1, 2, 3]
@@ -1002,7 +1012,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               resource R {}
@@ -1045,7 +1055,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		_, err := parseCheckAndInterpretWithOptions(t,
 			`
                let x = [1, 2, 3][1]
@@ -1075,7 +1085,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               fun test() {
@@ -1115,7 +1125,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		_, err := parseCheckAndInterpretWithOptions(t,
 			`
               let x = [1, 2, 3].append(4)
@@ -1146,7 +1156,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		_, err := parseCheckAndInterpretWithOptions(t,
 			`
               let x = [1, 2, 3].insert(at: 1, 1)
@@ -1177,7 +1187,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		_, err := parseCheckAndInterpretWithOptions(t,
 			`
               let x = [1, 2, 3].remove(at: 1)
@@ -1208,7 +1218,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		_, err := parseCheckAndInterpretWithOptions(t,
 			`
               let x = [1, 2, 3].contains(4)
@@ -1229,11 +1239,11 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 3},
 				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
-				{Kind: common.ComputationKindWordSliceComparison, Intensity: 1},
+				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
-				{Kind: common.ComputationKindWordSliceComparison, Intensity: 1},
+				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
 				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 1},
-				{Kind: common.ComputationKindWordSliceComparison, Intensity: 1},
+				{Kind: common.ComputationKindWordSliceOperation, Intensity: 1},
 			},
 			computationGauge.usages,
 		)
@@ -1244,7 +1254,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
                fun test() {
@@ -1288,7 +1298,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
                fun test() {
@@ -1327,7 +1337,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
                fun test() {
@@ -1370,7 +1380,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
                fun test() {
@@ -1408,7 +1418,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
                fun test() {
@@ -1448,7 +1458,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
                fun test() {
@@ -1491,7 +1501,7 @@ func TestInterpretComputationMeteringArray(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
                fun test() {
@@ -1540,7 +1550,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		_, err := parseCheckAndInterpretWithOptions(t,
 			`
               let x = {"a": 1, "b": 2, "c": 3}
@@ -1584,7 +1594,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               resource R {}
@@ -1630,7 +1640,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		_, err := parseCheckAndInterpretWithOptions(t,
 			`
               let x = {"a": 1, "b": 2}["b"]
@@ -1666,7 +1676,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		_, err := parseCheckAndInterpretWithOptions(t,
 			`
               let x = {"a": 1, "b": 2}.containsKey("b")
@@ -1703,7 +1713,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               fun test() {
@@ -1748,7 +1758,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		_, err := parseCheckAndInterpretWithOptions(t,
 			`
               let x= {"a": 1}.remove(key: "a")
@@ -1782,7 +1792,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               fun test() {
@@ -1824,7 +1834,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               fun test() {
@@ -1866,7 +1876,7 @@ func TestInterpretComputationMeteringDictionary(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               fun test() {
@@ -1917,7 +1927,7 @@ func TestInterpretComputationMeteringComposite(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		_, err := parseCheckAndInterpretWithOptions(t,
 			`
               struct S {
@@ -1960,7 +1970,7 @@ func TestInterpretComputationMeteringComposite(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               resource R {}
@@ -2002,7 +2012,7 @@ func TestInterpretComputationMeteringComposite(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		_, err := parseCheckAndInterpretWithOptions(t,
 			`
               struct S {
@@ -2043,7 +2053,7 @@ func TestInterpretComputationMeteringComposite(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               struct S {
@@ -2094,7 +2104,7 @@ func TestInterpretComputationMeteringString(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		_, err := parseCheckAndInterpretWithOptions(t,
 			`
              let x = "abc"[2]
@@ -2129,7 +2139,7 @@ func TestInterpretComputationMeteringString(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		_, err := parseCheckAndInterpretWithOptions(t,
 			`
              let x = "abc".length
@@ -2160,7 +2170,7 @@ func TestInterpretComputationMeteringString(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		_, err := parseCheckAndInterpretWithOptions(t,
 			`
              let x = "abc".toLower()
@@ -2189,7 +2199,7 @@ func TestInterpretComputationMeteringString(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		_, err := parseCheckAndInterpretWithOptions(t,
 			`
              let x = "abcd".slice(from: 1, upTo: 3)
@@ -2223,7 +2233,7 @@ func TestInterpretComputationMeteringString(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
              fun test() {
@@ -2259,7 +2269,7 @@ func TestInterpretComputationMeteringString(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
              fun test() {
@@ -2310,7 +2320,7 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, stdlib.RLPContract)
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
              fun test() {
@@ -2372,7 +2382,7 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, stdlib.RLPContract)
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
              fun test() {
@@ -2433,7 +2443,7 @@ func TestInterpretComputationMeteringIntegerParsing(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               fun test() {
@@ -2467,7 +2477,7 @@ func TestInterpretComputationMeteringIntegerParsing(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               fun test() {
@@ -2501,7 +2511,7 @@ func TestInterpretComputationMeteringIntegerParsing(t *testing.T) {
 
 		computationGauge := newTestComputationGauge()
 
-		storage := newUnmeteredInMemoryStorage()
+		storage := NewUnmeteredInMemoryStorage()
 		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               fun test() {

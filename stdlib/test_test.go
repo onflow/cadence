@@ -35,6 +35,7 @@ import (
 	"github.com/onflow/cadence/parser"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
+	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -98,7 +99,7 @@ func newTestContractInterpreterWithTestFramework(
 		return nil, err
 	}
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	storage := NewUnmeteredInMemoryStorage()
 
 	var uuid uint64 = 0
 
