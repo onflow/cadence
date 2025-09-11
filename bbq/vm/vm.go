@@ -750,12 +750,14 @@ func opFalse(vm *VM) {
 	vm.push(interpreter.FalseValue)
 }
 
-func opGetValueConstant(vm *VM, ins opcode.InstructionGetConstant) {
+func opGetConstant(vm *VM, ins opcode.InstructionGetConstant) {
 	constantIndex := ins.Constant
 	executable := vm.callFrame.function.Executable
 	c := executable.Constants[constantIndex]
 	if c == nil {
-		c = vm.initializeConstant(constantIndex)
+		// Constants referred-to by `InstructionGetConstant`
+		// are always value-typed constants.
+		c = vm.initializeValueTypedConstant(constantIndex)
 	}
 	vm.push(c)
 }
@@ -1582,7 +1584,7 @@ func (vm *VM) run() {
 		case opcode.InstructionFalse:
 			opFalse(vm)
 		case opcode.InstructionGetConstant:
-			opGetValueConstant(vm, ins)
+			opGetConstant(vm, ins)
 		case opcode.InstructionGetLocal:
 			opGetLocal(vm, ins)
 		case opcode.InstructionSetLocal:
@@ -1766,7 +1768,7 @@ func opStatement(vm *VM) {
 	common.UseComputation(vm.context, common.StatementComputationUsage)
 }
 
-func (vm *VM) initializeConstant(index uint16) Value {
+func (vm *VM) initializeValueTypedConstant(index uint16) Value {
 	executable := vm.callFrame.function.Executable
 	c := executable.Program.Constants[index]
 
