@@ -451,7 +451,7 @@ func TestInterpretImportWithAlias(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
           import a as a1 from 0x1
@@ -565,7 +565,7 @@ func TestInterpretImportAliasGetType(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
           import Foo as Bar from 0x1
@@ -688,7 +688,7 @@ func TestInterpretImportTypeEquality(t *testing.T) {
 	// and imports bar from 0x2,
 	// and uses bar to return Baz (i.e., Foo)
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
           import Foo as Baz from 0x1
@@ -812,7 +812,7 @@ func TestInterpretImportAliasOtherMember(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewUnmeteredInMemoryStorage()
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
 		import MyContract as TheirContract from 0x1
