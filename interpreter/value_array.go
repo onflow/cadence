@@ -119,8 +119,25 @@ func NewArrayValueWithIterator(
 		}()
 	}
 
-	constructor := func() *atree.Array {
-		array, err := atree.NewArrayFromBatchData(
+	constructor := func() (array *atree.Array) {
+
+		if TracingEnabled {
+			startTime := time.Now()
+
+			defer func() {
+				valueID := array.ValueID().String()
+				typeID := string(v.Type.ID())
+
+				context.ReportAtreeNewArrayFromBatchData(
+					valueID,
+					typeID,
+					time.Since(startTime),
+				)
+			}()
+		}
+
+		var err error
+		array, err = atree.NewArrayFromBatchData(
 			context.Storage(),
 			atree.Address(address),
 			arrayType,
@@ -1378,36 +1395,54 @@ func (v *ArrayValue) Transfer(
 		common.UseMemory(context, dataSlabs)
 		common.UseMemory(context, metaDataSlabs)
 
-		array, err = atree.NewArrayFromBatchData(
-			context.Storage(),
-			address,
-			v.array.Type(),
-			func() (atree.Value, error) {
-				value, err := iterator.Next()
-				if err != nil {
-					return nil, err
-				}
-				if value == nil {
-					return nil, nil
-				}
+		func() {
 
-				element := MustConvertStoredValue(context, value).
-					Transfer(
-						context,
-						locationRange,
-						address,
-						remove,
-						nil,
-						preventTransfer,
-						false, // value has a parent container because it is from iterator.
+			if TracingEnabled {
+				startTime := time.Now()
+
+				defer func() {
+					valueID := array.ValueID().String()
+					typeID := string(v.Type.ID())
+
+					context.ReportAtreeNewArrayFromBatchData(
+						valueID,
+						typeID,
+						time.Since(startTime),
 					)
+				}()
+			}
 
-				return element, nil
-			},
-		)
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
+			array, err = atree.NewArrayFromBatchData(
+				context.Storage(),
+				address,
+				v.array.Type(),
+				func() (atree.Value, error) {
+					value, err := iterator.Next()
+					if err != nil {
+						return nil, err
+					}
+					if value == nil {
+						return nil, nil
+					}
+
+					element := MustConvertStoredValue(context, value).
+						Transfer(
+							context,
+							locationRange,
+							address,
+							remove,
+							nil,
+							preventTransfer,
+							false, // value has a parent container because it is from iterator.
+						)
+
+					return element, nil
+				},
+			)
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+		}()
 
 		if remove {
 			err = v.array.PopIterate(func(storable atree.Storable) {

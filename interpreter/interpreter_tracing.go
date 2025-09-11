@@ -35,6 +35,7 @@ const (
 	tracingArrayPrefix      = "array."
 	tracingDictionaryPrefix = "dictionary."
 	tracingCompositePrefix  = "composite."
+	tracingAtreeArrayPrefix = "atreeArray."
 	tracingAtreeMapPrefix   = "atreeMap."
 
 	// Value operation postfixes
@@ -77,6 +78,8 @@ type Tracer interface {
 	ReportCompositeValueGetMemberTrace(valueID string, typeID string, kind string, name string, duration time.Duration)
 	ReportCompositeValueSetMemberTrace(valueID string, typeID string, kind string, name string, duration time.Duration)
 	ReportCompositeValueRemoveMemberTrace(valueID string, typeID string, kind string, name string, duration time.Duration)
+
+	ReportAtreeNewArrayFromBatchData(valueID string, typeID string, duration time.Duration)
 
 	ReportAtreeNewMap(valueID string, typeID string, seed uint64, duration time.Duration)
 	ReportAtreeNewMapFromBatchData(valueID string, typeID string, seed uint64, duration time.Duration)
@@ -396,6 +399,18 @@ func (t CallbackTracer) ReportCompositeValueRemoveMemberTrace(
 	)
 }
 
+func (t CallbackTracer) ReportAtreeNewArrayFromBatchData(
+	valueID string,
+	typeID string,
+	duration time.Duration,
+) {
+	t(
+		tracingAtreeArrayPrefix+tracingAtreeMapNewFromBatchDataPostfix,
+		duration,
+		prepareContainerValueTraceAttrs(valueID, typeID),
+	)
+}
+
 func prepareAtreeMapTraceAttrs(valueID string, typeID string, seed uint64) []attribute.KeyValue {
 	return append(
 		prepareContainerValueTraceAttrs(valueID, typeID),
@@ -521,6 +536,10 @@ func (NoOpTracer) ReportCompositeValueRemoveMemberTrace(_ string, _ string, _ st
 }
 
 func (NoOpTracer) ReportDomainStorageMapDeepRemoveTrace(_ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportAtreeNewArrayFromBatchData(_ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
