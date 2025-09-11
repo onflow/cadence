@@ -41,8 +41,8 @@ import (
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
-// assertGlobalsEqualIgnoringFields compares globals while ignoring Kind, Function, Variable, and Contract fields
-func assertGlobalsEqualIgnoringFields(t *testing.T, expected, actual map[string]*bbq.Global[opcode.Instruction]) {
+// assertGlobalsEqual compares GlobalInfo of globals
+func assertGlobalsEqual(t *testing.T, expected map[string]bbq.GlobalInfo, actual map[string]bbq.Global) {
 	// Check that both maps have the same keys
 	assert.Equal(t, len(expected), len(actual), "globals maps have different lengths")
 
@@ -52,10 +52,7 @@ func assertGlobalsEqualIgnoringFields(t *testing.T, expected, actual map[string]
 			continue
 		}
 
-		// Compare only Name, Location, and Index - ignore Kind, Function, Variable, Contract
-		assert.Equal(t, expectedGlobal.Name, actualGlobal.Name, "global %s has different Name", key)
-		assert.Equal(t, expectedGlobal.Location, actualGlobal.Location, "global %s has different Location", key)
-		assert.Equal(t, expectedGlobal.Index, actualGlobal.Index, "global %s has different Index", key)
+		assert.Equal(t, expectedGlobal, actualGlobal.GetGlobalInfo())
 	}
 }
 
@@ -3248,7 +3245,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 	require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].Index)
+	assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].GetGlobalInfo().Index)
 
 	// `Test` type's `test` function.
 
@@ -3257,7 +3254,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 	require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].Index)
+	assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].GetGlobalInfo().Index)
 
 	// Should be calling into interface's default function.
 	// ```
@@ -3296,7 +3293,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 	require.Equal(t, interfaceTypeTestFuncName, interfaceTypeTestFunc.QualifiedName)
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, interfaceFunctionIndex, comp.Globals[interfaceTypeTestFuncName].Index)
+	assert.Equal(t, interfaceFunctionIndex, comp.Globals[interfaceTypeTestFuncName].GetGlobalInfo().Index)
 
 	// Should contain the implementation.
 	// ```
@@ -3627,7 +3624,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
 
 		// Also check if the globals are linked properly.
-		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].Index)
+		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].GetGlobalInfo().Index)
 
 		// `Test` type's `test` function.
 
@@ -3651,7 +3648,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
 
 		// Also check if the globals are linked properly.
-		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].Index)
+		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].GetGlobalInfo().Index)
 
 		// Would be equivalent to:
 		// ```
@@ -3802,7 +3799,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
 
 		// Also check if the globals are linked properly.
-		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].Index)
+		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].GetGlobalInfo().Index)
 
 		// `Test` type's `test` function.
 
@@ -3826,7 +3823,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
 
 		// Also check if the globals are linked properly.
-		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].Index)
+		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].GetGlobalInfo().Index)
 
 		// Would be equivalent to:
 		// ```
@@ -4998,7 +4995,7 @@ func TestCompileTransaction(t *testing.T) {
 	// Also check if the globals are linked properly.
 	assert.Equal(t,
 		transactionInitFunctionIndex,
-		comp.Globals[commons.TransactionWrapperCompositeName].Index,
+		comp.Globals[commons.TransactionWrapperCompositeName].GetGlobalInfo().Index,
 	)
 
 	assert.Equal(t,
@@ -5037,7 +5034,7 @@ func TestCompileTransaction(t *testing.T) {
 	// Also check if the globals are linked properly.
 	assert.Equal(t,
 		prepareFunctionIndex,
-		comp.Globals[commons.TransactionPrepareFunctionName].Index,
+		comp.Globals[commons.TransactionPrepareFunctionName].GetGlobalInfo().Index,
 	)
 
 	assert.Equal(t,
@@ -5076,7 +5073,7 @@ func TestCompileTransaction(t *testing.T) {
 	require.Equal(t, commons.TransactionExecuteFunctionName, executeFunction.QualifiedName)
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, executeFunctionIndex, comp.Globals[commons.TransactionExecuteFunctionName].Index)
+	assert.Equal(t, executeFunctionIndex, comp.Globals[commons.TransactionExecuteFunctionName].GetGlobalInfo().Index)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -9742,9 +9739,9 @@ func TestCompileImportAlias(t *testing.T) {
 		)
 
 		// Imported types are location qualified.
-		assertGlobalsEqualIgnoringFields(
+		assertGlobalsEqual(
 			t,
-			map[string]*bbq.Global[opcode.Instruction]{
+			map[string]bbq.GlobalInfo{
 				"test": {
 					Location: nil,
 					Name:     "test",
@@ -9844,9 +9841,9 @@ func TestCompileImportAlias(t *testing.T) {
 		)
 
 		// only imported function is a location qualified global.
-		assertGlobalsEqualIgnoringFields(
+		assertGlobalsEqual(
 			t,
-			map[string]*bbq.Global[opcode.Instruction]{
+			map[string]bbq.GlobalInfo{
 				"Bar": {
 					Location: nil,
 					Name:     "Bar",

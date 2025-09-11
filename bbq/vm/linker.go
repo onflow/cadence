@@ -128,14 +128,9 @@ func LinkGlobals(
 	// NOTE: ensure both the context and the mapping are updated
 
 	for i, global := range program.Globals {
-		// ignore imported globals, they are already linked and will be added later
-		if global.Kind == bbq.GlobalKindImported {
-			continue
-		}
-
-		switch global.Kind {
-		case bbq.GlobalKindFunction:
-			function := global.Function
+		switch typedGlobal := global.(type) {
+		case *bbq.FunctionGlobal[opcode.Instruction]:
+			function := typedGlobal.Function
 			var value FunctionValue
 
 			if function.IsNative() {
@@ -150,8 +145,8 @@ func LinkGlobals(
 			// Linker matches the compiled function index with the linked function index
 			globals[i] = variable
 			indexedGlobals.Set(function.QualifiedName, variable)
-		case bbq.GlobalKindVariable:
-			variable := global.Variable
+		case *bbq.VariableGlobal[opcode.Instruction]:
+			variable := typedGlobal.Variable
 			simpleVariable := &interpreter.SimpleVariable{}
 
 			// Some globals variables may not have initial values.
@@ -169,8 +164,8 @@ func LinkGlobals(
 			// Linker matches the compiled variable index with the linked variable index
 			globals[i] = simpleVariable
 			indexedGlobals.Set(variable.Name, simpleVariable)
-		case bbq.GlobalKindContract:
-			contract := global.Contract
+		case *bbq.ContractGlobal:
+			contract := typedGlobal.Contract
 			contractVariable := interpreter.NewContractVariableWithGetter(
 				memoryGauge,
 				func() interpreter.Value {
@@ -180,6 +175,9 @@ func LinkGlobals(
 			// Linker matches the compiled contract index with the linked contract index
 			globals[i] = contractVariable
 			indexedGlobals.Set(contract.Name, contractVariable)
+		case *bbq.ImportedGlobal:
+			// ignore imported globals, they are already linked and will be added later
+			continue
 		}
 	}
 

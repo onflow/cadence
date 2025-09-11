@@ -51,9 +51,9 @@ type Compiler[E, T any] struct {
 	functions          []*function[E]
 	globalVariables    []*globalVariable[E]
 	constants          []*Constant
-	Globals            map[string]*bbq.Global[E]
+	Globals            map[string]bbq.Global
 	globalImports      *activations.Activation[GlobalImport]
-	importedGlobals    []*bbq.Global[E]
+	importedGlobals    []bbq.Global
 	controlFlows       []controlFlow
 	currentControlFlow *controlFlow
 	returns            []returns
@@ -185,7 +185,7 @@ func newCompiler[E, T any](
 		DesugaredElaboration: NewDesugaredElaboration(program.Elaboration),
 		Config:               config,
 		location:             location,
-		Globals:              make(map[string]*bbq.Global[E]),
+		Globals:              make(map[string]bbq.Global),
 		globalImports:        globalImports,
 		typesInPool:          make(map[sema.TypeID]uint16),
 		constantsInPool:      make(map[constantsCacheKey]*Constant),
@@ -198,7 +198,7 @@ func newCompiler[E, T any](
 	}
 }
 
-func (c *Compiler[E, _]) findGlobal(name string) *bbq.Global[E] {
+func (c *Compiler[E, _]) findGlobal(name string) bbq.Global {
 	global, ok := c.Globals[name]
 	if ok {
 		return global
@@ -238,12 +238,11 @@ func (c *Compiler[E, _]) findGlobal(name string) *bbq.Global[E] {
 	if count >= math.MaxUint16 {
 		panic(errors.NewUnexpectedError("invalid global declaration '%s'", name))
 	}
-	global = bbq.NewGlobal[E](
+	global = bbq.NewImportedGlobal(
 		c.Config.MemoryGauge,
 		name,
 		importedGlobal.Location,
 		uint16(count),
-		bbq.GlobalKindImported,
 	)
 	c.Globals[name] = global
 
@@ -260,19 +259,23 @@ func (c *Compiler[E, _]) findGlobal(name string) *bbq.Global[E] {
 	return global
 }
 
-func (c *Compiler[E, _]) addGlobal(name string, kind bbq.GlobalKind) *bbq.Global[E] {
+func (c *Compiler[E, _]) addGlobal(name string, kind bbq.GlobalKind) bbq.Global {
 	count := len(c.Globals)
 	if count >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid global declaration"))
 	}
 
-	global := bbq.NewGlobal[E](
-		c.Config.MemoryGauge,
-		name,
-		nil,
-		(uint16)(count),
-		kind,
-	)
+	var global bbq.Global
+
+	switch kind {
+	case bbq.GlobalKindFunction:
+		global = bbq.NewFunctionGlobal[E](c.Config.MemoryGauge, name, nil, uint16(count))
+	case bbq.GlobalKindVariable:
+		global = bbq.NewVariableGlobal[E](c.Config.MemoryGauge, name, nil, uint16(count))
+	case bbq.GlobalKindContract:
+		global = bbq.NewContractGlobal(c.Config.MemoryGauge, name, nil, uint16(count))
+	}
+
 	c.Globals[name] = global
 
 	return global
@@ -648,10 +651,14 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 	// can't do this in exportContracts because it's called before initializeAllGlobals
 	for _, contract := range contracts {
 		global := c.Globals[contract.Name]
-		if global.Location != nil && global == nil {
-			panic(errors.NewUnexpectedError("global not found for contract %s", contract.Name))
+		if contractGlobal, ok := global.(*bbq.ContractGlobal); ok {
+			if contractGlobal.GlobalInfo.Location != nil && global == nil {
+				panic(errors.NewUnexpectedError("global not found for contract %s", contract.Name))
+			}
+			contractGlobal.Contract = contract
+		} else {
+			panic(errors.NewUnexpectedError("wrong global type found for contract %s", contract.Name))
 		}
-		global.Contract = contract
 	}
 
 	return &bbq.Program[E, T]{
@@ -740,7 +747,7 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 		case common.DeclarationKindDestructorLegacy,
 			common.DeclarationKindPrepare:
 			// Important: All special functions visited within `VisitSpecialFunctionDeclaration`
-			// must be also visited here. And must be visited only then. e.g: Don't visit inits.
+			// must be also visited here. And must only visit them. e.g: Don't visit inits.
 			functionName := declaration.FunctionDeclaration.Identifier.Identifier
 			qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
 			c.addGlobal(qualifiedName, bbq.GlobalKindFunction)
@@ -851,13 +858,13 @@ func (c *Compiler[_, T]) exportTypes() []T {
 	return c.compiledTypes
 }
 
-func (c *Compiler[E, _]) exportGlobals() []*bbq.Global[E] {
+func (c *Compiler[E, _]) exportGlobals() []bbq.Global {
 	// create a sorted global slice by index for linker efficiency
 	// tradeoff: compiler does more work to sort the globals, but linker does less work to link the globals
 	// ignore linting, order doesn't matter since its sorted after
 	globalsSlice := slices.Collect(maps.Values(c.Globals)) //nolint:forbidigo
-	slices.SortFunc(globalsSlice, func(a, b *bbq.Global[E]) int {
-		return int(a.Index) - int(b.Index)
+	slices.SortFunc(globalsSlice, func(a, b bbq.Global) int {
+		return int(a.GetGlobalInfo().Index) - int(b.GetGlobalInfo().Index)
 	})
 	return globalsSlice
 }
@@ -881,9 +888,9 @@ func (c *Compiler[_, _]) exportImports() []bbq.Import {
 	if count > 0 {
 		exportedImports = make([]bbq.Import, 0, count)
 		for _, importedGlobal := range c.importedGlobals {
-			name := c.removeAlias(importedGlobal.Name)
+			name := c.removeAlias(importedGlobal.GetGlobalInfo().Name)
 			bbqImport := bbq.Import{
-				Location: importedGlobal.Location,
+				Location: importedGlobal.GetGlobalInfo().Location,
 				Name:     name,
 			}
 			exportedImports = append(exportedImports, bbqImport)
@@ -909,13 +916,17 @@ func (c *Compiler[E, _]) exportFunctions() []bbq.Function[E] {
 			global := c.Globals[function.qualifiedName]
 			// function expressions do not have globals
 			// see VisitFunctionExpression
-			if function.qualifiedName == "" {
+			if newFunction.IsAnonymous() {
 				continue
 			}
 			if global == nil {
 				panic(errors.NewUnexpectedError("global not found for function %s", function.qualifiedName))
 			}
-			global.Function = &newFunction
+			if functionGlobal, ok := global.(*bbq.FunctionGlobal[E]); ok {
+				functionGlobal.Function = &newFunction
+			} else {
+				panic(errors.NewUnexpectedError("wrong global type found for function %s", function.qualifiedName))
+			}
 		}
 	}
 	return functions
@@ -961,7 +972,11 @@ func (c *Compiler[E, _]) exportGlobalVariables() []bbq.Variable[E] {
 			if global == nil {
 				panic(errors.NewUnexpectedError("global not found for global variable %s", variable.Name))
 			}
-			global.Variable = &variable
+			if variableGlobal, ok := global.(*bbq.VariableGlobal[E]); ok {
+				variableGlobal.Variable = &variable
+			} else {
+				panic(errors.NewUnexpectedError("wrong global type found for global variable %s", variable.Name))
+			}
 
 			globalVariables = append(globalVariables, variable)
 		}
@@ -2258,7 +2273,7 @@ func (c *Compiler[_, _]) emitGlobalLoad(name string) {
 	name = c.applyTypeAliases(name)
 	global := c.findGlobal(name)
 	c.emit(opcode.InstructionGetGlobal{
-		Global: global.Index,
+		Global: global.GetGlobalInfo().Index,
 	})
 }
 
@@ -2267,7 +2282,7 @@ func (c *Compiler[_, _]) emitMethodLoad(name string) {
 	name = c.applyTypeAliases(name)
 	global := c.findGlobal(name)
 	c.emit(opcode.InstructionGetMethod{
-		Method: global.Index,
+		Method: global.GetGlobalInfo().Index,
 	})
 }
 
@@ -2288,7 +2303,7 @@ func (c *Compiler[_, _]) emitVariableStore(name string) {
 
 	global := c.findGlobal(name)
 	c.emit(opcode.InstructionSetGlobal{
-		Global: global.Index,
+		Global: global.GetGlobalInfo().Index,
 	})
 }
 
@@ -3189,7 +3204,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		global := c.findGlobal(typeName)
 
 		c.emit(opcode.InstructionSetGlobal{
-			Global: global.Index,
+			Global: global.GetGlobalInfo().Index,
 		})
 	}
 

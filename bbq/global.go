@@ -31,29 +31,111 @@ const (
 	GlobalKindImported
 )
 
-type Global[E any] struct {
+type GlobalInfo struct {
 	Name     string
 	Location common.Location
 	Index    uint16
-	// used for linking
-	Function *Function[E]
-	Variable *Variable[E]
-	Contract *Contract
-	Kind     GlobalKind
 }
 
-func NewGlobal[E any](
+type Global interface {
+	GetGlobalInfo() GlobalInfo
+}
+
+type FunctionGlobal[E any] struct {
+	GlobalInfo
+	Function *Function[E]
+}
+
+type VariableGlobal[E any] struct {
+	GlobalInfo
+	Variable *Variable[E]
+}
+
+type ContractGlobal struct {
+	GlobalInfo
+	Contract *Contract
+}
+
+type ImportedGlobal struct {
+	GlobalInfo
+}
+
+func NewFunctionGlobal[E any](
 	memoryGauge common.MemoryGauge,
 	name string,
 	location common.Location,
 	index uint16,
-	kind GlobalKind,
-) *Global[E] {
+) *FunctionGlobal[E] {
 	common.UseMemory(memoryGauge, common.CompilerGlobalMemoryUsage)
-	return &Global[E]{
-		Name:     name,
-		Location: location,
-		Index:    index,
-		Kind:     kind,
+	return &FunctionGlobal[E]{
+		GlobalInfo: GlobalInfo{
+			Name:     name,
+			Location: location,
+			Index:    index,
+		},
+	}
+}
+
+func (g FunctionGlobal[E]) GetGlobalInfo() GlobalInfo {
+	return g.GlobalInfo
+}
+
+func (g VariableGlobal[E]) GetGlobalInfo() GlobalInfo {
+	return g.GlobalInfo
+}
+
+func (g ContractGlobal) GetGlobalInfo() GlobalInfo {
+	return g.GlobalInfo
+}
+
+func (g ImportedGlobal) GetGlobalInfo() GlobalInfo {
+	return g.GlobalInfo
+}
+
+func NewVariableGlobal[E any](
+	memoryGauge common.MemoryGauge,
+	name string,
+	location common.Location,
+	index uint16,
+) *VariableGlobal[E] {
+	common.UseMemory(memoryGauge, common.CompilerGlobalMemoryUsage)
+	return &VariableGlobal[E]{
+		GlobalInfo: GlobalInfo{
+			Name:     name,
+			Location: location,
+			Index:    index,
+		},
+	}
+}
+
+func NewContractGlobal(
+	memoryGauge common.MemoryGauge,
+	name string,
+	location common.Location,
+	index uint16,
+) *ContractGlobal {
+	common.UseMemory(memoryGauge, common.CompilerGlobalMemoryUsage)
+	return &ContractGlobal{
+		GlobalInfo: GlobalInfo{
+			Name:     name,
+			Location: location,
+			Index:    index,
+		},
+	}
+}
+
+func NewImportedGlobal(
+	memoryGauge common.MemoryGauge,
+	name string,
+	location common.Location,
+	index uint16,
+) *ImportedGlobal {
+	common.UseMemory(memoryGauge, common.CompilerGlobalMemoryUsage)
+	return &ImportedGlobal{
+		GlobalInfo: GlobalInfo{
+			Name:     name,
+			Location: location,
+			Index:    index,
+		},
 	}
 }
