@@ -71,18 +71,27 @@ func TestRuntimeTracingEnabled(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		ifCompile[[]string](
+		ifCompile(
 			[]string{
 				"function.transaction",
+				"atreeMap.new",
 				"dictionary.construct",
+				"atreeMap.newFromBatchData",
 				"dictionary.transfer",
+				"atreeArray.newFromBatchData",
 				"array.construct",
+				"atreeArray.newFromBatchData",
 				"array.transfer",
 				"function.transaction.prepare",
-			}, []string{
+			},
+			[]string{
+				"atreeMap.new",
 				"dictionary.construct",
+				"atreeMap.newFromBatchData",
 				"dictionary.transfer",
+				"atreeArray.newFromBatchData",
 				"array.construct",
+				"atreeArray.newFromBatchData",
 				"array.transfer",
 			},
 		),

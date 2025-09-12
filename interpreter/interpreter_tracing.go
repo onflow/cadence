@@ -35,6 +35,8 @@ const (
 	tracingArrayPrefix      = "array."
 	tracingDictionaryPrefix = "dictionary."
 	tracingCompositePrefix  = "composite."
+	tracingAtreeArrayPrefix = "atreeArray."
+	tracingAtreeMapPrefix   = "atreeMap."
 
 	// Value operation postfixes
 	tracingConstructPostfix            = "construct"
@@ -47,6 +49,9 @@ const (
 	tracingGetMemberPrefix    = "getMember."
 	tracingSetMemberPrefix    = "setMember."
 	tracingRemoveMemberPrefix = "removeMember."
+
+	tracingAtreeMapNew                     = "new"
+	tracingAtreeMapNewFromBatchDataPostfix = "newFromBatchData"
 )
 
 type Tracer interface {
@@ -54,25 +59,30 @@ type Tracer interface {
 	ReportImportTrace(importPath string, duration time.Duration)
 
 	ReportArrayValueConstructTrace(valueID string, typeID string, duration time.Duration)
-	ReportArrayValueTransferTrace(valueID string, typeID string, since time.Duration)
+	ReportArrayValueTransferTrace(valueID string, typeID string, duration time.Duration)
 	ReportArrayValueDeepRemoveTrace(valueID string, typeID string, duration time.Duration)
-	ReportArrayValueDestroyTrace(valueID string, typeID string, since time.Duration)
-	ReportArrayValueConformsToStaticTypeTrace(valueID string, typeID string, since time.Duration)
+	ReportArrayValueDestroyTrace(valueID string, typeID string, duration time.Duration)
+	ReportArrayValueConformsToStaticTypeTrace(valueID string, typeID string, duration time.Duration)
 
-	ReportDictionaryValueConstructTrace(valueID string, typeID string, since time.Duration)
-	ReportDictionaryValueTransferTrace(valueID string, typeID string, since time.Duration)
-	ReportDictionaryValueDeepRemoveTrace(valueID string, typeID string, since time.Duration)
-	ReportDictionaryValueDestroyTrace(valueID string, typeID string, since time.Duration)
-	ReportDictionaryValueConformsToStaticTypeTrace(valueID string, typeID string, since time.Duration)
+	ReportDictionaryValueConstructTrace(valueID string, typeID string, duration time.Duration)
+	ReportDictionaryValueTransferTrace(valueID string, typeID string, duration time.Duration)
+	ReportDictionaryValueDeepRemoveTrace(valueID string, typeID string, duration time.Duration)
+	ReportDictionaryValueDestroyTrace(valueID string, typeID string, duration time.Duration)
+	ReportDictionaryValueConformsToStaticTypeTrace(valueID string, typeID string, duration time.Duration)
 
-	ReportCompositeValueConstructTrace(valueID string, typeID string, kind string, since time.Duration)
-	ReportCompositeValueTransferTrace(valueID string, typeID string, kind string, since time.Duration)
-	ReportCompositeValueDeepRemoveTrace(valueID string, typeID string, kind string, since time.Duration)
-	ReportCompositeValueDestroyTrace(valueID string, typeID string, kind string, since time.Duration)
-	ReportCompositeValueConformsToStaticTypeTrace(valueID string, typeID string, kind string, since time.Duration)
+	ReportCompositeValueConstructTrace(valueID string, typeID string, kind string, duration time.Duration)
+	ReportCompositeValueTransferTrace(valueID string, typeID string, kind string, duration time.Duration)
+	ReportCompositeValueDeepRemoveTrace(valueID string, typeID string, kind string, duration time.Duration)
+	ReportCompositeValueDestroyTrace(valueID string, typeID string, kind string, duration time.Duration)
+	ReportCompositeValueConformsToStaticTypeTrace(valueID string, typeID string, kind string, duration time.Duration)
 	ReportCompositeValueGetMemberTrace(valueID string, typeID string, kind string, name string, duration time.Duration)
-	ReportCompositeValueSetMemberTrace(valueID string, typeID string, kind string, name string, since time.Duration)
-	ReportCompositeValueRemoveMemberTrace(valueID string, typeID string, kind string, name string, since time.Duration)
+	ReportCompositeValueSetMemberTrace(valueID string, typeID string, kind string, name string, duration time.Duration)
+	ReportCompositeValueRemoveMemberTrace(valueID string, typeID string, kind string, name string, duration time.Duration)
+
+	ReportAtreeNewArrayFromBatchData(valueID string, typeID string, duration time.Duration)
+
+	ReportAtreeNewMap(valueID string, typeID string, seed uint64, duration time.Duration)
+	ReportAtreeNewMapFromBatchData(valueID string, typeID string, seed uint64, duration time.Duration)
 }
 
 type CallbackTracer OnRecordTraceFunc
@@ -267,14 +277,14 @@ func (t CallbackTracer) reportCompositeTrace(
 }
 
 func (t CallbackTracer) ReportCompositeValueConstructTrace(
-	owner string,
+	valueID string,
 	typeID string,
 	kind string,
 	duration time.Duration,
 ) {
 	t.reportCompositeTrace(
 		tracingCompositePrefix+tracingConstructPostfix,
-		owner,
+		valueID,
 		typeID,
 		kind,
 		duration,
@@ -282,14 +292,14 @@ func (t CallbackTracer) ReportCompositeValueConstructTrace(
 }
 
 func (t CallbackTracer) ReportCompositeValueDeepRemoveTrace(
-	owner string,
+	valueID string,
 	typeID string,
 	kind string,
 	duration time.Duration,
 ) {
 	t.reportCompositeTrace(
 		tracingCompositePrefix+tracingDeepRemovePostfix,
-		owner,
+		valueID,
 		typeID,
 		kind,
 		duration,
@@ -297,14 +307,14 @@ func (t CallbackTracer) ReportCompositeValueDeepRemoveTrace(
 }
 
 func (t CallbackTracer) ReportCompositeValueDestroyTrace(
-	owner string,
+	valueID string,
 	typeID string,
 	kind string,
 	duration time.Duration,
 ) {
 	t.reportCompositeTrace(
 		tracingCompositePrefix+tracingDestroyPostfix,
-		owner,
+		valueID,
 		typeID,
 		kind,
 		duration,
@@ -312,14 +322,14 @@ func (t CallbackTracer) ReportCompositeValueDestroyTrace(
 }
 
 func (t CallbackTracer) ReportCompositeValueTransferTrace(
-	owner string,
+	valueID string,
 	typeID string,
 	kind string,
 	duration time.Duration,
 ) {
 	t.reportCompositeTrace(
 		tracingCompositePrefix+tracingTransferPostfix,
-		owner,
+		valueID,
 		typeID,
 		kind,
 		duration,
@@ -327,14 +337,14 @@ func (t CallbackTracer) ReportCompositeValueTransferTrace(
 }
 
 func (t CallbackTracer) ReportCompositeValueConformsToStaticTypeTrace(
-	owner string,
+	valueID string,
 	typeID string,
 	kind string,
 	duration time.Duration,
 ) {
 	t.reportCompositeTrace(
 		tracingCompositePrefix+tracingConformsToStaticTypePostfix,
-		owner,
+		valueID,
 		typeID,
 		kind,
 		duration,
@@ -342,7 +352,7 @@ func (t CallbackTracer) ReportCompositeValueConformsToStaticTypeTrace(
 }
 
 func (t CallbackTracer) ReportCompositeValueGetMemberTrace(
-	owner string,
+	valueID string,
 	typeID string,
 	kind string,
 	name string,
@@ -350,7 +360,7 @@ func (t CallbackTracer) ReportCompositeValueGetMemberTrace(
 ) {
 	t.reportCompositeTrace(
 		tracingCompositePrefix+tracingGetMemberPrefix+name,
-		owner,
+		valueID,
 		typeID,
 		kind,
 		duration,
@@ -358,7 +368,7 @@ func (t CallbackTracer) ReportCompositeValueGetMemberTrace(
 }
 
 func (t CallbackTracer) ReportCompositeValueSetMemberTrace(
-	owner string,
+	valueID string,
 	typeID string,
 	kind string,
 	name string,
@@ -366,7 +376,7 @@ func (t CallbackTracer) ReportCompositeValueSetMemberTrace(
 ) {
 	t.reportCompositeTrace(
 		tracingCompositePrefix+tracingSetMemberPrefix+name,
-		owner,
+		valueID,
 		typeID,
 		kind,
 		duration,
@@ -374,7 +384,7 @@ func (t CallbackTracer) ReportCompositeValueSetMemberTrace(
 }
 
 func (t CallbackTracer) ReportCompositeValueRemoveMemberTrace(
-	owner string,
+	valueID string,
 	typeID string,
 	kind string,
 	name string,
@@ -382,10 +392,58 @@ func (t CallbackTracer) ReportCompositeValueRemoveMemberTrace(
 ) {
 	t.reportCompositeTrace(
 		tracingCompositePrefix+tracingRemoveMemberPrefix+name,
-		owner,
+		valueID,
 		typeID,
 		kind,
 		duration,
+	)
+}
+
+func (t CallbackTracer) ReportAtreeNewArrayFromBatchData(
+	valueID string,
+	typeID string,
+	duration time.Duration,
+) {
+	t(
+		tracingAtreeArrayPrefix+tracingAtreeMapNewFromBatchDataPostfix,
+		duration,
+		prepareContainerValueTraceAttrs(valueID, typeID),
+	)
+}
+
+func prepareAtreeMapTraceAttrs(valueID string, typeID string, seed uint64) []attribute.KeyValue {
+	return append(
+		prepareContainerValueTraceAttrs(valueID, typeID),
+		// OpenTelemetry does not support unsigned integers, so we use Int64.
+		// The conversion might overflow if the seed is too large,
+		// but this information is only used for debugging purposes.
+		attribute.Int64("seed", int64(seed)),
+	)
+}
+
+func (t CallbackTracer) ReportAtreeNewMap(
+	valueID string,
+	typeID string,
+	seed uint64,
+	duration time.Duration,
+) {
+	t(
+		tracingAtreeMapPrefix+tracingAtreeMapNew,
+		duration,
+		prepareAtreeMapTraceAttrs(valueID, typeID, seed),
+	)
+}
+
+func (t CallbackTracer) ReportAtreeNewMapFromBatchData(
+	valueID string,
+	typeID string,
+	seed uint64,
+	duration time.Duration,
+) {
+	t(
+		tracingAtreeMapPrefix+tracingAtreeMapNewFromBatchDataPostfix,
+		duration,
+		prepareAtreeMapTraceAttrs(valueID, typeID, seed),
 	)
 }
 
@@ -478,5 +536,17 @@ func (NoOpTracer) ReportCompositeValueRemoveMemberTrace(_ string, _ string, _ st
 }
 
 func (NoOpTracer) ReportDomainStorageMapDeepRemoveTrace(_ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportAtreeNewArrayFromBatchData(_ string, _ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportAtreeNewMap(_ string, _ string, _ uint64, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportAtreeNewMapFromBatchData(_ string, _ string, _ uint64, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
