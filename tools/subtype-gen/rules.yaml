@@ -1,0 +1,209 @@
+rules:
+  - super: Any
+    sub: T
+    rule:
+      always
+
+  - super: AnyStruct
+    sub: T
+    rule:
+      and:
+        - not:
+            isResource: T
+        - not:
+            equals:
+              source: T
+              target: Any
+
+  - super: AnyResource
+    sub: T
+    rule:
+      isResource: T
+
+  - super: AnyResourceAttachment
+    sub: T
+    rule:
+      and:
+        - isAttachment: T
+        - isResource: T
+
+  - super: AnyStructAttachment
+    sub: T
+    rule:
+      and:
+        - isAttachment: T
+        - not:
+            isResource: T
+
+  - super: HashableStruct
+    sub: T
+    rule:
+      isHashableStruct: T
+
+  - super: Path
+    sub: T
+    rule:
+      subtype:
+        sub: T
+        super:
+          oneOf: [StoragePath, CapabilityPath]
+
+  - super: Storable
+    sub: T
+    rule:
+      isStorable: T
+
+  - super: CapabilityPath
+    sub: T
+    rule:
+      equals:
+        source: T
+        target:
+          oneOf: [PrivatePath, PublicPath]
+
+  - super: Number
+    sub: T
+    rule:
+      or:
+        - equals:
+            source: T
+            target:
+              oneOf: [Number, SignedNumber]
+
+        - subtype:
+            sub: T
+            super:
+              oneOf: [Integer, FixedPoint]
+
+  - super: SignedNumber
+    sub: T
+    rule:
+      or:
+        - equals:
+            source: T
+            target: SignedNumber
+
+        - subtype:
+            sub: T
+            super:
+              oneOf: [SignedInteger, SignedFixedPoint]
+
+  - super: Integer
+    sub: T
+    rule:
+      or:
+        - equals:
+            source: T
+            target:
+              oneOf: [Integer, SignedInteger, FixedSizeUnsignedInteger, UInt]
+
+        - subtype:
+            sub: T
+            super:
+              oneOf: [SignedInteger, FixedSizeUnsignedInteger]
+
+  - super: SignedInteger
+    sub: T
+    rule:
+      equals:
+        source: T
+        target:
+          oneOf: [SignedInteger, Int, Int8, Int16, Int32, Int64, Int128, Int256]
+
+  - super: FixedSizeUnsignedInteger
+    sub: T
+    rule:
+      equals:
+        source: T
+        target:
+          oneOf: [UInt8, UInt16, UInt32, UInt64, UInt128, UInt256,
+                  Word8, Word16, Word32, Word64, Word128, Word256]
+
+  - super: FixedPoint
+    sub: T
+    rule:
+      or: 
+        - equals:
+            source: T
+            target:
+              oneOf: [FixedPoint, SignedFixedPoint, UFix64, UFix128]
+
+        - subtype:
+            sub: T
+            super: 
+              oneOf: [SignedFixedPoint]
+
+  - super: SignedFixedPoint
+    sub: T
+    rule:
+      equals:
+        source: T
+        target:
+          oneOf: [SignedFixedPoint, Fix64, Fix128]
+
+  - super:
+      Optional:
+        inner: U
+    sub: T
+    rule:
+      equals:
+        source: T
+        target: U
+
+  - super:
+      Reference:
+        auth: A
+        type: B
+    sub:
+      Reference:
+        auth: C
+        type: D
+    rule:
+      and:
+        - permits: [B, A]
+        - equals:
+            source: D
+            target: B
+
+  - super:
+      Function:
+        params: A
+        return: B
+    sub:
+      Function:
+        params: C
+        return: D
+    rule:
+      and:
+        - purity:
+            equals_or_view: true
+        - typeParamsEqual: true
+        - paramsContravariant: true
+        - returnCovariant: true
+        - constructorEqual: true
+
+  - super:
+      Dictionary:
+        key: A
+        value: B
+    sub:
+      Dictionary:
+        key: C
+        value: D
+    rule:
+      and:
+        - equals:
+            source: C
+            target: A
+        - equals:
+            source: D
+            target: B
+
+  - super:
+      Intersection:
+        set: A
+    sub:
+      Intersection:
+        set: B
+    rule:
+      contains: [B, A]
