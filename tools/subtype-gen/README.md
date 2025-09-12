@@ -1,48 +1,29 @@
 # Subtype Generator
 
-This tool generates the `checkSubTypeWithoutEquality` function from a declarative YAML rules file.
+A Go code generator that reads subtype checking rules from a YAML file and generates the `checkSubTypeWithoutEquality` function.
 
-## Files
+## Structure
 
-- `generator.go` - The main generator implementation
-- `main.go` - CLI interface and main program
-- `rules.yaml` - YAML rules file defining subtype checking rules
-- `go.mod` & `go.sum` - Go module dependencies
+The generator is split into three main files:
+
+- **`main.go`** - Entry point and CLI handling
+- **`parser.go`** - YAML parsing and type definitions
+- **`generator.go`** - Code generation logic
 
 ## Usage
 
 ```bash
-# Generate to stdout
-go run generator.go -rules rules.yaml -stdout
-
-# Generate to file
-go run generator.go -rules rules.yaml -out generated_code.go
-
-# Specify package name
-go run generator.go -rules rules.yaml -pkg sema -out generated_code.go
+go run main.go parser.go generator.go -rules rules.yaml -stdout
 ```
 
-## Command Line Options
+## Flags
 
 - `-rules` - Path to YAML rules file (default: rules.yaml)
 - `-out` - Output file path or '-' for stdout (default: -)
 - `-pkg` - Target Go package name (default: sema)
 - `-stdout` - Write to stdout
 
-## YAML Rules Format
+## Files
 
-The rules file defines subtype checking rules in a declarative DSL format. Each rule specifies:
-- `super` - The supertype pattern
-- `sub` - The subtype pattern  
-- `rule` - The condition that must be satisfied
-
-Supported rule types:
-- `always` - Always returns true
-- `isResource`, `isAttachment`, `isHashableStruct`, `isStorable` - Type checks
-- `equals` - Type equality checks with `oneOf` support
-- `and` - Logical AND conditions
-- `not` - Logical NOT conditions
-- `permits` - Authorization checks
-- `purity` - Function purity checks
-- `typeParamsEqual`, `paramsContravariant`, `returnCovariant`, `constructorEqual` - Function type checks
-- `contains` - Set containment checks
+- `rules.yaml` - Input DSL defining subtype checking rules
+- `generated_code.go` - Example output (not used in build)

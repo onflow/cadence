@@ -2,127 +2,9 @@ package main
 
 import (
 	"bytes"
-	"flag"
 	"fmt"
-	"io"
-	"os"
-	"path/filepath"
 	"strings"
-
-	yaml "gopkg.in/yaml.v3"
 )
-
-// Rule represents a single subtype rule
-type Rule struct {
-	Super any `yaml:"super"`
-	Sub   any `yaml:"sub"`
-	Rule  any `yaml:"rule"`
-}
-
-// RulesConfig represents the entire YAML configuration
-type RulesConfig struct {
-	Rules []Rule `yaml:"rules"`
-}
-
-// RuleCondition represents different types of conditions in rules
-type RuleCondition struct {
-	Always              bool              `yaml:"always,omitempty"`
-	IsResource          any               `yaml:"isResource,omitempty"`
-	IsAttachment        any               `yaml:"isAttachment,omitempty"`
-	IsHashableStruct    any               `yaml:"isHashableStruct,omitempty"`
-	IsStorable          any               `yaml:"isStorable,omitempty"`
-	Equals              *EqualsCondition  `yaml:"equals,omitempty"`
-	Subtype             *SubtypeCondition `yaml:"subtype,omitempty"`
-	And                 []RuleCondition   `yaml:"and,omitempty"`
-	Or                  []RuleCondition   `yaml:"or,omitempty"`
-	Not                 *RuleCondition    `yaml:"not,omitempty"`
-	Permits             []any             `yaml:"permits,omitempty"`
-	Purity              *PurityCondition  `yaml:"purity,omitempty"`
-	TypeParamsEqual     bool              `yaml:"typeParamsEqual,omitempty"`
-	ParamsContravariant bool              `yaml:"paramsContravariant,omitempty"`
-	ReturnCovariant     bool              `yaml:"returnCovariant,omitempty"`
-	ConstructorEqual    bool              `yaml:"constructorEqual,omitempty"`
-	Contains            []any             `yaml:"contains,omitempty"`
-}
-
-type EqualsCondition struct {
-	Source any `yaml:"source"`
-	Target any `yaml:"target"`
-}
-
-type KeyValues = map[string]any
-
-type SubtypeCondition struct {
-	Sub   any `yaml:"sub"`
-	Super any `yaml:"super"`
-}
-
-type PurityCondition struct {
-	EqualsOrView bool `yaml:"equals_or_view"`
-}
-
-func main() {
-	var (
-		yamlPath string
-		outPath  string
-		pkgName  string
-		toStdout bool
-	)
-	flag.StringVar(&yamlPath, "rules", "rules.yaml", "path to YAML rules")
-	flag.StringVar(&outPath, "out", "-", "output file path or '-' for stdout")
-	flag.StringVar(&pkgName, "pkg", "sema", "target Go package name")
-	flag.BoolVar(&toStdout, "stdout", false, "write to stdout")
-	flag.Parse()
-
-	// Read and parse YAML rules
-	rules, err := readYAMLRules(yamlPath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error reading YAML rules: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Generate code using the comprehensive generator
-	code, err := generateComprehensiveCode(rules, pkgName)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error generating code: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Write output
-	if err := writeOutput(outPath, code, toStdout); err != nil {
-		fmt.Fprintf(os.Stderr, "error writing output: %v\n", err)
-		os.Exit(1)
-	}
-}
-
-// readYAMLRules reads and parses the YAML rules file
-func readYAMLRules(path string) ([]Rule, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file %s: %w", path, err)
-	}
-
-	var config RulesConfig
-	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse YAML: %w", err)
-	}
-
-	return config.Rules, nil
-}
-
-// writeOutput writes the generated code to the specified output
-func writeOutput(dst string, content []byte, stdout bool) error {
-	if stdout || dst == "-" {
-		_, err := io.Copy(os.Stdout, bytes.NewReader(content))
-		return err
-	}
-
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		return fmt.Errorf("failed to create output directory: %w", err)
-	}
-
-	return os.WriteFile(dst, content, 0o644)
-}
 
 // generateComprehensiveCode generates the complete checkSubTypeWithoutEquality function
 func generateComprehensiveCode(rules []Rule, packageName string) ([]byte, error) {
@@ -166,14 +48,7 @@ func generateRuleCode(rule Rule) (string, error) {
 		return "", fmt.Errorf("error parsing super type: %w", err)
 	}
 
-	// Handle subtype pattern
-	subType, err := parseType(rule.Sub)
-	if err != nil {
-		return "", fmt.Errorf("error parsing sub type: %w", err)
-	}
-
-	// Generate case statement for super type
-	caseCode, err := generateCaseCode(superType, subType, rule.Rule)
+	caseCode, err := generateCaseCode(superType, rule.Condition)
 	if err != nil {
 		return "", err
 	}
@@ -182,126 +57,8 @@ func generateRuleCode(rule Rule) (string, error) {
 	return buf.String(), nil
 }
 
-// TypeInfo represents parsed type information
-type TypeInfo struct {
-	TypeName       string
-	IsGeneric      bool
-	GenericArgs    []TypeInfo
-	IsOptional     bool
-	IsReference    bool
-	IsFunction     bool
-	IsDictionary   bool
-	IsIntersection bool
-}
-
-// parseType parses a type from YAML
-func parseType(typeData any) (*TypeInfo, error) {
-	switch v := typeData.(type) {
-	case string:
-		return &TypeInfo{TypeName: v}, nil
-	case KeyValues:
-		ti := &TypeInfo{}
-
-		// Handle Optional type
-		if optional, ok := v["Optional"].(KeyValues); ok {
-			ti.IsOptional = true
-			inner, err := parseType(optional["inner"])
-			if err != nil {
-				return nil, err
-			}
-			ti.GenericArgs = []TypeInfo{*inner}
-			return ti, nil
-		}
-
-		// Handle Reference type
-		if ref, ok := v["Reference"].(KeyValues); ok {
-			ti.IsReference = true
-			ti.TypeName = "Reference"
-			// Parse auth and type parameters
-			if auth, ok := ref["auth"]; ok {
-				authType, err := parseType(auth)
-				if err != nil {
-					return nil, err
-				}
-				ti.GenericArgs = append(ti.GenericArgs, *authType)
-			}
-			if typeParam, ok := ref["type"]; ok {
-				typeType, err := parseType(typeParam)
-				if err != nil {
-					return nil, err
-				}
-				ti.GenericArgs = append(ti.GenericArgs, *typeType)
-			}
-			return ti, nil
-		}
-
-		// Handle Function type
-		if fn, ok := v["Function"].(KeyValues); ok {
-			ti.IsFunction = true
-			ti.TypeName = "Function"
-			// Parse params and return
-			if params, ok := fn["params"]; ok {
-				paramsType, err := parseType(params)
-				if err != nil {
-					return nil, err
-				}
-				ti.GenericArgs = append(ti.GenericArgs, *paramsType)
-			}
-			if returnType, ok := fn["return"]; ok {
-				returnTypeInfo, err := parseType(returnType)
-				if err != nil {
-					return nil, err
-				}
-				ti.GenericArgs = append(ti.GenericArgs, *returnTypeInfo)
-			}
-			return ti, nil
-		}
-
-		// Handle Dictionary type
-		if dict, ok := v["Dictionary"].(KeyValues); ok {
-			ti.IsDictionary = true
-			ti.TypeName = "Dictionary"
-			// Parse key and value
-			if key, ok := dict["key"]; ok {
-				keyType, err := parseType(key)
-				if err != nil {
-					return nil, err
-				}
-				ti.GenericArgs = append(ti.GenericArgs, *keyType)
-			}
-			if value, ok := dict["value"]; ok {
-				valueType, err := parseType(value)
-				if err != nil {
-					return nil, err
-				}
-				ti.GenericArgs = append(ti.GenericArgs, *valueType)
-			}
-			return ti, nil
-		}
-
-		// Handle Intersection type
-		if intersection, ok := v["Intersection"].(KeyValues); ok {
-			ti.IsIntersection = true
-			ti.TypeName = "Intersection"
-			// Parse set
-			if set, ok := intersection["set"]; ok {
-				setType, err := parseType(set)
-				if err != nil {
-					return nil, err
-				}
-				ti.GenericArgs = []TypeInfo{*setType}
-			}
-			return ti, nil
-		}
-
-		return nil, fmt.Errorf("unsupported type pattern: %v", v)
-	default:
-		return nil, fmt.Errorf("unsupported type: %T", typeData)
-	}
-}
-
 // generateCaseCode generates a case statement for a type
-func generateCaseCode(superType, subType *TypeInfo, rule any) (string, error) {
+func generateCaseCode(superType *TypeInfo, rule any) (string, error) {
 	var buf bytes.Buffer
 
 	// Generate case condition
@@ -313,7 +70,7 @@ func generateCaseCode(superType, subType *TypeInfo, rule any) (string, error) {
 	buf.WriteString("\tcase " + caseCondition + ":\n")
 
 	// Generate rule body
-	ruleBody, err := generateRuleBody(superType, subType, rule)
+	ruleBody, err := generateRuleBody(rule)
 	if err != nil {
 		return "", err
 	}
@@ -356,168 +113,52 @@ func generateCaseCondition(typeInfo *TypeInfo) (string, error) {
 }
 
 // generateRuleBody generates the body of a rule
-func generateRuleBody(superType, subType *TypeInfo, rule any) (string, error) {
+func generateRuleBody(rule any) (string, error) {
 	// Parse rule condition
 	condition, err := parseRuleCondition(rule)
 	if err != nil {
 		return "", err
 	}
 
-	return generateConditionCode(superType, subType, condition), nil
-}
-
-// parseRuleCondition parses a rule condition from YAML
-func parseRuleCondition(rule any) (*RuleCondition, error) {
-	switch v := rule.(type) {
-	case string:
-		if v == "always" {
-			return &RuleCondition{Always: true}, nil
-		}
-		return nil, fmt.Errorf("unsupported string rule: %s", v)
-	case KeyValues:
-		rc := &RuleCondition{}
-
-		// Parse all possible conditions
-		if always, ok := v["always"].(bool); ok {
-			rc.Always = always
-		}
-
-		if isResource, ok := v["isResource"]; ok {
-			rc.IsResource = isResource
-		}
-
-		if isAttachment, ok := v["isAttachment"]; ok {
-			rc.IsAttachment = isAttachment
-		}
-
-		if isHashableStruct, ok := v["isHashableStruct"]; ok {
-			rc.IsHashableStruct = isHashableStruct
-		}
-
-		if isStorable, ok := v["isStorable"]; ok {
-			rc.IsStorable = isStorable
-		}
-
-		if equals, ok := v["equals"].(KeyValues); ok {
-			rc.Equals = &EqualsCondition{
-				Source: equals["source"],
-				Target: equals["target"],
-			}
-		}
-
-		if subtype, ok := v["subtype"].(KeyValues); ok {
-			rc.Subtype = &SubtypeCondition{
-				Sub:   subtype["sub"],
-				Super: subtype["super"],
-			}
-		}
-
-		if and, ok := v["and"].([]any); ok {
-			for _, cond := range and {
-				parsed, err := parseRuleCondition(cond)
-				if err != nil {
-					return nil, err
-				}
-				rc.And = append(rc.And, *parsed)
-			}
-		}
-
-		if or, ok := v["or"].([]any); ok {
-			for _, cond := range or {
-				parsed, err := parseRuleCondition(cond)
-				if err != nil {
-					return nil, err
-				}
-				rc.Or = append(rc.Or, *parsed)
-			}
-		}
-
-		if not, ok := v["not"]; ok {
-			parsed, err := parseRuleCondition(not)
-			if err != nil {
-				return nil, err
-			}
-			rc.Not = parsed
-		}
-
-		if permits, ok := v["permits"].([]any); ok {
-			rc.Permits = permits
-		}
-
-		if purity, ok := v["purity"].(KeyValues); ok {
-			rc.Purity = &PurityCondition{
-				EqualsOrView: purity["equals_or_view"].(bool),
-			}
-		}
-
-		if typeParamsEqual, ok := v["typeParamsEqual"].(bool); ok {
-			rc.TypeParamsEqual = typeParamsEqual
-		}
-
-		if paramsContravariant, ok := v["paramsContravariant"].(bool); ok {
-			rc.ParamsContravariant = paramsContravariant
-		}
-
-		if returnCovariant, ok := v["returnCovariant"].(bool); ok {
-			rc.ReturnCovariant = returnCovariant
-		}
-
-		if constructorEqual, ok := v["constructorEqual"].(bool); ok {
-			rc.ConstructorEqual = constructorEqual
-		}
-
-		if contains, ok := v["contains"].([]any); ok {
-			rc.Contains = contains
-		}
-
-		return rc, nil
-	default:
-		return nil, fmt.Errorf("unsupported rule type: %T", rule)
-	}
+	return generateConditionCode(condition), nil
 }
 
 // generateConditionCode generates Go code for a rule condition
-func generateConditionCode(superType, subType *TypeInfo, condition *RuleCondition) string {
-	if condition.Always {
+func generateConditionCode(condition RuleCondition) string {
+	switch c := condition.(type) {
+	case AlwaysCondition:
 		return "return true"
-	}
 
-	if condition.IsResource != nil {
+	case IsResourceCondition:
 		return "return subType.IsResourceType()"
-	}
 
-	if condition.IsAttachment != nil {
+	case IsAttachmentCondition:
 		return "return isAttachmentType(subType)"
-	}
 
-	if condition.IsHashableStruct != nil {
+	case IsHashableStructCondition:
 		return "return IsHashableStructType(subType)"
-	}
 
-	if condition.IsStorable != nil {
+	case IsStorableCondition:
 		return "storableResults := map[*Member]bool{}\n\t\treturn subType.IsStorable(storableResults)"
-	}
 
-	if condition.Not != nil {
-		innerCode := generateConditionCode(superType, subType, condition.Not)
+	case NotCondition:
+		innerCode := generateConditionCode(c.Condition)
 		return "return !(" + strings.Replace(innerCode, "return ", "", 1) + ")"
-	}
 
-	if condition.And != nil && len(condition.And) > 0 {
+	case AndCondition:
 		var conditions []string
-		for _, cond := range condition.And {
-			code := generateConditionCode(superType, subType, &cond)
+		for _, cond := range c.Conditions {
+			code := generateConditionCode(cond)
 			// Remove "return " prefix and add proper indentation
 			cleanCode := strings.Replace(code, "return ", "", 1)
 			conditions = append(conditions, cleanCode)
 		}
 		return "return " + strings.Join(conditions, " &&\n\t\t")
-	}
 
-	if condition.Or != nil && len(condition.Or) > 0 {
+	case OrCondition:
 		var conditions []string
-		for _, cond := range condition.Or {
-			code := generateConditionCode(superType, subType, &cond)
+		for _, cond := range c.Conditions {
+			code := generateConditionCode(cond)
 			// Remove "return " prefix and add proper indentation
 			cleanCode := strings.Replace(code, "return ", "", 1)
 			// Convert switch statements to OR conditions for OR contexts
@@ -525,53 +166,51 @@ func generateConditionCode(superType, subType *TypeInfo, condition *RuleConditio
 			conditions = append(conditions, cleanCode)
 		}
 		return "return " + strings.Join(conditions, " ||\n\t\t")
-	}
 
-	if condition.Equals != nil {
-		code := generateEqualsCondition(condition.Equals)
+	case EqualsCondition:
+		code := generateEqualsCondition(&c)
 		if !strings.HasPrefix(code, "return ") && !strings.HasPrefix(code, "switch ") {
 			return "return " + code
 		}
 		return code
-	}
 
-	if condition.Subtype != nil {
-		code := generateSubtypeCondition(condition.Subtype)
+	case SubtypeCondition:
+		code := generateSubtypeCondition(&c)
 		if !strings.HasPrefix(code, "return ") {
 			return "return " + code
 		}
 		return code
-	}
 
-	if condition.Permits != nil && len(condition.Permits) == 2 {
-		return "return typedSuperType.Authorization.PermitsAccess(typedSubType.Authorization)"
-	}
+	case PermitsCondition:
+		if len(c.Types) == 2 {
+			return "return typedSuperType.Authorization.PermitsAccess(typedSubType.Authorization)"
+		}
+		return "// TODO: Implement permits condition"
 
-	if condition.Purity != nil {
+	case PurityCondition:
 		return "return typedSubType.Purity == typedSuperType.Purity || typedSubType.Purity == FunctionPurityView"
-	}
 
-	if condition.TypeParamsEqual {
+	case TypeParamsEqualCondition:
 		return "return len(typedSubType.TypeParameters) == len(typedSuperType.TypeParameters)"
-	}
 
-	if condition.ParamsContravariant {
+	case ParamsContravariantCondition:
 		return "// TODO: Implement params contravariant check"
-	}
 
-	if condition.ReturnCovariant {
+	case ReturnCovariantCondition:
 		return "// TODO: Implement return covariant check"
-	}
 
-	if condition.ConstructorEqual {
+	case ConstructorEqualCondition:
 		return "return typedSubType.IsConstructor == typedSuperType.IsConstructor"
-	}
 
-	if condition.Contains != nil && len(condition.Contains) == 2 {
-		return "return typedSuperType.EffectiveIntersectionSet().IsSubsetOf(typedSubType.EffectiveIntersectionSet())"
-	}
+	case ContainsCondition:
+		if len(c.Types) == 2 {
+			return "return typedSuperType.EffectiveIntersectionSet().IsSubsetOf(typedSubType.EffectiveIntersectionSet())"
+		}
+		return "// TODO: Implement contains condition"
 
-	return "// TODO: Implement condition"
+	default:
+		return "// TODO: Implement condition: " + condition.GetType()
+	}
 }
 
 // convertSwitchToOrCondition converts a switch statement to OR conditions
@@ -624,7 +263,9 @@ func generateEqualsCondition(equals *EqualsCondition) string {
 						cases = append(cases, getTypeConstant(str))
 					}
 				}
-				return "switch subType {\n\t\tcase " + strings.Join(cases, ", ") + ":\n\t\t\treturn true\n\t\tdefault:\n\t\t\treturn false\n\t\t}"
+				return "switch subType {\n\t\tcase " +
+					strings.Join(cases, ", ") +
+					":\n\t\t\treturn true\n\t\tdefault:\n\t\t\treturn false\n\t\t}"
 			default:
 				panic(fmt.Errorf("unsupported rule `%s` for `target` of `equals` rule", key))
 			}
