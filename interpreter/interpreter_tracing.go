@@ -28,8 +28,8 @@ import (
 
 const (
 	// common
-	tracingFunctionPrefix = "function."
-	tracingImportPrefix   = "import."
+	tracingInvoke = "invoke"
+	tracingImport = "import"
 
 	// type prefixes
 	tracingArrayPrefix      = "array."
@@ -45,18 +45,18 @@ const (
 	tracingDeepRemovePostfix           = "deepRemove"
 	tracingDestroyPostfix              = "destroy"
 
-	// MemberAccessible operation prefixes
-	tracingGetMemberPrefix    = "getMember."
-	tracingSetMemberPrefix    = "setMember."
-	tracingRemoveMemberPrefix = "removeMember."
+	// MemberAccessible operation postfixes
+	tracingGetMemberPostfix    = "getMember"
+	tracingSetMemberPostfix    = "setMember"
+	tracingRemoveMemberPostfix = "removeMember"
 
 	tracingAtreeMapNew                     = "new"
 	tracingAtreeMapNewFromBatchDataPostfix = "newFromBatchData"
 )
 
 type Tracer interface {
-	ReportFunctionTrace(functionName string, duration time.Duration)
-	ReportImportTrace(importPath string, duration time.Duration)
+	ReportInvokeTrace(functionType string, functionName string, duration time.Duration)
+	ReportImportTrace(location string, duration time.Duration)
 
 	ReportArrayValueConstructTrace(valueID string, typeID string, duration time.Duration)
 	ReportArrayValueTransferTrace(valueID string, typeID string, duration time.Duration)
@@ -79,29 +79,35 @@ type Tracer interface {
 	ReportCompositeValueSetMemberTrace(valueID string, typeID string, kind string, name string, duration time.Duration)
 	ReportCompositeValueRemoveMemberTrace(valueID string, typeID string, kind string, name string, duration time.Duration)
 
-	ReportAtreeNewArrayFromBatchData(valueID string, typeID string, duration time.Duration)
+	ReportAtreeNewArrayFromBatchDataTrace(valueID string, typeID string, duration time.Duration)
 
-	ReportAtreeNewMap(valueID string, typeID string, seed uint64, duration time.Duration)
-	ReportAtreeNewMapFromBatchData(valueID string, typeID string, seed uint64, duration time.Duration)
+	ReportAtreeNewMapTrace(valueID string, typeID string, seed uint64, duration time.Duration)
+	ReportAtreeNewMapFromBatchDataTrace(valueID string, typeID string, seed uint64, duration time.Duration)
 }
 
 type CallbackTracer OnRecordTraceFunc
 
 var _ Tracer = CallbackTracer(nil)
 
-func (t CallbackTracer) ReportFunctionTrace(functionName string, duration time.Duration) {
+func (t CallbackTracer) ReportInvokeTrace(functionType string, functionName string, duration time.Duration) {
 	t(
-		tracingFunctionPrefix+functionName,
+		tracingInvoke,
 		duration,
-		nil,
+		[]attribute.KeyValue{
+			attribute.String("type", functionType),
+			// Second, because it is not always available
+			attribute.String("name", functionName),
+		},
 	)
 }
 
-func (t CallbackTracer) ReportImportTrace(importPath string, duration time.Duration) {
+func (t CallbackTracer) ReportImportTrace(location string, duration time.Duration) {
 	t(
-		tracingImportPrefix+importPath,
+		tracingImport,
 		duration,
-		nil,
+		[]attribute.KeyValue{
+			attribute.String("location", location),
+		},
 	)
 }
 
@@ -351,6 +357,26 @@ func (t CallbackTracer) ReportCompositeValueConformsToStaticTypeTrace(
 	)
 }
 
+func (t CallbackTracer) reportCompositeMemberTrace(
+	traceName string,
+	valueID string,
+	typeID string,
+	kind string,
+	name string,
+	duration time.Duration,
+) {
+	t(
+		traceName,
+		duration,
+		append(
+			[]attribute.KeyValue{
+				attribute.String("name", name),
+			},
+			prepareCompositeValueTraceAttrs(valueID, typeID, kind)...,
+		),
+	)
+}
+
 func (t CallbackTracer) ReportCompositeValueGetMemberTrace(
 	valueID string,
 	typeID string,
@@ -358,11 +384,12 @@ func (t CallbackTracer) ReportCompositeValueGetMemberTrace(
 	name string,
 	duration time.Duration,
 ) {
-	t.reportCompositeTrace(
-		tracingCompositePrefix+tracingGetMemberPrefix+name,
+	t.reportCompositeMemberTrace(
+		tracingCompositePrefix+tracingGetMemberPostfix,
 		valueID,
 		typeID,
 		kind,
+		name,
 		duration,
 	)
 }
@@ -374,11 +401,12 @@ func (t CallbackTracer) ReportCompositeValueSetMemberTrace(
 	name string,
 	duration time.Duration,
 ) {
-	t.reportCompositeTrace(
-		tracingCompositePrefix+tracingSetMemberPrefix+name,
+	t.reportCompositeMemberTrace(
+		tracingCompositePrefix+tracingSetMemberPostfix,
 		valueID,
 		typeID,
 		kind,
+		name,
 		duration,
 	)
 }
@@ -390,16 +418,17 @@ func (t CallbackTracer) ReportCompositeValueRemoveMemberTrace(
 	name string,
 	duration time.Duration,
 ) {
-	t.reportCompositeTrace(
-		tracingCompositePrefix+tracingRemoveMemberPrefix+name,
+	t.reportCompositeMemberTrace(
+		tracingCompositePrefix+tracingRemoveMemberPostfix,
 		valueID,
 		typeID,
 		kind,
+		name,
 		duration,
 	)
 }
 
-func (t CallbackTracer) ReportAtreeNewArrayFromBatchData(
+func (t CallbackTracer) ReportAtreeNewArrayFromBatchDataTrace(
 	valueID string,
 	typeID string,
 	duration time.Duration,
@@ -421,7 +450,7 @@ func prepareAtreeMapTraceAttrs(valueID string, typeID string, seed uint64) []att
 	)
 }
 
-func (t CallbackTracer) ReportAtreeNewMap(
+func (t CallbackTracer) ReportAtreeNewMapTrace(
 	valueID string,
 	typeID string,
 	seed uint64,
@@ -434,7 +463,7 @@ func (t CallbackTracer) ReportAtreeNewMap(
 	)
 }
 
-func (t CallbackTracer) ReportAtreeNewMapFromBatchData(
+func (t CallbackTracer) ReportAtreeNewMapFromBatchDataTrace(
 	valueID string,
 	typeID string,
 	seed uint64,
@@ -451,7 +480,7 @@ type NoOpTracer struct{}
 
 var _ Tracer = NoOpTracer{}
 
-func (NoOpTracer) ReportFunctionTrace(_ string, _ time.Duration) {
+func (NoOpTracer) ReportInvokeTrace(_ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -539,14 +568,14 @@ func (NoOpTracer) ReportDomainStorageMapDeepRemoveTrace(_ string, _ string, _ ti
 	panic(errors.NewUnreachableError())
 }
 
-func (NoOpTracer) ReportAtreeNewArrayFromBatchData(_ string, _ string, _ time.Duration) {
+func (NoOpTracer) ReportAtreeNewArrayFromBatchDataTrace(_ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (NoOpTracer) ReportAtreeNewMap(_ string, _ string, _ uint64, _ time.Duration) {
+func (NoOpTracer) ReportAtreeNewMapTrace(_ string, _ string, _ uint64, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (NoOpTracer) ReportAtreeNewMapFromBatchData(_ string, _ string, _ uint64, _ time.Duration) {
+func (NoOpTracer) ReportAtreeNewMapFromBatchDataTrace(_ string, _ string, _ uint64, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }

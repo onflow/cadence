@@ -180,7 +180,7 @@ func NewCompositeValue(
 				))
 				seed := dictionary.Seed()
 
-				context.ReportAtreeNewMap(
+				context.ReportAtreeNewMapTrace(
 					valueID,
 					typeID,
 					seed,
@@ -371,7 +371,6 @@ func (v *CompositeValue) Destroy(context ResourceDestructionContext, locationRan
 		kind := v.Kind.String()
 
 		defer func() {
-
 			context.ReportCompositeValueDestroyTrace(
 				valueID,
 				typeID,
@@ -1285,7 +1284,7 @@ func (v *CompositeValue) Transfer(
 					valueID := dictionary.ValueID().String()
 					typeID := string(v.TypeID())
 
-					context.ReportAtreeNewMapFromBatchData(
+					context.ReportAtreeNewMapFromBatchDataTrace(
 						valueID,
 						typeID,
 						seed,
