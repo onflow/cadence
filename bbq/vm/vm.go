@@ -973,18 +973,7 @@ func invokeFunction(
 			receiver = boundFunction.Receiver(context)
 		}
 
-		if interpreter.TracingEnabled {
-			startTime := time.Now()
-			defer func() {
-				context.ReportInvokeTrace(
-					// Use the original function value, to get the correct type.
-					// The native function value might have been wrapped in a bound function.
-					originalFunctionValue.FunctionType(context).String(),
-					functionValue.Function.QualifiedName,
-					time.Since(startTime),
-				)
-			}()
-		}
+		// Trace is reported in `popCallFrame`, to also include the execution time.
 
 		vm.pushCallFrame(functionValue, receiver, arguments)
 
