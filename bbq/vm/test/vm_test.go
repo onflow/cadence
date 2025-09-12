@@ -4265,7 +4265,7 @@ func TestFunctionPreConditions(t *testing.T) {
 
 		location := common.ScriptLocation{0x1}
 
-		_, err := compileAndInvokeWithOptionsAndPrograms(
+		_, err := CompileAndInvokeWithOptionsAndPrograms(
 			t,
 			code,
 			"main",
@@ -7677,7 +7677,7 @@ func TestInheritedConditions(t *testing.T) {
 
 		require.False(t, eventEmitted)
 
-		result, err := compileAndInvokeWithOptionsAndPrograms(
+		result, err := CompileAndInvokeWithOptionsAndPrograms(
 			t,
 			tx,
 			"main",
@@ -9640,7 +9640,7 @@ func TestInheritedDefaultDestroyEvent(t *testing.T) {
 		return nil
 	}
 
-	_, err := compileAndInvokeWithOptionsAndPrograms(
+	_, err := CompileAndInvokeWithOptionsAndPrograms(
 		t,
 		code,
 		"main",
