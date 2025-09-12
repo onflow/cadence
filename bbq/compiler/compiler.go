@@ -3337,21 +3337,25 @@ func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclarati
 
 	// Resolve and add globals from transitive imports.
 
-	// TODO: Is it possible to reuse the resolved locations from the elaboration?
-	// resolvedLocations := c.DesugaredElaboration.elaboration.ImportDeclarationResolvedLocations(declaration)
+	resolvedLocations := c.DesugaredElaboration.elaboration.ImportDeclarationResolvedLocations(declaration)
 
-	var identifiers []ast.Identifier
-	for _, imp := range declaration.Imports {
-		identifiers = append(identifiers, imp.Identifier)
-	}
+	// some import declarations are added during desugaring and do not have resolved locations from the elaboration
+	if len(resolvedLocations) == 0 {
+		var identifiers []ast.Identifier
+		for _, imp := range declaration.Imports {
+			identifiers = append(identifiers, imp.Identifier)
+		}
 
-	resolvedLocations, err := commons.ResolveLocation(
-		c.Config.LocationHandler,
-		identifiers,
-		declaration.Location,
-	)
-	if err != nil {
-		panic(err)
+		var err error
+		resolvedLocations, err = commons.ResolveLocation(
+			c.Config.LocationHandler,
+			identifiers,
+			declaration.Location,
+		)
+		if err != nil {
+			panic(err)
+		}
+
 	}
 
 	aliases := c.DesugaredElaboration.elaboration.ImportDeclarationAliases(declaration)
