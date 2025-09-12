@@ -45,10 +45,10 @@ const (
 	tracingDeepRemovePostfix           = "deepRemove"
 	tracingDestroyPostfix              = "destroy"
 
-	// MemberAccessible operation prefixes
-	tracingGetMemberPrefix    = "getMember."
-	tracingSetMemberPrefix    = "setMember."
-	tracingRemoveMemberPrefix = "removeMember."
+	// MemberAccessible operation postfixes
+	tracingGetMemberPostfix    = "getMember"
+	tracingSetMemberPostfix    = "setMember"
+	tracingRemoveMemberPostfix = "removeMember"
 
 	tracingAtreeMapNew                     = "new"
 	tracingAtreeMapNewFromBatchDataPostfix = "newFromBatchData"
@@ -357,6 +357,24 @@ func (t CallbackTracer) ReportCompositeValueConformsToStaticTypeTrace(
 	)
 }
 
+func (t CallbackTracer) reportCompositeMemberTrace(
+	traceName string,
+	valueID string,
+	typeID string,
+	kind string,
+	name string,
+	duration time.Duration,
+) {
+	t(
+		traceName,
+		duration,
+		append(
+			prepareCompositeValueTraceAttrs(valueID, typeID, kind),
+			attribute.String("name", name),
+		),
+	)
+}
+
 func (t CallbackTracer) ReportCompositeValueGetMemberTrace(
 	valueID string,
 	typeID string,
@@ -364,11 +382,12 @@ func (t CallbackTracer) ReportCompositeValueGetMemberTrace(
 	name string,
 	duration time.Duration,
 ) {
-	t.reportCompositeTrace(
-		tracingCompositePrefix+tracingGetMemberPrefix+name,
+	t.reportCompositeMemberTrace(
+		tracingCompositePrefix+tracingGetMemberPostfix,
 		valueID,
 		typeID,
 		kind,
+		name,
 		duration,
 	)
 }
@@ -380,11 +399,12 @@ func (t CallbackTracer) ReportCompositeValueSetMemberTrace(
 	name string,
 	duration time.Duration,
 ) {
-	t.reportCompositeTrace(
-		tracingCompositePrefix+tracingSetMemberPrefix+name,
+	t.reportCompositeMemberTrace(
+		tracingCompositePrefix+tracingSetMemberPostfix,
 		valueID,
 		typeID,
 		kind,
+		name,
 		duration,
 	)
 }
@@ -396,11 +416,12 @@ func (t CallbackTracer) ReportCompositeValueRemoveMemberTrace(
 	name string,
 	duration time.Duration,
 ) {
-	t.reportCompositeTrace(
-		tracingCompositePrefix+tracingRemoveMemberPrefix+name,
+	t.reportCompositeMemberTrace(
+		tracingCompositePrefix+tracingRemoveMemberPostfix,
 		valueID,
 		typeID,
 		kind,
+		name,
 		duration,
 	)
 }
