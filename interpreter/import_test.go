@@ -19,6 +19,8 @@
 package interpreter_test
 
 import (
+	"fmt"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,6 +28,11 @@ import (
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/compiler"
+	. "github.com/onflow/cadence/bbq/test_utils"
+	"github.com/onflow/cadence/bbq/vm"
+	"github.com/onflow/cadence/bbq/vm/test"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/interpreter"
@@ -884,95 +891,217 @@ func TestInterpretImportGlobals(t *testing.T) {
 
 	t.Parallel()
 
+	const logFunctionName = "log"
+
 	var logs []string
 
-	valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
-		"log",
-		stdlib.LogFunctionType,
-		"",
-		func(invocation interpreter.Invocation) interpreter.Value {
-			value := invocation.Arguments[0]
-			logs = append(logs, value.String())
-			return interpreter.Void
-		},
-	)
+	if *compile {
 
-	baseValueActivation := sema.NewVariableActivation(nil)
-	baseValueActivation.DeclareValue(valueDeclaration)
-
-	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, valueDeclaration)
-
-	address := common.MustBytesToAddress([]byte{0x1})
-
-	importedChecker, err := ParseAndCheckWithOptions(t,
-		`
-          let y = log("y")
-          let x = log("x")
-        `,
-		ParseAndCheckOptions{
-			Location: common.AddressLocation{
-				Address: address,
-				Name:    "",
+		valueDeclaration := stdlib.NewVMStandardLibraryStaticFunction(
+			logFunctionName,
+			stdlib.LogFunctionType,
+			"",
+			func(_ *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
+				value := arguments[0]
+				logs = append(logs, value.String())
+				return interpreter.Void
 			},
-			CheckerConfig: &sema.Config{
-				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-					return baseValueActivation
+		)
+
+		baseValueActivation := sema.NewVariableActivation(nil)
+		baseValueActivation.DeclareValue(valueDeclaration)
+
+		programs := CompiledPrograms{}
+
+		builtinGlobalsProvider := func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
+			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+
+			activation.Set(
+				logFunctionName,
+				compiler.GlobalImport{
+					Name: logFunctionName,
+				},
+			)
+
+			return activation
+		}
+		_ = ParseCheckAndCompileCodeWithOptions(t,
+			`
+              let y = log("y")
+              let x = log("x")
+
+              fun dummy() {}
+            `,
+			common.StringLocation("imported"),
+			ParseCheckAndCompileOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+					},
+				},
+				CompilerConfig: &compiler.Config{
+					BuiltinGlobalsProvider: builtinGlobalsProvider,
 				},
 			},
-		},
-	)
-	require.NoError(t, err)
+			programs,
+		)
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
-		`
-          import 0x1
+		_, err := test.CompileAndInvokeWithOptionsAndPrograms(t,
+			`
+              import dummy from "imported"
 
-          let b = log("b")
-          let a = log("a")
+              let b = log("b")
+              let a = log("a")
 
-          fun test() {}
-        `,
-		ParseCheckAndInterpretOptions{
-			ParseAndCheckOptions: &ParseAndCheckOptions{
+              fun test() {}
+            `,
+			"test",
+			test.CompilerAndVMOptions{
+				VMConfig: &vm.Config{
+					StackDepthLimit: math.MaxUint64,
+					BuiltinGlobalsProvider: func(location common.Location) *activations.Activation[vm.Variable] {
+						activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+
+						logVariable := &interpreter.SimpleVariable{}
+						logVariable.InitializeWithValue(valueDeclaration.Value)
+						activation.Set(
+							logFunctionName,
+							logVariable,
+						)
+
+						return activation
+					},
+				},
+				ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+					ParseAndCheckOptions: &ParseAndCheckOptions{
+						CheckerConfig: &sema.Config{
+							BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+								return baseValueActivation
+							},
+							ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+								importedProgram, ok := programs[importedLocation]
+								if !ok {
+									return nil, fmt.Errorf("cannot find program for location %s", importedLocation)
+								}
+
+								return sema.ElaborationImport{
+									Elaboration: importedProgram.DesugaredElaboration.OriginalElaboration(),
+								}, nil
+							},
+						},
+					},
+					CompilerConfig: &compiler.Config{
+						BuiltinGlobalsProvider: builtinGlobalsProvider,
+						ImportHandler: func(location common.Location) *bbq.InstructionProgram {
+							return programs[location].Program
+						},
+						LocationHandler: func(identifiers []ast.Identifier, location common.Location) ([]sema.ResolvedLocation, error) {
+							return []sema.ResolvedLocation{
+								{
+									Location:    location,
+									Identifiers: identifiers,
+								},
+							}, nil
+						},
+					},
+				},
+			},
+			programs,
+		)
+		require.NoError(t, err)
+
+	} else {
+
+		valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
+			"log",
+			stdlib.LogFunctionType,
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				value := invocation.Arguments[0]
+				logs = append(logs, value.String())
+				return interpreter.Void
+			},
+		)
+
+		baseValueActivation := sema.NewVariableActivation(nil)
+		baseValueActivation.DeclareValue(valueDeclaration)
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
+
+		address := common.MustBytesToAddress([]byte{0x1})
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
+              let y = log("y")
+              let x = log("x")
+            `,
+			ParseAndCheckOptions{
+				Location: common.AddressLocation{
+					Address: address,
+					Name:    "",
+				},
 				CheckerConfig: &sema.Config{
 					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 						return baseValueActivation
 					},
-					ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
-						require.Equal(t, importedChecker.Location, importedLocation)
+				},
+			},
+		)
+		require.NoError(t, err)
 
-						return sema.ElaborationImport{
-							Elaboration: importedChecker.Elaboration,
-						}, nil
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+              import 0x1
+
+              let b = log("b")
+              let a = log("a")
+
+              fun test() {}
+            `,
+			ParseCheckAndInterpretOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+						ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+							require.Equal(t, importedChecker.Location, importedLocation)
+
+							return sema.ElaborationImport{
+								Elaboration: importedChecker.Elaboration,
+							}, nil
+						},
+					},
+				},
+				InterpreterConfig: &interpreter.Config{
+					BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+
+					ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+						require.Equal(t, importedChecker.Location, location)
+
+						program := interpreter.ProgramFromChecker(importedChecker)
+						subInterpreter, err := inter.NewSubInterpreter(program, location)
+						if err != nil {
+							panic(err)
+						}
+
+						return interpreter.InterpreterImport{
+							Interpreter: subInterpreter,
+						}
 					},
 				},
 			},
-			InterpreterConfig: &interpreter.Config{
-				BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
-					return baseActivation
-				},
+		)
+		require.NoError(t, err)
 
-				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-					require.Equal(t, importedChecker.Location, location)
-
-					program := interpreter.ProgramFromChecker(importedChecker)
-					subInterpreter, err := inter.NewSubInterpreter(program, location)
-					if err != nil {
-						panic(err)
-					}
-
-					return interpreter.InterpreterImport{
-						Interpreter: subInterpreter,
-					}
-				},
-			},
-		},
-	)
-	require.NoError(t, err)
-
-	_, err = inter.Invoke("test")
-	require.NoError(t, err)
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+	}
 
 	require.Equal(t, []string{`"y"`, `"x"`, `"b"`, `"a"`}, logs)
 }
