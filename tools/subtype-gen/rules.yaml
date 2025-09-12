@@ -180,7 +180,7 @@ rules:
         - equals:
             source: X
             target:
-              oneOf: [A, "view"]
+              oneOf: [A, PurityView]
         - typeParamsEqual
         - paramsContravariant
         - returnCovariant

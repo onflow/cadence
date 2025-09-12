@@ -19,8 +19,8 @@ type RulesConfig struct {
 	Rules []Rule `yaml:"rules"`
 }
 
-// RuleCondition represents different types of conditions in rules
-type RuleCondition interface {
+// RulePredicate represents different types of predicates in rules
+type RulePredicate interface {
 	GetType() string
 }
 
@@ -75,21 +75,21 @@ func (s SubtypeCondition) GetType() string { return "subtype" }
 
 // AndCondition represents a logical AND condition
 type AndCondition struct {
-	Conditions []RuleCondition `yaml:"and"`
+	Conditions []RulePredicate `yaml:"and"`
 }
 
 func (a AndCondition) GetType() string { return "and" }
 
 // OrCondition represents a logical OR condition
 type OrCondition struct {
-	Conditions []RuleCondition `yaml:"or"`
+	Conditions []RulePredicate `yaml:"or"`
 }
 
 func (o OrCondition) GetType() string { return "or" }
 
 // NotCondition represents a logical NOT condition
 type NotCondition struct {
-	Condition RuleCondition `yaml:"not"`
+	Condition RulePredicate `yaml:"not"`
 }
 
 func (n NotCondition) GetType() string { return "not" }
@@ -271,13 +271,23 @@ func parseType(typeData any) (*TypeInfo, error) {
 }
 
 // parseRuleCondition parses a rule condition from YAML
-func parseRuleCondition(rule any) (RuleCondition, error) {
+func parseRuleCondition(rule any) (RulePredicate, error) {
 	switch v := rule.(type) {
 	case string:
-		if v == "always" {
+		switch v {
+		case "always":
 			return AlwaysCondition{}, nil
+		case "typeParamsEqual":
+			return TypeParamsEqualCondition{}, nil
+		case "paramsContravariant":
+			return ParamsContravariantCondition{}, nil
+		case "returnCovariant":
+			return ReturnCovariantCondition{}, nil
+		case "constructorEqual":
+			return ConstructorEqualCondition{}, nil
+		default:
+			return nil, fmt.Errorf("unsupported string rule: %s", v)
 		}
-		return nil, fmt.Errorf("unsupported string rule: %s", v)
 	case KeyValues:
 		// Check for each condition type
 		if _, ok := v["always"]; ok {
@@ -315,7 +325,7 @@ func parseRuleCondition(rule any) (RuleCondition, error) {
 		}
 
 		if and, ok := v["and"].([]any); ok {
-			var conditions []RuleCondition
+			var conditions []RulePredicate
 			for _, cond := range and {
 				parsed, err := parseRuleCondition(cond)
 				if err != nil {
@@ -327,7 +337,7 @@ func parseRuleCondition(rule any) (RuleCondition, error) {
 		}
 
 		if or, ok := v["or"].([]any); ok {
-			var conditions []RuleCondition
+			var conditions []RulePredicate
 			for _, cond := range or {
 				parsed, err := parseRuleCondition(cond)
 				if err != nil {
