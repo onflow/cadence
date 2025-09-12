@@ -29,6 +29,7 @@ type Kind uint8
 const (
 	Unknown Kind = iota
 	String
+	RawString
 	Character
 	Address
 	_

@@ -767,7 +767,7 @@ func instructionResolvedOperandsStringFuncDecl(ins instruction) *dst.FuncDecl {
 			Type: &dst.ArrayType{
 				Elt: &dst.Ident{
 					Path: constantPackagePath,
-					Name: "Constant",
+					Name: "DecodedConstant",
 				},
 			},
 		},

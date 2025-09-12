@@ -110,13 +110,13 @@ func TestCompileRecursionFib(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 		},
@@ -276,13 +276,13 @@ func TestCompileImperativeFib(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 		},
@@ -387,17 +387,17 @@ func TestCompileBreak(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x0},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(0),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x3},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(3),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 		},
@@ -487,17 +487,17 @@ func TestCompileContinue(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x0},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(0),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x3},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(3),
 				Kind: constant.Int,
 			},
 		},
@@ -685,17 +685,17 @@ func TestCompileArray(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x3},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(3),
 				Kind: constant.Int,
 			},
 		},
@@ -758,29 +758,29 @@ func TestCompileDictionary(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{'a'},
+				Data: interpreter.NewUnmeteredStringValue("a"),
 				Kind: constant.String,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{'b'},
+				Data: interpreter.NewUnmeteredStringValue("b"),
 				Kind: constant.String,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{'c'},
+				Data: interpreter.NewUnmeteredStringValue("c"),
 				Kind: constant.String,
 			},
 			{
-				Data: []byte{0x3},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(3),
 				Kind: constant.Int,
 			},
 		},
@@ -854,9 +854,9 @@ func TestCompileIfLet(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 		},
@@ -955,13 +955,13 @@ func TestCompileIfLetScope(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(0),
 				Kind: constant.Int,
 			},
 		},
@@ -1067,21 +1067,21 @@ func TestCompileSwitch(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x0},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(0),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x3},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(3),
 				Kind: constant.Int,
 			},
 		},
@@ -1163,13 +1163,13 @@ func TestSwitchBreak(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 		},
@@ -1265,13 +1265,13 @@ func TestWhileSwitchBreak(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x0},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(0),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 		},
@@ -1480,6 +1480,7 @@ func TestCompileNestedLoop(t *testing.T) {
 		// jIndex is the index of the local variable `j`, which is the second local variable
 		jIndex
 	)
+
 	const (
 		// zeroIndex is the index of the constant `0`, which is the first constant
 		zeroIndex = iota
@@ -1574,17 +1575,17 @@ func TestCompileNestedLoop(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x0},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(0),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0xa},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(10),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 		},
@@ -1636,13 +1637,13 @@ func TestCompileAssignLocal(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x0},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(0),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 		},
@@ -1709,13 +1710,13 @@ func TestCompileAssignGlobal(t *testing.T) {
 
 	// Constants
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x0},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(0),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 		},
@@ -1904,10 +1905,10 @@ func TestCompileMember(t *testing.T) {
 	}
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte("foo"),
-				Kind: constant.String,
+				Data: "foo",
+				Kind: constant.RawString,
 			},
 		},
 		program.Constants,
@@ -2039,9 +2040,9 @@ func TestCompileString(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte("Hello, world!"),
+				Data: interpreter.NewUnmeteredStringValue("Hello, world!"),
 				Kind: constant.String,
 			},
 		},
@@ -2053,7 +2054,7 @@ func TestCompilePositiveIntegers(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(integerType sema.Type, expectedData []byte) {
+	test := func(integerType sema.Type, expectedData interpreter.Value) {
 
 		t.Run(integerType.String(), func(t *testing.T) {
 
@@ -2100,7 +2101,7 @@ func TestCompilePositiveIntegers(t *testing.T) {
 			expectedConstantKind := constant.FromSemaType(integerType)
 
 			assert.Equal(t,
-				[]constant.Constant{
+				[]constant.DecodedConstant{
 					{
 						Data: expectedData,
 						Kind: expectedConstantKind,
@@ -2111,51 +2112,29 @@ func TestCompilePositiveIntegers(t *testing.T) {
 		})
 	}
 
-	tests := map[sema.Type][]byte{
-		sema.IntType:   {0x2},
-		sema.Int8Type:  {0x2},
-		sema.Int16Type: {0x0, 0x2},
-		sema.Int32Type: {0x0, 0x0, 0x0, 0x2},
-		sema.Int64Type: {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
-		sema.Int128Type: {
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-		},
-		sema.Int256Type: {
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-		},
-		sema.UIntType:   {0x2},
-		sema.UInt8Type:  {0x2},
-		sema.UInt16Type: {0x0, 0x2},
-		sema.UInt32Type: {0x0, 0x0, 0x0, 0x2},
-		sema.UInt64Type: {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
-		sema.UInt128Type: {
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-		},
-		sema.UInt256Type: {
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-		},
-		sema.Word8Type:  {0x2},
-		sema.Word16Type: {0x0, 0x2},
-		sema.Word32Type: {0x0, 0x0, 0x0, 0x2},
-		sema.Word64Type: {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
-		sema.Word128Type: {
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-		},
-		sema.Word256Type: {
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-		},
+	tests := map[sema.Type]interpreter.Value{
+		sema.IntType:    interpreter.NewUnmeteredIntValueFromInt64(2),
+		sema.Int8Type:   interpreter.NewUnmeteredInt8Value(2),
+		sema.Int16Type:  interpreter.NewUnmeteredInt16Value(2),
+		sema.Int32Type:  interpreter.NewUnmeteredInt32Value(2),
+		sema.Int64Type:  interpreter.NewUnmeteredInt64Value(2),
+		sema.Int128Type: interpreter.NewUnmeteredInt128ValueFromInt64(2),
+		sema.Int256Type: interpreter.NewUnmeteredInt256ValueFromInt64(2),
+
+		sema.UIntType:    interpreter.NewUnmeteredUIntValueFromUint64(2),
+		sema.UInt8Type:   interpreter.NewUnmeteredUInt8Value(2),
+		sema.UInt16Type:  interpreter.NewUnmeteredUInt16Value(2),
+		sema.UInt32Type:  interpreter.NewUnmeteredUInt32Value(2),
+		sema.UInt64Type:  interpreter.NewUnmeteredUInt64Value(2),
+		sema.UInt128Type: interpreter.NewUnmeteredUInt128ValueFromUint64(2),
+		sema.UInt256Type: interpreter.NewUnmeteredUInt256ValueFromUint64(2),
+
+		sema.Word8Type:   interpreter.NewUnmeteredWord8Value(2),
+		sema.Word16Type:  interpreter.NewUnmeteredWord16Value(2),
+		sema.Word32Type:  interpreter.NewUnmeteredWord32Value(2),
+		sema.Word64Type:  interpreter.NewUnmeteredWord64Value(2),
+		sema.Word128Type: interpreter.NewUnmeteredWord128ValueFromUint64(2),
+		sema.Word256Type: interpreter.NewUnmeteredWord256ValueFromUint64(2),
 	}
 
 	for _, integerType := range common.Concat(
@@ -2176,7 +2155,7 @@ func TestCompileNegativeIntegers(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(integerType sema.Type, expectedData []byte) {
+	test := func(integerType sema.Type, expectedData interpreter.Value) {
 
 		t.Run(integerType.String(), func(t *testing.T) {
 
@@ -2223,7 +2202,7 @@ func TestCompileNegativeIntegers(t *testing.T) {
 			expectedConstantKind := constant.FromSemaType(integerType)
 
 			assert.Equal(t,
-				[]constant.Constant{
+				[]constant.DecodedConstant{
 					{
 						Data: expectedData,
 						Kind: expectedConstantKind,
@@ -2234,22 +2213,14 @@ func TestCompileNegativeIntegers(t *testing.T) {
 		})
 	}
 
-	tests := map[sema.Type][]byte{
-		sema.IntType:   {0xfd},
-		sema.Int8Type:  {0xfd},
-		sema.Int16Type: {0xff, 0xfd},
-		sema.Int32Type: {0xff, 0xff, 0xff, 0xfd},
-		sema.Int64Type: {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfd},
-		sema.Int128Type: {
-			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfd,
-		},
-		sema.Int256Type: {
-			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfd,
-		},
+	tests := map[sema.Type]interpreter.Value{
+		sema.IntType:    interpreter.NewUnmeteredIntValueFromInt64(-3),
+		sema.Int8Type:   interpreter.NewUnmeteredInt8Value(-3),
+		sema.Int16Type:  interpreter.NewUnmeteredInt16Value(-3),
+		sema.Int32Type:  interpreter.NewUnmeteredInt32Value(-3),
+		sema.Int64Type:  interpreter.NewUnmeteredInt64Value(-3),
+		sema.Int128Type: interpreter.NewUnmeteredInt128ValueFromInt64(-3),
+		sema.Int256Type: interpreter.NewUnmeteredInt256ValueFromInt64(-3),
 	}
 
 	for _, integerType := range sema.AllSignedIntegerTypes {
@@ -2302,9 +2273,9 @@ func TestCompileAddress(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 				Kind: constant.Address,
 			},
 		},
@@ -2316,7 +2287,7 @@ func TestCompilePositiveFixedPoint(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(fixedPointType sema.Type, expectedData []byte) {
+	test := func(fixedPointType sema.Type, expectedData interpreter.Value) {
 
 		t.Run(fixedPointType.String(), func(t *testing.T) {
 
@@ -2363,7 +2334,7 @@ func TestCompilePositiveFixedPoint(t *testing.T) {
 			expectedConstantKind := constant.FromSemaType(fixedPointType)
 
 			assert.Equal(t,
-				[]constant.Constant{
+				[]constant.DecodedConstant{
 					{
 						Data: expectedData,
 						Kind: expectedConstantKind,
@@ -2374,11 +2345,11 @@ func TestCompilePositiveFixedPoint(t *testing.T) {
 		})
 	}
 
-	tests := map[sema.Type][]byte{
-		sema.Fix64Type:   {0x0, 0x0, 0x0, 0x0, 0x0d, 0xb5, 0x85, 0x80},
-		sema.Fix128Type:  {0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0xe7, 0xb, 0x3f, 0xf5, 0x3d, 0xbc, 0x25, 0x80, 0x0, 0x0},
-		sema.UFix64Type:  {0x0, 0x0, 0x0, 0x0, 0x0d, 0xb5, 0x85, 0x80},
-		sema.UFix128Type: {0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0xe7, 0xb, 0x3f, 0xf5, 0x3d, 0xbc, 0x25, 0x80, 0x0, 0x0},
+	tests := map[sema.Type]interpreter.Value{
+		sema.Fix64Type:   interpreter.NewUnmeteredFix64Value(230000000),
+		sema.Fix128Type:  interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(23, sema.Fix128Scale-1),
+		sema.UFix64Type:  interpreter.NewUnmeteredUFix64Value(230000000),
+		sema.UFix128Type: interpreter.NewUnmeteredUFix128ValueWithIntegerAndScale(23, sema.Fix128Scale-1),
 	}
 
 	for _, fixedPointType := range common.Concat(
@@ -2399,7 +2370,7 @@ func TestCompileNegativeFixedPoint(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(fixedPointType sema.Type, expectedData []byte) {
+	test := func(fixedPointType sema.Type, expectedData interpreter.Value) {
 
 		t.Run(fixedPointType.String(), func(t *testing.T) {
 
@@ -2446,7 +2417,7 @@ func TestCompileNegativeFixedPoint(t *testing.T) {
 			expectedConstantKind := constant.FromSemaType(fixedPointType)
 
 			assert.Equal(t,
-				[]constant.Constant{
+				[]constant.DecodedConstant{
 					{
 						Data: expectedData,
 						Kind: expectedConstantKind,
@@ -2457,9 +2428,9 @@ func TestCompileNegativeFixedPoint(t *testing.T) {
 		})
 	}
 
-	tests := map[sema.Type][]byte{
-		sema.Fix64Type:  {0xff, 0xff, 0xff, 0xff, 0xf2, 0x4a, 0x7a, 0x80},
-		sema.Fix128Type: {0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x18, 0xf4, 0xc0, 0xa, 0xc2, 0x43, 0xda, 0x80, 0x0, 0x0},
+	tests := map[sema.Type]interpreter.Value{
+		sema.Fix64Type:  interpreter.NewUnmeteredFix64Value(-230000000),
+		sema.Fix128Type: interpreter.NewUnmeteredFix128ValueWithIntegerAndScale(-23, sema.Fix128Scale-1),
 	}
 
 	for _, fixedPointType := range sema.AllSignedFixedPointTypes {
@@ -2649,13 +2620,13 @@ func TestCompileBinary(t *testing.T) {
 			)
 
 			assert.Equal(t,
-				[]constant.Constant{
+				[]constant.DecodedConstant{
 					{
-						Data: []byte{0x6},
+						Data: interpreter.NewUnmeteredIntValueFromInt64(6),
 						Kind: constant.Int,
 					},
 					{
-						Data: []byte{0x3},
+						Data: interpreter.NewUnmeteredIntValueFromInt64(3),
 						Kind: constant.Int,
 					},
 				},
@@ -2740,9 +2711,9 @@ func TestCompileNilCoalesce(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(0),
 				Kind: constant.Int,
 			},
 		},
@@ -2969,10 +2940,10 @@ func TestCompilePath(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte("foo"),
-				Kind: constant.String,
+				Data: "foo",
+				Kind: constant.RawString,
 			},
 		},
 		program.Constants,
@@ -3053,17 +3024,17 @@ func TestCompileBlockScope(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{3},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(3),
 				Kind: constant.Int,
 			},
 		},
@@ -3159,17 +3130,17 @@ func TestCompileBlockScope2(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{3},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(3),
 				Kind: constant.Int,
 			},
 		},
@@ -3302,9 +3273,9 @@ func TestCompileDefaultFunction(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{42},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(42),
 				Kind: constant.Int,
 			},
 		},
@@ -4419,13 +4390,13 @@ func TestForLoop(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
-					Data: []byte{0xff},
+					Data: interpreter.NewUnmeteredIntValueFromInt64(-1),
 					Kind: constant.Int,
 				},
 				{
-					Data: []byte{0x1},
+					Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 					Kind: constant.Int,
 				},
 			},
@@ -4728,17 +4699,17 @@ func TestCompileIf(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x0},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(0),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 		},
@@ -4793,13 +4764,13 @@ func TestCompileConditional(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 		},
@@ -5027,7 +4998,7 @@ func TestCompileTransaction(t *testing.T) {
 			// self.count = 2
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: selfIndex},
-			opcode.InstructionGetConstant{Constant: const2Index},
+			opcode.InstructionGetConstant{Constant: 0},
 			opcode.InstructionTransferAndConvert{Type: 4},
 			opcode.InstructionSetField{FieldName: constFieldNameIndex, AccessedType: 1},
 
@@ -5067,7 +5038,7 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: selfIndex},
 			opcode.InstructionGetField{FieldName: constFieldNameIndex, AccessedType: 1},
-			opcode.InstructionGetConstant{Constant: const2Index},
+			opcode.InstructionGetConstant{Constant: 0},
 			opcode.InstructionEqual{},
 
 			// if !<condition>
@@ -5077,7 +5048,7 @@ func TestCompileTransaction(t *testing.T) {
 			// $failPreCondition("")
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: failPreConditionFunctionIndex},
-			opcode.InstructionGetConstant{Constant: constErrorMsgIndex},
+			opcode.InstructionGetConstant{Constant: 2},
 			opcode.InstructionTransferAndConvert{Type: 5},
 			opcode.InstructionInvoke{ArgCount: 1},
 
@@ -5087,7 +5058,7 @@ func TestCompileTransaction(t *testing.T) {
 			// self.count = 10
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: selfIndex},
-			opcode.InstructionGetConstant{Constant: const10Index},
+			opcode.InstructionGetConstant{Constant: 3},
 			opcode.InstructionTransferAndConvert{Type: 4},
 			opcode.InstructionSetField{FieldName: constFieldNameIndex, AccessedType: 1},
 
@@ -5096,7 +5067,7 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: selfIndex},
 			opcode.InstructionGetField{FieldName: constFieldNameIndex, AccessedType: 1},
-			opcode.InstructionGetConstant{Constant: const10Index},
+			opcode.InstructionGetConstant{Constant: 3},
 			opcode.InstructionEqual{},
 
 			// if !<condition>
@@ -5106,7 +5077,7 @@ func TestCompileTransaction(t *testing.T) {
 			// $failPostCondition("")
 			opcode.InstructionStatement{},
 			opcode.InstructionGetGlobal{Global: failPostConditionFunctionIndex},
-			opcode.InstructionGetConstant{Constant: constErrorMsgIndex},
+			opcode.InstructionGetConstant{Constant: 2},
 			opcode.InstructionTransferAndConvert{Type: 5},
 			opcode.InstructionInvoke{ArgCount: 1},
 
@@ -5508,17 +5479,17 @@ func TestCompileFunctionExpression(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x3},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(3),
 				Kind: constant.Int,
 			},
 		},
@@ -5596,17 +5567,17 @@ func TestCompileInnerFunction(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x3},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(3),
 				Kind: constant.Int,
 			},
 		},
@@ -5781,13 +5752,13 @@ func TestCompileInnerFunctionOuterVariableUse(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 		},
@@ -5903,13 +5874,13 @@ func TestCompileInnerFunctionOuterOuterVariableUse(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 		},
@@ -6179,29 +6150,29 @@ func TestCompileFunctionExpressionOuterOuterVariableUse(t *testing.T) {
 	}
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x3},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(3),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x4},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(4),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x5},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(5),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x6},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(6),
 				Kind: constant.Int,
 			},
 		},
@@ -6247,9 +6218,9 @@ func TestCompileTransferConstant(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
-					Data: []byte{0x1},
+					Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 					Kind: constant.Int,
 				},
 			},
@@ -6291,9 +6262,9 @@ func TestCompileTransferConstant(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
-					Data: []byte{0x1},
+					Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 					Kind: constant.Int,
 				},
 			},
@@ -6344,10 +6315,10 @@ func TestCompileTransferNewPath(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
-					Data: []byte("foo"),
-					Kind: constant.String,
+					Data: "foo",
+					Kind: constant.RawString,
 				},
 			},
 			program.Constants,
@@ -6391,10 +6362,10 @@ func TestCompileTransferNewPath(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
-					Data: []byte("foo"),
-					Kind: constant.String,
+					Data: "foo",
+					Kind: constant.RawString,
 				},
 			},
 			program.Constants,
@@ -7069,10 +7040,10 @@ func TestCompileOptionalChaining(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
-					Data: []byte("bar"),
-					Kind: constant.String,
+					Data: "bar",
+					Kind: constant.RawString,
 				},
 			},
 			program.Constants,
@@ -7769,22 +7740,22 @@ func TestCompileEnum(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x0},
+				Data: interpreter.NewUnmeteredUInt8Value(0),
 				Kind: constant.UInt8,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredUInt8Value(1),
 				Kind: constant.UInt8,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredUInt8Value(2),
 				Kind: constant.UInt8,
 			},
 			{
-				Data: []byte("rawValue"),
-				Kind: constant.String,
+				Data: "rawValue",
+				Kind: constant.RawString,
 			},
 		},
 		program.Constants,
@@ -7865,9 +7836,9 @@ func TestCompileOptionalArgument(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
-					Data: []byte("hello"),
+					Data: interpreter.NewUnmeteredStringValue("hello"),
 					Kind: constant.String,
 				},
 			},
@@ -7961,33 +7932,33 @@ func TestCompileOptionalArgument(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
-					Data: []byte{0x1},
+					Data: interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 					Kind: constant.Address,
 				},
 				{
-					Data: []byte("account"),
+					Data: "account",
+					Kind: constant.RawString,
+				},
+				{
+					Data: "contracts",
+					Kind: constant.RawString,
+				},
+				{
+					Data: interpreter.NewUnmeteredStringValue("Foo"),
 					Kind: constant.String,
 				},
 				{
-					Data: []byte("contracts"),
+					Data: interpreter.NewUnmeteredStringValue(" contract Foo { let message: String\n init(message:String) {self.message = message}\nfun test(): String {return self.message}}"),
 					Kind: constant.String,
 				},
 				{
-					Data: []byte("Foo"),
-					Kind: constant.String,
+					Data: "utf8",
+					Kind: constant.RawString,
 				},
 				{
-					Data: []byte(" contract Foo { let message: String\n init(message:String) {self.message = message}\nfun test(): String {return self.message}}"),
-					Kind: constant.String,
-				},
-				{
-					Data: []byte("utf8"),
-					Kind: constant.String,
-				},
-				{
-					Data: []byte("Optional arg"),
+					Data: interpreter.NewUnmeteredStringValue("Optional arg"),
 					Kind: constant.String,
 				},
 			},
@@ -8062,18 +8033,18 @@ func TestCompileContract(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 				Kind: constant.Address,
 			},
 			{
-				Data: []byte{1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte("x"),
-				Kind: constant.String,
+				Data: "x",
+				Kind: constant.RawString,
 			},
 		},
 		program.Constants,
@@ -8155,13 +8126,13 @@ func TestCompileSwapIdentifiers(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 		},
@@ -8251,21 +8222,21 @@ func TestCompileSwapMembers(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte("x"),
-				Kind: constant.String,
+				Data: "x",
+				Kind: constant.RawString,
 			},
 			{
-				Data: []byte("y"),
-				Kind: constant.String,
+				Data: "y",
+				Kind: constant.RawString,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x2},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 				Kind: constant.Int,
 			},
 		},
@@ -8364,21 +8335,21 @@ func TestCompileSwapIndex(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte("a"),
+				Data: interpreter.NewUnmeteredStringValue("a"),
 				Kind: constant.String,
 			},
 			{
-				Data: []byte("b"),
+				Data: interpreter.NewUnmeteredStringValue("b"),
 				Kind: constant.String,
 			},
 			{
-				Data: []byte{0x0},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(0),
 				Kind: constant.Int,
 			},
 			{
-				Data: []byte{0x1},
+				Data: interpreter.NewUnmeteredIntValueFromInt64(1),
 				Kind: constant.Int,
 			},
 		},
@@ -8413,14 +8384,14 @@ func TestCompileStringTemplate(t *testing.T) {
 			[]opcode.Instruction{
 				// let str = "2+2=\(2+2)"
 				opcode.InstructionStatement{},
-				opcode.InstructionGetConstant{Constant: 0x0},
-				opcode.InstructionGetConstant{Constant: 0x1},
-				opcode.InstructionGetConstant{Constant: 0x2},
-				opcode.InstructionGetConstant{Constant: 0x2},
+				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionGetConstant{Constant: 1},
+				opcode.InstructionGetConstant{Constant: 2},
+				opcode.InstructionGetConstant{Constant: 2},
 				opcode.InstructionAdd{},
-				opcode.InstructionTemplateString{ExprSize: 0x1},
-				opcode.InstructionTransferAndConvert{Type: 0x1},
-				opcode.InstructionSetLocal{Local: 0x0},
+				opcode.InstructionTemplateString{ExprSize: 1},
+				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionSetLocal{Local: 0},
 
 				// Return
 				opcode.InstructionReturn{},
@@ -8429,18 +8400,18 @@ func TestCompileStringTemplate(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
-					Data: []byte("2+2="),
+					Data: interpreter.NewUnmeteredStringValue("2+2="),
 					Kind: constant.String,
 				},
 
 				{
-					Data: []byte(""),
+					Data: interpreter.NewUnmeteredStringValue(""),
 					Kind: constant.String,
 				},
 				{
-					Data: []byte{0x2},
+					Data: interpreter.NewUnmeteredIntValueFromInt64(2),
 					Kind: constant.Int,
 				},
 			},
@@ -8474,60 +8445,60 @@ func TestCompileStringTemplate(t *testing.T) {
 			[]opcode.Instruction{
 				// let a = "A"
 				opcode.InstructionStatement{},
-				opcode.InstructionGetConstant{Constant: 0x0},
-				opcode.InstructionTransferAndConvert{Type: 0x1},
-				opcode.InstructionSetLocal{Local: 0x0},
+				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionSetLocal{Local: 0},
 				// let b = "B"
 				opcode.InstructionStatement{},
-				opcode.InstructionGetConstant{Constant: 0x1},
-				opcode.InstructionTransferAndConvert{Type: 0x1},
-				opcode.InstructionSetLocal{Local: 0x1},
+				opcode.InstructionGetConstant{Constant: 1},
+				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionSetLocal{Local: 1},
 				// let c = 4
 				opcode.InstructionStatement{},
-				opcode.InstructionGetConstant{Constant: 0x2},
-				opcode.InstructionTransferAndConvert{Type: 0x2},
-				opcode.InstructionSetLocal{Local: 0x2},
+				opcode.InstructionGetConstant{Constant: 2},
+				opcode.InstructionTransferAndConvert{Type: 2},
+				opcode.InstructionSetLocal{Local: 2},
 				// let str = "\(a) + \(b) = \(c)"
 				opcode.InstructionStatement{},
-				opcode.InstructionGetConstant{Constant: 0x3},
-				opcode.InstructionGetConstant{Constant: 0x4},
-				opcode.InstructionGetConstant{Constant: 0x5},
-				opcode.InstructionGetConstant{Constant: 0x3},
-				opcode.InstructionGetLocal{Local: 0x0},
-				opcode.InstructionGetLocal{Local: 0x1},
-				opcode.InstructionGetLocal{Local: 0x2},
-				opcode.InstructionTemplateString{ExprSize: 0x3},
-				opcode.InstructionTransferAndConvert{Type: 0x1},
-				opcode.InstructionSetLocal{Local: 0x3},
+				opcode.InstructionGetConstant{Constant: 3},
+				opcode.InstructionGetConstant{Constant: 4},
+				opcode.InstructionGetConstant{Constant: 5},
+				opcode.InstructionGetConstant{Constant: 3},
+				opcode.InstructionGetLocal{Local: 0},
+				opcode.InstructionGetLocal{Local: 1},
+				opcode.InstructionGetLocal{Local: 2},
+				opcode.InstructionTemplateString{ExprSize: 3},
+				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionSetLocal{Local: 3},
 				opcode.InstructionReturn{},
 			},
 			functions[0].Code,
 		)
 
 		assert.Equal(t,
-			[]constant.Constant{
+			[]constant.DecodedConstant{
 				{
-					Data: []byte("A"),
+					Data: interpreter.NewUnmeteredStringValue("A"),
 					Kind: constant.String,
 				},
 				{
-					Data: []byte("B"),
+					Data: interpreter.NewUnmeteredStringValue("B"),
 					Kind: constant.String,
 				},
 				{
-					Data: []byte{0x4},
+					Data: interpreter.NewUnmeteredIntValueFromInt64(4),
 					Kind: constant.Int,
 				},
 				{
-					Data: []byte(""),
+					Data: interpreter.NewUnmeteredStringValue(""),
 					Kind: constant.String,
 				},
 				{
-					Data: []byte(" + "),
+					Data: interpreter.NewUnmeteredStringValue(" + "),
 					Kind: constant.String,
 				},
 				{
-					Data: []byte(" = "),
+					Data: interpreter.NewUnmeteredStringValue(" = "),
 					Kind: constant.String,
 				},
 			},
@@ -9271,10 +9242,10 @@ func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte("answer"),
-				Kind: constant.String,
+				Data: "answer",
+				Kind: constant.RawString,
 			},
 		},
 		program.Constants,
@@ -9418,10 +9389,10 @@ func TestCompileInjectedContract(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]constant.Constant{
+		[]constant.DecodedConstant{
 			{
-				Data: []byte("d"),
-				Kind: constant.String,
+				Data: "d",
+				Kind: constant.RawString,
 			},
 		},
 		program.Constants,

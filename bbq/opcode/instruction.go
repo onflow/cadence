@@ -39,7 +39,7 @@ type Instruction interface {
 	OperandsString(sb *strings.Builder, colorize bool)
 	ResolvedOperandsString(
 		sb *strings.Builder,
-		constants []constant.Constant,
+		constants []constant.DecodedConstant,
 		types []interpreter.StaticType,
 		functionNames []string,
 		colorize bool,
@@ -267,7 +267,7 @@ func printfArgument(
 func printfConstantArgument(
 	sb *strings.Builder,
 	argumentName string,
-	c constant.Constant,
+	c constant.DecodedConstant,
 	colorize bool,
 ) {
 	formattedConstant := c.String()
