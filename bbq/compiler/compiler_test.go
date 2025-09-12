@@ -3631,7 +3631,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// Inherited pre-condition
 				// x > 0
 				opcode.InstructionGetLocal{Local: xIndex},
-				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionGetConstant{Constant: const0Index},
 				opcode.InstructionGreater{},
 
 				// if !<condition>
@@ -3641,7 +3641,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// $failPreCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: failPreConditionFunctionIndex},
-				opcode.InstructionGetConstant{Constant: 1},
+				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
 				opcode.InstructionTransferAndConvert{Type: 5},
 				opcode.InstructionInvoke{ArgCount: 1},
 
@@ -3654,7 +3654,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// $_result = 42
 				opcode.InstructionStatement{},
-				opcode.InstructionGetConstant{Constant: 2},
+				opcode.InstructionGetConstant{Constant: const42Index},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
@@ -3672,7 +3672,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// y > 0
 				opcode.InstructionGetLocal{Local: yIndex},
-				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionGetConstant{Constant: const0Index},
 				opcode.InstructionGreater{},
 
 				// if !<condition>
@@ -3682,7 +3682,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// $failPostCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: failPostConditionFunctionIndex},
-				opcode.InstructionGetConstant{Constant: 1},
+				opcode.InstructionGetConstant{Constant: constPanicMessageIndex},
 				opcode.InstructionTransferAndConvert{Type: 5},
 				opcode.InstructionInvoke{ArgCount: 1},
 

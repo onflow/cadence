@@ -106,11 +106,6 @@ type Compiler[E, T any] struct {
 	globalRemoveAddressTable map[string]string
 }
 
-type constantsCacheKey struct {
-	data string
-	kind constant.Kind
-}
-
 var _ ast.DeclarationVisitor[struct{}] = &Compiler[any, any]{}
 var _ ast.StatementVisitor[struct{}] = &Compiler[any, any]{}
 var _ ast.ExpressionVisitor[struct{}] = &Compiler[any, any]{}
