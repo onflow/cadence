@@ -128,7 +128,7 @@ func NewArrayValueWithIterator(
 				valueID := array.ValueID().String()
 				typeID := string(arrayType.ID())
 
-				context.ReportAtreeNewArrayFromBatchData(
+				context.ReportAtreeNewArrayFromBatchDataTrace(
 					valueID,
 					typeID,
 					time.Since(startTime),
@@ -1404,7 +1404,7 @@ func (v *ArrayValue) Transfer(
 					valueID := array.ValueID().String()
 					typeID := string(v.Type.ID())
 
-					context.ReportAtreeNewArrayFromBatchData(
+					context.ReportAtreeNewArrayFromBatchDataTrace(
 						valueID,
 						typeID,
 						time.Since(startTime),

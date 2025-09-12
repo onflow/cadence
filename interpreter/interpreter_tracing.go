@@ -79,10 +79,10 @@ type Tracer interface {
 	ReportCompositeValueSetMemberTrace(valueID string, typeID string, kind string, name string, duration time.Duration)
 	ReportCompositeValueRemoveMemberTrace(valueID string, typeID string, kind string, name string, duration time.Duration)
 
-	ReportAtreeNewArrayFromBatchData(valueID string, typeID string, duration time.Duration)
+	ReportAtreeNewArrayFromBatchDataTrace(valueID string, typeID string, duration time.Duration)
 
-	ReportAtreeNewMap(valueID string, typeID string, seed uint64, duration time.Duration)
-	ReportAtreeNewMapFromBatchData(valueID string, typeID string, seed uint64, duration time.Duration)
+	ReportAtreeNewMapTrace(valueID string, typeID string, seed uint64, duration time.Duration)
+	ReportAtreeNewMapFromBatchDataTrace(valueID string, typeID string, seed uint64, duration time.Duration)
 }
 
 type CallbackTracer OnRecordTraceFunc
@@ -399,7 +399,7 @@ func (t CallbackTracer) ReportCompositeValueRemoveMemberTrace(
 	)
 }
 
-func (t CallbackTracer) ReportAtreeNewArrayFromBatchData(
+func (t CallbackTracer) ReportAtreeNewArrayFromBatchDataTrace(
 	valueID string,
 	typeID string,
 	duration time.Duration,
@@ -421,7 +421,7 @@ func prepareAtreeMapTraceAttrs(valueID string, typeID string, seed uint64) []att
 	)
 }
 
-func (t CallbackTracer) ReportAtreeNewMap(
+func (t CallbackTracer) ReportAtreeNewMapTrace(
 	valueID string,
 	typeID string,
 	seed uint64,
@@ -434,7 +434,7 @@ func (t CallbackTracer) ReportAtreeNewMap(
 	)
 }
 
-func (t CallbackTracer) ReportAtreeNewMapFromBatchData(
+func (t CallbackTracer) ReportAtreeNewMapFromBatchDataTrace(
 	valueID string,
 	typeID string,
 	seed uint64,
@@ -539,14 +539,14 @@ func (NoOpTracer) ReportDomainStorageMapDeepRemoveTrace(_ string, _ string, _ ti
 	panic(errors.NewUnreachableError())
 }
 
-func (NoOpTracer) ReportAtreeNewArrayFromBatchData(_ string, _ string, _ time.Duration) {
+func (NoOpTracer) ReportAtreeNewArrayFromBatchDataTrace(_ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (NoOpTracer) ReportAtreeNewMap(_ string, _ string, _ uint64, _ time.Duration) {
+func (NoOpTracer) ReportAtreeNewMapTrace(_ string, _ string, _ uint64, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 
-func (NoOpTracer) ReportAtreeNewMapFromBatchData(_ string, _ string, _ uint64, _ time.Duration) {
+func (NoOpTracer) ReportAtreeNewMapFromBatchDataTrace(_ string, _ string, _ uint64, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }

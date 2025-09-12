@@ -180,7 +180,7 @@ func NewCompositeValue(
 				))
 				seed := dictionary.Seed()
 
-				context.ReportAtreeNewMap(
+				context.ReportAtreeNewMapTrace(
 					valueID,
 					typeID,
 					seed,
@@ -1285,7 +1285,7 @@ func (v *CompositeValue) Transfer(
 					valueID := dictionary.ValueID().String()
 					typeID := string(v.TypeID())
 
-					context.ReportAtreeNewMapFromBatchData(
+					context.ReportAtreeNewMapFromBatchDataTrace(
 						valueID,
 						typeID,
 						seed,

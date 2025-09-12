@@ -110,7 +110,7 @@ func NewDictionaryValueWithAddress(
 				typeID := string(dictionaryType.ID())
 				seed := dictionary.Seed()
 
-				context.ReportAtreeNewMap(
+				context.ReportAtreeNewMapTrace(
 					valueID,
 					typeID,
 					seed,
@@ -213,7 +213,7 @@ func newDictionaryValueWithIterator(
 				valueID := orderedMap.ValueID().String()
 				typeID := string(staticType.ID())
 
-				context.ReportAtreeNewMapFromBatchData(
+				context.ReportAtreeNewMapFromBatchDataTrace(
 					valueID,
 					typeID,
 					seed,
@@ -1399,7 +1399,7 @@ func (v *DictionaryValue) Transfer(
 					valueID := dictionary.ValueID().String()
 					typeID := string(v.Type.ID())
 
-					context.ReportAtreeNewMapFromBatchData(
+					context.ReportAtreeNewMapFromBatchDataTrace(
 						valueID,
 						typeID,
 						seed,
