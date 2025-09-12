@@ -11,7 +11,7 @@ import (
 type Rule struct {
 	Super     any `yaml:"super"`
 	Sub       any `yaml:"sub"`
-	Condition any `yaml:"condition"` // Support both 'rule' and 'condition' fields
+	Predicate any `yaml:"predicate"`
 }
 
 // RulesConfig represents the entire YAML configuration
@@ -24,116 +24,116 @@ type RulePredicate interface {
 	GetType() string
 }
 
-// AlwaysCondition represents an always-true condition
-type AlwaysCondition struct{}
+// AlwaysPredicate represents an always-true condition
+type AlwaysPredicate struct{}
 
-func (a AlwaysCondition) GetType() string { return "always" }
+func (a AlwaysPredicate) GetType() string { return "always" }
 
-// IsResourceCondition represents a resource type check
-type IsResourceCondition struct {
+// IsResourcePredicate represents a resource type check
+type IsResourcePredicate struct {
 	Type any `yaml:"isResource"`
 }
 
-func (i IsResourceCondition) GetType() string { return "isResource" }
+func (i IsResourcePredicate) GetType() string { return "isResource" }
 
-// IsAttachmentCondition represents an attachment type check
-type IsAttachmentCondition struct {
+// IsAttachmentPredicate represents an attachment type check
+type IsAttachmentPredicate struct {
 	Type any `yaml:"isAttachment"`
 }
 
-func (i IsAttachmentCondition) GetType() string { return "isAttachment" }
+func (i IsAttachmentPredicate) GetType() string { return "isAttachment" }
 
-// IsHashableStructCondition represents a hashable struct type check
-type IsHashableStructCondition struct {
+// IsHashableStructPredicate represents a hashable struct type check
+type IsHashableStructPredicate struct {
 	Type any `yaml:"isHashableStruct"`
 }
 
-func (i IsHashableStructCondition) GetType() string { return "isHashableStruct" }
+func (i IsHashableStructPredicate) GetType() string { return "isHashableStruct" }
 
-// IsStorableCondition represents a storable type check
-type IsStorableCondition struct {
+// IsStorablePredicate represents a storable type check
+type IsStorablePredicate struct {
 	Type any `yaml:"isStorable"`
 }
 
-func (i IsStorableCondition) GetType() string { return "isStorable" }
+func (i IsStorablePredicate) GetType() string { return "isStorable" }
 
-// EqualsCondition represents an equality check
-type EqualsCondition struct {
+// EqualsPredicate represents an equality check
+type EqualsPredicate struct {
 	Source any `yaml:"source"`
 	Target any `yaml:"target"`
 }
 
-func (e EqualsCondition) GetType() string { return "equals" }
+func (e EqualsPredicate) GetType() string { return "equals" }
 
-// SubtypeCondition represents a subtype check
-type SubtypeCondition struct {
+// SubtypePredicate represents a subtype check
+type SubtypePredicate struct {
 	Sub   any `yaml:"sub"`
 	Super any `yaml:"super"`
 }
 
-func (s SubtypeCondition) GetType() string { return "subtype" }
+func (s SubtypePredicate) GetType() string { return "subtype" }
 
-// AndCondition represents a logical AND condition
-type AndCondition struct {
-	Conditions []RulePredicate `yaml:"and"`
+// AndPredicate represents a logical AND predicate
+type AndPredicate struct {
+	Predicates []RulePredicate `yaml:"and"`
 }
 
-func (a AndCondition) GetType() string { return "and" }
+func (a AndPredicate) GetType() string { return "and" }
 
-// OrCondition represents a logical OR condition
-type OrCondition struct {
-	Conditions []RulePredicate `yaml:"or"`
+// OrPredicate represents a logical OR predicate
+type OrPredicate struct {
+	Predicates []RulePredicate `yaml:"or"`
 }
 
-func (o OrCondition) GetType() string { return "or" }
+func (o OrPredicate) GetType() string { return "or" }
 
-// NotCondition represents a logical NOT condition
-type NotCondition struct {
-	Condition RulePredicate `yaml:"not"`
+// NotPredicate represents a logical NOT predicate
+type NotPredicate struct {
+	Predicate RulePredicate `yaml:"not"`
 }
 
-func (n NotCondition) GetType() string { return "not" }
+func (n NotPredicate) GetType() string { return "not" }
 
-// PermitsCondition represents a permits check
-type PermitsCondition struct {
+// PermitsPredicate represents a permits check
+type PermitsPredicate struct {
 	Types []any `yaml:"permits"`
 }
 
-func (p PermitsCondition) GetType() string { return "permits" }
+func (p PermitsPredicate) GetType() string { return "permits" }
 
-// PurityCondition represents a purity check
-type PurityCondition struct {
+// PurityPredicate represents a purity check
+type PurityPredicate struct {
 	EqualsOrView bool `yaml:"equals_or_view"`
 }
 
-func (p PurityCondition) GetType() string { return "purity" }
+func (p PurityPredicate) GetType() string { return "purity" }
 
-// TypeParamsEqualCondition represents a type parameters equality check
-type TypeParamsEqualCondition struct{}
+// TypeParamsEqualPredicate represents a type parameters equality check
+type TypeParamsEqualPredicate struct{}
 
-func (t TypeParamsEqualCondition) GetType() string { return "typeParamsEqual" }
+func (t TypeParamsEqualPredicate) GetType() string { return "typeParamsEqual" }
 
-// ParamsContravariantCondition represents a params contravariant check
-type ParamsContravariantCondition struct{}
+// ParamsContravariantPredicate represents a params contravariant check
+type ParamsContravariantPredicate struct{}
 
-func (p ParamsContravariantCondition) GetType() string { return "paramsContravariant" }
+func (p ParamsContravariantPredicate) GetType() string { return "paramsContravariant" }
 
-// ReturnCovariantCondition represents a return covariant check
-type ReturnCovariantCondition struct{}
+// ReturnCovariantPredicate represents a return covariant check
+type ReturnCovariantPredicate struct{}
 
-func (r ReturnCovariantCondition) GetType() string { return "returnCovariant" }
+func (r ReturnCovariantPredicate) GetType() string { return "returnCovariant" }
 
-// ConstructorEqualCondition represents a constructor equality check
-type ConstructorEqualCondition struct{}
+// ConstructorEqualPredicate represents a constructor equality check
+type ConstructorEqualPredicate struct{}
 
-func (c ConstructorEqualCondition) GetType() string { return "constructorEqual" }
+func (c ConstructorEqualPredicate) GetType() string { return "constructorEqual" }
 
-// ContainsCondition represents a contains check
-type ContainsCondition struct {
+// ContainsPredicate represents a contains check
+type ContainsPredicate struct {
 	Types []any `yaml:"contains"`
 }
 
-func (c ContainsCondition) GetType() string { return "contains" }
+func (c ContainsPredicate) GetType() string { return "contains" }
 
 type KeyValues = map[string]any
 
@@ -270,123 +270,123 @@ func parseType(typeData any) (*TypeInfo, error) {
 	}
 }
 
-// parseRuleCondition parses a rule condition from YAML
-func parseRuleCondition(rule any) (RulePredicate, error) {
+// parseRulePredicate parses a rule predicate from YAML
+func parseRulePredicate(rule any) (RulePredicate, error) {
 	switch v := rule.(type) {
 	case string:
 		switch v {
 		case "always":
-			return AlwaysCondition{}, nil
+			return AlwaysPredicate{}, nil
 		case "typeParamsEqual":
-			return TypeParamsEqualCondition{}, nil
+			return TypeParamsEqualPredicate{}, nil
 		case "paramsContravariant":
-			return ParamsContravariantCondition{}, nil
+			return ParamsContravariantPredicate{}, nil
 		case "returnCovariant":
-			return ReturnCovariantCondition{}, nil
+			return ReturnCovariantPredicate{}, nil
 		case "constructorEqual":
-			return ConstructorEqualCondition{}, nil
+			return ConstructorEqualPredicate{}, nil
 		default:
 			return nil, fmt.Errorf("unsupported string rule: %s", v)
 		}
 	case KeyValues:
-		// Check for each condition type
+		// Check for each predicate type
 		if _, ok := v["always"]; ok {
-			return AlwaysCondition{}, nil
+			return AlwaysPredicate{}, nil
 		}
 
 		if isResource, ok := v["isResource"]; ok {
-			return IsResourceCondition{Type: isResource}, nil
+			return IsResourcePredicate{Type: isResource}, nil
 		}
 
 		if isAttachment, ok := v["isAttachment"]; ok {
-			return IsAttachmentCondition{Type: isAttachment}, nil
+			return IsAttachmentPredicate{Type: isAttachment}, nil
 		}
 
 		if isHashableStruct, ok := v["isHashableStruct"]; ok {
-			return IsHashableStructCondition{Type: isHashableStruct}, nil
+			return IsHashableStructPredicate{Type: isHashableStruct}, nil
 		}
 
 		if isStorable, ok := v["isStorable"]; ok {
-			return IsStorableCondition{Type: isStorable}, nil
+			return IsStorablePredicate{Type: isStorable}, nil
 		}
 
 		if equals, ok := v["equals"].(KeyValues); ok {
-			return EqualsCondition{
+			return EqualsPredicate{
 				Source: equals["source"],
 				Target: equals["target"],
 			}, nil
 		}
 
 		if subtype, ok := v["subtype"].(KeyValues); ok {
-			return SubtypeCondition{
+			return SubtypePredicate{
 				Sub:   subtype["sub"],
 				Super: subtype["super"],
 			}, nil
 		}
 
 		if and, ok := v["and"].([]any); ok {
-			var conditions []RulePredicate
+			var predicates []RulePredicate
 			for _, cond := range and {
-				parsed, err := parseRuleCondition(cond)
+				parsed, err := parseRulePredicate(cond)
 				if err != nil {
 					return nil, err
 				}
-				conditions = append(conditions, parsed)
+				predicates = append(predicates, parsed)
 			}
-			return AndCondition{Conditions: conditions}, nil
+			return AndPredicate{Predicates: predicates}, nil
 		}
 
 		if or, ok := v["or"].([]any); ok {
-			var conditions []RulePredicate
+			var predicates []RulePredicate
 			for _, cond := range or {
-				parsed, err := parseRuleCondition(cond)
+				parsed, err := parseRulePredicate(cond)
 				if err != nil {
 					return nil, err
 				}
-				conditions = append(conditions, parsed)
+				predicates = append(predicates, parsed)
 			}
-			return OrCondition{Conditions: conditions}, nil
+			return OrPredicate{Predicates: predicates}, nil
 		}
 
 		if not, ok := v["not"]; ok {
-			parsed, err := parseRuleCondition(not)
+			predicate, err := parseRulePredicate(not)
 			if err != nil {
 				return nil, err
 			}
-			return NotCondition{Condition: parsed}, nil
+			return NotPredicate{Predicate: predicate}, nil
 		}
 
 		if permits, ok := v["permits"].([]any); ok {
-			return PermitsCondition{Types: permits}, nil
+			return PermitsPredicate{Types: permits}, nil
 		}
 
 		if purity, ok := v["purity"].(KeyValues); ok {
-			return PurityCondition{
+			return PurityPredicate{
 				EqualsOrView: purity["equals_or_view"].(bool),
 			}, nil
 		}
 
 		if typeParamsEqual, ok := v["typeParamsEqual"].(bool); ok && typeParamsEqual {
-			return TypeParamsEqualCondition{}, nil
+			return TypeParamsEqualPredicate{}, nil
 		}
 
 		if paramsContravariant, ok := v["paramsContravariant"].(bool); ok && paramsContravariant {
-			return ParamsContravariantCondition{}, nil
+			return ParamsContravariantPredicate{}, nil
 		}
 
 		if returnCovariant, ok := v["returnCovariant"].(bool); ok && returnCovariant {
-			return ReturnCovariantCondition{}, nil
+			return ReturnCovariantPredicate{}, nil
 		}
 
 		if constructorEqual, ok := v["constructorEqual"].(bool); ok && constructorEqual {
-			return ConstructorEqualCondition{}, nil
+			return ConstructorEqualPredicate{}, nil
 		}
 
 		if contains, ok := v["contains"].([]any); ok {
-			return ContainsCondition{Types: contains}, nil
+			return ContainsPredicate{Types: contains}, nil
 		}
 
-		return nil, fmt.Errorf("unsupported rule condition: %v", v)
+		return nil, fmt.Errorf("unsupported rule predicate: %v", v)
 	default:
 		return nil, fmt.Errorf("unsupported rule type: %T", rule)
 	}
