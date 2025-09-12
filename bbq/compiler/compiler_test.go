@@ -3493,7 +3493,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		// Would be equivalent to:
 		// fun test(x: @AnyResource?): @AnyResource? {
-		//    var $_result <-x
+		//    var $_result <- x
 		//    let result = &$_result
 		//    if !(result != nil) {
 		//        $failPostCondition("")
@@ -3504,20 +3504,21 @@ func TestCompileFunctionConditions(t *testing.T) {
 			[]opcode.Instruction{
 				opcode.InstructionStatement{},
 
-				// $_result = x
+				// $_result <- x
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: xIndex},
+				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.InstructionJump{Target: 5},
+				opcode.InstructionJump{Target: 6},
 
 				// Get the reference and assign to `result`.
 				// i.e: `let result = &$_result`
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionNewRef{Type: 1},
-				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionNewRef{Type: 2},
+				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionSetLocal{Local: resultIndex},
 
 				opcode.InstructionStatement{},
@@ -3529,13 +3530,13 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.InstructionNot{},
-				opcode.InstructionJumpIfFalse{Target: 22},
+				opcode.InstructionJumpIfFalse{Target: 23},
 
 				// $failPostCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 0}, // error message
-				opcode.InstructionTransferAndConvert{Type: 2},
+				opcode.InstructionTransferAndConvert{Type: 3},
 				opcode.InstructionInvoke{ArgCount: 1},
 
 				// Drop since it's a statement-expression
@@ -3543,7 +3544,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 3},
+				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionReturnValue{},
 			},
 			program.Functions[0].Code,
@@ -5253,6 +5254,41 @@ func TestCompileReturns(t *testing.T) {
 				// return x
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: xIndex},
+				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionReturnValue{},
+			},
+			functions[0].Code,
+		)
+	})
+
+	t.Run("resource value return", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            fun test(x: @AnyResource): @AnyResource {
+                return <- x
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 1)
+
+		// xIndex is the index of the parameter `x`, which is the first parameter
+		const xIndex = 0
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// return <- x
+				opcode.InstructionStatement{},
+				opcode.InstructionGetLocal{Local: xIndex},
+				// There should be only one transfer
 				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionReturnValue{},
 			},
