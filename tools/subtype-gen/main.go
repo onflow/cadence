@@ -30,14 +30,15 @@ func main() {
 	}
 
 	// Generate code using the comprehensive generator
-	code, err := generateComprehensiveCode(rules, pkgName)
+	gen := NewSubTypeCheckGenerator(pkgName)
+	code, err := gen.generateCheckSubTypeWithoutEqualityFunction(rules)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error generating code: %v\n", err)
 		os.Exit(1)
 	}
 
 	// Write output
-	if err := writeOutput(outPath, code, toStdout); err != nil {
+	if err := writeOutput(outPath, []byte(code), toStdout); err != nil {
 		fmt.Fprintf(os.Stderr, "error writing output: %v\n", err)
 		os.Exit(1)
 	}

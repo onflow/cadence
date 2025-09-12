@@ -167,20 +167,24 @@ rules:
 
   - super:
       Function:
-        params: A
-        return: B
+        purity: A
+        params: B
+        return: C
     sub:
       Function:
-        params: C
-        return: D
+        purity: X
+        params: Y
+        return: Z
     condition:
       and:
-        - purity:
-            equals_or_view: true
-        - typeParamsEqual: true
-        - paramsContravariant: true
-        - returnCovariant: true
-        - constructorEqual: true
+        - equals:
+            source: X
+            target:
+              oneOf: [A, "view"]
+        - typeParamsEqual
+        - paramsContravariant
+        - returnCovariant
+        - constructorEqual
 
   - super:
       Dictionary:
