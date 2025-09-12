@@ -369,8 +369,10 @@ func (t CallbackTracer) reportCompositeMemberTrace(
 		traceName,
 		duration,
 		append(
-			prepareCompositeValueTraceAttrs(valueID, typeID, kind),
-			attribute.String("name", name),
+			[]attribute.KeyValue{
+				attribute.String("name", name),
+			},
+			prepareCompositeValueTraceAttrs(valueID, typeID, kind)...,
 		),
 	)
 }
