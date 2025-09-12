@@ -120,77 +120,71 @@ func LinkGlobals(
 
 	executable := NewExecutableProgram(location, program, nil)
 
-	globalsLen := len(program.Contracts) + len(program.Variables) + len(program.Functions) + len(importedGlobals)
-
-	globals := make([]Variable, 0, globalsLen)
+	// reserved globals for the current program (exact)
+	globalCount := len(program.Globals) - len(importedGlobals)
+	globals := make([]Variable, globalCount, len(program.Globals))
 	indexedGlobals := activations.NewActivation[Variable](memoryGauge, nil)
 
 	// NOTE: ensure both the context and the mapping are updated
 
-	for _, contract := range program.Contracts {
-		contractVariable := interpreter.NewContractVariableWithGetter(
-			memoryGauge,
-			func() interpreter.Value {
-				return loadContractValue(contract, context)
-			},
-		)
+	for i, global := range program.Globals {
+		switch typedGlobal := global.(type) {
+		case *bbq.FunctionGlobal[opcode.Instruction]:
+			function := typedGlobal.Function
+			var value FunctionValue
 
-		globals = append(globals, contractVariable)
-		indexedGlobals.Set(contract.Name, contractVariable)
-	}
+			if function.IsNative() {
+				// Look-up using the unqualified name, in the common-builtin functions.
+				value = IndexedCommonBuiltinTypeBoundFunctions[function.Name]
+			} else {
+				value = functionValueFromBBQFunction(executable, function)
+			}
 
-	for _, variable := range program.Variables {
-		simpleVariable := &interpreter.SimpleVariable{}
+			variable := &interpreter.SimpleVariable{}
+			variable.InitializeWithValue(value)
+			// Linker matches the compiled function index with the linked function index
+			globals[i] = variable
+			indexedGlobals.Set(function.QualifiedName, variable)
+		case *bbq.VariableGlobal[opcode.Instruction]:
+			variable := typedGlobal.Variable
+			simpleVariable := &interpreter.SimpleVariable{}
 
-		// Some globals variables may not have initial values.
-		// e.g: Transaction parameters are converted global variables,
-		// where the values are being set in the transaction initializer.
-		if variable.Getter != nil {
-			valueGetter := functionValueFromBBQFunction(executable, variable.Getter)
-			simpleVariable.InitializeWithGetter(func() interpreter.Value {
-				return context.InvokeFunction(
-					valueGetter,
-					nil,
-				)
-			})
-		}
-
-		globals = append(globals, simpleVariable)
-		indexedGlobals.Set(variable.Name, simpleVariable)
-	}
-
-	// Iterate through `program.Functions` to be deterministic.
-	// Order of globals must be same as index set at `Compiler.addGlobal()`.
-	for i := range program.Functions {
-		function := &program.Functions[i]
-
-		// Anonymous functions are not needed as global variables.
-		// Compiler doesn't reserve global variable for them either.
-		if function.IsAnonymous() {
+			// Some globals variables may not have initial values.
+			// e.g: Transaction parameters are converted global variables,
+			// where the values are being set in the transaction initializer.
+			if variable.Getter != nil {
+				valueGetter := functionValueFromBBQFunction(executable, variable.Getter)
+				simpleVariable.InitializeWithGetter(func() interpreter.Value {
+					return context.InvokeFunction(
+						valueGetter,
+						nil,
+					)
+				})
+			}
+			// Linker matches the compiled variable index with the linked variable index
+			globals[i] = simpleVariable
+			indexedGlobals.Set(variable.Name, simpleVariable)
+		case *bbq.ContractGlobal:
+			contract := typedGlobal.Contract
+			contractVariable := interpreter.NewContractVariableWithGetter(
+				memoryGauge,
+				func() interpreter.Value {
+					return loadContractValue(contract, context)
+				},
+			)
+			// Linker matches the compiled contract index with the linked contract index
+			globals[i] = contractVariable
+			indexedGlobals.Set(contract.Name, contractVariable)
+		case *bbq.ImportedGlobal:
+			// ignore imported globals, they are already linked and will be added later
 			continue
 		}
-
-		var value FunctionValue
-
-		if function.IsNative() {
-			// Look-up using the unqualified name, in the common-builtin functions.
-			value = IndexedCommonBuiltinTypeBoundFunctions[function.Name]
-		} else {
-			value = functionValueFromBBQFunction(executable, function)
-		}
-
-		variable := &interpreter.SimpleVariable{}
-		variable.InitializeWithValue(value)
-
-		globals = append(globals, variable)
-		indexedGlobals.Set(function.QualifiedName, variable)
 	}
 
-	// Globals of the current program are added first.
-	// This is the same order as they are added in the compiler.
-	// e.g: [global1, global2, ... [importedGlobal1, importedGlobal2, ...]]
+	// add imported globals to the end of the globals
+	globals = append(globals, importedGlobals...)
+
 	executable.Globals = globals
-	executable.Globals = append(executable.Globals, importedGlobals...)
 
 	// Return only the globals defined in the current program.
 	// Because the importer/caller doesn't need to know globals of nested imports.

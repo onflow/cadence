@@ -30,6 +30,7 @@ type Program[E, T any] struct {
 	Constants []constant.Constant
 	Variables []Variable[E]
 	Types     []T
+	Globals   []Global
 }
 
 type InstructionProgram = Program[opcode.Instruction, StaticType]
