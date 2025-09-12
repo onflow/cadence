@@ -50,7 +50,7 @@ type EqualsCondition struct {
 	Target any `yaml:"target"`
 }
 
-type KeyValues map[string]any
+type KeyValues = map[string]any
 
 type SubtypeCondition struct {
 	Sub   any `yaml:"sub"`
@@ -528,7 +528,7 @@ func generateConditionCode(superType, subType *TypeInfo, condition *RuleConditio
 	}
 
 	if condition.Equals != nil {
-		code := generateEqualsCondition(superType, subType, condition.Equals)
+		code := generateEqualsCondition(condition.Equals)
 		if !strings.HasPrefix(code, "return ") && !strings.HasPrefix(code, "switch ") {
 			return "return " + code
 		}
@@ -536,7 +536,7 @@ func generateConditionCode(superType, subType *TypeInfo, condition *RuleConditio
 	}
 
 	if condition.Subtype != nil {
-		code := generateSubtypeCondition(superType, subType, condition.Subtype)
+		code := generateSubtypeCondition(condition.Subtype)
 		if !strings.HasPrefix(code, "return ") {
 			return "return " + code
 		}
@@ -606,42 +606,38 @@ func convertSwitchToOrCondition(code string) string {
 }
 
 // generateEqualsCondition generates code for equals conditions
-func generateEqualsCondition(superType, subType *TypeInfo, equals *EqualsCondition) string {
-	// Handle special case: equals: T Any should be treated as isAttachment
-	if targetStr, ok := equals.Target.(string); ok && targetStr == "Any" {
-		if sourceStr, ok := equals.Source.(string); ok && sourceStr == "T" {
-			return "isAttachmentType(subType)"
-		}
-	}
+func generateEqualsCondition(equals *EqualsCondition) string {
+	switch target := equals.Target.(type) {
+	case string:
+		return "subType == " + getTypeConstant(target)
+	case KeyValues:
+		for key, value := range target {
+			switch key {
+			case "oneOf":
+				// TODO: Extract this out and make it recursive.
 
-	// Handle oneOf target
-	if targetMap, ok := equals.Target.(KeyValues); ok {
-		if oneOf, ok := targetMap["oneOf"].([]any); ok {
-			var cases []string
-			for _, t := range oneOf {
-				if str, ok := t.(string); ok {
-					cases = append(cases, getTypeConstant(str))
+				// Value is always an array for `oneOf` rule.
+				oneOf := value.([]any)
+				var cases []string
+				for _, t := range oneOf {
+					if str, ok := t.(string); ok {
+						cases = append(cases, getTypeConstant(str))
+					}
 				}
+				return "switch subType {\n\t\tcase " + strings.Join(cases, ", ") + ":\n\t\t\treturn true\n\t\tdefault:\n\t\t\treturn false\n\t\t}"
+			default:
+				panic(fmt.Errorf("unsupported rule `%s` for `target` of `equals` rule", key))
 			}
-			return "switch subType {\n\t\tcase " + strings.Join(cases, ", ") + ":\n\t\t\treturn true\n\t\tdefault:\n\t\t\treturn false\n\t\t}"
 		}
-
-		// Handle direct type equality
-		if targetType, ok := targetMap["type"].(string); ok {
-			return "subType == " + getTypeConstant(targetType)
-		}
-	}
-
-	// Handle simple string target
-	if targetStr, ok := equals.Target.(string); ok {
-		return "subType == " + getTypeConstant(targetStr)
+	default:
+		panic(fmt.Errorf("unknown target type %t in `equals` rule", target))
 	}
 
 	return "// TODO: Implement equals condition"
 }
 
 // generateSubtypeCondition generates code for subtype conditions
-func generateSubtypeCondition(superType, subType *TypeInfo, subtype *SubtypeCondition) string {
+func generateSubtypeCondition(subtype *SubtypeCondition) string {
 	// Handle oneOf super type
 	if superMap, ok := subtype.Super.(KeyValues); ok {
 		if oneOf, ok := superMap["oneOf"].([]any); ok {
