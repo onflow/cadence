@@ -28,8 +28,8 @@ import (
 
 const (
 	// common
-	tracingFunctionPrefix = "function."
-	tracingImportPrefix   = "import."
+	tracingInvoke = "invoke"
+	tracingImport = "import"
 
 	// type prefixes
 	tracingArrayPrefix      = "array."
@@ -55,8 +55,8 @@ const (
 )
 
 type Tracer interface {
-	ReportFunctionTrace(functionName string, duration time.Duration)
-	ReportImportTrace(importPath string, duration time.Duration)
+	ReportInvokeTrace(functionType string, functionName string, duration time.Duration)
+	ReportImportTrace(location string, duration time.Duration)
 
 	ReportArrayValueConstructTrace(valueID string, typeID string, duration time.Duration)
 	ReportArrayValueTransferTrace(valueID string, typeID string, duration time.Duration)
@@ -89,19 +89,25 @@ type CallbackTracer OnRecordTraceFunc
 
 var _ Tracer = CallbackTracer(nil)
 
-func (t CallbackTracer) ReportFunctionTrace(functionName string, duration time.Duration) {
+func (t CallbackTracer) ReportInvokeTrace(functionType string, functionName string, duration time.Duration) {
 	t(
-		tracingFunctionPrefix+functionName,
+		tracingInvoke,
 		duration,
-		nil,
+		[]attribute.KeyValue{
+			attribute.String("type", functionType),
+			// Second, because it is not always available
+			attribute.String("name", functionName),
+		},
 	)
 }
 
-func (t CallbackTracer) ReportImportTrace(importPath string, duration time.Duration) {
+func (t CallbackTracer) ReportImportTrace(location string, duration time.Duration) {
 	t(
-		tracingImportPrefix+importPath,
+		tracingImport,
 		duration,
-		nil,
+		[]attribute.KeyValue{
+			attribute.String("location", location),
+		},
 	)
 }
 
@@ -451,7 +457,7 @@ type NoOpTracer struct{}
 
 var _ Tracer = NoOpTracer{}
 
-func (NoOpTracer) ReportFunctionTrace(_ string, _ time.Duration) {
+func (NoOpTracer) ReportInvokeTrace(_ string, _ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 

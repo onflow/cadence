@@ -371,7 +371,6 @@ func (v *CompositeValue) Destroy(context ResourceDestructionContext, locationRan
 		kind := v.Kind.String()
 
 		defer func() {
-
 			context.ReportCompositeValueDestroyTrace(
 				valueID,
 				typeID,

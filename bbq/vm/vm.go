@@ -261,10 +261,11 @@ func (vm *VM) popCallFrame() {
 
 	if interpreter.TracingEnabled {
 		startTime := vm.callFrame.startTime
-		functionName := vm.callFrame.function.Function.QualifiedName
+		function := vm.callFrame.function
 		defer func() {
-			vm.context.ReportFunctionTrace(
-				functionName,
+			vm.context.ReportInvokeTrace(
+				function.FunctionType(vm.context).String(),
+				function.Function.QualifiedName,
 				time.Since(startTime),
 			)
 		}()
@@ -953,6 +954,8 @@ func invokeFunction(
 	context := vm.context
 	common.UseComputation(context, common.FunctionInvocationComputationUsage)
 
+	originalFunctionValue := functionValue.(FunctionValue)
+
 	// Handle all function types in a single place, so this can be re-used everywhere.
 
 	boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue)
@@ -967,28 +970,45 @@ func invokeFunction(
 		if isBoundFunction {
 			// For compiled functions, pass the receiver as an implicit-reference.
 			// Because the `self` value can be accessed by user-code.
-			receiver = boundFunction.Receiver(vm.context)
+			receiver = boundFunction.Receiver(context)
 		}
+
+		if interpreter.TracingEnabled {
+			startTime := time.Now()
+			defer func() {
+				context.ReportInvokeTrace(
+					// Use the original function value, to get the correct type.
+					// The native function value might have been wrapped in a bound function.
+					originalFunctionValue.FunctionType(context).String(),
+					functionValue.Function.QualifiedName,
+					time.Since(startTime),
+				)
+			}()
+		}
+
 		vm.pushCallFrame(functionValue, receiver, arguments)
 
 	case *NativeFunctionValue:
 		if isBoundFunction {
 			// For built-in functions, pass the dereferenced receiver.
-			receiver = boundFunction.DereferencedReceiver(vm.context)
+			receiver = boundFunction.DereferencedReceiver(context)
 		}
 
-		var result Value
 		if interpreter.TracingEnabled {
 			startTime := time.Now()
-			result = functionValue.Function(context, typeArguments, receiver, arguments...)
-			context.ReportFunctionTrace(
-				functionValue.Name,
-				time.Since(startTime),
-			)
-		} else {
-			result = functionValue.Function(context, typeArguments, receiver, arguments...)
+			defer func() {
+
+				context.ReportInvokeTrace(
+					// Use the original function value, to get the correct type.
+					// The native function value might have been wrapped in a bound function.
+					originalFunctionValue.FunctionType(context).String(),
+					functionValue.Name,
+					time.Since(startTime),
+				)
+			}()
 		}
 
+		result := functionValue.Function(context, typeArguments, receiver, arguments...)
 		vm.push(result)
 
 	default:
