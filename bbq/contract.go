@@ -18,7 +18,9 @@
 
 package bbq
 
+import "github.com/onflow/cadence/common"
+
 type Contract struct {
-	Name    string
-	Address []byte
+	Name     string
+	Location common.Location
 }

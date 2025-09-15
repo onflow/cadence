@@ -90,14 +90,6 @@ func NewVM(
 
 	vm.globals = linkedGlobals.indexedGlobals
 
-	// initialize all globals
-	for _, global := range linkedGlobals.globals {
-		if global.Kind() == interpreter.VariableKindContract {
-			continue
-		}
-		global.GetValue(context)
-	}
-
 	return vm
 }
 
