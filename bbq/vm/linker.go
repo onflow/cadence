@@ -30,9 +30,6 @@ import (
 )
 
 type LinkedGlobals struct {
-	// context shared by the globals in the program.
-	executable *ExecutableProgram
-
 	// globals defined in the program, indexed by name.
 	indexedGlobals *activations.Activation[Variable]
 }
@@ -46,83 +43,10 @@ func LinkGlobals(
 	linkedGlobalsCache map[common.Location]LinkedGlobals,
 ) LinkedGlobals {
 
-	var importedGlobals []Variable
-
-	for _, programImport := range program.Imports {
-		importLocation := programImport.Location
-
-		var indexedGlobals *activations.Activation[Variable]
-
-		if importLocation == nil {
-			if context.BuiltinGlobalsProvider == nil {
-				indexedGlobals = DefaultBuiltinGlobals()
-			} else {
-				indexedGlobals = context.BuiltinGlobalsProvider(location)
-			}
-		} else {
-
-			linkedGlobals, ok := linkedGlobalsCache[importLocation]
-			if !ok {
-				importedProgram := context.ImportHandler(importLocation)
-
-				// Link and get all globals at the import location.
-				linkedGlobals = LinkGlobals(
-					memoryGauge,
-					importLocation,
-					importedProgram,
-					context,
-					linkedGlobalsCache,
-				)
-
-				linkedGlobalsCache[importLocation] = linkedGlobals
-			}
-
-			indexedGlobals = linkedGlobals.indexedGlobals
-		}
-
-		global := indexedGlobals.Find(programImport.Name)
-		if global == nil {
-			panic(LinkerError{
-				Message: fmt.Sprintf("cannot find import '%s'", programImport.Name),
-			})
-		}
-
-		importedGlobal := global
-
-		if global.Kind() == interpreter.VariableKindContract {
-			// If the variable is a contract value, then import it as a reference.
-			// This must be done at the type of importing, rather than when declaring the contract value.
-			importedGlobal = interpreter.NewContractVariableWithGetter(
-				memoryGauge,
-				func() interpreter.Value {
-					// TODO: Is this the right context?
-					contractValue := global.GetValue(context)
-
-					staticType := contractValue.StaticType(context)
-					semaType, err := interpreter.ConvertStaticToSemaType(context, staticType)
-					if err != nil {
-						panic(err)
-					}
-
-					return interpreter.NewEphemeralReferenceValue(
-						context,
-						interpreter.UnauthorizedAccess,
-						contractValue,
-						semaType,
-						EmptyLocationRange,
-					)
-				},
-			)
-		}
-
-		importedGlobals = append(importedGlobals, importedGlobal)
-	}
-
 	executable := NewExecutableProgram(location, program, nil)
 
 	// reserved globals for the current program (exact)
-	globalCount := len(program.Globals) - len(importedGlobals)
-	globals := make([]Variable, globalCount, len(program.Globals))
+	globals := make([]Variable, len(program.Globals))
 	indexedGlobals := activations.NewActivation[Variable](memoryGauge, nil)
 
 	// NOTE: ensure both the context and the mapping are updated
@@ -176,22 +100,107 @@ func LinkGlobals(
 			globals[i] = contractVariable
 			indexedGlobals.Set(contract.Name, contractVariable)
 		case *bbq.ImportedGlobal:
-			// ignore imported globals, they are already linked and will be added later
-			continue
+			importedGlobal := linkImportedGlobal(
+				memoryGauge,
+				location,
+				typedGlobal,
+				context,
+				linkedGlobalsCache,
+			)
+			globals[i] = importedGlobal
+
+			// Don't need to add to the `indexedGlobals`, since, like the below comment says,
+			// importer/caller doesn't need to know globals of nested imports
+		default:
+			panic(errors.NewUnexpectedError("unsupported global type: %T", global))
 		}
 	}
-
-	// add imported globals to the end of the globals
-	globals = append(globals, importedGlobals...)
 
 	executable.Globals = globals
 
 	// Return only the globals defined in the current program.
 	// Because the importer/caller doesn't need to know globals of nested imports.
 	return LinkedGlobals{
-		executable:     executable,
 		indexedGlobals: indexedGlobals,
 	}
+}
+
+func linkImportedGlobal(
+	memoryGauge common.MemoryGauge,
+	location common.Location,
+	importedGlobal *bbq.ImportedGlobal,
+	context *Context,
+	linkedGlobalsCache map[common.Location]LinkedGlobals,
+) Variable {
+	importLocation := importedGlobal.Location
+
+	var indexedGlobals *activations.Activation[Variable]
+
+	if importLocation == nil {
+		if context.BuiltinGlobalsProvider == nil {
+			indexedGlobals = DefaultBuiltinGlobals()
+		} else {
+			indexedGlobals = context.BuiltinGlobalsProvider(location)
+		}
+	} else {
+
+		linkedGlobals, ok := linkedGlobalsCache[importLocation]
+		if !ok {
+			importedProgram := context.ImportHandler(importLocation)
+
+			// Link and get all globals at the import location.
+			linkedGlobals = LinkGlobals(
+				memoryGauge,
+				importLocation,
+				importedProgram,
+				context,
+				linkedGlobalsCache,
+			)
+
+			linkedGlobalsCache[importLocation] = linkedGlobals
+		}
+
+		indexedGlobals = linkedGlobals.indexedGlobals
+	}
+
+	// When linking/finding the global in the imported program,
+	// use the unqualified-name.
+	// Because
+	global := indexedGlobals.Find(importedGlobal.Name)
+	if global == nil {
+		panic(LinkerError{
+			Message: fmt.Sprintf("cannot find import '%s'", importedGlobal.Name),
+		})
+	}
+
+	linkedImportedGlobal := global
+
+	if global.Kind() == interpreter.VariableKindContract {
+		// If the variable is a contract value, then import it as a reference.
+		// This must be done at the type of importing, rather than when declaring the contract value.
+		linkedImportedGlobal = interpreter.NewContractVariableWithGetter(
+			memoryGauge,
+			func() interpreter.Value {
+				// TODO: Is this the right context?
+				contractValue := global.GetValue(context)
+
+				staticType := contractValue.StaticType(context)
+				semaType, err := interpreter.ConvertStaticToSemaType(context, staticType)
+				if err != nil {
+					panic(err)
+				}
+
+				return interpreter.NewEphemeralReferenceValue(
+					context,
+					interpreter.UnauthorizedAccess,
+					contractValue,
+					semaType,
+					EmptyLocationRange,
+				)
+			},
+		)
+	}
+	return linkedImportedGlobal
 }
 
 func functionValueFromBBQFunction(

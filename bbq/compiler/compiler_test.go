@@ -3968,9 +3968,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 						activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 						activation.Set(
 							stdlib.LogFunctionName,
-							compiler.GlobalImport{
-								Name: stdlib.LogFunctionName,
-							},
+							compiler.NewGlobalImport(stdlib.LogFunctionName),
 						)
 						return activation
 					},
@@ -7837,9 +7835,7 @@ func TestCompileOptionalArgument(t *testing.T) {
 				activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 				activation.Set(
 					stdlib.AssertFunctionName,
-					compiler.GlobalImport{
-						Name: stdlib.AssertFunctionName,
-					},
+					compiler.NewGlobalImport(stdlib.AssertFunctionName),
 				)
 				return activation
 			},
@@ -9382,15 +9378,11 @@ func TestCompileInjectedContract(t *testing.T) {
 			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 			activation.Set(
 				"B",
-				compiler.GlobalImport{
-					Name: "B",
-				},
+				compiler.NewGlobalImport("B"),
 			)
 			activation.Set(
 				"B.c",
-				compiler.GlobalImport{
-					Name: "B.c",
-				},
+				compiler.NewGlobalImport("B.c"),
 			)
 			return activation
 		},
@@ -9743,19 +9735,22 @@ func TestCompileImportAlias(t *testing.T) {
 			t,
 			map[string]bbq.GlobalInfo{
 				"test": {
-					Location: nil,
-					Name:     "test",
-					Index:    0,
+					Location:      nil,
+					Name:          "test",
+					QualifiedName: "test",
+					Index:         0,
 				},
 				"A.0000000000000001.Foo": {
-					Location: importLocation,
-					Name:     "A.0000000000000001.Foo",
-					Index:    1,
+					Location:      importLocation,
+					Name:          "Foo",
+					QualifiedName: "A.0000000000000001.Foo",
+					Index:         1,
 				},
 				"A.0000000000000001.Foo.hello": {
-					Location: importLocation,
-					Name:     "A.0000000000000001.Foo.hello",
-					Index:    2,
+					Location:      importLocation,
+					Name:          "Foo.hello",
+					QualifiedName: "A.0000000000000001.Foo.hello",
+					Index:         2,
 				},
 			},
 			comp.Globals,
@@ -9845,34 +9840,40 @@ func TestCompileImportAlias(t *testing.T) {
 			t,
 			map[string]bbq.GlobalInfo{
 				"Bar": {
-					Location: nil,
-					Name:     "Bar",
-					Index:    0,
+					Location:      nil,
+					Name:          "Bar",
+					QualifiedName: "Bar",
+					Index:         0,
 				},
 				"Bar.getType": {
-					Location: nil,
-					Name:     "Bar.getType",
-					Index:    1,
+					Location:      nil,
+					Name:          "Bar.getType",
+					QualifiedName: "Bar.getType",
+					Index:         1,
 				},
 				"Bar.hello": {
-					Location: nil,
-					Name:     "Bar.hello",
-					Index:    3,
+					Location:      nil,
+					Name:          "Bar.hello",
+					QualifiedName: "Bar.hello",
+					Index:         3,
 				},
 				"Bar.isInstance": {
-					Location: nil,
-					Name:     "Bar.isInstance",
-					Index:    2,
+					Location:      nil,
+					Name:          "Bar.isInstance",
+					QualifiedName: "Bar.isInstance",
+					Index:         2,
 				},
 				"Bar.defaultHello": {
-					Location: nil,
-					Name:     "Bar.defaultHello",
-					Index:    4,
+					Location:      nil,
+					Name:          "Bar.defaultHello",
+					QualifiedName: "Bar.defaultHello",
+					Index:         4,
 				},
 				"A.0000000000000001.FooInterface.defaultHello": {
-					Location: importLocation,
-					Name:     "A.0000000000000001.FooInterface.defaultHello",
-					Index:    5,
+					Location:      importLocation,
+					Name:          "FooInterface.defaultHello",
+					QualifiedName: "A.0000000000000001.FooInterface.defaultHello",
+					Index:         5,
 				},
 			},
 			comp.Globals,
