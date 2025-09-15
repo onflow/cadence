@@ -478,6 +478,11 @@ func (r *BlockRenderer) renderBlock(
 	}
 	builder.WriteString("┐\n")
 
+	opcodePadding := maxOpcodeLen
+	if r.colorize {
+		opcodePadding += len(aurora.White("").String())
+	}
+
 	// Block instructions
 	for instrIndex := block.Start; instrIndex <= block.End; instrIndex++ {
 		instruction := r.instructions[instrIndex]
@@ -511,8 +516,10 @@ func (r *BlockRenderer) renderBlock(
 
 		// Format instruction line
 		builder.WriteString("│ ")
-		fmt.Fprintf(builder, "%4s | %-22s | %s",
+
+		fmt.Fprintf(builder, "%4s | %-*s | %s",
 			formattedOffset,
+			opcodePadding,
 			formattedOpcode,
 			operandsBuilder.String(),
 		)
@@ -523,6 +530,17 @@ func (r *BlockRenderer) renderBlock(
 	builder.WriteString("└")
 	builder.WriteString(strings.Repeat("─", maxWidth-1))
 	builder.WriteString("┘\n")
+}
+
+var maxOpcodeLen int
+
+func init() {
+	for opcode := range OpcodeMax {
+		l := len(opcode.String())
+		if l > maxOpcodeLen {
+			maxOpcodeLen = l
+		}
+	}
 }
 
 // renderBlockConnections shows connections from a block to other blocks
