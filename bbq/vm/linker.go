@@ -111,6 +111,8 @@ func LinkGlobals(
 
 			// Don't need to add to the `indexedGlobals`, since, like the below comment says,
 			// importer/caller doesn't need to know globals of nested imports
+		default:
+			panic(errors.NewUnexpectedError("unsupported global type: %T", global))
 		}
 	}
 
