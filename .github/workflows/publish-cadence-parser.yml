@@ -1,0 +1,59 @@
+name: Publish @onflow/cadence-parser
+
+on:
+  push:
+    tags:
+      - 'npm-packages/cadence-parser/v*'
+  workflow_dispatch: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: npm-packages/cadence-parser
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+          cache-dependency-path: |
+            npm-packages/cadence-parser/package-lock.json
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache-dependency-path: |
+            go.sum
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Verify tag matches package version
+        if: startsWith(github.ref, 'refs/tags/npm-packages/cadence-parser/')
+        run: |
+          TAG_VERSION="${GITHUB_REF#refs/tags/npm-packages/cadence-parser/}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          echo "Tag: $TAG_VERSION | package.json: $PKG_VERSION"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "Tag ($TAG_VERSION) does not match package.json version ($PKG_VERSION)" >&2
+            exit 1
+          fi
+
+      - name: Publish
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+

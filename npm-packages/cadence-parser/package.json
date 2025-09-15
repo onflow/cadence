@@ -19,6 +19,7 @@
   },
   "scripts": {
     "build": "npm run build:types && npm run build:esm && npm run build:cjs && GOARCH=wasm GOOS=js go build -o ./dist/cadence-parser.wasm ../../cmd/parse",
+    "prepublishOnly": "npm run build",
     "build:types": "tsc --emitDeclarationOnly --module system --outDir dist/types",
     "build:esm": "esbuild src/index.ts --bundle --sourcemap --format=esm --outfile=dist/esm/index.mjs",
     "build:cjs": "tsc --module commonjs --target es6 --outDir dist/cjs --declaration false",
@@ -37,6 +38,10 @@
   "files": [
     "dist/**/*"
   ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "dependencies": {
     "get-random-values": "^2.0.0"
   }
