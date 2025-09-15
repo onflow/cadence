@@ -2883,6 +2883,8 @@ func TestInterfaceMethodCall(t *testing.T) {
 
 		scriptImportHandler := func(location common.Location) *bbq.InstructionProgram {
 			switch location {
+			case fooLocation:
+				return fooProgram
 			case barLocation:
 				return barProgram
 			case bazLocation:
