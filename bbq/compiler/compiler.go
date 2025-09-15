@@ -107,6 +107,7 @@ type Compiler[E, T any] struct {
 	// this table maps a global from its address qualified name to its original un-aliased typename
 	// used mainly for exporting imports for linking
 	globalRemoveAddressTable map[string]string
+	importedLocations        []common.Location
 }
 
 type constantsCacheKey struct {
@@ -662,13 +663,14 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 	}
 
 	return &bbq.Program[E, T]{
-		Functions: functions,
-		Constants: constants,
-		Types:     types,
-		Imports:   imports,
-		Contracts: contracts,
-		Variables: variables,
-		Globals:   globals,
+		Functions:         functions,
+		Constants:         constants,
+		Types:             types,
+		Imports:           imports,
+		Contracts:         contracts,
+		Variables:         variables,
+		Globals:           globals,
+		ImportedLocations: c.importedLocations,
 	}
 }
 
@@ -3424,8 +3426,9 @@ func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclarati
 
 	aliases := c.DesugaredElaboration.elaboration.ImportDeclarationAliases(declaration)
 
-	for _, location := range resolvedLocations {
-		c.addGlobalsFromImportedProgram(location.Location, aliases)
+	for _, resolvedLocation := range resolvedLocations {
+		c.addGlobalsFromImportedProgram(resolvedLocation.Location, aliases)
+		c.importedLocations = append(c.importedLocations, resolvedLocation.Location)
 	}
 
 	return

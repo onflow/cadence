@@ -48,6 +48,28 @@ func LinkGlobals(
 
 	var importedGlobals []Variable
 
+	for _, importedLocation := range program.ImportedLocations {
+		if importedLocation == nil {
+			continue
+		}
+
+		linkedGlobals, ok := linkedGlobalsCache[importedLocation]
+		if !ok {
+			importedProgram := context.ImportHandler(importedLocation)
+
+			// Link and get all globals at the import location.
+			linkedGlobals = LinkGlobals(
+				memoryGauge,
+				importedLocation,
+				importedProgram,
+				context,
+				linkedGlobalsCache,
+			)
+
+			linkedGlobalsCache[importedLocation] = linkedGlobals
+		}
+	}
+
 	for _, programImport := range program.Imports {
 		importLocation := programImport.Location
 
@@ -60,21 +82,9 @@ func LinkGlobals(
 				indexedGlobals = context.BuiltinGlobalsProvider(location)
 			}
 		} else {
-
 			linkedGlobals, ok := linkedGlobalsCache[importLocation]
 			if !ok {
-				importedProgram := context.ImportHandler(importLocation)
-
-				// Link and get all globals at the import location.
-				linkedGlobals = LinkGlobals(
-					memoryGauge,
-					importLocation,
-					importedProgram,
-					context,
-					linkedGlobalsCache,
-				)
-
-				linkedGlobalsCache[importLocation] = linkedGlobals
+				panic(errors.NewUnreachableError())
 			}
 
 			indexedGlobals = linkedGlobals.indexedGlobals
@@ -127,6 +137,8 @@ func LinkGlobals(
 
 	// NOTE: ensure both the context and the mapping are updated
 
+	var variablesToInitialize []*interpreter.SimpleVariable
+
 	for i, global := range program.Globals {
 		switch typedGlobal := global.(type) {
 		case *bbq.FunctionGlobal[opcode.Instruction]:
@@ -145,6 +157,7 @@ func LinkGlobals(
 			// Linker matches the compiled function index with the linked function index
 			globals[i] = variable
 			indexedGlobals.Set(function.QualifiedName, variable)
+
 		case *bbq.VariableGlobal[opcode.Instruction]:
 			variable := typedGlobal.Variable
 			simpleVariable := &interpreter.SimpleVariable{}
@@ -160,10 +173,13 @@ func LinkGlobals(
 						nil,
 					)
 				})
+
+				variablesToInitialize = append(variablesToInitialize, simpleVariable)
 			}
 			// Linker matches the compiled variable index with the linked variable index
 			globals[i] = simpleVariable
 			indexedGlobals.Set(variable.Name, simpleVariable)
+
 		case *bbq.ContractGlobal:
 			contract := typedGlobal.Contract
 			contractVariable := interpreter.NewContractVariableWithGetter(
@@ -175,6 +191,7 @@ func LinkGlobals(
 			// Linker matches the compiled contract index with the linked contract index
 			globals[i] = contractVariable
 			indexedGlobals.Set(contract.Name, contractVariable)
+
 		case *bbq.ImportedGlobal:
 			// ignore imported globals, they are already linked and will be added later
 			continue
@@ -185,6 +202,10 @@ func LinkGlobals(
 	globals = append(globals, importedGlobals...)
 
 	executable.Globals = globals
+
+	for _, variable := range variablesToInitialize {
+		_ = variable.GetValue(context)
+	}
 
 	// Return only the globals defined in the current program.
 	// Because the importer/caller doesn't need to know globals of nested imports.
