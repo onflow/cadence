@@ -30,6 +30,7 @@ import (
 )
 
 type LinkedGlobals struct {
+	globals []Variable
 	// globals defined in the program, indexed by name.
 	indexedGlobals *activations.Activation[Variable]
 }
@@ -119,6 +120,7 @@ func LinkGlobals(
 	// Return only the globals defined in the current program.
 	// Because the importer/caller doesn't need to know globals of nested imports.
 	return LinkedGlobals{
+		globals:        globals,
 		indexedGlobals: indexedGlobals,
 	}
 }

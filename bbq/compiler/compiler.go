@@ -3509,8 +3509,22 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location,
 	}
 
 	for _, variable := range importedProgram.Variables {
-		qualifiedName := c.createGlobalAlias(location, variable.Name, aliases, false)
-		c.addImportedGlobal(location, variable.Name, qualifiedName)
+		name := variable.Name
+		qualifiedName := c.createGlobalAlias(location, name, aliases, false)
+		c.addImportedGlobal(location, name, qualifiedName)
+
+		count := len(c.Globals)
+		if count >= math.MaxUint16 {
+			panic(errors.NewUnexpectedError("invalid global declaration '%s'", name))
+		}
+		global := bbq.NewImportedGlobal(
+			c.Config.MemoryGauge,
+			name,
+			qualifiedName,
+			location,
+			uint16(count),
+		)
+		c.Globals[name] = global
 	}
 
 	for _, function := range importedProgram.Functions {
