@@ -6782,15 +6782,12 @@ func (t *InclusiveRangeType) Instantiate(
 	}
 
 	// memberType must only be a leaf integer type.
-	for _, ty := range AllNonLeafIntegerTypes {
-		if memberType == ty {
-			report(&InvalidTypeArgumentError{
-				TypeArgumentName: inclusiveRangeTypeParameter.Name,
-				Range:            getRange(),
-				Details:          fmt.Sprintf("Creation of InclusiveRange<%s> is disallowed", memberType),
-			})
-			break
-		}
+	if slices.Contains(AllNonLeafIntegerTypes, memberType) {
+		report(&InvalidTypeArgumentError{
+			TypeArgumentName: inclusiveRangeTypeParameter.Name,
+			Range:            getRange(),
+			Details:          fmt.Sprintf("Creation of InclusiveRange<%s> is disallowed", memberType),
+		})
 	}
 
 	return &InclusiveRangeType{

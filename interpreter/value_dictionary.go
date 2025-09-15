@@ -100,8 +100,27 @@ func NewDictionaryValueWithAddress(
 		panic("uneven number of keys and values")
 	}
 
-	constructor := func() *atree.OrderedMap {
-		dictionary, err := atree.NewMap(
+	constructor := func() (dictionary *atree.OrderedMap) {
+
+		if TracingEnabled {
+			startTime := time.Now()
+
+			defer func() {
+				valueID := dictionary.ValueID().String()
+				typeID := string(dictionaryType.ID())
+				seed := dictionary.Seed()
+
+				context.ReportAtreeNewMapTrace(
+					valueID,
+					typeID,
+					seed,
+					time.Since(startTime),
+				)
+			}()
+		}
+
+		var err error
+		dictionary, err = atree.NewMap(
 			context.Storage(),
 			atree.Address(address),
 			atree.NewDefaultDigesterBuilder(),
@@ -185,8 +204,26 @@ func newDictionaryValueWithIterator(
 		}()
 	}
 
-	constructor := func() *atree.OrderedMap {
-		orderedMap, err := atree.NewMapFromBatchData(
+	constructor := func() (orderedMap *atree.OrderedMap) {
+
+		if TracingEnabled {
+			startTime := time.Now()
+
+			defer func() {
+				valueID := orderedMap.ValueID().String()
+				typeID := string(staticType.ID())
+
+				context.ReportAtreeNewMapFromBatchDataTrace(
+					valueID,
+					typeID,
+					seed,
+					time.Since(startTime),
+				)
+			}()
+		}
+
+		var err error
+		orderedMap, err = atree.NewMapFromBatchData(
 			context.Storage(),
 			atree.Address(address),
 			atree.NewDefaultDigesterBuilder(),
@@ -1296,12 +1333,12 @@ func (v *DictionaryValue) Transfer(
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
-		typeInfo := v.Type.String()
+		typeID := string(v.Type.ID())
 
 		defer func() {
 			context.ReportDictionaryValueTransferTrace(
 				valueID,
-				typeInfo,
+				typeID,
 				time.Since(startTime),
 			)
 		}()
@@ -1352,52 +1389,72 @@ func (v *DictionaryValue) Transfer(
 		)
 		common.UseMemory(context, elementMemoryUse)
 
-		dictionary, err = atree.NewMapFromBatchData(
-			context.Storage(),
-			address,
-			atree.NewDefaultDigesterBuilder(),
-			v.dictionary.Type(),
-			valueComparator,
-			hashInputProvider,
-			v.dictionary.Seed(),
-			func() (atree.Value, atree.Value, error) {
+		func() {
+			seed := v.dictionary.Seed()
 
-				atreeKey, atreeValue, err := iterator.Next()
-				if err != nil {
-					return nil, nil, err
-				}
-				if atreeKey == nil || atreeValue == nil {
-					return nil, nil, nil
-				}
+			if TracingEnabled {
+				startTime := time.Now()
 
-				key := MustConvertStoredValue(context, atreeKey).
-					Transfer(
-						context,
-						locationRange,
-						address,
-						remove,
-						nil,
-						preventTransfer,
-						false, // atreeKey has parent container because it is returned from iterator.
+				defer func() {
+					valueID := dictionary.ValueID().String()
+					typeID := string(v.Type.ID())
+
+					context.ReportAtreeNewMapFromBatchDataTrace(
+						valueID,
+						typeID,
+						seed,
+						time.Since(startTime),
 					)
+				}()
+			}
 
-				value := MustConvertStoredValue(context, atreeValue).
-					Transfer(
-						context,
-						locationRange,
-						address,
-						remove,
-						nil,
-						preventTransfer,
-						false, // atreeValue has parent container because it is returned from iterator.
-					)
+			dictionary, err = atree.NewMapFromBatchData(
+				context.Storage(),
+				address,
+				atree.NewDefaultDigesterBuilder(),
+				v.dictionary.Type(),
+				valueComparator,
+				hashInputProvider,
+				seed,
+				func() (atree.Value, atree.Value, error) {
 
-				return key, value, nil
-			},
-		)
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
+					atreeKey, atreeValue, err := iterator.Next()
+					if err != nil {
+						return nil, nil, err
+					}
+					if atreeKey == nil || atreeValue == nil {
+						return nil, nil, nil
+					}
+
+					key := MustConvertStoredValue(context, atreeKey).
+						Transfer(
+							context,
+							locationRange,
+							address,
+							remove,
+							nil,
+							preventTransfer,
+							false, // atreeKey has parent container because it is returned from iterator.
+						)
+
+					value := MustConvertStoredValue(context, atreeValue).
+						Transfer(
+							context,
+							locationRange,
+							address,
+							remove,
+							nil,
+							preventTransfer,
+							false, // atreeValue has parent container because it is returned from iterator.
+						)
+
+					return key, value, nil
+				},
+			)
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+		}()
 
 		if remove {
 			err = v.dictionary.PopIterate(func(keyStorable atree.Storable, valueStorable atree.Storable) {

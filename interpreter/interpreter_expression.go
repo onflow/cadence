@@ -1188,13 +1188,16 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 }
 
 func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(invocationExpression *ast.InvocationExpression, implicitArg Value) Value {
-	// tracing
+
+	var function FunctionValue
+
 	if TracingEnabled {
 		startTime := time.Now()
-		invokedExpression := invocationExpression.InvokedExpression.String()
+
 		defer func() {
-			interpreter.ReportFunctionTrace(
-				invokedExpression,
+			interpreter.ReportInvokeTrace(
+				function.FunctionType(interpreter).String(),
+				"?",
 				time.Since(startTime),
 			)
 		}()
@@ -1227,7 +1230,8 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 		}
 	}
 
-	function, ok := result.(FunctionValue)
+	var ok bool
+	function, ok = result.(FunctionValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
