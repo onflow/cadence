@@ -48,16 +48,16 @@ type Compiler[E, T any] struct {
 
 	compositeTypeStack *Stack[sema.CompositeKindedType]
 
-	functions          []*function[E]
-	globalVariables    []*globalVariable[E]
-	constants          []*Constant
-	Globals            map[string]bbq.Global
-	globalImports      *activations.Activation[GlobalImport]
-	importedGlobals    []bbq.Global
-	controlFlows       []controlFlow
-	currentControlFlow *controlFlow
-	returns            []returns
-	currentReturn      *returns
+	functions           []*function[E]
+	globalVariables     []*globalVariable[E]
+	constants           []*Constant
+	Globals             map[string]bbq.Global
+	importedGlobals     *activations.Activation[GlobalImport]
+	usedImportedGlobals []bbq.Global
+	controlFlows        []controlFlow
+	currentControlFlow  *controlFlow
+	returns             []returns
+	currentReturn       *returns
 
 	types         []sema.Type
 	compiledTypes []T
@@ -170,13 +170,13 @@ func newCompiler[E, T any](
 	typeGen TypeGen[T],
 ) *Compiler[E, T] {
 
-	var globalImports *activations.Activation[GlobalImport]
+	var importedGlobals *activations.Activation[GlobalImport]
 	if config.BuiltinGlobalsProvider != nil {
-		globalImports = config.BuiltinGlobalsProvider(location)
+		importedGlobals = config.BuiltinGlobalsProvider(location)
 	} else {
-		globalImports = DefaultBuiltinGlobals()
+		importedGlobals = DefaultBuiltinGlobals()
 	}
-	globalImports = activations.NewActivation(config.MemoryGauge, globalImports)
+	importedGlobals = activations.NewActivation(config.MemoryGauge, importedGlobals)
 
 	common.UseMemory(config.MemoryGauge, common.CompilerMemoryUsage)
 
@@ -186,7 +186,7 @@ func newCompiler[E, T any](
 		Config:               config,
 		location:             location,
 		Globals:              make(map[string]bbq.Global),
-		globalImports:        globalImports,
+		importedGlobals:      importedGlobals,
 		typesInPool:          make(map[sema.TypeID]uint16),
 		constantsInPool:      make(map[constantsCacheKey]*Constant),
 		compositeTypeStack: &Stack[sema.CompositeKindedType]{
@@ -216,7 +216,7 @@ func (c *Compiler[E, _]) findGlobal(name string) bbq.Global {
 		}
 	}
 
-	importedGlobal := c.globalImports.Find(name)
+	importedGlobal := c.importedGlobals.Find(name)
 	if importedGlobal == (GlobalImport{}) {
 		panic(errors.NewUnexpectedError("cannot find global declaration '%s'", name))
 	}
@@ -254,7 +254,7 @@ func (c *Compiler[E, _]) findGlobal(name string) bbq.Global {
 	// Earlier we already reserved the indexes for the globals defined in the current program.
 	// (`reserveGlobals`)
 
-	c.importedGlobals = append(c.importedGlobals, global)
+	c.usedImportedGlobals = append(c.usedImportedGlobals, global)
 
 	return global
 }
@@ -282,11 +282,11 @@ func (c *Compiler[E, _]) addGlobal(name string, kind bbq.GlobalKind) bbq.Global 
 }
 
 func (c *Compiler[_, _]) addImportedGlobal(location common.Location, name string) {
-	existing := c.globalImports.Find(name)
+	existing := c.importedGlobals.Find(name)
 	if existing != (GlobalImport{}) {
 		return
 	}
-	c.globalImports.Set(
+	c.importedGlobals.Set(
 		name,
 		GlobalImport{
 			Location: location,
@@ -884,10 +884,10 @@ func (c *Compiler[_, T]) removeAlias(name string) string {
 func (c *Compiler[_, _]) exportImports() []bbq.Import {
 	var exportedImports []bbq.Import
 
-	count := len(c.importedGlobals)
+	count := len(c.usedImportedGlobals)
 	if count > 0 {
 		exportedImports = make([]bbq.Import, 0, count)
-		for _, importedGlobal := range c.importedGlobals {
+		for _, importedGlobal := range c.usedImportedGlobals {
 			name := c.removeAlias(importedGlobal.GetGlobalInfo().Name)
 			bbqImport := bbq.Import{
 				Location: importedGlobal.GetGlobalInfo().Location,
