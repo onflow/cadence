@@ -46,6 +46,9 @@ rules:
       subtype:
         sub: T
         super:
+          # Maybe use 'or' predicate here instead?
+          # The difference is 'or' is a predicate containing zero or more inner predicates.
+          # Whereas 'oneOf' contains zero or more leaf values, not predicates.
           oneOf: [StoragePath, CapabilityPath]
 
   - super: Storable
