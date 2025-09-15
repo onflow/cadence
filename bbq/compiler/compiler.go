@@ -3340,7 +3340,7 @@ func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclarati
 	resolvedLocations := c.DesugaredElaboration.elaboration.ImportDeclarationResolvedLocations(declaration)
 
 	// some import declarations are added during desugaring and do not have resolved locations from the elaboration
-	if len(resolvedLocations) == 0 {
+	if resolvedLocations == nil {
 		var identifiers []ast.Identifier
 		for _, imp := range declaration.Imports {
 			identifiers = append(identifiers, imp.Identifier)
