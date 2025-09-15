@@ -246,18 +246,31 @@ func (c *Compiler[E, _]) findGlobal(name string) bbq.Global {
 	//
 	// If a global is found in imported globals, that means the index is not set.
 	// So set an index and add it to the 'globals'.
-	count := len(c.Globals)
-	if count >= math.MaxUint16 {
-		panic(errors.NewUnexpectedError("invalid global declaration '%s'", name))
-	}
-	global = bbq.NewImportedGlobal(
-		c.Config.MemoryGauge,
+	return c.addUsedImportedGlobal(
 		importedGlobal.Name,
 		importedGlobal.QualifiedName,
 		importedGlobal.Location,
+	)
+}
+
+func (c *Compiler[E, _]) addUsedImportedGlobal(
+	name string,
+	qualifiedName string,
+	location common.Location,
+) bbq.Global {
+	count := len(c.Globals)
+	if count >= math.MaxUint16 {
+		panic(errors.NewUnexpectedError("invalid global declaration '%s'", qualifiedName))
+	}
+
+	global := bbq.NewImportedGlobal(
+		c.Config.MemoryGauge,
+		name,
+		qualifiedName,
+		location,
 		uint16(count),
 	)
-	c.Globals[name] = global
+	c.Globals[qualifiedName] = global
 
 	// Also add it to the usedImportedGlobals.
 	// This is later used to export the imports, which is eventually used by the linker.
@@ -268,7 +281,6 @@ func (c *Compiler[E, _]) findGlobal(name string) bbq.Global {
 	// (`reserveGlobals`)
 
 	c.usedImportedGlobals = append(c.usedImportedGlobals, global)
-
 	return global
 }
 
@@ -3509,8 +3521,14 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location,
 	}
 
 	for _, variable := range importedProgram.Variables {
-		qualifiedName := c.createGlobalAlias(location, variable.Name, aliases, false)
-		c.addImportedGlobal(location, variable.Name, qualifiedName)
+		name := variable.Name
+		qualifiedName := c.createGlobalAlias(location, name, aliases, false)
+
+		// All global-variables of imports must be initialized when the current program is initialized.
+		// Therefore, add all global **variables** as "used" globals-variables, so they are always added
+		// to the compiled program.
+		// VM will initialize all used globals-variables.
+		c.addUsedImportedGlobal(name, qualifiedName, location)
 	}
 
 	for _, function := range importedProgram.Functions {

@@ -765,7 +765,7 @@ func CompiledProgramsEntitlementMapTypeLoader(
 	}
 }
 
-func compileAndInvokeWithOptionsAndPrograms(
+func CompileAndInvokeWithOptionsAndPrograms(
 	t testing.TB,
 	code string,
 	funcName string,
