@@ -1112,7 +1112,7 @@ func TestInterpretDynamicallyImportedGlobals(t *testing.T) {
 
 	var logs []string
 
-	if true {
+	if *compile {
 
 		valueDeclaration := stdlib.NewVMStandardLibraryStaticFunction(
 			logFunctionName,
