@@ -918,9 +918,7 @@ func TestInterpretImportGlobals(t *testing.T) {
 
 			activation.Set(
 				logFunctionName,
-				compiler.GlobalImport{
-					Name: logFunctionName,
-				},
+				compiler.NewGlobalImport(logFunctionName),
 			)
 
 			return activation

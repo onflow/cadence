@@ -90,7 +90,13 @@ func NewVM(
 
 	vm.globals = linkedGlobals.indexedGlobals
 
-	vm.initializeGlobalVariables(program)
+	// initialize all globals
+	for _, global := range linkedGlobals.globals {
+		if global.Kind() == interpreter.VariableKindContract {
+			continue
+		}
+		global.GetValue(context)
+	}
 
 	return vm
 }
@@ -1956,13 +1962,6 @@ func (vm *VM) Reset() {
 	context.invokeFunction = vm.invokeFunction
 	context.lookupFunction = vm.lookupFunction
 	vm.context = context
-}
-
-func (vm *VM) initializeGlobalVariables(program *bbq.InstructionProgram) {
-	for _, variable := range program.Variables {
-		// Get the values to ensure they are initialized.
-		_ = vm.Global(variable.Name)
-	}
 }
 
 func (vm *VM) Global(name string) Value {
