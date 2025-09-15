@@ -165,9 +165,7 @@ func (e *vmEnvironment) defineValue(name string, value vm.Value) {
 	if e.defaultCompilerBuiltinGlobals.Find(name) == (compiler.GlobalImport{}) {
 		e.defaultCompilerBuiltinGlobals.Set(
 			name,
-			compiler.GlobalImport{
-				Name: name,
-			},
+			compiler.NewGlobalImport(name),
 		)
 	}
 
@@ -242,9 +240,7 @@ func (e *vmEnvironment) declareCompilerValue(valueDeclaration stdlib.StandardLib
 
 	compilerBuiltinGlobals.Set(
 		name,
-		compiler.GlobalImport{
-			Name: name,
-		},
+		compiler.NewGlobalImport(name),
 	)
 
 	for _, function := range compiler.CommonBuiltinTypeBoundFunctions {
@@ -254,9 +250,7 @@ func (e *vmEnvironment) declareCompilerValue(valueDeclaration stdlib.StandardLib
 		)
 		compilerBuiltinGlobals.Set(
 			qualifiedFunctionName,
-			compiler.GlobalImport{
-				Name: qualifiedFunctionName,
-			},
+			compiler.NewGlobalImport(qualifiedFunctionName),
 		)
 	}
 }

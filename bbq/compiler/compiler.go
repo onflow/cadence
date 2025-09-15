@@ -159,7 +159,19 @@ func NewInstructionCompilerWithConfig(
 
 type GlobalImport struct {
 	Location common.Location
-	Name     string
+	// Need to maintain both "qualified" and "unqualified" names for a given import,
+	// because when type-aliasing is used, imported name becomes qualified.
+	// However, the same import must use the unqualified name when linking.
+	// TODO: We can simplify this by always using qualified names for all imports.
+	QualifiedName string
+	Name          string
+}
+
+func NewGlobalImport(name string) GlobalImport {
+	return GlobalImport{
+		Name:          name,
+		QualifiedName: name,
+	}
 }
 
 func newCompiler[E, T any](
@@ -220,10 +232,10 @@ func (c *Compiler[E, _]) findGlobal(name string) bbq.Global {
 	if importedGlobal == (GlobalImport{}) {
 		panic(errors.NewUnexpectedError("cannot find global declaration '%s'", name))
 	}
-	if importedGlobal.Name != name {
+	if importedGlobal.QualifiedName != name {
 		panic(errors.NewUnexpectedError(
 			"imported global %q does not match the expected name %q",
-			importedGlobal.Name,
+			importedGlobal.QualifiedName,
 			name,
 		))
 	}
@@ -240,7 +252,8 @@ func (c *Compiler[E, _]) findGlobal(name string) bbq.Global {
 	}
 	global = bbq.NewImportedGlobal(
 		c.Config.MemoryGauge,
-		name,
+		importedGlobal.Name,
+		importedGlobal.QualifiedName,
 		importedGlobal.Location,
 		uint16(count),
 	)
@@ -274,6 +287,8 @@ func (c *Compiler[E, _]) addGlobal(name string, kind bbq.GlobalKind) bbq.Global 
 		global = bbq.NewVariableGlobal[E](c.Config.MemoryGauge, name, nil, uint16(count))
 	case bbq.GlobalKindContract:
 		global = bbq.NewContractGlobal(c.Config.MemoryGauge, name, nil, uint16(count))
+	default:
+		panic(errors.NewDefaultUserError("unsupported global kind %#q", kind))
 	}
 
 	c.Globals[name] = global
@@ -281,16 +296,17 @@ func (c *Compiler[E, _]) addGlobal(name string, kind bbq.GlobalKind) bbq.Global 
 	return global
 }
 
-func (c *Compiler[_, _]) addImportedGlobal(location common.Location, name string) {
-	existing := c.importedGlobals.Find(name)
+func (c *Compiler[_, _]) addImportedGlobal(location common.Location, name, qualifiedName string) {
+	existing := c.importedGlobals.Find(qualifiedName)
 	if existing != (GlobalImport{}) {
 		return
 	}
 	c.importedGlobals.Set(
-		name,
+		qualifiedName,
 		GlobalImport{
-			Location: location,
-			Name:     name,
+			Location:      location,
+			Name:          name,
+			QualifiedName: qualifiedName,
 		},
 	)
 }
@@ -3439,12 +3455,17 @@ func (c *Compiler[_, _]) applyTypeAliases(name string) string {
 	if c.globalAliasTable == nil {
 		return name
 	}
+
 	parts := strings.Split(name, ".")
 	part := parts[0]
 	alias, ok := c.globalAliasTable[part]
-	if ok {
-		parts[0] = alias
+
+	// If no alias found, then return the original name.
+	if !ok {
+		return name
 	}
+
+	parts[0] = alias
 	aliasedName := strings.Join(parts, ".")
 	return aliasedName
 }
@@ -3483,18 +3504,18 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location,
 	// Add a global variable for the imported contract value.
 	contracts := importedProgram.Contracts
 	for _, contract := range contracts {
-		name := c.createGlobalAlias(location, contract.Name, aliases, false)
-		c.addImportedGlobal(location, name)
+		qualifiedName := c.createGlobalAlias(location, contract.Name, aliases, false)
+		c.addImportedGlobal(location, contract.Name, qualifiedName)
 	}
 
 	for _, variable := range importedProgram.Variables {
-		name := c.createGlobalAlias(location, variable.Name, aliases, false)
-		c.addImportedGlobal(location, name)
+		qualifiedName := c.createGlobalAlias(location, variable.Name, aliases, false)
+		c.addImportedGlobal(location, variable.Name, qualifiedName)
 	}
 
 	for _, function := range importedProgram.Functions {
-		name := c.createGlobalAlias(location, function.QualifiedName, aliases, len(aliases) > 0)
-		c.addImportedGlobal(location, name)
+		qualifiedName := c.createGlobalAlias(location, function.QualifiedName, aliases, len(aliases) > 0)
+		c.addImportedGlobal(location, function.QualifiedName, qualifiedName)
 	}
 
 	// Recursively add transitive imports.

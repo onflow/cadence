@@ -651,9 +651,7 @@ func testAccountWithErrorHandlerWithCompiler(
 								}
 								activation.Set(
 									name,
-									compiler.GlobalImport{
-										Name: name,
-									},
+									compiler.NewGlobalImport(name),
 								)
 							}
 							return activation

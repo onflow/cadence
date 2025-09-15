@@ -389,9 +389,7 @@ func CompilerDefaultBuiltinGlobalsWithDefaultsAndLog(_ common.Location) *activat
 
 	activation.Set(
 		stdlib.LogFunctionName,
-		compiler.GlobalImport{
-			Name: stdlib.LogFunctionName,
-		},
+		compiler.NewGlobalImport(stdlib.LogFunctionName),
 	)
 
 	return activation
@@ -402,9 +400,7 @@ func CompilerDefaultBuiltinGlobalsWithDefaultsAndPanic(_ common.Location) *activ
 
 	activation.Set(
 		stdlib.PanicFunctionName,
-		compiler.GlobalImport{
-			Name: stdlib.PanicFunctionName,
-		},
+		compiler.NewGlobalImport(stdlib.PanicFunctionName),
 	)
 
 	return activation
@@ -415,9 +411,7 @@ func CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog(_ common.Location)
 
 	activation.Set(
 		conditionLogFunctionName,
-		compiler.GlobalImport{
-			Name: conditionLogFunctionName,
-		},
+		compiler.NewGlobalImport(conditionLogFunctionName),
 	)
 
 	return activation
