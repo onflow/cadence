@@ -881,20 +881,13 @@ func (v *ArrayValue) GetMethod(
 ) FunctionValue {
 	switch name {
 	case sema.ArrayTypeAppendFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayAppendFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				v.Append(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-					invocation.Arguments[0],
-				)
-				return Void
-			},
+			UnifiedArrayAppendFunction,
 		)
 
 	case sema.ArrayTypeAppendAllFunctionName:
@@ -2117,3 +2110,41 @@ func (i *ArrayIterator) Next(context ValueIteratorContext, _ LocationRange) Valu
 func (i *ArrayIterator) ValueID() (atree.ValueID, bool) {
 	return i.valueID, true
 }
+
+// UnifiedArrayAppendFunction is a unified implementation of array append
+var UnifiedArrayAppendFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		args ArgumentExtractor,
+		receiver Value,
+		typeArguments []StaticType,
+		locationRange LocationRange,
+	) (Value, error) {
+		// Validate receiver
+		thisArray, ok := receiver.(*ArrayValue)
+		if !ok {
+			return nil, ArgumentTypeError{
+				Index:    -1,
+				Expected: "Array",
+				Actual:   "unknown",
+			}
+		}
+
+		// Validate argument count
+		if args.Count() != 1 {
+			return nil, UnifiedArgumentCountError{
+				Expected: 1,
+				Actual:   args.Count(),
+			}
+		}
+
+		// Extract the argument
+		element, err := args.Get(0)
+		if err != nil {
+			return nil, err
+		}
+
+		thisArray.Append(context, locationRange, element)
+		return Void, nil
+	},
+)

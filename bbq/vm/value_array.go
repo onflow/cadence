@@ -119,18 +119,13 @@ func init() {
 
 	registerBuiltinTypeBoundFunction(
 		commons.TypeQualifierArrayVariableSized,
-		NewNativeFunctionValueWithDerivedType(
+		NewUnifiedNativeFunctionValueWithDerivedType(
 			sema.ArrayTypeAppendFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				elementType := arrayElementTypeFromValue(receiver, context)
 				return sema.ArrayAppendFunctionType(elementType)
 			},
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				array := receiver.(*interpreter.ArrayValue)
-				element := arguments[0]
-				array.Append(context, EmptyLocationRange, element)
-				return interpreter.Void
-			},
+			interpreter.UnifiedArrayAppendFunction,
 		),
 	)
 
