@@ -1,30 +1,41 @@
-package main
+package subtype_gen
 
 import (
 	"fmt"
+	"github.com/dave/dst"
+	"github.com/dave/dst/decorator"
+	"github.com/dave/dst/decorator/resolver/guess"
 	"os"
 	"testing"
 )
 
 func TestGen(t *testing.T) {
 	// Read and parse YAML rules
-	rules, err := readYAMLRules("/Users/supunsetunga/work/cadence-experimental/cadence/tools/subtype-gen/rules.yaml")
+	rules, err := ParseRules()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error reading YAML rules: %v\n", err)
 		os.Exit(1)
 	}
 
+	const pkgPath = "github.com/onflow/cadence/sema"
+
 	// Generate code using the comprehensive generator
-	gen := NewSubTypeCheckGenerator("github.com/onflow/cadence/sema")
-	code, err := gen.generateCheckSubTypeWithoutEqualityFunction(rules)
+	gen := NewSubTypeCheckGenerator(pkgPath)
+	decls := gen.GenerateCheckSubTypeWithoutEqualityFunction(rules)
+
+	resolver := guess.New()
+	restorer := decorator.NewRestorerWithImports(pkgPath, resolver)
+
+	packageName, err := resolver.ResolvePackage(pkgPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error generating code: %v\n", err)
-		os.Exit(1)
+		panic(err)
 	}
 
-	// Write output
-	if err := writeOutput("", []byte(code), true); err != nil {
-		fmt.Fprintf(os.Stderr, "error writing output: %v\n", err)
-		os.Exit(1)
-	}
+	err = restorer.Fprint(
+		os.Stdout,
+		&dst.File{
+			Name:  dst.NewIdent(packageName),
+			Decls: decls,
+		},
+	)
 }

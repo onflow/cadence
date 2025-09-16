@@ -1,4 +1,4 @@
-package main
+package subtype_gen
 
 import (
 	"fmt"
@@ -6,8 +6,9 @@ import (
 	"strings"
 
 	"github.com/dave/dst"
-	"github.com/dave/dst/decorator"
 )
+
+const subtypeCheckFuncName = "checkSubTypeWithoutEquality_gen"
 
 type SubTypeCheckGenerator struct {
 	typePkgName      string
@@ -22,39 +23,10 @@ func NewSubTypeCheckGenerator(typePackageName string) *SubTypeCheckGenerator {
 	}
 }
 
-// generateCheckSubTypeWithoutEqualityFunction generates the complete checkSubTypeWithoutEquality function.
-func (gen *SubTypeCheckGenerator) generateCheckSubTypeWithoutEqualityFunction(rules []Rule) (string, error) {
-	// Create the file AST
-	file := &dst.File{
-		Name: dst.NewIdent("main"),
-		Decls: []dst.Decl{
-			gen.createImportDecl(),
-			gen.createCheckSubTypeFunction(rules),
-		},
-	}
-
-	// Convert AST to string
-	var buf strings.Builder
-	if err := decorator.Fprint(&buf, file); err != nil {
-		return "", fmt.Errorf("error formatting AST: %w", err)
-	}
-
-	return buf.String(), nil
-}
-
-// createImportDecl creates the import declaration
-func (gen *SubTypeCheckGenerator) createImportDecl() dst.Decl {
-	return &dst.GenDecl{
-		Tok: token.IMPORT,
-		Specs: []dst.Spec{
-			&dst.ImportSpec{
-				Path: &dst.BasicLit{
-					Kind:  token.STRING,
-					Value: fmt.Sprintf("%q", gen.typePkgName),
-				},
-			},
-		},
-	}
+// GenerateCheckSubTypeWithoutEqualityFunction generates the complete checkSubTypeWithoutEquality function.
+func (gen *SubTypeCheckGenerator) GenerateCheckSubTypeWithoutEqualityFunction(rules []Rule) []dst.Decl {
+	checkSubTypeFunction := gen.createCheckSubTypeFunction(rules)
+	return []dst.Decl{checkSubTypeFunction}
 }
 
 // createCheckSubTypeFunction creates the main checkSubTypeWithoutEquality function
@@ -99,7 +71,7 @@ func (gen *SubTypeCheckGenerator) createCheckSubTypeFunction(rules []Rule) dst.D
 	})
 
 	return &dst.FuncDecl{
-		Name: dst.NewIdent("checkSubTypeWithoutEquality"),
+		Name: dst.NewIdent(subtypeCheckFuncName),
 		Type: &dst.FuncType{
 			Params: &dst.FieldList{
 				List: []*dst.Field{subTypeParam, superTypeParam},
@@ -656,10 +628,7 @@ func (gen *SubTypeCheckGenerator) isSubTypePredicate(subtype SubtypePredicate) [
 
 // qualifiedIdentifier creates a qualified identifier
 func (gen *SubTypeCheckGenerator) qualifiedIdentifier(name string) dst.Expr {
-	return &dst.SelectorExpr{
-		X:   dst.NewIdent(gen.typePkgQualifier),
-		Sel: dst.NewIdent(name),
-	}
+	return dst.NewIdent(name)
 }
 
 // qualifiedTypeIdent creates a qualified type identifier, by
@@ -669,10 +638,7 @@ func (gen *SubTypeCheckGenerator) qualifiedTypeIdent(name string) dst.Expr {
 	if typeConstant == "" {
 		panic(fmt.Errorf("empty type constant for name: %s", name))
 	}
-	return &dst.SelectorExpr{
-		X:   dst.NewIdent(gen.typePkgQualifier),
-		Sel: dst.NewIdent(typeConstant),
-	}
+	return dst.NewIdent(typeConstant)
 }
 
 // parseCaseCondition parses a case condition string to AST
@@ -680,18 +646,12 @@ func (gen *SubTypeCheckGenerator) parseCaseCondition(superType *TypeInfo) dst.Ex
 	// For now, handle simple type constants
 	superTypeName := superType.TypeName
 	if superTypeName != "" && !superType.IsGeneric {
-		return &dst.SelectorExpr{
-			X:   dst.NewIdent(gen.typePkgQualifier),
-			Sel: dst.NewIdent(gen.getTypeConstant(superTypeName)),
-		}
+		return gen.qualifiedTypeIdent(superTypeName)
 	}
 
 	// Handle pointer types
 	return &dst.StarExpr{
-		X: &dst.SelectorExpr{
-			X:   dst.NewIdent(gen.typePkgQualifier),
-			Sel: dst.NewIdent(gen.getTypeConstant(superTypeName)),
-		},
+		X: gen.qualifiedTypeIdent(superTypeName),
 	}
 }
 

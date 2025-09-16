@@ -1,11 +1,14 @@
-package main
+package subtype_gen
 
 import (
+	_ "embed"
 	"fmt"
-	"os"
 
 	yaml "gopkg.in/yaml.v3"
 )
+
+//go:embed rules.yaml
+var subtypeCheckingRules string
 
 // Rule represents a single subtype rule
 type Rule struct {
@@ -149,15 +152,10 @@ type TypeInfo struct {
 	IsIntersection bool
 }
 
-// readYAMLRules reads and parses the YAML rules file
-func readYAMLRules(path string) ([]Rule, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file %s: %w", path, err)
-	}
-
+// ParseRules reads and parses the YAML rules file
+func ParseRules() ([]Rule, error) {
 	var config RulesConfig
-	if err := yaml.Unmarshal(data, &config); err != nil {
+	if err := yaml.Unmarshal([]byte(subtypeCheckingRules), &config); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
 	}
 
