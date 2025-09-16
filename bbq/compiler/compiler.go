@@ -1031,15 +1031,9 @@ func (c *Compiler[_, _]) exportContracts() []*bbq.Contract {
 		location := contractType.GetLocation()
 		name := contractType.GetIdentifier()
 
-		var addressBytes []byte
-		addressLocation, ok := location.(common.AddressLocation)
-		if ok {
-			addressBytes = addressLocation.Address.Bytes()
-		}
-
 		contract := bbq.Contract{
-			Name:    name,
-			Address: addressBytes,
+			Name:     name,
+			Location: location,
 		}
 		contracts = append(
 			contracts,

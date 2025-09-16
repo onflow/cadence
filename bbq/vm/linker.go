@@ -30,7 +30,6 @@ import (
 )
 
 type LinkedGlobals struct {
-	globals []Variable
 	// globals defined in the program, indexed by name.
 	indexedGlobals *activations.Activation[Variable]
 }
@@ -119,12 +118,23 @@ func LinkGlobals(
 
 	executable.Globals = globals
 
-	// Return only the globals defined in the current program.
-	// Because the importer/caller doesn't need to know globals of nested imports.
-	return LinkedGlobals{
-		globals:        globals,
+	linkedGlobals := LinkedGlobals{
 		indexedGlobals: indexedGlobals,
 	}
+
+	linkedGlobalsCache[location] = linkedGlobals
+
+	// Ensure all linked globals are initialized, just after linking.
+	for _, global := range globals {
+		if global.Kind() == interpreter.VariableKindContract {
+			continue
+		}
+		global.GetValue(context)
+	}
+
+	// Return only the globals defined in the current program.
+	// Because the importer/caller doesn't need to know globals of nested imports.
+	return linkedGlobals
 }
 
 func linkImportedGlobal(
@@ -158,8 +168,6 @@ func linkImportedGlobal(
 				context,
 				linkedGlobalsCache,
 			)
-
-			linkedGlobalsCache[importLocation] = linkedGlobals
 		}
 
 		indexedGlobals = linkedGlobals.indexedGlobals
@@ -219,18 +227,11 @@ func functionValueFromBBQFunction(
 }
 
 func loadContractValue(contract *bbq.Contract, context *Context) Value {
-
 	if context.ContractValueHandler == nil {
 		panic(errors.NewUnexpectedError(
 			"missing contract value handler",
 		))
 	}
 
-	location := common.NewAddressLocation(
-		context.MemoryGauge,
-		common.MustBytesToAddress(contract.Address),
-		contract.Name,
-	)
-
-	return context.ContractValueHandler(context, location)
+	return context.ContractValueHandler(context, contract.Location)
 }
