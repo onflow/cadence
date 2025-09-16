@@ -188,10 +188,10 @@ func ColorizeOpcode(opcode Opcode) string {
 type JumpType int
 
 const (
-	JumpUnconditional JumpType = iota
-	JumpConditional
-	JumpCall
-	JumpReturn
+	JumpTypeUnconditional JumpType = iota
+	JumpTypeConditional
+	JumpTypeCall
+	JumpTypeReturn
 )
 
 // FlowAnalysis contains control flow information for a sequence of instructions
@@ -228,59 +228,53 @@ func analyzeControlFlow(instructions []Instruction) *FlowAnalysis {
 
 	// First pass: identify all jumps
 	for i, instr := range instructions {
-		switch instr.Opcode() {
-		case Jump:
-			if jumpInstr, ok := instr.(InstructionJump); ok {
-				target := int(jumpInstr.Target)
-				jumpInfo := JumpInfo{
-					Target:   target,
-					JumpType: JumpUnconditional,
-				}
-				analysis.JumpInfoMap[i] = jumpInfo
-				// instructions that are jump targets are leaders and instructions immediately after jumps are leaders
-				analysis.BlockLeaders = append(analysis.BlockLeaders, target, i+1)
+		switch instr := instr.(type) {
+		case InstructionJump:
+			target := int(instr.Target)
+			jumpInfo := JumpInfo{
+				Target:   target,
+				JumpType: JumpTypeUnconditional,
 			}
-		case JumpIfFalse:
-			if jumpInstr, ok := instr.(InstructionJumpIfFalse); ok {
-				target := int(jumpInstr.Target)
-				jumpInfo := JumpInfo{
-					Target:    target,
-					JumpType:  JumpConditional,
-					Condition: "if false",
-				}
-				analysis.JumpInfoMap[i] = jumpInfo
-				// instructions that are jump targets are leaders and instructions immediately after jumps are leaders
-				analysis.BlockLeaders = append(analysis.BlockLeaders, target, i+1)
+			analysis.JumpInfoMap[i] = jumpInfo
+			// instructions that are jump targets are leaders and instructions immediately after jumps are leaders
+			analysis.BlockLeaders = append(analysis.BlockLeaders, target, i+1)
+		case InstructionJumpIfFalse:
+			target := int(instr.Target)
+			jumpInfo := JumpInfo{
+				Target:    target,
+				JumpType:  JumpTypeConditional,
+				Condition: "if false",
 			}
-		case JumpIfTrue:
-			if jumpInstr, ok := instr.(InstructionJumpIfTrue); ok {
-				target := int(jumpInstr.Target)
-				jumpInfo := JumpInfo{
-					Target:    target,
-					JumpType:  JumpConditional,
-					Condition: "if true",
-				}
-				analysis.JumpInfoMap[i] = jumpInfo
-				// instructions that are jump targets are leaders and instructions immediately after jumps are leaders
-				analysis.BlockLeaders = append(analysis.BlockLeaders, target, i+1)
+			analysis.JumpInfoMap[i] = jumpInfo
+			// instructions that are jump targets are leaders and instructions immediately after jumps are leaders
+			analysis.BlockLeaders = append(analysis.BlockLeaders, target, i+1)
+
+		case InstructionJumpIfTrue:
+			target := int(instr.Target)
+			jumpInfo := JumpInfo{
+				Target:    target,
+				JumpType:  JumpTypeConditional,
+				Condition: "if true",
 			}
-		case JumpIfNil:
-			if jumpInstr, ok := instr.(InstructionJumpIfNil); ok {
-				target := int(jumpInstr.Target)
-				jumpInfo := JumpInfo{
-					Target:    target,
-					JumpType:  JumpConditional,
-					Condition: "if nil",
-				}
-				analysis.JumpInfoMap[i] = jumpInfo
-				// instructions that are jump targets are leaders and instructions immediately after jumps are leaders
-				analysis.BlockLeaders = append(analysis.BlockLeaders, target, i+1)
+			analysis.JumpInfoMap[i] = jumpInfo
+			// instructions that are jump targets are leaders and instructions immediately after jumps are leaders
+			analysis.BlockLeaders = append(analysis.BlockLeaders, target, i+1)
+		case InstructionJumpIfNil:
+			target := int(instr.Target)
+			jumpInfo := JumpInfo{
+				Target:    target,
+				JumpType:  JumpTypeConditional,
+				Condition: "if nil",
 			}
-		case Invoke, InvokeDynamic:
+			analysis.JumpInfoMap[i] = jumpInfo
+			// instructions that are jump targets are leaders and instructions immediately after jumps are leaders
+			analysis.BlockLeaders = append(analysis.BlockLeaders, target, i+1)
+
+		case InstructionInvoke, InstructionInvokeDynamic:
 			// Function calls
 			jumpInfo := JumpInfo{
 				Target:   -1, // unknown target by default
-				JumpType: JumpCall,
+				JumpType: JumpTypeCall,
 			}
 
 			// could analyze for call targets here, complicated
@@ -288,10 +282,10 @@ func analyzeControlFlow(instructions []Instruction) *FlowAnalysis {
 			analysis.JumpInfoMap[i] = jumpInfo
 			// instructions immediately after jumps are leaders
 			analysis.BlockLeaders = append(analysis.BlockLeaders, i+1)
-		case Return, ReturnValue:
+		case InstructionReturn, InstructionReturnValue:
 			jumpInfo := JumpInfo{
 				Target:   -1, // function exit
-				JumpType: JumpReturn,
+				JumpType: JumpTypeReturn,
 			}
 			analysis.JumpInfoMap[i] = jumpInfo
 			// instructions immediately after jumps are leaders, potentially end of program as well
@@ -375,7 +369,7 @@ func (r *BlockRenderer) buildBlockConnections() map[int][]BlockConnection {
 		// Check jumps from the last instruction of this block
 		lastInstrIndex := block.End
 		if jump, hasJump := r.analysis.JumpInfoMap[lastInstrIndex]; hasJump {
-			if jump.JumpType == JumpCall {
+			if jump.JumpType == JumpTypeCall {
 				// Function calls are considered external jumps
 				conn := BlockConnection{
 					TargetBlock: -1,
@@ -405,7 +399,7 @@ func (r *BlockRenderer) buildBlockConnections() map[int][]BlockConnection {
 			if !r.hasUnconditionalExit(lastInstrIndex) {
 				conn := BlockConnection{
 					TargetBlock: blockIndex + 1,
-					JumpType:    JumpUnconditional,
+					JumpType:    JumpTypeUnconditional,
 					Condition:   "fall through",
 					IsJump:      false,
 				}
@@ -442,7 +436,7 @@ func (r *BlockRenderer) findBlockContaining(instrIndex int) int {
 // hasUnconditionalExit checks if an instruction unconditionally exits (jump/return)
 func (r *BlockRenderer) hasUnconditionalExit(instrIndex int) bool {
 	if jump, hasJump := r.analysis.JumpInfoMap[instrIndex]; hasJump {
-		if jump.JumpType == JumpUnconditional || jump.JumpType == JumpReturn || jump.JumpType == JumpCall {
+		if jump.JumpType == JumpTypeUnconditional || jump.JumpType == JumpTypeReturn || jump.JumpType == JumpTypeCall {
 			return true
 		}
 	}
@@ -556,7 +550,7 @@ func (r *BlockRenderer) renderBlockConnections(
 		var arrow, description string
 
 		switch conn.JumpType {
-		case JumpUnconditional:
+		case JumpTypeUnconditional:
 			if conn.IsJump {
 				arrow = "──→"
 				description = "jump"
@@ -564,13 +558,13 @@ func (r *BlockRenderer) renderBlockConnections(
 				arrow = "──→"
 				description = "fall through"
 			}
-		case JumpConditional:
+		case JumpTypeConditional:
 			arrow = "─?→"
 			description = fmt.Sprintf("jump %s", conn.Condition)
-		case JumpReturn:
+		case JumpTypeReturn:
 			arrow = "──↩"
 			description = "return"
-		case JumpCall:
+		case JumpTypeCall:
 			arrow = "──→"
 			description = "function_call"
 		}
@@ -585,13 +579,13 @@ func (r *BlockRenderer) renderBlockConnections(
 
 		if r.colorize {
 			switch conn.JumpType {
-			case JumpUnconditional:
+			case JumpTypeUnconditional:
 				connectionText = aurora.Green(connectionText).String()
-			case JumpConditional:
+			case JumpTypeConditional:
 				connectionText = aurora.Yellow(connectionText).String()
-			case JumpReturn:
+			case JumpTypeReturn:
 				connectionText = aurora.Red(connectionText).String()
-			case JumpCall:
+			case JumpTypeCall:
 				connectionText = aurora.Blue(connectionText).String()
 			}
 		}

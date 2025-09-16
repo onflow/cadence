@@ -391,14 +391,14 @@ func TestFlowAnalysis(t *testing.T) {
 	require.Contains(t, analysis.JumpInfoMap, 3)
 	jumpInfo := analysis.JumpInfoMap[3]
 	assert.Equal(t, 6, jumpInfo.Target)
-	assert.Equal(t, JumpConditional, jumpInfo.JumpType)
+	assert.Equal(t, JumpTypeConditional, jumpInfo.JumpType)
 	assert.Equal(t, "if false", jumpInfo.Condition)
 
 	// Should identify returns
 	require.Contains(t, analysis.JumpInfoMap, 5) // first return
 	require.Contains(t, analysis.JumpInfoMap, 7) // second return
-	assert.Equal(t, JumpReturn, analysis.JumpInfoMap[5].JumpType)
-	assert.Equal(t, JumpReturn, analysis.JumpInfoMap[7].JumpType)
+	assert.Equal(t, JumpTypeReturn, analysis.JumpInfoMap[5].JumpType)
+	assert.Equal(t, JumpTypeReturn, analysis.JumpInfoMap[7].JumpType)
 
 	// Should identify basic blocks
 	assert.Len(t, analysis.BasicBlocks, 3)
