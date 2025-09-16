@@ -3584,7 +3584,9 @@ func (c *Compiler[_, _]) compileEnumCaseDeclaration(
 		c.emit(opcode.InstructionInvoke{
 			ArgCount: 1,
 		})
-		c.emitTransferAndConvertAndReturnValue(compositeType)
+		// NOTE: Do not transfer, as that creates a copy of the enum case value,
+		// which does not match the interpreter's behavior.
+		c.emit(opcode.InstructionReturnValue{})
 	}()
 
 	return
