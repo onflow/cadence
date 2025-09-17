@@ -24,28 +24,17 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-// AdaptUnifiedFunctionForVM converts a UnifiedNativeFunction to work with the VM
+// Like in the interpreter's unified_function, these are all the functions that need to exist to work with the VM
 func AdaptUnifiedFunctionForVM(fn interpreter.UnifiedNativeFunction) NativeFunction {
 	return func(context *Context, typeArguments []bbq.StaticType, receiver Value, arguments ...Value) Value {
-		// Create a minimal adapter that implements UnifiedFunctionContext
-		args := interpreter.NewInterpreterArgumentExtractor(arguments)
+		args := interpreter.NewArgumentExtractor(arguments)
 
-		// Convert bbq.StaticType to interpreter.StaticType
-		commonTypeArgs := make([]interpreter.StaticType, len(typeArguments))
-		for i, typeArg := range typeArguments {
-			commonTypeArgs[i] = typeArg
-		}
+		result := fn(context, args, receiver, typeArguments, interpreter.EmptyLocationRange)
 
-		result, err := fn(context, args, receiver, commonTypeArgs, interpreter.EmptyLocationRange)
-		if err != nil {
-			// In the VM system, errors are typically panicked
-			panic(err)
-		}
 		return result
 	}
 }
 
-// NewUnifiedNativeFunctionValue creates a native function value using the unified approach
 func NewUnifiedNativeFunctionValue(
 	name string,
 	funcType *sema.FunctionType,
@@ -58,10 +47,6 @@ func NewUnifiedNativeFunctionValue(
 	)
 }
 
-// For bound functions in the VM, we can just use the same AdaptUnifiedFunctionForVM
-// since the VM already passes the receiver as a parameter to NativeFunction
-
-// NewUnifiedNativeFunctionValueWithDerivedType creates a native function value with derived type using the unified approach
 func NewUnifiedNativeFunctionValueWithDerivedType(
 	name string,
 	typeGetter func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType,
