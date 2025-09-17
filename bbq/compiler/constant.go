@@ -44,3 +44,43 @@ func NewDecodedConstant(
 		data:  data,
 	}
 }
+
+type constantUniqueKey interface {
+	isConstantKey()
+}
+
+type stringConstantKey struct {
+	constantKind constant.Kind
+	content      string
+}
+
+var _ constantUniqueKey = stringConstantKey{}
+
+func (stringConstantKey) isConstantKey() {}
+
+type integerConstantKey struct {
+	constantKind constant.Kind
+	literal      string
+}
+
+var _ constantUniqueKey = integerConstantKey{}
+
+func (integerConstantKey) isConstantKey() {}
+
+type fixedpointConstantKey struct {
+	constantKind    constant.Kind
+	positiveLiteral string
+	isNegative      bool
+}
+
+var _ constantUniqueKey = fixedpointConstantKey{}
+
+func (fixedpointConstantKey) isConstantKey() {}
+
+type addressConstantKey struct {
+	content common.Address
+}
+
+var _ constantUniqueKey = addressConstantKey{}
+
+func (addressConstantKey) isConstantKey() {}

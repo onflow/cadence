@@ -79,8 +79,9 @@ type Compiler[E, T any] struct {
 	lastChangedPosition bbq.Position
 	currentPosition     bbq.Position
 
-	// Cache alike for compiledTypes in the pool.
-	typesInPool map[sema.TypeID]uint16
+	// Cache alike for compiledTypes and constants in the pool.
+	typesInPool     map[sema.TypeID]uint16
+	constantsInPool map[constantUniqueKey]*DecodedConstant
 
 	codeGen CodeGen[E]
 	typeGen TypeGen[T]
@@ -180,6 +181,7 @@ func newCompiler[E, T any](
 		Globals:              make(map[string]*Global),
 		globalImports:        globalImports,
 		typesInPool:          make(map[sema.TypeID]uint16),
+		constantsInPool:      make(map[constantUniqueKey]*DecodedConstant),
 		compositeTypeStack: &Stack[sema.CompositeKindedType]{
 			elements: make([]sema.CompositeKindedType, 0),
 		},
@@ -356,54 +358,32 @@ func (c *Compiler[E, _]) targetFunction(function *function[E]) {
 	c.codeGen.SetTarget(code)
 }
 
-func (c *Compiler[_, _]) addConstant(kind constant.Kind, data constant.ConstantData) *DecodedConstant {
+func (c *Compiler[_, _]) addConstant(
+	kind constant.Kind,
+	data constant.ConstantData,
+	constantKey constantUniqueKey,
+) *DecodedConstant {
 	count := len(c.constants)
 	if count >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid constant declaration"))
 	}
 
 	// Optimization: Reuse the constant if it is already added to the constant pool.
-	// Use to corresponding comparator function, depending on the type of the constant.
-	var newConstantEqualsTo func(existingConstData constant.ConstantData) bool
-	switch newConstData := data.(type) {
-	case string:
-		// If the newly adding constant is a raw-string constant,
-		// then use the `==` as the comparator function.
-		newConstantEqualsTo = func(existingConstData constant.ConstantData) bool {
-			return existingConstData == newConstData
-		}
-	case interpreter.EquatableValue:
-		// If the newly adding constant is an `interpreter.Value` typed constant,
-		// then use the `Equal` method as the comparator function.
-		newConstantEqualsTo = func(existingConstData constant.ConstantData) bool {
-			existingEquatableConstant, ok := existingConstData.(interpreter.EquatableValue)
-			if !ok {
-				return false
-			}
-
-			return newConstData.Equal(
-				nil, // OK to pass nil for the context for constant-types (numbers, string, char)
-				interpreter.EmptyLocationRange,
-				existingEquatableConstant,
-			)
-		}
-	default:
-		panic(errors.NewUnreachableError())
-	}
-	for _, existingDecodedConst := range c.constants {
-		if newConstantEqualsTo(existingDecodedConst.data) {
-			return existingDecodedConst
-		}
+	if existingConstant, ok := c.constantsInPool[constantKey]; ok {
+		return existingConstant
 	}
 
-	constant := NewDecodedConstant(
+	newConstant := NewDecodedConstant(
 		c.Config.MemoryGauge,
 		uint16(count),
 		kind,
 		data,
 	)
-	c.constants = append(c.constants, constant)
-	return constant
+
+	c.constants = append(c.constants, newConstant)
+	c.constantsInPool[constantKey] = newConstant
+
+	return newConstant
 }
 
 func (c *Compiler[_, _]) emitGetConstant(constant *DecodedConstant) {
@@ -419,11 +399,25 @@ func (c *Compiler[_, _]) emitStringConst(str string) {
 func (c *Compiler[_, _]) addStringConst(str string) *DecodedConstant {
 	// NOTE: already metered in lexer/parser. This is also equivalent in the interpreter.
 	stringValue := interpreter.NewUnmeteredStringValue(str)
-	return c.addConstant(constant.String, stringValue)
+	return c.addConstant(
+		constant.String,
+		stringValue,
+		stringConstantKey{
+			constantKind: constant.String,
+			content:      str,
+		},
+	)
 }
 
 func (c *Compiler[_, _]) addRawStringConst(str string) *DecodedConstant {
-	return c.addConstant(constant.RawString, str)
+	return c.addConstant(
+		constant.RawString,
+		str,
+		stringConstantKey{
+			constantKind: constant.RawString,
+			content:      str,
+		},
+	)
 }
 
 func (c *Compiler[_, _]) emitCharacterConst(str string) {
@@ -433,12 +427,22 @@ func (c *Compiler[_, _]) emitCharacterConst(str string) {
 func (c *Compiler[_, _]) addCharacterConst(str string) *DecodedConstant {
 	// NOTE: already metered in lexer/parser. This is also equivalent in the interpreter.
 	stringValue := interpreter.NewUnmeteredCharacterValue(str)
-	return c.addConstant(constant.Character, stringValue)
+	return c.addConstant(
+		constant.Character,
+		stringValue,
+		stringConstantKey{
+			constantKind: constant.Character,
+			content:      str,
+		},
+	)
 }
 
 func (c *Compiler[_, _]) emitIntConst(i int64) {
 	value := big.NewInt(i)
-	c.emitIntegerConstant(value, sema.IntegerType)
+	c.emitIntegerConstant(
+		value,
+		sema.IntegerType,
+	)
 }
 
 func (c *Compiler[_, _]) emitJump(target int) int {
@@ -1970,12 +1974,18 @@ func (c *Compiler[_, _]) VisitNilExpression(_ *ast.NilExpression) (_ struct{}) {
 func (c *Compiler[_, _]) VisitIntegerExpression(expression *ast.IntegerExpression) (_ struct{}) {
 	value := expression.Value
 	integerType := c.DesugaredElaboration.IntegerExpressionType(expression)
-	c.emitIntegerConstant(value, integerType)
+	c.emitIntegerConstant(
+		value,
+		integerType,
+	)
 
 	return
 }
 
-func (c *Compiler[_, _]) emitIntegerConstant(value *big.Int, integerType sema.Type) {
+func (c *Compiler[_, _]) emitIntegerConstant(
+	value *big.Int,
+	integerType sema.Type,
+) {
 	constantKind := constant.FromSemaType(integerType)
 
 	var data constant.ConstantData
@@ -2057,7 +2067,16 @@ func (c *Compiler[_, _]) emitIntegerConstant(value *big.Int, integerType sema.Ty
 		))
 	}
 
-	c.emitGetConstant(c.addConstant(constantKind, data))
+	addedConstant := c.addConstant(
+		constantKind,
+		data,
+		integerConstantKey{
+			constantKind: constantKind,
+			literal:      value.String(),
+		},
+	)
+
+	c.emitGetConstant(addedConstant)
 }
 
 func (c *Compiler[_, _]) VisitFixedPointExpression(expression *ast.FixedPointExpression) (_ struct{}) {
@@ -2079,60 +2098,57 @@ func (c *Compiler[_, _]) VisitFixedPointExpression(expression *ast.FixedPointExp
 		scale,
 	)
 
-	var constant *DecodedConstant
+	var constantValue interpreter.Value
+	var constantKind constant.Kind
 
 	switch fixedPointSubType {
 	case sema.Fix64Type, sema.SignedFixedPointType:
-		constant = c.addFix64Constant(value)
+		constantKind = constant.Fix64
+		constantValue = interpreter.NewUnmeteredFix64Value(value.Int64())
 
 	case sema.UFix64Type:
-		constant = c.addUFix64Constant(value)
+		constantKind = constant.UFix64
+		constantValue = interpreter.NewUnmeteredUFix64Value(value.Uint64())
 
 	case sema.Fix128Type:
-		constant = c.addFix128Constant(value)
+		constantKind = constant.Fix128
+		constantValue = interpreter.NewFix128ValueFromBigInt(
+			c.Config.MemoryGauge,
+			value,
+		)
 
 	case sema.UFix128Type:
-		constant = c.addUFix128Constant(value)
+		constantKind = constant.UFix128
+		constantValue = interpreter.NewUFix128ValueFromBigInt(
+			c.Config.MemoryGauge,
+			value,
+		)
 
 	case sema.FixedPointType:
 		if expression.Negative {
-			constant = c.addFix64Constant(value)
+			constantKind = constant.Fix64
+			constantValue = interpreter.NewUnmeteredFix64Value(value.Int64())
 		} else {
-			constant = c.addUFix64Constant(value)
+			constantKind = constant.UFix64
+			constantValue = interpreter.NewUnmeteredUFix64Value(value.Uint64())
 		}
 	default:
 		panic(errors.NewUnreachableError())
 	}
 
-	c.emitGetConstant(constant)
+	addedConstant := c.addConstant(
+		constantKind,
+		constantValue,
+		fixedpointConstantKey{
+			constantKind:    constantKind,
+			positiveLiteral: string(expression.PositiveLiteral),
+			isNegative:      expression.Negative,
+		},
+	)
+
+	c.emitGetConstant(addedConstant)
 
 	return
-}
-
-func (c *Compiler[_, _]) addUFix64Constant(value *big.Int) *DecodedConstant {
-	uFix64Value := interpreter.NewUnmeteredUFix64Value(value.Uint64())
-	return c.addConstant(constant.UFix64, uFix64Value)
-}
-
-func (c *Compiler[_, _]) addFix64Constant(value *big.Int) *DecodedConstant {
-	fix64Value := interpreter.NewUnmeteredFix64Value(value.Int64())
-	return c.addConstant(constant.Fix64, fix64Value)
-}
-
-func (c *Compiler[_, _]) addUFix128Constant(value *big.Int) *DecodedConstant {
-	ufix128Value := interpreter.NewUFix128ValueFromBigInt(
-		c.Config.MemoryGauge,
-		value,
-	)
-	return c.addConstant(constant.UFix128, ufix128Value)
-}
-
-func (c *Compiler[_, _]) addFix128Constant(value *big.Int) *DecodedConstant {
-	fix128Value := interpreter.NewFix128ValueFromBigInt(
-		c.Config.MemoryGauge,
-		value,
-	)
-	return c.addConstant(constant.Fix128, fix128Value)
 }
 
 func (c *Compiler[_, _]) VisitArrayExpression(array *ast.ArrayExpression) (_ struct{}) {
@@ -3134,7 +3150,13 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		}
 	} else {
 		addressValue := interpreter.NewAddressValue(c.Config.MemoryGauge, address)
-		addressConstant := c.addConstant(constant.Address, addressValue)
+		addressConstant := c.addConstant(
+			constant.Address,
+			addressValue,
+			addressConstantKey{
+				content: address,
+			},
+		)
 		c.emit(
 			opcode.InstructionNewCompositeAt{
 				Kind:    kind,
@@ -3499,10 +3521,13 @@ func (c *Compiler[_, _]) compileEnumCaseDeclaration(
 
 		constructorName := commons.TypeQualifiedName(compositeType, commons.InitFunctionName)
 		c.emitGlobalLoad(constructorName)
+
+		indexBigInt := big.NewInt(int64(index))
 		c.emitIntegerConstant(
-			big.NewInt(int64(index)),
+			indexBigInt,
 			compositeType.EnumRawType,
 		)
+
 		c.emit(opcode.InstructionInvoke{
 			ArgCount: 1,
 		})
