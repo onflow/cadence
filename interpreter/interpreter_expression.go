@@ -1195,11 +1195,16 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 		startTime := time.Now()
 
 		defer func() {
-			interpreter.ReportInvokeTrace(
-				function.FunctionType(interpreter).String(),
-				"?",
-				time.Since(startTime),
-			)
+			// `function` might be nil for:
+			// - optional chaining invocations where the target is nil (no function invoked)
+			// - for invalid programs (panic, e.g. invoking a non-function value)
+			if function != nil {
+				interpreter.ReportInvokeTrace(
+					function.FunctionType(interpreter).String(),
+					"?",
+					time.Since(startTime),
+				)
+			}
 		}()
 	}
 

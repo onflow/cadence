@@ -984,7 +984,6 @@ func invokeFunction(
 		if interpreter.TracingEnabled {
 			startTime := time.Now()
 			defer func() {
-
 				context.ReportInvokeTrace(
 					// Use the original function value, to get the correct type.
 					// The native function value might have been wrapped in a bound function.
