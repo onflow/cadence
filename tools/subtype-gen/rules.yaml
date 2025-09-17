@@ -144,73 +144,73 @@ rules:
         target:
           oneOf: [SignedFixedPoint, Fix64, Fix128]
 
-  - super:
-      Optional:
-        inner: U
-    sub: T
-    predicate:
-      equals:
-        source: T
-        target: U
-
-  - super:
-      Reference:
-        auth: A
-        type: B
-    sub:
-      Reference:
-        auth: C
-        type: D
-    predicate:
-      and:
-        - permits: [B, A]
-        - equals:
-            source: D
-            target: B
-
-  - super:
-      Function:
-        purity: A
-        params: B
-        return: C
-    sub:
-      Function:
-        purity: X
-        params: Y
-        return: Z
-    predicate:
-      and:
-        - equals:
-            source: X
-            target:
-              oneOf: [A, PurityView]
-        - typeParamsEqual
-        - paramsContravariant
-        - returnCovariant
-        - constructorEqual
-
-  - super:
-      Dictionary:
-        key: A
-        value: B
-    sub:
-      Dictionary:
-        key: C
-        value: D
-    predicate:
-      and:
-        - equals:
-            source: C
-            target: A
-        - equals:
-            source: D
-            target: B
-
-  - super:
-      Intersection:
-        set: A
-    sub:
-      Intersection:
-        set: B
-    predicate:
-      contains: [B, A]
+#  - super:
+#      Optional:
+#        inner: U
+#    sub: T
+#    predicate:
+#      equals:
+#        source: T
+#        target: U
+#
+#  - super:
+#      Reference:
+#        auth: A
+#        type: B
+#    sub:
+#      Reference:
+#        auth: C
+#        type: D
+#    predicate:
+#      and:
+#        - permits: [B, A]
+#        - equals:
+#            source: D
+#            target: B
+#
+#  - super:
+#      Function:
+#        purity: A
+#        params: B
+#        return: C
+#    sub:
+#      Function:
+#        purity: X
+#        params: Y
+#        return: Z
+#    predicate:
+#      and:
+#        - equals:
+#            source: X
+#            target:
+#              oneOf: [A, PurityView]
+#        - typeParamsEqual
+#        - paramsContravariant
+#        - returnCovariant
+#        - constructorEqual
+#
+#  - super:
+#      Dictionary:
+#        key: A
+#        value: B
+#    sub:
+#      Dictionary:
+#        key: C
+#        value: D
+#    predicate:
+#      and:
+#        - equals:
+#            source: C
+#            target: A
+#        - equals:
+#            source: D
+#            target: B
+#
+#  - super:
+#      Intersection:
+#        set: A
+#    sub:
+#      Intersection:
+#        set: B
+#    predicate:
+#      contains: [B, A]

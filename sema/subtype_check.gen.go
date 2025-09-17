@@ -84,16 +84,6 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 			return true
 		}
 		return false
-	case *Type:
-		return subType == UType
-	case ReferenceType:
-		return typedSuperType.Authorization.PermitsAccess(typedSubType.Authorization) && subType == BType
-	case FunctionType:
-		return len(typedSubType.TypeParameters) == len(typedSuperType.TypeParameters) && false && false && typedSubType.IsConstructor == typedSuperType.IsConstructor
-	case DictionaryType:
-		return subType == AType && subType == BType
-	case IntersectionType:
-		return typedSuperType.EffectiveIntersectionSet().IsSubsetOf(typedSubType.EffectiveIntersectionSet())
 	}
 	return false
 }

@@ -178,7 +178,7 @@ func (gen *SubTypeCheckGenerator) generatePredicateStatements(predicate RulePred
 			},
 		)
 	case dst.Stmt:
-		// TODO: Maybe panic?
+		// TODO: Maybe panic? - because we only generate either an expression, or a switch statement for now.
 		stmts = append(stmts, lastNode)
 	default:
 		panic(fmt.Errorf("error generating predicate AST: unexpected node type: %T", lastNode))
