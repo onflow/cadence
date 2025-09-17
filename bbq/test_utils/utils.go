@@ -56,7 +56,7 @@ func SingleIdentifierLocationResolver(t testing.TB) sema.LocationHandlerFunc {
 func PrintProgram(name string, program *bbq.InstructionProgram) { //nolint:unused
 	const resolve = true
 	const colorize = true
-	printer := bbq.NewInstructionsProgramPrinter(resolve, colorize)
+	printer := bbq.NewInstructionsProgramPrinter(resolve, colorize, true)
 	fmt.Println("===================", name, "===================")
 	fmt.Println(printer.PrintProgram(program))
 }
@@ -126,7 +126,7 @@ func ParseCheckAndCompileCodeWithOptions(
 	// Ensure the program can be printed
 	const resolve = false
 	const colorize = false
-	printer := bbq.NewInstructionsProgramPrinter(resolve, colorize)
+	printer := bbq.NewInstructionsProgramPrinter(resolve, colorize, false)
 
 	_ = printer.PrintProgram(program)
 
