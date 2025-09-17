@@ -19,8 +19,6 @@
 package interpreter
 
 import (
-	"reflect"
-
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 )
@@ -36,238 +34,143 @@ type UnifiedFunctionContext interface {
 	InvocationContext
 }
 
-// ArgumentExtractor provides a unified interface for extracting and validating arguments
-type ArgumentExtractor interface {
-	Count() int
-	Get(index int) (Value, error)
-	GetString(index int) (*StringValue, error)
-	GetInt(index int) (IntValue, error)
-	GetArray(index int) (*ArrayValue, error)
-	GetType(index int) (TypeValue, error)
-	GetOptional(index int) (OptionalValue, error)
-	GetBool(index int) (BoolValue, error)
-	GetAddress(index int) (AddressValue, error)
-}
-
-// UnifiedNativeFunction uses our minimal UnifiedFunctionContext
-// This provides just what most functions need without the complexity of InvocationContext
 type UnifiedNativeFunction func(
 	context UnifiedFunctionContext,
-	args ArgumentExtractor,
+	args *ArgumentExtractor,
 	receiver Value,
 	typeArguments []StaticType,
 	locationRange LocationRange,
-) (Value, error)
-
-// ArgumentIndexError is returned when trying to access an argument at an invalid index
-type ArgumentIndexError struct {
-	Index int
-	Count int
-}
-
-var _ errors.UserError = ArgumentIndexError{}
-
-func (e ArgumentIndexError) IsUserError() {}
-
-func (e ArgumentIndexError) Error() string {
-	return "argument index out of bounds"
-}
-
-// ArgumentTypeError is returned when an argument has an unexpected type
-type ArgumentTypeError struct {
-	Index    int
-	Expected string
-	Actual   string
-}
-
-var _ errors.UserError = ArgumentTypeError{}
-
-func (e ArgumentTypeError) IsUserError() {}
-
-func (e ArgumentTypeError) Error() string {
-	return "invalid argument type"
-}
-
-// UnifiedArgumentCountError is returned when the number of arguments doesn't match expectations
-type UnifiedArgumentCountError struct {
-	Expected int
-	Actual   int
-}
-
-var _ errors.UserError = UnifiedArgumentCountError{}
-
-func (e UnifiedArgumentCountError) IsUserError() {}
-
-func (e UnifiedArgumentCountError) Error() string {
-	return "invalid argument count"
-}
+) Value
 
 // InterpreterArgumentExtractor adapts interpreter arguments to ArgumentExtractor
-type InterpreterArgumentExtractor struct {
+type ArgumentExtractor struct {
 	arguments []Value
 }
 
-func NewInterpreterArgumentExtractor(arguments []Value) *InterpreterArgumentExtractor {
-	return &InterpreterArgumentExtractor{
+func NewArgumentExtractor(arguments []Value) *ArgumentExtractor {
+	return &ArgumentExtractor{
 		arguments: arguments,
 	}
 }
 
-func (e *InterpreterArgumentExtractor) Count() int {
+func (e *ArgumentExtractor) Count() int {
 	return len(e.arguments)
 }
 
-func (e *InterpreterArgumentExtractor) Get(index int) (Value, error) {
+func (e *ArgumentExtractor) Get(index int) Value {
 	if index < 0 || index >= len(e.arguments) {
-		return nil, ArgumentIndexError{
-			Index: index,
-			Count: len(e.arguments),
-		}
+		panic(errors.NewUnreachableError())
 	}
-	return e.arguments[index], nil
+	return e.arguments[index]
 }
 
-func (e *InterpreterArgumentExtractor) GetString(index int) (*StringValue, error) {
-	value, err := e.Get(index)
-	if err != nil {
-		return nil, err
-	}
+func (e *ArgumentExtractor) GetString(index int) *StringValue {
+	value := e.Get(index)
 
 	stringValue, ok := value.(*StringValue)
 	if !ok {
-		return nil, ArgumentTypeError{
-			Index:    index,
-			Expected: "String",
-			Actual:   reflect.TypeOf(value).String(),
-		}
+		panic(errors.NewUnreachableError())
 	}
-	return stringValue, nil
+	return stringValue
 }
 
-func (e *InterpreterArgumentExtractor) GetInt(index int) (IntValue, error) {
-	value, err := e.Get(index)
-	if err != nil {
-		return NewUnmeteredIntValueFromInt64(0), err
-	}
+func (e *ArgumentExtractor) GetInt(index int) IntValue {
+	value := e.Get(index)
 
 	intValue, ok := value.(IntValue)
 	if !ok {
-		return NewUnmeteredIntValueFromInt64(0), ArgumentTypeError{
-			Index:    index,
-			Expected: "Int",
-			Actual:   reflect.TypeOf(value).String(),
-		}
+		panic(errors.NewUnreachableError())
 	}
-	return intValue, nil
+	return intValue
 }
 
-func (e *InterpreterArgumentExtractor) GetArray(index int) (*ArrayValue, error) {
-	value, err := e.Get(index)
-	if err != nil {
-		return nil, err
-	}
+func (e *ArgumentExtractor) GetArray(index int) *ArrayValue {
+	value := e.Get(index)
 
 	arrayValue, ok := value.(*ArrayValue)
 	if !ok {
-		return nil, ArgumentTypeError{
-			Index:    index,
-			Expected: "Array",
-			Actual:   reflect.TypeOf(value).String(),
-		}
+		panic(errors.NewUnreachableError())
 	}
-	return arrayValue, nil
+	return arrayValue
 }
 
-func (e *InterpreterArgumentExtractor) GetType(index int) (TypeValue, error) {
-	value, err := e.Get(index)
-	if err != nil {
-		return NewTypeValue(nil, PrimitiveStaticTypeAny), err
-	}
+func (e *ArgumentExtractor) GetType(index int) TypeValue {
+	value := e.Get(index)
 
 	typeValue, ok := value.(TypeValue)
 	if !ok {
-		return NewTypeValue(nil, PrimitiveStaticTypeAny), ArgumentTypeError{
-			Index:    index,
-			Expected: "Type",
-			Actual:   reflect.TypeOf(value).String(),
-		}
+		panic(errors.NewUnreachableError())
 	}
-	return typeValue, nil
+	return typeValue
 }
 
-func (e *InterpreterArgumentExtractor) GetOptional(index int) (OptionalValue, error) {
-	value, err := e.Get(index)
-	if err != nil {
-		return nil, err
-	}
+func (e *ArgumentExtractor) GetOptional(index int) OptionalValue {
+	value := e.Get(index)
 
 	optionalValue, ok := value.(OptionalValue)
 	if !ok {
-		return nil, ArgumentTypeError{
-			Index:    index,
-			Expected: "Optional",
-			Actual:   reflect.TypeOf(value).String(),
-		}
+		panic(errors.NewUnreachableError())
 	}
-	return optionalValue, nil
+	return optionalValue
 }
 
-func (e *InterpreterArgumentExtractor) GetBool(index int) (BoolValue, error) {
-	value, err := e.Get(index)
-	if err != nil {
-		return FalseValue, err
-	}
+func (e *ArgumentExtractor) GetBool(index int) BoolValue {
+	value := e.Get(index)
 
 	boolValue, ok := value.(BoolValue)
 	if !ok {
-		return FalseValue, ArgumentTypeError{
-			Index:    index,
-			Expected: "Bool",
-			Actual:   reflect.TypeOf(value).String(),
-		}
+		panic(errors.NewUnreachableError())
 	}
-	return boolValue, nil
+	return boolValue
 }
 
-func (e *InterpreterArgumentExtractor) GetAddress(index int) (AddressValue, error) {
-	value, err := e.Get(index)
-	if err != nil {
-		return NewUnmeteredAddressValueFromBytes([]byte{}), err
-	}
+func (e *ArgumentExtractor) GetAddress(index int) AddressValue {
+	value := e.Get(index)
 
 	addressValue, ok := value.(AddressValue)
 	if !ok {
-		return NewUnmeteredAddressValueFromBytes([]byte{}), ArgumentTypeError{
-			Index:    index,
-			Expected: "Address",
-			Actual:   reflect.TypeOf(value).String(),
-		}
+		panic(errors.NewUnreachableError())
 	}
-	return addressValue, nil
+	return addressValue
 }
 
-// AdaptUnifiedFunction converts a UnifiedNativeFunction to work with the interpreter
-func AdaptUnifiedFunction(fn UnifiedNativeFunction) HostFunction {
+func (e *ArgumentExtractor) GetFunction(index int) FunctionValue {
+	value := e.Get(index)
+
+	functionValue, ok := value.(FunctionValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	return functionValue
+}
+
+// These are all the functions that need to exist to work with the interpreter
+func AdaptUnifiedFunctionForInterpreter(fn UnifiedNativeFunction) HostFunction {
 	return func(invocation Invocation) Value {
 		context := invocation.InvocationContext
-		args := NewInterpreterArgumentExtractor(invocation.Arguments)
+		args := NewArgumentExtractor(invocation.Arguments)
 
 		var receiver Value
 		if invocation.Self != nil {
 			receiver = *invocation.Self
 		}
 
-		// Type arguments are not available in interpreter invocations
-		result, err := fn(context, args, receiver, nil, invocation.LocationRange)
-		if err != nil {
-			// In the interpreter system, errors are typically panicked
-			panic(err)
+		// Convert TypeParameterTypes to []StaticType
+		var typeArguments []StaticType
+		if invocation.TypeParameterTypes != nil {
+			typeArguments = make([]StaticType, 0, invocation.TypeParameterTypes.Len())
+			invocation.TypeParameterTypes.Foreach(func(key *sema.TypeParameter, semaType sema.Type) {
+				staticType := ConvertSemaToStaticType(context, semaType)
+				typeArguments = append(typeArguments, staticType)
+			})
 		}
+
+		result := fn(context, args, receiver, typeArguments, invocation.LocationRange)
+
 		return result
 	}
 }
 
-// NewUnifiedHostFunctionValue creates a host function value using the unified approach
 func NewUnifiedStaticHostFunctionValue(
 	context InvocationContext,
 	functionType *sema.FunctionType,
@@ -276,12 +179,10 @@ func NewUnifiedStaticHostFunctionValue(
 	return NewStaticHostFunctionValue(
 		context,
 		functionType,
-		AdaptUnifiedFunction(fn),
+		AdaptUnifiedFunctionForInterpreter(fn),
 	)
 }
 
-// NewBoundUnifiedHostFunctionValue creates a bound function value using the unified approach
-// This uses the same UnifiedNativeFunction signature but handles type casting internally
 func NewUnifiedBoundHostFunctionValue(
 	context FunctionCreationContext,
 	self Value,
@@ -290,7 +191,7 @@ func NewUnifiedBoundHostFunctionValue(
 ) BoundFunctionValue {
 
 	// Wrap the unified function to work with the standard HostFunction signature
-	wrappedFunction := AdaptUnifiedFunction(function)
+	wrappedFunction := AdaptUnifiedFunctionForInterpreter(function)
 
 	hostFunc := NewStaticHostFunctionValue(context, funcType, wrappedFunction)
 
