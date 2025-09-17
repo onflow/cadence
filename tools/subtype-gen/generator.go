@@ -128,10 +128,7 @@ func (gen *SubTypeCheckGenerator) createSwitchStatement(rules []Rule) dst.Stmt {
 // createCaseStatement creates a case statement for a rule
 func (gen *SubTypeCheckGenerator) createCaseStatement(rule Rule) dst.Stmt {
 	// Parse super type
-	superType, err := parseType(rule.Super)
-	if err != nil {
-		panic(fmt.Errorf("error parsing super type: %w", err))
-	}
+	superType := parseType(rule.Super)
 
 	// Generate case condition
 	caseExpr := gen.parseCaseCondition(superType)
@@ -152,7 +149,7 @@ func (gen *SubTypeCheckGenerator) createCaseStatement(rule Rule) dst.Stmt {
 
 // generatePredicateStatements generates statements for a given predicate.
 // A predicate may generate one or more statements.
-func (gen *SubTypeCheckGenerator) generatePredicateStatements(predicate RulePredicate) []dst.Stmt {
+func (gen *SubTypeCheckGenerator) generatePredicateStatements(predicate Predicate) []dst.Stmt {
 	nodes := gen.generatePredicate(predicate)
 	if len(nodes) == 0 {
 		return nil
@@ -206,7 +203,7 @@ func (gen *SubTypeCheckGenerator) generatePredicateStatements(predicate RulePred
 }
 
 // generatePredicate recursively generates one or more expression/statement for a given predicate.
-func (gen *SubTypeCheckGenerator) generatePredicate(predicate RulePredicate) (result []dst.Node) {
+func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result []dst.Node) {
 	switch p := predicate.(type) {
 	case AlwaysPredicate:
 		return []dst.Node{dst.NewIdent("true")}
@@ -521,127 +518,104 @@ func (gen *SubTypeCheckGenerator) isResourcePredicate() []dst.Node {
 // equalsPredicate generates AST for equals predicate
 func (gen *SubTypeCheckGenerator) equalsPredicate(equals EqualsPredicate) []dst.Node {
 	switch target := equals.Target.(type) {
-	case string:
+	case Type:
 		return []dst.Node{
 			&dst.BinaryExpr{
 				X:  dst.NewIdent("subType"),
 				Op: token.EQL,
-				Y:  gen.qualifiedTypeIdent(target),
+				Y:  gen.qualifiedTypeIdent(target.Name()),
 			},
 		}
-	case KeyValues:
-		for key, value := range target {
-			switch key {
-			case "oneOf":
-				oneOf := value.([]any)
-
-				value := oneOf[1].(string)
-				if len(oneOf) == 1 {
-					return []dst.Node{
-						&dst.BinaryExpr{
-							X:  dst.NewIdent("subType"),
-							Op: token.EQL,
-							Y:  gen.qualifiedTypeIdent(value),
-						},
-					}
-				}
-
-				var cases []dst.Expr
-				for _, t := range oneOf {
-					if str, ok := t.(string); ok {
-						cases = append(cases, gen.qualifiedTypeIdent(str))
-					}
-				}
-
-				// Generate switch expression
-				var caseClauses []dst.Stmt
-				caseClauses = append(caseClauses, &dst.CaseClause{
-					List: cases,
-					Body: []dst.Stmt{
-						&dst.ReturnStmt{
-							Results: []dst.Expr{dst.NewIdent("true")},
-						},
-					},
-				})
-
-				return []dst.Node{
-					&dst.SwitchStmt{
-						Tag: dst.NewIdent("subType"),
-						Body: &dst.BlockStmt{
-							List: caseClauses,
-						},
-					},
-				}
-			default:
-				panic(fmt.Errorf("unsupported rule `%s` for `target` of `equals` rule", key))
+	case OneOfTypes:
+		types := target.Types
+		// If there's only one type to match, use `==`.
+		if len(types) == 1 {
+			typ := types[0]
+			return []dst.Node{
+				&dst.BinaryExpr{
+					X:  dst.NewIdent("subType"),
+					Op: token.EQL,
+					Y:  gen.qualifiedTypeIdent(typ.Name()),
+				},
 			}
+		}
+
+		// Otherwise, if there are more than one type, then generate a switch-case.
+		var cases []dst.Expr
+		for _, typ := range types {
+			cases = append(cases, gen.qualifiedTypeIdent(typ.Name()))
+		}
+
+		// Generate switch expression
+		var caseClauses []dst.Stmt
+		caseClauses = append(caseClauses, &dst.CaseClause{
+			List: cases,
+			Body: []dst.Stmt{
+				&dst.ReturnStmt{
+					Results: []dst.Expr{dst.NewIdent("true")},
+				},
+			},
+		})
+
+		return []dst.Node{
+			&dst.SwitchStmt{
+				Tag: dst.NewIdent("subType"),
+				Body: &dst.BlockStmt{
+					List: caseClauses,
+				},
+			},
 		}
 	default:
 		panic(fmt.Errorf("unknown target type %t in `equals` rule", target))
 	}
-
-	return []dst.Node{dst.NewIdent("false")}
 }
 
 // isSubTypePredicate generates AST for subtype conditions
 func (gen *SubTypeCheckGenerator) isSubTypePredicate(subtype SubtypePredicate) []dst.Node {
 	switch superType := subtype.Super.(type) {
-	case string:
+	case Type:
 		return []dst.Node{
 			&dst.CallExpr{
 				Fun: gen.qualifiedIdentifier("IsSubType"),
 				Args: []dst.Expr{
 					dst.NewIdent("subType"),
-					gen.qualifiedTypeIdent(superType),
+					gen.qualifiedTypeIdent(superType.Name()),
 				},
 			},
 		}
-	case KeyValues:
-		for key, value := range superType {
-			switch key {
-			case "oneOf":
-				oneOf := value.([]any)
-				var conditions []dst.Expr
-				for _, t := range oneOf {
+	case OneOfTypes:
+		var conditions []dst.Expr
+		for _, typ := range superType.Types {
+			// TODO: Recursively call `generatePredicate`
+			conditions = append(
+				conditions,
+				&dst.CallExpr{
+					Fun: gen.qualifiedIdentifier("IsSubType"),
+					Args: []dst.Expr{
+						dst.NewIdent("subType"),
+						gen.qualifiedTypeIdent(typ.Name()),
+					},
+				},
+			)
+		}
 
-					// TODO: Recursively call `generatePredicate`
-					if str, ok := t.(string); ok {
-						conditions = append(
-							conditions,
-							&dst.CallExpr{
-								Fun: gen.qualifiedIdentifier("IsSubType"),
-								Args: []dst.Expr{
-									dst.NewIdent("subType"),
-									gen.qualifiedTypeIdent(str),
-								},
-							},
-						)
-					}
-				}
+		if len(conditions) == 0 {
+			return []dst.Node{dst.NewIdent("false")}
+		}
 
-				if len(conditions) == 0 {
-					return []dst.Node{dst.NewIdent("false")}
-				}
-
-				result := conditions[0]
-				for i := 1; i < len(conditions); i++ {
-					result = &dst.BinaryExpr{
-						X:  result,
-						Op: token.LOR,
-						Y:  conditions[i],
-					}
-				}
-
-				return []dst.Node{result}
-			default:
-				panic(fmt.Errorf("unsupported rule `%s` for `super` of `subtype` rule", key))
+		result := conditions[0]
+		for i := 1; i < len(conditions); i++ {
+			result = &dst.BinaryExpr{
+				X:  result,
+				Op: token.LOR,
+				Y:  conditions[i],
 			}
 		}
-	default:
-		panic(fmt.Errorf("unknown super type %t in `subtype` rule", superType))
-	}
 
-	return []dst.Node{dst.NewIdent("false")}
+		return []dst.Node{result}
+	default:
+		panic(fmt.Errorf("unknown super type `%t` in `subtype` rule", superType))
+	}
 }
 
 // qualifiedIdentifier creates a qualified identifier
@@ -659,17 +633,17 @@ func (gen *SubTypeCheckGenerator) qualifiedTypeIdent(name string) dst.Expr {
 	return dst.NewIdent(typeConstant)
 }
 
-// parseCaseCondition parses a case condition string to AST
-func (gen *SubTypeCheckGenerator) parseCaseCondition(superType *TypeInfo) dst.Expr {
-	// For now, handle simple type constants
-	superTypeName := superType.TypeName
-	if superTypeName != "" && !superType.IsGeneric {
-		return gen.qualifiedTypeIdent(superTypeName)
-	}
-
-	// Handle pointer types
-	return &dst.StarExpr{
-		X: gen.qualifiedTypeIdent(superTypeName),
+// parseCaseCondition parses a case condition to AST using Cadence types
+func (gen *SubTypeCheckGenerator) parseCaseCondition(superType Type) dst.Expr {
+	// Use type assertion to determine the specific type
+	switch superType.(type) {
+	case *OptionalType:
+		return &dst.StarExpr{
+			X: gen.qualifiedTypeIdent(superType.Name()),
+		}
+	default:
+		// For simple types, use the type directly
+		return gen.qualifiedTypeIdent(superType.Name())
 	}
 }
 

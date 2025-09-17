@@ -48,8 +48,8 @@ rules:
         super:
           # Maybe use 'or' predicate here instead?
           # The difference is 'or' is a predicate containing zero or more inner predicates.
-          # Whereas 'oneOf' contains zero or more leaf values, not predicates.
-          oneOf: [StoragePath, CapabilityPath]
+          # Whereas, 'oneOfTypes' contains zero or more types, not predicates.
+          oneOfTypes: [StoragePath, CapabilityPath]
 
   - super: Storable
     sub: T
@@ -62,7 +62,7 @@ rules:
       equals:
         source: T
         target:
-          oneOf: [PrivatePath, PublicPath]
+          oneOfTypes: [PrivatePath, PublicPath]
 
   - super: Number
     sub: T
@@ -71,12 +71,12 @@ rules:
         - equals:
             source: T
             target:
-              oneOf: [Number, SignedNumber]
+              oneOfTypes: [Number, SignedNumber]
 
         - subtype:
             sub: T
             super:
-              oneOf: [Integer, FixedPoint]
+              oneOfTypes: [Integer, FixedPoint]
 
   - super: SignedNumber
     sub: T
@@ -89,7 +89,7 @@ rules:
         - subtype:
             sub: T
             super:
-              oneOf: [SignedInteger, SignedFixedPoint]
+              oneOfTypes: [SignedInteger, SignedFixedPoint]
 
   - super: Integer
     sub: T
@@ -98,12 +98,12 @@ rules:
         - equals:
             source: T
             target:
-              oneOf: [Integer, SignedInteger, FixedSizeUnsignedInteger, UInt]
+              oneOfTypes: [Integer, SignedInteger, FixedSizeUnsignedInteger, UInt]
 
         - subtype:
             sub: T
             super:
-              oneOf: [SignedInteger, FixedSizeUnsignedInteger]
+              oneOfTypes: [SignedInteger, FixedSizeUnsignedInteger]
 
   - super: SignedInteger
     sub: T
@@ -111,7 +111,7 @@ rules:
       equals:
         source: T
         target:
-          oneOf: [SignedInteger, Int, Int8, Int16, Int32, Int64, Int128, Int256]
+          oneOfTypes: [SignedInteger, Int, Int8, Int16, Int32, Int64, Int128, Int256]
 
   - super: FixedSizeUnsignedInteger
     sub: T
@@ -119,7 +119,7 @@ rules:
       equals:
         source: T
         target:
-          oneOf: [UInt8, UInt16, UInt32, UInt64, UInt128, UInt256,
+          oneOfTypes: [UInt8, UInt16, UInt32, UInt64, UInt128, UInt256,
                   Word8, Word16, Word32, Word64, Word128, Word256]
 
   - super: FixedPoint
@@ -129,12 +129,12 @@ rules:
         - equals:
             source: T
             target:
-              oneOf: [FixedPoint, SignedFixedPoint, UFix64, UFix128]
+              oneOfTypes: [FixedPoint, SignedFixedPoint, UFix64, UFix128]
 
         - subtype:
             sub: T
             super: 
-              oneOf: [SignedFixedPoint]
+              oneOfTypes: [SignedFixedPoint]
 
   - super: SignedFixedPoint
     sub: T
@@ -142,7 +142,7 @@ rules:
       equals:
         source: T
         target:
-          oneOf: [SignedFixedPoint, Fix64, Fix128]
+          oneOfTypes: [SignedFixedPoint, Fix64, Fix128]
 
 #  - super:
 #      Optional:
@@ -183,7 +183,7 @@ rules:
 #        - equals:
 #            source: X
 #            target:
-#              oneOf: [A, PurityView]
+#              oneOfTypes: [A, PurityView]
 #        - typeParamsEqual
 #        - paramsContravariant
 #        - returnCovariant
