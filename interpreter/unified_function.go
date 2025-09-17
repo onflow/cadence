@@ -64,6 +64,15 @@ func (e *ArgumentExtractor) Get(index int) Value {
 	return e.arguments[index]
 }
 
+func (e *ArgumentExtractor) GetNumber(index int) NumberValue {
+	value := e.Get(index)
+	numberValue, ok := value.(NumberValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	return numberValue
+}
+
 func (e *ArgumentExtractor) GetString(index int) *StringValue {
 	value := e.Get(index)
 
