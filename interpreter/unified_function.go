@@ -73,6 +73,24 @@ func (e *ArgumentExtractor) GetNumber(index int) NumberValue {
 	return numberValue
 }
 
+func (e *ArgumentExtractor) GetFunction(index int) FunctionValue {
+	value := e.Get(index)
+	functionValue, ok := value.(FunctionValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	return functionValue
+}
+
+func (e *ArgumentExtractor) GetType(index int) TypeValue {
+	value := e.Get(index)
+	typeValue, ok := value.(TypeValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	return typeValue
+}
+
 func (e *ArgumentExtractor) GetString(index int) *StringValue {
 	value := e.Get(index)
 
@@ -103,14 +121,8 @@ func (e *ArgumentExtractor) GetArray(index int) *ArrayValue {
 	return arrayValue
 }
 
-func (e *ArgumentExtractor) GetType(index int) TypeValue {
-	value := e.Get(index)
-
-	typeValue, ok := value.(TypeValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return typeValue
+func (e *ArgumentExtractor) GetValue(index int) Value {
+	return e.Get(index)
 }
 
 func (e *ArgumentExtractor) GetOptional(index int) OptionalValue {
@@ -141,16 +153,6 @@ func (e *ArgumentExtractor) GetAddress(index int) AddressValue {
 		panic(errors.NewUnreachableError())
 	}
 	return addressValue
-}
-
-func (e *ArgumentExtractor) GetFunction(index int) FunctionValue {
-	value := e.Get(index)
-
-	functionValue, ok := value.(FunctionValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return functionValue
 }
 
 // These are all the functions that need to exist to work with the interpreter

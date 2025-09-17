@@ -34,132 +34,82 @@ func init() {
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeConcatFunctionName,
 			sema.StringTypeConcatFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				this := receiver.(*interpreter.StringValue)
-				other := arguments[0]
-				return interpreter.StringConcat(
-					context,
-					this,
-					other,
-					EmptyLocationRange,
-				)
-			},
+			interpreter.UnifiedStringConcatFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeSliceFunctionName,
 			sema.StringTypeSliceFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				this := receiver.(*interpreter.StringValue)
-				from := arguments[0].(interpreter.IntValue)
-				to := arguments[1].(interpreter.IntValue)
-				return this.Slice(from, to, EmptyLocationRange)
-			},
+			interpreter.UnifiedStringSliceFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeContainsFunctionName,
 			sema.StringTypeContainsFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				this := receiver.(*interpreter.StringValue)
-				other := arguments[0].(*interpreter.StringValue)
-				return this.Contains(context, other)
-			},
+			interpreter.UnifiedStringContainsFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeIndexFunctionName,
 			sema.StringTypeIndexFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				this := receiver.(*interpreter.StringValue)
-				other := arguments[0].(*interpreter.StringValue)
-				return this.IndexOf(context, other)
-			},
+			interpreter.UnifiedStringIndexFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeCountFunctionName,
 			sema.StringTypeCountFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				this := receiver.(*interpreter.StringValue)
-				other := arguments[0].(*interpreter.StringValue)
-				return this.Count(context, EmptyLocationRange, other)
-			},
+			interpreter.UnifiedStringCountFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeDecodeHexFunctionName,
 			sema.StringTypeDecodeHexFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, _ ...Value) Value {
-				this := receiver.(*interpreter.StringValue)
-				return this.DecodeHex(context, EmptyLocationRange)
-			},
+			interpreter.UnifiedStringDecodeHexFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeToLowerFunctionName,
 			sema.StringTypeToLowerFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, _ ...Value) Value {
-				this := receiver.(*interpreter.StringValue)
-				return this.ToLower(context)
-			},
+			interpreter.UnifiedStringToLowerFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeSplitFunctionName,
 			sema.StringTypeSplitFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				this := receiver.(*interpreter.StringValue)
-				separator := arguments[0].(*interpreter.StringValue)
-				return this.Split(
-					context,
-					EmptyLocationRange,
-					separator,
-				)
-			},
+			interpreter.UnifiedStringSplitFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeReplaceAllFunctionName,
 			sema.StringTypeReplaceAllFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				this := receiver.(*interpreter.StringValue)
-				original := arguments[0].(*interpreter.StringValue)
-				replacement := arguments[1].(*interpreter.StringValue)
-				return this.ReplaceAll(
-					context,
-					EmptyLocationRange,
-					original,
-					replacement,
-				)
-			},
+			interpreter.UnifiedStringReplaceAllFunction,
 		),
 	)
 
