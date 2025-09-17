@@ -716,7 +716,7 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindAtreeMapPreAllocatedElement))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeStaticType))
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindCompositeTypeInfo))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindCompositeTypeInfo))
 
 		// TODO: assert equivalent for compiler/VM
 		if !*compile {
@@ -753,7 +753,7 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		assert.Equal(t, uint64(480), meter.getMemory(common.MemoryKindAtreeMapPreAllocatedElement))
 
 		assert.Equal(t, ifCompile[uint64](6, 7), meter.getMemory(common.MemoryKindCompositeStaticType))
-		assert.Equal(t, uint64(21), meter.getMemory(common.MemoryKindCompositeTypeInfo))
+		assert.Equal(t, uint64(18), meter.getMemory(common.MemoryKindCompositeTypeInfo))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindCompositeField))
 
 		// TODO: assert equivalent for compiler/VM

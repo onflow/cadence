@@ -106,11 +106,8 @@ func registerBoundFunctions(typ sema.Type) {
 func registerGlobalImport(name string, activation *activations.Activation[GlobalImport]) {
 	activation.Set(
 		name,
-		GlobalImport{
-			// This is a native function, so the location is nil.
-			Location: nil,
-			Name:     name,
-		},
+		// This is a native function, so the location is nil.
+		NewGlobalImport(name),
 	)
 }
 

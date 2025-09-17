@@ -41,6 +41,21 @@ import (
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
+// assertGlobalsEqual compares GlobalInfo of globals
+func assertGlobalsEqual(t *testing.T, expected map[string]bbq.GlobalInfo, actual map[string]bbq.Global) {
+	// Check that both maps have the same keys
+	assert.Equal(t, len(expected), len(actual), "globals maps have different lengths")
+
+	for key, expectedGlobal := range expected {
+		actualGlobal, exists := actual[key]
+		if !assert.True(t, exists, "expected global %s not found in actual", key) {
+			continue
+		}
+
+		assert.Equal(t, expectedGlobal, actualGlobal.GetGlobalInfo())
+	}
+}
+
 func TestCompileRecursionFib(t *testing.T) {
 
 	t.Parallel()
@@ -3201,7 +3216,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 	require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].Index)
+	assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].GetGlobalInfo().Index)
 
 	// `Test` type's `test` function.
 
@@ -3210,7 +3225,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 	require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].Index)
+	assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].GetGlobalInfo().Index)
 
 	// Should be calling into interface's default function.
 	// ```
@@ -3249,7 +3264,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 	require.Equal(t, interfaceTypeTestFuncName, interfaceTypeTestFunc.QualifiedName)
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, interfaceFunctionIndex, comp.Globals[interfaceTypeTestFuncName].Index)
+	assert.Equal(t, interfaceFunctionIndex, comp.Globals[interfaceTypeTestFuncName].GetGlobalInfo().Index)
 
 	// Should contain the implementation.
 	// ```
@@ -3580,7 +3595,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
 
 		// Also check if the globals are linked properly.
-		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].Index)
+		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].GetGlobalInfo().Index)
 
 		// `Test` type's `test` function.
 
@@ -3604,7 +3619,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
 
 		// Also check if the globals are linked properly.
-		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].Index)
+		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].GetGlobalInfo().Index)
 
 		// Would be equivalent to:
 		// ```
@@ -3755,7 +3770,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
 
 		// Also check if the globals are linked properly.
-		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].Index)
+		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].GetGlobalInfo().Index)
 
 		// `Test` type's `test` function.
 
@@ -3779,7 +3794,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
 
 		// Also check if the globals are linked properly.
-		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].Index)
+		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].GetGlobalInfo().Index)
 
 		// Would be equivalent to:
 		// ```
@@ -3924,9 +3939,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 						activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 						activation.Set(
 							stdlib.LogFunctionName,
-							compiler.GlobalImport{
-								Name: stdlib.LogFunctionName,
-							},
+							compiler.NewGlobalImport(stdlib.LogFunctionName),
 						)
 						return activation
 					},
@@ -4951,7 +4964,7 @@ func TestCompileTransaction(t *testing.T) {
 	// Also check if the globals are linked properly.
 	assert.Equal(t,
 		transactionInitFunctionIndex,
-		comp.Globals[commons.TransactionWrapperCompositeName].Index,
+		comp.Globals[commons.TransactionWrapperCompositeName].GetGlobalInfo().Index,
 	)
 
 	assert.Equal(t,
@@ -4990,7 +5003,7 @@ func TestCompileTransaction(t *testing.T) {
 	// Also check if the globals are linked properly.
 	assert.Equal(t,
 		prepareFunctionIndex,
-		comp.Globals[commons.TransactionPrepareFunctionName].Index,
+		comp.Globals[commons.TransactionPrepareFunctionName].GetGlobalInfo().Index,
 	)
 
 	assert.Equal(t,
@@ -5029,7 +5042,7 @@ func TestCompileTransaction(t *testing.T) {
 	require.Equal(t, commons.TransactionExecuteFunctionName, executeFunction.QualifiedName)
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, executeFunctionIndex, comp.Globals[commons.TransactionExecuteFunctionName].Index)
+	assert.Equal(t, executeFunctionIndex, comp.Globals[commons.TransactionExecuteFunctionName].GetGlobalInfo().Index)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -7711,7 +7724,6 @@ func TestCompileEnum(t *testing.T) {
 			opcode.InstructionGetGlobal{Global: testConstructorGlobalIndex},
 			opcode.InstructionGetConstant{Constant: 0},
 			opcode.InstructionInvoke{ArgCount: 1},
-			opcode.InstructionTransferAndConvert{Type: 3},
 			opcode.InstructionReturnValue{},
 		},
 		variables[testAVarIndex].Getter.Code,
@@ -7722,7 +7734,6 @@ func TestCompileEnum(t *testing.T) {
 			opcode.InstructionGetGlobal{Global: testConstructorGlobalIndex},
 			opcode.InstructionGetConstant{Constant: 1},
 			opcode.InstructionInvoke{ArgCount: 1},
-			opcode.InstructionTransferAndConvert{Type: 3},
 			opcode.InstructionReturnValue{},
 		},
 		variables[testBVarIndex].Getter.Code,
@@ -7733,7 +7744,6 @@ func TestCompileEnum(t *testing.T) {
 			opcode.InstructionGetGlobal{Global: testConstructorGlobalIndex},
 			opcode.InstructionGetConstant{Constant: 2},
 			opcode.InstructionInvoke{ArgCount: 1},
-			opcode.InstructionTransferAndConvert{Type: 3},
 			opcode.InstructionReturnValue{},
 		},
 		variables[testCVarIndex].Getter.Code,
@@ -7793,9 +7803,7 @@ func TestCompileOptionalArgument(t *testing.T) {
 				activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 				activation.Set(
 					stdlib.AssertFunctionName,
-					compiler.GlobalImport{
-						Name: stdlib.AssertFunctionName,
-					},
+					compiler.NewGlobalImport(stdlib.AssertFunctionName),
 				)
 				return activation
 			},
@@ -9338,15 +9346,11 @@ func TestCompileInjectedContract(t *testing.T) {
 			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 			activation.Set(
 				"B",
-				compiler.GlobalImport{
-					Name: "B",
-				},
+				compiler.NewGlobalImport("B"),
 			)
 			activation.Set(
 				"B.c",
-				compiler.GlobalImport{
-					Name: "B.c",
-				},
+				compiler.NewGlobalImport("B.c"),
 			)
 			return activation
 		},
@@ -9695,23 +9699,26 @@ func TestCompileImportAlias(t *testing.T) {
 		)
 
 		// Imported types are location qualified.
-		assert.Equal(
+		assertGlobalsEqual(
 			t,
-			map[string]*compiler.Global{
+			map[string]bbq.GlobalInfo{
 				"test": {
-					Location: nil,
-					Name:     "test",
-					Index:    0,
+					Location:      nil,
+					Name:          "test",
+					QualifiedName: "test",
+					Index:         0,
 				},
 				"A.0000000000000001.Foo": {
-					Location: importLocation,
-					Name:     "A.0000000000000001.Foo",
-					Index:    1,
+					Location:      importLocation,
+					Name:          "Foo",
+					QualifiedName: "A.0000000000000001.Foo",
+					Index:         1,
 				},
 				"A.0000000000000001.Foo.hello": {
-					Location: importLocation,
-					Name:     "A.0000000000000001.Foo.hello",
-					Index:    2,
+					Location:      importLocation,
+					Name:          "Foo.hello",
+					QualifiedName: "A.0000000000000001.Foo.hello",
+					Index:         2,
 				},
 			},
 			comp.Globals,
@@ -9797,38 +9804,44 @@ func TestCompileImportAlias(t *testing.T) {
 		)
 
 		// only imported function is a location qualified global.
-		assert.Equal(
+		assertGlobalsEqual(
 			t,
-			map[string]*compiler.Global{
+			map[string]bbq.GlobalInfo{
 				"Bar": {
-					Location: nil,
-					Name:     "Bar",
-					Index:    0,
+					Location:      nil,
+					Name:          "Bar",
+					QualifiedName: "Bar",
+					Index:         0,
 				},
 				"Bar.getType": {
-					Location: nil,
-					Name:     "Bar.getType",
-					Index:    1,
+					Location:      nil,
+					Name:          "Bar.getType",
+					QualifiedName: "Bar.getType",
+					Index:         1,
 				},
 				"Bar.hello": {
-					Location: nil,
-					Name:     "Bar.hello",
-					Index:    3,
+					Location:      nil,
+					Name:          "Bar.hello",
+					QualifiedName: "Bar.hello",
+					Index:         3,
 				},
 				"Bar.isInstance": {
-					Location: nil,
-					Name:     "Bar.isInstance",
-					Index:    2,
+					Location:      nil,
+					Name:          "Bar.isInstance",
+					QualifiedName: "Bar.isInstance",
+					Index:         2,
 				},
 				"Bar.defaultHello": {
-					Location: nil,
-					Name:     "Bar.defaultHello",
-					Index:    4,
+					Location:      nil,
+					Name:          "Bar.defaultHello",
+					QualifiedName: "Bar.defaultHello",
+					Index:         4,
 				},
 				"A.0000000000000001.FooInterface.defaultHello": {
-					Location: importLocation,
-					Name:     "A.0000000000000001.FooInterface.defaultHello",
-					Index:    5,
+					Location:      importLocation,
+					Name:          "FooInterface.defaultHello",
+					QualifiedName: "A.0000000000000001.FooInterface.defaultHello",
+					Index:         5,
 				},
 			},
 			comp.Globals,
