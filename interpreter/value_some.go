@@ -158,32 +158,13 @@ func (v *SomeValue) GetMethod(
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
 		innerValueType := v.InnerValueType(context)
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.OptionalTypeMapFunctionType(
 				innerValueType,
 			),
-			func(v *SomeValue, invocation Invocation) Value {
-				invocationContext := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				transformFunction, ok := invocation.Arguments[0].(FunctionValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				transformFunctionType := transformFunction.FunctionType(invocationContext)
-
-				return OptionalValueMapFunction(
-					invocationContext,
-					v,
-					transformFunctionType,
-					transformFunction,
-					innerValueType,
-					locationRange,
-				)
-			},
+			UnifiedSomeMapFunction,
 		)
 	}
 
@@ -532,3 +513,14 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 		s.Storable,
 	}
 }
+
+// Unified some functions
+
+var UnifiedSomeMapFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, args *ArgumentExtractor, receiver Value, typeArguments []StaticType, locationRange LocationRange) Value {
+		transformFunction := args.GetFunction(0)
+		transformFunctionType := transformFunction.FunctionType(context)
+		innerValueType := receiver.(OptionalValue).InnerValueType(context)
+		return OptionalValueMapFunction(context, receiver.(OptionalValue), transformFunctionType, transformFunction, innerValueType, locationRange)
+	},
+)

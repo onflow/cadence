@@ -854,81 +854,42 @@ func (v *DictionaryValue) GetMethod(
 ) FunctionValue {
 	switch name {
 	case sema.DictionaryTypeRemoveFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.DictionaryRemoveFunctionType(
 				v.SemaType(context),
 			),
-			func(v *DictionaryValue, invocation Invocation) Value {
-				keyValue := invocation.Arguments[0]
-
-				return v.Remove(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-					keyValue,
-				)
-			},
+			UnifiedDictionaryRemoveFunction,
 		)
 
 	case sema.DictionaryTypeInsertFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.DictionaryInsertFunctionType(
 				v.SemaType(context),
 			),
-			func(v *DictionaryValue, invocation Invocation) Value {
-				keyValue := invocation.Arguments[0]
-				newValue := invocation.Arguments[1]
-
-				return v.Insert(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-					keyValue,
-					newValue,
-				)
-			},
+			UnifiedDictionaryInsertFunction,
 		)
 
 	case sema.DictionaryTypeContainsKeyFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.DictionaryContainsKeyFunctionType(
 				v.SemaType(context),
 			),
-			func(v *DictionaryValue, invocation Invocation) Value {
-				return v.ContainsKey(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-					invocation.Arguments[0],
-				)
-			},
+			UnifiedDictionaryContainsKeyFunction,
 		)
 	case sema.DictionaryTypeForEachKeyFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.DictionaryForEachKeyFunctionType(
 				v.SemaType(context),
 			),
-			func(v *DictionaryValue, invocation Invocation) Value {
-				invocationContext := invocation.InvocationContext
-
-				funcArgument, ok := invocation.Arguments[0].(FunctionValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				v.ForEachKey(
-					invocationContext,
-					invocation.LocationRange,
-					funcArgument,
-				)
-
-				return Void
-			},
+			UnifiedDictionaryForEachKeyFunction,
 		)
 	}
 
@@ -1653,3 +1614,35 @@ func (v *DictionaryValue) ElementSize() uint {
 func (v *DictionaryValue) Inlined() bool {
 	return v.dictionary.Inlined()
 }
+
+// Unified dictionary functions
+
+var UnifiedDictionaryRemoveFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, args *ArgumentExtractor, receiver Value, typeArguments []StaticType, locationRange LocationRange) Value {
+		keyValue := args.GetValue(0)
+		return receiver.(*DictionaryValue).Remove(context, locationRange, keyValue)
+	},
+)
+
+var UnifiedDictionaryInsertFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, args *ArgumentExtractor, receiver Value, typeArguments []StaticType, locationRange LocationRange) Value {
+		keyValue := args.GetValue(0)
+		newValue := args.GetValue(1)
+		return receiver.(*DictionaryValue).Insert(context, locationRange, keyValue, newValue)
+	},
+)
+
+var UnifiedDictionaryContainsKeyFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, args *ArgumentExtractor, receiver Value, typeArguments []StaticType, locationRange LocationRange) Value {
+		keyValue := args.GetValue(0)
+		return receiver.(*DictionaryValue).ContainsKey(context, locationRange, keyValue)
+	},
+)
+
+var UnifiedDictionaryForEachKeyFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, args *ArgumentExtractor, receiver Value, typeArguments []StaticType, locationRange LocationRange) Value {
+		funcArgument := args.GetFunction(0)
+		receiver.(*DictionaryValue).ForEachKey(context, locationRange, funcArgument)
+		return Void
+	},
+)

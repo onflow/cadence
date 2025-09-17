@@ -380,156 +380,75 @@ func (v *StringValue) GetMethod(
 ) FunctionValue {
 	switch name {
 	case sema.StringTypeConcatFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeConcatFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				invocationContext := invocation.InvocationContext
-				other := invocation.Arguments[0]
-				return StringConcat(
-					invocationContext,
-					v,
-					other,
-					locationRange,
-				)
-			},
+			UnifiedStringConcatFunction,
 		)
 
 	case sema.StringTypeSliceFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeSliceFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				from, ok := invocation.Arguments[0].(IntValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				to, ok := invocation.Arguments[1].(IntValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.Slice(from, to, invocation.LocationRange)
-			},
+			UnifiedStringSliceFunction,
 		)
 
 	case sema.StringTypeContainsFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeContainsFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				other, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.Contains(invocation.InvocationContext, other)
-			},
+			UnifiedStringContainsFunction,
 		)
 
 	case sema.StringTypeIndexFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeIndexFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				other, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.IndexOf(invocation.InvocationContext, other)
-			},
+			UnifiedStringIndexFunction,
 		)
 
 	case sema.StringTypeCountFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeIndexFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				other, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.Count(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-					other,
-				)
-			},
+			UnifiedStringCountFunction,
 		)
 
 	case sema.StringTypeDecodeHexFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeDecodeHexFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				return v.DecodeHex(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-				)
-			},
+			UnifiedStringDecodeHexFunction,
 		)
 
 	case sema.StringTypeToLowerFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeToLowerFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				return v.ToLower(invocation.InvocationContext)
-			},
+			UnifiedStringToLowerFunction,
 		)
 
 	case sema.StringTypeSplitFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeSplitFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				separator, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.Split(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-					separator,
-				)
-			},
+			UnifiedStringSplitFunction,
 		)
 
 	case sema.StringTypeReplaceAllFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeReplaceAllFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				original, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				replacement, ok := invocation.Arguments[1].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.ReplaceAll(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-					original,
-					replacement,
-				)
-			},
+			UnifiedStringReplaceAllFunction,
 		)
 	}
 
@@ -1414,3 +1333,68 @@ var stringFunction = func() Value {
 
 	return functionValue
 }()
+
+// Unified string functions
+
+var UnifiedStringConcatFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, args *ArgumentExtractor, receiver Value, typeArguments []StaticType, locationRange LocationRange) Value {
+		other := args.GetValue(0)
+		return StringConcat(context, receiver.(*StringValue), other, locationRange)
+	},
+)
+
+var UnifiedStringSliceFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, args *ArgumentExtractor, receiver Value, typeArguments []StaticType, locationRange LocationRange) Value {
+		from := args.GetInt(0)
+		to := args.GetInt(1)
+		return receiver.(*StringValue).Slice(from, to, locationRange)
+	},
+)
+
+var UnifiedStringContainsFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, args *ArgumentExtractor, receiver Value, typeArguments []StaticType, locationRange LocationRange) Value {
+		other := args.GetString(0)
+		return receiver.(*StringValue).Contains(context, other)
+	},
+)
+
+var UnifiedStringIndexFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, args *ArgumentExtractor, receiver Value, typeArguments []StaticType, locationRange LocationRange) Value {
+		other := args.GetString(0)
+		return receiver.(*StringValue).IndexOf(context, other)
+	},
+)
+
+var UnifiedStringCountFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, args *ArgumentExtractor, receiver Value, typeArguments []StaticType, locationRange LocationRange) Value {
+		other := args.GetString(0)
+		return receiver.(*StringValue).Count(context, locationRange, other)
+	},
+)
+
+var UnifiedStringDecodeHexFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, args *ArgumentExtractor, receiver Value, typeArguments []StaticType, locationRange LocationRange) Value {
+		return receiver.(*StringValue).DecodeHex(context, locationRange)
+	},
+)
+
+var UnifiedStringToLowerFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, args *ArgumentExtractor, receiver Value, typeArguments []StaticType, locationRange LocationRange) Value {
+		return receiver.(*StringValue).ToLower(context)
+	},
+)
+
+var UnifiedStringSplitFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, args *ArgumentExtractor, receiver Value, typeArguments []StaticType, locationRange LocationRange) Value {
+		separator := args.GetString(0)
+		return receiver.(*StringValue).Split(context, locationRange, separator)
+	},
+)
+
+var UnifiedStringReplaceAllFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, args *ArgumentExtractor, receiver Value, typeArguments []StaticType, locationRange LocationRange) Value {
+		original := args.GetString(0)
+		replacement := args.GetString(1)
+		return receiver.(*StringValue).ReplaceAll(context, locationRange, original, replacement)
+	},
+)
