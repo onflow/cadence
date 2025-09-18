@@ -121,6 +121,24 @@ func (e *ArgumentExtractor) GetArray(index int) *ArrayValue {
 	return arrayValue
 }
 
+func (e *ArgumentExtractor) GetComposite(index int) *CompositeValue {
+	value := e.Get(index)
+	compositeValue, ok := value.(*CompositeValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	return compositeValue
+}
+
+func (e *ArgumentExtractor) GetUFix64(index int) UFix64Value {
+	value := e.Get(index)
+	uFix64Value, ok := value.(UFix64Value)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	return uFix64Value
+}
+
 func (e *ArgumentExtractor) GetValue(index int) Value {
 	return e.Get(index)
 }

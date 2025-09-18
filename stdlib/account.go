@@ -641,43 +641,45 @@ type AccountKeyAdditionHandler interface {
 	AddAccountKey(address common.Address, key *PublicKey, algo sema.HashAlgorithm, weight int) (*AccountKey, error)
 }
 
+// Unified function for AccountKeysAdd
+func unifiedAccountKeysAddFunction(
+	handler AccountKeyAdditionHandler,
+	addressValue interpreter.AddressValue,
+) interpreter.UnifiedNativeFunction {
+	return func(
+		context interpreter.UnifiedFunctionContext,
+		args *interpreter.ArgumentExtractor,
+		receiver interpreter.Value,
+		typeArguments []interpreter.StaticType,
+		locationRange interpreter.LocationRange,
+	) interpreter.Value {
+		publicKeyValue := args.GetComposite(0)
+		hashAlgoValue := args.Get(1)
+		weightValue := args.GetUFix64(2)
+
+		return AccountKeysAdd(
+			context,
+			addressValue,
+			publicKeyValue,
+			hashAlgoValue,
+			weightValue,
+			locationRange,
+			handler,
+		)
+	}
+}
+
 func newInterpreterAccountKeysAddFunction(
 	context interpreter.AccountKeyCreationContext,
 	handler AccountKeyAdditionHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountKeys interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-
-		return interpreter.NewBoundHostFunctionValue(
+		return interpreter.NewUnifiedBoundHostFunctionValue(
 			context,
 			accountKeys,
 			sema.Account_KeysTypeAddFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-				inter := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				publicKeyValue, ok := invocation.Arguments[0].(*interpreter.CompositeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				hashAlgoValue := invocation.Arguments[1]
-
-				weightValue, ok := invocation.Arguments[2].(interpreter.UFix64Value)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return AccountKeysAdd(
-					inter,
-					addressValue,
-					publicKeyValue,
-					hashAlgoValue,
-					weightValue,
-					locationRange,
-					handler,
-				)
-			},
+			unifiedAccountKeysAddFunction(handler, addressValue),
 		)
 	}
 }
@@ -687,34 +689,25 @@ func NewVMAccountKeysAddFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_KeysType,
-		FunctionValue: vm.NewNativeFunctionValue(
+		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_KeysTypeAddFunctionName,
 			sema.Account_KeysTypeAddFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
-
+			func(
+				context interpreter.UnifiedFunctionContext,
+				args *interpreter.ArgumentExtractor,
+				receiver interpreter.Value,
+				typeArguments []interpreter.StaticType,
+				locationRange interpreter.LocationRange,
+			) interpreter.Value {
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver)
 
-				publicKeyValue, ok := args[0].(*interpreter.CompositeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				hashAlgoValue := args[1]
-
-				weightValue, ok := args[2].(interpreter.UFix64Value)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return AccountKeysAdd(
+				return unifiedAccountKeysAddFunction(handler, address)(
 					context,
-					address,
-					publicKeyValue,
-					hashAlgoValue,
-					weightValue,
-					interpreter.EmptyLocationRange,
-					handler,
+					args,
+					receiver,
+					typeArguments,
+					locationRange,
 				)
 			},
 		),
@@ -792,6 +785,30 @@ type AccountKeyProvider interface {
 	AccountKeysCount(address common.Address) (uint32, error)
 }
 
+// Unified function for AccountKeysGet
+func unifiedAccountKeysGetFunction(
+	provider AccountKeyProvider,
+	address common.Address,
+) interpreter.UnifiedNativeFunction {
+	return func(
+		context interpreter.UnifiedFunctionContext,
+		args *interpreter.ArgumentExtractor,
+		receiver interpreter.Value,
+		typeArguments []interpreter.StaticType,
+		locationRange interpreter.LocationRange,
+	) interpreter.Value {
+		indexValue := args.GetInt(0)
+
+		return AccountKeysGet(
+			context,
+			address,
+			indexValue,
+			locationRange,
+			provider,
+		)
+	}
+}
+
 func newInterpreterAccountKeysGetFunction(
 	context interpreter.FunctionCreationContext,
 	functionType *sema.FunctionType,
@@ -803,27 +820,11 @@ func newInterpreterAccountKeysGetFunction(
 		// Converted addresses can be cached and don't have to be recomputed on each function invocation
 		address := addressValue.ToAddress()
 
-		return interpreter.NewBoundHostFunctionValue(
+		return interpreter.NewUnifiedBoundHostFunctionValue(
 			context,
 			accountKeys,
 			functionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-				inter := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				indexValue, ok := invocation.Arguments[0].(interpreter.IntValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return AccountKeysGet(
-					inter,
-					address,
-					indexValue,
-					locationRange,
-					provider,
-				)
-			},
+			unifiedAccountKeysGetFunction(provider, address),
 		)
 	}
 }
@@ -833,25 +834,25 @@ func NewVMAccountKeysGetFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_KeysType,
-		FunctionValue: vm.NewNativeFunctionValue(
+		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_KeysTypeGetFunctionName,
 			sema.Account_KeysTypeGetFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
-
+			func(
+				context interpreter.UnifiedFunctionContext,
+				args *interpreter.ArgumentExtractor,
+				receiver interpreter.Value,
+				typeArguments []interpreter.StaticType,
+				locationRange interpreter.LocationRange,
+			) interpreter.Value {
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
 
-				indexValue, ok := args[0].(interpreter.IntValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return AccountKeysGet(
+				return unifiedAccountKeysGetFunction(provider, address)(
 					context,
-					address,
-					indexValue,
-					interpreter.EmptyLocationRange,
-					provider,
+					args,
+					receiver,
+					typeArguments,
+					locationRange,
 				)
 			},
 		),
@@ -894,6 +895,30 @@ func AccountKeysGet(
 // `Account.Keys.forEachKey(_ f: fun(AccountKey): Bool)`
 var accountKeysForEachCallbackTypeParams = []sema.Type{sema.AccountKeyType}
 
+// Unified function for AccountKeysForEach
+func unifiedAccountKeysForEachFunction(
+	provider AccountKeyProvider,
+	address common.Address,
+) interpreter.UnifiedNativeFunction {
+	return func(
+		context interpreter.UnifiedFunctionContext,
+		args *interpreter.ArgumentExtractor,
+		receiver interpreter.Value,
+		typeArguments []interpreter.StaticType,
+		locationRange interpreter.LocationRange,
+	) interpreter.Value {
+		fnValue := args.GetFunction(0)
+
+		return AccountKeysForEach(
+			context,
+			address,
+			fnValue,
+			locationRange,
+			provider,
+		)
+	}
+}
+
 func newInterpreterAccountKeysForEachFunction(
 	context interpreter.FunctionCreationContext,
 	provider AccountKeyProvider,
@@ -902,27 +927,11 @@ func newInterpreterAccountKeysForEachFunction(
 	return func(accountKeys interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
 
-		return interpreter.NewBoundHostFunctionValue(
+		return interpreter.NewUnifiedBoundHostFunctionValue(
 			context,
 			accountKeys,
 			sema.Account_KeysTypeForEachFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-				invocationContext := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				fnValue, ok := invocation.Arguments[0].(interpreter.FunctionValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return AccountKeysForEach(
-					invocationContext,
-					address,
-					fnValue,
-					locationRange,
-					provider,
-				)
-			},
+			unifiedAccountKeysForEachFunction(provider, address),
 		)
 	}
 }
@@ -932,25 +941,25 @@ func NewVMAccountKeysForEachFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_KeysType,
-		FunctionValue: vm.NewNativeFunctionValue(
+		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_KeysTypeForEachFunctionName,
 			sema.Account_KeysTypeForEachFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
-
+			func(
+				context interpreter.UnifiedFunctionContext,
+				args *interpreter.ArgumentExtractor,
+				receiver interpreter.Value,
+				typeArguments []interpreter.StaticType,
+				locationRange interpreter.LocationRange,
+			) interpreter.Value {
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
 
-				fnValue, ok := args[0].(interpreter.FunctionValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return AccountKeysForEach(
+				return unifiedAccountKeysForEachFunction(provider, address)(
 					context,
-					address,
-					fnValue,
-					interpreter.EmptyLocationRange,
-					provider,
+					args,
+					receiver,
+					typeArguments,
+					locationRange,
 				)
 			},
 		),
@@ -1059,6 +1068,30 @@ type AccountKeyRevocationHandler interface {
 	RevokeAccountKey(address common.Address, index uint32) (*AccountKey, error)
 }
 
+// Unified function for AccountKeysRevoke
+func unifiedAccountKeysRevokeFunction(
+	handler AccountKeyRevocationHandler,
+	addressValue interpreter.AddressValue,
+) interpreter.UnifiedNativeFunction {
+	return func(
+		context interpreter.UnifiedFunctionContext,
+		args *interpreter.ArgumentExtractor,
+		receiver interpreter.Value,
+		typeArguments []interpreter.StaticType,
+		locationRange interpreter.LocationRange,
+	) interpreter.Value {
+		indexValue := args.GetInt(0)
+
+		return AccountKeysRevoke(
+			context,
+			addressValue,
+			indexValue,
+			locationRange,
+			handler,
+		)
+	}
+}
+
 func newInterpreterAccountKeysRevokeFunction(
 	context interpreter.FunctionCreationContext,
 	handler AccountKeyRevocationHandler,
@@ -1066,27 +1099,11 @@ func newInterpreterAccountKeysRevokeFunction(
 ) interpreter.BoundFunctionGenerator {
 	return func(accountKeys interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 
-		return interpreter.NewBoundHostFunctionValue(
+		return interpreter.NewUnifiedBoundHostFunctionValue(
 			context,
 			accountKeys,
 			sema.Account_KeysTypeRevokeFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-				inter := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				indexValue, ok := invocation.Arguments[0].(interpreter.IntValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return AccountKeysRevoke(
-					inter,
-					addressValue,
-					indexValue,
-					locationRange,
-					handler,
-				)
-			},
+			unifiedAccountKeysRevokeFunction(handler, addressValue),
 		)
 	}
 }
@@ -1096,25 +1113,25 @@ func NewVMAccountKeysRevokeFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_KeysType,
-		FunctionValue: vm.NewNativeFunctionValue(
+		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_KeysTypeRevokeFunctionName,
 			sema.Account_KeysTypeRevokeFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
-
+			func(
+				context interpreter.UnifiedFunctionContext,
+				args *interpreter.ArgumentExtractor,
+				receiver interpreter.Value,
+				typeArguments []interpreter.StaticType,
+				locationRange interpreter.LocationRange,
+			) interpreter.Value {
 				// Get address field from the receiver
 				addressValue := vm.GetAccountTypePrivateAddressValue(receiver)
 
-				indexValue, ok := args[0].(interpreter.IntValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return AccountKeysRevoke(
+				return unifiedAccountKeysRevokeFunction(handler, addressValue)(
 					context,
-					addressValue,
-					indexValue,
-					interpreter.EmptyLocationRange,
-					handler,
+					args,
+					receiver,
+					typeArguments,
+					locationRange,
 				)
 			},
 		),
@@ -1165,45 +1182,45 @@ func AccountKeysRevoke(
 	)
 }
 
+// Unified function for AccountInboxPublish
+func unifiedAccountInboxPublishFunction(
+	handler EventEmitter,
+	providerValue interpreter.AddressValue,
+) interpreter.UnifiedNativeFunction {
+	return func(
+		context interpreter.UnifiedFunctionContext,
+		args *interpreter.ArgumentExtractor,
+		receiver interpreter.Value,
+		typeArguments []interpreter.StaticType,
+		locationRange interpreter.LocationRange,
+	) interpreter.Value {
+		value := args.Get(0).(interpreter.CapabilityValue)
+		nameValue := args.GetString(1)
+		recipientValue := args.GetAddress(2)
+
+		return AccountInboxPublish(
+			context,
+			locationRange,
+			providerValue,
+			recipientValue,
+			nameValue,
+			value,
+			handler,
+		)
+	}
+}
+
 func newInterpreterAccountInboxPublishFunction(
 	context interpreter.FunctionCreationContext,
 	handler EventEmitter,
 	providerValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountInbox interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		return interpreter.NewBoundHostFunctionValue(
+		return interpreter.NewUnifiedBoundHostFunctionValue(
 			context,
 			accountInbox,
 			sema.Account_InboxTypePublishFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-				inter := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				value, ok := invocation.Arguments[0].(interpreter.CapabilityValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				nameValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				recipientValue := invocation.Arguments[2].(interpreter.AddressValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return AccountInboxPublish(
-					inter,
-					locationRange,
-					providerValue,
-					recipientValue,
-					nameValue,
-					value,
-					handler,
-				)
-			},
+			unifiedAccountInboxPublishFunction(handler, providerValue),
 		)
 	}
 }
@@ -1213,37 +1230,25 @@ func NewVMAccountInboxPublishFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_InboxType,
-		FunctionValue: vm.NewNativeFunctionValue(
+		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_InboxTypePublishFunctionName,
 			sema.Account_InboxTypePublishFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
-
+			func(
+				context interpreter.UnifiedFunctionContext,
+				args *interpreter.ArgumentExtractor,
+				receiver interpreter.Value,
+				typeArguments []interpreter.StaticType,
+				locationRange interpreter.LocationRange,
+			) interpreter.Value {
 				// Get address field from the receiver
 				providerValue := vm.GetAccountTypePrivateAddressValue(receiver)
 
-				value, ok := args[0].(interpreter.CapabilityValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				nameValue, ok := args[1].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				recipientValue := args[2].(interpreter.AddressValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return AccountInboxPublish(
+				return unifiedAccountInboxPublishFunction(handler, providerValue)(
 					context,
-					interpreter.EmptyLocationRange,
-					providerValue,
-					recipientValue,
-					nameValue,
-					value,
-					handler,
+					args,
+					receiver,
+					typeArguments,
+					locationRange,
 				)
 			},
 		),
@@ -1293,40 +1298,48 @@ func AccountInboxPublish(
 	return interpreter.Void
 }
 
+// Unified function for AccountInboxUnpublish
+func unifiedAccountInboxUnpublishFunction(
+	handler EventEmitter,
+	providerValue interpreter.AddressValue,
+) interpreter.UnifiedNativeFunction {
+	return func(
+		context interpreter.UnifiedFunctionContext,
+		args *interpreter.ArgumentExtractor,
+		receiver interpreter.Value,
+		typeArguments []interpreter.StaticType,
+		locationRange interpreter.LocationRange,
+	) interpreter.Value {
+		nameValue := args.GetString(0)
+
+		// Get the type from typeArguments (first type argument)
+		if len(typeArguments) == 0 {
+			panic(errors.NewUnreachableError())
+		}
+		borrowType := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
+
+		return AccountInboxUnpublish(
+			context,
+			locationRange,
+			providerValue,
+			borrowType,
+			nameValue,
+			handler,
+		)
+	}
+}
+
 func newInterpreterAccountInboxUnpublishFunction(
 	context interpreter.FunctionCreationContext,
 	handler EventEmitter,
 	providerValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountInbox interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		return interpreter.NewBoundHostFunctionValue(
+		return interpreter.NewUnifiedBoundHostFunctionValue(
 			context,
 			accountInbox,
 			sema.Account_InboxTypeUnpublishFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-				inter := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				typeParameterPair := invocation.TypeParameterTypes.Oldest()
-				if typeParameterPair == nil {
-					panic(errors.NewUnreachableError())
-				}
-				borrowType := typeParameterPair.Value
-
-				return AccountInboxUnpublish(
-					inter,
-					locationRange,
-					providerValue,
-					borrowType,
-					nameValue,
-					handler,
-				)
-			},
+			unifiedAccountInboxUnpublishFunction(handler, providerValue),
 		)
 	}
 }
@@ -1336,28 +1349,25 @@ func NewVMAccountInboxUnpublishFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_InboxType,
-		FunctionValue: vm.NewNativeFunctionValue(
+		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_InboxTypeUnpublishFunctionName,
 			sema.Account_InboxTypeUnpublishFunctionType,
-			func(context *vm.Context, typeArguments []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
-
+			func(
+				context interpreter.UnifiedFunctionContext,
+				args *interpreter.ArgumentExtractor,
+				receiver interpreter.Value,
+				typeArguments []interpreter.StaticType,
+				locationRange interpreter.LocationRange,
+			) interpreter.Value {
 				// Get address field from the receiver
 				providerValue := vm.GetAccountTypePrivateAddressValue(receiver)
 
-				nameValue, ok := args[0].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				borrowType := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
-
-				return AccountInboxUnpublish(
+				return unifiedAccountInboxUnpublishFunction(handler, providerValue)(
 					context,
-					interpreter.EmptyLocationRange,
-					providerValue,
-					borrowType,
-					nameValue,
-					handler,
+					args,
+					receiver,
+					typeArguments,
+					locationRange,
 				)
 			},
 		),
@@ -1429,47 +1439,50 @@ func AccountInboxUnpublish(
 	return interpreter.NewSomeValueNonCopying(context, value)
 }
 
+// Unified function for AccountInboxClaim
+func unifiedAccountInboxClaimFunction(
+	handler EventEmitter,
+	recipientValue interpreter.AddressValue,
+) interpreter.UnifiedNativeFunction {
+	return func(
+		context interpreter.UnifiedFunctionContext,
+		args *interpreter.ArgumentExtractor,
+		receiver interpreter.Value,
+		typeArguments []interpreter.StaticType,
+		locationRange interpreter.LocationRange,
+	) interpreter.Value {
+		nameValue := args.GetString(0)
+		providerValue := args.GetAddress(1)
+
+		// Get the type from typeArguments (first type argument)
+		if len(typeArguments) == 0 {
+			panic(errors.NewUnreachableError())
+		}
+		borrowType := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
+
+		return AccountInboxClaim(
+			context,
+			locationRange,
+			providerValue,
+			recipientValue,
+			nameValue,
+			borrowType,
+			handler,
+		)
+	}
+}
+
 func newInterpreterAccountInboxClaimFunction(
 	context interpreter.FunctionCreationContext,
 	handler EventEmitter,
 	recipientValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountInbox interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		return interpreter.NewBoundHostFunctionValue(
+		return interpreter.NewUnifiedBoundHostFunctionValue(
 			context,
 			accountInbox,
 			sema.Account_InboxTypeClaimFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-				inter := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				providerValue, ok := invocation.Arguments[1].(interpreter.AddressValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				typeParameterPair := invocation.TypeParameterTypes.Oldest()
-				if typeParameterPair == nil {
-					panic(errors.NewUnreachableError())
-				}
-
-				borrowType := typeParameterPair.Value
-
-				return AccountInboxClaim(
-					inter,
-					locationRange,
-					providerValue,
-					recipientValue,
-					nameValue,
-					borrowType,
-					handler,
-				)
-			},
+			unifiedAccountInboxClaimFunction(handler, recipientValue),
 		)
 	}
 }
@@ -1479,34 +1492,25 @@ func NewVMAccountInboxClaimFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_InboxType,
-		FunctionValue: vm.NewNativeFunctionValue(
+		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_InboxTypeClaimFunctionName,
 			sema.Account_InboxTypeClaimFunctionType,
-			func(context *vm.Context, typeArguments []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
-
+			func(
+				context interpreter.UnifiedFunctionContext,
+				args *interpreter.ArgumentExtractor,
+				receiver interpreter.Value,
+				typeArguments []interpreter.StaticType,
+				locationRange interpreter.LocationRange,
+			) interpreter.Value {
 				// Get address field from the receiver
 				recipientValue := vm.GetAccountTypePrivateAddressValue(receiver)
 
-				nameValue, ok := args[0].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				providerValue, ok := args[1].(interpreter.AddressValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				borrowType := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
-
-				return AccountInboxClaim(
+				return unifiedAccountInboxClaimFunction(handler, recipientValue)(
 					context,
-					interpreter.EmptyLocationRange,
-					providerValue,
-					recipientValue,
-					nameValue,
-					borrowType,
-					handler,
+					args,
+					receiver,
+					typeArguments,
+					locationRange,
 				)
 			},
 		),
@@ -1659,6 +1663,29 @@ type AccountContractProvider interface {
 	GetAccountContractCode(location common.AddressLocation) ([]byte, error)
 }
 
+// Unified function for AccountContractsGet
+func unifiedAccountContractsGetFunction(
+	provider AccountContractProvider,
+	addressValue interpreter.AddressValue,
+) interpreter.UnifiedNativeFunction {
+	return func(
+		context interpreter.UnifiedFunctionContext,
+		args *interpreter.ArgumentExtractor,
+		receiver interpreter.Value,
+		typeArguments []interpreter.StaticType,
+		locationRange interpreter.LocationRange,
+	) interpreter.Value {
+		nameValue := args.GetString(0)
+
+		return AccountContractsGet(
+			context,
+			addressValue,
+			nameValue,
+			provider,
+		)
+	}
+}
+
 func newInterpreterAccountContractsGetFunction(
 	context interpreter.FunctionCreationContext,
 	provider AccountContractProvider,
@@ -1666,25 +1693,11 @@ func newInterpreterAccountContractsGetFunction(
 ) interpreter.BoundFunctionGenerator {
 	return func(accountContracts interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 
-		return interpreter.NewBoundHostFunctionValue(
+		return interpreter.NewUnifiedBoundHostFunctionValue(
 			context,
 			accountContracts,
 			sema.Account_ContractsTypeGetFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-				context := invocation.InvocationContext
-
-				nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return AccountContractsGet(
-					context,
-					addressValue,
-					nameValue,
-					provider,
-				)
-			},
+			unifiedAccountContractsGetFunction(provider, addressValue),
 		)
 	}
 }
@@ -1692,24 +1705,25 @@ func newInterpreterAccountContractsGetFunction(
 func NewVMAccountContractsGetFunction(provider AccountContractProvider) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_ContractsType,
-		FunctionValue: vm.NewNativeFunctionValue(
+		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_ContractsTypeGetFunctionName,
 			sema.Account_ContractsTypeGetFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
-
+			func(
+				context interpreter.UnifiedFunctionContext,
+				args *interpreter.ArgumentExtractor,
+				receiver interpreter.Value,
+				typeArguments []interpreter.StaticType,
+				locationRange interpreter.LocationRange,
+			) interpreter.Value {
 				// Get address field from the receiver
 				addressValue := vm.GetAccountTypePrivateAddressValue(receiver)
 
-				nameValue, ok := args[0].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return AccountContractsGet(
+				return unifiedAccountContractsGetFunction(provider, addressValue)(
 					context,
-					addressValue,
-					nameValue,
-					provider,
+					args,
+					receiver,
+					typeArguments,
+					locationRange,
 				)
 			},
 		),
@@ -1752,6 +1766,37 @@ func AccountContractsGet(
 	}
 }
 
+// Unified function for AccountContractsBorrow
+func unifiedAccountContractsBorrowFunction(
+	handler AccountContractsHandler,
+	address common.Address,
+) interpreter.UnifiedNativeFunction {
+	return func(
+		context interpreter.UnifiedFunctionContext,
+		args *interpreter.ArgumentExtractor,
+		receiver interpreter.Value,
+		typeArguments []interpreter.StaticType,
+		locationRange interpreter.LocationRange,
+	) interpreter.Value {
+		nameValue := args.GetString(0)
+
+		// Get the type from typeArguments (first type argument)
+		if len(typeArguments) == 0 {
+			panic(errors.NewUnreachableError())
+		}
+		borrowType := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
+
+		return AccountContractsBorrow(
+			context,
+			locationRange,
+			address,
+			nameValue,
+			borrowType,
+			handler,
+		)
+	}
+}
+
 func newInterpreterAccountContractsBorrowFunction(
 	context interpreter.AccountContractBorrowContext,
 	handler AccountContractsHandler,
@@ -1762,35 +1807,11 @@ func newInterpreterAccountContractsBorrowFunction(
 		// Converted addresses can be cached and don't have to be recomputed on each function invocation
 		address := addressValue.ToAddress()
 
-		return interpreter.NewBoundHostFunctionValue(
+		return interpreter.NewUnifiedBoundHostFunctionValue(
 			context,
 			accountContracts,
 			sema.Account_ContractsTypeBorrowFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-
-				invocationContext := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				typeParameterPair := invocation.TypeParameterTypes.Oldest()
-				if typeParameterPair == nil {
-					panic(errors.NewUnreachableError())
-				}
-				borrowType := typeParameterPair.Value
-
-				return AccountContractsBorrow(
-					invocationContext,
-					locationRange,
-					address,
-					nameValue,
-					borrowType,
-					handler,
-				)
-			},
+			unifiedAccountContractsBorrowFunction(handler, address),
 		)
 	}
 }
@@ -1798,28 +1819,25 @@ func newInterpreterAccountContractsBorrowFunction(
 func NewVMAccountContractsBorrowFunction(handler AccountContractsHandler) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_ContractsType,
-		FunctionValue: vm.NewNativeFunctionValue(
+		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_ContractsTypeBorrowFunctionName,
 			sema.Account_ContractsTypeBorrowFunctionType,
-			func(context *vm.Context, typeArguments []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
-
+			func(
+				context interpreter.UnifiedFunctionContext,
+				args *interpreter.ArgumentExtractor,
+				receiver interpreter.Value,
+				typeArguments []interpreter.StaticType,
+				locationRange interpreter.LocationRange,
+			) interpreter.Value {
 				// Get address field from the receiver
 				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
 
-				nameValue, ok := args[0].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				borrowType := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
-
-				return AccountContractsBorrow(
+				return unifiedAccountContractsBorrowFunction(handler, address)(
 					context,
-					interpreter.EmptyLocationRange,
-					address,
-					nameValue,
-					borrowType,
-					handler,
+					args,
+					receiver,
+					typeArguments,
+					locationRange,
 				)
 			},
 		),
@@ -1957,6 +1975,40 @@ type AccountContractAdditionHandler interface {
 	TemporarilyRecordCode(location common.AddressLocation, code []byte)
 }
 
+// Unified function for AccountContractsChange (Add/Update)
+func unifiedAccountContractsChangeFunction(
+	handler AccountContractAdditionAndNamesHandler,
+	addressValue interpreter.AddressValue,
+	isUpdate bool,
+) interpreter.UnifiedNativeFunction {
+	return func(
+		context interpreter.UnifiedFunctionContext,
+		args *interpreter.ArgumentExtractor,
+		receiver interpreter.Value,
+		typeArguments []interpreter.StaticType,
+		locationRange interpreter.LocationRange,
+	) interpreter.Value {
+		// Extract arguments as Values and Types for changeAccountContracts
+		arguments := make([]interpreter.Value, args.Count())
+		argumentTypes := make([]sema.Type, args.Count())
+		for i := 0; i < args.Count(); i++ {
+			arguments[i] = args.Get(i)
+			staticType := arguments[i].StaticType(context)
+			argumentTypes[i] = interpreter.MustConvertStaticToSemaType(staticType, context)
+		}
+
+		return changeAccountContracts(
+			context,
+			arguments,
+			argumentTypes,
+			addressValue,
+			locationRange,
+			handler,
+			isUpdate,
+		)
+	}
+}
+
 // newInterpreterAccountContractsChangeFunction called when e.g.
 // - adding: `Account.contracts.add(name: "Foo", code: [...])` (isUpdate = false)
 // - updating: `Account.contracts.update(name: "Foo", code: [...])` (isUpdate = true)
@@ -1973,22 +2025,11 @@ func newInterpreterAccountContractsChangeFunction(
 	}
 
 	return func(accountContracts interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		return interpreter.NewBoundHostFunctionValue(
+		return interpreter.NewUnifiedBoundHostFunctionValue(
 			context,
 			accountContracts,
 			functionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-				context := invocation.InvocationContext
-				return changeAccountContracts(
-					context,
-					invocation.Arguments,
-					invocation.ArgumentTypes,
-					addressValue,
-					invocation.LocationRange,
-					handler,
-					isUpdate,
-				)
-			},
+			unifiedAccountContractsChangeFunction(handler, addressValue, isUpdate),
 		)
 	}
 }
@@ -2007,28 +2048,24 @@ func newVMAccountContractsChangeFunction(
 
 	return VMFunction{
 		BaseType: sema.Account_ContractsType,
-		FunctionValue: vm.NewNativeFunctionValue(
+		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			functionName,
 			functionType,
-			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
-
+			func(
+				context interpreter.UnifiedFunctionContext,
+				args *interpreter.ArgumentExtractor,
+				receiver interpreter.Value,
+				typeArguments []interpreter.StaticType,
+				locationRange interpreter.LocationRange,
+			) interpreter.Value {
 				address := vm.GetAccountTypePrivateAddressValue(receiver)
 
-				argumentTypes := make([]sema.Type, len(args))
-				// TODO: optimize
-				for i, arg := range args {
-					staticType := arg.StaticType(context)
-					argumentTypes[i] = interpreter.MustConvertStaticToSemaType(staticType, context)
-				}
-
-				return changeAccountContracts(
+				return unifiedAccountContractsChangeFunction(handler, address, isUpdate)(
 					context,
 					args,
-					argumentTypes,
-					address,
-					interpreter.EmptyLocationRange,
-					handler,
-					isUpdate,
+					receiver,
+					typeArguments,
+					locationRange,
 				)
 			},
 		),
@@ -2325,61 +2362,82 @@ func changeAccountContracts(
 	)
 }
 
+// Unified function for AccountContractsTryUpdate
+func unifiedAccountContractsTryUpdateFunction(
+	handler AccountContractAdditionAndNamesHandler,
+	addressValue interpreter.AddressValue,
+) interpreter.UnifiedNativeFunction {
+	return func(
+		context interpreter.UnifiedFunctionContext,
+		args *interpreter.ArgumentExtractor,
+		receiver interpreter.Value,
+		typeArguments []interpreter.StaticType,
+		locationRange interpreter.LocationRange,
+	) (deploymentResult interpreter.Value) {
+		var deployedContract interpreter.Value
+
+		defer func() {
+			if r := recover(); r != nil {
+				rootError := r
+				for {
+					switch err := r.(type) {
+					case errors.UserError, errors.ExternalError:
+						// Error is ignored for now.
+						// Simply return with a `nil` deployed-contract
+					case xerrors.Wrapper:
+						r = err.Unwrap()
+						continue
+					default:
+						panic(rootError)
+					}
+
+					break
+				}
+			}
+
+			var optionalDeployedContract interpreter.OptionalValue
+			if deployedContract == nil {
+				optionalDeployedContract = interpreter.NilOptionalValue
+			} else {
+				optionalDeployedContract = interpreter.NewSomeValueNonCopying(context, deployedContract)
+			}
+
+			deploymentResult = interpreter.NewDeploymentResultValue(context, optionalDeployedContract)
+		}()
+
+		// TODO: optimize
+		arguments := make([]interpreter.Value, args.Count())
+		argumentTypes := make([]sema.Type, args.Count())
+		for i := 0; i < args.Count(); i++ {
+			arguments[i] = args.Get(i)
+			staticType := arguments[i].StaticType(context)
+			argumentTypes[i] = interpreter.MustConvertStaticToSemaType(staticType, context)
+		}
+
+		deployedContract = changeAccountContracts(
+			context,
+			arguments,
+			argumentTypes,
+			addressValue,
+			locationRange,
+			handler,
+			true, // isUpdate = true for TryUpdate
+		)
+		return
+	}
+}
+
 func newInterpreterAccountContractsTryUpdateFunction(
 	context interpreter.FunctionCreationContext,
 	handler AccountContractAdditionAndNamesHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountContracts interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		return interpreter.NewBoundHostFunctionValue(
+		return interpreter.NewUnifiedBoundHostFunctionValue(
 			context,
 			accountContracts,
 			sema.Account_ContractsTypeTryUpdateFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) (deploymentResult interpreter.Value) {
-				context := invocation.InvocationContext
-
-				var deployedContract interpreter.Value
-
-				defer func() {
-					if r := recover(); r != nil {
-						rootError := r
-						for {
-							switch err := r.(type) {
-							case errors.UserError, errors.ExternalError:
-								// Error is ignored for now.
-								// Simply return with a `nil` deployed-contract
-							case xerrors.Wrapper:
-								r = err.Unwrap()
-								continue
-							default:
-								panic(rootError)
-							}
-
-							break
-						}
-					}
-
-					var optionalDeployedContract interpreter.OptionalValue
-					if deployedContract == nil {
-						optionalDeployedContract = interpreter.NilOptionalValue
-					} else {
-						optionalDeployedContract = interpreter.NewSomeValueNonCopying(context, deployedContract)
-					}
-
-					deploymentResult = interpreter.NewDeploymentResultValue(context, optionalDeployedContract)
-				}()
-
-				deployedContract = changeAccountContracts(
-					context,
-					invocation.Arguments,
-					invocation.ArgumentTypes,
-					addressValue,
-					invocation.LocationRange,
-					handler,
-					true,
-				)
-				return
-			},
+			unifiedAccountContractsTryUpdateFunction(handler, addressValue),
 		)
 	}
 }
@@ -2390,61 +2448,20 @@ func newVMAccountContractsTryUpdateFunction(
 
 	return VMFunction{
 		BaseType: sema.Account_ContractsType,
-		FunctionValue: vm.NewNativeFunctionValue(
+		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_ContractsTypeTryUpdateFunctionName,
 			sema.Account_ContractsTypeTryUpdateFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) (deploymentResult vm.Value) {
+			func(context interpreter.UnifiedFunctionContext, args *interpreter.ArgumentExtractor, receiver interpreter.Value, typeArguments []interpreter.StaticType, locationRange interpreter.LocationRange) (deploymentResult interpreter.Value) {
 
 				address := vm.GetAccountTypePrivateAddressValue(receiver)
 
-				var deployedContract interpreter.Value
-
-				defer func() {
-					if r := recover(); r != nil {
-						rootError := r
-						for {
-							switch err := r.(type) {
-							case errors.UserError, errors.ExternalError:
-								// Error is ignored for now.
-								// Simply return with a `nil` deployed-contract
-							case xerrors.Wrapper:
-								r = err.Unwrap()
-								continue
-							default:
-								panic(rootError)
-							}
-
-							break
-						}
-					}
-
-					var optionalDeployedContract interpreter.OptionalValue
-					if deployedContract == nil {
-						optionalDeployedContract = interpreter.NilOptionalValue
-					} else {
-						optionalDeployedContract = interpreter.NewSomeValueNonCopying(context, deployedContract)
-					}
-
-					deploymentResult = interpreter.NewDeploymentResultValue(context, optionalDeployedContract)
-				}()
-
-				argumentTypes := make([]sema.Type, len(args))
-				// TODO: optimize
-				for i, arg := range args {
-					staticType := arg.StaticType(context)
-					argumentTypes[i] = interpreter.MustConvertStaticToSemaType(staticType, context)
-				}
-
-				deployedContract = changeAccountContracts(
+				return unifiedAccountContractsTryUpdateFunction(handler, address)(
 					context,
 					args,
-					argumentTypes,
-					address,
-					interpreter.EmptyLocationRange,
-					handler,
-					true,
+					receiver,
+					typeArguments,
+					locationRange,
 				)
-				return
 			},
 		),
 	}
@@ -2699,6 +2716,30 @@ type AccountContractRemovalHandler interface {
 	RecordContractRemoval(location common.AddressLocation)
 }
 
+// Unified function for AccountContractsRemove
+func unifiedAccountContractsRemoveFunction(
+	handler AccountContractRemovalHandler,
+	addressValue interpreter.AddressValue,
+) interpreter.UnifiedNativeFunction {
+	return func(
+		context interpreter.UnifiedFunctionContext,
+		args *interpreter.ArgumentExtractor,
+		receiver interpreter.Value,
+		typeArguments []interpreter.StaticType,
+		locationRange interpreter.LocationRange,
+	) interpreter.Value {
+		nameValue := args.GetString(0)
+
+		return removeContract(
+			context,
+			addressValue,
+			nameValue,
+			handler,
+			locationRange,
+		)
+	}
+}
+
 func newInterpreterAccountContractsRemoveFunction(
 	context interpreter.FunctionCreationContext,
 	handler AccountContractRemovalHandler,
@@ -2706,28 +2747,11 @@ func newInterpreterAccountContractsRemoveFunction(
 ) interpreter.BoundFunctionGenerator {
 	return func(accountContracts interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 
-		return interpreter.NewBoundHostFunctionValue(
+		return interpreter.NewUnifiedBoundHostFunctionValue(
 			context,
 			accountContracts,
 			sema.Account_ContractsTypeRemoveFunctionType,
-			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
-
-				context := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return removeContract(
-					context,
-					addressValue,
-					nameValue,
-					handler,
-					locationRange,
-				)
-			},
+			unifiedAccountContractsRemoveFunction(handler, addressValue),
 		)
 	}
 }
@@ -2737,25 +2761,25 @@ func newVMAccountContractsRemoveFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_ContractsType,
-		FunctionValue: vm.NewNativeFunctionValue(
+		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_ContractsTypeRemoveFunctionName,
 			sema.Account_ContractsTypeRemoveFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) interpreter.Value {
-
+			func(
+				context interpreter.UnifiedFunctionContext,
+				args *interpreter.ArgumentExtractor,
+				receiver interpreter.Value,
+				typeArguments []interpreter.StaticType,
+				locationRange interpreter.LocationRange,
+			) interpreter.Value {
 				// Get address field from the receiver
 				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver)
 
-				nameValue, ok := args[0].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return removeContract(
+				return unifiedAccountContractsRemoveFunction(handler, accountAddress)(
 					context,
-					accountAddress,
-					nameValue,
-					handler,
-					interpreter.EmptyLocationRange,
+					args,
+					receiver,
+					typeArguments,
+					locationRange,
 				)
 			},
 		),
