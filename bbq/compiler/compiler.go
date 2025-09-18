@@ -889,6 +889,11 @@ func (c *Compiler[E, _]) exportGlobals() []bbq.Global {
 
 	for _, global := range c.Globals { //nolint:maprange
 		index := int(global.GetGlobalInfo().Index)
+
+		if globals[index] != nil {
+			panic(errors.NewUnexpectedError("duplicate global index %d", index))
+		}
+
 		globals[index] = global
 	}
 
