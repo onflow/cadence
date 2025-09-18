@@ -890,8 +890,14 @@ func (c *Compiler[E, _]) exportGlobals() []bbq.Global {
 	for _, global := range c.Globals { //nolint:maprange
 		index := int(global.GetGlobalInfo().Index)
 
-		if globals[index] != nil {
-			panic(errors.NewUnexpectedError("duplicate global index %d", index))
+		existingGlobal := globals[index]
+		if existingGlobal != nil {
+			panic(errors.NewUnexpectedError(
+				"duplicate global at index %d. existing global: %#q, new global %#q",
+				index,
+				existingGlobal.GetGlobalInfo().QualifiedName,
+				global.GetGlobalInfo().QualifiedName,
+			))
 		}
 
 		globals[index] = global
@@ -3525,11 +3531,16 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location,
 		name := variable.Name
 		qualifiedName := c.createGlobalAlias(location, name, aliases, false)
 
-		// All global-variables of imports must be initialized when the current program is initialized.
-		// Therefore, add all global **variables** as "used" globals-variables, so they are always added
-		// to the compiled program.
-		// VM will initialize all used globals-variables.
-		c.addUsedImportedGlobal(name, qualifiedName, location)
+		if _, ok := c.Globals[qualifiedName]; !ok {
+			// All global-variables of imports must be initialized when the current program is initialized.
+			// Therefore, add all global **variables** as "used" globals-variables, so they are always added
+			// to the compiled program.
+			// VM will initialize all used globals-variables.
+			//
+			// Only add them if they are not already added.
+			// e.g: Could have more than one path to a transitive import.
+			c.addUsedImportedGlobal(name, qualifiedName, location)
+		}
 	}
 
 	for _, function := range importedProgram.Functions {

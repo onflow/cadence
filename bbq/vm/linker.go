@@ -52,13 +52,7 @@ func LinkGlobals(
 	// NOTE: ensure both the context and the mapping are updated
 
 	for _, global := range program.Globals {
-
 		index := int(global.GetGlobalInfo().Index)
-
-		// Sanity check to avoid global index clashing.
-		if globals[index] != nil {
-			panic(errors.NewUnexpectedError("duplicate global index %d", index))
-		}
 
 		switch typedGlobal := global.(type) {
 		case *bbq.FunctionGlobal[opcode.Instruction]:
