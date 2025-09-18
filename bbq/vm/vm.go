@@ -917,8 +917,12 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
 	// Load type arguments
 	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 
-	// Load arguments
-	arguments := vm.popN(int(ins.ArgCount))
+	// Load arguments.
+	// Make a copy, since the slice can get mutated, since the stack is reused.
+	// This can happen in case getting the member below triggers execution of other functions.
+	argCount := int(ins.ArgCount)
+	arguments := make([]Value, argCount)
+	copy(arguments, vm.popN(argCount))
 
 	// Load the invoked value
 	receiver := vm.pop()
@@ -1158,7 +1162,7 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 func checkMemberAccessTargetType(
 	vm *VM,
 	accessedTypeIndex uint16,
-	accessedValue interpreter.Value,
+	accessedValue Value,
 ) {
 	accessedType := vm.loadType(accessedTypeIndex)
 
@@ -1700,7 +1704,7 @@ func opEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
 	eventFields := vm.popN(int(ins.ArgCount))
 
 	// Make a copy, since the slice can get mutated, since the stack is reused.
-	fields := make([]interpreter.Value, len(eventFields))
+	fields := make([]Value, len(eventFields))
 	copy(fields, eventFields)
 
 	context.EmitEvent(
