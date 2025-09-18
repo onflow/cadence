@@ -384,6 +384,8 @@
     pop:
       - name: "arguments"
         # TODO: count
+      - name: "receiver"
+        type: "value"
     push:
       - name: "result"
         type: "value"

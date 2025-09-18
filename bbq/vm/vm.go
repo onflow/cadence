@@ -910,18 +910,23 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 	vm.push(boundFunction)
 }
 
-func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
+func opInvokeDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
 	// TODO: This method is now equivalent to: `GetField` + `Invoke` instructions.
 	// See if it can be replaced. That will reduce the complexity of `invokeFunction` method below.
 
 	// Load type arguments
 	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 
-	// Load arguments
-	arguments := vm.popN(int(ins.ArgCount))
+	// Get the receiver and its member *before* getting the arguments.
+	//
+	// Getting the member might trigger the execution of other functions,
+	// which might modify the stack.
+	// This avoids having to allocate a copy of the arguments slice.
 
 	// Load the invoked value
-	receiver := vm.pop()
+	lastStackIndex := len(vm.stack) - 1
+	argumentCount := int(ins.ArgCount)
+	receiver := vm.stack[lastStackIndex-argumentCount]
 
 	// Get function
 	nameIndex := ins.Name
@@ -934,6 +939,10 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
 		EmptyLocationRange,
 		funcName,
 	)
+
+	// Load arguments.
+	// While at it, also pop the receiver, which is stored before the arguments.
+	arguments := vm.popN(1 + argumentCount)[1:]
 
 	invokeFunction(
 		vm,
@@ -1158,7 +1167,7 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 func checkMemberAccessTargetType(
 	vm *VM,
 	accessedTypeIndex uint16,
-	accessedValue interpreter.Value,
+	accessedValue Value,
 ) {
 	accessedType := vm.loadType(accessedTypeIndex)
 
@@ -1613,7 +1622,7 @@ func (vm *VM) run() {
 		case opcode.InstructionInvoke:
 			opInvoke(vm, ins)
 		case opcode.InstructionInvokeDynamic:
-			opInvokeMethodDynamic(vm, ins)
+			opInvokeDynamic(vm, ins)
 		case opcode.InstructionDrop:
 			opDrop(vm)
 		case opcode.InstructionDup:
@@ -1700,7 +1709,7 @@ func opEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
 	eventFields := vm.popN(int(ins.ArgCount))
 
 	// Make a copy, since the slice can get mutated, since the stack is reused.
-	fields := make([]interpreter.Value, len(eventFields))
+	fields := make([]Value, len(eventFields))
 	copy(fields, eventFields)
 
 	context.EmitEvent(
