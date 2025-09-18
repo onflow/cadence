@@ -368,30 +368,6 @@
   controlEffects:
     - call:
 
-- name: "invokeDynamic"
-  description:
-    Invokes a method with the given name dynamically. 
-    Pops the receiver and the arguments off the stack, invokes the function with the arguments,
-    and then pushes the result back on to the stack.
-  operands:
-    - name: "name"
-      type: "constantIndex"
-    - name: "typeArgs"
-      type: "typeIndices"
-    - name: "argCount"
-      type: "size"
-  valueEffects:
-    pop:
-      - name: "arguments"
-        # TODO: count
-      - name: "receiver"
-        type: "value"
-    push:
-      - name: "result"
-        type: "value"
-  controlEffects:
-    - call:
-
 - name: "getMethod"
   description:
     Pops a value off the stack, the receiver,

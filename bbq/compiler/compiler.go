@@ -2467,8 +2467,6 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 				// Compile arguments
 				c.compileArguments(expression.Arguments, invocationTypes)
 
-				//funcNameConst := c.addStringConst(funcName)
-
 				c.emit(
 					opcode.InstructionInvoke{
 						TypeArgs: typeArgs,
