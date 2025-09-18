@@ -19,10 +19,8 @@
 package compiler
 
 import (
-	"maps"
 	"math"
 	"math/big"
-	"slices"
 	"strings"
 
 	"github.com/onflow/cadence/activations"
@@ -887,14 +885,14 @@ func (c *Compiler[_, T]) exportTypes() []T {
 }
 
 func (c *Compiler[E, _]) exportGlobals() []bbq.Global {
-	// create a sorted global slice by index for linker efficiency
-	// tradeoff: compiler does more work to sort the globals, but linker does less work to link the globals
-	// ignore linting, order doesn't matter since its sorted after
-	globalsSlice := slices.Collect(maps.Values(c.Globals)) //nolint:forbidigo
-	slices.SortFunc(globalsSlice, func(a, b bbq.Global) int {
-		return int(a.GetGlobalInfo().Index) - int(b.GetGlobalInfo().Index)
-	})
-	return globalsSlice
+	globals := make([]bbq.Global, len(c.Globals))
+
+	for _, global := range c.Globals { //nolint:maprange
+		index := int(global.GetGlobalInfo().Index)
+		globals[index] = global
+	}
+
+	return globals
 }
 
 // removeAlias removes the address qualifier from the name if it exists
