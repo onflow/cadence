@@ -910,7 +910,7 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 	vm.push(boundFunction)
 }
 
-func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
+func opInvokeDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
 	// TODO: This method is now equivalent to: `GetField` + `Invoke` instructions.
 	// See if it can be replaced. That will reduce the complexity of `invokeFunction` method below.
 
@@ -1622,7 +1622,7 @@ func (vm *VM) run() {
 		case opcode.InstructionInvoke:
 			opInvoke(vm, ins)
 		case opcode.InstructionInvokeDynamic:
-			opInvokeMethodDynamic(vm, ins)
+			opInvokeDynamic(vm, ins)
 		case opcode.InstructionDrop:
 			opDrop(vm)
 		case opcode.InstructionDup:
