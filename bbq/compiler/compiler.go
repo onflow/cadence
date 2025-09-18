@@ -893,7 +893,7 @@ func (c *Compiler[E, _]) exportGlobals() []bbq.Global {
 		existingGlobal := globals[index]
 		if existingGlobal != nil {
 			panic(errors.NewUnexpectedError(
-				"duplicate global at index %d. existing global: %#q, new global %#q",
+				"duplicate global index %d. existing global: %#q, new global %#q",
 				index,
 				existingGlobal.GetGlobalInfo().QualifiedName,
 				global.GetGlobalInfo().QualifiedName,
