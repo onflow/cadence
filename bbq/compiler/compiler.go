@@ -19,10 +19,8 @@
 package compiler
 
 import (
-	"maps"
 	"math"
 	"math/big"
-	"slices"
 	"strings"
 
 	"github.com/onflow/cadence/activations"
@@ -911,14 +909,25 @@ func (c *Compiler[_, T]) exportTypes() []T {
 }
 
 func (c *Compiler[E, _]) exportGlobals() []bbq.Global {
-	// create a sorted global slice by index for linker efficiency
-	// tradeoff: compiler does more work to sort the globals, but linker does less work to link the globals
-	// ignore linting, order doesn't matter since its sorted after
-	globalsSlice := slices.Collect(maps.Values(c.Globals)) //nolint:forbidigo
-	slices.SortFunc(globalsSlice, func(a, b bbq.Global) int {
-		return int(a.GetGlobalInfo().Index) - int(b.GetGlobalInfo().Index)
-	})
-	return globalsSlice
+	globals := make([]bbq.Global, len(c.Globals))
+
+	for _, global := range c.Globals { //nolint:maprange
+		index := int(global.GetGlobalInfo().Index)
+
+		existingGlobal := globals[index]
+		if existingGlobal != nil {
+			panic(errors.NewUnexpectedError(
+				"duplicate global at index %d. existing global: %#q, new global %#q",
+				index,
+				existingGlobal.GetGlobalInfo().QualifiedName,
+				global.GetGlobalInfo().QualifiedName,
+			))
+		}
+
+		globals[index] = global
+	}
+
+	return globals
 }
 
 // removeAlias removes the address qualifier from the name if it exists
@@ -2497,16 +2506,16 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 			invokedExpr.Expression,
 			isOptional,
 			func() {
-				// withOptionalChaining already load the receiver onto the stack.
+				// Get the method as a bound function.
+				// withOptionalChaining evaluates the target expression and leave the value on stack.
+				// i.e: the receiver is already loaded.
+				c.compileMemberAccess(invokedExpr)
 
 				// Compile arguments
 				c.compileArguments(expression.Arguments, invocationTypes)
 
-				funcNameConst := c.addRawStringConst(funcName)
-
 				c.emit(
-					opcode.InstructionInvokeDynamic{
-						Name:     funcNameConst.index,
+					opcode.InstructionInvoke{
 						TypeArgs: typeArgs,
 						ArgCount: argumentCount,
 					},
@@ -3567,11 +3576,16 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location,
 		name := variable.Name
 		qualifiedName := c.createGlobalAlias(location, name, aliases, false)
 
-		// All global-variables of imports must be initialized when the current program is initialized.
-		// Therefore, add all global **variables** as "used" globals-variables, so they are always added
-		// to the compiled program.
-		// VM will initialize all used globals-variables.
-		c.addUsedImportedGlobal(name, qualifiedName, location)
+		if _, ok := c.Globals[qualifiedName]; !ok {
+			// All global-variables of imports must be initialized when the current program is initialized.
+			// Therefore, add all global **variables** as "used" globals-variables, so they are always added
+			// to the compiled program.
+			// VM will initialize all used globals-variables.
+			//
+			// Only add them if they are not already added.
+			// e.g: Could have more than one path to a transitive import.
+			c.addUsedImportedGlobal(name, qualifiedName, location)
+		}
 	}
 
 	for _, function := range importedProgram.Functions {

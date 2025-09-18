@@ -51,7 +51,9 @@ func LinkGlobals(
 
 	// NOTE: ensure both the context and the mapping are updated
 
-	for i, global := range program.Globals {
+	for _, global := range program.Globals {
+		index := int(global.GetGlobalInfo().Index)
+
 		switch typedGlobal := global.(type) {
 		case *bbq.FunctionGlobal[opcode.Instruction]:
 			function := typedGlobal.Function
@@ -67,7 +69,7 @@ func LinkGlobals(
 			variable := &interpreter.SimpleVariable{}
 			variable.InitializeWithValue(value)
 			// Linker matches the compiled function index with the linked function index
-			globals[i] = variable
+			globals[index] = variable
 			indexedGlobals.Set(function.QualifiedName, variable)
 		case *bbq.VariableGlobal[opcode.Instruction]:
 			variable := typedGlobal.Variable
@@ -86,7 +88,7 @@ func LinkGlobals(
 				})
 			}
 			// Linker matches the compiled variable index with the linked variable index
-			globals[i] = simpleVariable
+			globals[index] = simpleVariable
 			indexedGlobals.Set(variable.Name, simpleVariable)
 		case *bbq.ContractGlobal:
 			contract := typedGlobal.Contract
@@ -97,7 +99,7 @@ func LinkGlobals(
 				},
 			)
 			// Linker matches the compiled contract index with the linked contract index
-			globals[i] = contractVariable
+			globals[index] = contractVariable
 			indexedGlobals.Set(contract.Name, contractVariable)
 		case *bbq.ImportedGlobal:
 			importedGlobal := linkImportedGlobal(
@@ -107,7 +109,7 @@ func LinkGlobals(
 				context,
 				linkedGlobalsCache,
 			)
-			globals[i] = importedGlobal
+			globals[index] = importedGlobal
 
 			// Don't need to add to the `indexedGlobals`, since, like the below comment says,
 			// importer/caller doesn't need to know globals of nested imports

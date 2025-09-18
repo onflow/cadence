@@ -270,7 +270,7 @@ func analyzeControlFlow(instructions []Instruction) *FlowAnalysis {
 			// instructions that are jump targets are leaders and instructions immediately after jumps are leaders
 			analysis.BlockLeaders = append(analysis.BlockLeaders, target, i+1)
 
-		case InstructionInvoke, InstructionInvokeDynamic:
+		case InstructionInvoke:
 			// Function calls
 			jumpInfo := JumpInfo{
 				Target:   -1, // unknown target by default
