@@ -917,15 +917,16 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
 	// Load type arguments
 	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
 
-	// Load arguments.
-	// Make a copy, since the slice can get mutated, since the stack is reused.
-	// This can happen in case getting the member below triggers execution of other functions.
-	argCount := int(ins.ArgCount)
-	arguments := make([]Value, argCount)
-	copy(arguments, vm.popN(argCount))
+	// Get the receiver and its member *before* getting the arguments.
+	//
+	// Getting the member might trigger the execution of other functions,
+	// which might modify the stack.
+	// This avoids having to allocate a copy of the arguments slice.
 
 	// Load the invoked value
-	receiver := vm.pop()
+	lastStackIndex := len(vm.stack) - 1
+	argumentCount := int(ins.ArgCount)
+	receiver := vm.stack[lastStackIndex-argumentCount]
 
 	// Get function
 	nameIndex := ins.Name
@@ -938,6 +939,10 @@ func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
 		EmptyLocationRange,
 		funcName,
 	)
+
+	// Load arguments.
+	// While at it, also pop the receiver, which is stored before the arguments.
+	arguments := vm.popN(1 + argumentCount)[1:]
 
 	invokeFunction(
 		vm,
