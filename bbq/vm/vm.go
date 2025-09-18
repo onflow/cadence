@@ -910,48 +910,6 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 	vm.push(boundFunction)
 }
 
-func opInvokeDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
-	// TODO: This method is now equivalent to: `GetField` + `Invoke` instructions.
-	// See if it can be replaced. That will reduce the complexity of `invokeFunction` method below.
-
-	// Load type arguments
-	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
-
-	// Get the receiver and its member *before* getting the arguments.
-	//
-	// Getting the member might trigger the execution of other functions,
-	// which might modify the stack.
-	// This avoids having to allocate a copy of the arguments slice.
-
-	// Load the invoked value
-	lastStackIndex := len(vm.stack) - 1
-	argumentCount := int(ins.ArgCount)
-	receiver := vm.stack[lastStackIndex-argumentCount]
-
-	// Get function
-	nameIndex := ins.Name
-	funcName := getStringConstant(vm, nameIndex)
-
-	// Load the invoked value
-	memberAccessibleValue := receiver.(interpreter.MemberAccessibleValue)
-	functionValue := memberAccessibleValue.GetMember(
-		vm.context,
-		EmptyLocationRange,
-		funcName,
-	)
-
-	// Load arguments.
-	// While at it, also pop the receiver, which is stored before the arguments.
-	arguments := vm.popN(1 + argumentCount)[1:]
-
-	invokeFunction(
-		vm,
-		functionValue,
-		arguments,
-		typeArguments,
-	)
-}
-
 func invokeFunction(
 	vm *VM,
 	functionValue Value,
@@ -1621,8 +1579,6 @@ func (vm *VM) run() {
 			opGetMethod(vm, ins)
 		case opcode.InstructionInvoke:
 			opInvoke(vm, ins)
-		case opcode.InstructionInvokeDynamic:
-			opInvokeDynamic(vm, ins)
 		case opcode.InstructionDrop:
 			opDrop(vm)
 		case opcode.InstructionDup:

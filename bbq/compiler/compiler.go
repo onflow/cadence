@@ -2459,16 +2459,16 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 			invokedExpr.Expression,
 			isOptional,
 			func() {
-				// withOptionalChaining already load the receiver onto the stack.
+				// Get the method as a bound function.
+				// withOptionalChaining evaluates the target expression and leave the value on stack.
+				// i.e: the receiver is already loaded.
+				c.compileMemberAccess(invokedExpr)
 
 				// Compile arguments
 				c.compileArguments(expression.Arguments, invocationTypes)
 
-				funcNameConst := c.addStringConst(funcName)
-
 				c.emit(
-					opcode.InstructionInvokeDynamic{
-						Name:     funcNameConst.index,
+					opcode.InstructionInvoke{
 						TypeArgs: typeArgs,
 						ArgCount: argumentCount,
 					},
