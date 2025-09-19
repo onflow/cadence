@@ -9649,16 +9649,14 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 			opcode.InstructionGetField{FieldName: 2, AccessedType: 5},
 			opcode.InstructionTransferAndConvert{Type: 6},
 			opcode.InstructionInvoke{ArgCount: 1},
-			opcode.InstructionTransferAndConvert{Type: 8},
 
 			// Construct the self defined event
 			// Foo.ABC.ResourceDestroyed(self.x)
 			opcode.InstructionGetGlobal{Global: selfDefinedABCEventConstructorIndex},
 			opcode.InstructionGetLocal{Local: 0},
-			opcode.InstructionGetField{FieldName: 2, AccessedType: 9},
+			opcode.InstructionGetField{FieldName: 2, AccessedType: 8},
 			opcode.InstructionTransferAndConvert{Type: 6},
 			opcode.InstructionInvoke{ArgCount: 1},
-			opcode.InstructionTransferAndConvert{Type: 10},
 
 			// Invoke `collectEvents` with the above event.
 			// `collectEvents(...)`

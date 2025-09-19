@@ -2637,6 +2637,11 @@ func isDynamicMethodInvocation(accessedType sema.Type) bool {
 func (c *Compiler[_, _]) compileArguments(arguments ast.Arguments, invocationTypes sema.InvocationExpressionTypes) {
 	for index, argument := range arguments {
 		c.compileExpression(argument.Expression)
+
+		if invocationTypes.SkipArgumentsTransfer {
+			continue
+		}
+
 		parameterType := invocationTypes.ParameterTypes[index]
 		if parameterType == nil {
 			c.emitTransfer()

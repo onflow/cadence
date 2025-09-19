@@ -2370,9 +2370,10 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 	d.elaboration.SetInvocationExpressionTypes(
 		invocation,
 		sema.InvocationExpressionTypes{
-			ReturnType:     sema.VoidType,
-			ArgumentTypes:  eventTypes,
-			ParameterTypes: eventTypes,
+			ReturnType:            sema.VoidType,
+			ArgumentTypes:         eventTypes,
+			ParameterTypes:        eventTypes,
+			SkipArgumentsTransfer: true,
 		},
 	)
 
