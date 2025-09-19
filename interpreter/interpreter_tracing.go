@@ -28,8 +28,9 @@ import (
 
 const (
 	// common
-	tracingInvoke = "invoke"
-	tracingImport = "import"
+	tracingInvoke    = "invoke"
+	tracingImport    = "import"
+	tracingEmitEvent = "emitEvent"
 
 	// type prefixes
 	tracingArrayPrefix      = "array."
@@ -57,6 +58,7 @@ const (
 type Tracer interface {
 	ReportInvokeTrace(functionType string, functionName string, duration time.Duration)
 	ReportImportTrace(location string, duration time.Duration)
+	ReportEmitEventTrace(eventType string, duration time.Duration)
 
 	ReportArrayValueConstructTrace(valueID string, typeID string, duration time.Duration)
 	ReportArrayValueTransferTrace(valueID string, typeID string, duration time.Duration)
@@ -107,6 +109,16 @@ func (t CallbackTracer) ReportImportTrace(location string, duration time.Duratio
 		duration,
 		[]attribute.KeyValue{
 			attribute.String("location", location),
+		},
+	)
+}
+
+func (t CallbackTracer) ReportEmitEventTrace(eventType string, duration time.Duration) {
+	t(
+		tracingEmitEvent,
+		duration,
+		[]attribute.KeyValue{
+			attribute.String("type", eventType),
 		},
 	)
 }
@@ -485,6 +497,10 @@ func (NoOpTracer) ReportInvokeTrace(_ string, _ string, _ time.Duration) {
 }
 
 func (NoOpTracer) ReportImportTrace(_ string, _ time.Duration) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpTracer) ReportEmitEventTrace(_ string, _ time.Duration) {
 	panic(errors.NewUnreachableError())
 }
 

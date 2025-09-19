@@ -20,6 +20,7 @@ package vm
 
 import (
 	"math"
+	"time"
 
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
@@ -242,6 +243,16 @@ func (c *Config) EmitEvent(
 	eventType *sema.CompositeType,
 	eventFields []Value,
 ) {
+	if interpreter.TracingEnabled {
+		startTime := time.Now()
+		defer func() {
+			context.ReportEmitEventTrace(
+				string(eventType.ID()),
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	onEventEmitted := c.OnEventEmitted
 	if onEventEmitted == nil {
 		panic(&interpreter.EventEmissionUnavailableError{

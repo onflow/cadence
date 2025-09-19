@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"time"
+
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -365,6 +367,16 @@ func (interpreter *Interpreter) EmitEvent(
 	eventType *sema.CompositeType,
 	eventFields []Value,
 ) {
+	if TracingEnabled {
+		startTime := time.Now()
+		defer func() {
+			interpreter.ReportEmitEventTrace(
+				string(eventType.ID()),
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	config := interpreter.SharedState.Config
 
 	onEventEmitted := config.OnEventEmitted
