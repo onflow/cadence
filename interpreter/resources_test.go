@@ -1451,12 +1451,6 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 		t.Parallel()
 
-		// Skip test when compiling, as the VM currently does not have
-		// the resource invalidation defensive check like the interpreter.
-		if *compile {
-			return
-		}
-
 		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
             resource R {}
@@ -3060,11 +3054,7 @@ func TestInterpretMovedResourceInOptionalBinding(t *testing.T) {
 	// Error must be thrown at `copy2: <- victim`
 	errorStartPos := invalidResourceError.LocationRange.StartPosition()
 	assert.Equal(t, 15, errorStartPos.Line)
-	if *compile {
-		assert.Equal(t, 40, errorStartPos.Column)
-	} else {
-		assert.Equal(t, 58, errorStartPos.Column)
-	}
+	assert.Equal(t, ifCompile(55, 58), errorStartPos.Column)
 }
 
 func TestInterpretMovedResourceInSecondValue(t *testing.T) {
@@ -3110,11 +3100,7 @@ func TestInterpretMovedResourceInSecondValue(t *testing.T) {
 	// Error must be thrown at `copy2: <- victim`
 	errorStartPos := invalidResourceError.LocationRange.StartPosition()
 	assert.Equal(t, 15, errorStartPos.Line)
-	if *compile {
-		assert.Equal(t, 37, errorStartPos.Column)
-	} else {
-		assert.Equal(t, 55, errorStartPos.Column)
-	}
+	assert.Equal(t, ifCompile(52, 55), errorStartPos.Column)
 }
 
 func TestInterpretResourceLoss(t *testing.T) {
