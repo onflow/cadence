@@ -661,7 +661,7 @@ func unifiedAccountKeysAddFunction(
 		var addressValue interpreter.AddressValue
 		if addressPointer == nil {
 			// Get address field from the receiver
-			addressValue = vm.GetAccountTypePrivateAddressValue(receiver)
+			addressValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
 		} else {
 			addressValue = *addressPointer
 		}
@@ -794,7 +794,7 @@ func unifiedAccountKeysGetFunction(
 		var address common.Address
 		if addressPointer == nil {
 			// Get address field from the receiver
-			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
 		} else {
 			address = *addressPointer
 		}
@@ -894,7 +894,7 @@ func unifiedAccountKeysForEachFunction(
 
 		var address common.Address
 		if addressPointer == nil {
-			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
 		} else {
 			address = *addressPointer
 		}
@@ -1057,7 +1057,7 @@ func unifiedAccountKeysRevokeFunction(
 
 		var addressValue interpreter.AddressValue
 		if addressPointer == nil {
-			addressValue = vm.GetAccountTypePrivateAddressValue(receiver)
+			addressValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
 		} else {
 			addressValue = *addressPointer
 		}
@@ -1163,7 +1163,7 @@ func unifiedAccountInboxPublishFunction(
 
 		var providerValue interpreter.AddressValue
 		if providerPointer == nil {
-			providerValue = vm.GetAccountTypePrivateAddressValue(receiver)
+			providerValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
 		} else {
 			providerValue = *providerPointer
 		}
@@ -1273,7 +1273,7 @@ func unifiedAccountInboxUnpublishFunction(
 
 		var providerValue interpreter.AddressValue
 		if providerPointer == nil {
-			providerValue = vm.GetAccountTypePrivateAddressValue(receiver)
+			providerValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
 		} else {
 			providerValue = *providerPointer
 		}
@@ -1405,7 +1405,7 @@ func unifiedAccountInboxClaimFunction(
 
 		var recipientValue interpreter.AddressValue
 		if recipientPointer == nil {
-			recipientValue = vm.GetAccountTypePrivateAddressValue(receiver)
+			recipientValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
 		} else {
 			recipientValue = *recipientPointer
 		}
@@ -1612,7 +1612,7 @@ func unifiedAccountContractsGetFunction(
 
 		var addressValue interpreter.AddressValue
 		if addressPointer == nil {
-			addressValue = vm.GetAccountTypePrivateAddressValue(receiver)
+			addressValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
 		} else {
 			addressValue = *addressPointer
 		}
@@ -1711,7 +1711,7 @@ func unifiedAccountContractsBorrowFunction(
 
 		var address common.Address
 		if addressPointer == nil {
-			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
 		} else {
 			address = *addressPointer
 		}
@@ -1913,7 +1913,7 @@ func unifiedAccountContractsChangeFunction(
 
 		var addressValue interpreter.AddressValue
 		if addressPointer == nil {
-			addressValue = vm.GetAccountTypePrivateAddressValue(receiver)
+			addressValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
 		} else {
 			addressValue = *addressPointer
 		}
@@ -2321,7 +2321,7 @@ func unifiedAccountContractsTryUpdateFunction(
 
 		var addressValue interpreter.AddressValue
 		if addressPointer == nil {
-			addressValue = vm.GetAccountTypePrivateAddressValue(receiver)
+			addressValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
 		} else {
 			addressValue = *addressPointer
 		}
@@ -2633,7 +2633,7 @@ func unifiedAccountContractsRemoveFunction(
 
 		var addressValue interpreter.AddressValue
 		if addressPointer == nil {
-			addressValue = vm.GetAccountTypePrivateAddressValue(receiver)
+			addressValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
 		} else {
 			addressValue = *addressPointer
 		}
@@ -2977,7 +2977,7 @@ func unifiedAccountStorageCapabilitiesGetControllerFunction(
 
 		var address common.Address
 		if addressPointer == nil {
-			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
 		} else {
 			address = *addressPointer
 		}
@@ -3067,7 +3067,7 @@ func unifiedAccountStorageCapabilitiesGetControllersFunction(
 
 		var address common.Address
 		if addressPointer == nil {
-			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
 		} else {
 			address = *addressPointer
 		}
@@ -3188,7 +3188,7 @@ func unifiedAccountStorageCapabilitiesForEachControllerFunction(
 
 		var address common.Address
 		if addressPointer == nil {
-			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
 		} else {
 			address = *addressPointer
 		}
@@ -3356,7 +3356,7 @@ func unifiedAccountStorageCapabilitiesIssueFunction(
 
 		var address common.Address
 		if addressPointer == nil {
-			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
 		} else {
 			address = *addressPointer
 		}
@@ -3446,7 +3446,7 @@ func unifiedAccountStorageCapabilitiesIssueWithTypeFunction(
 
 		var address common.Address
 		if addressPointer == nil {
-			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
 		} else {
 			address = *addressPointer
 		}
@@ -3640,7 +3640,7 @@ func unifiedAccountAccountCapabilitiesIssueFunction(
 
 		var address common.Address
 		if addressPointer == nil {
-			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
 		} else {
 			address = *addressPointer
 		}
@@ -3704,7 +3704,7 @@ func unifiedAccountAccountCapabilitiesIssueWithTypeFunction(
 
 		var address common.Address
 		if addressPointer == nil {
-			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
 		} else {
 			address = *addressPointer
 		}
@@ -4372,7 +4372,7 @@ func unifiedAccountCapabilitiesPublishFunction(
 
 		var accountAddressValue interpreter.AddressValue
 		if accountAddressPointer == nil {
-			accountAddressValue = vm.GetAccountTypePrivateAddressValue(receiver)
+			accountAddressValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
 		} else {
 			accountAddressValue = *accountAddressPointer
 		}
@@ -4549,7 +4549,7 @@ func unifiedAccountCapabilitiesUnpublishFunction(
 
 		var addressValue interpreter.AddressValue
 		if addressPointer == nil {
-			addressValue = vm.GetAccountTypePrivateAddressValue(receiver)
+			addressValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
 		} else {
 			addressValue = *addressPointer
 		}
@@ -4862,7 +4862,7 @@ func unifiedAccountCapabilitiesGetFunction(
 
 		var addressValue interpreter.AddressValue
 		if addressPointer == nil {
-			addressValue = vm.GetAccountTypePrivateAddressValue(receiver)
+			addressValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
 		} else {
 			addressValue = *addressPointer
 		}
@@ -5117,7 +5117,7 @@ func unifiedAccountCapabilitiesExistsFunction(
 
 		var addressValue interpreter.AddressValue
 		if addressPointer == nil {
-			addressValue = vm.GetAccountTypePrivateAddressValue(receiver)
+			addressValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
 		} else {
 			addressValue = *addressPointer
 		}
@@ -5227,7 +5227,7 @@ func unifiedAccountAccountCapabilitiesGetControllerFunction(
 
 		var address common.Address
 		if addressPointer == nil {
-			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
 		} else {
 			address = *addressPointer
 		}
@@ -5296,7 +5296,7 @@ func unifiedAccountAccountCapabilitiesGetControllersFunction(
 	) interpreter.Value {
 		var address common.Address
 		if addressPointer == nil {
-			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
 		} else {
 			address = *addressPointer
 		}
@@ -5415,7 +5415,7 @@ func unifiedAccountAccountCapabilitiesForEachControllerFunction(
 
 		var address common.Address
 		if addressPointer == nil {
-			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
 		} else {
 			address = *addressPointer
 		}

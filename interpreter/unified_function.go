@@ -231,3 +231,15 @@ func NewUnifiedBoundHostFunctionValue(
 		nil,
 	)
 }
+
+func GetAccountTypePrivateAddressValue(receiver Value) AddressValue {
+	simpleCompositeValue := receiver.(*SimpleCompositeValue)
+
+	addressMetaInfo := simpleCompositeValue.PrivateField(AccountTypePrivateAddressFieldName)
+	address, ok := addressMetaInfo.(AddressValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	return address
+}
