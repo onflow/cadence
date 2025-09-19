@@ -340,64 +340,92 @@ func (v *AccountCapabilityControllerValue) CheckDeleted() {
 	}
 }
 
-func (v *AccountCapabilityControllerValue) newHostFunctionValue(
+func (v *AccountCapabilityControllerValue) newUnifiedHostFunctionValue(
 	context FunctionCreationContext,
 	funcType *sema.FunctionType,
-	f func(invocation Invocation) Value,
+	f UnifiedNativeFunction,
 ) FunctionValue {
 	return deletionCheckedFunctionValue{
-		FunctionValue: NewBoundHostFunctionValue(
+		FunctionValue: NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			funcType,
-			func(v *AccountCapabilityControllerValue, invocation Invocation) Value {
-				// NOTE: check if controller is already deleted
-				v.CheckDeleted()
-
-				return f(invocation)
-			},
+			NewUnifiedDeletionCheckedAccountCapabilityControllerFunction(f),
 		),
 	}
 }
 
+func NewUnifiedDeletionCheckedAccountCapabilityControllerFunction(
+	f UnifiedNativeFunction,
+) UnifiedNativeFunction {
+	return func(
+		context UnifiedFunctionContext,
+		args *ArgumentExtractor,
+		receiver Value,
+		typeArguments []StaticType,
+		locationRange LocationRange,
+	) Value {
+		controller, ok := receiver.(*AccountCapabilityControllerValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		controller.CheckDeleted()
+
+		return f(context, args, receiver, typeArguments, locationRange)
+	}
+}
+
+// Unified function for AccountCapabilityController Delete
+var UnifiedAccountCapabilityControllerDeleteFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		args *ArgumentExtractor,
+		receiver Value,
+		typeArguments []StaticType,
+		locationRange LocationRange,
+	) Value {
+		controller, ok := receiver.(*AccountCapabilityControllerValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		controller.Delete(context, locationRange)
+		controller.deleted = true
+		return Void
+	},
+)
+
 func (v *AccountCapabilityControllerValue) newDeleteFunction(
 	context FunctionCreationContext,
 ) FunctionValue {
-	return v.newHostFunctionValue(
-		context,
-		sema.AccountCapabilityControllerTypeDeleteFunctionType,
-		func(invocation Invocation) Value {
-			invocationContext := invocation.InvocationContext
-			locationRange := invocation.LocationRange
-
-			v.Delete(invocationContext, locationRange)
-
-			v.deleted = true
-
-			return Void
-		},
-	)
+	return v.newUnifiedHostFunctionValue(context, sema.AccountCapabilityControllerTypeDeleteFunctionType, UnifiedAccountCapabilityControllerDeleteFunction)
 }
+
+// Unified function for AccountCapabilityController SetTag
+var UnifiedAccountCapabilityControllerSetTagFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		args *ArgumentExtractor,
+		receiver Value,
+		typeArguments []StaticType,
+		locationRange LocationRange,
+	) Value {
+		controller, ok := receiver.(*AccountCapabilityControllerValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		newTagValue := args.GetString(0)
+		controller.SetTag(context, newTagValue)
+		return Void
+	},
+)
 
 func (v *AccountCapabilityControllerValue) newSetTagFunction(
 	context FunctionCreationContext,
 ) FunctionValue {
-	return v.newHostFunctionValue(
-		context,
-		sema.AccountCapabilityControllerTypeSetTagFunctionType,
-		func(invocation Invocation) Value {
-			inter := invocation.InvocationContext
-
-			newTagValue, ok := invocation.Arguments[0].(*StringValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			v.SetTag(inter, newTagValue)
-
-			return Void
-		},
-	)
+	return v.newUnifiedHostFunctionValue(context, sema.AccountCapabilityControllerTypeSetTagFunctionType, UnifiedAccountCapabilityControllerSetTagFunction)
 }
 
 func (v *AccountCapabilityControllerValue) SetDeleted() {
