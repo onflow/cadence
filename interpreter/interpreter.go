@@ -4406,21 +4406,10 @@ func UnifiedAccountStorageIterateFunction(
 		typeArguments []StaticType,
 		locationRange LocationRange,
 	) Value {
-		// interpreter supplies the address, vm does not
-		var addressValue AddressValue
-		if addressPointer == nil {
-			addressValue = GetAccountTypePrivateAddressValue(receiver)
-		} else {
-			addressValue = *addressPointer
-		}
-
+		addressValue := GetAddressValue(receiver, addressPointer)
 		address := addressValue.ToAddress()
 
-		// Convert args to slice for AccountStorageIterate
-		arguments := make([]Value, args.Count())
-		for i := 0; i < args.Count(); i++ {
-			arguments[i] = args.Get(i)
-		}
+		arguments := args.GetAll()
 
 		return AccountStorageIterate(
 			context,
@@ -4649,19 +4638,10 @@ func UnifiedAccountStorageSaveFunction(
 		typeArguments []StaticType,
 		locationRange LocationRange,
 	) Value {
-		// interpreter supplies the address, vm does not
-		var addressValue AddressValue
-		if addressPointer == nil {
-			addressValue = GetAccountTypePrivateAddressValue(receiver)
-		} else {
-			addressValue = *addressPointer
-		}
+		addressValue := GetAddressValue(receiver, addressPointer)
 
 		// Convert args to slice for AccountStorageSave
-		arguments := make([]Value, args.Count())
-		for i := 0; i < args.Count(); i++ {
-			arguments[i] = args.Get(i)
-		}
+		arguments := args.GetAll()
 
 		return AccountStorageSave(
 			context,
@@ -4751,21 +4731,11 @@ func UnifiedAccountStorageTypeFunction(
 		typeArguments []StaticType,
 		locationRange LocationRange,
 	) Value {
-		// interpreter supplies the address, vm does not
-		var addressValue AddressValue
-		if addressPointer == nil {
-			addressValue = GetAccountTypePrivateAddressValue(receiver)
-		} else {
-			addressValue = *addressPointer
-		}
-
+		addressValue := GetAddressValue(receiver, addressPointer)
 		address := addressValue.ToAddress()
 
 		// Convert args to slice for AccountStorageType
-		arguments := make([]Value, args.Count())
-		for i := 0; i < args.Count(); i++ {
-			arguments[i] = args.Get(i)
-		}
+		arguments := args.GetAll()
 
 		return AccountStorageType(
 			context,
@@ -4861,14 +4831,7 @@ func UnifiedAccountStorageReadFunction(
 		typeArguments []StaticType,
 		locationRange LocationRange,
 	) Value {
-		// interpreter supplies the address, vm does not
-		var addressValue AddressValue
-		if addressPointer == nil {
-			addressValue = GetAccountTypePrivateAddressValue(receiver)
-		} else {
-			addressValue = *addressPointer
-		}
-
+		addressValue := GetAddressValue(receiver, addressPointer)
 		address := addressValue.ToAddress()
 
 		// Get type parameter from typeArguments
@@ -4878,10 +4841,7 @@ func UnifiedAccountStorageReadFunction(
 		typeParameter := MustConvertStaticToSemaType(typeArguments[0], context)
 
 		// Convert args to slice for AccountStorageRead
-		arguments := make([]Value, args.Count())
-		for i := 0; i < args.Count(); i++ {
-			arguments[i] = args.Get(i)
-		}
+		arguments := args.GetAll()
 
 		return AccountStorageRead(
 			context,
@@ -4987,14 +4947,7 @@ func UnifiedAccountStorageBorrowFunction(
 		typeArguments []StaticType,
 		locationRange LocationRange,
 	) Value {
-		// interpreter supplies the address, vm does not
-		var addressValue AddressValue
-		if addressPointer == nil {
-			addressValue = GetAccountTypePrivateAddressValue(receiver)
-		} else {
-			addressValue = *addressPointer
-		}
-
+		addressValue := GetAddressValue(receiver, addressPointer)
 		address := addressValue.ToAddress()
 
 		// Get type parameter from typeArguments
@@ -5003,11 +4956,7 @@ func UnifiedAccountStorageBorrowFunction(
 		}
 		typeParameter := MustConvertStaticToSemaType(typeArguments[0], context)
 
-		// Convert args to slice for AccountStorageBorrow
-		arguments := make([]Value, args.Count())
-		for i := 0; i < args.Count(); i++ {
-			arguments[i] = args.Get(i)
-		}
+		arguments := args.GetAll()
 
 		return AccountStorageBorrow(
 			context,
@@ -5084,14 +5033,7 @@ func UnifiedAccountStorageCheckFunction(
 		typeArguments []StaticType,
 		locationRange LocationRange,
 	) Value {
-		// interpreter supplies the address, vm does not
-		var addressValue AddressValue
-		if addressPointer == nil {
-			addressValue = GetAccountTypePrivateAddressValue(receiver)
-		} else {
-			addressValue = *addressPointer
-		}
-
+		addressValue := GetAddressValue(receiver, addressPointer)
 		address := addressValue.ToAddress()
 
 		// Get type parameter from typeArguments
@@ -5101,10 +5043,7 @@ func UnifiedAccountStorageCheckFunction(
 		typeParameter := MustConvertStaticToSemaType(typeArguments[0], context)
 
 		// Convert args to slice for AccountStorageCheck
-		arguments := make([]Value, args.Count())
-		for i := 0; i < args.Count(); i++ {
-			arguments[i] = args.Get(i)
-		}
+		arguments := args.GetAll()
 
 		return AccountStorageCheck(
 			context,

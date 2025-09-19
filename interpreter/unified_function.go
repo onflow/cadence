@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 )
@@ -62,6 +63,10 @@ func (e *ArgumentExtractor) Get(index int) Value {
 		panic(errors.NewUnreachableError())
 	}
 	return e.arguments[index]
+}
+
+func (e *ArgumentExtractor) GetAll() []Value {
+	return e.arguments
 }
 
 func (e *ArgumentExtractor) GetNumber(index int) NumberValue {
@@ -230,6 +235,25 @@ func NewUnifiedBoundHostFunctionValue(
 		&self,
 		nil,
 	)
+}
+
+// Helper functions to get the address from the receiver or the address pointer
+// interpreter supplies the address, vm does not
+// see stdlib/account.go for usage examples
+func GetAddressValue(receiver Value, addressPointer *AddressValue) AddressValue {
+	if addressPointer == nil {
+		return GetAccountTypePrivateAddressValue(receiver)
+	} else {
+		return *addressPointer
+	}
+}
+
+func GetAddress(receiver Value, addressPointer *common.Address) common.Address {
+	if addressPointer == nil {
+		return GetAccountTypePrivateAddressValue(receiver).ToAddress()
+	} else {
+		return *addressPointer
+	}
 }
 
 func GetAccountTypePrivateAddressValue(receiver Value) AddressValue {
