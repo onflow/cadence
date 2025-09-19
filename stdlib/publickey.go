@@ -236,97 +236,60 @@ type PublicKeySignatureVerifier interface {
 	) (bool, error)
 }
 
+// Unified function for PublicKey VerifySignature
+func UnifiedPublicKeyVerifySignatureFunction(
+	publicKeyValue *interpreter.CompositeValue,
+	verifier PublicKeySignatureVerifier,
+) interpreter.UnifiedNativeFunction {
+	return func(
+		context interpreter.UnifiedFunctionContext,
+		args *interpreter.ArgumentExtractor,
+		receiver interpreter.Value,
+		typeArguments []interpreter.StaticType,
+		locationRange interpreter.LocationRange,
+	) interpreter.Value {
+		signatureValue := args.GetArray(0)
+		signedDataValue := args.GetArray(1)
+		domainSeparationTagValue := args.GetString(2)
+		hashAlgorithmValue := args.Get(3).(*interpreter.SimpleCompositeValue)
+
+		if publicKeyValue == nil {
+			publicKeyValue = receiver.(*interpreter.CompositeValue)
+		}
+
+		return PublicKeyVerifySignature(
+			context,
+			locationRange,
+			publicKeyValue,
+			signatureValue,
+			signedDataValue,
+			domainSeparationTagValue,
+			hashAlgorithmValue,
+			verifier,
+		)
+	}
+}
+
 func newInterpreterPublicKeyVerifySignatureFunction(
 	inter *interpreter.Interpreter,
 	publicKeyValue *interpreter.CompositeValue,
 	verifier PublicKeySignatureVerifier,
 ) interpreter.BoundFunctionValue {
-	return interpreter.NewBoundHostFunctionValue(
+	return interpreter.NewUnifiedBoundHostFunctionValue(
 		inter,
 		publicKeyValue,
 		sema.PublicKeyTypeVerifyFunctionType,
-		func(publicKeyValue *interpreter.CompositeValue, invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.InvocationContext
-			locationRange := invocation.LocationRange
-
-			signatureValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			signedDataValue, ok := invocation.Arguments[1].(*interpreter.ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			domainSeparationTagValue, ok := invocation.Arguments[2].(*interpreter.StringValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			hashAlgorithmValue, ok := invocation.Arguments[3].(*interpreter.SimpleCompositeValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			return PublicKeyVerifySignature(
-				inter,
-				locationRange,
-				publicKeyValue,
-				signatureValue,
-				signedDataValue,
-				domainSeparationTagValue,
-				hashAlgorithmValue,
-				verifier,
-			)
-		},
+		UnifiedPublicKeyVerifySignatureFunction(publicKeyValue, verifier),
 	)
 }
 
 func NewVMPublicKeyVerifySignatureFunction(verifier PublicKeySignatureVerifier) VMFunction {
 	return VMFunction{
 		BaseType: sema.PublicKeyType,
-		FunctionValue: vm.NewNativeFunctionValue(
+		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.PublicKeyTypeVerifyFunctionName,
 			sema.PublicKeyTypeVerifyFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
-
-				publicKeyValue, ok := receiver.(*interpreter.CompositeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				signatureValue, ok := args[0].(*interpreter.ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				signedDataValue, ok := args[1].(*interpreter.ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				domainSeparationTagValue, ok := args[2].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				hashAlgorithmValue, ok := args[3].(*interpreter.SimpleCompositeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return PublicKeyVerifySignature(
-					context,
-					interpreter.EmptyLocationRange,
-					publicKeyValue,
-					signatureValue,
-					signedDataValue,
-					domainSeparationTagValue,
-					hashAlgorithmValue,
-					verifier,
-				)
-			},
+			UnifiedPublicKeyVerifySignatureFunction(nil, verifier),
 		),
 	}
 }
@@ -387,61 +350,54 @@ type BLSPoPVerifier interface {
 	BLSVerifyPOP(publicKey *PublicKey, signature []byte) (bool, error)
 }
 
+// Unified function for PublicKey VerifyPoP
+func UnifiedPublicKeyVerifyPoPFunction(
+	publicKeyValue *interpreter.CompositeValue,
+	verifier BLSPoPVerifier,
+) interpreter.UnifiedNativeFunction {
+	return func(
+		context interpreter.UnifiedFunctionContext,
+		args *interpreter.ArgumentExtractor,
+		receiver interpreter.Value,
+		typeArguments []interpreter.StaticType,
+		locationRange interpreter.LocationRange,
+	) interpreter.Value {
+		signatureValue := args.GetArray(0)
+
+		if publicKeyValue == nil {
+			publicKeyValue = receiver.(*interpreter.CompositeValue)
+		}
+
+		return PublicKeyVerifyPoP(
+			context,
+			locationRange,
+			publicKeyValue,
+			signatureValue,
+			verifier,
+		)
+	}
+}
+
 func newInterpreterPublicKeyVerifyPoPFunction(
 	inter *interpreter.Interpreter,
 	publicKeyValue *interpreter.CompositeValue,
 	verifier BLSPoPVerifier,
 ) interpreter.BoundFunctionValue {
-	return interpreter.NewBoundHostFunctionValue(
+	return interpreter.NewUnifiedBoundHostFunctionValue(
 		inter,
 		publicKeyValue,
 		sema.PublicKeyTypeVerifyPoPFunctionType,
-		func(publicKeyValue *interpreter.CompositeValue, invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.InvocationContext
-			locationRange := invocation.LocationRange
-
-			signatureValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			return PublicKeyVerifyPoP(
-				inter,
-				locationRange,
-				publicKeyValue,
-				signatureValue,
-				verifier,
-			)
-		},
+		UnifiedPublicKeyVerifyPoPFunction(publicKeyValue, verifier),
 	)
 }
 
 func NewVMPublicKeyVerifyPoPFunction(verifier BLSPoPVerifier) VMFunction {
 	return VMFunction{
 		BaseType: sema.PublicKeyType,
-		FunctionValue: vm.NewNativeFunctionValue(
+		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.PublicKeyTypeVerifyPoPFunctionName,
 			sema.PublicKeyTypeVerifyPoPFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
-
-				publicKeyValue, ok := receiver.(*interpreter.CompositeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				signatureValue, ok := args[0].(*interpreter.ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return PublicKeyVerifyPoP(
-					context,
-					interpreter.EmptyLocationRange,
-					publicKeyValue,
-					signatureValue,
-					verifier,
-				)
-			},
+			UnifiedPublicKeyVerifyPoPFunction(nil, verifier),
 		),
 	}
 }
