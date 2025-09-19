@@ -657,14 +657,7 @@ func unifiedAccountKeysAddFunction(
 		hashAlgoValue := args.Get(1)
 		weightValue := args.GetUFix64(2)
 
-		// interpreter supplies the address, vm does not
-		var addressValue interpreter.AddressValue
-		if addressPointer == nil {
-			// Get address field from the receiver
-			addressValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
-		} else {
-			addressValue = *addressPointer
-		}
+		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
 
 		return AccountKeysAdd(
 			context,
@@ -791,13 +784,7 @@ func unifiedAccountKeysGetFunction(
 	) interpreter.Value {
 		indexValue := args.GetInt(0)
 
-		var address common.Address
-		if addressPointer == nil {
-			// Get address field from the receiver
-			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-		} else {
-			address = *addressPointer
-		}
+		address := interpreter.GetAddress(receiver, addressPointer)
 
 		return AccountKeysGet(
 			context,
@@ -892,12 +879,7 @@ func unifiedAccountKeysForEachFunction(
 	) interpreter.Value {
 		fnValue := args.GetFunction(0)
 
-		var address common.Address
-		if addressPointer == nil {
-			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-		} else {
-			address = *addressPointer
-		}
+		address := interpreter.GetAddress(receiver, addressPointer)
 
 		return AccountKeysForEach(
 			context,
@@ -1055,12 +1037,7 @@ func unifiedAccountKeysRevokeFunction(
 	) interpreter.Value {
 		indexValue := args.GetInt(0)
 
-		var addressValue interpreter.AddressValue
-		if addressPointer == nil {
-			addressValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
-		} else {
-			addressValue = *addressPointer
-		}
+		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
 
 		return AccountKeysRevoke(
 			context,
@@ -1161,12 +1138,7 @@ func unifiedAccountInboxPublishFunction(
 		nameValue := args.GetString(1)
 		recipientValue := args.GetAddress(2)
 
-		var providerValue interpreter.AddressValue
-		if providerPointer == nil {
-			providerValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
-		} else {
-			providerValue = *providerPointer
-		}
+		providerValue := interpreter.GetAddressValue(receiver, providerPointer)
 
 		return AccountInboxPublish(
 			context,
@@ -1271,12 +1243,7 @@ func unifiedAccountInboxUnpublishFunction(
 		}
 		borrowType := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
 
-		var providerValue interpreter.AddressValue
-		if providerPointer == nil {
-			providerValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
-		} else {
-			providerValue = *providerPointer
-		}
+		providerValue := interpreter.GetAddressValue(receiver, providerPointer)
 
 		return AccountInboxUnpublish(
 			context,
@@ -1403,12 +1370,7 @@ func unifiedAccountInboxClaimFunction(
 		}
 		borrowType := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
 
-		var recipientValue interpreter.AddressValue
-		if recipientPointer == nil {
-			recipientValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
-		} else {
-			recipientValue = *recipientPointer
-		}
+		recipientValue := interpreter.GetAddressValue(receiver, recipientPointer)
 
 		return AccountInboxClaim(
 			context,
@@ -1610,12 +1572,7 @@ func unifiedAccountContractsGetFunction(
 	) interpreter.Value {
 		nameValue := args.GetString(0)
 
-		var addressValue interpreter.AddressValue
-		if addressPointer == nil {
-			addressValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
-		} else {
-			addressValue = *addressPointer
-		}
+		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
 
 		return AccountContractsGet(
 			context,
@@ -1709,12 +1666,7 @@ func unifiedAccountContractsBorrowFunction(
 		}
 		borrowType := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
 
-		var address common.Address
-		if addressPointer == nil {
-			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-		} else {
-			address = *addressPointer
-		}
+		address := interpreter.GetAddress(receiver, addressPointer)
 
 		return AccountContractsBorrow(
 			context,
@@ -1901,22 +1853,15 @@ func unifiedAccountContractsChangeFunction(
 		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
 	) interpreter.Value {
-		// TODO: avoidable?
-		// Extract arguments as Values and Types for changeAccountContracts
-		arguments := make([]interpreter.Value, args.Count())
-		argumentTypes := make([]sema.Type, args.Count())
-		for i := 0; i < args.Count(); i++ {
-			arguments[i] = args.Get(i)
+		arguments := args.GetAll()
+		argumentTypes := make([]sema.Type, len(arguments))
+		for i := 0; i < len(arguments); i++ {
+			// typeArguments does not contain the information needed
 			staticType := arguments[i].StaticType(context)
 			argumentTypes[i] = interpreter.MustConvertStaticToSemaType(staticType, context)
 		}
 
-		var addressValue interpreter.AddressValue
-		if addressPointer == nil {
-			addressValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
-		} else {
-			addressValue = *addressPointer
-		}
+		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
 
 		return changeAccountContracts(
 			context,
@@ -2310,21 +2255,15 @@ func unifiedAccountContractsTryUpdateFunction(
 			deploymentResult = interpreter.NewDeploymentResultValue(context, optionalDeployedContract)
 		}()
 
-		// TODO: optimize/avoidable?
-		arguments := make([]interpreter.Value, args.Count())
-		argumentTypes := make([]sema.Type, args.Count())
-		for i := 0; i < args.Count(); i++ {
-			arguments[i] = args.Get(i)
+		arguments := args.GetAll()
+		argumentTypes := make([]sema.Type, len(arguments))
+		for i := 0; i < len(arguments); i++ {
+			// typeArguments does not contain the information needed
 			staticType := arguments[i].StaticType(context)
 			argumentTypes[i] = interpreter.MustConvertStaticToSemaType(staticType, context)
 		}
 
-		var addressValue interpreter.AddressValue
-		if addressPointer == nil {
-			addressValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
-		} else {
-			addressValue = *addressPointer
-		}
+		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
 
 		deployedContract = changeAccountContracts(
 			context,
@@ -2631,12 +2570,7 @@ func unifiedAccountContractsRemoveFunction(
 	) interpreter.Value {
 		nameValue := args.GetString(0)
 
-		var addressValue interpreter.AddressValue
-		if addressPointer == nil {
-			addressValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
-		} else {
-			addressValue = *addressPointer
-		}
+		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
 
 		return removeContract(
 			context,
@@ -2975,12 +2909,7 @@ func unifiedAccountStorageCapabilitiesGetControllerFunction(
 	) interpreter.Value {
 		capabilityIDValue := args.Get(0).(interpreter.UInt64Value)
 
-		var address common.Address
-		if addressPointer == nil {
-			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-		} else {
-			address = *addressPointer
-		}
+		address := interpreter.GetAddress(receiver, addressPointer)
 
 		return AccountStorageCapabilitiesGetController(
 			context,
@@ -3065,12 +2994,7 @@ func unifiedAccountStorageCapabilitiesGetControllersFunction(
 	) interpreter.Value {
 		targetPathValue := args.Get(0).(interpreter.PathValue)
 
-		var address common.Address
-		if addressPointer == nil {
-			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-		} else {
-			address = *addressPointer
-		}
+		address := interpreter.GetAddress(receiver, addressPointer)
 
 		return AccountStorageCapabilitiesGetControllers(
 			context,
@@ -3186,12 +3110,7 @@ func unifiedAccountStorageCapabilitiesForEachControllerFunction(
 		targetPathValue := args.Get(0).(interpreter.PathValue)
 		functionValue := args.GetFunction(1)
 
-		var address common.Address
-		if addressPointer == nil {
-			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-		} else {
-			address = *addressPointer
-		}
+		address := interpreter.GetAddress(receiver, addressPointer)
 
 		return AccountStorageCapabilitiesForeachController(
 			context,
@@ -3347,19 +3266,9 @@ func unifiedAccountStorageCapabilitiesIssueFunction(
 		}
 		borrowType := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
 
-		// Extract arguments
-		// TODO: maybe make this into a function in argument extractor
-		arguments := make([]interpreter.Value, args.Count())
-		for i := 0; i < args.Count(); i++ {
-			arguments[i] = args.Get(i)
-		}
+		arguments := args.GetAll()
 
-		var address common.Address
-		if addressPointer == nil {
-			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-		} else {
-			address = *addressPointer
-		}
+		address := interpreter.GetAddress(receiver, addressPointer)
 
 		return AccountStorageCapabilitiesIssue(
 			arguments,
@@ -3444,12 +3353,7 @@ func unifiedAccountStorageCapabilitiesIssueWithTypeFunction(
 		targetPathValue := args.Get(0).(interpreter.PathValue)
 		borrowType := args.GetType(1)
 
-		var address common.Address
-		if addressPointer == nil {
-			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-		} else {
-			address = *addressPointer
-		}
+		address := interpreter.GetAddress(receiver, addressPointer)
 
 		return AccountStorageCapabilitiesIssueWithType(
 			context,
@@ -3638,12 +3542,7 @@ func unifiedAccountAccountCapabilitiesIssueFunction(
 		}
 		ty := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
 
-		var address common.Address
-		if addressPointer == nil {
-			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-		} else {
-			address = *addressPointer
-		}
+		address := interpreter.GetAddress(receiver, addressPointer)
 
 		return checkAndIssueAccountCapabilityControllerWithType(
 			context,
@@ -3702,12 +3601,7 @@ func unifiedAccountAccountCapabilitiesIssueWithTypeFunction(
 			panic(errors.NewUnexpectedErrorFromCause(err))
 		}
 
-		var address common.Address
-		if addressPointer == nil {
-			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-		} else {
-			address = *addressPointer
-		}
+		address := interpreter.GetAddress(receiver, addressPointer)
 
 		return checkAndIssueAccountCapabilityControllerWithType(
 			context,
@@ -4370,12 +4264,7 @@ func unifiedAccountCapabilitiesPublishFunction(
 		capabilityValue := args.Get(0).(interpreter.CapabilityValue)
 		pathValue := args.Get(1).(interpreter.PathValue)
 
-		var accountAddressValue interpreter.AddressValue
-		if accountAddressPointer == nil {
-			accountAddressValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
-		} else {
-			accountAddressValue = *accountAddressPointer
-		}
+		accountAddressValue := interpreter.GetAddressValue(receiver, accountAddressPointer)
 
 		return AccountCapabilitiesPublish(
 			context,
@@ -4547,12 +4436,7 @@ func unifiedAccountCapabilitiesUnpublishFunction(
 	) interpreter.Value {
 		pathValue := args.Get(0).(interpreter.PathValue)
 
-		var addressValue interpreter.AddressValue
-		if addressPointer == nil {
-			addressValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
-		} else {
-			addressValue = *addressPointer
-		}
+		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
 
 		return AccountCapabilitiesUnpublish(
 			context,
@@ -4860,12 +4744,7 @@ func unifiedAccountCapabilitiesGetFunction(
 			panic(errors.NewUnexpectedErrorFromCause(err))
 		}
 
-		var addressValue interpreter.AddressValue
-		if addressPointer == nil {
-			addressValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
-		} else {
-			addressValue = *addressPointer
-		}
+		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
 
 		return AccountCapabilitiesGet(
 			context,
@@ -5115,12 +4994,7 @@ func unifiedAccountCapabilitiesExistsFunction(
 	) interpreter.Value {
 		pathValue := args.Get(0).(interpreter.PathValue)
 
-		var addressValue interpreter.AddressValue
-		if addressPointer == nil {
-			addressValue = interpreter.GetAccountTypePrivateAddressValue(receiver)
-		} else {
-			addressValue = *addressPointer
-		}
+		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
 
 		return AccountCapabilitiesExists(
 			context,
@@ -5225,12 +5099,7 @@ func unifiedAccountAccountCapabilitiesGetControllerFunction(
 
 		capabilityID := uint64(capabilityIDValue)
 
-		var address common.Address
-		if addressPointer == nil {
-			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-		} else {
-			address = *addressPointer
-		}
+		address := interpreter.GetAddress(receiver, addressPointer)
 
 		referenceValue := getAccountCapabilityControllerReference(
 			context,
@@ -5294,12 +5163,7 @@ func unifiedAccountAccountCapabilitiesGetControllersFunction(
 		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
 	) interpreter.Value {
-		var address common.Address
-		if addressPointer == nil {
-			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-		} else {
-			address = *addressPointer
-		}
+		address := interpreter.GetAddress(receiver, addressPointer)
 
 		return accountAccountCapabilitiesGetControllers(context, address, locationRange, handler)
 	}
@@ -5413,12 +5277,7 @@ func unifiedAccountAccountCapabilitiesForEachControllerFunction(
 	) interpreter.Value {
 		functionValue := args.GetFunction(0)
 
-		var address common.Address
-		if addressPointer == nil {
-			address = interpreter.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-		} else {
-			address = *addressPointer
-		}
+		address := interpreter.GetAddress(receiver, addressPointer)
 
 		return AccountCapabilitiesForEachController(context, address, functionValue, locationRange, handler)
 	}
