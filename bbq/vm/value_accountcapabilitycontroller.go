@@ -19,7 +19,6 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -33,40 +32,19 @@ func init() {
 
 	registerBuiltinTypeBoundFunction(
 		accountCapabilityControllerTypeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.AccountCapabilityControllerTypeSetTagFunctionName,
 			sema.AccountCapabilityControllerTypeSetTagFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, args ...Value) Value {
-
-				newTagValue, ok := args[0].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				v := getCheckedAccountCapabilityControllerReceiver(receiver)
-
-				v.SetTag(context, newTagValue)
-
-				return interpreter.Void
-			},
+			interpreter.NewUnifiedDeletionCheckedAccountCapabilityControllerFunction(interpreter.UnifiedAccountCapabilityControllerSetTagFunction),
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		accountCapabilityControllerTypeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.AccountCapabilityControllerTypeDeleteFunctionName,
 			sema.AccountCapabilityControllerTypeDeleteFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, _ ...Value) Value {
-
-				v := getCheckedAccountCapabilityControllerReceiver(receiver)
-
-				v.Delete(context, EmptyLocationRange)
-
-				v.SetDeleted()
-
-				return interpreter.Void
-			},
+			interpreter.NewUnifiedDeletionCheckedAccountCapabilityControllerFunction(interpreter.UnifiedAccountCapabilityControllerDeleteFunction),
 		),
 	)
 }
