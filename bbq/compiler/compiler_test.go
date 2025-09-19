@@ -9701,6 +9701,8 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
             resource ABC: Bar.XYZ {
                 var x: Int
 
+                event ResourceDestroyed(x: Int = self.x)
+
                 init() {
                     self.x = 6
                 }
@@ -9717,33 +9719,44 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 	fooProgram := ParseCheckAndCompile(t, fooContract, fooLocation, programs)
 
 	functions = fooProgram.Functions
-	require.Len(t, functions, 8)
+	require.Len(t, functions, 11)
 
 	defaultDestroyEventEmittingFunction := functions[7]
 	require.Equal(t, "Foo.ABC.$ResourceDestroyed", defaultDestroyEventEmittingFunction.Name)
 
 	const inheritedEventConstructorIndex = 9
+	const selfDefinedABCEventConstructorIndex = 12
 
 	assert.Equal(t,
 		[]opcode.Instruction{
 			opcode.InstructionStatement{},
 
+			// Get the `collectEvents` parameter for invocation.
+			opcode.InstructionGetLocal{Local: 1},
+
 			// Construct the inherited event
 			// Bar.XYZ.ResourceDestroyed(self.x)
 			opcode.InstructionGetGlobal{Global: inheritedEventConstructorIndex},
+			opcode.InstructionGetLocal{Local: 0},
+			opcode.InstructionGetField{FieldName: 2, AccessedType: 5},
+			opcode.InstructionTransferAndConvert{Type: 6},
+			opcode.InstructionInvoke{ArgCount: 1},
+
+			// Construct the self defined event
+			// Foo.ABC.ResourceDestroyed(self.x)
+			opcode.InstructionGetGlobal{Global: selfDefinedABCEventConstructorIndex},
 			opcode.InstructionGetLocal{Local: 0},
 			opcode.InstructionGetField{FieldName: 2, AccessedType: 8},
 			opcode.InstructionTransferAndConvert{Type: 6},
 			opcode.InstructionInvoke{ArgCount: 1},
 
-			// Create the array with the above event.
-			// `[Bar.XYZ.ResourceDestroyed(self.x)]`
-			opcode.InstructionTransferAndConvert{Type: 9},
-			opcode.InstructionNewArray{Type: 7, Size: 1, IsResource: false},
-			opcode.InstructionTransferAndConvert{Type: 7},
+			// Invoke `collectEvents` with the above event.
+			// `collectEvents(...)`
+			opcode.InstructionInvoke{ArgCount: 2},
+			opcode.InstructionDrop{},
 
-			// return the array
-			opcode.InstructionReturnValue{},
+			// Return
+			opcode.InstructionReturn{},
 		},
 		defaultDestroyEventEmittingFunction.Code,
 	)

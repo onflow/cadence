@@ -2123,16 +2123,16 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 
 	// Generate a function:
 	// ```
-	//   func $ResourceDestroyed(): [AnyStruct] {
-	//      return [
-	//          R.$ResourceDestroyed(args...),
-	//          I.$ResourceDestroyed(args...),
+	//   func $ResourceDestroyed(collectEvents: fun(events...)) {
+	//      collectEvents(
+	//          R.ResourceDestroyed(args...),
+	//          I.ResourceDestroyed(args...),
 	//          ...,
-	//      ]
+	//      )
 	//   }
 	// ```
 
-	eventConstructorInvocations := make([]ast.Expression, 0)
+	eventConstructorInvocations := make(ast.Arguments, 0)
 	eventTypes := make([]sema.Type, 0)
 
 	addEventConstructorInvocation := func(
@@ -2224,7 +2224,16 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 
 		d.elaboration.SetInvocationExpressionTypes(eventConstructorInvocation, invocationTypes)
 
-		eventConstructorInvocations = append(eventConstructorInvocations, eventConstructorInvocation)
+		eventConstructorInvocations = append(
+			eventConstructorInvocations,
+			ast.NewArgument(
+				d.memoryGauge,
+				"",
+				&startPos,
+				&startPos,
+				eventConstructorInvocation,
+			),
+		)
 		eventTypes = append(eventTypes, eventType)
 	}
 
@@ -2263,38 +2272,66 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 	astRange := compositeDeclaration.Range
 	startPos := compositeDeclaration.StartPos
 
-	// Put all the events in an array.
-	arrayExpression := ast.NewArrayExpression(
+	// Invoke the 'collectEvents' parameter
+
+	invocation := ast.NewInvocationExpression(
 		d.memoryGauge,
+		ast.NewIdentifierExpression(
+			d.memoryGauge,
+			ast.NewIdentifier(
+				d.memoryGauge,
+				commons.CollectEventsParamName,
+				startPos,
+			),
+		),
+		nil,
 		eventConstructorInvocations,
-		astRange,
+		startPos,
+		startPos,
 	)
 
-	d.elaboration.SetArrayExpressionTypes(
-		arrayExpression,
-		sema.ArrayExpressionTypes{
-			ArrayType:     semaAnyStructArrayType,
-			ArgumentTypes: eventTypes,
+	d.elaboration.SetInvocationExpressionTypes(
+		invocation,
+		sema.InvocationExpressionTypes{
+			ReturnType:            sema.VoidType,
+			ArgumentTypes:         eventTypes,
+			ParameterTypes:        eventTypes,
+			SkipArgumentsTransfer: true,
 		},
 	)
 
-	// Return the array.
-	returnStatement := ast.NewReturnStatement(
-		d.memoryGauge,
-		arrayExpression,
-		astRange,
-	)
-	d.elaboration.SetReturnStatementTypes(
-		returnStatement,
-		sema.ReturnStatementTypes{
-			ValueType:  semaAnyStructArrayType,
-			ReturnType: semaAnyStructArrayType,
-		},
-	)
+	expressionStmt := ast.NewExpressionStatement(d.memoryGauge, invocation)
 
 	functionName := commons.ResourceDestroyedEventsFunctionName
 
 	// Generate the function declaration.
+
+	parameter := ast.NewParameter(
+		d.memoryGauge,
+		sema.ArgumentLabelNotRequired,
+		ast.NewIdentifier(
+			d.memoryGauge,
+			commons.CollectEventsParamName,
+			startPos,
+		),
+		ast.NewTypeAnnotation(
+			d.memoryGauge,
+			false,
+			ast.NewFunctionType(
+				d.memoryGauge,
+				ast.FunctionPurityUnspecified,
+				[]*ast.TypeAnnotation{
+					anyStructTypeAnnotation,
+				},
+				nil,
+				astRange,
+			),
+			ast.EmptyPosition,
+		),
+		nil,
+		ast.EmptyPosition,
+	)
+
 	eventEmittingFunction := ast.NewFunctionDeclaration(
 		d.memoryGauge,
 		ast.AccessNotSpecified,
@@ -2307,18 +2344,17 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 			startPos,
 		),
 		nil,
-		nil,
-		ast.NewTypeAnnotation(
+		ast.NewParameterList(
 			d.memoryGauge,
-			false,
-			astAnyStructArrayType,
-			startPos,
+			[]*ast.Parameter{parameter},
+			astRange,
 		),
+		nil,
 		ast.NewFunctionBlock(
 			d.memoryGauge,
 			ast.NewBlock(
 				d.memoryGauge,
-				[]ast.Statement{returnStatement},
+				[]ast.Statement{expressionStmt},
 				astRange,
 			),
 			nil,
@@ -2472,17 +2508,21 @@ var executeFuncType = sema.NewSimpleFunctionType(
 	sema.VoidTypeAnnotation,
 )
 
-var eventEmittingFunctionType = sema.NewSimpleFunctionType(
-	sema.FunctionPurityImpure,
-	nil,
-	sema.VoidTypeAnnotation,
-)
-
-var semaAnyStructArrayType = &sema.VariableSizedType{
-	Type: sema.AnyStructType,
+var eventEmittingFunctionType = &sema.FunctionType{
+	Purity:               sema.FunctionPurityImpure,
+	ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+	Parameters: []sema.Parameter{
+		{
+			TypeAnnotation: sema.TypeAnnotation{
+				Type: commons.CollectEventsFunctionType,
+			},
+			Label:      sema.ArgumentLabelNotRequired,
+			Identifier: commons.CollectEventsParamName,
+		},
+	},
 }
 
-var astAnyStructArrayType = &ast.VariableSizedType{
+var anyStructTypeAnnotation = &ast.TypeAnnotation{
 	Type: &ast.NominalType{
 		Identifier: ast.Identifier{
 			Identifier: sema.AnyStructType.Name,
