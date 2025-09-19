@@ -644,7 +644,7 @@ type AccountKeyAdditionHandler interface {
 // Unified function for AccountKeysAdd
 func unifiedAccountKeysAddFunction(
 	handler AccountKeyAdditionHandler,
-	addressValue interpreter.AddressValue,
+	addressPointer *interpreter.AddressValue,
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
@@ -656,6 +656,15 @@ func unifiedAccountKeysAddFunction(
 		publicKeyValue := args.GetComposite(0)
 		hashAlgoValue := args.Get(1)
 		weightValue := args.GetUFix64(2)
+
+		// interpreter supplies the address, vm does not
+		var addressValue interpreter.AddressValue
+		if addressPointer == nil {
+			// Get address field from the receiver
+			addressValue = vm.GetAccountTypePrivateAddressValue(receiver)
+		} else {
+			addressValue = *addressPointer
+		}
 
 		return AccountKeysAdd(
 			context,
@@ -679,7 +688,7 @@ func newInterpreterAccountKeysAddFunction(
 			context,
 			accountKeys,
 			sema.Account_KeysTypeAddFunctionType,
-			unifiedAccountKeysAddFunction(handler, addressValue),
+			unifiedAccountKeysAddFunction(handler, &addressValue),
 		)
 	}
 }
@@ -692,24 +701,7 @@ func NewVMAccountKeysAddFunction(
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_KeysTypeAddFunctionName,
 			sema.Account_KeysTypeAddFunctionType,
-			func(
-				context interpreter.UnifiedFunctionContext,
-				args *interpreter.ArgumentExtractor,
-				receiver interpreter.Value,
-				typeArguments []interpreter.StaticType,
-				locationRange interpreter.LocationRange,
-			) interpreter.Value {
-				// Get address field from the receiver
-				address := vm.GetAccountTypePrivateAddressValue(receiver)
-
-				return unifiedAccountKeysAddFunction(handler, address)(
-					context,
-					args,
-					receiver,
-					typeArguments,
-					locationRange,
-				)
-			},
+			unifiedAccountKeysAddFunction(handler, nil),
 		),
 	}
 }
@@ -788,7 +780,7 @@ type AccountKeyProvider interface {
 // Unified function for AccountKeysGet
 func unifiedAccountKeysGetFunction(
 	provider AccountKeyProvider,
-	address common.Address,
+	addressPointer *common.Address,
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
@@ -798,6 +790,14 @@ func unifiedAccountKeysGetFunction(
 		locationRange interpreter.LocationRange,
 	) interpreter.Value {
 		indexValue := args.GetInt(0)
+
+		var address common.Address
+		if addressPointer == nil {
+			// Get address field from the receiver
+			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+		} else {
+			address = *addressPointer
+		}
 
 		return AccountKeysGet(
 			context,
@@ -824,7 +824,7 @@ func newInterpreterAccountKeysGetFunction(
 			context,
 			accountKeys,
 			functionType,
-			unifiedAccountKeysGetFunction(provider, address),
+			unifiedAccountKeysGetFunction(provider, &address),
 		)
 	}
 }
@@ -837,24 +837,7 @@ func NewVMAccountKeysGetFunction(
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_KeysTypeGetFunctionName,
 			sema.Account_KeysTypeGetFunctionType,
-			func(
-				context interpreter.UnifiedFunctionContext,
-				args *interpreter.ArgumentExtractor,
-				receiver interpreter.Value,
-				typeArguments []interpreter.StaticType,
-				locationRange interpreter.LocationRange,
-			) interpreter.Value {
-				// Get address field from the receiver
-				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-
-				return unifiedAccountKeysGetFunction(provider, address)(
-					context,
-					args,
-					receiver,
-					typeArguments,
-					locationRange,
-				)
-			},
+			unifiedAccountKeysGetFunction(provider, nil),
 		),
 	}
 }
@@ -898,7 +881,7 @@ var accountKeysForEachCallbackTypeParams = []sema.Type{sema.AccountKeyType}
 // Unified function for AccountKeysForEach
 func unifiedAccountKeysForEachFunction(
 	provider AccountKeyProvider,
-	address common.Address,
+	addressPointer *common.Address,
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
@@ -908,6 +891,13 @@ func unifiedAccountKeysForEachFunction(
 		locationRange interpreter.LocationRange,
 	) interpreter.Value {
 		fnValue := args.GetFunction(0)
+
+		var address common.Address
+		if addressPointer == nil {
+			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+		} else {
+			address = *addressPointer
+		}
 
 		return AccountKeysForEach(
 			context,
@@ -931,7 +921,7 @@ func newInterpreterAccountKeysForEachFunction(
 			context,
 			accountKeys,
 			sema.Account_KeysTypeForEachFunctionType,
-			unifiedAccountKeysForEachFunction(provider, address),
+			unifiedAccountKeysForEachFunction(provider, &address),
 		)
 	}
 }
@@ -944,24 +934,7 @@ func NewVMAccountKeysForEachFunction(
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_KeysTypeForEachFunctionName,
 			sema.Account_KeysTypeForEachFunctionType,
-			func(
-				context interpreter.UnifiedFunctionContext,
-				args *interpreter.ArgumentExtractor,
-				receiver interpreter.Value,
-				typeArguments []interpreter.StaticType,
-				locationRange interpreter.LocationRange,
-			) interpreter.Value {
-				// Get address field from the receiver
-				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-
-				return unifiedAccountKeysForEachFunction(provider, address)(
-					context,
-					args,
-					receiver,
-					typeArguments,
-					locationRange,
-				)
-			},
+			unifiedAccountKeysForEachFunction(provider, nil),
 		),
 	}
 }
@@ -1071,7 +1044,7 @@ type AccountKeyRevocationHandler interface {
 // Unified function for AccountKeysRevoke
 func unifiedAccountKeysRevokeFunction(
 	handler AccountKeyRevocationHandler,
-	addressValue interpreter.AddressValue,
+	addressPointer *interpreter.AddressValue,
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
@@ -1081,6 +1054,13 @@ func unifiedAccountKeysRevokeFunction(
 		locationRange interpreter.LocationRange,
 	) interpreter.Value {
 		indexValue := args.GetInt(0)
+
+		var addressValue interpreter.AddressValue
+		if addressPointer == nil {
+			addressValue = vm.GetAccountTypePrivateAddressValue(receiver)
+		} else {
+			addressValue = *addressPointer
+		}
 
 		return AccountKeysRevoke(
 			context,
@@ -1103,7 +1083,7 @@ func newInterpreterAccountKeysRevokeFunction(
 			context,
 			accountKeys,
 			sema.Account_KeysTypeRevokeFunctionType,
-			unifiedAccountKeysRevokeFunction(handler, addressValue),
+			unifiedAccountKeysRevokeFunction(handler, &addressValue),
 		)
 	}
 }
@@ -1116,24 +1096,7 @@ func NewVMAccountKeysRevokeFunction(
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_KeysTypeRevokeFunctionName,
 			sema.Account_KeysTypeRevokeFunctionType,
-			func(
-				context interpreter.UnifiedFunctionContext,
-				args *interpreter.ArgumentExtractor,
-				receiver interpreter.Value,
-				typeArguments []interpreter.StaticType,
-				locationRange interpreter.LocationRange,
-			) interpreter.Value {
-				// Get address field from the receiver
-				addressValue := vm.GetAccountTypePrivateAddressValue(receiver)
-
-				return unifiedAccountKeysRevokeFunction(handler, addressValue)(
-					context,
-					args,
-					receiver,
-					typeArguments,
-					locationRange,
-				)
-			},
+			unifiedAccountKeysRevokeFunction(handler, nil),
 		),
 	}
 }
@@ -1185,7 +1148,7 @@ func AccountKeysRevoke(
 // Unified function for AccountInboxPublish
 func unifiedAccountInboxPublishFunction(
 	handler EventEmitter,
-	providerValue interpreter.AddressValue,
+	providerPointer *interpreter.AddressValue,
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
@@ -1197,6 +1160,13 @@ func unifiedAccountInboxPublishFunction(
 		value := args.Get(0).(interpreter.CapabilityValue)
 		nameValue := args.GetString(1)
 		recipientValue := args.GetAddress(2)
+
+		var providerValue interpreter.AddressValue
+		if providerPointer == nil {
+			providerValue = vm.GetAccountTypePrivateAddressValue(receiver)
+		} else {
+			providerValue = *providerPointer
+		}
 
 		return AccountInboxPublish(
 			context,
@@ -1220,7 +1190,7 @@ func newInterpreterAccountInboxPublishFunction(
 			context,
 			accountInbox,
 			sema.Account_InboxTypePublishFunctionType,
-			unifiedAccountInboxPublishFunction(handler, providerValue),
+			unifiedAccountInboxPublishFunction(handler, &providerValue),
 		)
 	}
 }
@@ -1233,24 +1203,7 @@ func NewVMAccountInboxPublishFunction(
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_InboxTypePublishFunctionName,
 			sema.Account_InboxTypePublishFunctionType,
-			func(
-				context interpreter.UnifiedFunctionContext,
-				args *interpreter.ArgumentExtractor,
-				receiver interpreter.Value,
-				typeArguments []interpreter.StaticType,
-				locationRange interpreter.LocationRange,
-			) interpreter.Value {
-				// Get address field from the receiver
-				providerValue := vm.GetAccountTypePrivateAddressValue(receiver)
-
-				return unifiedAccountInboxPublishFunction(handler, providerValue)(
-					context,
-					args,
-					receiver,
-					typeArguments,
-					locationRange,
-				)
-			},
+			unifiedAccountInboxPublishFunction(handler, nil),
 		),
 	}
 }
@@ -1301,7 +1254,7 @@ func AccountInboxPublish(
 // Unified function for AccountInboxUnpublish
 func unifiedAccountInboxUnpublishFunction(
 	handler EventEmitter,
-	providerValue interpreter.AddressValue,
+	providerPointer *interpreter.AddressValue,
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
@@ -1317,6 +1270,13 @@ func unifiedAccountInboxUnpublishFunction(
 			panic(errors.NewUnreachableError())
 		}
 		borrowType := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
+
+		var providerValue interpreter.AddressValue
+		if providerPointer == nil {
+			providerValue = vm.GetAccountTypePrivateAddressValue(receiver)
+		} else {
+			providerValue = *providerPointer
+		}
 
 		return AccountInboxUnpublish(
 			context,
@@ -1339,7 +1299,7 @@ func newInterpreterAccountInboxUnpublishFunction(
 			context,
 			accountInbox,
 			sema.Account_InboxTypeUnpublishFunctionType,
-			unifiedAccountInboxUnpublishFunction(handler, providerValue),
+			unifiedAccountInboxUnpublishFunction(handler, &providerValue),
 		)
 	}
 }
@@ -1352,24 +1312,7 @@ func NewVMAccountInboxUnpublishFunction(
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_InboxTypeUnpublishFunctionName,
 			sema.Account_InboxTypeUnpublishFunctionType,
-			func(
-				context interpreter.UnifiedFunctionContext,
-				args *interpreter.ArgumentExtractor,
-				receiver interpreter.Value,
-				typeArguments []interpreter.StaticType,
-				locationRange interpreter.LocationRange,
-			) interpreter.Value {
-				// Get address field from the receiver
-				providerValue := vm.GetAccountTypePrivateAddressValue(receiver)
-
-				return unifiedAccountInboxUnpublishFunction(handler, providerValue)(
-					context,
-					args,
-					receiver,
-					typeArguments,
-					locationRange,
-				)
-			},
+			unifiedAccountInboxUnpublishFunction(handler, nil),
 		),
 	}
 }
@@ -1442,7 +1385,7 @@ func AccountInboxUnpublish(
 // Unified function for AccountInboxClaim
 func unifiedAccountInboxClaimFunction(
 	handler EventEmitter,
-	recipientValue interpreter.AddressValue,
+	recipientPointer *interpreter.AddressValue,
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
@@ -1459,6 +1402,13 @@ func unifiedAccountInboxClaimFunction(
 			panic(errors.NewUnreachableError())
 		}
 		borrowType := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
+
+		var recipientValue interpreter.AddressValue
+		if recipientPointer == nil {
+			recipientValue = vm.GetAccountTypePrivateAddressValue(receiver)
+		} else {
+			recipientValue = *recipientPointer
+		}
 
 		return AccountInboxClaim(
 			context,
@@ -1482,7 +1432,7 @@ func newInterpreterAccountInboxClaimFunction(
 			context,
 			accountInbox,
 			sema.Account_InboxTypeClaimFunctionType,
-			unifiedAccountInboxClaimFunction(handler, recipientValue),
+			unifiedAccountInboxClaimFunction(handler, &recipientValue),
 		)
 	}
 }
@@ -1495,24 +1445,7 @@ func NewVMAccountInboxClaimFunction(
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_InboxTypeClaimFunctionName,
 			sema.Account_InboxTypeClaimFunctionType,
-			func(
-				context interpreter.UnifiedFunctionContext,
-				args *interpreter.ArgumentExtractor,
-				receiver interpreter.Value,
-				typeArguments []interpreter.StaticType,
-				locationRange interpreter.LocationRange,
-			) interpreter.Value {
-				// Get address field from the receiver
-				recipientValue := vm.GetAccountTypePrivateAddressValue(receiver)
-
-				return unifiedAccountInboxClaimFunction(handler, recipientValue)(
-					context,
-					args,
-					receiver,
-					typeArguments,
-					locationRange,
-				)
-			},
+			unifiedAccountInboxClaimFunction(handler, nil),
 		),
 	}
 }
@@ -1666,7 +1599,7 @@ type AccountContractProvider interface {
 // Unified function for AccountContractsGet
 func unifiedAccountContractsGetFunction(
 	provider AccountContractProvider,
-	addressValue interpreter.AddressValue,
+	addressPointer *interpreter.AddressValue,
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
@@ -1676,6 +1609,13 @@ func unifiedAccountContractsGetFunction(
 		locationRange interpreter.LocationRange,
 	) interpreter.Value {
 		nameValue := args.GetString(0)
+
+		var addressValue interpreter.AddressValue
+		if addressPointer == nil {
+			addressValue = vm.GetAccountTypePrivateAddressValue(receiver)
+		} else {
+			addressValue = *addressPointer
+		}
 
 		return AccountContractsGet(
 			context,
@@ -1697,7 +1637,7 @@ func newInterpreterAccountContractsGetFunction(
 			context,
 			accountContracts,
 			sema.Account_ContractsTypeGetFunctionType,
-			unifiedAccountContractsGetFunction(provider, addressValue),
+			unifiedAccountContractsGetFunction(provider, &addressValue),
 		)
 	}
 }
@@ -1708,24 +1648,7 @@ func NewVMAccountContractsGetFunction(provider AccountContractProvider) VMFuncti
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_ContractsTypeGetFunctionName,
 			sema.Account_ContractsTypeGetFunctionType,
-			func(
-				context interpreter.UnifiedFunctionContext,
-				args *interpreter.ArgumentExtractor,
-				receiver interpreter.Value,
-				typeArguments []interpreter.StaticType,
-				locationRange interpreter.LocationRange,
-			) interpreter.Value {
-				// Get address field from the receiver
-				addressValue := vm.GetAccountTypePrivateAddressValue(receiver)
-
-				return unifiedAccountContractsGetFunction(provider, addressValue)(
-					context,
-					args,
-					receiver,
-					typeArguments,
-					locationRange,
-				)
-			},
+			unifiedAccountContractsGetFunction(provider, nil),
 		),
 	}
 }
@@ -1769,7 +1692,7 @@ func AccountContractsGet(
 // Unified function for AccountContractsBorrow
 func unifiedAccountContractsBorrowFunction(
 	handler AccountContractsHandler,
-	address common.Address,
+	addressPointer *common.Address,
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
@@ -1785,6 +1708,13 @@ func unifiedAccountContractsBorrowFunction(
 			panic(errors.NewUnreachableError())
 		}
 		borrowType := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
+
+		var address common.Address
+		if addressPointer == nil {
+			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+		} else {
+			address = *addressPointer
+		}
 
 		return AccountContractsBorrow(
 			context,
@@ -1811,7 +1741,7 @@ func newInterpreterAccountContractsBorrowFunction(
 			context,
 			accountContracts,
 			sema.Account_ContractsTypeBorrowFunctionType,
-			unifiedAccountContractsBorrowFunction(handler, address),
+			unifiedAccountContractsBorrowFunction(handler, &address),
 		)
 	}
 }
@@ -1822,24 +1752,7 @@ func NewVMAccountContractsBorrowFunction(handler AccountContractsHandler) VMFunc
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_ContractsTypeBorrowFunctionName,
 			sema.Account_ContractsTypeBorrowFunctionType,
-			func(
-				context interpreter.UnifiedFunctionContext,
-				args *interpreter.ArgumentExtractor,
-				receiver interpreter.Value,
-				typeArguments []interpreter.StaticType,
-				locationRange interpreter.LocationRange,
-			) interpreter.Value {
-				// Get address field from the receiver
-				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-
-				return unifiedAccountContractsBorrowFunction(handler, address)(
-					context,
-					args,
-					receiver,
-					typeArguments,
-					locationRange,
-				)
-			},
+			unifiedAccountContractsBorrowFunction(handler, nil),
 		),
 	}
 }
@@ -1978,7 +1891,7 @@ type AccountContractAdditionHandler interface {
 // Unified function for AccountContractsChange (Add/Update)
 func unifiedAccountContractsChangeFunction(
 	handler AccountContractAdditionAndNamesHandler,
-	addressValue interpreter.AddressValue,
+	addressPointer *interpreter.AddressValue,
 	isUpdate bool,
 ) interpreter.UnifiedNativeFunction {
 	return func(
@@ -1988,6 +1901,7 @@ func unifiedAccountContractsChangeFunction(
 		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
 	) interpreter.Value {
+		// TODO: avoidable?
 		// Extract arguments as Values and Types for changeAccountContracts
 		arguments := make([]interpreter.Value, args.Count())
 		argumentTypes := make([]sema.Type, args.Count())
@@ -1995,6 +1909,13 @@ func unifiedAccountContractsChangeFunction(
 			arguments[i] = args.Get(i)
 			staticType := arguments[i].StaticType(context)
 			argumentTypes[i] = interpreter.MustConvertStaticToSemaType(staticType, context)
+		}
+
+		var addressValue interpreter.AddressValue
+		if addressPointer == nil {
+			addressValue = vm.GetAccountTypePrivateAddressValue(receiver)
+		} else {
+			addressValue = *addressPointer
 		}
 
 		return changeAccountContracts(
@@ -2029,7 +1950,7 @@ func newInterpreterAccountContractsChangeFunction(
 			context,
 			accountContracts,
 			functionType,
-			unifiedAccountContractsChangeFunction(handler, addressValue, isUpdate),
+			unifiedAccountContractsChangeFunction(handler, &addressValue, isUpdate),
 		)
 	}
 }
@@ -2051,23 +1972,7 @@ func newVMAccountContractsChangeFunction(
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			functionName,
 			functionType,
-			func(
-				context interpreter.UnifiedFunctionContext,
-				args *interpreter.ArgumentExtractor,
-				receiver interpreter.Value,
-				typeArguments []interpreter.StaticType,
-				locationRange interpreter.LocationRange,
-			) interpreter.Value {
-				address := vm.GetAccountTypePrivateAddressValue(receiver)
-
-				return unifiedAccountContractsChangeFunction(handler, address, isUpdate)(
-					context,
-					args,
-					receiver,
-					typeArguments,
-					locationRange,
-				)
-			},
+			unifiedAccountContractsChangeFunction(handler, nil, isUpdate),
 		),
 	}
 }
@@ -2365,7 +2270,7 @@ func changeAccountContracts(
 // Unified function for AccountContractsTryUpdate
 func unifiedAccountContractsTryUpdateFunction(
 	handler AccountContractAdditionAndNamesHandler,
-	addressValue interpreter.AddressValue,
+	addressPointer *interpreter.AddressValue,
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
@@ -2405,13 +2310,20 @@ func unifiedAccountContractsTryUpdateFunction(
 			deploymentResult = interpreter.NewDeploymentResultValue(context, optionalDeployedContract)
 		}()
 
-		// TODO: optimize
+		// TODO: optimize/avoidable?
 		arguments := make([]interpreter.Value, args.Count())
 		argumentTypes := make([]sema.Type, args.Count())
 		for i := 0; i < args.Count(); i++ {
 			arguments[i] = args.Get(i)
 			staticType := arguments[i].StaticType(context)
 			argumentTypes[i] = interpreter.MustConvertStaticToSemaType(staticType, context)
+		}
+
+		var addressValue interpreter.AddressValue
+		if addressPointer == nil {
+			addressValue = vm.GetAccountTypePrivateAddressValue(receiver)
+		} else {
+			addressValue = *addressPointer
 		}
 
 		deployedContract = changeAccountContracts(
@@ -2437,7 +2349,7 @@ func newInterpreterAccountContractsTryUpdateFunction(
 			context,
 			accountContracts,
 			sema.Account_ContractsTypeTryUpdateFunctionType,
-			unifiedAccountContractsTryUpdateFunction(handler, addressValue),
+			unifiedAccountContractsTryUpdateFunction(handler, &addressValue),
 		)
 	}
 }
@@ -2451,18 +2363,7 @@ func newVMAccountContractsTryUpdateFunction(
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_ContractsTypeTryUpdateFunctionName,
 			sema.Account_ContractsTypeTryUpdateFunctionType,
-			func(context interpreter.UnifiedFunctionContext, args *interpreter.ArgumentExtractor, receiver interpreter.Value, typeArguments []interpreter.StaticType, locationRange interpreter.LocationRange) (deploymentResult interpreter.Value) {
-
-				address := vm.GetAccountTypePrivateAddressValue(receiver)
-
-				return unifiedAccountContractsTryUpdateFunction(handler, address)(
-					context,
-					args,
-					receiver,
-					typeArguments,
-					locationRange,
-				)
-			},
+			unifiedAccountContractsTryUpdateFunction(handler, nil),
 		),
 	}
 }
@@ -2719,7 +2620,7 @@ type AccountContractRemovalHandler interface {
 // Unified function for AccountContractsRemove
 func unifiedAccountContractsRemoveFunction(
 	handler AccountContractRemovalHandler,
-	addressValue interpreter.AddressValue,
+	addressPointer *interpreter.AddressValue,
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
@@ -2729,6 +2630,13 @@ func unifiedAccountContractsRemoveFunction(
 		locationRange interpreter.LocationRange,
 	) interpreter.Value {
 		nameValue := args.GetString(0)
+
+		var addressValue interpreter.AddressValue
+		if addressPointer == nil {
+			addressValue = vm.GetAccountTypePrivateAddressValue(receiver)
+		} else {
+			addressValue = *addressPointer
+		}
 
 		return removeContract(
 			context,
@@ -2751,7 +2659,7 @@ func newInterpreterAccountContractsRemoveFunction(
 			context,
 			accountContracts,
 			sema.Account_ContractsTypeRemoveFunctionType,
-			unifiedAccountContractsRemoveFunction(handler, addressValue),
+			unifiedAccountContractsRemoveFunction(handler, &addressValue),
 		)
 	}
 }
@@ -2764,24 +2672,7 @@ func newVMAccountContractsRemoveFunction(
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_ContractsTypeRemoveFunctionName,
 			sema.Account_ContractsTypeRemoveFunctionType,
-			func(
-				context interpreter.UnifiedFunctionContext,
-				args *interpreter.ArgumentExtractor,
-				receiver interpreter.Value,
-				typeArguments []interpreter.StaticType,
-				locationRange interpreter.LocationRange,
-			) interpreter.Value {
-				// Get address field from the receiver
-				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver)
-
-				return unifiedAccountContractsRemoveFunction(handler, accountAddress)(
-					context,
-					args,
-					receiver,
-					typeArguments,
-					locationRange,
-				)
-			},
+			unifiedAccountContractsRemoveFunction(handler, nil),
 		),
 	}
 }
@@ -3073,7 +2964,7 @@ func newAccountCapabilitiesValue(
 // Unified function for AccountStorageCapabilitiesGetController
 func unifiedAccountStorageCapabilitiesGetControllerFunction(
 	handler CapabilityControllerHandler,
-	address common.Address,
+	addressPointer *common.Address,
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
@@ -3083,6 +2974,13 @@ func unifiedAccountStorageCapabilitiesGetControllerFunction(
 		locationRange interpreter.LocationRange,
 	) interpreter.Value {
 		capabilityIDValue := args.Get(0).(interpreter.UInt64Value)
+
+		var address common.Address
+		if addressPointer == nil {
+			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+		} else {
+			address = *addressPointer
+		}
 
 		return AccountStorageCapabilitiesGetController(
 			context,
@@ -3105,7 +3003,7 @@ func newInterpreterAccountStorageCapabilitiesGetControllerFunction(
 			context,
 			storageCapabilities,
 			sema.Account_StorageCapabilitiesTypeGetControllerFunctionType,
-			unifiedAccountStorageCapabilitiesGetControllerFunction(handler, address),
+			unifiedAccountStorageCapabilitiesGetControllerFunction(handler, &address),
 		)
 	}
 }
@@ -3118,24 +3016,7 @@ func NewVMAccountStorageCapabilitiesGetControllerFunction(
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeGetControllerFunctionName,
 			sema.Account_StorageCapabilitiesTypeGetControllerFunctionType,
-			func(
-				context interpreter.UnifiedFunctionContext,
-				args *interpreter.ArgumentExtractor,
-				receiver interpreter.Value,
-				typeArguments []interpreter.StaticType,
-				locationRange interpreter.LocationRange,
-			) interpreter.Value {
-				// Get address field from the receiver
-				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-
-				return unifiedAccountStorageCapabilitiesGetControllerFunction(handler, accountAddress)(
-					context,
-					args,
-					receiver,
-					typeArguments,
-					locationRange,
-				)
-			},
+			unifiedAccountStorageCapabilitiesGetControllerFunction(handler, nil),
 		),
 	}
 }
@@ -3173,7 +3054,7 @@ var storageCapabilityControllerReferencesArrayStaticType = &interpreter.Variable
 // Unified function for AccountStorageCapabilitiesGetControllers
 func unifiedAccountStorageCapabilitiesGetControllersFunction(
 	handler CapabilityControllerHandler,
-	address common.Address,
+	addressPointer *common.Address,
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
@@ -3183,6 +3064,13 @@ func unifiedAccountStorageCapabilitiesGetControllersFunction(
 		locationRange interpreter.LocationRange,
 	) interpreter.Value {
 		targetPathValue := args.Get(0).(interpreter.PathValue)
+
+		var address common.Address
+		if addressPointer == nil {
+			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+		} else {
+			address = *addressPointer
+		}
 
 		return AccountStorageCapabilitiesGetControllers(
 			context,
@@ -3205,7 +3093,7 @@ func newInterpreterAccountStorageCapabilitiesGetControllersFunction(
 			context,
 			storageCapabilities,
 			sema.Account_StorageCapabilitiesTypeGetControllersFunctionType,
-			unifiedAccountStorageCapabilitiesGetControllersFunction(handler, address),
+			unifiedAccountStorageCapabilitiesGetControllersFunction(handler, &address),
 		)
 	}
 }
@@ -3218,24 +3106,7 @@ func NewVMAccountStorageCapabilitiesGetControllersFunction(
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeGetControllersFunctionName,
 			sema.Account_StorageCapabilitiesTypeGetControllersFunctionType,
-			func(
-				context interpreter.UnifiedFunctionContext,
-				args *interpreter.ArgumentExtractor,
-				receiver interpreter.Value,
-				typeArguments []interpreter.StaticType,
-				locationRange interpreter.LocationRange,
-			) interpreter.Value {
-				// Get address field from the receiver
-				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-
-				return unifiedAccountStorageCapabilitiesGetControllersFunction(handler, accountAddress)(
-					context,
-					args,
-					receiver,
-					typeArguments,
-					locationRange,
-				)
-			},
+			unifiedAccountStorageCapabilitiesGetControllersFunction(handler, nil),
 		),
 	}
 }
@@ -3303,7 +3174,7 @@ var accountStorageCapabilitiesForEachControllerCallbackTypeParams = []sema.Type{
 // Unified function for AccountStorageCapabilitiesForEachController
 func unifiedAccountStorageCapabilitiesForEachControllerFunction(
 	handler CapabilityControllerHandler,
-	address common.Address,
+	addressPointer *common.Address,
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
@@ -3314,6 +3185,13 @@ func unifiedAccountStorageCapabilitiesForEachControllerFunction(
 	) interpreter.Value {
 		targetPathValue := args.Get(0).(interpreter.PathValue)
 		functionValue := args.GetFunction(1)
+
+		var address common.Address
+		if addressPointer == nil {
+			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+		} else {
+			address = *addressPointer
+		}
 
 		return AccountStorageCapabilitiesForeachController(
 			context,
@@ -3338,7 +3216,7 @@ func newInterpreterAccountStorageCapabilitiesForEachControllerFunction(
 			context,
 			storageCapabilities,
 			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionType,
-			unifiedAccountStorageCapabilitiesForEachControllerFunction(handler, address),
+			unifiedAccountStorageCapabilitiesForEachControllerFunction(handler, &address),
 		)
 	}
 }
@@ -3350,24 +3228,7 @@ func NewVMAccountStorageCapabilitiesForEachControllerFunction(
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionName,
 			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionType,
-			func(
-				context interpreter.UnifiedFunctionContext,
-				args *interpreter.ArgumentExtractor,
-				receiver interpreter.Value,
-				typeArguments []interpreter.StaticType,
-				locationRange interpreter.LocationRange,
-			) interpreter.Value {
-				// Get address field from the receiver
-				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-
-				return unifiedAccountStorageCapabilitiesForEachControllerFunction(handler, accountAddress)(
-					context,
-					args,
-					receiver,
-					typeArguments,
-					locationRange,
-				)
-			},
+			unifiedAccountStorageCapabilitiesForEachControllerFunction(handler, nil),
 		),
 	}
 }
@@ -3471,7 +3332,7 @@ func AccountStorageCapabilitiesForeachController(
 // Unified function for AccountStorageCapabilitiesIssue
 func unifiedAccountStorageCapabilitiesIssueFunction(
 	handler CapabilityControllerIssueHandler,
-	address common.Address,
+	addressPointer *common.Address,
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
@@ -3487,9 +3348,17 @@ func unifiedAccountStorageCapabilitiesIssueFunction(
 		borrowType := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
 
 		// Extract arguments
+		// TODO: maybe make this into a function in argument extractor
 		arguments := make([]interpreter.Value, args.Count())
 		for i := 0; i < args.Count(); i++ {
 			arguments[i] = args.Get(i)
+		}
+
+		var address common.Address
+		if addressPointer == nil {
+			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+		} else {
+			address = *addressPointer
 		}
 
 		return AccountStorageCapabilitiesIssue(
@@ -3514,7 +3383,7 @@ func newInterpreterAccountStorageCapabilitiesIssueFunction(
 			context,
 			storageCapabilities,
 			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
-			unifiedAccountStorageCapabilitiesIssueFunction(handler, address),
+			unifiedAccountStorageCapabilitiesIssueFunction(handler, &address),
 		)
 	}
 }
@@ -3527,24 +3396,7 @@ func NewVMAccountStorageCapabilitiesIssueFunction(
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeIssueFunctionName,
 			sema.Account_StorageCapabilitiesTypeIssueFunctionType,
-			func(
-				context interpreter.UnifiedFunctionContext,
-				args *interpreter.ArgumentExtractor,
-				receiver interpreter.Value,
-				typeArguments []interpreter.StaticType,
-				locationRange interpreter.LocationRange,
-			) interpreter.Value {
-				// Get address field from the receiver
-				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-
-				return unifiedAccountStorageCapabilitiesIssueFunction(handler, accountAddress)(
-					context,
-					args,
-					receiver,
-					typeArguments,
-					locationRange,
-				)
-			},
+			unifiedAccountStorageCapabilitiesIssueFunction(handler, nil),
 		),
 	}
 }
@@ -3580,7 +3432,7 @@ func AccountStorageCapabilitiesIssue(
 // Unified function for AccountStorageCapabilitiesIssueWithType
 func unifiedAccountStorageCapabilitiesIssueWithTypeFunction(
 	handler CapabilityControllerIssueHandler,
-	address common.Address,
+	addressPointer *common.Address,
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
@@ -3591,6 +3443,13 @@ func unifiedAccountStorageCapabilitiesIssueWithTypeFunction(
 	) interpreter.Value {
 		targetPathValue := args.Get(0).(interpreter.PathValue)
 		borrowType := args.GetType(1)
+
+		var address common.Address
+		if addressPointer == nil {
+			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+		} else {
+			address = *addressPointer
+		}
 
 		return AccountStorageCapabilitiesIssueWithType(
 			context,
@@ -3614,7 +3473,7 @@ func newInterpreterAccountStorageCapabilitiesIssueWithTypeFunction(
 			context,
 			storageCapabilities,
 			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
-			unifiedAccountStorageCapabilitiesIssueWithTypeFunction(handler, address),
+			unifiedAccountStorageCapabilitiesIssueWithTypeFunction(handler, &address),
 		)
 	}
 }
@@ -3627,24 +3486,7 @@ func NewVMAccountStorageCapabilitiesIssueWithTypeFunction(
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionName,
 			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
-			func(
-				context interpreter.UnifiedFunctionContext,
-				args *interpreter.ArgumentExtractor,
-				receiver interpreter.Value,
-				typeArguments []interpreter.StaticType,
-				locationRange interpreter.LocationRange,
-			) interpreter.Value {
-				// Get address field from the receiver
-				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-
-				return unifiedAccountStorageCapabilitiesIssueWithTypeFunction(handler, accountAddress)(
-					context,
-					args,
-					receiver,
-					typeArguments,
-					locationRange,
-				)
-			},
+			unifiedAccountStorageCapabilitiesIssueWithTypeFunction(handler, nil),
 		),
 	}
 }
@@ -3781,7 +3623,7 @@ func IssueStorageCapabilityController(
 // Unified function for AccountAccountCapabilitiesIssue
 func unifiedAccountAccountCapabilitiesIssueFunction(
 	handler CapabilityControllerIssueHandler,
-	address common.Address,
+	addressPointer *common.Address,
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
@@ -3795,6 +3637,13 @@ func unifiedAccountAccountCapabilitiesIssueFunction(
 			panic(errors.NewUnreachableError())
 		}
 		ty := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
+
+		var address common.Address
+		if addressPointer == nil {
+			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+		} else {
+			address = *addressPointer
+		}
 
 		return checkAndIssueAccountCapabilityControllerWithType(
 			context,
@@ -3817,7 +3666,7 @@ func newInterpreterAccountAccountCapabilitiesIssueFunction(
 			context,
 			accountCapabilities,
 			sema.Account_AccountCapabilitiesTypeIssueFunctionType,
-			unifiedAccountAccountCapabilitiesIssueFunction(handler, address),
+			unifiedAccountAccountCapabilitiesIssueFunction(handler, &address),
 		)
 	}
 }
@@ -3830,25 +3679,7 @@ func NewVMAccountAccountCapabilitiesIssueFunction(
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_AccountCapabilitiesTypeIssueFunctionName,
 			sema.Account_AccountCapabilitiesTypeIssueFunctionType,
-			func(
-				context interpreter.UnifiedFunctionContext,
-				args *interpreter.ArgumentExtractor,
-				receiver interpreter.Value,
-				typeArguments []interpreter.StaticType,
-				locationRange interpreter.LocationRange,
-			) interpreter.Value {
-
-				// Get address field from the receiver
-				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-
-				return unifiedAccountAccountCapabilitiesIssueFunction(handler, address)(
-					context,
-					args,
-					receiver,
-					typeArguments,
-					interpreter.EmptyLocationRange,
-				)
-			},
+			unifiedAccountAccountCapabilitiesIssueFunction(handler, nil),
 		),
 	}
 }
@@ -3856,7 +3687,7 @@ func NewVMAccountAccountCapabilitiesIssueFunction(
 // Unified function for AccountAccountCapabilitiesIssueWithType
 func unifiedAccountAccountCapabilitiesIssueWithTypeFunction(
 	handler CapabilityControllerIssueHandler,
-	address common.Address,
+	addressPointer *common.Address,
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
@@ -3869,6 +3700,13 @@ func unifiedAccountAccountCapabilitiesIssueWithTypeFunction(
 		ty, err := interpreter.ConvertStaticToSemaType(context, typeValue.Type)
 		if err != nil {
 			panic(errors.NewUnexpectedErrorFromCause(err))
+		}
+
+		var address common.Address
+		if addressPointer == nil {
+			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+		} else {
+			address = *addressPointer
 		}
 
 		return checkAndIssueAccountCapabilityControllerWithType(
@@ -3892,7 +3730,7 @@ func newInterpreterAccountAccountCapabilitiesIssueWithTypeFunction(
 			context,
 			accountCapabilities,
 			sema.Account_AccountCapabilitiesTypeIssueFunctionType,
-			unifiedAccountAccountCapabilitiesIssueWithTypeFunction(handler, address),
+			unifiedAccountAccountCapabilitiesIssueWithTypeFunction(handler, &address),
 		)
 	}
 }
@@ -3905,25 +3743,7 @@ func NewVMAccountAccountCapabilitiesIssueWithTypeFunction(
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_AccountCapabilitiesTypeIssueWithTypeFunctionName,
 			sema.Account_AccountCapabilitiesTypeIssueWithTypeFunctionType,
-			func(
-				context interpreter.UnifiedFunctionContext,
-				args *interpreter.ArgumentExtractor,
-				receiver interpreter.Value,
-				typeArguments []interpreter.StaticType,
-				locationRange interpreter.LocationRange,
-			) interpreter.Value {
-
-				// Get address field from the receiver
-				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-
-				return unifiedAccountAccountCapabilitiesIssueWithTypeFunction(handler, address)(
-					context,
-					args,
-					receiver,
-					typeArguments,
-					locationRange,
-				)
-			},
+			unifiedAccountAccountCapabilitiesIssueWithTypeFunction(handler, nil),
 		),
 	}
 }
@@ -4538,7 +4358,7 @@ func getAccountCapabilityControllerIDsIterator(
 
 func unifiedAccountCapabilitiesPublishFunction(
 	handler CapabilityControllerHandler,
-	accountAddressValue interpreter.AddressValue,
+	accountAddressPointer *interpreter.AddressValue,
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
@@ -4549,6 +4369,14 @@ func unifiedAccountCapabilitiesPublishFunction(
 	) interpreter.Value {
 		capabilityValue := args.Get(0).(interpreter.CapabilityValue)
 		pathValue := args.Get(1).(interpreter.PathValue)
+
+		var accountAddressValue interpreter.AddressValue
+		if accountAddressPointer == nil {
+			accountAddressValue = vm.GetAccountTypePrivateAddressValue(receiver)
+		} else {
+			accountAddressValue = *accountAddressPointer
+		}
+
 		return AccountCapabilitiesPublish(
 			context,
 			handler,
@@ -4571,7 +4399,7 @@ func newInterpreterAccountCapabilitiesPublishFunction(
 			context,
 			accountCapabilities,
 			sema.Account_CapabilitiesTypePublishFunctionType,
-			unifiedAccountCapabilitiesPublishFunction(handler, accountAddressValue),
+			unifiedAccountCapabilitiesPublishFunction(handler, &accountAddressValue),
 		)
 	}
 }
@@ -4584,24 +4412,7 @@ func NewVMAccountCapabilitiesPublishFunction(
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_CapabilitiesTypePublishFunctionName,
 			sema.Account_CapabilitiesTypePublishFunctionType,
-			func(context interpreter.UnifiedFunctionContext,
-				args *interpreter.ArgumentExtractor,
-				receiver interpreter.Value,
-				typeArguments []interpreter.StaticType,
-				locationRange interpreter.LocationRange,
-			) interpreter.Value {
-
-				// Get address field from the receiver
-				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver)
-
-				return unifiedAccountCapabilitiesPublishFunction(handler, accountAddress)(
-					context,
-					args,
-					receiver,
-					typeArguments,
-					locationRange,
-				)
-			},
+			unifiedAccountCapabilitiesPublishFunction(handler, nil),
 		),
 	}
 }
@@ -4725,7 +4536,7 @@ func AccountCapabilitiesPublish(
 
 func unifiedAccountCapabilitiesUnpublishFunction(
 	handler CapabilityControllerHandler,
-	addressValue interpreter.AddressValue,
+	addressPointer *interpreter.AddressValue,
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
@@ -4735,6 +4546,14 @@ func unifiedAccountCapabilitiesUnpublishFunction(
 		locationRange interpreter.LocationRange,
 	) interpreter.Value {
 		pathValue := args.Get(0).(interpreter.PathValue)
+
+		var addressValue interpreter.AddressValue
+		if addressPointer == nil {
+			addressValue = vm.GetAccountTypePrivateAddressValue(receiver)
+		} else {
+			addressValue = *addressPointer
+		}
+
 		return AccountCapabilitiesUnpublish(
 			context,
 			handler,
@@ -4756,7 +4575,7 @@ func newInterpreterAccountCapabilitiesUnpublishFunction(
 			context,
 			accountCapabilities,
 			sema.Account_CapabilitiesTypeUnpublishFunctionType,
-			unifiedAccountCapabilitiesUnpublishFunction(handler, addressValue),
+			unifiedAccountCapabilitiesUnpublishFunction(handler, &addressValue),
 		)
 	}
 }
@@ -4769,24 +4588,7 @@ func NewVMAccountCapabilitiesUnpublishFunction(
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_CapabilitiesTypeUnpublishFunctionName,
 			sema.Account_CapabilitiesTypeUnpublishFunctionType,
-			func(context interpreter.UnifiedFunctionContext,
-				args *interpreter.ArgumentExtractor,
-				receiver interpreter.Value,
-				typeArguments []interpreter.StaticType,
-				locationRange interpreter.LocationRange,
-			) interpreter.Value {
-
-				// Get address field from the receiver
-				accountAddress := vm.GetAccountTypePrivateAddressValue(receiver)
-
-				return unifiedAccountCapabilitiesUnpublishFunction(handler, accountAddress)(
-					context,
-					args,
-					receiver,
-					typeArguments,
-					locationRange,
-				)
-			},
+			unifiedAccountCapabilitiesUnpublishFunction(handler, nil),
 		),
 	}
 }
@@ -5041,7 +4843,7 @@ func CheckCapabilityController(
 
 func unifiedAccountCapabilitiesGetFunction(
 	controllerHandler CapabilityControllerHandler,
-	addressValue interpreter.AddressValue,
+	addressPointer *interpreter.AddressValue,
 	borrow bool,
 ) interpreter.UnifiedNativeFunction {
 	return func(
@@ -5057,6 +4859,14 @@ func unifiedAccountCapabilitiesGetFunction(
 		if err != nil {
 			panic(errors.NewUnexpectedErrorFromCause(err))
 		}
+
+		var addressValue interpreter.AddressValue
+		if addressPointer == nil {
+			addressValue = vm.GetAccountTypePrivateAddressValue(receiver)
+		} else {
+			addressValue = *addressPointer
+		}
+
 		return AccountCapabilitiesGet(
 			context,
 			controllerHandler,
@@ -5087,7 +4897,7 @@ func newInterpreterAccountCapabilitiesGetFunction(
 			context,
 			accountCapabilities,
 			funcType,
-			unifiedAccountCapabilitiesGetFunction(controllerHandler, addressValue, borrow),
+			unifiedAccountCapabilitiesGetFunction(controllerHandler, &addressValue, borrow),
 		)
 	}
 }
@@ -5114,24 +4924,7 @@ func NewVMAccountCapabilitiesGetFunction(
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			funcName,
 			funcType,
-			func(context interpreter.UnifiedFunctionContext,
-				args *interpreter.ArgumentExtractor,
-				receiver interpreter.Value,
-				typeArguments []interpreter.StaticType,
-				locationRange interpreter.LocationRange,
-			) interpreter.Value {
-
-				// Get address field from the receiver
-				address := vm.GetAccountTypePrivateAddressValue(receiver)
-
-				return unifiedAccountCapabilitiesGetFunction(controllerHandler, address, borrow)(
-					context,
-					args,
-					receiver,
-					typeArguments,
-					locationRange,
-				)
-			},
+			unifiedAccountCapabilitiesGetFunction(controllerHandler, nil, borrow),
 		),
 	}
 }
@@ -5311,7 +5104,7 @@ func AccountCapabilitiesGet(
 }
 
 func unifiedAccountCapabilitiesExistsFunction(
-	addressValue interpreter.AddressValue,
+	addressPointer *interpreter.AddressValue,
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
@@ -5321,6 +5114,14 @@ func unifiedAccountCapabilitiesExistsFunction(
 		locationRange interpreter.LocationRange,
 	) interpreter.Value {
 		pathValue := args.Get(0).(interpreter.PathValue)
+
+		var addressValue interpreter.AddressValue
+		if addressPointer == nil {
+			addressValue = vm.GetAccountTypePrivateAddressValue(receiver)
+		} else {
+			addressValue = *addressPointer
+		}
+
 		return AccountCapabilitiesExists(
 			context,
 			pathValue,
@@ -5338,7 +5139,7 @@ func newInterpreterAccountCapabilitiesExistsFunction(
 			context,
 			accountCapabilities,
 			sema.Account_CapabilitiesTypeExistsFunctionType,
-			unifiedAccountCapabilitiesExistsFunction(addressValue),
+			unifiedAccountCapabilitiesExistsFunction(&addressValue),
 		)
 	}
 }
@@ -5348,24 +5149,7 @@ var VMAccountCapabilitiesExistsFunction = VMFunction{
 	FunctionValue: vm.NewUnifiedNativeFunctionValue(
 		sema.Account_CapabilitiesTypeExistsFunctionName,
 		sema.Account_CapabilitiesTypeExistsFunctionType,
-		func(context interpreter.UnifiedFunctionContext,
-			args *interpreter.ArgumentExtractor,
-			receiver interpreter.Value,
-			typeArguments []interpreter.StaticType,
-			locationRange interpreter.LocationRange,
-		) interpreter.Value {
-
-			// Get address field from the receiver
-			accountAddress := vm.GetAccountTypePrivateAddressValue(receiver)
-
-			return unifiedAccountCapabilitiesExistsFunction(accountAddress)(
-				context,
-				args,
-				receiver,
-				typeArguments,
-				locationRange,
-			)
-		},
+		unifiedAccountCapabilitiesExistsFunction(nil),
 	),
 }
 
@@ -5425,7 +5209,7 @@ func getAccountCapabilityControllerReference(
 
 func unifiedAccountAccountCapabilitiesGetControllerFunction(
 	handler CapabilityControllerHandler,
-	address common.Address,
+	addressPointer *common.Address,
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
@@ -5440,6 +5224,13 @@ func unifiedAccountAccountCapabilitiesGetControllerFunction(
 		}
 
 		capabilityID := uint64(capabilityIDValue)
+
+		var address common.Address
+		if addressPointer == nil {
+			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+		} else {
+			address = *addressPointer
+		}
 
 		referenceValue := getAccountCapabilityControllerReference(
 			context,
@@ -5467,7 +5258,7 @@ func newInterpreterAccountAccountCapabilitiesGetControllerFunction(
 			context,
 			accountCapabilities,
 			sema.Account_AccountCapabilitiesTypeGetControllerFunctionType,
-			unifiedAccountAccountCapabilitiesGetControllerFunction(handler, address),
+			unifiedAccountAccountCapabilitiesGetControllerFunction(handler, &address),
 		)
 	}
 }
@@ -5480,24 +5271,7 @@ func NewVMAccountAccountCapabilitiesGetControllerFunction(
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_AccountCapabilitiesTypeGetControllerFunctionName,
 			sema.Account_AccountCapabilitiesTypeGetControllerFunctionType,
-			func(context interpreter.UnifiedFunctionContext,
-				args *interpreter.ArgumentExtractor,
-				receiver interpreter.Value,
-				typeArguments []interpreter.StaticType,
-				locationRange interpreter.LocationRange,
-			) interpreter.Value {
-
-				// Get address field from the receiver
-				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-
-				return unifiedAccountAccountCapabilitiesGetControllerFunction(handler, address)(
-					context,
-					args,
-					receiver,
-					typeArguments,
-					locationRange,
-				)
-			},
+			unifiedAccountAccountCapabilitiesGetControllerFunction(handler, nil),
 		),
 	}
 }
@@ -5511,7 +5285,7 @@ var accountCapabilityControllerReferencesArrayStaticType = &interpreter.Variable
 
 func unifiedAccountAccountCapabilitiesGetControllersFunction(
 	handler CapabilityControllerHandler,
-	address common.Address,
+	addressPointer *common.Address,
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
@@ -5520,6 +5294,13 @@ func unifiedAccountAccountCapabilitiesGetControllersFunction(
 		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
 	) interpreter.Value {
+		var address common.Address
+		if addressPointer == nil {
+			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+		} else {
+			address = *addressPointer
+		}
+
 		return accountAccountCapabilitiesGetControllers(context, address, locationRange, handler)
 	}
 }
@@ -5535,7 +5316,7 @@ func newInterpreterAccountAccountCapabilitiesGetControllersFunction(
 			context,
 			accountCapabilities,
 			sema.Account_AccountCapabilitiesTypeGetControllersFunctionType,
-			unifiedAccountAccountCapabilitiesGetControllersFunction(handler, address),
+			unifiedAccountAccountCapabilitiesGetControllersFunction(handler, &address),
 		)
 	}
 }
@@ -5548,24 +5329,7 @@ func NewVMAccountAccountCapabilitiesGetControllersFunction(
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_AccountCapabilitiesTypeGetControllersFunctionName,
 			sema.Account_AccountCapabilitiesTypeGetControllersFunctionType,
-			func(context interpreter.UnifiedFunctionContext,
-				args *interpreter.ArgumentExtractor,
-				receiver interpreter.Value,
-				typeArguments []interpreter.StaticType,
-				locationRange interpreter.LocationRange,
-			) interpreter.Value {
-
-				// Get address field from the receiver
-				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-
-				return unifiedAccountAccountCapabilitiesGetControllersFunction(handler, address)(
-					context,
-					args,
-					receiver,
-					typeArguments,
-					locationRange,
-				)
-			},
+			unifiedAccountAccountCapabilitiesGetControllersFunction(handler, nil),
 		),
 	}
 }
@@ -5638,7 +5402,7 @@ func (CapabilityControllersMutatedDuringIterationError) Error() string {
 
 func unifiedAccountAccountCapabilitiesForEachControllerFunction(
 	handler CapabilityControllerHandler,
-	address common.Address,
+	addressPointer *common.Address,
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
@@ -5648,6 +5412,14 @@ func unifiedAccountAccountCapabilitiesForEachControllerFunction(
 		locationRange interpreter.LocationRange,
 	) interpreter.Value {
 		functionValue := args.GetFunction(0)
+
+		var address common.Address
+		if addressPointer == nil {
+			address = vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
+		} else {
+			address = *addressPointer
+		}
+
 		return AccountCapabilitiesForEachController(context, address, functionValue, locationRange, handler)
 	}
 }
@@ -5664,7 +5436,7 @@ func newInterpreterAccountAccountCapabilitiesForEachControllerFunction(
 			context,
 			accountCapabilities,
 			sema.Account_AccountCapabilitiesTypeForEachControllerFunctionType,
-			unifiedAccountAccountCapabilitiesForEachControllerFunction(handler, address),
+			unifiedAccountAccountCapabilitiesForEachControllerFunction(handler, &address),
 		)
 	}
 }
@@ -5677,24 +5449,7 @@ func NewVMAccountAccountCapabilitiesForEachControllerFunction(
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.Account_AccountCapabilitiesTypeForEachControllerFunctionName,
 			sema.Account_AccountCapabilitiesTypeForEachControllerFunctionType,
-			func(context interpreter.UnifiedFunctionContext,
-				args *interpreter.ArgumentExtractor,
-				receiver interpreter.Value,
-				typeArguments []interpreter.StaticType,
-				locationRange interpreter.LocationRange,
-			) interpreter.Value {
-
-				// Get address field from the receiver
-				address := vm.GetAccountTypePrivateAddressValue(receiver).ToAddress()
-
-				return unifiedAccountAccountCapabilitiesForEachControllerFunction(handler, address)(
-					context,
-					args,
-					receiver,
-					typeArguments,
-					locationRange,
-				)
-			},
+			unifiedAccountAccountCapabilitiesForEachControllerFunction(handler, nil),
 		),
 	}
 }
