@@ -76,6 +76,7 @@ func newInterpreterDeployedContractPublicTypesFunctionValue(
 	var publicTypes *ArrayValue
 
 	address := addressValue.ToAddress()
+	// TODO: maybe update this to use UnifiedBoundHostFunctionValue
 	return NewBoundHostFunctionValue(
 		context,
 		self,
