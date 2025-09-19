@@ -4393,6 +4393,46 @@ func (interpreter *Interpreter) RecordStorageMutation() {
 	}
 }
 
+// Unified function for AccountStorageIterate
+func UnifiedAccountStorageIterateFunction(
+	addressPointer *AddressValue,
+	domain common.PathDomain,
+	pathType sema.Type,
+) UnifiedNativeFunction {
+	return func(
+		context UnifiedFunctionContext,
+		args *ArgumentExtractor,
+		receiver Value,
+		typeArguments []StaticType,
+		locationRange LocationRange,
+	) Value {
+		// interpreter supplies the address, vm does not
+		var addressValue AddressValue
+		if addressPointer == nil {
+			addressValue = GetAccountTypePrivateAddressValue(receiver)
+		} else {
+			addressValue = *addressPointer
+		}
+
+		address := addressValue.ToAddress()
+
+		// Convert args to slice for AccountStorageIterate
+		arguments := make([]Value, args.Count())
+		for i := 0; i < args.Count(); i++ {
+			arguments[i] = args.Get(i)
+		}
+
+		return AccountStorageIterate(
+			context,
+			arguments,
+			address,
+			domain,
+			pathType,
+			locationRange,
+		)
+	}
+}
+
 func newStorageIterationFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
@@ -4402,26 +4442,11 @@ func newStorageIterationFunction(
 	pathType sema.Type,
 ) BoundFunctionValue {
 
-	address := addressValue.ToAddress()
-
-	return NewBoundHostFunctionValue(
+	return NewUnifiedBoundHostFunctionValue(
 		context,
 		storageValue,
 		functionType,
-		func(_ *SimpleCompositeValue, invocation Invocation) Value {
-			invocationContext := invocation.InvocationContext
-			locationRange := invocation.LocationRange
-			arguments := invocation.Arguments
-
-			return AccountStorageIterate(
-				invocationContext,
-				arguments,
-				address,
-				domain,
-				pathType,
-				locationRange,
-			)
-		},
+		UnifiedAccountStorageIterateFunction(&addressValue, domain, pathType),
 	)
 }
 
@@ -4613,28 +4638,51 @@ func checkValue(
 	return
 }
 
+// Unified function for AccountStorageSave
+func UnifiedAccountStorageSaveFunction(
+	addressPointer *AddressValue,
+) UnifiedNativeFunction {
+	return func(
+		context UnifiedFunctionContext,
+		args *ArgumentExtractor,
+		receiver Value,
+		typeArguments []StaticType,
+		locationRange LocationRange,
+	) Value {
+		// interpreter supplies the address, vm does not
+		var addressValue AddressValue
+		if addressPointer == nil {
+			addressValue = GetAccountTypePrivateAddressValue(receiver)
+		} else {
+			addressValue = *addressPointer
+		}
+
+		// Convert args to slice for AccountStorageSave
+		arguments := make([]Value, args.Count())
+		for i := 0; i < args.Count(); i++ {
+			arguments[i] = args.Get(i)
+		}
+
+		return AccountStorageSave(
+			context,
+			arguments,
+			addressValue,
+			locationRange,
+		)
+	}
+}
+
 func authAccountStorageSaveFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
 
-	return NewBoundHostFunctionValue(
+	return NewUnifiedBoundHostFunctionValue(
 		context,
 		storageValue,
 		sema.Account_StorageTypeSaveFunctionType,
-		func(_ *SimpleCompositeValue, invocation Invocation) Value {
-			interpreter := invocation.InvocationContext
-			arguments := invocation.Arguments
-			locationRange := invocation.LocationRange
-
-			return AccountStorageSave(
-				interpreter,
-				arguments,
-				addressValue,
-				locationRange,
-			)
-		},
+		UnifiedAccountStorageSaveFunction(&addressValue),
 	)
 }
 
@@ -4692,29 +4740,52 @@ func AccountStorageSave(
 	return Void
 }
 
+// Unified function for AccountStorageType
+func UnifiedAccountStorageTypeFunction(
+	addressPointer *AddressValue,
+) UnifiedNativeFunction {
+	return func(
+		context UnifiedFunctionContext,
+		args *ArgumentExtractor,
+		receiver Value,
+		typeArguments []StaticType,
+		locationRange LocationRange,
+	) Value {
+		// interpreter supplies the address, vm does not
+		var addressValue AddressValue
+		if addressPointer == nil {
+			addressValue = GetAccountTypePrivateAddressValue(receiver)
+		} else {
+			addressValue = *addressPointer
+		}
+
+		address := addressValue.ToAddress()
+
+		// Convert args to slice for AccountStorageType
+		arguments := make([]Value, args.Count())
+		for i := 0; i < args.Count(); i++ {
+			arguments[i] = args.Get(i)
+		}
+
+		return AccountStorageType(
+			context,
+			arguments,
+			address,
+		)
+	}
+}
+
 func authAccountStorageTypeFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
 
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewBoundHostFunctionValue(
+	return NewUnifiedBoundHostFunctionValue(
 		context,
 		storageValue,
 		sema.Account_StorageTypeTypeFunctionType,
-		func(_ *SimpleCompositeValue, invocation Invocation) Value {
-			interpreter := invocation.InvocationContext
-			arguments := invocation.Arguments
-
-			return AccountStorageType(
-				interpreter,
-				arguments,
-				address,
-			)
-		},
+		UnifiedAccountStorageTypeFunction(&addressValue),
 	)
 }
 
@@ -4778,6 +4849,51 @@ func authAccountStorageCopyFunction(
 	)
 }
 
+// Unified function for AccountStorageRead
+func UnifiedAccountStorageReadFunction(
+	addressPointer *AddressValue,
+	clear bool,
+) UnifiedNativeFunction {
+	return func(
+		context UnifiedFunctionContext,
+		args *ArgumentExtractor,
+		receiver Value,
+		typeArguments []StaticType,
+		locationRange LocationRange,
+	) Value {
+		// interpreter supplies the address, vm does not
+		var addressValue AddressValue
+		if addressPointer == nil {
+			addressValue = GetAccountTypePrivateAddressValue(receiver)
+		} else {
+			addressValue = *addressPointer
+		}
+
+		address := addressValue.ToAddress()
+
+		// Get type parameter from typeArguments
+		if len(typeArguments) == 0 {
+			panic(errors.NewUnreachableError())
+		}
+		typeParameter := MustConvertStaticToSemaType(typeArguments[0], context)
+
+		// Convert args to slice for AccountStorageRead
+		arguments := make([]Value, args.Count())
+		for i := 0; i < args.Count(); i++ {
+			arguments[i] = args.Get(i)
+		}
+
+		return AccountStorageRead(
+			context,
+			arguments,
+			typeParameter,
+			address,
+			clear,
+			locationRange,
+		)
+	}
+}
+
 func authAccountReadFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
@@ -4786,34 +4902,11 @@ func authAccountReadFunction(
 	clear bool,
 ) BoundFunctionValue {
 
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewBoundHostFunctionValue(
+	return NewUnifiedBoundHostFunctionValue(
 		context,
 		storageValue,
 		functionType,
-		func(_ *SimpleCompositeValue, invocation Invocation) Value {
-			invocationContext := invocation.InvocationContext
-			arguments := invocation.Arguments
-			locationRange := invocation.LocationRange
-
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			if typeParameterPair == nil {
-				panic(errors.NewUnreachableError())
-			}
-
-			typeParameter := typeParameterPair.Value
-
-			return AccountStorageRead(
-				invocationContext,
-				arguments,
-				typeParameter,
-				address,
-				clear,
-				locationRange,
-			)
-		},
+		UnifiedAccountStorageReadFunction(&addressValue, clear),
 	)
 }
 
@@ -4883,33 +4976,60 @@ func AccountStorageRead(
 	return NewSomeValueNonCopying(invocationContext, transferredValue)
 }
 
+// Unified function for AccountStorageBorrow
+func UnifiedAccountStorageBorrowFunction(
+	addressPointer *AddressValue,
+) UnifiedNativeFunction {
+	return func(
+		context UnifiedFunctionContext,
+		args *ArgumentExtractor,
+		receiver Value,
+		typeArguments []StaticType,
+		locationRange LocationRange,
+	) Value {
+		// interpreter supplies the address, vm does not
+		var addressValue AddressValue
+		if addressPointer == nil {
+			addressValue = GetAccountTypePrivateAddressValue(receiver)
+		} else {
+			addressValue = *addressPointer
+		}
+
+		address := addressValue.ToAddress()
+
+		// Get type parameter from typeArguments
+		if len(typeArguments) == 0 {
+			panic(errors.NewUnreachableError())
+		}
+		typeParameter := MustConvertStaticToSemaType(typeArguments[0], context)
+
+		// Convert args to slice for AccountStorageBorrow
+		arguments := make([]Value, args.Count())
+		for i := 0; i < args.Count(); i++ {
+			arguments[i] = args.Get(i)
+		}
+
+		return AccountStorageBorrow(
+			context,
+			arguments,
+			typeParameter,
+			address,
+			locationRange,
+		)
+	}
+}
+
 func authAccountStorageBorrowFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
 
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewBoundHostFunctionValue(
+	return NewUnifiedBoundHostFunctionValue(
 		context,
 		storageValue,
 		sema.Account_StorageTypeBorrowFunctionType,
-		func(_ *SimpleCompositeValue, invocation Invocation) Value {
-			invocationContext := invocation.InvocationContext
-			arguments := invocation.Arguments
-			typeParameterPair := invocation.TypeParameterTypes.Oldest().Value
-			locationRange := invocation.LocationRange
-
-			return AccountStorageBorrow(
-				invocationContext,
-				arguments,
-				typeParameterPair,
-				address,
-				locationRange,
-			)
-		},
+		UnifiedAccountStorageBorrowFunction(&addressValue),
 	)
 }
 
@@ -4953,36 +5073,59 @@ func AccountStorageBorrow(
 	return NewSomeValueNonCopying(invocationContext, reference)
 }
 
+// Unified function for AccountStorageCheck
+func UnifiedAccountStorageCheckFunction(
+	addressPointer *AddressValue,
+) UnifiedNativeFunction {
+	return func(
+		context UnifiedFunctionContext,
+		args *ArgumentExtractor,
+		receiver Value,
+		typeArguments []StaticType,
+		locationRange LocationRange,
+	) Value {
+		// interpreter supplies the address, vm does not
+		var addressValue AddressValue
+		if addressPointer == nil {
+			addressValue = GetAccountTypePrivateAddressValue(receiver)
+		} else {
+			addressValue = *addressPointer
+		}
+
+		address := addressValue.ToAddress()
+
+		// Get type parameter from typeArguments
+		if len(typeArguments) == 0 {
+			panic(errors.NewUnreachableError())
+		}
+		typeParameter := MustConvertStaticToSemaType(typeArguments[0], context)
+
+		// Convert args to slice for AccountStorageCheck
+		arguments := make([]Value, args.Count())
+		for i := 0; i < args.Count(); i++ {
+			arguments[i] = args.Get(i)
+		}
+
+		return AccountStorageCheck(
+			context,
+			address,
+			arguments,
+			typeParameter,
+		)
+	}
+}
+
 func authAccountStorageCheckFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
 
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewBoundHostFunctionValue(
+	return NewUnifiedBoundHostFunctionValue(
 		context,
 		storageValue,
 		sema.Account_StorageTypeCheckFunctionType,
-		func(_ *SimpleCompositeValue, invocation Invocation) Value {
-			invocationContext := invocation.InvocationContext
-			arguments := invocation.Arguments
-
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			if typeParameterPair == nil {
-				panic(errors.NewUnreachableError())
-			}
-			typeParameter := typeParameterPair.Value
-
-			return AccountStorageCheck(
-				invocationContext,
-				address,
-				arguments,
-				typeParameter,
-			)
-		},
+		UnifiedAccountStorageCheckFunction(&addressValue),
 	)
 }
 
@@ -5400,22 +5543,26 @@ func getBuiltinFunctionMember(context MemberAccessibleContext, self Value, ident
 	}
 }
 
+// Unified function for IsInstance
+func UnifiedIsInstanceFunction() UnifiedNativeFunction {
+	return func(
+		context UnifiedFunctionContext,
+		args *ArgumentExtractor,
+		receiver Value,
+		typeArguments []StaticType,
+		locationRange LocationRange,
+	) Value {
+		typeValue := args.GetType(0)
+		return IsInstance(context, receiver, typeValue)
+	}
+}
+
 func isInstanceFunction(context FunctionCreationContext, self Value) FunctionValue {
-	return NewBoundHostFunctionValue(
+	return NewUnifiedBoundHostFunctionValue(
 		context,
 		self,
 		sema.IsInstanceFunctionType,
-		func(self Value, invocation Invocation) Value {
-			invocationContext := invocation.InvocationContext
-
-			firstArgument := invocation.Arguments[0]
-			typeValue, ok := firstArgument.(TypeValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			return IsInstance(invocationContext, self, typeValue)
-		},
+		UnifiedIsInstanceFunction(),
 	)
 }
 
@@ -5434,15 +5581,25 @@ func IsInstance(invocationContext InvocationContext, self Value, typeValue TypeV
 	)
 }
 
+// Unified function for GetType
+func UnifiedGetTypeFunction() UnifiedNativeFunction {
+	return func(
+		context UnifiedFunctionContext,
+		args *ArgumentExtractor,
+		receiver Value,
+		typeArguments []StaticType,
+		locationRange LocationRange,
+	) Value {
+		return ValueGetType(context, receiver)
+	}
+}
+
 func getTypeFunction(context FunctionCreationContext, self Value) FunctionValue {
-	return NewBoundHostFunctionValue(
+	return NewUnifiedBoundHostFunctionValue(
 		context,
 		self,
 		sema.GetTypeFunctionType,
-		func(self Value, invocation Invocation) Value {
-			invocationContext := invocation.InvocationContext
-			return ValueGetType(invocationContext, self)
-		},
+		UnifiedGetTypeFunction(),
 	)
 }
 
@@ -5895,6 +6052,35 @@ func (interpreter *Interpreter) Storage() Storage {
 	return interpreter.SharedState.Config.Storage
 }
 
+// Unified function for CapabilityBorrow
+func UnifiedCapabilityBorrowFunction(
+	addressValue AddressValue,
+	capabilityID UInt64Value,
+	capabilityBorrowType *sema.ReferenceType,
+) UnifiedNativeFunction {
+	return func(
+		context UnifiedFunctionContext,
+		args *ArgumentExtractor,
+		receiver Value,
+		typeArguments []StaticType,
+		locationRange LocationRange,
+	) Value {
+		var typeArgument sema.Type
+		if len(typeArguments) > 0 {
+			typeArgument = MustConvertStaticToSemaType(typeArguments[0], context)
+		}
+
+		return CapabilityBorrow(
+			context,
+			typeArgument,
+			addressValue,
+			capabilityID,
+			capabilityBorrowType,
+			locationRange,
+		)
+	}
+}
+
 func capabilityBorrowFunction(
 	context FunctionCreationContext,
 	capabilityValue CapabilityValue,
@@ -5903,29 +6089,11 @@ func capabilityBorrowFunction(
 	capabilityBorrowType *sema.ReferenceType,
 ) FunctionValue {
 
-	return NewBoundHostFunctionValue(
+	return NewUnifiedBoundHostFunctionValue(
 		context,
 		capabilityValue,
 		sema.CapabilityTypeBorrowFunctionType(capabilityBorrowType),
-		func(_ CapabilityValue, invocation Invocation) Value {
-			invocationContext := invocation.InvocationContext
-			locationRange := invocation.LocationRange
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-
-			var typeArgument sema.Type
-			if typeParameterPair != nil {
-				typeArgument = typeParameterPair.Value
-			}
-
-			return CapabilityBorrow(
-				invocationContext,
-				typeArgument,
-				addressValue,
-				capabilityID,
-				capabilityBorrowType,
-				locationRange,
-			)
-		},
+		UnifiedCapabilityBorrowFunction(addressValue, capabilityID, capabilityBorrowType),
 	)
 }
 
@@ -5966,6 +6134,35 @@ func CapabilityBorrow(
 	return NewSomeValueNonCopying(invocationContext, referenceValue)
 }
 
+// Unified function for CapabilityCheck
+func UnifiedCapabilityCheckFunction(
+	addressValue AddressValue,
+	capabilityID UInt64Value,
+	capabilityBorrowType *sema.ReferenceType,
+) UnifiedNativeFunction {
+	return func(
+		context UnifiedFunctionContext,
+		args *ArgumentExtractor,
+		receiver Value,
+		typeArguments []StaticType,
+		locationRange LocationRange,
+	) Value {
+		var typeArgument sema.Type
+		if len(typeArguments) > 0 {
+			typeArgument = MustConvertStaticToSemaType(typeArguments[0], context)
+		}
+
+		return CapabilityCheck(
+			context,
+			typeArgument,
+			addressValue,
+			capabilityID,
+			capabilityBorrowType,
+			locationRange,
+		)
+	}
+}
+
 func capabilityCheckFunction(
 	context FunctionCreationContext,
 	capabilityValue CapabilityValue,
@@ -5974,30 +6171,11 @@ func capabilityCheckFunction(
 	capabilityBorrowType *sema.ReferenceType,
 ) FunctionValue {
 
-	return NewBoundHostFunctionValue(
+	return NewUnifiedBoundHostFunctionValue(
 		context,
 		capabilityValue,
 		sema.CapabilityTypeCheckFunctionType(capabilityBorrowType),
-		func(_ CapabilityValue, invocation Invocation) Value {
-
-			invocationContext := invocation.InvocationContext
-			locationRange := invocation.LocationRange
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-
-			var typeArgument sema.Type
-			if typeParameterPair != nil {
-				typeArgument = typeParameterPair.Value
-			}
-
-			return CapabilityCheck(
-				invocationContext,
-				typeArgument,
-				addressValue,
-				capabilityID,
-				capabilityBorrowType,
-				locationRange,
-			)
-		},
+		UnifiedCapabilityCheckFunction(addressValue, capabilityID, capabilityBorrowType),
 	)
 }
 
