@@ -28,7 +28,6 @@ import (
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
-	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -755,7 +754,9 @@ func opGetConstant(vm *VM, ins opcode.InstructionGetConstant) {
 	executable := vm.callFrame.function.Executable
 	c := executable.Constants[constantIndex]
 	if c == nil {
-		c = vm.initializeConstant(constantIndex)
+		// Constants referred-to by `InstructionGetConstant`
+		// are always value-typed constants.
+		c = vm.initializeValueTypedConstant(constantIndex)
 	}
 	vm.push(c)
 }
@@ -1042,11 +1043,13 @@ func opNewCompositeAt(vm *VM, ins opcode.InstructionNewCompositeAt) {
 	executable := vm.callFrame.function.Executable
 	c := executable.Program.Constants[ins.Address]
 
+	addressValue := c.Data.(interpreter.AddressValue)
+
 	compositeValue := newCompositeValue(
 		vm,
 		ins.Kind,
 		ins.Type,
-		common.MustBytesToAddress(c.Data),
+		addressValue.ToAddress(),
 	)
 	vm.push(compositeValue)
 }
@@ -1088,7 +1091,7 @@ func opSetField(vm *VM, ins opcode.InstructionSetField) {
 
 	// VM assumes the field name is always a string.
 	fieldNameIndex := ins.FieldName
-	fieldName := getStringConstant(vm, fieldNameIndex)
+	fieldName := getRawStringConstant(vm, fieldNameIndex)
 
 	memberAccessibleValue := target.(interpreter.MemberAccessibleValue)
 	memberAccessibleValue.SetMember(
@@ -1110,7 +1113,7 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 
 	// VM assumes the field name is always a string.
 	fieldNameIndex := ins.FieldName
-	fieldName := getStringConstant(vm, fieldNameIndex)
+	fieldName := getRawStringConstant(vm, fieldNameIndex)
 
 	fieldValue := memberAccessibleValue.GetMember(vm.context, EmptyLocationRange, fieldName)
 	if fieldValue == nil {
@@ -1147,7 +1150,7 @@ func opRemoveField(vm *VM, ins opcode.InstructionRemoveField) {
 
 	// VM assumes the field name is always a string.
 	fieldNameIndex := ins.FieldName
-	fieldName := getStringConstant(vm, fieldNameIndex)
+	fieldName := getRawStringConstant(vm, fieldNameIndex)
 
 	fieldValue := memberAccessibleValue.RemoveMember(vm.context, EmptyLocationRange, fieldName)
 	if fieldValue == nil {
@@ -1159,10 +1162,10 @@ func opRemoveField(vm *VM, ins opcode.InstructionRemoveField) {
 	vm.push(fieldValue)
 }
 
-func getStringConstant(vm *VM, index uint16) string {
+func getRawStringConstant(vm *VM, index uint16) string {
 	executable := vm.callFrame.function.Executable
 	c := executable.Program.Constants[index]
-	return string(c.Data)
+	return c.Data.(string)
 }
 
 func opTransferAndConvert(vm *VM, ins opcode.InstructionTransferAndConvert) {
@@ -1210,7 +1213,7 @@ func opDestroy(vm *VM) {
 
 func opNewPath(vm *VM, ins opcode.InstructionNewPath) {
 	identifierIndex := ins.Identifier
-	identifier := getStringConstant(vm, identifierIndex)
+	identifier := getRawStringConstant(vm, identifierIndex)
 	value := interpreter.NewPathValue(
 		vm.context.MemoryGauge,
 		ins.Domain,
@@ -1736,103 +1739,11 @@ func opStatement(vm *VM) {
 	common.UseComputation(vm.context, common.StatementComputationUsage)
 }
 
-func (vm *VM) initializeConstant(index uint16) (value Value) {
+func (vm *VM) initializeValueTypedConstant(index uint16) Value {
 	executable := vm.callFrame.function.Executable
 	c := executable.Program.Constants[index]
 
-	memoryGauge := vm.context.MemoryGauge
-
-	switch c.Kind {
-	case constant.String:
-		value = interpreter.NewUnmeteredStringValue(string(c.Data))
-
-	case constant.Character:
-		value = interpreter.NewUnmeteredCharacterValue(string(c.Data))
-
-	case constant.Int:
-		value = interpreter.NewIntValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Int8:
-		value = interpreter.NewInt8ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Int16:
-		value = interpreter.NewInt16ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Int32:
-		value = interpreter.NewInt32ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Int64:
-		value = interpreter.NewInt64ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Int128:
-		value = interpreter.NewInt128ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Int256:
-		value = interpreter.NewInt256ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt:
-		value = interpreter.NewUIntValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt8:
-		value = interpreter.NewUInt8ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt16:
-		value = interpreter.NewUInt16ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt32:
-		value = interpreter.NewUInt32ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt64:
-		value = interpreter.NewUInt64ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt128:
-		value = interpreter.NewUInt128ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt256:
-		value = interpreter.NewUInt256ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Word8:
-		value = interpreter.NewWord8ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Word16:
-		value = interpreter.NewWord16ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Word32:
-		value = interpreter.NewWord32ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Word64:
-		value = interpreter.NewWord64ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Word128:
-		value = interpreter.NewWord128ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Word256:
-		value = interpreter.NewWord256ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Fix64:
-		value = interpreter.NewFix64ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Fix128:
-		value = interpreter.NewFix128ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UFix64:
-		value = interpreter.NewUFix64ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UFix128:
-		value = interpreter.NewUFix128ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Address:
-		value = interpreter.NewAddressValueFromBytes(
-			memoryGauge,
-			func() []byte {
-				return c.Data
-			},
-		)
-
-	default:
-		panic(errors.NewUnexpectedError("unsupported constant kind: %s", c.Kind))
-	}
-
+	value := c.Data.(Value)
 	executable.Constants[index] = value
 
 	return value

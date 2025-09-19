@@ -23,22 +23,64 @@ import (
 	"github.com/onflow/cadence/common"
 )
 
-type Constant struct {
+type Constant[T any] struct {
 	index uint16
-	data  []byte
+	data  T
 	kind  constant.Kind
 }
 
-func NewConstant(
+type DecodedConstant = Constant[constant.ConstantData]
+
+func NewDecodedConstant(
 	gauge common.MemoryGauge,
 	index uint16,
 	kind constant.Kind,
-	data []byte,
-) *Constant {
+	data constant.ConstantData,
+) *DecodedConstant {
 	common.UseMemory(gauge, common.CompilerConstantMemoryUsage)
-	return &Constant{
+	return &DecodedConstant{
 		index: index,
 		kind:  kind,
 		data:  data,
 	}
 }
+
+type constantUniqueKey interface {
+	isConstantKey()
+}
+
+type stringConstantKey struct {
+	constantKind constant.Kind
+	content      string
+}
+
+var _ constantUniqueKey = stringConstantKey{}
+
+func (stringConstantKey) isConstantKey() {}
+
+type integerConstantKey struct {
+	constantKind constant.Kind
+	literal      string
+}
+
+var _ constantUniqueKey = integerConstantKey{}
+
+func (integerConstantKey) isConstantKey() {}
+
+type fixedpointConstantKey struct {
+	constantKind    constant.Kind
+	positiveLiteral string
+	isNegative      bool
+}
+
+var _ constantUniqueKey = fixedpointConstantKey{}
+
+func (fixedpointConstantKey) isConstantKey() {}
+
+type addressConstantKey struct {
+	content common.Address
+}
+
+var _ constantUniqueKey = addressConstantKey{}
+
+func (addressConstantKey) isConstantKey() {}
