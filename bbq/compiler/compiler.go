@@ -641,6 +641,7 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 	variableDeclarations := c.Program.VariableDeclarations()
 	functionDeclarations := c.Program.FunctionDeclarations()
 	interfaceDeclarations := c.Program.InterfaceDeclarations()
+	transactionDeclarations := c.Program.TransactionDeclarations()
 
 	// Phase 1: Collect all global symbols, assign indices
 	c.initializeAllGlobals(
@@ -649,6 +650,7 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 		functionDeclarations,
 		compositeDeclarations,
 		interfaceDeclarations,
+		transactionDeclarations,
 	)
 
 	// Phase 2: Compile declarations, all globals must be initialized at this point.
@@ -662,6 +664,9 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 		c.compileDeclaration(declaration)
 	}
 	for _, declaration := range interfaceDeclarations {
+		c.compileDeclaration(declaration)
+	}
+	for _, declaration := range transactionDeclarations {
 		c.compileDeclaration(declaration)
 	}
 
@@ -704,6 +709,7 @@ func (c *Compiler[_, _]) initializeAllGlobals(
 	functionDecls []*ast.FunctionDeclaration,
 	compositeDecls []*ast.CompositeDeclaration,
 	interfaceDecls []*ast.InterfaceDeclaration,
+	transactionDecls []*ast.TransactionDeclaration,
 ) {
 	// Reserve globals for the contract values before everything.
 	// Contract values must be always start at the zero-th index.
@@ -724,6 +730,7 @@ func (c *Compiler[_, _]) initializeAllGlobals(
 		functionDecls,
 		compositeDecls,
 		interfaceDecls,
+		transactionDecls,
 	)
 }
 
@@ -767,6 +774,7 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 	functionDecls []*ast.FunctionDeclaration,
 	compositeDecls []*ast.CompositeDeclaration,
 	interfaceDecls []*ast.InterfaceDeclaration,
+	transactionDecls []*ast.TransactionDeclaration,
 ) {
 	for _, declaration := range specialFunctionDecls {
 		switch declaration.Kind {
@@ -841,6 +849,7 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 			members.Functions(),
 			members.Composites(),
 			members.Interfaces(),
+			nil,
 		)
 	}
 
@@ -856,7 +865,22 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 			members.Functions(),
 			members.Composites(),
 			members.Interfaces(),
+			nil,
 		)
+	}
+
+	switch len(transactionDecls) {
+	case 0:
+		// No-op
+	case 1:
+		transactionDecl := transactionDecls[0]
+		if transactionDecl.ParameterList != nil &&
+			len(transactionDecl.ParameterList.Parameters) > 0 {
+
+			c.addGlobal(commons.ProgramInitFunctionName, bbq.GlobalKindFunction)
+		}
+	default:
+		panic(errors.NewUnexpectedError("multiple transaction declarations"))
 	}
 }
 
@@ -3554,10 +3578,69 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location,
 	}
 }
 
-func (c *Compiler[_, _]) VisitTransactionDeclaration(_ *ast.TransactionDeclaration) (_ struct{}) {
-	// Transaction declaration are desugared to composite declarations.
-	// So this should never reach.
-	panic(errors.NewUnreachableError())
+func (c *Compiler[_, _]) VisitTransactionDeclaration(declaration *ast.TransactionDeclaration) (_ struct{}) {
+
+	if declaration.ParameterList == nil ||
+		declaration.ParameterList.IsEmpty() {
+
+		return
+	}
+
+	transactionTypes := c.DesugaredElaboration.elaboration.TransactionDeclarationType(declaration)
+	if transactionTypes == nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	parameterCount := len(transactionTypes.Parameters)
+
+	if parameterCount >= math.MaxUint16 {
+		panic(errors.NewDefaultUserError("invalid parameter count"))
+	}
+
+	functionIndex := len(c.functions)
+
+	if functionIndex >= math.MaxUint16 {
+		panic(errors.NewDefaultUserError("invalid function index"))
+	}
+
+	functionType := &sema.FunctionType{
+		Parameters:           transactionTypes.Parameters,
+		ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+	}
+
+	const functionName = commons.ProgramInitFunctionName
+
+	function := c.addFunction(
+		functionName,
+		functionName,
+		uint16(parameterCount),
+		functionType,
+	)
+
+	func() {
+		c.targetFunction(function)
+		defer c.targetFunction(nil)
+
+		for _, parameter := range declaration.ParameterList.Parameters {
+
+			// Create assignment from param to global var.
+			// i.e: `a = $_param_a`
+			// NOTE: NO transfer, as the argument was already transferred to the parameter.
+
+			modifiedParamName := commons.TransactionGeneratedParamPrefix +
+				parameter.Identifier.Identifier
+
+			local := c.currentFunction.declareLocal(modifiedParamName)
+			c.emitGetLocal(local.index)
+
+			global := c.findGlobal(parameter.Identifier.Identifier)
+			c.emit(opcode.InstructionSetGlobal{
+				Global: global.GetGlobalInfo().Index,
+			})
+		}
+	}()
+
+	return
 }
 
 func (c *Compiler[_, _]) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) (_ struct{}) {

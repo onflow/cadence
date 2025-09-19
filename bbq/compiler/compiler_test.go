@@ -4926,23 +4926,24 @@ func TestCompileTransaction(t *testing.T) {
 
 	checker, err := ParseAndCheckWithOptions(t,
 		`
-            transaction {
+            transaction(n: Int) {
+
                 var count: Int
 
                 prepare() {
-                    self.count = 2
+                    self.count = 1 + n
                 }
 
                 pre {
-                    self.count == 2
+                    self.count == 2 + n: "pre failed"
                 }
 
                 execute {
-                    self.count = 10
+                    self.count = 3 + n
                 }
 
                 post {
-                    self.count == 10
+                    self.count == 4 + n: "post failed"
                 }
             }
         `,
@@ -4968,7 +4969,52 @@ func TestCompileTransaction(t *testing.T) {
 
 	program := comp.Compile()
 	functions := program.Functions
-	require.Len(t, functions, 5)
+	require.Len(t, functions, 6)
+
+	// constant indexes
+	const (
+		oneConstIndex = iota
+		fieldNameConstIndex
+		twoConstIndex
+		preErrorMessageConstIndex
+		threeConstIndex
+		fourConstIndex
+		postErrorMessageConstIndex
+	)
+
+	assert.Equal(t,
+		[]constant.Constant{
+			{
+				Data: []byte{0x1},
+				Kind: constant.Int,
+			},
+			{
+				Data: []byte("count"),
+				Kind: constant.String,
+			},
+			{
+				Data: []byte{0x2},
+				Kind: constant.Int,
+			},
+			{
+				Data: []byte("pre failed"),
+				Kind: constant.String,
+			},
+			{
+				Data: []byte{0x3},
+				Kind: constant.Int,
+			},
+			{
+				Data: []byte{0x4},
+				Kind: constant.Int,
+			},
+			{
+				Data: []byte("post failed"),
+				Kind: constant.String,
+			},
+		},
+		program.Constants,
+	)
 
 	// Function indexes
 	const (
@@ -4978,8 +5024,22 @@ func TestCompileTransaction(t *testing.T) {
 		_
 		prepareFunctionIndex
 		executeFunctionIndex
-		failPreConditionFunctionIndex
-		failPostConditionFunctionIndex
+		programInitFunctionIndex
+	)
+
+	const transactionParameterCount = 1
+
+	const (
+		nGlobalIndex = iota
+		// Next 6 indexes are for functions, see above
+		_
+		_
+		_
+		_
+		_
+		_
+		failPreConditionGlobalIndex
+		failPostConditionGlobalIndex
 	)
 
 	// Transaction constructor
@@ -4992,7 +5052,7 @@ func TestCompileTransaction(t *testing.T) {
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t,
-		transactionInitFunctionIndex,
+		transactionParameterCount+transactionInitFunctionIndex,
 		comp.Globals[commons.TransactionWrapperCompositeName].GetGlobalInfo().Index,
 	)
 
@@ -5009,14 +5069,6 @@ func TestCompileTransaction(t *testing.T) {
 		constructor.Code,
 	)
 
-	// constant indexes
-	const (
-		const2Index = iota
-		constFieldNameIndex
-		constErrorMsgIndex
-		const10Index
-	)
-
 	// Prepare function.
 	// local var indexes
 	const (
@@ -5031,18 +5083,23 @@ func TestCompileTransaction(t *testing.T) {
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t,
-		prepareFunctionIndex,
+		transactionParameterCount+prepareFunctionIndex,
 		comp.Globals[commons.TransactionPrepareFunctionName].GetGlobalInfo().Index,
 	)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
-			// self.count = 2
+			// self.count = 1 + n
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: selfIndex},
-			opcode.InstructionGetConstant{Constant: const2Index},
+			opcode.InstructionGetConstant{Constant: oneConstIndex},
+			opcode.InstructionGetGlobal{Global: nGlobalIndex},
+			opcode.InstructionAdd{},
 			opcode.InstructionTransferAndConvert{Type: 4},
-			opcode.InstructionSetField{FieldName: constFieldNameIndex, AccessedType: 1},
+			opcode.InstructionSetField{
+				FieldName:    fieldNameConstIndex,
+				AccessedType: 1,
+			},
 
 			// return
 			opcode.InstructionReturn{},
@@ -5054,15 +5111,15 @@ func TestCompileTransaction(t *testing.T) {
 
 	// Would be equivalent to:
 	//    fun execute {
-	//        if !(self.count == 2) {
-	//            $failPreCondition("")
+	//        if !(self.count == 2 + n) {
+	//            $failPreCondition("pre failed")
 	//        }
 	//
 	//        var $_result
-	//        self.count = 10
+	//        self.count = 3 + n
 	//
-	//        if !(self.count == 10) {
-	//            $failPostCondition("")
+	//        if !(self.count == 4 + n) {
+	//            $failPostCondition("post failed")
 	//        }
 	//        return
 	//    }
@@ -5071,55 +5128,73 @@ func TestCompileTransaction(t *testing.T) {
 	require.Equal(t, commons.TransactionExecuteFunctionName, executeFunction.QualifiedName)
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, executeFunctionIndex, comp.Globals[commons.TransactionExecuteFunctionName].GetGlobalInfo().Index)
+	assert.Equal(t,
+		transactionParameterCount+executeFunctionIndex,
+		comp.Globals[commons.TransactionExecuteFunctionName].GetGlobalInfo().Index,
+	)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
 			// Pre condition
-			// `self.count == 2`
+			// `self.count == 2 + n: "pre failed"`
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: selfIndex},
-			opcode.InstructionGetField{FieldName: constFieldNameIndex, AccessedType: 1},
-			opcode.InstructionGetConstant{Constant: const2Index},
+			opcode.InstructionGetField{
+				FieldName:    fieldNameConstIndex,
+				AccessedType: 1,
+			},
+			opcode.InstructionGetConstant{Constant: twoConstIndex},
+			opcode.InstructionGetGlobal{Global: nGlobalIndex},
+			opcode.InstructionAdd{},
 			opcode.InstructionEqual{},
 
 			// if !<condition>
 			opcode.InstructionNot{},
-			opcode.InstructionJumpIfFalse{Target: 13},
+			opcode.InstructionJumpIfFalse{Target: 15},
 
-			// $failPreCondition("")
+			// $failPreCondition("pre failed")
 			opcode.InstructionStatement{},
-			opcode.InstructionGetGlobal{Global: failPreConditionFunctionIndex},
-			opcode.InstructionGetConstant{Constant: constErrorMsgIndex},
+			opcode.InstructionGetGlobal{Global: failPreConditionGlobalIndex},
+			opcode.InstructionGetConstant{Constant: preErrorMessageConstIndex},
 			opcode.InstructionTransferAndConvert{Type: 5},
 			opcode.InstructionInvoke{ArgCount: 1},
 
 			// Drop since it's a statement-expression
 			opcode.InstructionDrop{},
 
-			// self.count = 10
+			// self.count = 3 + n
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: selfIndex},
-			opcode.InstructionGetConstant{Constant: const10Index},
+			opcode.InstructionGetConstant{Constant: threeConstIndex},
+			opcode.InstructionGetGlobal{Global: nGlobalIndex},
+			opcode.InstructionAdd{},
 			opcode.InstructionTransferAndConvert{Type: 4},
-			opcode.InstructionSetField{FieldName: constFieldNameIndex, AccessedType: 1},
+			opcode.InstructionSetField{
+				FieldName:    fieldNameConstIndex,
+				AccessedType: 1,
+			},
 
 			// Post condition
-			// `self.count == 10`
+			// `self.count == 4 + n: "post failed"`
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: selfIndex},
-			opcode.InstructionGetField{FieldName: constFieldNameIndex, AccessedType: 1},
-			opcode.InstructionGetConstant{Constant: const10Index},
+			opcode.InstructionGetField{
+				FieldName:    fieldNameConstIndex,
+				AccessedType: 1,
+			},
+			opcode.InstructionGetConstant{Constant: fourConstIndex},
+			opcode.InstructionGetGlobal{Global: nGlobalIndex},
+			opcode.InstructionAdd{},
 			opcode.InstructionEqual{},
 
 			// if !<condition>
 			opcode.InstructionNot{},
-			opcode.InstructionJumpIfFalse{Target: 31},
+			opcode.InstructionJumpIfFalse{Target: 37},
 
-			// $failPostCondition("")
+			// $failPostCondition("post failed")
 			opcode.InstructionStatement{},
-			opcode.InstructionGetGlobal{Global: failPostConditionFunctionIndex},
-			opcode.InstructionGetConstant{Constant: constErrorMsgIndex},
+			opcode.InstructionGetGlobal{Global: failPostConditionGlobalIndex},
+			opcode.InstructionGetConstant{Constant: postErrorMessageConstIndex},
 			opcode.InstructionTransferAndConvert{Type: 5},
 			opcode.InstructionInvoke{ArgCount: 1},
 
@@ -5130,6 +5205,23 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionReturn{},
 		},
 		executeFunction.Code,
+	)
+
+	// Program init function
+	initFunction := program.Functions[programInitFunctionIndex]
+	require.Equal(t,
+		commons.ProgramInitFunctionName,
+		initFunction.QualifiedName,
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// n = $_param_n
+			opcode.InstructionGetLocal{Local: 0},
+			// NOTE: no transfer, intentional to avoid copy
+			opcode.InstructionSetGlobal{Global: nGlobalIndex},
+		},
+		initFunction.Code,
 	)
 }
 

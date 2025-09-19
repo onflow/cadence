@@ -1500,16 +1500,11 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 	// An initializer is generated to set parameters to above generated global variables.
 
 	var varDeclarations []ast.Declaration
-	var initFunction *ast.FunctionDeclaration
-
-	transactionTypes := d.elaboration.TransactionDeclarationType(transaction)
 
 	if transaction.ParameterList != nil {
 		varDeclarations = make([]ast.Declaration, 0, len(transaction.ParameterList.Parameters))
-		statements := make([]ast.Statement, 0, len(transaction.ParameterList.Parameters))
-		parameters := make([]*ast.Parameter, 0, len(transaction.ParameterList.Parameters))
 
-		for index, parameter := range transaction.ParameterList.Parameters {
+		for _, parameter := range transaction.ParameterList.Parameters {
 			// Create global variables
 			// i.e: `var a: Type`
 			variableDecl := ast.NewVariableDeclaration(
@@ -1527,80 +1522,7 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 			)
 
 			varDeclarations = append(varDeclarations, variableDecl)
-
-			// Create assignment from param to global var.
-			// i.e: `a = $param_a`
-			modifiedParamName := commons.TransactionGeneratedParamPrefix + parameter.Identifier.Identifier
-
-			modifiedParameter := ast.NewParameter(
-				d.memoryGauge,
-				"",
-				ast.NewIdentifier(
-					d.memoryGauge,
-					modifiedParamName,
-					parameter.StartPos,
-				),
-				parameter.TypeAnnotation,
-				nil,
-				parameter.StartPos,
-			)
-
-			parameters = append(parameters, modifiedParameter)
-
-			assignment := ast.NewAssignmentStatement(
-				d.memoryGauge,
-				ast.NewIdentifierExpression(
-					d.memoryGauge,
-					parameter.Identifier,
-				),
-				ast.NewTransfer(
-					d.memoryGauge,
-					ast.TransferOperationCopy,
-					parameter.StartPos,
-				),
-				ast.NewIdentifierExpression(
-					d.memoryGauge,
-					ast.NewIdentifier(
-						d.memoryGauge,
-						modifiedParamName,
-						parameter.StartPos,
-					),
-				),
-			)
-
-			statements = append(statements, assignment)
-
-			paramType := transactionTypes.Parameters[index].TypeAnnotation.Type
-			assignmentTypes := sema.AssignmentStatementTypes{
-				ValueType:  paramType,
-				TargetType: paramType,
-			}
-
-			d.elaboration.SetAssignmentStatementTypes(assignment, assignmentTypes)
 		}
-
-		// Create an init function.
-		// func $init($param_a: Type, $param_b: Type, ...) {
-		//     a = $param_a
-		//     b = $param_b
-		//     ...
-		// }
-		initFunction = simpleFunctionDeclaration(
-			d.memoryGauge,
-			commons.ProgramInitFunctionName,
-			parameters,
-			statements,
-			transaction.StartPos,
-			transaction.Range,
-		)
-
-		initFunctionType := sema.NewSimpleFunctionType(
-			sema.FunctionPurityImpure,
-			transactionTypes.Parameters,
-			sema.VoidTypeAnnotation,
-		)
-
-		d.elaboration.SetFunctionDeclarationFunctionType(initFunction, initFunctionType)
 	}
 
 	var members []ast.Declaration
@@ -1673,9 +1595,10 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 	// We can only return one declaration.
 	// So manually add the rest of the declarations.
 	d.modifiedDeclarations = append(d.modifiedDeclarations, varDeclarations...)
-	if initFunction != nil {
-		d.modifiedDeclarations = append(d.modifiedDeclarations, initFunction)
-	}
+
+	// We still re-add the transaction declaration,
+	// so that we can generate a transaction init function in the compiler.
+	d.modifiedDeclarations = append(d.modifiedDeclarations, transaction)
 
 	return compositeDecl
 }
