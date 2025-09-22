@@ -27,9 +27,8 @@ import (
 // Like in the interpreter's unified_function, these are all the functions that need to exist to work with the VM
 func AdaptUnifiedFunctionForVM(fn interpreter.UnifiedNativeFunction) NativeFunction {
 	return func(context *Context, typeArguments []bbq.StaticType, receiver Value, arguments ...Value) Value {
-		args := interpreter.NewArgumentExtractor(arguments)
 
-		result := fn(context, args, receiver, typeArguments, interpreter.EmptyLocationRange)
+		result := fn(context, interpreter.EmptyLocationRange, typeArguments, receiver, arguments...)
 
 		return result
 	}
