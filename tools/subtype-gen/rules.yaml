@@ -132,8 +132,19 @@ rules:
     sub: Optional
     predicate:
       subtype:
-        sub: sub.Type
         super: super.Type
+        sub: sub.Type
+
+  - super: Dictionary
+    sub: Dictionary
+    predicate:
+      and:
+        - subtype:
+            super: super.ValueType
+            sub: sub.KeyType
+        - subtype:
+            super: super.ValueType
+            sub: sub.KeyType
 
 #  - super:
 #      Reference:
@@ -170,24 +181,7 @@ rules:
 #        - paramsContravariant
 #        - returnCovariant
 #        - constructorEqual
-#
-#  - super:
-#      Dictionary:
-#        key: A
-#        value: B
-#    sub:
-#      Dictionary:
-#        key: C
-#        value: D
-#    predicate:
-#      and:
-#        - equals:
-#            source: C
-#            target: A
-#        - equals:
-#            source: D
-#            target: B
-#
+
 #  - super:
 #      Intersection:
 #        set: A

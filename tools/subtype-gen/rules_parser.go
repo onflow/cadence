@@ -56,10 +56,15 @@ func ParseRules() ([]Rule, error) {
 // parseType parses a type with just a name.
 func parseType(typeName string) Type {
 	switch typeName {
-	case typePlaceholderOptional:
-		return OptionalType{}
+	case typePlaceholderOptional,
+		typePlaceholderDictionary:
+		return ComplexTypeType{
+			name: typeName,
+		}
 	default:
-		return SimpleType{name: typeName}
+		return SimpleType{
+			name: typeName,
+		}
 	}
 }
 

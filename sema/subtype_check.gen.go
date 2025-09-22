@@ -119,6 +119,14 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 		return IsSubType(typedSubType.Type, typedSuperType.Type)
 
+	case *DictionaryType:
+		typedSubType, ok := subType.(*DictionaryType)
+		if !ok {
+			return false
+		}
+
+		return IsSubType(typedSubType.KeyType, typedSuperType.ValueType) && IsSubType(typedSubType.KeyType, typedSuperType.ValueType)
+
 	}
 
 	return false

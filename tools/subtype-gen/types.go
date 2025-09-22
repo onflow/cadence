@@ -33,12 +33,12 @@ func (t SimpleType) Name() string {
 	return t.name
 }
 
-type OptionalType struct {
-	Type Type
+type ComplexTypeType struct {
+	name string
 }
 
-var _ Type = &OptionalType{}
+var _ Type = &ComplexTypeType{}
 
-func (o OptionalType) Name() string {
-	return typePlaceholderOptional
+func (t ComplexTypeType) Name() string {
+	return t.name
 }
