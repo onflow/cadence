@@ -115,7 +115,13 @@ func main() {
 		if mapDataSlab1, ok := slab1.(*atree.MapDataSlab); ok {
 			if mapDataSlab2, ok := slab2.(*atree.MapDataSlab); ok {
 				compareMapDataSlabs(mapDataSlab1, mapDataSlab2)
+				return
 			}
+		}
+
+		if !bytes.Equal(data, data2) {
+			fmt.Printf("Slabs are different!")
+			os.Exit(1)
 		}
 	}
 }
