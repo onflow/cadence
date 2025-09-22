@@ -131,30 +131,30 @@ type mapEntry struct {
 	value atree.MapValue
 }
 
+func newMapDataSlabIndexer(entries map[string]mapEntry) func(key atree.MapKey, value atree.MapValue) error {
+	return func(key atree.MapKey, value atree.MapValue) error {
+		entries[string(encodeStorable(key))] = mapEntry{
+			key:   key,
+			value: value,
+		}
+		return nil
+	}
+}
+
 func compareMapDataSlabs(slab1 *atree.MapDataSlab, slab2 *atree.MapDataSlab) {
 
 	if slab1.Count() != slab2.Count() {
 		fmt.Printf("Different count: %d vs %d\n", slab1.Count(), slab2.Count())
 	}
 
-	newIndexer := func(entries map[string]mapEntry) func(key atree.MapKey, value atree.MapValue) error {
-		return func(key atree.MapKey, value atree.MapValue) error {
-			entries[string(encodeStorable(key))] = mapEntry{
-				key:   key,
-				value: value,
-			}
-			return nil
-		}
-	}
-
 	entries1 := make(map[string]mapEntry)
-	err := slab1.Iterate(nil, newIndexer(entries1))
+	err := slab1.Iterate(nil, newMapDataSlabIndexer(entries1))
 	if err != nil {
 		panic(fmt.Errorf("Error iterating slab 1: %w\n", err))
 	}
 
 	entries2 := make(map[string]mapEntry)
-	err = slab2.Iterate(nil, newIndexer(entries2))
+	err = slab2.Iterate(nil, newMapDataSlabIndexer(entries2))
 	if err != nil {
 		panic(fmt.Errorf("Error iterating slab 2: %w\n", err))
 	}
