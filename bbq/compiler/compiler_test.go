@@ -41,6 +41,21 @@ import (
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
+// assertGlobalsEqual compares GlobalInfo of globals
+func assertGlobalsEqual(t *testing.T, expected map[string]bbq.GlobalInfo, actual map[string]bbq.Global) {
+	// Check that both maps have the same keys
+	assert.Equal(t, len(expected), len(actual), "globals maps have different lengths")
+
+	for key, expectedGlobal := range expected {
+		actualGlobal, exists := actual[key]
+		if !assert.True(t, exists, "expected global %s not found in actual", key) {
+			continue
+		}
+
+		assert.Equal(t, expectedGlobal, actualGlobal.GetGlobalInfo())
+	}
+}
+
 func TestCompileRecursionFib(t *testing.T) {
 
 	t.Parallel()
@@ -3230,7 +3245,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 	require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].Index)
+	assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].GetGlobalInfo().Index)
 
 	// `Test` type's `test` function.
 
@@ -3239,7 +3254,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 	require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].Index)
+	assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].GetGlobalInfo().Index)
 
 	// Should be calling into interface's default function.
 	// ```
@@ -3278,7 +3293,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 	require.Equal(t, interfaceTypeTestFuncName, interfaceTypeTestFunc.QualifiedName)
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, interfaceFunctionIndex, comp.Globals[interfaceTypeTestFuncName].Index)
+	assert.Equal(t, interfaceFunctionIndex, comp.Globals[interfaceTypeTestFuncName].GetGlobalInfo().Index)
 
 	// Should contain the implementation.
 	// ```
@@ -3610,7 +3625,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
 
 		// Also check if the globals are linked properly.
-		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].Index)
+		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].GetGlobalInfo().Index)
 
 		// `Test` type's `test` function.
 
@@ -3634,7 +3649,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
 
 		// Also check if the globals are linked properly.
-		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].Index)
+		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].GetGlobalInfo().Index)
 
 		// Would be equivalent to:
 		// ```
@@ -3785,7 +3800,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
 
 		// Also check if the globals are linked properly.
-		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].Index)
+		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].GetGlobalInfo().Index)
 
 		// `Test` type's `test` function.
 
@@ -3809,7 +3824,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
 
 		// Also check if the globals are linked properly.
-		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].Index)
+		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].GetGlobalInfo().Index)
 
 		// Would be equivalent to:
 		// ```
@@ -3954,9 +3969,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 						activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 						activation.Set(
 							stdlib.LogFunctionName,
-							compiler.GlobalImport{
-								Name: stdlib.LogFunctionName,
-							},
+							compiler.NewGlobalImport(stdlib.LogFunctionName),
 						)
 						return activation
 					},
@@ -4914,23 +4927,24 @@ func TestCompileTransaction(t *testing.T) {
 
 	checker, err := ParseAndCheckWithOptions(t,
 		`
-            transaction {
+            transaction(n: Int) {
+
                 var count: Int
 
                 prepare() {
-                    self.count = 2
+                    self.count = 1 + n
                 }
 
                 pre {
-                    self.count == 2
+                    self.count == 2 + n: "pre failed"
                 }
 
                 execute {
-                    self.count = 10
+                    self.count = 3 + n
                 }
 
                 post {
-                    self.count == 10
+                    self.count == 4 + n: "post failed"
                 }
             }
         `,
@@ -4956,7 +4970,52 @@ func TestCompileTransaction(t *testing.T) {
 
 	program := comp.Compile()
 	functions := program.Functions
-	require.Len(t, functions, 5)
+	require.Len(t, functions, 6)
+
+	// constant indexes
+	const (
+		oneConstIndex = iota
+		fieldNameConstIndex
+		twoConstIndex
+		preErrorMessageConstIndex
+		threeConstIndex
+		fourConstIndex
+		postErrorMessageConstIndex
+	)
+
+	assert.Equal(t,
+		[]constant.Constant{
+			{
+				Data: []byte{0x1},
+				Kind: constant.Int,
+			},
+			{
+				Data: []byte("count"),
+				Kind: constant.String,
+			},
+			{
+				Data: []byte{0x2},
+				Kind: constant.Int,
+			},
+			{
+				Data: []byte("pre failed"),
+				Kind: constant.String,
+			},
+			{
+				Data: []byte{0x3},
+				Kind: constant.Int,
+			},
+			{
+				Data: []byte{0x4},
+				Kind: constant.Int,
+			},
+			{
+				Data: []byte("post failed"),
+				Kind: constant.String,
+			},
+		},
+		program.Constants,
+	)
 
 	// Function indexes
 	const (
@@ -4966,8 +5025,22 @@ func TestCompileTransaction(t *testing.T) {
 		_
 		prepareFunctionIndex
 		executeFunctionIndex
-		failPreConditionFunctionIndex
-		failPostConditionFunctionIndex
+		programInitFunctionIndex
+	)
+
+	const transactionParameterCount = 1
+
+	const (
+		nGlobalIndex = iota
+		// Next 6 indexes are for functions, see above
+		_
+		_
+		_
+		_
+		_
+		_
+		failPreConditionGlobalIndex
+		failPostConditionGlobalIndex
 	)
 
 	// Transaction constructor
@@ -4980,8 +5053,8 @@ func TestCompileTransaction(t *testing.T) {
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t,
-		transactionInitFunctionIndex,
-		comp.Globals[commons.TransactionWrapperCompositeName].Index,
+		transactionParameterCount+transactionInitFunctionIndex,
+		comp.Globals[commons.TransactionWrapperCompositeName].GetGlobalInfo().Index,
 	)
 
 	assert.Equal(t,
@@ -4995,14 +5068,6 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionReturnValue{},
 		},
 		constructor.Code,
-	)
-
-	// constant indexes
-	const (
-		const2Index = iota
-		constFieldNameIndex
-		constErrorMsgIndex
-		const10Index
 	)
 
 	// Prepare function.
@@ -5019,18 +5084,23 @@ func TestCompileTransaction(t *testing.T) {
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t,
-		prepareFunctionIndex,
-		comp.Globals[commons.TransactionPrepareFunctionName].Index,
+		transactionParameterCount+prepareFunctionIndex,
+		comp.Globals[commons.TransactionPrepareFunctionName].GetGlobalInfo().Index,
 	)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
-			// self.count = 2
+			// self.count = 1 + n
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: selfIndex},
-			opcode.InstructionGetConstant{Constant: const2Index},
+			opcode.InstructionGetConstant{Constant: oneConstIndex},
+			opcode.InstructionGetGlobal{Global: nGlobalIndex},
+			opcode.InstructionAdd{},
 			opcode.InstructionTransferAndConvert{Type: 4},
-			opcode.InstructionSetField{FieldName: constFieldNameIndex, AccessedType: 1},
+			opcode.InstructionSetField{
+				FieldName:    fieldNameConstIndex,
+				AccessedType: 1,
+			},
 
 			// return
 			opcode.InstructionReturn{},
@@ -5042,15 +5112,15 @@ func TestCompileTransaction(t *testing.T) {
 
 	// Would be equivalent to:
 	//    fun execute {
-	//        if !(self.count == 2) {
-	//            $failPreCondition("")
+	//        if !(self.count == 2 + n) {
+	//            $failPreCondition("pre failed")
 	//        }
 	//
 	//        var $_result
-	//        self.count = 10
+	//        self.count = 3 + n
 	//
-	//        if !(self.count == 10) {
-	//            $failPostCondition("")
+	//        if !(self.count == 4 + n) {
+	//            $failPostCondition("post failed")
 	//        }
 	//        return
 	//    }
@@ -5059,55 +5129,73 @@ func TestCompileTransaction(t *testing.T) {
 	require.Equal(t, commons.TransactionExecuteFunctionName, executeFunction.QualifiedName)
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, executeFunctionIndex, comp.Globals[commons.TransactionExecuteFunctionName].Index)
+	assert.Equal(t,
+		transactionParameterCount+executeFunctionIndex,
+		comp.Globals[commons.TransactionExecuteFunctionName].GetGlobalInfo().Index,
+	)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
 			// Pre condition
-			// `self.count == 2`
+			// `self.count == 2 + n: "pre failed"`
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: selfIndex},
-			opcode.InstructionGetField{FieldName: constFieldNameIndex, AccessedType: 1},
-			opcode.InstructionGetConstant{Constant: const2Index},
+			opcode.InstructionGetField{
+				FieldName:    fieldNameConstIndex,
+				AccessedType: 1,
+			},
+			opcode.InstructionGetConstant{Constant: twoConstIndex},
+			opcode.InstructionGetGlobal{Global: nGlobalIndex},
+			opcode.InstructionAdd{},
 			opcode.InstructionEqual{},
 
 			// if !<condition>
 			opcode.InstructionNot{},
-			opcode.InstructionJumpIfFalse{Target: 13},
+			opcode.InstructionJumpIfFalse{Target: 15},
 
-			// $failPreCondition("")
+			// $failPreCondition("pre failed")
 			opcode.InstructionStatement{},
-			opcode.InstructionGetGlobal{Global: failPreConditionFunctionIndex},
-			opcode.InstructionGetConstant{Constant: constErrorMsgIndex},
+			opcode.InstructionGetGlobal{Global: failPreConditionGlobalIndex},
+			opcode.InstructionGetConstant{Constant: preErrorMessageConstIndex},
 			opcode.InstructionTransferAndConvert{Type: 5},
 			opcode.InstructionInvoke{ArgCount: 1},
 
 			// Drop since it's a statement-expression
 			opcode.InstructionDrop{},
 
-			// self.count = 10
+			// self.count = 3 + n
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: selfIndex},
-			opcode.InstructionGetConstant{Constant: const10Index},
+			opcode.InstructionGetConstant{Constant: threeConstIndex},
+			opcode.InstructionGetGlobal{Global: nGlobalIndex},
+			opcode.InstructionAdd{},
 			opcode.InstructionTransferAndConvert{Type: 4},
-			opcode.InstructionSetField{FieldName: constFieldNameIndex, AccessedType: 1},
+			opcode.InstructionSetField{
+				FieldName:    fieldNameConstIndex,
+				AccessedType: 1,
+			},
 
 			// Post condition
-			// `self.count == 10`
+			// `self.count == 4 + n: "post failed"`
 			opcode.InstructionStatement{},
 			opcode.InstructionGetLocal{Local: selfIndex},
-			opcode.InstructionGetField{FieldName: constFieldNameIndex, AccessedType: 1},
-			opcode.InstructionGetConstant{Constant: const10Index},
+			opcode.InstructionGetField{
+				FieldName:    fieldNameConstIndex,
+				AccessedType: 1,
+			},
+			opcode.InstructionGetConstant{Constant: fourConstIndex},
+			opcode.InstructionGetGlobal{Global: nGlobalIndex},
+			opcode.InstructionAdd{},
 			opcode.InstructionEqual{},
 
 			// if !<condition>
 			opcode.InstructionNot{},
-			opcode.InstructionJumpIfFalse{Target: 31},
+			opcode.InstructionJumpIfFalse{Target: 37},
 
-			// $failPostCondition("")
+			// $failPostCondition("post failed")
 			opcode.InstructionStatement{},
-			opcode.InstructionGetGlobal{Global: failPostConditionFunctionIndex},
-			opcode.InstructionGetConstant{Constant: constErrorMsgIndex},
+			opcode.InstructionGetGlobal{Global: failPostConditionGlobalIndex},
+			opcode.InstructionGetConstant{Constant: postErrorMessageConstIndex},
 			opcode.InstructionTransferAndConvert{Type: 5},
 			opcode.InstructionInvoke{ArgCount: 1},
 
@@ -5118,6 +5206,23 @@ func TestCompileTransaction(t *testing.T) {
 			opcode.InstructionReturn{},
 		},
 		executeFunction.Code,
+	)
+
+	// Program init function
+	initFunction := program.Functions[programInitFunctionIndex]
+	require.Equal(t,
+		commons.ProgramInitFunctionName,
+		initFunction.QualifiedName,
+	)
+
+	assert.Equal(t,
+		[]opcode.Instruction{
+			// n = $_param_n
+			opcode.InstructionGetLocal{Local: 0},
+			// NOTE: no transfer, intentional to avoid copy
+			opcode.InstructionSetGlobal{Global: nGlobalIndex},
+		},
+		initFunction.Code,
 	)
 }
 
@@ -7776,7 +7881,6 @@ func TestCompileEnum(t *testing.T) {
 			opcode.InstructionGetGlobal{Global: testConstructorGlobalIndex},
 			opcode.InstructionGetConstant{Constant: 0},
 			opcode.InstructionInvoke{ArgCount: 1},
-			opcode.InstructionTransferAndConvert{Type: 3},
 			opcode.InstructionReturnValue{},
 		},
 		variables[testAVarIndex].Getter.Code,
@@ -7787,7 +7891,6 @@ func TestCompileEnum(t *testing.T) {
 			opcode.InstructionGetGlobal{Global: testConstructorGlobalIndex},
 			opcode.InstructionGetConstant{Constant: 1},
 			opcode.InstructionInvoke{ArgCount: 1},
-			opcode.InstructionTransferAndConvert{Type: 3},
 			opcode.InstructionReturnValue{},
 		},
 		variables[testBVarIndex].Getter.Code,
@@ -7798,7 +7901,6 @@ func TestCompileEnum(t *testing.T) {
 			opcode.InstructionGetGlobal{Global: testConstructorGlobalIndex},
 			opcode.InstructionGetConstant{Constant: 2},
 			opcode.InstructionInvoke{ArgCount: 1},
-			opcode.InstructionTransferAndConvert{Type: 3},
 			opcode.InstructionReturnValue{},
 		},
 		variables[testCVarIndex].Getter.Code,
@@ -7858,9 +7960,7 @@ func TestCompileOptionalArgument(t *testing.T) {
 				activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 				activation.Set(
 					stdlib.AssertFunctionName,
-					compiler.GlobalImport{
-						Name: stdlib.AssertFunctionName,
-					},
+					compiler.NewGlobalImport(stdlib.AssertFunctionName),
 				)
 				return activation
 			},
@@ -9290,17 +9390,20 @@ func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
 			opcode.InstructionGetLocal{Local: siIndex},
 			opcode.InstructionSetLocal{Local: tempIndex},
 			opcode.InstructionGetLocal{Local: tempIndex},
-			opcode.InstructionJumpIfNil{Target: 10},
+			opcode.InstructionJumpIfNil{Target: 11},
 			opcode.InstructionGetLocal{Local: tempIndex},
 			opcode.InstructionUnwrap{},
-			opcode.InstructionInvokeDynamic{
-				Name:     0,
+			opcode.InstructionGetField{
+				FieldName:    0,
+				AccessedType: 1,
+			},
+			opcode.InstructionInvoke{
 				ArgCount: 0,
 			},
 			opcode.InstructionWrap{},
-			opcode.InstructionJump{Target: 11},
+			opcode.InstructionJump{Target: 12},
 			opcode.InstructionNil{},
-			opcode.InstructionTransferAndConvert{Type: 1},
+			opcode.InstructionTransferAndConvert{Type: 2},
 			opcode.InstructionReturnValue{},
 		},
 		functions[0].Code,
@@ -9403,15 +9506,11 @@ func TestCompileInjectedContract(t *testing.T) {
 			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 			activation.Set(
 				"B",
-				compiler.GlobalImport{
-					Name: "B",
-				},
+				compiler.NewGlobalImport("B"),
 			)
 			activation.Set(
 				"B.c",
-				compiler.GlobalImport{
-					Name: "B.c",
-				},
+				compiler.NewGlobalImport("B.c"),
 			)
 			return activation
 		},
@@ -9638,6 +9737,8 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
             resource ABC: Bar.XYZ {
                 var x: Int
 
+                event ResourceDestroyed(x: Int = self.x)
+
                 init() {
                     self.x = 6
                 }
@@ -9654,33 +9755,44 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 	fooProgram := ParseCheckAndCompile(t, fooContract, fooLocation, programs)
 
 	functions = fooProgram.Functions
-	require.Len(t, functions, 8)
+	require.Len(t, functions, 11)
 
 	defaultDestroyEventEmittingFunction := functions[7]
 	require.Equal(t, "Foo.ABC.$ResourceDestroyed", defaultDestroyEventEmittingFunction.Name)
 
 	const inheritedEventConstructorIndex = 9
+	const selfDefinedABCEventConstructorIndex = 12
 
 	assert.Equal(t,
 		[]opcode.Instruction{
 			opcode.InstructionStatement{},
 
+			// Get the `collectEvents` parameter for invocation.
+			opcode.InstructionGetLocal{Local: 1},
+
 			// Construct the inherited event
 			// Bar.XYZ.ResourceDestroyed(self.x)
 			opcode.InstructionGetGlobal{Global: inheritedEventConstructorIndex},
+			opcode.InstructionGetLocal{Local: 0},
+			opcode.InstructionGetField{FieldName: 2, AccessedType: 5},
+			opcode.InstructionTransferAndConvert{Type: 6},
+			opcode.InstructionInvoke{ArgCount: 1},
+
+			// Construct the self defined event
+			// Foo.ABC.ResourceDestroyed(self.x)
+			opcode.InstructionGetGlobal{Global: selfDefinedABCEventConstructorIndex},
 			opcode.InstructionGetLocal{Local: 0},
 			opcode.InstructionGetField{FieldName: 2, AccessedType: 8},
 			opcode.InstructionTransferAndConvert{Type: 6},
 			opcode.InstructionInvoke{ArgCount: 1},
 
-			// Create the array with the above event.
-			// `[Bar.XYZ.ResourceDestroyed(self.x)]`
-			opcode.InstructionTransferAndConvert{Type: 9},
-			opcode.InstructionNewArray{Type: 7, Size: 1, IsResource: false},
-			opcode.InstructionTransferAndConvert{Type: 7},
+			// Invoke `collectEvents` with the above event.
+			// `collectEvents(...)`
+			opcode.InstructionInvoke{ArgCount: 2},
+			opcode.InstructionDrop{},
 
-			// return the array
-			opcode.InstructionReturnValue{},
+			// Return
+			opcode.InstructionReturn{},
 		},
 		defaultDestroyEventEmittingFunction.Code,
 	)
@@ -9760,23 +9872,26 @@ func TestCompileImportAlias(t *testing.T) {
 		)
 
 		// Imported types are location qualified.
-		assert.Equal(
+		assertGlobalsEqual(
 			t,
-			map[string]*compiler.Global{
+			map[string]bbq.GlobalInfo{
 				"test": {
-					Location: nil,
-					Name:     "test",
-					Index:    0,
+					Location:      nil,
+					Name:          "test",
+					QualifiedName: "test",
+					Index:         0,
 				},
 				"A.0000000000000001.Foo": {
-					Location: importLocation,
-					Name:     "A.0000000000000001.Foo",
-					Index:    1,
+					Location:      importLocation,
+					Name:          "Foo",
+					QualifiedName: "A.0000000000000001.Foo",
+					Index:         1,
 				},
 				"A.0000000000000001.Foo.hello": {
-					Location: importLocation,
-					Name:     "A.0000000000000001.Foo.hello",
-					Index:    2,
+					Location:      importLocation,
+					Name:          "Foo.hello",
+					QualifiedName: "A.0000000000000001.Foo.hello",
+					Index:         2,
 				},
 			},
 			comp.Globals,
@@ -9862,38 +9977,44 @@ func TestCompileImportAlias(t *testing.T) {
 		)
 
 		// only imported function is a location qualified global.
-		assert.Equal(
+		assertGlobalsEqual(
 			t,
-			map[string]*compiler.Global{
+			map[string]bbq.GlobalInfo{
 				"Bar": {
-					Location: nil,
-					Name:     "Bar",
-					Index:    0,
+					Location:      nil,
+					Name:          "Bar",
+					QualifiedName: "Bar",
+					Index:         0,
 				},
 				"Bar.getType": {
-					Location: nil,
-					Name:     "Bar.getType",
-					Index:    1,
+					Location:      nil,
+					Name:          "Bar.getType",
+					QualifiedName: "Bar.getType",
+					Index:         1,
 				},
 				"Bar.hello": {
-					Location: nil,
-					Name:     "Bar.hello",
-					Index:    3,
+					Location:      nil,
+					Name:          "Bar.hello",
+					QualifiedName: "Bar.hello",
+					Index:         3,
 				},
 				"Bar.isInstance": {
-					Location: nil,
-					Name:     "Bar.isInstance",
-					Index:    2,
+					Location:      nil,
+					Name:          "Bar.isInstance",
+					QualifiedName: "Bar.isInstance",
+					Index:         2,
 				},
 				"Bar.defaultHello": {
-					Location: nil,
-					Name:     "Bar.defaultHello",
-					Index:    4,
+					Location:      nil,
+					Name:          "Bar.defaultHello",
+					QualifiedName: "Bar.defaultHello",
+					Index:         4,
 				},
 				"A.0000000000000001.FooInterface.defaultHello": {
-					Location: importLocation,
-					Name:     "A.0000000000000001.FooInterface.defaultHello",
-					Index:    5,
+					Location:      importLocation,
+					Name:          "FooInterface.defaultHello",
+					QualifiedName: "A.0000000000000001.FooInterface.defaultHello",
+					Index:         5,
 				},
 			},
 			comp.Globals,

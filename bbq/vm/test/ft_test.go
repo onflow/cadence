@@ -102,23 +102,17 @@ func compiledFTTransfer(tb testing.TB) {
 
 			activation.Set(
 				stdlib.AssertFunctionName,
-				compiler.GlobalImport{
-					Name: stdlib.AssertFunctionName,
-				},
+				compiler.NewGlobalImport(stdlib.AssertFunctionName),
 			)
 
 			activation.Set(
 				stdlib.GetAccountFunctionName,
-				compiler.GlobalImport{
-					Name: stdlib.GetAccountFunctionName,
-				},
+				compiler.NewGlobalImport(stdlib.GetAccountFunctionName),
 			)
 
 			activation.Set(
 				stdlib.PanicFunctionName,
-				compiler.GlobalImport{
-					Name: stdlib.PanicFunctionName,
-				},
+				compiler.NewGlobalImport(stdlib.PanicFunctionName),
 			)
 
 			return activation

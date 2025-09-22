@@ -90,8 +90,6 @@ func NewVM(
 
 	vm.globals = linkedGlobals.indexedGlobals
 
-	vm.initializeGlobalVariables(program)
-
 	return vm
 }
 
@@ -261,10 +259,11 @@ func (vm *VM) popCallFrame() {
 
 	if interpreter.TracingEnabled {
 		startTime := vm.callFrame.startTime
-		functionName := vm.callFrame.function.Function.QualifiedName
+		function := vm.callFrame.function
 		defer func() {
-			vm.context.ReportFunctionTrace(
-				functionName,
+			vm.context.ReportInvokeTrace(
+				function.FunctionType(vm.context).String(),
+				function.Function.QualifiedName,
 				time.Since(startTime),
 			)
 		}()
@@ -911,39 +910,6 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 	vm.push(boundFunction)
 }
 
-func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
-	// TODO: This method is now equivalent to: `GetField` + `Invoke` instructions.
-	// See if it can be replaced. That will reduce the complexity of `invokeFunction` method below.
-
-	// Load type arguments
-	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
-
-	// Load arguments
-	arguments := vm.popN(int(ins.ArgCount))
-
-	// Load the invoked value
-	receiver := vm.pop()
-
-	// Get function
-	nameIndex := ins.Name
-	funcName := getStringConstant(vm, nameIndex)
-
-	// Load the invoked value
-	memberAccessibleValue := receiver.(interpreter.MemberAccessibleValue)
-	functionValue := memberAccessibleValue.GetMember(
-		vm.context,
-		EmptyLocationRange,
-		funcName,
-	)
-
-	invokeFunction(
-		vm,
-		functionValue,
-		arguments,
-		typeArguments,
-	)
-}
-
 func invokeFunction(
 	vm *VM,
 	functionValue Value,
@@ -952,6 +918,8 @@ func invokeFunction(
 ) {
 	context := vm.context
 	common.UseComputation(context, common.FunctionInvocationComputationUsage)
+
+	originalFunctionValue := functionValue.(FunctionValue)
 
 	// Handle all function types in a single place, so this can be re-used everywhere.
 
@@ -967,28 +935,33 @@ func invokeFunction(
 		if isBoundFunction {
 			// For compiled functions, pass the receiver as an implicit-reference.
 			// Because the `self` value can be accessed by user-code.
-			receiver = boundFunction.Receiver(vm.context)
+			receiver = boundFunction.Receiver(context)
 		}
+
+		// Trace is reported in `popCallFrame`, to also include the execution time.
+
 		vm.pushCallFrame(functionValue, receiver, arguments)
 
 	case *NativeFunctionValue:
 		if isBoundFunction {
 			// For built-in functions, pass the dereferenced receiver.
-			receiver = boundFunction.DereferencedReceiver(vm.context)
+			receiver = boundFunction.DereferencedReceiver(context)
 		}
 
-		var result Value
 		if interpreter.TracingEnabled {
 			startTime := time.Now()
-			result = functionValue.Function(context, typeArguments, receiver, arguments...)
-			context.ReportFunctionTrace(
-				functionValue.Name,
-				time.Since(startTime),
-			)
-		} else {
-			result = functionValue.Function(context, typeArguments, receiver, arguments...)
+			defer func() {
+				context.ReportInvokeTrace(
+					// Use the original function value, to get the correct type.
+					// The native function value might have been wrapped in a bound function.
+					originalFunctionValue.FunctionType(context).String(),
+					functionValue.Name,
+					time.Since(startTime),
+				)
+			}()
 		}
 
+		result := functionValue.Function(context, typeArguments, receiver, arguments...)
 		vm.push(result)
 
 	default:
@@ -1152,7 +1125,7 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 func checkMemberAccessTargetType(
 	vm *VM,
 	accessedTypeIndex uint16,
-	accessedValue interpreter.Value,
+	accessedValue Value,
 ) {
 	accessedType := vm.loadType(accessedTypeIndex)
 
@@ -1606,8 +1579,6 @@ func (vm *VM) run() {
 			opGetMethod(vm, ins)
 		case opcode.InstructionInvoke:
 			opInvoke(vm, ins)
-		case opcode.InstructionInvokeDynamic:
-			opInvokeMethodDynamic(vm, ins)
 		case opcode.InstructionDrop:
 			opDrop(vm)
 		case opcode.InstructionDup:
@@ -1694,7 +1665,7 @@ func opEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
 	eventFields := vm.popN(int(ins.ArgCount))
 
 	// Make a copy, since the slice can get mutated, since the stack is reused.
-	fields := make([]interpreter.Value, len(eventFields))
+	fields := make([]Value, len(eventFields))
 	copy(fields, eventFields)
 
 	context.EmitEvent(
@@ -1947,13 +1918,6 @@ func (vm *VM) Reset() {
 	context.invokeFunction = vm.invokeFunction
 	context.lookupFunction = vm.lookupFunction
 	vm.context = context
-}
-
-func (vm *VM) initializeGlobalVariables(program *bbq.InstructionProgram) {
-	for _, variable := range program.Variables {
-		// Get the values to ensure they are initialized.
-		_ = vm.Global(variable.Name)
-	}
 }
 
 func (vm *VM) Global(name string) Value {

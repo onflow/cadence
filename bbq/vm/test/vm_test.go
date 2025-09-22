@@ -2035,9 +2035,7 @@ func TestNativeFunctions(t *testing.T) {
 				activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 				activation.Set(
 					stdlib.AssertFunctionName,
-					compiler.GlobalImport{
-						Name: stdlib.AssertFunctionName,
-					},
+					compiler.NewGlobalImport(stdlib.AssertFunctionName),
 				)
 				return activation
 			},
@@ -4265,7 +4263,7 @@ func TestFunctionPreConditions(t *testing.T) {
 
 		location := common.ScriptLocation{0x1}
 
-		_, err := compileAndInvokeWithOptionsAndPrograms(
+		_, err := CompileAndInvokeWithOptionsAndPrograms(
 			t,
 			code,
 			"main",
@@ -7677,7 +7675,7 @@ func TestInheritedConditions(t *testing.T) {
 
 		require.False(t, eventEmitted)
 
-		result, err := compileAndInvokeWithOptionsAndPrograms(
+		result, err := CompileAndInvokeWithOptionsAndPrograms(
 			t,
 			tx,
 			"main",
@@ -8752,9 +8750,7 @@ func TestFunctionInvocationWithOptionalArgs(t *testing.T) {
 			activation := activations.NewActivation[compiler.GlobalImport](nil, compiler.DefaultBuiltinGlobals())
 			activation.Set(
 				functionName,
-				compiler.GlobalImport{
-					Name: functionName,
-				},
+				compiler.NewGlobalImport(functionName),
 			)
 			return activation
 		},
@@ -9099,9 +9095,7 @@ func TestGetAuthAccount(t *testing.T) {
 				activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 				activation.Set(
 					stdlib.GetAuthAccountFunctionName,
-					compiler.GlobalImport{
-						Name: stdlib.GetAuthAccountFunctionName,
-					},
+					compiler.NewGlobalImport(stdlib.GetAuthAccountFunctionName),
 				)
 				return activation
 			},
@@ -9336,15 +9330,11 @@ func TestInjectedContract(t *testing.T) {
 			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 			activation.Set(
 				"B",
-				compiler.GlobalImport{
-					Name: "B",
-				},
+				compiler.NewGlobalImport("B"),
 			)
 			activation.Set(
 				"B.c",
-				compiler.GlobalImport{
-					Name: "B.c",
-				},
+				compiler.NewGlobalImport("B.c"),
 			)
 			return activation
 		},
@@ -9640,7 +9630,7 @@ func TestInheritedDefaultDestroyEvent(t *testing.T) {
 		return nil
 	}
 
-	_, err := compileAndInvokeWithOptionsAndPrograms(
+	_, err := CompileAndInvokeWithOptionsAndPrograms(
 		t,
 		code,
 		"main",
@@ -9677,9 +9667,7 @@ func TestFunctionInclusiveRangeConstruction(t *testing.T) {
 			activation := activations.NewActivation[compiler.GlobalImport](nil, compiler.DefaultBuiltinGlobals())
 			activation.Set(
 				stdlib.VMInclusiveRangeConstructor.Name,
-				compiler.GlobalImport{
-					Name: stdlib.VMInclusiveRangeConstructor.Name,
-				},
+				compiler.NewGlobalImport(stdlib.VMInclusiveRangeConstructor.Name),
 			)
 			return activation
 		},
@@ -11311,4 +11299,133 @@ func TestVMImportAliasing(t *testing.T) {
 
 		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), result)
 	})
+}
+
+func TestImportSameProgramFromMultiplePaths(t *testing.T) {
+
+	t.Parallel()
+
+	programs := map[common.Location]*CompiledProgram{}
+	contractValues := map[common.Location]*interpreter.CompositeValue{}
+
+	vmConfig := PrepareVMConfig(t, nil, programs)
+	vmConfig.ContractValueHandler = func(context *vm.Context, location common.Location) *interpreter.CompositeValue {
+		contractValue, ok := contractValues[location]
+		if !ok {
+			assert.FailNow(t, "invalid location")
+		}
+		return contractValue
+	}
+
+	// Prgram A
+
+	locationA := common.NewAddressLocation(
+		nil,
+		common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+		"A",
+	)
+
+	programA := ParseCheckAndCompileCodeWithOptions(t,
+		`
+            contract A {
+                enum E: UInt8 {
+                    case a
+                    case b
+                }
+            }
+        `,
+		locationA,
+		ParseCheckAndCompileOptions{},
+		programs,
+	)
+
+	_, contractValueA := initializeContract(
+		t,
+		locationA,
+		programA,
+		vmConfig,
+	)
+	contractValues[locationA] = contractValueA
+
+	// Program B
+	locationB := common.NewAddressLocation(
+		nil,
+		common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+		"B",
+	)
+
+	programB := ParseCheckAndCompileCodeWithOptions(t,
+		`
+            import A from 0x1
+
+            contract B {
+                fun foo() {
+                    A.E.a
+                }
+            }
+        `,
+		locationB,
+		ParseCheckAndCompileOptions{},
+		programs,
+	)
+
+	_, contractValueB := initializeContract(
+		t,
+		locationB,
+		programB,
+		vmConfig,
+	)
+	contractValues[locationB] = contractValueB
+
+	// Program C
+
+	locationC := common.NewAddressLocation(
+		nil,
+		common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3},
+		"C",
+	)
+
+	programC := ParseCheckAndCompileCodeWithOptions(t,
+		`
+            import A from 0x1
+
+            contract C {
+                fun bar() {
+                    A.E.b
+                }
+            }
+        `,
+		locationC,
+		ParseCheckAndCompileOptions{},
+		programs,
+	)
+
+	_, contractValueC := initializeContract(
+		t,
+		locationC,
+		programC,
+		vmConfig,
+	)
+	contractValues[locationC] = contractValueC
+
+	// Test script
+	_, err := CompileAndInvokeWithOptions(
+		t,
+		`
+            import B from 0x2
+            import C from 0x3
+
+            fun test() {
+                B.foo()
+                C.bar()
+            }
+        `,
+		"test",
+		CompilerAndVMOptions{
+			VMConfig: vmConfig,
+			Programs: programs,
+		},
+	)
+
+	require.NoError(t, err)
 }

@@ -190,9 +190,6 @@ func TestPrintInstruction(t *testing.T) {
 		"Invoke typeArgs:[772, 1286] argCount:1": {
 			byte(Invoke), 0, 2, 3, 4, 5, 6, 0, 1,
 		},
-		`InvokeDynamic name:1 typeArgs:[772, 1286] argCount:1800`: {
-			byte(InvokeDynamic), 0, 1, 0, 2, 3, 4, 5, 6, 7, 8,
-		},
 
 		"NewRef type:258 isImplicit:true": {byte(NewRef), 1, 2, 1},
 		"Deref":                           {byte(Deref)},
@@ -283,4 +280,135 @@ func TestPrintInstruction(t *testing.T) {
 			assert.Equal(t, expected, instruction.String())
 		})
 	}
+}
+
+func TestPrintRecursionFibWithFlow(t *testing.T) {
+	t.Parallel()
+
+	code := []byte{
+		// if n < 2
+		byte(GetLocal), 0, 0,
+		byte(GetConstant), 0, 0,
+		byte(Less),
+		byte(JumpIfFalse), 0, 14,
+		// then return n
+		byte(GetLocal), 0, 0,
+		byte(ReturnValue),
+		// fib(n - 1)
+		byte(GetLocal), 0, 0,
+		byte(GetConstant), 0, 1,
+		byte(Subtract),
+		byte(TransferAndConvert), 0, 0,
+		byte(GetGlobal), 0, 0,
+		byte(Invoke), 0, 0, 0, 0,
+		// fib(n - 2)
+		byte(GetLocal), 0, 0,
+		byte(GetConstant), 0, 0,
+		byte(Subtract),
+		byte(TransferAndConvert), 0, 0,
+		byte(GetGlobal), 0, 0,
+		byte(Invoke), 0, 0, 0, 0,
+		// return sum
+		byte(Add),
+		byte(ReturnValue),
+	}
+
+	const expected = `┌─ Block 0 (0-3) ─────────────────────────────────────────────────────┐
+│    0 | GetLocal           |  local:0
+│    1 | GetConstant        |  constant:0
+│    2 | Less               | 
+│    3 | JumpIfFalse        |  target:14
+└─────────────────────────────────────────────────────────────────────┘
+    ─?→ Block 4 (jump if false)
+
+    ──→ Block 1 (fall through)
+
+┌─ Block 1 (4-5) ─────────────────────────────────────────────────────┐
+│    4 | GetLocal           |  local:0
+│    5 | ReturnValue        | 
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─ Block 2 (6-11) ────────────────────────────────────────────────────┐
+│    6 | GetLocal           |  local:0
+│    7 | GetConstant        |  constant:1
+│    8 | Subtract           | 
+│    9 | TransferAndConvert |  type:0
+│   10 | GetGlobal          |  global:0
+│   11 | Invoke             |  typeArgs:[] argCount:0
+└─────────────────────────────────────────────────────────────────────┘
+    ──→ Unknown target (function_call)
+
+┌─ Block 3 (12-13) ───────────────────────────────────────────────────┐
+│   12 | GetLocal           |  local:0
+│   13 | GetConstant        |  constant:0
+└─────────────────────────────────────────────────────────────────────┘
+    ──→ Block 4 (fall through)
+
+┌─ Block 4 (14-17) ───────────────────────────────────────────────────┐
+│   14 | Subtract           | 
+│   15 | TransferAndConvert |  type:0
+│   16 | GetGlobal          |  global:0
+│   17 | Invoke             |  typeArgs:[] argCount:0
+└─────────────────────────────────────────────────────────────────────┘
+    ──→ Unknown target (function_call)
+
+┌─ Block 5 (18-19) ───────────────────────────────────────────────────┐
+│   18 | Add                | 
+│   19 | ReturnValue        | 
+└─────────────────────────────────────────────────────────────────────┘
+
+`
+
+	var builder strings.Builder
+	const resolve = false
+	const colorize = false
+	err := PrintBytecodeWithFlow(&builder, code, resolve, nil, nil, nil, colorize)
+	require.NoError(t, err)
+
+	assert.Equal(t, expected, builder.String())
+}
+
+func TestFlowAnalysis(t *testing.T) {
+	t.Parallel()
+
+	instructions := []Instruction{
+		InstructionGetLocal{Local: 0},
+		InstructionGetConstant{Constant: 0},
+		InstructionLess{},
+		InstructionJumpIfFalse{Target: 6},
+		InstructionGetLocal{Local: 0},
+		InstructionReturnValue{},
+		InstructionGetLocal{Local: 0},
+		InstructionReturnValue{},
+	}
+
+	analysis := analyzeControlFlow(instructions)
+
+	// Should identify the conditional jump
+	require.Contains(t, analysis.JumpInfoMap, 3)
+	jumpInfo := analysis.JumpInfoMap[3]
+	assert.Equal(t, 6, jumpInfo.Target)
+	assert.Equal(t, JumpTypeConditional, jumpInfo.JumpType)
+	assert.Equal(t, "if false", jumpInfo.Condition)
+
+	// Should identify returns
+	require.Contains(t, analysis.JumpInfoMap, 5) // first return
+	require.Contains(t, analysis.JumpInfoMap, 7) // second return
+	assert.Equal(t, JumpTypeReturn, analysis.JumpInfoMap[5].JumpType)
+	assert.Equal(t, JumpTypeReturn, analysis.JumpInfoMap[7].JumpType)
+
+	// Should identify basic blocks
+	assert.Len(t, analysis.BasicBlocks, 3)
+
+	// Block 0: instructions 0-3
+	assert.Equal(t, 0, analysis.BasicBlocks[0].Start)
+	assert.Equal(t, 3, analysis.BasicBlocks[0].End)
+
+	// Block 1: instructions 4-5
+	assert.Equal(t, 4, analysis.BasicBlocks[1].Start)
+	assert.Equal(t, 5, analysis.BasicBlocks[1].End)
+
+	// Block 2: instructions 6-7
+	assert.Equal(t, 6, analysis.BasicBlocks[2].Start)
+	assert.Equal(t, 7, analysis.BasicBlocks[2].End)
 }

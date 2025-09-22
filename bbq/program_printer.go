@@ -50,18 +50,26 @@ type ProgramPrinter[E, T any] struct {
 	colorize      bool
 }
 
-func NewBytecodeProgramPrinter(resolve bool, colorize bool) *ProgramPrinter[byte, []byte] {
+func NewBytecodeProgramPrinter(resolve bool, colorize bool, showFlow bool) *ProgramPrinter[byte, []byte] {
+	printerFunc := opcode.PrintBytecode
+	if showFlow {
+		printerFunc = opcode.PrintBytecodeWithFlow
+	}
 	return &ProgramPrinter[byte, []byte]{
-		codePrinter: opcode.PrintBytecode,
+		codePrinter: printerFunc,
 		typeDecoder: interpreter.StaticTypeFromBytes,
 		resolve:     resolve,
 		colorize:    colorize,
 	}
 }
 
-func NewInstructionsProgramPrinter(resolve bool, colorize bool) *ProgramPrinter[opcode.Instruction, StaticType] {
+func NewInstructionsProgramPrinter(resolve bool, colorize bool, showFlow bool) *ProgramPrinter[opcode.Instruction, StaticType] {
+	printerFunc := opcode.PrintInstructions
+	if showFlow {
+		printerFunc = opcode.PrintInstructionsWithFlow
+	}
 	return &ProgramPrinter[opcode.Instruction, StaticType]{
-		codePrinter: opcode.PrintInstructions,
+		codePrinter: printerFunc,
 		typeDecoder: func(typ StaticType) (StaticType, error) {
 			return typ, nil
 		},
@@ -127,6 +135,7 @@ func (p *ProgramPrinter[E, T]) printFunction(
 		functionNames,
 		p.colorize,
 	)
+
 	if err != nil {
 		// TODO: propagate error
 		panic(err)

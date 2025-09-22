@@ -105,3 +105,16 @@ func LocationQualifier(typ sema.Type) string {
 		return string(typ.ID())
 	}
 }
+
+var CollectEventsFunctionType = &sema.FunctionType{
+	Purity:               sema.FunctionPurityImpure,
+	ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+	Arity:                &sema.Arity{Min: 0, Max: -1},
+	Parameters: []sema.Parameter{
+		{
+			TypeAnnotation: sema.AnyStructTypeAnnotation,
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     CollectEventsParamName,
+		},
+	},
+}
