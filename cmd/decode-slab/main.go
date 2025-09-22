@@ -21,6 +21,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -62,7 +63,7 @@ func decodeSlab(id atree.SlabID, data []byte) (atree.Slab, error) {
 
 func main() {
 	if len(os.Args) < 3 {
-		panic("Usage: decode-slab <address-hex> <index> <data-hex>")
+		panic("Usage: decode-slab <address-hex> <index> <data-hex> [<data-hex>]")
 	}
 
 	address, err := hex.DecodeString(os.Args[1])
@@ -77,7 +78,7 @@ func main() {
 
 	data, err := hex.DecodeString(os.Args[3])
 	if err != nil {
-		panic(fmt.Errorf("failed to parse data: %w", err))
+		panic(fmt.Errorf("failed to parse data of slab: %w", err))
 	}
 
 	var slabIndex atree.SlabIndex
@@ -88,10 +89,117 @@ func main() {
 		slabIndex,
 	)
 
-	slab, err := decodeSlab(slabID, data)
+	slab1, err := decodeSlab(slabID, data)
 	if err != nil {
-		panic(fmt.Errorf("failed to decode slab %s: %w", slabID, err))
+		panic(fmt.Errorf("failed to decode slab: %w", err))
 	}
 
-	fmt.Print(slab)
+	fmt.Println(slab1)
+	fmt.Println()
+
+	if len(os.Args) > 4 {
+
+		data2, err := hex.DecodeString(os.Args[4])
+		if err != nil {
+			panic(fmt.Errorf("failed to parse data of slab 2: %w", err))
+		}
+
+		slab2, err := decodeSlab(slabID, data2)
+		if err != nil {
+			panic(fmt.Errorf("failed to decode slab 2: %w", err))
+		}
+
+		fmt.Println(slab2)
+		fmt.Println()
+
+		if mapDataSlab1, ok := slab1.(*atree.MapDataSlab); ok {
+			if mapDataSlab2, ok := slab2.(*atree.MapDataSlab); ok {
+				compareMapDataSlabs(mapDataSlab1, mapDataSlab2)
+			}
+		}
+	}
+}
+
+type mapEntry struct {
+	key   atree.MapKey
+	value atree.MapValue
+}
+
+func compareMapDataSlabs(slab1 *atree.MapDataSlab, slab2 *atree.MapDataSlab) {
+
+	if slab1.Count() != slab2.Count() {
+		fmt.Printf("Different count: %d vs %d\n", slab1.Count(), slab2.Count())
+	}
+
+	newIndexer := func(entries map[string]mapEntry) func(key atree.MapKey, value atree.MapValue) error {
+		return func(key atree.MapKey, value atree.MapValue) error {
+			entries[string(encodeStorable(key))] = mapEntry{
+				key:   key,
+				value: value,
+			}
+			return nil
+		}
+	}
+
+	entries1 := make(map[string]mapEntry)
+	err := slab1.Iterate(nil, newIndexer(entries1))
+	if err != nil {
+		panic(fmt.Errorf("Error iterating slab 1: %w\n", err))
+	}
+
+	entries2 := make(map[string]mapEntry)
+	err = slab2.Iterate(nil, newIndexer(entries2))
+	if err != nil {
+		panic(fmt.Errorf("Error iterating slab 2: %w\n", err))
+	}
+
+	for encodedKey, entry1 := range entries1 {
+		entry2, ok := entries2[encodedKey]
+		if !ok {
+			fmt.Printf("Key %q missing in slab 2\n", entry1.key)
+			continue
+		}
+
+		value1 := entry1.value
+		value2 := entry2.value
+
+		if mapDataSlabValue1, ok := value1.(*atree.MapDataSlab); ok {
+			if mapDataSlabValue2, ok := value2.(*atree.MapDataSlab); ok {
+				compareMapDataSlabs(mapDataSlabValue1, mapDataSlabValue2)
+				continue
+			}
+		}
+
+		if !bytes.Equal(encodeStorable(value1), encodeStorable(value2)) {
+			fmt.Printf(
+				"Different value for key %q: %q vs %q\n",
+				entry1.key,
+				value1,
+				value2,
+			)
+		}
+	}
+
+	for encodedKey, entry2 := range entries2 {
+		_, ok := entries1[encodedKey]
+		if !ok {
+			fmt.Printf("Key %q missing in slab 1\n", entry2.key)
+		}
+	}
+}
+
+func encodeStorable(storable atree.Storable) []byte {
+	var buf bytes.Buffer
+	encoder := atree.NewEncoder(&buf, interpreter.CBOREncMode)
+	err := storable.Encode(encoder)
+	if err != nil {
+		panic(fmt.Errorf("failed to encode storable: %w", err))
+	}
+
+	err = encoder.CBOR.Flush()
+	if err != nil {
+		panic(fmt.Errorf("failed to flush encoder: %w", err))
+	}
+
+	return buf.Bytes()
 }
