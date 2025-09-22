@@ -134,7 +134,7 @@ const (
 	GetTypeIndex
 	SetTypeIndex
 	RemoveTypeIndex
-	_
+	SetAttachmentBase
 	_
 	_
 

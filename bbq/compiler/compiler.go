@@ -3063,10 +3063,11 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	// otherwise, base is declared as the second parameter after self.
 	c.declareParameters(parameterList, false, false)
 
+	var base *local
 	// must do this before declaring self
 	if kind == common.CompositeKindAttachment {
 		// base is provided as an argument at the end of the argument list implicitly
-		c.currentFunction.declareLocal(sema.BaseIdentifier)
+		base = c.currentFunction.declareLocal(sema.BaseIdentifier)
 	}
 
 	// Declare `self`
@@ -3126,12 +3127,18 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		returnLocalIndex = c.currentFunction.generateLocalIndex()
 		c.emitSetLocal(returnLocalIndex)
 		c.emitGetLocal(returnLocalIndex)
-		baseTyp := enclosingType.(sema.EntitlementSupportingType)
-		baseAccess := baseTyp.SupportedEntitlements().Access()
+		attachType := enclosingType.(sema.EntitlementSupportingType)
+		baseAccess := attachType.SupportedEntitlements().Access()
 		refType := &sema.ReferenceType{
-			Type:          baseTyp,
+			Type:          attachType,
 			Authorization: baseAccess,
 		}
+		// we need to set the attachment's base value
+		// because it may be used in function calls in the initializer.
+		// see `call function in initializer` test.
+		c.emitGetLocal(base.index)
+		c.emitGetLocal(returnLocalIndex)
+		c.emit(opcode.InstructionSetAttachmentBase{})
 		// Set `self` to be a reference.
 		c.emit(opcode.InstructionNewRef{
 			Type:       c.getOrAddType(refType),
@@ -3242,7 +3249,7 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 	functionType := c.DesugaredElaboration.FunctionDeclarationFunctionType(declaration)
 
 	function := c.addFunction(
-		functionName,
+		identifier,
 		functionName,
 		uint16(parameterCount),
 		functionType,
@@ -3556,7 +3563,11 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 	c.emitSetLocal(baseLocalIndex)
 	// get base back on stack
 	c.emitGetLocal(baseLocalIndex)
-	baseTyp := baseType.(sema.EntitlementSupportingType)
+	baseTyp, ok := baseType.(sema.EntitlementSupportingType)
+	if !ok {
+		// simulates defensive check in interpreter
+		panic(errors.NewUnreachableError())
+	}
 	baseAccess := baseTyp.SupportedEntitlements().Access()
 	refType := &sema.ReferenceType{
 		Type:          baseTyp,
@@ -3576,8 +3587,6 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 
 	// base back on stack
 	c.emitGetLocal(baseLocalIndex)
-	// base should now be transferred
-	c.emitTransfer()
 
 	// add attachment value as a member of transferred base
 	// returns the result

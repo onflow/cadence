@@ -9098,8 +9098,6 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.InstructionInvoke{TypeArgs: []uint16{1}, ArgCount: 2},
 				// get s back on stack
 				opcode.InstructionGetLocal{Local: sTmpLocalIndex},
-				// copy/transfer of s to attach to
-				opcode.InstructionTransfer{},
 				// attachment operation, attach A to s-copy
 				opcode.InstructionSetTypeIndex{Type: 4},
 				// return value is s-copy
@@ -9114,14 +9112,14 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.InstructionGetTypeIndex{Type: 4},
 				opcode.InstructionSetLocal{Local: attachmentLocalIndex},
 				opcode.InstructionGetLocal{Local: attachmentLocalIndex},
-				opcode.InstructionJumpIfNil{Target: 33},
+				opcode.InstructionJumpIfNil{Target: 32},
 				opcode.InstructionGetLocal{Local: attachmentLocalIndex},
 				opcode.InstructionUnwrap{},
 				// call foo if not nil
 				opcode.InstructionGetMethod{Method: 8},
 				opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0},
 				opcode.InstructionWrap{},
-				opcode.InstructionJump{Target: 34},
+				opcode.InstructionJump{Target: 33},
 				opcode.InstructionNil{},
 				opcode.InstructionUnwrap{},
 				opcode.InstructionTransferAndConvert{Type: 3},
@@ -9147,8 +9145,12 @@ func TestCompileAttachments(t *testing.T) {
 				opcode.InstructionSetLocal{Local: returnLocalIndex},
 				// get a reference to attachment
 				opcode.InstructionGetLocal{Local: returnLocalIndex},
-				opcode.InstructionNewRef{Type: 10, IsImplicit: false},
+				// set base to be the attachment
+				opcode.InstructionGetLocal{Local: baseLocalIndex},
+				opcode.InstructionGetLocal{Local: returnLocalIndex},
+				opcode.InstructionSetAttachmentBase{},
 				// set self to be the reference
+				opcode.InstructionNewRef{Type: 10, IsImplicit: false},
 				opcode.InstructionSetLocal{Local: selfLocalIndex},
 
 				// self.x = x
@@ -9407,7 +9409,7 @@ func TestCompileInjectedContract(t *testing.T) {
 
 	aTestFunction := functions[3]
 
-	require.Equal(t, aTestFunction.Name, "A.test")
+	require.Equal(t, aTestFunction.QualifiedName, "A.test")
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -9635,7 +9637,7 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 	require.Len(t, functions, 9)
 
 	defaultDestroyEventEmittingFunction := functions[8]
-	require.Equal(t, "Foo.ABC.$ResourceDestroyed", defaultDestroyEventEmittingFunction.Name)
+	require.Equal(t, "Foo.ABC.$ResourceDestroyed", defaultDestroyEventEmittingFunction.QualifiedName)
 
 	const inheritedEventConstructorIndex = 10
 

@@ -397,6 +397,7 @@ func (v *NativeFunctionValue) GetMethod(
 }
 
 func (v *NativeFunctionValue) IsNative() bool {
+	// Native functions are always native.
 	return true
 }
 
@@ -586,14 +587,16 @@ func (v *BoundFunctionValue) DereferencedReceiver(context interpreter.ValueStati
 		context,
 		EmptyLocationRange,
 	)
-	return maybeDereferenceReceiver(context, *receiver)
+	return maybeDereferenceReceiver(context, *receiver, v.IsNative())
+}
+
+func (v *BoundFunctionValue) IsNative() bool {
+	// BoundFunctionValue is a wrapper around a function value, which can be either native or compiled.
+	// So, we delegate the call to the underlying function value.
+	return v.Method.IsNative()
 }
 
 func (v *BoundFunctionValue) Receiver(context interpreter.ReferenceCreationContext) ImplicitReferenceValue {
 	receiverValue := v.DereferencedReceiver(context)
 	return NewImplicitReferenceValue(context, receiverValue)
-}
-
-func (v *BoundFunctionValue) IsNative() bool {
-	return v.Method.IsNative()
 }

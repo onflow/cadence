@@ -1412,8 +1412,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO: requires support for attachments in the VM
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement Y
             entitlement Z
 
@@ -1447,8 +1446,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO: requires support for attachments in the VM
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement Y
             entitlement Z
 
@@ -1487,8 +1485,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO: requires support for attachments in the VM
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement Y
             entitlement Z
 
@@ -1526,8 +1523,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO: requires support for attachments in the VM
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement Y
             entitlement Z
 
@@ -1566,8 +1562,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO: requires support for attachments in the VM
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement Y
             entitlement Z
 
@@ -1606,8 +1601,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO: requires support for attachments in the VM
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement E
             entitlement G
@@ -1643,8 +1637,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO: requires support for attachments in the VM
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement E
             entitlement G
@@ -1684,8 +1677,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO: requires support for attachments in the VM
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement E
             entitlement G
@@ -1725,8 +1717,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO: requires support for attachments in the VM
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement E
             entitlement G
@@ -1766,8 +1757,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO: requires support for attachments in the VM
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement E
             entitlement G
@@ -1809,7 +1799,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil,
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil,
 			`
               entitlement X
               entitlement E
@@ -1851,7 +1841,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil,
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil,
 			`
               entitlement X
               entitlement E
@@ -1897,7 +1887,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, nil,
+		inter, _ := testAccountWithCompilerEnabled(t, address, true, nil,
 			`
               entitlement X
               entitlement E
@@ -1941,8 +1931,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO: requires support for attachments in the VM
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement X
             entitlement E
             entitlement G
@@ -1973,8 +1962,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO: requires support for attachments in the VM
-		inter := parseCheckAndInterpret(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement Z
             entitlement Y
 

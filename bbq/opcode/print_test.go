@@ -236,6 +236,7 @@ func TestPrintInstruction(t *testing.T) {
 		"GetTypeIndex type:258":                   {byte(GetTypeIndex), 1, 2, 3},
 		"SetTypeIndex type:258":                   {byte(SetTypeIndex), 1, 2, 3},
 		"RemoveTypeIndex type:258":                {byte(RemoveTypeIndex), 1, 2, 3},
+		"SetAttachmentBase":                       {byte(SetAttachmentBase), 1, 2, 3},
 		"SetIndex":                                {byte(SetIndex)},
 		"GetIndex":                                {byte(GetIndex)},
 		"RemoveIndex":                             {byte(RemoveIndex)},

@@ -1005,3 +1005,13 @@
     push:
       - name: "value"
         type: "value"
+
+- name: "setAttachmentBase"
+  description:
+    Pops two values off the stack, the attachment and the base, sets the attachment's base value to base.
+  valueEffects:
+    pop:
+      - name: "attachment"
+        type: "value"
+      - name: "base"
+        type: "value"
