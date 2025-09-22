@@ -98,7 +98,7 @@ func NewArrayValueWithIterator(
 
 	var v *ArrayValue
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		defer func() {
@@ -119,8 +119,25 @@ func NewArrayValueWithIterator(
 		}()
 	}
 
-	constructor := func() *atree.Array {
-		array, err := atree.NewArrayFromBatchData(
+	constructor := func() (array *atree.Array) {
+
+		if TracingEnabled {
+			startTime := time.Now()
+
+			defer func() {
+				valueID := array.ValueID().String()
+				typeID := string(arrayType.ID())
+
+				context.ReportAtreeNewArrayFromBatchDataTrace(
+					valueID,
+					typeID,
+					time.Since(startTime),
+				)
+			}()
+		}
+
+		var err error
+		array, err = atree.NewArrayFromBatchData(
 			context.Storage(),
 			atree.Address(address),
 			arrayType,
@@ -359,7 +376,7 @@ func (v *ArrayValue) Destroy(context ResourceDestructionContext, locationRange L
 		},
 	)
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -1198,7 +1215,7 @@ func (v *ArrayValue) ConformsToStaticType(
 	results TypeConformanceResults,
 ) bool {
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -1329,7 +1346,7 @@ func (v *ArrayValue) Transfer(
 		},
 	)
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -1378,36 +1395,54 @@ func (v *ArrayValue) Transfer(
 		common.UseMemory(context, dataSlabs)
 		common.UseMemory(context, metaDataSlabs)
 
-		array, err = atree.NewArrayFromBatchData(
-			context.Storage(),
-			address,
-			v.array.Type(),
-			func() (atree.Value, error) {
-				value, err := iterator.Next()
-				if err != nil {
-					return nil, err
-				}
-				if value == nil {
-					return nil, nil
-				}
+		func() {
 
-				element := MustConvertStoredValue(context, value).
-					Transfer(
-						context,
-						locationRange,
-						address,
-						remove,
-						nil,
-						preventTransfer,
-						false, // value has a parent container because it is from iterator.
+			if TracingEnabled {
+				startTime := time.Now()
+
+				defer func() {
+					valueID := array.ValueID().String()
+					typeID := string(v.Type.ID())
+
+					context.ReportAtreeNewArrayFromBatchDataTrace(
+						valueID,
+						typeID,
+						time.Since(startTime),
 					)
+				}()
+			}
 
-				return element, nil
-			},
-		)
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
+			array, err = atree.NewArrayFromBatchData(
+				context.Storage(),
+				address,
+				v.array.Type(),
+				func() (atree.Value, error) {
+					value, err := iterator.Next()
+					if err != nil {
+						return nil, err
+					}
+					if value == nil {
+						return nil, nil
+					}
+
+					element := MustConvertStoredValue(context, value).
+						Transfer(
+							context,
+							locationRange,
+							address,
+							remove,
+							nil,
+							preventTransfer,
+							false, // value has a parent container because it is from iterator.
+						)
+
+					return element, nil
+				},
+			)
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+		}()
 
 		if remove {
 			err = v.array.PopIterate(func(storable atree.Storable) {
@@ -1501,7 +1536,7 @@ func (v *ArrayValue) Clone(context ValueCloneContext) Value {
 }
 
 func (v *ArrayValue) DeepRemove(context ValueRemoveContext, hasNoParentContainer bool) {
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()

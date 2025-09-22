@@ -140,6 +140,16 @@ const ( // Cadence simple type IDs
 	SimpleTypeHashableStruct
 	SimpleTypeFixedSizeUnsignedInteger
 
+	// Fix* types
+
+	SimpleTypeFix128
+	_
+
+	// UFix* types
+
+	SimpleTypeUFix128
+	_
+
 	// !!! *WARNING* !!!
 	// ADD NEW TYPES *BEFORE* THIS WARNING.
 	// DO *NOT* ADD NEW TYPES AFTER THIS LINE!
@@ -196,7 +206,9 @@ func initSimpleTypeIDBiMap() (m *bimap.BiMap[cadence.PrimitiveType, SimpleType])
 	m.Insert(cadence.Word128Type, SimpleTypeWord128)
 	m.Insert(cadence.Word256Type, SimpleTypeWord256)
 	m.Insert(cadence.Fix64Type, SimpleTypeFix64)
+	m.Insert(cadence.Fix128Type, SimpleTypeFix128)
 	m.Insert(cadence.UFix64Type, SimpleTypeUFix64)
+	m.Insert(cadence.UFix128Type, SimpleTypeUFix128)
 
 	m.Insert(cadence.BlockType, SimpleTypeBlock)
 	m.Insert(cadence.PathType, SimpleTypePath)

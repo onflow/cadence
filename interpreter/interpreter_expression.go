@@ -896,18 +896,33 @@ func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedP
 
 	fixedPointSubType := interpreter.Program.Elaboration.FixedPointExpression(expression)
 
+	var scale uint
+	switch fixedPointSubType {
+	case sema.Fix128Type, sema.UFix128Type:
+		scale = sema.Fix128Scale
+	default:
+		scale = sema.Fix64Scale
+	}
+
 	value := fixedpoint.ConvertToFixedPointBigInt(
 		expression.Negative,
 		expression.UnsignedInteger,
 		expression.Fractional,
 		expression.Scale,
-		sema.Fix64Scale,
+		scale,
 	)
+
 	switch fixedPointSubType {
 	case sema.Fix64Type, sema.SignedFixedPointType:
 		return NewFix64Value(interpreter, value.Int64)
+	case sema.Fix128Type:
+		// No need to check ranges here again, as the checker already does that.
+		return NewFix128ValueFromBigInt(interpreter, value)
 	case sema.UFix64Type:
 		return NewUFix64Value(interpreter, value.Uint64)
+	case sema.UFix128Type:
+		// No need to check ranges here again, as the checker already does that.
+		return NewUFix128ValueFromBigInt(interpreter, value)
 	case sema.FixedPointType:
 		if expression.Negative {
 			return NewFix64Value(interpreter, value.Int64)
@@ -1173,15 +1188,23 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 }
 
 func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(invocationExpression *ast.InvocationExpression, implicitArg Value) Value {
-	// tracing
-	if interpreter.TracingEnabled() {
+
+	var function FunctionValue
+
+	if TracingEnabled {
 		startTime := time.Now()
-		invokedExpression := invocationExpression.InvokedExpression.String()
+
 		defer func() {
-			interpreter.ReportFunctionTrace(
-				invokedExpression,
-				time.Since(startTime),
-			)
+			// `function` might be nil for:
+			// - optional chaining invocations where the target is nil (no function invoked)
+			// - for invalid programs (panic, e.g. invoking a non-function value)
+			if function != nil {
+				interpreter.ReportInvokeTrace(
+					function.FunctionType(interpreter).String(),
+					"?",
+					time.Since(startTime),
+				)
+			}
 		}()
 	}
 
@@ -1212,7 +1235,8 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 		}
 	}
 
-	function, ok := result.(FunctionValue)
+	var ok bool
+	function, ok = result.(FunctionValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}

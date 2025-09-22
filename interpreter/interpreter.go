@@ -284,7 +284,7 @@ func NewInterpreterWithSharedState(
 ) (*Interpreter, error) {
 
 	var tracer Tracer
-	if sharedState.Config.TracingEnabled {
+	if TracingEnabled {
 		tracer = CallbackTracer(sharedState.Config.OnRecordTrace)
 	}
 
@@ -2468,10 +2468,10 @@ func (interpreter *Interpreter) declareInterface(
 	)
 
 	var defaultDestroyEventConstructor FunctionValue
-	if defautlDestroyEvent := interpreter.Program.Elaboration.DefaultDestroyDeclaration(declaration); defautlDestroyEvent != nil {
+	if defaultDestroyEvent := interpreter.Program.Elaboration.DefaultDestroyDeclaration(declaration); defaultDestroyEvent != nil {
 		var nestedVariable Variable
 		lexicalScope, nestedVariable = interpreter.declareCompositeValue(
-			defautlDestroyEvent,
+			defaultDestroyEvent,
 			lexicalScope,
 		)
 		defaultDestroyEventConstructor = nestedVariable.GetValue(interpreter).(FunctionValue)
@@ -3019,6 +3019,20 @@ var StringValueParsers = func() map[string]TypedStringValueParser {
 
 			},
 		},
+		{
+			ReceiverType: sema.Fix128Type,
+			Parser: func(memoryGauge common.MemoryGauge, input string) OptionalValue {
+				n, err := fixedpoint.ParseFix128(input)
+				if err != nil {
+					return NilOptionalValue
+				}
+
+				// No need to check ranges, as `ParseFix128` already does that.
+				val := NewFix128ValueFromBigInt(memoryGauge, n)
+				return NewSomeValueNonCopying(memoryGauge, val)
+
+			},
+		},
 
 		// UFix*
 		{
@@ -3030,6 +3044,20 @@ var StringValueParsers = func() map[string]TypedStringValueParser {
 				}
 				val := NewUFix64Value(memoryGauge, n.Uint64)
 				return NewSomeValueNonCopying(memoryGauge, val)
+			},
+		},
+		{
+			ReceiverType: sema.UFix128Type,
+			Parser: func(memoryGauge common.MemoryGauge, input string) OptionalValue {
+				n, err := fixedpoint.ParseUFix128(input)
+				if err != nil {
+					return NilOptionalValue
+				}
+
+				// No need to check ranges, as `ParseUFix128` already does that.
+				val := NewUFix128ValueFromBigInt(memoryGauge, n)
+				return NewSomeValueNonCopying(memoryGauge, val)
+
 			},
 		},
 	} {
@@ -3226,12 +3254,22 @@ var BigEndianBytesConverters = func() map[string]TypedBigEndianBytesConverter {
 			ByteLength:   sema.Fix64TypeSize,
 			Converter:    NewFix64ValueFromBigEndianBytes,
 		},
+		{
+			ReceiverType: sema.Fix128Type,
+			ByteLength:   sema.Fix128TypeSize,
+			Converter:    NewFix128ValueFromBigEndianBytes,
+		},
 
 		// UFix*
 		{
 			ReceiverType: sema.UFix64Type,
 			ByteLength:   sema.UFix64TypeSize,
 			Converter:    NewUFix64ValueFromBigEndianBytes,
+		},
+		{
+			ReceiverType: sema.UFix128Type,
+			ByteLength:   sema.UFix128TypeSize,
+			Converter:    NewUFix128ValueFromBigEndianBytes,
 		},
 	} {
 		// index by type name
@@ -3418,12 +3456,28 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		Max: NewUnmeteredFix64Value(math.MaxInt64),
 	},
 	{
+		Name: sema.Fix128TypeName,
+		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+			return ConvertFix128(gauge, value, locationRange)
+		},
+		Min: NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
+		Max: NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
+	},
+	{
 		Name: sema.UFix64TypeName,
 		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
 			return ConvertUFix64(gauge, value, locationRange)
 		},
 		Min: NewUnmeteredUFix64Value(0),
 		Max: NewUnmeteredUFix64Value(math.MaxUint64),
+	},
+	{
+		Name: sema.UFix128TypeName,
+		Convert: func(gauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+			return ConvertUFix128(gauge, value, locationRange)
+		},
+		Min: NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMin),
+		Max: NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMax),
 	},
 	{
 		Name: sema.AddressTypeName,
@@ -5236,7 +5290,7 @@ func (interpreter *Interpreter) GetInterfaceType(
 		if interfaceType != nil {
 			return interfaceType, nil
 		}
-		return nil, &InterfaceMissingLocationError{
+		return nil, InterfaceMissingLocationError{
 			QualifiedIdentifier: qualifiedIdentifier,
 		}
 	}
@@ -6068,10 +6122,6 @@ func (interpreter *Interpreter) OnResourceOwnerChange(resource *CompositeValue, 
 	}
 
 	onResourceOwnerChange(interpreter, resource, oldOwner, newOwner)
-}
-
-func (interpreter *Interpreter) TracingEnabled() bool {
-	return interpreter.Tracer != nil
 }
 
 func (interpreter *Interpreter) IsTypeInfoRecovered(location common.Location) bool {

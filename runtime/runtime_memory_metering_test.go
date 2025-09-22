@@ -68,14 +68,15 @@ func TestRuntimeInterpreterAddressLocationMetering(t *testing.T) {
 			let s = CompositeType("A.0000000000000001.S")
 		}
         `
-		meter := newTestMemoryGauge()
+
+		memoryGauge := newTestMemoryGauge()
+
 		var accountCode []byte
 		runtimeInterface := &TestRuntimeInterface{
 			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{{42}}, nil
 			},
-			Storage:       NewTestLedger(nil, nil),
-			OnMeterMemory: meter.MeterMemory,
+			Storage: NewTestLedger(nil, nil),
 			OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 				return accountCode, nil
 			},
@@ -88,17 +89,18 @@ func TestRuntimeInterpreterAddressLocationMetering(t *testing.T) {
 				Source: []byte(script),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    common.ScriptLocation{},
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAddressLocation))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindElaboration))
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindRawString))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
+		assert.Equal(t, uint64(1), memoryGauge.getMemory(common.MemoryKindAddressLocation))
+		assert.Equal(t, uint64(2), memoryGauge.getMemory(common.MemoryKindElaboration))
+		assert.Equal(t, uint64(0), memoryGauge.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(1), memoryGauge.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 }
 
@@ -132,7 +134,7 @@ func TestRuntimeInterpreterElaborationImportMetering(t *testing.T) {
 
 			runtime := NewTestRuntime()
 
-			meter := newTestMemoryGauge()
+			memoryGauge := newTestMemoryGauge()
 
 			accountCodes := map[common.Location][]byte{}
 
@@ -153,9 +155,6 @@ func TestRuntimeInterpreterElaborationImportMetering(t *testing.T) {
 					code = accountCodes[location]
 					return code, nil
 				},
-				OnMeterMemory: func(usage common.MemoryUsage) error {
-					return meter.MeterMemory(usage)
-				},
 				OnEmitEvent: func(_ cadence.Event) error {
 					return nil
 				},
@@ -169,16 +168,17 @@ func TestRuntimeInterpreterElaborationImportMetering(t *testing.T) {
 						Source: DeploymentTransaction(fmt.Sprintf("C%d", j), contracts[j]),
 					},
 					Context{
-						Interface: runtimeInterface,
-						Location:  nextTransactionLocation(),
-						UseVM:     *compile,
+						Interface:   runtimeInterface,
+						Location:    nextTransactionLocation(),
+						MemoryGauge: memoryGauge,
+						UseVM:       *compile,
 					},
 				)
 				require.NoError(t, err)
 				// one for each deployment transaction and one for each contract
-				assert.Equal(t, uint64(2*j+2), meter.getMemory(common.MemoryKindElaboration))
+				assert.Equal(t, uint64(2*j+2), memoryGauge.getMemory(common.MemoryKindElaboration))
 
-				assert.Equal(t, uint64(1+j), meter.getMemory(common.MemoryKindCadenceAddressValue))
+				assert.Equal(t, uint64(1+j), memoryGauge.getMemory(common.MemoryKindCadenceAddressValue))
 			}
 
 			_, err := runtime.ExecuteScript(
@@ -186,16 +186,17 @@ func TestRuntimeInterpreterElaborationImportMetering(t *testing.T) {
 					Source: []byte(script),
 				},
 				Context{
-					Interface: runtimeInterface,
-					Location:  common.ScriptLocation{},
-					UseVM:     *compile,
+					Interface:   runtimeInterface,
+					Location:    common.ScriptLocation{},
+					MemoryGauge: memoryGauge,
+					UseVM:       *compile,
 				},
 			)
 			require.NoError(t, err)
 
 			// in addition to the elaborations metered above, we also meter
 			// one more for the script and one more for each contract imported
-			assert.Equal(t, uint64(3*imports+4), meter.getMemory(common.MemoryKindElaboration))
+			assert.Equal(t, uint64(3*imports+4), memoryGauge.getMemory(common.MemoryKindElaboration))
 		})
 	}
 
@@ -215,9 +216,10 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
             access(all) fun main(a: Int) {
             }
         `
-		meter := newTestMemoryGauge()
+
+		memoryGauge := newTestMemoryGauge()
+
 		runtimeInterface := &TestRuntimeInterface{
-			OnMeterMemory: meter.MeterMemory,
 			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(nil, b)
 			},
@@ -233,14 +235,15 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 				}),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    common.ScriptLocation{},
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
+		assert.Equal(t, uint64(1), memoryGauge.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
 	t.Run("import type Int large value", func(t *testing.T) {
@@ -250,9 +253,10 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
             access(all) fun main(a: Int) {
             }
         `
-		meter := newTestMemoryGauge()
+
+		memoryGauge := newTestMemoryGauge()
+
 		runtimeInterface := &TestRuntimeInterface{
-			OnMeterMemory: meter.MeterMemory,
 			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(nil, b)
 			},
@@ -273,14 +277,15 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 				}),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    common.ScriptLocation{},
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
+		assert.Equal(t, uint64(1), memoryGauge.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
 	t.Run("import type Int8", func(t *testing.T) {
@@ -290,9 +295,10 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
             access(all) fun main(a: Int8) {
             }
         `
-		meter := newTestMemoryGauge()
+
+		memoryGauge := newTestMemoryGauge()
+
 		runtimeInterface := &TestRuntimeInterface{
-			OnMeterMemory: meter.MeterMemory,
 			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(nil, b)
 			},
@@ -308,14 +314,15 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 				}),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    common.ScriptLocation{},
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
+		assert.Equal(t, uint64(1), memoryGauge.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
 	t.Run("import type Int16", func(t *testing.T) {
@@ -325,9 +332,10 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
             access(all) fun main(a: Int16) {
             }
         `
-		meter := newTestMemoryGauge()
+
+		memoryGauge := newTestMemoryGauge()
+
 		runtimeInterface := &TestRuntimeInterface{
-			OnMeterMemory: meter.MeterMemory,
 			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(nil, b)
 			},
@@ -343,14 +351,15 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 				}),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    common.ScriptLocation{},
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
+		assert.Equal(t, uint64(1), memoryGauge.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
 	t.Run("import type Int32", func(t *testing.T) {
@@ -360,9 +369,10 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
             access(all) fun main(a: Int32) {
             }
         `
-		meter := newTestMemoryGauge()
+
+		memoryGauge := newTestMemoryGauge()
+
 		runtimeInterface := &TestRuntimeInterface{
-			OnMeterMemory: meter.MeterMemory,
 			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(nil, b)
 			},
@@ -378,14 +388,15 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 				}),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    common.ScriptLocation{},
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
+		assert.Equal(t, uint64(1), memoryGauge.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
 	t.Run("import type Int64", func(t *testing.T) {
@@ -395,9 +406,10 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
             access(all) fun main(a: Int64) {
             }
         `
-		meter := newTestMemoryGauge()
+
+		memoryGauge := newTestMemoryGauge()
+
 		runtimeInterface := &TestRuntimeInterface{
-			OnMeterMemory: meter.MeterMemory,
 			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(nil, b)
 			},
@@ -413,14 +425,15 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 				}),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    common.ScriptLocation{},
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
+		assert.Equal(t, uint64(1), memoryGauge.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
 	t.Run("import type Int128", func(t *testing.T) {
@@ -430,9 +443,10 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
             access(all) fun main(a: Int128) {
             }
         `
-		meter := newTestMemoryGauge()
+
+		memoryGauge := newTestMemoryGauge()
+
 		runtimeInterface := &TestRuntimeInterface{
-			OnMeterMemory: meter.MeterMemory,
 			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(nil, b)
 			},
@@ -448,14 +462,15 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 				}),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    common.ScriptLocation{},
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
+		assert.Equal(t, uint64(1), memoryGauge.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
 	t.Run("import type Int256", func(t *testing.T) {
@@ -465,9 +480,10 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
             access(all) fun main(a: Int256) {
             }
         `
-		meter := newTestMemoryGauge()
+
+		memoryGauge := newTestMemoryGauge()
+
 		runtimeInterface := &TestRuntimeInterface{
-			OnMeterMemory: meter.MeterMemory,
 			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(nil, b)
 			},
@@ -483,14 +499,15 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 				}),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    common.ScriptLocation{},
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
+		assert.Equal(t, uint64(1), memoryGauge.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 
 	t.Run("return value Int small value", func(t *testing.T) {
@@ -502,9 +519,10 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 				return a
             }
         `
-		meter := newTestMemoryGauge()
+
+		memoryGauge := newTestMemoryGauge()
+
 		runtimeInterface := &TestRuntimeInterface{
-			OnMeterMemory: meter.MeterMemory,
 			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(nil, b)
 			},
@@ -517,14 +535,15 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 				Source: []byte(script),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    common.ScriptLocation{},
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindCadenceIntValue))
+		assert.Equal(t, uint64(8), memoryGauge.getMemory(common.MemoryKindCadenceIntValue))
 	})
 
 	t.Run("return value Int large value", func(t *testing.T) {
@@ -537,9 +556,10 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 				return b
             }
         `
-		meter := newTestMemoryGauge()
+
+		memoryGauge := newTestMemoryGauge()
+
 		runtimeInterface := &TestRuntimeInterface{
-			OnMeterMemory: meter.MeterMemory,
 			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(nil, b)
 			},
@@ -552,14 +572,15 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 				Source: []byte(script),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    common.ScriptLocation{},
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindCadenceIntValue))
+		assert.Equal(t, uint64(16), memoryGauge.getMemory(common.MemoryKindCadenceIntValue))
 	})
 
 	t.Run("return value Int8", func(t *testing.T) {
@@ -570,10 +591,10 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
                 return 12
             }
         `
-		meter := newTestMemoryGauge()
-		runtimeInterface := &TestRuntimeInterface{
-			OnMeterMemory: meter.MeterMemory,
-		}
+
+		memoryGauge := newTestMemoryGauge()
+
+		runtimeInterface := &TestRuntimeInterface{}
 
 		runtime := NewTestRuntime()
 
@@ -582,14 +603,15 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 				Source: []byte(script),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    common.ScriptLocation{},
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceNumberValue))
+		assert.Equal(t, uint64(1), memoryGauge.getMemory(common.MemoryKindCadenceNumberValue))
 	})
 
 	t.Run("return value Int16", func(t *testing.T) {
@@ -600,10 +622,10 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
                 return 12
             }
         `
-		meter := newTestMemoryGauge()
-		runtimeInterface := &TestRuntimeInterface{
-			OnMeterMemory: meter.MeterMemory,
-		}
+
+		memoryGauge := newTestMemoryGauge()
+
+		runtimeInterface := &TestRuntimeInterface{}
 
 		runtime := NewTestRuntime()
 
@@ -612,14 +634,15 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 				Source: []byte(script),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    common.ScriptLocation{},
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCadenceNumberValue))
+		assert.Equal(t, uint64(2), memoryGauge.getMemory(common.MemoryKindCadenceNumberValue))
 	})
 
 	t.Run("return value Int32", func(t *testing.T) {
@@ -630,10 +653,10 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
                 return 12
             }
         `
-		meter := newTestMemoryGauge()
-		runtimeInterface := &TestRuntimeInterface{
-			OnMeterMemory: meter.MeterMemory,
-		}
+
+		memoryGauge := newTestMemoryGauge()
+
+		runtimeInterface := &TestRuntimeInterface{}
 
 		runtime := NewTestRuntime()
 
@@ -642,14 +665,15 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 				Source: []byte(script),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    common.ScriptLocation{},
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindCadenceNumberValue))
+		assert.Equal(t, uint64(4), memoryGauge.getMemory(common.MemoryKindCadenceNumberValue))
 	})
 
 	t.Run("return value Int64", func(t *testing.T) {
@@ -660,10 +684,10 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
                 return 12
             }
         `
-		meter := newTestMemoryGauge()
-		runtimeInterface := &TestRuntimeInterface{
-			OnMeterMemory: meter.MeterMemory,
-		}
+
+		memoryGauge := newTestMemoryGauge()
+
+		runtimeInterface := &TestRuntimeInterface{}
 
 		runtime := NewTestRuntime()
 
@@ -672,14 +696,15 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 				Source: []byte(script),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    common.ScriptLocation{},
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindCadenceNumberValue))
+		assert.Equal(t, uint64(8), memoryGauge.getMemory(common.MemoryKindCadenceNumberValue))
 	})
 
 	t.Run("return value Int128", func(t *testing.T) {
@@ -690,10 +715,10 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
                 return 12
             }
         `
-		meter := newTestMemoryGauge()
-		runtimeInterface := &TestRuntimeInterface{
-			OnMeterMemory: meter.MeterMemory,
-		}
+
+		memoryGauge := newTestMemoryGauge()
+
+		runtimeInterface := &TestRuntimeInterface{}
 
 		runtime := NewTestRuntime()
 
@@ -702,14 +727,15 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 				Source: []byte(script),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    common.ScriptLocation{},
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindCadenceNumberValue))
+		assert.Equal(t, uint64(16), memoryGauge.getMemory(common.MemoryKindCadenceNumberValue))
 	})
 
 	t.Run("return value Int256", func(t *testing.T) {
@@ -720,10 +746,10 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
                 return 12
             }
         `
-		meter := newTestMemoryGauge()
-		runtimeInterface := &TestRuntimeInterface{
-			OnMeterMemory: meter.MeterMemory,
-		}
+
+		memoryGauge := newTestMemoryGauge()
+
+		runtimeInterface := &TestRuntimeInterface{}
 
 		runtime := NewTestRuntime()
 
@@ -732,14 +758,15 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 				Source: []byte(script),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    common.ScriptLocation{},
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindCadenceNumberValue))
+		assert.Equal(t, uint64(32), memoryGauge.getMemory(common.MemoryKindCadenceNumberValue))
 	})
 }
 
@@ -762,14 +789,13 @@ func TestRuntimeLogFunctionStringConversionMetering(t *testing.T) {
 		var loggedString string
 		var accountCode []byte
 
-		meter := newTestMemoryGauge()
+		memoryGauge := newTestMemoryGauge()
 
 		runtimeInterface := &TestRuntimeInterface{
 			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{{42}}, nil
 			},
-			Storage:       NewTestLedger(nil, nil),
-			OnMeterMemory: meter.MeterMemory,
+			Storage: NewTestLedger(nil, nil),
 			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				return accountCode, nil
 			},
@@ -785,14 +811,15 @@ func TestRuntimeLogFunctionStringConversionMetering(t *testing.T) {
 				Source: []byte(script),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    common.ScriptLocation{},
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
 
-		return meter.getMemory(common.MemoryKindRawString), uint64(len(loggedString))
+		return memoryGauge.getMemory(common.MemoryKindRawString), uint64(len(loggedString))
 	}
 
 	emptyStrMeteredAmount, emptyStrActualLen := testMetering("")
@@ -820,7 +847,7 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
             }
         `)
 
-		meter := newTestMemoryGauge()
+		memoryGauge := newTestMemoryGauge()
 
 		storageUsedInvoked := false
 
@@ -829,11 +856,10 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{{42}}, nil
 			},
-			OnMeterMemory: meter.MeterMemory,
 			OnGetStorageUsed: func(_ Address) (uint64, error) {
 				// Before the storageUsed function is invoked, the deltas must have been committed.
 				// So the encoded slabs must have been metered at this point.
-				assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
+				assert.Equal(t, uint64(0), memoryGauge.getMemory(common.MemoryKindAtreeEncodedSlab))
 
 				storageUsedInvoked = true
 
@@ -848,15 +874,16 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 				Source: code,
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.TransactionLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    common.TransactionLocation{},
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 
 		require.NoError(t, err)
 		assert.True(t, storageUsedInvoked)
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
+		assert.Equal(t, uint64(0), memoryGauge.getMemory(common.MemoryKindAtreeEncodedSlab))
 	})
 
 	t.Run("account.storage.save", func(t *testing.T) {
@@ -870,14 +897,13 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
             }
         `)
 
-		meter := newTestMemoryGauge()
+		memoryGauge := newTestMemoryGauge()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
 			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{{42}}, nil
 			},
-			OnMeterMemory: meter.MeterMemory,
 		}
 
 		runtime := NewTestRuntime()
@@ -887,16 +913,17 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 				Source: code,
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.TransactionLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    common.TransactionLocation{},
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
 
 		assert.Equal(t,
 			uint64(5),
-			meter.getMemory(common.MemoryKindAtreeEncodedSlab),
+			memoryGauge.getMemory(common.MemoryKindAtreeEncodedSlab),
 		)
 	})
 
@@ -912,7 +939,8 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
             }
         `)
 
-		meter := newTestMemoryGauge()
+		memoryGauge := newTestMemoryGauge()
+
 		storageUsedInvoked := false
 
 		runtimeInterface := &TestRuntimeInterface{
@@ -920,13 +948,12 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{{42}}, nil
 			},
-			OnMeterMemory: meter.MeterMemory,
 			OnGetStorageUsed: func(_ Address) (uint64, error) {
 				// Before the storageUsed function is invoked, the deltas must have been committed.
 				// So the encoded slabs must have been metered at this point.
 				assert.Equal(t,
 					uint64(5),
-					meter.getMemory(common.MemoryKindAtreeEncodedSlab),
+					memoryGauge.getMemory(common.MemoryKindAtreeEncodedSlab),
 				)
 
 				storageUsedInvoked = true
@@ -942,9 +969,10 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 				Source: code,
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.TransactionLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    common.TransactionLocation{},
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -952,9 +980,19 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 
 		assert.Equal(t,
 			uint64(5),
-			meter.getMemory(common.MemoryKindAtreeEncodedSlab),
+			memoryGauge.getMemory(common.MemoryKindAtreeEncodedSlab),
 		)
 	})
+}
+
+type testMemoryError struct{}
+
+var _ errors.UserError = testMemoryError{}
+
+func (testMemoryError) IsUserError() {}
+
+func (testMemoryError) Error() string {
+	return "memory limit exceeded"
 }
 
 func TestRuntimeMemoryMeteringErrors(t *testing.T) {
@@ -963,11 +1001,18 @@ func TestRuntimeMemoryMeteringErrors(t *testing.T) {
 
 	runtime := NewTestRuntime()
 
-	type memoryMeter map[common.MemoryKind]uint64
+	executeScript := func(script []byte, args ...cadence.Value) error {
 
-	runtimeInterface := func(memoryMeter) *TestRuntimeInterface {
-		return &TestRuntimeInterface{
-			OnMeterMemory: func(usage common.MemoryUsage) error {
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		runtimeInterface := &TestRuntimeInterface{
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
+			},
+		}
+
+		memoryGauge := common.FunctionMemoryGauge(
+			func(usage common.MemoryUsage) error {
 				if usage.Kind == common.MemoryKindStringValue ||
 					usage.Kind == common.MemoryKindArrayValueBase ||
 					usage.Kind == common.MemoryKindErrorToken {
@@ -976,24 +1021,18 @@ func TestRuntimeMemoryMeteringErrors(t *testing.T) {
 				}
 				return nil
 			},
-			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(nil, b)
-			},
-		}
-	}
+		)
 
-	nextScriptLocation := NewScriptLocationGenerator()
-
-	executeScript := func(script []byte, meter memoryMeter, args ...cadence.Value) error {
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source:    script,
 				Arguments: encodeArgs(args),
 			},
 			Context{
-				Interface: runtimeInterface(meter),
-				Location:  nextScriptLocation(),
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    nextScriptLocation(),
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 
@@ -1007,7 +1046,7 @@ func TestRuntimeMemoryMeteringErrors(t *testing.T) {
             access(all) fun main() {}
         `)
 
-		err := executeScript(script, memoryMeter{})
+		err := executeScript(script)
 		assert.NoError(t, err)
 	})
 
@@ -1020,7 +1059,6 @@ func TestRuntimeMemoryMeteringErrors(t *testing.T) {
 
 		err := executeScript(
 			script,
-			memoryMeter{},
 			cadence.String("hello"),
 		)
 		RequireError(t, err)
@@ -1037,7 +1075,7 @@ func TestRuntimeMemoryMeteringErrors(t *testing.T) {
             }
         `)
 
-		err := executeScript(script, memoryMeter{})
+		err := executeScript(script)
 
 		require.IsType(t, Error{}, err)
 		runtimeError := err.(Error)
@@ -1057,10 +1095,180 @@ func TestRuntimeMemoryMeteringErrors(t *testing.T) {
             }
         `)
 
-		err := executeScript(script, memoryMeter{})
+		err := executeScript(script)
 		RequireError(t, err)
 
 		assert.ErrorIs(t, err, testMemoryError{})
+	})
+
+	t.Run("regular error returned", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            access(all) fun foo() {}
+
+            access(all) fun main() {
+                foo()
+            }
+        `)
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+		}
+
+		memoryGauge := common.FunctionMemoryGauge(
+			func(_ common.MemoryUsage) error {
+				return fmt.Errorf("memory limit exceeded")
+			},
+		)
+
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface:   runtimeInterface,
+				Location:    nextScriptLocation(),
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
+			},
+		)
+
+		require.Error(t, err)
+
+		var meteringErr errors.MemoryMeteringError
+		require.ErrorAs(t, err, &meteringErr)
+	})
+
+	t.Run("regular error panicked", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+	       access(all) fun foo() {}
+
+	       access(all) fun main() {
+	           foo()
+	       }
+	   `)
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+		}
+
+		memoryGauge := common.FunctionMemoryGauge(
+			func(_ common.MemoryUsage) error {
+				panic(fmt.Errorf("memory limit exceeded"))
+			},
+		)
+
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface:   runtimeInterface,
+				Location:    nextScriptLocation(),
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
+			},
+		)
+
+		require.Error(t, err)
+	})
+
+	t.Run("go runtime error panicked", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+	       access(all) fun foo() {}
+
+	       access(all) fun main() {
+	           foo()
+	       }
+	   `)
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+		}
+
+		memoryGauge := common.FunctionMemoryGauge(
+			func(_ common.MemoryUsage) error {
+				// Cause a runtime error
+				var x any = "hello"
+				_ = x.(int)
+				return nil
+			},
+		)
+
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface:   runtimeInterface,
+				Location:    nextScriptLocation(),
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
+			},
+		)
+
+		require.Error(t, err)
+	})
+
+	t.Run("go runtime error returned", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            access(all) event Foo()
+
+            access(all) fun main() {
+                emit Foo()
+            }
+        `)
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+		}
+
+		memoryGauge := common.FunctionMemoryGauge(
+			func(_ common.MemoryUsage) (err error) {
+				// Cause a runtime error. Catch it and return.
+				var x any = "hello"
+				defer func() {
+					if r := recover(); r != nil {
+						if r, ok := r.(error); ok {
+							err = r
+						}
+					}
+				}()
+
+				_ = x.(int)
+
+				return
+			},
+		)
+
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface:   runtimeInterface,
+				Location:    nextScriptLocation(),
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
+			},
+		)
+
+		require.Error(t, err)
 	})
 }
 
@@ -1078,14 +1286,14 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 
 		address := common.MustBytesToAddress([]byte{0x1})
 		storage := NewTestLedger(nil, nil)
-		meter := newTestMemoryGauge()
+
+		memoryGauge := newTestMemoryGauge()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: storage,
 			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{address}, nil
 			},
-			OnMeterMemory: meter.MeterMemory,
 		}
 
 		text := "A quick brown fox jumps over the lazy dog"
@@ -1105,16 +1313,17 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 				)),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.TransactionLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    common.TransactionLocation{},
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
 
 		assert.Equal(t,
 			uint64(107),
-			meter.getMemory(common.MemoryKindBytes),
+			memoryGauge.getMemory(common.MemoryKindBytes),
 		)
 	})
 
@@ -1128,14 +1337,14 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 
 		address := common.MustBytesToAddress([]byte{0x1})
 		storage := NewTestLedger(nil, nil)
-		meter := newTestMemoryGauge()
+
+		memoryGauge := newTestMemoryGauge()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: storage,
 			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{address}, nil
 			},
-			OnMeterMemory: meter.MeterMemory,
 		}
 
 		text := "A quick brown fox jumps over the lazy dog"
@@ -1160,16 +1369,17 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 				)),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.TransactionLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    common.TransactionLocation{},
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
 
 		assert.Equal(t,
 			uint64(61494),
-			meter.getMemory(common.MemoryKindBytes),
+			memoryGauge.getMemory(common.MemoryKindBytes),
 		)
 	})
 
@@ -1183,14 +1393,14 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 
 		address := common.MustBytesToAddress([]byte{0x1})
 		storage := NewTestLedger(nil, nil)
-		meter := newTestMemoryGauge()
+
+		memoryGauge := newTestMemoryGauge()
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: storage,
 			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{address}, nil
 			},
-			OnMeterMemory: meter.MeterMemory,
 		}
 
 		_, err := rt.ExecuteScript(
@@ -1216,9 +1426,10 @@ func TestRuntimeMeterEncoding(t *testing.T) {
                 `),
 			},
 			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-				UseVM:     *compile,
+				Interface:   runtimeInterface,
+				Location:    common.ScriptLocation{},
+				MemoryGauge: memoryGauge,
+				UseVM:       *compile,
 			},
 		)
 		require.NoError(t, err)
@@ -1226,7 +1437,7 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 		// Scripts should not perform any encoding
 		assert.Equal(t,
 			uint64(0),
-			meter.getMemory(common.MemoryKindBytes),
+			memoryGauge.getMemory(common.MemoryKindBytes),
 		)
 	})
 }

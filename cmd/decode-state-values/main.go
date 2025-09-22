@@ -31,6 +31,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 
@@ -564,14 +565,7 @@ payloadLoop:
 
 		if filter {
 			owner := common.MustBytesToAddress([]byte(storageKey[0]))
-			var found bool
-			for _, address := range addresses {
-				if owner == address {
-					found = true
-					break
-				}
-			}
-			if !found {
+			if !slices.Contains(addresses, owner) {
 				continue payloadLoop
 			}
 		}

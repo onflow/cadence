@@ -56,6 +56,10 @@ func (i Identifier) StartPosition() Position {
 
 func (i Identifier) EndPosition(memoryGauge common.MemoryGauge) Position {
 	length := len(i.Identifier)
+	if length == 0 {
+		return i.Pos
+	}
+	// -1 because position is inclusive
 	return i.Pos.Shifted(memoryGauge, length-1)
 }
 

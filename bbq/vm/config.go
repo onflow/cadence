@@ -20,6 +20,7 @@ package vm
 
 import (
 	"math"
+	"time"
 
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
@@ -38,7 +39,14 @@ type Config struct {
 	// BuiltinGlobalsProvider provides the built-in globals for a given location.
 	// NOTE: all global must be defined for location nil!
 	BuiltinGlobalsProvider BuiltinGlobalsProvider
-	TypeLoader             func(location common.Location, typeID interpreter.TypeID) (sema.Type, error)
+	// CompositeTypeHandler is used to load composite types
+	CompositeTypeHandler interpreter.CompositeTypeHandlerFunc
+	// InterfaceTypeHandler is used to load interface types
+	InterfaceTypeHandler interpreter.InterfaceTypeHandlerFunc
+	// EntitlementTypeHandler is used to load entitlement types
+	EntitlementTypeHandler EntitlementTypeHandlerFunc
+	// EntitlementMapTypeHandler is used to load entitlement map types
+	EntitlementMapTypeHandler EntitlementMapTypeHandlerFunc
 
 	MemoryGauge      common.MemoryGauge
 	ComputationGauge common.ComputationGauge
@@ -106,19 +114,15 @@ func (c *Config) GetInterfaceType(
 		}
 	}
 
-	ty, err := c.TypeLoader(location, typeID)
-	if err != nil {
-		return nil, err
-	}
+	ty := c.InterfaceTypeHandler(location, typeID)
 
-	interfaceType, ok := ty.(*sema.InterfaceType)
-	if !ok {
+	if ty == nil {
 		return nil, interpreter.TypeLoadingError{
 			TypeID: typeID,
 		}
 	}
 
-	return interfaceType, nil
+	return ty, nil
 }
 
 func (c *Config) GetCompositeType(
@@ -134,19 +138,15 @@ func (c *Config) GetCompositeType(
 		}
 	}
 
-	ty, err := c.TypeLoader(location, typeID)
-	if err != nil {
-		return nil, err
-	}
+	ty := c.CompositeTypeHandler(location, typeID)
 
-	compositeType, ok := ty.(*sema.CompositeType)
-	if !ok {
+	if ty == nil {
 		return nil, interpreter.TypeLoadingError{
 			TypeID: typeID,
 		}
 	}
 
-	return compositeType, nil
+	return ty, nil
 }
 
 func (c *Config) GetEntitlementType(typeID interpreter.TypeID) (*sema.EntitlementType, error) {
@@ -166,19 +166,15 @@ func (c *Config) GetEntitlementType(typeID interpreter.TypeID) (*sema.Entitlemen
 		return ty, nil
 	}
 
-	ty, err := c.TypeLoader(location, typeID)
-	if err != nil {
-		return nil, err
-	}
+	ty := c.EntitlementTypeHandler(location, typeID)
 
-	entitlementType, ok := ty.(*sema.EntitlementType)
-	if !ok {
+	if ty == nil {
 		return nil, interpreter.TypeLoadingError{
 			TypeID: typeID,
 		}
 	}
 
-	return entitlementType, nil
+	return ty, nil
 }
 
 func (c *Config) GetEntitlementMapType(typeID interpreter.TypeID) (*sema.EntitlementMapType, error) {
@@ -198,19 +194,15 @@ func (c *Config) GetEntitlementMapType(typeID interpreter.TypeID) (*sema.Entitle
 		return ty, nil
 	}
 
-	ty, err := c.TypeLoader(location, typeID)
-	if err != nil {
-		return nil, err
-	}
+	ty := c.EntitlementMapTypeHandler(location, typeID)
 
-	entitlementMapType, ok := ty.(*sema.EntitlementMapType)
-	if !ok {
+	if ty == nil {
 		return nil, interpreter.TypeLoadingError{
 			TypeID: typeID,
 		}
 	}
 
-	return entitlementMapType, nil
+	return ty, nil
 }
 
 func (c *Config) MeterComputation(usage common.ComputationUsage) error {
@@ -251,6 +243,16 @@ func (c *Config) EmitEvent(
 	eventType *sema.CompositeType,
 	eventFields []Value,
 ) {
+	if interpreter.TracingEnabled {
+		startTime := time.Now()
+		defer func() {
+			context.ReportEmitEventTrace(
+				string(eventType.ID()),
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	onEventEmitted := c.OnEventEmitted
 	if onEventEmitted == nil {
 		panic(&interpreter.EventEmissionUnavailableError{
@@ -287,3 +289,7 @@ type ContractValueHandler func(
 ) *interpreter.CompositeValue
 
 type ElaborationResolver func(location common.Location) (*sema.Elaboration, error)
+
+type EntitlementTypeHandlerFunc func(location common.Location, typeID interpreter.TypeID) *sema.EntitlementType
+
+type EntitlementMapTypeHandlerFunc func(location common.Location, typeID interpreter.TypeID) *sema.EntitlementMapType

@@ -75,8 +75,8 @@ type ExternalNonError struct {
 	Recovered any
 }
 
-func NewExternalNonError(recovered error) ExternalError {
-	return ExternalError{
+func NewExternalNonError(recovered any) ExternalNonError {
+	return ExternalNonError{
 		Recovered: recovered,
 	}
 }

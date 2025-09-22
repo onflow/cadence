@@ -366,7 +366,7 @@ func TestRuntimeRLPGetTypeAndIsInstance(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
-			UseVM:     *compile,
+			UseVM:     true,
 		},
 	)
 	require.NoError(t, err)

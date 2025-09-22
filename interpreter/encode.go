@@ -480,6 +480,78 @@ func (v Fix64Value) Encode(e *atree.Encoder) error {
 	return e.CBOR.EncodeInt64(int64(v))
 }
 
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	// !!! *WARNING* !!!
+	//
+	// encodedFix128ValueLength is used to verify encoded fix128-parts length during decoding.
+	encodedFix128ValueLength = 2
+)
+
+// Encode encodes Fix128Value as
+//
+//	cbor.Tag{
+//			Number:  CBORTagFix128Value,
+//			Content: []any {
+//			    int64(hi),
+//			    int64(lo),
+//			}
+//	}
+func (v Fix128Value) Encode(e *atree.Encoder) error {
+	err := e.CBOR.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, values.CBORTagFix128Value,
+		// array, 2 items follow
+		0x82,
+	})
+	if err != nil {
+		return err
+	}
+
+	err = e.CBOR.EncodeUint64(uint64(v.Hi))
+	if err != nil {
+		return err
+	}
+
+	return e.CBOR.EncodeUint64(uint64(v.Lo))
+}
+
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	// !!! *WARNING* !!!
+	//
+	// encodedUFix128ValueLength is used to verify encoded ufix128-parts length during decoding.
+	encodedUFix128ValueLength = 2
+)
+
+// Encode encodes UFix128Value as
+//
+//	cbor.Tag{
+//			Number:  CBORTagUFix128Value,
+//			Content: []any {
+//			    int64(hi),
+//			    int64(lo),
+//			}
+//	}
+func (v UFix128Value) Encode(e *atree.Encoder) error {
+	err := e.CBOR.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, values.CBORTagUFix128Value,
+		// array, 2 items follow
+		0x82,
+	})
+	if err != nil {
+		return err
+	}
+
+	err = e.CBOR.EncodeUint64(uint64(v.Hi))
+	if err != nil {
+		return err
+	}
+
+	return e.CBOR.EncodeUint64(uint64(v.Lo))
+}
+
 var _ atree.ContainerStorable = &SomeStorable{}
 
 func (s SomeStorable) Encode(e *atree.Encoder) error {
@@ -1399,7 +1471,7 @@ func (t *CapabilityStaticType) Encode(e *cbor.StreamEncoder) error {
 }
 
 func (t FunctionStaticType) Encode(_ *cbor.StreamEncoder) error {
-	return &NonStorableStaticTypeError{
+	return NonStorableStaticTypeError{
 		Type: t.Type,
 	}
 }

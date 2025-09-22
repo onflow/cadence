@@ -459,7 +459,7 @@ func (v Int128Value) Div(context NumberValueArithmeticContext, other NumberValue
 				LocationRange: locationRange,
 			})
 		}
-		res.Div(v.BigInt, o.BigInt)
+		res.Quo(v.BigInt, o.BigInt)
 
 		return res
 	}
@@ -495,7 +495,7 @@ func (v Int128Value) SaturatingDiv(context NumberValueArithmeticContext, other N
 		if (v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
 			return sema.Int128TypeMaxIntBig
 		}
-		res.Div(v.BigInt, o.BigInt)
+		res.Quo(v.BigInt, o.BigInt)
 
 		return res
 	}
