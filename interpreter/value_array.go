@@ -1968,13 +1968,11 @@ var UnifiedArrayAppendFunction = UnifiedNativeFunction(
 		typeArguments []StaticType,
 		locationRange LocationRange,
 	) Value {
-		// Validate receiver
 		thisArray, ok := receiver.(*ArrayValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
 
-		// Extract the argument
 		element := args.Get(0)
 
 		thisArray.Append(context, locationRange, element)
@@ -1990,13 +1988,11 @@ var UnifiedArrayAppendAllFunction = UnifiedNativeFunction(
 		typeArguments []StaticType,
 		locationRange LocationRange,
 	) Value {
-		// Validate receiver
 		thisArray, ok := receiver.(*ArrayValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
 
-		// Extract the argument
 		otherArray := args.GetArray(0)
 
 		thisArray.AppendAll(context, locationRange, otherArray)
@@ -2012,13 +2008,11 @@ var UnifiedArrayConcatFunction = UnifiedNativeFunction(
 		typeArguments []StaticType,
 		locationRange LocationRange,
 	) Value {
-		// Validate receiver
 		thisArray, ok := receiver.(*ArrayValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
 
-		// Extract the argument
 		otherArray := args.GetArray(0)
 
 		return thisArray.Concat(context, locationRange, otherArray)
@@ -2033,19 +2027,12 @@ var UnifiedArrayInsertFunction = UnifiedNativeFunction(
 		typeArguments []StaticType,
 		locationRange LocationRange,
 	) Value {
-		// Validate receiver
 		thisArray, ok := receiver.(*ArrayValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
 
-		// Extract arguments
-		indexValue := args.Get(0)
-		index, ok := indexValue.(NumberValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
+		index := args.GetNumber(0)
 		element := args.Get(1)
 
 		thisArray.Insert(context, locationRange, index.ToInt(locationRange), element)
@@ -2067,17 +2054,7 @@ var UnifiedArrayRemoveFunction = UnifiedNativeFunction(
 			panic(errors.NewUnreachableError())
 		}
 
-		// Validate argument count
-		if args.Count() != 1 {
-			panic(errors.NewUnreachableError())
-		}
-
-		// Extract argument
-		indexValue := args.Get(0)
-		index, ok := indexValue.(NumberValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
+		index := args.GetNumber(0)
 
 		return thisArray.Remove(context, locationRange, index.ToInt(locationRange))
 	},
@@ -2112,13 +2089,11 @@ var UnifiedArraySliceFunction = UnifiedNativeFunction(
 		typeArguments []StaticType,
 		locationRange LocationRange,
 	) Value {
-		// Validate receiver
 		thisArray, ok := receiver.(*ArrayValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
 
-		// Extract arguments
 		fromValue := args.GetInt(0)
 		toValue := args.GetInt(1)
 
@@ -2134,7 +2109,6 @@ var UnifiedArrayReverseFunction = UnifiedNativeFunction(
 		typeArguments []StaticType,
 		locationRange LocationRange,
 	) Value {
-		// Validate receiver
 		thisArray, ok := receiver.(*ArrayValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
@@ -2152,13 +2126,11 @@ var UnifiedArrayFilterFunction = UnifiedNativeFunction(
 		typeArguments []StaticType,
 		locationRange LocationRange,
 	) Value {
-		// Validate receiver
 		thisArray, ok := receiver.(*ArrayValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
 
-		// Extract argument
 		funcValue := args.GetFunction(0)
 
 		return thisArray.Filter(context, locationRange, funcValue)
@@ -2173,13 +2145,11 @@ var UnifiedArrayMapFunction = UnifiedNativeFunction(
 		typeArguments []StaticType,
 		locationRange LocationRange,
 	) Value {
-		// Validate receiver
 		thisArray, ok := receiver.(*ArrayValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
 
-		// Extract argument
 		funcValue := args.GetFunction(0)
 
 		return thisArray.Map(context, locationRange, funcValue)
@@ -2194,7 +2164,6 @@ var UnifiedArrayToVariableSizedFunction = UnifiedNativeFunction(
 		typeArguments []StaticType,
 		locationRange LocationRange,
 	) Value {
-		// Validate receiver
 		thisArray, ok := receiver.(*ArrayValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
@@ -2212,7 +2181,6 @@ var UnifiedArrayToConstantSizedFunction = UnifiedNativeFunction(
 		typeArguments []StaticType,
 		locationRange LocationRange,
 	) Value {
-		// Validate receiver
 		thisArray, ok := receiver.(*ArrayValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
@@ -2235,13 +2203,11 @@ var UnifiedArrayFirstIndexFunction = UnifiedNativeFunction(
 		typeArguments []StaticType,
 		locationRange LocationRange,
 	) Value {
-		// Validate receiver
 		thisArray, ok := receiver.(*ArrayValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
 
-		// Extract argument
 		element := args.Get(0)
 
 		return thisArray.FirstIndex(context, locationRange, element)
@@ -2256,7 +2222,6 @@ var UnifiedArrayRemoveFirstFunction = UnifiedNativeFunction(
 		typeArguments []StaticType,
 		locationRange LocationRange,
 	) Value {
-		// Validate receiver
 		thisArray, ok := receiver.(*ArrayValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
@@ -2273,7 +2238,6 @@ var UnifiedArrayRemoveLastFunction = UnifiedNativeFunction(
 		typeArguments []StaticType,
 		locationRange LocationRange,
 	) Value {
-		// Validate receiver
 		thisArray, ok := receiver.(*ArrayValue)
 		if !ok {
 			panic(errors.NewUnreachableError())

@@ -25,12 +25,9 @@ import (
 
 // minimal interfaces needed by all native/host functions
 type UnifiedFunctionContext interface {
-	ReferenceTracker
 	ValueStaticTypeContext
 	ValueTransferContext
-	StorageContext
 	StaticTypeConversionHandler
-	ValueComparisonContext
 	InvocationContext
 }
 
@@ -42,7 +39,6 @@ type UnifiedNativeFunction func(
 	locationRange LocationRange,
 ) Value
 
-// InterpreterArgumentExtractor adapts interpreter arguments to ArgumentExtractor
 type ArgumentExtractor struct {
 	arguments []Value
 }
@@ -73,16 +69,6 @@ func (e *ArgumentExtractor) GetNumber(index int) NumberValue {
 	return numberValue
 }
 
-func (e *ArgumentExtractor) GetString(index int) *StringValue {
-	value := e.Get(index)
-
-	stringValue, ok := value.(*StringValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return stringValue
-}
-
 func (e *ArgumentExtractor) GetInt(index int) IntValue {
 	value := e.Get(index)
 
@@ -101,46 +87,6 @@ func (e *ArgumentExtractor) GetArray(index int) *ArrayValue {
 		panic(errors.NewUnreachableError())
 	}
 	return arrayValue
-}
-
-func (e *ArgumentExtractor) GetType(index int) TypeValue {
-	value := e.Get(index)
-
-	typeValue, ok := value.(TypeValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return typeValue
-}
-
-func (e *ArgumentExtractor) GetOptional(index int) OptionalValue {
-	value := e.Get(index)
-
-	optionalValue, ok := value.(OptionalValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return optionalValue
-}
-
-func (e *ArgumentExtractor) GetBool(index int) BoolValue {
-	value := e.Get(index)
-
-	boolValue, ok := value.(BoolValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return boolValue
-}
-
-func (e *ArgumentExtractor) GetAddress(index int) AddressValue {
-	value := e.Get(index)
-
-	addressValue, ok := value.(AddressValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return addressValue
 }
 
 func (e *ArgumentExtractor) GetFunction(index int) FunctionValue {
@@ -164,7 +110,7 @@ func AdaptUnifiedFunctionForInterpreter(fn UnifiedNativeFunction) HostFunction {
 			receiver = *invocation.Self
 		}
 
-		// Convert TypeParameterTypes to []StaticType
+		// convert TypeParameterTypes to []StaticType
 		var typeArguments []StaticType
 		if invocation.TypeParameterTypes != nil {
 			typeArguments = make([]StaticType, 0, invocation.TypeParameterTypes.Len())
@@ -199,7 +145,8 @@ func NewUnifiedBoundHostFunctionValue(
 	function UnifiedNativeFunction,
 ) BoundFunctionValue {
 
-	// Wrap the unified function to work with the standard HostFunction signature
+	// wrap the unified function to work with the standard HostFunction signature
+	// just like how we do it in the interpreter
 	wrappedFunction := AdaptUnifiedFunctionForInterpreter(function)
 
 	hostFunc := NewStaticHostFunctionValue(context, funcType, wrappedFunction)

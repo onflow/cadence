@@ -139,17 +139,15 @@ type BigNumberValue interface {
 	ToBigInt(memoryGauge common.MemoryGauge) *big.Int
 }
 
-// Unified number functions
+// all native number functions
 var UnifiedNumberToStringFunction = UnifiedNativeFunction(
 	func(context UnifiedFunctionContext, args *ArgumentExtractor, receiver Value, typeArguments []StaticType, locationRange LocationRange) Value {
-		// No arguments needed for toString
 		return NumberValueToString(context, receiver.(NumberValue))
 	},
 )
 
 var UnifiedNumberToBigEndianBytesFunction = UnifiedNativeFunction(
 	func(context UnifiedFunctionContext, args *ArgumentExtractor, receiver Value, typeArguments []StaticType, locationRange LocationRange) Value {
-		// No arguments needed for toBigEndianBytes
 		return ByteSliceToByteArrayValue(context, receiver.(NumberValue).ToBigEndianBytes())
 	},
 )
