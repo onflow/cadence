@@ -72,6 +72,10 @@ type InvocationExpressionTypes struct {
 	TypeArguments  *TypeParameterTypeOrderedMap
 	ArgumentTypes  []Type
 	ParameterTypes []Type
+
+	// Flag indicating whether to transfer the arguments or not, when calling into this function type.
+	// IMPORTANT: Only for internal use only. User-defined functions must never have this flag on!
+	SkipArgumentsTransfer bool
 }
 
 type ArrayExpressionTypes struct {

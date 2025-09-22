@@ -21,6 +21,7 @@ package vm
 import (
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -312,35 +313,29 @@ func (c *Context) DefaultDestroyEvents(
 	method := c.GetMethod(
 		resourceValue,
 		commons.ResourceDestroyedEventsFunctionName,
-		EmptyLocationRange,
+		locationRange,
 	)
 
 	if method == nil {
 		return nil
 	}
 
-	// The generated function takes no arguments.
-	events := c.InvokeFunction(method, nil)
-	eventsArray, ok := events.(*interpreter.ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
+	eventValues := make([]*interpreter.CompositeValue, 0)
 
-	length := eventsArray.Count()
-	common.UseMemory(c, common.NewGoSliceMemoryUsages(length))
-
-	eventValues := make([]*interpreter.CompositeValue, 0, eventsArray.Count())
-
-	eventsArray.Iterate(
-		c,
-		func(element interpreter.Value) (resume bool) {
-			event := element.(*interpreter.CompositeValue)
-			eventValues = append(eventValues, event)
-			return true
+	collectFunction := NewNativeFunctionValue(
+		"", // anonymous function
+		commons.CollectEventsFunctionType,
+		func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
+			for _, argument := range arguments {
+				event := argument.(*interpreter.CompositeValue)
+				eventValues = append(eventValues, event)
+			}
+			return interpreter.Void
 		},
-		false,
-		locationRange,
 	)
+
+	// The generated function takes no arguments, and returns nothing.
+	c.InvokeFunction(method, []Value{collectFunction})
 
 	return eventValues
 }
