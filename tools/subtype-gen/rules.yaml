@@ -1,50 +1,43 @@
 rules:
   - super: Any
-    sub: T
     predicate:
       always
 
   - super: AnyStruct
-    sub: T
     predicate:
       and:
         - not:
-            isResource: T
+            isResource: sub
         - not:
             equals:
-              source: T
+              source: sub
               target: Any
 
   - super: AnyResource
-    sub: T
     predicate:
-      isResource: T
+      isResource: sub
 
   - super: AnyResourceAttachment
-    sub: T
     predicate:
       and:
-        - isAttachment: T
-        - isResource: T
+        - isAttachment: sub
+        - isResource: sub
 
   - super: AnyStructAttachment
-    sub: T
     predicate:
       and:
-        - isAttachment: T
+        - isAttachment: sub
         - not:
-            isResource: T
+            isResource: sub
 
   - super: HashableStruct
-    sub: T
     predicate:
-      isHashableStruct: T
+      isHashableStruct: sub
 
   - super: Path
-    sub: T
     predicate:
       subtype:
-        sub: T
+        sub: sub
         super:
           # Maybe use 'or' predicate here instead?
           # The difference is 'or' is a predicate containing zero or more inner predicates.
@@ -52,107 +45,96 @@ rules:
           oneOfTypes: [StoragePath, CapabilityPath]
 
   - super: Storable
-    sub: T
     predicate:
-      isStorable: T
+      isStorable: sub
 
   - super: CapabilityPath
-    sub: T
     predicate:
       equals:
-        source: T
+        source: sub
         target:
           oneOfTypes: [PrivatePath, PublicPath]
 
   - super: Number
-    sub: T
     predicate:
       or:
         - equals:
-            source: T
+            source: sub
             target:
               oneOfTypes: [Number, SignedNumber]
 
         - subtype:
-            sub: T
+            sub: sub
             super:
               oneOfTypes: [Integer, FixedPoint]
 
   - super: SignedNumber
-    sub: T
     predicate:
       or:
         - equals:
-            source: T
+            source: sub
             target: SignedNumber
 
         - subtype:
-            sub: T
+            sub: sub
             super:
               oneOfTypes: [SignedInteger, SignedFixedPoint]
 
   - super: Integer
-    sub: T
     predicate:
       or:
         - equals:
-            source: T
+            source: sub
             target:
               oneOfTypes: [Integer, SignedInteger, FixedSizeUnsignedInteger, UInt]
 
         - subtype:
-            sub: T
+            sub: sub
             super:
               oneOfTypes: [SignedInteger, FixedSizeUnsignedInteger]
 
   - super: SignedInteger
-    sub: T
     predicate:
       equals:
-        source: T
+        source: sub
         target:
           oneOfTypes: [SignedInteger, Int, Int8, Int16, Int32, Int64, Int128, Int256]
 
   - super: FixedSizeUnsignedInteger
-    sub: T
     predicate:
       equals:
-        source: T
+        source: sub
         target:
           oneOfTypes: [UInt8, UInt16, UInt32, UInt64, UInt128, UInt256,
                   Word8, Word16, Word32, Word64, Word128, Word256]
 
   - super: FixedPoint
-    sub: T
     predicate:
-      or: 
+      or:
         - equals:
-            source: T
+            source: sub
             target:
               oneOfTypes: [FixedPoint, SignedFixedPoint, UFix64, UFix128]
 
         - subtype:
-            sub: T
-            super: 
+            sub: sub
+            super:
               oneOfTypes: [SignedFixedPoint]
 
   - super: SignedFixedPoint
-    sub: T
     predicate:
       equals:
-        source: T
+        source: sub
         target:
           oneOfTypes: [SignedFixedPoint, Fix64, Fix128]
 
-#  - super:
-#      Optional:
-#        inner: U
-#    sub: T
-#    predicate:
-#      equals:
-#        source: T
-#        target: U
-#
+  - super: Optional
+    sub: Optional
+    predicate:
+      subtype:
+        sub: sub.Type
+        super: super.Type
+
 #  - super:
 #      Reference:
 #        auth: A

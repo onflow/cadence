@@ -21,6 +21,7 @@ package subtype_gen
 import (
 	_ "embed"
 	"fmt"
+	"strings"
 
 	yaml "gopkg.in/yaml.v3"
 )
@@ -30,9 +31,9 @@ var subtypeCheckingRules string
 
 // Rule represents a single subtype rule
 type Rule struct {
-	Super     any `yaml:"super"`
-	Sub       any `yaml:"sub"`
-	Predicate any `yaml:"predicate"`
+	Super     string `yaml:"super"`
+	Sub       string `yaml:"sub"`
+	Predicate any    `yaml:"predicate"`
 }
 
 // RulesConfig represents the entire YAML configuration
@@ -52,27 +53,29 @@ func ParseRules() ([]Rule, error) {
 	return config.Rules, nil
 }
 
-// parseType parses type information from YAML data and returns a `Type`.
-func parseType(typeData any) Type {
-	switch v := typeData.(type) {
-	case string:
-		return parseSimpleType(v)
-	case KeyValues:
-		return parseComplexType(v)
+// parseType parses a type with just a name.
+func parseType(typeName string) Type {
+	switch typeName {
+	case typePlaceholderOptional:
+		return OptionalType{}
 	default:
-		panic(fmt.Errorf("unsupported type data: %T", typeData))
+		return SimpleType{name: typeName}
 	}
 }
 
-// parseSimpleType parses a type with just a name.
-func parseSimpleType(typeName string) Type {
-	return &SimpleType{name: typeName}
-}
-
 // parseComplexType parses complex types with parameters
-func parseComplexType(v KeyValues) Type {
-	// TODO:
-	panic(fmt.Errorf("complex types are not yet supported"))
+func parseMemberExpression(names []string) Expression {
+	size := len(names)
+	if size != 2 {
+		panic(fmt.Errorf("invalid number of nested levels for member: expected 2, found %d", size))
+	}
+
+	return MemberExpression{
+		Parent: IdentifierExpression{
+			Name: names[0],
+		},
+		MemberName: names[1],
+	}
 }
 
 // parseRulePredicate parses a rule predicate from YAML
@@ -91,20 +94,20 @@ func parseRulePredicate(rule any) (Predicate, error) {
 		switch key {
 
 		case "isResource":
-			typ := parseType(value)
-			return IsResourcePredicate{Type: typ}, nil
+			expr := parseSimpleExpression(value)
+			return IsResourcePredicate{Expression: expr}, nil
 
 		case "isAttachment":
-			typ := parseType(value)
-			return IsAttachmentPredicate{Type: typ}, nil
+			expr := parseSimpleExpression(value)
+			return IsAttachmentPredicate{Expression: expr}, nil
 
 		case "isHashableStruct":
-			typ := parseType(value)
-			return IsHashableStructPredicate{Type: typ}, nil
+			expr := parseSimpleExpression(value)
+			return IsHashableStructPredicate{Expression: expr}, nil
 
 		case "isStorable":
-			typ := parseType(value)
-			return IsStorablePredicate{Type: typ}, nil
+			expr := parseSimpleExpression(value)
+			return IsStorablePredicate{Expression: expr}, nil
 
 		case "equals":
 			equals, ok := value.(KeyValues)
@@ -112,12 +115,25 @@ func parseRulePredicate(rule any) (Predicate, error) {
 				return nil, fmt.Errorf("expected KeyValues, got %T", value)
 			}
 
-			target, err := parseTypeOrOneOfTypes(equals["target"])
+			// Get source
+			data, ok := equals["source"]
+			if !ok {
+				return nil, fmt.Errorf("cannot find `source` property for `equals` predicate")
+			}
+
+			sourceType := parseSimpleExpression(data)
+
+			// Get target
+			expr, ok := equals["target"]
+			if !ok {
+				return nil, fmt.Errorf("cannot find `target` property for `equals` predicate")
+			}
+
+			target, err := parseExpression(expr)
 			if err != nil {
 				return nil, err
 			}
 
-			sourceType := parseType(equals["source"])
 			return EqualsPredicate{
 				Source: sourceType,
 				Target: target,
@@ -129,15 +145,28 @@ func parseRulePredicate(rule any) (Predicate, error) {
 				return nil, fmt.Errorf("expected KeyValues, got %T", value)
 			}
 
-			super, err := parseTypeOrOneOfTypes(equals["super"])
+			// Get super type
+			super, ok := equals["super"]
+			if !ok {
+				return nil, fmt.Errorf("cannot find `super` property for `subtype` predicate")
+			}
+
+			superType, err := parseExpression(super)
 			if err != nil {
 				return nil, err
 			}
 
-			subType := parseType(equals["sub"])
+			// Get subtype
+			sub, ok := equals["sub"]
+			if !ok {
+				return nil, fmt.Errorf("cannot find `sub` property for `subtype` predicate")
+			}
+
+			subType := parseSimpleExpression(sub)
+
 			return SubtypePredicate{
 				Sub:   subType,
-				Super: super,
+				Super: superType,
 			}, nil
 
 		case "and":
@@ -219,13 +248,12 @@ func singleKeyValueFromMap(v KeyValues) (string, any) {
 	return "", nil
 }
 
-func parseTypeOrOneOfTypes(target any) (any, error) {
-	// TODO:
-	switch target := target.(type) {
+func parseExpression(expr any) (Expression, error) {
+	switch expr := expr.(type) {
 	case string:
-		return parseType(target), nil
+		return parseSimpleExpression(expr), nil
 	case KeyValues:
-		key, value := singleKeyValueFromMap(target)
+		key, value := singleKeyValueFromMap(expr)
 
 		switch key {
 		case "oneOfTypes":
@@ -234,17 +262,36 @@ func parseTypeOrOneOfTypes(target any) (any, error) {
 				return nil, fmt.Errorf("expected a list of predicates, got %T", value)
 			}
 
-			var types []Type
+			var expressions []Expression
 			for _, item := range list {
-				types = append(types, parseType(item))
+				expressions = append(
+					expressions,
+					parseSimpleExpression(item),
+				)
 			}
 
-			return OneOfTypes{Types: types}, nil
+			return OneOfExpression{Expressions: expressions}, nil
 		default:
-			return nil, fmt.Errorf("unsupported predicate: %s", key)
+			return nil, fmt.Errorf("unsupported key: %s", key)
 		}
 
+	default:
+		return nil, fmt.Errorf("unsupported expression: %s", expr)
 	}
+}
 
-	return target, nil
+// parseExpression parses an expression that is represented as a string data in YAML.
+func parseSimpleExpression(expr any) Expression {
+	switch v := expr.(type) {
+	case string:
+		parts := strings.Split(v, ".")
+		if len(parts) == 1 {
+			typ := parseType(v)
+			return TypeExpression{Type: typ}
+		}
+
+		return parseMemberExpression(parts)
+	default:
+		panic(fmt.Errorf("unsupported expression type: %T", expr))
+	}
 }

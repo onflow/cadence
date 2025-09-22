@@ -31,6 +31,12 @@ const subtypeCheckFuncName = "checkSubTypeWithoutEquality_gen"
 type SubTypeCheckGenerator struct {
 	typePkgName      string
 	typePkgQualifier string
+
+	currentSuperType Type
+	currentSubType   Type
+
+	superTypeVarName string
+	subTypeVarName   string
 }
 
 func NewSubTypeCheckGenerator(typePackageName string) *SubTypeCheckGenerator {
@@ -44,18 +50,20 @@ func NewSubTypeCheckGenerator(typePackageName string) *SubTypeCheckGenerator {
 // GenerateCheckSubTypeWithoutEqualityFunction generates the complete checkSubTypeWithoutEquality function.
 func (gen *SubTypeCheckGenerator) GenerateCheckSubTypeWithoutEqualityFunction(rules []Rule) []dst.Decl {
 	checkSubTypeFunction := gen.createCheckSubTypeFunction(rules)
-	return []dst.Decl{checkSubTypeFunction}
+	return []dst.Decl{
+		checkSubTypeFunction,
+	}
 }
 
 // createCheckSubTypeFunction creates the main checkSubTypeWithoutEquality function
 func (gen *SubTypeCheckGenerator) createCheckSubTypeFunction(rules []Rule) dst.Decl {
 	// Create function parameters
 	subTypeParam := &dst.Field{
-		Names: []*dst.Ident{dst.NewIdent("subType")},
+		Names: []*dst.Ident{dst.NewIdent(subTypeVarName)},
 		Type:  gen.qualifiedIdentifier("Type"),
 	}
 	superTypeParam := &dst.Field{
-		Names: []*dst.Ident{dst.NewIdent("superType")},
+		Names: []*dst.Ident{dst.NewIdent(superTypeVarName)},
 		Type:  gen.qualifiedIdentifier("Type"),
 	}
 
@@ -65,9 +73,9 @@ func (gen *SubTypeCheckGenerator) createCheckSubTypeFunction(rules []Rule) dst.D
 	// Add early return for Never type
 	neverTypeCheck := &dst.IfStmt{
 		Cond: &dst.BinaryExpr{
-			X:  dst.NewIdent("subType"),
+			X:  dst.NewIdent(subTypeVarName),
 			Op: token.EQL,
-			Y:  gen.qualifiedTypeIdent("Never"),
+			Y:  gen.qualifiedTypeIdentifier("Never"),
 		},
 		Body: &dst.BlockStmt{
 			List: []dst.Stmt{
@@ -76,12 +84,22 @@ func (gen *SubTypeCheckGenerator) createCheckSubTypeFunction(rules []Rule) dst.D
 				},
 			},
 		},
+		Decs: dst.IfStmtDecorations{
+			NodeDecs: dst.NodeDecs{
+				Before: dst.NewLine,
+				After:  dst.EmptyLine,
+			},
+		},
 	}
 	stmts = append(stmts, neverTypeCheck)
 
-	// Create switch statement
-	switchStmt := gen.createSwitchStatement(rules)
-	stmts = append(stmts, switchStmt)
+	// Create switch statement for simple types.
+	switchStmtForSimpleTypes := gen.createSwitchStatement(rules, true)
+	stmts = append(stmts, switchStmtForSimpleTypes)
+
+	// Create switch statement for complex types.
+	switchStmtForComplexTypes := gen.createSwitchStatement(rules, false)
+	stmts = append(stmts, switchStmtForComplexTypes)
 
 	// Add final return false
 	stmts = append(stmts, &dst.ReturnStmt{
@@ -109,29 +127,135 @@ func (gen *SubTypeCheckGenerator) createCheckSubTypeFunction(rules []Rule) dst.D
 }
 
 // createSwitchStatement creates the switch statement for superType
-func (gen *SubTypeCheckGenerator) createSwitchStatement(rules []Rule) dst.Stmt {
+func (gen *SubTypeCheckGenerator) createSwitchStatement(rules []Rule, forSimpleTypes bool) dst.Stmt {
 	var cases []dst.Stmt
 
-	for _, rule := range rules {
-		caseStmt := gen.createCaseStatement(rule)
-		cases = append(cases, caseStmt)
+	if forSimpleTypes {
+		gen.superTypeVarName = superTypeVarName
+	} else {
+		gen.superTypeVarName = typedSuperTypeVarName
 	}
 
-	return &dst.SwitchStmt{
-		Tag: dst.NewIdent("superType"),
+	for _, rule := range rules {
+		caseStmt := gen.createCaseStatement(rule, forSimpleTypes)
+		if caseStmt != nil {
+			cases = append(cases, caseStmt)
+		}
+	}
+
+	nodeDecs := dst.NodeDecs{
+		Before: dst.NewLine,
+		After:  dst.EmptyLine,
+	}
+
+	// For simple types, use a value-switch.
+	if forSimpleTypes {
+		return &dst.SwitchStmt{
+			Tag: dst.NewIdent(gen.superTypeVarName),
+			Body: &dst.BlockStmt{
+				List: cases,
+			},
+			Decs: dst.SwitchStmtDecorations{
+				NodeDecs: nodeDecs,
+			},
+		}
+	}
+
+	// For complex types, use a type-switch.
+	return &dst.TypeSwitchStmt{
+		Assign: &dst.AssignStmt{
+			Lhs: []dst.Expr{
+				dst.NewIdent(gen.superTypeVarName),
+			},
+			Tok: token.DEFINE,
+			Rhs: []dst.Expr{
+				&dst.TypeAssertExpr{
+					X:    dst.NewIdent(superTypeVarName),
+					Type: dst.NewIdent("type"),
+				},
+			},
+		},
 		Body: &dst.BlockStmt{
 			List: cases,
+		},
+		Decs: dst.TypeSwitchStmtDecorations{
+			NodeDecs: nodeDecs,
 		},
 	}
 }
 
 // createCaseStatement creates a case statement for a rule
-func (gen *SubTypeCheckGenerator) createCaseStatement(rule Rule) dst.Stmt {
-	// Parse super type
-	superType := parseType(rule.Super)
+func (gen *SubTypeCheckGenerator) createCaseStatement(rule Rule, forSimpleTypes bool) dst.Stmt {
+	prevSuperType := gen.currentSuperType
+	prevSubType := gen.currentSubType
+	defer func() {
+		gen.currentSuperType = prevSuperType
+		gen.currentSubType = prevSubType
+	}()
+
+	// Parse types
+	gen.currentSuperType = parseType(rule.Super)
+	gen.currentSubType = parseType(rule.Sub)
+
+	_, isSimpleType := gen.currentSuperType.(SimpleType)
+	if isSimpleType != forSimpleTypes {
+		return nil
+	}
 
 	// Generate case condition
-	caseExpr := gen.parseCaseCondition(superType)
+	caseExpr := gen.parseCaseCondition(gen.currentSuperType)
+
+	var bodyStmts []dst.Stmt
+
+	// If the subtype needs to be of a certain type,
+	// then add a type assertion.
+	if rule.Sub != "" {
+		gen.subTypeVarName = typedSubTypeVarName
+
+		assignment := &dst.AssignStmt{
+			Lhs: []dst.Expr{
+				dst.NewIdent(gen.subTypeVarName),
+				dst.NewIdent("ok"),
+			},
+			Tok: token.DEFINE,
+			Rhs: []dst.Expr{
+				&dst.TypeAssertExpr{
+					X: dst.NewIdent(subTypeVarName),
+					Type: &dst.StarExpr{
+						X: gen.qualifiedTypeIdentifier(rule.Sub),
+					},
+				},
+			},
+		}
+
+		ifStmt := &dst.IfStmt{
+			Cond: &dst.UnaryExpr{
+				X:  dst.NewIdent("ok"),
+				Op: token.NOT,
+			},
+			Body: &dst.BlockStmt{
+				List: []dst.Stmt{
+					&dst.ReturnStmt{
+						Results: []dst.Expr{
+							dst.NewIdent("false"),
+						},
+					},
+				},
+			},
+			Decs: dst.IfStmtDecorations{
+				NodeDecs: dst.NodeDecs{
+					Before: dst.NewLine,
+					After:  dst.EmptyLine,
+				},
+			},
+		}
+
+		bodyStmts = append(
+			bodyStmts,
+			assignment,
+			ifStmt,
+		)
+	}
 
 	predicate, err := parseRulePredicate(rule.Predicate)
 	if err != nil {
@@ -139,11 +263,20 @@ func (gen *SubTypeCheckGenerator) createCaseStatement(rule Rule) dst.Stmt {
 	}
 
 	// Generate statements for the predicate
-	bodyStmts := gen.generatePredicateStatements(predicate)
+	bodyStmts = append(
+		bodyStmts,
+		gen.generatePredicateStatements(predicate)...,
+	)
 
 	return &dst.CaseClause{
 		List: []dst.Expr{caseExpr},
 		Body: bodyStmts,
+		Decs: dst.CaseClauseDecorations{
+			NodeDecs: dst.NodeDecs{
+				Before: dst.NewLine,
+				After:  dst.EmptyLine,
+			},
+		},
 	}
 }
 
@@ -209,16 +342,16 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 		return []dst.Node{dst.NewIdent("true")}
 
 	case IsResourcePredicate:
-		return gen.isResourcePredicate()
+		return gen.isResourcePredicate(p)
 
 	case IsAttachmentPredicate:
-		return gen.isAttachmentPredicate()
+		return gen.isAttachmentPredicate(p)
 
 	case IsHashableStructPredicate:
-		return gen.isHashableStructPredicate()
+		return gen.isHashableStructPredicate(p)
 
 	case IsStorablePredicate:
-		return gen.isStorablePredicate()
+		return gen.isStorablePredicate(p)
 
 	case NotPredicate:
 		return gen.notPredicate(p)
@@ -303,20 +436,22 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 	}
 }
 
-func (gen *SubTypeCheckGenerator) isHashableStructPredicate() []dst.Node {
+func (gen *SubTypeCheckGenerator) isHashableStructPredicate(predicate IsHashableStructPredicate) []dst.Node {
 	return []dst.Node{
 		&dst.CallExpr{
-			Fun:  dst.NewIdent("IsHashableStructType"),
-			Args: []dst.Expr{dst.NewIdent("subType")},
+			Fun: dst.NewIdent("IsHashableStructType"),
+			Args: []dst.Expr{
+				gen.expression(predicate.Expression),
+			},
 		},
 	}
 }
 
-func (gen *SubTypeCheckGenerator) isStorablePredicate() []dst.Node {
+func (gen *SubTypeCheckGenerator) isStorablePredicate(predicate IsStorablePredicate) []dst.Node {
 	return []dst.Node{
 		&dst.CallExpr{
 			Fun: &dst.SelectorExpr{
-				X:   dst.NewIdent("subType"),
+				X:   gen.expression(predicate.Expression),
 				Sel: dst.NewIdent("IsStorable"),
 			},
 			Args: []dst.Expr{
@@ -495,20 +630,22 @@ func (gen *SubTypeCheckGenerator) constructorEqualPredicate() []dst.Node {
 	return []dst.Node{binaryExpr}
 }
 
-func (gen *SubTypeCheckGenerator) isAttachmentPredicate() []dst.Node {
+func (gen *SubTypeCheckGenerator) isAttachmentPredicate(predicate IsAttachmentPredicate) []dst.Node {
 	return []dst.Node{
 		&dst.CallExpr{
-			Fun:  dst.NewIdent("isAttachmentType"),
-			Args: []dst.Expr{dst.NewIdent("subType")},
+			Fun: dst.NewIdent("isAttachmentType"),
+			Args: []dst.Expr{
+				gen.expression(predicate.Expression),
+			},
 		},
 	}
 }
 
-func (gen *SubTypeCheckGenerator) isResourcePredicate() []dst.Node {
+func (gen *SubTypeCheckGenerator) isResourcePredicate(predicate IsResourcePredicate) []dst.Node {
 	return []dst.Node{
 		&dst.CallExpr{
 			Fun: &dst.SelectorExpr{
-				X:   dst.NewIdent("subType"),
+				X:   gen.expression(predicate.Expression),
 				Sel: dst.NewIdent("IsResourceType"),
 			},
 		},
@@ -518,32 +655,33 @@ func (gen *SubTypeCheckGenerator) isResourcePredicate() []dst.Node {
 // equalsPredicate generates AST for equals predicate
 func (gen *SubTypeCheckGenerator) equalsPredicate(equals EqualsPredicate) []dst.Node {
 	switch target := equals.Target.(type) {
-	case Type:
+	case TypeExpression, MemberExpression:
 		return []dst.Node{
 			&dst.BinaryExpr{
-				X:  dst.NewIdent("subType"),
+				// TODO:
+				X:  gen.expression(equals.Source),
 				Op: token.EQL,
-				Y:  gen.qualifiedTypeIdent(target.Name()),
+				Y:  gen.expression(target),
 			},
 		}
-	case OneOfTypes:
-		types := target.Types
+	case OneOfExpression:
+		exprs := target.Expressions
 		// If there's only one type to match, use `==`.
-		if len(types) == 1 {
-			typ := types[0]
+		if len(exprs) == 1 {
+			expr := exprs[0]
 			return []dst.Node{
 				&dst.BinaryExpr{
-					X:  dst.NewIdent("subType"),
+					X:  gen.expression(equals.Source),
 					Op: token.EQL,
-					Y:  gen.qualifiedTypeIdent(typ.Name()),
+					Y:  gen.expression(expr),
 				},
 			}
 		}
 
 		// Otherwise, if there are more than one type, then generate a switch-case.
 		var cases []dst.Expr
-		for _, typ := range types {
-			cases = append(cases, gen.qualifiedTypeIdent(typ.Name()))
+		for _, expr := range exprs {
+			cases = append(cases, gen.expression(expr))
 		}
 
 		// Generate switch expression
@@ -559,9 +697,15 @@ func (gen *SubTypeCheckGenerator) equalsPredicate(equals EqualsPredicate) []dst.
 
 		return []dst.Node{
 			&dst.SwitchStmt{
-				Tag: dst.NewIdent("subType"),
+				Tag: gen.expression(equals.Source),
 				Body: &dst.BlockStmt{
 					List: caseClauses,
+				},
+				Decs: dst.SwitchStmtDecorations{
+					NodeDecs: dst.NodeDecs{
+						Before: dst.NewLine,
+						After:  dst.EmptyLine,
+					},
 				},
 			},
 		}
@@ -570,30 +714,56 @@ func (gen *SubTypeCheckGenerator) equalsPredicate(equals EqualsPredicate) []dst.
 	}
 }
 
+func (gen *SubTypeCheckGenerator) expression(expr Expression) dst.Expr {
+	switch expr := expr.(type) {
+	case IdentifierExpression:
+		switch expr.Name {
+		case "sub":
+			return &dst.Ident{Name: gen.subTypeVarName}
+		case "super":
+			return &dst.Ident{Name: gen.superTypeVarName}
+		default:
+			return dst.NewIdent(expr.Name)
+		}
+
+	case TypeExpression:
+		return gen.qualifiedTypeIdentifier(expr.Type.Name())
+
+	case MemberExpression:
+		return &dst.SelectorExpr{
+			X:   gen.expression(expr.Parent),
+			Sel: dst.NewIdent(expr.MemberName),
+		}
+
+	default:
+		panic(fmt.Errorf("unsupported expression to convert to string: %t", expr))
+	}
+}
+
 // isSubTypePredicate generates AST for subtype conditions
 func (gen *SubTypeCheckGenerator) isSubTypePredicate(subtype SubtypePredicate) []dst.Node {
 	switch superType := subtype.Super.(type) {
-	case Type:
+	case TypeExpression, MemberExpression:
 		return []dst.Node{
 			&dst.CallExpr{
 				Fun: gen.qualifiedIdentifier("IsSubType"),
 				Args: []dst.Expr{
-					dst.NewIdent("subType"),
-					gen.qualifiedTypeIdent(superType.Name()),
+					gen.expression(subtype.Sub),
+					gen.expression(superType),
 				},
 			},
 		}
-	case OneOfTypes:
+	case OneOfExpression:
 		var conditions []dst.Expr
-		for _, typ := range superType.Types {
+		for _, expr := range superType.Expressions {
 			// TODO: Recursively call `generatePredicate`
 			conditions = append(
 				conditions,
 				&dst.CallExpr{
 					Fun: gen.qualifiedIdentifier("IsSubType"),
 					Args: []dst.Expr{
-						dst.NewIdent("subType"),
-						gen.qualifiedTypeIdent(typ.Name()),
+						gen.expression(subtype.Sub),
+						gen.expression(expr),
 					},
 				},
 			)
@@ -614,7 +784,7 @@ func (gen *SubTypeCheckGenerator) isSubTypePredicate(subtype SubtypePredicate) [
 
 		return []dst.Node{result}
 	default:
-		panic(fmt.Errorf("unknown super type `%t` in `subtype` rule", superType))
+		panic(fmt.Errorf("unknown super type `%T` in `subtype` rule", superType))
 	}
 }
 
@@ -623,9 +793,9 @@ func (gen *SubTypeCheckGenerator) qualifiedIdentifier(name string) dst.Expr {
 	return dst.NewIdent(name)
 }
 
-// qualifiedTypeIdent creates a qualified type identifier, by
+// qualifiedTypeIdentifier creates a qualified type identifier, by
 // prepending the package-qualifier,prefix, and appending `Type` suffix.
-func (gen *SubTypeCheckGenerator) qualifiedTypeIdent(name string) dst.Expr {
+func (gen *SubTypeCheckGenerator) qualifiedTypeIdentifier(name string) dst.Expr {
 	typeConstant := gen.getTypeConstant(name)
 	if typeConstant == "" {
 		panic(fmt.Errorf("empty type constant for name: %s", name))
@@ -637,13 +807,13 @@ func (gen *SubTypeCheckGenerator) qualifiedTypeIdent(name string) dst.Expr {
 func (gen *SubTypeCheckGenerator) parseCaseCondition(superType Type) dst.Expr {
 	// Use type assertion to determine the specific type
 	switch superType.(type) {
-	case *OptionalType:
-		return &dst.StarExpr{
-			X: gen.qualifiedTypeIdent(superType.Name()),
-		}
-	default:
+	case SimpleType:
 		// For simple types, use the type directly
-		return gen.qualifiedTypeIdent(superType.Name())
+		return gen.qualifiedTypeIdentifier(superType.Name())
+	default:
+		return &dst.StarExpr{
+			X: gen.qualifiedTypeIdentifier(superType.Name()),
+		}
 	}
 }
 

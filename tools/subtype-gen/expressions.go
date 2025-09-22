@@ -18,27 +18,39 @@
 
 package subtype_gen
 
-// Type represents parsed type information using Cadence types
-type Type interface {
-	Name() string
+type Expression interface {
+	isExpression()
 }
 
-type SimpleType struct {
-	name string
-}
-
-var _ Type = &SimpleType{}
-
-func (t SimpleType) Name() string {
-	return t.name
-}
-
-type OptionalType struct {
+type TypeExpression struct {
 	Type Type
 }
 
-var _ Type = &OptionalType{}
+var _ Expression = TypeExpression{}
 
-func (o OptionalType) Name() string {
-	return typePlaceholderOptional
+func (t TypeExpression) isExpression() {}
+
+type IdentifierExpression struct {
+	Name string
 }
+
+var _ Expression = IdentifierExpression{}
+
+func (t IdentifierExpression) isExpression() {}
+
+type MemberExpression struct {
+	Parent     Expression
+	MemberName string
+}
+
+var _ Expression = MemberExpression{}
+
+func (t MemberExpression) isExpression() {}
+
+type OneOfExpression struct {
+	Expressions []Expression
+}
+
+var _ Expression = OneOfExpression{}
+
+func (t OneOfExpression) isExpression() {}

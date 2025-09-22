@@ -20,11 +20,12 @@ package subtype_gen
 
 import (
 	"fmt"
+	"os"
+	"testing"
+
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 	"github.com/dave/dst/decorator/resolver/guess"
-	"os"
-	"testing"
 )
 
 func TestGen(t *testing.T) {

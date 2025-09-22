@@ -30,44 +30,44 @@ func (a AlwaysPredicate) GetType() string { return "always" }
 
 // IsResourcePredicate represents a resource type check
 type IsResourcePredicate struct {
-	Type Type `yaml:"isResource"`
+	Expression Expression `yaml:"isResource"`
 }
 
 func (i IsResourcePredicate) GetType() string { return "isResource" }
 
 // IsAttachmentPredicate represents an attachment type check
 type IsAttachmentPredicate struct {
-	Type Type `yaml:"isAttachment"`
+	Expression Expression `yaml:"isAttachment"`
 }
 
 func (i IsAttachmentPredicate) GetType() string { return "isAttachment" }
 
 // IsHashableStructPredicate represents a hashable struct type check
 type IsHashableStructPredicate struct {
-	Type Type `yaml:"isHashableStruct"`
+	Expression Expression `yaml:"isHashableStruct"`
 }
 
 func (i IsHashableStructPredicate) GetType() string { return "isHashableStruct" }
 
 // IsStorablePredicate represents a storable type check
 type IsStorablePredicate struct {
-	Type Type `yaml:"isStorable"`
+	Expression Expression `yaml:"isStorable"`
 }
 
 func (i IsStorablePredicate) GetType() string { return "isStorable" }
 
 // EqualsPredicate represents an equality check
 type EqualsPredicate struct {
-	Source Type `yaml:"source"`
-	Target any  `yaml:"target"`
+	Source Expression `yaml:"source"`
+	Target Expression `yaml:"target"`
 }
 
 func (e EqualsPredicate) GetType() string { return "equals" }
 
 // SubtypePredicate represents a subtype check
 type SubtypePredicate struct {
-	Sub   Type `yaml:"sub"`
-	Super any  `yaml:"super"`
+	Sub   Expression `yaml:"sub"`
+	Super Expression `yaml:"super"`
 }
 
 func (s SubtypePredicate) GetType() string { return "subtype" }
@@ -133,7 +133,3 @@ type ContainsPredicate struct {
 }
 
 func (c ContainsPredicate) GetType() string { return "contains" }
-
-type OneOfTypes struct {
-	Types []Type
-}

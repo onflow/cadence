@@ -18,27 +18,21 @@
 
 package subtype_gen
 
-// Type represents parsed type information using Cadence types
-type Type interface {
-	Name() string
-}
+const (
+	typePlaceholderUnknown       = "<<Unknown>>"
+	typePlaceholderOptional      = "Optional"
+	typePlaceholderReference     = "Reference"
+	typePlaceholderDictionary    = "Dictionary"
+	typePlaceholderVariableSized = "VariableSized"
+	typePlaceholderConstantSized = "ConstantSized"
+	typePlaceholderIntersection  = "Intersection"
+	typePlaceholderFunction      = "Function"
+	typePlaceholderComposite     = "Composite"
+	typePlaceholderInterface     = "Interface"
+	typePlaceholderParameterized = "Parameterized"
 
-type SimpleType struct {
-	name string
-}
-
-var _ Type = &SimpleType{}
-
-func (t SimpleType) Name() string {
-	return t.name
-}
-
-type OptionalType struct {
-	Type Type
-}
-
-var _ Type = &OptionalType{}
-
-func (o OptionalType) Name() string {
-	return typePlaceholderOptional
-}
+	subTypeVarName        = "subType"
+	typedSubTypeVarName   = "typedSubType"
+	superTypeVarName      = "superType"
+	typedSuperTypeVarName = "typedSuperType"
+)
