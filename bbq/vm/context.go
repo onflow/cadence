@@ -56,6 +56,10 @@ type Context struct {
 	// TODO: Re-use the conversions from the compiler.
 	// TODO: Maybe extend/share this between executions.
 	semaTypes map[sema.TypeID]sema.Type
+
+	attachmentIterationMap map[*interpreter.CompositeValue]struct{}
+
+	// TODO: stack-trace, location, etc.
 }
 
 var _ interpreter.ReferenceTracker = &Context{}
@@ -90,6 +94,11 @@ func (c *Context) SetInStorageIteration(inStorageIteration bool) {
 	c.inStorageIteration = inStorageIteration
 }
 
+func (c *Context) inAttachmentIteration(base *interpreter.CompositeValue) bool {
+	_, ok := c.attachmentIterationMap[base]
+	return ok
+}
+
 func (c *Context) GetCapabilityControllerIterations() map[interpreter.AddressPath]int {
 	if c.CapabilityControllerIterations == nil {
 		c.CapabilityControllerIterations = make(map[interpreter.AddressPath]int)
@@ -106,8 +115,16 @@ func (c *Context) MutationDuringCapabilityControllerIteration() bool {
 }
 
 func (c *Context) SetAttachmentIteration(composite *interpreter.CompositeValue, state bool) bool {
-	//TODO
-	return false
+	oldState := c.inAttachmentIteration(composite)
+	if c.attachmentIterationMap == nil {
+		c.attachmentIterationMap = map[*interpreter.CompositeValue]struct{}{}
+	}
+	if state {
+		c.attachmentIterationMap[composite] = struct{}{}
+	} else {
+		delete(c.attachmentIterationMap, composite)
+	}
+	return oldState
 }
 
 func (c *Context) ReadStored(
@@ -262,6 +279,42 @@ func (c *Context) GetResourceDestructionContextForLocation(location common.Locat
 	return c
 }
 
+func AttachmentBaseAndSelfValues(
+	c *Context,
+	v *interpreter.CompositeValue,
+	method FunctionValue,
+) (base *interpreter.EphemeralReferenceValue, self *interpreter.EphemeralReferenceValue) {
+	// CompositeValue.GetMethod, as in the interpreter we need an authorized reference to self
+	var unqualifiedName string
+	switch functionValue := method.(type) {
+	case CompiledFunctionValue:
+		unqualifiedName = functionValue.Function.Name
+	case *NativeFunctionValue:
+		unqualifiedName = functionValue.Name
+	}
+
+	fnAccess := interpreter.GetAccessOfMember(c, v, unqualifiedName)
+	// with respect to entitlements, any access inside an attachment that is not an entitlement access
+	// does not provide any entitlements to base and self
+	// E.g. consider:
+	//
+	//    access(E) fun foo() {}
+	//    access(self) fun bar() {
+	//        self.foo()
+	//    }
+	//    access(all) fun baz() {
+	//        self.bar()
+	//    }
+	//
+	// clearly `bar` should be callable within `baz`, but we cannot allow `foo`
+	// to be callable within `bar`, or it will be possible to access `E` entitled
+	// methods on `base`
+	if fnAccess.IsPrimitiveAccess() {
+		fnAccess = sema.UnauthorizedAccess
+	}
+	return interpreter.AttachmentBaseAndSelfValues(c, fnAccess, v, EmptyLocationRange)
+}
+
 func (c *Context) GetMethod(
 	value interpreter.MemberAccessibleValue,
 	name string,
@@ -292,10 +345,17 @@ func (c *Context) GetMethod(
 		return method
 	}
 
+	var base *interpreter.EphemeralReferenceValue
+	// If the value is an attachment, then we must create an authorized reference
+	if v, ok := value.(*interpreter.CompositeValue); ok && v.Kind == common.CompositeKindAttachment {
+		base, value = AttachmentBaseAndSelfValues(c, v, method)
+	}
+
 	return NewBoundFunctionValue(
 		c,
 		value,
 		method,
+		base,
 	)
 }
 
@@ -320,6 +380,20 @@ func (c *Context) DefaultDestroyEvents(
 		return nil
 	}
 
+	var arguments []Value
+
+	if resourceValue.Kind == common.CompositeKindAttachment {
+		base, _ := interpreter.AttachmentBaseAndSelfValues(
+			c,
+			sema.UnauthorizedAccess,
+			resourceValue,
+			EmptyLocationRange,
+		)
+		arguments = []Value{
+			base,
+		}
+	}
+
 	eventValues := make([]*interpreter.CompositeValue, 0)
 
 	collectFunction := NewNativeFunctionValue(
@@ -334,8 +408,10 @@ func (c *Context) DefaultDestroyEvents(
 		},
 	)
 
-	// The generated function takes no arguments, and returns nothing.
-	c.InvokeFunction(method, []Value{collectFunction})
+	arguments = append(arguments, collectFunction)
+
+	// The generated function takes no arguments unless its an attachment, and returns nothing.
+	c.InvokeFunction(method, arguments)
 
 	return eventValues
 }
