@@ -553,6 +553,8 @@ func (gen *SubTypeCheckGenerator) andPredicate(p AndPredicate) []dst.Node {
 			continue
 		}
 
+		expr.Decorations().Before = dst.NewLine
+
 		binaryExpr = &dst.BinaryExpr{
 			X:  binaryExpr,
 			Op: token.LAND,
@@ -589,6 +591,8 @@ func (gen *SubTypeCheckGenerator) orPredicate(p OrPredicate) []dst.Node {
 			binaryExpr = expr
 			continue
 		}
+
+		expr.Decorations().Before = dst.NewLine
 
 		binaryExpr = &dst.BinaryExpr{
 			X:  binaryExpr,
@@ -721,7 +725,9 @@ func (gen *SubTypeCheckGenerator) equalsPredicate(equals EqualsPredicate) []dst.
 		// Otherwise, if there are more than one type, then generate a switch-case.
 		var cases []dst.Expr
 		for _, expr := range exprs {
-			cases = append(cases, gen.expression(expr))
+			generatedExpr := gen.expression(expr)
+			generatedExpr.Decorations().After = dst.NewLine
+			cases = append(cases, generatedExpr)
 		}
 
 		// Generate switch expression
@@ -811,10 +817,12 @@ func (gen *SubTypeCheckGenerator) isSubTypePredicate(subtype SubtypePredicate) [
 
 		result := conditions[0]
 		for i := 1; i < len(conditions); i++ {
+			nextCondition := conditions[i]
+			nextCondition.Decorations().Before = dst.NewLine
 			result = &dst.BinaryExpr{
 				X:  result,
 				Op: token.LOR,
-				Y:  conditions[i],
+				Y:  nextCondition,
 			}
 		}
 

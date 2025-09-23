@@ -29,29 +29,34 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 		return true
 
 	case PrimitiveStaticTypeAnyStruct:
-		return !(subType.IsResourceType()) && !(subType == PrimitiveStaticTypeAny)
+		return !(subType.IsResourceType()) &&
+			!(subType == PrimitiveStaticTypeAny)
 
 	case PrimitiveStaticTypeAnyResource:
 		return subType.IsResourceType()
 
 	case PrimitiveStaticTypeAnyResourceAttachment:
-		return isAttachmentType(subType) && subType.IsResourceType()
+		return isAttachmentType(subType) &&
+			subType.IsResourceType()
 
 	case PrimitiveStaticTypeAnyStructAttachment:
-		return isAttachmentType(subType) && !(subType.IsResourceType())
+		return isAttachmentType(subType) &&
+			!(subType.IsResourceType())
 
 	case PrimitiveStaticTypeHashableStruct:
 		return IsHashableStructType(subType)
 
 	case PrimitiveStaticTypePath:
-		return IsSubType(typeConverter, subType, PrimitiveStaticTypeStoragePath) || IsSubType(typeConverter, subType, PrimitiveStaticTypeCapabilityPath)
+		return IsSubType(typeConverter, subType, PrimitiveStaticTypeStoragePath) ||
+			IsSubType(typeConverter, subType, PrimitiveStaticTypeCapabilityPath)
 
 	case PrimitiveStaticTypeStorable:
 		return subType.IsStorable(map[*Member]bool{})
 
 	case PrimitiveStaticTypeCapabilityPath:
 		switch subType {
-		case PrimitiveStaticTypePrivatePath, PrimitiveStaticTypePublicPath:
+		case PrimitiveStaticTypePrivatePath,
+			PrimitiveStaticTypePublicPath:
 			return true
 		}
 
@@ -59,26 +64,41 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 
 	case PrimitiveStaticTypeNumber:
 		switch subType {
-		case PrimitiveStaticTypeNumber, PrimitiveStaticTypeSignedNumber:
+		case PrimitiveStaticTypeNumber,
+			PrimitiveStaticTypeSignedNumber:
 			return true
 		}
 
-		return IsSubType(typeConverter, subType, PrimitiveStaticTypeInteger) || IsSubType(typeConverter, subType, PrimitiveStaticTypeFixedPoint)
+		return IsSubType(typeConverter, subType, PrimitiveStaticTypeInteger) ||
+			IsSubType(typeConverter, subType, PrimitiveStaticTypeFixedPoint)
 
 	case PrimitiveStaticTypeSignedNumber:
-		return subType == PrimitiveStaticTypeSignedNumber || (IsSubType(typeConverter, subType, PrimitiveStaticTypeSignedInteger) || IsSubType(typeConverter, subType, PrimitiveStaticTypeSignedFixedPoint))
+		return subType == PrimitiveStaticTypeSignedNumber ||
+			(IsSubType(typeConverter, subType, PrimitiveStaticTypeSignedInteger) ||
+				IsSubType(typeConverter, subType, PrimitiveStaticTypeSignedFixedPoint))
 
 	case PrimitiveStaticTypeInteger:
 		switch subType {
-		case PrimitiveStaticTypeInteger, PrimitiveStaticTypeSignedInteger, PrimitiveStaticTypeFixedSizeUnsignedInteger, PrimitiveStaticTypeUInt:
+		case PrimitiveStaticTypeInteger,
+			PrimitiveStaticTypeSignedInteger,
+			PrimitiveStaticTypeFixedSizeUnsignedInteger,
+			PrimitiveStaticTypeUInt:
 			return true
 		}
 
-		return IsSubType(typeConverter, subType, PrimitiveStaticTypeSignedInteger) || IsSubType(typeConverter, subType, PrimitiveStaticTypeFixedSizeUnsignedInteger)
+		return IsSubType(typeConverter, subType, PrimitiveStaticTypeSignedInteger) ||
+			IsSubType(typeConverter, subType, PrimitiveStaticTypeFixedSizeUnsignedInteger)
 
 	case PrimitiveStaticTypeSignedInteger:
 		switch subType {
-		case PrimitiveStaticTypeSignedInteger, PrimitiveStaticTypeInt, PrimitiveStaticTypeInt8, PrimitiveStaticTypeInt16, PrimitiveStaticTypeInt32, PrimitiveStaticTypeInt64, PrimitiveStaticTypeInt128, PrimitiveStaticTypeInt256:
+		case PrimitiveStaticTypeSignedInteger,
+			PrimitiveStaticTypeInt,
+			PrimitiveStaticTypeInt8,
+			PrimitiveStaticTypeInt16,
+			PrimitiveStaticTypeInt32,
+			PrimitiveStaticTypeInt64,
+			PrimitiveStaticTypeInt128,
+			PrimitiveStaticTypeInt256:
 			return true
 		}
 
@@ -86,7 +106,18 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 
 	case PrimitiveStaticTypeFixedSizeUnsignedInteger:
 		switch subType {
-		case PrimitiveStaticTypeUInt8, PrimitiveStaticTypeUInt16, PrimitiveStaticTypeUInt32, PrimitiveStaticTypeUInt64, PrimitiveStaticTypeUInt128, PrimitiveStaticTypeUInt256, PrimitiveStaticTypeWord8, PrimitiveStaticTypeWord16, PrimitiveStaticTypeWord32, PrimitiveStaticTypeWord64, PrimitiveStaticTypeWord128, PrimitiveStaticTypeWord256:
+		case PrimitiveStaticTypeUInt8,
+			PrimitiveStaticTypeUInt16,
+			PrimitiveStaticTypeUInt32,
+			PrimitiveStaticTypeUInt64,
+			PrimitiveStaticTypeUInt128,
+			PrimitiveStaticTypeUInt256,
+			PrimitiveStaticTypeWord8,
+			PrimitiveStaticTypeWord16,
+			PrimitiveStaticTypeWord32,
+			PrimitiveStaticTypeWord64,
+			PrimitiveStaticTypeWord128,
+			PrimitiveStaticTypeWord256:
 			return true
 		}
 
@@ -94,7 +125,10 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 
 	case PrimitiveStaticTypeFixedPoint:
 		switch subType {
-		case PrimitiveStaticTypeFixedPoint, PrimitiveStaticTypeSignedFixedPoint, PrimitiveStaticTypeUFix64, PrimitiveStaticTypeUFix128:
+		case PrimitiveStaticTypeFixedPoint,
+			PrimitiveStaticTypeSignedFixedPoint,
+			PrimitiveStaticTypeUFix64,
+			PrimitiveStaticTypeUFix128:
 			return true
 		}
 
@@ -102,7 +136,9 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 
 	case PrimitiveStaticTypeSignedFixedPoint:
 		switch subType {
-		case PrimitiveStaticTypeSignedFixedPoint, PrimitiveStaticTypeFix64, PrimitiveStaticTypeFix128:
+		case PrimitiveStaticTypeSignedFixedPoint,
+			PrimitiveStaticTypeFix64,
+			PrimitiveStaticTypeFix128:
 			return true
 		}
 
@@ -125,7 +161,8 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 			return false
 		}
 
-		return IsSubType(typeConverter, typedSubType.ValueType, typedSuperType.ValueType) && IsSubType(typeConverter, typedSubType.KeyType, typedSuperType.KeyType)
+		return IsSubType(typeConverter, typedSubType.ValueType, typedSuperType.ValueType) &&
+			IsSubType(typeConverter, typedSubType.KeyType, typedSuperType.KeyType)
 
 	}
 

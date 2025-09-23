@@ -29,29 +29,34 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 		return true
 
 	case AnyStructType:
-		return !(subType.IsResourceType()) && !(subType == AnyType)
+		return !(subType.IsResourceType()) &&
+			!(subType == AnyType)
 
 	case AnyResourceType:
 		return subType.IsResourceType()
 
 	case AnyResourceAttachmentType:
-		return isAttachmentType(subType) && subType.IsResourceType()
+		return isAttachmentType(subType) &&
+			subType.IsResourceType()
 
 	case AnyStructAttachmentType:
-		return isAttachmentType(subType) && !(subType.IsResourceType())
+		return isAttachmentType(subType) &&
+			!(subType.IsResourceType())
 
 	case HashableStructType:
 		return IsHashableStructType(subType)
 
 	case PathType:
-		return IsSubType(subType, StoragePathType) || IsSubType(subType, CapabilityPathType)
+		return IsSubType(subType, StoragePathType) ||
+			IsSubType(subType, CapabilityPathType)
 
 	case StorableType:
 		return subType.IsStorable(map[*Member]bool{})
 
 	case CapabilityPathType:
 		switch subType {
-		case PrivatePathType, PublicPathType:
+		case PrivatePathType,
+			PublicPathType:
 			return true
 		}
 
@@ -59,26 +64,41 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 	case NumberType:
 		switch subType {
-		case NumberType, SignedNumberType:
+		case NumberType,
+			SignedNumberType:
 			return true
 		}
 
-		return IsSubType(subType, IntegerType) || IsSubType(subType, FixedPointType)
+		return IsSubType(subType, IntegerType) ||
+			IsSubType(subType, FixedPointType)
 
 	case SignedNumberType:
-		return subType == SignedNumberType || (IsSubType(subType, SignedIntegerType) || IsSubType(subType, SignedFixedPointType))
+		return subType == SignedNumberType ||
+			(IsSubType(subType, SignedIntegerType) ||
+				IsSubType(subType, SignedFixedPointType))
 
 	case IntegerType:
 		switch subType {
-		case IntegerType, SignedIntegerType, FixedSizeUnsignedIntegerType, UIntType:
+		case IntegerType,
+			SignedIntegerType,
+			FixedSizeUnsignedIntegerType,
+			UIntType:
 			return true
 		}
 
-		return IsSubType(subType, SignedIntegerType) || IsSubType(subType, FixedSizeUnsignedIntegerType)
+		return IsSubType(subType, SignedIntegerType) ||
+			IsSubType(subType, FixedSizeUnsignedIntegerType)
 
 	case SignedIntegerType:
 		switch subType {
-		case SignedIntegerType, IntType, Int8Type, Int16Type, Int32Type, Int64Type, Int128Type, Int256Type:
+		case SignedIntegerType,
+			IntType,
+			Int8Type,
+			Int16Type,
+			Int32Type,
+			Int64Type,
+			Int128Type,
+			Int256Type:
 			return true
 		}
 
@@ -86,7 +106,18 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 	case FixedSizeUnsignedIntegerType:
 		switch subType {
-		case UInt8Type, UInt16Type, UInt32Type, UInt64Type, UInt128Type, UInt256Type, Word8Type, Word16Type, Word32Type, Word64Type, Word128Type, Word256Type:
+		case UInt8Type,
+			UInt16Type,
+			UInt32Type,
+			UInt64Type,
+			UInt128Type,
+			UInt256Type,
+			Word8Type,
+			Word16Type,
+			Word32Type,
+			Word64Type,
+			Word128Type,
+			Word256Type:
 			return true
 		}
 
@@ -94,7 +125,10 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 	case FixedPointType:
 		switch subType {
-		case FixedPointType, SignedFixedPointType, UFix64Type, UFix128Type:
+		case FixedPointType,
+			SignedFixedPointType,
+			UFix64Type,
+			UFix128Type:
 			return true
 		}
 
@@ -102,7 +136,9 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 	case SignedFixedPointType:
 		switch subType {
-		case SignedFixedPointType, Fix64Type, Fix128Type:
+		case SignedFixedPointType,
+			Fix64Type,
+			Fix128Type:
 			return true
 		}
 
@@ -125,7 +161,8 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 			return false
 		}
 
-		return IsSubType(typedSubType.KeyType, typedSuperType.ValueType) && IsSubType(typedSubType.KeyType, typedSuperType.ValueType)
+		return IsSubType(typedSubType.ValueType, typedSuperType.ValueType) &&
+			IsSubType(typedSubType.KeyType, typedSuperType.KeyType)
 
 	}
 
