@@ -20,6 +20,7 @@ package subtype_gen
 
 const (
 	typePlaceholderUnknown       = "<<Unknown>>"
+	TypePlaceholderStorable      = "Storable"
 	typePlaceholderOptional      = "Optional"
 	typePlaceholderReference     = "Reference"
 	typePlaceholderDictionary    = "Dictionary"

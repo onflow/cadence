@@ -44,14 +44,11 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 			!(subType.IsResourceType())
 
 	case PrimitiveStaticTypeHashableStruct:
-		return IsHashableStructType(subType)
+		return IsHashableStructType(typeConverter, subType)
 
 	case PrimitiveStaticTypePath:
 		return IsSubType(typeConverter, subType, PrimitiveStaticTypeStoragePath) ||
 			IsSubType(typeConverter, subType, PrimitiveStaticTypeCapabilityPath)
-
-	case PrimitiveStaticTypeStorable:
-		return subType.IsStorable(map[*Member]bool{})
 
 	case PrimitiveStaticTypeCapabilityPath:
 		switch subType {

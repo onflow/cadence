@@ -123,3 +123,5 @@ func writeGoFile(outFile *os.File, decls []dst.Decl, packagePath string) {
 		panic(err)
 	}
 }
+
+var typeMapping = map[string]string{}

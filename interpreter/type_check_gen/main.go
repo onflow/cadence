@@ -91,6 +91,9 @@ func main() {
 				PkgPath: interpreterPath,
 			},
 		},
+		SkipTypes: map[string]struct{}{
+			subtypegen.TypePlaceholderStorable: {},
+		},
 	}
 
 	// Generate code using the comprehensive generator

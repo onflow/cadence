@@ -47,6 +47,7 @@ type Config struct {
 	ComplexTypeSuffix string
 
 	ExtraParams []ExtraParam
+	SkipTypes   map[string]struct{}
 }
 
 type ExtraParam struct {
@@ -229,16 +230,25 @@ func (gen *SubTypeCheckGenerator) createCaseStatement(rule Rule, forSimpleTypes 
 	}()
 
 	// Parse types
-	gen.currentSuperType = parseType(rule.Super)
-	gen.currentSubType = parseType(rule.Sub)
 
-	_, isSimpleType := gen.currentSuperType.(SimpleType)
+	superType := parseType(rule.Super)
+	gen.currentSuperType = superType
+
+	// Skip the given types.
+	// Some types are only exist during type-checking, but not at runtime. e.g: Storable type
+	if _, ok := gen.config.SkipTypes[superType.Name()]; ok {
+		return nil
+	}
+
+	_, isSimpleType := superType.(SimpleType)
 	if isSimpleType != forSimpleTypes {
 		return nil
 	}
 
+	gen.currentSubType = parseType(rule.Sub)
+
 	// Generate case condition
-	caseExpr := gen.parseCaseCondition(gen.currentSuperType)
+	caseExpr := gen.parseCaseCondition(superType)
 
 	var bodyStmts []dst.Stmt
 
@@ -297,12 +307,13 @@ func (gen *SubTypeCheckGenerator) createCaseStatement(rule Rule, forSimpleTypes 
 		)
 	}
 
+	// Generate statements for the predicate.
+
 	predicate, err := parseRulePredicate(rule.Predicate)
 	if err != nil {
 		panic(fmt.Errorf("error parsing rule predicate: %w", err))
 	}
 
-	// Generate statements for the predicate
 	bodyStmts = append(
 		bodyStmts,
 		gen.generatePredicateStatements(predicate)...,
@@ -409,80 +420,50 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 		return gen.isSubTypePredicate(p)
 
 	case PermitsPredicate:
-		if len(p.Types) == 2 {
-			callExpr := &dst.CallExpr{
-				Fun: &dst.SelectorExpr{
-					X: &dst.SelectorExpr{
-						X:   dst.NewIdent("typedSuperType"),
-						Sel: dst.NewIdent("Authorization"),
-					},
-					Sel: dst.NewIdent("PermitsAccess"),
-				},
-				Args: []dst.Expr{
-					&dst.SelectorExpr{
-						X:   dst.NewIdent("typedSubType"),
-						Sel: dst.NewIdent("Authorization"),
-					},
-				},
-			}
-
-			return []dst.Node{callExpr}
-		}
-		return []dst.Node{dst.NewIdent("false")} // TODO: Implement permits condition
+		// TODO: Implement permits condition
+		return []dst.Node{dst.NewIdent("false")}
 
 	case PurityPredicate:
-		return gen.purityPredicate()
+		// TODO: Implement purity check
+		return []dst.Node{dst.NewIdent("false")}
 
 	case TypeParamsEqualPredicate:
-		return gen.typeParamsEqualPredicate()
+		// TODO: Implement type-params-equal check
+		return []dst.Node{dst.NewIdent("false")}
 
 	case ParamsContravariantPredicate:
-		return []dst.Node{dst.NewIdent("false")} // TODO: Implement params contravariant check
+		// TODO: Implement params-contravariant check
+		return []dst.Node{dst.NewIdent("false")}
 
 	case ReturnCovariantPredicate:
-		return []dst.Node{dst.NewIdent("false")} // TODO: Implement return covariant check
+		// TODO: Implement return-covariant check
+		return []dst.Node{dst.NewIdent("false")}
 
 	case ConstructorEqualPredicate:
-		return gen.constructorEqualPredicate()
+		// TODO: Implement constructor-equal check
+		return []dst.Node{dst.NewIdent("false")}
 
 	case ContainsPredicate:
-		if len(p.Types) == 2 {
-			callExpr := &dst.CallExpr{
-				Fun: &dst.SelectorExpr{
-					X: &dst.CallExpr{
-						Fun: &dst.SelectorExpr{
-							X:   dst.NewIdent("typedSuperType"),
-							Sel: dst.NewIdent("EffectiveIntersectionSet"),
-						},
-					},
-					Sel: dst.NewIdent("IsSubsetOf"),
-				},
-				Args: []dst.Expr{
-					&dst.CallExpr{
-						Fun: &dst.SelectorExpr{
-							X:   dst.NewIdent("typedSubType"),
-							Sel: dst.NewIdent("EffectiveIntersectionSet"),
-						},
-					},
-				},
-			}
-
-			return []dst.Node{callExpr}
-		}
-		return []dst.Node{dst.NewIdent("false")} // TODO: Implement contains condition
+		// TODO: Implement contains condition
+		return []dst.Node{dst.NewIdent("false")}
 
 	default:
-		return []dst.Node{dst.NewIdent("false")} // TODO: Implement condition: " + predicate.GetType()
+		panic(fmt.Errorf("unsupported predicate: %T", p))
 	}
 }
 
 func (gen *SubTypeCheckGenerator) isHashableStructPredicate(predicate IsHashableStructPredicate) []dst.Node {
+	args := gen.extraArguments()
+
+	args = append(
+		args,
+		gen.expression(predicate.Expression),
+	)
+
 	return []dst.Node{
 		&dst.CallExpr{
-			Fun: dst.NewIdent("IsHashableStructType"),
-			Args: []dst.Expr{
-				gen.expression(predicate.Expression),
-			},
+			Fun:  dst.NewIdent("IsHashableStructType"),
+			Args: args,
 		},
 	}
 }
@@ -606,74 +587,6 @@ func (gen *SubTypeCheckGenerator) orPredicate(p OrPredicate) []dst.Node {
 	return result
 }
 
-func (gen *SubTypeCheckGenerator) purityPredicate() []dst.Node {
-	binaryExpr := &dst.BinaryExpr{
-		X: &dst.BinaryExpr{
-			X: &dst.SelectorExpr{
-				X:   dst.NewIdent("typedSubType"),
-				Sel: dst.NewIdent("Purity"),
-			},
-			Op: token.EQL,
-			Y: &dst.SelectorExpr{
-				X:   dst.NewIdent("typedSuperType"),
-				Sel: dst.NewIdent("Purity"),
-			},
-		},
-		Op: token.LOR,
-		Y: &dst.BinaryExpr{
-			X: &dst.SelectorExpr{
-				X:   dst.NewIdent("typedSubType"),
-				Sel: dst.NewIdent("Purity"),
-			},
-			Op: token.EQL,
-			Y:  dst.NewIdent("FunctionPurityView"),
-		},
-	}
-	return []dst.Node{binaryExpr}
-}
-
-func (gen *SubTypeCheckGenerator) typeParamsEqualPredicate() []dst.Node {
-	binaryExpr := &dst.BinaryExpr{
-		X: &dst.CallExpr{
-			Fun: dst.NewIdent("len"),
-			Args: []dst.Expr{
-				&dst.SelectorExpr{
-					X:   dst.NewIdent("typedSubType"),
-					Sel: dst.NewIdent("TypeParameters"),
-				},
-			},
-		},
-		Op: token.EQL,
-		Y: &dst.CallExpr{
-			Fun: dst.NewIdent("len"),
-			Args: []dst.Expr{
-				&dst.SelectorExpr{
-					X:   dst.NewIdent("typedSuperType"),
-					Sel: dst.NewIdent("TypeParameters"),
-				},
-			},
-		},
-	}
-
-	return []dst.Node{binaryExpr}
-}
-
-func (gen *SubTypeCheckGenerator) constructorEqualPredicate() []dst.Node {
-	binaryExpr := &dst.BinaryExpr{
-		X: &dst.SelectorExpr{
-			X:   dst.NewIdent("typedSubType"),
-			Sel: dst.NewIdent("IsConstructor"),
-		},
-		Op: token.EQL,
-		Y: &dst.SelectorExpr{
-			X:   dst.NewIdent("typedSuperType"),
-			Sel: dst.NewIdent("IsConstructor"),
-		},
-	}
-
-	return []dst.Node{binaryExpr}
-}
-
 func (gen *SubTypeCheckGenerator) isAttachmentPredicate(predicate IsAttachmentPredicate) []dst.Node {
 	return []dst.Node{
 		&dst.CallExpr{
@@ -790,7 +703,7 @@ func (gen *SubTypeCheckGenerator) expression(expr Expression) dst.Expr {
 func (gen *SubTypeCheckGenerator) isSubTypePredicate(subtype SubtypePredicate) []dst.Node {
 	switch superType := subtype.Super.(type) {
 	case TypeExpression, MemberExpression:
-		args := gen.getSubTypeArguments(subtype.Sub, superType)
+		args := gen.isSubTypeMethodArguments(subtype.Sub, superType)
 		return []dst.Node{
 			&dst.CallExpr{
 				Fun:  dst.NewIdent("IsSubType"),
@@ -800,7 +713,7 @@ func (gen *SubTypeCheckGenerator) isSubTypePredicate(subtype SubtypePredicate) [
 	case OneOfExpression:
 		var conditions []dst.Expr
 		for _, expr := range superType.Expressions {
-			args := gen.getSubTypeArguments(subtype.Sub, expr)
+			args := gen.isSubTypeMethodArguments(subtype.Sub, expr)
 			// TODO: Recursively call `generatePredicate`
 			conditions = append(
 				conditions,
@@ -832,7 +745,18 @@ func (gen *SubTypeCheckGenerator) isSubTypePredicate(subtype SubtypePredicate) [
 	}
 }
 
-func (gen *SubTypeCheckGenerator) getSubTypeArguments(subType, superType Expression) []dst.Expr {
+func (gen *SubTypeCheckGenerator) isSubTypeMethodArguments(subType, superType Expression) []dst.Expr {
+	args := gen.extraArguments()
+
+	args = append(args,
+		gen.expression(subType),
+		gen.expression(superType),
+	)
+
+	return args
+}
+
+func (gen *SubTypeCheckGenerator) extraArguments() []dst.Expr {
 	args := make([]dst.Expr, 0)
 	for _, param := range gen.config.ExtraParams {
 		args = append(
@@ -840,12 +764,6 @@ func (gen *SubTypeCheckGenerator) getSubTypeArguments(subType, superType Express
 			dst.NewIdent(param.Name),
 		)
 	}
-
-	args = append(args,
-		gen.expression(subType),
-		gen.expression(superType),
-	)
-
 	return args
 }
 

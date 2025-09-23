@@ -19,3 +19,42 @@
 package interpreter
 
 //go:generate go run ./type_check_gen subtype_check.gen.go
+
+func isAttachmentType(t StaticType) bool {
+	switch t {
+	case PrimitiveStaticTypeAnyResourceAttachment, PrimitiveStaticTypeAnyStructAttachment:
+		return true
+	default:
+		_, ok := t.(*CompositeStaticType)
+		if !ok {
+			return false
+		}
+
+		// TODO:
+		//return compositeType.Kind == common.CompositeKindAttachment
+
+		return false
+	}
+}
+
+func IsHashableStructType(typeConverter TypeConverter, typ StaticType) bool {
+	switch typ {
+	case PrimitiveStaticTypeNever,
+		PrimitiveStaticTypeBool,
+		PrimitiveStaticTypeCharacter,
+		PrimitiveStaticTypeString,
+		PrimitiveStaticTypeMetaType,
+		PrimitiveStaticTypeHashableStruct:
+		return true
+	default:
+		_, ok := typ.(*CompositeStaticType)
+		if !ok {
+			// TODO:
+			//return  compositeType.Kind == common.CompositeKindEnum
+			return false
+		}
+
+		return IsSubType(typeConverter, typ, PrimitiveStaticTypeNumber) ||
+			IsSubType(typeConverter, typ, PrimitiveStaticTypePath)
+	}
+}
