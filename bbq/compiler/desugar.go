@@ -51,8 +51,8 @@ type Desugar struct {
 	inheritedConditionParamBinding map[ast.Statement]map[string]string
 	isInheritedFunction            bool
 
-	importsSet map[common.Location]struct{}
-	newImports []ast.Declaration
+	importedLocationsSet map[common.Location]struct{}
+	newImports           []ast.Declaration
 }
 
 type inheritedFunction struct {
@@ -85,7 +85,7 @@ func NewDesugar(
 		elaboration:                    elaboration,
 		program:                        program,
 		location:                       location,
-		importsSet:                     map[common.Location]struct{}{},
+		importedLocationsSet:           map[common.Location]struct{}{},
 		inheritedFuncsWithConditions:   map[string][]*inheritedFunction{},
 		postConditionIndices:           map[*ast.FunctionBlock]int{},
 		inheritedConditionParamBinding: map[ast.Statement]map[string]string{},
@@ -128,10 +128,17 @@ func (d *Desugar) desugarDeclaration(declaration ast.Declaration) (result ast.De
 	return desugaredDeclaration, desugared
 }
 
-func desugarList[T any](
+type comparableElement interface {
+	comparable
+	ast.Element
+}
+
+func desugarList[T comparableElement](
 	list []T,
 	listEntryDesugarFunction func(entry T) (desugaredEntry T, desugared bool),
 ) (desugaredList []T, desugared bool) {
+
+	var zeroValue T
 
 	for index, entry := range list {
 		desugaredEntry, ok := listEntryDesugarFunction(entry)
@@ -142,7 +149,9 @@ func desugarList[T any](
 		// If at-least one entry is desugared already, then add the current entry
 		// to the desugared entries list (regardless whether the current entry was desugared or not).
 		if desugared {
-			desugaredList = append(desugaredList, desugaredEntry)
+			if desugaredEntry != zeroValue {
+				desugaredList = append(desugaredList, desugaredEntry)
+			}
 			continue
 		}
 
@@ -156,7 +165,7 @@ func desugarList[T any](
 		desugared = true
 		desugaredList = append(desugaredList, list[:index]...)
 
-		if any(desugaredEntry) != nil {
+		if desugaredEntry != zeroValue {
 			desugaredList = append(desugaredList, desugaredEntry)
 		}
 	}
@@ -237,9 +246,8 @@ func (d *Desugar) desugarFunctionBlock(
 	)
 
 	modifiedStatements := make([]ast.Statement, 0)
-	modifiedStatements = append(modifiedStatements, preConditions...)
-
 	modifiedStatements = append(modifiedStatements, beforeStatements...)
+	modifiedStatements = append(modifiedStatements, preConditions...)
 
 	returnType := functionType.ReturnTypeAnnotation.Type
 
@@ -941,6 +949,19 @@ func (d *Desugar) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclarat
 		declaration.Range,
 	)
 
+	hasInit := false
+	for _, member := range desugaredMembers {
+		if member, ok := member.(*ast.SpecialFunctionDeclaration); ok && member.Kind == common.DeclarationKindInitializer {
+			hasInit = true
+			break
+		}
+	}
+
+	if !hasInit {
+		membersDesugared = true
+		d.addEmptyInitializer(&desugaredMembers)
+	}
+
 	// Optimization: If none of the existing members got updated or,
 	// if there are no inherited members, then return the same declaration as-is.
 	if !membersDesugared && len(inheritedDefaultFuncs) == 0 {
@@ -1027,6 +1048,41 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 		declaration.StartPos,
 		declaration.Range,
 	)
+
+	hasInit := false
+	for _, member := range desugaredMembers {
+		if member, ok := member.(*ast.SpecialFunctionDeclaration); ok && member.Kind == common.DeclarationKindInitializer {
+			hasInit = true
+			break
+		}
+	}
+
+	if !hasInit {
+		// If the initializer is not declared, generate
+		// - a synthetic initializer for enum types, otherwise
+		// - an empty initializer
+		membersDesugared = true
+		if compositeType.Kind == common.CompositeKindEnum {
+			// generate enum initializer
+			enumInitializer := newEnumInitializer(d.memoryGauge, compositeType, d.elaboration)
+			enumInitializerFuncType := newEnumInitializerFuncType(compositeType.EnumRawType)
+			d.elaboration.SetFunctionDeclarationFunctionType(enumInitializer.FunctionDeclaration, enumInitializerFuncType)
+			desugaredMembers = append(desugaredMembers, enumInitializer)
+
+			// generate enum lookup
+			enumLookup := newEnumLookup(
+				d.memoryGauge,
+				compositeType,
+				declaration.Members.EnumCases(),
+				d.elaboration,
+			)
+			enumLookupFuncType := newEnumLookupFuncType(d.memoryGauge, compositeType)
+			d.elaboration.SetFunctionDeclarationFunctionType(enumLookup, enumLookupFuncType)
+			d.modifiedDeclarations = append(d.modifiedDeclarations, enumLookup)
+		} else {
+			d.addEmptyInitializer(&desugaredMembers)
+		}
+	}
 
 	// Optimization: If none of the existing members got updated or,
 	// if there are no inherited members, then return the same declaration as-is.
@@ -1450,24 +1506,33 @@ func (d *Desugar) addImport(location common.Location) {
 
 	switch location := location.(type) {
 	case common.AddressLocation:
-		_, exists := d.importsSet[location]
+		_, exists := d.importedLocationsSet[location]
 		if exists {
 			return
 		}
 
+		importDeclaration := ast.NewImportDeclaration(
+			d.memoryGauge,
+			[]ast.Import{
+				{
+					Identifier: ast.NewIdentifier(
+						d.memoryGauge,
+						location.Name,
+						ast.EmptyPosition,
+					),
+				},
+			},
+			location,
+			ast.EmptyRange,
+			ast.EmptyPosition,
+		)
+
 		d.newImports = append(
 			d.newImports,
-			ast.NewImportDeclaration(
-				d.memoryGauge,
-				[]ast.Identifier{
-					ast.NewIdentifier(d.memoryGauge, location.Name, ast.EmptyPosition),
-				},
-				location,
-				ast.EmptyRange,
-				ast.EmptyPosition,
-			))
+			importDeclaration,
+		)
 
-		d.importsSet[location] = struct{}{}
+		d.importedLocationsSet[location] = struct{}{}
 	default:
 		panic(errors.NewUnreachableError())
 	}
@@ -1522,16 +1587,11 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 	// An initializer is generated to set parameters to above generated global variables.
 
 	var varDeclarations []ast.Declaration
-	var initFunction *ast.FunctionDeclaration
-
-	transactionTypes := d.elaboration.TransactionDeclarationType(transaction)
 
 	if transaction.ParameterList != nil {
 		varDeclarations = make([]ast.Declaration, 0, len(transaction.ParameterList.Parameters))
-		statements := make([]ast.Statement, 0, len(transaction.ParameterList.Parameters))
-		parameters := make([]*ast.Parameter, 0, len(transaction.ParameterList.Parameters))
 
-		for index, parameter := range transaction.ParameterList.Parameters {
+		for _, parameter := range transaction.ParameterList.Parameters {
 			// Create global variables
 			// i.e: `var a: Type`
 			variableDecl := ast.NewVariableDeclaration(
@@ -1549,80 +1609,7 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 			)
 
 			varDeclarations = append(varDeclarations, variableDecl)
-
-			// Create assignment from param to global var.
-			// i.e: `a = $param_a`
-			modifiedParamName := commons.TransactionGeneratedParamPrefix + parameter.Identifier.Identifier
-
-			modifiedParameter := ast.NewParameter(
-				d.memoryGauge,
-				"",
-				ast.NewIdentifier(
-					d.memoryGauge,
-					modifiedParamName,
-					parameter.StartPos,
-				),
-				parameter.TypeAnnotation,
-				nil,
-				parameter.StartPos,
-			)
-
-			parameters = append(parameters, modifiedParameter)
-
-			assignment := ast.NewAssignmentStatement(
-				d.memoryGauge,
-				ast.NewIdentifierExpression(
-					d.memoryGauge,
-					parameter.Identifier,
-				),
-				ast.NewTransfer(
-					d.memoryGauge,
-					ast.TransferOperationCopy,
-					parameter.StartPos,
-				),
-				ast.NewIdentifierExpression(
-					d.memoryGauge,
-					ast.NewIdentifier(
-						d.memoryGauge,
-						modifiedParamName,
-						parameter.StartPos,
-					),
-				),
-			)
-
-			statements = append(statements, assignment)
-
-			paramType := transactionTypes.Parameters[index].TypeAnnotation.Type
-			assignmentTypes := sema.AssignmentStatementTypes{
-				ValueType:  paramType,
-				TargetType: paramType,
-			}
-
-			d.elaboration.SetAssignmentStatementTypes(assignment, assignmentTypes)
 		}
-
-		// Create an init function.
-		// func $init($param_a: Type, $param_b: Type, ...) {
-		//     a = $param_a
-		//     b = $param_b
-		//     ...
-		// }
-		initFunction = simpleFunctionDeclaration(
-			d.memoryGauge,
-			commons.ProgramInitFunctionName,
-			parameters,
-			statements,
-			transaction.StartPos,
-			transaction.Range,
-		)
-
-		initFunctionType := sema.NewSimpleFunctionType(
-			sema.FunctionPurityImpure,
-			transactionTypes.Parameters,
-			sema.VoidTypeAnnotation,
-		)
-
-		d.elaboration.SetFunctionDeclarationFunctionType(initFunction, initFunctionType)
 	}
 
 	var members []ast.Declaration
@@ -1669,6 +1656,10 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 		members = append(members, desugaredExecuteFunc)
 	}
 
+	// Always add empty initializer for transactions.
+	// To be updated later by compilation.
+	d.addEmptyInitializer(&members)
+
 	compositeDecl := ast.NewCompositeDeclaration(
 		d.memoryGauge,
 		ast.AccessNotSpecified,
@@ -1691,9 +1682,10 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 	// We can only return one declaration.
 	// So manually add the rest of the declarations.
 	d.modifiedDeclarations = append(d.modifiedDeclarations, varDeclarations...)
-	if initFunction != nil {
-		d.modifiedDeclarations = append(d.modifiedDeclarations, initFunction)
-	}
+
+	// We still re-add the transaction declaration,
+	// so that we can generate a transaction init function in the compiler.
+	d.modifiedDeclarations = append(d.modifiedDeclarations, transaction)
 
 	return compositeDecl
 }
@@ -1711,9 +1703,15 @@ func (d *Desugar) VisitPragmaDeclaration(declaration *ast.PragmaDeclaration) ast
 }
 
 func (d *Desugar) VisitImportDeclaration(declaration *ast.ImportDeclaration) ast.Declaration {
+
+	var identifiers []ast.Identifier
+	for _, imp := range declaration.Imports {
+		identifiers = append(identifiers, imp.Identifier)
+	}
+
 	resolvedLocations, err := commons.ResolveLocation(
 		d.config.LocationHandler,
-		declaration.Identifiers,
+		identifiers,
 		declaration.Location,
 	)
 	if err != nil {
@@ -1722,12 +1720,12 @@ func (d *Desugar) VisitImportDeclaration(declaration *ast.ImportDeclaration) ast
 
 	for _, resolvedLocation := range resolvedLocations {
 		location := resolvedLocation.Location
-		_, exists := d.importsSet[location]
+		_, exists := d.importedLocationsSet[location]
 		if exists {
 			return nil
 		}
 
-		d.importsSet[location] = struct{}{}
+		d.importedLocationsSet[location] = struct{}{}
 	}
 
 	return declaration
@@ -1807,6 +1805,12 @@ var emptyInitializerFuncType = sema.NewSimpleFunctionType(
 	nil,
 	sema.VoidTypeAnnotation,
 )
+
+func (d *Desugar) addEmptyInitializer(members *[]ast.Declaration) {
+	// Add an empty initializer
+	*members = append(*members, emptyInitializer)
+	d.elaboration.SetFunctionDeclarationFunctionType(emptyInitializer.FunctionDeclaration, emptyInitializerFuncType)
+}
 
 func newEnumInitializer(
 	gauge common.MemoryGauge,
@@ -1960,7 +1964,7 @@ func newEnumLookup(
 
 	typeIdentifier := ast.NewIdentifier(
 		gauge,
-		enumType.Identifier,
+		commons.TypeQualifier(enumType),
 		ast.EmptyPosition,
 	)
 
@@ -2206,16 +2210,16 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 
 	// Generate a function:
 	// ```
-	//   func $ResourceDestroyed(): [AnyStruct] {
-	//      return [
-	//          R.$ResourceDestroyed(args...),
-	//          I.$ResourceDestroyed(args...),
+	//   func $ResourceDestroyed(collectEvents: fun(events...)) {
+	//      collectEvents(
+	//          R.ResourceDestroyed(args...),
+	//          I.ResourceDestroyed(args...),
 	//          ...,
-	//      ]
+	//      )
 	//   }
 	// ```
 
-	eventConstructorInvocations := make([]ast.Expression, 0)
+	eventConstructorInvocations := make(ast.Arguments, 0)
 	eventTypes := make([]sema.Type, 0)
 
 	addEventConstructorInvocation := func(
@@ -2307,7 +2311,16 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 
 		d.elaboration.SetInvocationExpressionTypes(eventConstructorInvocation, invocationTypes)
 
-		eventConstructorInvocations = append(eventConstructorInvocations, eventConstructorInvocation)
+		eventConstructorInvocations = append(
+			eventConstructorInvocations,
+			ast.NewArgument(
+				d.memoryGauge,
+				"",
+				&startPos,
+				&startPos,
+				eventConstructorInvocation,
+			),
+		)
 		eventTypes = append(eventTypes, eventType)
 	}
 
@@ -2356,38 +2369,66 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 		panic(errors.NewUnreachableError())
 	}
 
-	// Put all the events in an array.
-	arrayExpression := ast.NewArrayExpression(
+	// Invoke the 'collectEvents' parameter
+
+	invocation := ast.NewInvocationExpression(
 		d.memoryGauge,
+		ast.NewIdentifierExpression(
+			d.memoryGauge,
+			ast.NewIdentifier(
+				d.memoryGauge,
+				commons.CollectEventsParamName,
+				startPos,
+			),
+		),
+		nil,
 		eventConstructorInvocations,
-		astRange,
+		startPos,
+		startPos,
 	)
 
-	d.elaboration.SetArrayExpressionTypes(
-		arrayExpression,
-		sema.ArrayExpressionTypes{
-			ArrayType:     semaAnyStructArrayType,
-			ArgumentTypes: eventTypes,
+	d.elaboration.SetInvocationExpressionTypes(
+		invocation,
+		sema.InvocationExpressionTypes{
+			ReturnType:            sema.VoidType,
+			ArgumentTypes:         eventTypes,
+			ParameterTypes:        eventTypes,
+			SkipArgumentsTransfer: true,
 		},
 	)
 
-	// Return the array.
-	returnStatement := ast.NewReturnStatement(
-		d.memoryGauge,
-		arrayExpression,
-		astRange,
-	)
-	d.elaboration.SetReturnStatementTypes(
-		returnStatement,
-		sema.ReturnStatementTypes{
-			ValueType:  semaAnyStructArrayType,
-			ReturnType: semaAnyStructArrayType,
-		},
-	)
+	expressionStmt := ast.NewExpressionStatement(d.memoryGauge, invocation)
 
 	functionName := commons.ResourceDestroyedEventsFunctionName
 
 	// Generate the function declaration.
+
+	parameter := ast.NewParameter(
+		d.memoryGauge,
+		sema.ArgumentLabelNotRequired,
+		ast.NewIdentifier(
+			d.memoryGauge,
+			commons.CollectEventsParamName,
+			startPos,
+		),
+		ast.NewTypeAnnotation(
+			d.memoryGauge,
+			false,
+			ast.NewFunctionType(
+				d.memoryGauge,
+				ast.FunctionPurityUnspecified,
+				[]*ast.TypeAnnotation{
+					anyStructTypeAnnotation,
+				},
+				nil,
+				astRange,
+			),
+			ast.EmptyPosition,
+		),
+		nil,
+		ast.EmptyPosition,
+	)
+
 	eventEmittingFunction := ast.NewFunctionDeclaration(
 		d.memoryGauge,
 		ast.AccessNotSpecified,
@@ -2400,18 +2441,17 @@ func (d *Desugar) generateResourceDestroyedEventsGetterFunction(
 			startPos,
 		),
 		nil,
-		nil,
-		ast.NewTypeAnnotation(
+		ast.NewParameterList(
 			d.memoryGauge,
-			false,
-			astAnyStructArrayType,
-			startPos,
+			[]*ast.Parameter{parameter},
+			astRange,
 		),
+		nil,
 		ast.NewFunctionBlock(
 			d.memoryGauge,
 			ast.NewBlock(
 				d.memoryGauge,
-				[]ast.Statement{returnStatement},
+				[]ast.Statement{expressionStmt},
 				astRange,
 			),
 			nil,
@@ -2565,17 +2605,21 @@ var executeFuncType = sema.NewSimpleFunctionType(
 	sema.VoidTypeAnnotation,
 )
 
-var eventEmittingFunctionType = sema.NewSimpleFunctionType(
-	sema.FunctionPurityImpure,
-	nil,
-	sema.VoidTypeAnnotation,
-)
-
-var semaAnyStructArrayType = &sema.VariableSizedType{
-	Type: sema.AnyStructType,
+var eventEmittingFunctionType = &sema.FunctionType{
+	Purity:               sema.FunctionPurityImpure,
+	ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+	Parameters: []sema.Parameter{
+		{
+			TypeAnnotation: sema.TypeAnnotation{
+				Type: commons.CollectEventsFunctionType,
+			},
+			Label:      sema.ArgumentLabelNotRequired,
+			Identifier: commons.CollectEventsParamName,
+		},
+	},
 }
 
-var astAnyStructArrayType = &ast.VariableSizedType{
+var anyStructTypeAnnotation = &ast.TypeAnnotation{
 	Type: &ast.NominalType{
 		Identifier: ast.Identifier{
 			Identifier: sema.AnyStructType.Name,

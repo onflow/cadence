@@ -111,7 +111,7 @@ func (executor *contractFunctionExecutor) preprocess() (err error) {
 
 	storage := NewStorage(
 		runtimeInterface,
-		runtimeInterface,
+		context.MemoryGauge,
 		StorageConfig{},
 	)
 	executor.storage = storage
@@ -129,6 +129,8 @@ func (executor *contractFunctionExecutor) preprocess() (err error) {
 		runtimeInterface,
 		codesAndPrograms,
 		storage,
+		context.MemoryGauge,
+		context.ComputationGauge,
 		context.CoverageReport,
 	)
 	executor.environment = environment

@@ -136,7 +136,7 @@ func NewCompositeValue(
 
 	var v *CompositeValue
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		defer func() {
@@ -159,30 +159,48 @@ func NewCompositeValue(
 		}()
 	}
 
-	constructor := func() *atree.OrderedMap {
-		dictionary, err := atree.NewMap(
-			context.Storage(),
-			atree.Address(address),
-			atree.NewDefaultDigesterBuilder(),
-			NewCompositeTypeInfo(
-				context,
-				location,
-				qualifiedIdentifier,
-				kind,
-			),
-		)
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
-		return dictionary
-	}
-
 	typeInfo := NewCompositeTypeInfo(
 		context,
 		location,
 		qualifiedIdentifier,
 		kind,
 	)
+
+	constructor := func() (dictionary *atree.OrderedMap) {
+
+		if TracingEnabled {
+			startTime := time.Now()
+
+			defer func() {
+				valueID := dictionary.ValueID().String()
+				typeID := string(common.NewTypeIDFromQualifiedName(
+					context,
+					location,
+					qualifiedIdentifier,
+				))
+				seed := dictionary.Seed()
+
+				context.ReportAtreeNewMapTrace(
+					valueID,
+					typeID,
+					seed,
+					time.Since(startTime),
+				)
+			}()
+		}
+
+		var err error
+		dictionary, err = atree.NewMap(
+			context.Storage(),
+			atree.Address(address),
+			atree.NewDefaultDigesterBuilder(),
+			typeInfo,
+		)
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+		return dictionary
+	}
 
 	v = newCompositeValueFromConstructor(context, uint64(len(fields)), typeInfo, constructor)
 
@@ -345,7 +363,7 @@ func (v *CompositeValue) Destroy(context ResourceDestructionContext, locationRan
 		},
 	)
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -353,7 +371,6 @@ func (v *CompositeValue) Destroy(context ResourceDestructionContext, locationRan
 		kind := v.Kind.String()
 
 		defer func() {
-
 			context.ReportCompositeValueDestroyTrace(
 				valueID,
 				typeID,
@@ -465,7 +482,7 @@ func (v *CompositeValue) getBuiltinMember(context MemberAccessibleContext, locat
 
 func (v *CompositeValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -653,7 +670,7 @@ func (v *CompositeValue) RemoveMember(
 	name string,
 ) Value {
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -720,7 +737,7 @@ func (v *CompositeValue) SetMemberWithoutTransfer(
 
 	context.EnforceNotResourceDestruction(v.ValueID(), locationRange)
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -976,7 +993,7 @@ func (v *CompositeValue) ConformsToStaticType(
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -1195,7 +1212,7 @@ func (v *CompositeValue) Transfer(
 		},
 	)
 
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()
@@ -1257,52 +1274,72 @@ func (v *CompositeValue) Transfer(
 		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(elementCount, 0)
 		common.UseMemory(context, elementMemoryUse)
 
-		dictionary, err = atree.NewMapFromBatchData(
-			context.Storage(),
-			address,
-			atree.NewDefaultDigesterBuilder(),
-			v.dictionary.Type(),
-			StringAtreeValueComparator,
-			StringAtreeValueHashInput,
-			v.dictionary.Seed(),
-			func() (atree.Value, atree.Value, error) {
+		func() {
+			seed := v.dictionary.Seed()
 
-				atreeKey, atreeValue, err := iterator.Next()
-				if err != nil {
-					return nil, nil, err
-				}
-				if atreeKey == nil || atreeValue == nil {
-					return nil, nil, nil
-				}
+			if TracingEnabled {
+				startTime := time.Now()
 
-				// NOTE: key is stringAtreeValue
-				// and does not need to be converted or copied
+				defer func() {
+					valueID := dictionary.ValueID().String()
+					typeID := string(v.TypeID())
 
-				value := MustConvertStoredValue(context, atreeValue)
-				// the base of an attachment is not stored in the atree, so in order to make the
-				// transfer happen properly, we set the base value here if this field is an attachment
-				if compositeValue, ok := value.(*CompositeValue); ok &&
-					compositeValue.Kind == common.CompositeKindAttachment {
+					context.ReportAtreeNewMapFromBatchDataTrace(
+						valueID,
+						typeID,
+						seed,
+						time.Since(startTime),
+					)
+				}()
+			}
 
-					compositeValue.SetBaseValue(v)
-				}
+			dictionary, err = atree.NewMapFromBatchData(
+				context.Storage(),
+				address,
+				atree.NewDefaultDigesterBuilder(),
+				v.dictionary.Type(),
+				StringAtreeValueComparator,
+				StringAtreeValueHashInput,
+				seed,
+				func() (atree.Value, atree.Value, error) {
 
-				value = value.Transfer(
-					context,
-					locationRange,
-					address,
-					remove,
-					nil,
-					preventTransfer,
-					false, // value is an element of parent container because it is returned from iterator.
-				)
+					atreeKey, atreeValue, err := iterator.Next()
+					if err != nil {
+						return nil, nil, err
+					}
+					if atreeKey == nil || atreeValue == nil {
+						return nil, nil, nil
+					}
 
-				return atreeKey, value, nil
-			},
-		)
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
+					// NOTE: key is stringAtreeValue
+					// and does not need to be converted or copied
+
+					value := MustConvertStoredValue(context, atreeValue)
+					// the base of an attachment is not stored in the atree, so in order to make the
+					// transfer happen properly, we set the base value here if this field is an attachment
+					if compositeValue, ok := value.(*CompositeValue); ok &&
+						compositeValue.Kind == common.CompositeKindAttachment {
+
+						compositeValue.SetBaseValue(v)
+					}
+
+					value = value.Transfer(
+						context,
+						locationRange,
+						address,
+						remove,
+						nil,
+						preventTransfer,
+						false, // value is an element of parent container because it is returned from iterator.
+					)
+
+					return atreeKey, value, nil
+				},
+			)
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+		}()
 
 		if remove {
 			err = v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
@@ -1438,7 +1475,7 @@ func (v *CompositeValue) Clone(context ValueCloneContext) Value {
 }
 
 func (v *CompositeValue) DeepRemove(context ValueRemoveContext, hasNoParentContainer bool) {
-	if context.TracingEnabled() {
+	if TracingEnabled {
 		startTime := time.Now()
 
 		valueID := v.ValueID().String()

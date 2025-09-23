@@ -548,14 +548,15 @@ func TestImport(t *testing.T) {
 	vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
 		return importedProgram
 	}
-	vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+	vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 		elaboration := importedChecker.Elaboration
 		compositeType := elaboration.CompositeType(typeID)
-		if compositeType != nil {
-			return compositeType, nil
-		}
-
-		return elaboration.InterfaceType(typeID), nil
+		return compositeType
+	}
+	vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+		elaboration := importedChecker.Elaboration
+		interfaceType := elaboration.InterfaceType(typeID)
+		return interfaceType
 	}
 
 	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
@@ -673,14 +674,15 @@ func TestImportError(t *testing.T) {
 	vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 		return importedContractValue
 	}
-	vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+	vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 		elaboration := importedChecker.Elaboration
 		compositeType := elaboration.CompositeType(typeID)
-		if compositeType != nil {
-			return compositeType, nil
-		}
-
-		return elaboration.InterfaceType(typeID), nil
+		return compositeType
+	}
+	vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+		elaboration := importedChecker.Elaboration
+		interfaceType := elaboration.InterfaceType(typeID)
+		return interfaceType
 	}
 	vmConfig.BuiltinGlobalsProvider = VMBuiltinGlobalsProviderWithDefaultsAndPanic
 
@@ -789,14 +791,15 @@ func TestContractImport(t *testing.T) {
 		vmConfig.ContractValueHandler = func(*vm.Context, common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 			elaboration := importedChecker.Elaboration
 			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType, nil
-			}
-
-			return elaboration.InterfaceType(typeID), nil
+			return compositeType
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			elaboration := importedChecker.Elaboration
+			interfaceType := elaboration.InterfaceType(typeID)
+			return interfaceType
 		}
 
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
@@ -850,14 +853,15 @@ func TestContractImport(t *testing.T) {
 		vmConfig.ContractValueHandler = func(*vm.Context, common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 			elaboration := importedChecker.Elaboration
 			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType, nil
-			}
-
-			return elaboration.InterfaceType(typeID), nil
+			return compositeType
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			elaboration := importedChecker.Elaboration
+			interfaceType := elaboration.InterfaceType(typeID)
+			return interfaceType
 		}
 
 		_, importedContractValue = initializeContract(
@@ -953,16 +957,19 @@ func TestContractImport(t *testing.T) {
 			require.Equal(t, fooLocation, location)
 			return fooContractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 			require.Equal(t, fooLocation, location)
 
 			elaboration := fooChecker.Elaboration
 			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType, nil
-			}
+			return compositeType
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			require.Equal(t, fooLocation, location)
 
-			return elaboration.InterfaceType(typeID), nil
+			elaboration := fooChecker.Elaboration
+			interfaceType := elaboration.InterfaceType(typeID)
+			return interfaceType
 		}
 
 		_, fooContractValue = initializeContract(
@@ -1102,8 +1109,7 @@ func TestContractImport(t *testing.T) {
 				return nil
 			}
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
-
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 			var elaboration *sema.Elaboration
 
 			switch location {
@@ -1116,11 +1122,23 @@ func TestContractImport(t *testing.T) {
 			}
 
 			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType, nil
+			return compositeType
+		}
+
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			var elaboration *sema.Elaboration
+
+			switch location {
+			case fooLocation:
+				elaboration = fooChecker.Elaboration
+			case barLocation:
+				elaboration = barChecker.Elaboration
+			default:
+				assert.FailNow(t, fmt.Sprintf("invalid location %s", location))
 			}
 
-			return elaboration.InterfaceType(typeID), nil
+			interfaceType := elaboration.InterfaceType(typeID)
+			return interfaceType
 		}
 
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
@@ -1312,8 +1330,7 @@ func TestContractImport(t *testing.T) {
 				return nil
 			}
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
-
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 			var elaboration *sema.Elaboration
 
 			switch location {
@@ -1324,11 +1341,20 @@ func TestContractImport(t *testing.T) {
 			}
 
 			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType, nil
+			return compositeType
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			var elaboration *sema.Elaboration
+
+			switch location {
+			case barLocation:
+				elaboration = barChecker.Elaboration
+			default:
+				assert.FailNow(t, fmt.Sprintf("invalid location %s", location))
 			}
 
-			return elaboration.InterfaceType(typeID), nil
+			interfaceType := elaboration.InterfaceType(typeID)
+			return interfaceType
 		}
 		vmConfig.BuiltinGlobalsProvider = VMBuiltinGlobalsProviderWithDefaultsAndPanic
 
@@ -1398,14 +1424,15 @@ func TestContractImport(t *testing.T) {
 		vmConfig.ContractValueHandler = func(*vm.Context, common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 			elaboration := importedChecker.Elaboration
 			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType, nil
-			}
-
-			return elaboration.InterfaceType(typeID), nil
+			return compositeType
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			elaboration := importedChecker.Elaboration
+			interfaceType := elaboration.InterfaceType(typeID)
+			return interfaceType
 		}
 		vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(&logs)
 
@@ -1746,14 +1773,15 @@ func TestContractField(t *testing.T) {
 		vmConfig.ContractValueHandler = func(_ *vm.Context, _ common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 			elaboration := importedChecker.Elaboration
 			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType, nil
-			}
-
-			return elaboration.InterfaceType(typeID), nil
+			return compositeType
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			elaboration := importedChecker.Elaboration
+			interfaceType := elaboration.InterfaceType(typeID)
+			return interfaceType
 		}
 
 		_, importedContractValue = initializeContract(
@@ -1839,14 +1867,15 @@ func TestContractField(t *testing.T) {
 		vmConfig.ContractValueHandler = func(_ *vm.Context, _ common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 			elaboration := importedChecker.Elaboration
 			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType, nil
-			}
-
-			return elaboration.InterfaceType(typeID), nil
+			return compositeType
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			elaboration := importedChecker.Elaboration
+			interfaceType := elaboration.InterfaceType(typeID)
+			return interfaceType
 		}
 
 		_, importedContractValue = initializeContract(
@@ -2006,9 +2035,7 @@ func TestNativeFunctions(t *testing.T) {
 				activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 				activation.Set(
 					stdlib.AssertFunctionName,
-					compiler.GlobalImport{
-						Name: stdlib.AssertFunctionName,
-					},
+					compiler.NewGlobalImport(stdlib.AssertFunctionName),
 				)
 				return activation
 			},
@@ -2599,14 +2626,15 @@ func TestInterfaceMethodCall(t *testing.T) {
 		vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 			return importedContractValue
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 			elaboration := importedChecker.Elaboration
 			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType, nil
-			}
-
-			return elaboration.InterfaceType(typeID), nil
+			return compositeType
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			elaboration := importedChecker.Elaboration
+			interfaceType := elaboration.InterfaceType(typeID)
+			return interfaceType
 		}
 
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
@@ -2782,8 +2810,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 				return nil
 			}
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
-
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 			var elaboration *sema.Elaboration
 
 			switch location {
@@ -2796,11 +2823,22 @@ func TestInterfaceMethodCall(t *testing.T) {
 			}
 
 			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType, nil
+			return compositeType
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			var elaboration *sema.Elaboration
+
+			switch location {
+			case fooLocation:
+				elaboration = fooChecker.Elaboration
+			case barLocation:
+				elaboration = barChecker.Elaboration
+			default:
+				assert.FailNow(t, fmt.Sprintf("invalid location %s", location))
 			}
 
-			return elaboration.InterfaceType(typeID), nil
+			interfaceType := elaboration.InterfaceType(typeID)
+			return interfaceType
 		}
 
 		_, bazContractValue := initializeContract(
@@ -2874,7 +2912,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 				return nil
 			}
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 			var elaboration *sema.Elaboration
 
 			switch location {
@@ -2887,11 +2925,22 @@ func TestInterfaceMethodCall(t *testing.T) {
 			}
 
 			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType, nil
+			return compositeType
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			var elaboration *sema.Elaboration
+
+			switch location {
+			case barLocation:
+				elaboration = barChecker.Elaboration
+			case bazLocation:
+				elaboration = bazChecker.Elaboration
+			default:
+				assert.FailNow(t, fmt.Sprintf("invalid location %s", location))
 			}
 
-			return elaboration.InterfaceType(typeID), nil
+			interfaceType := elaboration.InterfaceType(typeID)
+			return interfaceType
 		}
 
 		scriptVM := vm.NewVM(scriptLocation(), program, vmConfig)
@@ -2982,8 +3031,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 				return nil
 			}
 		}
-		vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
-
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 			var elaboration *sema.Elaboration
 
 			switch location {
@@ -2998,11 +3046,24 @@ func TestInterfaceMethodCall(t *testing.T) {
 			}
 
 			compositeType := elaboration.CompositeType(typeID)
-			if compositeType != nil {
-				return compositeType, nil
+			return compositeType
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			var elaboration *sema.Elaboration
+
+			switch location {
+			case fooLocation:
+				elaboration = fooChecker.Elaboration
+			case barLocation:
+				elaboration = barChecker.Elaboration
+			case bazLocation:
+				elaboration = bazChecker.Elaboration
+			default:
+				assert.FailNow(t, fmt.Sprintf("invalid location %s", location))
 			}
 
-			return elaboration.InterfaceType(typeID), nil
+			interfaceType := elaboration.InterfaceType(typeID)
+			return interfaceType
 		}
 
 		scriptVM = vm.NewVM(scriptLocation(), program, vmConfig)
@@ -3413,7 +3474,10 @@ func TestDefaultFunctions(t *testing.T) {
 			}
 			return contractValue
 		}
-		vmConfig.TypeLoader = CompiledProgramsTypeLoader(programs)
+		vmConfig.CompositeTypeHandler = CompiledProgramsCompositeTypeLoader(programs)
+		vmConfig.InterfaceTypeHandler = CompiledProgramsInterfaceTypeLoader(programs)
+		vmConfig.EntitlementTypeHandler = CompiledProgramsEntitlementTypeLoader(programs)
+		vmConfig.EntitlementMapTypeHandler = CompiledProgramsEntitlementMapTypeLoader(programs)
 
 		var uuid uint64 = 42
 		vmConfig.UUIDHandler = func() (uint64, error) {
@@ -3536,7 +3600,10 @@ func TestDefaultFunctions(t *testing.T) {
 			}
 			return contractValue
 		}
-		vmConfig.TypeLoader = CompiledProgramsTypeLoader(programs)
+		vmConfig.CompositeTypeHandler = CompiledProgramsCompositeTypeLoader(programs)
+		vmConfig.InterfaceTypeHandler = CompiledProgramsInterfaceTypeLoader(programs)
+		vmConfig.EntitlementTypeHandler = CompiledProgramsEntitlementTypeLoader(programs)
+		vmConfig.EntitlementMapTypeHandler = CompiledProgramsEntitlementMapTypeLoader(programs)
 
 		var uuid uint64 = 42
 		vmConfig.UUIDHandler = func() (uint64, error) {
@@ -3651,7 +3718,10 @@ func TestDefaultFunctions(t *testing.T) {
 			}
 			return contractValue
 		}
-		vmConfig.TypeLoader = CompiledProgramsTypeLoader(programs)
+		vmConfig.CompositeTypeHandler = CompiledProgramsCompositeTypeLoader(programs)
+		vmConfig.InterfaceTypeHandler = CompiledProgramsInterfaceTypeLoader(programs)
+		vmConfig.EntitlementTypeHandler = CompiledProgramsEntitlementTypeLoader(programs)
+		vmConfig.EntitlementMapTypeHandler = CompiledProgramsEntitlementMapTypeLoader(programs)
 
 		var uuid uint64 = 42
 		vmConfig.UUIDHandler = func() (uint64, error) {
@@ -4038,7 +4108,10 @@ func TestFunctionPreConditions(t *testing.T) {
 			}
 			return contractValue
 		}
-		vmConfig.TypeLoader = CompiledProgramsTypeLoader(programs)
+		vmConfig.CompositeTypeHandler = CompiledProgramsCompositeTypeLoader(programs)
+		vmConfig.InterfaceTypeHandler = CompiledProgramsInterfaceTypeLoader(programs)
+		vmConfig.EntitlementTypeHandler = CompiledProgramsEntitlementTypeLoader(programs)
+		vmConfig.EntitlementMapTypeHandler = CompiledProgramsEntitlementMapTypeLoader(programs)
 
 		vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(&logs)
 
@@ -4190,7 +4263,7 @@ func TestFunctionPreConditions(t *testing.T) {
 
 		location := common.ScriptLocation{0x1}
 
-		_, err := compileAndInvokeWithOptionsAndPrograms(
+		_, err := CompileAndInvokeWithOptionsAndPrograms(
 			t,
 			code,
 			"main",
@@ -5347,6 +5420,14 @@ func TestFixedPoint(t *testing.T) {
 
 			t.Parallel()
 
+			var expected string
+			switch fixedPointType {
+			case sema.Fix128Type, sema.UFix128Type:
+				expected = "10.000000000000000000000000"
+			default:
+				expected = "10.00000000"
+			}
+
 			result, err := CompileAndInvoke(t,
 				fmt.Sprintf(`
                         fun test(): %s {
@@ -5359,7 +5440,7 @@ func TestFixedPoint(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			assert.Equal(t, "10.00000000", result.String())
+			assert.Equal(t, expected, result.String())
 			assert.Equal(t,
 				fixedPointType,
 				interpreter.MustConvertStaticToSemaType(result.StaticType(nil), nil),
@@ -6271,14 +6352,15 @@ func TestContractAccount(t *testing.T) {
 	vmConfig.ContractValueHandler = func(*vm.Context, common.Location) *interpreter.CompositeValue {
 		return importedContractValue
 	}
-	vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+	vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 		elaboration := importedChecker.Elaboration
 		compositeType := elaboration.CompositeType(typeID)
-		if compositeType != nil {
-			return compositeType, nil
-		}
-
-		return elaboration.InterfaceType(typeID), nil
+		return compositeType
+	}
+	vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+		elaboration := importedChecker.Elaboration
+		interfaceType := elaboration.InterfaceType(typeID)
+		return interfaceType
 	}
 
 	vmConfig.InjectedCompositeFieldsHandler = func(
@@ -6395,14 +6477,15 @@ func TestResourceOwner(t *testing.T) {
 	vmConfig.ContractValueHandler = func(*vm.Context, common.Location) *interpreter.CompositeValue {
 		return importedContractValue
 	}
-	vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+	vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 		elaboration := importedChecker.Elaboration
 		compositeType := elaboration.CompositeType(typeID)
-		if compositeType != nil {
-			return compositeType, nil
-		}
-
-		return elaboration.InterfaceType(typeID), nil
+		return compositeType
+	}
+	vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+		elaboration := importedChecker.Elaboration
+		interfaceType := elaboration.InterfaceType(typeID)
+		return interfaceType
 	}
 
 	vmConfig.UUIDHandler = func() (uint64, error) {
@@ -6527,14 +6610,15 @@ func TestResourceUUID(t *testing.T) {
 	vmConfig.ContractValueHandler = func(*vm.Context, common.Location) *interpreter.CompositeValue {
 		return importedContractValue
 	}
-	vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+	vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 		elaboration := importedChecker.Elaboration
 		compositeType := elaboration.CompositeType(typeID)
-		if compositeType != nil {
-			return compositeType, nil
-		}
-
-		return elaboration.InterfaceType(typeID), nil
+		return compositeType
+	}
+	vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+		elaboration := importedChecker.Elaboration
+		interfaceType := elaboration.InterfaceType(typeID)
+		return interfaceType
 	}
 
 	vmConfig.UUIDHandler = func() (uint64, error) {
@@ -6929,14 +7013,15 @@ func TestContractClosure(t *testing.T) {
 	vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 		return importedContractValue
 	}
-	vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+	vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 		elaboration := importedChecker.Elaboration
 		compositeType := elaboration.CompositeType(typeID)
-		if compositeType != nil {
-			return compositeType, nil
-		}
-
-		return elaboration.InterfaceType(typeID), nil
+		return compositeType
+	}
+	vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+		elaboration := importedChecker.Elaboration
+		interfaceType := elaboration.InterfaceType(typeID)
+		return interfaceType
 	}
 	vmConfig.BuiltinGlobalsProvider = VMBuiltinGlobalsProviderWithDefaultsAndPanic
 
@@ -7168,7 +7253,10 @@ func TestEmitInContract(t *testing.T) {
 			}
 			return contractValue
 		}
-		vmConfig.TypeLoader = CompiledProgramsTypeLoader(programs)
+		vmConfig.CompositeTypeHandler = CompiledProgramsCompositeTypeLoader(programs)
+		vmConfig.InterfaceTypeHandler = CompiledProgramsInterfaceTypeLoader(programs)
+		vmConfig.EntitlementTypeHandler = CompiledProgramsEntitlementTypeLoader(programs)
+		vmConfig.EntitlementMapTypeHandler = CompiledProgramsEntitlementMapTypeLoader(programs)
 
 		var uuid uint64 = 42
 		vmConfig.UUIDHandler = func() (uint64, error) {
@@ -7301,7 +7389,10 @@ func TestInheritedConditions(t *testing.T) {
 			}
 			return contractValue
 		}
-		vmConfig.TypeLoader = CompiledProgramsTypeLoader(programs)
+		vmConfig.CompositeTypeHandler = CompiledProgramsCompositeTypeLoader(programs)
+		vmConfig.InterfaceTypeHandler = CompiledProgramsInterfaceTypeLoader(programs)
+		vmConfig.EntitlementTypeHandler = CompiledProgramsEntitlementTypeLoader(programs)
+		vmConfig.EntitlementMapTypeHandler = CompiledProgramsEntitlementMapTypeLoader(programs)
 
 		var uuid uint64 = 42
 		vmConfig.UUIDHandler = func() (uint64, error) {
@@ -7452,7 +7543,10 @@ func TestInheritedConditions(t *testing.T) {
 			}
 			return contractValue
 		}
-		vmConfig.TypeLoader = CompiledProgramsTypeLoader(programs)
+		vmConfig.CompositeTypeHandler = CompiledProgramsCompositeTypeLoader(programs)
+		vmConfig.InterfaceTypeHandler = CompiledProgramsInterfaceTypeLoader(programs)
+		vmConfig.EntitlementTypeHandler = CompiledProgramsEntitlementTypeLoader(programs)
+		vmConfig.EntitlementMapTypeHandler = CompiledProgramsEntitlementMapTypeLoader(programs)
 
 		var uuid uint64 = 42
 		vmConfig.UUIDHandler = func() (uint64, error) {
@@ -7581,7 +7675,7 @@ func TestInheritedConditions(t *testing.T) {
 
 		require.False(t, eventEmitted)
 
-		result, err := compileAndInvokeWithOptionsAndPrograms(
+		result, err := CompileAndInvokeWithOptionsAndPrograms(
 			t,
 			tx,
 			"main",
@@ -8591,14 +8685,39 @@ func TestEnumLookupFailure(t *testing.T) {
 
 	result, err := CompileAndInvoke(t,
 		`
-            enum Test: UInt8 {
-                case a
-                case b
-                case c
-            }
+			enum Test: UInt8 {
+				case a
+				case b
+				case c
+			}
+            
 
             fun test(): AnyStruct {
                 return Test(rawValue: 5)
+            }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.Nil, result)
+}
+
+func TestNestedEnumLookupFailure(t *testing.T) {
+
+	t.Parallel()
+
+	result, err := CompileAndInvoke(t,
+		`
+			contract C {
+				enum Test: UInt8 {
+					case a
+					case b
+					case c
+				}
+			}
+
+            fun test(): AnyStruct {
+                return C.Test(rawValue: 5)
             }
         `,
 		"test",
@@ -8631,9 +8750,7 @@ func TestFunctionInvocationWithOptionalArgs(t *testing.T) {
 			activation := activations.NewActivation[compiler.GlobalImport](nil, compiler.DefaultBuiltinGlobals())
 			activation.Set(
 				functionName,
-				compiler.GlobalImport{
-					Name: functionName,
-				},
+				compiler.NewGlobalImport(functionName),
 			)
 			return activation
 		},
@@ -8762,7 +8879,7 @@ func TestMetering(t *testing.T) {
 	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(28657), result)
 	assert.Equal(t, 0, vmInstance.StackSize())
 
-	assert.Equal(t, uint64(2032), memoryGauge.getMemory(common.MemoryKindBigInt))
+	assert.Equal(t, uint64(2016), memoryGauge.getMemory(common.MemoryKindBigInt))
 	assert.Equal(t, uint64(21), computationGauge.getComputation(common.ComputationKindLoop))
 }
 
@@ -8978,9 +9095,7 @@ func TestGetAuthAccount(t *testing.T) {
 				activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 				activation.Set(
 					stdlib.GetAuthAccountFunctionName,
-					compiler.GlobalImport{
-						Name: stdlib.GetAuthAccountFunctionName,
-					},
+					compiler.NewGlobalImport(stdlib.GetAuthAccountFunctionName),
 				)
 				return activation
 			},
@@ -9185,20 +9300,23 @@ func TestAttachments(t *testing.T) {
 				activation.Set(
 					stdlib.VMSignatureAlgorithmConstructor.Name,
 					compiler.GlobalImport{
-						Name: stdlib.VMSignatureAlgorithmConstructor.Name,
+						Name:          stdlib.VMSignatureAlgorithmConstructor.Name,
+						QualifiedName: stdlib.VMSignatureAlgorithmConstructor.Name,
 					},
 				)
 				activation.Set(
 					validator.Name,
 					compiler.GlobalImport{
-						Name: validator.Name,
+						Name:          validator.Name,
+						QualifiedName: validator.Name,
 					},
 				)
 				for _, v := range stdlib.VMSignatureAlgorithmCaseValues {
 					activation.Set(
 						v.Name,
 						compiler.GlobalImport{
-							Name: v.Name,
+							Name:          v.Name,
+							QualifiedName: v.Name,
 						},
 					)
 				}
@@ -9396,15 +9514,11 @@ func TestInjectedContract(t *testing.T) {
 			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 			activation.Set(
 				"B",
-				compiler.GlobalImport{
-					Name: "B",
-				},
+				compiler.NewGlobalImport("B"),
 			)
 			activation.Set(
 				"B.c",
-				compiler.GlobalImport{
-					Name: "B.c",
-				},
+				compiler.NewGlobalImport("B.c"),
 			)
 			return activation
 		},
@@ -9442,14 +9556,17 @@ func TestInjectedContract(t *testing.T) {
 
 	programs := map[common.Location]*CompiledProgram{}
 
-	compiledProgramsTypeLoader := CompiledProgramsTypeLoader(programs)
+	compositeTypeLoader := CompiledProgramsCompositeTypeLoader(programs)
+	vmConfig.InterfaceTypeHandler = CompiledProgramsInterfaceTypeLoader(programs)
+	vmConfig.EntitlementTypeHandler = CompiledProgramsEntitlementTypeLoader(programs)
+	vmConfig.EntitlementMapTypeHandler = CompiledProgramsEntitlementMapTypeLoader(programs)
 
-	vmConfig.TypeLoader = func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+	vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 		if location == nil && typeID == "B" {
-			return bType, nil
+			return bType
 		}
 
-		return compiledProgramsTypeLoader(location, typeID)
+		return compositeTypeLoader(location, typeID)
 	}
 
 	result, err := CompileAndInvokeWithOptions(
@@ -9554,7 +9671,10 @@ func TestInheritedDefaultDestroyEvent(t *testing.T) {
 		}
 		return contractValue
 	}
-	vmConfig.TypeLoader = CompiledProgramsTypeLoader(programs)
+	vmConfig.CompositeTypeHandler = CompiledProgramsCompositeTypeLoader(programs)
+	vmConfig.InterfaceTypeHandler = CompiledProgramsInterfaceTypeLoader(programs)
+	vmConfig.EntitlementTypeHandler = CompiledProgramsEntitlementTypeLoader(programs)
+	vmConfig.EntitlementMapTypeHandler = CompiledProgramsEntitlementMapTypeLoader(programs)
 
 	vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(&logs)
 
@@ -9694,7 +9814,7 @@ func TestInheritedDefaultDestroyEvent(t *testing.T) {
 		return nil
 	}
 
-	_, err := compileAndInvokeWithOptionsAndPrograms(
+	_, err := CompileAndInvokeWithOptionsAndPrograms(
 		t,
 		code,
 		"main",
@@ -9731,9 +9851,7 @@ func TestFunctionInclusiveRangeConstruction(t *testing.T) {
 			activation := activations.NewActivation[compiler.GlobalImport](nil, compiler.DefaultBuiltinGlobals())
 			activation.Set(
 				stdlib.VMInclusiveRangeConstructor.Name,
-				compiler.GlobalImport{
-					Name: stdlib.VMInclusiveRangeConstructor.Name,
-				},
+				compiler.NewGlobalImport(stdlib.VMInclusiveRangeConstructor.Name),
 			)
 			return activation
 		},
@@ -9771,4 +9889,1727 @@ func TestFunctionInclusiveRangeConstruction(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.IsType(t, &interpreter.CompositeValue{}, result)
+}
+
+func TestVMImportAliasing(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic", func(t *testing.T) {
+
+		t.Parallel()
+
+		importLocation := common.NewAddressLocation(nil, common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}, "MyContract")
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
+				contract MyContract {
+
+					fun helloText(): String {
+						return "global function of the imported program"
+					}
+
+					init() {}
+
+					struct Foo {
+						var id : String
+
+						init(_ id: String) {
+							self.id = id
+						}
+
+						fun sayHello(_ id: Int): String {
+							self.id
+							return MyContract.helloText()
+						}
+					}
+				}
+            `,
+			ParseAndCheckOptions{
+				Location: importLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		importCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(importedChecker),
+			importedChecker.Location,
+		)
+		importedProgram := importCompiler.Compile()
+
+		_, importedContractValue := initializeContract(
+			t,
+			importLocation,
+			importedProgram,
+			nil,
+		)
+
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+				import MyContract as TheirContract from 0x01
+
+				fun test(): String {
+					var r = TheirContract.Foo("Hello from Foo!")
+					return r.sayHello(1)
+				}
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			return importedProgram
+		}
+
+		program := comp.Compile()
+
+		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			return importedProgram
+		}
+		vmConfig.ContractValueHandler = func(*vm.Context, common.Location) *interpreter.CompositeValue {
+			return importedContractValue
+		}
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+			elaboration := importedChecker.Elaboration
+			return elaboration.CompositeType(typeID)
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			elaboration := importedChecker.Elaboration
+			return elaboration.InterfaceType(typeID)
+		}
+
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		result, err := vmInstance.InvokeExternally("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+
+		require.Equal(t, interpreter.NewUnmeteredStringValue("global function of the imported program"), result)
+	})
+
+	t.Run("same contract name", func(t *testing.T) {
+
+		t.Parallel()
+
+		// Initialize Foo
+
+		fooLocation := common.NewAddressLocation(
+			nil,
+			common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+			"Foo",
+		)
+
+		fooChecker, err := ParseAndCheckWithOptions(t,
+			`
+			contract Foo {
+				fun foo(): Int {
+					return 1
+				}
+			}
+            `,
+			ParseAndCheckOptions{
+				Location: fooLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		fooCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(fooChecker),
+			fooChecker.Location,
+		)
+		fooProgram := fooCompiler.Compile()
+
+		var fooContractValue *interpreter.CompositeValue
+
+		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			require.Equal(t, fooLocation, location)
+			return fooProgram
+		}
+		vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
+			require.Equal(t, fooLocation, location)
+			return fooContractValue
+		}
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+			require.Equal(t, fooLocation, location)
+
+			elaboration := fooChecker.Elaboration
+			return elaboration.CompositeType(typeID)
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			require.Equal(t, fooLocation, location)
+
+			elaboration := fooChecker.Elaboration
+			return elaboration.InterfaceType(typeID)
+		}
+
+		_, fooContractValue = initializeContract(
+			t,
+			fooLocation,
+			fooProgram,
+			vmConfig,
+		)
+
+		// Initialize duplicate Foo (Bar)
+
+		barLocation := common.NewAddressLocation(
+			nil,
+			common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+			"Foo",
+		)
+
+		barChecker, err := ParseAndCheckWithOptions(t,
+			`
+			contract Foo {
+				fun bar(): Int {
+					return 2
+				}
+			}
+            `,
+			ParseAndCheckOptions{
+				Location: barLocation,
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						require.Equal(t, fooLocation, location)
+						return sema.ElaborationImport{
+							Elaboration: fooChecker.Elaboration,
+						}, nil
+					},
+					LocationHandler: SingleIdentifierLocationResolver(t),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		barCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(barChecker),
+			barChecker.Location,
+		)
+		barCompiler.Config.LocationHandler = SingleIdentifierLocationResolver(t)
+		barCompiler.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			require.Equal(t, fooLocation, location)
+			return fooProgram
+		}
+
+		barProgram := barCompiler.Compile()
+
+		_, barContractValue := initializeContract(
+			t,
+			barLocation,
+			barProgram,
+			vmConfig,
+		)
+
+		// Compile and run main program
+
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+			import Foo as Foo1 from 0x01
+			import Foo as Foo2 from 0x02
+
+			fun test(): Int {
+				return Foo1.foo() + Foo2.bar()
+			}
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						require.IsType(t, common.AddressLocation{}, location)
+						addressLocation := location.(common.AddressLocation)
+						var elaboration *sema.Elaboration
+						switch addressLocation.Address {
+						case fooLocation.Address:
+							elaboration = fooChecker.Elaboration
+						case barLocation.Address:
+							elaboration = barChecker.Elaboration
+						default:
+							assert.FailNow(t, "invalid location")
+						}
+
+						return sema.ElaborationImport{
+							Elaboration: elaboration,
+						}, nil
+					},
+					LocationHandler: SingleIdentifierLocationResolver(t),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp.Config.LocationHandler = SingleIdentifierLocationResolver(t)
+		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			switch location {
+			case fooLocation:
+				return fooProgram
+			case barLocation:
+				return barProgram
+			default:
+				assert.FailNow(t, "invalid location")
+				return nil
+			}
+		}
+
+		program := comp.Compile()
+
+		vmConfig = vm.NewConfig(NewUnmeteredInMemoryStorage())
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			switch location {
+			case fooLocation:
+				return fooProgram
+			case barLocation:
+				return barProgram
+			default:
+				assert.FailNow(t, "invalid location")
+				return nil
+			}
+		}
+		vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
+			switch location {
+			case fooLocation:
+				return fooContractValue
+			case barLocation:
+				return barContractValue
+			default:
+				assert.FailNow(t, fmt.Sprintf("invalid location %s", location))
+				return nil
+			}
+		}
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+
+			var elaboration *sema.Elaboration
+
+			switch location {
+			case fooLocation:
+				elaboration = fooChecker.Elaboration
+			case barLocation:
+				elaboration = barChecker.Elaboration
+			default:
+				assert.FailNow(t, fmt.Sprintf("invalid location %s", location))
+				return nil
+			}
+
+			return elaboration.CompositeType(typeID)
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+
+			var elaboration *sema.Elaboration
+
+			switch location {
+			case fooLocation:
+				elaboration = fooChecker.Elaboration
+			case barLocation:
+				elaboration = barChecker.Elaboration
+			default:
+				assert.FailNow(t, fmt.Sprintf("invalid location %s", location))
+				return nil
+			}
+
+			return elaboration.InterfaceType(typeID)
+		}
+
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		result, err := vmInstance.InvokeExternally("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), result)
+	})
+
+	t.Run("same contract name, same function name", func(t *testing.T) {
+
+		t.Parallel()
+
+		// Initialize Foo
+
+		fooLocation := common.NewAddressLocation(
+			nil,
+			common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+			"Foo",
+		)
+
+		fooChecker, err := ParseAndCheckWithOptions(t,
+			`
+			contract Foo {
+				fun value(): Int {
+					return 1
+				}
+			}
+            `,
+			ParseAndCheckOptions{
+				Location: fooLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		fooCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(fooChecker),
+			fooChecker.Location,
+		)
+		fooProgram := fooCompiler.Compile()
+
+		var fooContractValue *interpreter.CompositeValue
+
+		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			require.Equal(t, fooLocation, location)
+			return fooProgram
+		}
+		vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
+			require.Equal(t, fooLocation, location)
+			return fooContractValue
+		}
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+			require.Equal(t, fooLocation, location)
+
+			elaboration := fooChecker.Elaboration
+			return elaboration.CompositeType(typeID)
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			require.Equal(t, fooLocation, location)
+
+			elaboration := fooChecker.Elaboration
+			return elaboration.InterfaceType(typeID)
+		}
+
+		_, fooContractValue = initializeContract(
+			t,
+			fooLocation,
+			fooProgram,
+			vmConfig,
+		)
+
+		// Initialize duplicate Foo (Bar)
+
+		barLocation := common.NewAddressLocation(
+			nil,
+			common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+			"Foo",
+		)
+
+		barChecker, err := ParseAndCheckWithOptions(t,
+			`
+			contract Foo {
+				fun value(): Int {
+					return 2
+				}
+			}
+            `,
+			ParseAndCheckOptions{
+				Location: barLocation,
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						require.Equal(t, fooLocation, location)
+						return sema.ElaborationImport{
+							Elaboration: fooChecker.Elaboration,
+						}, nil
+					},
+					LocationHandler: SingleIdentifierLocationResolver(t),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		barCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(barChecker),
+			barChecker.Location,
+		)
+		barCompiler.Config.LocationHandler = SingleIdentifierLocationResolver(t)
+		barCompiler.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			require.Equal(t, fooLocation, location)
+			return fooProgram
+		}
+
+		barProgram := barCompiler.Compile()
+
+		_, barContractValue := initializeContract(
+			t,
+			barLocation,
+			barProgram,
+			vmConfig,
+		)
+
+		// Compile and run main program
+
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+			import Foo as Foo1 from 0x01
+			import Foo as Foo2 from 0x02
+
+			fun test(): Int {
+				return Foo1.value() + Foo2.value()
+			}
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						require.IsType(t, common.AddressLocation{}, location)
+						addressLocation := location.(common.AddressLocation)
+						var elaboration *sema.Elaboration
+						switch addressLocation.Address {
+						case fooLocation.Address:
+							elaboration = fooChecker.Elaboration
+						case barLocation.Address:
+							elaboration = barChecker.Elaboration
+						default:
+							assert.FailNow(t, "invalid location")
+						}
+
+						return sema.ElaborationImport{
+							Elaboration: elaboration,
+						}, nil
+					},
+					LocationHandler: SingleIdentifierLocationResolver(t),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp.Config.LocationHandler = SingleIdentifierLocationResolver(t)
+		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			switch location {
+			case fooLocation:
+				return fooProgram
+			case barLocation:
+				return barProgram
+			default:
+				assert.FailNow(t, "invalid location")
+				return nil
+			}
+		}
+
+		program := comp.Compile()
+
+		vmConfig = vm.NewConfig(NewUnmeteredInMemoryStorage())
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			switch location {
+			case fooLocation:
+				return fooProgram
+			case barLocation:
+				return barProgram
+			default:
+				assert.FailNow(t, "invalid location")
+				return nil
+			}
+		}
+		vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
+			switch location {
+			case fooLocation:
+				return fooContractValue
+			case barLocation:
+				return barContractValue
+			default:
+				assert.FailNow(t, fmt.Sprintf("invalid location %s", location))
+				return nil
+			}
+		}
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+
+			var elaboration *sema.Elaboration
+
+			switch location {
+			case fooLocation:
+				elaboration = fooChecker.Elaboration
+			case barLocation:
+				elaboration = barChecker.Elaboration
+			default:
+				assert.FailNow(t, fmt.Sprintf("invalid location %s", location))
+				return nil
+			}
+
+			return elaboration.CompositeType(typeID)
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+
+			var elaboration *sema.Elaboration
+
+			switch location {
+			case fooLocation:
+				elaboration = fooChecker.Elaboration
+			case barLocation:
+				elaboration = barChecker.Elaboration
+			default:
+				assert.FailNow(t, fmt.Sprintf("invalid location %s", location))
+				return nil
+			}
+
+			return elaboration.InterfaceType(typeID)
+		}
+
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		result, err := vmInstance.InvokeExternally("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), result)
+	})
+
+	t.Run("alias same contract twice", func(t *testing.T) {
+
+		t.Parallel()
+
+		// Initialize Foo
+
+		fooLocation := common.NewAddressLocation(
+			nil,
+			common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+			"Foo",
+		)
+
+		fooChecker, err := ParseAndCheckWithOptions(t,
+			`
+			contract Foo {
+				fun value(): Int {
+					return 1
+				}
+			}
+            `,
+			ParseAndCheckOptions{
+				Location: fooLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		fooCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(fooChecker),
+			fooChecker.Location,
+		)
+		fooProgram := fooCompiler.Compile()
+
+		var fooContractValue *interpreter.CompositeValue
+
+		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			require.Equal(t, fooLocation, location)
+			return fooProgram
+		}
+		vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
+			require.Equal(t, fooLocation, location)
+			return fooContractValue
+		}
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+			require.Equal(t, fooLocation, location)
+
+			elaboration := fooChecker.Elaboration
+			return elaboration.CompositeType(typeID)
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			require.Equal(t, fooLocation, location)
+
+			elaboration := fooChecker.Elaboration
+			return elaboration.InterfaceType(typeID)
+		}
+
+		_, fooContractValue = initializeContract(
+			t,
+			fooLocation,
+			fooProgram,
+			vmConfig,
+		)
+
+		// Initialize Bar
+
+		barLocation := common.NewAddressLocation(
+			nil,
+			common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+			"Bar",
+		)
+
+		barChecker, err := ParseAndCheckWithOptions(t,
+			`
+			import Foo as Cab from 0x01
+			contract Bar {
+				fun value(): Int {
+					return Cab.value()
+				}
+			}
+            `,
+			ParseAndCheckOptions{
+				Location: barLocation,
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						require.Equal(t, fooLocation, location)
+						return sema.ElaborationImport{
+							Elaboration: fooChecker.Elaboration,
+						}, nil
+					},
+					LocationHandler: SingleIdentifierLocationResolver(t),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		barCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(barChecker),
+			barChecker.Location,
+		)
+		barCompiler.Config.LocationHandler = SingleIdentifierLocationResolver(t)
+		barCompiler.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			require.Equal(t, fooLocation, location)
+			return fooProgram
+		}
+
+		barProgram := barCompiler.Compile()
+
+		_, barContractValue := initializeContract(
+			t,
+			barLocation,
+			barProgram,
+			vmConfig,
+		)
+
+		// Compile and run main program
+
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+			import Bar as Foo from 0x02
+
+			fun test(): Int {
+				return Foo.value()
+			}
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						require.IsType(t, common.AddressLocation{}, location)
+						addressLocation := location.(common.AddressLocation)
+						var elaboration *sema.Elaboration
+						switch addressLocation.Address {
+						case fooLocation.Address:
+							elaboration = fooChecker.Elaboration
+						case barLocation.Address:
+							elaboration = barChecker.Elaboration
+						default:
+							assert.FailNow(t, "invalid location")
+						}
+
+						return sema.ElaborationImport{
+							Elaboration: elaboration,
+						}, nil
+					},
+					LocationHandler: SingleIdentifierLocationResolver(t),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp.Config.LocationHandler = SingleIdentifierLocationResolver(t)
+		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			switch location {
+			case fooLocation:
+				return fooProgram
+			case barLocation:
+				return barProgram
+			default:
+				assert.FailNow(t, "invalid location")
+				return nil
+			}
+		}
+
+		program := comp.Compile()
+
+		vmConfig = vm.NewConfig(NewUnmeteredInMemoryStorage())
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			switch location {
+			case fooLocation:
+				return fooProgram
+			case barLocation:
+				return barProgram
+			default:
+				assert.FailNow(t, "invalid location")
+				return nil
+			}
+		}
+		vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
+			switch location {
+			case fooLocation:
+				return fooContractValue
+			case barLocation:
+				return barContractValue
+			default:
+				assert.FailNow(t, fmt.Sprintf("invalid location %s", location))
+				return nil
+			}
+		}
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+
+			var elaboration *sema.Elaboration
+
+			switch location {
+			case fooLocation:
+				elaboration = fooChecker.Elaboration
+			case barLocation:
+				elaboration = barChecker.Elaboration
+			default:
+				assert.FailNow(t, fmt.Sprintf("invalid location %s", location))
+				return nil
+			}
+
+			return elaboration.CompositeType(typeID)
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+
+			var elaboration *sema.Elaboration
+
+			switch location {
+			case fooLocation:
+				elaboration = fooChecker.Elaboration
+			case barLocation:
+				elaboration = barChecker.Elaboration
+			default:
+				assert.FailNow(t, fmt.Sprintf("invalid location %s", location))
+				return nil
+			}
+
+			return elaboration.InterfaceType(typeID)
+		}
+
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		result, err := vmInstance.InvokeExternally("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), result)
+	})
+
+	t.Run("get nested types of alias", func(t *testing.T) {
+
+		t.Parallel()
+
+		importLocation := common.NewAddressLocation(nil, common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}, "MyContract")
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
+				contract MyContract {
+					struct MyStruct {
+						var value : Int
+						init (_ v: Int) {self.value = v}
+						fun getValue(): Int {
+							return self.value
+						}
+					}
+				}
+            `,
+			ParseAndCheckOptions{
+				Location: importLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		importCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(importedChecker),
+			importedChecker.Location,
+		)
+		importedProgram := importCompiler.Compile()
+
+		_, importedContractValue := initializeContract(
+			t,
+			importLocation,
+			importedProgram,
+			nil,
+		)
+
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+				import MyContract as TheirContract from 0x01
+
+				struct Foo {
+					var tmp: TheirContract.MyStruct
+					init() {
+						self.tmp = TheirContract.MyStruct(5)
+					}
+				}
+
+				fun test(): Int {
+					return Foo().tmp.getValue()
+				}
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			return importedProgram
+		}
+
+		program := comp.Compile()
+
+		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			return importedProgram
+		}
+		vmConfig.ContractValueHandler = func(*vm.Context, common.Location) *interpreter.CompositeValue {
+			return importedContractValue
+		}
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+			elaboration := importedChecker.Elaboration
+			compositeType := elaboration.CompositeType(typeID)
+			if compositeType != nil {
+				return compositeType
+			}
+
+			elaboration = checker.Elaboration
+			compositeType = elaboration.CompositeType(typeID)
+			if compositeType != nil {
+				return compositeType
+			}
+
+			return nil
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			elaboration := importedChecker.Elaboration
+			interfaceType := elaboration.InterfaceType(typeID)
+			if interfaceType != nil {
+				return interfaceType
+			}
+
+			elaboration = checker.Elaboration
+			interfaceType = elaboration.InterfaceType(typeID)
+			if interfaceType != nil {
+				return interfaceType
+			}
+
+			return nil
+		}
+
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		result, err := vmInstance.InvokeExternally("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(5), result)
+	})
+
+	t.Run("aliased interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		// Initialize Foo
+
+		fooLocation := common.NewAddressLocation(
+			nil,
+			common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+			"Foo",
+		)
+
+		fooChecker, err := ParseAndCheckWithOptions(t,
+			`
+            contract interface Foo {
+                fun withdraw(_ amount: Int): String {
+                    pre {
+                        amount < 100: "Withdraw limit exceeds"
+                    }
+                }
+            }
+            `,
+			ParseAndCheckOptions{
+				Location: fooLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		fooCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(fooChecker),
+			fooChecker.Location,
+		)
+		fooProgram := fooCompiler.Compile()
+
+		// Initialize Bar
+
+		barLocation := common.NewAddressLocation(
+			nil,
+			common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+			"Bar",
+		)
+
+		barChecker, err := ParseAndCheckWithOptions(t,
+			`
+            import Foo as F from 0x01
+
+            contract Bar: F {
+                init() {}
+                fun withdraw(_ amount: Int): String {
+                    return "Successfully withdrew"
+                }
+            }
+            `,
+			ParseAndCheckOptions{
+				Location: barLocation,
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						require.Equal(t, fooLocation, location)
+						return sema.ElaborationImport{
+							Elaboration: fooChecker.Elaboration,
+						}, nil
+					},
+					LocationHandler: SingleIdentifierLocationResolver(t),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		barCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(barChecker),
+			barChecker.Location,
+		)
+		barCompiler.Config.LocationHandler = SingleIdentifierLocationResolver(t)
+		barCompiler.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			require.Equal(t, fooLocation, location)
+			return fooProgram
+		}
+
+		barCompiler.Config.ElaborationResolver = func(location common.Location) (*compiler.DesugaredElaboration, error) {
+			switch location {
+			case fooLocation:
+				return compiler.NewDesugaredElaboration(fooChecker.Elaboration), nil
+			case barLocation:
+				return compiler.NewDesugaredElaboration(barChecker.Elaboration), nil
+			default:
+				return nil, fmt.Errorf("cannot find elaboration for %s", location)
+			}
+		}
+
+		barProgram := barCompiler.Compile()
+
+		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			require.Equal(t, fooLocation, location)
+			return fooProgram
+		}
+		vmConfig.BuiltinGlobalsProvider = VMBuiltinGlobalsProviderWithDefaultsAndPanic
+
+		_, barContractValue := initializeContract(
+			t,
+			barLocation,
+			barProgram,
+			vmConfig,
+		)
+
+		// Compile and run main program
+
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+            import Bar from 0x02
+
+            fun test(): String {
+                return Bar.withdraw(50)
+            }
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						require.IsType(t, common.AddressLocation{}, location)
+						addressLocation := location.(common.AddressLocation)
+						var elaboration *sema.Elaboration
+						switch addressLocation.Address {
+						case fooLocation.Address:
+							elaboration = fooChecker.Elaboration
+						case barLocation.Address:
+							elaboration = barChecker.Elaboration
+						default:
+							assert.FailNow(t, "invalid location")
+						}
+
+						return sema.ElaborationImport{
+							Elaboration: elaboration,
+						}, nil
+					},
+					LocationHandler: SingleIdentifierLocationResolver(t),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp.Config.LocationHandler = SingleIdentifierLocationResolver(t)
+		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			switch location {
+			case fooLocation:
+				return fooProgram
+			case barLocation:
+				return barProgram
+			default:
+				assert.FailNow(t, "invalid location")
+				return nil
+			}
+		}
+
+		program := comp.Compile()
+
+		vmConfig = vm.NewConfig(NewUnmeteredInMemoryStorage())
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			switch location {
+			case fooLocation:
+				return fooProgram
+			case barLocation:
+				return barProgram
+			default:
+				assert.FailNow(t, "invalid location")
+				return nil
+			}
+		}
+		vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
+			switch location {
+			case barLocation:
+				return barContractValue
+			default:
+				assert.FailNow(t, fmt.Sprintf("invalid location %s", location))
+				return nil
+			}
+		}
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+			require.Equal(t, barLocation, location)
+
+			elaboration := barChecker.Elaboration
+			return elaboration.CompositeType(typeID)
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			require.Equal(t, barLocation, location)
+
+			elaboration := barChecker.Elaboration
+			return elaboration.InterfaceType(typeID)
+		}
+		vmConfig.BuiltinGlobalsProvider = VMBuiltinGlobalsProviderWithDefaultsAndPanic
+
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		result, err := vmInstance.InvokeExternally("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+
+		require.Equal(t, interpreter.NewUnmeteredStringValue("Successfully withdrew"), result)
+	})
+
+	t.Run("multiple aliases, all declaration types", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := common.MustBytesToAddress([]byte{0x1})
+
+		fooChecker, err := ParseAndCheckWithOptions(t,
+			`
+			contract C {
+				fun v(): Int {
+					return 1
+				}
+			}
+
+			struct S {
+				fun v(): Int {
+					return 2
+				}
+			}
+
+			fun v(): Int {
+				return 3
+			}
+            `,
+			ParseAndCheckOptions{
+				Location: common.AddressLocation{
+					Address: address,
+					Name:    "C",
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		fooCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(fooChecker),
+			fooChecker.Location,
+		)
+		fooProgram := fooCompiler.Compile()
+
+		// Compile and run main program
+
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+			import C as SomeContract, S as SomeStruct, v as SomeFunc from 0x01
+
+			fun test(): Int {
+				return SomeContract.v() + SomeStruct().v() + SomeFunc()
+			}
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						require.IsType(t, common.AddressLocation{}, location)
+						addressLocation := location.(common.AddressLocation)
+						var elaboration *sema.Elaboration
+						switch addressLocation.Address {
+						case address:
+							elaboration = fooChecker.Elaboration
+						default:
+							assert.FailNow(t, "invalid location")
+						}
+
+						return sema.ElaborationImport{
+							Elaboration: elaboration,
+						}, nil
+					},
+					LocationHandler: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
+
+						require.Equal(t,
+							common.AddressLocation{
+								Address: address,
+								Name:    "",
+							},
+							location,
+						)
+
+						for _, identifier := range identifiers {
+							result = append(result, sema.ResolvedLocation{
+								Location: common.AddressLocation{
+									Address: location.(common.AddressLocation).Address,
+									Name:    identifier.Identifier,
+								},
+								Identifiers: []ast.Identifier{
+									identifier,
+								},
+							})
+						}
+						return
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp.Config.LocationHandler = func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
+
+			require.Equal(t,
+				common.AddressLocation{
+					Address: address,
+					Name:    "",
+				},
+				location,
+			)
+
+			for _, identifier := range identifiers {
+				result = append(result, sema.ResolvedLocation{
+					Location: common.AddressLocation{
+						Address: location.(common.AddressLocation).Address,
+						Name:    identifier.Identifier,
+					},
+					Identifiers: []ast.Identifier{
+						identifier,
+					},
+				})
+			}
+			return
+		}
+		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			return fooProgram
+		}
+
+		program := comp.Compile()
+		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			return fooProgram
+		}
+		vmConfig.BuiltinGlobalsProvider = VMBuiltinGlobalsProviderWithDefaultsAndPanic
+		_, fooContractValue := initializeContract(
+			t,
+			common.AddressLocation{
+				Address: address,
+				Name:    "C",
+			},
+			fooProgram,
+			vmConfig,
+		)
+		vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
+			return fooContractValue
+		}
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+			require.Equal(t, fooChecker.Location, location)
+
+			elaboration := fooChecker.Elaboration
+			return elaboration.CompositeType(typeID)
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			require.Equal(t, fooChecker.Location, location)
+
+			elaboration := fooChecker.Elaboration
+			return elaboration.InterfaceType(typeID)
+		}
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		result, err := vmInstance.InvokeExternally("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(6), result)
+	})
+
+	t.Run("get type", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := common.MustBytesToAddress([]byte{0x1})
+
+		fooChecker, err := ParseAndCheckWithOptions(t,
+			`
+			struct S {}
+            `,
+			ParseAndCheckOptions{
+				Location: common.AddressLocation{
+					Address: address,
+					Name:    "S",
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		fooCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(fooChecker),
+			fooChecker.Location,
+		)
+		fooProgram := fooCompiler.Compile()
+
+		// Compile and run main program
+
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+			import S as SomeStruct from 0x01
+
+			fun test(): String {
+				var s = SomeStruct()
+				return s.getType().identifier
+			}
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						require.IsType(t, common.AddressLocation{}, location)
+						addressLocation := location.(common.AddressLocation)
+						var elaboration *sema.Elaboration
+						switch addressLocation.Address {
+						case address:
+							elaboration = fooChecker.Elaboration
+						default:
+							assert.FailNow(t, "invalid location")
+						}
+
+						return sema.ElaborationImport{
+							Elaboration: elaboration,
+						}, nil
+					},
+					LocationHandler: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
+
+						require.Equal(t,
+							common.AddressLocation{
+								Address: address,
+								Name:    "",
+							},
+							location,
+						)
+
+						for _, identifier := range identifiers {
+							result = append(result, sema.ResolvedLocation{
+								Location: common.AddressLocation{
+									Address: location.(common.AddressLocation).Address,
+									Name:    identifier.Identifier,
+								},
+								Identifiers: []ast.Identifier{
+									identifier,
+								},
+							})
+						}
+						return
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp.Config.LocationHandler = func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
+
+			require.Equal(t,
+				common.AddressLocation{
+					Address: address,
+					Name:    "",
+				},
+				location,
+			)
+
+			for _, identifier := range identifiers {
+				result = append(result, sema.ResolvedLocation{
+					Location: common.AddressLocation{
+						Address: location.(common.AddressLocation).Address,
+						Name:    identifier.Identifier,
+					},
+					Identifiers: []ast.Identifier{
+						identifier,
+					},
+				})
+			}
+			return
+		}
+		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			return fooProgram
+		}
+
+		program := comp.Compile()
+		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			return fooProgram
+		}
+		vmConfig.BuiltinGlobalsProvider = VMBuiltinGlobalsProviderWithDefaultsAndPanic
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+			require.Equal(t, fooChecker.Location, location)
+
+			elaboration := fooChecker.Elaboration
+			return elaboration.CompositeType(typeID)
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			require.Equal(t, fooChecker.Location, location)
+
+			elaboration := fooChecker.Elaboration
+			return elaboration.InterfaceType(typeID)
+		}
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		result, err := vmInstance.InvokeExternally("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+
+		require.Equal(t, interpreter.NewUnmeteredStringValue("A.0000000000000001.S"), result)
+	})
+
+	t.Run("nested type with same name as alias", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := common.MustBytesToAddress([]byte{0x1})
+
+		fooChecker, err := ParseAndCheckWithOptions(t,
+			`
+			access(all) contract Foo {
+				access(all) struct Foo1 {
+					fun Test(): Int {
+						return 1
+					}
+				}
+			}
+            `,
+			ParseAndCheckOptions{
+				Location: common.AddressLocation{
+					Address: address,
+					Name:    "Foo",
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		fooCompiler := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(fooChecker),
+			fooChecker.Location,
+		)
+		fooProgram := fooCompiler.Compile()
+
+		// Compile and run main program
+
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+			import Foo as Foo1 from 0x01
+
+			access(all) fun test(): Int {
+				var foo = Foo1.Foo1()
+				return foo.Test()
+			}
+            `,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						require.IsType(t, common.AddressLocation{}, location)
+						addressLocation := location.(common.AddressLocation)
+						var elaboration *sema.Elaboration
+						switch addressLocation.Address {
+						case address:
+							elaboration = fooChecker.Elaboration
+						default:
+							assert.FailNow(t, "invalid location")
+						}
+
+						return sema.ElaborationImport{
+							Elaboration: elaboration,
+						}, nil
+					},
+					LocationHandler: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
+
+						require.Equal(t,
+							common.AddressLocation{
+								Address: address,
+								Name:    "",
+							},
+							location,
+						)
+
+						for _, identifier := range identifiers {
+							result = append(result, sema.ResolvedLocation{
+								Location: common.AddressLocation{
+									Address: location.(common.AddressLocation).Address,
+									Name:    identifier.Identifier,
+								},
+								Identifiers: []ast.Identifier{
+									identifier,
+								},
+							})
+						}
+						return
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		comp.Config.LocationHandler = func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
+
+			require.Equal(t,
+				common.AddressLocation{
+					Address: address,
+					Name:    "",
+				},
+				location,
+			)
+
+			for _, identifier := range identifiers {
+				result = append(result, sema.ResolvedLocation{
+					Location: common.AddressLocation{
+						Address: location.(common.AddressLocation).Address,
+						Name:    identifier.Identifier,
+					},
+					Identifiers: []ast.Identifier{
+						identifier,
+					},
+				})
+			}
+			return
+		}
+		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			return fooProgram
+		}
+
+		program := comp.Compile()
+		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+		vmConfig.BuiltinGlobalsProvider = VMBuiltinGlobalsProviderWithDefaultsAndPanic
+		_, fooContractValue := initializeContract(
+			t,
+			common.AddressLocation{
+				Address: address,
+				Name:    "Foo",
+			},
+			fooProgram,
+			vmConfig,
+		)
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			return fooProgram
+		}
+		vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
+			return fooContractValue
+		}
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+			require.Equal(t, fooChecker.Location, location)
+
+			elaboration := fooChecker.Elaboration
+			return elaboration.CompositeType(typeID)
+		}
+		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			require.Equal(t, fooChecker.Location, location)
+
+			elaboration := fooChecker.Elaboration
+			return elaboration.InterfaceType(typeID)
+		}
+
+		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+
+		result, err := vmInstance.InvokeExternally("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+
+		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), result)
+	})
+}
+
+func TestImportSameProgramFromMultiplePaths(t *testing.T) {
+
+	t.Parallel()
+
+	programs := map[common.Location]*CompiledProgram{}
+	contractValues := map[common.Location]*interpreter.CompositeValue{}
+
+	vmConfig := PrepareVMConfig(t, nil, programs)
+	vmConfig.ContractValueHandler = func(context *vm.Context, location common.Location) *interpreter.CompositeValue {
+		contractValue, ok := contractValues[location]
+		if !ok {
+			assert.FailNow(t, "invalid location")
+		}
+		return contractValue
+	}
+
+	// Prgram A
+
+	locationA := common.NewAddressLocation(
+		nil,
+		common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+		"A",
+	)
+
+	programA := ParseCheckAndCompileCodeWithOptions(t,
+		`
+            contract A {
+                enum E: UInt8 {
+                    case a
+                    case b
+                }
+            }
+        `,
+		locationA,
+		ParseCheckAndCompileOptions{},
+		programs,
+	)
+
+	_, contractValueA := initializeContract(
+		t,
+		locationA,
+		programA,
+		vmConfig,
+	)
+	contractValues[locationA] = contractValueA
+
+	// Program B
+	locationB := common.NewAddressLocation(
+		nil,
+		common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+		"B",
+	)
+
+	programB := ParseCheckAndCompileCodeWithOptions(t,
+		`
+            import A from 0x1
+
+            contract B {
+                fun foo() {
+                    A.E.a
+                }
+            }
+        `,
+		locationB,
+		ParseCheckAndCompileOptions{},
+		programs,
+	)
+
+	_, contractValueB := initializeContract(
+		t,
+		locationB,
+		programB,
+		vmConfig,
+	)
+	contractValues[locationB] = contractValueB
+
+	// Program C
+
+	locationC := common.NewAddressLocation(
+		nil,
+		common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3},
+		"C",
+	)
+
+	programC := ParseCheckAndCompileCodeWithOptions(t,
+		`
+            import A from 0x1
+
+            contract C {
+                fun bar() {
+                    A.E.b
+                }
+            }
+        `,
+		locationC,
+		ParseCheckAndCompileOptions{},
+		programs,
+	)
+
+	_, contractValueC := initializeContract(
+		t,
+		locationC,
+		programC,
+		vmConfig,
+	)
+	contractValues[locationC] = contractValueC
+
+	// Test script
+	_, err := CompileAndInvokeWithOptions(
+		t,
+		`
+            import B from 0x2
+            import C from 0x3
+
+            fun test() {
+                B.foo()
+                C.bar()
+            }
+        `,
+		"test",
+		CompilerAndVMOptions{
+			VMConfig: vmConfig,
+			Programs: programs,
+		},
+	)
+
+	require.NoError(t, err)
 }

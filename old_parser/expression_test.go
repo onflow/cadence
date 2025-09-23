@@ -33,7 +33,7 @@ import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
-	"github.com/onflow/cadence/parser/lexer"
+	"github.com/onflow/cadence/old_parser/lexer"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 

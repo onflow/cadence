@@ -389,9 +389,7 @@ func CompilerDefaultBuiltinGlobalsWithDefaultsAndLog(_ common.Location) *activat
 
 	activation.Set(
 		stdlib.LogFunctionName,
-		compiler.GlobalImport{
-			Name: stdlib.LogFunctionName,
-		},
+		compiler.NewGlobalImport(stdlib.LogFunctionName),
 	)
 
 	return activation
@@ -402,9 +400,7 @@ func CompilerDefaultBuiltinGlobalsWithDefaultsAndPanic(_ common.Location) *activ
 
 	activation.Set(
 		stdlib.PanicFunctionName,
-		compiler.GlobalImport{
-			Name: stdlib.PanicFunctionName,
-		},
+		compiler.NewGlobalImport(stdlib.PanicFunctionName),
 	)
 
 	return activation
@@ -415,9 +411,7 @@ func CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog(_ common.Location)
 
 	activation.Set(
 		conditionLogFunctionName,
-		compiler.GlobalImport{
-			Name: conditionLogFunctionName,
-		},
+		compiler.NewGlobalImport(conditionLogFunctionName),
 	)
 
 	return activation
@@ -697,46 +691,81 @@ func ContractValueHandler(contractName string, arguments ...vm.Value) vm.Contrac
 	}
 }
 
-func CompiledProgramsTypeLoader(
+func CompiledProgramsCompositeTypeLoader(
 	programs CompiledPrograms,
-) func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
-	return func(location common.Location, typeID interpreter.TypeID) (sema.Type, error) {
+) func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+	return func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
 		program, ok := programs[location]
 		if !ok {
-			return nil, interpreter.TypeLoadingError{
-				TypeID: typeID,
-			}
+			return nil
 		}
 
 		elaboration := program.DesugaredElaboration
 
 		compositeType := elaboration.CompositeType(typeID)
-		if compositeType != nil {
-			return compositeType, nil
-		}
 
-		interfaceType := elaboration.InterfaceType(typeID)
-		if interfaceType != nil {
-			return interfaceType, nil
-		}
-
-		entitlementType := elaboration.EntitlementType(typeID)
-		if entitlementType != nil {
-			return entitlementType, nil
-		}
-
-		entitlementMapType := elaboration.EntitlementMapType(typeID)
-		if entitlementMapType != nil {
-			return entitlementMapType, nil
-		}
-
-		return nil, interpreter.TypeLoadingError{
-			TypeID: typeID,
-		}
+		return compositeType
 	}
 }
 
-func compileAndInvokeWithOptionsAndPrograms(
+func CompiledProgramsInterfaceTypeLoader(
+	programs CompiledPrograms,
+) func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+	return func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+		program, ok := programs[location]
+		if !ok {
+			return nil
+		}
+
+		elaboration := program.DesugaredElaboration
+
+		interfaceType := elaboration.InterfaceType(typeID)
+
+		return interfaceType
+	}
+}
+
+func CompiledProgramsEntitlementTypeLoader(
+	programs CompiledPrograms,
+) func(location common.Location, typeID interpreter.TypeID) *sema.EntitlementType {
+	return func(location common.Location, typeID interpreter.TypeID) *sema.EntitlementType {
+		program, ok := programs[location]
+		if !ok {
+			return nil
+		}
+
+		elaboration := program.DesugaredElaboration
+
+		entitlementType := elaboration.EntitlementType(typeID)
+		if entitlementType != nil {
+			return entitlementType
+		}
+
+		return nil
+	}
+}
+
+func CompiledProgramsEntitlementMapTypeLoader(
+	programs CompiledPrograms,
+) func(location common.Location, typeID interpreter.TypeID) *sema.EntitlementMapType {
+	return func(location common.Location, typeID interpreter.TypeID) *sema.EntitlementMapType {
+		program, ok := programs[location]
+		if !ok {
+			return nil
+		}
+
+		elaboration := program.DesugaredElaboration
+
+		entitlementMapType := elaboration.EntitlementMapType(typeID)
+		if entitlementMapType != nil {
+			return entitlementMapType
+		}
+
+		return nil
+	}
+}
+
+func CompileAndInvokeWithOptionsAndPrograms(
 	t testing.TB,
 	code string,
 	funcName string,
@@ -795,8 +824,20 @@ func PrepareVMConfig(
 		}
 	}
 
-	if config.TypeLoader == nil {
-		config.TypeLoader = CompiledProgramsTypeLoader(programs)
+	if config.CompositeTypeHandler == nil {
+		config.CompositeTypeHandler = CompiledProgramsCompositeTypeLoader(programs)
+	}
+
+	if config.InterfaceTypeHandler == nil {
+		config.InterfaceTypeHandler = CompiledProgramsInterfaceTypeLoader(programs)
+	}
+
+	if config.EntitlementTypeHandler == nil {
+		config.EntitlementTypeHandler = CompiledProgramsEntitlementTypeLoader(programs)
+	}
+
+	if config.EntitlementMapTypeHandler == nil {
+		config.EntitlementMapTypeHandler = CompiledProgramsEntitlementMapTypeLoader(programs)
 	}
 
 	if config.ImportHandler == nil {

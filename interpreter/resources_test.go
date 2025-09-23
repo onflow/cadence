@@ -1451,6 +1451,12 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 
 		t.Parallel()
 
+		// Skip test when compiling, as the VM currently does not have
+		// the resource invalidation defensive check like the interpreter.
+		if *compile {
+			return
+		}
+
 		inter, err := parseCheckAndPrepareWithOptions(t,
 			`
             resource R {}
@@ -3012,33 +3018,36 @@ func TestInterpretMovedResourceInOptionalBinding(t *testing.T) {
 
 	t.Parallel()
 
-	inter, err := parseCheckAndPrepareWithOptions(t, `
-        resource R{}
+	inter, err := parseCheckAndPrepareWithOptions(t,
+		`
+          resource R{}
 
-        fun collect(copy2: @R?, _ arrRef: auth(Mutate) &[R]): @R {
-            arrRef.append(<- copy2!)
-            return <- create R()
-        }
+          fun collect(copy2: @R?, _ arrRef: auth(Mutate) &[R]): @R {
+              arrRef.append(<- copy2!)
+              return <- create R()
+          }
 
-        fun main() {
-            var victim: @R? <- create R()
-            var arr: @[R] <- []
+          fun main() {
+              var victim: @R? <- create R()
+              var arr: @[R] <- []
 
-            // In the optional binding below, the 'victim' must be invalidated
-            // before evaluation of the collect() call
-            if let copy1 <- victim <- collect(copy2: <- victim, &arr as auth(Mutate) &[R]) {
-                arr.append(<- copy1)
-            }
+              // In the optional binding below, the 'victim' must be invalidated
+              // before evaluation of the collect() call
+              if let copy1 <- victim <- collect(copy2: <- victim, &arr as auth(Mutate) &[R]) {
+                  arr.append(<- copy1)
+              }
 
-            destroy arr // This crashes
-            destroy victim
-        }
-    `, ParseCheckAndInterpretOptions{
-		HandleCheckerError: func(err error) {
-			errs := RequireCheckerErrors(t, err, 1)
-			assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+              destroy arr // This crashes
+              destroy victim
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(err error) {
+				errs := RequireCheckerErrors(t, err, 1)
+				assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+			},
 		},
-	})
+	)
 	require.NoError(t, err)
 
 	_, err = inter.Invoke("main")
@@ -3049,39 +3058,46 @@ func TestInterpretMovedResourceInOptionalBinding(t *testing.T) {
 	// Error must be thrown at `copy2: <- victim`
 	errorStartPos := invalidResourceError.LocationRange.StartPosition()
 	assert.Equal(t, 15, errorStartPos.Line)
-	assert.Equal(t, 56, errorStartPos.Column)
+	if *compile {
+		assert.Equal(t, 40, errorStartPos.Column)
+	} else {
+		assert.Equal(t, 58, errorStartPos.Column)
+	}
 }
 
 func TestInterpretMovedResourceInSecondValue(t *testing.T) {
 
 	t.Parallel()
 
-	inter, err := parseCheckAndPrepareWithOptions(t, `
-        resource R{}
+	inter, err := parseCheckAndPrepareWithOptions(t,
+		`
+          resource R{}
 
-        fun collect(copy2: @R?, _ arrRef: auth(Mutate) &[R]): @R {
-            arrRef.append(<- copy2!)
-            return <- create R()
-        }
+          fun collect(copy2: @R?, _ arrRef: auth(Mutate) &[R]): @R {
+              arrRef.append(<- copy2!)
+              return <- create R()
+          }
 
-        fun main() {
-            var victim: @R? <- create R()
-            var arr: @[R] <- []
+          fun main() {
+              var victim: @R? <- create R()
+              var arr: @[R] <- []
 
-            // In the optional binding below, the 'victim' must be invalidated
-            // before evaluation of the collect() call
-            let copy1 <- victim <- collect(copy2: <- victim, &arr as auth(Mutate) &[R])
+              // In the optional binding below, the 'victim' must be invalidated
+              // before evaluation of the collect() call
+              let copy1 <- victim <- collect(copy2: <- victim, &arr as auth(Mutate) &[R])
 
-            destroy copy1
-            destroy arr
-         destroy victim
-        }
-    `, ParseCheckAndInterpretOptions{
-		HandleCheckerError: func(err error) {
-			errs := RequireCheckerErrors(t, err, 1)
-			assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+              destroy copy1
+              destroy arr
+           destroy victim
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(err error) {
+				errs := RequireCheckerErrors(t, err, 1)
+				assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+			},
 		},
-	})
+	)
 	require.NoError(t, err)
 
 	_, err = inter.Invoke("main")
@@ -3092,7 +3108,11 @@ func TestInterpretMovedResourceInSecondValue(t *testing.T) {
 	// Error must be thrown at `copy2: <- victim`
 	errorStartPos := invalidResourceError.LocationRange.StartPosition()
 	assert.Equal(t, 15, errorStartPos.Line)
-	assert.Equal(t, 53, errorStartPos.Column)
+	if *compile {
+		assert.Equal(t, 37, errorStartPos.Column)
+	} else {
+		assert.Equal(t, 55, errorStartPos.Column)
+	}
 }
 
 func TestInterpretResourceLoss(t *testing.T) {

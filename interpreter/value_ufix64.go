@@ -22,12 +22,14 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
+	"math/big"
 
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/values"
 )
@@ -117,6 +119,20 @@ func ConvertUFix64(memoryGauge common.MemoryGauge, value Value, locationRange Lo
 			func() uint64 {
 				return uint64(value)
 			},
+		)
+
+	case Fix128Value:
+		return fix128BigIntToUFix64(
+			memoryGauge,
+			value.ToBigInt(),
+			locationRange,
+		)
+
+	case UFix128Value:
+		return fix128BigIntToUFix64(
+			memoryGauge,
+			value.ToBigInt(),
+			locationRange,
 		)
 
 	case BigNumberValue:
@@ -229,9 +245,8 @@ func (v UFix64Value) Plus(context NumberValueArithmeticContext, other NumberValu
 		})
 	}
 	result, err := v.UFix64Value.Plus(context, o.UFix64Value)
-	if err != nil {
-		panic(err)
-	}
+	handleFix64Error(err, locationRange)
+
 	return UFix64Value{UFix64Value: result}
 }
 
@@ -247,9 +262,8 @@ func (v UFix64Value) SaturatingPlus(context NumberValueArithmeticContext, other 
 	}
 
 	result, err := v.UFix64Value.SaturatingPlus(context, o.UFix64Value)
-	if err != nil {
-		panic(err)
-	}
+	handleFix64Error(err, locationRange)
+
 	return UFix64Value{UFix64Value: result}
 }
 
@@ -265,9 +279,8 @@ func (v UFix64Value) Minus(context NumberValueArithmeticContext, other NumberVal
 	}
 
 	result, err := v.UFix64Value.Minus(context, o.UFix64Value)
-	if err != nil {
-		panic(err)
-	}
+	handleFix64Error(err, locationRange)
+
 	return UFix64Value{UFix64Value: result}
 }
 
@@ -283,9 +296,8 @@ func (v UFix64Value) SaturatingMinus(context NumberValueArithmeticContext, other
 	}
 
 	result, err := v.UFix64Value.SaturatingMinus(context, o.UFix64Value)
-	if err != nil {
-		panic(err)
-	}
+	handleFix64Error(err, locationRange)
+
 	return UFix64Value{UFix64Value: result}
 }
 
@@ -301,9 +313,8 @@ func (v UFix64Value) Mul(context NumberValueArithmeticContext, other NumberValue
 	}
 
 	result, err := v.UFix64Value.Mul(context, o.UFix64Value)
-	if err != nil {
-		panic(err)
-	}
+	handleFix64Error(err, locationRange)
+
 	return UFix64Value{UFix64Value: result}
 }
 
@@ -319,9 +330,8 @@ func (v UFix64Value) SaturatingMul(context NumberValueArithmeticContext, other N
 	}
 
 	result, err := v.UFix64Value.SaturatingMul(context, o.UFix64Value)
-	if err != nil {
-		panic(err)
-	}
+	handleFix64Error(err, locationRange)
+
 	return UFix64Value{UFix64Value: result}
 }
 
@@ -337,9 +347,8 @@ func (v UFix64Value) Div(context NumberValueArithmeticContext, other NumberValue
 	}
 
 	result, err := v.UFix64Value.Div(context, o.UFix64Value)
-	if err != nil {
-		panic(err)
-	}
+	handleFix64Error(err, locationRange)
+
 	return UFix64Value{UFix64Value: result}
 }
 
@@ -360,9 +369,8 @@ func (v UFix64Value) Mod(context NumberValueArithmeticContext, other NumberValue
 	}
 
 	result, err := v.UFix64Value.Mod(context, o.UFix64Value)
-	if err != nil {
-		panic(err)
-	}
+	handleFix64Error(err, locationRange)
+
 	return UFix64Value{UFix64Value: result}
 }
 
@@ -503,4 +511,49 @@ func (UFix64Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 
 func (v UFix64Value) IntegerPart() NumberValue {
 	return UInt64Value(v.UFix64Value.IntegerPart())
+}
+
+func fix128BigIntToUFix64(
+	memoryGauge common.MemoryGauge,
+	bigInt *big.Int,
+	locationRange LocationRange,
+) UFix64Value {
+
+	if bigInt.Cmp(fixedpoint.UFix64TypeMaxScaledTo128) > 0 {
+		panic(&OverflowError{
+			LocationRange: locationRange,
+		})
+	} else if bigInt.Cmp(fixedpoint.UFix64TypeMinScaledTo128) < 0 {
+		panic(&UnderflowError{
+			LocationRange: locationRange,
+		})
+	}
+
+	bigInt = bigInt.Div(bigInt, fixedpoint.Fix64ToFix128FactorAsBigInt)
+
+	return NewUFix64Value(
+		memoryGauge,
+		func() uint64 {
+			// Already checked the bounds above.
+			// So safe to directly convert to uint64.
+			return bigInt.Uint64()
+		},
+	)
+}
+
+func handleFix64Error(err error, locationRange LocationRange) {
+	switch err.(type) {
+	case nil:
+		return
+	case values.OverflowError:
+		panic(&OverflowError{
+			LocationRange: locationRange,
+		})
+	case values.UnderflowError:
+		panic(&UnderflowError{
+			LocationRange: locationRange,
+		})
+	default:
+		panic(err)
+	}
 }

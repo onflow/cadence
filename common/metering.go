@@ -35,6 +35,14 @@ type MemoryGauge interface {
 	MeterMemory(usage MemoryUsage) error
 }
 
+type FunctionMemoryGauge func(usage MemoryUsage) error
+
+var _ MemoryGauge = FunctionMemoryGauge(nil)
+
+func (f FunctionMemoryGauge) MeterMemory(usage MemoryUsage) error {
+	return f(usage)
+}
+
 type ComputationUsage struct {
 	Kind      ComputationKind
 	Intensity uint64
@@ -44,34 +52,20 @@ type ComputationGauge interface {
 	MeterComputation(usage ComputationUsage) error
 }
 
+type FunctionComputationGauge func(usage ComputationUsage) error
+
+var _ ComputationGauge = FunctionComputationGauge(nil)
+
+func (f FunctionComputationGauge) MeterComputation(usage ComputationUsage) error {
+	return f(usage)
+}
+
 // Gauge combines a memory and computation gauge.
 // Metering-sites can use this combined interface
 // if they need to do both memory and computation metering.
 type Gauge interface {
 	MemoryGauge
 	ComputationGauge
-}
-
-// CombinedGauge is a Gauge, i.e. it allows metering both memory and computation,
-// by delegating to an independent memory gauge and independent computation gauge.
-//
-// It is mostly just a convenience/helper type, which is useful for e.g. tests,
-// where one has an independent (test) memory gauge, and an independent (test) computation gauge.
-type CombinedGauge struct {
-	MemoryGauge
-	ComputationGauge
-}
-
-var _ Gauge = CombinedGauge{}
-
-func NewCombinedGauge(
-	memoryGauge MemoryGauge,
-	computationGauge ComputationGauge,
-) Gauge {
-	return CombinedGauge{
-		MemoryGauge:      memoryGauge,
-		ComputationGauge: computationGauge,
-	}
 }
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {

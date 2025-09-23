@@ -21,13 +21,13 @@ package vm
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
-	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -88,8 +88,6 @@ func NewVM(
 	)
 
 	vm.globals = linkedGlobals.indexedGlobals
-
-	vm.initializeGlobalVariables(program)
 
 	return vm
 }
@@ -237,10 +235,16 @@ func (vm *VM) pushCallFrame(functionValue CompiledFunctionValue, receiver Value,
 		vm.ipStack[len(vm.ipStack)-1] = vm.ip
 	}
 
+	var startTime time.Time
+	if interpreter.TracingEnabled {
+		startTime = time.Now()
+	}
+
 	callFrame := callFrame{
 		localsCount:  localsCount,
 		localsOffset: offset,
 		function:     functionValue,
+		startTime:    startTime,
 	}
 
 	vm.ipStack = append(vm.ipStack, 0)
@@ -251,6 +255,19 @@ func (vm *VM) pushCallFrame(functionValue CompiledFunctionValue, receiver Value,
 }
 
 func (vm *VM) popCallFrame() {
+
+	if interpreter.TracingEnabled {
+		startTime := vm.callFrame.startTime
+		function := vm.callFrame.function
+		defer func() {
+			vm.context.ReportInvokeTrace(
+				function.FunctionType(vm.context).String(),
+				function.Function.QualifiedName,
+				time.Since(startTime),
+			)
+		}()
+	}
+
 	// Close all open upvalues before popping the locals.
 	// The order of the closing does not matter
 	for absoluteLocalsIndex, upvalue := range vm.callFrame.openUpvalues { //nolint:maprange
@@ -739,7 +756,9 @@ func opGetConstant(vm *VM, ins opcode.InstructionGetConstant) {
 	executable := vm.callFrame.function.Executable
 	c := executable.Constants[constantIndex]
 	if c == nil {
-		c = vm.initializeConstant(constantIndex)
+		// Constants referred-to by `InstructionGetConstant`
+		// are always value-typed constants.
+		c = vm.initializeValueTypedConstant(constantIndex)
 	}
 	vm.push(c)
 }
@@ -910,39 +929,6 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 	vm.push(boundFunction)
 }
 
-func opInvokeMethodDynamic(vm *VM, ins opcode.InstructionInvokeDynamic) {
-	// TODO: This method is now equivalent to: `GetField` + `Invoke` instructions.
-	// See if it can be replaced. That will reduce the complexity of `invokeFunction` method below.
-
-	// Load type arguments
-	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
-
-	// Load arguments
-	arguments := vm.popN(int(ins.ArgCount))
-
-	// Load the invoked value
-	receiver := vm.pop()
-
-	// Get function
-	nameIndex := ins.Name
-	funcName := getStringConstant(vm, nameIndex)
-
-	// Load the invoked value
-	memberAccessibleValue := receiver.(interpreter.MemberAccessibleValue)
-	functionValue := memberAccessibleValue.GetMember(
-		vm.context,
-		EmptyLocationRange,
-		funcName,
-	)
-
-	invokeFunction(
-		vm,
-		functionValue,
-		arguments,
-		typeArguments,
-	)
-}
-
 func invokeFunction(
 	vm *VM,
 	functionValue Value,
@@ -951,6 +937,8 @@ func invokeFunction(
 ) {
 	context := vm.context
 	common.UseComputation(context, common.FunctionInvocationComputationUsage)
+
+	originalFunctionValue := functionValue.(FunctionValue)
 
 	// Handle all function types in a single place, so this can be re-used everywhere.
 
@@ -966,15 +954,32 @@ func invokeFunction(
 		if isBoundFunction {
 			// For compiled functions, pass the receiver as an implicit-reference.
 			// Because the `self` value can be accessed by user-code.
-			receiver = boundFunction.Receiver(vm.context)
+			receiver = boundFunction.Receiver(context)
 		}
+
+		// Trace is reported in `popCallFrame`, to also include the execution time.
+
 		vm.pushCallFrame(functionValue, receiver, arguments)
 
 	case *NativeFunctionValue:
 		if isBoundFunction {
 			// For built-in functions, pass the dereferenced receiver.
-			receiver = boundFunction.DereferencedReceiver(vm.context)
+			receiver = boundFunction.DereferencedReceiver(context)
 		}
+
+		if interpreter.TracingEnabled {
+			startTime := time.Now()
+			defer func() {
+				context.ReportInvokeTrace(
+					// Use the original function value, to get the correct type.
+					// The native function value might have been wrapped in a bound function.
+					originalFunctionValue.FunctionType(context).String(),
+					functionValue.Name,
+					time.Since(startTime),
+				)
+			}()
+		}
+
 		result := functionValue.Function(context, typeArguments, receiver, arguments...)
 		vm.push(result)
 
@@ -1063,11 +1068,13 @@ func opNewCompositeAt(vm *VM, ins opcode.InstructionNewCompositeAt) {
 	executable := vm.callFrame.function.Executable
 	c := executable.Program.Constants[ins.Address]
 
+	addressValue := c.Data.(interpreter.AddressValue)
+
 	compositeValue := newCompositeValue(
 		vm,
 		ins.Kind,
 		ins.Type,
-		common.MustBytesToAddress(c.Data),
+		addressValue.ToAddress(),
 	)
 	vm.push(compositeValue)
 }
@@ -1109,7 +1116,7 @@ func opSetField(vm *VM, ins opcode.InstructionSetField) {
 
 	// VM assumes the field name is always a string.
 	fieldNameIndex := ins.FieldName
-	fieldName := getStringConstant(vm, fieldNameIndex)
+	fieldName := getRawStringConstant(vm, fieldNameIndex)
 
 	memberAccessibleValue := target.(interpreter.MemberAccessibleValue)
 	memberAccessibleValue.SetMember(
@@ -1131,7 +1138,7 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 
 	// VM assumes the field name is always a string.
 	fieldNameIndex := ins.FieldName
-	fieldName := getStringConstant(vm, fieldNameIndex)
+	fieldName := getRawStringConstant(vm, fieldNameIndex)
 
 	fieldValue := memberAccessibleValue.GetMember(vm.context, EmptyLocationRange, fieldName)
 	if fieldValue == nil {
@@ -1146,7 +1153,7 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 func checkMemberAccessTargetType(
 	vm *VM,
 	accessedTypeIndex uint16,
-	accessedValue interpreter.Value,
+	accessedValue Value,
 ) {
 	accessedType := vm.loadType(accessedTypeIndex)
 
@@ -1168,7 +1175,7 @@ func opRemoveField(vm *VM, ins opcode.InstructionRemoveField) {
 
 	// VM assumes the field name is always a string.
 	fieldNameIndex := ins.FieldName
-	fieldName := getStringConstant(vm, fieldNameIndex)
+	fieldName := getRawStringConstant(vm, fieldNameIndex)
 
 	fieldValue := memberAccessibleValue.RemoveMember(vm.context, EmptyLocationRange, fieldName)
 	if fieldValue == nil {
@@ -1180,10 +1187,10 @@ func opRemoveField(vm *VM, ins opcode.InstructionRemoveField) {
 	vm.push(fieldValue)
 }
 
-func getStringConstant(vm *VM, index uint16) string {
+func getRawStringConstant(vm *VM, index uint16) string {
 	executable := vm.callFrame.function.Executable
 	c := executable.Program.Constants[index]
-	return string(c.Data)
+	return c.Data.(string)
 }
 
 func opTransferAndConvert(vm *VM, ins opcode.InstructionTransferAndConvert) {
@@ -1231,7 +1238,7 @@ func opDestroy(vm *VM) {
 
 func opNewPath(vm *VM, ins opcode.InstructionNewPath) {
 	identifierIndex := ins.Identifier
-	identifier := getStringConstant(vm, identifierIndex)
+	identifier := getRawStringConstant(vm, identifierIndex)
 	value := interpreter.NewPathValue(
 		vm.context.MemoryGauge,
 		ins.Domain,
@@ -1720,8 +1727,6 @@ func (vm *VM) run() {
 			opGetMethod(vm, ins)
 		case opcode.InstructionInvoke:
 			opInvoke(vm, ins)
-		case opcode.InstructionInvokeDynamic:
-			opInvokeMethodDynamic(vm, ins)
 		case opcode.InstructionDrop:
 			opDrop(vm)
 		case opcode.InstructionDup:
@@ -1816,7 +1821,7 @@ func opEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
 	eventFields := vm.popN(int(ins.ArgCount))
 
 	// Make a copy, since the slice can get mutated, since the stack is reused.
-	fields := make([]interpreter.Value, len(eventFields))
+	fields := make([]Value, len(eventFields))
 	copy(fields, eventFields)
 
 	context.EmitEvent(
@@ -1887,97 +1892,11 @@ func opStatement(vm *VM) {
 	common.UseComputation(vm.context, common.StatementComputationUsage)
 }
 
-func (vm *VM) initializeConstant(index uint16) (value Value) {
+func (vm *VM) initializeValueTypedConstant(index uint16) Value {
 	executable := vm.callFrame.function.Executable
 	c := executable.Program.Constants[index]
 
-	memoryGauge := vm.context.MemoryGauge
-
-	switch c.Kind {
-	case constant.String:
-		value = interpreter.NewUnmeteredStringValue(string(c.Data))
-
-	case constant.Character:
-		value = interpreter.NewUnmeteredCharacterValue(string(c.Data))
-
-	case constant.Int:
-		value = interpreter.NewIntValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Int8:
-		value = interpreter.NewInt8ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Int16:
-		value = interpreter.NewInt16ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Int32:
-		value = interpreter.NewInt32ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Int64:
-		value = interpreter.NewInt64ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Int128:
-		value = interpreter.NewInt128ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Int256:
-		value = interpreter.NewInt256ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt:
-		value = interpreter.NewUIntValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt8:
-		value = interpreter.NewUInt8ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt16:
-		value = interpreter.NewUInt16ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt32:
-		value = interpreter.NewUInt32ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt64:
-		value = interpreter.NewUInt64ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt128:
-		value = interpreter.NewUInt128ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt256:
-		value = interpreter.NewUInt256ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Word8:
-		value = interpreter.NewWord8ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Word16:
-		value = interpreter.NewWord16ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Word32:
-		value = interpreter.NewWord32ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Word64:
-		value = interpreter.NewWord64ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Word128:
-		value = interpreter.NewWord128ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Word256:
-		value = interpreter.NewWord256ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Fix64:
-		value = interpreter.NewFix64ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UFix64:
-		value = interpreter.NewUFix64ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Address:
-		value = interpreter.NewAddressValueFromBytes(
-			memoryGauge,
-			func() []byte {
-				return c.Data
-			},
-		)
-
-	default:
-		panic(errors.NewUnexpectedError("unsupported constant kind: %s", c.Kind))
-	}
-
+	value := c.Data.(Value)
 	executable.Constants[index] = value
 
 	return value
@@ -2063,13 +1982,6 @@ func (vm *VM) Reset() {
 	context.invokeFunction = vm.invokeFunction
 	context.lookupFunction = vm.lookupFunction
 	vm.context = context
-}
-
-func (vm *VM) initializeGlobalVariables(program *bbq.InstructionProgram) {
-	for _, variable := range program.Variables {
-		// Get the values to ensure they are initialized.
-		_ = vm.Global(variable.Name)
-	}
 }
 
 func (vm *VM) Global(name string) Value {

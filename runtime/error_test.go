@@ -102,7 +102,7 @@ func TestRuntimeError(t *testing.T) {
 				" --> 0100000000000000000000000000000000000000000000000000000000000000:1:0\n"+
 				"  |\n"+
 				"1 | fun test() {}\n"+
-				"  | ^ add an access modifier like `access(all)`, `access(contract)`, or `access(self)`\n",
+				"  | ^ an access modifier is required for this declaration; add an access modifier, like e.g. `access(all)` or `access(self)`\n",
 		)
 	})
 
@@ -233,12 +233,12 @@ func TestRuntimeError(t *testing.T) {
 15 | 				destroy createResource()
    | 				^^^^^^^^^^^^^^^^^^^^^^^^
 
-  --> 0100000000000000000000000000000000000000000000000000000000000000:9:21
+  --> 0100000000000000000000000000000000000000000000000000000000000000:9:4
    |
  9 | 				return <- create Resource(
 10 | 					s: "argument"
 11 | 				)
-   | 				^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   | 				^
 
 error: panic: 42
  --> 0100000000000000000000000000000000000000000000000000000000000000:4:5
@@ -356,7 +356,7 @@ error: panic: 42
 				" --> imported:1:0\n"+
 				"  |\n"+
 				"1 | fun test() {}\n"+
-				"  | ^ add an access modifier like `access(all)`, `access(contract)`, or `access(self)`\n",
+				"  | ^ an access modifier is required for this declaration; add an access modifier, like e.g. `access(all)` or `access(self)`\n",
 		)
 	})
 
@@ -493,15 +493,13 @@ error: overflow
 				" --> 0000000000000002.B:3:30\n"+
 				"  |\n"+
 				"3 |               access(all) fun bar() {\n"+
-				"  |                               ^^^ move the declaration inside a contract or function\n"+
-				"\n"+
-				"  See documentation at: https://cadence-lang.org/docs/language/constants-and-variables\n"+
+				"  |                               ^^^ move this declaration into a contract\n"+
 				"\n"+
 				"error: cannot find variable in this scope: `X`\n"+
 				" --> 0000000000000002.B:5:18\n"+
 				"  |\n"+
 				"5 |                   X\n"+
-				"  |                   ^ not found in this scope\n"+
+				"  |                   ^ not found in this scope; check for typos or declare it\n"+
 				"\n"+
 				"  See documentation at: https://cadence-lang.org/docs/language/constants-and-variables\n"+
 				"\n"+
@@ -509,15 +507,13 @@ error: overflow
 				" --> 0000000000000001.A:8:30\n"+
 				"  |\n"+
 				"8 |               access(all) fun foo() {\n"+
-				"  |                               ^^^ move the declaration inside a contract or function\n"+
-				"\n"+
-				"  See documentation at: https://cadence-lang.org/docs/language/constants-and-variables\n"+
+				"  |                               ^^^ move this declaration into a contract\n"+
 				"\n"+
 				"error: cannot find variable in this scope: `Y`\n"+
 				"  --> 0000000000000001.A:10:18\n"+
 				"   |\n"+
 				"10 |                   Y\n"+
-				"   |                   ^ not found in this scope\n"+
+				"   |                   ^ not found in this scope; check for typos or declare it\n"+
 				"\n"+
 				"  See documentation at: https://cadence-lang.org/docs/language/constants-and-variables\n"+
 				"\n",

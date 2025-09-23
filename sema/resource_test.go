@@ -1536,33 +1536,101 @@ func TestCheckInvalidResourceCreationWithoutCreate(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
+	const code = `
       resource X {}
 
       let x <- X()
-    `)
+    `
+	_, err := ParseAndCheck(t, code)
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.MissingCreateError{}, errs[0])
+	var missingCreateError *sema.MissingCreateError
+	require.ErrorAs(t, errs[0], &missingCreateError)
 
+	fixes := missingCreateError.SuggestFixes(code)
+
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert `create`",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: "create ",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 37, Line: 4, Column: 15},
+							EndPos:   ast.Position{Offset: 37, Line: 4, Column: 15},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	const expected = `
+      resource X {}
+
+      let x <- create X()
+    `
+
+	assert.Equal(t,
+		expected,
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestCheckInvalidDestroy(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
+	const code = `
       struct X {}
 
       fun test() {
-          destroy X()
+          destroy X()// after
       }
-    `)
+    `
+	_, err := ParseAndCheck(t, code)
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.InvalidDestructionError{}, errs[0])
+	var destructionError *sema.InvalidDestructionError
+	require.ErrorAs(t, errs[0], &destructionError)
+
+	fixes := destructionError.SuggestFixes(code)
+
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Remove `destroy` expression",
+				TextEdits: []ast.TextEdit{
+					{
+						Replacement: "",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 49, Line: 5, Column: 10},
+							EndPos:   ast.Position{Offset: 59, Line: 5, Column: 20},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	const expected = `
+      struct X {}
+
+      fun test() {
+          // after
+      }
+    `
+
+	assert.Equal(t,
+		expected,
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+
 }
 
 func TestCheckUnaryCreateAndDestroy(t *testing.T) {
@@ -1630,17 +1698,52 @@ func TestCheckInvalidUnaryCreateStruct(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
+	const code = `
       struct X {}
 
       fun test() {
           create X()
       }
-    `)
+    `
+	_, err := ParseAndCheck(t, code)
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.InvalidConstructionError{}, errs[0])
+	var invalidConstructionErr *sema.InvalidConstructionError
+	require.ErrorAs(t, errs[0], &invalidConstructionErr)
+
+	fixes := invalidConstructionErr.SuggestFixes(code)
+
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Remove `create`",
+				TextEdits: []ast.TextEdit{
+					{
+						Replacement: "",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 49, Line: 5, Column: 10},
+							EndPos:   ast.Position{Offset: 55, Line: 5, Column: 16},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	const expected = `
+      struct X {}
+
+      fun test() {
+          X()
+      }
+    `
+
+	assert.Equal(t,
+		expected,
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestCheckInvalidCreateImportedResource(t *testing.T) {
@@ -1903,17 +2006,52 @@ func TestCheckInvalidResourceReturnMissingMove(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
+	const code = `
       resource X {}
 
       fun test(): @X {
           return create X()
       }
-    `)
+    `
+	_, err := ParseAndCheck(t, code)
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.MissingMoveOperationError{}, errs[0])
+	var missingMoveErr *sema.MissingMoveOperationError
+	require.ErrorAs(t, errs[0], &missingMoveErr)
+
+	fixes := missingMoveErr.SuggestFixes(code)
+
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert `<-`",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: "<-",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 62, Line: 5, Column: 17},
+							EndPos:   ast.Position{Offset: 62, Line: 5, Column: 17},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	const expected = `
+      resource X {}
+
+      fun test(): @X {
+          return <-create X()
+      }
+    `
+
+	assert.Equal(t,
+		expected,
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestCheckInvalidResourceReturnMissingMoveInvalidReturnType(t *testing.T) {
@@ -1938,17 +2076,51 @@ func TestCheckInvalidNonResourceReturnWithMove(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
+	const code = `
       struct X {}
 
       fun test(): X {
           return <-X()
       }
-    `)
+    `
+	_, err := ParseAndCheck(t, code)
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.InvalidMoveOperationError{}, errs[0])
+	var invalidMoveOpErr *sema.InvalidMoveOperationError
+	require.ErrorAs(t, errs[0], &invalidMoveOpErr)
+
+	fixes := invalidMoveOpErr.SuggestFixes(code)
+
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Remove `<-`",
+				TextEdits: []ast.TextEdit{
+					{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 59, Line: 5, Column: 17},
+							EndPos:   ast.Position{Offset: 60, Line: 5, Column: 18},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	const expected = `
+      struct X {}
+
+      fun test(): X {
+          return X()
+      }
+    `
+
+	assert.Equal(t,
+		expected,
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }
 
 func TestCheckResourceArgument(t *testing.T) {
@@ -10491,4 +10663,98 @@ func TestInterpretInvalidNilCoalescingResourceDuplication(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 	assert.IsType(t, &sema.InvalidNilCoalescingRightResourceOperandError{}, errs[0])
+}
+
+func TestCheckMissingResourceAnnotation(t *testing.T) {
+	t.Parallel()
+
+	const code = `
+      resource R {}
+
+      fun test(r: R) { destroy r }
+    `
+	_, err := ParseAndCheck(t, code)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	var missingAnnotationErr *sema.MissingResourceAnnotationError
+	require.ErrorAs(t, errs[0], &missingAnnotationErr)
+
+	fixes := missingAnnotationErr.SuggestFixes(code)
+
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Insert `@`",
+				TextEdits: []ast.TextEdit{
+					{
+						Insertion: "@",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 40, Line: 4, Column: 18},
+							EndPos:   ast.Position{Offset: 40, Line: 4, Column: 18},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	const expected = `
+      resource R {}
+
+      fun test(r: @R) { destroy r }
+    `
+
+	assert.Equal(t,
+		expected,
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
+}
+
+func TestCheckInvalidResourceAnnotation(t *testing.T) {
+	t.Parallel()
+
+	const code = `
+      struct S {}
+
+      fun test(s: @S) {}
+    `
+	_, err := ParseAndCheck(t, code)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	var invalidAnnotationErr *sema.InvalidResourceAnnotationError
+	require.ErrorAs(t, errs[0], &invalidAnnotationErr)
+
+	fixes := invalidAnnotationErr.SuggestFixes(code)
+
+	AssertEqualWithDiff(t,
+		[]errors.SuggestedFix[ast.TextEdit]{
+			{
+				Message: "Remove `@`",
+				TextEdits: []ast.TextEdit{
+					{
+						Replacement: "",
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 38, Line: 4, Column: 18},
+							EndPos:   ast.Position{Offset: 38, Line: 4, Column: 18},
+						},
+					},
+				},
+			},
+		},
+		fixes,
+	)
+
+	const expected = `
+      struct S {}
+
+      fun test(s: S) {}
+    `
+
+	assert.Equal(t,
+		expected,
+		fixes[0].TextEdits[0].ApplyTo(code),
+	)
 }

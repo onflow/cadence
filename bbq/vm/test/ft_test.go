@@ -20,10 +20,14 @@ package test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/bbq"
@@ -98,23 +102,17 @@ func compiledFTTransfer(tb testing.TB) {
 
 			activation.Set(
 				stdlib.AssertFunctionName,
-				compiler.GlobalImport{
-					Name: stdlib.AssertFunctionName,
-				},
+				compiler.NewGlobalImport(stdlib.AssertFunctionName),
 			)
 
 			activation.Set(
 				stdlib.GetAccountFunctionName,
-				compiler.GlobalImport{
-					Name: stdlib.GetAccountFunctionName,
-				},
+				compiler.NewGlobalImport(stdlib.GetAccountFunctionName),
 			)
 
 			activation.Set(
 				stdlib.PanicFunctionName,
-				compiler.GlobalImport{
-					Name: stdlib.PanicFunctionName,
-				},
+				compiler.NewGlobalImport(stdlib.PanicFunctionName),
 			)
 
 			return activation
@@ -430,8 +428,10 @@ func compiledFTTransfer(tb testing.TB) {
 		}
 	}
 
-	for loop() {
+	// Uncomment to enable tracing.
+	//vmConfig.Tracer = interpreter.CallbackTracer(printTrace)
 
+	for loop() {
 		err := tokenTransferTxVM.InvokeTransaction(tokenTransferTxArgs, tokenTransferTxAuthorizer)
 		require.NoError(tb, err)
 		require.Equal(tb, 0, tokenTransferTxVM.StackSize())
@@ -444,6 +444,8 @@ func compiledFTTransfer(tb testing.TB) {
 	if b != nil {
 		b.StopTimer()
 	}
+
+	vmConfig.Tracer = nil
 
 	// Run validation scripts
 
@@ -491,4 +493,30 @@ func TestFTTransfer(t *testing.T) {
 func BenchmarkFTTransfer(b *testing.B) {
 
 	compiledFTTransfer(b)
+}
+
+func printTrace(
+	operationName string,
+	_ time.Duration,
+	attrs []attribute.KeyValue,
+) {
+	sb := strings.Builder{}
+	sb.WriteString(operationName)
+
+	attributesLength := len(attrs)
+
+	if attributesLength > 0 {
+		sb.WriteString(": ")
+		for i, attr := range attrs {
+			sb.WriteString(string(attr.Key))
+			sb.WriteString(":")
+			sb.WriteString(attr.Value.AsString())
+
+			if i < attributesLength-1 {
+				sb.WriteString(", ")
+			}
+		}
+	}
+
+	fmt.Println(sb.String())
 }
