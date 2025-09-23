@@ -16,29 +16,6 @@
  * limitations under the License.
  */
 
-package subtype_gen
+package interpreter
 
-// Type represents parsed type information using Cadence types
-type Type interface {
-	Name() string
-}
-
-type SimpleType struct {
-	name string
-}
-
-var _ Type = &SimpleType{}
-
-func (t SimpleType) Name() string {
-	return t.name
-}
-
-type ComplexType struct {
-	name string
-}
-
-var _ Type = &ComplexType{}
-
-func (t ComplexType) Name() string {
-	return t.name
-}
+//go:generate go run ./type_check_gen subtype_check.gen.go

@@ -1,9 +1,9 @@
 rules:
-  - super: Any
+  - super: AnyType
     predicate:
       always
 
-  - super: AnyStruct
+  - super: AnyStructType
     predicate:
       and:
         - not:
@@ -11,30 +11,30 @@ rules:
         - not:
             equals:
               source: sub
-              target: Any
+              target: AnyType
 
-  - super: AnyResource
+  - super: AnyResourceType
     predicate:
       isResource: sub
 
-  - super: AnyResourceAttachment
+  - super: AnyResourceAttachmentType
     predicate:
       and:
         - isAttachment: sub
         - isResource: sub
 
-  - super: AnyStructAttachment
+  - super: AnyStructAttachmentType
     predicate:
       and:
         - isAttachment: sub
         - not:
             isResource: sub
 
-  - super: HashableStruct
+  - super: HashableStructType
     predicate:
       isHashableStruct: sub
 
-  - super: Path
+  - super: PathType
     predicate:
       subtype:
         sub: sub
@@ -42,94 +42,94 @@ rules:
           # Maybe use 'or' predicate here instead?
           # The difference is 'or' is a predicate containing zero or more inner predicates.
           # Whereas, 'oneOfTypes' contains zero or more types, not predicates.
-          oneOfTypes: [StoragePath, CapabilityPath]
+          oneOfTypes: [StoragePathType, CapabilityPathType]
 
-  - super: Storable
+  - super: StorableType
     predicate:
       isStorable: sub
 
-  - super: CapabilityPath
+  - super: CapabilityPathType
     predicate:
       equals:
         source: sub
         target:
-          oneOfTypes: [PrivatePath, PublicPath]
+          oneOfTypes: [PrivatePathType, PublicPathType]
 
-  - super: Number
+  - super: NumberType
     predicate:
       or:
         - equals:
             source: sub
             target:
-              oneOfTypes: [Number, SignedNumber]
+              oneOfTypes: [NumberType, SignedNumberType]
 
         - subtype:
             sub: sub
             super:
-              oneOfTypes: [Integer, FixedPoint]
+              oneOfTypes: [IntegerType, FixedPointType]
 
-  - super: SignedNumber
+  - super: SignedNumberType
     predicate:
       or:
         - equals:
             source: sub
-            target: SignedNumber
+            target: SignedNumberType
 
         - subtype:
             sub: sub
             super:
-              oneOfTypes: [SignedInteger, SignedFixedPoint]
+              oneOfTypes: [SignedIntegerType, SignedFixedPointType]
 
-  - super: Integer
-    predicate:
-      or:
-        - equals:
-            source: sub
-            target:
-              oneOfTypes: [Integer, SignedInteger, FixedSizeUnsignedInteger, UInt]
-
-        - subtype:
-            sub: sub
-            super:
-              oneOfTypes: [SignedInteger, FixedSizeUnsignedInteger]
-
-  - super: SignedInteger
-    predicate:
-      equals:
-        source: sub
-        target:
-          oneOfTypes: [SignedInteger, Int, Int8, Int16, Int32, Int64, Int128, Int256]
-
-  - super: FixedSizeUnsignedInteger
-    predicate:
-      equals:
-        source: sub
-        target:
-          oneOfTypes: [UInt8, UInt16, UInt32, UInt64, UInt128, UInt256,
-                  Word8, Word16, Word32, Word64, Word128, Word256]
-
-  - super: FixedPoint
+  - super: IntegerType
     predicate:
       or:
         - equals:
             source: sub
             target:
-              oneOfTypes: [FixedPoint, SignedFixedPoint, UFix64, UFix128]
+              oneOfTypes: [IntegerType, SignedIntegerType, FixedSizeUnsignedIntegerType, UIntType]
 
         - subtype:
             sub: sub
             super:
-              oneOfTypes: [SignedFixedPoint]
+              oneOfTypes: [SignedIntegerType, FixedSizeUnsignedIntegerType]
 
-  - super: SignedFixedPoint
+  - super: SignedIntegerType
     predicate:
       equals:
         source: sub
         target:
-          oneOfTypes: [SignedFixedPoint, Fix64, Fix128]
+          oneOfTypes: [SignedIntegerType, IntType, Int8Type, Int16Type, Int32Type, Int64Type, Int128Type, Int256Type]
 
-  - super: Optional
-    sub: Optional
+  - super: FixedSizeUnsignedIntegerType
+    predicate:
+      equals:
+        source: sub
+        target:
+          oneOfTypes: [UInt8Type, UInt16Type, UInt32Type, UInt64Type, UInt128Type, UInt256Type,
+                  Word8Type, Word16Type, Word32Type, Word64Type, Word128Type, Word256Type]
+
+  - super: FixedPointType
+    predicate:
+      or:
+        - equals:
+            source: sub
+            target:
+              oneOfTypes: [FixedPointType, SignedFixedPointType, UFix64Type, UFix128Type]
+
+        - subtype:
+            sub: sub
+            super:
+              oneOfTypes: [SignedFixedPointType]
+
+  - super: SignedFixedPointType
+    predicate:
+      equals:
+        source: sub
+        target:
+          oneOfTypes: [SignedFixedPointType, Fix64Type, Fix128Type]
+
+  - super: OptionalType
+    sub: OptionalType
     predicate:
       subtype:
         super: super.Type
@@ -141,9 +141,9 @@ rules:
       and:
         - subtype:
             super: super.ValueType
-            sub: sub.KeyType
+            sub: sub.ValueType
         - subtype:
-            super: super.ValueType
+            super: super.KeyType
             sub: sub.KeyType
 
 #  - super:

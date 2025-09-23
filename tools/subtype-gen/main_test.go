@@ -38,8 +38,13 @@ func TestGen(t *testing.T) {
 
 	const pkgPath = "github.com/onflow/cadence/sema"
 
+	config := Config{
+		SimpleTypePrefix:  "PrimitiveStaticType",
+		ComplexTypeSuffix: "StaticType",
+	}
+
 	// Generate code using the comprehensive generator
-	gen := NewSubTypeCheckGenerator(pkgPath)
+	gen := NewSubTypeCheckGenerator(config)
 	decls := gen.GenerateCheckSubTypeWithoutEqualityFunction(rules)
 
 	resolver := guess.New()

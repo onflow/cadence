@@ -20,17 +20,18 @@ package subtype_gen
 
 import (
 	"fmt"
-	"go/token"
-	"strings"
-
 	"github.com/dave/dst"
+	"go/token"
 )
 
-const subtypeCheckFuncName = "checkSubTypeWithoutEquality_gen"
+var neverType = SimpleType{
+	name: "Never",
+}
+
+var interfaceType = ComplexType{}
 
 type SubTypeCheckGenerator struct {
-	typePkgName      string
-	typePkgQualifier string
+	config Config
 
 	currentSuperType Type
 	currentSubType   Type
@@ -39,11 +40,24 @@ type SubTypeCheckGenerator struct {
 	subTypeVarName   string
 }
 
-func NewSubTypeCheckGenerator(typePackageName string) *SubTypeCheckGenerator {
-	parts := strings.Split(typePackageName, "/")
+type Config struct {
+	SimpleTypePrefix  string
+	SimpleTypeSuffix  string
+	ComplexTypePrefix string
+	ComplexTypeSuffix string
+
+	ExtraParams []ExtraParam
+}
+
+type ExtraParam struct {
+	Name    string
+	Type    string
+	PkgPath string
+}
+
+func NewSubTypeCheckGenerator(config Config) *SubTypeCheckGenerator {
 	return &SubTypeCheckGenerator{
-		typePkgName:      typePackageName,
-		typePkgQualifier: parts[len(parts)-1],
+		config: config,
 	}
 }
 
@@ -59,12 +73,16 @@ func (gen *SubTypeCheckGenerator) GenerateCheckSubTypeWithoutEqualityFunction(ru
 func (gen *SubTypeCheckGenerator) createCheckSubTypeFunction(rules []Rule) dst.Decl {
 	// Create function parameters
 	subTypeParam := &dst.Field{
-		Names: []*dst.Ident{dst.NewIdent(subTypeVarName)},
-		Type:  gen.qualifiedIdentifier("Type"),
+		Names: []*dst.Ident{
+			dst.NewIdent(subTypeVarName),
+		},
+		Type: gen.qualifiedTypeIdentifier(interfaceType),
 	}
 	superTypeParam := &dst.Field{
-		Names: []*dst.Ident{dst.NewIdent(superTypeVarName)},
-		Type:  gen.qualifiedIdentifier("Type"),
+		Names: []*dst.Ident{
+			dst.NewIdent(superTypeVarName),
+		},
+		Type: gen.qualifiedTypeIdentifier(interfaceType),
 	}
 
 	// Create function body
@@ -75,7 +93,7 @@ func (gen *SubTypeCheckGenerator) createCheckSubTypeFunction(rules []Rule) dst.D
 		Cond: &dst.BinaryExpr{
 			X:  dst.NewIdent(subTypeVarName),
 			Op: token.EQL,
-			Y:  gen.qualifiedTypeIdentifier("Never"),
+			Y:  gen.qualifiedTypeIdentifier(neverType),
 		},
 		Body: &dst.BlockStmt{
 			List: []dst.Stmt{
@@ -106,11 +124,28 @@ func (gen *SubTypeCheckGenerator) createCheckSubTypeFunction(rules []Rule) dst.D
 		Results: []dst.Expr{dst.NewIdent("false")},
 	})
 
+	params := make([]*dst.Field, 0)
+	for _, param := range gen.config.ExtraParams {
+		extraParam := &dst.Field{
+			Names: []*dst.Ident{
+				dst.NewIdent(param.Name),
+			},
+			Type: &dst.Ident{
+				Name: param.Type,
+				Path: param.PkgPath,
+			},
+		}
+
+		params = append(params, extraParam)
+	}
+
+	params = append(params, subTypeParam, superTypeParam)
+
 	return &dst.FuncDecl{
 		Name: dst.NewIdent(subtypeCheckFuncName),
 		Type: &dst.FuncType{
 			Params: &dst.FieldList{
-				List: []*dst.Field{subTypeParam, superTypeParam},
+				List: params,
 			},
 			Results: &dst.FieldList{
 				List: []*dst.Field{
@@ -209,8 +244,13 @@ func (gen *SubTypeCheckGenerator) createCaseStatement(rule Rule, forSimpleTypes 
 
 	// If the subtype needs to be of a certain type,
 	// then add a type assertion.
-	if rule.Sub != "" {
+
+	if rule.Sub == "" {
+		gen.subTypeVarName = subTypeVarName
+	} else {
 		gen.subTypeVarName = typedSubTypeVarName
+
+		subType := parseType(rule.Sub)
 
 		assignment := &dst.AssignStmt{
 			Lhs: []dst.Expr{
@@ -222,7 +262,7 @@ func (gen *SubTypeCheckGenerator) createCaseStatement(rule Rule, forSimpleTypes 
 				&dst.TypeAssertExpr{
 					X: dst.NewIdent(subTypeVarName),
 					Type: &dst.StarExpr{
-						X: gen.qualifiedTypeIdentifier(rule.Sub),
+						X: gen.qualifiedTypeIdentifier(subType),
 					},
 				},
 			},
@@ -458,7 +498,7 @@ func (gen *SubTypeCheckGenerator) isStorablePredicate(predicate IsStorablePredic
 				&dst.CompositeLit{
 					Type: &dst.MapType{
 						Key: &dst.StarExpr{
-							X: gen.qualifiedIdentifier("Member"),
+							X: dst.NewIdent("Member"),
 						},
 						Value: dst.NewIdent("bool"),
 					},
@@ -655,7 +695,7 @@ func (gen *SubTypeCheckGenerator) isResourcePredicate(predicate IsResourcePredic
 // equalsPredicate generates AST for equals predicate
 func (gen *SubTypeCheckGenerator) equalsPredicate(equals EqualsPredicate) []dst.Node {
 	switch target := equals.Target.(type) {
-	case TypeExpression, MemberExpression:
+	case TypeExpression, MemberExpression, IdentifierExpression:
 		return []dst.Node{
 			&dst.BinaryExpr{
 				// TODO:
@@ -727,7 +767,7 @@ func (gen *SubTypeCheckGenerator) expression(expr Expression) dst.Expr {
 		}
 
 	case TypeExpression:
-		return gen.qualifiedTypeIdentifier(expr.Type.Name())
+		return gen.qualifiedTypeIdentifier(expr.Type)
 
 	case MemberExpression:
 		return &dst.SelectorExpr{
@@ -744,27 +784,23 @@ func (gen *SubTypeCheckGenerator) expression(expr Expression) dst.Expr {
 func (gen *SubTypeCheckGenerator) isSubTypePredicate(subtype SubtypePredicate) []dst.Node {
 	switch superType := subtype.Super.(type) {
 	case TypeExpression, MemberExpression:
+		args := gen.getSubTypeArguments(subtype.Sub, superType)
 		return []dst.Node{
 			&dst.CallExpr{
-				Fun: gen.qualifiedIdentifier("IsSubType"),
-				Args: []dst.Expr{
-					gen.expression(subtype.Sub),
-					gen.expression(superType),
-				},
+				Fun:  dst.NewIdent("IsSubType"),
+				Args: args,
 			},
 		}
 	case OneOfExpression:
 		var conditions []dst.Expr
 		for _, expr := range superType.Expressions {
+			args := gen.getSubTypeArguments(subtype.Sub, expr)
 			// TODO: Recursively call `generatePredicate`
 			conditions = append(
 				conditions,
 				&dst.CallExpr{
-					Fun: gen.qualifiedIdentifier("IsSubType"),
-					Args: []dst.Expr{
-						gen.expression(subtype.Sub),
-						gen.expression(expr),
-					},
+					Fun:  dst.NewIdent("IsSubType"),
+					Args: args,
 				},
 			)
 		}
@@ -788,36 +824,47 @@ func (gen *SubTypeCheckGenerator) isSubTypePredicate(subtype SubtypePredicate) [
 	}
 }
 
-// qualifiedIdentifier creates a qualified identifier
-func (gen *SubTypeCheckGenerator) qualifiedIdentifier(name string) dst.Expr {
-	return dst.NewIdent(name)
+func (gen *SubTypeCheckGenerator) getSubTypeArguments(subType, superType Expression) []dst.Expr {
+	args := make([]dst.Expr, 0)
+	for _, param := range gen.config.ExtraParams {
+		args = append(
+			args,
+			dst.NewIdent(param.Name),
+		)
+	}
+
+	args = append(args,
+		gen.expression(subType),
+		gen.expression(superType),
+	)
+
+	return args
 }
 
 // qualifiedTypeIdentifier creates a qualified type identifier, by
 // prepending the package-qualifier,prefix, and appending `Type` suffix.
-func (gen *SubTypeCheckGenerator) qualifiedTypeIdentifier(name string) dst.Expr {
-	typeConstant := gen.getTypeConstant(name)
-	if typeConstant == "" {
-		panic(fmt.Errorf("empty type constant for name: %s", name))
+func (gen *SubTypeCheckGenerator) qualifiedTypeIdentifier(typ Type) dst.Expr {
+	var typeName string
+	if _, ok := typ.(SimpleType); ok {
+		typeName = gen.config.SimpleTypePrefix + typ.Name() + gen.config.SimpleTypeSuffix
+	} else {
+		typeName = gen.config.ComplexTypePrefix + typ.Name() + gen.config.ComplexTypeSuffix
 	}
-	return dst.NewIdent(typeConstant)
+
+	return dst.NewIdent(typeName)
 }
 
 // parseCaseCondition parses a case condition to AST using Cadence types
 func (gen *SubTypeCheckGenerator) parseCaseCondition(superType Type) dst.Expr {
 	// Use type assertion to determine the specific type
+	typeName := gen.qualifiedTypeIdentifier(superType)
 	switch superType.(type) {
 	case SimpleType:
 		// For simple types, use the type directly
-		return gen.qualifiedTypeIdentifier(superType.Name())
+		return typeName
 	default:
 		return &dst.StarExpr{
-			X: gen.qualifiedTypeIdentifier(superType.Name()),
+			X: typeName,
 		}
 	}
-}
-
-// getTypeConstant converts a type name to its Go constant
-func (gen *SubTypeCheckGenerator) getTypeConstant(placeholderTypeName string) string {
-	return placeholderTypeName + "Type"
 }

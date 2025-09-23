@@ -54,11 +54,13 @@ func ParseRules() ([]Rule, error) {
 }
 
 // parseType parses a type with just a name.
-func parseType(typeName string) Type {
+func parseType(typePlaceHolder string) Type {
+	typeName := strings.TrimSuffix(typePlaceHolder, "Type")
+
 	switch typeName {
 	case typePlaceholderOptional,
 		typePlaceholderDictionary:
-		return ComplexTypeType{
+		return ComplexType{
 			name: typeName,
 		}
 	default:
@@ -291,8 +293,18 @@ func parseSimpleExpression(expr any) Expression {
 	case string:
 		parts := strings.Split(v, ".")
 		if len(parts) == 1 {
-			typ := parseType(v)
-			return TypeExpression{Type: typ}
+			identifier := parts[0]
+
+			if strings.HasSuffix(identifier, "Type") {
+				typePlaceHolder := strings.TrimSuffix(identifier, "Type")
+				return TypeExpression{
+					Type: parseType(typePlaceHolder),
+				}
+			}
+
+			return IdentifierExpression{
+				Name: identifier,
+			}
 		}
 
 		return parseMemberExpression(parts)

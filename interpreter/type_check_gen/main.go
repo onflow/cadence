@@ -54,9 +54,9 @@ const headerTemplate = `// Code generated from {{ . }}. DO NOT EDIT.
 
 var parsedHeaderTemplate = template.Must(template.New("header").Parse(headerTemplate))
 
-const semaPath = "github.com/onflow/cadence/sema"
+const interpreterPath = "github.com/onflow/cadence/interpreter"
 
-var packagePathFlag = flag.String("pkg", semaPath, "target Go package name")
+var packagePathFlag = flag.String("pkg", interpreterPath, "target Go package name")
 
 func main() {
 
@@ -75,9 +75,22 @@ func main() {
 		os.Exit(1)
 	}
 
+	const (
+		interpreterPath        = "github.com/onflow/cadence/interpreter"
+		typeConverterParamName = "typeConverter"
+		typeConverterTypeName  = "TypeConverter"
+	)
+
 	config := subtypegen.Config{
-		SimpleTypeSuffix:  "Type",
-		ComplexTypeSuffix: "Type",
+		SimpleTypePrefix:  "PrimitiveStaticType",
+		ComplexTypeSuffix: "StaticType",
+		ExtraParams: []subtypegen.ExtraParam{
+			{
+				Name:    typeConverterParamName,
+				Type:    typeConverterTypeName,
+				PkgPath: interpreterPath,
+			},
+		},
 	}
 
 	// Generate code using the comprehensive generator
