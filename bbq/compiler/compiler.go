@@ -1666,6 +1666,16 @@ func (c *Compiler[_, _]) VisitVariableDeclaration(declaration *ast.VariableDecla
 	return
 }
 
+func assertNotInternalNoTransfer(transfer *ast.Transfer) {
+	if transfer != nil &&
+		transfer.Operation == ast.TransferOperationInternalNoTransfer {
+
+		panic(errors.NewUnexpectedError(
+			"internal no-transfer not allowed here",
+		))
+	}
+}
+
 func (c *Compiler[_, _]) compileVariableDeclaration(
 	declaration *ast.VariableDeclaration,
 	varDeclTypes sema.VariableDeclarationTypes,
@@ -1685,9 +1695,22 @@ func (c *Compiler[_, _]) compileVariableDeclaration(
 	// No second value.
 	if secondValue == nil {
 		c.compileExpression(firstValue)
-		c.emitTransferAndConvert(firstValueTransferType)
+
+		transfer := declaration.Transfer
+
+		needTransferAndConvert :=
+			!(transfer != nil &&
+				transfer.Operation == ast.TransferOperationInternalNoTransfer)
+
+		if needTransferAndConvert {
+			c.emitTransferAndConvert(firstValueTransferType)
+		}
+
 		return
 	}
+
+	assertNotInternalNoTransfer(declaration.Transfer)
+	assertNotInternalNoTransfer(declaration.SecondTransfer)
 
 	// Also has a second value.
 	// The middle expression (i.e: the first value), and its sub expressions,
