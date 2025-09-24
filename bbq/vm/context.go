@@ -362,6 +362,7 @@ func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema
 }
 
 func (c *Context) GetContractValue(contractLocation common.AddressLocation) *interpreter.CompositeValue {
+	c.linkLocation(contractLocation)
 	return c.ContractValueHandler(c, contractLocation)
 }
 
