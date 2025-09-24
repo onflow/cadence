@@ -56,6 +56,9 @@ type Context struct {
 	// TODO: Re-use the conversions from the compiler.
 	// TODO: Maybe extend/share this between executions.
 	semaTypes map[sema.TypeID]sema.Type
+
+	// linkedGlobalsCache is a local cache-alike that is being used to hold already linked imports.
+	linkedGlobalsCache map[common.Location]LinkedGlobals
 }
 
 var _ interpreter.ReferenceTracker = &Context{}
@@ -377,4 +380,29 @@ func (c *Context) MaybeUpdateStorageReferenceMemberReceiver(
 	}
 
 	return member
+}
+
+func (c *Context) linkLocation(location common.Location) LinkedGlobals {
+	linkedGlobals, ok := c.linkedGlobalsCache[location]
+	if ok {
+		return linkedGlobals
+	}
+
+	program := c.ImportHandler(location)
+
+	return c.linkGlobals(location, program)
+}
+
+func (c *Context) linkGlobals(location common.Location, program *bbq.InstructionProgram) LinkedGlobals {
+	if c.linkedGlobalsCache == nil {
+		c.linkedGlobalsCache = map[common.Location]LinkedGlobals{}
+	}
+
+	return LinkGlobals(
+		c.MemoryGauge,
+		location,
+		program,
+		c,
+		c.linkedGlobalsCache,
+	)
 }
