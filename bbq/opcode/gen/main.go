@@ -109,11 +109,25 @@ func main() {
 		)
 	}
 	decls = append(decls, decodeInstructionFuncDecl(instructions))
-	decls = append(decls, generateIsControlFlowMethod(instructions))
 
 	writeGoFile(&buffer, decls, opcodePackagePath)
 
 	err = os.WriteFile(goPath, buffer.Bytes(), 0644)
+	if err != nil {
+		panic(err)
+	}
+
+	generatedOpcodePath := "opcode_flow.go"
+	// write opcode.isControlFlow to separate hardcoded file
+	buffer.Reset()
+	_, err = fmt.Fprintf(&buffer, headerFormat, yamlPath)
+	if err != nil {
+		panic(err)
+	}
+
+	writeGoFile(&buffer, []dst.Decl{generateIsControlFlowMethod(instructions)}, opcodePackagePath)
+
+	err = os.WriteFile(generatedOpcodePath, buffer.Bytes(), 0644)
 	if err != nil {
 		panic(err)
 	}
