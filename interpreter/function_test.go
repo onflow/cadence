@@ -404,7 +404,48 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 		require.ErrorAs(t, err, &typeErr)
 	})
 
-	t.Run("no transfer", func(t *testing.T) {
+	t.Run("no transfer, result is used", func(t *testing.T) {
+		t.Parallel()
+
+		storage := newUnmeteredInMemoryStorage()
+
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+              struct S {}
+
+              fun test(): S {
+                  post { result != nil }
+                  return S()
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				InterpreterConfig: &interpreter.Config{
+					Storage: storage,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
+		require.NoError(t, err)
+
+		var expectedSlabIndex atree.SlabIndex
+		binary.BigEndian.PutUint64(expectedSlabIndex[:], 3)
+
+		require.Equal(
+			t,
+			atree.NewSlabID(
+				atree.AddressUndefined,
+				expectedSlabIndex,
+			),
+			slabID,
+		)
+	})
+
+	t.Run("no transfer, result is not used", func(t *testing.T) {
 		t.Parallel()
 
 		storage := newUnmeteredInMemoryStorage()
