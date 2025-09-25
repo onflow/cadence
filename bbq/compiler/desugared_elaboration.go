@@ -418,7 +418,7 @@ func (e *DesugaredElaboration) GetGlobalType(name string) (*sema.Variable, bool)
 	return e.elaboration.GetGlobalType(name)
 }
 
-func (e *DesugaredElaboration) MoveExpressionTypes(expression *ast.UnaryExpression) sema.Type {
+func (e *DesugaredElaboration) MoveExpressionTypes(expression *ast.UnaryExpression) sema.MoveExpressionTypes {
 	return e.elaboration.MoveExpressionTypes(expression)
 }
 

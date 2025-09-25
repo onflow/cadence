@@ -1928,6 +1928,22 @@ func TransferAndConvert(
 		true, // value is standalone.
 	)
 
+	return ConvertAndBoxWithValidation(
+		context,
+		transferredValue,
+		valueType,
+		targetType,
+		locationRange,
+	)
+}
+
+func ConvertAndBoxWithValidation(
+	context ValueConversionContext,
+	transferredValue Value,
+	valueType sema.Type,
+	targetType sema.Type,
+	locationRange LocationRange,
+) Value {
 	result := ConvertAndBox(
 		context,
 		locationRange,
@@ -1952,6 +1968,34 @@ func TransferAndConvert(
 	}
 
 	return result
+}
+
+func TransferIfNotResourceAndConvert(
+	context ValueConversionContext,
+	value Value,
+	valueType, targetType sema.Type,
+	locationRange LocationRange,
+) Value {
+
+	if !valueType.IsResourceType() {
+		value = value.Transfer(
+			context,
+			locationRange,
+			atree.Address{},
+			false,
+			nil,
+			nil,
+			true, // value is standalone.
+		)
+	}
+
+	return ConvertAndBoxWithValidation(
+		context,
+		value,
+		valueType,
+		targetType,
+		locationRange,
+	)
 }
 
 // ConvertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary

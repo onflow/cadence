@@ -121,6 +121,11 @@ type ForStatementTypes struct {
 	ContainerType     Type
 }
 
+type MoveExpressionTypes struct {
+	ValueType  Type
+	TargetType Type
+}
+
 type Elaboration struct {
 	interfaceTypesAndDeclarationsBiMap      *bimap.BiMap[*InterfaceType, *ast.InterfaceDeclaration]
 	entitlementTypesAndDeclarationsBiMap    *bimap.BiMap[*EntitlementType, *ast.EntitlementDeclaration]
@@ -178,7 +183,7 @@ type Elaboration struct {
 	TransactionTypes                   []*TransactionType
 	semanticAccesses                   map[ast.Access]Access
 	resultVariableTypes                map[ast.Element]Type
-	moveExpressionTypes                map[*ast.UnaryExpression]Type
+	moveExpressionTypes                map[*ast.UnaryExpression]MoveExpressionTypes
 	enumLookupFunctionTypes            map[*CompositeType]*FunctionType
 	isChecking                         bool
 	// IsRecovered is true if the program was recovered (see runtime.Interface.RecoverProgram)
@@ -1119,16 +1124,16 @@ func (e *Elaboration) ResultVariableType(declaration ast.Element) (typ Type, exi
 	return
 }
 
-func (e *Elaboration) SetMoveExpressionTypes(expression *ast.UnaryExpression, targetType Type) {
+func (e *Elaboration) SetMoveExpressionTypes(expression *ast.UnaryExpression, types MoveExpressionTypes) {
 	if e.moveExpressionTypes == nil {
-		e.moveExpressionTypes = map[*ast.UnaryExpression]Type{}
+		e.moveExpressionTypes = map[*ast.UnaryExpression]MoveExpressionTypes{}
 	}
-	e.moveExpressionTypes[expression] = targetType
+	e.moveExpressionTypes[expression] = types
 }
 
-func (e *Elaboration) MoveExpressionTypes(expression *ast.UnaryExpression) Type {
+func (e *Elaboration) MoveExpressionTypes(expression *ast.UnaryExpression) (types MoveExpressionTypes) {
 	if e.moveExpressionTypes == nil {
-		return nil
+		return
 	}
 	return e.moveExpressionTypes[expression]
 }

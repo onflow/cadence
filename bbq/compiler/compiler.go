@@ -2935,9 +2935,9 @@ func (c *Compiler[_, _]) VisitUnaryExpression(expression *ast.UnaryExpression) (
 		c.emit(opcode.InstructionDeref{})
 
 	case ast.OperationMove:
-		// Transfer to the target type.
-		targetType := c.DesugaredElaboration.MoveExpressionTypes(expression)
-		c.mustEmitTransferAndConvert(targetType)
+		// Transfer.
+		// No need to convert.
+		c.emitTransfer()
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -3866,15 +3866,19 @@ func (c *Compiler[_, _]) mustEmitTransferAndConvert(targetType sema.Type) {
 }
 
 func (c *Compiler[_, _]) emitTransferAndConvertIfNotResource(targetType sema.Type) {
+	typeIndex := c.getOrAddType(targetType)
 
 	// Resource-typed values are always used along with the move (<-) unary-operator.
 	// And the unary move operator already does the transfer.
 	// Therefore, do not perform a redundant transfer for resource-types.
+	// Only perform the conversion (e.g: boxing, etc.).
 	if targetType.IsResourceType() {
+		c.emit(opcode.InstructionConvert{
+			Type: typeIndex,
+		})
 		return
 	}
 
-	typeIndex := c.getOrAddType(targetType)
 	c.emit(opcode.InstructionTransferAndConvert{
 		Type: typeIndex,
 	})
