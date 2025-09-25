@@ -11316,7 +11316,7 @@ func TestImportSameProgramFromMultiplePaths(t *testing.T) {
 		return contractValue
 	}
 
-	// Prgram A
+	// Program A
 
 	locationA := common.NewAddressLocation(
 		nil,
@@ -11451,6 +11451,31 @@ func TestBorrowContractLinksGlobals(t *testing.T) {
 	})
 	activation.DeclareValue(conditionLogFunction)
 
+	const contractCode = `
+      let ok = conditionLog("x")
+    `
+
+	contractAddress := common.MustBytesToAddress([]byte{0x1})
+	const contractName = "Test"
+
+	contractLocation := common.AddressLocation{
+		Name:    contractName,
+		Address: contractAddress,
+	}
+
+	importedChecker, err := ParseAndCheckWithOptions(t,
+		contractCode,
+		ParseAndCheckOptions{
+			Location: contractLocation,
+			CheckerConfig: &sema.Config{
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return activation
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
 	compilerConfig := &compiler.Config{
 		BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
 			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
@@ -11466,21 +11491,17 @@ func TestBorrowContractLinksGlobals(t *testing.T) {
 		},
 	}
 
-	contractAddress := common.MustBytesToAddress([]byte{0x1})
-	const (
-		contractName = "Test"
-		contractCode = `
-          let ok = conditionLog("x")
-        `
+	subComp := compiler.NewInstructionCompilerWithConfig(
+		interpreter.ProgramFromChecker(importedChecker),
+		importedChecker.Location,
+		compilerConfig,
 	)
+	subProgram := subComp.Compile()
 
 	accountHandler := &testAccountHandler{
 		getAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
 			assert.Equal(t,
-				common.AddressLocation{
-					Name:    contractName,
-					Address: contractAddress,
-				},
+				contractLocation,
 				location,
 			)
 			return []byte(contractCode), nil
@@ -11522,8 +11543,15 @@ func TestBorrowContractLinksGlobals(t *testing.T) {
 	vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
 		return nil
 	}
+	vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+		assert.Equal(t,
+			contractLocation,
+			location,
+		)
+		return subProgram
+	}
 
-	_, err := CompileAndInvokeWithOptions(
+	_, err = CompileAndInvokeWithOptions(
 		t,
 		`
           fun test() {
@@ -11547,5 +11575,5 @@ func TestBorrowContractLinksGlobals(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Equal(t, []string{"x"}, logs)
+	assert.Equal(t, []string{`"x"`}, logs)
 }
