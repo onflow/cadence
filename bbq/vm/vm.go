@@ -47,9 +47,8 @@ type VM struct {
 	ipStack []uint16
 	ip      uint16
 
-	context            *Context
-	globals            *activations.Activation[Variable]
-	linkedGlobalsCache map[common.Location]LinkedGlobals
+	context *Context
+	globals *activations.Activation[Variable]
 }
 
 func NewVM(
@@ -60,16 +59,8 @@ func NewVM(
 
 	context := NewContext(config)
 
-	if context.referencedResourceKindedValues == nil {
-		context.referencedResourceKindedValues = ReferencedResourceKindedValues{}
-	}
-
-	// linkedGlobalsCache is a local cache-alike that is being used to hold already linked imports.
-	linkedGlobalsCache := map[common.Location]LinkedGlobals{}
-
 	vm := &VM{
-		linkedGlobalsCache: linkedGlobalsCache,
-		context:            context,
+		context: context,
 	}
 
 	// Delegate the function invocations to the vm.
@@ -79,12 +70,9 @@ func NewVM(
 	context.recoverErrors = vm.RecoverErrors
 
 	// Link global variables and functions.
-	linkedGlobals := LinkGlobals(
-		config.MemoryGauge,
+	linkedGlobals := context.linkGlobals(
 		location,
 		program,
-		context,
-		linkedGlobalsCache,
 	)
 
 	vm.globals = linkedGlobals.indexedGlobals
@@ -1786,23 +1774,9 @@ func (vm *VM) lookupFunction(location common.Location, name string) FunctionValu
 			indexedGlobals = context.BuiltinGlobalsProvider(location)
 		}
 	} else {
-
-		linkedGlobals, ok := vm.linkedGlobalsCache[location]
-
-		if !ok {
-			// TODO: This currently link all functions in program, unnecessarily.
-			//   Link only the requested function.
-			program := context.ImportHandler(location)
-
-			linkedGlobals = LinkGlobals(
-				context.MemoryGauge,
-				location,
-				program,
-				context,
-				vm.linkedGlobalsCache,
-			)
-		}
-
+		// TODO: This currently link all functions in program, unnecessarily.
+		//   Link only the requested function.
+		linkedGlobals := context.linkLocation(location)
 		indexedGlobals = linkedGlobals.indexedGlobals
 	}
 

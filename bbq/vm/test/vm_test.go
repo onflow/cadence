@@ -8690,7 +8690,6 @@ func TestEnumLookupFailure(t *testing.T) {
 				case b
 				case c
 			}
-            
 
             fun test(): AnyStruct {
                 return Test(rawValue: 5)
@@ -8747,7 +8746,7 @@ func TestFunctionInvocationWithOptionalArgs(t *testing.T) {
 
 	compilerConfig := &compiler.Config{
 		BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
-			activation := activations.NewActivation[compiler.GlobalImport](nil, compiler.DefaultBuiltinGlobals())
+			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 			activation.Set(
 				functionName,
 				compiler.NewGlobalImport(functionName),
@@ -8778,7 +8777,7 @@ func TestFunctionInvocationWithOptionalArgs(t *testing.T) {
 
 	vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
 	vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
-		activation := activations.NewActivation[vm.Variable](nil, vm.DefaultBuiltinGlobals())
+		activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 		variable := &interpreter.SimpleVariable{}
 		variable.InitializeWithValue(functionValue)
 		activation.Set(functionName, variable)
@@ -9664,7 +9663,7 @@ func TestFunctionInclusiveRangeConstruction(t *testing.T) {
 
 	compilerConfig := &compiler.Config{
 		BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
-			activation := activations.NewActivation[compiler.GlobalImport](nil, compiler.DefaultBuiltinGlobals())
+			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 			activation.Set(
 				stdlib.VMInclusiveRangeConstructor.Name,
 				compiler.NewGlobalImport(stdlib.VMInclusiveRangeConstructor.Name),
@@ -9674,7 +9673,7 @@ func TestFunctionInclusiveRangeConstruction(t *testing.T) {
 	}
 	vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
 	vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
-		activation := activations.NewActivation[vm.Variable](nil, vm.DefaultBuiltinGlobals())
+		activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
 		variable := &interpreter.SimpleVariable{}
 		variable.InitializeWithValue(stdlib.VMInclusiveRangeConstructor.Value)
 		activation.Set(stdlib.VMInclusiveRangeConstructor.Name, variable)
@@ -11317,7 +11316,7 @@ func TestImportSameProgramFromMultiplePaths(t *testing.T) {
 		return contractValue
 	}
 
-	// Prgram A
+	// Program A
 
 	locationA := common.NewAddressLocation(
 		nil,
@@ -11428,4 +11427,153 @@ func TestImportSameProgramFromMultiplePaths(t *testing.T) {
 	)
 
 	require.NoError(t, err)
+}
+
+func TestBorrowContractLinksGlobals(t *testing.T) {
+
+	t.Parallel()
+
+	var logs []string
+	conditionLogFunction := newConditionLogFunction(&logs)
+
+	const functionName = "borrowContract"
+
+	functionType := &sema.FunctionType{
+		Purity:               sema.FunctionPurityView,
+		ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+	}
+
+	activation := sema.NewVariableActivation(sema.BaseValueActivation)
+	activation.DeclareValue(stdlib.StandardLibraryValue{
+		Name: functionName,
+		Type: functionType,
+		Kind: common.DeclarationKindFunction,
+	})
+	activation.DeclareValue(conditionLogFunction)
+
+	const contractCode = `
+      let ok = conditionLog("x")
+    `
+
+	contractAddress := common.MustBytesToAddress([]byte{0x1})
+	const contractName = "Test"
+
+	contractLocation := common.AddressLocation{
+		Name:    contractName,
+		Address: contractAddress,
+	}
+
+	importedChecker, err := ParseAndCheckWithOptions(t,
+		contractCode,
+		ParseAndCheckOptions{
+			Location: contractLocation,
+			CheckerConfig: &sema.Config{
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return activation
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	compilerConfig := &compiler.Config{
+		BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
+			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+			activation.Set(
+				functionName,
+				compiler.NewGlobalImport(functionName),
+			)
+			activation.Set(
+				conditionLogFunctionName,
+				compiler.NewGlobalImport(conditionLogFunctionName),
+			)
+			return activation
+		},
+	}
+
+	subComp := compiler.NewInstructionCompilerWithConfig(
+		interpreter.ProgramFromChecker(importedChecker),
+		importedChecker.Location,
+		compilerConfig,
+	)
+	subProgram := subComp.Compile()
+
+	accountHandler := &testAccountHandler{
+		getAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
+			assert.Equal(t,
+				contractLocation,
+				location,
+			)
+			return []byte(contractCode), nil
+		},
+	}
+
+	functionValue := vm.NewNativeFunctionValue(
+		functionName,
+		functionType,
+		func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
+
+			stdlib.AccountContractsBorrow(
+				context,
+				interpreter.EmptyLocationRange,
+				contractAddress,
+				interpreter.NewUnmeteredStringValue(contractName),
+				sema.NewReferenceType(nil, sema.UnauthorizedAccess, sema.AnyStructType),
+				accountHandler,
+			)
+
+			return interpreter.Void
+		},
+	)
+
+	vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
+	vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
+		activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+
+		variable := &interpreter.SimpleVariable{}
+		variable.InitializeWithValue(functionValue)
+		activation.Set(functionName, variable)
+
+		logFunctionVariable := &interpreter.SimpleVariable{}
+		logFunctionVariable.InitializeWithValue(conditionLogFunction.Value)
+		activation.Set(conditionLogFunctionName, logFunctionVariable)
+
+		return activation
+	}
+	vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
+		return nil
+	}
+	vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+		assert.Equal(t,
+			contractLocation,
+			location,
+		)
+		return subProgram
+	}
+
+	_, err = CompileAndInvokeWithOptions(
+		t,
+		`
+          fun test() {
+              borrowContract()
+          }
+        `,
+		"test",
+		CompilerAndVMOptions{
+			ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+				CompilerConfig: compilerConfig,
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(location common.Location) *sema.VariableActivation {
+							return activation
+						},
+					},
+				},
+			},
+			VMConfig: vmConfig,
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{`"x"`}, logs)
 }
