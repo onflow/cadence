@@ -141,7 +141,12 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) Ty
 		if targetType == nil {
 			targetType = valueType
 		}
-		checker.Elaboration.SetMoveExpressionTypes(expression, targetType)
+		checker.Elaboration.SetMoveExpressionTypes(
+			expression,
+			MoveExpressionTypes{
+				TargetType: targetType,
+				ValueType:  valueType,
+			})
 
 		return valueType
 	}

@@ -1194,6 +1194,26 @@ func opTransfer(vm *VM) {
 	vm.replaceTop(transferredValue)
 }
 
+func opConvert(vm *VM, ins opcode.InstructionConvert) {
+	typeIndex := ins.Type
+	targetType := vm.loadType(typeIndex)
+
+	context := vm.context
+
+	value := vm.peek()
+	valueType := value.StaticType(context)
+
+	transferredValue := interpreter.ConvertAndBoxWithValidation(
+		context,
+		value,
+		context.SemaTypeFromStaticType(valueType),
+		context.SemaTypeFromStaticType(targetType),
+		EmptyLocationRange,
+	)
+
+	vm.replaceTop(transferredValue)
+}
+
 func opDestroy(vm *VM) {
 	value := vm.pop().(interpreter.ResourceKindedValue)
 	value.Destroy(vm.context, EmptyLocationRange)
@@ -1596,6 +1616,8 @@ func (vm *VM) run() {
 			opTransferAndConvert(vm, ins)
 		case opcode.InstructionTransfer:
 			opTransfer(vm)
+		case opcode.InstructionConvert:
+			opConvert(vm, ins)
 		case opcode.InstructionDestroy:
 			opDestroy(vm)
 		case opcode.InstructionNewPath:
