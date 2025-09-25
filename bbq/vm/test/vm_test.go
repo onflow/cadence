@@ -9280,6 +9280,7 @@ func TestInjectedContract(t *testing.T) {
 	}
 
 	bType := &sema.CompositeType{
+		Location:   TestLocation,
 		Identifier: "B",
 		Kind:       common.CompositeKindContract,
 	}
@@ -9377,7 +9378,7 @@ func TestInjectedContract(t *testing.T) {
 	vmConfig.EntitlementMapTypeHandler = CompiledProgramsEntitlementMapTypeLoader(programs)
 
 	vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
-		if location == nil && typeID == "B" {
+		if location == TestLocation && typeID == "S.test.B" {
 			return bType
 		}
 

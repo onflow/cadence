@@ -151,7 +151,7 @@ func (c *Config) GetCompositeType(
 
 func (c *Config) GetEntitlementType(
 	typeID interpreter.TypeID,
-	linkLocation func(location common.Location) LinkedGlobals,
+	ensureProgramInitialized func(location common.Location),
 ) (*sema.EntitlementType, error) {
 	location, qualifiedIdentifier, err := common.DecodeTypeID(c, string(typeID))
 	if err != nil {
@@ -169,7 +169,7 @@ func (c *Config) GetEntitlementType(
 		return ty, nil
 	}
 
-	linkLocation(location)
+	ensureProgramInitialized(location)
 
 	ty := c.EntitlementTypeHandler(location, typeID)
 
@@ -184,7 +184,7 @@ func (c *Config) GetEntitlementType(
 
 func (c *Config) GetEntitlementMapType(
 	typeID interpreter.TypeID,
-	linkLocation func(location common.Location) LinkedGlobals,
+	ensureProgramInitialized func(location common.Location),
 ) (*sema.EntitlementMapType, error) {
 	location, qualifiedIdentifier, err := common.DecodeTypeID(c, string(typeID))
 	if err != nil {
@@ -202,7 +202,7 @@ func (c *Config) GetEntitlementMapType(
 		return ty, nil
 	}
 
-	linkLocation(location)
+	ensureProgramInitialized(location)
 
 	ty := c.EntitlementMapTypeHandler(location, typeID)
 
