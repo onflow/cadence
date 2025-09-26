@@ -1148,13 +1148,7 @@ func (c *Compiler[_, _]) compileBlock(
 				c.emit(opcode.InstructionReturn{})
 			} else {
 				c.emitGetLocal(local.index)
-
-				// This is a synthetic return. Therefore, there is no explicit unary-move operator added for resource typed values.
-				// So either explicitly compile a unary operator if this is a resource value + do a conditional transfer,
-				// OR simply always transfer the value (regardless of its type), which is equivalent to the former.
-				c.mustEmitTransferAndConvert(returnType)
-
-				c.emit(opcode.InstructionReturnValue{})
+				c.emitTransferAndConvertAndReturnValue(returnType)
 			}
 		} else if needsSyntheticReturn(block.Statements) {
 			// If there are no post conditions,

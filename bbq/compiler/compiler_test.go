@@ -3531,7 +3531,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 3},
+				opcode.InstructionConvert{Type: 3},
 				opcode.InstructionReturnValue{},
 			},
 			program.Functions[0].Code,
