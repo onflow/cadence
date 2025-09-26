@@ -42,7 +42,8 @@ type compiledProgram struct {
 // that gets reconfigured by vmEnvironment.Configure
 type vmEnvironmentReconfigured struct {
 	Interface
-	storage *Storage
+	storage        *Storage
+	coverageReport *CoverageReport
 }
 
 type vmEnvironment struct {
@@ -219,10 +220,20 @@ func (e *vmEnvironment) Configure(
 		memoryGauge,
 	)
 
-	// TODO: add support for coverage report
-	_ = coverageReport
+	e.coverageReport = coverageReport
+	if e.coverageReport != nil {
+		e.VMConfig.OnStatement = e.newOnStatementHandler()
+	}
 
 	configureVersionedFeatures(runtimeInterface)
+}
+
+func (e *vmEnvironment) newOnStatementHandler() vm.OnStatementFunc {
+	return func(location common.Location, line int) {
+		if e.coverageReport != nil {
+			e.coverageReport.AddLineHit(location, line)
+		}
+	}
 }
 
 func (e *vmEnvironment) DeclareValue(valueDeclaration stdlib.StandardLibraryValue, location common.Location) {

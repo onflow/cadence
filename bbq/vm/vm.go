@@ -50,6 +50,8 @@ type VM struct {
 	context            *Context
 	globals            *activations.Activation[Variable]
 	linkedGlobalsCache map[common.Location]LinkedGlobals
+
+	Location common.Location
 }
 
 func NewVM(
@@ -88,6 +90,7 @@ func NewVM(
 	)
 
 	vm.globals = linkedGlobals.indexedGlobals
+	vm.Location = location
 
 	return vm
 }
@@ -1737,6 +1740,10 @@ func opLoop(vm *VM) {
 
 func opStatement(vm *VM) {
 	common.UseComputation(vm.context, common.StatementComputationUsage)
+
+	if vm.context.Config.OnStatement != nil {
+		vm.context.Config.OnStatement(vm.Location, vm.callFrame.function.Function.LineNumbers.GetSourcePosition(vm.ip).StartPos.Line)
+	}
 }
 
 func (vm *VM) initializeValueTypedConstant(index uint16) Value {

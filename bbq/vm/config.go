@@ -74,7 +74,11 @@ type Config struct {
 	StackDepthLimit uint64
 
 	debugEnabled bool
+
+	OnStatement OnStatementFunc
 }
+
+type OnStatementFunc func(location common.Location, line int)
 
 func NewConfig(storage interpreter.Storage) *Config {
 	return &Config{
