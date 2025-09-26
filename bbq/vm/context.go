@@ -161,6 +161,7 @@ func (c *Context) MaybeValidateAtreeStorage() {
 }
 
 func (c *Context) IsTypeInfoRecovered(location common.Location) bool {
+	c.ensureProgramInitialized(location)
 	elaboration, err := c.ElaborationResolver(location)
 	if err != nil {
 		return false
@@ -218,8 +219,8 @@ func (c *Context) EnforceNotResourceDestruction(valueID atree.ValueID, locationR
 	}
 }
 
-func (c *Context) GetMemberAccessContextForLocation(_ common.Location) interpreter.MemberAccessibleContext {
-	//TODO
+func (c *Context) GetMemberAccessContextForLocation(location common.Location) interpreter.MemberAccessibleContext {
+	c.ensureProgramInitialized(location)
 	return c
 }
 
@@ -262,6 +263,7 @@ func (c *Context) InvokeFunction(
 }
 
 func (c *Context) GetResourceDestructionContextForLocation(location common.Location) interpreter.ResourceDestructionContext {
+	c.ensureProgramInitialized(location)
 	return c
 }
 
@@ -362,7 +364,7 @@ func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema
 }
 
 func (c *Context) GetContractValue(contractLocation common.AddressLocation) *interpreter.CompositeValue {
-	c.linkLocation(contractLocation)
+	c.ensureProgramInitialized(contractLocation)
 	return c.ContractValueHandler(c, contractLocation)
 }
 
@@ -383,6 +385,14 @@ func (c *Context) MaybeUpdateStorageReferenceMemberReceiver(
 	return member
 }
 
+func (c *Context) ensureProgramInitialized(location common.Location) {
+	if location == nil {
+		return
+	}
+
+	c.linkLocation(location)
+}
+
 func (c *Context) linkLocation(location common.Location) LinkedGlobals {
 	linkedGlobals, ok := c.linkedGlobalsCache[location]
 	if ok {
@@ -390,6 +400,9 @@ func (c *Context) linkLocation(location common.Location) LinkedGlobals {
 	}
 
 	program := c.ImportHandler(location)
+	if program == nil {
+		return LinkedGlobals{}
+	}
 
 	return c.linkGlobals(location, program)
 }
@@ -406,4 +419,34 @@ func (c *Context) linkGlobals(location common.Location, program *bbq.Instruction
 		c,
 		c.linkedGlobalsCache,
 	)
+}
+
+func (c *Context) GetCompositeType(
+	location common.Location,
+	qualifiedIdentifier string,
+	typeID common.TypeID,
+) (*sema.CompositeType, error) {
+	c.ensureProgramInitialized(location)
+	return c.Config.GetCompositeType(location, qualifiedIdentifier, typeID)
+}
+
+func (c *Context) GetInterfaceType(
+	location common.Location,
+	qualifiedIdentifier string,
+	typeID common.TypeID,
+) (*sema.InterfaceType, error) {
+	c.ensureProgramInitialized(location)
+	return c.Config.GetInterfaceType(location, qualifiedIdentifier, typeID)
+}
+
+func (c *Context) GetEntitlementType(
+	typeID common.TypeID,
+) (*sema.EntitlementType, error) {
+	return c.Config.GetEntitlementType(typeID, c.ensureProgramInitialized)
+}
+
+func (c *Context) GetEntitlementMapType(
+	typeID common.TypeID,
+) (*sema.EntitlementMapType, error) {
+	return c.Config.GetEntitlementMapType(typeID, c.ensureProgramInitialized)
 }
