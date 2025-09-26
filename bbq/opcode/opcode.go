@@ -86,7 +86,7 @@ const (
 	ForceCast
 	Deref
 	Transfer
-	_
+	Convert
 	_
 	_
 	_

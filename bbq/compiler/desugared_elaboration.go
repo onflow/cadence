@@ -418,10 +418,6 @@ func (e *DesugaredElaboration) GetGlobalType(name string) (*sema.Variable, bool)
 	return e.elaboration.GetGlobalType(name)
 }
 
-func (e *DesugaredElaboration) MoveExpressionTypes(expression *ast.UnaryExpression) sema.Type {
-	return e.elaboration.MoveExpressionTypes(expression)
-}
-
 func (e *DesugaredElaboration) IsNestedResourceMoveExpression(expression ast.Expression) bool {
 	return e.elaboration.IsNestedResourceMoveExpression(expression)
 }

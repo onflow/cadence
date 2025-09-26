@@ -3480,7 +3480,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		// Would be equivalent to:
 		// fun test(x: @AnyResource?): @AnyResource? {
-		//    var $_result <-x
+		//    var $_result <- x
 		//    let result $noTransfer &$_result
 		//    if !(result != nil) {
 		//        $failPostCondition("")
@@ -3491,13 +3491,14 @@ func TestCompileFunctionConditions(t *testing.T) {
 			[]opcode.Instruction{
 				opcode.InstructionStatement{},
 
-				// $_result = x
+				// $_result <- x
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: xIndex},
+				opcode.InstructionTransfer{},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.InstructionJump{Target: 5},
+				opcode.InstructionJump{Target: 6},
 
 				// Get the reference and assign to `result`.
 				// i.e: `let result $noTransfer &$_result`
@@ -3516,7 +3517,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.InstructionNot{},
-				opcode.InstructionJumpIfFalse{Target: 21},
+				opcode.InstructionJumpIfFalse{Target: 22},
 
 				// $failPostCondition("")
 				opcode.InstructionStatement{},
@@ -3530,7 +3531,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 3},
+				opcode.InstructionConvert{Type: 3},
 				opcode.InstructionReturnValue{},
 			},
 			program.Functions[0].Code,
@@ -5331,6 +5332,42 @@ func TestCompileReturns(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: xIndex},
 				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionReturnValue{},
+			},
+			functions[0].Code,
+		)
+	})
+
+	t.Run("resource value return", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            fun test(x: @AnyResource): @AnyResource {
+                return <- x
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewInstructionCompiler(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
+		program := comp.Compile()
+
+		functions := program.Functions
+		require.Len(t, functions, 1)
+
+		// xIndex is the index of the parameter `x`, which is the first parameter
+		const xIndex = 0
+
+		assert.Equal(t,
+			[]opcode.Instruction{
+				// return <- x
+				opcode.InstructionStatement{},
+				opcode.InstructionGetLocal{Local: xIndex},
+				// There should be only one transfer
+				opcode.InstructionTransfer{},
+				opcode.InstructionConvert{Type: 1},
 				opcode.InstructionReturnValue{},
 			},
 			functions[0].Code,
@@ -7364,7 +7401,8 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 				opcode.InstructionTransferAndConvert{Type: 3},
 				opcode.InstructionGetGlobal{Global: 1},
 				opcode.InstructionInvoke{TypeArgs: []uint16(nil), ArgCount: 0},
-				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionTransfer{},
+				opcode.InstructionConvert{Type: 1},
 				opcode.InstructionNewDictionary{Type: 2, Size: 1, IsResource: true},
 				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionSetLocal{Local: yIndex},

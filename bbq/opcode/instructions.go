@@ -1441,7 +1441,7 @@ func (i InstructionTransfer) Encode(code *[]byte) {
 
 // InstructionTransferAndConvert
 //
-// Pops a value off the stack, transfers it to the given type, and then pushes it back on to the stack.
+// Pops a value off the stack, transfer and converts it to the given type, and then pushes it back on to the stack.
 type InstructionTransferAndConvert struct {
 	Type uint16
 }
@@ -1479,6 +1479,50 @@ func (i InstructionTransferAndConvert) Encode(code *[]byte) {
 }
 
 func DecodeTransferAndConvert(ip *uint16, code []byte) (i InstructionTransferAndConvert) {
+	i.Type = decodeUint16(ip, code)
+	return i
+}
+
+// InstructionConvert
+//
+// Pops a value off the stack, converts it to the given type, and then pushes it back on to the stack.
+type InstructionConvert struct {
+	Type uint16
+}
+
+var _ Instruction = InstructionConvert{}
+
+func (InstructionConvert) Opcode() Opcode {
+	return Convert
+}
+
+func (i InstructionConvert) String() string {
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
+}
+
+func (i InstructionConvert) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "type", i.Type, colorize)
+}
+
+func (i InstructionConvert) ResolvedOperandsString(sb *strings.Builder,
+	constants []constant.DecodedConstant,
+	types []interpreter.StaticType,
+	functionNames []string,
+	colorize bool) {
+	sb.WriteByte(' ')
+	printfTypeArgument(sb, "type", types[i.Type], colorize)
+}
+
+func (i InstructionConvert) Encode(code *[]byte) {
+	emitOpcode(code, i.Opcode())
+	emitUint16(code, i.Type)
+}
+
+func DecodeConvert(ip *uint16, code []byte) (i InstructionConvert) {
 	i.Type = decodeUint16(ip, code)
 	return i
 }
@@ -2743,6 +2787,8 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 		return InstructionTransfer{}
 	case TransferAndConvert:
 		return DecodeTransferAndConvert(ip, code)
+	case Convert:
+		return DecodeConvert(ip, code)
 	case SimpleCast:
 		return DecodeSimpleCast(ip, code)
 	case FailableCast:
