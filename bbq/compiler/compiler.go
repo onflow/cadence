@@ -3868,8 +3868,8 @@ func (c *Compiler[_, _]) mustEmitTransferAndConvert(targetType sema.Type) {
 // emitTransferIfNotResourceAndConvert emits code to transfer only non-resource types,
 // followed by a conversion regardless of the type.
 // i.e: If
-//  - Resource: Convert only.
-//  - Non-Resource: Transfer and convert.
+//   - Resource: Convert only.
+//   - Non-Resource: Transfer and convert.
 func (c *Compiler[_, _]) emitTransferIfNotResourceAndConvert(targetType sema.Type) {
 	typeIndex := c.getOrAddType(targetType)
 
