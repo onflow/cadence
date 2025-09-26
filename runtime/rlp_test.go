@@ -365,7 +365,7 @@ func TestRuntimeRLPGetTypeAndIsInstance(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
+			Location:  common.ScriptLocation{0x1},
 			UseVM:     true,
 		},
 	)
