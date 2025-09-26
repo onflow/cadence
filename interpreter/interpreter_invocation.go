@@ -127,7 +127,7 @@ func invokeFunctionValueWithEval[T any](
 
 			if i < parameterTypeCount {
 				parameterType := parameterTypes[i]
-				transferredArguments[i] = TransferAndConvert(
+				transferredArguments[i] = TransferIfNotResourceAndConvert(
 					context,
 					argumentValue,
 					argumentType,
