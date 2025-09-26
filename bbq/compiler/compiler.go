@@ -1841,7 +1841,7 @@ func (c *Compiler[_, _]) compileGlobalVariable(declaration *ast.VariableDeclarat
 }
 
 func (c *Compiler[_, _]) emitTransferAndConvertAndReturnValue(returnType sema.Type) {
-	c.emitTransferAndConvertIfNotResource(returnType)
+	c.emitTransferIfNotResourceAndConvert(returnType)
 	c.emit(opcode.InstructionReturnValue{})
 }
 
@@ -2088,7 +2088,7 @@ func (c *Compiler[_, _]) emitIndexKeyTransferAndConvert(indexExpression *ast.Ind
 	}
 
 	indexedType := indexExpressionTypes.IndexedType
-	c.emitTransferAndConvertIfNotResource(indexedType.IndexingType())
+	c.emitTransferIfNotResourceAndConvert(indexedType.IndexingType())
 }
 
 func (c *Compiler[_, _]) VisitExpressionStatement(statement *ast.ExpressionStatement) (_ struct{}) {
@@ -2318,7 +2318,7 @@ func (c *Compiler[_, _]) VisitArrayExpression(array *ast.ArrayExpression) (_ str
 
 	for _, expression := range array.Values {
 		c.compileExpression(expression)
-		c.emitTransferAndConvertIfNotResource(elementExpectedType)
+		c.emitTransferIfNotResourceAndConvert(elementExpectedType)
 	}
 
 	c.emit(
@@ -2346,9 +2346,9 @@ func (c *Compiler[_, _]) VisitDictionaryExpression(dictionary *ast.DictionaryExp
 
 	for _, entry := range dictionary.Entries {
 		c.compileExpression(entry.Key)
-		c.emitTransferAndConvertIfNotResource(dictionaryType.KeyType)
+		c.emitTransferIfNotResourceAndConvert(dictionaryType.KeyType)
 		c.compileExpression(entry.Value)
-		c.emitTransferAndConvertIfNotResource(dictionaryType.ValueType)
+		c.emitTransferIfNotResourceAndConvert(dictionaryType.ValueType)
 	}
 
 	c.emit(
@@ -2742,7 +2742,7 @@ func (c *Compiler[_, _]) compileArguments(arguments ast.Arguments, invocationTyp
 		if parameterType == nil {
 			c.emitTransfer()
 		} else {
-			c.emitTransferAndConvertIfNotResource(parameterType)
+			c.emitTransferIfNotResourceAndConvert(parameterType)
 		}
 	}
 }
@@ -3865,7 +3865,12 @@ func (c *Compiler[_, _]) mustEmitTransferAndConvert(targetType sema.Type) {
 	})
 }
 
-func (c *Compiler[_, _]) emitTransferAndConvertIfNotResource(targetType sema.Type) {
+// emitTransferIfNotResourceAndConvert emits code to transfer only non-resource types,
+// followed by a conversion regardless of the type.
+// i.e: If
+//   - Resource: Convert only.
+//   - Non-Resource: Transfer and convert.
+func (c *Compiler[_, _]) emitTransferIfNotResourceAndConvert(targetType sema.Type) {
 	typeIndex := c.getOrAddType(targetType)
 
 	// Resource-typed values are always used along with the move (<-) unary-operator.
