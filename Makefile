@@ -94,7 +94,10 @@ test-with-tracing:
 	go test -tags cadence_tracing $(TESTPKGS)
 
 .PHONY: ci
-ci: test-with-coverage smoke-test test-with-compiler
+ci: test-with-coverage test-with-compiler smoke-test
+
+.PHONY: ci-with-tracing
+ci-with-tracing: test-with-tracing test-with-compiler-and-tracing
 
 .PHONY: test-with-coverage
 test-with-coverage:
@@ -109,6 +112,10 @@ smoke-test:
 .PHONY: test-with-compiler
 test-with-compiler:
 	go test ./interpreter/... ./runtime/... -compile=true
+
+.PHONY: test-with-compiler-and-tracing
+test-with-compiler-and-tracing:
+	go test -tags cadence_tracing ./interpreter/... ./runtime/... -compile=true
 
 # Linting
 

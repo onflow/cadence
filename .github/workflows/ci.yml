@@ -94,7 +94,7 @@ jobs:
           cache: true
 
       - name: Test
-        run: make test-with-tracing
+        run: make ci-with-tracing
 
   lint:
     name: Lint
