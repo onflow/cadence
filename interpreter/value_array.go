@@ -109,7 +109,10 @@ func NewArrayValueWithIterator(
 			}
 
 			valueID := v.ValueID().String()
-			typeID := string(v.Type.ID())
+			var typeID string
+			if v.Type != nil {
+				typeID = string(v.Type.ID())
+			}
 
 			context.ReportArrayValueConstructTrace(
 				valueID,
@@ -125,8 +128,17 @@ func NewArrayValueWithIterator(
 			startTime := time.Now()
 
 			defer func() {
+				// NOTE: in defer, as array is only initialized at the end of the function,
+				// if there was no error during construction
+				if array == nil {
+					return
+				}
+
 				valueID := array.ValueID().String()
-				typeID := string(arrayType.ID())
+				var typeID string
+				if arrayType != nil {
+					typeID = string(arrayType.ID())
+				}
 
 				context.ReportAtreeNewArrayFromBatchDataTrace(
 					valueID,
