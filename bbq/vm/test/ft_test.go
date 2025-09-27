@@ -445,8 +445,6 @@ func compiledFTTransfer(tb testing.TB) {
 		b.StopTimer()
 	}
 
-	vmConfig.Tracer = nil
-
 	// Run validation scripts
 
 	for _, address := range []common.Address{

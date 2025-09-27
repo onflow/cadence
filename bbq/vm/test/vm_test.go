@@ -5531,7 +5531,7 @@ func TestForLoop(t *testing.T) {
 	})
 }
 
-func TestCompileIf(t *testing.T) {
+func TestIf(t *testing.T) {
 
 	t.Parallel()
 
@@ -5570,7 +5570,7 @@ func TestCompileIf(t *testing.T) {
 	})
 }
 
-func TestCompileConditional(t *testing.T) {
+func TestConditional(t *testing.T) {
 
 	t.Parallel()
 
@@ -5603,7 +5603,7 @@ func TestCompileConditional(t *testing.T) {
 	})
 }
 
-func TestCompileOr(t *testing.T) {
+func TestOr(t *testing.T) {
 
 	t.Parallel()
 
@@ -5681,7 +5681,7 @@ func TestCompileOr(t *testing.T) {
 	})
 }
 
-func TestCompileAnd(t *testing.T) {
+func TestAnd(t *testing.T) {
 
 	t.Parallel()
 
@@ -5759,7 +5759,7 @@ func TestCompileAnd(t *testing.T) {
 	})
 }
 
-func TestCompileUnaryNot(t *testing.T) {
+func TestUnaryNot(t *testing.T) {
 
 	t.Parallel()
 
@@ -5794,7 +5794,7 @@ func TestCompileUnaryNot(t *testing.T) {
 	})
 }
 
-func TestCompileUnaryNegate(t *testing.T) {
+func TestUnaryNegate(t *testing.T) {
 
 	t.Parallel()
 
@@ -5812,7 +5812,7 @@ func TestCompileUnaryNegate(t *testing.T) {
 	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(-42), actual)
 }
 
-func TestCompileUnaryDeref(t *testing.T) {
+func TestUnaryDeref(t *testing.T) {
 
 	t.Parallel()
 
@@ -5831,7 +5831,7 @@ func TestCompileUnaryDeref(t *testing.T) {
 	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(42), actual)
 }
 
-func TestCompileUnaryDerefSome(t *testing.T) {
+func TestUnaryDerefSome(t *testing.T) {
 
 	t.Parallel()
 
@@ -5854,7 +5854,7 @@ func TestCompileUnaryDerefSome(t *testing.T) {
 	)
 }
 
-func TestCompileUnaryDerefNil(t *testing.T) {
+func TestUnaryDerefNil(t *testing.T) {
 
 	t.Parallel()
 
@@ -5925,7 +5925,7 @@ func TestBinary(t *testing.T) {
 	}
 }
 
-func TestCompileForce(t *testing.T) {
+func TestForce(t *testing.T) {
 
 	t.Parallel()
 

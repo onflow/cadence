@@ -958,6 +958,7 @@ func TestInterpretImportGlobals(t *testing.T) {
 			"test",
 			test.CompilerAndVMOptions{
 				VMConfig: &vm.Config{
+					Tracer:          interpreter.NoOpTracer{},
 					StackDepthLimit: math.MaxUint64,
 					BuiltinGlobalsProvider: func(location common.Location) *activations.Activation[vm.Variable] {
 						activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())

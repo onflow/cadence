@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/json"
+	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
@@ -38,6 +39,13 @@ func testUseMemory(meter map[common.MemoryKind]uint64) common.FunctionMemoryGaug
 		meter[usage.Kind] += usage.Amount
 		return nil
 	}
+}
+
+func ifTracing[T any](tracingValue, nonTracingValue T) T {
+	if interpreter.TracingEnabled {
+		return tracingValue
+	}
+	return nonTracingValue
 }
 
 func TestRuntimeImportedValueMemoryMetering(t *testing.T) {
@@ -444,7 +452,7 @@ func TestRuntimeImportedValueMemoryMetering(t *testing.T) {
 
 		executeScript(t, script, meter, structValue)
 		assert.Equal(t, uint64(1), meter[common.MemoryKindCompositeValueBase])
-		assert.Equal(t, uint64(71), meter[common.MemoryKindRawString])
+		assert.Equal(t, ifTracing[uint64](142, 71), meter[common.MemoryKindRawString])
 	})
 
 	t.Run("InclusiveRange", func(t *testing.T) {
