@@ -79,7 +79,7 @@ type Config struct {
 func NewConfig(storage interpreter.Storage) *Config {
 	var tracer interpreter.Tracer
 	if interpreter.TracingEnabled {
-		tracer = interpreter.CallbackTracer(nil)
+		tracer = interpreter.NoOpTracer{}
 	}
 	return &Config{
 		storage:         storage,

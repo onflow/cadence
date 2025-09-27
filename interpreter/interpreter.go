@@ -285,7 +285,12 @@ func NewInterpreterWithSharedState(
 
 	var tracer Tracer
 	if TracingEnabled {
-		tracer = CallbackTracer(sharedState.Config.OnRecordTrace)
+		onRecordTrace := sharedState.Config.OnRecordTrace
+		if onRecordTrace == nil {
+			tracer = NoOpTracer{}
+		} else {
+			tracer = CallbackTracer(onRecordTrace)
+		}
 	}
 
 	interpreter := &Interpreter{
