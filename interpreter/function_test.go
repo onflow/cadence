@@ -512,3 +512,52 @@ func TestInvokeBoundFunctionsExternally(t *testing.T) {
 		result,
 	)
 }
+
+func TestInterpretConvertedResult(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t,
+			`
+            fun test(): Int? {
+                post {
+                    result.getType() == Type<Int?>()
+                }
+                return 1
+            }`,
+		)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("with errors", func(t *testing.T) {
+		t.Parallel()
+
+		inter, err := parseCheckAndPrepareWithOptions(t, `
+            fun test(): Int? {
+                post {
+                    result.map(mappingFunc) == 2
+                }
+                return 1
+            }
+
+            fun mappingFunc(value: Int): Int {
+                return value + 1
+            }`,
+			ParseCheckAndInterpretOptions{
+				HandleCheckerError: func(err error) {
+					errs := RequireCheckerErrors(t, err, 1)
+					assert.IsType(t, &sema.PurityError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+	})
+}
