@@ -3410,10 +3410,11 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// $_result = 5
 				opcode.InstructionStatement{},
 				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.InstructionJump{Target: 5},
+				opcode.InstructionJump{Target: 6},
 
 				// let result $noTransfer $_result
 				opcode.InstructionStatement{},
@@ -3430,13 +3431,13 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.InstructionNot{},
-				opcode.InstructionJumpIfFalse{Target: 20},
+				opcode.InstructionJumpIfFalse{Target: 21},
 
 				// $failPostCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 2}, // error message
-				opcode.InstructionTransferAndConvert{Type: 1},
+				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionInvoke{ArgCount: 1},
 
 				// Drop since it's a statement-expression
@@ -3444,7 +3445,6 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionReturnValue{},
 			},
 			program.Functions[0].Code,
@@ -3495,16 +3495,17 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: xIndex},
 				opcode.InstructionTransfer{},
+				opcode.InstructionConvert{Type: 1},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.InstructionJump{Target: 6},
+				opcode.InstructionJump{Target: 7},
 
 				// Get the reference and assign to `result`.
 				// i.e: `let result $noTransfer &$_result`
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionNewRef{Type: 1},
+				opcode.InstructionNewRef{Type: 2},
 				// NOTE: Explicitly no transferAndConvert
 				opcode.InstructionSetLocal{Local: resultIndex},
 
@@ -3517,13 +3518,13 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.InstructionNot{},
-				opcode.InstructionJumpIfFalse{Target: 22},
+				opcode.InstructionJumpIfFalse{Target: 23},
 
 				// $failPostCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 0}, // error message
-				opcode.InstructionTransferAndConvert{Type: 2},
+				opcode.InstructionTransferAndConvert{Type: 3},
 				opcode.InstructionInvoke{ArgCount: 1},
 
 				// Drop since it's a statement-expression
@@ -3531,7 +3532,6 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionConvert{Type: 3},
 				opcode.InstructionReturnValue{},
 			},
 			program.Functions[0].Code,
@@ -3672,10 +3672,11 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// $_result = 42
 				opcode.InstructionStatement{},
 				opcode.InstructionGetConstant{Constant: const42Index},
+				opcode.InstructionTransferAndConvert{Type: 6},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.InstructionJump{Target: 17},
+				opcode.InstructionJump{Target: 18},
 
 				// let result $noTransfer $_result
 				opcode.InstructionStatement{},
@@ -3694,7 +3695,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.InstructionNot{},
-				opcode.InstructionJumpIfFalse{Target: 32},
+				opcode.InstructionJumpIfFalse{Target: 33},
 
 				// $failPostCondition("")
 				opcode.InstructionStatement{},
@@ -3708,7 +3709,6 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 6},
 				opcode.InstructionReturnValue{},
 			},
 			concreteTypeTestFunc.Code,
@@ -3830,10 +3830,11 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// $_result = 42
 				opcode.InstructionStatement{},
 				opcode.InstructionGetConstant{Constant: const42Index},
+				opcode.InstructionTransferAndConvert{Type: 5},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.InstructionJump{Target: 9},
+				opcode.InstructionJump{Target: 10},
 
 				// let result $noTransfer $_result
 				opcode.InstructionStatement{},
@@ -3852,7 +3853,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.InstructionNot{},
-				opcode.InstructionJumpIfFalse{Target: 24},
+				opcode.InstructionJumpIfFalse{Target: 25},
 
 				// $failPostCondition("")
 				opcode.InstructionStatement{},
@@ -3866,7 +3867,6 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 5},
 				opcode.InstructionReturnValue{},
 			},
 			concreteTypeTestFunc.Code,
@@ -4217,10 +4217,11 @@ func TestCompileFunctionConditions(t *testing.T) {
 				// $_result = 5
 				opcode.InstructionStatement{},
 				opcode.InstructionGetConstant{Constant: 2},
+				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.InstructionJump{Target: 21},
+				opcode.InstructionJump{Target: 22},
 
 				// let result $noTransfer $_result
 				opcode.InstructionStatement{},
@@ -4236,7 +4237,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.InstructionGetLocal{Local: xIndex},
 				opcode.InstructionLess{},
 				opcode.InstructionNot{},
-				opcode.InstructionJumpIfFalse{Target: 36},
+				opcode.InstructionJumpIfFalse{Target: 37},
 
 				// $failPostCondition("")
 				opcode.InstructionStatement{},
@@ -4250,7 +4251,6 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionReturnValue{},
 			},
 			program.Functions[0].Code,
@@ -5461,10 +5461,11 @@ func TestCompileReturns(t *testing.T) {
 				// $_result = a
 				opcode.InstructionStatement{},
 				opcode.InstructionGetLocal{Local: aIndex},
+				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// Jump to post conditions
-				opcode.InstructionJump{Target: 9},
+				opcode.InstructionJump{Target: 10},
 
 				// let result $noTransfer $_result
 				opcode.InstructionStatement{},
@@ -5476,7 +5477,7 @@ func TestCompileReturns(t *testing.T) {
 				opcode.InstructionStatement{},
 				opcode.InstructionTrue{},
 				opcode.InstructionNot{},
-				opcode.InstructionJumpIfFalse{Target: 22},
+				opcode.InstructionJumpIfFalse{Target: 23},
 
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},
@@ -5486,8 +5487,9 @@ func TestCompileReturns(t *testing.T) {
 				opcode.InstructionDrop{},
 
 				// return $_result
+				// Note: no transfer/convert, since the value is already
+				// transferred/converted when assigning to `$_result`.
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 1},
 				opcode.InstructionReturnValue{},
 			},
 			functions[0].Code,
@@ -8939,10 +8941,11 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 				// $_result = 5
 				opcode.InstructionStatement{},
 				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.InstructionJump{Target: 5},
+				opcode.InstructionJump{Target: 6},
 
 				// let result $noTransfer $_result
 				opcode.InstructionStatement{},
@@ -8959,13 +8962,13 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.InstructionNot{},
-				opcode.InstructionJumpIfFalse{Target: 20},
+				opcode.InstructionJumpIfFalse{Target: 21},
 
 				// $failPostCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 2}, // error message
-				opcode.InstructionTransferAndConvert{Type: 2},
+				opcode.InstructionTransferAndConvert{Type: 3},
 				opcode.InstructionInvoke{ArgCount: 1},
 
 				// Drop since it's a statement-expression
@@ -8973,7 +8976,6 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 3},
 				opcode.InstructionReturnValue{},
 			},
 			functions[anonymousFunctionIndex].Code,
@@ -9129,10 +9131,11 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 				// $_result = 5
 				opcode.InstructionStatement{},
 				opcode.InstructionGetConstant{Constant: 0},
+				opcode.InstructionTransferAndConvert{Type: 2},
 				opcode.InstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.InstructionJump{Target: 5},
+				opcode.InstructionJump{Target: 6},
 
 				// let result $noTransfer $_result
 				opcode.InstructionStatement{},
@@ -9149,13 +9152,13 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.InstructionNot{},
-				opcode.InstructionJumpIfFalse{Target: 20},
+				opcode.InstructionJumpIfFalse{Target: 21},
 
 				// $failPostCondition("")
 				opcode.InstructionStatement{},
 				opcode.InstructionGetGlobal{Global: 1},     // global index 1 is 'panic' function
 				opcode.InstructionGetConstant{Constant: 2}, // error message
-				opcode.InstructionTransferAndConvert{Type: 2},
+				opcode.InstructionTransferAndConvert{Type: 3},
 				opcode.InstructionInvoke{ArgCount: 1},
 
 				// Drop since it's a statement-expression
@@ -9163,7 +9166,6 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 
 				// return $_result
 				opcode.InstructionGetLocal{Local: tempResultIndex},
-				opcode.InstructionTransferAndConvert{Type: 3},
 				opcode.InstructionReturnValue{},
 			},
 			functions[anonymousFunctionIndex].Code,

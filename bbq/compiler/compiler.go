@@ -1148,7 +1148,9 @@ func (c *Compiler[_, _]) compileBlock(
 				c.emit(opcode.InstructionReturn{})
 			} else {
 				c.emitGetLocal(local.index)
-				c.emitTransferAndConvertAndReturnValue(returnType)
+				// Do not transfer/convert, since the assignment to the temp
+				// `$_result` variable already did the transfer and convert.
+				c.emit(opcode.InstructionReturnValue{})
 			}
 		} else if needsSyntheticReturn(block.Statements) {
 			// If there are no post conditions,
@@ -1248,6 +1250,12 @@ func (c *Compiler[_, _]) VisitReturnStatement(statement *ast.ReturnStatement) (_
 			if tempResultVar != nil {
 				// (1.a.i)
 				// Assign the return value to the temp-result variable.
+
+				// Must transfer and convert, so that `result` variable gets the
+				// correct converted value.
+				returnTypes := c.DesugaredElaboration.ReturnStatementTypes(statement)
+				c.emitTransferIfNotResourceAndConvert(returnTypes.ReturnType)
+
 				c.emitSetLocal(tempResultVar.index)
 			} else {
 				// (1.a.ii)
