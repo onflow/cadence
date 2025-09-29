@@ -22,8 +22,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-
-	"github.com/onflow/cadence/errors"
 )
 
 const (
@@ -492,106 +490,62 @@ type NoOpTracer struct{}
 
 var _ Tracer = NoOpTracer{}
 
-func (NoOpTracer) ReportInvokeTrace(_ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
+func (NoOpTracer) ReportInvokeTrace(_ string, _ string, _ time.Duration) {}
 
-func (NoOpTracer) ReportImportTrace(_ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
+func (NoOpTracer) ReportImportTrace(_ string, _ time.Duration) {}
 
-func (NoOpTracer) ReportEmitEventTrace(_ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
+func (NoOpTracer) ReportEmitEventTrace(_ string, _ time.Duration) {}
 
-func (NoOpTracer) ReportArrayValueDeepRemoveTrace(_ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
+func (NoOpTracer) ReportArrayValueDeepRemoveTrace(_ string, _ string, _ time.Duration) {}
 
-func (NoOpTracer) ReportArrayValueTransferTrace(_ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
+func (NoOpTracer) ReportArrayValueTransferTrace(_ string, _ string, _ time.Duration) {}
 
-func (NoOpTracer) ReportArrayValueDestroyTrace(_ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
+func (NoOpTracer) ReportArrayValueDestroyTrace(_ string, _ string, _ time.Duration) {}
 
-func (NoOpTracer) ReportArrayValueConstructTrace(_ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
+func (NoOpTracer) ReportArrayValueConstructTrace(_ string, _ string, _ time.Duration) {}
 
-func (NoOpTracer) ReportDictionaryValueTransferTrace(_ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
+func (NoOpTracer) ReportDictionaryValueTransferTrace(_ string, _ string, _ time.Duration) {}
 
-func (NoOpTracer) ReportArrayValueConformsToStaticTypeTrace(_ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
+func (NoOpTracer) ReportArrayValueConformsToStaticTypeTrace(_ string, _ string, _ time.Duration) {}
 
-func (NoOpTracer) ReportDictionaryValueDestroyTrace(_ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
+func (NoOpTracer) ReportDictionaryValueDestroyTrace(_ string, _ string, _ time.Duration) {}
 
-func (NoOpTracer) ReportDictionaryValueDeepRemoveTrace(_ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
+func (NoOpTracer) ReportDictionaryValueDeepRemoveTrace(_ string, _ string, _ time.Duration) {}
 
 func (NoOpTracer) ReportCompositeValueDeepRemoveTrace(_ string, _ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
 }
 
 func (NoOpTracer) ReportDictionaryValueGetMemberTrace(_ string, _ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
 }
 
-func (NoOpTracer) ReportDictionaryValueConstructTrace(_ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
+func (NoOpTracer) ReportDictionaryValueConstructTrace(_ string, _ string, _ time.Duration) {}
 
 func (NoOpTracer) ReportDictionaryValueConformsToStaticTypeTrace(_ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
 }
 
-func (NoOpTracer) ReportCompositeValueTransferTrace(_ string, _ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
+func (NoOpTracer) ReportCompositeValueTransferTrace(_ string, _ string, _ string, _ time.Duration) {}
 
 func (NoOpTracer) ReportCompositeValueSetMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
 }
 
-func (NoOpTracer) ReportCompositeValueDestroyTrace(_ string, _ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
+func (NoOpTracer) ReportCompositeValueDestroyTrace(_ string, _ string, _ string, _ time.Duration) {}
 
 func (NoOpTracer) ReportCompositeValueGetMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
 }
 
-func (NoOpTracer) ReportCompositeValueConstructTrace(_ string, _ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
+func (NoOpTracer) ReportCompositeValueConstructTrace(_ string, _ string, _ string, _ time.Duration) {}
 
 func (NoOpTracer) ReportCompositeValueConformsToStaticTypeTrace(_ string, _ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
 }
 
 func (NoOpTracer) ReportCompositeValueRemoveMemberTrace(_ string, _ string, _ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
 }
 
-func (NoOpTracer) ReportDomainStorageMapDeepRemoveTrace(_ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
+func (NoOpTracer) ReportDomainStorageMapDeepRemoveTrace(_ string, _ string, _ time.Duration) {}
 
-func (NoOpTracer) ReportAtreeNewArrayFromBatchDataTrace(_ string, _ string, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
+func (NoOpTracer) ReportAtreeNewArrayFromBatchDataTrace(_ string, _ string, _ time.Duration) {}
 
-func (NoOpTracer) ReportAtreeNewMapTrace(_ string, _ string, _ uint64, _ time.Duration) {
-	panic(errors.NewUnreachableError())
-}
+func (NoOpTracer) ReportAtreeNewMapTrace(_ string, _ string, _ uint64, _ time.Duration) {}
 
 func (NoOpTracer) ReportAtreeNewMapFromBatchDataTrace(_ string, _ string, _ uint64, _ time.Duration) {
-	panic(errors.NewUnreachableError())
 }
