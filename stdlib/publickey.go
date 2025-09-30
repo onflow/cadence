@@ -243,18 +243,18 @@ func UnifiedPublicKeyVerifySignatureFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		signatureValue := args.GetArray(0)
-		signedDataValue := args.GetArray(1)
-		domainSeparationTagValue := args.GetString(2)
-		hashAlgorithmValue := args.Get(3).(*interpreter.SimpleCompositeValue)
+		signatureValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
+		signedDataValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[1])
+		domainSeparationTagValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[2])
+		hashAlgorithmValue := interpreter.AssertValueOfType[*interpreter.SimpleCompositeValue](args[3])
 
 		if publicKeyValue == nil {
-			publicKeyValue = receiver.(*interpreter.CompositeValue)
+			publicKeyValue = interpreter.AssertValueOfType[*interpreter.CompositeValue](receiver)
 		}
 
 		return PublicKeyVerifySignature(
@@ -357,12 +357,12 @@ func UnifiedPublicKeyVerifyPoPFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		signatureValue := args.GetArray(0)
+		signatureValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
 
 		if publicKeyValue == nil {
 			publicKeyValue = receiver.(*interpreter.CompositeValue)

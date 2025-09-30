@@ -365,7 +365,7 @@ func NewUnifiedDeletionCheckedAccountCapabilityControllerFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		controller := assertValueOfType[*AccountCapabilityControllerValue](receiver)
+		controller := AssertValueOfType[*AccountCapabilityControllerValue](receiver)
 		controller.CheckDeleted()
 
 		return f(context, locationRange, typeParameterGetter, receiver, args...)
@@ -381,7 +381,7 @@ var UnifiedAccountCapabilityControllerDeleteFunction = UnifiedNativeFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		controller := assertValueOfType[*AccountCapabilityControllerValue](receiver)
+		controller := AssertValueOfType[*AccountCapabilityControllerValue](receiver)
 		controller.Delete(context, locationRange)
 		controller.deleted = true
 		return Void
@@ -403,8 +403,8 @@ var UnifiedAccountCapabilityControllerSetTagFunction = UnifiedNativeFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		controller := assertValueOfType[*AccountCapabilityControllerValue](receiver)
-		newTagValue := assertValueOfType[*StringValue](args[0])
+		controller := AssertValueOfType[*AccountCapabilityControllerValue](receiver)
+		newTagValue := AssertValueOfType[*StringValue](args[0])
 		controller.SetTag(context, newTagValue)
 		return Void
 	},

@@ -120,7 +120,7 @@ func NewUnifiedBoundHostFunctionValue(
 
 // generic helper function to assert that the provided value is of a specific type
 // useful for asserting receiver and argument types in unified functions
-func assertValueOfType[T Value](val Value) T {
+func AssertValueOfType[T Value](val Value) T {
 	value, ok := val.(T)
 	if !ok {
 		panic(errors.NewUnreachableError())

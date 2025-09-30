@@ -1618,31 +1618,35 @@ func (v *DictionaryValue) Inlined() bool {
 // Unified dictionary functions
 
 var UnifiedDictionaryRemoveFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, args *ArgumentExtractor, receiver Value, typeArguments []StaticType, locationRange LocationRange) Value {
-		keyValue := args.GetValue(0)
-		return receiver.(*DictionaryValue).Remove(context, locationRange, keyValue)
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		keyValue := args[0]
+		dictionary := AssertValueOfType[*DictionaryValue](receiver)
+		return dictionary.Remove(context, locationRange, keyValue)
 	},
 )
 
 var UnifiedDictionaryInsertFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, args *ArgumentExtractor, receiver Value, typeArguments []StaticType, locationRange LocationRange) Value {
-		keyValue := args.GetValue(0)
-		newValue := args.GetValue(1)
-		return receiver.(*DictionaryValue).Insert(context, locationRange, keyValue, newValue)
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		keyValue := args[0]
+		newValue := args[1]
+		dictionary := AssertValueOfType[*DictionaryValue](receiver)
+		return dictionary.Insert(context, locationRange, keyValue, newValue)
 	},
 )
 
 var UnifiedDictionaryContainsKeyFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, args *ArgumentExtractor, receiver Value, typeArguments []StaticType, locationRange LocationRange) Value {
-		keyValue := args.GetValue(0)
-		return receiver.(*DictionaryValue).ContainsKey(context, locationRange, keyValue)
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		keyValue := args[0]
+		dictionary := AssertValueOfType[*DictionaryValue](receiver)
+		return dictionary.ContainsKey(context, locationRange, keyValue)
 	},
 )
 
 var UnifiedDictionaryForEachKeyFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, args *ArgumentExtractor, receiver Value, typeArguments []StaticType, locationRange LocationRange) Value {
-		funcArgument := args.GetFunction(0)
-		receiver.(*DictionaryValue).ForEachKey(context, locationRange, funcArgument)
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		funcArgument := AssertValueOfType[FunctionValue](args[0])
+		dictionary := AssertValueOfType[*DictionaryValue](receiver)
+		dictionary.ForEachKey(context, locationRange, funcArgument)
 		return Void
 	},
 )

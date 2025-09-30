@@ -232,15 +232,12 @@ func (v CharacterValue) GetMember(context MemberAccessibleContext, locationRange
 var UnifiedCharacterValueToStringFunction = UnifiedNativeFunction(
 	func(
 		context UnifiedFunctionContext,
-		args *ArgumentExtractor,
-		receiver Value,
-		typeArguments []StaticType,
 		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
 	) Value {
-		character, ok := receiver.(CharacterValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
+		character := AssertValueOfType[CharacterValue](receiver)
 		return CharacterValueToString(context, character)
 	},
 )

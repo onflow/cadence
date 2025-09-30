@@ -115,11 +115,8 @@ func (v PathValue) GetMember(context MemberAccessibleContext, locationRange Loca
 }
 
 var UnifiedPathValueToStringFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, args *ArgumentExtractor, receiver Value, typeArguments []StaticType, locationRange LocationRange) Value {
-		path, ok := receiver.(PathValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		path := AssertValueOfType[PathValue](receiver)
 		return PathValueToStringFunction(context, path, locationRange)
 	},
 )

@@ -517,10 +517,10 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 // Unified some functions
 
 var UnifiedSomeMapFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, args *ArgumentExtractor, receiver Value, typeArguments []StaticType, locationRange LocationRange) Value {
-		transformFunction := args.GetFunction(0)
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		transformFunction := AssertValueOfType[FunctionValue](args[0])
 		transformFunctionType := transformFunction.FunctionType(context)
-		innerValueType := receiver.(OptionalValue).InnerValueType(context)
+		innerValueType := AssertValueOfType[OptionalValue](receiver).InnerValueType(context)
 		return OptionalValueMapFunction(context, receiver.(OptionalValue), transformFunctionType, transformFunction, innerValueType, locationRange)
 	},
 )

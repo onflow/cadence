@@ -128,16 +128,13 @@ func NewInclusiveRangeValueWithStep(
 var UnifiedInclusiveRangeContainsFunction = UnifiedNativeFunction(
 	func(
 		context UnifiedFunctionContext,
-		args *ArgumentExtractor,
-		receiver Value,
-		typeArguments []StaticType,
 		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
 	) Value {
-		rangeValue, ok := receiver.(*CompositeValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-		needleInteger := convertAndAssertIntegerValue(args.Get(0))
+		rangeValue := AssertValueOfType[*CompositeValue](receiver)
+		needleInteger := convertAndAssertIntegerValue(args[0])
 		rangeType, ok := rangeValue.StaticType(context).(InclusiveRangeStaticType)
 		if !ok {
 			panic(errors.NewUnreachableError())

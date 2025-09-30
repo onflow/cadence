@@ -4406,7 +4406,7 @@ func UnifiedAccountStorageIterateFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		addressValue := assertValueOfType[AddressValue](receiver)
+		addressValue := AssertValueOfType[AddressValue](receiver)
 		address := addressValue.ToAddress()
 
 		return AccountStorageIterate(
@@ -4636,7 +4636,7 @@ func UnifiedAccountStorageSaveFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		addressValue := assertValueOfType[AddressValue](receiver)
+		addressValue := AssertValueOfType[AddressValue](receiver)
 
 		return AccountStorageSave(
 			context,
@@ -4726,7 +4726,7 @@ func UnifiedAccountStorageTypeFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		addressValue := assertValueOfType[AddressValue](receiver)
+		addressValue := AssertValueOfType[AddressValue](receiver)
 		address := addressValue.ToAddress()
 
 		return AccountStorageType(
@@ -4823,7 +4823,7 @@ func UnifiedAccountStorageReadFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		addressValue := assertValueOfType[AddressValue](receiver)
+		addressValue := AssertValueOfType[AddressValue](receiver)
 		address := addressValue.ToAddress()
 		typeParameter := typeParameterGetter.NextSema()
 
@@ -4931,7 +4931,7 @@ func UnifiedAccountStorageBorrowFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		addressValue := assertValueOfType[AddressValue](receiver)
+		addressValue := AssertValueOfType[AddressValue](receiver)
 		address := addressValue.ToAddress()
 		typeParameter := typeParameterGetter.NextSema()
 
@@ -5010,7 +5010,7 @@ func UnifiedAccountStorageCheckFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		addressValue := assertValueOfType[AddressValue](receiver)
+		addressValue := AssertValueOfType[AddressValue](receiver)
 		address := addressValue.ToAddress()
 		typeParameter := typeParameterGetter.NextSema()
 
@@ -5460,7 +5460,7 @@ func UnifiedIsInstanceFunction() UnifiedNativeFunction {
 		receiver Value,
 		args ...Value,
 	) Value {
-		typeValue := assertValueOfType[TypeValue](args[0])
+		typeValue := AssertValueOfType[TypeValue](args[0])
 		return IsInstance(context, receiver, typeValue)
 	}
 }

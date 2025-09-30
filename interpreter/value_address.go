@@ -293,14 +293,14 @@ func AddressValueFromString(gauge common.MemoryGauge, string *StringValue) Value
 // Unified address functions
 
 var UnifiedAddressToStringFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, args *ArgumentExtractor, receiver Value, typeArguments []StaticType, locationRange LocationRange) Value {
-		return AddressValueToStringFunction(context, receiver.(AddressValue), locationRange)
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		return AddressValueToStringFunction(context, AssertValueOfType[AddressValue](receiver), locationRange)
 	},
 )
 
 var UnifiedAddressToBytesFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, args *ArgumentExtractor, receiver Value, typeArguments []StaticType, locationRange LocationRange) Value {
-		address := common.Address(receiver.(AddressValue))
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		address := common.Address(AssertValueOfType[AddressValue](receiver))
 		return ByteSliceToByteArrayValue(context, address[:])
 	},
 )
