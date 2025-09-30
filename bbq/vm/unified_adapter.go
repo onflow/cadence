@@ -25,12 +25,14 @@ import (
 )
 
 type VMTypeParameterGetter struct {
+	index              int
 	context            *Context
 	typeParameterTypes []bbq.StaticType
 }
 
 func NewVMTypeParameterGetter(context *Context, typeParameterTypes []bbq.StaticType) *VMTypeParameterGetter {
 	return &VMTypeParameterGetter{
+		index:              0,
 		context:            context,
 		typeParameterTypes: typeParameterTypes,
 	}
@@ -39,11 +41,15 @@ func NewVMTypeParameterGetter(context *Context, typeParameterTypes []bbq.StaticT
 var _ interpreter.TypeParameterGetter = &VMTypeParameterGetter{}
 
 func (g *VMTypeParameterGetter) NextStatic() interpreter.StaticType {
-	return g.typeParameterTypes[0]
+	current := g.index
+	g.index++
+	return g.typeParameterTypes[current]
 }
 
 func (g *VMTypeParameterGetter) NextSema() sema.Type {
-	return g.context.SemaTypeFromStaticType(g.typeParameterTypes[0])
+	current := g.index
+	g.index++
+	return g.context.SemaTypeFromStaticType(g.typeParameterTypes[current])
 }
 
 // Like in the interpreter's unified_function, these are all the functions that need to exist to work with the VM

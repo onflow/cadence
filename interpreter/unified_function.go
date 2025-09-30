@@ -52,11 +52,15 @@ func NewInterpreterTypeParameterGetter(memoryGauge common.MemoryGauge, typeParam
 }
 
 func (i *InterpreterTypeParameterGetter) NextStatic() StaticType {
-	return ConvertSemaToStaticType(i.memoryGauge, i.typeParameterTypes.Oldest().Value)
+	current := i.typeParameterTypes.Oldest()
+	i.typeParameterTypes.Delete(current.Key)
+	return ConvertSemaToStaticType(i.memoryGauge, current.Value)
 }
 
 func (i *InterpreterTypeParameterGetter) NextSema() sema.Type {
-	return i.typeParameterTypes.Oldest().Value
+	current := i.typeParameterTypes.Oldest()
+	i.typeParameterTypes.Delete(current.Key)
+	return current.Value
 }
 
 type UnifiedNativeFunction func(
