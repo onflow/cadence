@@ -4401,19 +4401,17 @@ func UnifiedAccountStorageIterateFunction(
 ) UnifiedNativeFunction {
 	return func(
 		context UnifiedFunctionContext,
-		args *ArgumentExtractor,
-		receiver Value,
-		typeArguments []StaticType,
 		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
 	) Value {
-		addressValue := GetAddressValue(receiver, addressPointer)
+		addressValue := assertValueOfType[AddressValue](receiver)
 		address := addressValue.ToAddress()
-
-		arguments := args.GetAll()
 
 		return AccountStorageIterate(
 			context,
-			arguments,
+			args,
 			address,
 			domain,
 			pathType,
@@ -4633,19 +4631,16 @@ func UnifiedAccountStorageSaveFunction(
 ) UnifiedNativeFunction {
 	return func(
 		context UnifiedFunctionContext,
-		args *ArgumentExtractor,
-		receiver Value,
-		typeArguments []StaticType,
 		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
 	) Value {
-		addressValue := GetAddressValue(receiver, addressPointer)
-
-		// Convert args to slice for AccountStorageSave
-		arguments := args.GetAll()
+		addressValue := assertValueOfType[AddressValue](receiver)
 
 		return AccountStorageSave(
 			context,
-			arguments,
+			args,
 			addressValue,
 			locationRange,
 		)
@@ -4726,20 +4721,17 @@ func UnifiedAccountStorageTypeFunction(
 ) UnifiedNativeFunction {
 	return func(
 		context UnifiedFunctionContext,
-		args *ArgumentExtractor,
-		receiver Value,
-		typeArguments []StaticType,
 		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
 	) Value {
-		addressValue := GetAddressValue(receiver, addressPointer)
+		addressValue := assertValueOfType[AddressValue](receiver)
 		address := addressValue.ToAddress()
-
-		// Convert args to slice for AccountStorageType
-		arguments := args.GetAll()
 
 		return AccountStorageType(
 			context,
-			arguments,
+			args,
 			address,
 		)
 	}
@@ -4826,26 +4818,18 @@ func UnifiedAccountStorageReadFunction(
 ) UnifiedNativeFunction {
 	return func(
 		context UnifiedFunctionContext,
-		args *ArgumentExtractor,
-		receiver Value,
-		typeArguments []StaticType,
 		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
 	) Value {
-		addressValue := GetAddressValue(receiver, addressPointer)
+		addressValue := assertValueOfType[AddressValue](receiver)
 		address := addressValue.ToAddress()
-
-		// Get type parameter from typeArguments
-		if len(typeArguments) == 0 {
-			panic(errors.NewUnreachableError())
-		}
-		typeParameter := MustConvertStaticToSemaType(typeArguments[0], context)
-
-		// Convert args to slice for AccountStorageRead
-		arguments := args.GetAll()
+		typeParameter := typeParameterGetter.NextSema()
 
 		return AccountStorageRead(
 			context,
-			arguments,
+			args,
 			typeParameter,
 			address,
 			clear,
@@ -4942,25 +4926,18 @@ func UnifiedAccountStorageBorrowFunction(
 ) UnifiedNativeFunction {
 	return func(
 		context UnifiedFunctionContext,
-		args *ArgumentExtractor,
-		receiver Value,
-		typeArguments []StaticType,
 		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
 	) Value {
-		addressValue := GetAddressValue(receiver, addressPointer)
+		addressValue := assertValueOfType[AddressValue](receiver)
 		address := addressValue.ToAddress()
-
-		// Get type parameter from typeArguments
-		if len(typeArguments) == 0 {
-			panic(errors.NewUnreachableError())
-		}
-		typeParameter := MustConvertStaticToSemaType(typeArguments[0], context)
-
-		arguments := args.GetAll()
+		typeParameter := typeParameterGetter.NextSema()
 
 		return AccountStorageBorrow(
 			context,
-			arguments,
+			args,
 			typeParameter,
 			address,
 			locationRange,
@@ -5028,27 +5005,19 @@ func UnifiedAccountStorageCheckFunction(
 ) UnifiedNativeFunction {
 	return func(
 		context UnifiedFunctionContext,
-		args *ArgumentExtractor,
-		receiver Value,
-		typeArguments []StaticType,
 		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
 	) Value {
-		addressValue := GetAddressValue(receiver, addressPointer)
+		addressValue := assertValueOfType[AddressValue](receiver)
 		address := addressValue.ToAddress()
-
-		// Get type parameter from typeArguments
-		if len(typeArguments) == 0 {
-			panic(errors.NewUnreachableError())
-		}
-		typeParameter := MustConvertStaticToSemaType(typeArguments[0], context)
-
-		// Convert args to slice for AccountStorageCheck
-		arguments := args.GetAll()
+		typeParameter := typeParameterGetter.NextSema()
 
 		return AccountStorageCheck(
 			context,
 			address,
-			arguments,
+			args,
 			typeParameter,
 		)
 	}
@@ -5486,12 +5455,12 @@ func getBuiltinFunctionMember(context MemberAccessibleContext, self Value, ident
 func UnifiedIsInstanceFunction() UnifiedNativeFunction {
 	return func(
 		context UnifiedFunctionContext,
-		args *ArgumentExtractor,
-		receiver Value,
-		typeArguments []StaticType,
 		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
 	) Value {
-		typeValue := args.GetType(0)
+		typeValue := assertValueOfType[TypeValue](args[0])
 		return IsInstance(context, receiver, typeValue)
 	}
 }
@@ -5524,10 +5493,10 @@ func IsInstance(invocationContext InvocationContext, self Value, typeValue TypeV
 func UnifiedGetTypeFunction() UnifiedNativeFunction {
 	return func(
 		context UnifiedFunctionContext,
-		args *ArgumentExtractor,
-		receiver Value,
-		typeArguments []StaticType,
 		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
 	) Value {
 		return ValueGetType(context, receiver)
 	}
@@ -5999,15 +5968,12 @@ func UnifiedCapabilityBorrowFunction(
 ) UnifiedNativeFunction {
 	return func(
 		context UnifiedFunctionContext,
-		args *ArgumentExtractor,
-		receiver Value,
-		typeArguments []StaticType,
 		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
 	) Value {
-		var typeArgument sema.Type
-		if len(typeArguments) > 0 {
-			typeArgument = MustConvertStaticToSemaType(typeArguments[0], context)
-		}
+		typeArgument := typeParameterGetter.NextSema()
 
 		return CapabilityBorrow(
 			context,
@@ -6081,15 +6047,12 @@ func UnifiedCapabilityCheckFunction(
 ) UnifiedNativeFunction {
 	return func(
 		context UnifiedFunctionContext,
-		args *ArgumentExtractor,
-		receiver Value,
-		typeArguments []StaticType,
 		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
 	) Value {
-		var typeArgument sema.Type
-		if len(typeArguments) > 0 {
-			typeArgument = MustConvertStaticToSemaType(typeArguments[0], context)
-		}
+		typeArgument := typeParameterGetter.NextSema()
 
 		return CapabilityCheck(
 			context,
