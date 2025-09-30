@@ -19,3 +19,7 @@
 package sema
 
 //go:generate go run ./type_check_gen subtype_check.gen.go
+
+func IsResourceType(typ Type) bool {
+	return typ.IsResourceType()
+}

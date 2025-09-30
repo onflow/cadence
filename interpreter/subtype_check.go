@@ -58,3 +58,16 @@ func IsHashableStructType(typeConverter TypeConverter, typ StaticType) bool {
 			IsSubType(typeConverter, typ, PrimitiveStaticTypePath)
 	}
 }
+
+func IsResourceType(typ StaticType) bool {
+	switch typ := typ.(type) {
+	case PrimitiveStaticType:
+		// Primitive static type to sema type conversion is just a switch case.
+		// So not much overhead there.
+		// TODO: Maybe have these precomputed.
+		return typ.SemaType().IsResourceType()
+	default:
+		// TODO:
+		return false
+	}
+}

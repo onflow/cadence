@@ -601,9 +601,9 @@ func (gen *SubTypeCheckGenerator) isAttachmentPredicate(predicate IsAttachmentPr
 func (gen *SubTypeCheckGenerator) isResourcePredicate(predicate IsResourcePredicate) []dst.Node {
 	return []dst.Node{
 		&dst.CallExpr{
-			Fun: &dst.SelectorExpr{
-				X:   gen.expression(predicate.Expression),
-				Sel: dst.NewIdent("IsResourceType"),
+			Fun: dst.NewIdent("IsResourceType"),
+			Args: []dst.Expr{
+				gen.expression(predicate.Expression),
 			},
 		},
 	}

@@ -29,19 +29,19 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 		return true
 
 	case PrimitiveStaticTypeAnyStruct:
-		return !(subType.IsResourceType()) &&
+		return !(IsResourceType(subType)) &&
 			!(subType == PrimitiveStaticTypeAny)
 
 	case PrimitiveStaticTypeAnyResource:
-		return subType.IsResourceType()
+		return IsResourceType(subType)
 
 	case PrimitiveStaticTypeAnyResourceAttachment:
 		return isAttachmentType(subType) &&
-			subType.IsResourceType()
+			IsResourceType(subType)
 
 	case PrimitiveStaticTypeAnyStructAttachment:
 		return isAttachmentType(subType) &&
-			!(subType.IsResourceType())
+			!(IsResourceType(subType))
 
 	case PrimitiveStaticTypeHashableStruct:
 		return IsHashableStructType(typeConverter, subType)

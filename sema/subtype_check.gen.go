@@ -29,19 +29,19 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 		return true
 
 	case AnyStructType:
-		return !(subType.IsResourceType()) &&
+		return !(IsResourceType(subType)) &&
 			!(subType == AnyType)
 
 	case AnyResourceType:
-		return subType.IsResourceType()
+		return IsResourceType(subType)
 
 	case AnyResourceAttachmentType:
 		return isAttachmentType(subType) &&
-			subType.IsResourceType()
+			IsResourceType(subType)
 
 	case AnyStructAttachmentType:
 		return isAttachmentType(subType) &&
-			!(subType.IsResourceType())
+			!(IsResourceType(subType))
 
 	case HashableStructType:
 		return IsHashableStructType(subType)
