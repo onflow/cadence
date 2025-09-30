@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 )
@@ -31,10 +32,37 @@ type UnifiedFunctionContext interface {
 	InvocationContext
 }
 
+type TypeParameterGetter interface {
+	NextStatic() StaticType
+	NextSema() sema.Type
+}
+
+type InterpreterTypeParameterGetter struct {
+	memoryGauge        common.MemoryGauge
+	typeParameterTypes *sema.TypeParameterTypeOrderedMap
+}
+
+var _ TypeParameterGetter = &InterpreterTypeParameterGetter{}
+
+func NewInterpreterTypeParameterGetter(memoryGauge common.MemoryGauge, typeParameterTypes *sema.TypeParameterTypeOrderedMap) *InterpreterTypeParameterGetter {
+	return &InterpreterTypeParameterGetter{
+		memoryGauge:        memoryGauge,
+		typeParameterTypes: typeParameterTypes,
+	}
+}
+
+func (i *InterpreterTypeParameterGetter) NextStatic() StaticType {
+	return ConvertSemaToStaticType(i.memoryGauge, i.typeParameterTypes.Oldest().Value)
+}
+
+func (i *InterpreterTypeParameterGetter) NextSema() sema.Type {
+	return i.typeParameterTypes.Oldest().Value
+}
+
 type UnifiedNativeFunction func(
 	context UnifiedFunctionContext,
 	locationRange LocationRange,
-	typeArguments []StaticType,
+	typeParameterGetter TypeParameterGetter,
 	receiver Value,
 	args ...Value,
 ) Value
@@ -49,17 +77,9 @@ func AdaptUnifiedFunctionForInterpreter(fn UnifiedNativeFunction) HostFunction {
 			receiver = *invocation.Self
 		}
 
-		// convert TypeParameterTypes to []StaticType
-		var typeArguments []StaticType
-		if invocation.TypeParameterTypes != nil {
-			typeArguments = make([]StaticType, 0, invocation.TypeParameterTypes.Len())
-			invocation.TypeParameterTypes.Foreach(func(key *sema.TypeParameter, semaType sema.Type) {
-				staticType := ConvertSemaToStaticType(context, semaType)
-				typeArguments = append(typeArguments, staticType)
-			})
-		}
+		typeParameterGetter := NewInterpreterTypeParameterGetter(context, invocation.TypeParameterTypes)
 
-		result := fn(context, invocation.LocationRange, typeArguments, receiver, invocation.Arguments...)
+		result := fn(context, invocation.LocationRange, typeParameterGetter, receiver, invocation.Arguments...)
 
 		return result
 	}

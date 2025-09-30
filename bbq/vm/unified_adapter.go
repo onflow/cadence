@@ -24,11 +24,34 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
+type VMTypeParameterGetter struct {
+	context            *Context
+	typeParameterTypes []bbq.StaticType
+}
+
+func NewVMTypeParameterGetter(context *Context, typeParameterTypes []bbq.StaticType) *VMTypeParameterGetter {
+	return &VMTypeParameterGetter{
+		context:            context,
+		typeParameterTypes: typeParameterTypes,
+	}
+}
+
+var _ interpreter.TypeParameterGetter = &VMTypeParameterGetter{}
+
+func (g *VMTypeParameterGetter) NextStatic() interpreter.StaticType {
+	return g.typeParameterTypes[0]
+}
+
+func (g *VMTypeParameterGetter) NextSema() sema.Type {
+	return g.context.SemaTypeFromStaticType(g.typeParameterTypes[0])
+}
+
 // Like in the interpreter's unified_function, these are all the functions that need to exist to work with the VM
 func AdaptUnifiedFunctionForVM(fn interpreter.UnifiedNativeFunction) NativeFunction {
 	return func(context *Context, typeArguments []bbq.StaticType, receiver Value, arguments ...Value) Value {
+		typeParameterGetter := NewVMTypeParameterGetter(context, typeArguments)
 
-		result := fn(context, interpreter.EmptyLocationRange, typeArguments, receiver, arguments...)
+		result := fn(context, interpreter.EmptyLocationRange, typeParameterGetter, receiver, arguments...)
 
 		return result
 	}

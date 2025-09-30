@@ -1964,7 +1964,7 @@ var UnifiedArrayAppendFunction = UnifiedNativeFunction(
 	func(
 		context UnifiedFunctionContext,
 		locationRange LocationRange,
-		typeArguments []StaticType,
+		typeParameterGetter TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -1980,7 +1980,7 @@ var UnifiedArrayAppendAllFunction = UnifiedNativeFunction(
 	func(
 		context UnifiedFunctionContext,
 		locationRange LocationRange,
-		typeArguments []StaticType,
+		typeParameterGetter TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -1996,7 +1996,7 @@ var UnifiedArrayConcatFunction = UnifiedNativeFunction(
 	func(
 		context UnifiedFunctionContext,
 		locationRange LocationRange,
-		typeArguments []StaticType,
+		typeParameterGetter TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -2011,7 +2011,7 @@ var UnifiedArrayInsertFunction = UnifiedNativeFunction(
 	func(
 		context UnifiedFunctionContext,
 		locationRange LocationRange,
-		typeArguments []StaticType,
+		typeParameterGetter TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -2028,7 +2028,7 @@ var UnifiedArrayRemoveFunction = UnifiedNativeFunction(
 	func(
 		context UnifiedFunctionContext,
 		locationRange LocationRange,
-		typeArguments []StaticType,
+		typeParameterGetter TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -2043,7 +2043,7 @@ var UnifiedArrayContainsFunction = UnifiedNativeFunction(
 	func(
 		context UnifiedFunctionContext,
 		locationRange LocationRange,
-		typeArguments []StaticType,
+		typeParameterGetter TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -2058,7 +2058,7 @@ var UnifiedArraySliceFunction = UnifiedNativeFunction(
 	func(
 		context UnifiedFunctionContext,
 		locationRange LocationRange,
-		typeArguments []StaticType,
+		typeParameterGetter TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -2074,7 +2074,7 @@ var UnifiedArrayReverseFunction = UnifiedNativeFunction(
 	func(
 		context UnifiedFunctionContext,
 		locationRange LocationRange,
-		typeArguments []StaticType,
+		typeParameterGetter TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -2088,7 +2088,7 @@ var UnifiedArrayFilterFunction = UnifiedNativeFunction(
 	func(
 		context UnifiedFunctionContext,
 		locationRange LocationRange,
-		typeArguments []StaticType,
+		typeParameterGetter TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -2103,7 +2103,7 @@ var UnifiedArrayMapFunction = UnifiedNativeFunction(
 	func(
 		context UnifiedFunctionContext,
 		locationRange LocationRange,
-		typeArguments []StaticType,
+		typeParameterGetter TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -2118,7 +2118,7 @@ var UnifiedArrayToVariableSizedFunction = UnifiedNativeFunction(
 	func(
 		context UnifiedFunctionContext,
 		locationRange LocationRange,
-		typeArguments []StaticType,
+		typeParameterGetter TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -2132,12 +2132,12 @@ var UnifiedArrayToConstantSizedFunction = UnifiedNativeFunction(
 	func(
 		context UnifiedFunctionContext,
 		locationRange LocationRange,
-		typeArguments []StaticType,
+		typeParameterGetter TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
 		thisArray := assertValueOfType[*ArrayValue](receiver)
-		constantSizedArrayType, ok := typeArguments[0].(*ConstantSizedStaticType)
+		constantSizedArrayType, ok := typeParameterGetter.NextStatic().(*ConstantSizedStaticType)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
@@ -2150,7 +2150,7 @@ var UnifiedArrayFirstIndexFunction = UnifiedNativeFunction(
 	func(
 		context UnifiedFunctionContext,
 		locationRange LocationRange,
-		typeArguments []StaticType,
+		typeParameterGetter TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -2165,7 +2165,7 @@ var UnifiedArrayRemoveFirstFunction = UnifiedNativeFunction(
 	func(
 		context UnifiedFunctionContext,
 		locationRange LocationRange,
-		typeArguments []StaticType,
+		typeParameterGetter TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -2179,7 +2179,7 @@ var UnifiedArrayRemoveLastFunction = UnifiedNativeFunction(
 	func(
 		context UnifiedFunctionContext,
 		locationRange LocationRange,
-		typeArguments []StaticType,
+		typeParameterGetter TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
