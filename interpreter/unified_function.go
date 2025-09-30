@@ -26,182 +26,62 @@ import (
 
 // minimal interfaces needed by all native/host functions
 type UnifiedFunctionContext interface {
-	ReferenceTracker
 	ValueStaticTypeContext
 	ValueTransferContext
-	StorageContext
 	StaticTypeConversionHandler
-	ValueComparisonContext
 	InvocationContext
+}
+
+type TypeParameterGetter interface {
+	NextStatic() StaticType
+	NextSema() sema.Type
+}
+
+type InterpreterTypeParameterGetter struct {
+	memoryGauge        common.MemoryGauge
+	typeParameterTypes *sema.TypeParameterTypeOrderedMap
+}
+
+var _ TypeParameterGetter = &InterpreterTypeParameterGetter{}
+
+func NewInterpreterTypeParameterGetter(memoryGauge common.MemoryGauge, typeParameterTypes *sema.TypeParameterTypeOrderedMap) *InterpreterTypeParameterGetter {
+	return &InterpreterTypeParameterGetter{
+		memoryGauge:        memoryGauge,
+		typeParameterTypes: typeParameterTypes,
+	}
+}
+
+func (i *InterpreterTypeParameterGetter) NextStatic() StaticType {
+	return ConvertSemaToStaticType(i.memoryGauge, i.NextSema())
+}
+
+func (i *InterpreterTypeParameterGetter) NextSema() sema.Type {
+	current := i.typeParameterTypes.Oldest()
+	i.typeParameterTypes.Delete(current.Key)
+	return current.Value
 }
 
 type UnifiedNativeFunction func(
 	context UnifiedFunctionContext,
-	args *ArgumentExtractor,
-	receiver Value,
-	typeArguments []StaticType,
 	locationRange LocationRange,
+	typeParameterGetter TypeParameterGetter,
+	receiver Value,
+	args ...Value,
 ) Value
-
-// InterpreterArgumentExtractor adapts interpreter arguments to ArgumentExtractor
-type ArgumentExtractor struct {
-	arguments []Value
-}
-
-func NewArgumentExtractor(arguments []Value) *ArgumentExtractor {
-	return &ArgumentExtractor{
-		arguments: arguments,
-	}
-}
-
-func (e *ArgumentExtractor) Count() int {
-	return len(e.arguments)
-}
-
-func (e *ArgumentExtractor) Get(index int) Value {
-	if index < 0 || index >= len(e.arguments) {
-		panic(errors.NewUnreachableError())
-	}
-	return e.arguments[index]
-}
-
-func (e *ArgumentExtractor) GetAll() []Value {
-	return e.arguments
-}
-
-func (e *ArgumentExtractor) GetNumber(index int) NumberValue {
-	value := e.Get(index)
-	numberValue, ok := value.(NumberValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return numberValue
-}
-
-func (e *ArgumentExtractor) GetFunction(index int) FunctionValue {
-	value := e.Get(index)
-	functionValue, ok := value.(FunctionValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return functionValue
-}
-
-func (e *ArgumentExtractor) GetType(index int) TypeValue {
-	value := e.Get(index)
-	typeValue, ok := value.(TypeValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return typeValue
-}
-
-func (e *ArgumentExtractor) GetString(index int) *StringValue {
-	value := e.Get(index)
-
-	stringValue, ok := value.(*StringValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return stringValue
-}
-
-func (e *ArgumentExtractor) GetInt(index int) IntValue {
-	value := e.Get(index)
-
-	intValue, ok := value.(IntValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return intValue
-}
-
-func (e *ArgumentExtractor) GetArray(index int) *ArrayValue {
-	value := e.Get(index)
-
-	arrayValue, ok := value.(*ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return arrayValue
-}
-
-func (e *ArgumentExtractor) GetComposite(index int) *CompositeValue {
-	value := e.Get(index)
-	compositeValue, ok := value.(*CompositeValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return compositeValue
-}
-
-func (e *ArgumentExtractor) GetUFix64(index int) UFix64Value {
-	value := e.Get(index)
-	uFix64Value, ok := value.(UFix64Value)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return uFix64Value
-}
-
-func (e *ArgumentExtractor) GetValue(index int) Value {
-	return e.Get(index)
-}
-
-func (e *ArgumentExtractor) GetOptional(index int) OptionalValue {
-	value := e.Get(index)
-
-	optionalValue, ok := value.(OptionalValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return optionalValue
-}
-
-func (e *ArgumentExtractor) GetBool(index int) BoolValue {
-	value := e.Get(index)
-
-	boolValue, ok := value.(BoolValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return boolValue
-}
-
-func (e *ArgumentExtractor) GetAddress(index int) AddressValue {
-	value := e.Get(index)
-
-	addressValue, ok := value.(AddressValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return addressValue
-}
 
 // These are all the functions that need to exist to work with the interpreter
 func AdaptUnifiedFunctionForInterpreter(fn UnifiedNativeFunction) HostFunction {
 	return func(invocation Invocation) Value {
 		context := invocation.InvocationContext
-		args := NewArgumentExtractor(invocation.Arguments)
 
 		var receiver Value
 		if invocation.Self != nil {
 			receiver = *invocation.Self
 		}
 
-		// Convert TypeParameterTypes to []StaticType
-		var typeArguments []StaticType
-		if invocation.TypeParameterTypes != nil {
-			typeArguments = make([]StaticType, 0, invocation.TypeParameterTypes.Len())
-			invocation.TypeParameterTypes.Foreach(func(key *sema.TypeParameter, semaType sema.Type) {
-				staticType := ConvertSemaToStaticType(context, semaType)
-				typeArguments = append(typeArguments, staticType)
-			})
-		}
+		typeParameterGetter := NewInterpreterTypeParameterGetter(context, invocation.TypeParameterTypes)
 
-		result := fn(context, args, receiver, typeArguments, invocation.LocationRange)
-
-		return result
+		return fn(context, invocation.LocationRange, typeParameterGetter, receiver, invocation.Arguments...)
 	}
 }
 
@@ -224,7 +104,8 @@ func NewUnifiedBoundHostFunctionValue(
 	function UnifiedNativeFunction,
 ) BoundFunctionValue {
 
-	// Wrap the unified function to work with the standard HostFunction signature
+	// wrap the unified function to work with the standard HostFunction signature
+	// just like how we do it in the interpreter
 	wrappedFunction := AdaptUnifiedFunctionForInterpreter(function)
 
 	hostFunc := NewStaticHostFunctionValue(context, funcType, wrappedFunction)
@@ -237,33 +118,12 @@ func NewUnifiedBoundHostFunctionValue(
 	)
 }
 
-// Helper functions to get the address from the receiver or the address pointer
-// interpreter supplies the address, vm does not
-// see stdlib/account.go for usage examples
-func GetAddressValue(receiver Value, addressPointer *AddressValue) AddressValue {
-	if addressPointer == nil {
-		return GetAccountTypePrivateAddressValue(receiver)
-	} else {
-		return *addressPointer
-	}
-}
-
-func GetAddress(receiver Value, addressPointer *common.Address) common.Address {
-	if addressPointer == nil {
-		return GetAccountTypePrivateAddressValue(receiver).ToAddress()
-	} else {
-		return *addressPointer
-	}
-}
-
-func GetAccountTypePrivateAddressValue(receiver Value) AddressValue {
-	simpleCompositeValue := receiver.(*SimpleCompositeValue)
-
-	addressMetaInfo := simpleCompositeValue.PrivateField(AccountTypePrivateAddressFieldName)
-	address, ok := addressMetaInfo.(AddressValue)
+// generic helper function to assert that the provided value is of a specific type
+// useful for asserting receiver and argument types in unified functions
+func assertValueOfType[T Value](val Value) T {
+	value, ok := val.(T)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-
-	return address
+	return value
 }
