@@ -52,9 +52,7 @@ func NewInterpreterTypeParameterGetter(memoryGauge common.MemoryGauge, typeParam
 }
 
 func (i *InterpreterTypeParameterGetter) NextStatic() StaticType {
-	current := i.typeParameterTypes.Oldest()
-	i.typeParameterTypes.Delete(current.Key)
-	return ConvertSemaToStaticType(i.memoryGauge, current.Value)
+	return ConvertSemaToStaticType(i.memoryGauge, i.NextSema())
 }
 
 func (i *InterpreterTypeParameterGetter) NextSema() sema.Type {
@@ -83,9 +81,7 @@ func AdaptUnifiedFunctionForInterpreter(fn UnifiedNativeFunction) HostFunction {
 
 		typeParameterGetter := NewInterpreterTypeParameterGetter(context, invocation.TypeParameterTypes)
 
-		result := fn(context, invocation.LocationRange, typeParameterGetter, receiver, invocation.Arguments...)
-
-		return result
+		return fn(context, invocation.LocationRange, typeParameterGetter, receiver, invocation.Arguments...)
 	}
 }
 

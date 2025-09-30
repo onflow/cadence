@@ -47,9 +47,7 @@ func (g *VMTypeParameterGetter) NextStatic() interpreter.StaticType {
 }
 
 func (g *VMTypeParameterGetter) NextSema() sema.Type {
-	current := g.index
-	g.index++
-	return g.context.SemaTypeFromStaticType(g.typeParameterTypes[current])
+	return g.context.SemaTypeFromStaticType(g.NextStatic())
 }
 
 // Like in the interpreter's unified_function, these are all the functions that need to exist to work with the VM
