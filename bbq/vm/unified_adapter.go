@@ -55,9 +55,7 @@ func AdaptUnifiedFunctionForVM(fn interpreter.UnifiedNativeFunction) NativeFunct
 	return func(context *Context, typeArguments []bbq.StaticType, receiver Value, arguments ...Value) Value {
 		typeParameterGetter := NewVMTypeParameterGetter(context, typeArguments)
 
-		result := fn(context, interpreter.EmptyLocationRange, typeParameterGetter, receiver, arguments...)
-
-		return result
+		return fn(context, interpreter.EmptyLocationRange, typeParameterGetter, receiver, arguments...)
 	}
 }
 
