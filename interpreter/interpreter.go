@@ -4406,8 +4406,7 @@ func UnifiedAccountStorageIterateFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		addressValue := AssertValueOfType[AddressValue](receiver)
-		address := addressValue.ToAddress()
+		address := GetAddressValue(receiver, addressPointer).ToAddress()
 
 		return AccountStorageIterate(
 			context,
@@ -4636,7 +4635,7 @@ func UnifiedAccountStorageSaveFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		addressValue := AssertValueOfType[AddressValue](receiver)
+		addressValue := GetAddressValue(receiver, addressPointer)
 
 		return AccountStorageSave(
 			context,
@@ -4726,8 +4725,7 @@ func UnifiedAccountStorageTypeFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		addressValue := AssertValueOfType[AddressValue](receiver)
-		address := addressValue.ToAddress()
+		address := GetAddressValue(receiver, addressPointer).ToAddress()
 
 		return AccountStorageType(
 			context,
@@ -4823,8 +4821,7 @@ func UnifiedAccountStorageReadFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		addressValue := AssertValueOfType[AddressValue](receiver)
-		address := addressValue.ToAddress()
+		address := GetAddressValue(receiver, addressPointer).ToAddress()
 		typeParameter := typeParameterGetter.NextSema()
 
 		return AccountStorageRead(
@@ -4931,8 +4928,7 @@ func UnifiedAccountStorageBorrowFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		addressValue := AssertValueOfType[AddressValue](receiver)
-		address := addressValue.ToAddress()
+		address := GetAddressValue(receiver, addressPointer).ToAddress()
 		typeParameter := typeParameterGetter.NextSema()
 
 		return AccountStorageBorrow(
@@ -5010,8 +5006,7 @@ func UnifiedAccountStorageCheckFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		addressValue := AssertValueOfType[AddressValue](receiver)
-		address := addressValue.ToAddress()
+		address := GetAddressValue(receiver, addressPointer).ToAddress()
 		typeParameter := typeParameterGetter.NextSema()
 
 		return AccountStorageCheck(

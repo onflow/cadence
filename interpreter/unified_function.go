@@ -57,7 +57,12 @@ func (i *InterpreterTypeParameterGetter) NextStatic() StaticType {
 
 func (i *InterpreterTypeParameterGetter) NextSema() sema.Type {
 	current := i.typeParameterTypes.Oldest()
-	i.typeParameterTypes.Delete(current.Key)
+	// deletion cannot happen here, type parameters are used multiple times
+	// it is also possible that there are no type parameters which is valid
+	// see UnifiedCapabilityBorrowFunction
+	if current == nil {
+		return nil
+	}
 	return current.Value
 }
 
@@ -126,4 +131,29 @@ func AssertValueOfType[T Value](val Value) T {
 		panic(errors.NewUnreachableError())
 	}
 	return value
+}
+
+// Helper functions to get the address from the receiver or the address pointer
+// interpreter supplies the address, vm does not
+// see stdlib/account.go for usage examples
+func GetAddressValue(receiver Value, addressPointer *AddressValue) AddressValue {
+	if addressPointer == nil {
+		return GetAccountTypePrivateAddressValue(receiver)
+	}
+	return *addressPointer
+}
+
+func GetAddress(receiver Value, addressPointer *common.Address) common.Address {
+	if addressPointer == nil {
+		return GetAccountTypePrivateAddressValue(receiver).ToAddress()
+	}
+	return *addressPointer
+}
+
+func GetAccountTypePrivateAddressValue(receiver Value) AddressValue {
+	simpleCompositeValue := AssertValueOfType[*SimpleCompositeValue](receiver)
+
+	addressMetaInfo := simpleCompositeValue.PrivateField(AccountTypePrivateAddressFieldName)
+	address := AssertValueOfType[AddressValue](addressMetaInfo)
+	return address
 }

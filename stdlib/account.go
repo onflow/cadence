@@ -648,14 +648,14 @@ func unifiedAccountKeysAddFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		publicKeyValue := args.GetComposite(0)
-		hashAlgoValue := args.Get(1)
-		weightValue := args.GetUFix64(2)
+		publicKeyValue := interpreter.AssertValueOfType[*interpreter.CompositeValue](args[0])
+		hashAlgoValue := args[1]
+		weightValue := interpreter.AssertValueOfType[interpreter.UFix64Value](args[2])
 
 		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
 
@@ -777,12 +777,12 @@ func unifiedAccountKeysGetFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		indexValue := args.GetInt(0)
+		indexValue := interpreter.AssertValueOfType[interpreter.IntValue](args[0])
 
 		address := interpreter.GetAddress(receiver, addressPointer)
 
@@ -872,12 +872,12 @@ func unifiedAccountKeysForEachFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		fnValue := args.GetFunction(0)
+		fnValue := interpreter.AssertValueOfType[interpreter.FunctionValue](args[0])
 
 		address := interpreter.GetAddress(receiver, addressPointer)
 
@@ -1030,12 +1030,12 @@ func unifiedAccountKeysRevokeFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		indexValue := args.GetInt(0)
+		indexValue := interpreter.AssertValueOfType[interpreter.IntValue](args[0])
 
 		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
 
@@ -1129,14 +1129,14 @@ func unifiedAccountInboxPublishFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		value := args.Get(0).(interpreter.CapabilityValue)
-		nameValue := args.GetString(1)
-		recipientValue := args.GetAddress(2)
+		value := interpreter.AssertValueOfType[interpreter.CapabilityValue](args[0])
+		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[1])
+		recipientValue := interpreter.AssertValueOfType[interpreter.AddressValue](args[2])
 
 		providerValue := interpreter.GetAddressValue(receiver, providerPointer)
 
@@ -1230,18 +1230,13 @@ func unifiedAccountInboxUnpublishFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		nameValue := args.GetString(0)
-
-		// Get the type from typeArguments (first type argument)
-		if len(typeArguments) == 0 {
-			panic(errors.NewUnreachableError())
-		}
-		borrowType := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
+		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[0])
+		borrowType := typeParameterGetter.NextSema()
 
 		providerValue := interpreter.GetAddressValue(receiver, providerPointer)
 
@@ -1356,19 +1351,14 @@ func unifiedAccountInboxClaimFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		nameValue := args.GetString(0)
-		providerValue := args.GetAddress(1)
-
-		// Get the type from typeArguments (first type argument)
-		if len(typeArguments) == 0 {
-			panic(errors.NewUnreachableError())
-		}
-		borrowType := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
+		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[0])
+		providerValue := interpreter.AssertValueOfType[interpreter.AddressValue](args[1])
+		borrowType := typeParameterGetter.NextSema()
 
 		recipientValue := interpreter.GetAddressValue(receiver, recipientPointer)
 
@@ -1565,12 +1555,12 @@ func unifiedAccountContractsGetFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		nameValue := args.GetString(0)
+		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[0])
 
 		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
 
@@ -1653,18 +1643,13 @@ func unifiedAccountContractsBorrowFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		nameValue := args.GetString(0)
-
-		// Get the type from typeArguments (first type argument)
-		if len(typeArguments) == 0 {
-			panic(errors.NewUnreachableError())
-		}
-		borrowType := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
+		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[0])
+		borrowType := typeParameterGetter.NextSema()
 
 		address := interpreter.GetAddress(receiver, addressPointer)
 
@@ -1848,16 +1833,16 @@ func unifiedAccountContractsChangeFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		arguments := args.GetAll()
-		argumentTypes := make([]sema.Type, len(arguments))
-		for i := 0; i < len(arguments); i++ {
+		argumentTypes := make([]sema.Type, len(args))
+		for i := 0; i < len(args); i++ {
+			// TODO: is this necessary?
 			// typeArguments does not contain the information needed
-			staticType := arguments[i].StaticType(context)
+			staticType := args[i].StaticType(context)
 			argumentTypes[i] = interpreter.MustConvertStaticToSemaType(staticType, context)
 		}
 
@@ -1865,7 +1850,7 @@ func unifiedAccountContractsChangeFunction(
 
 		return changeAccountContracts(
 			context,
-			arguments,
+			args,
 			argumentTypes,
 			addressValue,
 			locationRange,
@@ -2219,10 +2204,10 @@ func unifiedAccountContractsTryUpdateFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) (deploymentResult interpreter.Value) {
 		var deployedContract interpreter.Value
 
@@ -2255,11 +2240,11 @@ func unifiedAccountContractsTryUpdateFunction(
 			deploymentResult = interpreter.NewDeploymentResultValue(context, optionalDeployedContract)
 		}()
 
-		arguments := args.GetAll()
-		argumentTypes := make([]sema.Type, len(arguments))
-		for i := 0; i < len(arguments); i++ {
+		argumentTypes := make([]sema.Type, len(args))
+		for i := 0; i < len(args); i++ {
+			// TODO: is this necessary?
 			// typeArguments does not contain the information needed
-			staticType := arguments[i].StaticType(context)
+			staticType := args[i].StaticType(context)
 			argumentTypes[i] = interpreter.MustConvertStaticToSemaType(staticType, context)
 		}
 
@@ -2267,7 +2252,7 @@ func unifiedAccountContractsTryUpdateFunction(
 
 		deployedContract = changeAccountContracts(
 			context,
-			arguments,
+			args,
 			argumentTypes,
 			addressValue,
 			locationRange,
@@ -2563,12 +2548,12 @@ func unifiedAccountContractsRemoveFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		nameValue := args.GetString(0)
+		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[0])
 
 		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
 
@@ -2902,12 +2887,12 @@ func unifiedAccountStorageCapabilitiesGetControllerFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		capabilityIDValue := args.Get(0).(interpreter.UInt64Value)
+		capabilityIDValue := interpreter.AssertValueOfType[interpreter.UInt64Value](args[0])
 
 		address := interpreter.GetAddress(receiver, addressPointer)
 
@@ -2987,12 +2972,12 @@ func unifiedAccountStorageCapabilitiesGetControllersFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		targetPathValue := args.Get(0).(interpreter.PathValue)
+		targetPathValue := interpreter.AssertValueOfType[interpreter.PathValue](args[0])
 
 		address := interpreter.GetAddress(receiver, addressPointer)
 
@@ -3102,13 +3087,13 @@ func unifiedAccountStorageCapabilitiesForEachControllerFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		targetPathValue := args.Get(0).(interpreter.PathValue)
-		functionValue := args.GetFunction(1)
+		targetPathValue := interpreter.AssertValueOfType[interpreter.PathValue](args[0])
+		functionValue := interpreter.AssertValueOfType[interpreter.FunctionValue](args[1])
 
 		address := interpreter.GetAddress(receiver, addressPointer)
 
@@ -3255,23 +3240,17 @@ func unifiedAccountStorageCapabilitiesIssueFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		// Get borrow-type from type arguments
-		if len(typeArguments) == 0 {
-			panic(errors.NewUnreachableError())
-		}
-		borrowType := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
-
-		arguments := args.GetAll()
+		borrowType := typeParameterGetter.NextSema()
 
 		address := interpreter.GetAddress(receiver, addressPointer)
 
 		return AccountStorageCapabilitiesIssue(
-			arguments,
+			args,
 			context,
 			locationRange,
 			handler,
@@ -3345,13 +3324,13 @@ func unifiedAccountStorageCapabilitiesIssueWithTypeFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		targetPathValue := args.Get(0).(interpreter.PathValue)
-		borrowType := args.GetType(1)
+		targetPathValue := interpreter.AssertValueOfType[interpreter.PathValue](args[0])
+		borrowType := interpreter.AssertValueOfType[interpreter.TypeValue](args[1])
 
 		address := interpreter.GetAddress(receiver, addressPointer)
 
@@ -3531,16 +3510,12 @@ func unifiedAccountAccountCapabilitiesIssueFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		// Get borrow type from type arguments
-		if len(typeArguments) == 0 {
-			panic(errors.NewUnreachableError())
-		}
-		ty := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
+		borrowType := typeParameterGetter.NextSema()
 
 		address := interpreter.GetAddress(receiver, addressPointer)
 
@@ -3549,7 +3524,7 @@ func unifiedAccountAccountCapabilitiesIssueFunction(
 			locationRange,
 			handler,
 			address,
-			ty,
+			borrowType,
 		)
 	}
 }
@@ -3590,12 +3565,12 @@ func unifiedAccountAccountCapabilitiesIssueWithTypeFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		typeValue := args.GetType(0)
+		typeValue := interpreter.AssertValueOfType[interpreter.TypeValue](args[0])
 		ty, err := interpreter.ConvertStaticToSemaType(context, typeValue.Type)
 		if err != nil {
 			panic(errors.NewUnexpectedErrorFromCause(err))
@@ -4256,13 +4231,13 @@ func unifiedAccountCapabilitiesPublishFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		capabilityValue := args.Get(0).(interpreter.CapabilityValue)
-		pathValue := args.Get(1).(interpreter.PathValue)
+		capabilityValue := interpreter.AssertValueOfType[interpreter.CapabilityValue](args[0])
+		pathValue := interpreter.AssertValueOfType[interpreter.PathValue](args[1])
 
 		accountAddressValue := interpreter.GetAddressValue(receiver, accountAddressPointer)
 
@@ -4429,12 +4404,12 @@ func unifiedAccountCapabilitiesUnpublishFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		pathValue := args.Get(0).(interpreter.PathValue)
+		pathValue := interpreter.AssertValueOfType[interpreter.PathValue](args[0])
 
 		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
 
@@ -4732,17 +4707,13 @@ func unifiedAccountCapabilitiesGetFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		pathValue := args.Get(0).(interpreter.PathValue)
-		staticType := typeArguments[0]
-		typeParameter, err := interpreter.ConvertStaticToSemaType(context, staticType)
-		if err != nil {
-			panic(errors.NewUnexpectedErrorFromCause(err))
-		}
+		pathValue := interpreter.AssertValueOfType[interpreter.PathValue](args[0])
+		typeParameter := typeParameterGetter.NextSema()
 
 		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
 
@@ -4987,12 +4958,12 @@ func unifiedAccountCapabilitiesExistsFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		pathValue := args.Get(0).(interpreter.PathValue)
+		pathValue := interpreter.AssertValueOfType[interpreter.PathValue](args[0])
 
 		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
 
@@ -5087,15 +5058,12 @@ func unifiedAccountAccountCapabilitiesGetControllerFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		capabilityIDValue, ok := args.Get(0).(interpreter.UInt64Value)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
+		capabilityIDValue := interpreter.AssertValueOfType[interpreter.UInt64Value](args[0])
 
 		capabilityID := uint64(capabilityIDValue)
 
@@ -5158,10 +5126,10 @@ func unifiedAccountAccountCapabilitiesGetControllersFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
 		address := interpreter.GetAddress(receiver, addressPointer)
 
@@ -5270,12 +5238,12 @@ func unifiedAccountAccountCapabilitiesForEachControllerFunction(
 ) interpreter.UnifiedNativeFunction {
 	return func(
 		context interpreter.UnifiedFunctionContext,
-		args *interpreter.ArgumentExtractor,
-		receiver interpreter.Value,
-		typeArguments []interpreter.StaticType,
 		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
 	) interpreter.Value {
-		functionValue := args.GetFunction(0)
+		functionValue := interpreter.AssertValueOfType[interpreter.FunctionValue](args[0])
 
 		address := interpreter.GetAddress(receiver, addressPointer)
 

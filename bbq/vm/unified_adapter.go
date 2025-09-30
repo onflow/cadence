@@ -20,6 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -43,6 +44,9 @@ var _ interpreter.TypeParameterGetter = &VMTypeParameterGetter{}
 func (g *VMTypeParameterGetter) NextStatic() interpreter.StaticType {
 	current := g.index
 	g.index++
+	if current >= len(g.typeParameterTypes) {
+		panic(errors.NewUnreachableError())
+	}
 	return g.typeParameterTypes[current]
 }
 
