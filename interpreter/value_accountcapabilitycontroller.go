@@ -360,19 +360,15 @@ func NewUnifiedDeletionCheckedAccountCapabilityControllerFunction(
 ) UnifiedNativeFunction {
 	return func(
 		context UnifiedFunctionContext,
-		args *ArgumentExtractor,
-		receiver Value,
-		typeArguments []StaticType,
 		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
 	) Value {
-		controller, ok := receiver.(*AccountCapabilityControllerValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
+		controller := assertValueOfType[*AccountCapabilityControllerValue](receiver)
 		controller.CheckDeleted()
 
-		return f(context, args, receiver, typeArguments, locationRange)
+		return f(context, locationRange, typeParameterGetter, receiver, args...)
 	}
 }
 
@@ -380,16 +376,12 @@ func NewUnifiedDeletionCheckedAccountCapabilityControllerFunction(
 var UnifiedAccountCapabilityControllerDeleteFunction = UnifiedNativeFunction(
 	func(
 		context UnifiedFunctionContext,
-		args *ArgumentExtractor,
-		receiver Value,
-		typeArguments []StaticType,
 		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
 	) Value {
-		controller, ok := receiver.(*AccountCapabilityControllerValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
+		controller := assertValueOfType[*AccountCapabilityControllerValue](receiver)
 		controller.Delete(context, locationRange)
 		controller.deleted = true
 		return Void
@@ -406,17 +398,13 @@ func (v *AccountCapabilityControllerValue) newDeleteFunction(
 var UnifiedAccountCapabilityControllerSetTagFunction = UnifiedNativeFunction(
 	func(
 		context UnifiedFunctionContext,
-		args *ArgumentExtractor,
-		receiver Value,
-		typeArguments []StaticType,
 		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
 	) Value {
-		controller, ok := receiver.(*AccountCapabilityControllerValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		newTagValue := args.GetString(0)
+		controller := assertValueOfType[*AccountCapabilityControllerValue](receiver)
+		newTagValue := assertValueOfType[*StringValue](args[0])
 		controller.SetTag(context, newTagValue)
 		return Void
 	},
