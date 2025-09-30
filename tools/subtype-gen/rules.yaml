@@ -146,6 +146,35 @@ rules:
             super: super.KeyType
             sub: sub.KeyType
 
+  - super: VariableSizedType
+    sub: VariableSizedType
+    predicate:
+      and:
+        - subtype:
+            super: super.ElementType
+            sub: sub.ElementType
+
+  - super: ConstantSizedType
+    sub: ConstantSizedType
+    predicate:
+      and:
+        - equals:
+            source: super.Size
+            target: sub.Size
+        - subtype:
+            super: super.ElementType
+            sub: sub.ElementType
+
+  - super: ReferenceType
+    sub: ReferenceType
+    predicate:
+      and:
+        - permits:
+            super: super.Authorization
+            sub: sub.Authorization
+        - subtype:
+            super: super.Type
+            sub: sub.Type
 #  - super:
 #      Reference:
 #        auth: A

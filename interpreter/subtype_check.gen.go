@@ -161,6 +161,32 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 		return IsSubType(typeConverter, typedSubType.ValueType, typedSuperType.ValueType) &&
 			IsSubType(typeConverter, typedSubType.KeyType, typedSuperType.KeyType)
 
+	case *VariableSizedStaticType:
+		typedSubType, ok := subType.(*VariableSizedStaticType)
+		if !ok {
+			return false
+		}
+
+		return IsSubType(typeConverter, typedSubType.ElementType(), typedSuperType.ElementType())
+
+	case *ConstantSizedStaticType:
+		typedSubType, ok := subType.(*ConstantSizedStaticType)
+		if !ok {
+			return false
+		}
+
+		return typedSuperType.Size == typedSubType.Size &&
+			IsSubType(typeConverter, typedSubType.ElementType(), typedSuperType.ElementType())
+
+	case *ReferenceStaticType:
+		typedSubType, ok := subType.(*ReferenceStaticType)
+		if !ok {
+			return false
+		}
+
+		return PermitsAccess(typedSuperType.Authorization, typedSubType.Authorization) &&
+			IsSubType(typeConverter, typedSubType.Type, typedSuperType.Type)
+
 	}
 
 	return false

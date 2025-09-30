@@ -23,3 +23,7 @@ package sema
 func IsResourceType(typ Type) bool {
 	return typ.IsResourceType()
 }
+
+func PermitsAccess(superTypeAccess, subtypeAccess Access) bool {
+	return superTypeAccess.PermitsAccess(subtypeAccess)
+}

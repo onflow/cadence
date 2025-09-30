@@ -95,7 +95,8 @@ func (n NotPredicate) GetType() string { return "not" }
 
 // PermitsPredicate represents a permits check
 type PermitsPredicate struct {
-	Types []Type `yaml:"permits"`
+	Sub   Expression `yaml:"sub"`
+	Super Expression `yaml:"super"`
 }
 
 func (p PermitsPredicate) GetType() string { return "permits" }

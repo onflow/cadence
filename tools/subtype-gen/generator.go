@@ -48,6 +48,8 @@ type Config struct {
 
 	ExtraParams []ExtraParam
 	SkipTypes   map[string]struct{}
+
+	ArrayElementTypeMethodArgs []any
 }
 
 type ExtraParam struct {
@@ -420,8 +422,7 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 		return gen.isSubTypePredicate(p)
 
 	case PermitsPredicate:
-		// TODO: Implement permits condition
-		return []dst.Node{dst.NewIdent("false")}
+		return gen.permitsPredicate(p)
 
 	case PurityPredicate:
 		// TODO: Implement purity check
@@ -689,10 +690,24 @@ func (gen *SubTypeCheckGenerator) expression(expr Expression) dst.Expr {
 		return gen.qualifiedTypeIdentifier(expr.Type)
 
 	case MemberExpression:
-		return &dst.SelectorExpr{
+		selectorExpr := &dst.SelectorExpr{
 			X:   gen.expression(expr.Parent),
 			Sel: dst.NewIdent(expr.MemberName),
 		}
+
+		if expr.MemberName == "ElementType" {
+			var args []dst.Expr
+			for _, arg := range gen.config.ArrayElementTypeMethodArgs {
+				args = append(args, dst.NewIdent(fmt.Sprint(arg)))
+			}
+
+			return &dst.CallExpr{
+				Fun:  selectorExpr,
+				Args: args,
+			}
+		}
+
+		return selectorExpr
 
 	default:
 		panic(fmt.Errorf("unsupported expression to convert to string: %t", expr))
@@ -792,5 +807,19 @@ func (gen *SubTypeCheckGenerator) parseCaseCondition(superType Type) dst.Expr {
 		return &dst.StarExpr{
 			X: typeName,
 		}
+	}
+}
+
+func (gen *SubTypeCheckGenerator) permitsPredicate(permits PermitsPredicate) []dst.Node {
+	args := []dst.Expr{
+		gen.expression(permits.Super),
+		gen.expression(permits.Sub),
+	}
+
+	return []dst.Node{
+		&dst.CallExpr{
+			Fun:  dst.NewIdent("PermitsAccess"),
+			Args: args,
+		},
 	}
 }

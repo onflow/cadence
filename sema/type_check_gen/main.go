@@ -78,6 +78,10 @@ func main() {
 	config := subtypegen.Config{
 		SimpleTypeSuffix:  "Type",
 		ComplexTypeSuffix: "Type",
+
+		ArrayElementTypeMethodArgs: []any{
+			false,
+		},
 	}
 
 	// Generate code using the comprehensive generator

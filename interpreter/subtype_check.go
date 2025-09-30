@@ -71,3 +71,8 @@ func IsResourceType(typ StaticType) bool {
 		return false
 	}
 }
+
+func PermitsAccess(superTypeAccess, subtypeAccess Authorization) bool {
+	// TODO:
+	return false
+}

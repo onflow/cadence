@@ -59,7 +59,10 @@ func parseType(typePlaceHolder string) Type {
 
 	switch typeName {
 	case typePlaceholderOptional,
-		typePlaceholderDictionary:
+		typePlaceholderDictionary,
+		typePlaceholderVariableSized,
+		typePlaceholderConstantSized,
+		typePlaceholderReference:
 		return ComplexType{
 			name: typeName,
 		}
@@ -147,29 +150,10 @@ func parseRulePredicate(rule any) (Predicate, error) {
 			}, nil
 
 		case "subtype":
-			equals, ok := value.(KeyValues)
-			if !ok {
-				return nil, fmt.Errorf("expected KeyValues, got %T", value)
-			}
-
-			// Get super type
-			super, ok := equals["super"]
-			if !ok {
-				return nil, fmt.Errorf("cannot find `super` property for `subtype` predicate")
-			}
-
-			superType, err := parseExpression(super)
+			superType, subType, err := parseSuperAndSubExpressions(value, key)
 			if err != nil {
 				return nil, err
 			}
-
-			// Get subtype
-			sub, ok := equals["sub"]
-			if !ok {
-				return nil, fmt.Errorf("cannot find `sub` property for `subtype` predicate")
-			}
-
-			subType := parseSimpleExpression(sub)
 
 			return SubtypePredicate{
 				Sub:   subType,
@@ -221,11 +205,15 @@ func parseRulePredicate(rule any) (Predicate, error) {
 			}, nil
 
 		case "permits":
-			list, ok := value.([]Type)
-			if !ok {
-				return nil, fmt.Errorf("expected a list of types, got %T", value)
+			superType, subType, err := parseSuperAndSubExpressions(value, key)
+			if err != nil {
+				return nil, err
 			}
-			return PermitsPredicate{Types: list}, nil
+
+			return PermitsPredicate{
+				Sub:   subType,
+				Super: superType,
+			}, nil
 
 		case "contains":
 			list, ok := value.([]Type)
@@ -235,12 +223,39 @@ func parseRulePredicate(rule any) (Predicate, error) {
 			return ContainsPredicate{Types: list}, nil
 
 		default:
-			return nil, fmt.Errorf("unsupported rule predicate: %v", v)
+			return nil, fmt.Errorf("unsupported rule predicate: %s", key)
 		}
 
 	default:
 		return nil, fmt.Errorf("unsupported rule type: %T", rule)
 	}
+}
+
+func parseSuperAndSubExpressions(value any, predicateName string) (Expression, Expression, error) {
+	keyValues, ok := value.(KeyValues)
+	if !ok {
+		return nil, nil, fmt.Errorf("expected KeyValues, got %T", value)
+	}
+
+	// Get super type
+	super, ok := keyValues["super"]
+	if !ok {
+		return nil, nil, fmt.Errorf("cannot find `super` property for %#q predicate", predicateName)
+	}
+
+	superType, err := parseExpression(super)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Get subtype
+	sub, ok := keyValues["sub"]
+	if !ok {
+		return nil, nil, fmt.Errorf("cannot find `sub` property for %#q predicate", predicateName)
+	}
+
+	subType := parseSimpleExpression(sub)
+	return superType, subType, nil
 }
 
 func singleKeyValueFromMap(v KeyValues) (string, any) {
