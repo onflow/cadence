@@ -62,6 +62,7 @@ var interpreterSignatureAlgorithmConstructorValue, SignatureAlgorithmCaseValues 
 	NewSignatureAlgorithmCase,
 )
 
+// these functions are left as is, since there are differences in the implementations between interpreter and vm
 var InterpreterSignatureAlgorithmConstructor = StandardLibraryValue{
 	Name:  sema.SignatureAlgorithmTypeName,
 	Type:  signatureAlgorithmLookupType,

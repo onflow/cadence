@@ -183,6 +183,7 @@ func hash(
 	return interpreter.ByteSliceToByteArrayValue(context, result)
 }
 
+// these functions are left as is, since there are differences in the implementations between interpreter and vm
 func NewInterpreterHashAlgorithmConstructor(hasher Hasher) StandardLibraryValue {
 
 	interpreterHashAlgorithmConstructorValue, _ := interpreterCryptoAlgorithmEnumValueAndCaseValues(
