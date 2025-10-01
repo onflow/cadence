@@ -69,9 +69,8 @@ var InterpreterPanicFunction = NewInterpreterStandardLibraryStaticFunction(
 	PanicFunctionType,
 	panicFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
-		locationRange := invocation.LocationRange
 		message := invocation.Arguments[0]
-		return PanicWithError(message, locationRange)
+		return PanicWithError(message)
 	},
 )
 
@@ -81,17 +80,16 @@ var VMPanicFunction = NewVMStandardLibraryStaticFunction(
 	panicFunctionDocString,
 	func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...interpreter.Value) interpreter.Value {
 		message := arguments[0]
-		return PanicWithError(message, interpreter.EmptyLocationRange)
+		return PanicWithError(message)
 	},
 )
 
-func PanicWithError(message interpreter.Value, locationRange interpreter.LocationRange) interpreter.Value {
+func PanicWithError(message interpreter.Value) interpreter.Value {
 	messageValue, ok := message.(*interpreter.StringValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 	panic(&PanicError{
-		Message:       messageValue.Str,
-		LocationRange: locationRange,
+		Message: messageValue.Str,
 	})
 }
