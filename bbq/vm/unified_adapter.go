@@ -20,7 +20,6 @@ package vm
 
 import (
 	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -45,13 +44,18 @@ func (g *VMTypeParameterGetter) NextStatic() interpreter.StaticType {
 	current := g.index
 	g.index++
 	if current >= len(g.typeParameterTypes) {
-		panic(errors.NewUnreachableError())
+		// much like the interpreter, there can be no type parameters provided
+		return nil
 	}
 	return g.typeParameterTypes[current]
 }
 
 func (g *VMTypeParameterGetter) NextSema() sema.Type {
-	return g.context.SemaTypeFromStaticType(g.NextStatic())
+	staticType := g.NextStatic()
+	if staticType == nil {
+		return nil
+	}
+	return g.context.SemaTypeFromStaticType(staticType)
 }
 
 // Like in the interpreter's unified_function, these are all the functions that need to exist to work with the VM

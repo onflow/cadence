@@ -91,9 +91,9 @@ func (v NilValue) MeteredString(context ValueStringContext, _ SeenReferences, _ 
 
 // nilValueMapFunction is created only once per interpreter.
 // Hence, no need to meter, as it's a constant.
-var nilValueMapFunction = NewUnmeteredStaticHostFunctionValue(
+var nilValueMapFunction = NewUnmeteredUnifiedStaticHostFunctionValue(
 	sema.OptionalTypeMapFunctionType(NilOptionalValue.InnerValueType(nil)),
-	func(invocation Invocation) Value {
+	func(_ UnifiedFunctionContext, _ LocationRange, _ TypeParameterGetter, _ Value, _ ...Value) Value {
 		return Nil
 	},
 )

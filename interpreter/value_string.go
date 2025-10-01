@@ -1069,21 +1069,35 @@ func (*StringValueIterator) ValueID() (atree.ValueID, bool) {
 	return atree.ValueID{}, false
 }
 
-func stringFunctionEncodeHex(invocation Invocation) Value {
-	argument, ok := invocation.Arguments[0].(*ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
+// Unified functions for String type methods
+var UnifiedStringEncodeHexFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		argument := AssertValueOfType[*ArrayValue](args[0])
+		return StringFunctionEncodeHex(context, argument, locationRange)
+	},
+)
 
-	invocationContext := invocation.InvocationContext
-	locationRange := invocation.LocationRange
+var UnifiedStringFromUtf8Function = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		argument := AssertValueOfType[*ArrayValue](args[0])
+		return StringFunctionFromUtf8(context, argument, locationRange)
+	},
+)
 
-	return StringFunctionEncodeHex(
-		invocationContext,
-		argument,
-		locationRange,
-	)
-}
+var UnifiedStringFromCharactersFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		argument := AssertValueOfType[*ArrayValue](args[0])
+		return StringFunctionFromCharacters(context, argument, locationRange)
+	},
+)
+
+var UnifiedStringJoinFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		stringArray := AssertValueOfType[*ArrayValue](args[0])
+		separator := AssertValueOfType[*StringValue](args[1])
+		return StringFunctionJoin(context, stringArray, separator, locationRange)
+	},
+)
 
 func StringFunctionEncodeHex(
 	invocationContext InvocationContext,
@@ -1100,22 +1114,6 @@ func StringFunctionEncodeHex(
 			bytes, _ := ByteArrayValueToByteSlice(invocationContext, argument, locationRange)
 			return hex.EncodeToString(bytes)
 		},
-	)
-}
-
-func stringFunctionFromUtf8(invocation Invocation) Value {
-	argument, ok := invocation.Arguments[0].(*ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	invocationContext := invocation.InvocationContext
-	locationRange := invocation.LocationRange
-
-	return StringFunctionFromUtf8(
-		invocationContext,
-		argument,
-		locationRange,
 	)
 }
 
@@ -1142,22 +1140,6 @@ func StringFunctionFromUtf8(
 		NewStringValue(invocationContext, memoryUsage, func() string {
 			return string(buf)
 		}),
-	)
-}
-
-func stringFunctionFromCharacters(invocation Invocation) Value {
-	argument, ok := invocation.Arguments[0].(*ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	invocationContext := invocation.InvocationContext
-	locationRange := invocation.LocationRange
-
-	return StringFunctionFromCharacters(
-		invocationContext,
-		argument,
-		locationRange,
 	)
 }
 
@@ -1191,27 +1173,6 @@ func StringFunctionFromCharacters(
 	)
 
 	return NewUnmeteredStringValue(builder.String())
-}
-
-func stringFunctionJoin(invocation Invocation) Value {
-	stringArray, ok := invocation.Arguments[0].(*ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	invocationContext := invocation.InvocationContext
-
-	separator, ok := invocation.Arguments[1].(*StringValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	return StringFunctionJoin(
-		invocationContext,
-		stringArray,
-		separator,
-		invocation.LocationRange,
-	)
 }
 
 func StringFunctionJoin(
@@ -1283,11 +1244,9 @@ func StringFunctionJoin(
 // stringFunction is the `String` function. It is stateless, hence it can be re-used across interpreters.
 // Type bound functions are static functions.
 var stringFunction = func() Value {
-	functionValue := NewUnmeteredStaticHostFunctionValue(
+	functionValue := NewUnmeteredUnifiedStaticHostFunctionValue(
 		sema.StringFunctionType,
-		func(invocation Invocation) Value {
-			return EmptyString
-		},
+		UnifiedStringFunction,
 	)
 
 	addMember := func(name string, value Value) {
@@ -1301,33 +1260,33 @@ var stringFunction = func() Value {
 
 	addMember(
 		sema.StringTypeEncodeHexFunctionName,
-		NewUnmeteredStaticHostFunctionValue(
+		NewUnmeteredUnifiedStaticHostFunctionValue(
 			sema.StringTypeEncodeHexFunctionType,
-			stringFunctionEncodeHex,
+			UnifiedStringEncodeHexFunction,
 		),
 	)
 
 	addMember(
 		sema.StringTypeFromUtf8FunctionName,
-		NewUnmeteredStaticHostFunctionValue(
+		NewUnmeteredUnifiedStaticHostFunctionValue(
 			sema.StringTypeFromUtf8FunctionType,
-			stringFunctionFromUtf8,
+			UnifiedStringFromUtf8Function,
 		),
 	)
 
 	addMember(
 		sema.StringTypeFromCharactersFunctionName,
-		NewUnmeteredStaticHostFunctionValue(
+		NewUnmeteredUnifiedStaticHostFunctionValue(
 			sema.StringTypeFromCharactersFunctionType,
-			stringFunctionFromCharacters,
+			UnifiedStringFromCharactersFunction,
 		),
 	)
 
 	addMember(
 		sema.StringTypeJoinFunctionName,
-		NewUnmeteredStaticHostFunctionValue(
+		NewUnmeteredUnifiedStaticHostFunctionValue(
 			sema.StringTypeJoinFunctionType,
-			stringFunctionJoin,
+			UnifiedStringJoinFunction,
 		),
 	)
 

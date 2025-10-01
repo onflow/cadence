@@ -19,7 +19,6 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -57,29 +56,19 @@ func init() {
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.AddressTypeFromBytesFunctionName,
 			sema.AddressTypeFromBytesFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-				byteArrayValue := arguments[0].(*interpreter.ArrayValue)
-				return interpreter.AddressValueFromByteArray(
-					context,
-					byteArrayValue,
-					EmptyLocationRange,
-				)
-			},
+			interpreter.UnifiedAddressFromBytesFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.AddressTypeFromStringFunctionName,
 			sema.AddressTypeFromStringFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-				stringValue := arguments[0].(*interpreter.StringValue)
-				return interpreter.AddressValueFromString(context, stringValue)
-			},
+			interpreter.UnifiedAddressFromStringFunction,
 		),
 	)
 

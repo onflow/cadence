@@ -26,7 +26,6 @@ import (
 
 	"github.com/onflow/atree"
 
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -111,23 +110,12 @@ type AccountCreator interface {
 	CreateAccount(payer common.Address) (address common.Address, err error)
 }
 
-func NewInterpreterAccountConstructor(creator AccountCreator) StandardLibraryValue {
-	return NewInterpreterStandardLibraryStaticFunction(
-		accountFunctionName,
-		accountFunctionType,
-		accountFunctionDocString,
-		func(invocation interpreter.Invocation) interpreter.Value {
-
-			payer, ok := invocation.Arguments[0].(interpreter.MemberAccessibleValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			inter := invocation.InvocationContext
-			locationRange := invocation.LocationRange
-
+func UnifiedAccountConstructor(creator AccountCreator) interpreter.UnifiedNativeFunction {
+	return interpreter.UnifiedNativeFunction(
+		func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+			payer := interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](args[0])
 			return NewAccount(
-				inter,
+				context,
 				payer,
 				locationRange,
 				creator,
@@ -136,25 +124,23 @@ func NewInterpreterAccountConstructor(creator AccountCreator) StandardLibraryVal
 	)
 }
 
-func NewVMAccountConstructor(creator AccountCreator) StandardLibraryValue {
-	return NewVMStandardLibraryStaticFunction(
+func NewInterpreterAccountConstructor(creator AccountCreator) StandardLibraryValue {
+	return NewUnifiedStandardLibraryStaticFunction(
 		accountFunctionName,
 		accountFunctionType,
 		accountFunctionDocString,
-		func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...interpreter.Value) interpreter.Value {
+		UnifiedAccountConstructor(creator),
+		false,
+	)
+}
 
-			payer, ok := arguments[0].(interpreter.MemberAccessibleValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			return NewAccount(
-				context,
-				payer,
-				interpreter.EmptyLocationRange,
-				creator,
-			)
-		},
+func NewVMAccountConstructor(creator AccountCreator) StandardLibraryValue {
+	return NewUnifiedStandardLibraryStaticFunction(
+		accountFunctionName,
+		accountFunctionType,
+		accountFunctionDocString,
+		UnifiedAccountConstructor(creator),
+		true,
 	)
 }
 
@@ -255,72 +241,39 @@ var GetAuthAccountFunctionType = func() *sema.FunctionType {
 	}
 }()
 
-func NewInterpreterGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
-	return NewInterpreterStandardLibraryStaticFunction(
-		GetAuthAccountFunctionName,
-		GetAuthAccountFunctionType,
-		getAuthAccountFunctionDocString,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			accountAddress, ok := invocation.Arguments[0].(interpreter.AddressValue)
+func UnifiedGetAuthAccountFunction(handler AccountHandler) interpreter.UnifiedNativeFunction {
+	return interpreter.UnifiedNativeFunction(
+		func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+			accountAddress := interpreter.AssertValueOfType[interpreter.AddressValue](args[0])
+
+			ty := typeParameterGetter.NextStatic()
+			referenceType, ok := ty.(*interpreter.ReferenceStaticType)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			inter := invocation.InvocationContext
-			locationRange := invocation.LocationRange
-
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			if typeParameterPair == nil {
-				panic(errors.NewUnreachableError())
-			}
-
-			ty := typeParameterPair.Value
-
-			referenceType, ok := ty.(*sema.ReferenceType)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			authorization := interpreter.ConvertSemaAccessToStaticAuthorization(
-				inter,
-				referenceType.Authorization,
-			)
-
-			return NewAccountReferenceValue(
-				inter,
-				handler,
-				accountAddress,
-				authorization,
-				locationRange,
-			)
+			return NewAccountReferenceValue(context, handler, accountAddress, referenceType.Authorization, locationRange)
 		},
 	)
 }
 
-func NewVMGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
-	return NewVMStandardLibraryStaticFunction(
+func NewInterpreterGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
+	return NewUnifiedStandardLibraryStaticFunction(
 		GetAuthAccountFunctionName,
 		GetAuthAccountFunctionType,
 		getAuthAccountFunctionDocString,
-		func(context *vm.Context, typeArguments []bbq.StaticType, receiver vm.Value, args ...vm.Value) interpreter.Value {
-			accountAddress, ok := args[0].(interpreter.AddressValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+		UnifiedGetAuthAccountFunction(handler),
+		false,
+	)
+}
 
-			referenceType, ok := typeArguments[0].(*interpreter.ReferenceStaticType)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			return NewAccountReferenceValue(
-				context,
-				handler,
-				accountAddress,
-				referenceType.Authorization,
-				interpreter.EmptyLocationRange,
-			)
-		},
+func NewVMGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
+	return NewUnifiedStandardLibraryStaticFunction(
+		GetAuthAccountFunctionName,
+		GetAuthAccountFunctionType,
+		getAuthAccountFunctionDocString,
+		UnifiedGetAuthAccountFunction(handler),
+		true,
 	)
 }
 
@@ -2709,51 +2662,31 @@ var GetAccountFunctionType = sema.NewSimpleFunctionType(
 	sema.AccountReferenceTypeAnnotation,
 )
 
+func UnifiedGetAccountFunction(handler AccountHandler) interpreter.UnifiedNativeFunction {
+	return interpreter.UnifiedNativeFunction(
+		func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+			accountAddress := interpreter.AssertValueOfType[interpreter.AddressValue](args[0])
+			return NewAccountReferenceValue(context, handler, accountAddress, interpreter.UnauthorizedAccess, locationRange)
+		},
+	)
+}
 func NewInterpreterGetAccountFunction(handler AccountHandler) StandardLibraryValue {
-	return NewInterpreterStandardLibraryStaticFunction(
+	return NewUnifiedStandardLibraryStaticFunction(
 		GetAccountFunctionName,
 		GetAccountFunctionType,
 		getAccountFunctionDocString,
-		func(invocation interpreter.Invocation) interpreter.Value {
-
-			inter := invocation.InvocationContext
-			locationRange := invocation.LocationRange
-
-			accountAddress, ok := invocation.Arguments[0].(interpreter.AddressValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			return NewAccountReferenceValue(
-				inter,
-				handler,
-				accountAddress,
-				interpreter.UnauthorizedAccess,
-				locationRange,
-			)
-		},
+		UnifiedGetAccountFunction(handler),
+		false,
 	)
 }
 
 func NewVMGetAccountFunction(handler AccountHandler) StandardLibraryValue {
-	return NewVMStandardLibraryStaticFunction(
+	return NewUnifiedStandardLibraryStaticFunction(
 		GetAccountFunctionName,
 		GetAccountFunctionType,
 		getAccountFunctionDocString,
-		func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...interpreter.Value) interpreter.Value {
-			address, ok := arguments[0].(interpreter.AddressValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			return NewAccountReferenceValue(
-				context,
-				handler,
-				address,
-				interpreter.UnauthorizedAccess,
-				interpreter.EmptyLocationRange,
-			)
-		},
+		UnifiedGetAccountFunction(handler),
+		true,
 	)
 }
 

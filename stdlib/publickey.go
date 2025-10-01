@@ -19,7 +19,6 @@
 package stdlib
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/errors"
@@ -71,66 +70,40 @@ func newPublicKeyValidationHandler(validator PublicKeyValidator) interpreter.Pub
 	}
 }
 
+func UnifiedPublicKeyConstructorFunction(
+	publicKeyValidator PublicKeyValidator,
+) interpreter.UnifiedNativeFunction {
+	return interpreter.UnifiedNativeFunction(
+		func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+			publicKey := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
+			signAlgo := interpreter.AssertValueOfType[*interpreter.SimpleCompositeValue](args[1])
+
+			return NewPublicKeyFromFields(context, locationRange, publicKey, signAlgo, publicKeyValidator)
+		},
+	)
+}
+
 func NewInterpreterPublicKeyConstructor(
 	publicKeyValidator PublicKeyValidator,
 ) StandardLibraryValue {
-	return NewInterpreterStandardLibraryStaticFunction(
+	return NewUnifiedStandardLibraryStaticFunction(
 		sema.PublicKeyTypeName,
 		publicKeyConstructorFunctionType,
 		publicKeyConstructorFunctionDocString,
-		func(invocation interpreter.Invocation) interpreter.Value {
-
-			publicKey, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			signAlgo, ok := invocation.Arguments[1].(*interpreter.SimpleCompositeValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			context := invocation.InvocationContext
-			locationRange := invocation.LocationRange
-
-			return NewPublicKeyFromFields(
-				context,
-				locationRange,
-				publicKey,
-				signAlgo,
-				publicKeyValidator,
-			)
-		},
+		UnifiedPublicKeyConstructorFunction(publicKeyValidator),
+		false,
 	)
 }
 
 func NewVMPublicKeyConstructor(
 	publicKeyValidator PublicKeyValidator,
 ) StandardLibraryValue {
-	return NewVMStandardLibraryStaticFunction(
+	return NewUnifiedStandardLibraryStaticFunction(
 		sema.PublicKeyTypeName,
 		publicKeyConstructorFunctionType,
 		publicKeyConstructorFunctionDocString,
-		func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, args ...vm.Value) vm.Value {
-
-			publicKey, ok := args[0].(*interpreter.ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			signAlgo, ok := args[1].(*interpreter.SimpleCompositeValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			return NewPublicKeyFromFields(
-				context,
-				interpreter.EmptyLocationRange,
-				publicKey,
-				signAlgo,
-				publicKeyValidator,
-			)
-		},
+		UnifiedPublicKeyConstructorFunction(publicKeyValidator),
+		true,
 	)
 }
 

@@ -21,7 +21,6 @@ package vm
 import (
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -96,11 +95,11 @@ func init() {
 	// Pre/post condition failure functions
 
 	registerBuiltinFunction(
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			commons.FailPreConditionFunctionName,
 			failConditionFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-				messageValue := arguments[0].(*interpreter.StringValue)
+			func(_ interpreter.UnifiedFunctionContext, _ interpreter.LocationRange, _ interpreter.TypeParameterGetter, _ interpreter.Value, args ...interpreter.Value) interpreter.Value {
+				messageValue := args[0].(*interpreter.StringValue)
 				panic(&interpreter.ConditionError{
 					Message:       messageValue.Str,
 					ConditionKind: ast.ConditionKindPre,
@@ -110,11 +109,11 @@ func init() {
 	)
 
 	registerBuiltinFunction(
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			commons.FailPostConditionFunctionName,
 			failConditionFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-				messageValue := arguments[0].(*interpreter.StringValue)
+			func(_ interpreter.UnifiedFunctionContext, _ interpreter.LocationRange, _ interpreter.TypeParameterGetter, _ interpreter.Value, args ...interpreter.Value) interpreter.Value {
+				messageValue := args[0].(*interpreter.StringValue)
 				panic(&interpreter.ConditionError{
 					Message:       messageValue.Str,
 					ConditionKind: ast.ConditionKindPost,
@@ -126,172 +125,90 @@ func init() {
 	// Type constructors
 
 	registerBuiltinFunction(
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.MetaTypeName,
 			sema.MetaTypeFunctionType,
-			func(context *Context, typeArguments []bbq.StaticType, _ Value, _ ...Value) Value {
-				return interpreter.NewTypeValue(
-					context.MemoryGauge,
-					typeArguments[0],
-				)
-			},
+			interpreter.UnifiedMetaTypeFunction,
 		),
 	)
 
 	registerBuiltinFunction(
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.OptionalTypeFunctionName,
 			sema.OptionalTypeFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-
-				typeValue := arguments[0].(interpreter.TypeValue)
-				return interpreter.ConstructOptionalTypeValue(context, typeValue)
-			},
+			interpreter.UnifiedOptionalTypeFunction,
 		),
 	)
 
 	registerBuiltinFunction(
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.VariableSizedArrayTypeFunctionName,
 			sema.VariableSizedArrayTypeFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-
-				typeValue := arguments[0].(interpreter.TypeValue)
-				return interpreter.ConstructVariableSizedArrayTypeValue(
-					context,
-					typeValue,
-				)
-			},
+			interpreter.UnifiedVariableSizedArrayTypeFunction,
 		),
 	)
 
 	registerBuiltinFunction(
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.ConstantSizedArrayTypeFunctionName,
 			sema.ConstantSizedArrayTypeFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-
-				typeValue := arguments[0].(interpreter.TypeValue)
-				sizeValue := arguments[1].(interpreter.IntValue)
-
-				return interpreter.ConstructConstantSizedArrayTypeValue(
-					context,
-					EmptyLocationRange,
-					typeValue,
-					sizeValue,
-				)
-			},
+			interpreter.UnifiedConstantSizedArrayTypeFunction,
 		),
 	)
 
 	registerBuiltinFunction(
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.DictionaryTypeFunctionName,
 			sema.DictionaryTypeFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-
-				keyTypeValue := arguments[0].(interpreter.TypeValue)
-				valueTypeValue := arguments[1].(interpreter.TypeValue)
-
-				return interpreter.ConstructDictionaryTypeValue(
-					context,
-					keyTypeValue,
-					valueTypeValue,
-				)
-			},
+			interpreter.UnifiedDictionaryTypeFunction,
 		),
 	)
 
 	registerBuiltinFunction(
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.CompositeTypeFunctionName,
 			sema.CompositeTypeFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-
-				typeIDValue := arguments[0].(*interpreter.StringValue)
-				return interpreter.ConstructCompositeTypeValue(context, typeIDValue)
-			},
+			interpreter.UnifiedCompositeTypeFunction,
 		),
 	)
 
 	registerBuiltinFunction(
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.FunctionTypeFunctionName,
 			sema.FunctionTypeFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-
-				parameterTypeValues := arguments[0].(*interpreter.ArrayValue)
-				returnTypeValue := arguments[1].(interpreter.TypeValue)
-
-				return interpreter.ConstructFunctionTypeValue(
-					context,
-					EmptyLocationRange,
-					parameterTypeValues,
-					returnTypeValue,
-				)
-			},
+			interpreter.UnifiedFunctionTypeFunction,
 		),
 	)
 
 	registerBuiltinFunction(
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.ReferenceTypeFunctionName,
 			sema.ReferenceTypeFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-
-				entitlementValues := arguments[0].(*interpreter.ArrayValue)
-				typeValue := arguments[1].(interpreter.TypeValue)
-
-				return interpreter.ConstructReferenceTypeValue(
-					context,
-					EmptyLocationRange,
-					entitlementValues,
-					typeValue,
-				)
-			},
+			interpreter.UnifiedReferenceTypeFunction,
 		),
 	)
 
 	registerBuiltinFunction(
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.IntersectionTypeFunctionName,
 			sema.IntersectionTypeFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-
-				intersectionIDs := arguments[0].(*interpreter.ArrayValue)
-
-				return interpreter.ConstructIntersectionTypeValue(
-					context,
-					EmptyLocationRange,
-					intersectionIDs,
-				)
-			},
+			interpreter.UnifiedIntersectionTypeFunction,
 		),
 	)
 
 	registerBuiltinFunction(
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.CapabilityTypeFunctionName,
 			sema.CapabilityTypeFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-
-				typeValue := arguments[0].(interpreter.TypeValue)
-
-				return interpreter.ConstructCapabilityTypeValue(context, typeValue)
-			},
+			interpreter.UnifiedCapabilityTypeFunction,
 		),
 	)
 
 	registerBuiltinFunction(
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.InclusiveRangeTypeFunctionName,
 			sema.InclusiveRangeTypeFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-
-				typeValue := arguments[0].(interpreter.TypeValue)
-
-				return interpreter.ConstructInclusiveRangeTypeValue(context, typeValue)
-			},
+			interpreter.UnifiedInclusiveRangeTypeFunction,
 		),
 	)
 
@@ -302,16 +219,10 @@ func init() {
 
 		functionType := sema.BaseValueActivation.Find(declaration.Name).Type.(*sema.FunctionType)
 
-		function := NewNativeFunctionValue(
+		function := NewUnifiedNativeFunctionValue(
 			declaration.Name,
 			functionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-				return convert(
-					context.MemoryGauge,
-					arguments[0],
-					EmptyLocationRange,
-				)
-			},
+			interpreter.UnifiedConverterFunction(convert),
 		)
 		registerBuiltinFunction(function)
 
@@ -351,12 +262,10 @@ func init() {
 	// Value constructors
 
 	registerBuiltinFunction(
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringType.String(),
 			sema.StringFunctionType,
-			func(_ *Context, _ []bbq.StaticType, _ Value, _ ...Value) Value {
-				return interpreter.EmptyString
-			},
+			interpreter.UnifiedStringFunction,
 		),
 	)
 
@@ -392,26 +301,17 @@ func registerBuiltinTypeBoundFunctions(
 var CommonBuiltinTypeBoundFunctions = []*NativeFunctionValue{
 
 	// `isInstance` function
-	NewNativeFunctionValue(
+	NewUnifiedNativeFunctionValue(
 		sema.IsInstanceFunctionName,
 		sema.IsInstanceFunctionType,
-		func(context *Context, _ []bbq.StaticType, value Value, arguments ...Value) Value {
-			typeValue, ok := arguments[0].(interpreter.TypeValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			return interpreter.IsInstance(context, value, typeValue)
-		},
+		interpreter.UnifiedIsInstanceFunction(),
 	),
 
 	// `getType` function
-	NewNativeFunctionValue(
+	NewUnifiedNativeFunctionValue(
 		sema.GetTypeFunctionName,
 		sema.GetTypeFunctionType,
-		func(context *Context, _ []bbq.StaticType, value Value, arguments ...Value) Value {
-			return interpreter.ValueGetType(context, value)
-		},
+		interpreter.UnifiedGetTypeFunction(),
 	),
 
 	// TODO: add remaining functions
@@ -481,16 +381,10 @@ func newFromStringFunction(typedParser interpreter.TypedStringValueParser) *Nati
 	functionType := sema.FromStringFunctionType(typedParser.ReceiverType)
 	parser := typedParser.Parser
 
-	return NewNativeFunctionValue(
+	return NewUnifiedNativeFunctionValue(
 		sema.FromStringFunctionName,
 		functionType,
-		func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-			argument, ok := arguments[0].(*interpreter.StringValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-			return parser(context, argument.Str)
-		},
+		interpreter.UnifiedFromStringFunction(parser),
 	)
 }
 
@@ -499,27 +393,9 @@ func newFromBigEndianBytesFunction(typedConverter interpreter.TypedBigEndianByte
 	byteLength := typedConverter.ByteLength
 	converter := typedConverter.Converter
 
-	return NewNativeFunctionValue(
+	return NewUnifiedNativeFunctionValue(
 		sema.FromBigEndianBytesFunctionName,
 		functionType,
-		func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-
-			argument, ok := arguments[0].(*interpreter.ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			bytes, err := interpreter.ByteArrayValueToByteSlice(context, argument, EmptyLocationRange)
-			if err != nil {
-				return interpreter.Nil
-			}
-
-			// overflow
-			if byteLength != 0 && uint(len(bytes)) > byteLength {
-				return interpreter.Nil
-			}
-
-			return interpreter.NewSomeValueNonCopying(context, converter(context, bytes))
-		},
+		interpreter.UnifiedFromBigEndianBytesFunction(byteLength, converter),
 	)
 }

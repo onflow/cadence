@@ -25,6 +25,39 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
+func NewUnifiedStandardLibraryStaticFunction(
+	name string,
+	functionType *sema.FunctionType,
+	docString string,
+	function interpreter.UnifiedNativeFunction,
+	isVM bool,
+) StandardLibraryValue {
+	parameters := functionType.Parameters
+
+	argumentLabels := make([]string, len(parameters))
+
+	for i, parameter := range parameters {
+		argumentLabels[i] = parameter.EffectiveArgumentLabel()
+	}
+
+	var functionValue interpreter.Value
+	if isVM {
+		functionValue = vm.NewUnifiedNativeFunctionValue(name, functionType, function)
+	} else {
+		functionValue = interpreter.NewUnmeteredUnifiedStaticHostFunctionValue(functionType, function)
+	}
+
+	return StandardLibraryValue{
+		Name:           name,
+		Type:           functionType,
+		DocString:      docString,
+		Value:          functionValue,
+		ArgumentLabels: argumentLabels,
+		Kind:           common.DeclarationKindFunction,
+	}
+}
+
+// These functions are helpers for testing.
 // NewInterpreterStandardLibraryStaticFunction should only be used for creating static functions.
 func NewInterpreterStandardLibraryStaticFunction(
 	name string,

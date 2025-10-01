@@ -2798,16 +2798,9 @@ func newFromStringFunction(typedParser TypedStringValueParser) FunctionValue {
 	functionType := sema.FromStringFunctionType(typedParser.ReceiverType)
 	parser := typedParser.Parser
 
-	return NewUnmeteredStaticHostFunctionValue(
+	return NewUnmeteredUnifiedStaticHostFunctionValue(
 		functionType,
-		func(invocation Invocation) Value {
-			argument, ok := invocation.Arguments[0].(*StringValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-			inter := invocation.InvocationContext
-			return parser(inter, argument.Str)
-		},
+		UnifiedFromStringFunction(parser),
 	)
 }
 
@@ -3114,29 +3107,9 @@ func newFromBigEndianBytesFunction(typedConverter TypedBigEndianBytesConverter) 
 	converter := typedConverter.Converter
 
 	// Converter functions are static functions.
-	return NewUnmeteredStaticHostFunctionValue(
+	return NewUnmeteredUnifiedStaticHostFunctionValue(
 		functionType,
-		func(invocation Invocation) Value {
-			context := invocation.InvocationContext
-			locationRange := invocation.LocationRange
-
-			argument, ok := invocation.Arguments[0].(*ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			bytes, err := ByteArrayValueToByteSlice(context, argument, locationRange)
-			if err != nil {
-				return Nil
-			}
-
-			// overflow
-			if byteLength != 0 && uint(len(bytes)) > byteLength {
-				return Nil
-			}
-
-			return NewSomeValueNonCopying(context, converter(context, bytes))
-		},
+		UnifiedFromBigEndianBytesFunction(byteLength, converter),
 	)
 }
 
@@ -3491,39 +3464,16 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 			// Converter functions are static functions.
 			{
 				Name: sema.AddressTypeFromBytesFunctionName,
-				Value: NewUnmeteredStaticHostFunctionValue(
+				Value: NewUnmeteredUnifiedStaticHostFunctionValue(
 					sema.AddressTypeFromBytesFunctionType,
-					func(invocation Invocation) Value {
-						context := invocation.InvocationContext
-						locationRange := invocation.LocationRange
-
-						byteArray, ok := invocation.Arguments[0].(*ArrayValue)
-						if !ok {
-							panic(errors.NewUnreachableError())
-						}
-
-						return AddressValueFromByteArray(
-							context,
-							byteArray,
-							locationRange,
-						)
-					},
+					UnifiedAddressFromBytesFunction,
 				),
 			},
 			{
 				Name: sema.AddressTypeFromStringFunctionName,
-				Value: NewUnmeteredStaticHostFunctionValue(
+				Value: NewUnmeteredUnifiedStaticHostFunctionValue(
 					sema.AddressTypeFromStringFunctionType,
-					func(invocation Invocation) Value {
-						context := invocation.InvocationContext
-
-						string, ok := invocation.Arguments[0].(*StringValue)
-						if !ok {
-							panic(errors.NewUnreachableError())
-						}
-
-						return AddressValueFromString(context, string)
-					},
+					UnifiedAddressFromStringFunction,
 				),
 			},
 		},
@@ -3964,15 +3914,9 @@ var converterFunctionValues = func() []converterFunction {
 
 		converterFunctionType := sema.BaseValueActivation.Find(declaration.Name).Type.(*sema.FunctionType)
 
-		converterFunctionValue := NewUnmeteredStaticHostFunctionValue(
+		converterFunctionValue := NewUnmeteredUnifiedStaticHostFunctionValue(
 			converterFunctionType,
-			func(invocation Invocation) Value {
-				return convert(
-					invocation.InvocationContext,
-					invocation.Arguments[0],
-					invocation.LocationRange,
-				)
-			},
+			UnifiedConverterFunction(convert),
 		)
 
 		addMember := func(name string, value Value) {
@@ -4026,234 +3970,271 @@ type runtimeTypeConstructor struct {
 	constructor *HostFunctionValue
 }
 
+var UnifiedMetaTypeFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		staticType := typeParameterGetter.NextStatic()
+
+		return NewTypeValue(context, staticType)
+	},
+)
+
+var UnifiedOptionalTypeFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		typeValue := AssertValueOfType[TypeValue](args[0])
+
+		return ConstructOptionalTypeValue(context, typeValue)
+	},
+)
+
+var UnifiedVariableSizedArrayTypeFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		typeValue := AssertValueOfType[TypeValue](args[0])
+
+		return ConstructVariableSizedArrayTypeValue(context, typeValue)
+	},
+)
+
+var UnifiedConstantSizedArrayTypeFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		typeValue := AssertValueOfType[TypeValue](args[0])
+		sizeValue := AssertValueOfType[IntValue](args[1])
+
+		return ConstructConstantSizedArrayTypeValue(
+			context,
+			locationRange,
+			typeValue,
+			sizeValue,
+		)
+	},
+)
+
+var UnifiedDictionaryTypeFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		keyTypeValue := AssertValueOfType[TypeValue](args[0])
+		valueTypeValue := AssertValueOfType[TypeValue](args[1])
+
+		return ConstructDictionaryTypeValue(
+			context,
+			keyTypeValue,
+			valueTypeValue,
+		)
+	},
+)
+
+var UnifiedCompositeTypeFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		typeIDValue := AssertValueOfType[*StringValue](args[0])
+
+		return ConstructCompositeTypeValue(context, typeIDValue)
+	},
+)
+
+var UnifiedFunctionTypeFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		parameterTypeValues := AssertValueOfType[*ArrayValue](args[0])
+		returnTypeValue := AssertValueOfType[TypeValue](args[1])
+
+		return ConstructFunctionTypeValue(
+			context,
+			locationRange,
+			parameterTypeValues,
+			returnTypeValue,
+		)
+	},
+)
+
+var UnifiedReferenceTypeFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		entitlementValues := AssertValueOfType[*ArrayValue](args[0])
+		typeValue := AssertValueOfType[TypeValue](args[1])
+
+		return ConstructReferenceTypeValue(
+			context,
+			locationRange,
+			entitlementValues,
+			typeValue,
+		)
+	},
+)
+
+var UnifiedIntersectionTypeFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		intersectionIDs := AssertValueOfType[*ArrayValue](args[0])
+
+		return ConstructIntersectionTypeValue(
+			context,
+			locationRange,
+			intersectionIDs,
+		)
+	},
+)
+
+var UnifiedCapabilityTypeFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		typeValue := AssertValueOfType[TypeValue](args[0])
+
+		return ConstructCapabilityTypeValue(context, typeValue)
+	},
+)
+
+var UnifiedInclusiveRangeTypeFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		typeValue := AssertValueOfType[TypeValue](args[0])
+
+		return ConstructInclusiveRangeTypeValue(context, typeValue)
+	},
+)
+
+var UnifiedAddressFromBytesFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		byteArray := AssertValueOfType[*ArrayValue](args[0])
+
+		return AddressValueFromByteArray(
+			context,
+			byteArray,
+			locationRange,
+		)
+	},
+)
+
+var UnifiedAddressFromStringFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		string := AssertValueOfType[*StringValue](args[0])
+
+		return AddressValueFromString(context, string)
+	},
+)
+
+// UnifiedConverterFunction creates a unified function for value converters
+func UnifiedConverterFunction(convert func(memoryGauge common.MemoryGauge, value Value, locationRange LocationRange) Value) UnifiedNativeFunction {
+	return UnifiedNativeFunction(
+		func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+			return convert(
+				context,
+				args[0],
+				locationRange,
+			)
+		},
+	)
+}
+
+// UnifiedFromStringFunction creates a unified function for string parsers
+func UnifiedFromStringFunction(parser StringValueParser) UnifiedNativeFunction {
+	return UnifiedNativeFunction(
+		func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+			argument := AssertValueOfType[*StringValue](args[0])
+			return parser(context, argument.Str)
+		},
+	)
+}
+
+// UnifiedFromBigEndianBytesFunction creates a unified function for big endian bytes converters
+func UnifiedFromBigEndianBytesFunction(byteLength uint, converter func(memoryGauge common.MemoryGauge, bytes []byte) Value) UnifiedNativeFunction {
+	return UnifiedNativeFunction(
+		func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+			argument := AssertValueOfType[*ArrayValue](args[0])
+
+			bytes, err := ByteArrayValueToByteSlice(context, argument, locationRange)
+			if err != nil {
+				return Nil
+			}
+
+			// overflow
+			if byteLength != 0 && uint(len(bytes)) > byteLength {
+				return Nil
+			}
+
+			return NewSomeValueNonCopying(context, converter(context, bytes))
+		},
+	)
+}
+
+// UnifiedStringFunction creates the unified String constructor function
+var UnifiedStringFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		return EmptyString
+	},
+)
+
 // Constructor functions are stateless functions. Hence they can be re-used across interpreters.
 // They are also static functions.
 var runtimeTypeConstructors = []runtimeTypeConstructor{
 	{
 		name: sema.MetaTypeName,
-		constructor: NewUnmeteredStaticHostFunctionValue(
+		constructor: NewUnmeteredUnifiedStaticHostFunctionValue(
 			sema.MetaTypeFunctionType,
-			func(invocation Invocation) Value {
-				context := invocation.InvocationContext
-
-				typeParameterPair := invocation.TypeParameterTypes.Oldest()
-				if typeParameterPair == nil {
-					panic(errors.NewUnreachableError())
-				}
-
-				ty := typeParameterPair.Value
-
-				staticType := ConvertSemaToStaticType(context, ty)
-				return NewTypeValue(context, staticType)
-			},
+			UnifiedMetaTypeFunction,
 		),
 	},
 	{
 		name: sema.OptionalTypeFunctionName,
-		constructor: NewUnmeteredStaticHostFunctionValue(
+		constructor: NewUnmeteredUnifiedStaticHostFunctionValue(
 			sema.OptionalTypeFunctionType,
-			func(invocation Invocation) Value {
-				context := invocation.InvocationContext
-
-				typeValue, ok := invocation.Arguments[0].(TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return ConstructOptionalTypeValue(context, typeValue)
-			},
+			UnifiedOptionalTypeFunction,
 		),
 	},
 	{
 		name: sema.VariableSizedArrayTypeFunctionName,
-		constructor: NewUnmeteredStaticHostFunctionValue(
+		constructor: NewUnmeteredUnifiedStaticHostFunctionValue(
 			sema.VariableSizedArrayTypeFunctionType,
-			func(invocation Invocation) Value {
-				context := invocation.InvocationContext
-
-				typeValue, ok := invocation.Arguments[0].(TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return ConstructVariableSizedArrayTypeValue(context, typeValue)
-			},
+			UnifiedVariableSizedArrayTypeFunction,
 		),
 	},
 	{
 		name: sema.ConstantSizedArrayTypeFunctionName,
-		constructor: NewUnmeteredStaticHostFunctionValue(
+		constructor: NewUnmeteredUnifiedStaticHostFunctionValue(
 			sema.ConstantSizedArrayTypeFunctionType,
-			func(invocation Invocation) Value {
-				context := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				typeValue, ok := invocation.Arguments[0].(TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				sizeValue, ok := invocation.Arguments[1].(IntValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return ConstructConstantSizedArrayTypeValue(
-					context,
-					locationRange,
-					typeValue,
-					sizeValue,
-				)
-			},
+			UnifiedConstantSizedArrayTypeFunction,
 		),
 	},
 	{
 		name: sema.DictionaryTypeFunctionName,
-		constructor: NewUnmeteredStaticHostFunctionValue(
+		constructor: NewUnmeteredUnifiedStaticHostFunctionValue(
 			sema.DictionaryTypeFunctionType,
-			func(invocation Invocation) Value {
-				context := invocation.InvocationContext
-
-				keyTypeValue, ok := invocation.Arguments[0].(TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				valueTypeValue, ok := invocation.Arguments[1].(TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return ConstructDictionaryTypeValue(
-					context,
-					keyTypeValue,
-					valueTypeValue,
-				)
-			},
+			UnifiedDictionaryTypeFunction,
 		),
 	},
 	{
 		name: sema.CompositeTypeFunctionName,
-		constructor: NewUnmeteredStaticHostFunctionValue(
+		constructor: NewUnmeteredUnifiedStaticHostFunctionValue(
 			sema.CompositeTypeFunctionType,
-			func(invocation Invocation) Value {
-				context := invocation.InvocationContext
-
-				typeIDValue, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return ConstructCompositeTypeValue(context, typeIDValue)
-			},
+			UnifiedCompositeTypeFunction,
 		),
 	},
 	{
 		name: sema.FunctionTypeFunctionName,
-		constructor: NewUnmeteredStaticHostFunctionValue(
+		constructor: NewUnmeteredUnifiedStaticHostFunctionValue(
 			sema.FunctionTypeFunctionType,
-			func(invocation Invocation) Value {
-				interpreter := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				parameterTypeValues, ok := invocation.Arguments[0].(*ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				returnTypeValue, ok := invocation.Arguments[1].(TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return ConstructFunctionTypeValue(
-					interpreter,
-					locationRange,
-					parameterTypeValues,
-					returnTypeValue,
-				)
-			},
+			UnifiedFunctionTypeFunction,
 		),
 	},
 
 	{
 		name: sema.ReferenceTypeFunctionName,
-		constructor: NewUnmeteredStaticHostFunctionValue(
+		constructor: NewUnmeteredUnifiedStaticHostFunctionValue(
 			sema.ReferenceTypeFunctionType,
-			func(invocation Invocation) Value {
-				invocationContext := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				entitlementValues, ok := invocation.Arguments[0].(*ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				typeValue, ok := invocation.Arguments[1].(TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return ConstructReferenceTypeValue(
-					invocationContext,
-					locationRange,
-					entitlementValues,
-					typeValue,
-				)
-			},
+			UnifiedReferenceTypeFunction,
 		),
 	},
 	{
 		name: sema.IntersectionTypeFunctionName,
-		constructor: NewUnmeteredStaticHostFunctionValue(
+		constructor: NewUnmeteredUnifiedStaticHostFunctionValue(
 			sema.IntersectionTypeFunctionType,
-			func(invocation Invocation) Value {
-				context := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				intersectionIDs, ok := invocation.Arguments[0].(*ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return ConstructIntersectionTypeValue(
-					context,
-					locationRange,
-					intersectionIDs,
-				)
-			},
+			UnifiedIntersectionTypeFunction,
 		),
 	},
 	{
 		name: sema.CapabilityTypeFunctionName,
-		constructor: NewUnmeteredStaticHostFunctionValue(
+		constructor: NewUnmeteredUnifiedStaticHostFunctionValue(
 			sema.CapabilityTypeFunctionType,
-			func(invocation Invocation) Value {
-				context := invocation.InvocationContext
-
-				typeValue, ok := invocation.Arguments[0].(TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return ConstructCapabilityTypeValue(context, typeValue)
-			},
+			UnifiedCapabilityTypeFunction,
 		),
 	},
 	{
 		name: sema.InclusiveRangeTypeFunctionName,
-		constructor: NewUnmeteredStaticHostFunctionValue(
+		constructor: NewUnmeteredUnifiedStaticHostFunctionValue(
 			sema.InclusiveRangeTypeFunctionType,
-			func(invocation Invocation) Value {
-				context := invocation.InvocationContext
-
-				typeValue, ok := invocation.Arguments[0].(TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return ConstructInclusiveRangeTypeValue(context, typeValue)
-			},
+			UnifiedInclusiveRangeTypeFunction,
 		),
 	},
 }

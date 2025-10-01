@@ -19,7 +19,6 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -33,14 +32,14 @@ func init() {
 	// Capability.borrow
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValueWithDerivedType(
+		NewUnifiedNativeFunctionValueWithDerivedType(
 			sema.CapabilityTypeBorrowFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				capability := receiver.(*interpreter.IDCapabilityValue)
 				borrowType := context.SemaTypeFromStaticType(capability.BorrowType).(*sema.ReferenceType)
 				return sema.CapabilityTypeBorrowFunctionType(borrowType)
 			},
-			func(context *Context, typeArguments []bbq.StaticType, receiver Value, args ...Value) Value {
+			func(context interpreter.UnifiedFunctionContext, _ interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
 				var idCapabilityValue *interpreter.IDCapabilityValue
 
 				switch capabilityValue := receiver.(type) {
@@ -62,22 +61,10 @@ func init() {
 				}
 
 				capabilityBorrowType := context.SemaTypeFromStaticType(idCapabilityValue.BorrowType).(*sema.ReferenceType)
-
-				var typeParameter sema.Type
-				if len(typeArguments) > 0 {
-					typeParameter = context.SemaTypeFromStaticType(typeArguments[0])
-				}
-
 				address := idCapabilityValue.Address()
 
-				return interpreter.CapabilityBorrow(
-					context,
-					typeParameter,
-					address,
-					capabilityID,
-					capabilityBorrowType,
-					EmptyLocationRange,
-				)
+				unifiedFunc := interpreter.UnifiedCapabilityBorrowFunction(address, capabilityID, capabilityBorrowType)
+				return unifiedFunc(context, interpreter.EmptyLocationRange, typeParameterGetter, receiver, args...)
 			},
 		),
 	)
@@ -85,14 +72,14 @@ func init() {
 	// Capability.check
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValueWithDerivedType(
+		NewUnifiedNativeFunctionValueWithDerivedType(
 			sema.CapabilityTypeCheckFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				capability := receiver.(*interpreter.IDCapabilityValue)
 				borrowType := context.SemaTypeFromStaticType(capability.BorrowType).(*sema.ReferenceType)
 				return sema.CapabilityTypeCheckFunctionType(borrowType)
 			},
-			func(context *Context, typeArguments []bbq.StaticType, receiver Value, args ...Value) Value {
+			func(context interpreter.UnifiedFunctionContext, _ interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
 
 				var idCapabilityValue *interpreter.IDCapabilityValue
 
@@ -115,22 +102,10 @@ func init() {
 				}
 
 				capabilityBorrowType := context.SemaTypeFromStaticType(idCapabilityValue.BorrowType).(*sema.ReferenceType)
-
-				var typeParameter sema.Type
-				if len(typeArguments) > 0 {
-					typeParameter = context.SemaTypeFromStaticType(typeArguments[0])
-				}
-
 				address := idCapabilityValue.Address()
 
-				return interpreter.CapabilityCheck(
-					context,
-					typeParameter,
-					address,
-					capabilityID,
-					capabilityBorrowType,
-					EmptyLocationRange,
-				)
+				unifiedFunc := interpreter.UnifiedCapabilityCheckFunction(address, capabilityID, capabilityBorrowType)
+				return unifiedFunc(context, interpreter.EmptyLocationRange, typeParameterGetter, receiver, args...)
 			},
 		),
 	)

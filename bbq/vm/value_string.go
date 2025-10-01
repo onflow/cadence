@@ -19,7 +19,6 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -118,68 +117,37 @@ func init() {
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeEncodeHexFunctionName,
 			sema.StringTypeEncodeHexFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-				byteArray := arguments[0].(*interpreter.ArrayValue)
-				return interpreter.StringFunctionEncodeHex(
-					context,
-					byteArray,
-					EmptyLocationRange,
-				)
-			},
+			interpreter.UnifiedStringEncodeHexFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeFromUtf8FunctionName,
 			sema.StringTypeFromUtf8FunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-				byteArray := arguments[0].(*interpreter.ArrayValue)
-				return interpreter.StringFunctionFromUtf8(
-					context,
-					byteArray,
-					EmptyLocationRange,
-				)
-			},
+			interpreter.UnifiedStringFromUtf8Function,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeFromCharactersFunctionName,
 			sema.StringTypeFromCharactersFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-				charactersArray := arguments[0].(*interpreter.ArrayValue)
-				return interpreter.StringFunctionFromCharacters(
-					context,
-					charactersArray,
-					EmptyLocationRange,
-				)
-			},
+			interpreter.UnifiedStringFromCharactersFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeJoinFunctionName,
 			sema.StringTypeJoinFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-				stringArray := arguments[0].(*interpreter.ArrayValue)
-				separator := arguments[1].(*interpreter.StringValue)
-
-				return interpreter.StringFunctionJoin(
-					context,
-					stringArray,
-					separator,
-					EmptyLocationRange,
-				)
-			},
+			interpreter.UnifiedStringJoinFunction,
 		),
 	)
 }
