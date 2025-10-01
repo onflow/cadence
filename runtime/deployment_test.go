@@ -215,16 +215,11 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 	t.Run("with incorrect argument", func(t *testing.T) {
 
 		expectedErrorMessage := "Execution failed:\n" +
-			"error: invalid argument at index 0: expected type `Int`, got `Bool`\n"
-
-		// TODO: additional info when using compiler/VM
-		if !*compile {
-			expectedErrorMessage +=
-				" --> 0000000000000000000000000000000000000000000000000000000000000000:5:22\n" +
-					"  |\n" +
-					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202061636365737328616c6c2920636f6e74726163742054657374207b0a202020202020202020202020202020202020696e6974285f20783a20496e7429207b7d0a20202020202020202020202020207d0a202020202020202020202020\".decodeHex(), true)\n" +
-					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"
-		}
+			"error: invalid argument at index 0: expected type `Int`, got `Bool`\n" +
+			" --> 0000000000000000000000000000000000000000000000000000000000000000:5:22\n" +
+			"  |\n" +
+			"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202061636365737328616c6c2920636f6e74726163742054657374207b0a202020202020202020202020202020202020696e6974285f20783a20496e7429207b7d0a20202020202020202020202020207d0a202020202020202020202020\".decodeHex(), true)\n" +
+			"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"
 
 		test(t, testCase{
 			contract: `
@@ -245,16 +240,12 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 	t.Run("additional argument", func(t *testing.T) {
 
 		expectedErrorMessage := "Execution failed:\n" +
-			"error: invalid argument count, too many arguments: expected 0, got 1\n"
+			"error: invalid argument count, too many arguments: expected 0, got 1\n" +
+			" --> 0000000000000000000000000000000000000000000000000000000000000000:5:22\n" +
+			"  |\n" +
+			"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202061636365737328616c6c2920636f6e74726163742054657374207b7d0a202020202020202020202020\".decodeHex(), 1)\n" +
+			"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"
 
-		// TODO: additional info when using compiler/VM
-		if !*compile {
-			expectedErrorMessage +=
-				" --> 0000000000000000000000000000000000000000000000000000000000000000:5:22\n" +
-					"  |\n" +
-					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202061636365737328616c6c2920636f6e74726163742054657374207b7d0a202020202020202020202020\".decodeHex(), 1)\n" +
-					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"
-		}
 		test(t, testCase{
 			contract: `
               access(all) contract Test {}
@@ -272,31 +263,26 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 	t.Run("additional code which is invalid at top-level", func(t *testing.T) {
 
 		expectedErrorMessage := "Execution failed:\n" +
-			"error: cannot deploy invalid contract\n"
-
-		// TODO: additional info when using compiler/VM
-		if !*compile {
-			expectedErrorMessage +=
-				" --> 0000000000000000000000000000000000000000000000000000000000000000:5:22\n" +
-					"  |\n" +
-					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202061636365737328616c6c2920636f6e74726163742054657374207b7d0a0a202020202020202020202020202066756e2074657374436173652829207b7d0a202020202020202020202020\".decodeHex())\n" +
-					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n" +
-					"\n" +
-					"error: function declarations are not valid at the top-level\n" +
-					" --> 2a00000000000000.Test:4:18\n" +
-					"  |\n" +
-					"4 |               fun testCase() {}\n" +
-					"  |                   ^^^^^^^^ move this declaration into a contract\n" +
-					"\n" +
-					"error: missing access modifier for function\n" +
-					" --> 2a00000000000000.Test:4:14\n" +
-					"  |\n" +
-					"4 |               fun testCase() {}\n" +
-					"  |               ^ an access modifier is required for this declaration; add an access modifier, like e.g. `access(all)` or `access(self)`\n" +
-					"\n" +
-					"  See documentation at: https://cadence-lang.org/docs/language/access-control\n" +
-					"\n"
-		}
+			"error: cannot deploy invalid contract\n" +
+			" --> 0000000000000000000000000000000000000000000000000000000000000000:5:22\n" +
+			"  |\n" +
+			"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202061636365737328616c6c2920636f6e74726163742054657374207b7d0a0a202020202020202020202020202066756e2074657374436173652829207b7d0a202020202020202020202020\".decodeHex())\n" +
+			"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n" +
+			"\n" +
+			"error: function declarations are not valid at the top-level\n" +
+			" --> 2a00000000000000.Test:4:18\n" +
+			"  |\n" +
+			"4 |               fun testCase() {}\n" +
+			"  |                   ^^^^^^^^ move this declaration into a contract\n" +
+			"\n" +
+			"error: missing access modifier for function\n" +
+			" --> 2a00000000000000.Test:4:14\n" +
+			"  |\n" +
+			"4 |               fun testCase() {}\n" +
+			"  |               ^ an access modifier is required for this declaration; add an access modifier, like e.g. `access(all)` or `access(self)`\n" +
+			"\n" +
+			"  See documentation at: https://cadence-lang.org/docs/language/access-control\n" +
+			"\n"
 
 		test(t, testCase{
 			contract: `
@@ -315,22 +301,17 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 	t.Run("invalid contract, parsing error", func(t *testing.T) {
 
 		expectedErrorMessage := "Execution failed:\n" +
-			"error: cannot deploy invalid contract\n"
-
-		// TODO: additional info when using compiler/VM
-		if !*compile {
-			expectedErrorMessage +=
-				" --> 0000000000000000000000000000000000000000000000000000000000000000:5:22\n" +
-					"  |\n" +
-					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a2020202020202020202020202020580a202020202020202020202020\".decodeHex())\n" +
-					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n" +
-					"\n" +
-					"error: unexpected token: identifier\n" +
-					" --> 2a00000000000000.Test:2:14\n" +
-					"  |\n" +
-					"2 |               X\n" +
-					"  |               ^ check for extra characters, missing semicolons, or incomplete statements\n"
-		}
+			"error: cannot deploy invalid contract\n" +
+			" --> 0000000000000000000000000000000000000000000000000000000000000000:5:22\n" +
+			"  |\n" +
+			"5 |                       signer.contracts.add(name: \"Test\", code: \"0a2020202020202020202020202020580a202020202020202020202020\".decodeHex())\n" +
+			"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n" +
+			"\n" +
+			"error: unexpected token: identifier\n" +
+			" --> 2a00000000000000.Test:2:14\n" +
+			"  |\n" +
+			"2 |               X\n" +
+			"  |               ^ check for extra characters, missing semicolons, or incomplete statements\n"
 
 		test(t, testCase{
 			contract: `
@@ -346,22 +327,17 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 	t.Run("invalid contract, checking error", func(t *testing.T) {
 		expectedErrorMessage := "Execution failed:\n" +
-			"error: cannot deploy invalid contract\n"
-
-		// TODO: additional info when using compiler/VM
-		if !*compile {
-			expectedErrorMessage +=
-				" --> 0000000000000000000000000000000000000000000000000000000000000000:5:22\n" +
-					"  |\n" +
-					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202061636365737328616c6c2920636f6e74726163742054657374207b0a20202020202020202020202020202020202061636365737328616c6c292066756e20746573742829207b2058207d0a20202020202020202020202020207d0a202020202020202020202020\".decodeHex())\n" +
-					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n" +
-					"\n" +
-					"error: cannot find variable in this scope: `X`\n" +
-					" --> 2a00000000000000.Test:3:43\n" +
-					"  |\n" +
-					"3 |                   access(all) fun test() { X }\n" +
-					"  |                                            ^ not found in this scope; check for typos or declare it\n"
-		}
+			"error: cannot deploy invalid contract\n" +
+			" --> 0000000000000000000000000000000000000000000000000000000000000000:5:22\n" +
+			"  |\n" +
+			"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202061636365737328616c6c2920636f6e74726163742054657374207b0a20202020202020202020202020202020202061636365737328616c6c292066756e20746573742829207b2058207d0a20202020202020202020202020207d0a202020202020202020202020\".decodeHex())\n" +
+			"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n" +
+			"\n" +
+			"error: cannot find variable in this scope: `X`\n" +
+			" --> 2a00000000000000.Test:3:43\n" +
+			"  |\n" +
+			"3 |                   access(all) fun test() { X }\n" +
+			"  |                                            ^ not found in this scope; check for typos or declare it\n"
 
 		test(t, testCase{
 			contract: `
