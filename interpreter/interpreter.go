@@ -558,7 +558,7 @@ func (interpreter *Interpreter) InvokeTransaction(arguments []Value, signers ...
 
 func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	if r := recover(); r != nil {
-		// Recover all errors, because interpreter can be directly invoked by FVM.
+		// Recover all errors, because FVM can directly invoke interpreter.
 		err := AsCadenceError(r)
 
 		// if the error is not yet an interpreter error, wrap it
@@ -568,11 +568,11 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 
 			_, ok := err.(ast.HasPosition)
 			if !ok && interpreter.statement != nil {
-				r := ast.NewUnmeteredRangeFromPositioned(interpreter.statement)
+				errRange := ast.NewUnmeteredRangeFromPositioned(interpreter.statement)
 
 				err = PositionedError{
 					Err:   err,
-					Range: r,
+					Range: errRange,
 				}
 			}
 
@@ -615,7 +615,7 @@ func AsCadenceError(r any) error {
 }
 
 func (interpreter *Interpreter) CallStack() []Invocation {
-	return interpreter.SharedState.callStack.Invocations[:]
+	return interpreter.SharedState.callStack.Invocations
 }
 
 func (interpreter *Interpreter) CallStackLocations() []LocationRange {

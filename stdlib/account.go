@@ -2458,6 +2458,7 @@ type InvalidContractDeploymentError struct {
 
 var _ errors.UserError = &InvalidContractDeploymentError{}
 var _ errors.ParentError = &InvalidContractDeploymentError{}
+var _ interpreter.HasLocationRange = &InvalidContractDeploymentError{}
 
 func (*InvalidContractDeploymentError) IsUserError() {}
 
@@ -2478,17 +2479,26 @@ func (e *InvalidContractDeploymentError) Unwrap() error {
 	return e.Err
 }
 
+func (e *InvalidContractDeploymentError) SetLocationRange(locationRange interpreter.LocationRange) {
+	e.LocationRange = locationRange
+}
+
 // InvalidContractDeploymentOriginError
 type InvalidContractDeploymentOriginError struct {
 	interpreter.LocationRange
 }
 
 var _ errors.UserError = &InvalidContractDeploymentOriginError{}
+var _ interpreter.HasLocationRange = &InvalidContractDeploymentOriginError{}
 
 func (*InvalidContractDeploymentOriginError) IsUserError() {}
 
 func (*InvalidContractDeploymentOriginError) Error() string {
 	return "cannot deploy invalid contract"
+}
+
+func (e *InvalidContractDeploymentOriginError) SetLocationRange(locationRange interpreter.LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // ignoreUpdatedProgramParserError determines if the parsing error
@@ -2850,11 +2860,16 @@ type ContractRemovalError struct {
 }
 
 var _ errors.UserError = &ContractRemovalError{}
+var _ interpreter.HasLocationRange = &ContractRemovalError{}
 
 func (*ContractRemovalError) IsUserError() {}
 
 func (e *ContractRemovalError) Error() string {
 	return fmt.Sprintf("cannot remove contract `%s`", e.Name)
+}
+
+func (e *ContractRemovalError) SetLocationRange(locationRange interpreter.LocationRange) {
+	e.LocationRange = locationRange
 }
 
 const getAccountFunctionDocString = `
@@ -3434,7 +3449,7 @@ func AccountStorageCapabilitiesForeachController(
 		// In order to be safe, we perform this check here to effectively enforce
 		// that users return `false` from their callback in all cases where storage is mutated.
 		if invocationContext.MutationDuringCapabilityControllerIteration() {
-			panic(CapabilityControllersMutatedDuringIterationError{
+			panic(&CapabilityControllersMutatedDuringIterationError{
 				LocationRange: locationRange,
 			})
 		}
@@ -5577,12 +5592,17 @@ type CapabilityControllersMutatedDuringIterationError struct {
 	interpreter.LocationRange
 }
 
-var _ errors.UserError = CapabilityControllersMutatedDuringIterationError{}
+var _ errors.UserError = &CapabilityControllersMutatedDuringIterationError{}
+var _ interpreter.HasLocationRange = &CapabilityControllersMutatedDuringIterationError{}
 
-func (CapabilityControllersMutatedDuringIterationError) IsUserError() {}
+func (*CapabilityControllersMutatedDuringIterationError) IsUserError() {}
 
-func (CapabilityControllersMutatedDuringIterationError) Error() string {
+func (*CapabilityControllersMutatedDuringIterationError) Error() string {
 	return "capability controller iteration continued after changes to controllers"
+}
+
+func (e *CapabilityControllersMutatedDuringIterationError) SetLocationRange(locationRange interpreter.LocationRange) {
+	e.LocationRange = locationRange
 }
 
 func newInterpreterAccountAccountCapabilitiesForEachControllerFunction(
@@ -5733,7 +5753,7 @@ func AccountCapabilitiesForEachController(
 		// In order to be safe, we perform this check here to effectively enforce
 		// that users return `false` from their callback in all cases where storage is mutated.
 		if invocationContext.MutationDuringCapabilityControllerIteration() {
-			panic(CapabilityControllersMutatedDuringIterationError{
+			panic(&CapabilityControllersMutatedDuringIterationError{
 				LocationRange: locationRange,
 			})
 		}

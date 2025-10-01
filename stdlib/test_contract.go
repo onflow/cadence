@@ -102,7 +102,7 @@ func testTypeAssertFunction(
 			}
 
 			if !condition {
-				panic(AssertionError{
+				panic(&AssertionError{
 					Message:       message,
 					LocationRange: invocation.LocationRange,
 				})
@@ -173,7 +173,7 @@ func testTypeAssertEqualFunction(
 					expectedType,
 					actualType,
 				)
-				panic(AssertionError{
+				panic(&AssertionError{
 					Message:       message,
 					LocationRange: invocation.LocationRange,
 				})
@@ -191,7 +191,7 @@ func testTypeAssertEqualFunction(
 					expected,
 					actual,
 				)
-				panic(AssertionError{
+				panic(&AssertionError{
 					Message:       message,
 					LocationRange: invocation.LocationRange,
 				})
@@ -241,7 +241,7 @@ func testTypeFailFunction(
 				message = messageValue.Str
 			}
 
-			panic(AssertionError{
+			panic(&AssertionError{
 				Message:       message,
 				LocationRange: invocation.LocationRange,
 			})
@@ -317,7 +317,7 @@ func newTestTypeExpectFunction(functionType *sema.FunctionType) testContractBoun
 						"given value is: %s",
 						value,
 					)
-					panic(AssertionError{
+					panic(&AssertionError{
 						Message:       message,
 						LocationRange: locationRange,
 					})

@@ -1941,7 +1941,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			)
 			RequireError(t, err)
 
-			var mutationErr stdlib.CapabilityControllersMutatedDuringIterationError
+			var mutationErr *stdlib.CapabilityControllersMutatedDuringIterationError
 			require.ErrorAs(t, err, &mutationErr)
 
 			require.Equal(t,
@@ -2028,7 +2028,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			)
 			RequireError(t, err)
 
-			var mutationErr stdlib.CapabilityControllersMutatedDuringIterationError
+			var mutationErr *stdlib.CapabilityControllersMutatedDuringIterationError
 			require.ErrorAs(t, err, &mutationErr)
 
 			require.Equal(t,
@@ -2527,7 +2527,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			)
 			RequireError(t, err)
 
-			var mutationErr stdlib.CapabilityControllersMutatedDuringIterationError
+			var mutationErr *stdlib.CapabilityControllersMutatedDuringIterationError
 			require.ErrorAs(t, err, &mutationErr)
 
 			require.Equal(t,
@@ -2604,7 +2604,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			)
 			RequireError(t, err)
 
-			var mutationErr stdlib.CapabilityControllersMutatedDuringIterationError
+			var mutationErr *stdlib.CapabilityControllersMutatedDuringIterationError
 			require.ErrorAs(t, err, &mutationErr)
 
 			require.Equal(t,

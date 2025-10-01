@@ -26,6 +26,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/opcode"
@@ -1887,24 +1888,35 @@ func (vm *VM) callStackLocations() []interpreter.LocationRange {
 func (vm *VM) RecoverErrors(onError func(error)) {
 	if r := recover(); r != nil {
 		// Recover all errors, because VM can be directly invoked by FVM.
-		cadenceError := interpreter.AsCadenceError(r)
+		err := interpreter.AsCadenceError(r)
 
 		currentLocation := vm.LocationRange()
 
-		if locatedError, ok := cadenceError.(interpreter.HasLocationRange); ok {
+		if locatedError, ok := err.(interpreter.HasLocationRange); ok {
 			locatedError.SetLocationRange(currentLocation)
 		}
 
 		// if the error is not yet an interpreter error, wrap it
-		if _, ok := cadenceError.(interpreter.Error); !ok {
-			cadenceError = interpreter.Error{
-				Err:      cadenceError,
+		if _, ok := err.(interpreter.Error); !ok {
+
+			_, ok := err.(ast.HasPosition)
+			if !ok {
+				errRange := ast.NewUnmeteredRangeFromPositioned(currentLocation)
+
+				err = interpreter.PositionedError{
+					Err:   err,
+					Range: errRange,
+				}
+			}
+
+			err = interpreter.Error{
+				Err:      err,
 				Location: currentLocation.Location,
 			}
 		}
 
-		err := cadenceError.(interpreter.Error)
-		err.StackTrace = vm.callStackLocations()
+		interpreterErr := err.(interpreter.Error)
+		interpreterErr.StackTrace = vm.callStackLocations()
 
 		// For debug purpose only
 
@@ -1921,7 +1933,7 @@ func (vm *VM) RecoverErrors(onError func(error)) {
 			}
 		}
 
-		onError(err)
+		onError(interpreterErr)
 	}
 }
 
