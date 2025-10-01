@@ -239,7 +239,6 @@ type ReferencedResourceKindedValues map[atree.ValueID]map[*EphemeralReferenceVal
 
 type Interpreter struct {
 	Location     common.Location
-	statement    ast.Statement
 	Program      *Program
 	SharedState  *SharedState
 	Globals      GlobalVariables
@@ -247,6 +246,9 @@ type Interpreter struct {
 	Transactions []*HostFunctionValue
 	interpreted  bool
 	Tracer
+
+	statement  ast.Statement
+	expression ast.Expression
 }
 
 var _ common.MemoryGauge = &Interpreter{}
@@ -561,14 +563,20 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 		// Recover all errors, because FVM can directly invoke interpreter.
 		err := AsCadenceError(r)
 
+		locationRange := interpreter.LocationRange()
+
+		if locatedError, ok := err.(HasLocationRange); ok {
+			locatedError.SetLocationRange(locationRange)
+		}
+
 		// if the error is not yet an interpreter error, wrap it
 		if _, ok := err.(Error); !ok {
 
 			// wrap the error with position information if needed
 
 			_, ok := err.(ast.HasPosition)
-			if !ok && interpreter.statement != nil {
-				errRange := ast.NewUnmeteredRangeFromPositioned(interpreter.statement)
+			if !ok {
+				errRange := ast.NewUnmeteredRangeFromPositioned(locationRange)
 
 				err = PositionedError{
 					Err:   err,
@@ -578,7 +586,7 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 
 			err = Error{
 				Err:      err,
-				Location: interpreter.Location,
+				Location: locationRange.Location,
 			}
 		}
 
@@ -586,6 +594,20 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 		interpreterErr.StackTrace = interpreter.CallStackLocations()
 
 		onError(interpreterErr)
+	}
+}
+
+func (interpreter *Interpreter) LocationRange() LocationRange {
+	var hasPos ast.HasPosition
+	if interpreter.expression != nil {
+		hasPos = interpreter.expression
+	} else if interpreter.statement != nil {
+		hasPos = interpreter.statement
+	}
+
+	return LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: hasPos,
 	}
 }
 
