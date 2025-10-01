@@ -66,6 +66,52 @@ func NewDeployedContractValue(
 	return deployedContract
 }
 
+func NewUnifiedDeployedContractPublicTypesFunctionValue(
+	addressPointer *common.Address,
+	name *StringValue,
+	publicTypes *ArrayValue,
+) UnifiedNativeFunction {
+	return func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		var address common.Address
+		if addressPointer == nil {
+			// the vm does not provide any arguments
+			deployedContract := AssertValueOfType[*SimpleCompositeValue](receiver)
+
+			addressFieldValue := deployedContract.GetMember(
+				context,
+				EmptyLocationRange,
+				sema.DeployedContractTypeAddressFieldName,
+			)
+			address = common.Address(AssertValueOfType[AddressValue](addressFieldValue))
+
+			nameFieldValue := deployedContract.GetMember(
+				context,
+				EmptyLocationRange,
+				sema.DeployedContractTypeNameFieldName,
+			)
+			name = AssertValueOfType[*StringValue](nameFieldValue)
+		} else {
+			address = *addressPointer
+		}
+
+		if publicTypes == nil {
+			publicTypes = DeployedContractPublicTypes(
+				context,
+				address,
+				name,
+			)
+		}
+
+		return publicTypes
+	}
+}
+
 func newInterpreterDeployedContractPublicTypesFunctionValue(
 	context FunctionCreationContext,
 	self MemberAccessibleValue,
@@ -76,22 +122,11 @@ func newInterpreterDeployedContractPublicTypesFunctionValue(
 	var publicTypes *ArrayValue
 
 	address := addressValue.ToAddress()
-	// TODO: maybe update this to use UnifiedBoundHostFunctionValue
-	return NewBoundHostFunctionValue(
+	return NewUnifiedBoundHostFunctionValue(
 		context,
 		self,
 		sema.DeployedContractTypePublicTypesFunctionType,
-		func(_ MemberAccessibleValue, invocation Invocation) Value {
-			if publicTypes == nil {
-				publicTypes = DeployedContractPublicTypes(
-					invocation.InvocationContext,
-					address,
-					name,
-				)
-			}
-
-			return publicTypes
-		},
+		NewUnifiedDeployedContractPublicTypesFunctionValue(&address, name, publicTypes),
 	)
 }
 
