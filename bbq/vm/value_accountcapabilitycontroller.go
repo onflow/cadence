@@ -20,7 +20,6 @@ package vm
 
 import (
 	"github.com/onflow/cadence/bbq/commons"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -47,16 +46,4 @@ func init() {
 			interpreter.NewUnifiedDeletionCheckedAccountCapabilityControllerFunction(interpreter.UnifiedAccountCapabilityControllerDeleteFunction),
 		),
 	)
-}
-
-func getCheckedAccountCapabilityControllerReceiver(receiver Value) *interpreter.AccountCapabilityControllerValue {
-	v, ok := receiver.(*interpreter.AccountCapabilityControllerValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	// NOTE: check if controller is already deleted
-	v.CheckDeleted()
-
-	return v
 }
