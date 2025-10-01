@@ -134,3 +134,12 @@ type ContainsPredicate struct {
 }
 
 func (c ContainsPredicate) GetType() string { return "contains" }
+
+// TypeAssertionPredicate represents an equality check
+type TypeAssertionPredicate struct {
+	Source  Expression `yaml:"source"`
+	Type    Type       `yaml:"type"`
+	IfMatch Predicate  `yaml:"ifMatch"`
+}
+
+func (e TypeAssertionPredicate) GetType() string { return "mustType" }

@@ -30,7 +30,7 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 
 	case PrimitiveStaticTypeAnyStruct:
 		return !(IsResourceType(subType)) &&
-			!(subType == PrimitiveStaticTypeAny)
+			subType != PrimitiveStaticTypeAny
 
 	case PrimitiveStaticTypeAnyResource:
 		return IsResourceType(subType)
@@ -186,6 +186,28 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 
 		return PermitsAccess(typedSuperType.Authorization, typedSubType.Authorization) &&
 			IsSubType(typeConverter, typedSubType.Type, typedSuperType.Type)
+
+	case *CompositeStaticType:
+		switch typedSubType := subType.(type) {
+		case *IntersectionStaticType:
+			switch typedSubType.LegacyType {
+			case nil,
+				PrimitiveStaticTypeAnyResource,
+				PrimitiveStaticTypeAnyStruct,
+				PrimitiveStaticTypeAny:
+				return false
+			}
+
+			switch typedSubTypeLegacyType := typedSubType.LegacyType.(type) {
+			case *CompositeStaticType:
+				return typedSubTypeLegacyType == typedSuperType
+
+			}
+
+		case *CompositeStaticType:
+			return false
+
+		}
 
 	}
 

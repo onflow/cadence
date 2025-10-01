@@ -175,21 +175,33 @@ rules:
         - subtype:
             super: super.Type
             sub: sub.Type
-#  - super:
-#      Reference:
-#        auth: A
-#        type: B
-#    sub:
-#      Reference:
-#        auth: C
-#        type: D
-#    predicate:
-#      and:
-#        - permits: [B, A]
-#        - equals:
-#            source: D
-#            target: B
-#
+
+  - super: CompositeType
+    predicate:
+      or:
+        - mustType:
+            source: sub
+            type: IntersectionType
+            predicate:
+              and:
+                - not:
+                    equals:
+                      source: sub.LegacyType
+                      target:
+                        oneOfTypes: [nil, AnyResourceType, AnyStructType, AnyType]
+                - mustType:
+                    source: sub.LegacyType
+                    type: CompositeType
+                    predicate:
+                      equals:
+                        source: sub.LegacyType
+                        target: super
+        - mustType:
+            source: sub
+            type: CompositeType
+            predicate:
+              not: always
+
 #  - super:
 #      Function:
 #        purity: A

@@ -30,7 +30,7 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 	case AnyStructType:
 		return !(IsResourceType(subType)) &&
-			!(subType == AnyType)
+			subType != AnyType
 
 	case AnyResourceType:
 		return IsResourceType(subType)
@@ -189,6 +189,28 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 		return PermitsAccess(typedSuperType.Authorization, typedSubType.Authorization) &&
 			IsSubType(typedSubType.Type, typedSuperType.Type)
+
+	case *CompositeType:
+		switch typedSubType := subType.(type) {
+		case *IntersectionType:
+			switch typedSubType.LegacyType {
+			case nil,
+				AnyResourceType,
+				AnyStructType,
+				AnyType:
+				return false
+			}
+
+			switch typedSubTypeLegacyType := typedSubType.LegacyType.(type) {
+			case *CompositeType:
+				return typedSubTypeLegacyType == typedSuperType
+
+			}
+
+		case *CompositeType:
+			return false
+
+		}
 
 	}
 

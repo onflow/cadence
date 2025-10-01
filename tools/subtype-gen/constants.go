@@ -32,9 +32,7 @@ const (
 	typePlaceholderInterface     = "Interface"
 	typePlaceholderParameterized = "Parameterized"
 
-	subtypeCheckFuncName  = "checkSubTypeWithoutEquality_gen"
-	subTypeVarName        = "subType"
-	typedSubTypeVarName   = "typedSubType"
-	superTypeVarName      = "superType"
-	typedSuperTypeVarName = "typedSuperType"
+	subtypeCheckFuncName = "checkSubTypeWithoutEquality_gen"
+	subTypeVarName       = "subType"
+	superTypeVarName     = "superType"
 )

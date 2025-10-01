@@ -62,7 +62,11 @@ func parseType(typePlaceHolder string) Type {
 		typePlaceholderDictionary,
 		typePlaceholderVariableSized,
 		typePlaceholderConstantSized,
-		typePlaceholderReference:
+		typePlaceholderReference,
+		typePlaceholderComposite,
+		typePlaceholderInterface,
+		typePlaceholderFunction,
+		typePlaceholderIntersection:
 		return ComplexType{
 			name: typeName,
 		}
@@ -88,8 +92,8 @@ func parseMemberExpression(names []string) Expression {
 	}
 }
 
-// parseRulePredicate parses a rule predicate from YAML
-func parseRulePredicate(rule any) (Predicate, error) {
+// parsePredicate parses a rule predicate from YAML
+func parsePredicate(rule any) (Predicate, error) {
 	switch v := rule.(type) {
 	case string:
 		switch v {
@@ -126,27 +130,27 @@ func parseRulePredicate(rule any) (Predicate, error) {
 			}
 
 			// Get source
-			data, ok := equals["source"]
+			source, ok := equals["source"]
 			if !ok {
 				return nil, fmt.Errorf("cannot find `source` property for `equals` predicate")
 			}
 
-			sourceType := parseSimpleExpression(data)
+			sourceExpr := parseSimpleExpression(source)
 
 			// Get target
-			expr, ok := equals["target"]
+			target, ok := equals["target"]
 			if !ok {
 				return nil, fmt.Errorf("cannot find `target` property for `equals` predicate")
 			}
 
-			target, err := parseExpression(expr)
+			targetExpr, err := parseExpression(target)
 			if err != nil {
 				return nil, err
 			}
 
 			return EqualsPredicate{
-				Source: sourceType,
-				Target: target,
+				Source: sourceExpr,
+				Target: targetExpr,
 			}, nil
 
 		case "subtype":
@@ -168,7 +172,7 @@ func parseRulePredicate(rule any) (Predicate, error) {
 
 			var predicates []Predicate
 			for _, cond := range and {
-				predicate, err := parseRulePredicate(cond)
+				predicate, err := parsePredicate(cond)
 				if err != nil {
 					return nil, err
 				}
@@ -185,7 +189,7 @@ func parseRulePredicate(rule any) (Predicate, error) {
 
 			var predicates []Predicate
 			for _, cond := range or {
-				predicate, err := parseRulePredicate(cond)
+				predicate, err := parsePredicate(cond)
 				if err != nil {
 					return nil, err
 				}
@@ -195,7 +199,7 @@ func parseRulePredicate(rule any) (Predicate, error) {
 			return OrPredicate{Predicates: predicates}, nil
 
 		case "not":
-			innerPredicate, err := parseRulePredicate(value)
+			innerPredicate, err := parsePredicate(value)
 			if err != nil {
 				return nil, err
 			}
@@ -222,8 +226,47 @@ func parseRulePredicate(rule any) (Predicate, error) {
 			}
 			return ContainsPredicate{Types: list}, nil
 
+		case "mustType":
+			keyValues, ok := value.(KeyValues)
+			if !ok {
+				return nil, fmt.Errorf("expected KeyValues, got %T", value)
+			}
+
+			// Get source
+			data, ok := keyValues["source"]
+			if !ok {
+				return nil, fmt.Errorf("cannot find `source` property for `mustType` predicate")
+			}
+
+			sourceExpr := parseSimpleExpression(data)
+
+			// Get target
+			typ, ok := keyValues["type"]
+			if !ok {
+				return nil, fmt.Errorf("cannot find `target` property for `mustType` predicate")
+			}
+
+			expectedType := parseType(typ.(string))
+
+			// Get inner predicate
+			ifMatch, ok := keyValues["predicate"]
+			if !ok {
+				return nil, fmt.Errorf("cannot find `predicate` property for `mustType` predicate")
+			}
+
+			ifMatchPredicate, err := parsePredicate(ifMatch)
+			if err != nil {
+				return nil, err
+			}
+
+			return TypeAssertionPredicate{
+				Source:  sourceExpr,
+				Type:    expectedType,
+				IfMatch: ifMatchPredicate,
+			}, nil
+
 		default:
-			return nil, fmt.Errorf("unsupported rule predicate: %s", key)
+			return nil, fmt.Errorf("unsupported predicate: %s", key)
 		}
 
 	default:
