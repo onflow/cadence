@@ -294,7 +294,12 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) (
 	// Transfer the elements before pass onto the loop-body.
 	const transferElements = true
 
-	iterable.ForEach(interpreter, forStmtTypes.ValueVariableType, executeBody, transferElements)
+	iterable.ForEach(
+		interpreter,
+		forStmtTypes.ValueVariableType,
+		executeBody,
+		transferElements,
+	)
 
 	return
 }
