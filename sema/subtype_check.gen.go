@@ -226,6 +226,56 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 		}
 
+	case *IntersectionType:
+		switch typedSuperType.LegacyType {
+		case AnyType,
+			AnyStructType,
+			AnyResourceType:
+			switch subType {
+			case AnyType,
+				AnyStructType,
+				AnyResourceType:
+				return false
+			}
+
+			switch typedSubType := subType.(type) {
+			case *IntersectionType:
+				return true
+
+			case ConformingType:
+				return true
+
+			}
+
+		}
+
+		switch subType {
+		case AnyType,
+			AnyStructType,
+			AnyResourceType:
+			return false
+		}
+
+		switch typedSubType := subType.(type) {
+		case *IntersectionType:
+			switch typedSubType.LegacyType {
+			case AnyType,
+				AnyStructType,
+				AnyResourceType:
+				return false
+			}
+
+			switch typedSubTypeLegacyType := typedSubType.LegacyType.(type) {
+			case *CompositeType:
+				return typedSubTypeLegacyType == typedSuperType.LegacyType
+
+			}
+
+		case *CompositeType:
+			return IsSubType(typedSubType, typedSuperType.LegacyType)
+
+		}
+
 	}
 
 	return false

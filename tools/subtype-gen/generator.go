@@ -47,7 +47,8 @@ type SubTypeCheckGenerator struct {
 
 	negate bool
 
-	scope []map[Expression]string
+	scope          []map[Expression]string
+	predicateChain *PredicateChain
 }
 
 type Config struct {
@@ -594,8 +595,16 @@ func (gen *SubTypeCheckGenerator) andPredicate(p AndPredicate) []dst.Node {
 	var result []dst.Node
 	var exprs []dst.Expr
 
-	for _, condition := range p.Predicates {
-		generatedPredicatedNodes := gen.generatePredicate(condition)
+	prevPredicateChain := gen.predicateChain
+	gen.predicateChain = NewPredicateChain(p.Predicates)
+	defer func() {
+		gen.predicateChain = prevPredicateChain
+	}()
+
+	for gen.predicateChain.hasMore() {
+		predicate := gen.predicateChain.next()
+		generatedPredicatedNodes := gen.generatePredicate(predicate)
+
 		for _, node := range generatedPredicatedNodes {
 			switch node := node.(type) {
 			case dst.Stmt:
@@ -608,6 +617,21 @@ func (gen *SubTypeCheckGenerator) andPredicate(p AndPredicate) []dst.Node {
 			}
 		}
 	}
+
+	//for _, condition := range p.Predicates {
+	//	generatedPredicatedNodes := gen.generatePredicate(condition)
+	//	for _, node := range generatedPredicatedNodes {
+	//		switch node := node.(type) {
+	//		case dst.Stmt:
+	//			// Add statements as-is, since they are all conditional-statements.
+	//			result = append(result, node)
+	//		case dst.Expr:
+	//			exprs = append(exprs, node)
+	//		default:
+	//			panic(fmt.Errorf("error generating predicate AST: unexpected node type: %T", node))
+	//		}
+	//	}
+	//}
 
 	var binaryExpr dst.Expr
 	for _, expr := range exprs {
@@ -748,18 +772,42 @@ func (gen *SubTypeCheckGenerator) equalsPredicate(equals EqualsPredicate) []dst.
 			cases = append(cases, generatedExpr)
 		}
 
-		// Generate switch expression
-		var caseClauses []dst.Stmt
-		caseClauses = append(caseClauses, &dst.CaseClause{
-			List: cases,
-			Body: []dst.Stmt{
+		var body []dst.Stmt
+
+		// If there are chained/nested predicates (originating from AND),
+		// then they should be generated instead of the return.
+		// However, if there is a negate, then do not nest, but rather early exit
+		// by adding a return.
+		if !gen.negate &&
+			gen.predicateChain != nil &&
+			gen.predicateChain.hasMore() {
+
+			innerPredicate := gen.predicateChain.next()
+			body = gen.generatePredicateStatements(innerPredicate)
+
+		} else {
+			body = []dst.Stmt{
 				&dst.ReturnStmt{
 					Results: []dst.Expr{
 						gen.booleanExpression(true),
 					},
 				},
+			}
+		}
+
+		// Generate switch expression
+		caseClauses := []dst.Stmt{
+			&dst.CaseClause{
+				List: cases,
+				Body: body,
+				Decs: dst.CaseClauseDecorations{
+					NodeDecs: dst.NodeDecs{
+						Before: dst.NewLine,
+						After:  dst.NewLine,
+					},
+				},
 			},
-		})
+		}
 
 		return []dst.Node{
 			&dst.SwitchStmt{
@@ -835,7 +883,7 @@ func (gen *SubTypeCheckGenerator) expression(expr Expression) dst.Expr {
 // isSubTypePredicate generates AST for subtype conditions
 func (gen *SubTypeCheckGenerator) isSubTypePredicate(subtype SubtypePredicate) []dst.Node {
 	switch superType := subtype.Super.(type) {
-	case TypeExpression, MemberExpression:
+	case IdentifierExpression, TypeExpression, MemberExpression:
 		args := gen.isSubTypeMethodArguments(subtype.Sub, superType)
 		return []dst.Node{
 			gen.callExpression(
@@ -1101,4 +1149,28 @@ func (gen *SubTypeCheckGenerator) setContains(p SetContainsPredicate) []dst.Node
 	return []dst.Node{
 		callExpr,
 	}
+}
+
+type PredicateChain struct {
+	size       int
+	index      int
+	predicates []Predicate
+}
+
+func NewPredicateChain(predicates []Predicate) *PredicateChain {
+	return &PredicateChain{
+		size:       len(predicates),
+		index:      0,
+		predicates: predicates,
+	}
+}
+
+func (p *PredicateChain) hasMore() bool {
+	return p.index < p.size
+}
+
+func (p *PredicateChain) next() Predicate {
+	predicate := p.predicates[p.index]
+	p.index++
+	return predicate
 }
