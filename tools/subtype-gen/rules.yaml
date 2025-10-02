@@ -202,6 +202,35 @@ rules:
             predicate:
               not: always
 
+  - super: InterfaceType
+    predicate:
+      or:
+        - mustType:
+            source: sub
+            type: CompositeType
+            predicate:
+              and:
+                - equals:
+                    source: sub.Kind
+                    target: super.CompositeKind
+                - setContains:
+                    source: sub.EffectiveInterfaceConformanceSet
+                    target: super
+        - mustType:
+            source: sub
+            type: IntersectionType
+            predicate:
+              setContains:
+                source: sub.EffectiveIntersectionSet
+                target: super
+        - mustType:
+            source: sub
+            type: InterfaceType
+            predicate:
+              setContains:
+                source: sub.EffectiveInterfaceConformanceSet
+                target: super
+
 #  - super:
 #      Function:
 #        purity: A

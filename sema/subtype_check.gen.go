@@ -212,6 +212,20 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 		}
 
+	case *InterfaceType:
+		switch typedSubType := subType.(type) {
+		case *CompositeType:
+			return typedSubType.Kind == typedSuperType.CompositeKind &&
+				typedSubType.EffectiveInterfaceConformanceSet().Contains(typedSuperType)
+
+		case *IntersectionType:
+			return typedSubType.EffectiveIntersectionSet().Contains(typedSuperType)
+
+		case *InterfaceType:
+			return typedSubType.EffectiveInterfaceConformanceSet().Contains(typedSuperType)
+
+		}
+
 	}
 
 	return false

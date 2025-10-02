@@ -124,26 +124,7 @@ func parsePredicate(rule any) (Predicate, error) {
 			return IsStorablePredicate{Expression: expr}, nil
 
 		case "equals":
-			equals, ok := value.(KeyValues)
-			if !ok {
-				return nil, fmt.Errorf("expected KeyValues, got %T", value)
-			}
-
-			// Get source
-			source, ok := equals["source"]
-			if !ok {
-				return nil, fmt.Errorf("cannot find `source` property for `equals` predicate")
-			}
-
-			sourceExpr := parseSimpleExpression(source)
-
-			// Get target
-			target, ok := equals["target"]
-			if !ok {
-				return nil, fmt.Errorf("cannot find `target` property for `equals` predicate")
-			}
-
-			targetExpr, err := parseExpression(target)
+			sourceExpr, targetExpr, err := parseSourceAndTarget(key, value)
 			if err != nil {
 				return nil, err
 			}
@@ -154,7 +135,7 @@ func parsePredicate(rule any) (Predicate, error) {
 			}, nil
 
 		case "subtype":
-			superType, subType, err := parseSuperAndSubExpressions(value, key)
+			superType, subType, err := parseSuperAndSubExpressions(key, value)
 			if err != nil {
 				return nil, err
 			}
@@ -209,7 +190,7 @@ func parsePredicate(rule any) (Predicate, error) {
 			}, nil
 
 		case "permits":
-			superType, subType, err := parseSuperAndSubExpressions(value, key)
+			superType, subType, err := parseSuperAndSubExpressions(key, value)
 			if err != nil {
 				return nil, err
 			}
@@ -218,13 +199,6 @@ func parsePredicate(rule any) (Predicate, error) {
 				Sub:   subType,
 				Super: superType,
 			}, nil
-
-		case "contains":
-			list, ok := value.([]Type)
-			if !ok {
-				return nil, fmt.Errorf("expected a list of types, got %T", value)
-			}
-			return ContainsPredicate{Types: list}, nil
 
 		case "mustType":
 			keyValues, ok := value.(KeyValues)
@@ -265,6 +239,17 @@ func parsePredicate(rule any) (Predicate, error) {
 				IfMatch: ifMatchPredicate,
 			}, nil
 
+		case "setContains":
+			sourceExpr, targetExpr, err := parseSourceAndTarget(key, value)
+			if err != nil {
+				return nil, err
+			}
+
+			return SetContainsPredicate{
+				Source: sourceExpr,
+				Target: targetExpr,
+			}, nil
+
 		default:
 			return nil, fmt.Errorf("unsupported predicate: %s", key)
 		}
@@ -274,7 +259,35 @@ func parsePredicate(rule any) (Predicate, error) {
 	}
 }
 
-func parseSuperAndSubExpressions(value any, predicateName string) (Expression, Expression, error) {
+func parseSourceAndTarget(predicateName string, value any) (Expression, Expression, error) {
+	keyValues, ok := value.(KeyValues)
+	if !ok {
+		return nil, nil, fmt.Errorf("expected KeyValues, got %T", value)
+	}
+
+	// Get source
+	source, ok := keyValues["source"]
+	if !ok {
+		return nil, nil, fmt.Errorf("cannot find `source` property for %#q predicate", predicateName)
+	}
+
+	sourceExpr := parseSimpleExpression(source)
+
+	// Get target
+	target, ok := keyValues["target"]
+	if !ok {
+		return nil, nil, fmt.Errorf("cannot find `target` property for %#q predicate", predicateName)
+	}
+
+	targetExpr, err := parseExpression(target)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return sourceExpr, targetExpr, nil
+}
+
+func parseSuperAndSubExpressions(predicateName string, value any) (Expression, Expression, error) {
 	keyValues, ok := value.(KeyValues)
 	if !ok {
 		return nil, nil, fmt.Errorf("expected KeyValues, got %T", value)

@@ -128,13 +128,6 @@ type ConstructorEqualPredicate struct{}
 
 func (c ConstructorEqualPredicate) GetType() string { return "constructorEqual" }
 
-// ContainsPredicate represents a contains check
-type ContainsPredicate struct {
-	Types []Type `yaml:"contains"`
-}
-
-func (c ContainsPredicate) GetType() string { return "contains" }
-
 // TypeAssertionPredicate represents an equality check
 type TypeAssertionPredicate struct {
 	Source  Expression `yaml:"source"`
@@ -143,3 +136,10 @@ type TypeAssertionPredicate struct {
 }
 
 func (e TypeAssertionPredicate) GetType() string { return "mustType" }
+
+type SetContainsPredicate struct {
+	Source Expression `yaml:"source"`
+	Target Expression `yaml:"target"`
+}
+
+func (e SetContainsPredicate) GetType() string { return "setContains" }

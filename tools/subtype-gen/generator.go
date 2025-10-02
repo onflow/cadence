@@ -526,9 +526,8 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 		// TODO: Implement constructor-equal check
 		return []dst.Node{dst.NewIdent("false")}
 
-	case ContainsPredicate:
-		// TODO: Implement contains condition
-		return []dst.Node{dst.NewIdent("false")}
+	case SetContainsPredicate:
+		return gen.setContains(p)
 
 	default:
 		panic(fmt.Errorf("unsupported predicate: %T", p))
@@ -808,7 +807,8 @@ func (gen *SubTypeCheckGenerator) expression(expr Expression) dst.Expr {
 			Sel: dst.NewIdent(expr.MemberName),
 		}
 
-		if expr.MemberName == "ElementType" {
+		switch expr.MemberName {
+		case "ElementType":
 			var args []dst.Expr
 			for _, arg := range gen.config.ArrayElementTypeMethodArgs {
 				args = append(args, dst.NewIdent(fmt.Sprint(arg)))
@@ -817,6 +817,11 @@ func (gen *SubTypeCheckGenerator) expression(expr Expression) dst.Expr {
 			return &dst.CallExpr{
 				Fun:  selectorExpr,
 				Args: args,
+			}
+		case "EffectiveInterfaceConformanceSet",
+			"EffectiveIntersectionSet":
+			return &dst.CallExpr{
+				Fun: selectorExpr,
 			}
 		}
 
@@ -1075,5 +1080,25 @@ func (gen *SubTypeCheckGenerator) newTypedVariableNameFor(source Expression) str
 		name := fmt.Sprintf("v%d", gen.nextVarIndex)
 		gen.nextVarIndex++
 		return name
+	}
+}
+
+func (gen *SubTypeCheckGenerator) setContains(p SetContainsPredicate) []dst.Node {
+	selectExpr := &dst.SelectorExpr{
+		X:   gen.expression(p.Source),
+		Sel: dst.NewIdent("Contains"),
+	}
+
+	args := []dst.Expr{
+		gen.expression(p.Target),
+	}
+
+	callExpr := &dst.CallExpr{
+		Fun:  selectExpr,
+		Args: args,
+	}
+
+	return []dst.Node{
+		callExpr,
 	}
 }
