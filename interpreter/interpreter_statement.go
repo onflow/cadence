@@ -347,7 +347,6 @@ func (interpreter *Interpreter) visitForStatementBody(
 
 func (interpreter *Interpreter) EmitEvent(
 	context ValueExportContext,
-	locationRange LocationRange,
 	eventType *sema.CompositeType,
 	eventFields []Value,
 ) {
@@ -370,7 +369,6 @@ func (interpreter *Interpreter) EmitEvent(
 
 	err := onEventEmitted(
 		context,
-		locationRange,
 		eventType,
 		eventFields,
 	)
@@ -380,11 +378,6 @@ func (interpreter *Interpreter) EmitEvent(
 }
 
 func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement) StatementResult {
-
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: statement,
-	}
 
 	invocationExpression := statement.InvocationExpression
 	arguments := invocationExpression.Arguments
@@ -416,12 +409,7 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 
 	eventType := interpreter.Program.Elaboration.EmitStatementEventType(statement)
 
-	interpreter.EmitEvent(
-		interpreter,
-		locationRange,
-		eventType,
-		eventFields,
-	)
+	interpreter.EmitEvent(interpreter, eventType, eventFields)
 
 	return nil
 }
@@ -447,15 +435,10 @@ func extractEventFields(
 
 func (interpreter *Interpreter) VisitRemoveStatement(removeStatement *ast.RemoveStatement) StatementResult {
 
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: removeStatement,
-	}
-
 	removeTarget := interpreter.evalExpression(removeStatement.Value)
 	base, ok := removeTarget.(*CompositeValue)
 
-	// we enforce this in the checker, but check defensively anyways
+	// we enforce this in the checker, but check defensively anyway
 	if !ok || !base.Kind.SupportsAttachments() {
 		panic(&InvalidAttachmentOperationTargetError{
 			Value: removeTarget,
@@ -470,7 +453,7 @@ func (interpreter *Interpreter) VisitRemoveStatement(removeStatement *ast.Remove
 
 	nominalType := interpreter.Program.Elaboration.AttachmentRemoveTypes(removeStatement)
 
-	removed := base.RemoveTypeKey(interpreter, locationRange, nominalType)
+	removed := base.RemoveTypeKey(interpreter, nominalType)
 
 	// attachment not present on this base
 	if removed == nil {
@@ -486,7 +469,7 @@ func (interpreter *Interpreter) VisitRemoveStatement(removeStatement *ast.Remove
 	if attachment.IsResourceKinded(interpreter) {
 		// this attachment is no longer attached to its base, but the `base` variable is still available in the destructor
 		attachment.setBaseValue(base)
-		attachment.Destroy(interpreter, locationRange)
+		attachment.Destroy(interpreter)
 	}
 
 	return nil
@@ -535,12 +518,7 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 	// If the resource was not moved out of the container,
 	// its contents get deleted.
 
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: declaration.Value,
-	}
-
-	getterSetter := interpreter.assignmentGetterSetter(declaration.Value, locationRange)
+	getterSetter := interpreter.assignmentGetterSetter(declaration.Value)
 
 	const allowMissing = false
 	result := getterSetter.get(allowMissing)
@@ -585,12 +563,7 @@ func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.Assignm
 	target := assignment.Target
 	value := assignment.Value
 
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: target,
-	}
-
-	getterSetter := interpreter.assignmentGetterSetter(target, locationRange)
+	getterSetter := interpreter.assignmentGetterSetter(target)
 
 	interpreter.visitAssignment(
 		assignment.Transfer.Operation,
@@ -613,21 +586,11 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) Stat
 
 	// Evaluate the left side (target and key)
 
-	leftLocationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: swap.Left,
-	}
-
-	leftGetterSetter := interpreter.assignmentGetterSetter(swap.Left, leftLocationRange)
+	leftGetterSetter := interpreter.assignmentGetterSetter(swap.Left)
 
 	// Evaluate the right side (target and key)
 
-	rightLocationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: swap.Right,
-	}
-
-	rightGetterSetter := interpreter.assignmentGetterSetter(swap.Right, rightLocationRange)
+	rightGetterSetter := interpreter.assignmentGetterSetter(swap.Right)
 
 	// Get left and right values
 

@@ -76,11 +76,11 @@ func NewStorageReferenceValue(
 
 func (*StorageReferenceValue) IsValue() {}
 
-func (v *StorageReferenceValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v *StorageReferenceValue) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitStorageReferenceValue(context, v)
 }
 
-func (*StorageReferenceValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (*StorageReferenceValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 	// NOTE: *not* walking referenced value!
 }
@@ -93,7 +93,10 @@ func (v *StorageReferenceValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v *StorageReferenceValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (v *StorageReferenceValue) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	common.UseMemory(context, common.StorageReferenceValueStringMemoryUsage)
 	return v.String()
 }
@@ -117,7 +120,7 @@ func (v *StorageReferenceValue) GetAuthorization() Authorization {
 	return v.Authorization
 }
 
-func (*StorageReferenceValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (*StorageReferenceValue) IsImportable(_ ValueImportableContext) bool {
 	return false
 }
 
@@ -186,18 +189,18 @@ func (v *StorageReferenceValue) mustReferencedValue(
 	return *referencedValue
 }
 
-func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, name string) Value {
 	referencedValue := v.mustReferencedValue(context)
 
 	var member Value
 
 	if memberAccessibleValue, ok := referencedValue.(MemberAccessibleValue); ok {
-		member = memberAccessibleValue.GetMember(context, locationRange, name)
+		member = memberAccessibleValue.GetMember(context, name)
 	}
 
 	if member == nil {
 		// NOTE: Must call the `GetMethod` of the `StorageReferenceValue`, not of the referenced-value.
-		member = context.GetMethod(v, name, locationRange)
+		member = context.GetMethod(v, name)
 	}
 
 	// If the member is a function, it is always a bound-function.
@@ -228,111 +231,91 @@ func (v *StorageReferenceValue) GetMember(context MemberAccessibleContext, locat
 	)
 }
 
-func (v *StorageReferenceValue) GetMethod(
-	context MemberAccessibleContext,
-	_ LocationRange,
-	name string,
-) FunctionValue {
+func (v *StorageReferenceValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	referencedValue := v.mustReferencedValue(context)
 	return getBuiltinFunctionMember(context, referencedValue, name)
 }
 
-func (v *StorageReferenceValue) RemoveMember(
-	context ValueTransferContext,
-	locationRange LocationRange,
-	name string,
-) Value {
+func (v *StorageReferenceValue) RemoveMember(context ValueTransferContext, name string) Value {
 	self := v.mustReferencedValue(context)
 
-	return self.(MemberAccessibleValue).RemoveMember(context, locationRange, name)
+	return self.(MemberAccessibleValue).RemoveMember(context, name)
 }
 
-func (v *StorageReferenceValue) SetMember(
-	context ValueTransferContext,
-	locationRange LocationRange,
-	name string,
-	value Value,
-) bool {
+func (v *StorageReferenceValue) SetMember(context ValueTransferContext, name string, value Value) bool {
 	self := v.mustReferencedValue(context)
 
 	return setMember(
 		context,
 		self,
-		locationRange,
 		name,
 		value,
 	)
 }
 
-func (v *StorageReferenceValue) GetKey(context ValueComparisonContext, locationRange LocationRange, key Value) Value {
+func (v *StorageReferenceValue) GetKey(context ValueComparisonContext, key Value) Value {
 	self := v.mustReferencedValue(context)
 
 	return self.(ValueIndexableValue).
-		GetKey(context, locationRange, key)
+		GetKey(context, key)
 }
 
-func (v *StorageReferenceValue) SetKey(context ContainerMutationContext, locationRange LocationRange, key Value, value Value) {
+func (v *StorageReferenceValue) SetKey(context ContainerMutationContext, key Value, value Value) {
 	self := v.mustReferencedValue(context)
 
 	self.(ValueIndexableValue).
-		SetKey(context, locationRange, key, value)
+		SetKey(context, key, value)
 }
 
-func (v *StorageReferenceValue) InsertKey(context ContainerMutationContext, locationRange LocationRange, key Value, value Value) {
+func (v *StorageReferenceValue) InsertKey(context ContainerMutationContext, key Value, value Value) {
 	self := v.mustReferencedValue(context)
 
 	self.(ValueIndexableValue).
-		InsertKey(context, locationRange, key, value)
+		InsertKey(context, key, value)
 }
 
-func (v *StorageReferenceValue) RemoveKey(context ContainerMutationContext, locationRange LocationRange, key Value) Value {
+func (v *StorageReferenceValue) RemoveKey(context ContainerMutationContext, key Value) Value {
 	self := v.mustReferencedValue(context)
 
 	return self.(ValueIndexableValue).
-		RemoveKey(context, locationRange, key)
+		RemoveKey(context, key)
 }
 
 func (v *StorageReferenceValue) GetTypeKey(
 	context MemberAccessibleContext,
-	locationRange LocationRange,
 	key sema.Type,
 ) Value {
 	self := v.mustReferencedValue(context)
 
 	if selfComposite, isComposite := self.(*CompositeValue); isComposite {
+		access := MustConvertStaticAuthorizationToSemaAccess(context, v.Authorization)
 		return selfComposite.getTypeKey(
 			context,
-			locationRange,
 			key,
-			MustConvertStaticAuthorizationToSemaAccess(context, v.Authorization),
+			access,
 		)
 	}
 
 	return self.(TypeIndexableValue).
-		GetTypeKey(context, locationRange, key)
+		GetTypeKey(context, key)
 }
 
 func (v *StorageReferenceValue) SetTypeKey(
 	context ValueTransferContext,
-	locationRange LocationRange,
 	key sema.Type,
 	value Value,
 ) {
 	self := v.mustReferencedValue(context)
 
 	self.(TypeIndexableValue).
-		SetTypeKey(context, locationRange, key, value)
+		SetTypeKey(context, key, value)
 }
 
-func (v *StorageReferenceValue) RemoveTypeKey(
-	context ValueTransferContext,
-	locationRange LocationRange,
-	key sema.Type,
-) Value {
+func (v *StorageReferenceValue) RemoveTypeKey(context ValueTransferContext, key sema.Type) Value {
 	self := v.mustReferencedValue(context)
 
 	return self.(TypeIndexableValue).
-		RemoveTypeKey(context, locationRange, key)
+		RemoveTypeKey(context, key)
 }
 
 func (v *StorageReferenceValue) Equal(_ ValueComparisonContext, other Value) bool {
@@ -354,7 +337,6 @@ func (v *StorageReferenceValue) Equal(_ ValueComparisonContext, other Value) boo
 
 func (v *StorageReferenceValue) ConformsToStaticType(
 	context ValueStaticTypeConformanceContext,
-	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
 	referencedValue, err := v.dereference(context)
@@ -370,11 +352,7 @@ func (v *StorageReferenceValue) ConformsToStaticType(
 		return false
 	}
 
-	return self.ConformsToStaticType(
-		context,
-		locationRange,
-		results,
-	)
+	return self.ConformsToStaticType(context, results)
 }
 
 func (*StorageReferenceValue) IsStorable() bool {

@@ -70,11 +70,11 @@ var _ HashableValue = Int8Value(0)
 
 func (Int8Value) IsValue() {}
 
-func (v Int8Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v Int8Value) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitInt8Value(context, v)
 }
 
-func (Int8Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (Int8Value) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -82,7 +82,7 @@ func (Int8Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeInt8)
 }
 
-func (Int8Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (Int8Value) IsImportable(_ ValueImportableContext) bool {
 	return true
 }
 
@@ -94,7 +94,10 @@ func (v Int8Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Int8Value) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (v Int8Value) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	common.UseMemory(
 		context,
 		common.NewRawStringMemoryUsage(
@@ -566,24 +569,20 @@ func (v Int8Value) BitwiseRightShift(context ValueStaticTypeContext, other Integ
 	return NewInt8Value(context, valueGetter)
 }
 
-func (v Int8Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
-	return context.GetMethod(v, name, locationRange)
+func (v Int8Value) GetMember(context MemberAccessibleContext, name string) Value {
+	return context.GetMethod(v, name)
 }
 
-func (v Int8Value) GetMethod(
-	context MemberAccessibleContext,
-	_ LocationRange,
-	name string,
-) FunctionValue {
+func (v Int8Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	return getNumberValueFunctionMember(context, v, name, sema.Int8Type)
 }
 
-func (Int8Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (Int8Value) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (Int8Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (Int8Value) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -594,7 +593,6 @@ func (v Int8Value) ToBigEndianBytes() []byte {
 
 func (v Int8Value) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true

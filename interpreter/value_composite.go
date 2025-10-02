@@ -64,7 +64,7 @@ type CompositeValue struct {
 	isDestroyed         bool
 }
 
-type ComputedField func(ValueTransferContext, LocationRange, *CompositeValue) Value
+type ComputedField func(ValueTransferContext, *CompositeValue) Value
 
 type CompositeField struct {
 	Value Value
@@ -95,7 +95,6 @@ func NewUnmeteredCompositeField(name string, value Value) CompositeField {
 // For e.g. InclusiveRangeType
 func NewCompositeValueWithStaticType(
 	context MemberAccessibleContext,
-	locationRange LocationRange,
 	location common.Location,
 	qualifiedIdentifier string,
 	kind common.CompositeKind,
@@ -105,7 +104,6 @@ func NewCompositeValueWithStaticType(
 ) *CompositeValue {
 	value := NewCompositeValue(
 		context,
-		locationRange,
 		location,
 		qualifiedIdentifier,
 		kind,
@@ -118,7 +116,6 @@ func NewCompositeValueWithStaticType(
 
 func NewCompositeValue(
 	context MemberAccessibleContext,
-	locationRange LocationRange,
 	location common.Location,
 	qualifiedIdentifier string,
 	kind common.CompositeKind,
@@ -207,7 +204,6 @@ func NewCompositeValue(
 	for _, field := range fields {
 		v.SetMember(
 			context,
-			locationRange,
 			field.Name,
 			field.Value,
 		)
@@ -266,7 +262,7 @@ func (*CompositeValue) IsValue() {}
 
 func (*CompositeValue) isAtreeContainerBackedValue() {}
 
-func (v *CompositeValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
+func (v *CompositeValue) Accept(context ValueVisitContext, visitor Visitor) {
 	descend := visitor.VisitCompositeValue(context, v)
 	if !descend {
 		return
@@ -275,7 +271,7 @@ func (v *CompositeValue) Accept(context ValueVisitContext, visitor Visitor, loca
 	v.ForEachField(
 		context,
 		func(_ string, value Value) (resume bool) {
-			value.Accept(context, visitor, locationRange)
+			value.Accept(context, visitor)
 
 			// continue iteration
 			return true
@@ -285,9 +281,9 @@ func (v *CompositeValue) Accept(context ValueVisitContext, visitor Visitor, loca
 
 // Walk iterates over all field values of the composite value.
 // It does NOT walk the computed field or functions!
-func (v *CompositeValue) Walk(interpreter ValueWalkContext, walkChild func(Value), _ LocationRange) {
+func (v *CompositeValue) Walk(context ValueWalkContext, walkChild func(Value)) {
 	v.ForEachField(
-		interpreter,
+		context,
 		func(_ string, value Value) (resume bool) {
 			walkChild(value)
 
@@ -311,7 +307,7 @@ func (v *CompositeValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return v.staticType
 }
 
-func (v *CompositeValue) IsImportable(context ValueImportableContext, locationRange LocationRange) bool {
+func (v *CompositeValue) IsImportable(context ValueImportableContext) bool {
 	// Check type is importable
 	staticType := v.StaticType(context)
 	semaType := MustConvertStaticToSemaType(staticType, context)
@@ -324,7 +320,7 @@ func (v *CompositeValue) IsImportable(context ValueImportableContext, locationRa
 	v.ForEachField(
 		context,
 		func(_ string, value Value) (resume bool) {
-			if !value.IsImportable(context, locationRange) {
+			if !value.IsImportable(context) {
 				importable = false
 				// stop iteration
 				return false
@@ -362,7 +358,7 @@ func (v *CompositeValue) defaultDestroyEventConstructors() (constructors []Funct
 	return
 }
 
-func (v *CompositeValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {
+func (v *CompositeValue) Destroy(context ResourceDestructionContext) {
 
 	common.UseComputation(
 		context,
@@ -398,29 +394,23 @@ func (v *CompositeValue) Destroy(context ResourceDestructionContext, locationRan
 	// so that we can leverage existing atree encoding and decoding. However, we need to make sure functions are initialized
 	// if the composite was recently loaded from storage
 	if v.Functions == nil {
-		v.Functions = context.GetCompositeValueFunctions(v, locationRange)
+		v.Functions = context.GetCompositeValueFunctions(v)
 	}
 
-	events := context.DefaultDestroyEvents(v, locationRange)
+	events := context.DefaultDestroyEvents(v)
 	for _, event := range events {
 		// emit the event once destruction is complete
 		eventType := MustSemaTypeOfValue(event, context).(*sema.CompositeType)
 
 		eventFields := extractEventFields(context, event, eventType)
 
-		defer context.EmitEvent(
-			context,
-			locationRange,
-			eventType,
-			eventFields,
-		)
+		defer context.EmitEvent(context, eventType, eventFields)
 	}
 
 	valueID := v.ValueID()
 
 	context.WithResourceDestruction(
 		valueID,
-		locationRange,
 		func() {
 			contextForLocation := context.GetResourceDestructionContextForLocation(v.Location)
 
@@ -434,7 +424,7 @@ func (v *CompositeValue) Destroy(context ResourceDestructionContext, locationRan
 						compositeFieldValue.setBaseValue(v)
 					}
 
-					maybeDestroy(contextForLocation, locationRange, fieldValue)
+					maybeDestroy(contextForLocation, fieldValue)
 
 					return true
 				},
@@ -451,7 +441,6 @@ func (v *CompositeValue) Destroy(context ResourceDestructionContext, locationRan
 
 func (v *CompositeValue) DefaultDestroyEvents(
 	context ResourceDestructionContext,
-	locationRange LocationRange,
 ) []*CompositeValue {
 	eventConstructors := v.defaultDestroyEventConstructors()
 
@@ -470,7 +459,7 @@ func (v *CompositeValue) DefaultDestroyEvents(
 			[]Value{v},
 			[]sema.Type{},
 			nil,
-			locationRange,
+			context.LocationRange(),
 		)
 
 		event := constructor.Invoke(eventConstructorInvocation).(*CompositeValue)
@@ -480,7 +469,7 @@ func (v *CompositeValue) DefaultDestroyEvents(
 	return events
 }
 
-func (v *CompositeValue) getBuiltinMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+func (v *CompositeValue) getBuiltinMember(context MemberAccessibleContext, name string) Value {
 
 	switch name {
 	case sema.ResourceOwnerFieldName:
@@ -489,14 +478,14 @@ func (v *CompositeValue) getBuiltinMember(context MemberAccessibleContext, locat
 		}
 	case sema.CompositeForEachAttachmentFunctionName:
 		if v.Kind.SupportsAttachments() {
-			return v.forEachAttachmentFunction(context, locationRange)
+			return v.forEachAttachmentFunction(context)
 		}
 	}
 
 	return nil
 }
 
-func (v *CompositeValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+func (v *CompositeValue) GetMember(context MemberAccessibleContext, name string) Value {
 
 	if TracingEnabled {
 		startTime := time.Now()
@@ -516,13 +505,13 @@ func (v *CompositeValue) GetMember(context MemberAccessibleContext, locationRang
 		}()
 	}
 
-	if builtin := v.getBuiltinMember(context, locationRange, name); builtin != nil {
+	if builtin := v.getBuiltinMember(context, name); builtin != nil {
 		return compositeMember(context, v, builtin)
 	}
 
 	// Give computed fields precedence over stored fields for built-in types
 	if v.Location == nil {
-		if computedField := v.GetComputedField(context, locationRange, name); computedField != nil {
+		if computedField := v.GetComputedField(context, name); computedField != nil {
 			return computedField
 		}
 	}
@@ -542,7 +531,7 @@ func (v *CompositeValue) GetMember(context MemberAccessibleContext, locationRang
 
 	// Dynamically link in the computed fields, injected fields, and functions
 
-	if computedField := v.GetComputedField(context, locationRange, name); computedField != nil {
+	if computedField := v.GetComputedField(context, name); computedField != nil {
 		return computedField
 	}
 
@@ -550,7 +539,7 @@ func (v *CompositeValue) GetMember(context MemberAccessibleContext, locationRang
 		return injectedField
 	}
 
-	if function := context.GetMethod(v, name, locationRange); function != nil {
+	if function := context.GetMethod(v, name); function != nil {
 		return function
 	}
 
@@ -581,7 +570,7 @@ func (v *CompositeValue) GetComputedFields() map[string]ComputedField {
 	return v.computedFields
 }
 
-func (v *CompositeValue) GetComputedField(context ValueTransferContext, locationRange LocationRange, name string) Value {
+func (v *CompositeValue) GetComputedField(context ValueTransferContext, name string) Value {
 	computedFields := v.GetComputedFields()
 
 	computedField, ok := computedFields[name]
@@ -589,7 +578,7 @@ func (v *CompositeValue) GetComputedField(context ValueTransferContext, location
 		return nil
 	}
 
-	return computedField(context, locationRange, v)
+	return computedField(context, v)
 }
 
 func (v *CompositeValue) GetInjectedField(context MemberAccessibleContext, name string) Value {
@@ -605,9 +594,9 @@ func (v *CompositeValue) GetInjectedField(context MemberAccessibleContext, name 
 	return value
 }
 
-func (v *CompositeValue) GetMethod(context MemberAccessibleContext, locationRange LocationRange, name string) FunctionValue {
+func (v *CompositeValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	if v.Functions == nil {
-		v.Functions = context.GetCompositeValueFunctions(v, locationRange)
+		v.Functions = context.GetCompositeValueFunctions(v)
 	}
 	// if no functions were produced, the `Get` below will be nil
 	if v.Functions == nil {
@@ -678,11 +667,7 @@ func (v *CompositeValue) OwnerValue(context MemberAccessibleContext) OptionalVal
 	return NewSomeValueNonCopying(context, reference)
 }
 
-func (v *CompositeValue) RemoveMember(
-	context ValueTransferContext,
-	_ LocationRange,
-	name string,
-) Value {
+func (v *CompositeValue) RemoveMember(context ValueTransferContext, name string) Value {
 
 	if TracingEnabled {
 		startTime := time.Now()
@@ -743,12 +728,11 @@ func (v *CompositeValue) RemoveMember(
 
 func (v *CompositeValue) SetMemberWithoutTransfer(
 	context ValueTransferContext,
-	locationRange LocationRange,
 	name string,
 	value Value,
 ) bool {
 
-	context.EnforceNotResourceDestruction(v.ValueID(), locationRange)
+	context.EnforceNotResourceDestruction(v.ValueID())
 
 	if TracingEnabled {
 		startTime := time.Now()
@@ -795,7 +779,7 @@ func (v *CompositeValue) SetMemberWithoutTransfer(
 	return false
 }
 
-func (v *CompositeValue) SetMember(context ValueTransferContext, locationRange LocationRange, name string, value Value) bool {
+func (v *CompositeValue) SetMember(context ValueTransferContext, name string, value Value) bool {
 	address := v.StorageAddress()
 
 	value = value.Transfer(
@@ -811,7 +795,6 @@ func (v *CompositeValue) SetMember(context ValueTransferContext, locationRange L
 
 	return v.SetMemberWithoutTransfer(
 		context,
-		locationRange,
 		name,
 		value,
 	)
@@ -822,12 +805,15 @@ func (v *CompositeValue) String() string {
 }
 
 func (v *CompositeValue) RecursiveString(seenReferences SeenReferences) string {
-	return v.MeteredString(NoOpStringContext{}, seenReferences, EmptyLocationRange)
+	return v.MeteredString(NoOpStringContext{}, seenReferences)
 }
 
 var emptyCompositeStringLen = len(format.Composite("", nil))
 
-func (v *CompositeValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+func (v *CompositeValue) MeteredString(
+	context ValueStringContext,
+	seenReferences SeenReferences,
+) string {
 
 	if v.Stringer != nil {
 		return v.Stringer(context, v, seenReferences)
@@ -867,7 +853,7 @@ func (v *CompositeValue) MeteredString(context ValueStringContext, seenReference
 
 	common.UseMemory(context, common.NewRawStringMemoryUsage(strLen))
 
-	return formatComposite(context, typeId, fields, seenReferences, locationRange)
+	return formatComposite(context, typeId, fields, seenReferences)
 }
 
 func formatComposite(
@@ -875,7 +861,6 @@ func formatComposite(
 	typeId string,
 	fields []CompositeField,
 	seenReferences SeenReferences,
-	locationRange LocationRange,
 ) string {
 	preparedFields := make(
 		[]struct {
@@ -894,7 +879,7 @@ func formatComposite(
 				Value string
 			}{
 				Name:  field.Name,
-				Value: field.Value.MeteredString(context, seenReferences, locationRange),
+				Value: field.Value.MeteredString(context, seenReferences),
 			},
 		)
 	}
@@ -1001,7 +986,6 @@ func (v *CompositeValue) TypeID() TypeID {
 
 func (v *CompositeValue) ConformsToStaticType(
 	context ValueStaticTypeConformanceContext,
-	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
 	if TracingEnabled {
@@ -1026,12 +1010,20 @@ func (v *CompositeValue) ConformsToStaticType(
 
 	switch staticType.(type) {
 	case *CompositeStaticType:
-		return v.CompositeStaticTypeConformsToStaticType(context, locationRange, results, semaType)
+		return v.CompositeStaticTypeConformsToStaticType(
+			context,
+			results,
+			semaType,
+		)
 
 	// CompositeValue is also used for storing types which aren't CompositeStaticType.
 	// E.g. InclusiveRange.
 	case InclusiveRangeStaticType:
-		return v.InclusiveRangeStaticTypeConformsToStaticType(context, locationRange, results, semaType)
+		return v.InclusiveRangeStaticTypeConformsToStaticType(
+			context,
+			results,
+			semaType,
+		)
 
 	default:
 		return false
@@ -1040,7 +1032,6 @@ func (v *CompositeValue) ConformsToStaticType(
 
 func (v *CompositeValue) CompositeStaticTypeConformsToStaticType(
 	context ValueStaticTypeConformanceContext,
-	locationRange LocationRange,
 	results TypeConformanceResults,
 	semaType sema.Type,
 ) bool {
@@ -1054,7 +1045,7 @@ func (v *CompositeValue) CompositeStaticTypeConformsToStaticType(
 
 	if compositeType.Kind == common.CompositeKindAttachment {
 		base := v.getBaseValue(context, UnauthorizedAccess).Value
-		if base == nil || !base.ConformsToStaticType(context, locationRange, results) {
+		if base == nil || !base.ConformsToStaticType(context, results) {
 			return false
 		}
 	}
@@ -1084,7 +1075,7 @@ func (v *CompositeValue) CompositeStaticTypeConformsToStaticType(
 				return false
 			}
 
-			value = fieldGetter(context, locationRange, v)
+			value = fieldGetter(context, v)
 		}
 
 		member, ok := compositeType.Members.Get(fieldName)
@@ -1098,11 +1089,7 @@ func (v *CompositeValue) CompositeStaticTypeConformsToStaticType(
 			return false
 		}
 
-		if !value.ConformsToStaticType(
-			context,
-			locationRange,
-			results,
-		) {
+		if !value.ConformsToStaticType(context, results) {
 			return false
 		}
 	}
@@ -1112,7 +1099,6 @@ func (v *CompositeValue) CompositeStaticTypeConformsToStaticType(
 
 func (v *CompositeValue) InclusiveRangeStaticTypeConformsToStaticType(
 	context ValueStaticTypeConformanceContext,
-	locationRange LocationRange,
 	results TypeConformanceResults,
 	semaType sema.Type,
 ) bool {
@@ -1134,11 +1120,7 @@ func (v *CompositeValue) InclusiveRangeStaticTypeConformsToStaticType(
 			return false
 		}
 
-		if !value.ConformsToStaticType(
-			context,
-			locationRange,
-			results,
-		) {
+		if !value.ConformsToStaticType(context, results) {
 			return false
 		}
 	}
@@ -1666,7 +1648,6 @@ func (v *CompositeValue) SetNestedVariables(variables map[string]Variable) {
 
 func NewEnumCaseValue(
 	context MemberAccessibleContext,
-	locationRange LocationRange,
 	enumType *sema.CompositeType,
 	rawValue NumberValue,
 	functions *FunctionOrderedMap,
@@ -1681,7 +1662,6 @@ func NewEnumCaseValue(
 
 	v := NewCompositeValue(
 		context,
-		locationRange,
 		enumType.Location,
 		enumType.QualifiedIdentifier(),
 		enumType.Kind,
@@ -1724,14 +1704,9 @@ func AttachmentMemberName(typeID string) string {
 
 func (v *CompositeValue) getAttachmentValue(
 	context MemberAccessibleContext,
-	locationRange LocationRange,
 	ty sema.Type,
 ) *CompositeValue {
-	attachment := v.GetMember(
-		context,
-		locationRange,
-		AttachmentMemberName(string(ty.ID())),
-	)
+	attachment := v.GetMember(context, AttachmentMemberName(string(ty.ID())))
 	if attachment != nil {
 		return attachment.(*CompositeValue)
 	}
@@ -1749,7 +1724,7 @@ func (v *CompositeValue) GetAttachments(context AttachmentContext) []*CompositeV
 	return attachments
 }
 
-func (v *CompositeValue) forEachAttachmentFunction(context FunctionCreationContext, locationRange LocationRange) Value {
+func (v *CompositeValue) forEachAttachmentFunction(context FunctionCreationContext) Value {
 	compositeType := MustSemaTypeOfValue(v, context).(*sema.CompositeType)
 	return NewBoundHostFunctionValue(
 		context,
@@ -1796,7 +1771,6 @@ func (v *CompositeValue) forEachAttachmentFunction(context FunctionCreationConte
 					parameterTypes,
 					returnType,
 					nil,
-					locationRange,
 				)
 			}
 
@@ -1887,11 +1861,10 @@ func forEachAttachment(
 
 func (v *CompositeValue) getTypeKey(
 	context MemberAccessibleContext,
-	locationRange LocationRange,
 	keyType sema.Type,
 	baseAccess sema.Access,
 ) Value {
-	attachment := v.getAttachmentValue(context, locationRange, keyType)
+	attachment := v.getAttachmentValue(context, keyType)
 	if attachment == nil {
 		return Nil
 	}
@@ -1910,27 +1883,22 @@ func (v *CompositeValue) getTypeKey(
 	return NewSomeValueNonCopying(context, attachmentRef)
 }
 
-func (v *CompositeValue) GetTypeKey(
-	context MemberAccessibleContext,
-	locationRange LocationRange,
-	ty sema.Type,
-) Value {
+func (v *CompositeValue) GetTypeKey(context MemberAccessibleContext, ty sema.Type) Value {
 	access := sema.UnauthorizedAccess
 	attachmentTyp, isAttachmentType := ty.(*sema.CompositeType)
 	if isAttachmentType {
 		access = attachmentTyp.SupportedEntitlements().Access()
 	}
-	return v.getTypeKey(context, locationRange, ty, access)
+	return v.getTypeKey(context, ty, access)
 }
 
 func (v *CompositeValue) SetTypeKey(
 	context ValueTransferContext,
-	locationRange LocationRange,
 	attachmentType sema.Type,
 	attachment Value,
 ) {
 	memberName := AttachmentMemberName(string(attachmentType.ID()))
-	if v.SetMember(context, locationRange, memberName, attachment) {
+	if v.SetMember(context, memberName, attachment) {
 		panic(&DuplicateAttachmentError{
 			AttachmentType: attachmentType,
 			Value:          v,
@@ -1940,11 +1908,10 @@ func (v *CompositeValue) SetTypeKey(
 
 func (v *CompositeValue) RemoveTypeKey(
 	context ValueTransferContext,
-	locationRange LocationRange,
 	attachmentType sema.Type,
 ) Value {
 	memberName := AttachmentMemberName(string(attachmentType.ID()))
-	return v.RemoveMember(context, locationRange, memberName)
+	return v.RemoveMember(context, memberName)
 }
 
 func (v *CompositeValue) Iterator(context ValueStaticTypeContext) ValueIterator {

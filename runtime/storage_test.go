@@ -3201,7 +3201,7 @@ func TestRuntimeStorageInternalAccess(t *testing.T) {
 	rValue := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("r"))
 	require.IsType(t, &interpreter.CompositeValue{}, rValue)
 
-	_, err = ExportValue(rValue, inter, interpreter.EmptyLocationRange)
+	_, err = ExportValue(rValue, inter)
 	require.NoError(t, err)
 }
 

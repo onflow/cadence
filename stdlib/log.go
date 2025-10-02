@@ -45,18 +45,15 @@ Logs a string representation of the given value
 
 type Logger interface {
 	// ProgramLog logs program logs.
-	ProgramLog(message string, locationRange interpreter.LocationRange) error
+	ProgramLog(message string) error
 }
 
-type FunctionLogger func(
-	message string,
-	locationRange interpreter.LocationRange,
-) error
+type FunctionLogger func(message string) error
 
 var _ Logger = FunctionLogger(nil)
 
-func (f FunctionLogger) ProgramLog(message string, locationRange interpreter.LocationRange) error {
-	return f(message, locationRange)
+func (f FunctionLogger) ProgramLog(message string) error {
+	return f(message)
 }
 
 func NewInterpreterLogFunction(logger Logger) StandardLibraryValue {
@@ -66,13 +63,11 @@ func NewInterpreterLogFunction(logger Logger) StandardLibraryValue {
 		logFunctionDocString,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			invocationContext := invocation.InvocationContext
-			locationRange := invocation.LocationRange
 			value := invocation.Arguments[0]
 			return Log(
 				invocationContext,
 				logger,
 				value,
-				locationRange,
 			)
 		},
 	)
@@ -89,7 +84,6 @@ func NewVMLogFunction(logger Logger) StandardLibraryValue {
 				context,
 				logger,
 				value,
-				interpreter.EmptyLocationRange,
 			)
 		},
 	)
@@ -99,11 +93,10 @@ func Log(
 	context interpreter.ValueStringContext,
 	logger Logger,
 	value interpreter.Value,
-	locationRange interpreter.LocationRange,
 ) interpreter.Value {
-	message := value.MeteredString(context, interpreter.SeenReferences{}, locationRange)
+	message := value.MeteredString(context, interpreter.SeenReferences{})
 
-	err := logger.ProgramLog(message, locationRange)
+	err := logger.ProgramLog(message)
 	if err != nil {
 		panic(err)
 	}

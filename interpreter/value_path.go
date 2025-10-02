@@ -58,11 +58,11 @@ var _ MemberAccessibleValue = PathValue{}
 
 func (PathValue) IsValue() {}
 
-func (v PathValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v PathValue) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitPathValue(context, v)
 }
 
-func (PathValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (PathValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -79,7 +79,7 @@ func (v PathValue) StaticType(context ValueStaticTypeContext) StaticType {
 	}
 }
 
-func (v PathValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (v PathValue) IsImportable(_ ValueImportableContext) bool {
 	switch v.Domain {
 	case common.PathDomainStorage:
 		return sema.StoragePathType.Importable
@@ -103,22 +103,21 @@ func (v PathValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v PathValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (v PathValue) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	// len(domain) + len(identifier) + '/' x2
 	strLen := len(v.Domain.Identifier()) + len(v.Identifier) + 2
 	common.UseMemory(context, common.NewRawStringMemoryUsage(strLen))
 	return v.String()
 }
 
-func (v PathValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
-	return context.GetMethod(v, name, locationRange)
+func (v PathValue) GetMember(context MemberAccessibleContext, name string) Value {
+	return context.GetMethod(v, name)
 }
 
-func (v PathValue) GetMethod(
-	context MemberAccessibleContext,
-	_ LocationRange,
-	name string,
-) FunctionValue {
+func (v PathValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -154,19 +153,18 @@ func PathValueToStringFunction(
 	)
 }
 
-func (PathValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (PathValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Paths have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (PathValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (PathValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Paths have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v PathValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true

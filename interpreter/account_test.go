@@ -121,7 +121,6 @@ type testAccountHandler struct {
 	accountKeysCount func(address common.Address) (uint32, error)
 	emitEvent        func(
 		context interpreter.ValueExportContext,
-		locationRange interpreter.LocationRange,
 		eventType *sema.CompositeType,
 		values []interpreter.Value,
 	)
@@ -271,7 +270,6 @@ func (t *testAccountHandler) AccountKeysCount(address common.Address) (uint32, e
 
 func (t *testAccountHandler) EmitEvent(
 	context interpreter.ValueExportContext,
-	locationRange interpreter.LocationRange,
 	eventType *sema.CompositeType,
 	values []interpreter.Value,
 ) {
@@ -280,7 +278,6 @@ func (t *testAccountHandler) EmitEvent(
 	}
 	t.emitEvent(
 		context,
-		locationRange,
 		eventType,
 		values,
 	)
@@ -498,7 +495,6 @@ func (n NoOpFunctionCreationContext) ReferencedResourceKindedValues(
 
 func (n NoOpFunctionCreationContext) CheckInvalidatedResourceOrResourceReference(
 	_ interpreter.Value,
-	_ interpreter.LocationRange,
 ) {
 	// NO-OP
 }

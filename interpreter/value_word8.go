@@ -70,11 +70,11 @@ func NewWord8ValueFromBigEndianBytes(gauge common.MemoryGauge, b []byte) Value {
 
 func (Word8Value) IsValue() {}
 
-func (v Word8Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v Word8Value) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitWord8Value(context, v)
 }
 
-func (Word8Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (Word8Value) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -82,7 +82,7 @@ func (Word8Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeWord8)
 }
 
-func (Word8Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (Word8Value) IsImportable(_ ValueImportableContext) bool {
 	return true
 }
 
@@ -94,7 +94,10 @@ func (v Word8Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Word8Value) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (v Word8Value) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	common.UseMemory(
 		context,
 		common.NewRawStringMemoryUsage(
@@ -384,24 +387,20 @@ func (v Word8Value) BitwiseRightShift(context ValueStaticTypeContext, other Inte
 	return NewWord8Value(context, valueGetter)
 }
 
-func (v Word8Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
-	return context.GetMethod(v, name, locationRange)
+func (v Word8Value) GetMember(context MemberAccessibleContext, name string) Value {
+	return context.GetMethod(v, name)
 }
 
-func (v Word8Value) GetMethod(
-	context MemberAccessibleContext,
-	_ LocationRange,
-	name string,
-) FunctionValue {
+func (v Word8Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	return getNumberValueFunctionMember(context, v, name, sema.Word8Type)
 }
 
-func (Word8Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (Word8Value) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (Word8Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (Word8Value) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -412,7 +411,6 @@ func (v Word8Value) ToBigEndianBytes() []byte {
 
 func (v Word8Value) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true

@@ -79,11 +79,11 @@ var _ MemberAccessibleValue = CharacterValue{}
 
 func (CharacterValue) IsValue() {}
 
-func (v CharacterValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v CharacterValue) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitCharacterValue(context, v)
 }
 
-func (CharacterValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (CharacterValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -91,7 +91,7 @@ func (CharacterValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeCharacter)
 }
 
-func (CharacterValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (CharacterValue) IsImportable(_ ValueImportableContext) bool {
 	return sema.CharacterType.Importable
 }
 
@@ -103,7 +103,10 @@ func (v CharacterValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v CharacterValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (v CharacterValue) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	l := format.FormattedStringLength(v.Str)
 	common.UseMemory(context, common.NewRawStringMemoryUsage(l))
 	return v.String()
@@ -166,7 +169,6 @@ func (v CharacterValue) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
 
 func (v CharacterValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true
@@ -218,21 +220,17 @@ func (CharacterValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (v CharacterValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+func (v CharacterValue) GetMember(context MemberAccessibleContext, name string) Value {
 	switch name {
 	case sema.CharacterTypeUtf8FieldName:
 		common.UseMemory(context, common.NewBytesMemoryUsage(len(v.Str)))
 		return ByteSliceToByteArrayValue(context, []byte(v.Str))
 	}
 
-	return context.GetMethod(v, name, locationRange)
+	return context.GetMethod(v, name)
 }
 
-func (v CharacterValue) GetMethod(
-	context MemberAccessibleContext,
-	_ LocationRange,
-	name string,
-) FunctionValue {
+func (v CharacterValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	switch name {
 	case sema.ToStringFunctionName:
 		return NewBoundHostFunctionValue(
@@ -265,12 +263,12 @@ func CharacterValueToString(
 	)
 }
 
-func (CharacterValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (CharacterValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Characters have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (CharacterValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (CharacterValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Characters have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

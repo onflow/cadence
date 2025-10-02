@@ -152,7 +152,6 @@ func TestInterpretIDCapability(t *testing.T) {
 			handlers{
 				borrow: func(
 					_ interpreter.BorrowCapabilityControllerContext,
-					_ interpreter.LocationRange,
 					address interpreter.AddressValue,
 					capabilityID interpreter.UInt64Value,
 					_ *sema.ReferenceType,
@@ -187,7 +186,6 @@ func TestInterpretIDCapability(t *testing.T) {
 			handlers{
 				check: func(
 					_ interpreter.CheckCapabilityControllerContext,
-					_ interpreter.LocationRange,
 					address interpreter.AddressValue,
 					capabilityID interpreter.UInt64Value,
 					_ *sema.ReferenceType,

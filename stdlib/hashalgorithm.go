@@ -92,11 +92,8 @@ func newInterpreterHashAlgorithmHashFunction(
 
 			context := invocation.InvocationContext
 
-			locationRange := invocation.LocationRange
-
 			return hash(
 				context,
-				locationRange,
 				hasher,
 				dataValue,
 				nil,
@@ -128,7 +125,6 @@ func NewVMHashAlgorithmHashFunction(
 
 				return hash(
 					context,
-					vm.EmptyLocationRange,
 					hasher,
 					dataValue,
 					nil,
@@ -161,11 +157,8 @@ func newInterpreterHashAlgorithmHashWithTagFunction(
 
 			inter := invocation.InvocationContext
 
-			locationRange := invocation.LocationRange
-
 			return hash(
 				inter,
-				locationRange,
 				hasher,
 				dataValue,
 				tagValue,
@@ -202,7 +195,6 @@ func NewVMHashAlgorithmHashWithTagFunction(
 
 				return hash(
 					context,
-					vm.EmptyLocationRange,
 					hasher,
 					dataValue,
 					tagValue,
@@ -215,7 +207,6 @@ func NewVMHashAlgorithmHashWithTagFunction(
 
 func hash(
 	context interpreter.MemberAccessibleContext,
-	locationRange interpreter.LocationRange,
 	hasher Hasher,
 	dataValue *interpreter.ArrayValue,
 	tagValue *interpreter.StringValue,
@@ -231,7 +222,7 @@ func hash(
 		tag = tagValue.Str
 	}
 
-	hashAlgorithm := NewHashAlgorithmFromValue(context, locationRange, hashAlgorithmValue)
+	hashAlgorithm := NewHashAlgorithmFromValue(context, hashAlgorithmValue)
 
 	result, err := hasher.Hash(data, tag, hashAlgorithm)
 	if err != nil {

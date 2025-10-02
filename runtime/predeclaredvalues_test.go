@@ -1191,7 +1191,6 @@ func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
 			func(invocation interpreter.Invocation) interpreter.Value {
 				return interpreter.NewCompositeValue(
 					invocation.InvocationContext,
-					invocation.LocationRange,
 					xType.Location,
 					xType.QualifiedIdentifier(),
 					xType.Kind,
@@ -1234,7 +1233,6 @@ func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
 		xType.ID(),
 		func(
 			inter *interpreter.Interpreter,
-			locationRange interpreter.LocationRange,
 			compositeValue *interpreter.CompositeValue,
 		) *interpreter.FunctionOrderedMap {
 			require.NotNil(t, compositeValue)

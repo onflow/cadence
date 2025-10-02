@@ -60,12 +60,7 @@ func TestInspectValue(t *testing.T) {
 		optionalValue := NewUnmeteredSomeValueNonCopying(arrayValue)
 
 		compositeValue = newTestCompositeValue(inter, common.ZeroAddress)
-		compositeValue.SetMember(
-			inter,
-			EmptyLocationRange,
-			"value",
-			optionalValue,
-		)
+		compositeValue.SetMember(inter, "value", optionalValue)
 	}
 
 	// Get actually stored values.
@@ -89,7 +84,6 @@ func TestInspectValue(t *testing.T) {
 				inspectedValues = append(inspectedValues, value)
 				return true
 			},
-			EmptyLocationRange,
 		)
 
 		AssertValueSlicesEqual(
@@ -118,7 +112,6 @@ func TestInspectValue(t *testing.T) {
 				inspectedValues = append(inspectedValues, value)
 				return true
 			},
-			EmptyLocationRange,
 		)
 
 		AssertValueSlicesEqual(

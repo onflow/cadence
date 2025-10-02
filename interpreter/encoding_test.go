@@ -489,7 +489,6 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		expected := NewCompositeValue(
 			inter,
-			EmptyLocationRange,
 			TestLocation,
 			"TestStruct",
 			common.CompositeKindStructure,
@@ -527,7 +526,6 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		expected := NewCompositeValue(
 			inter,
-			EmptyLocationRange,
 			TestLocation,
 			"TestResource",
 			common.CompositeKindResource,

@@ -103,7 +103,6 @@ func importValue(t *testing.T, inter *interpreter.Interpreter, value cadence.Val
 
 		arrayResult, err := runtime.ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			cadence.Array{},
@@ -129,7 +128,6 @@ func importValue(t *testing.T, inter *interpreter.Interpreter, value cadence.Val
 
 		dictionaryResult, err := runtime.ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			cadence.Dictionary{},
@@ -157,7 +155,6 @@ func importValue(t *testing.T, inter *interpreter.Interpreter, value cadence.Val
 
 		structResult, err := runtime.ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			cadence.Struct{
@@ -170,12 +167,7 @@ func importValue(t *testing.T, inter *interpreter.Interpreter, value cadence.Val
 		composite := structResult.(*interpreter.CompositeValue)
 
 		for fieldName, fieldValue := range value.FieldsMappedByName() {
-			composite.SetMember(
-				inter,
-				interpreter.EmptyLocationRange,
-				fieldName,
-				importValue(t, inter, fieldValue),
-			)
+			composite.SetMember(inter, fieldName, importValue(t, inter, fieldValue))
 		}
 
 		return composite
@@ -193,7 +185,6 @@ func importValue(t *testing.T, inter *interpreter.Interpreter, value cadence.Val
 	default:
 		result, err := runtime.ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			value,
@@ -1076,7 +1067,6 @@ func TestInterpretSmokeRandomCompositeOperations(t *testing.T) {
 			func() *interpreter.CompositeValue {
 				return interpreter.NewCompositeValue(
 					inter,
-					interpreter.EmptyLocationRange,
 					expectedValue.StructType.Location,
 					expectedValue.StructType.QualifiedIdentifier,
 					common.CompositeKindStructure,
@@ -1112,7 +1102,7 @@ func TestInterpretSmokeRandomCompositeOperations(t *testing.T) {
 
 		for name, field := range fieldsMappedByName {
 
-			value := composite.GetMember(inter, interpreter.EmptyLocationRange, name)
+			value := composite.GetMember(inter, name)
 
 			fieldValue := importValue(t, inter, field)
 			AssertValuesEqual(t, inter, fieldValue, value)
@@ -1339,12 +1329,7 @@ func TestInterpretSmokeRandomCompositeOperations(t *testing.T) {
 			// to not report any "unreferenced slab" errors.
 
 			existed := withoutAtreeStorageValidationEnabled(inter, func() bool {
-				return composite.SetMember(
-					inter,
-					interpreter.EmptyLocationRange,
-					name,
-					newValue,
-				)
+				return composite.SetMember(inter, name, newValue)
 			})
 
 			require.True(t, existed)
@@ -1939,7 +1924,7 @@ func TestInterpretSmokeRandomArrayOperations(t *testing.T) {
 			// to not report any "unreferenced slab" errors.
 
 			removedValue := withoutAtreeStorageValidationEnabled(inter, func() interpreter.Value {
-				return array.Remove(inter, interpreter.EmptyLocationRange, index)
+				return array.Remove(inter, index)
 			})
 
 			// Removed value must be same as the original value
@@ -2552,11 +2537,7 @@ func TestInterpretSmokeRandomNestedArrayOperations(t *testing.T) {
 			// to not report any "unreferenced slab" errors.
 
 			withoutAtreeStorageValidationEnabled(inter, func() struct{} {
-				array.Remove(
-					inter,
-					interpreter.EmptyLocationRange,
-					index,
-				)
+				array.Remove(inter, index)
 				return struct{}{}
 			})
 
@@ -2986,12 +2967,7 @@ func TestInterpretSmokeRandomNestedDictionaryOperations(t *testing.T) {
 			// to not report any "unreferenced slab" errors.
 
 			withoutAtreeStorageValidationEnabled(inter, func() struct{} {
-				dictionary.SetKey(
-					inter,
-					interpreter.EmptyLocationRange,
-					key,
-					interpreter.NewUnmeteredSomeValueNonCopying(newValue),
-				)
+				dictionary.SetKey(inter, key, interpreter.NewUnmeteredSomeValueNonCopying(newValue))
 				return struct{}{}
 			})
 
@@ -3016,11 +2992,7 @@ func TestInterpretSmokeRandomNestedDictionaryOperations(t *testing.T) {
 		actualNestedDictionary.IterateKeys(
 			inter,
 			func(key interpreter.Value) (resume bool) {
-				cadenceKey, err := runtime.ExportValue(
-					key,
-					inter,
-					interpreter.EmptyLocationRange,
-				)
+				cadenceKey, err := runtime.ExportValue(key, inter)
 				require.NoError(t, err)
 
 				keys = append(keys, cadenceKey)
@@ -3177,11 +3149,7 @@ func TestInterpretSmokeRandomNestedDictionaryOperations(t *testing.T) {
 				break
 			}
 
-			cadenceKey, err := runtime.ExportValue(
-				key,
-				inter,
-				interpreter.EmptyLocationRange,
-			)
+			cadenceKey, err := runtime.ExportValue(key, inter)
 			require.NoError(t, err)
 
 			removes = append(removes, cadenceKey)
@@ -3389,11 +3357,7 @@ func TestInterpretSmokeRandomNestedCompositeOperations(t *testing.T) {
 			inter,
 			func(name string, element interpreter.Value) (resume bool) {
 
-				expectedElement := expectedComposite.GetMember(
-					inter,
-					interpreter.EmptyLocationRange,
-					name,
-				)
+				expectedElement := expectedComposite.GetMember(inter, name)
 				AssertValuesEqual(t, inter, expectedElement, element)
 
 				iterations += 1
@@ -3448,12 +3412,7 @@ func TestInterpretSmokeRandomNestedCompositeOperations(t *testing.T) {
 			// to not report any "unreferenced slab" errors.
 
 			withoutAtreeStorageValidationEnabled(inter, func() struct{} {
-				composite.SetMember(
-					inter,
-					interpreter.EmptyLocationRange,
-					insert.name,
-					newValue,
-				)
+				composite.SetMember(inter, insert.name, newValue)
 				return struct{}{}
 			})
 
@@ -3479,11 +3438,7 @@ func TestInterpretSmokeRandomNestedCompositeOperations(t *testing.T) {
 			for {
 				name = r.randomUTF8String()
 
-				if actualNestedComposite.GetMember(
-					inter,
-					interpreter.EmptyLocationRange,
-					name,
-				) != nil {
+				if actualNestedComposite.GetMember(inter, name) != nil {
 					continue
 				}
 
@@ -3597,12 +3552,7 @@ func TestInterpretSmokeRandomNestedCompositeOperations(t *testing.T) {
 			// to not report any "unreferenced slab" errors.
 
 			withoutAtreeStorageValidationEnabled(inter, func() struct{} {
-				composite.SetMember(
-					inter,
-					interpreter.EmptyLocationRange,
-					update.name,
-					interpreter.NewUnmeteredSomeValueNonCopying(newValue),
-				)
+				composite.SetMember(inter, update.name, interpreter.NewUnmeteredSomeValueNonCopying(newValue))
 				return struct{}{}
 			})
 
@@ -3729,11 +3679,7 @@ func TestInterpretSmokeRandomNestedCompositeOperations(t *testing.T) {
 			// to not report any "unreferenced slab" errors.
 
 			withoutAtreeStorageValidationEnabled(inter, func() struct{} {
-				composite.RemoveMember(
-					inter,
-					interpreter.EmptyLocationRange,
-					name,
-				)
+				composite.RemoveMember(inter, name)
 				return struct{}{}
 			})
 
@@ -3964,11 +3910,7 @@ func getNestedValue(
 			)
 			composite := value.(*interpreter.CompositeValue)
 
-			value = composite.GetMember(
-				inter,
-				interpreter.EmptyLocationRange,
-				element.name,
-			)
+			value = composite.GetMember(inter, element.name)
 
 			require.NotNil(t,
 				value,
@@ -4942,7 +4884,6 @@ func TestInterpretCheckStorageHealthInMiddleOfTransferAndRemove(t *testing.T) {
 
 	gchildComposite := interpreter.NewCompositeValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		location,
 		identifier,
 		common.CompositeKindStructure,
@@ -5850,11 +5791,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		inlinedCount := uninlinedCount - 1
 
-		childArray.Remove(
-			inter,
-			interpreter.EmptyLocationRange,
-			inlinedCount,
-		)
+		childArray.Remove(inter, inlinedCount)
 
 		require.True(t, childArray.Inlined())
 
@@ -5878,11 +5815,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		// Remove all elements
 
 		for i := uninlinedCount - 1; i >= 0; i-- {
-			childArray.Remove(
-				inter,
-				interpreter.EmptyLocationRange,
-				i,
-			)
+			childArray.Remove(inter, i)
 		}
 
 		require.Equal(t, 0, childArray.Count())
@@ -5982,11 +5915,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		// Remove elements until the array is inlined
 
 		for i := inlinedCount - 1; !childArray.Inlined(); i-- {
-			existingValue := childArray.Remove(
-				inter,
-				interpreter.EmptyLocationRange,
-				i,
-			)
+			existingValue := childArray.Remove(inter, i)
 			expectedValue := interpreter.NewUnmeteredStringValue(strconv.Itoa(i))
 			AssertValuesEqual(t, inter, expectedValue, existingValue)
 		}
@@ -6104,12 +6033,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		require.True(t, childComposite.Inlined())
 
 		for i := 0; childComposite.Inlined(); i++ {
-			childComposite.SetMember(
-				inter,
-				interpreter.EmptyLocationRange,
-				strconv.Itoa(i),
-				interpreter.NewUnmeteredIntValueFromInt64(int64(i)),
-			)
+			childComposite.SetMember(inter, strconv.Itoa(i), interpreter.NewUnmeteredIntValueFromInt64(int64(i)))
 		}
 
 		require.False(t, childComposite.Inlined())
@@ -6124,11 +6048,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 			require.Equal(t, count, childComposite.FieldCount())
 
 			for i := 0; i < count; i++ {
-				value := childComposite.GetMember(
-					inter,
-					interpreter.EmptyLocationRange,
-					strconv.Itoa(i),
-				)
+				value := childComposite.GetMember(inter, strconv.Itoa(i))
 				expectedValue := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
 				AssertValuesEqual(t, inter, expectedValue, value)
 			}
@@ -6140,11 +6060,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		inlinedCount := uninlinedCount - 1
 
-		childComposite.RemoveMember(
-			inter,
-			interpreter.EmptyLocationRange,
-			strconv.Itoa(inlinedCount),
-		)
+		childComposite.RemoveMember(inter, strconv.Itoa(inlinedCount))
 
 		require.True(t, childComposite.Inlined())
 
@@ -6154,12 +6070,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		// Add a new element to make the composite uninlined again
 
-		childComposite.SetMember(
-			inter,
-			interpreter.EmptyLocationRange,
-			strconv.Itoa(inlinedCount),
-			interpreter.NewUnmeteredIntValueFromInt64(int64(inlinedCount)),
-		)
+		childComposite.SetMember(inter, strconv.Itoa(inlinedCount), interpreter.NewUnmeteredIntValueFromInt64(int64(inlinedCount)))
 
 		require.False(t, childComposite.Inlined())
 
@@ -6170,11 +6081,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		// Remove all elements
 
 		for i := 0; i < uninlinedCount; i++ {
-			childComposite.RemoveMember(
-				inter,
-				interpreter.EmptyLocationRange,
-				strconv.Itoa(i),
-			)
+			childComposite.RemoveMember(inter, strconv.Itoa(i))
 		}
 
 		require.Equal(t, 0, childComposite.FieldCount())
@@ -6317,11 +6224,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 			require.Equal(t, count, childComposite.FieldCount())
 
 			for i := 0; i < count; i++ {
-				value := childComposite.GetMember(
-					inter,
-					interpreter.EmptyLocationRange,
-					strconv.Itoa(i),
-				)
+				value := childComposite.GetMember(inter, strconv.Itoa(i))
 				expectedValue := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
 				AssertValuesEqual(t, inter, expectedValue, value)
 			}
@@ -6332,11 +6235,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		// Remove elements until the composite is inlined
 
 		for i := inlinedCount - 1; !childComposite.Inlined(); i-- {
-			existingValue := childComposite.RemoveMember(
-				inter,
-				interpreter.EmptyLocationRange,
-				strconv.Itoa(i),
-			)
+			existingValue := childComposite.RemoveMember(inter, strconv.Itoa(i))
 
 			expectedValue := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
 			AssertValuesEqual(t, inter, expectedValue, existingValue)
@@ -6353,12 +6252,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		// Add element to make the composite uninlined again
 
-		childComposite.SetMember(
-			inter,
-			interpreter.EmptyLocationRange,
-			strconv.Itoa(inlinedCount),
-			interpreter.NewUnmeteredIntValueFromInt64(int64(inlinedCount)),
-		)
+		childComposite.SetMember(inter, strconv.Itoa(inlinedCount), interpreter.NewUnmeteredIntValueFromInt64(int64(inlinedCount)))
 
 		require.False(t, childComposite.Inlined())
 

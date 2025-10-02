@@ -57,7 +57,6 @@ type getterSetter struct {
 // OnEventEmittedFunc is a function that is triggered when an event is emitted by the program.
 type OnEventEmittedFunc func(
 	context ValueExportContext,
-	locationRange LocationRange,
 	eventType *sema.CompositeType,
 	eventFields []Value,
 ) error
@@ -98,7 +97,6 @@ type OnResourceOwnerChangeFunc func(
 // CapabilityBorrowHandlerFunc is a function that is used to borrow ID capabilities.
 type CapabilityBorrowHandlerFunc func(
 	context BorrowCapabilityControllerContext,
-	locationRange LocationRange,
 	address AddressValue,
 	capabilityID UInt64Value,
 	wantedBorrowType *sema.ReferenceType,
@@ -108,7 +106,6 @@ type CapabilityBorrowHandlerFunc func(
 // CapabilityCheckHandlerFunc is a function that is used to check ID capabilities.
 type CapabilityCheckHandlerFunc func(
 	context CheckCapabilityControllerContext,
-	locationRange LocationRange,
 	address AddressValue,
 	capabilityID UInt64Value,
 	wantedBorrowType *sema.ReferenceType,
@@ -128,7 +125,6 @@ type ContractValueHandlerFunc func(
 	inter *Interpreter,
 	compositeType *sema.CompositeType,
 	constructorGenerator func(common.Address) *HostFunctionValue,
-	invocationRange ast.Range,
 ) ContractValue
 
 // ImportLocationHandlerFunc is a function that handles imports of locations.
@@ -147,7 +143,6 @@ type AccountHandlerFunc func(
 // ValidateAccountCapabilitiesGetHandlerFunc is a function that is used to handle when a capability of an account is got.
 type ValidateAccountCapabilitiesGetHandlerFunc func(
 	context AccountCapabilityGetValidationContext,
-	locationRange LocationRange,
 	address AddressValue,
 	path PathValue,
 	wantedBorrowType *sema.ReferenceType,
@@ -157,7 +152,6 @@ type ValidateAccountCapabilitiesGetHandlerFunc func(
 // ValidateAccountCapabilitiesPublishHandlerFunc is a function that is used to handle when a capability of an account is got.
 type ValidateAccountCapabilitiesPublishHandlerFunc func(
 	context AccountCapabilityPublishValidationContext,
-	locationRange LocationRange,
 	address AddressValue,
 	path PathValue,
 	capabilityBorrowType *ReferenceStaticType,
@@ -175,7 +169,6 @@ type InterfaceTypeHandlerFunc func(location common.Location, typeID TypeID) *sem
 // CompositeValueFunctionsHandlerFunc is a function that loads composite value functions.
 type CompositeValueFunctionsHandlerFunc func(
 	inter *Interpreter,
-	locationRange LocationRange,
 	compositeValue *CompositeValue,
 ) *FunctionOrderedMap
 
@@ -457,7 +450,7 @@ func InvokeExternally(
 		preparedArguments,
 		nil,
 		nil,
-		EmptyLocationRange,
+		LocationRange{},
 	)
 
 	return functionValue.Invoke(invocation), nil
@@ -803,14 +796,7 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 		lexicalScope,
 	)
 
-	variable.SetValue(
-		interpreter,
-		LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: declaration,
-		},
-		value,
-	)
+	variable.SetValue(interpreter, value)
 
 	return nil
 }
@@ -1285,7 +1271,6 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			initializerType,
 			func(invocation Invocation) Value {
 				invocationInterpreter := invocation.InvocationContext
-				locationRange := invocation.LocationRange
 				self := *invocation.Self
 
 				compositeSelf, ok := self.(*CompositeValue)
@@ -1315,7 +1300,6 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 					parameter := compositeType.ConstructorParameters[i]
 					compositeSelf.SetMember(
 						invocationInterpreter,
-						locationRange,
 						parameter.Identifier,
 						argument,
 					)
@@ -1440,8 +1424,6 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				// Check that the resource is constructed
 				// in the same location as it was declared
 
-				locationRange := invocation.LocationRange
-
 				if compositeType.Kind == common.CompositeKindResource &&
 					invocationContext.GetLocation() != compositeType.Location {
 
@@ -1494,7 +1476,6 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 				value := NewCompositeValue(
 					invocationContext,
-					locationRange,
 					location,
 					qualifiedIdentifier,
 					declaration.Kind(),
@@ -1561,29 +1542,18 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 	if declaration.Kind() == common.CompositeKindContract {
 		variable.InitializeWithGetter(func() Value {
-			positioned := ast.NewRangeFromPositioned(declarationInterpreter, declaration.DeclarationIdentifier())
-
 			contractValue := config.ContractValueHandler(
 				declarationInterpreter,
 				compositeType,
 				constructorGenerator,
-				positioned,
 			)
-
 			contractValue.SetNestedVariables(nestedVariables)
 			return contractValue
 		})
 	} else {
 		constructor := constructorGenerator(common.ZeroAddress)
 		constructor.NestedVariables = nestedVariables
-		variable.SetValue(
-			declarationInterpreter,
-			LocationRange{
-				Location:    location,
-				HasPosition: declaration,
-			},
-			constructor,
-		)
+		variable.SetValue(declarationInterpreter, constructor)
 	}
 
 	return lexicalScope, variable
@@ -1636,14 +1606,8 @@ func (interpreter *Interpreter) declareEnumLookupFunction(
 			},
 		}
 
-		locationRange := LocationRange{
-			Location:    location,
-			HasPosition: enumCase,
-		}
-
 		caseValue := NewCompositeValue(
 			interpreter,
-			locationRange,
 			location,
 			qualifiedIdentifier,
 			declaration.CompositeKind,
@@ -1659,11 +1623,6 @@ func (interpreter *Interpreter) declareEnumLookupFunction(
 			NewVariableWithValue(interpreter, caseValue)
 	}
 
-	locationRange := LocationRange{
-		Location:    location,
-		HasPosition: declaration,
-	}
-
 	enumLookupFunctionType := interpreter.Program.Elaboration.EnumLookupFunctionType(compositeType)
 	value := EnumLookupFunction(
 		interpreter,
@@ -1671,11 +1630,7 @@ func (interpreter *Interpreter) declareEnumLookupFunction(
 		caseValues,
 		constructorNestedVariables,
 	)
-	variable.SetValue(
-		interpreter,
-		locationRange,
-		value,
-	)
+	variable.SetValue(interpreter, value)
 
 	return lexicalScope, variable
 }
@@ -4405,7 +4360,6 @@ func newStorageIterationFunction(
 		functionType,
 		func(_ *SimpleCompositeValue, invocation Invocation) Value {
 			invocationContext := invocation.InvocationContext
-			locationRange := invocation.LocationRange
 			arguments := invocation.Arguments
 
 			return AccountStorageIterate(
@@ -4414,7 +4368,6 @@ func newStorageIterationFunction(
 				address,
 				domain,
 				pathType,
-				locationRange,
 			)
 		},
 	)
@@ -4426,7 +4379,6 @@ func AccountStorageIterate(
 	address common.Address,
 	domain common.PathDomain,
 	pathType sema.Type,
-	locationRange LocationRange,
 ) Value {
 	fn, ok := arguments[0].(FunctionValue)
 	if !ok {
@@ -4455,7 +4407,6 @@ func AccountStorageIterate(
 			invocationContext,
 			value,
 			staticType,
-			locationRange,
 		)
 
 		if valueError != nil {
@@ -4475,7 +4426,6 @@ func AccountStorageIterate(
 			fn,
 			arguments,
 			invocationArgumentTypes,
-			locationRange,
 		)
 
 		shouldContinue, ok := result.(BoolValue)
@@ -4519,7 +4469,6 @@ func invokeIteratorFunction(
 	fn FunctionValue,
 	arguments []Value,
 	invocationArgumentTypes []sema.Type,
-	locationRange LocationRange,
 ) Value {
 	fnType := fn.FunctionType(context)
 	parameterTypes := fnType.ParameterTypes()
@@ -4533,7 +4482,6 @@ func invokeIteratorFunction(
 		parameterTypes,
 		returnType,
 		nil,
-		locationRange,
 	)
 	return result
 }
@@ -4542,7 +4490,6 @@ func checkValue(
 	context StoredValueCheckContext,
 	value Value,
 	staticType StaticType,
-	locationRange LocationRange,
 ) (valueError error) {
 
 	defer func() {
@@ -4589,7 +4536,6 @@ func checkValue(
 
 		_ = capabilityCheckHandler(
 			context,
-			locationRange,
 			capability.address,
 			capability.ID,
 			referenceType,
@@ -4618,13 +4564,11 @@ func authAccountStorageSaveFunction(
 		func(_ *SimpleCompositeValue, invocation Invocation) Value {
 			interpreter := invocation.InvocationContext
 			arguments := invocation.Arguments
-			locationRange := invocation.LocationRange
 
 			return AccountStorageSave(
 				interpreter,
 				arguments,
 				addressValue,
-				locationRange,
 			)
 		},
 	)
@@ -4634,7 +4578,6 @@ func AccountStorageSave(
 	context InvocationContext,
 	arguments []Value,
 	addressValue AddressValue,
-	locationRange LocationRange,
 ) Value {
 	value := arguments[0]
 
@@ -5147,7 +5090,6 @@ func GetNativeCompositeValueComputedFields(qualifiedIdentifier string) map[strin
 		return map[string]ComputedField{
 			sema.PublicKeyTypePublicKeyFieldName: func(
 				context ValueTransferContext,
-				locationRange LocationRange,
 				v *CompositeValue,
 			) Value {
 				publicKeyValue := v.GetField(context, sema.PublicKeyTypePublicKeyFieldName)
@@ -5195,10 +5137,7 @@ func GetCompositeValueInjectedFields(context MemberAccessibleContext, v *Composi
 	)
 }
 
-func (interpreter *Interpreter) GetCompositeValueFunctions(
-	v *CompositeValue,
-	locationRange LocationRange,
-) *FunctionOrderedMap {
+func (interpreter *Interpreter) GetCompositeValueFunctions(v *CompositeValue) *FunctionOrderedMap {
 
 	var functions *FunctionOrderedMap
 
@@ -5208,7 +5147,7 @@ func (interpreter *Interpreter) GetCompositeValueFunctions(
 
 	compositeValueFunctionsHandler := sharedState.Config.CompositeValueFunctionsHandler
 	if compositeValueFunctionsHandler != nil {
-		functions = compositeValueFunctionsHandler(interpreter, locationRange, v)
+		functions = compositeValueFunctionsHandler(interpreter, v)
 		if functions != nil {
 			return functions
 		}
@@ -5350,7 +5289,7 @@ func getAccessOfMember(context ValueStaticTypeContext, self Value, identifier st
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.
 // May return nil if the member does not exist.
-func getMember(context MemberAccessibleContext, self Value, locationRange LocationRange, identifier string) Value {
+func getMember(context MemberAccessibleContext, self Value, identifier string) Value {
 	var result Value
 	// When the accessed value has a type that supports the declaration of members
 	// or is a built-in type that has members (`MemberAccessibleValue`),
@@ -5358,7 +5297,7 @@ func getMember(context MemberAccessibleContext, self Value, locationRange Locati
 	// For example, the built-in type `String` has a member "length",
 	// and composite declarations may contain member declarations
 	if memberAccessibleValue, ok := self.(MemberAccessibleValue); ok {
-		result = memberAccessibleValue.GetMember(context, locationRange, identifier)
+		result = memberAccessibleValue.GetMember(context, identifier)
 	}
 	if result == nil {
 		result = getBuiltinFunctionMember(context, self, identifier)
@@ -5435,11 +5374,10 @@ func ValueGetType(context InvocationContext, self Value) Value {
 func setMember(
 	context ValueTransferContext,
 	self Value,
-	locationRange LocationRange,
 	identifier string,
 	value Value,
 ) bool {
-	return self.(MemberAccessibleValue).SetMember(context, locationRange, identifier, value)
+	return self.(MemberAccessibleValue).SetMember(context, identifier, value)
 }
 
 func ExpectType(
@@ -5870,7 +5808,6 @@ func capabilityBorrowFunction(
 		sema.CapabilityTypeBorrowFunctionType(capabilityBorrowType),
 		func(_ CapabilityValue, invocation Invocation) Value {
 			invocationContext := invocation.InvocationContext
-			locationRange := invocation.LocationRange
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
 
 			var typeArgument sema.Type
@@ -5884,7 +5821,6 @@ func capabilityBorrowFunction(
 				addressValue,
 				capabilityID,
 				capabilityBorrowType,
-				locationRange,
 			)
 		},
 	)
@@ -5896,7 +5832,6 @@ func CapabilityBorrow(
 	addressValue AddressValue,
 	capabilityID UInt64Value,
 	capabilityBorrowType *sema.ReferenceType,
-	locationRange LocationRange,
 ) Value {
 	if capabilityID == InvalidCapabilityID {
 		return Nil
@@ -5915,7 +5850,6 @@ func CapabilityBorrow(
 
 	referenceValue := borrowHandler(
 		invocationContext,
-		locationRange,
 		addressValue,
 		capabilityID,
 		wantedBorrowType,
@@ -5942,7 +5876,6 @@ func capabilityCheckFunction(
 		func(_ CapabilityValue, invocation Invocation) Value {
 
 			invocationContext := invocation.InvocationContext
-			locationRange := invocation.LocationRange
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
 
 			var typeArgument sema.Type
@@ -5956,7 +5889,6 @@ func capabilityCheckFunction(
 				addressValue,
 				capabilityID,
 				capabilityBorrowType,
-				locationRange,
 			)
 		},
 	)
@@ -5968,7 +5900,6 @@ func CapabilityCheck(
 	addressValue AddressValue,
 	capabilityID UInt64Value,
 	capabilityBorrowType *sema.ReferenceType,
-	locationRange LocationRange,
 ) Value {
 
 	if capabilityID == InvalidCapabilityID {
@@ -5988,7 +5919,6 @@ func CapabilityCheck(
 
 	return checkHandler(
 		invocationContext,
-		locationRange,
 		addressValue,
 		capabilityID,
 		wantedBorrowType,
@@ -6022,22 +5952,15 @@ func (interpreter *Interpreter) WithContainerMutationPrevention(valueID atree.Va
 	}
 }
 
-func (interpreter *Interpreter) EnforceNotResourceDestruction(
-	valueID atree.ValueID,
-	_ LocationRange,
-) {
+func (interpreter *Interpreter) EnforceNotResourceDestruction(valueID atree.ValueID) {
 	_, exists := interpreter.SharedState.destroyedResources[valueID]
 	if exists {
 		panic(&DestroyedResourceError{})
 	}
 }
 
-func (interpreter *Interpreter) WithResourceDestruction(
-	valueID atree.ValueID,
-	locationRange LocationRange,
-	f func(),
-) {
-	interpreter.EnforceNotResourceDestruction(valueID, locationRange)
+func (interpreter *Interpreter) WithResourceDestruction(valueID atree.ValueID, f func()) {
+	interpreter.EnforceNotResourceDestruction(valueID)
 
 	interpreter.SharedState.destroyedResources[valueID] = struct{}{}
 
@@ -6169,8 +6092,8 @@ func (interpreter *Interpreter) StorageMutatedDuringIteration() bool {
 	return interpreter.SharedState.storageMutatedDuringIteration
 }
 
-func (interpreter *Interpreter) GetMethod(value MemberAccessibleValue, name string, locationRange LocationRange) FunctionValue {
-	return value.GetMethod(interpreter, locationRange, name)
+func (interpreter *Interpreter) GetMethod(value MemberAccessibleValue, name string) FunctionValue {
+	return value.GetMethod(interpreter, name)
 }
 
 func (interpreter *Interpreter) GetGlobal(name string) Value {
@@ -6181,11 +6104,8 @@ func (interpreter *Interpreter) GetGlobalType(name string) (*sema.Variable, bool
 	return interpreter.Program.Elaboration.GetGlobalType(name)
 }
 
-func (interpreter *Interpreter) DefaultDestroyEvents(
-	resourceValue *CompositeValue,
-	locationRange LocationRange,
-) []*CompositeValue {
-	return resourceValue.DefaultDestroyEvents(interpreter, locationRange)
+func (interpreter *Interpreter) DefaultDestroyEvents(resourceValue *CompositeValue) []*CompositeValue {
+	return resourceValue.DefaultDestroyEvents(interpreter)
 }
 
 func (interpreter *Interpreter) SemaTypeFromStaticType(staticType StaticType) sema.Type {

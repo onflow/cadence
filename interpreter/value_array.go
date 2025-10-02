@@ -225,7 +225,7 @@ func (*ArrayValue) IsValue() {}
 
 func (*ArrayValue) isAtreeContainerBackedValue() {}
 
-func (v *ArrayValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
+func (v *ArrayValue) Accept(context ValueVisitContext, visitor Visitor) {
 	descend := visitor.VisitArrayValue(context, v)
 	if !descend {
 		return
@@ -234,9 +234,8 @@ func (v *ArrayValue) Accept(context ValueVisitContext, visitor Visitor, location
 	v.Walk(
 		context,
 		func(element Value) {
-			element.Accept(context, visitor, locationRange)
+			element.Accept(context, visitor)
 		},
-		locationRange,
 	)
 }
 
@@ -320,11 +319,7 @@ func (v *ArrayValue) Iterator(_ ValueStaticTypeContext) ValueIterator {
 	}
 }
 
-func (v *ArrayValue) Walk(
-	context ValueWalkContext,
-	walkChild func(Value),
-	_ LocationRange,
-) {
+func (v *ArrayValue) Walk(context ValueWalkContext, walkChild func(Value)) {
 	v.Iterate(
 		context,
 		func(element Value) (resume bool) {
@@ -340,12 +335,12 @@ func (v *ArrayValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	return v.Type
 }
 
-func (v *ArrayValue) IsImportable(context ValueImportableContext, locationRange LocationRange) bool {
+func (v *ArrayValue) IsImportable(context ValueImportableContext) bool {
 	importable := true
 	v.Iterate(
 		context,
 		func(element Value) (resume bool) {
-			if !element.IsImportable(context, locationRange) {
+			if !element.IsImportable(context) {
 				importable = false
 				// stop iteration
 				return false
@@ -368,7 +363,7 @@ func (v *ArrayValue) IsStaleResource(context ValueStaticTypeContext) bool {
 	return v.array == nil && v.IsResourceKinded(context)
 }
 
-func (v *ArrayValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {
+func (v *ArrayValue) Destroy(context ResourceDestructionContext) {
 
 	common.UseComputation(
 		context,
@@ -397,14 +392,12 @@ func (v *ArrayValue) Destroy(context ResourceDestructionContext, locationRange L
 
 	context.WithResourceDestruction(
 		valueID,
-		locationRange,
 		func() {
 			v.Walk(
 				context,
 				func(element Value) {
-					maybeDestroy(context, locationRange, element)
+					maybeDestroy(context, element)
 				},
-				locationRange,
 			)
 		},
 	)
@@ -495,7 +488,7 @@ func (v *ArrayValue) Concat(context ValueTransferContext, other *ArrayValue) Val
 	)
 }
 
-func (v *ArrayValue) GetKey(context ValueComparisonContext, _ LocationRange, key Value) Value {
+func (v *ArrayValue) GetKey(context ValueComparisonContext, key Value) Value {
 	index := key.(NumberValue).ToInt()
 	return v.Get(context, index)
 }
@@ -532,7 +525,7 @@ func (v *ArrayValue) Get(gauge common.MemoryGauge, index int) Value {
 	return MustConvertStoredValue(gauge, storedValue)
 }
 
-func (v *ArrayValue) SetKey(context ContainerMutationContext, _ LocationRange, key Value, value Value) {
+func (v *ArrayValue) SetKey(context ContainerMutationContext, key Value, value Value) {
 	index := key.(NumberValue).ToInt()
 	v.Set(context, index, value)
 }
@@ -588,10 +581,13 @@ func (v *ArrayValue) String() string {
 }
 
 func (v *ArrayValue) RecursiveString(seenReferences SeenReferences) string {
-	return v.MeteredString(NoOpStringContext{}, seenReferences, EmptyLocationRange)
+	return v.MeteredString(NoOpStringContext{}, seenReferences)
 }
 
-func (v *ArrayValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+func (v *ArrayValue) MeteredString(
+	context ValueStringContext,
+	seenReferences SeenReferences,
+) string {
 	// if n > 0:
 	// len = open-bracket + close-bracket + ((n-1) comma+space)
 	//     = 2 + 2n - 2
@@ -609,7 +605,7 @@ func (v *ArrayValue) MeteredString(context ValueStringContext, seenReferences Se
 		func(value Value) (resume bool) {
 			// ok to not meter anything created as part of this iteration, since we will discard the result
 			// upon creating the string
-			values[i] = value.MeteredString(context, seenReferences, locationRange)
+			values[i] = value.MeteredString(context, seenReferences)
 			i++
 			return true
 		},
@@ -655,17 +651,16 @@ func (v *ArrayValue) Append(context ValueTransferContext, element Value) {
 	context.MaybeValidateAtreeStorage()
 }
 
-func (v *ArrayValue) AppendAll(context ValueTransferContext, locationRange LocationRange, other *ArrayValue) {
+func (v *ArrayValue) AppendAll(context ValueTransferContext, other *ArrayValue) {
 	other.Walk(
 		context,
 		func(value Value) {
 			v.Append(context, value)
 		},
-		locationRange,
 	)
 }
 
-func (v *ArrayValue) InsertKey(context ContainerMutationContext, _ LocationRange, key Value, value Value) {
+func (v *ArrayValue) InsertKey(context ContainerMutationContext, key Value, value Value) {
 	index := key.(NumberValue).ToInt()
 	v.Insert(context, index, value)
 }
@@ -733,9 +728,9 @@ func (v *ArrayValue) Insert(context ContainerMutationContext, index int, element
 	)
 }
 
-func (v *ArrayValue) RemoveKey(context ContainerMutationContext, locationRange LocationRange, key Value) Value {
+func (v *ArrayValue) RemoveKey(context ContainerMutationContext, key Value) Value {
 	index := key.(NumberValue).ToInt()
-	return v.Remove(context, locationRange, index)
+	return v.Remove(context, index)
 }
 
 func (v *ArrayValue) RemoveWithoutTransfer(
@@ -768,7 +763,7 @@ func (v *ArrayValue) RemoveWithoutTransfer(
 	return storable
 }
 
-func (v *ArrayValue) Remove(context ContainerMutationContext, _ LocationRange, index int) Value {
+func (v *ArrayValue) Remove(context ContainerMutationContext, index int) Value {
 	storable := v.RemoveWithoutTransfer(context, index)
 
 	value := StoredValue(context, storable, context.Storage())
@@ -783,12 +778,12 @@ func (v *ArrayValue) Remove(context ContainerMutationContext, _ LocationRange, i
 	)
 }
 
-func (v *ArrayValue) RemoveFirst(context ContainerMutationContext, locationRange LocationRange) Value {
-	return v.Remove(context, locationRange, 0)
+func (v *ArrayValue) RemoveFirst(context ContainerMutationContext) Value {
+	return v.Remove(context, 0)
 }
 
-func (v *ArrayValue) RemoveLast(context ContainerMutationContext, locationRange LocationRange) Value {
-	return v.Remove(context, locationRange, v.Count()-1)
+func (v *ArrayValue) RemoveLast(context ContainerMutationContext) Value {
+	return v.Remove(context, v.Count()-1)
 }
 
 func (v *ArrayValue) FirstIndex(interpreter ContainerMutationContext, needleValue Value) OptionalValue {
@@ -850,20 +845,16 @@ func (v *ArrayValue) Contains(
 	return BoolValue(result)
 }
 
-func (v *ArrayValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+func (v *ArrayValue) GetMember(context MemberAccessibleContext, name string) Value {
 	switch name {
 	case "length":
 		return NewIntValueFromInt64(context, int64(v.Count()))
 	}
 
-	return context.GetMethod(v, name, locationRange)
+	return context.GetMethod(v, name)
 }
 
-func (v *ArrayValue) GetMethod(
-	context MemberAccessibleContext,
-	_ LocationRange,
-	name string,
-) FunctionValue {
+func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	switch name {
 	case sema.ArrayTypeAppendFunctionName:
 		return NewBoundHostFunctionValue(
@@ -895,7 +886,6 @@ func (v *ArrayValue) GetMethod(
 				}
 				v.AppendAll(
 					invocation.InvocationContext,
-					invocation.LocationRange,
 					otherArray,
 				)
 				return Void
@@ -957,7 +947,6 @@ func (v *ArrayValue) GetMethod(
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
 				inter := invocation.InvocationContext
-				locationRange := invocation.LocationRange
 
 				indexValue, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
@@ -965,11 +954,7 @@ func (v *ArrayValue) GetMethod(
 				}
 				index := indexValue.ToInt()
 
-				return v.Remove(
-					inter,
-					locationRange,
-					index,
-				)
+				return v.Remove(inter, index)
 			},
 		)
 
@@ -981,10 +966,7 @@ func (v *ArrayValue) GetMethod(
 				v.SemaType(context).ElementType(false),
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
-				return v.RemoveFirst(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-				)
+				return v.RemoveFirst(invocation.InvocationContext)
 			},
 		)
 
@@ -996,10 +978,7 @@ func (v *ArrayValue) GetMethod(
 				v.SemaType(context).ElementType(false),
 			),
 			func(v *ArrayValue, invocation Invocation) Value {
-				return v.RemoveLast(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-				)
+				return v.RemoveLast(invocation.InvocationContext)
 			},
 		)
 
@@ -1089,7 +1068,6 @@ func (v *ArrayValue) GetMethod(
 
 				return v.Filter(
 					interpreter,
-					invocation.LocationRange,
 					funcArgument,
 				)
 			},
@@ -1113,7 +1091,6 @@ func (v *ArrayValue) GetMethod(
 
 				return v.Map(
 					interpreter,
-					invocation.LocationRange,
 					funcArgument,
 				)
 			},
@@ -1164,12 +1141,12 @@ func (v *ArrayValue) GetMethod(
 	return nil
 }
 
-func (v *ArrayValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (v *ArrayValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Arrays have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (v *ArrayValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (v *ArrayValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Arrays have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -1180,7 +1157,6 @@ func (v *ArrayValue) Count() int {
 
 func (v *ArrayValue) ConformsToStaticType(
 	context ValueStaticTypeConformanceContext,
-	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
 
@@ -1224,11 +1200,7 @@ func (v *ArrayValue) ConformsToStaticType(
 				return false
 			}
 
-			if !element.ConformsToStaticType(
-				context,
-				locationRange,
-				results,
-			) {
+			if !element.ConformsToStaticType(context, results) {
 				elementMismatch = true
 				// stop iteration
 				return false
@@ -1688,7 +1660,6 @@ func (v *ArrayValue) Reverse(
 
 func (v *ArrayValue) Filter(
 	context InvocationContext,
-	locationRange LocationRange,
 	procedure FunctionValue,
 ) Value {
 
@@ -1745,7 +1716,6 @@ func (v *ArrayValue) Filter(
 					parameterTypes,
 					returnType,
 					nil,
-					locationRange,
 				)
 
 				shouldInclude, ok := result.(BoolValue)
@@ -1773,7 +1743,6 @@ func (v *ArrayValue) Filter(
 
 func (v *ArrayValue) Map(
 	context InvocationContext,
-	locationRange LocationRange,
 	procedure FunctionValue,
 ) Value {
 
@@ -1842,7 +1811,6 @@ func (v *ArrayValue) Map(
 				parameterTypes,
 				returnType,
 				nil,
-				locationRange,
 			)
 
 			return result.Transfer(

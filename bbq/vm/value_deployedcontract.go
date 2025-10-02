@@ -46,7 +46,6 @@ func init() {
 
 				addressFieldValue := deployedContract.GetMember(
 					context,
-					EmptyLocationRange,
 					sema.DeployedContractTypeAddressFieldName,
 				)
 				addressValue, ok := addressFieldValue.(interpreter.AddressValue)
@@ -56,7 +55,6 @@ func init() {
 
 				nameFieldValue := deployedContract.GetMember(
 					context,
-					EmptyLocationRange,
 					sema.DeployedContractTypeNameFieldName,
 				)
 

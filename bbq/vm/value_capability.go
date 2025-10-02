@@ -88,7 +88,6 @@ func init() {
 					address,
 					capabilityID,
 					capabilityBorrowType,
-					EmptyLocationRange,
 				)
 			},
 		),
@@ -153,7 +152,6 @@ func init() {
 					address,
 					capabilityID,
 					capabilityBorrowType,
-					EmptyLocationRange,
 				)
 			},
 		),

@@ -40,11 +40,11 @@ const FalseValue = BoolValue(false)
 
 func (BoolValue) IsValue() {}
 
-func (v BoolValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v BoolValue) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitBoolValue(context, v)
 }
 
-func (BoolValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (BoolValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -52,7 +52,7 @@ func (BoolValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeBool)
 }
 
-func (BoolValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (BoolValue) IsImportable(_ ValueImportableContext) bool {
 	return sema.BoolType.Importable
 }
 
@@ -138,7 +138,10 @@ func (v BoolValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v BoolValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (v BoolValue) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	if v {
 		common.UseMemory(context, common.TrueStringMemoryUsage)
 	} else {
@@ -150,7 +153,6 @@ func (v BoolValue) MeteredString(context ValueStringContext, _ SeenReferences, _
 
 func (v BoolValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true

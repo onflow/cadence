@@ -150,7 +150,6 @@ func compiledFTTransfer(tb testing.TB) {
 	accountHandler := &testAccountHandler{
 		emitEvent: func(
 			_ interpreter.ValueExportContext,
-			_ interpreter.LocationRange,
 			_ *sema.CompositeType,
 			_ []interpreter.Value,
 		) {
@@ -164,7 +163,6 @@ func compiledFTTransfer(tb testing.TB) {
 
 	vmConfig.CapabilityBorrowHandler = func(
 		context interpreter.BorrowCapabilityControllerContext,
-		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		capabilityID interpreter.UInt64Value,
 		wantedBorrowType *sema.ReferenceType,
@@ -172,7 +170,6 @@ func compiledFTTransfer(tb testing.TB) {
 	) interpreter.ReferenceValue {
 		return stdlib.BorrowCapabilityController(
 			context,
-			locationRange,
 			address,
 			capabilityID,
 			wantedBorrowType,
@@ -183,7 +180,6 @@ func compiledFTTransfer(tb testing.TB) {
 
 	vmConfig.OnEventEmitted = func(
 		_ interpreter.ValueExportContext,
-		_ interpreter.LocationRange,
 		_ *sema.CompositeType,
 		_ []interpreter.Value,
 	) error {
@@ -471,9 +467,17 @@ func compiledFTTransfer(tb testing.TB) {
 		require.Equal(tb, 0, validationScriptVM.StackSize())
 
 		if address == senderAddress {
-			assert.Equal(tb, interpreter.NewUnmeteredUFix64Value(total-transferAmount*uint64(transferCount)), result)
+			assert.Equal(
+				tb,
+				interpreter.NewUnmeteredUFix64Value(total-transferAmount*uint64(transferCount)),
+				result,
+			)
 		} else {
-			assert.Equal(tb, interpreter.NewUnmeteredUFix64Value(transferAmount*uint64(transferCount)), result)
+			assert.Equal(
+				tb,
+				interpreter.NewUnmeteredUFix64Value(transferAmount*uint64(transferCount)),
+				result,
+			)
 		}
 	}
 }
