@@ -478,7 +478,12 @@ func forEachReference(
 	// We only take a references to them, but never move them out.
 	const transferElements = false
 
-	referencedIterable.ForEach(context, referencedElementType, updatedFunction, transferElements)
+	referencedIterable.ForEach(
+		context,
+		referencedElementType,
+		updatedFunction,
+		transferElements,
+	)
 }
 
 func (v *StorageReferenceValue) BorrowType() sema.Type {
