@@ -22,7 +22,6 @@ import (
 	"math/big"
 
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 )
 
@@ -59,103 +58,51 @@ func getNumberValueFunctionMember(
 	switch name {
 
 	case sema.ToStringFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.ToStringFunctionType,
-			func(v NumberValue, invocation Invocation) Value {
-				invocationContext := invocation.InvocationContext
-				return NumberValueToString(invocationContext, v)
-			},
+			UnifiedNumberToStringFunction,
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.ToBigEndianBytesFunctionType,
-			func(v NumberValue, invocation Invocation) Value {
-				return ByteSliceToByteArrayValue(
-					invocation.InvocationContext,
-					v.ToBigEndianBytes(),
-				)
-			},
+			UnifiedNumberToBigEndianBytesFunction,
 		)
 
 	case sema.NumericTypeSaturatingAddFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
-			func(v NumberValue, invocation Invocation) Value {
-				other, ok := invocation.Arguments[0].(NumberValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.SaturatingPlus(
-					invocation.InvocationContext,
-					other,
-					locationRange,
-				)
-			},
+			UnifiedNumberSaturatingAddFunction,
 		)
 
 	case sema.NumericTypeSaturatingSubtractFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
-			func(v NumberValue, invocation Invocation) Value {
-				other, ok := invocation.Arguments[0].(NumberValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.SaturatingMinus(
-					invocation.InvocationContext,
-					other,
-					locationRange,
-				)
-			},
+			UnifiedNumberSaturatingSubtractFunction,
 		)
 
 	case sema.NumericTypeSaturatingMultiplyFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
-			func(v NumberValue, invocation Invocation) Value {
-				other, ok := invocation.Arguments[0].(NumberValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.SaturatingMul(
-					invocation.InvocationContext,
-					other,
-					locationRange,
-				)
-			},
+			UnifiedNumberSaturatingMultiplyFunction,
 		)
 
 	case sema.NumericTypeSaturatingDivideFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
-			func(v NumberValue, invocation Invocation) Value {
-				other, ok := invocation.Arguments[0].(NumberValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.SaturatingDiv(
-					invocation.InvocationContext,
-					other,
-					locationRange,
-				)
-			},
+			UnifiedNumberSaturatingDivideFunction,
 		)
 	}
 
@@ -191,3 +138,44 @@ type BigNumberValue interface {
 	ByteLength() int
 	ToBigInt(memoryGauge common.MemoryGauge) *big.Int
 }
+
+// all native number functions
+var UnifiedNumberToStringFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		return NumberValueToString(context, receiver.(NumberValue))
+	},
+)
+
+var UnifiedNumberToBigEndianBytesFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		return ByteSliceToByteArrayValue(context, receiver.(NumberValue).ToBigEndianBytes())
+	},
+)
+
+var UnifiedNumberSaturatingAddFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		other := assertValueOfType[NumberValue](args[0])
+		return receiver.(NumberValue).SaturatingPlus(context, other, locationRange)
+	},
+)
+
+var UnifiedNumberSaturatingSubtractFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		other := assertValueOfType[NumberValue](args[0])
+		return receiver.(NumberValue).SaturatingMinus(context, other, locationRange)
+	},
+)
+
+var UnifiedNumberSaturatingMultiplyFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		other := assertValueOfType[NumberValue](args[0])
+		return receiver.(NumberValue).SaturatingMul(context, other, locationRange)
+	},
+)
+
+var UnifiedNumberSaturatingDivideFunction = UnifiedNativeFunction(
+	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		other := assertValueOfType[NumberValue](args[0])
+		return receiver.(NumberValue).SaturatingDiv(context, other, locationRange)
+	},
+)

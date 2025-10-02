@@ -881,314 +881,155 @@ func (v *ArrayValue) GetMethod(
 ) FunctionValue {
 	switch name {
 	case sema.ArrayTypeAppendFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayAppendFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				v.Append(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-					invocation.Arguments[0],
-				)
-				return Void
-			},
+			UnifiedArrayAppendFunction,
 		)
 
 	case sema.ArrayTypeAppendAllFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayAppendAllFunctionType(
 				v.SemaType(context),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				otherArray, ok := invocation.Arguments[0].(*ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				v.AppendAll(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-					otherArray,
-				)
-				return Void
-			},
+			UnifiedArrayAppendAllFunction,
 		)
 
 	case sema.ArrayTypeConcatFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayConcatFunctionType(
 				v.SemaType(context),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				otherArray, ok := invocation.Arguments[0].(*ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				return v.Concat(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-					otherArray,
-				)
-			},
+			UnifiedArrayConcatFunction,
 		)
 
 	case sema.ArrayTypeInsertFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayInsertFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				inter := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				indexValue, ok := invocation.Arguments[0].(NumberValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				index := indexValue.ToInt(locationRange)
-
-				element := invocation.Arguments[1]
-
-				v.Insert(
-					inter,
-					locationRange,
-					index,
-					element,
-				)
-				return Void
-			},
+			UnifiedArrayInsertFunction,
 		)
 
 	case sema.ArrayTypeRemoveFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayRemoveFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				inter := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				indexValue, ok := invocation.Arguments[0].(NumberValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				index := indexValue.ToInt(locationRange)
-
-				return v.Remove(
-					inter,
-					locationRange,
-					index,
-				)
-			},
+			UnifiedArrayRemoveFunction,
 		)
 
 	case sema.ArrayTypeRemoveFirstFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayRemoveFirstFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				return v.RemoveFirst(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-				)
-			},
+			UnifiedArrayRemoveFirstFunction,
 		)
 
 	case sema.ArrayTypeRemoveLastFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayRemoveLastFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				return v.RemoveLast(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-				)
-			},
+			UnifiedArrayRemoveLastFunction,
 		)
 
 	case sema.ArrayTypeFirstIndexFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayFirstIndexFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				return v.FirstIndex(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-					invocation.Arguments[0],
-				)
-			},
+			UnifiedArrayFirstIndexFunction,
 		)
 
 	case sema.ArrayTypeContainsFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayContainsFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				return v.Contains(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-					invocation.Arguments[0],
-				)
-			},
+			UnifiedArrayContainsFunction,
 		)
 
 	case sema.ArrayTypeSliceFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArraySliceFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				from, ok := invocation.Arguments[0].(IntValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				to, ok := invocation.Arguments[1].(IntValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.Slice(
-					invocation.InvocationContext,
-					from,
-					to,
-					invocation.LocationRange,
-				)
-			},
+			UnifiedArraySliceFunction,
 		)
 
 	case sema.ArrayTypeReverseFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayReverseFunctionType(
 				v.SemaType(context),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				return v.Reverse(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-				)
-			},
+			UnifiedArrayReverseFunction,
 		)
 
 	case sema.ArrayTypeFilterFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayFilterFunctionType(
 				context,
 				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				interpreter := invocation.InvocationContext
-
-				funcArgument, ok := invocation.Arguments[0].(FunctionValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.Filter(
-					interpreter,
-					invocation.LocationRange,
-					funcArgument,
-				)
-			},
+			UnifiedArrayFilterFunction,
 		)
 
 	case sema.ArrayTypeMapFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayMapFunctionType(
 				context,
 				v.SemaType(context),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				interpreter := invocation.InvocationContext
-
-				funcArgument, ok := invocation.Arguments[0].(FunctionValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.Map(
-					interpreter,
-					invocation.LocationRange,
-					funcArgument,
-				)
-			},
+			UnifiedArrayMapFunction,
 		)
 
 	case sema.ArrayTypeToVariableSizedFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayToVariableSizedFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				interpreter := invocation.InvocationContext
-
-				return v.ToVariableSized(
-					interpreter,
-					invocation.LocationRange,
-				)
-			},
+			UnifiedArrayToVariableSizedFunction,
 		)
 
 	case sema.ArrayTypeToConstantSizedFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayToConstantSizedFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				interpreter := invocation.InvocationContext
-
-				typeParameterPair := invocation.TypeParameterTypes.Oldest()
-				if typeParameterPair == nil {
-					panic(errors.NewUnreachableError())
-				}
-
-				ty := typeParameterPair.Value
-
-				constantSizedArrayType, ok := ty.(*sema.ConstantSizedType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.ToConstantSized(
-					interpreter,
-					invocation.LocationRange,
-					constantSizedArrayType.Size,
-				)
-			},
+			UnifiedArrayToConstantSizedFunction,
 		)
 	}
 
@@ -2117,3 +1958,233 @@ func (i *ArrayIterator) Next(context ValueIteratorContext, _ LocationRange) Valu
 func (i *ArrayIterator) ValueID() (atree.ValueID, bool) {
 	return i.valueID, true
 }
+
+// define all native functions for array type
+var UnifiedArrayAppendFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := assertValueOfType[*ArrayValue](receiver)
+		element := args[0]
+
+		thisArray.Append(context, locationRange, element)
+		return Void
+	},
+)
+
+var UnifiedArrayAppendAllFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := assertValueOfType[*ArrayValue](receiver)
+		otherArray := assertValueOfType[*ArrayValue](args[0])
+
+		thisArray.AppendAll(context, locationRange, otherArray)
+		return Void
+	},
+)
+
+var UnifiedArrayConcatFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := assertValueOfType[*ArrayValue](receiver)
+		otherArray := assertValueOfType[*ArrayValue](args[0])
+
+		return thisArray.Concat(context, locationRange, otherArray)
+	},
+)
+
+var UnifiedArrayInsertFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := assertValueOfType[*ArrayValue](receiver)
+		index := assertValueOfType[NumberValue](args[0])
+		element := args[1]
+
+		thisArray.Insert(context, locationRange, index.ToInt(locationRange), element)
+		return Void
+	},
+)
+
+var UnifiedArrayRemoveFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := assertValueOfType[*ArrayValue](receiver)
+		index := assertValueOfType[NumberValue](args[0])
+
+		return thisArray.Remove(context, locationRange, index.ToInt(locationRange))
+	},
+)
+
+var UnifiedArrayContainsFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := assertValueOfType[*ArrayValue](receiver)
+		element := args[0]
+
+		return thisArray.Contains(context, locationRange, element)
+	},
+)
+
+var UnifiedArraySliceFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := assertValueOfType[*ArrayValue](receiver)
+		fromValue := assertValueOfType[IntValue](args[0])
+		toValue := assertValueOfType[IntValue](args[1])
+
+		return thisArray.Slice(context, fromValue, toValue, locationRange)
+	},
+)
+
+var UnifiedArrayReverseFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := assertValueOfType[*ArrayValue](receiver)
+
+		return thisArray.Reverse(context, locationRange)
+	},
+)
+
+var UnifiedArrayFilterFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := assertValueOfType[*ArrayValue](receiver)
+		funcValue := assertValueOfType[FunctionValue](args[0])
+
+		return thisArray.Filter(context, locationRange, funcValue)
+	},
+)
+
+var UnifiedArrayMapFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := assertValueOfType[*ArrayValue](receiver)
+		funcValue := assertValueOfType[FunctionValue](args[0])
+
+		return thisArray.Map(context, locationRange, funcValue)
+	},
+)
+
+var UnifiedArrayToVariableSizedFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := assertValueOfType[*ArrayValue](receiver)
+
+		return thisArray.ToVariableSized(context, locationRange)
+	},
+)
+
+var UnifiedArrayToConstantSizedFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := assertValueOfType[*ArrayValue](receiver)
+		constantSizedArrayType, ok := typeParameterGetter.NextStatic().(*ConstantSizedStaticType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		return thisArray.ToConstantSized(context, locationRange, constantSizedArrayType.Size)
+	},
+)
+
+var UnifiedArrayFirstIndexFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := assertValueOfType[*ArrayValue](receiver)
+		element := args[0]
+
+		return thisArray.FirstIndex(context, locationRange, element)
+	},
+)
+
+var UnifiedArrayRemoveFirstFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := assertValueOfType[*ArrayValue](receiver)
+
+		return thisArray.RemoveFirst(context, locationRange)
+	},
+)
+
+var UnifiedArrayRemoveLastFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := assertValueOfType[*ArrayValue](receiver)
+
+		return thisArray.RemoveLast(context, locationRange)
+	},
+)

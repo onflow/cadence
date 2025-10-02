@@ -431,79 +431,49 @@ func registerBuiltinSaturatingArithmeticFunctions() {
 }
 
 func registerBuiltinTypeSaturatingArithmeticFunctions(t sema.SaturatingArithmeticType) {
+	functionType := sema.SaturatingArithmeticTypeFunctionTypes[t]
 
-	register := func(
-		functionName string,
-		op func(context *Context, v, other interpreter.NumberValue) interpreter.NumberValue,
-	) {
+	if t.SupportsSaturatingAdd() {
 		registerBuiltinTypeBoundFunction(
 			commons.TypeQualifier(t),
-			NewNativeFunctionValue(
-				functionName,
-				sema.SaturatingArithmeticTypeFunctionTypes[t],
-				func(context *Context, _ []bbq.StaticType, receiver Value, args ...Value) Value {
-					this := receiver.(interpreter.NumberValue)
-
-					other, ok := args[0].(interpreter.NumberValue)
-					if !ok {
-						panic(errors.NewUnreachableError())
-					}
-
-					return op(context, this, other)
-				},
+			NewUnifiedNativeFunctionValue(
+				sema.NumericTypeSaturatingAddFunctionName,
+				functionType,
+				interpreter.UnifiedNumberSaturatingAddFunction,
 			),
 		)
 	}
 
-	if t.SupportsSaturatingAdd() {
-		register(
-			sema.NumericTypeSaturatingAddFunctionName,
-			func(context *Context, v, other interpreter.NumberValue) interpreter.NumberValue {
-				return v.SaturatingPlus(
-					context,
-					other,
-					EmptyLocationRange,
-				)
-			},
-		)
-	}
-
 	if t.SupportsSaturatingSubtract() {
-		register(
-			sema.NumericTypeSaturatingSubtractFunctionName,
-			func(context *Context, v, other interpreter.NumberValue) interpreter.NumberValue {
-				return v.SaturatingMinus(
-					context,
-					other,
-					EmptyLocationRange,
-				)
-			},
+		registerBuiltinTypeBoundFunction(
+			commons.TypeQualifier(t),
+			NewUnifiedNativeFunctionValue(
+				sema.NumericTypeSaturatingSubtractFunctionName,
+				functionType,
+				interpreter.UnifiedNumberSaturatingSubtractFunction,
+			),
 		)
 	}
 
 	if t.SupportsSaturatingMultiply() {
-		register(
-			sema.NumericTypeSaturatingMultiplyFunctionName,
-			func(context *Context, v, other interpreter.NumberValue) interpreter.NumberValue {
-				return v.SaturatingMul(
-					context,
-					other,
-					EmptyLocationRange,
-				)
-			},
+		registerBuiltinTypeBoundFunction(
+			commons.TypeQualifier(t),
+			NewUnifiedNativeFunctionValue(
+				sema.NumericTypeSaturatingMultiplyFunctionName,
+				functionType,
+				interpreter.UnifiedNumberSaturatingMultiplyFunction,
+			),
 		)
 	}
 
 	if t.SupportsSaturatingDivide() {
-		register(
-			sema.NumericTypeSaturatingDivideFunctionName,
-			func(context *Context, v, other interpreter.NumberValue) interpreter.NumberValue {
-				return v.SaturatingDiv(
-					context,
-					other,
-					EmptyLocationRange,
-				)
-			},
+		registerBuiltinTypeBoundFunction(
+			commons.TypeQualifier(t),
+			NewUnifiedNativeFunctionValue(
+				sema.NumericTypeSaturatingDivideFunctionName,
+				functionType,
+				interpreter.UnifiedNumberSaturatingDivideFunction,
+			),
 		)
 	}
 }
