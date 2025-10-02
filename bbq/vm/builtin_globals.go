@@ -304,14 +304,14 @@ var CommonBuiltinTypeBoundFunctions = []*NativeFunctionValue{
 	NewUnifiedNativeFunctionValue(
 		sema.IsInstanceFunctionName,
 		sema.IsInstanceFunctionType,
-		interpreter.UnifiedIsInstanceFunction(),
+		interpreter.UnifiedIsInstanceFunction,
 	),
 
 	// `getType` function
 	NewUnifiedNativeFunctionValue(
 		sema.GetTypeFunctionName,
 		sema.GetTypeFunctionType,
-		interpreter.UnifiedGetTypeFunction(),
+		interpreter.UnifiedGetTypeFunction,
 	),
 
 	// TODO: add remaining functions

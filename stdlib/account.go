@@ -594,7 +594,6 @@ type AccountKeyAdditionHandler interface {
 	AddAccountKey(address common.Address, key *PublicKey, algo sema.HashAlgorithm, weight int) (*AccountKey, error)
 }
 
-// Unified function for AccountKeysAdd
 func unifiedAccountKeysAddFunction(
 	handler AccountKeyAdditionHandler,
 	addressPointer *interpreter.AddressValue,
@@ -723,7 +722,6 @@ type AccountKeyProvider interface {
 	AccountKeysCount(address common.Address) (uint32, error)
 }
 
-// Unified function for AccountKeysGet
 func unifiedAccountKeysGetFunction(
 	provider AccountKeyProvider,
 	addressPointer *common.Address,
@@ -818,7 +816,6 @@ func AccountKeysGet(
 // `Account.Keys.forEachKey(_ f: fun(AccountKey): Bool)`
 var accountKeysForEachCallbackTypeParams = []sema.Type{sema.AccountKeyType}
 
-// Unified function for AccountKeysForEach
 func unifiedAccountKeysForEachFunction(
 	provider AccountKeyProvider,
 	addressPointer *common.Address,
@@ -976,7 +973,6 @@ type AccountKeyRevocationHandler interface {
 	RevokeAccountKey(address common.Address, index uint32) (*AccountKey, error)
 }
 
-// Unified function for AccountKeysRevoke
 func unifiedAccountKeysRevokeFunction(
 	handler AccountKeyRevocationHandler,
 	addressPointer *interpreter.AddressValue,
@@ -1075,7 +1071,6 @@ func AccountKeysRevoke(
 	)
 }
 
-// Unified function for AccountInboxPublish
 func unifiedAccountInboxPublishFunction(
 	handler EventEmitter,
 	providerPointer *interpreter.AddressValue,
@@ -1176,7 +1171,6 @@ func AccountInboxPublish(
 	return interpreter.Void
 }
 
-// Unified function for AccountInboxUnpublish
 func unifiedAccountInboxUnpublishFunction(
 	handler EventEmitter,
 	providerPointer *interpreter.AddressValue,
@@ -1297,7 +1291,6 @@ func AccountInboxUnpublish(
 	return interpreter.NewSomeValueNonCopying(context, value)
 }
 
-// Unified function for AccountInboxClaim
 func unifiedAccountInboxClaimFunction(
 	handler EventEmitter,
 	recipientPointer *interpreter.AddressValue,
@@ -1501,7 +1494,6 @@ type AccountContractProvider interface {
 	GetAccountContractCode(location common.AddressLocation) ([]byte, error)
 }
 
-// Unified function for AccountContractsGet
 func unifiedAccountContractsGetFunction(
 	provider AccountContractProvider,
 	addressPointer *interpreter.AddressValue,
@@ -1589,7 +1581,6 @@ func AccountContractsGet(
 	}
 }
 
-// Unified function for AccountContractsBorrow
 func unifiedAccountContractsBorrowFunction(
 	handler AccountContractsHandler,
 	addressPointer *common.Address,
@@ -1778,7 +1769,6 @@ type AccountContractAdditionHandler interface {
 	TemporarilyRecordCode(location common.AddressLocation, code []byte)
 }
 
-// Unified function for AccountContractsChange (Add/Update)
 func unifiedAccountContractsChangeFunction(
 	handler AccountContractAdditionAndNamesHandler,
 	addressPointer *interpreter.AddressValue,
@@ -2150,7 +2140,6 @@ func changeAccountContracts(
 	)
 }
 
-// Unified function for AccountContractsTryUpdate
 func unifiedAccountContractsTryUpdateFunction(
 	handler AccountContractAdditionAndNamesHandler,
 	addressPointer *interpreter.AddressValue,
@@ -2494,7 +2483,6 @@ type AccountContractRemovalHandler interface {
 	RecordContractRemoval(location common.AddressLocation)
 }
 
-// Unified function for AccountContractsRemove
 func unifiedAccountContractsRemoveFunction(
 	handler AccountContractRemovalHandler,
 	addressPointer *interpreter.AddressValue,
@@ -2813,7 +2801,6 @@ func newAccountCapabilitiesValue(
 	)
 }
 
-// Unified function for AccountStorageCapabilitiesGetController
 func unifiedAccountStorageCapabilitiesGetControllerFunction(
 	handler CapabilityControllerHandler,
 	addressPointer *common.Address,
@@ -2898,7 +2885,6 @@ var storageCapabilityControllerReferencesArrayStaticType = &interpreter.Variable
 	},
 }
 
-// Unified function for AccountStorageCapabilitiesGetControllers
 func unifiedAccountStorageCapabilitiesGetControllersFunction(
 	handler CapabilityControllerHandler,
 	addressPointer *common.Address,
@@ -3013,7 +2999,6 @@ var accountStorageCapabilitiesForEachControllerCallbackTypeParams = []sema.Type{
 	},
 }
 
-// Unified function for AccountStorageCapabilitiesForEachController
 func unifiedAccountStorageCapabilitiesForEachControllerFunction(
 	handler CapabilityControllerHandler,
 	addressPointer *common.Address,
@@ -3166,7 +3151,6 @@ func AccountStorageCapabilitiesForeachController(
 	return interpreter.Void
 }
 
-// Unified function for AccountStorageCapabilitiesIssue
 func unifiedAccountStorageCapabilitiesIssueFunction(
 	handler CapabilityControllerIssueHandler,
 	addressPointer *common.Address,
@@ -3250,7 +3234,6 @@ func AccountStorageCapabilitiesIssue(
 	)
 }
 
-// Unified function for AccountStorageCapabilitiesIssueWithType
 func unifiedAccountStorageCapabilitiesIssueWithTypeFunction(
 	handler CapabilityControllerIssueHandler,
 	addressPointer *common.Address,
@@ -3436,7 +3419,6 @@ func IssueStorageCapabilityController(
 	return capabilityIDValue
 }
 
-// Unified function for AccountAccountCapabilitiesIssue
 func unifiedAccountAccountCapabilitiesIssueFunction(
 	handler CapabilityControllerIssueHandler,
 	addressPointer *common.Address,
@@ -3491,7 +3473,6 @@ func NewVMAccountAccountCapabilitiesIssueFunction(
 	}
 }
 
-// Unified function for AccountAccountCapabilitiesIssueWithType
 func unifiedAccountAccountCapabilitiesIssueWithTypeFunction(
 	handler CapabilityControllerIssueHandler,
 	addressPointer *common.Address,

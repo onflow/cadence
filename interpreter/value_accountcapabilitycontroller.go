@@ -366,13 +366,13 @@ func NewUnifiedDeletionCheckedAccountCapabilityControllerFunction(
 		args ...Value,
 	) Value {
 		controller := AssertValueOfType[*AccountCapabilityControllerValue](receiver)
+		// check if controller is already deleted
 		controller.CheckDeleted()
 
 		return f(context, locationRange, typeParameterGetter, receiver, args...)
 	}
 }
 
-// Unified function for AccountCapabilityController Delete
 var UnifiedAccountCapabilityControllerDeleteFunction = UnifiedNativeFunction(
 	func(
 		context UnifiedFunctionContext,
@@ -394,7 +394,6 @@ func (v *AccountCapabilityControllerValue) newDeleteFunction(
 	return v.newUnifiedHostFunctionValue(context, sema.AccountCapabilityControllerTypeDeleteFunctionType, UnifiedAccountCapabilityControllerDeleteFunction)
 }
 
-// Unified function for AccountCapabilityController SetTag
 var UnifiedAccountCapabilityControllerSetTagFunction = UnifiedNativeFunction(
 	func(
 		context UnifiedFunctionContext,
@@ -414,8 +413,4 @@ func (v *AccountCapabilityControllerValue) newSetTagFunction(
 	context FunctionCreationContext,
 ) FunctionValue {
 	return v.newUnifiedHostFunctionValue(context, sema.AccountCapabilityControllerTypeSetTagFunctionType, UnifiedAccountCapabilityControllerSetTagFunction)
-}
-
-func (v *AccountCapabilityControllerValue) SetDeleted() {
-	v.deleted = true
 }

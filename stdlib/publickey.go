@@ -209,7 +209,6 @@ type PublicKeySignatureVerifier interface {
 	) (bool, error)
 }
 
-// Unified function for PublicKey VerifySignature
 func UnifiedPublicKeyVerifySignatureFunction(
 	publicKeyValue *interpreter.CompositeValue,
 	verifier PublicKeySignatureVerifier,
@@ -323,7 +322,6 @@ type BLSPoPVerifier interface {
 	BLSVerifyPOP(publicKey *PublicKey, signature []byte) (bool, error)
 }
 
-// Unified function for PublicKey VerifyPoP
 func UnifiedPublicKeyVerifyPoPFunction(
 	publicKeyValue *interpreter.CompositeValue,
 	verifier BLSPoPVerifier,

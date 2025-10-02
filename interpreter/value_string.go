@@ -1069,7 +1069,6 @@ func (*StringValueIterator) ValueID() (atree.ValueID, bool) {
 	return atree.ValueID{}, false
 }
 
-// Unified functions for String type methods
 var UnifiedStringEncodeHexFunction = UnifiedNativeFunction(
 	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
 		argument := AssertValueOfType[*ArrayValue](args[0])
@@ -1297,8 +1296,9 @@ var stringFunction = func() Value {
 
 var UnifiedStringConcatFunction = UnifiedNativeFunction(
 	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		this := AssertValueOfType[*StringValue](receiver)
 		other := args[0]
-		return StringConcat(context, receiver.(*StringValue), other, locationRange)
+		return StringConcat(context, this, other, locationRange)
 	},
 )
 

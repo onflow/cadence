@@ -398,9 +398,7 @@ func (v *StorageCapabilityControllerValue) newUnifiedHostFunctionValue(
 var UnifiedStorageCapabilityControllerDeleteFunction = UnifiedNativeFunction(
 	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
 		controller := AssertValueOfType[*StorageCapabilityControllerValue](receiver)
-
 		controller.Delete(context, locationRange)
-
 		controller.deleted = true
 
 		return Void
@@ -439,6 +437,9 @@ var UnifiedStorageCapabilityControllerRetargetFunction = UnifiedNativeFunction(
 		controller := AssertValueOfType[*StorageCapabilityControllerValue](receiver)
 
 		newTargetPathValue := AssertValueOfType[PathValue](args[0])
+		if newTargetPathValue.Domain != common.PathDomainStorage {
+			panic(errors.NewUnreachableError())
+		}
 
 		controller.SetTarget(context, locationRange, newTargetPathValue)
 		controller.TargetPath = newTargetPathValue
@@ -477,8 +478,4 @@ func (v *StorageCapabilityControllerValue) newSetTagFunction(
 		sema.StorageCapabilityControllerTypeSetTagFunctionType,
 		UnifiedStorageCapabilityControllerSetTagFunction,
 	)
-}
-
-func (v *StorageCapabilityControllerValue) SetDeleted() {
-	v.deleted = true
 }

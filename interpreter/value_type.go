@@ -361,7 +361,8 @@ func (v TypeValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []by
 
 var UnifiedTypeIsSubtypeFunction = UnifiedNativeFunction(
 	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		typeValue := AssertValueOfType[TypeValue](receiver)
 		otherTypeValue := AssertValueOfType[TypeValue](args[0])
-		return MetaTypeIsSubType(context, receiver.(TypeValue), otherTypeValue)
+		return MetaTypeIsSubType(context, typeValue, otherTypeValue)
 	},
 )

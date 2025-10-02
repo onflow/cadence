@@ -4105,7 +4105,6 @@ var UnifiedAddressFromStringFunction = UnifiedNativeFunction(
 	},
 )
 
-// UnifiedConverterFunction creates a unified function for value converters
 func UnifiedConverterFunction(convert func(memoryGauge common.MemoryGauge, value Value, locationRange LocationRange) Value) UnifiedNativeFunction {
 	return UnifiedNativeFunction(
 		func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
@@ -4118,7 +4117,6 @@ func UnifiedConverterFunction(convert func(memoryGauge common.MemoryGauge, value
 	)
 }
 
-// UnifiedFromStringFunction creates a unified function for string parsers
 func UnifiedFromStringFunction(parser StringValueParser) UnifiedNativeFunction {
 	return UnifiedNativeFunction(
 		func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
@@ -4128,7 +4126,6 @@ func UnifiedFromStringFunction(parser StringValueParser) UnifiedNativeFunction {
 	)
 }
 
-// UnifiedFromBigEndianBytesFunction creates a unified function for big endian bytes converters
 func UnifiedFromBigEndianBytesFunction(byteLength uint, converter func(memoryGauge common.MemoryGauge, bytes []byte) Value) UnifiedNativeFunction {
 	return UnifiedNativeFunction(
 		func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
@@ -4149,9 +4146,8 @@ func UnifiedFromBigEndianBytesFunction(byteLength uint, converter func(memoryGau
 	)
 }
 
-// UnifiedStringFunction creates the unified String constructor function
 var UnifiedStringFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(_ UnifiedFunctionContext, _ LocationRange, _ TypeParameterGetter, _ Value, _ ...Value) Value {
 		return EmptyString
 	},
 )
@@ -4374,7 +4370,6 @@ func (interpreter *Interpreter) RecordStorageMutation() {
 	}
 }
 
-// Unified function for AccountStorageIterate
 func UnifiedAccountStorageIterateFunction(
 	addressPointer *AddressValue,
 	domain common.PathDomain,
@@ -4605,7 +4600,6 @@ func checkValue(
 	return
 }
 
-// Unified function for AccountStorageSave
 func UnifiedAccountStorageSaveFunction(
 	addressPointer *AddressValue,
 ) UnifiedNativeFunction {
@@ -4695,7 +4689,6 @@ func AccountStorageSave(
 	return Void
 }
 
-// Unified function for AccountStorageType
 func UnifiedAccountStorageTypeFunction(
 	addressPointer *AddressValue,
 ) UnifiedNativeFunction {
@@ -4790,7 +4783,6 @@ func authAccountStorageCopyFunction(
 	)
 }
 
-// Unified function for AccountStorageRead
 func UnifiedAccountStorageReadFunction(
 	addressPointer *AddressValue,
 	clear bool,
@@ -4803,12 +4795,12 @@ func UnifiedAccountStorageReadFunction(
 		args ...Value,
 	) Value {
 		address := GetAddressValue(receiver, addressPointer).ToAddress()
-		typeParameter := typeParameterGetter.NextSema()
+		semaBorrowType := typeParameterGetter.NextSema()
 
 		return AccountStorageRead(
 			context,
 			args,
-			typeParameter,
+			semaBorrowType,
 			address,
 			clear,
 			locationRange,
@@ -4898,7 +4890,6 @@ func AccountStorageRead(
 	return NewSomeValueNonCopying(invocationContext, transferredValue)
 }
 
-// Unified function for AccountStorageBorrow
 func UnifiedAccountStorageBorrowFunction(
 	addressPointer *AddressValue,
 ) UnifiedNativeFunction {
@@ -4976,7 +4967,6 @@ func AccountStorageBorrow(
 	return NewSomeValueNonCopying(invocationContext, reference)
 }
 
-// Unified function for AccountStorageCheck
 func UnifiedAccountStorageCheckFunction(
 	addressPointer *AddressValue,
 ) UnifiedNativeFunction {
@@ -5427,9 +5417,8 @@ func getBuiltinFunctionMember(context MemberAccessibleContext, self Value, ident
 	}
 }
 
-// Unified function for IsInstance
-func UnifiedIsInstanceFunction() UnifiedNativeFunction {
-	return func(
+var UnifiedIsInstanceFunction = UnifiedNativeFunction(
+	func(
 		context UnifiedFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
@@ -5438,15 +5427,15 @@ func UnifiedIsInstanceFunction() UnifiedNativeFunction {
 	) Value {
 		typeValue := AssertValueOfType[TypeValue](args[0])
 		return IsInstance(context, receiver, typeValue)
-	}
-}
+	},
+)
 
 func isInstanceFunction(context FunctionCreationContext, self Value) FunctionValue {
 	return NewUnifiedBoundHostFunctionValue(
 		context,
 		self,
 		sema.IsInstanceFunctionType,
-		UnifiedIsInstanceFunction(),
+		UnifiedIsInstanceFunction,
 	)
 }
 
@@ -5465,9 +5454,8 @@ func IsInstance(invocationContext InvocationContext, self Value, typeValue TypeV
 	)
 }
 
-// Unified function for GetType
-func UnifiedGetTypeFunction() UnifiedNativeFunction {
-	return func(
+var UnifiedGetTypeFunction = UnifiedNativeFunction(
+	func(
 		context UnifiedFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
@@ -5475,15 +5463,15 @@ func UnifiedGetTypeFunction() UnifiedNativeFunction {
 		args ...Value,
 	) Value {
 		return ValueGetType(context, receiver)
-	}
-}
+	},
+)
 
 func getTypeFunction(context FunctionCreationContext, self Value) FunctionValue {
 	return NewUnifiedBoundHostFunctionValue(
 		context,
 		self,
 		sema.GetTypeFunctionType,
-		UnifiedGetTypeFunction(),
+		UnifiedGetTypeFunction,
 	)
 }
 
@@ -5936,7 +5924,6 @@ func (interpreter *Interpreter) Storage() Storage {
 	return interpreter.SharedState.Config.Storage
 }
 
-// Unified function for CapabilityBorrow
 func UnifiedCapabilityBorrowFunction(
 	addressValue AddressValue,
 	capabilityID UInt64Value,
@@ -5949,11 +5936,11 @@ func UnifiedCapabilityBorrowFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		typeArgument := typeParameterGetter.NextSema()
+		typeParameter := typeParameterGetter.NextSema()
 
 		return CapabilityBorrow(
 			context,
-			typeArgument,
+			typeParameter,
 			addressValue,
 			capabilityID,
 			capabilityBorrowType,
@@ -6015,7 +6002,6 @@ func CapabilityBorrow(
 	return NewSomeValueNonCopying(invocationContext, referenceValue)
 }
 
-// Unified function for CapabilityCheck
 func UnifiedCapabilityCheckFunction(
 	addressValue AddressValue,
 	capabilityID UInt64Value,
