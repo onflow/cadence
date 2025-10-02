@@ -93,7 +93,7 @@ func init() {
 				func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
 					array := receiver.(*interpreter.ArrayValue)
 					funcArgument := arguments[0].(FunctionValue)
-					return array.Filter(context, EmptyLocationRange, funcArgument)
+					return array.Filter(context, funcArgument)
 				},
 			),
 		)
@@ -109,7 +109,7 @@ func init() {
 				func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
 					array := receiver.(*interpreter.ArrayValue)
 					funcArgument := arguments[0].(FunctionValue)
-					return array.Map(context, EmptyLocationRange, funcArgument)
+					return array.Map(context, funcArgument)
 				},
 			),
 		)
@@ -148,7 +148,6 @@ func init() {
 
 				array.AppendAll(
 					context,
-					EmptyLocationRange,
 					otherArray,
 				)
 				return interpreter.Void
@@ -210,12 +209,10 @@ func init() {
 				array := receiver.(*interpreter.ArrayValue)
 				indexValue := arguments[0].(interpreter.NumberValue)
 
-				locationRange := EmptyLocationRange
 				index := indexValue.ToInt()
 
 				return array.Remove(
 					context,
-					locationRange,
 					index,
 				)
 			},
@@ -232,7 +229,7 @@ func init() {
 			},
 			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
 				array := receiver.(*interpreter.ArrayValue)
-				return array.RemoveFirst(context, EmptyLocationRange)
+				return array.RemoveFirst(context)
 			},
 		),
 	)
@@ -247,7 +244,7 @@ func init() {
 			},
 			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
 				array := receiver.(*interpreter.ArrayValue)
-				return array.RemoveLast(context, EmptyLocationRange)
+				return array.RemoveLast(context)
 			},
 		),
 	)

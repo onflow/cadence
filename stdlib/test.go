@@ -226,7 +226,6 @@ func addressArrayValueToSlice(
 func accountsArrayValueToSlice(
 	context interpreter.PublicKeyCreationContext,
 	accountsValue interpreter.Value,
-	locationRange interpreter.LocationRange,
 ) []*Account {
 
 	accountsArray, ok := accountsValue.(*interpreter.ArrayValue)
@@ -244,7 +243,7 @@ func accountsArrayValueToSlice(
 				panic(errors.NewUnreachableError())
 			}
 
-			account := accountFromValue(context, accountValue, locationRange)
+			account := accountFromValue(context, accountValue)
 
 			accounts = append(accounts, account)
 
@@ -259,32 +258,23 @@ func accountsArrayValueToSlice(
 func accountFromValue(
 	context interpreter.PublicKeyCreationContext,
 	accountValue interpreter.MemberAccessibleValue,
-	locationRange interpreter.LocationRange,
 ) *Account {
 
 	// Get address
-	addressValue := accountValue.GetMember(
-		context,
-		locationRange,
-		accountAddressFieldName,
-	)
+	addressValue := accountValue.GetMember(context, accountAddressFieldName)
 	address, ok := addressValue.(interpreter.AddressValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
 	// Get public key
-	publicKeyVal, ok := accountValue.GetMember(
-		context,
-		locationRange,
-		sema.AccountKeyPublicKeyFieldName,
-	).(interpreter.MemberAccessibleValue)
+	publicKeyVal, ok := accountValue.GetMember(context, sema.AccountKeyPublicKeyFieldName).(interpreter.MemberAccessibleValue)
 
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	publicKey, err := NewPublicKeyFromValue(context, locationRange, publicKeyVal)
+	publicKey, err := NewPublicKeyFromValue(context, publicKeyVal)
 	if err != nil {
 		panic(err)
 	}
@@ -487,17 +477,16 @@ func NewTestInterpreterContractValueHandler(
 		inter *interpreter.Interpreter,
 		compositeType *sema.CompositeType,
 		constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
-		invocationRange ast.Range,
 	) interpreter.ContractValue {
 
 		switch compositeType.Location {
 		case TestContractLocation:
-			contract, err := GetTestContractType().NewTestContract(
-				inter,
-				testFramework,
-				constructorGenerator(common.ZeroAddress),
-				invocationRange,
-			)
+			contract, err := GetTestContractType().
+				NewTestContract(
+					inter,
+					testFramework,
+					constructorGenerator(common.ZeroAddress),
+				)
 			if err != nil {
 				panic(err)
 			}

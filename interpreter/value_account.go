@@ -78,7 +78,7 @@ func NewAccountValue(
 		return nil
 	}
 
-	computeField := func(name string, _ MemberAccessibleContext, _ LocationRange) Value {
+	computeField := func(name string, _ MemberAccessibleContext) Value {
 		switch name {
 		case sema.AccountTypeBalanceFieldName:
 			return accountBalanceGet()
@@ -95,10 +95,10 @@ func NewAccountValue(
 	}
 
 	var str string
-	stringer := func(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+	stringer := func(context ValueStringContext, seenReferences SeenReferences) string {
 		if str == "" {
 			common.UseMemory(context, common.AccountValueStringMemoryUsage)
-			addressStr := address.MeteredString(context, seenReferences, locationRange)
+			addressStr := address.MeteredString(context, seenReferences)
 			str = fmt.Sprintf("Account(%s)", addressStr)
 		}
 		return str

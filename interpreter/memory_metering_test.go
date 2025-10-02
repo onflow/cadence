@@ -9282,7 +9282,6 @@ func TestInterpretValueStringConversion(t *testing.T) {
 				loggedString = invocation.Arguments[0].MeteredString(
 					invocation.InvocationContext,
 					interpreter.SeenReferences{},
-					invocation.LocationRange,
 				)
 				return interpreter.Void
 			},
@@ -9631,7 +9630,6 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 				loggedString = invocation.Arguments[0].MeteredString(
 					invocation.InvocationContext,
 					interpreter.SeenReferences{},
-					invocation.LocationRange,
 				)
 				return interpreter.Void
 			},

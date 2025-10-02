@@ -62,7 +62,7 @@ func init() {
 
 				v := getCheckedStorageCapabilityControllerReceiver(receiver)
 
-				v.Delete(context, EmptyLocationRange)
+				v.Delete(context)
 
 				v.SetDeleted()
 
@@ -101,7 +101,7 @@ func init() {
 
 				v := getCheckedStorageCapabilityControllerReceiver(receiver)
 
-				v.SetTarget(context, EmptyLocationRange, newTargetPathValue)
+				v.SetTarget(context, newTargetPathValue)
 				v.TargetPath = newTargetPathValue
 
 				return interpreter.Void

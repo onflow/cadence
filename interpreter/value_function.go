@@ -88,18 +88,21 @@ func (f *InterpretedFunctionValue) RecursiveString(_ SeenReferences) string {
 	return f.String()
 }
 
-func (f *InterpretedFunctionValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (f *InterpretedFunctionValue) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	// TODO: Meter sema.Type String conversion
 	typeString := f.Type.String()
 	common.UseMemory(context, common.NewRawStringMemoryUsage(8+len(typeString)))
 	return f.String()
 }
 
-func (f *InterpretedFunctionValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (f *InterpretedFunctionValue) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitInterpretedFunctionValue(context, f)
 }
 
-func (f *InterpretedFunctionValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (f *InterpretedFunctionValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -107,7 +110,7 @@ func (f *InterpretedFunctionValue) StaticType(context ValueStaticTypeContext) St
 	return ConvertSemaToStaticType(context, f.Type)
 }
 
-func (*InterpretedFunctionValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (*InterpretedFunctionValue) IsImportable(_ ValueImportableContext) bool {
 	return false
 }
 
@@ -127,7 +130,6 @@ func (f *InterpretedFunctionValue) Invoke(invocation Invocation) Value {
 
 func (f *InterpretedFunctionValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true
@@ -185,7 +187,10 @@ func (f *HostFunctionValue) RecursiveString(_ SeenReferences) string {
 	return f.String()
 }
 
-func (f *HostFunctionValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (f *HostFunctionValue) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	common.UseMemory(context, common.HostFunctionValueStringMemoryUsage)
 	return f.String()
 }
@@ -228,11 +233,11 @@ var _ ContractValue = &HostFunctionValue{}
 
 func (*HostFunctionValue) IsValue() {}
 
-func (f *HostFunctionValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (f *HostFunctionValue) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitHostFunctionValue(context, f)
 }
 
-func (f *HostFunctionValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (f *HostFunctionValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -240,7 +245,7 @@ func (f *HostFunctionValue) StaticType(context ValueStaticTypeContext) StaticTyp
 	return ConvertSemaToStaticType(context, f.Type)
 }
 
-func (*HostFunctionValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (*HostFunctionValue) IsImportable(_ ValueImportableContext) bool {
 	return false
 }
 
@@ -258,7 +263,7 @@ func (f *HostFunctionValue) Invoke(invocation Invocation) Value {
 	return f.Function(invocation)
 }
 
-func (f *HostFunctionValue) GetMember(context MemberAccessibleContext, _ LocationRange, name string) Value {
+func (f *HostFunctionValue) GetMember(context MemberAccessibleContext, name string) Value {
 	if f.NestedVariables != nil {
 		if variable, ok := f.NestedVariables[name]; ok {
 			return variable.GetValue(context)
@@ -267,27 +272,22 @@ func (f *HostFunctionValue) GetMember(context MemberAccessibleContext, _ Locatio
 	return nil
 }
 
-func (f *HostFunctionValue) GetMethod(
-	_ MemberAccessibleContext,
-	_ LocationRange,
-	_ string,
-) FunctionValue {
+func (f *HostFunctionValue) GetMethod(_ MemberAccessibleContext, _ string) FunctionValue {
 	return nil
 }
 
-func (*HostFunctionValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (*HostFunctionValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Host functions have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (*HostFunctionValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (*HostFunctionValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Host functions have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (f *HostFunctionValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true
@@ -414,15 +414,18 @@ func (f BoundFunctionValue) RecursiveString(seenReferences SeenReferences) strin
 	return f.Function.RecursiveString(seenReferences)
 }
 
-func (f BoundFunctionValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
-	return f.Function.MeteredString(context, seenReferences, locationRange)
+func (f BoundFunctionValue) MeteredString(
+	context ValueStringContext,
+	seenReferences SeenReferences,
+) string {
+	return f.Function.MeteredString(context, seenReferences)
 }
 
-func (f BoundFunctionValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (f BoundFunctionValue) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitBoundFunctionValue(context, f)
 }
 
-func (f BoundFunctionValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (f BoundFunctionValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -430,7 +433,7 @@ func (f BoundFunctionValue) StaticType(context ValueStaticTypeContext) StaticTyp
 	return f.Function.StaticType(context)
 }
 
-func (BoundFunctionValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (BoundFunctionValue) IsImportable(_ ValueImportableContext) bool {
 	return false
 }
 
@@ -444,7 +447,6 @@ func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 
 	invocation.Base = f.Base
 
-	locationRange := invocation.LocationRange
 	inter := invocation.InvocationContext
 
 	// If the `self` is already a reference to begin with (e.g: attachments),
@@ -455,7 +457,6 @@ func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 		f.SelfReference,
 		f.selfIsReference,
 		inter,
-		locationRange,
 	)
 	invocation.Self = receiver
 
@@ -466,7 +467,6 @@ func GetReceiver(
 	receiverReference ReferenceValue,
 	receiverIsReference bool,
 	context ValueStaticTypeContext,
-	locationRange LocationRange,
 ) *Value {
 	var receiver *Value
 
@@ -492,12 +492,10 @@ func GetReceiver(
 
 func (f BoundFunctionValue) ConformsToStaticType(
 	context ValueStaticTypeConformanceContext,
-	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
 	return f.Function.ConformsToStaticType(
 		context,
-		locationRange,
 		results,
 	)
 }

@@ -178,11 +178,11 @@ var _ MemberAccessibleValue = UFix64Value{}
 
 func (UFix64Value) IsValue() {}
 
-func (v UFix64Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v UFix64Value) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitUFix64Value(context, v)
 }
 
-func (UFix64Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (UFix64Value) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -190,7 +190,7 @@ func (UFix64Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeUFix64)
 }
 
-func (UFix64Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (UFix64Value) IsImportable(_ ValueImportableContext) bool {
 	return true
 }
 
@@ -198,7 +198,10 @@ func (v UFix64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v UFix64Value) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (v UFix64Value) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	common.UseMemory(
 		context,
 		common.NewRawStringMemoryUsage(
@@ -422,31 +425,26 @@ func (v UFix64Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
 	return scratch[:9]
 }
 
-func (v UFix64Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
-	return context.GetMethod(v, name, locationRange)
+func (v UFix64Value) GetMember(context MemberAccessibleContext, name string) Value {
+	return context.GetMethod(v, name)
 }
 
-func (v UFix64Value) GetMethod(
-	context MemberAccessibleContext,
-	_ LocationRange,
-	name string,
-) FunctionValue {
+func (v UFix64Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	return getNumberValueFunctionMember(context, v, name, sema.UFix64Type)
 }
 
-func (UFix64Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (UFix64Value) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (UFix64Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (UFix64Value) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v UFix64Value) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true

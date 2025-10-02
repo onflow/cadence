@@ -97,7 +97,6 @@ func init() {
 				funcArgument := arguments[0].(FunctionValue)
 				dictionary.ForEachKey(
 					context,
-					EmptyLocationRange,
 					funcArgument,
 				)
 

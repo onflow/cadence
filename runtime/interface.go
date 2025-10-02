@@ -141,7 +141,6 @@ type Interface interface {
 	RecoverProgram(program *ast.Program, location common.Location) ([]byte, error)
 	ValidateAccountCapabilitiesGet(
 		context interpreter.AccountCapabilityGetValidationContext,
-		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		path interpreter.PathValue,
 		wantedBorrowType *sema.ReferenceType,
@@ -149,7 +148,6 @@ type Interface interface {
 	) (bool, error)
 	ValidateAccountCapabilitiesPublish(
 		context interpreter.AccountCapabilityPublishValidationContext,
-		locationRange interpreter.LocationRange,
 		address interpreter.AddressValue,
 		path interpreter.PathValue,
 		capabilityBorrowType *interpreter.ReferenceStaticType,

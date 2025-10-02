@@ -70,10 +70,10 @@ func NewAccountInboxValue(
 	}
 
 	var str string
-	stringer := func(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+	stringer := func(context ValueStringContext, seenReferences SeenReferences) string {
 		if str == "" {
 			common.UseMemory(context, common.AccountInboxStringMemoryUsage)
-			addressStr := addressValue.MeteredString(context, seenReferences, locationRange)
+			addressStr := addressValue.MeteredString(context, seenReferences)
 			str = fmt.Sprintf("Account.Inbox(%s)", addressStr)
 		}
 		return str

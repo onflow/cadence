@@ -122,7 +122,6 @@ var InterpreterInclusiveRangeConstructor = NewInterpreterStandardLibraryStaticFu
 	inclusiveRangeConstructorFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		invocationContext := invocation.InvocationContext
-		locationRange := invocation.LocationRange
 
 		start, ok := invocation.Arguments[0].(interpreter.IntegerValue)
 		if !ok {
@@ -144,7 +143,6 @@ var InterpreterInclusiveRangeConstructor = NewInterpreterStandardLibraryStaticFu
 
 		return NewInclusiveRange(
 			invocationContext,
-			locationRange,
 			start,
 			end,
 			step,
@@ -178,7 +176,6 @@ var VMInclusiveRangeConstructor = NewVMStandardLibraryStaticFunction(
 
 		return NewInclusiveRange(
 			context,
-			interpreter.EmptyLocationRange,
 			start,
 			end,
 			step,
@@ -188,7 +185,6 @@ var VMInclusiveRangeConstructor = NewVMStandardLibraryStaticFunction(
 
 func NewInclusiveRange(
 	invocationContext interpreter.InvocationContext,
-	locationRange interpreter.LocationRange,
 	start interpreter.IntegerValue,
 	end interpreter.IntegerValue,
 	step interpreter.IntegerValue,
@@ -227,7 +223,6 @@ func NewInclusiveRange(
 
 		return interpreter.NewInclusiveRangeValueWithStep(
 			invocationContext,
-			locationRange,
 			start,
 			end,
 			step,
@@ -238,7 +233,6 @@ func NewInclusiveRange(
 
 	return interpreter.NewInclusiveRangeValue(
 		invocationContext,
-		locationRange,
 		start,
 		end,
 		rangeStaticType,

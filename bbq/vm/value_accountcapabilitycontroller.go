@@ -61,7 +61,7 @@ func init() {
 
 				v := getCheckedAccountCapabilityControllerReceiver(receiver)
 
-				v.Delete(context, EmptyLocationRange)
+				v.Delete(context)
 
 				v.SetDeleted()
 

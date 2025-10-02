@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -295,13 +294,11 @@ func newTestTypeExpectFunction(functionType *sema.FunctionType) testContractBoun
 				}
 
 				invocationContext := invocation.InvocationContext
-				locationRange := invocation.LocationRange
 
 				result := invokeMatcherTest(
 					invocationContext,
 					matcher,
 					value,
-					locationRange,
 				)
 
 				if !result {
@@ -324,13 +321,8 @@ func invokeMatcherTest(
 	context interpreter.InvocationContext,
 	matcher interpreter.MemberAccessibleValue,
 	value interpreter.Value,
-	locationRange interpreter.LocationRange,
 ) bool {
-	testFunc := matcher.GetMember(
-		context,
-		locationRange,
-		matcherTestFieldName,
-	)
+	testFunc := matcher.GetMember(context, matcherTestFieldName)
 
 	funcValue, ok := testFunc.(interpreter.FunctionValue)
 	if !ok {
@@ -1270,7 +1262,6 @@ func (t *TestContractType) NewTestContract(
 	inter *interpreter.Interpreter,
 	testFramework TestFramework,
 	constructor interpreter.FunctionValue,
-	invocationRange ast.Range,
 ) (
 	*interpreter.CompositeValue,
 	error,
@@ -1279,7 +1270,6 @@ func (t *TestContractType) NewTestContract(
 	emulatorBackend := t.emulatorBackendType.newEmulatorBackend(
 		inter,
 		testFramework.EmulatorBackend(),
-		interpreter.EmptyLocationRange,
 	)
 	returnType := constructor.FunctionType(inter).ReturnTypeAnnotation.Type
 	value, err := interpreter.InvokeFunctionValue(
@@ -1289,7 +1279,6 @@ func (t *TestContractType) NewTestContract(
 		initializerTypes,
 		initializerTypes,
 		returnType,
-		invocationRange,
 	)
 	if err != nil {
 		return nil, err

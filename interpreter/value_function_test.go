@@ -90,7 +90,6 @@ func TestFunctionStaticType(t *testing.T) {
 
 		var compositeValue Value = NewCompositeValue(
 			inter,
-			EmptyLocationRange,
 			TestLocation,
 			"foo",
 			common.CompositeKindStructure,

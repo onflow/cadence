@@ -222,7 +222,6 @@ func integerLiteralValue(
 	return ExportValue(
 		convertedValue,
 		context,
-		interpreter.EmptyLocationRange,
 	)
 }
 

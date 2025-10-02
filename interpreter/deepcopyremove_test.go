@@ -76,12 +76,7 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 
 	compositeValue := newTestCompositeValue(inter, address)
 
-	compositeValue.SetMember(
-		inter,
-		interpreter.EmptyLocationRange,
-		"value",
-		optionalValue,
-	)
+	compositeValue.SetMember(inter, "value", optionalValue)
 
 	compositeValue.DeepRemove(inter, true)
 

@@ -425,7 +425,6 @@ func TestInclusiveRange(t *testing.T) {
 			if withStep {
 				expectedRangeValue = interpreter.NewInclusiveRangeValueWithStep(
 					inter,
-					interpreter.EmptyLocationRange,
 					interpreter.GetSmallIntegerValue(testCase.s, integerType),
 					interpreter.GetSmallIntegerValue(testCase.e, integerType),
 					interpreter.GetSmallIntegerValue(testCase.step, integerType),
@@ -435,7 +434,6 @@ func TestInclusiveRange(t *testing.T) {
 			} else {
 				expectedRangeValue = interpreter.NewInclusiveRangeValue(
 					inter,
-					interpreter.EmptyLocationRange,
 					interpreter.GetSmallIntegerValue(testCase.s, integerType),
 					interpreter.GetSmallIntegerValue(testCase.e, integerType),
 					rangeType,

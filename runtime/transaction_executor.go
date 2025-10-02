@@ -307,7 +307,6 @@ func (executor *transactionExecutor) executeWithVM() (err error) {
 	arguments, err := importValidatedArguments(
 		context,
 		environment,
-		interpreter.EmptyLocationRange,
 		executor.script.Arguments,
 		executor.transactionType.Parameters,
 	)
@@ -345,7 +344,6 @@ func (executor *transactionExecutor) transactionExecutionFunction() interpretFun
 		arguments, err := importValidatedArguments(
 			inter,
 			executor.environment,
-			interpreter.EmptyLocationRange,
 			executor.script.Arguments,
 			executor.transactionType.Parameters,
 		)

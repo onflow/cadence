@@ -435,7 +435,7 @@ func (r *runtime) ReadStored(
 
 	var exportedValue cadence.Value
 	if value != nil {
-		exportedValue, err = ExportValue(value, inter, interpreter.EmptyLocationRange)
+		exportedValue, err = ExportValue(value, inter)
 		if err != nil {
 			return nil, newError(err, location, codesAndPrograms)
 		}

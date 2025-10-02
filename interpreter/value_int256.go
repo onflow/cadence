@@ -85,11 +85,11 @@ var _ MemberAccessibleValue = Int256Value{}
 
 func (Int256Value) IsValue() {}
 
-func (v Int256Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v Int256Value) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitInt256Value(context, v)
 }
 
-func (Int256Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (Int256Value) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -97,7 +97,7 @@ func (Int256Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeInt256)
 }
 
-func (Int256Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (Int256Value) IsImportable(_ ValueImportableContext) bool {
 	return true
 }
 
@@ -125,7 +125,10 @@ func (v Int256Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Int256Value) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (v Int256Value) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	common.UseMemory(
 		context,
 		common.NewRawStringMemoryUsage(
@@ -664,25 +667,21 @@ func (v Int256Value) BitwiseRightShift(context ValueStaticTypeContext, other Int
 	return NewInt256ValueFromBigInt(context, valueGetter)
 }
 
-func (v Int256Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
-	return context.GetMethod(v, name, locationRange)
+func (v Int256Value) GetMember(context MemberAccessibleContext, name string) Value {
+	return context.GetMethod(v, name)
 
 }
 
-func (v Int256Value) GetMethod(
-	context MemberAccessibleContext,
-	_ LocationRange,
-	name string,
-) FunctionValue {
+func (v Int256Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	return getNumberValueFunctionMember(context, v, name, sema.Int256Type)
 }
 
-func (Int256Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (Int256Value) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (Int256Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (Int256Value) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -693,7 +692,6 @@ func (v Int256Value) ToBigEndianBytes() []byte {
 
 func (v Int256Value) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true

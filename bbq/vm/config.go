@@ -254,9 +254,8 @@ func (c *Config) GetCapabilityCheckHandler() interpreter.CapabilityCheckHandlerF
 
 func (c *Config) EmitEvent(
 	context interpreter.ValueExportContext,
-	locationRange interpreter.LocationRange,
 	eventType *sema.CompositeType,
-	eventFields []Value,
+	eventFields []interpreter.Value,
 ) {
 	if interpreter.TracingEnabled {
 		startTime := time.Now()
@@ -275,7 +274,6 @@ func (c *Config) EmitEvent(
 
 	err := onEventEmitted(
 		context,
-		locationRange,
 		eventType,
 		eventFields,
 	)

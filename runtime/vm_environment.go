@@ -299,13 +299,11 @@ func (e *vmEnvironment) CommitStorageTemporarily(context interpreter.ValueTransf
 
 func (e *vmEnvironment) EmitEvent(
 	context interpreter.ValueExportContext,
-	locationRange interpreter.LocationRange,
 	eventType *sema.CompositeType,
 	values []interpreter.Value,
 ) {
 	EmitEventFields(
 		context,
-		locationRange,
 		eventType,
 		values,
 		e.Interface.EmitEvent,
@@ -398,7 +396,7 @@ func (e *vmEnvironment) commitStorage(context interpreter.ValueTransferContext) 
 	return CommitStorage(context, e.storage, checkStorageHealth)
 }
 
-func (e *vmEnvironment) ProgramLog(message string, _ interpreter.LocationRange) error {
+func (e *vmEnvironment) ProgramLog(message string) error {
 	return e.Interface.ProgramLog(message)
 }
 

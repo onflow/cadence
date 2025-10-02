@@ -58,11 +58,11 @@ func NewTypeValue(
 
 func (TypeValue) IsValue() {}
 
-func (v TypeValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v TypeValue) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitTypeValue(context, v)
 }
 
-func (TypeValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (TypeValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -70,7 +70,7 @@ func (TypeValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeMetaType)
 }
 
-func (TypeValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (TypeValue) IsImportable(_ ValueImportableContext) bool {
 	return sema.MetaType.Importable
 }
 
@@ -88,7 +88,10 @@ func (v TypeValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v TypeValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (v TypeValue) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	common.UseMemory(context, common.TypeValueStringMemoryUsage)
 
 	var typeString string
@@ -117,7 +120,7 @@ func (v TypeValue) Equal(_ ValueComparisonContext, other Value) bool {
 	return staticType.Equal(otherStaticType)
 }
 
-func (v TypeValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+func (v TypeValue) GetMember(context MemberAccessibleContext, name string) Value {
 	switch name {
 	case sema.MetaTypeIdentifierFieldName:
 		var typeID string
@@ -223,14 +226,10 @@ func (v TypeValue) GetMember(context MemberAccessibleContext, locationRange Loca
 		}
 	}
 
-	return context.GetMethod(v, name, locationRange)
+	return context.GetMethod(v, name)
 }
 
-func (v TypeValue) GetMethod(
-	context MemberAccessibleContext,
-	_ LocationRange,
-	name string,
-) FunctionValue {
+func (v TypeValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	switch name {
 	case sema.MetaTypeIsSubtypeFunctionName:
 		return NewBoundHostFunctionValue(
@@ -277,19 +276,18 @@ func MetaTypeIsSubType(
 	return BoolValue(result)
 }
 
-func (TypeValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (TypeValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Types have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (TypeValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (TypeValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Types have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v TypeValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true

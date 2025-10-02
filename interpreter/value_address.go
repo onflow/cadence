@@ -94,11 +94,11 @@ var _ MemberAccessibleValue = AddressValue{}
 
 func (AddressValue) IsValue() {}
 
-func (v AddressValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v AddressValue) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitAddressValue(context, v)
 }
 
-func (AddressValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (AddressValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -106,7 +106,7 @@ func (AddressValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeAddress)
 }
 
-func (AddressValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (AddressValue) IsImportable(_ ValueImportableContext) bool {
 	return true
 }
 
@@ -118,7 +118,10 @@ func (v AddressValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v AddressValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (v AddressValue) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	common.UseMemory(context, common.AddressValueStringMemoryUsage)
 	return v.String()
 }
@@ -156,15 +159,11 @@ func (v AddressValue) ToAddress() common.Address {
 	return common.Address(v)
 }
 
-func (v AddressValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
-	return context.GetMethod(v, name, locationRange)
+func (v AddressValue) GetMember(context MemberAccessibleContext, name string) Value {
+	return context.GetMethod(v, name)
 }
 
-func (v AddressValue) GetMethod(
-	context MemberAccessibleContext,
-	_ LocationRange,
-	name string,
-) FunctionValue {
+func (v AddressValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -213,19 +212,18 @@ func AddressValueToStringFunction(
 	)
 }
 
-func (AddressValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (AddressValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Addresses have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (AddressValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (AddressValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Addresses have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v AddressValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true

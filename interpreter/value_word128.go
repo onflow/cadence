@@ -85,11 +85,11 @@ var _ MemberAccessibleValue = Word128Value{}
 
 func (Word128Value) IsValue() {}
 
-func (v Word128Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v Word128Value) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitWord128Value(context, v)
 }
 
-func (Word128Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (Word128Value) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -97,7 +97,7 @@ func (Word128Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeWord128)
 }
 
-func (Word128Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (Word128Value) IsImportable(_ ValueImportableContext) bool {
 	return true
 }
 
@@ -125,7 +125,10 @@ func (v Word128Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Word128Value) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (v Word128Value) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	common.UseMemory(
 		context,
 		common.NewRawStringMemoryUsage(
@@ -526,24 +529,20 @@ func (v Word128Value) BitwiseRightShift(context ValueStaticTypeContext, other In
 	)
 }
 
-func (v Word128Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
-	return context.GetMethod(v, name, locationRange)
+func (v Word128Value) GetMember(context MemberAccessibleContext, name string) Value {
+	return context.GetMethod(v, name)
 }
 
-func (v Word128Value) GetMethod(
-	context MemberAccessibleContext,
-	_ LocationRange,
-	name string,
-) FunctionValue {
+func (v Word128Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	return getNumberValueFunctionMember(context, v, name, sema.Word128Type)
 }
 
-func (Word128Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (Word128Value) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (Word128Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (Word128Value) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -554,7 +553,6 @@ func (v Word128Value) ToBigEndianBytes() []byte {
 
 func (v Word128Value) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true

@@ -55,7 +55,6 @@ func init() {
 					transformFunctionType,
 					transformFunction,
 					innerValueType,
-					EmptyLocationRange,
 				)
 			},
 		),

@@ -111,7 +111,7 @@ func testCompositeValue(t *testing.T, code string) Invokable {
 		map[string]interpreter.Value{
 			"name": interpreter.NewUnmeteredStringValue("Apple"),
 		},
-		func(name string, _ interpreter.MemberAccessibleContext, _ interpreter.LocationRange) interpreter.Value {
+		func(name string, _ interpreter.MemberAccessibleContext) interpreter.Value {
 			if name == "color" {
 				return interpreter.NewUnmeteredStringValue("Red")
 			}

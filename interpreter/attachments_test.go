@@ -1265,7 +1265,6 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
-						_ interpreter.LocationRange,
 						eventType *sema.CompositeType,
 						_ []interpreter.Value,
 					) error {
@@ -1319,7 +1318,6 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
-						_ interpreter.LocationRange,
 						eventType *sema.CompositeType,
 						_ []interpreter.Value,
 					) error {
@@ -1366,7 +1364,6 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
-						_ interpreter.LocationRange,
 						eventType *sema.CompositeType,
 						_ []interpreter.Value,
 					) error {
@@ -1420,7 +1417,6 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
-						_ interpreter.LocationRange,
 						eventType *sema.CompositeType,
 						_ []interpreter.Value,
 					) error {
@@ -1478,7 +1474,6 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
-						_ interpreter.LocationRange,
 						eventType *sema.CompositeType,
 						_ []interpreter.Value,
 					) error {
@@ -1547,7 +1542,6 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
-						_ interpreter.LocationRange,
 						eventType *sema.CompositeType,
 						eventFields []interpreter.Value,
 					) error {

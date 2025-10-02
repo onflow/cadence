@@ -31,7 +31,6 @@ import (
 // NOTE: Assumes that the values start and end are of the same static type.
 func NewInclusiveRangeValue(
 	context MemberAccessibleContext,
-	locationRange LocationRange,
 	start IntegerValue,
 	end IntegerValue,
 	rangeStaticType InclusiveRangeStaticType,
@@ -65,7 +64,6 @@ func NewInclusiveRangeValue(
 
 	return createInclusiveRange(
 		context,
-		locationRange,
 		start,
 		end,
 		step,
@@ -74,11 +72,10 @@ func NewInclusiveRangeValue(
 	)
 }
 
-// NewInclusiveRangeValue constructs an InclusiveRange value with the provided start, end & step.
+// NewInclusiveRangeValueWithStep constructs an InclusiveRange value with the provided start, end & step.
 // NOTE: Assumes that the values start, end and step are of the same static type.
 func NewInclusiveRangeValueWithStep(
 	context MemberAccessibleContext,
-	locationRange LocationRange,
 	start IntegerValue,
 	end IntegerValue,
 	step IntegerValue,
@@ -113,7 +110,6 @@ func NewInclusiveRangeValueWithStep(
 
 	return createInclusiveRange(
 		context,
-		locationRange,
 		start,
 		end,
 		step,
@@ -124,7 +120,6 @@ func NewInclusiveRangeValueWithStep(
 
 func createInclusiveRange(
 	context MemberAccessibleContext,
-	locationRange LocationRange,
 	start IntegerValue,
 	end IntegerValue,
 	step IntegerValue,
@@ -148,7 +143,6 @@ func createInclusiveRange(
 
 	rangeValue := NewCompositeValueWithStaticType(
 		context,
-		locationRange,
 		nil,
 		rangeSemaType.QualifiedString(),
 		common.CompositeKindStructure,
@@ -174,7 +168,6 @@ func createInclusiveRange(
 					rangeValue,
 					rangeType,
 					invocation.InvocationContext,
-					invocation.LocationRange,
 					needleInteger,
 				)
 			},
@@ -188,7 +181,6 @@ func InclusiveRangeContains(
 	rangeValue *CompositeValue,
 	rangeType InclusiveRangeStaticType,
 	context ValueComparisonContext,
-	locationRange LocationRange,
 	needleValue IntegerValue,
 ) BoolValue {
 	start := getFieldAsIntegerValue(context, rangeValue, sema.InclusiveRangeTypeStartFieldName)

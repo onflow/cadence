@@ -63,7 +63,6 @@ func init() {
 					rangeValue,
 					rangeType,
 					context,
-					EmptyLocationRange,
 					needleInteger,
 				)
 			},

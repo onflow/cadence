@@ -36,7 +36,6 @@ type CapabilityControllerValue interface {
 		context ValueCapabilityControllerReferenceValueContext,
 		capabilityAddress common.Address,
 		resultBorrowType *sema.ReferenceType,
-		locationRange LocationRange,
 	) ReferenceValue
 	ControllerCapabilityID() UInt64Value
 }
@@ -65,8 +64,8 @@ type StorageCapabilityControllerValue struct {
 	GetCapability func(common.MemoryGauge) *IDCapabilityValue
 	GetTag        func(storageReader StorageReader) *StringValue
 	SetTag        func(storageWriter StorageWriter, tag *StringValue)
-	Delete        func(context CapabilityControllerContext, locationRange LocationRange)
-	SetTarget     func(context CapabilityControllerContext, locationRange LocationRange, target PathValue)
+	Delete        func(context CapabilityControllerContext)
+	SetTarget     func(context CapabilityControllerContext, target PathValue)
 }
 
 func NewUnmeteredStorageCapabilityControllerValue(
@@ -110,11 +109,11 @@ func (v *StorageCapabilityControllerValue) CapabilityControllerBorrowType() *Ref
 	return v.BorrowType
 }
 
-func (v *StorageCapabilityControllerValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v *StorageCapabilityControllerValue) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitStorageCapabilityControllerValue(context, v)
 }
 
-func (v *StorageCapabilityControllerValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {
+func (v *StorageCapabilityControllerValue) Walk(_ ValueWalkContext, walkChild func(Value)) {
 	walkChild(v.TargetPath)
 	walkChild(v.CapabilityID)
 }
@@ -123,7 +122,7 @@ func (v *StorageCapabilityControllerValue) StaticType(_ ValueStaticTypeContext) 
 	return PrimitiveStaticTypeStorageCapabilityController
 }
 
-func (*StorageCapabilityControllerValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (*StorageCapabilityControllerValue) IsImportable(_ ValueImportableContext) bool {
 	return false
 }
 
@@ -139,19 +138,21 @@ func (v *StorageCapabilityControllerValue) RecursiveString(seenReferences SeenRe
 	)
 }
 
-func (v *StorageCapabilityControllerValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+func (v *StorageCapabilityControllerValue) MeteredString(
+	context ValueStringContext,
+	seenReferences SeenReferences,
+) string {
 	common.UseMemory(context, common.StorageCapabilityControllerValueStringMemoryUsage)
 
 	return format.StorageCapabilityController(
 		v.BorrowType.MeteredString(context),
-		v.CapabilityID.MeteredString(context, seenReferences, locationRange),
-		v.TargetPath.MeteredString(context, seenReferences, locationRange),
+		v.CapabilityID.MeteredString(context, seenReferences),
+		v.TargetPath.MeteredString(context, seenReferences),
 	)
 }
 
 func (v *StorageCapabilityControllerValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true
@@ -232,7 +233,7 @@ func (v *StorageCapabilityControllerValue) ChildStorables() []atree.Storable {
 	}
 }
 
-func (v *StorageCapabilityControllerValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) (result Value) {
+func (v *StorageCapabilityControllerValue) GetMember(context MemberAccessibleContext, name string) (result Value) {
 	defer func() {
 		switch typedResult := result.(type) {
 		case deletionCheckedFunctionValue:
@@ -264,14 +265,10 @@ func (v *StorageCapabilityControllerValue) GetMember(context MemberAccessibleCon
 		// by e.g. using StorageCapabilityControllerValue.newHostFunction
 	}
 
-	return context.GetMethod(v, name, locationRange)
+	return context.GetMethod(v, name)
 }
 
-func (v *StorageCapabilityControllerValue) GetMethod(
-	context MemberAccessibleContext,
-	_ LocationRange,
-	name string,
-) FunctionValue {
+func (v *StorageCapabilityControllerValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	switch name {
 	case sema.StorageCapabilityControllerTypeSetTagFunctionName:
 		if v.setTagFunction == nil {
@@ -304,14 +301,13 @@ func (v *StorageCapabilityControllerValue) GetMethod(
 	return nil
 }
 
-func (*StorageCapabilityControllerValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (*StorageCapabilityControllerValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Storage capability controllers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v *StorageCapabilityControllerValue) SetMember(
 	context ValueTransferContext,
-	_ LocationRange,
 	identifier string,
 	value Value,
 ) bool {
@@ -335,12 +331,7 @@ func (v *StorageCapabilityControllerValue) ControllerCapabilityID() UInt64Value 
 	return v.CapabilityID
 }
 
-func (v *StorageCapabilityControllerValue) ReferenceValue(
-	context ValueCapabilityControllerReferenceValueContext,
-	capabilityAddress common.Address,
-	resultBorrowType *sema.ReferenceType,
-	_ LocationRange,
-) ReferenceValue {
+func (v *StorageCapabilityControllerValue) ReferenceValue(context ValueCapabilityControllerReferenceValueContext, capabilityAddress common.Address, resultBorrowType *sema.ReferenceType) ReferenceValue {
 	authorization := ConvertSemaAccessToStaticAuthorization(
 		context,
 		resultBorrowType.Authorization,
@@ -390,9 +381,8 @@ func (v *StorageCapabilityControllerValue) newDeleteFunction(
 		sema.StorageCapabilityControllerTypeDeleteFunctionType,
 		func(invocation Invocation) Value {
 			inter := invocation.InvocationContext
-			locationRange := invocation.LocationRange
 
-			v.Delete(inter, locationRange)
+			v.Delete(inter)
 
 			v.deleted = true
 
@@ -421,7 +411,6 @@ func (v *StorageCapabilityControllerValue) newRetargetFunction(
 		sema.StorageCapabilityControllerTypeRetargetFunctionType,
 		func(invocation Invocation) Value {
 			inter := invocation.InvocationContext
-			locationRange := invocation.LocationRange
 
 			// Get path argument
 
@@ -430,7 +419,7 @@ func (v *StorageCapabilityControllerValue) newRetargetFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			v.SetTarget(inter, locationRange, newTargetPathValue)
+			v.SetTarget(inter, newTargetPathValue)
 			v.TargetPath = newTargetPathValue
 
 			return Void

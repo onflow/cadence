@@ -104,11 +104,11 @@ var _ MemberAccessibleValue = IntValue{}
 
 func (IntValue) IsValue() {}
 
-func (v IntValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v IntValue) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitIntValue(context, v)
 }
 
-func (IntValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (IntValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -116,7 +116,7 @@ func (IntValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeInt)
 }
 
-func (IntValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (IntValue) IsImportable(_ ValueImportableContext) bool {
 	return true
 }
 
@@ -155,7 +155,10 @@ func (v IntValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v IntValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (v IntValue) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	common.UseMemory(
 		context,
 		common.NewRawStringMemoryUsage(
@@ -505,31 +508,26 @@ func (v IntValue) BitwiseRightShift(context ValueStaticTypeContext, other Intege
 	}
 }
 
-func (v IntValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
-	return context.GetMethod(v, name, locationRange)
+func (v IntValue) GetMember(context MemberAccessibleContext, name string) Value {
+	return context.GetMethod(v, name)
 }
 
-func (v IntValue) GetMethod(
-	context MemberAccessibleContext,
-	_ LocationRange,
-	name string,
-) FunctionValue {
+func (v IntValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	return getNumberValueFunctionMember(context, v, name, sema.IntType)
 }
 
-func (IntValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (IntValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (IntValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (IntValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v IntValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true

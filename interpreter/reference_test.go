@@ -3250,7 +3250,6 @@ func TestInterpretHostFunctionReferenceInvalidation(t *testing.T) {
 			common.ZeroAddress,
 			interpreter.NewCompositeValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				TestLocation,
 				"S",
 				common.CompositeKindStructure,

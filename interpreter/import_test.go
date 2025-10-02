@@ -108,7 +108,6 @@ func TestInterpretVirtualImport(t *testing.T) {
 
 					value := interpreter.NewCompositeValue(
 						inter,
-						interpreter.EmptyLocationRange,
 						location,
 						"Foo",
 						common.CompositeKindContract,
@@ -1227,7 +1226,6 @@ func TestInterpretDynamicallyImportedGlobals(t *testing.T) {
 
 		sValue := interpreter.NewCompositeValue(
 			context,
-			interpreter.EmptyLocationRange,
 			common.NewAddressLocation(nil, addressB, ""),
 			"S",
 			common.CompositeKindStructure,
@@ -1453,7 +1451,6 @@ func TestInterpretDynamicallyImportedGlobals(t *testing.T) {
 
 		sValue := interpreter.NewCompositeValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			common.NewAddressLocation(nil, addressB, ""),
 			"S",
 			common.CompositeKindStructure,
@@ -1605,7 +1602,6 @@ func TestInterpretImplicitImportThroughTypeLoading(t *testing.T) {
 
 		sValue := interpreter.NewCompositeValue(
 			context,
-			interpreter.EmptyLocationRange,
 			common.NewAddressLocation(nil, addressB, ""),
 			"S",
 			common.CompositeKindStructure,
@@ -1797,7 +1793,6 @@ func TestInterpretImplicitImportThroughTypeLoading(t *testing.T) {
 
 		sValue := interpreter.NewCompositeValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			common.NewAddressLocation(nil, addressB, ""),
 			"S",
 			common.CompositeKindStructure,

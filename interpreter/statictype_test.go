@@ -163,9 +163,9 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 			(&ReferenceStaticType{
 				ReferencedType: PrimitiveStaticTypeString,
 			}).Equal(
-				(&CapabilityStaticType{
+				&CapabilityStaticType{
 					BorrowType: PrimitiveStaticTypeString,
-				}),
+				},
 			),
 		)
 	})

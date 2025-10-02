@@ -32,7 +32,6 @@ func InvokeFunctionValue(
 	argumentTypes []sema.Type,
 	parameterTypes []sema.Type,
 	returnType sema.Type,
-	invocationPosition ast.HasPosition,
 ) (
 	value Value,
 	err error,
@@ -51,7 +50,6 @@ func InvokeFunctionValue(
 		parameterTypes,
 		returnType,
 		nil,
-		invocationPosition,
 	), nil
 }
 
@@ -63,7 +61,6 @@ func invokeFunctionValue(
 	parameterTypes []sema.Type,
 	returnType sema.Type,
 	typeParameterTypes *sema.TypeParameterTypeOrderedMap,
-	invocationPosition ast.HasPosition,
 ) Value {
 	return invokeFunctionValueWithEval(
 		context,
@@ -77,7 +74,6 @@ func invokeFunctionValue(
 		parameterTypes,
 		returnType,
 		typeParameterTypes,
-		invocationPosition,
 	)
 }
 
@@ -91,14 +87,11 @@ func invokeFunctionValueWithEval[T any](
 	parameterTypes []sema.Type,
 	returnType sema.Type,
 	typeParameterTypes *sema.TypeParameterTypeOrderedMap,
-	invocationPosition ast.HasPosition,
 ) Value {
 
 	parameterTypeCount := len(parameterTypes)
 
 	var transferredArguments []Value
-
-	location := context.GetLocation()
 
 	argumentCount := len(arguments)
 	if argumentCount > 0 {
@@ -145,11 +138,6 @@ func invokeFunctionValueWithEval[T any](
 		argumentTypes = append(argumentTypes, argumentType)
 	}
 
-	locationRange := LocationRange{
-		Location:    location,
-		HasPosition: invocationPosition,
-	}
-
 	invocation := NewInvocation(
 		context,
 		nil,
@@ -157,7 +145,7 @@ func invokeFunctionValueWithEval[T any](
 		transferredArguments,
 		argumentTypes,
 		typeParameterTypes,
-		locationRange,
+		context.LocationRange(),
 	)
 
 	resultValue := function.Invoke(invocation)

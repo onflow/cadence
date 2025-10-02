@@ -46,7 +46,6 @@ func init() {
 					context,
 					arguments,
 					address,
-					EmptyLocationRange,
 				)
 			},
 		),
@@ -90,7 +89,6 @@ func init() {
 					address.ToAddress(),
 					common.PathDomainPublic,
 					sema.PublicPathType,
-					EmptyLocationRange,
 				)
 			},
 		),
@@ -112,7 +110,6 @@ func init() {
 					address.ToAddress(),
 					common.PathDomainStorage,
 					sema.StoragePathType,
-					EmptyLocationRange,
 				)
 			},
 		),

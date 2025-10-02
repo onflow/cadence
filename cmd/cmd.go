@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/onflow/cadence/activations"
@@ -232,8 +231,8 @@ type StandardLibraryHandler struct {
 
 var _ stdlib.StandardLibraryHandler = &StandardLibraryHandler{}
 
-func (*StandardLibraryHandler) ProgramLog(message string, locationRange interpreter.LocationRange) error {
-	fmt.Printf("LOG @ %s: %s\n", formatLocationRange(locationRange), message)
+func (*StandardLibraryHandler) ProgramLog(message string) error {
+	fmt.Printf("LOG: %s\n", message)
 	return nil
 }
 
@@ -318,7 +317,6 @@ func (*StandardLibraryHandler) GetAccountContractCode(_ common.AddressLocation) 
 
 func (*StandardLibraryHandler) EmitEvent(
 	_ interpreter.ValueExportContext,
-	_ interpreter.LocationRange,
 	_ *sema.CompositeType,
 	_ []interpreter.Value,
 ) {
@@ -406,13 +404,11 @@ func (*StandardLibraryHandler) BLSAggregateSignatures(_ [][]byte) ([]byte, error
 func (h *StandardLibraryHandler) NewOnEventEmittedHandler() interpreter.OnEventEmittedFunc {
 	return func(
 		_ interpreter.ValueExportContext,
-		locationRange interpreter.LocationRange,
 		eventType *sema.CompositeType,
 		eventFields []interpreter.Value,
 	) error {
 		fmt.Printf(
-			"EVENT @ %s: %s(",
-			formatLocationRange(locationRange),
+			"EVENT: %s(",
 			eventType.ID(),
 		)
 		for i, field := range eventFields {
@@ -438,23 +434,4 @@ func (h *StandardLibraryHandler) EndContractAddition(common.AddressLocation) {
 func (h *StandardLibraryHandler) IsContractBeingAdded(common.AddressLocation) bool {
 	// NO-OP
 	return false
-}
-
-func formatLocationRange(locationRange interpreter.LocationRange) string {
-	var builder strings.Builder
-	if locationRange.Location != nil {
-		_, _ = fmt.Fprintf(
-			&builder,
-			"%s:",
-			locationRange.Location,
-		)
-	}
-	startPosition := locationRange.StartPosition()
-	_, _ = fmt.Fprintf(
-		&builder,
-		"%d:%d",
-		startPosition.Line,
-		startPosition.Column,
-	)
-	return builder.String()
 }

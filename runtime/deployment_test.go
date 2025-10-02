@@ -70,7 +70,6 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 		codeHash, err := ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			codeHashValue,

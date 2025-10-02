@@ -270,7 +270,6 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		composite := interpreter.NewCompositeValue(
 			context,
-			interpreter.EmptyLocationRange,
 			location,
 			identifier,
 			kind,
@@ -695,7 +694,6 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 
 		composite := interpreter.NewCompositeValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			location,
 			identifier,
 			kind,
@@ -779,7 +777,6 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 
 		composite := interpreter.NewCompositeValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			location,
 			identifier,
 			kind,

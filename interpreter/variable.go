@@ -33,7 +33,7 @@ const (
 
 type Variable interface {
 	GetValue(ValueStaticTypeContext) Value
-	SetValue(context ValueStaticTypeContext, locationRange LocationRange, value Value)
+	SetValue(context ValueStaticTypeContext, value Value)
 	InitializeWithValue(value Value)
 	InitializeWithGetter(getter func() Value)
 	Kind() VariableKind
@@ -64,7 +64,7 @@ func (v *SimpleVariable) GetValue(ValueStaticTypeContext) Value {
 	return v.value
 }
 
-func (v *SimpleVariable) SetValue(context ValueStaticTypeContext, _ LocationRange, value Value) {
+func (v *SimpleVariable) SetValue(context ValueStaticTypeContext, value Value) {
 	existingValue := v.value
 	if existingValue != nil {
 		CheckResourceLoss(context, existingValue)
@@ -139,7 +139,7 @@ func (v *SelfVariable) GetValue(context ValueStaticTypeContext) Value {
 	return v.value
 }
 
-func (v *SelfVariable) SetValue(ValueStaticTypeContext, LocationRange, Value) {
+func (v *SelfVariable) SetValue(ValueStaticTypeContext, Value) {
 	// self variable cannot be updated.
 	panic(errors.NewUnreachableError())
 }

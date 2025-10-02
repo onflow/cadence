@@ -49,7 +49,6 @@ func TestCompositeStorage(t *testing.T) {
 
 	value := NewCompositeValue(
 		inter,
-		EmptyLocationRange,
 		TestLocation,
 		"TestStruct",
 		common.CompositeKindStructure,
@@ -67,7 +66,7 @@ func TestCompositeStorage(t *testing.T) {
 
 	const fieldName = "test"
 
-	value.SetMember(inter, EmptyLocationRange, fieldName, TrueValue)
+	value.SetMember(inter, fieldName, TrueValue)
 
 	require.Equal(t, 1, storage.BasicSlabStorage.Count())
 
@@ -103,7 +102,6 @@ func TestInclusiveRangeStorage(t *testing.T) {
 
 	value := NewInclusiveRangeValueWithStep(
 		inter,
-		EmptyLocationRange,
 		NewUnmeteredInt16Value(1),
 		NewUnmeteredInt16Value(100),
 		NewUnmeteredInt16Value(5),
@@ -122,7 +120,7 @@ func TestInclusiveRangeStorage(t *testing.T) {
 	// Ensure that updating a field (e.g. step) works
 	const stepFieldName = "step"
 
-	value.SetMember(inter, EmptyLocationRange, stepFieldName, NewUnmeteredInt16Value(10))
+	value.SetMember(inter, stepFieldName, NewUnmeteredInt16Value(10))
 
 	require.Equal(t, 1, storage.BasicSlabStorage.Count())
 
@@ -263,11 +261,7 @@ func TestArrayStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		value.Remove(
-			inter,
-			EmptyLocationRange,
-			0,
-		)
+		value.Remove(inter, 0)
 
 		require.Equal(t, 3, storage.BasicSlabStorage.Count())
 
@@ -320,12 +314,7 @@ func TestDictionaryStorage(t *testing.T) {
 		entryKey := NewUnmeteredStringValue("test")
 		entryValue := TrueValue
 
-		value.SetKey(
-			inter,
-			EmptyLocationRange,
-			entryKey,
-			NewUnmeteredSomeValueNonCopying(entryValue),
-		)
+		value.SetKey(inter, entryKey, NewUnmeteredSomeValueNonCopying(entryValue))
 
 		require.Equal(t, 1, storage.BasicSlabStorage.Count())
 
@@ -375,12 +364,7 @@ func TestDictionaryStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		value.SetKey(
-			inter,
-			EmptyLocationRange,
-			NewUnmeteredStringValue("test"),
-			Nil,
-		)
+		value.SetKey(inter, NewUnmeteredStringValue("test"), Nil)
 
 		require.Equal(t, 1, storage.BasicSlabStorage.Count())
 
@@ -635,7 +619,6 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		newChildValue := func(value uint8) *CompositeValue {
 			return NewCompositeValue(
 				inter,
-				EmptyLocationRange,
 				TestLocation,
 				"TestStruct",
 				common.CompositeKindStructure,
@@ -662,7 +645,7 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 
 		require.Equal(t, "S.test.TestStruct(test: 0)", childValue1.String())
 
-		childValue1.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(3))
+		childValue1.SetMember(inter, fieldName, NewUnmeteredUInt8Value(3))
 
 		require.Equal(t, "S.test.TestStruct(test: 3)", childValue1.String())
 
@@ -684,21 +667,21 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		require.Equal(t, "S.test.TestStruct(test: 3)", childValue1.String())
 		require.Equal(t, "S.test.TestStruct(test: 3)", childValue2.String())
 
-		childValue2.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(4))
+		childValue2.SetMember(inter, fieldName, NewUnmeteredUInt8Value(4))
 
 		require.Equal(t, "[1, S.test.TestStruct(test: 3)]", containerValue1.String())
 		require.Equal(t, "[2]", containerValue2.String())
 		require.Equal(t, "S.test.TestStruct(test: 3)", childValue1.String())
 		require.Equal(t, "S.test.TestStruct(test: 4)", childValue2.String())
 
-		childValue1.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(5))
+		childValue1.SetMember(inter, fieldName, NewUnmeteredUInt8Value(5))
 
 		require.Equal(t, "[1, S.test.TestStruct(test: 5)]", containerValue1.String())
 		require.Equal(t, "[2]", containerValue2.String())
 		require.Equal(t, "S.test.TestStruct(test: 5)", childValue1.String())
 		require.Equal(t, "S.test.TestStruct(test: 4)", childValue2.String())
 
-		childValue3 := containerValue1.Remove(inter, EmptyLocationRange, 1).(*CompositeValue)
+		childValue3 := containerValue1.Remove(inter, 1).(*CompositeValue)
 
 		require.Equal(t, "[1]", containerValue1.String())
 		require.Equal(t, "[2]", containerValue2.String())
@@ -707,7 +690,7 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		require.Equal(t, "S.test.TestStruct(test: 4)", childValue2.String())
 		require.Equal(t, "S.test.TestStruct(test: 5)", childValue3.String())
 
-		childValue1.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(6))
+		childValue1.SetMember(inter, fieldName, NewUnmeteredUInt8Value(6))
 
 		require.Equal(t, "[1]", containerValue1.String())
 		require.Equal(t, "[2]", containerValue2.String())
@@ -735,7 +718,7 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		require.Equal(t, "S.test.TestStruct(test: 5)", childValue3.String())
 		require.Equal(t, "S.test.TestStruct(test: 7)", childValue4.String())
 
-		childValue1.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(8))
+		childValue1.SetMember(inter, fieldName, NewUnmeteredUInt8Value(8))
 
 		require.Equal(t, "[1, S.test.TestStruct(test: 7)]", containerValue1.String())
 		require.Equal(t, "[2]", containerValue2.String())
@@ -744,7 +727,7 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		require.Equal(t, "S.test.TestStruct(test: 5)", childValue3.String())
 		require.Equal(t, "S.test.TestStruct(test: 7)", childValue4.String())
 
-		childValue4.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(9))
+		childValue4.SetMember(inter, fieldName, NewUnmeteredUInt8Value(9))
 
 		require.Equal(t, "[1, S.test.TestStruct(test: 9)]", containerValue1.String())
 		require.Equal(t, "[2]", containerValue2.String())
@@ -764,7 +747,7 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		require.Equal(t, "S.test.TestStruct(test: 5)", childValue3.String())
 		require.Equal(t, "S.test.TestStruct(test: 9)", childValue4.String())
 
-		childValue3.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(10))
+		childValue3.SetMember(inter, fieldName, NewUnmeteredUInt8Value(10))
 
 		require.Equal(t, "[1, S.test.TestStruct(test: 9)]", containerValue1.String())
 		require.Equal(t, "[2, S.test.TestStruct(test: 10)]", containerValue2.String())
@@ -809,7 +792,6 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		newChildValue := func(value uint8) *CompositeValue {
 			return NewCompositeValue(
 				inter,
-				EmptyLocationRange,
 				TestLocation,
 				"TestResource",
 				common.CompositeKindResource,
@@ -836,7 +818,7 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 
 		require.Equal(t, "S.test.TestResource(test: 0)", childValue1.String())
 
-		childValue1.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(3))
+		childValue1.SetMember(inter, fieldName, NewUnmeteredUInt8Value(3))
 
 		require.Equal(t, "S.test.TestResource(test: 3)", childValue1.String())
 
@@ -856,7 +838,7 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		require.Equal(t, "S.test.TestResource(test: 3)", childValue1.String())
 		require.Nil(t, ref1.Value)
 
-		childValue1.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(4))
+		childValue1.SetMember(inter, fieldName, NewUnmeteredUInt8Value(4))
 
 		require.Equal(t, "[1, S.test.TestResource(test: 4)]", containerValue1.String())
 		require.Equal(t, "[2]", containerValue2.String())
@@ -864,14 +846,14 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		require.Nil(t, ref1.Value)
 
 		// Cannot use ref1, as it's invalidated
-		childValue1.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(5))
+		childValue1.SetMember(inter, fieldName, NewUnmeteredUInt8Value(5))
 
 		require.Equal(t, "[1, S.test.TestResource(test: 5)]", containerValue1.String())
 		require.Equal(t, "[2]", containerValue2.String())
 		require.Equal(t, "S.test.TestResource(test: 5)", childValue1.String())
 		require.Nil(t, ref1.Value)
 
-		childValue2 := containerValue1.Remove(inter, EmptyLocationRange, 1).(*CompositeValue)
+		childValue2 := containerValue1.Remove(inter, 1).(*CompositeValue)
 
 		require.Equal(t, "[1]", containerValue1.String())
 		require.Equal(t, "[2]", containerValue2.String())
@@ -879,7 +861,7 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		require.Nil(t, ref1.Value)
 		require.Equal(t, "S.test.TestResource(test: 5)", childValue2.String())
 
-		childValue1.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(6))
+		childValue1.SetMember(inter, fieldName, NewUnmeteredUInt8Value(6))
 
 		require.Equal(t, "[1]", containerValue1.String())
 		require.Equal(t, "[2]", containerValue2.String())
@@ -887,7 +869,7 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		require.Nil(t, ref1.Value)
 		require.Equal(t, "S.test.TestResource(test: 6)", childValue2.String())
 
-		childValue1.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(7))
+		childValue1.SetMember(inter, fieldName, NewUnmeteredUInt8Value(7))
 
 		require.Equal(t, "[1]", containerValue1.String())
 		require.Equal(t, "[2]", containerValue2.String())
@@ -916,7 +898,7 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		require.Equal(t, "S.test.TestResource(test: 7)", childValue2.String())
 		require.Equal(t, "S.test.TestResource(test: 8)", childValue4.String())
 
-		childValue1.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(9))
+		childValue1.SetMember(inter, fieldName, NewUnmeteredUInt8Value(9))
 
 		require.Equal(t, "[1, S.test.TestResource(test: 8)]", containerValue1.String())
 		require.Equal(t, "[2]", containerValue2.String())
@@ -926,7 +908,7 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		require.Equal(t, "S.test.TestResource(test: 8)", childValue4.String())
 
 		// Cannot use ref1, as it's invalidated
-		childValue1.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(10))
+		childValue1.SetMember(inter, fieldName, NewUnmeteredUInt8Value(10))
 
 		require.Equal(t, "[1, S.test.TestResource(test: 8)]", containerValue1.String())
 		require.Equal(t, "[2]", containerValue2.String())
@@ -935,7 +917,7 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		require.Equal(t, "S.test.TestResource(test: 10)", childValue2.String())
 		require.Equal(t, "S.test.TestResource(test: 8)", childValue4.String())
 
-		childValue4.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(11))
+		childValue4.SetMember(inter, fieldName, NewUnmeteredUInt8Value(11))
 
 		require.Equal(t, "[1, S.test.TestResource(test: 11)]", containerValue1.String())
 		require.Equal(t, "[2]", containerValue2.String())
@@ -955,7 +937,7 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		require.Equal(t, "S.test.TestResource(test: 10)", childValue2.String())
 		require.Equal(t, "S.test.TestResource(test: 11)", childValue4.String())
 
-		childValue2.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(12))
+		childValue2.SetMember(inter, fieldName, NewUnmeteredUInt8Value(12))
 
 		require.Equal(t, "[1, S.test.TestResource(test: 11)]", containerValue1.String())
 		require.Equal(t, "[2, S.test.TestResource(test: 12)]", containerValue2.String())

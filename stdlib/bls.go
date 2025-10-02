@@ -47,7 +47,6 @@ func newInterpreterBLSAggregatePublicKeysFunction(
 		BLSTypeAggregatePublicKeysFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.InvocationContext
-			locationRange := invocation.LocationRange
 
 			publicKeysValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 			if !ok {
@@ -57,7 +56,6 @@ func newInterpreterBLSAggregatePublicKeysFunction(
 			return BLSAggregatePublicKeys(
 				inter,
 				publicKeysValue,
-				locationRange,
 				aggregator,
 			)
 		},
@@ -82,7 +80,6 @@ func NewVMBLSAggregatePublicKeysFunction(
 				return BLSAggregatePublicKeys(
 					context,
 					publicKeysValue,
-					interpreter.EmptyLocationRange,
 					aggregator,
 				)
 			},
@@ -93,7 +90,6 @@ func NewVMBLSAggregatePublicKeysFunction(
 func BLSAggregatePublicKeys(
 	context interpreter.InvocationContext,
 	publicKeysValue *interpreter.ArrayValue,
-	locationRange interpreter.LocationRange,
 	aggregator BLSPublicKeyAggregator,
 ) interpreter.Value {
 
@@ -112,7 +108,7 @@ func BLSAggregatePublicKeys(
 				panic(errors.NewUnreachableError())
 			}
 
-			publicKey, err := NewPublicKeyFromValue(context, locationRange, publicKeyValue)
+			publicKey, err := NewPublicKeyFromValue(context, publicKeyValue)
 			if err != nil {
 				panic(err)
 			}
@@ -134,7 +130,6 @@ func BLSAggregatePublicKeys(
 
 	aggregatedPublicKeyValue := NewPublicKeyValue(
 		context,
-		locationRange,
 		aggregatedPublicKey,
 	)
 

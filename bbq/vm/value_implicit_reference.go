@@ -82,21 +82,13 @@ func (v ImplicitReferenceValue) String() string {
 	panic(errors.NewUnreachableError())
 }
 
-func (v ImplicitReferenceValue) Accept(
-	_ interpreter.ValueVisitContext,
-	_ interpreter.Visitor,
-	_ interpreter.LocationRange,
-) {
+func (v ImplicitReferenceValue) Accept(_ interpreter.ValueVisitContext, _ interpreter.Visitor) {
 	// ImplicitReferenceValue is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
 }
 
-func (v ImplicitReferenceValue) Walk(
-	_ interpreter.ValueWalkContext,
-	_ func(interpreter.Value),
-	_ interpreter.LocationRange,
-) {
+func (v ImplicitReferenceValue) Walk(_ interpreter.ValueWalkContext, _ func(interpreter.Value)) {
 	// ImplicitReferenceValue is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
@@ -110,7 +102,6 @@ func (v ImplicitReferenceValue) StaticType(_ interpreter.ValueStaticTypeContext)
 
 func (v ImplicitReferenceValue) ConformsToStaticType(
 	_ interpreter.ValueStaticTypeConformanceContext,
-	_ interpreter.LocationRange,
 	_ interpreter.TypeConformanceResults,
 ) bool {
 	// ImplicitReferenceValue is an internal-only value.
@@ -127,7 +118,6 @@ func (v ImplicitReferenceValue) RecursiveString(_ interpreter.SeenReferences) st
 func (v ImplicitReferenceValue) MeteredString(
 	_ interpreter.ValueStringContext,
 	_ interpreter.SeenReferences,
-	_ interpreter.LocationRange,
 ) string {
 	// ImplicitReferenceValue is an internal-only value.
 	// Hence, this should never be called.
@@ -167,7 +157,7 @@ func (v ImplicitReferenceValue) Clone(_ interpreter.ValueCloneContext) interpret
 	panic(errors.NewUnreachableError())
 }
 
-func (v ImplicitReferenceValue) IsImportable(_ interpreter.ValueImportableContext, _ interpreter.LocationRange) bool {
+func (v ImplicitReferenceValue) IsImportable(_ interpreter.ValueImportableContext) bool {
 	// ImplicitReferenceValue is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())

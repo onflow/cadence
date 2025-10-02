@@ -34,19 +34,19 @@ import (
 
 // assignmentGetterSetter returns a getter/setter function pair
 // for the target expression
-func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression, locationRange LocationRange) getterSetter {
+func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression) getterSetter {
 	switch expression := expression.(type) {
 	case *ast.IdentifierExpression:
-		return interpreter.identifierExpressionGetterSetter(expression, locationRange)
+		return interpreter.identifierExpressionGetterSetter(expression)
 
 	case *ast.IndexExpression:
 		if attachmentType, ok := interpreter.Program.Elaboration.AttachmentAccessTypes(expression); ok {
-			return interpreter.typeIndexExpressionGetterSetter(expression, attachmentType, locationRange)
+			return interpreter.typeIndexExpressionGetterSetter(expression, attachmentType)
 		}
-		return interpreter.valueIndexExpressionGetterSetter(expression, locationRange)
+		return interpreter.valueIndexExpressionGetterSetter(expression)
 
 	case *ast.MemberExpression:
-		return interpreter.memberExpressionGetterSetter(expression, locationRange)
+		return interpreter.memberExpressionGetterSetter(expression)
 
 	default:
 		return getterSetter{
@@ -64,7 +64,6 @@ func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression
 // for the target identifier expression
 func (interpreter *Interpreter) identifierExpressionGetterSetter(
 	identifierExpression *ast.IdentifierExpression,
-	locationRange LocationRange,
 ) getterSetter {
 	identifier := identifierExpression.Identifier.Identifier
 	variable := interpreter.FindVariable(identifier)
@@ -77,11 +76,7 @@ func (interpreter *Interpreter) identifierExpressionGetterSetter(
 		},
 		set: func(value Value) {
 			interpreter.startResourceTracking(value, variable, identifier)
-			variable.SetValue(
-				interpreter,
-				locationRange,
-				value,
-			)
+			variable.SetValue(interpreter, value)
 		},
 	}
 }
@@ -89,7 +84,6 @@ func (interpreter *Interpreter) identifierExpressionGetterSetter(
 func (interpreter *Interpreter) typeIndexExpressionGetterSetter(
 	indexExpression *ast.IndexExpression,
 	attachmentType sema.Type,
-	locationRange LocationRange,
 ) getterSetter {
 	target, ok := interpreter.evalExpression(indexExpression.TargetExpression).(TypeIndexableValue)
 	if !ok {
@@ -100,7 +94,7 @@ func (interpreter *Interpreter) typeIndexExpressionGetterSetter(
 		target: target,
 		get: func(_ bool) Value {
 			CheckInvalidatedResourceOrResourceReference(target, interpreter)
-			return target.GetTypeKey(interpreter, locationRange, attachmentType)
+			return target.GetTypeKey(interpreter, attachmentType)
 		},
 		set: func(_ Value) {
 			CheckInvalidatedResourceOrResourceReference(target, interpreter)
@@ -114,7 +108,6 @@ func (interpreter *Interpreter) typeIndexExpressionGetterSetter(
 // for the target index expression
 func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 	indexExpression *ast.IndexExpression,
-	locationRange LocationRange,
 ) getterSetter {
 
 	// Use getter/setter functions to evaluate the target expression,
@@ -133,7 +126,7 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 	// If `a.b` is a resource, then `c()` should not be able to access/move it.
 
 	targetExpression := indexExpression.TargetExpression
-	targetGetterSetter := interpreter.assignmentGetterSetter(targetExpression, locationRange)
+	targetGetterSetter := interpreter.assignmentGetterSetter(targetExpression)
 	const allowMissing = false
 	target, ok := targetGetterSetter.get(allowMissing).(ValueIndexableValue)
 	if !ok {
@@ -197,14 +190,14 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 	if isNestedResourceMove {
 		get = func(_ bool) Value {
 			CheckInvalidatedResourceOrResourceReference(target, interpreter)
-			value := target.RemoveKey(interpreter, locationRange, transferredIndexingValue)
-			target.InsertKey(interpreter, locationRange, transferredIndexingValue, placeholder)
+			value := target.RemoveKey(interpreter, transferredIndexingValue)
+			target.InsertKey(interpreter, transferredIndexingValue, placeholder)
 			return value
 		}
 	} else {
 		get = func(_ bool) Value {
 			CheckInvalidatedResourceOrResourceReference(target, interpreter)
-			value := target.GetKey(interpreter, locationRange, transferredIndexingValue)
+			value := target.GetKey(interpreter, transferredIndexingValue)
 
 			// If the indexing value is a reference, then return a reference for the resulting value.
 			return interpreter.maybeGetReference(indexExpression, value)
@@ -216,7 +209,7 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 		get:    get,
 		set: func(value Value) {
 			CheckInvalidatedResourceOrResourceReference(target, interpreter)
-			target.SetKey(interpreter, locationRange, transferredIndexingValue, value)
+			target.SetKey(interpreter, transferredIndexingValue, value)
 		},
 	}
 }
@@ -225,7 +218,6 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 // for the target member expression
 func (interpreter *Interpreter) memberExpressionGetterSetter(
 	memberExpression *ast.MemberExpression,
-	locationRange LocationRange,
 ) getterSetter {
 
 	target := interpreter.evalExpression(memberExpression.Expression)
@@ -261,9 +253,9 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(
 
 			var resultValue Value
 			if isNestedResourceMove {
-				resultValue = target.(MemberAccessibleValue).RemoveMember(interpreter, locationRange, identifier)
+				resultValue = target.(MemberAccessibleValue).RemoveMember(interpreter, identifier)
 			} else {
-				resultValue = getMember(interpreter, target, locationRange, identifier)
+				resultValue = getMember(interpreter, target, identifier)
 			}
 
 			if resultValue == nil && !allowMissing {
@@ -296,7 +288,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(
 		},
 		set: func(value Value) {
 			interpreter.checkMemberAccess(memberExpression, target)
-			setMember(interpreter, target, locationRange, identifier, value)
+			setMember(interpreter, target, identifier, value)
 		},
 	}
 }
@@ -1016,13 +1008,7 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 
 func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpression) Value {
 	const allowMissing = false
-
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: expression,
-	}
-
-	return interpreter.memberExpressionGetterSetter(expression, locationRange).get(allowMissing)
+	return interpreter.memberExpressionGetterSetter(expression).get(allowMissing)
 }
 
 func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpression) Value {
@@ -1035,22 +1021,15 @@ func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpres
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
-		locationRange := LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: expression,
-		}
-		return typedResult.GetTypeKey(interpreter, locationRange, attachmentType)
+
+		return typedResult.GetTypeKey(interpreter, attachmentType)
 	} else {
 		typedResult, ok := interpreter.evalExpression(expression.TargetExpression).(ValueIndexableValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
 		indexingValue := interpreter.evalExpression(expression.IndexingExpression)
-		locationRange := LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: expression,
-		}
-		value := typedResult.GetKey(interpreter, locationRange, indexingValue)
+		value := typedResult.GetKey(interpreter, indexingValue)
 
 		// If the indexing value is a reference, then return a reference for the resulting value.
 		return interpreter.maybeGetReference(expression, value)
@@ -1182,7 +1161,6 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 		parameterTypes,
 		returnType,
 		typeParameterTypes,
-		invocationExpression,
 	)
 
 	interpreter.reportInvokedFunctionReturn()
@@ -1331,12 +1309,7 @@ func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyEx
 
 	interpreter.invalidateResource(value)
 
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: expression,
-	}
-
-	value.(ResourceKindedValue).Destroy(interpreter, locationRange)
+	value.(ResourceKindedValue).Destroy(interpreter)
 
 	return Void
 }
@@ -1499,11 +1472,6 @@ func (interpreter *Interpreter) VisitPathExpression(expression *ast.PathExpressi
 
 func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.AttachExpression) Value {
 
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: attachExpression,
-	}
-
 	attachTarget := interpreter.evalExpression(attachExpression.Base)
 	base, ok := attachTarget.(*CompositeValue)
 
@@ -1564,12 +1532,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		panic(errors.NewUnreachableError())
 	}
 
-	base.SetTypeKey(
-		interpreter,
-		locationRange,
-		attachmentType,
-		attachment,
-	)
+	base.SetTypeKey(interpreter, attachmentType, attachment)
 
 	return base
 }
