@@ -36,7 +36,6 @@ func ConvertAndBox(
 
 	return interpreter.ConvertAndBox(
 		context,
-		EmptyLocationRange,
 		value,
 		valueSemaType,
 		targetSemaType,

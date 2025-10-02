@@ -562,11 +562,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 					require.IsType(t, interpreter.IntValue{}, args[0])
 					arg := args[0].(interpreter.IntValue)
 
-					return arg.Plus(
-						context,
-						arg,
-						interpreter.EmptyLocationRange,
-					)
+					return arg.Plus(context, arg)
 				},
 			)
 		} else {
@@ -580,11 +576,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 					require.IsType(t, interpreter.IntValue{}, args[0])
 					arg := args[0].(interpreter.IntValue)
 
-					return arg.Plus(
-						invocation.InvocationContext,
-						arg,
-						interpreter.EmptyLocationRange,
-					)
+					return arg.Plus(invocation.InvocationContext, arg)
 				},
 			)
 			bValue.Fields["c"] = function

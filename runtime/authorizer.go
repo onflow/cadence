@@ -30,7 +30,6 @@ func newAccountReferenceValueFromAddress(
 	address common.Address,
 	environment Environment,
 	authorization sema.Access,
-	locationRange interpreter.LocationRange,
 ) *interpreter.EphemeralReferenceValue {
 	addressValue := interpreter.NewAddressValue(context, address)
 
@@ -41,14 +40,12 @@ func newAccountReferenceValueFromAddress(
 		authorization,
 	)
 
-	accountReferenceValue := interpreter.NewEphemeralReferenceValue(
+	return interpreter.NewEphemeralReferenceValue(
 		context,
 		staticAuthorization,
 		accountValue,
 		sema.AccountType,
-		locationRange,
 	)
-	return accountReferenceValue
 }
 
 func authorizerValues(
@@ -75,8 +72,6 @@ func authorizerValues(
 			address,
 			environment,
 			referenceType.Authorization,
-			// okay to pass an empty range here because the account value is never a reference, so this can't fail
-			interpreter.EmptyLocationRange,
 		)
 
 		authorizerValues = append(authorizerValues, accountReferenceValue)

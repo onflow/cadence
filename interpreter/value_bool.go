@@ -60,7 +60,7 @@ func (v BoolValue) Negate(_ *Interpreter) BoolValue {
 	return BoolValue(values.BoolValue(v).Negate())
 }
 
-func (v BoolValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
+func (v BoolValue) Equal(_ ValueComparisonContext, other Value) bool {
 	otherBool, ok := other.(BoolValue)
 	if !ok {
 		return false
@@ -69,7 +69,7 @@ func (v BoolValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value)
 		Equal(values.BoolValue(otherBool))
 }
 
-func (v BoolValue) Less(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v BoolValue) Less(_ ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -81,7 +81,7 @@ func (v BoolValue) Less(_ ValueComparisonContext, other ComparableValue, _ Locat
 	)
 }
 
-func (v BoolValue) LessEqual(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v BoolValue) LessEqual(_ ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -93,7 +93,7 @@ func (v BoolValue) LessEqual(_ ValueComparisonContext, other ComparableValue, _ 
 	)
 }
 
-func (v BoolValue) Greater(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v BoolValue) Greater(_ ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -105,7 +105,7 @@ func (v BoolValue) Greater(_ ValueComparisonContext, other ComparableValue, _ Lo
 	)
 }
 
-func (v BoolValue) GreaterEqual(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v BoolValue) GreaterEqual(_ ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(BoolValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -120,7 +120,7 @@ func (v BoolValue) GreaterEqual(_ ValueComparisonContext, other ComparableValue,
 // HashInput returns a byte slice containing:
 // - HashInputTypeBool (1 byte)
 // - 1/0 (1 byte)
-func (v BoolValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+func (v BoolValue) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
 	scratch[0] = byte(HashInputTypeBool)
 	if v {
 		scratch[1] = 1
@@ -170,7 +170,6 @@ func (BoolValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (v BoolValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,

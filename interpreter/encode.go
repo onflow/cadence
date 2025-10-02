@@ -1471,7 +1471,7 @@ func (t *CapabilityStaticType) Encode(e *cbor.StreamEncoder) error {
 }
 
 func (t FunctionStaticType) Encode(_ *cbor.StreamEncoder) error {
-	return NonStorableStaticTypeError{
+	return &NonStorableStaticTypeError{
 		Type: t.Type,
 	}
 }

@@ -207,7 +207,6 @@ func linkImportedGlobal(
 					interpreter.UnauthorizedAccess,
 					contractValue,
 					semaType,
-					EmptyLocationRange,
 				)
 			},
 		)

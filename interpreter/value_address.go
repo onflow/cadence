@@ -67,13 +67,13 @@ func NewAddressValueFromConstructor(
 	return NewUnmeteredAddressValueFromBytes(address[:])
 }
 
-func ConvertAddress(memoryGauge common.MemoryGauge, value Value, locationRange LocationRange) AddressValue {
+func ConvertAddress(memoryGauge common.MemoryGauge, value Value) AddressValue {
 	if address, ok := value.(AddressValue); ok {
 		return address
 	}
 
 	converter := func() (result common.Address) {
-		uint64Value := ConvertUInt64(memoryGauge, value, locationRange)
+		uint64Value := ConvertUInt64(memoryGauge, value)
 
 		binary.BigEndian.PutUint64(
 			result[:common.AddressLength],
@@ -123,7 +123,7 @@ func (v AddressValue) MeteredString(context ValueStringContext, _ SeenReferences
 	return v.String()
 }
 
-func (v AddressValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
+func (v AddressValue) Equal(_ ValueComparisonContext, other Value) bool {
 	otherAddress, ok := other.(AddressValue)
 	if !ok {
 		return false
@@ -134,7 +134,7 @@ func (v AddressValue) Equal(_ ValueComparisonContext, _ LocationRange, other Val
 // HashInput returns a byte slice containing:
 // - HashInputTypeAddress (1 byte)
 // - address (8 bytes)
-func (v AddressValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+func (v AddressValue) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
 	length := 1 + len(v)
 	var buffer []byte
 	if length <= len(scratch) {
@@ -162,7 +162,7 @@ func (v AddressValue) GetMember(context MemberAccessibleContext, locationRange L
 
 func (v AddressValue) GetMethod(
 	context MemberAccessibleContext,
-	locationRange LocationRange,
+	_ LocationRange,
 	name string,
 ) FunctionValue {
 	switch name {
@@ -174,12 +174,10 @@ func (v AddressValue) GetMethod(
 			sema.ToStringFunctionType,
 			func(v AddressValue, invocation Invocation) Value {
 				invocationContext := invocation.InvocationContext
-				locationRange := invocation.LocationRange
 
 				return AddressValueToStringFunction(
 					invocationContext,
 					v,
-					locationRange,
 				)
 			},
 		)
@@ -203,10 +201,9 @@ func (v AddressValue) GetMethod(
 func AddressValueToStringFunction(
 	invocationContext InvocationContext,
 	v AddressValue,
-	locationRange LocationRange,
 ) Value {
 	memoryUsage := common.NewStringMemoryUsage(
-		safeMul(common.AddressLength, 2, locationRange),
+		safeMul(common.AddressLength, 2),
 	)
 
 	return NewStringValue(
@@ -252,7 +249,6 @@ func (AddressValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (v AddressValue) Transfer(
 	transferContext ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -285,8 +281,8 @@ func (AddressValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func AddressValueFromByteArray(context ContainerMutationContext, byteArray *ArrayValue, locationRange LocationRange) AddressValue {
-	bytes, err := ByteArrayValueToByteSlice(context, byteArray, locationRange)
+func AddressValueFromByteArray(context ContainerMutationContext, byteArray *ArrayValue) AddressValue {
+	bytes, err := ByteArrayValueToByteSlice(context, byteArray)
 	if err != nil {
 		panic(err)
 	}

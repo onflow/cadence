@@ -53,7 +53,7 @@ var _ atree.Storable = NonStorable{}
 
 func (s NonStorable) Encode(_ *atree.Encoder) error {
 	//nolint:gosimple
-	return NonStorableValueError{
+	return &NonStorableValueError{
 		Value: s.Value,
 	}
 }
@@ -114,7 +114,6 @@ type Value interface {
 	NeedsStoreTo(address atree.Address) bool
 	Transfer(
 		transferContext ValueTransferContext,
-		locationRange LocationRange,
 		address atree.Address,
 		remove bool,
 		storable atree.Storable,
@@ -175,24 +174,24 @@ type EquatableValue interface {
 	Value
 	// Equal returns true if the given value is equal to this value.
 	// If no location range is available, pass e.g. EmptyLocationRange
-	Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool
+	Equal(context ValueComparisonContext, other Value) bool
 }
 
-func newValueComparator(context ValueComparisonContext, locationRange LocationRange) atree.ValueComparator {
+func newValueComparator(context ValueComparisonContext) atree.ValueComparator {
 	return func(storage atree.SlabStorage, atreeValue atree.Value, otherStorable atree.Storable) (bool, error) {
 		value := MustConvertStoredValue(context, atreeValue)
 		otherValue := StoredValue(context, otherStorable, storage)
-		return value.(EquatableValue).Equal(context, locationRange, otherValue), nil
+		return value.(EquatableValue).Equal(context, otherValue), nil
 	}
 }
 
 // ComparableValue
 type ComparableValue interface {
 	EquatableValue
-	Less(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue
-	LessEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue
-	Greater(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue
-	GreaterEqual(context ValueComparisonContext, other ComparableValue, locationRange LocationRange) BoolValue
+	Less(context ValueComparisonContext, other ComparableValue) BoolValue
+	LessEqual(context ValueComparisonContext, other ComparableValue) BoolValue
+	Greater(context ValueComparisonContext, other ComparableValue) BoolValue
+	GreaterEqual(context ValueComparisonContext, other ComparableValue) BoolValue
 }
 
 // ResourceKindedValue
@@ -239,9 +238,8 @@ type IterableValue interface {
 		elementType sema.Type,
 		function func(value Value) (resume bool),
 		transferElements bool,
-		locationRange LocationRange,
 	)
-	Iterator(context ValueStaticTypeContext, locationRange LocationRange) ValueIterator
+	Iterator(context ValueStaticTypeContext) ValueIterator
 }
 
 // OwnedValue is a value which has an owner
@@ -259,7 +257,7 @@ type ValueIteratorContext interface {
 // When Next returns nil, it signals the end of the iterator.
 type ValueIterator interface {
 	HasNext() bool
-	Next(context ValueIteratorContext, locationRange LocationRange) Value
+	Next(context ValueIteratorContext) Value
 	ValueID() (atree.ValueID, bool)
 }
 
@@ -270,52 +268,40 @@ type atreeContainerBackedValue interface {
 	isAtreeContainerBackedValue()
 }
 
-func safeAdd(a, b int, locationRange LocationRange) int {
+func safeAdd(a, b int) int {
 	// INT32-C
 	if (b > 0) && (a > (goMaxInt - b)) {
-		panic(&OverflowError{
-			LocationRange: locationRange,
-		})
+		panic(&OverflowError{})
 	} else if (b < 0) && (a < (goMinInt - b)) {
-		panic(&UnderflowError{
-			LocationRange: locationRange,
-		})
+		panic(&UnderflowError{})
 	}
 	return a + b
 }
 
-func safeMul(a, b int, locationRange LocationRange) int {
+func safeMul(a, b int) int {
 	// INT32-C
 	if a > 0 {
 		if b > 0 {
 			// positive * positive = positive. overflow?
 			if a > (goMaxInt / b) {
-				panic(&OverflowError{
-					LocationRange: locationRange,
-				})
+				panic(&OverflowError{})
 			}
 		} else {
 			// positive * negative = negative. underflow?
 			if b < (goMinInt / a) {
-				panic(&UnderflowError{
-					LocationRange: locationRange,
-				})
+				panic(&UnderflowError{})
 			}
 		}
 	} else {
 		if b > 0 {
 			// negative * positive = negative. underflow?
 			if a < (goMinInt / b) {
-				panic(&UnderflowError{
-					LocationRange: locationRange,
-				})
+				panic(&UnderflowError{})
 			}
 		} else {
 			// negative * negative = positive. overflow?
 			if (a != 0) && (b < (goMaxInt / a)) {
-				panic(&OverflowError{
-					LocationRange: locationRange,
-				})
+				panic(&OverflowError{})
 			}
 		}
 	}

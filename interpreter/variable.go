@@ -64,10 +64,10 @@ func (v *SimpleVariable) GetValue(ValueStaticTypeContext) Value {
 	return v.value
 }
 
-func (v *SimpleVariable) SetValue(context ValueStaticTypeContext, locationRange LocationRange, value Value) {
+func (v *SimpleVariable) SetValue(context ValueStaticTypeContext, _ LocationRange, value Value) {
 	existingValue := v.value
 	if existingValue != nil {
-		CheckResourceLoss(context, existingValue, locationRange)
+		CheckResourceLoss(context, existingValue)
 	}
 	v.getter = nil
 	v.value = value
@@ -108,14 +108,14 @@ type SelfVariable struct {
 
 var _ Variable = &SelfVariable{}
 
-func NewSelfVariableWithValue(interpreter *Interpreter, value Value, locationRange LocationRange) Variable {
+func NewSelfVariableWithValue(interpreter *Interpreter, value Value) Variable {
 	common.UseMemory(interpreter, variableMemoryUsage)
 
 	semaType := MustSemaTypeOfValue(value, interpreter)
 
 	// Create an explicit reference to represent the implicit reference behavior of 'self' value.
 	// Authorization doesn't matter, we just need a reference to add to tracking.
-	selfRef := NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, value, semaType, locationRange)
+	selfRef := NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, value, semaType)
 
 	return &SelfVariable{
 		value:   value,
@@ -135,7 +135,7 @@ func (v *SelfVariable) InitializeWithGetter(func() Value) {
 
 func (v *SelfVariable) GetValue(context ValueStaticTypeContext) Value {
 	// TODO: pass proper location range
-	CheckInvalidatedResourceOrResourceReference(v.selfRef, EmptyLocationRange, context)
+	CheckInvalidatedResourceOrResourceReference(v.selfRef, context)
 	return v.value
 }
 

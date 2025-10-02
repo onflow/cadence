@@ -429,10 +429,6 @@ func (n NoOpReferenceCreationContext) ReferencedResourceKindedValues(_ atree.Val
 	return nil
 }
 
-func (n NoOpReferenceCreationContext) CheckInvalidatedResourceOrResourceReference(value interpreter.Value, locationRange interpreter.LocationRange) {
-	// NO-OP
-}
-
 func (n NoOpReferenceCreationContext) MaybeTrackReferencedResourceKindedValue(_ *interpreter.EphemeralReferenceValue) {
 	// NO-OP
 }
@@ -559,7 +555,6 @@ func testAccountWithErrorHandlerWithCompiler(
 			interpreter.FullyEntitledAccountAccess,
 			account,
 			sema.AccountType,
-			interpreter.EmptyLocationRange,
 		),
 		Kind: common.DeclarationKindConstant,
 	}
@@ -573,7 +568,6 @@ func testAccountWithErrorHandlerWithCompiler(
 			interpreter.UnauthorizedAccess,
 			account,
 			sema.AccountType,
-			interpreter.EmptyLocationRange,
 		),
 		Kind: common.DeclarationKindConstant,
 	}

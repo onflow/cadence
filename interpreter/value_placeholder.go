@@ -81,7 +81,6 @@ func (PlaceholderValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (v PlaceholderValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,

@@ -420,7 +420,6 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 		expected := NewArrayValue(
 			inter,
-			EmptyLocationRange,
 			&ConstantSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 				Size: 0,
@@ -452,7 +451,6 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 		expected := NewArrayValue(
 			inter,
-			EmptyLocationRange,
 			&VariableSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 			},
@@ -686,7 +684,7 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 
 		maxInlineElementSize := atree.MaxInlineArrayElementSize()
 		for len(expected.BigInt.Bytes()) < int(maxInlineElementSize+1) {
-			expected = expected.Mul(inter, expected, EmptyLocationRange).(IntValue)
+			expected = expected.Mul(inter, expected).(IntValue)
 		}
 
 		testEncodeDecode(t,
@@ -1644,7 +1642,7 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 
 		maxInlineElementSize := atree.MaxInlineArrayElementSize()
 		for len(expected.BigInt.Bytes()) < int(maxInlineElementSize+1) {
-			expected = expected.Mul(inter, expected, EmptyLocationRange).(UIntValue)
+			expected = expected.Mul(inter, expected).(UIntValue)
 		}
 
 		testEncodeDecode(t,
@@ -3144,7 +3142,6 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 		expected := NewUnmeteredSomeValueNonCopying(
 			NewArrayValue(
 				inter,
-				EmptyLocationRange,
 				&ConstantSizedStaticType{
 					Type: PrimitiveStaticTypeAnyStruct,
 					Size: 0,
@@ -3196,7 +3193,6 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 			NewUnmeteredSomeValueNonCopying(
 				NewArrayValue(
 					inter,
-					EmptyLocationRange,
 					&ConstantSizedStaticType{
 						Type: PrimitiveStaticTypeAnyStruct,
 						Size: 0,
@@ -3255,7 +3251,6 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 		expectedArray :=
 			NewArrayValue(
 				inter,
-				EmptyLocationRange,
 				&ConstantSizedStaticType{
 					Type: PrimitiveStaticTypeAnyStruct,
 					Size: 0,
@@ -3294,7 +3289,6 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 		expectedArray :=
 			NewArrayValue(
 				inter,
-				EmptyLocationRange,
 				&ConstantSizedStaticType{
 					Type: PrimitiveStaticTypeAnyStruct,
 					Size: 0,
@@ -3336,7 +3330,6 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 		expectedArray :=
 			NewArrayValue(
 				inter,
-				EmptyLocationRange,
 				&ConstantSizedStaticType{
 					Type: PrimitiveStaticTypeAnyStruct,
 					Size: 0,

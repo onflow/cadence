@@ -47,7 +47,6 @@ func NewImplicitReferenceValue(context interpreter.ReferenceCreationContext, val
 		interpreter.UnauthorizedAccess,
 		value,
 		semaType,
-		EmptyLocationRange,
 	)
 
 	return ImplicitReferenceValue{
@@ -61,7 +60,7 @@ func (v ImplicitReferenceValue) IsValue() {}
 func (v ImplicitReferenceValue) ReferencedValue(
 	context interpreter.ValueStaticTypeContext,
 ) interpreter.Value {
-	interpreter.CheckInvalidatedResourceOrResourceReference(v.selfRef, EmptyLocationRange, context)
+	interpreter.CheckInvalidatedResourceOrResourceReference(v.selfRef, context)
 	return v.value
 }
 
@@ -147,7 +146,6 @@ func (v ImplicitReferenceValue) NeedsStoreTo(_ atree.Address) bool {
 
 func (v ImplicitReferenceValue) Transfer(
 	_ interpreter.ValueTransferContext,
-	_ interpreter.LocationRange,
 	_ atree.Address,
 	_ bool,
 	_ atree.Storable,

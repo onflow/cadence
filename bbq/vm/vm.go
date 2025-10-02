@@ -97,7 +97,7 @@ func (vm *VM) pop() Value {
 	vm.stack[lastIndex] = nil
 	vm.stack = vm.stack[:lastIndex]
 
-	interpreter.CheckInvalidatedResourceOrResourceReference(value, EmptyLocationRange, vm.context)
+	interpreter.CheckInvalidatedResourceOrResourceReference(value, vm.context)
 
 	return value
 }
@@ -111,8 +111,9 @@ func (vm *VM) pop2() (Value, Value) {
 	vm.stack[lastIndex-1], vm.stack[lastIndex] = nil, nil
 	vm.stack = vm.stack[:lastIndex-1]
 
-	interpreter.CheckInvalidatedResourceOrResourceReference(value1, EmptyLocationRange, vm.context)
-	interpreter.CheckInvalidatedResourceOrResourceReference(value2, EmptyLocationRange, vm.context)
+	context := vm.context
+	interpreter.CheckInvalidatedResourceOrResourceReference(value1, context)
+	interpreter.CheckInvalidatedResourceOrResourceReference(value2, context)
 
 	return value1, value2
 }
@@ -126,9 +127,10 @@ func (vm *VM) pop3() (Value, Value, Value) {
 	vm.stack[lastIndex-2], vm.stack[lastIndex-1], vm.stack[lastIndex] = nil, nil, nil
 	vm.stack = vm.stack[:lastIndex-2]
 
-	interpreter.CheckInvalidatedResourceOrResourceReference(value1, EmptyLocationRange, vm.context)
-	interpreter.CheckInvalidatedResourceOrResourceReference(value2, EmptyLocationRange, vm.context)
-	interpreter.CheckInvalidatedResourceOrResourceReference(value3, EmptyLocationRange, vm.context)
+	context := vm.context
+	interpreter.CheckInvalidatedResourceOrResourceReference(value1, context)
+	interpreter.CheckInvalidatedResourceOrResourceReference(value2, context)
+	interpreter.CheckInvalidatedResourceOrResourceReference(value3, context)
 
 	return value1, value2, value3
 }
@@ -138,8 +140,9 @@ func (vm *VM) peekN(count int) []Value {
 	startIndex := stackHeight - count
 	values := vm.stack[startIndex:]
 
+	context := vm.context
 	for _, value := range values {
-		interpreter.CheckInvalidatedResourceOrResourceReference(value, EmptyLocationRange, vm.context)
+		interpreter.CheckInvalidatedResourceOrResourceReference(value, context)
 	}
 
 	return values
@@ -150,8 +153,9 @@ func (vm *VM) popN(count int) []Value {
 	startIndex := stackHeight - count
 	values := vm.stack[startIndex:]
 
+	context := vm.context
 	for _, value := range values {
-		interpreter.CheckInvalidatedResourceOrResourceReference(value, EmptyLocationRange, vm.context)
+		interpreter.CheckInvalidatedResourceOrResourceReference(value, context)
 	}
 
 	vm.stack = vm.stack[:startIndex]
@@ -162,7 +166,7 @@ func (vm *VM) popN(count int) []Value {
 func (vm *VM) peek() Value {
 	lastIndex := len(vm.stack) - 1
 	value := vm.stack[lastIndex]
-	interpreter.CheckInvalidatedResourceOrResourceReference(value, EmptyLocationRange, vm.context)
+	interpreter.CheckInvalidatedResourceOrResourceReference(value, vm.context)
 	return value
 }
 
@@ -178,8 +182,9 @@ func (vm *VM) peekPop() (Value, Value) {
 	peekedValue := vm.stack[lastIndex-1]
 	poppedValue := vm.pop()
 
-	interpreter.CheckInvalidatedResourceOrResourceReference(peekedValue, EmptyLocationRange, vm.context)
-	interpreter.CheckInvalidatedResourceOrResourceReference(poppedValue, EmptyLocationRange, vm.context)
+	context := vm.context
+	interpreter.CheckInvalidatedResourceOrResourceReference(peekedValue, context)
+	interpreter.CheckInvalidatedResourceOrResourceReference(poppedValue, context)
 
 	return peekedValue, poppedValue
 }
@@ -557,11 +562,7 @@ func opAdd(vm *VM) {
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.NumberValue)
 	rightNumber := right.(interpreter.NumberValue)
-	result := leftNumber.Plus(
-		vm.context,
-		rightNumber,
-		EmptyLocationRange,
-	)
+	result := leftNumber.Plus(vm.context, rightNumber)
 	vm.replaceTop(result)
 }
 
@@ -569,11 +570,7 @@ func opSubtract(vm *VM) {
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.NumberValue)
 	rightNumber := right.(interpreter.NumberValue)
-	result := leftNumber.Minus(
-		vm.context,
-		rightNumber,
-		EmptyLocationRange,
-	)
+	result := leftNumber.Minus(vm.context, rightNumber)
 	vm.replaceTop(result)
 }
 
@@ -581,11 +578,7 @@ func opMultiply(vm *VM) {
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.NumberValue)
 	rightNumber := right.(interpreter.NumberValue)
-	result := leftNumber.Mul(
-		vm.context,
-		rightNumber,
-		EmptyLocationRange,
-	)
+	result := leftNumber.Mul(vm.context, rightNumber)
 	vm.replaceTop(result)
 }
 
@@ -593,11 +586,7 @@ func opDivide(vm *VM) {
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.NumberValue)
 	rightNumber := right.(interpreter.NumberValue)
-	result := leftNumber.Div(
-		vm.context,
-		rightNumber,
-		EmptyLocationRange,
-	)
+	result := leftNumber.Div(vm.context, rightNumber)
 	vm.replaceTop(result)
 }
 
@@ -605,20 +594,13 @@ func opMod(vm *VM) {
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.NumberValue)
 	rightNumber := right.(interpreter.NumberValue)
-	result := leftNumber.Mod(
-		vm.context,
-		rightNumber,
-		EmptyLocationRange,
-	)
+	result := leftNumber.Mod(vm.context, rightNumber)
 	vm.replaceTop(result)
 }
 
 func opNegate(vm *VM) {
 	value := vm.pop().(interpreter.NumberValue)
-	result := value.Negate(
-		vm.context,
-		EmptyLocationRange,
-	)
+	result := value.Negate(vm.context)
 	vm.push(result)
 }
 
@@ -626,11 +608,7 @@ func opBitwiseOr(vm *VM) {
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.IntegerValue)
 	rightNumber := right.(interpreter.IntegerValue)
-	result := leftNumber.BitwiseOr(
-		vm.context,
-		rightNumber,
-		EmptyLocationRange,
-	)
+	result := leftNumber.BitwiseOr(vm.context, rightNumber)
 	vm.replaceTop(result)
 }
 
@@ -638,11 +616,7 @@ func opBitwiseXor(vm *VM) {
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.IntegerValue)
 	rightNumber := right.(interpreter.IntegerValue)
-	result := leftNumber.BitwiseXor(
-		vm.context,
-		rightNumber,
-		EmptyLocationRange,
-	)
+	result := leftNumber.BitwiseXor(vm.context, rightNumber)
 	vm.replaceTop(result)
 }
 
@@ -650,11 +624,7 @@ func opBitwiseAnd(vm *VM) {
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.IntegerValue)
 	rightNumber := right.(interpreter.IntegerValue)
-	result := leftNumber.BitwiseAnd(
-		vm.context,
-		rightNumber,
-		EmptyLocationRange,
-	)
+	result := leftNumber.BitwiseAnd(vm.context, rightNumber)
 	vm.replaceTop(result)
 }
 
@@ -662,11 +632,7 @@ func opBitwiseLeftShift(vm *VM) {
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.IntegerValue)
 	rightNumber := right.(interpreter.IntegerValue)
-	result := leftNumber.BitwiseLeftShift(
-		vm.context,
-		rightNumber,
-		EmptyLocationRange,
-	)
+	result := leftNumber.BitwiseLeftShift(vm.context, rightNumber)
 	vm.replaceTop(result)
 }
 
@@ -674,11 +640,7 @@ func opBitwiseRightShift(vm *VM) {
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.IntegerValue)
 	rightNumber := right.(interpreter.IntegerValue)
-	result := leftNumber.BitwiseRightShift(
-		vm.context,
-		rightNumber,
-		EmptyLocationRange,
-	)
+	result := leftNumber.BitwiseRightShift(vm.context, rightNumber)
 	vm.replaceTop(result)
 }
 
@@ -686,11 +648,7 @@ func opLess(vm *VM) {
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.ComparableValue)
 	rightNumber := right.(interpreter.ComparableValue)
-	result := leftNumber.Less(
-		vm.context,
-		rightNumber,
-		EmptyLocationRange,
-	)
+	result := leftNumber.Less(vm.context, rightNumber)
 	vm.replaceTop(result)
 }
 
@@ -698,11 +656,7 @@ func opLessOrEqual(vm *VM) {
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.ComparableValue)
 	rightNumber := right.(interpreter.ComparableValue)
-	result := leftNumber.LessEqual(
-		vm.context,
-		rightNumber,
-		EmptyLocationRange,
-	)
+	result := leftNumber.LessEqual(vm.context, rightNumber)
 	vm.replaceTop(result)
 }
 
@@ -710,11 +664,7 @@ func opGreater(vm *VM) {
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.ComparableValue)
 	rightNumber := right.(interpreter.ComparableValue)
-	result := leftNumber.Greater(
-		vm.context,
-		rightNumber,
-		EmptyLocationRange,
-	)
+	result := leftNumber.Greater(vm.context, rightNumber)
 	vm.replaceTop(result)
 }
 
@@ -722,11 +672,7 @@ func opGreaterOrEqual(vm *VM) {
 	left, right := vm.peekPop()
 	leftNumber := left.(interpreter.ComparableValue)
 	rightNumber := right.(interpreter.ComparableValue)
-	result := leftNumber.GreaterEqual(
-		vm.context,
-		rightNumber,
-		EmptyLocationRange,
-	)
+	result := leftNumber.GreaterEqual(vm.context, rightNumber)
 	vm.replaceTop(result)
 }
 
@@ -770,7 +716,7 @@ func opSetLocal(vm *VM, ins opcode.InstructionSetLocal) {
 
 	existingValue := vm.locals[absoluteIndex]
 	if existingValue != nil {
-		interpreter.CheckResourceLoss(vm.context, existingValue, EmptyLocationRange)
+		interpreter.CheckResourceLoss(vm.context, existingValue)
 	}
 
 	vm.locals[absoluteIndex] = vm.pop()
@@ -976,11 +922,7 @@ func maybeDereference(context interpreter.ValueStaticTypeContext, value Value) V
 	case *interpreter.EphemeralReferenceValue:
 		return typedValue.Value
 	case *interpreter.StorageReferenceValue:
-		referencedValue := typedValue.ReferencedValue(
-			context,
-			EmptyLocationRange,
-			true,
-		)
+		referencedValue := typedValue.ReferencedValue(context, true)
 		return *referencedValue
 	default:
 		return value
@@ -1130,7 +1072,6 @@ func checkMemberAccessTargetType(
 		context,
 		accessedValue,
 		accessedSemaType,
-		EmptyLocationRange,
 	)
 }
 
@@ -1171,7 +1112,6 @@ func opTransferAndConvert(vm *VM, ins opcode.InstructionTransferAndConvert) {
 		value,
 		context.SemaTypeFromStaticType(valueType),
 		context.SemaTypeFromStaticType(targetType),
-		EmptyLocationRange,
 	)
 
 	vm.replaceTop(transferredValue)
@@ -1184,7 +1124,6 @@ func opTransfer(vm *VM) {
 
 	transferredValue := value.Transfer(
 		context,
-		EmptyLocationRange,
 		atree.Address{},
 		false,
 		nil,
@@ -1209,7 +1148,6 @@ func opConvert(vm *VM, ins opcode.InstructionConvert) {
 		value,
 		context.SemaTypeFromStaticType(valueType),
 		context.SemaTypeFromStaticType(targetType),
-		EmptyLocationRange,
 	)
 
 	vm.replaceTop(transferredValue)
@@ -1288,9 +1226,8 @@ func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 		valueSemaType := context.SemaTypeFromStaticType(valueType)
 
 		panic(&interpreter.ForceCastTypeMismatchError{
-			ExpectedType:  targetSemaType,
-			ActualType:    valueSemaType,
-			LocationRange: vm.LocationRange(),
+			ExpectedType: targetSemaType,
+			ActualType:   valueSemaType,
 		})
 	}
 
@@ -1335,7 +1272,6 @@ func opEqual(vm *VM) {
 	left, right := vm.peekPop()
 	result := interpreter.TestValueEqual(
 		vm.context,
-		EmptyLocationRange,
 		left,
 		right,
 	)
@@ -1346,7 +1282,6 @@ func opNotEqual(vm *VM) {
 	left, right := vm.peekPop()
 	result := !interpreter.TestValueEqual(
 		vm.context,
-		EmptyLocationRange,
 		left,
 		right,
 	)
@@ -1383,13 +1318,10 @@ func opNewArray(vm *VM, ins opcode.InstructionNewArray) {
 	elements := vm.peekN(int(ins.Size))
 	array := interpreter.NewArrayValue(
 		vm.context,
-		EmptyLocationRange,
 		typ,
-
 		// Newly created values are always on stack.
 		// Need to 'Transfer' if needed to be stored in an account.
 		common.ZeroAddress,
-
 		elements...,
 	)
 
@@ -1405,7 +1337,6 @@ func opNewDictionary(vm *VM, ins opcode.InstructionNewDictionary) {
 	entries := vm.peekN(int(ins.Size * 2))
 	dictionary := interpreter.NewDictionaryValue(
 		vm.context,
-		EmptyLocationRange,
 		typ,
 		entries...,
 	)
@@ -1427,7 +1358,6 @@ func opNewRef(vm *VM, ins opcode.InstructionNewRef) {
 		context,
 		semaBorrowedType,
 		value,
-		EmptyLocationRange,
 		ins.IsImplicit,
 	)
 
@@ -1438,7 +1368,7 @@ func opIterator(vm *VM) {
 	value := vm.pop()
 	iterable := value.(interpreter.IterableValue)
 	context := vm.context
-	iterator := iterable.Iterator(context, EmptyLocationRange)
+	iterator := iterable.Iterator(context)
 	if valueID, ok := iterator.ValueID(); ok {
 		context.startContainerValueIteration(valueID)
 	}
@@ -1455,7 +1385,7 @@ func opIteratorHasNext(vm *VM) {
 func opIteratorNext(vm *VM) {
 	value := vm.pop()
 	iterator := value.(*IteratorWrapperValue)
-	element := iterator.Next(vm.context, EmptyLocationRange)
+	element := iterator.Next(vm.context)
 	vm.push(element)
 }
 
@@ -1469,7 +1399,7 @@ func opIteratorEnd(vm *VM) {
 
 func opDeref(vm *VM) {
 	value := vm.pop()
-	dereferenced := interpreter.DereferenceValue(vm.context, EmptyLocationRange, value)
+	dereferenced := interpreter.DereferenceValue(vm.context, value)
 	vm.push(dereferenced)
 }
 

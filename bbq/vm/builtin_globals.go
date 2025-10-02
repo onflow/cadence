@@ -176,7 +176,6 @@ func init() {
 
 				return interpreter.ConstructConstantSizedArrayTypeValue(
 					context,
-					EmptyLocationRange,
 					typeValue,
 					sizeValue,
 				)
@@ -225,7 +224,6 @@ func init() {
 
 				return interpreter.ConstructFunctionTypeValue(
 					context,
-					EmptyLocationRange,
 					parameterTypeValues,
 					returnTypeValue,
 				)
@@ -244,7 +242,6 @@ func init() {
 
 				return interpreter.ConstructReferenceTypeValue(
 					context,
-					EmptyLocationRange,
 					entitlementValues,
 					typeValue,
 				)
@@ -262,7 +259,6 @@ func init() {
 
 				return interpreter.ConstructIntersectionTypeValue(
 					context,
-					EmptyLocationRange,
 					intersectionIDs,
 				)
 			},
@@ -309,7 +305,6 @@ func init() {
 				return convert(
 					context.MemoryGauge,
 					arguments[0],
-					EmptyLocationRange,
 				)
 			},
 		)
@@ -459,11 +454,7 @@ func registerBuiltinTypeSaturatingArithmeticFunctions(t sema.SaturatingArithmeti
 		register(
 			sema.NumericTypeSaturatingAddFunctionName,
 			func(context *Context, v, other interpreter.NumberValue) interpreter.NumberValue {
-				return v.SaturatingPlus(
-					context,
-					other,
-					EmptyLocationRange,
-				)
+				return v.SaturatingPlus(context, other)
 			},
 		)
 	}
@@ -472,11 +463,7 @@ func registerBuiltinTypeSaturatingArithmeticFunctions(t sema.SaturatingArithmeti
 		register(
 			sema.NumericTypeSaturatingSubtractFunctionName,
 			func(context *Context, v, other interpreter.NumberValue) interpreter.NumberValue {
-				return v.SaturatingMinus(
-					context,
-					other,
-					EmptyLocationRange,
-				)
+				return v.SaturatingMinus(context, other)
 			},
 		)
 	}
@@ -485,11 +472,7 @@ func registerBuiltinTypeSaturatingArithmeticFunctions(t sema.SaturatingArithmeti
 		register(
 			sema.NumericTypeSaturatingMultiplyFunctionName,
 			func(context *Context, v, other interpreter.NumberValue) interpreter.NumberValue {
-				return v.SaturatingMul(
-					context,
-					other,
-					EmptyLocationRange,
-				)
+				return v.SaturatingMul(context, other)
 			},
 		)
 	}
@@ -498,11 +481,7 @@ func registerBuiltinTypeSaturatingArithmeticFunctions(t sema.SaturatingArithmeti
 		register(
 			sema.NumericTypeSaturatingDivideFunctionName,
 			func(context *Context, v, other interpreter.NumberValue) interpreter.NumberValue {
-				return v.SaturatingDiv(
-					context,
-					other,
-					EmptyLocationRange,
-				)
+				return v.SaturatingDiv(context, other)
 			},
 		)
 	}
@@ -540,7 +519,7 @@ func newFromBigEndianBytesFunction(typedConverter interpreter.TypedBigEndianByte
 				panic(errors.NewUnreachableError())
 			}
 
-			bytes, err := interpreter.ByteArrayValueToByteSlice(context, argument, EmptyLocationRange)
+			bytes, err := interpreter.ByteArrayValueToByteSlice(context, argument)
 			if err != nil {
 				return interpreter.Nil
 			}

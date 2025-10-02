@@ -904,5 +904,5 @@ func checkCadenceValue(
 ) {
 	ev, ok := value.(interpreter.EquatableValue)
 	require.True(tb, ok)
-	require.True(tb, ev.Equal(inter, interpreter.EmptyLocationRange, expectedValue))
+	require.True(tb, ev.Equal(inter, expectedValue))
 }

@@ -61,7 +61,7 @@ func (*PathCapabilityValue) IsValue() {}
 
 func (*PathCapabilityValue) isCapabilityValue() {}
 
-func (v *PathCapabilityValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
+func (v *PathCapabilityValue) Accept(_ ValueVisitContext, _ Visitor, _ LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -205,7 +205,7 @@ func (v *PathCapabilityValue) ConformsToStaticType(
 	return true
 }
 
-func (v *PathCapabilityValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
+func (v *PathCapabilityValue) Equal(context ValueComparisonContext, other Value) bool {
 	otherCapability, ok := other.(*PathCapabilityValue)
 	if !ok {
 		return false
@@ -221,8 +221,8 @@ func (v *PathCapabilityValue) Equal(context ValueComparisonContext, locationRang
 		return false
 	}
 
-	return otherCapability.address.Equal(context, locationRange, v.address) &&
-		otherCapability.Path.Equal(context, locationRange, v.Path)
+	return otherCapability.address.Equal(context, v.address) &&
+		otherCapability.Path.Equal(context, v.Path)
 }
 
 func (*PathCapabilityValue) IsStorable() bool {
@@ -252,7 +252,6 @@ func (*PathCapabilityValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (v *PathCapabilityValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,

@@ -179,7 +179,6 @@ func TestArrayStorage(t *testing.T) {
 
 		value := NewArrayValue(
 			inter,
-			EmptyLocationRange,
 			&VariableSizedStaticType{
 				Type: element.StaticType(inter),
 			},
@@ -195,16 +194,15 @@ func TestArrayStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		require.False(t, bool(value.Contains(inter, EmptyLocationRange, element)))
+		require.False(t, bool(value.Contains(inter, element)))
 
 		value.Insert(
 			inter,
-			EmptyLocationRange,
 			0,
 			element,
 		)
 
-		require.True(t, bool(value.Contains(inter, EmptyLocationRange, element)))
+		require.True(t, bool(value.Contains(inter, element)))
 
 		// array + new copy of composite element
 		// NOTE: original composite value is inlined in parent array.
@@ -219,7 +217,7 @@ func TestArrayStorage(t *testing.T) {
 		require.IsType(t, storedValue, &ArrayValue{})
 		storedArray := storedValue.(*ArrayValue)
 
-		actual := storedArray.Get(inter, EmptyLocationRange, 0)
+		actual := storedArray.Get(inter, 0)
 
 		RequireValuesEqual(t, inter, element, actual)
 	})
@@ -246,7 +244,6 @@ func TestArrayStorage(t *testing.T) {
 
 		value := NewArrayValue(
 			inter,
-			EmptyLocationRange,
 			&VariableSizedStaticType{
 				Type: element.StaticType(inter),
 			},
@@ -254,7 +251,7 @@ func TestArrayStorage(t *testing.T) {
 			element,
 		)
 
-		require.True(t, bool(value.Contains(inter, EmptyLocationRange, element)))
+		require.True(t, bool(value.Contains(inter, element)))
 
 		require.NotEqual(t, atree.SlabIDUndefined, value.SlabID())
 
@@ -283,7 +280,7 @@ func TestArrayStorage(t *testing.T) {
 		require.IsType(t, storedValue, &ArrayValue{})
 		storedArray := storedValue.(*ArrayValue)
 
-		require.False(t, bool(storedArray.Contains(inter, EmptyLocationRange, element)))
+		require.False(t, bool(storedArray.Contains(inter, element)))
 	})
 }
 
@@ -306,7 +303,6 @@ func TestDictionaryStorage(t *testing.T) {
 
 		value := NewDictionaryValue(
 			inter,
-			EmptyLocationRange,
 			&DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
@@ -342,7 +338,7 @@ func TestDictionaryStorage(t *testing.T) {
 		require.IsType(t, storedValue, &DictionaryValue{})
 		storedDictionary := storedValue.(*DictionaryValue)
 
-		actual, ok := storedDictionary.Get(inter, EmptyLocationRange, entryKey)
+		actual, ok := storedDictionary.Get(inter, entryKey)
 		require.True(t, ok)
 
 		RequireValuesEqual(t, inter, entryValue, actual)
@@ -363,7 +359,6 @@ func TestDictionaryStorage(t *testing.T) {
 
 		value := NewDictionaryValue(
 			inter,
-			EmptyLocationRange,
 			&DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
@@ -413,7 +408,6 @@ func TestDictionaryStorage(t *testing.T) {
 
 		value := NewDictionaryValue(
 			inter,
-			EmptyLocationRange,
 			&DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
@@ -432,7 +426,6 @@ func TestDictionaryStorage(t *testing.T) {
 
 		value.Remove(
 			inter,
-			EmptyLocationRange,
 			NewUnmeteredStringValue("test"),
 		)
 
@@ -462,7 +455,6 @@ func TestDictionaryStorage(t *testing.T) {
 
 		value := NewDictionaryValue(
 			inter,
-			EmptyLocationRange,
 			&DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
@@ -479,7 +471,6 @@ func TestDictionaryStorage(t *testing.T) {
 
 		value.Insert(
 			inter,
-			EmptyLocationRange,
 			NewUnmeteredStringValue("test"),
 			NewUnmeteredSomeValueNonCopying(TrueValue),
 		)
@@ -515,7 +506,6 @@ func TestStorageOverwriteAndRemove(t *testing.T) {
 
 		array1 := NewArrayValue(
 			inter,
-			EmptyLocationRange,
 			&VariableSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 			},
@@ -532,7 +522,6 @@ func TestStorageOverwriteAndRemove(t *testing.T) {
 
 		array2 := NewArrayValue(
 			inter,
-			EmptyLocationRange,
 			&VariableSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 			},
@@ -629,7 +618,6 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 
 		containerValue1 := NewArrayValue(
 			inter,
-			EmptyLocationRange,
 			&VariableSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 			},
@@ -638,7 +626,6 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 
 		containerValue2 := NewArrayValue(
 			inter,
-			EmptyLocationRange,
 			&VariableSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 			},
@@ -667,8 +654,8 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		require.Equal(t, "[]", containerValue1.String())
 		require.Equal(t, "[]", containerValue2.String())
 
-		containerValue1.Append(inter, EmptyLocationRange, NewUnmeteredUInt8Value(1))
-		containerValue2.Append(inter, EmptyLocationRange, NewUnmeteredUInt8Value(2))
+		containerValue1.Append(inter, NewUnmeteredUInt8Value(1))
+		containerValue2.Append(inter, NewUnmeteredUInt8Value(2))
 
 		require.Equal(t, "[1]", containerValue1.String())
 		require.Equal(t, "[2]", containerValue2.String())
@@ -681,7 +668,6 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 
 		childValue2 := childValue1.Transfer(
 			inter,
-			EmptyLocationRange,
 			atree.Address{},
 			false,
 			nil,
@@ -689,9 +675,9 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 			true, // childValue1 is standalone before being inserted into containerValue1.
 		).(*CompositeValue)
 
-		containerValue1.Append(inter, EmptyLocationRange, childValue1)
+		containerValue1.Append(inter, childValue1)
 		// Append invalidated, get again
-		childValue1 = containerValue1.Get(inter, EmptyLocationRange, 1).(*CompositeValue)
+		childValue1 = containerValue1.Get(inter, 1).(*CompositeValue)
 
 		require.Equal(t, "[1, S.test.TestStruct(test: 3)]", containerValue1.String())
 		require.Equal(t, "[2]", containerValue2.String())
@@ -738,9 +724,9 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		require.Equal(t, "S.test.TestStruct(test: 5)", childValue3.String())
 		require.Equal(t, "S.test.TestStruct(test: 7)", childValue4.String())
 
-		containerValue1.Append(inter, EmptyLocationRange, childValue4)
+		containerValue1.Append(inter, childValue4)
 		// Append invalidated, get again
-		childValue4 = containerValue1.Get(inter, EmptyLocationRange, 1).(*CompositeValue)
+		childValue4 = containerValue1.Get(inter, 1).(*CompositeValue)
 
 		require.Equal(t, "[1, S.test.TestStruct(test: 7)]", containerValue1.String())
 		require.Equal(t, "[2]", containerValue2.String())
@@ -767,9 +753,9 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		require.Equal(t, "S.test.TestStruct(test: 5)", childValue3.String())
 		require.Equal(t, "S.test.TestStruct(test: 9)", childValue4.String())
 
-		containerValue2.Append(inter, EmptyLocationRange, childValue3)
+		containerValue2.Append(inter, childValue3)
 		// Append invalidated, get again
-		childValue3 = containerValue2.Get(inter, EmptyLocationRange, 1).(*CompositeValue)
+		childValue3 = containerValue2.Get(inter, 1).(*CompositeValue)
 
 		require.Equal(t, "[1, S.test.TestStruct(test: 9)]", containerValue1.String())
 		require.Equal(t, "[2, S.test.TestStruct(test: 5)]", containerValue2.String())
@@ -806,7 +792,6 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 
 		containerValue1 := NewArrayValue(
 			inter,
-			EmptyLocationRange,
 			&VariableSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 			},
@@ -815,7 +800,6 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 
 		containerValue2 := NewArrayValue(
 			inter,
-			EmptyLocationRange,
 			&VariableSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 			},
@@ -844,8 +828,8 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		require.Equal(t, "[]", containerValue1.String())
 		require.Equal(t, "[]", containerValue2.String())
 
-		containerValue1.Append(inter, EmptyLocationRange, NewUnmeteredUInt8Value(1))
-		containerValue2.Append(inter, EmptyLocationRange, NewUnmeteredUInt8Value(2))
+		containerValue1.Append(inter, NewUnmeteredUInt8Value(1))
+		containerValue2.Append(inter, NewUnmeteredUInt8Value(2))
 
 		require.Equal(t, "[1]", containerValue1.String())
 		require.Equal(t, "[2]", containerValue2.String())
@@ -861,12 +845,11 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 			UnauthorizedAccess,
 			childValue1,
 			testResourceType,
-			EmptyLocationRange,
 		)
 
-		containerValue1.Append(inter, EmptyLocationRange, childValue1)
+		containerValue1.Append(inter, childValue1)
 		// Append invalidated, get again
-		childValue1 = containerValue1.Get(inter, EmptyLocationRange, 1).(*CompositeValue)
+		childValue1 = containerValue1.Get(inter, 1).(*CompositeValue)
 
 		require.Equal(t, "[1, S.test.TestResource(test: 3)]", containerValue1.String())
 		require.Equal(t, "[2]", containerValue2.String())
@@ -922,9 +905,9 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		require.Equal(t, "S.test.TestResource(test: 7)", childValue2.String())
 		require.Equal(t, "S.test.TestResource(test: 8)", childValue4.String())
 
-		containerValue1.Append(inter, EmptyLocationRange, childValue4)
+		containerValue1.Append(inter, childValue4)
 		// Append invalidated, get again
-		childValue4 = containerValue1.Get(inter, EmptyLocationRange, 1).(*CompositeValue)
+		childValue4 = containerValue1.Get(inter, 1).(*CompositeValue)
 
 		require.Equal(t, "[1, S.test.TestResource(test: 8)]", containerValue1.String())
 		require.Equal(t, "[2]", containerValue2.String())
@@ -961,9 +944,9 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		require.Equal(t, "S.test.TestResource(test: 10)", childValue2.String())
 		require.Equal(t, "S.test.TestResource(test: 11)", childValue4.String())
 
-		containerValue2.Append(inter, EmptyLocationRange, childValue2)
+		containerValue2.Append(inter, childValue2)
 		// Append invalidated, get again
-		childValue2 = containerValue2.Get(inter, EmptyLocationRange, 1).(*CompositeValue)
+		childValue2 = containerValue2.Get(inter, 1).(*CompositeValue)
 
 		require.Equal(t, "[1, S.test.TestResource(test: 11)]", containerValue1.String())
 		require.Equal(t, "[2, S.test.TestResource(test: 10)]", containerValue2.String())

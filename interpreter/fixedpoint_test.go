@@ -122,11 +122,11 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 var testFixedPointValues = map[sema.Type]interpreter.Value{
 	// Fix types
 	sema.Fix64Type:  interpreter.NewUnmeteredFix64Value(50 * sema.Fix64Factor),
-	sema.Fix128Type: interpreter.NewUnmeteredFix128ValueWithInteger(50, interpreter.EmptyLocationRange),
+	sema.Fix128Type: interpreter.NewUnmeteredFix128ValueWithInteger(50),
 
 	// UFix types
 	sema.UFix64Type:  interpreter.NewUnmeteredUFix64Value(50 * sema.Fix64Factor),
-	sema.UFix128Type: interpreter.NewUnmeteredUFix128ValueWithInteger(50, interpreter.EmptyLocationRange),
+	sema.UFix128Type: interpreter.NewUnmeteredUFix128ValueWithInteger(50),
 }
 
 func init() {
@@ -466,20 +466,20 @@ func TestInterpretFixedPointToFixedPointConversions(t *testing.T) {
 	testValues := map[*sema.FixedPointNumericType]values{
 		// Fix types
 		sema.Fix64Type: {
-			positiveValue: interpreter.NewUnmeteredFix64ValueWithInteger(42, interpreter.EmptyLocationRange),
-			negativeValue: interpreter.NewUnmeteredFix64ValueWithInteger(-42, interpreter.EmptyLocationRange),
+			positiveValue: interpreter.NewUnmeteredFix64ValueWithInteger(42),
+			negativeValue: interpreter.NewUnmeteredFix64ValueWithInteger(-42),
 
 			// Use the max(Fix64) as the large positive value
 			largePositiveValue: interpreter.NewUnmeteredFix64Value(math.MaxInt64),
 			// Use the min(Fix64) as the large negative value
 			largeNegativeValue: interpreter.NewUnmeteredFix64Value(math.MinInt64),
 
-			min: interpreter.NewUnmeteredFix64ValueWithInteger(sema.Fix64TypeMinInt, interpreter.EmptyLocationRange),
-			max: interpreter.NewUnmeteredFix64ValueWithInteger(sema.Fix64TypeMaxInt, interpreter.EmptyLocationRange),
+			min: interpreter.NewUnmeteredFix64ValueWithInteger(sema.Fix64TypeMinInt),
+			max: interpreter.NewUnmeteredFix64ValueWithInteger(sema.Fix64TypeMaxInt),
 		},
 		sema.Fix128Type: {
-			positiveValue: interpreter.NewUnmeteredFix128ValueWithInteger(42, interpreter.EmptyLocationRange),
-			negativeValue: interpreter.NewUnmeteredFix128ValueWithInteger(-42, interpreter.EmptyLocationRange),
+			positiveValue: interpreter.NewUnmeteredFix128ValueWithInteger(42),
+			negativeValue: interpreter.NewUnmeteredFix128ValueWithInteger(-42),
 
 			// Use the max(Fix64) as the large positive value
 			largePositiveValue: interpreter.NewFix128ValueFromBigInt(nil, fixedpoint.Fix64TypeMaxScaledTo128),
@@ -492,16 +492,16 @@ func TestInterpretFixedPointToFixedPointConversions(t *testing.T) {
 
 		// UFix types
 		sema.UFix64Type: {
-			positiveValue: interpreter.NewUnmeteredUFix64ValueWithInteger(42, interpreter.EmptyLocationRange),
+			positiveValue: interpreter.NewUnmeteredUFix64ValueWithInteger(42),
 
 			// Use the max(Fix64) as the large positive value
 			largePositiveValue: interpreter.NewUnmeteredUFix64Value(math.MaxInt64),
 
-			min: interpreter.NewUnmeteredUFix64ValueWithInteger(sema.UFix64TypeMinInt, interpreter.EmptyLocationRange),
-			max: interpreter.NewUnmeteredUFix64ValueWithInteger(sema.UFix64TypeMaxInt, interpreter.EmptyLocationRange),
+			min: interpreter.NewUnmeteredUFix64ValueWithInteger(sema.UFix64TypeMinInt),
+			max: interpreter.NewUnmeteredUFix64ValueWithInteger(sema.UFix64TypeMaxInt),
 		},
 		sema.UFix128Type: {
-			positiveValue: interpreter.NewUnmeteredUFix128ValueWithInteger(42, interpreter.EmptyLocationRange),
+			positiveValue: interpreter.NewUnmeteredUFix128ValueWithInteger(42),
 
 			// Use the max(Fix64) as the large positive value
 			largePositiveValue: interpreter.NewUFix128ValueFromBigInt(nil, fixedpoint.Fix64TypeMaxScaledTo128),
@@ -1321,8 +1321,8 @@ func TestInterpretFixedPointLeastSignificantDecimalHandling(t *testing.T) {
 				test(
 					t,
 					typ,
-					a.Negate(nil, interpreter.EmptyLocationRange),
-					b.Negate(nil, interpreter.EmptyLocationRange),
+					a.Negate(nil),
+					b.Negate(nil),
 					result,
 					operation,
 				)
@@ -1332,8 +1332,8 @@ func TestInterpretFixedPointLeastSignificantDecimalHandling(t *testing.T) {
 					t,
 					typ,
 					a,
-					b.Negate(nil, interpreter.EmptyLocationRange),
-					result.Negate(nil, interpreter.EmptyLocationRange),
+					b.Negate(nil),
+					result.Negate(nil),
 					operation,
 				)
 
@@ -1341,9 +1341,9 @@ func TestInterpretFixedPointLeastSignificantDecimalHandling(t *testing.T) {
 				test(
 					t,
 					typ,
-					a.Negate(nil, interpreter.EmptyLocationRange),
+					a.Negate(nil),
 					b,
-					result.Negate(nil, interpreter.EmptyLocationRange),
+					result.Negate(nil),
 					operation,
 				)
 			}

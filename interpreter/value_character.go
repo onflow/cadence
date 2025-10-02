@@ -109,7 +109,7 @@ func (v CharacterValue) MeteredString(context ValueStringContext, _ SeenReferenc
 	return v.String()
 }
 
-func (v CharacterValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
+func (v CharacterValue) Equal(_ ValueComparisonContext, other Value) bool {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		return false
@@ -117,7 +117,7 @@ func (v CharacterValue) Equal(_ ValueComparisonContext, _ LocationRange, other V
 	return v.Str == otherChar.Str
 }
 
-func (v CharacterValue) Less(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) Less(_ ValueComparisonContext, other ComparableValue) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -125,7 +125,7 @@ func (v CharacterValue) Less(_ ValueComparisonContext, other ComparableValue, _ 
 	return v.Str < otherChar.Str
 }
 
-func (v CharacterValue) LessEqual(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) LessEqual(_ ValueComparisonContext, other ComparableValue) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -133,7 +133,7 @@ func (v CharacterValue) LessEqual(_ ValueComparisonContext, other ComparableValu
 	return v.Str <= otherChar.Str
 }
 
-func (v CharacterValue) Greater(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) Greater(_ ValueComparisonContext, other ComparableValue) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -141,7 +141,7 @@ func (v CharacterValue) Greater(_ ValueComparisonContext, other ComparableValue,
 	return v.Str > otherChar.Str
 }
 
-func (v CharacterValue) GreaterEqual(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) GreaterEqual(_ ValueComparisonContext, other ComparableValue) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -149,7 +149,7 @@ func (v CharacterValue) GreaterEqual(_ ValueComparisonContext, other ComparableV
 	return v.Str >= otherChar.Str
 }
 
-func (v CharacterValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+func (v CharacterValue) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
 	s := []byte(v.Str)
 	length := 1 + len(s)
 	var buffer []byte
@@ -186,7 +186,6 @@ func (CharacterValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (v CharacterValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -231,7 +230,7 @@ func (v CharacterValue) GetMember(context MemberAccessibleContext, locationRange
 
 func (v CharacterValue) GetMethod(
 	context MemberAccessibleContext,
-	locationRange LocationRange,
+	_ LocationRange,
 	name string,
 ) FunctionValue {
 	switch name {

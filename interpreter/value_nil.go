@@ -74,7 +74,7 @@ func (NilValue) IsDestroyed() bool {
 	return false
 }
 
-func (v NilValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {}
+func (v NilValue) Destroy(_ ResourceDestructionContext, _ LocationRange) {}
 
 func (NilValue) String() string {
 	return format.Nil
@@ -103,8 +103,8 @@ func (v NilValue) GetMember(context MemberAccessibleContext, locationRange Locat
 }
 
 func (v NilValue) GetMethod(
-	context MemberAccessibleContext,
-	locationRange LocationRange,
+	_ MemberAccessibleContext,
+	_ LocationRange,
 	name string,
 ) FunctionValue {
 	switch name {
@@ -133,7 +133,7 @@ func (v NilValue) ConformsToStaticType(
 	return true
 }
 
-func (v NilValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
+func (v NilValue) Equal(_ ValueComparisonContext, other Value) bool {
 	_, ok := other.(NilValue)
 	return ok
 }
@@ -156,7 +156,6 @@ func (NilValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (v NilValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,

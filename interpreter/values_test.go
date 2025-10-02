@@ -116,7 +116,6 @@ func importValue(t *testing.T, inter *interpreter.Interpreter, value cadence.Val
 		for _, element := range value.Values {
 			array.Append(
 				inter,
-				interpreter.EmptyLocationRange,
 				importValue(t, inter, element),
 			)
 		}
@@ -147,7 +146,6 @@ func importValue(t *testing.T, inter *interpreter.Interpreter, value cadence.Val
 		for _, pair := range value.Pairs {
 			dictionary.Insert(
 				inter,
-				interpreter.EmptyLocationRange,
 				importValue(t, inter, pair.Key),
 				importValue(t, inter, pair.Value),
 			)
@@ -327,7 +325,6 @@ func TestInterpretSmokeRandomDictionaryOperations(t *testing.T) {
 			func() *interpreter.DictionaryValue {
 				return interpreter.NewDictionaryValueWithAddress(
 					inter,
-					interpreter.EmptyLocationRange,
 					&interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeHashableStruct,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -363,10 +360,10 @@ func TestInterpretSmokeRandomDictionaryOperations(t *testing.T) {
 		for _, pair := range expectedValue.Pairs {
 			pairKey := importValue(t, inter, pair.Key)
 
-			exists := dictionary.ContainsKey(inter, interpreter.EmptyLocationRange, pairKey)
+			exists := dictionary.ContainsKey(inter, pairKey)
 			require.True(t, bool(exists))
 
-			value, found := dictionary.Get(inter, interpreter.EmptyLocationRange, pairKey)
+			value, found := dictionary.Get(inter, pairKey)
 			require.True(t, found)
 
 			pairValue := importValue(t, inter, pair.Value)
@@ -404,7 +401,6 @@ func TestInterpretSmokeRandomDictionaryOperations(t *testing.T) {
 
 		dictionary.Iterate(
 			inter,
-			interpreter.EmptyLocationRange,
 			func(key, value interpreter.Value) (resume bool) {
 
 				mapKey := mapKey(inter, key)
@@ -574,7 +570,6 @@ func TestInterpretSmokeRandomDictionaryOperations(t *testing.T) {
 
 		transferred := original.Transfer(
 			inter,
-			interpreter.EmptyLocationRange,
 			atree.Address(newOwner),
 			false,
 			nil,
@@ -693,11 +688,7 @@ func TestInterpretSmokeRandomDictionaryOperations(t *testing.T) {
 				key = r.randomHashableValue(inter)
 				importedKey = importValue(t, inter, key)
 
-				if !dictionary.ContainsKey(
-					inter,
-					interpreter.EmptyLocationRange,
-					importedKey,
-				) {
+				if !dictionary.ContainsKey(inter, importedKey) {
 					break
 				}
 			}
@@ -712,7 +703,6 @@ func TestInterpretSmokeRandomDictionaryOperations(t *testing.T) {
 
 				existing := dictionary.Insert(
 					inter,
-					interpreter.EmptyLocationRange,
 					importedKey,
 					importedValue,
 				)
@@ -812,7 +802,7 @@ func TestInterpretSmokeRandomDictionaryOperations(t *testing.T) {
 			// to not report any "unreferenced slab" errors.
 
 			removedValue := withoutAtreeStorageValidationEnabled(inter, func() interpreter.OptionalValue {
-				return dictionary.Remove(inter, interpreter.EmptyLocationRange, key)
+				return dictionary.Remove(inter, key)
 			})
 
 			require.IsType(t, &interpreter.SomeValue{}, removedValue)
@@ -925,7 +915,6 @@ func TestInterpretSmokeRandomDictionaryOperations(t *testing.T) {
 			existingValue := withoutAtreeStorageValidationEnabled(inter, func() interpreter.OptionalValue {
 				return dictionary.Insert(
 					inter,
-					interpreter.EmptyLocationRange,
 					key,
 					newValue,
 				)
@@ -1223,7 +1212,6 @@ func TestInterpretSmokeRandomCompositeOperations(t *testing.T) {
 
 		transferred := original.Transfer(
 			inter,
-			interpreter.EmptyLocationRange,
 			atree.Address(newOwner),
 			false,
 			nil,
@@ -1502,7 +1490,6 @@ func TestInterpretSmokeRandomArrayOperations(t *testing.T) {
 			func() *interpreter.ArrayValue {
 				return interpreter.NewArrayValue(
 					inter,
-					interpreter.EmptyLocationRange,
 					&interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
@@ -1537,7 +1524,7 @@ func TestInterpretSmokeRandomArrayOperations(t *testing.T) {
 		for i, value := range expectedValue.Values {
 			value := importValue(t, inter, value)
 
-			element := array.Get(inter, interpreter.EmptyLocationRange, i)
+			element := array.Get(inter, i)
 
 			AssertValuesEqual(t, inter, value, element)
 		}
@@ -1568,7 +1555,6 @@ func TestInterpretSmokeRandomArrayOperations(t *testing.T) {
 				return true
 			},
 			false,
-			interpreter.EmptyLocationRange,
 		)
 
 		assert.Equal(t, len(expectedValue.Values), iterations)
@@ -1725,7 +1711,6 @@ func TestInterpretSmokeRandomArrayOperations(t *testing.T) {
 
 		transferred := original.Transfer(
 			inter,
-			interpreter.EmptyLocationRange,
 			atree.Address(newOwner),
 			false,
 			nil,
@@ -1857,7 +1842,6 @@ func TestInterpretSmokeRandomArrayOperations(t *testing.T) {
 
 				array.Insert(
 					inter,
-					interpreter.EmptyLocationRange,
 					index,
 					importedValue,
 				)
@@ -2054,7 +2038,6 @@ func TestInterpretSmokeRandomArrayOperations(t *testing.T) {
 			withoutAtreeStorageValidationEnabled(inter, func() struct{} {
 				array.Set(
 					inter,
-					interpreter.EmptyLocationRange,
 					index,
 					newValue,
 				)
@@ -2223,7 +2206,6 @@ func TestInterpretSmokeRandomNestedArrayOperations(t *testing.T) {
 
 		actualRootValue = importValue(t, inter, generatedValue).Transfer(
 			inter,
-			interpreter.EmptyLocationRange,
 			atree.Address(owner),
 			false,
 			nil,
@@ -2260,11 +2242,7 @@ func TestInterpretSmokeRandomNestedArrayOperations(t *testing.T) {
 			inter,
 			func(element interpreter.Value) (resume bool) {
 
-				expectedElement := expectedArray.Get(
-					inter,
-					interpreter.EmptyLocationRange,
-					iterations,
-				)
+				expectedElement := expectedArray.Get(inter, iterations)
 				AssertValuesEqual(t, inter, expectedElement, element)
 
 				iterations += 1
@@ -2272,7 +2250,6 @@ func TestInterpretSmokeRandomNestedArrayOperations(t *testing.T) {
 				return true
 			},
 			false,
-			interpreter.EmptyLocationRange,
 		)
 
 		assert.Equal(t, expectedCount, iterations)
@@ -2323,7 +2300,6 @@ func TestInterpretSmokeRandomNestedArrayOperations(t *testing.T) {
 			withoutAtreeStorageValidationEnabled(inter, func() struct{} {
 				array.Insert(
 					inter,
-					interpreter.EmptyLocationRange,
 					insert.index,
 					newValue,
 				)
@@ -2458,7 +2434,6 @@ func TestInterpretSmokeRandomNestedArrayOperations(t *testing.T) {
 			withoutAtreeStorageValidationEnabled(inter, func() struct{} {
 				array.Set(
 					inter,
-					interpreter.EmptyLocationRange,
 					update.index,
 					newValue,
 				)
@@ -2771,7 +2746,6 @@ func TestInterpretSmokeRandomNestedDictionaryOperations(t *testing.T) {
 
 		actualRootValue = importValue(t, inter, generatedValue).Transfer(
 			inter,
-			interpreter.EmptyLocationRange,
 			atree.Address(owner),
 			false,
 			nil,
@@ -2806,14 +2780,9 @@ func TestInterpretSmokeRandomNestedDictionaryOperations(t *testing.T) {
 
 		actualDictionary.Iterate(
 			inter,
-			interpreter.EmptyLocationRange,
 			func(key, element interpreter.Value) (resume bool) {
 
-				expectedElement, exists := expectedDictionary.Get(
-					inter,
-					interpreter.EmptyLocationRange,
-					key,
-				)
+				expectedElement, exists := expectedDictionary.Get(inter, key)
 				require.True(t, exists)
 				AssertValuesEqual(t, inter, expectedElement, element)
 
@@ -2872,7 +2841,6 @@ func TestInterpretSmokeRandomNestedDictionaryOperations(t *testing.T) {
 			withoutAtreeStorageValidationEnabled(inter, func() struct{} {
 				dictionary.Insert(
 					inter,
-					interpreter.EmptyLocationRange,
 					newKey,
 					newValue,
 				)
@@ -2902,11 +2870,7 @@ func TestInterpretSmokeRandomNestedDictionaryOperations(t *testing.T) {
 				key = r.randomHashableValue(inter)
 
 				importedKey := importValue(t, inter, key)
-				if actualNestedDictionary.ContainsKey(
-					inter,
-					interpreter.EmptyLocationRange,
-					importedKey,
-				) {
+				if actualNestedDictionary.ContainsKey(inter, importedKey) {
 					continue
 				}
 
@@ -3051,7 +3015,6 @@ func TestInterpretSmokeRandomNestedDictionaryOperations(t *testing.T) {
 
 		actualNestedDictionary.IterateKeys(
 			inter,
-			interpreter.EmptyLocationRange,
 			func(key interpreter.Value) (resume bool) {
 				cadenceKey, err := runtime.ExportValue(
 					key,
@@ -3166,7 +3129,6 @@ func TestInterpretSmokeRandomNestedDictionaryOperations(t *testing.T) {
 			withoutAtreeStorageValidationEnabled(inter, func() struct{} {
 				dictionary.Remove(
 					inter,
-					interpreter.EmptyLocationRange,
 					importValue(t, inter, key),
 				)
 				return struct{}{}
@@ -3189,7 +3151,6 @@ func TestInterpretSmokeRandomNestedDictionaryOperations(t *testing.T) {
 
 		actualNestedDictionary.IterateKeys(
 			inter,
-			interpreter.EmptyLocationRange,
 			func(key interpreter.Value) (resume bool) {
 
 				keys = append(keys, key)
@@ -3392,7 +3353,6 @@ func TestInterpretSmokeRandomNestedCompositeOperations(t *testing.T) {
 
 		actualRootValue = importValue(t, inter, generatedValue).Transfer(
 			inter,
-			interpreter.EmptyLocationRange,
 			atree.Address(owner),
 			false,
 			nil,
@@ -3440,7 +3400,6 @@ func TestInterpretSmokeRandomNestedCompositeOperations(t *testing.T) {
 
 				return true
 			},
-			interpreter.EmptyLocationRange,
 		)
 
 		assert.Equal(t, expectedCount, iterations)
@@ -3959,11 +3918,7 @@ func getNestedValue(
 			)
 			array := value.(*interpreter.ArrayValue)
 
-			value = array.Get(
-				inter,
-				interpreter.EmptyLocationRange,
-				element.index,
-			)
+			value = array.Get(inter, element.index)
 
 			require.NotNil(t,
 				value,
@@ -3985,11 +3940,7 @@ func getNestedValue(
 			key := importValue(t, inter, element.key)
 
 			var found bool
-			value, found = dictionary.Get(
-				inter,
-				interpreter.EmptyLocationRange,
-				key,
-			)
+			value, found = dictionary.Get(inter, key)
 			require.True(t,
 				found,
 				"missing value for dictionary key %s (path: %v)",
@@ -4866,7 +4817,6 @@ func TestCheckStorageHealthInMiddleOfDeepRemove(t *testing.T) {
 	// Create a small child array which will be inlined in parent container.
 	childArray1 := interpreter.NewArrayValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		&interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeAnyStruct,
 		},
@@ -4879,7 +4829,6 @@ func TestCheckStorageHealthInMiddleOfDeepRemove(t *testing.T) {
 	// Create a large child array which will NOT be inlined in parent container.
 	childArray2 := interpreter.NewArrayValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		&interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeAnyStruct,
 		},
@@ -4891,7 +4840,6 @@ func TestCheckStorageHealthInMiddleOfDeepRemove(t *testing.T) {
 	// Create an array with childArray1 and childArray2.
 	array := interpreter.NewArrayValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		&interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeAnyStruct,
 		},
@@ -4945,7 +4893,6 @@ func TestInterpretCheckStorageHealthInMiddleOfTransferAndRemove(t *testing.T) {
 	// Create large array value with zero address which will not be inlined.
 	gchildArray := interpreter.NewArrayValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		&interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeAnyStruct,
 		},
@@ -5034,7 +4981,6 @@ func TestInterpretCheckStorageHealthInMiddleOfTransferAndRemove(t *testing.T) {
 
 	childMap := interpreter.NewDictionaryValueWithAddress(
 		inter,
-		interpreter.EmptyLocationRange,
 		&interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 			ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -5047,7 +4993,6 @@ func TestInterpretCheckStorageHealthInMiddleOfTransferAndRemove(t *testing.T) {
 	owner := common.Address{'A'}
 	m := interpreter.NewDictionaryValueWithAddress(
 		inter,
-		interpreter.EmptyLocationRange,
 		&interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 			ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -5078,7 +5023,6 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 	) {
 		value = value.Transfer(
 			inter,
-			interpreter.EmptyLocationRange,
 			atree.Address(owner),
 			false,
 			nil,
@@ -5176,7 +5120,6 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 
 		rootDictionary.Iterate(
 			inter,
-			interpreter.EmptyLocationRange,
 			func(key, value interpreter.Value) (resume bool) {
 
 				require.IsType(t, &interpreter.SomeValue{}, value)
@@ -5212,7 +5155,6 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 		var iterations int
 		rootDictionary.IterateReadOnlyLoaded(
 			inter,
-			interpreter.EmptyLocationRange,
 			func(_, _ interpreter.Value) (resume bool) {
 				iterations += 1
 
@@ -5226,7 +5168,6 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 		iterations = 0
 		rootDictionary.Iterate(
 			inter,
-			interpreter.EmptyLocationRange,
 			func(_, _ interpreter.Value) (resume bool) {
 				iterations += 1
 
@@ -5291,7 +5232,6 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 				return true
 			},
 			false,
-			interpreter.EmptyLocationRange,
 		)
 
 		writeValue(
@@ -5319,7 +5259,6 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 				// continue iteration
 				return true
 			},
-			interpreter.EmptyLocationRange,
 		)
 
 		require.Equal(t, 0, iterations)
@@ -5335,7 +5274,6 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 				return true
 			},
 			false,
-			interpreter.EmptyLocationRange,
 		)
 
 		require.Equal(t, expectedRootCount, iterations)
@@ -5459,7 +5397,6 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 				// continue iteration
 				return true
 			},
-			interpreter.EmptyLocationRange,
 		)
 
 		writeValue(
@@ -5487,7 +5424,6 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 				// continue iteration
 				return true
 			},
-			interpreter.EmptyLocationRange,
 		)
 
 		require.Equal(t, 0, iterations)
@@ -5501,7 +5437,6 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 				// continue iteration
 				return true
 			},
-			interpreter.EmptyLocationRange,
 		)
 
 		require.Equal(t, expectedRootCount, iterations)
@@ -5523,7 +5458,6 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 	) {
 		value = value.Transfer(
 			inter,
-			interpreter.EmptyLocationRange,
 			atree.Address(owner),
 			false,
 			nil,
@@ -5615,7 +5549,6 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		for i := 0; childDictionary.Inlined(); i++ {
 			childDictionary.Insert(
 				inter,
-				interpreter.EmptyLocationRange,
 				interpreter.NewUnmeteredStringValue(strconv.Itoa(i)),
 				interpreter.NewUnmeteredIntValueFromInt64(int64(i)),
 			)
@@ -5634,11 +5567,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 			for i := 0; i < count; i++ {
 				key := interpreter.NewUnmeteredStringValue(strconv.Itoa(i))
-				value, exists := childDictionary.Get(
-					inter,
-					interpreter.EmptyLocationRange,
-					key,
-				)
+				value, exists := childDictionary.Get(inter, key)
 				require.True(t, exists)
 				expectedValue := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
 				AssertValuesEqual(t, inter, expectedValue, value)
@@ -5653,7 +5582,6 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		existingValue := childDictionary.Remove(
 			inter,
-			interpreter.EmptyLocationRange,
 			interpreter.NewUnmeteredStringValue(strconv.Itoa(inlinedCount)),
 		)
 		require.IsType(t, &interpreter.SomeValue{}, existingValue)
@@ -5668,7 +5596,6 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		childDictionary.Insert(
 			inter,
-			interpreter.EmptyLocationRange,
 			interpreter.NewUnmeteredStringValue(strconv.Itoa(inlinedCount)),
 			interpreter.NewUnmeteredIntValueFromInt64(int64(inlinedCount)),
 		)
@@ -5684,7 +5611,6 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		for i := 0; i < uninlinedCount; i++ {
 			existingValue := childDictionary.Remove(
 				inter,
-				interpreter.EmptyLocationRange,
 				interpreter.NewUnmeteredStringValue(strconv.Itoa(i)),
 			)
 			require.IsType(t, &interpreter.SomeValue{}, existingValue)
@@ -5780,11 +5706,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 			for i := 0; i < count; i++ {
 				key := interpreter.NewUnmeteredStringValue(strconv.Itoa(i))
-				value, exists := childDictionary.Get(
-					inter,
-					interpreter.EmptyLocationRange,
-					key,
-				)
+				value, exists := childDictionary.Get(inter, key)
 				require.True(t, exists)
 				expectedValue := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
 				AssertValuesEqual(t, inter, expectedValue, value)
@@ -5798,7 +5720,6 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		for i := inlinedCount - 1; !childDictionary.Inlined(); i-- {
 			existingValue := childDictionary.Remove(
 				inter,
-				interpreter.EmptyLocationRange,
 				interpreter.NewUnmeteredStringValue(strconv.Itoa(i)),
 			)
 
@@ -5823,7 +5744,6 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		childDictionary.Insert(
 			inter,
-			interpreter.EmptyLocationRange,
 			interpreter.NewUnmeteredStringValue(strconv.Itoa(inlinedCount)),
 			interpreter.NewUnmeteredIntValueFromInt64(int64(inlinedCount)),
 		)
@@ -5902,7 +5822,6 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		for i := 0; childArray.Inlined(); i++ {
 			childArray.Append(
 				inter,
-				interpreter.EmptyLocationRange,
 				interpreter.NewUnmeteredStringValue(strconv.Itoa(i)),
 			)
 		}
@@ -5919,7 +5838,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 			require.Equal(t, count, childArray.Count())
 
 			for i := 0; i < count; i++ {
-				value := childArray.Get(inter, interpreter.EmptyLocationRange, i)
+				value := childArray.Get(inter, i)
 				expectedValue := interpreter.NewUnmeteredStringValue(strconv.Itoa(i))
 				AssertValuesEqual(t, inter, expectedValue, value)
 			}
@@ -5947,7 +5866,6 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		childArray.Append(
 			inter,
-			interpreter.EmptyLocationRange,
 			interpreter.NewUnmeteredStringValue(strconv.Itoa(inlinedCount)),
 		)
 
@@ -6053,7 +5971,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 			require.Equal(t, count, childArray.Count())
 
 			for i := 0; i < count; i++ {
-				value := childArray.Get(inter, interpreter.EmptyLocationRange, i)
+				value := childArray.Get(inter, i)
 				expectedValue := interpreter.NewUnmeteredStringValue(strconv.Itoa(i))
 				AssertValuesEqual(t, inter, expectedValue, value)
 			}
@@ -6085,7 +6003,6 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		childArray.Append(
 			inter,
-			interpreter.EmptyLocationRange,
 			interpreter.NewUnmeteredStringValue(strconv.Itoa(inlinedCount)),
 		)
 

@@ -946,13 +946,13 @@ func TestInterpretBrokenMetaTypeUsage(t *testing.T) {
 	RequireValuesEqual(t,
 		inter,
 		interpreter.NewTypeValue(nil, staticType2),
-		resultArray.Get(inter, interpreter.EmptyLocationRange, 0),
+		resultArray.Get(inter, 0),
 	)
 
 	RequireValuesEqual(t,
 		inter,
 		interpreter.NewTypeValue(nil, staticType1),
-		resultArray.Get(inter, interpreter.EmptyLocationRange, 1),
+		resultArray.Get(inter, 1),
 	)
 
 }

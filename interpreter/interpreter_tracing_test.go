@@ -98,7 +98,6 @@ func TestInterpreterTracing(t *testing.T) {
 		owner := common.Address{0x1}
 		array := interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -130,7 +129,6 @@ func TestInterpreterTracing(t *testing.T) {
 		})
 		dict := interpreter.NewDictionaryValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -194,7 +192,6 @@ func TestInterpreterTracing(t *testing.T) {
 
 		array := interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},

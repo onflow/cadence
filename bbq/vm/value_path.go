@@ -45,11 +45,7 @@ func init() {
 				sema.ToStringFunctionType,
 				func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
 					path := receiver.(interpreter.PathValue)
-					return interpreter.PathValueToStringFunction(
-						context,
-						path,
-						EmptyLocationRange,
-					)
+					return interpreter.PathValueToStringFunction(context, path)
 				},
 			),
 		)

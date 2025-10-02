@@ -35,37 +35,37 @@ func TestNegate(t *testing.T) {
 
 	t.Run("Int8", func(t *testing.T) {
 		assert.Panics(t, func() {
-			NewUnmeteredInt8Value(math.MinInt8).Negate(nil, EmptyLocationRange)
+			NewUnmeteredInt8Value(math.MinInt8).Negate(nil)
 		})
 	})
 
 	t.Run("Int16", func(t *testing.T) {
 		assert.Panics(t, func() {
-			NewUnmeteredInt16Value(math.MinInt16).Negate(nil, EmptyLocationRange)
+			NewUnmeteredInt16Value(math.MinInt16).Negate(nil)
 		})
 	})
 
 	t.Run("Int32", func(t *testing.T) {
 		assert.Panics(t, func() {
-			NewUnmeteredInt32Value(math.MinInt32).Negate(nil, EmptyLocationRange)
+			NewUnmeteredInt32Value(math.MinInt32).Negate(nil)
 		})
 	})
 
 	t.Run("Int64", func(t *testing.T) {
 		assert.Panics(t, func() {
-			NewUnmeteredInt64Value(math.MinInt64).Negate(nil, EmptyLocationRange)
+			NewUnmeteredInt64Value(math.MinInt64).Negate(nil)
 		})
 	})
 
 	t.Run("Int128", func(t *testing.T) {
 		assert.Panics(t, func() {
-			Int128Value{BigInt: new(big.Int).Set(sema.Int128TypeMinIntBig)}.Negate(nil, EmptyLocationRange)
+			Int128Value{BigInt: new(big.Int).Set(sema.Int128TypeMinIntBig)}.Negate(nil)
 		})
 	})
 
 	t.Run("Int256", func(t *testing.T) {
 		assert.Panics(t, func() {
-			Int256Value{BigInt: new(big.Int).Set(sema.Int256TypeMinIntBig)}.Negate(nil, EmptyLocationRange)
+			Int256Value{BigInt: new(big.Int).Set(sema.Int256TypeMinIntBig)}.Negate(nil)
 		})
 	})
 }

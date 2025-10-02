@@ -65,9 +65,8 @@ func NewPublicKeyValue(
 	err := validatePublicKey(context, locationRange, publicKeyValue)
 	if err != nil {
 		panic(&InvalidPublicKeyError{
-			PublicKey:     publicKey,
-			Err:           err,
-			LocationRange: locationRange,
+			PublicKey: publicKey,
+			Err:       err,
 		})
 	}
 

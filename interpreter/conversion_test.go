@@ -44,7 +44,6 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 		invalid := []Value{
 			NewArrayValue(
 				inter,
-				EmptyLocationRange,
 				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeUInt64,
 				},
@@ -53,7 +52,6 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 			),
 			NewArrayValue(
 				inter,
-				EmptyLocationRange,
 				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInt256,
 				},
@@ -66,7 +64,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 		}
 
 		for _, value := range invalid {
-			_, err := ByteArrayValueToByteSlice(inter, value, EmptyLocationRange)
+			_, err := ByteArrayValueToByteSlice(inter, value)
 			RequireError(t, err)
 		}
 	})
@@ -78,7 +76,6 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 		invalid := map[Value][]byte{
 			NewArrayValue(
 				inter,
-				EmptyLocationRange,
 				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
@@ -86,7 +83,6 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 			): nil,
 			NewArrayValue(
 				inter,
-				EmptyLocationRange,
 				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
@@ -96,7 +92,6 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 			): {2, 3},
 			NewArrayValue(
 				inter,
-				EmptyLocationRange,
 				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
@@ -107,7 +102,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 		}
 
 		for value, expected := range invalid {
-			result, err := ByteArrayValueToByteSlice(inter, value, EmptyLocationRange)
+			result, err := ByteArrayValueToByteSlice(inter, value)
 			require.NoError(t, err)
 			require.Equal(t, expected, result)
 		}
@@ -129,7 +124,7 @@ func TestByteValueToByte(t *testing.T) {
 		}
 
 		for _, value := range invalid {
-			_, err := ByteValueToByte(nil, value, EmptyLocationRange)
+			_, err := ByteValueToByte(nil, value)
 			RequireError(t, err)
 		}
 	})
@@ -147,7 +142,7 @@ func TestByteValueToByte(t *testing.T) {
 		}
 
 		for value, expected := range invalid {
-			result, err := ByteValueToByte(nil, value, EmptyLocationRange)
+			result, err := ByteValueToByte(nil, value)
 			require.NoError(t, err)
 			require.Equal(t, expected, result)
 		}
@@ -168,7 +163,6 @@ func TestByteSliceToArrayValue(t *testing.T) {
 
 		expected := NewArrayValue(
 			inter,
-			EmptyLocationRange,
 			expectedType,
 			common.ZeroAddress,
 			NewUnmeteredUInt8Value(0),
@@ -178,7 +172,7 @@ func TestByteSliceToArrayValue(t *testing.T) {
 
 		result := ByteSliceToByteArrayValue(inter, b)
 		require.Equal(t, expectedType, result.Type)
-		require.True(t, result.Equal(inter, EmptyLocationRange, expected))
+		require.True(t, result.Equal(inter, expected))
 	})
 
 	t.Run("const sized", func(t *testing.T) {
@@ -193,7 +187,6 @@ func TestByteSliceToArrayValue(t *testing.T) {
 
 		expected := NewArrayValue(
 			inter,
-			EmptyLocationRange,
 			expectedType,
 			common.ZeroAddress,
 			NewUnmeteredUInt8Value(0),
@@ -203,6 +196,6 @@ func TestByteSliceToArrayValue(t *testing.T) {
 
 		result := ByteSliceToConstantSizedByteArrayValue(inter, b)
 		require.Equal(t, expectedType, result.Type)
-		require.True(t, result.Equal(inter, EmptyLocationRange, expected))
+		require.True(t, result.Equal(inter, expected))
 	})
 }

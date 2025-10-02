@@ -52,7 +52,3 @@ func (r LocationRange) ImportLocation() common.Location {
 }
 
 var EmptyLocationRange = LocationRange{}
-
-func ReturnEmptyRange() ast.Range {
-	return ast.EmptyRange
-}

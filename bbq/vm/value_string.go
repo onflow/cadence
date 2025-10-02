@@ -44,7 +44,6 @@ func init() {
 					context,
 					this,
 					other,
-					EmptyLocationRange,
 				)
 			},
 		),
@@ -59,7 +58,7 @@ func init() {
 				this := receiver.(*interpreter.StringValue)
 				from := arguments[0].(interpreter.IntValue)
 				to := arguments[1].(interpreter.IntValue)
-				return this.Slice(from, to, EmptyLocationRange)
+				return this.Slice(from, to)
 			},
 		),
 	)
@@ -98,7 +97,7 @@ func init() {
 			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
 				this := receiver.(*interpreter.StringValue)
 				other := arguments[0].(*interpreter.StringValue)
-				return this.Count(context, EmptyLocationRange, other)
+				return this.Count(context, other)
 			},
 		),
 	)
@@ -110,7 +109,7 @@ func init() {
 			sema.StringTypeDecodeHexFunctionType,
 			func(context *Context, _ []bbq.StaticType, receiver Value, _ ...Value) Value {
 				this := receiver.(*interpreter.StringValue)
-				return this.DecodeHex(context, EmptyLocationRange)
+				return this.DecodeHex(context)
 			},
 		),
 	)
@@ -137,7 +136,6 @@ func init() {
 				separator := arguments[0].(*interpreter.StringValue)
 				return this.Split(
 					context,
-					EmptyLocationRange,
 					separator,
 				)
 			},
@@ -155,7 +153,6 @@ func init() {
 				replacement := arguments[1].(*interpreter.StringValue)
 				return this.ReplaceAll(
 					context,
-					EmptyLocationRange,
 					original,
 					replacement,
 				)
@@ -176,7 +173,6 @@ func init() {
 				return interpreter.StringFunctionEncodeHex(
 					context,
 					byteArray,
-					EmptyLocationRange,
 				)
 			},
 		),
@@ -192,7 +188,6 @@ func init() {
 				return interpreter.StringFunctionFromUtf8(
 					context,
 					byteArray,
-					EmptyLocationRange,
 				)
 			},
 		),
@@ -208,7 +203,6 @@ func init() {
 				return interpreter.StringFunctionFromCharacters(
 					context,
 					charactersArray,
-					EmptyLocationRange,
 				)
 			},
 		),
@@ -222,12 +216,10 @@ func init() {
 			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
 				stringArray := arguments[0].(*interpreter.ArrayValue)
 				separator := arguments[1].(*interpreter.StringValue)
-
 				return interpreter.StringFunctionJoin(
 					context,
 					stringArray,
 					separator,
-					EmptyLocationRange,
 				)
 			},
 		),

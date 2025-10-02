@@ -186,7 +186,6 @@ func newInjectedCompositeFieldsHandler(accountHandler stdlib.AccountHandler) int
 					accountHandler,
 					addressValue,
 					interpreter.FullyEntitledAccountAccess,
-					interpreter.EmptyLocationRange,
 				),
 			}
 		}

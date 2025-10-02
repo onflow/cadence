@@ -49,12 +49,10 @@ func NewUnmeteredEphemeralReferenceValue(
 	authorization Authorization,
 	value Value,
 	borrowedType sema.Type,
-	locationRange LocationRange,
 ) *EphemeralReferenceValue {
 	if reference, isReference := value.(ReferenceValue); isReference {
 		panic(&NestedReferenceError{
-			Value:         reference,
-			LocationRange: locationRange,
+			Value: reference,
 		})
 	}
 
@@ -74,10 +72,9 @@ func NewEphemeralReferenceValue(
 	authorization Authorization,
 	value Value,
 	borrowedType sema.Type,
-	locationRange LocationRange,
 ) *EphemeralReferenceValue {
 	common.UseMemory(context, common.EphemeralReferenceValueMemoryUsage)
-	return NewUnmeteredEphemeralReferenceValue(context, authorization, value, borrowedType, locationRange)
+	return NewUnmeteredEphemeralReferenceValue(context, authorization, value, borrowedType)
 }
 
 func (*EphemeralReferenceValue) IsValue() {}
@@ -127,11 +124,7 @@ func (*EphemeralReferenceValue) IsImportable(_ ValueImportableContext, _ Locatio
 	return false
 }
 
-func (v *EphemeralReferenceValue) ReferencedValue(
-	_ ValueStaticTypeContext,
-	_ LocationRange,
-	_ bool,
-) *Value {
+func (v *EphemeralReferenceValue) ReferencedValue(context ValueStaticTypeContext, errorOnFailedDereference bool) *Value {
 	return &v.Value
 }
 
@@ -233,7 +226,7 @@ func (v *EphemeralReferenceValue) RemoveTypeKey(
 		RemoveTypeKey(context, locationRange, key)
 }
 
-func (v *EphemeralReferenceValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
+func (v *EphemeralReferenceValue) Equal(_ ValueComparisonContext, other Value) bool {
 	otherReference, ok := other.(*EphemeralReferenceValue)
 	if !ok ||
 		v.Value != otherReference.Value ||
@@ -304,7 +297,6 @@ func (*EphemeralReferenceValue) IsResourceKinded(_ ValueStaticTypeContext) bool 
 
 func (v *EphemeralReferenceValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -318,7 +310,12 @@ func (v *EphemeralReferenceValue) Transfer(
 }
 
 func (v *EphemeralReferenceValue) Clone(context ValueCloneContext) Value {
-	return NewUnmeteredEphemeralReferenceValue(context, v.Authorization, v.Value, v.BorrowedType, EmptyLocationRange)
+	return NewUnmeteredEphemeralReferenceValue(
+		context,
+		v.Authorization,
+		v.Value,
+		v.BorrowedType,
+	)
 }
 
 func (*EphemeralReferenceValue) DeepRemove(_ ValueRemoveContext, _ bool) {
@@ -332,7 +329,6 @@ func (v *EphemeralReferenceValue) ForEach(
 	elementType sema.Type,
 	function func(value Value) (resume bool),
 	_ bool,
-	locationRange LocationRange,
 ) {
 	forEachReference(
 		context,
@@ -340,7 +336,6 @@ func (v *EphemeralReferenceValue) ForEach(
 		v.Value,
 		elementType,
 		function,
-		locationRange,
 	)
 }
 
@@ -348,7 +343,7 @@ func (v *EphemeralReferenceValue) BorrowType() sema.Type {
 	return v.BorrowedType
 }
 
-func (v *EphemeralReferenceValue) Iterator(context ValueStaticTypeContext, locationRange LocationRange) ValueIterator {
+func (v *EphemeralReferenceValue) Iterator(context ValueStaticTypeContext) ValueIterator {
 	referencedIterable, ok := v.Value.(IterableValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -356,7 +351,7 @@ func (v *EphemeralReferenceValue) Iterator(context ValueStaticTypeContext, locat
 
 	return &ReferenceValueIterator{
 		reference: v,
-		iterator:  referencedIterable.Iterator(context, locationRange),
+		iterator:  referencedIterable.Iterator(context),
 	}
 }
 
@@ -367,11 +362,11 @@ type ReferenceValueIterator struct {
 
 var _ ValueIterator = &ReferenceValueIterator{}
 
-func (i *ReferenceValueIterator) Next(context ValueIteratorContext, locationRange LocationRange) Value {
+func (i *ReferenceValueIterator) Next(context ValueIteratorContext) Value {
 	// Iterator implicitly captures the reference.
 	// Therefore, check whether the reference is valid, everytime the iterator is used.
-	CheckInvalidatedResourceOrResourceReference(i.reference, locationRange, context)
-	return i.iterator.Next(context, locationRange)
+	CheckInvalidatedResourceOrResourceReference(i.reference, context)
+	return i.iterator.Next(context)
 }
 
 func (i *ReferenceValueIterator) HasNext() bool {

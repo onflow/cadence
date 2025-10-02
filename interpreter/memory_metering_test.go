@@ -792,7 +792,6 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 			nil,
 			interpreter.AddressValue(address),
 			interpreter.UnauthorizedAccess,
-			interpreter.EmptyLocationRange,
 		)
 
 		_, err = inter.Invoke("main", account)
@@ -7088,7 +7087,6 @@ func TestInterpretStorageReferenceValueMetering(t *testing.T) {
 			nil,
 			interpreter.AddressValue(address),
 			authorization,
-			interpreter.EmptyLocationRange,
 		)
 
 		_, err = inter.Invoke("main", account)
@@ -9247,7 +9245,6 @@ func TestInterpretStorageMapMetering(t *testing.T) {
 		nil,
 		address,
 		authorization,
-		interpreter.EmptyLocationRange,
 	)
 
 	_, err = inter.Invoke("main", account)

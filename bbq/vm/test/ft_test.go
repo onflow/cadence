@@ -203,7 +203,6 @@ func compiledFTTransfer(tb testing.TB) {
 			accountHandler,
 			interpreter.NewAddressValue(nil, contractsAddress),
 			interpreter.FullyEntitledAccountAccess,
-			interpreter.EmptyLocationRange,
 		)
 
 		return map[string]interpreter.Value{
@@ -320,7 +319,6 @@ func compiledFTTransfer(tb testing.TB) {
 			accountHandler,
 			interpreter.AddressValue(address),
 			interpreter.FullyEntitledAccountAccess,
-			interpreter.EmptyLocationRange,
 		)
 		err := setupTxVM.InvokeTransaction(nil, authorizer)
 		require.NoError(tb, err)
@@ -368,7 +366,6 @@ func compiledFTTransfer(tb testing.TB) {
 		accountHandler,
 		interpreter.AddressValue(contractsAddress),
 		authorization,
-		interpreter.EmptyLocationRange,
 	)
 
 	err := mintTxVM.InvokeTransaction(mintTxArgs, mintTxAuthorizer)
@@ -407,7 +404,6 @@ func compiledFTTransfer(tb testing.TB) {
 		accountHandler,
 		interpreter.AddressValue(senderAddress),
 		authorization,
-		interpreter.EmptyLocationRange,
 	)
 
 	var transferCount int

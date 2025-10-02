@@ -30,9 +30,7 @@ func newCompositeValueFields(context *Context, compositeKind common.CompositeKin
 
 		uuidHandler := context.UUIDHandler
 		if uuidHandler == nil {
-			panic(&interpreter.UUIDUnavailableError{
-				LocationRange: EmptyLocationRange,
-			})
+			panic(&interpreter.UUIDUnavailableError{})
 		}
 
 		uuid, err := uuidHandler()

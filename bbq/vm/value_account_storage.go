@@ -69,7 +69,6 @@ func init() {
 					arguments,
 					semaBorrowType,
 					address.ToAddress(),
-					EmptyLocationRange,
 				)
 			},
 		),
@@ -156,7 +155,6 @@ func init() {
 					semaBorrowType,
 					address.ToAddress(),
 					true,
-					EmptyLocationRange,
 				)
 			},
 		),
@@ -180,7 +178,6 @@ func init() {
 					semaBorrowType,
 					address,
 					false,
-					EmptyLocationRange,
 				)
 			},
 		),

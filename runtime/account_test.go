@@ -2798,7 +2798,6 @@ func TestRuntimePublicKeyPublicKeyField(t *testing.T) {
 				Name: sema.PublicKeyTypePublicKeyFieldName,
 				Value: interpreter.NewArrayValue(
 					inter,
-					locationRange,
 					interpreter.ByteArrayStaticType,
 					common.ZeroAddress,
 					interpreter.NewUnmeteredUInt8Value(1),
@@ -2816,7 +2815,6 @@ func TestRuntimePublicKeyPublicKeyField(t *testing.T) {
 
 	publicKey2 := publicKey.Transfer(
 		inter,
-		locationRange,
 		atree.Address{},
 		false,
 		nil,
@@ -2837,6 +2835,6 @@ func TestRuntimePublicKeyPublicKeyField(t *testing.T) {
 
 	require.True(t,
 		publicKeyArray2.(interpreter.EquatableValue).
-			Equal(inter, locationRange, publicKeyArray1),
+			Equal(inter, publicKeyArray1),
 	)
 }

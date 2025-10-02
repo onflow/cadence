@@ -509,43 +509,43 @@ var testCases = map[sema.Type]testCase{
 		add: testCalls{
 			overflow: testCall{
 				interpreter.NewUnmeteredFix64Value(math.MaxInt64),
-				interpreter.NewUnmeteredFix64ValueWithInteger(2, interpreter.EmptyLocationRange),
+				interpreter.NewUnmeteredFix64ValueWithInteger(2),
 				interpreter.NewUnmeteredFix64Value(math.MaxInt64),
 			},
 			underflow: testCall{
 				interpreter.NewUnmeteredFix64Value(math.MinInt64),
-				interpreter.NewUnmeteredFix64ValueWithInteger(-2, interpreter.EmptyLocationRange),
+				interpreter.NewUnmeteredFix64ValueWithInteger(-2),
 				interpreter.NewUnmeteredFix64Value(math.MinInt64),
 			},
 		},
 		subtract: testCalls{
 			overflow: testCall{
 				interpreter.NewUnmeteredFix64Value(math.MaxInt64),
-				interpreter.NewUnmeteredFix64ValueWithInteger(-2, interpreter.EmptyLocationRange),
+				interpreter.NewUnmeteredFix64ValueWithInteger(-2),
 				interpreter.NewUnmeteredFix64Value(math.MaxInt64),
 			},
 			underflow: testCall{
 				interpreter.NewUnmeteredFix64Value(math.MinInt64),
-				interpreter.NewUnmeteredFix64ValueWithInteger(2, interpreter.EmptyLocationRange),
+				interpreter.NewUnmeteredFix64ValueWithInteger(2),
 				interpreter.NewUnmeteredFix64Value(math.MinInt64),
 			},
 		},
 		multiply: testCalls{
 			overflow: testCall{
 				interpreter.NewUnmeteredFix64Value(math.MaxInt64),
-				interpreter.NewUnmeteredFix64ValueWithInteger(2, interpreter.EmptyLocationRange),
+				interpreter.NewUnmeteredFix64ValueWithInteger(2),
 				interpreter.NewUnmeteredFix64Value(math.MaxInt64),
 			},
 			underflow: testCall{
 				interpreter.NewUnmeteredFix64Value(math.MinInt64),
-				interpreter.NewUnmeteredFix64ValueWithInteger(2, interpreter.EmptyLocationRange),
+				interpreter.NewUnmeteredFix64ValueWithInteger(2),
 				interpreter.NewUnmeteredFix64Value(math.MinInt64),
 			},
 		},
 		divide: testCalls{
 			overflow: testCall{
 				interpreter.NewUnmeteredFix64Value(math.MinInt64),
-				interpreter.NewUnmeteredFix64ValueWithInteger(-1, interpreter.EmptyLocationRange),
+				interpreter.NewUnmeteredFix64ValueWithInteger(-1),
 				interpreter.NewUnmeteredFix64Value(math.MaxInt64),
 			},
 		},
@@ -554,43 +554,43 @@ var testCases = map[sema.Type]testCase{
 		add: testCalls{
 			overflow: testCall{
 				interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
-				interpreter.NewUnmeteredFix128ValueWithInteger(2, interpreter.EmptyLocationRange),
+				interpreter.NewUnmeteredFix128ValueWithInteger(2),
 				interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
 			},
 			underflow: testCall{
 				interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
-				interpreter.NewUnmeteredFix128ValueWithInteger(-2, interpreter.EmptyLocationRange),
+				interpreter.NewUnmeteredFix128ValueWithInteger(-2),
 				interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
 			},
 		},
 		subtract: testCalls{
 			overflow: testCall{
 				interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
-				interpreter.NewUnmeteredFix128ValueWithInteger(-2, interpreter.EmptyLocationRange),
+				interpreter.NewUnmeteredFix128ValueWithInteger(-2),
 				interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
 			},
 			underflow: testCall{
 				interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
-				interpreter.NewUnmeteredFix128ValueWithInteger(2, interpreter.EmptyLocationRange),
+				interpreter.NewUnmeteredFix128ValueWithInteger(2),
 				interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
 			},
 		},
 		multiply: testCalls{
 			overflow: testCall{
 				interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
-				interpreter.NewUnmeteredFix128ValueWithInteger(2, interpreter.EmptyLocationRange),
+				interpreter.NewUnmeteredFix128ValueWithInteger(2),
 				interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
 			},
 			underflow: testCall{
 				interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
-				interpreter.NewUnmeteredFix128ValueWithInteger(2, interpreter.EmptyLocationRange),
+				interpreter.NewUnmeteredFix128ValueWithInteger(2),
 				interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
 			},
 		},
 		divide: testCalls{
 			overflow: testCall{
 				interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMin),
-				interpreter.NewUnmeteredFix128ValueWithInteger(-1, interpreter.EmptyLocationRange),
+				interpreter.NewUnmeteredFix128ValueWithInteger(-1),
 				interpreter.NewUnmeteredFix128Value(fixedpoint.Fix128TypeMax),
 			},
 		},
@@ -747,21 +747,21 @@ var testCases = map[sema.Type]testCase{
 		add: testCalls{
 			overflow: testCall{
 				interpreter.NewUnmeteredUFix64Value(math.MaxUint64),
-				interpreter.NewUnmeteredUFix64ValueWithInteger(2, interpreter.EmptyLocationRange),
+				interpreter.NewUnmeteredUFix64ValueWithInteger(2),
 				interpreter.NewUnmeteredUFix64Value(math.MaxUint64),
 			},
 		},
 		subtract: testCalls{
 			underflow: testCall{
 				interpreter.NewUnmeteredUFix64Value(0),
-				interpreter.NewUnmeteredUFix64ValueWithInteger(2, interpreter.EmptyLocationRange),
+				interpreter.NewUnmeteredUFix64ValueWithInteger(2),
 				interpreter.NewUnmeteredUFix64Value(0),
 			},
 		},
 		multiply: testCalls{
 			overflow: testCall{
 				interpreter.NewUnmeteredUFix64Value(math.MaxUint64),
-				interpreter.NewUnmeteredUFix64ValueWithInteger(2, interpreter.EmptyLocationRange),
+				interpreter.NewUnmeteredUFix64ValueWithInteger(2),
 				interpreter.NewUnmeteredUFix64Value(math.MaxUint64),
 			},
 		},
@@ -770,21 +770,21 @@ var testCases = map[sema.Type]testCase{
 		add: testCalls{
 			overflow: testCall{
 				interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMax),
-				interpreter.NewUnmeteredUFix128ValueWithInteger(2, interpreter.EmptyLocationRange),
+				interpreter.NewUnmeteredUFix128ValueWithInteger(2),
 				interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMax),
 			},
 		},
 		subtract: testCalls{
 			underflow: testCall{
 				interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMin),
-				interpreter.NewUnmeteredUFix128ValueWithInteger(2, interpreter.EmptyLocationRange),
+				interpreter.NewUnmeteredUFix128ValueWithInteger(2),
 				interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMin),
 			},
 		},
 		multiply: testCalls{
 			overflow: testCall{
 				interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMax),
-				interpreter.NewUnmeteredUFix128ValueWithInteger(2, interpreter.EmptyLocationRange),
+				interpreter.NewUnmeteredUFix128ValueWithInteger(2),
 				interpreter.NewUnmeteredUFix128Value(fixedpoint.UFix128TypeMax),
 			},
 		},
@@ -833,7 +833,7 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 				require.NoError(t, err)
 
 				require.True(t,
-					call.expected.Equal(inter, interpreter.EmptyLocationRange, result),
+					call.expected.Equal(inter, result),
 					fmt.Sprintf(
 						"%s(%s, %s) = %s != %s",
 						method, call.left, call.right, result, call.expected,
