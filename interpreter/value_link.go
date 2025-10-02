@@ -52,7 +52,7 @@ func (PathLinkValue) IsValue() {}
 
 func (PathLinkValue) isLinkValue() {}
 
-func (v PathLinkValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
+func (v PathLinkValue) Accept(_ ValueVisitContext, _ Visitor, _ LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -99,13 +99,13 @@ func (v PathLinkValue) ConformsToStaticType(
 	panic(errors.NewUnreachableError())
 }
 
-func (v PathLinkValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
+func (v PathLinkValue) Equal(context ValueComparisonContext, other Value) bool {
 	otherLink, ok := other.(PathLinkValue)
 	if !ok {
 		return false
 	}
 
-	return otherLink.TargetPath.Equal(context, locationRange, v.TargetPath) &&
+	return otherLink.TargetPath.Equal(context, v.TargetPath) &&
 		otherLink.Type.Equal(v.Type)
 }
 
@@ -121,13 +121,12 @@ func (PathLinkValue) NeedsStoreTo(_ atree.Address) bool {
 	panic(errors.NewUnreachableError())
 }
 
-func (PathLinkValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (PathLinkValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	panic(errors.NewUnreachableError())
 }
 
 func (v PathLinkValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -177,7 +176,7 @@ func (AccountLinkValue) IsValue() {}
 
 func (AccountLinkValue) isLinkValue() {}
 
-func (v AccountLinkValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
+func (v AccountLinkValue) Accept(_ ValueVisitContext, _ Visitor, _ LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -227,7 +226,7 @@ func (v AccountLinkValue) ConformsToStaticType(
 	panic(errors.NewUnreachableError())
 }
 
-func (v AccountLinkValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
+func (v AccountLinkValue) Equal(_ ValueComparisonContext, other Value) bool {
 	_, ok := other.(AccountLinkValue)
 	return ok
 }
@@ -244,13 +243,12 @@ func (AccountLinkValue) NeedsStoreTo(_ atree.Address) bool {
 	panic(errors.NewUnreachableError())
 }
 
-func (AccountLinkValue) IsResourceKinded(context ValueStaticTypeContext) bool {
+func (AccountLinkValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 	panic(errors.NewUnreachableError())
 }
 
 func (v AccountLinkValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,

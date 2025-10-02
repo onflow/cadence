@@ -2271,8 +2271,10 @@ func TestBlockchain(t *testing.T) {
 						assert.Nil(t, eventType)
 						return interpreter.NewArrayValue(
 							context,
-							interpreter.EmptyLocationRange,
-							interpreter.NewVariableSizedStaticType(context, interpreter.PrimitiveStaticTypeAnyStruct),
+							interpreter.NewVariableSizedStaticType(
+								context,
+								interpreter.PrimitiveStaticTypeAnyStruct,
+							),
 							common.Address{},
 						)
 					},
@@ -2325,8 +2327,10 @@ func TestBlockchain(t *testing.T) {
 
 						return interpreter.NewArrayValue(
 							context,
-							interpreter.EmptyLocationRange,
-							interpreter.NewVariableSizedStaticType(context, interpreter.PrimitiveStaticTypeAnyStruct),
+							interpreter.NewVariableSizedStaticType(
+								context,
+								interpreter.PrimitiveStaticTypeAnyStruct,
+							),
 							common.Address{},
 						)
 					},

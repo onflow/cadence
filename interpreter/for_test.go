@@ -252,7 +252,6 @@ func TestInterpretForString(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeCharacter,
 				},
@@ -286,7 +285,6 @@ func TestInterpretForString(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeCharacter,
 				},
@@ -319,7 +317,6 @@ func TestInterpretForString(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeCharacter,
 				},
@@ -879,7 +876,6 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 			invokable,
 			interpreter.NewArrayValue(
 				invokable,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeCharacter,
 				},
@@ -1132,27 +1128,21 @@ func TestInclusiveRangeForInLoop(t *testing.T) {
 			count := 0
 			loopElementsArray := loopElements.(*interpreter.ArrayValue)
 
-			loopElementsArray.ForEach(
-				inter,
-				nil,
-				func(value interpreter.Value) (resume bool) {
-					AssertValuesEqual(
-						t,
-						inter,
-						interpreter.GetSmallIntegerValue(
-							int8(testCase.loopElements[count]),
-							integerStaticType,
-						),
-						value,
-					)
+			loopElementsArray.ForEach(inter, nil, func(value interpreter.Value) (resume bool) {
+				AssertValuesEqual(
+					t,
+					inter,
+					interpreter.GetSmallIntegerValue(
+						int8(testCase.loopElements[count]),
+						integerStaticType,
+					),
+					value,
+				)
 
-					count += 1
+				count += 1
 
-					return true
-				},
-				false,
-				interpreter.EmptyLocationRange,
-			)
+				return true
+			}, false)
 
 			assert.Equal(t, len(testCase.loopElements), count)
 		})

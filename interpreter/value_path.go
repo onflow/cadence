@@ -116,7 +116,7 @@ func (v PathValue) GetMember(context MemberAccessibleContext, locationRange Loca
 
 func (v PathValue) GetMethod(
 	context MemberAccessibleContext,
-	locationRange LocationRange,
+	_ LocationRange,
 	name string,
 ) FunctionValue {
 	switch name {
@@ -128,11 +128,7 @@ func (v PathValue) GetMethod(
 			sema.ToStringFunctionType,
 			func(v PathValue, invocation Invocation) Value {
 				invocationContext := invocation.InvocationContext
-				return PathValueToStringFunction(
-					invocationContext,
-					v,
-					locationRange,
-				)
+				return PathValueToStringFunction(invocationContext, v)
 			},
 		)
 	}
@@ -143,13 +139,12 @@ func (v PathValue) GetMethod(
 func PathValueToStringFunction(
 	memoryGauge common.MemoryGauge,
 	v PathValue,
-	locationRange LocationRange,
 ) Value {
 	domainLength := len(v.Domain.Identifier())
 	identifierLength := len(v.Identifier)
 
 	memoryUsage := common.NewStringMemoryUsage(
-		safeAdd(domainLength, identifierLength, locationRange),
+		safeAdd(domainLength, identifierLength),
 	)
 
 	return NewStringValue(
@@ -177,7 +172,7 @@ func (v PathValue) ConformsToStaticType(
 	return true
 }
 
-func (v PathValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
+func (v PathValue) Equal(_ ValueComparisonContext, other Value) bool {
 	otherPath, ok := other.(PathValue)
 	if !ok {
 		return false
@@ -191,7 +186,7 @@ func (v PathValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value)
 // - HashInputTypePath (1 byte)
 // - domain (1 byte)
 // - identifier (n bytes)
-func (v PathValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+func (v PathValue) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
 	length := 1 + 1 + len(v.Identifier)
 	var buffer []byte
 	if length <= len(scratch) {
@@ -251,7 +246,6 @@ func (PathValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (v PathValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,

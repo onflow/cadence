@@ -252,7 +252,7 @@ func exportValue(
 		defer delete(seenReferences, v)
 		seenReferences[v] = struct{}{}
 
-		referencedValue := v.ReferencedValue(context, interpreter.EmptyLocationRange, true)
+		referencedValue := v.ReferencedValue(context, true)
 		if referencedValue == nil {
 			return nil, nil
 		}
@@ -337,7 +337,6 @@ func exportArrayValue(
 					return true
 				},
 				false,
-				locationRange,
 			)
 
 			if err != nil {
@@ -438,7 +437,7 @@ func exportCompositeValue(
 		}
 
 		if composite, ok := v.(*interpreter.CompositeValue); ok {
-			for _, attachment := range composite.GetAttachments(context, locationRange) {
+			for _, attachment := range composite.GetAttachments(context) {
 				exportedAttachmentValue, err := exportValue(
 					attachment,
 					context,
@@ -563,7 +562,6 @@ func exportDictionaryValue(
 
 			v.Iterate(
 				context,
-				locationRange,
 				func(key, value interpreter.Value) (resume bool) {
 
 					var convertedKey cadence.Value
@@ -1306,7 +1304,6 @@ func (i valueImporter) importArrayValue(
 	}
 
 	inter := i.context
-	locationRange := i.locationRange
 
 	for elementIndex, element := range v.Values {
 		value, err := i.importValue(
@@ -1346,7 +1343,6 @@ func (i valueImporter) importArrayValue(
 
 	return interpreter.NewArrayValue(
 		inter,
-		locationRange,
 		staticArrayType,
 		common.ZeroAddress,
 		values...,
@@ -1372,7 +1368,6 @@ func (i valueImporter) importDictionaryValue(
 	}
 
 	inter := i.context
-	locationRange := i.locationRange
 
 	for pairIndex, pair := range v.Pairs {
 		key, err := i.importValue(pair.Key, keyType)
@@ -1432,7 +1427,6 @@ func (i valueImporter) importDictionaryValue(
 
 	return interpreter.NewDictionaryValue(
 		inter,
-		locationRange,
 		dictionaryStaticType,
 		keysAndValues...,
 	), nil

@@ -76,7 +76,7 @@ func (v VoidValue) ConformsToStaticType(
 	return true
 }
 
-func (v VoidValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
+func (v VoidValue) Equal(_ ValueComparisonContext, other Value) bool {
 	_, ok := other.(VoidValue)
 	return ok
 }
@@ -95,7 +95,6 @@ func (VoidValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (v VoidValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,

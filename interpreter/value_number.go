@@ -35,17 +35,17 @@ var _ NumberValueArithmeticContext = &Interpreter{}
 // NumberValue
 type NumberValue interface {
 	ComparableValue
-	ToInt(locationRange LocationRange) int
-	Negate(context NumberValueArithmeticContext, locationRange LocationRange) NumberValue
-	Plus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
-	SaturatingPlus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
-	Minus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
-	SaturatingMinus(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
-	Mod(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
-	Mul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
-	SaturatingMul(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
-	Div(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
-	SaturatingDiv(context NumberValueArithmeticContext, other NumberValue, locationRange LocationRange) NumberValue
+	ToInt() int
+	Negate(context NumberValueArithmeticContext) NumberValue
+	Plus(context NumberValueArithmeticContext, other NumberValue) NumberValue
+	SaturatingPlus(context NumberValueArithmeticContext, other NumberValue) NumberValue
+	Minus(context NumberValueArithmeticContext, other NumberValue) NumberValue
+	SaturatingMinus(context NumberValueArithmeticContext, other NumberValue) NumberValue
+	Mod(context NumberValueArithmeticContext, other NumberValue) NumberValue
+	Mul(context NumberValueArithmeticContext, other NumberValue) NumberValue
+	SaturatingMul(context NumberValueArithmeticContext, other NumberValue) NumberValue
+	Div(context NumberValueArithmeticContext, other NumberValue) NumberValue
+	SaturatingDiv(context NumberValueArithmeticContext, other NumberValue) NumberValue
 	ToBigEndianBytes() []byte
 }
 
@@ -54,7 +54,6 @@ func getNumberValueFunctionMember(
 	v NumberValue,
 	name string,
 	typ sema.Type,
-	locationRange LocationRange,
 ) FunctionValue {
 	switch name {
 
@@ -93,11 +92,7 @@ func getNumberValueFunctionMember(
 					panic(errors.NewUnreachableError())
 				}
 
-				return v.SaturatingPlus(
-					invocation.InvocationContext,
-					other,
-					locationRange,
-				)
+				return v.SaturatingPlus(invocation.InvocationContext, other)
 			},
 		)
 
@@ -112,11 +107,7 @@ func getNumberValueFunctionMember(
 					panic(errors.NewUnreachableError())
 				}
 
-				return v.SaturatingMinus(
-					invocation.InvocationContext,
-					other,
-					locationRange,
-				)
+				return v.SaturatingMinus(invocation.InvocationContext, other)
 			},
 		)
 
@@ -131,11 +122,7 @@ func getNumberValueFunctionMember(
 					panic(errors.NewUnreachableError())
 				}
 
-				return v.SaturatingMul(
-					invocation.InvocationContext,
-					other,
-					locationRange,
-				)
+				return v.SaturatingMul(invocation.InvocationContext, other)
 			},
 		)
 
@@ -150,11 +137,7 @@ func getNumberValueFunctionMember(
 					panic(errors.NewUnreachableError())
 				}
 
-				return v.SaturatingDiv(
-					invocation.InvocationContext,
-					other,
-					locationRange,
-				)
+				return v.SaturatingDiv(invocation.InvocationContext, other)
 			},
 		)
 	}
@@ -178,11 +161,11 @@ func NumberValueToString(
 
 type IntegerValue interface {
 	NumberValue
-	BitwiseOr(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue
-	BitwiseXor(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue
-	BitwiseAnd(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue
-	BitwiseLeftShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue
-	BitwiseRightShift(context ValueStaticTypeContext, other IntegerValue, locationRange LocationRange) IntegerValue
+	BitwiseOr(context ValueStaticTypeContext, other IntegerValue) IntegerValue
+	BitwiseXor(context ValueStaticTypeContext, other IntegerValue) IntegerValue
+	BitwiseAnd(context ValueStaticTypeContext, other IntegerValue) IntegerValue
+	BitwiseLeftShift(context ValueStaticTypeContext, other IntegerValue) IntegerValue
+	BitwiseRightShift(context ValueStaticTypeContext, other IntegerValue) IntegerValue
 }
 
 // BigNumberValue is a number value with an integer value outside the range of int64

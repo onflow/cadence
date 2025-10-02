@@ -115,7 +115,6 @@ func (v IteratorWrapperValue) NeedsStoreTo(_ atree.Address) bool {
 
 func (v IteratorWrapperValue) Transfer(
 	_ interpreter.ValueTransferContext,
-	_ interpreter.LocationRange,
 	_ atree.Address,
 	_ bool,
 	_ atree.Storable,

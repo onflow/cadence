@@ -46,7 +46,7 @@ func init() {
 				func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
 					array := receiver.(*interpreter.ArrayValue)
 					element := arguments[0]
-					return array.FirstIndex(context, EmptyLocationRange, element)
+					return array.FirstIndex(context, element)
 				},
 			),
 		)
@@ -62,7 +62,7 @@ func init() {
 				func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
 					array := receiver.(*interpreter.ArrayValue)
 					element := arguments[0]
-					return array.Contains(context, EmptyLocationRange, element)
+					return array.Contains(context, element)
 				},
 			),
 		)
@@ -77,7 +77,7 @@ func init() {
 				},
 				func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
 					array := receiver.(*interpreter.ArrayValue)
-					return array.Reverse(context, EmptyLocationRange)
+					return array.Reverse(context)
 				},
 			),
 		)
@@ -128,7 +128,7 @@ func init() {
 			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
 				array := receiver.(*interpreter.ArrayValue)
 				element := arguments[0]
-				array.Append(context, EmptyLocationRange, element)
+				array.Append(context, element)
 				return interpreter.Void
 			},
 		),
@@ -167,7 +167,7 @@ func init() {
 			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
 				array := receiver.(*interpreter.ArrayValue)
 				otherArray := arguments[0].(*interpreter.ArrayValue)
-				return array.Concat(context, EmptyLocationRange, otherArray)
+				return array.Concat(context, otherArray)
 			},
 		),
 	)
@@ -185,12 +185,10 @@ func init() {
 				indexValue := arguments[0].(interpreter.NumberValue)
 				element := arguments[1]
 
-				locationRange := EmptyLocationRange
-				index := indexValue.ToInt(locationRange)
+				index := indexValue.ToInt()
 
 				array.Insert(
 					context,
-					locationRange,
 					index,
 					element,
 				)
@@ -213,7 +211,7 @@ func init() {
 				indexValue := arguments[0].(interpreter.NumberValue)
 
 				locationRange := EmptyLocationRange
-				index := indexValue.ToInt(locationRange)
+				index := indexValue.ToInt()
 
 				return array.Remove(
 					context,
@@ -270,7 +268,6 @@ func init() {
 					context,
 					from,
 					to,
-					EmptyLocationRange,
 				)
 			},
 		),
@@ -289,7 +286,6 @@ func init() {
 				constantSizedArrayType := typeArguments[0].(*interpreter.ConstantSizedStaticType)
 				return array.ToConstantSized(
 					context,
-					EmptyLocationRange,
 					constantSizedArrayType.Size,
 				)
 			},
@@ -308,7 +304,7 @@ func init() {
 			},
 			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
 				array := receiver.(*interpreter.ArrayValue)
-				return array.ToVariableSized(context, EmptyLocationRange)
+				return array.ToVariableSized(context)
 			},
 		),
 	)

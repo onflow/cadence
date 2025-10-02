@@ -40,7 +40,7 @@ func init() {
 			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
 				dictionary := receiver.(*interpreter.DictionaryValue)
 				key := arguments[0]
-				return dictionary.Remove(context, EmptyLocationRange, key)
+				return dictionary.Remove(context, key)
 			},
 		),
 	)
@@ -60,7 +60,6 @@ func init() {
 
 				return dictionary.Insert(
 					context,
-					EmptyLocationRange,
 					keyValue,
 					newValue,
 				)
@@ -79,11 +78,7 @@ func init() {
 			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
 				dictionary := receiver.(*interpreter.DictionaryValue)
 				key := arguments[0]
-				return dictionary.ContainsKey(
-					context,
-					EmptyLocationRange,
-					key,
-				)
+				return dictionary.ContainsKey(context, key)
 			},
 		),
 	)

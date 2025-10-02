@@ -101,7 +101,6 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		array := interpreter.NewArrayValue(
 			context,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -166,7 +165,6 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 
 		dict := interpreter.NewDictionaryValueWithAddress(
 			context,
-			interpreter.EmptyLocationRange,
 			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -195,7 +193,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 		) (bool, error) {
 			value := interpreter.MustConvertStoredValue(context, atreeValue)
 			otherValue := interpreter.StoredValue(context, otherStorable, storage)
-			return value.(interpreter.EquatableValue).Equal(context, interpreter.EmptyLocationRange, otherValue), nil
+			return value.(interpreter.EquatableValue).Equal(context, otherValue), nil
 		}
 
 		hashInputProvider := func(
@@ -203,7 +201,7 @@ func TestSomeValueUnwrapAtreeValue(t *testing.T) {
 			scratch []byte,
 		) ([]byte, error) {
 			hashInput := interpreter.MustConvertStoredValue(context, value).(interpreter.HashableValue).
-				HashInput(context, interpreter.EmptyLocationRange, scratch)
+				HashInput(context, scratch)
 			return hashInput, nil
 		}
 
@@ -369,7 +367,6 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 
 		array := interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -432,7 +429,6 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 
 		array := interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -497,7 +493,6 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 
 		dict := interpreter.NewDictionaryValueWithAddress(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -534,7 +529,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 		) (bool, error) {
 			value := interpreter.MustConvertStoredValue(inter, atreeValue)
 			otherValue := interpreter.StoredValue(inter, otherStorable, storage)
-			return value.(interpreter.EquatableValue).Equal(inter, interpreter.EmptyLocationRange, otherValue), nil
+			return value.(interpreter.EquatableValue).Equal(inter, otherValue), nil
 		}
 
 		hashInputProvider := func(
@@ -542,7 +537,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 			scratch []byte,
 		) ([]byte, error) {
 			hashInput := interpreter.MustConvertStoredValue(inter, value).(interpreter.HashableValue).
-				HashInput(inter, interpreter.EmptyLocationRange, scratch)
+				HashInput(inter, scratch)
 			return hashInput, nil
 		}
 
@@ -594,7 +589,6 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 
 		dict := interpreter.NewDictionaryValueWithAddress(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -631,7 +625,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 		) (bool, error) {
 			value := interpreter.MustConvertStoredValue(inter, atreeValue)
 			otherValue := interpreter.StoredValue(inter, otherStorable, storage)
-			return value.(interpreter.EquatableValue).Equal(inter, interpreter.EmptyLocationRange, otherValue), nil
+			return value.(interpreter.EquatableValue).Equal(inter, otherValue), nil
 		}
 
 		hashInputProvider := func(
@@ -639,7 +633,7 @@ func TestSomeStorableUnwrapAtreeStorable(t *testing.T) {
 			scratch []byte,
 		) ([]byte, error) {
 			hashInput := interpreter.MustConvertStoredValue(inter, value).(interpreter.HashableValue).
-				HashInput(inter, interpreter.EmptyLocationRange, scratch)
+				HashInput(inter, scratch)
 			return hashInput, nil
 		}
 

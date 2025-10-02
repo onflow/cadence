@@ -273,7 +273,6 @@ func (t *testEmulatorBackendType) newExecuteScriptFunction(
 			args, err := arrayValueToSlice(
 				invocationContext,
 				invocation.Arguments[1],
-				invocation.LocationRange,
 			)
 			if err != nil {
 				panic(errors.NewUnexpectedErrorFromCause(err))
@@ -384,8 +383,7 @@ func (t *testEmulatorBackendType) newGetAccountFunction(
 			if err != nil {
 				msg := fmt.Sprintf("account with address: %s was not found", address)
 				panic(&PanicError{
-					Message:       msg,
-					LocationRange: invocation.LocationRange,
+					Message: msg,
 				})
 			}
 
@@ -450,7 +448,7 @@ func (t *testEmulatorBackendType) newAddTransactionFunction(
 				testTransactionTypeAuthorizersFieldName,
 			)
 
-			authorizers := addressArrayValueToSlice(inter, authorizerValue, locationRange)
+			authorizers := addressArrayValueToSlice(inter, authorizerValue)
 
 			// Get signers
 			signersValue := transactionValue.GetMember(
@@ -471,7 +469,7 @@ func (t *testEmulatorBackendType) newAddTransactionFunction(
 				locationRange,
 				testTransactionTypeArgumentsFieldName,
 			)
-			args, err := arrayValueToSlice(inter, argsValue, locationRange)
+			args, err := arrayValueToSlice(inter, argsValue)
 			if err != nil {
 				panic(errors.NewUnexpectedErrorFromCause(err))
 			}
@@ -588,7 +586,6 @@ func (t *testEmulatorBackendType) newDeployContractFunction(
 			args, err := arrayValueToSlice(
 				inter,
 				invocation.Arguments[2],
-				invocation.LocationRange,
 			)
 			if err != nil {
 				panic(err)
@@ -649,7 +646,6 @@ func (t *testEmulatorBackendType) newLogsFunction(
 
 			return interpreter.NewArrayValue(
 				inter,
-				invocation.LocationRange,
 				arrayType,
 				common.ZeroAddress,
 				values...,
@@ -783,7 +779,7 @@ func (t *testEmulatorBackendType) newMoveTimeFunction(
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
-			blockchain.MoveTime(int64(timeDelta.ToInt(invocation.LocationRange)))
+			blockchain.MoveTime(int64(timeDelta.ToInt()))
 			return interpreter.Void
 		},
 	)

@@ -101,7 +101,6 @@ func BLSAggregatePublicKeys(
 		context,
 		publicKeysValue,
 		sema.PublicKeyArrayType,
-		locationRange,
 	)
 
 	publicKeys := make([]*PublicKey, 0, publicKeysValue.Count())
@@ -124,7 +123,6 @@ func BLSAggregatePublicKeys(
 			return true
 		},
 		false,
-		locationRange,
 	)
 
 	aggregatedPublicKey, err := aggregator.BLSAggregatePublicKeys(publicKeys)
@@ -162,7 +160,6 @@ func newInterpreterBLSAggregateSignaturesFunction(
 		BLSTypeAggregateSignaturesFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.InvocationContext
-			locationRange := invocation.LocationRange
 
 			signaturesValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 			if !ok {
@@ -172,7 +169,6 @@ func newInterpreterBLSAggregateSignaturesFunction(
 			return BLSAggregateSignatures(
 				inter,
 				signaturesValue,
-				locationRange,
 				aggregator,
 			)
 		},
@@ -197,7 +193,6 @@ func NewVMBLSAggregateSignaturesFunction(
 				return BLSAggregateSignatures(
 					context,
 					signaturesValue,
-					interpreter.EmptyLocationRange,
 					aggregator,
 				)
 			},
@@ -208,7 +203,6 @@ func NewVMBLSAggregateSignaturesFunction(
 func BLSAggregateSignatures(
 	context interpreter.InvocationContext,
 	signaturesValue *interpreter.ArrayValue,
-	locationRange interpreter.LocationRange,
 	aggregator BLSSignatureAggregator,
 ) interpreter.Value {
 
@@ -216,7 +210,6 @@ func BLSAggregateSignatures(
 		context,
 		signaturesValue,
 		sema.ByteArrayArrayType,
-		locationRange,
 	)
 
 	bytesArray := make([][]byte, 0, signaturesValue.Count())
@@ -228,7 +221,7 @@ func BLSAggregateSignatures(
 				panic(errors.NewUnreachableError())
 			}
 
-			bytes, err := interpreter.ByteArrayValueToByteSlice(context, signature, locationRange)
+			bytes, err := interpreter.ByteArrayValueToByteSlice(context, signature)
 			if err != nil {
 				panic(err)
 			}
@@ -239,7 +232,6 @@ func BLSAggregateSignatures(
 			return true
 		},
 		false,
-		locationRange,
 	)
 
 	aggregatedSignature, err := aggregator.BLSAggregateSignatures(bytesArray)

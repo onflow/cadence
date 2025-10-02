@@ -270,7 +270,6 @@ func BenchmarkNewStructRaw(b *testing.B) {
 			structValue.SetMember(vmConfig, vm.EmptyLocationRange, "id", fieldValue)
 			structValue.Transfer(
 				vmConfig,
-				vm.EmptyLocationRange,
 				atree.Address{},
 				false,
 				nil,

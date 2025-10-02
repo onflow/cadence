@@ -87,13 +87,13 @@ func NewAccountStorageValue(
 		return nil
 	}
 
-	computeField := func(name string, context MemberAccessibleContext, locationRange LocationRange) Value {
+	computeField := func(name string, context MemberAccessibleContext, _ LocationRange) Value {
 		switch name {
 		case sema.Account_StorageTypePublicPathsFieldName:
-			return publicAccountPaths(context, address, locationRange)
+			return publicAccountPaths(context, address)
 
 		case sema.Account_StorageTypeStoragePathsFieldName:
-			return storageAccountPaths(context, address, locationRange)
+			return storageAccountPaths(context, address)
 
 		case sema.Account_StorageTypeUsedFieldName:
 			return storageUsedGet(context)

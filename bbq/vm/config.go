@@ -270,9 +270,7 @@ func (c *Config) EmitEvent(
 
 	onEventEmitted := c.OnEventEmitted
 	if onEventEmitted == nil {
-		panic(&interpreter.EventEmissionUnavailableError{
-			LocationRange: locationRange,
-		})
+		panic(&interpreter.EventEmissionUnavailableError{})
 	}
 
 	err := onEventEmitted(

@@ -120,7 +120,7 @@ type ValueTransferContext interface {
 	)
 
 	WithContainerMutationPrevention(valueID atree.ValueID, f func())
-	ValidateContainerMutation(valueID atree.ValueID, locationRange LocationRange)
+	ValidateContainerMutation(valueID atree.ValueID)
 
 	EnforceNotResourceDestruction(
 		valueID atree.ValueID,
@@ -543,7 +543,7 @@ func (ctx NoOpStringContext) WithContainerMutationPrevention(_ atree.ValueID, f 
 	f()
 }
 
-func (ctx NoOpStringContext) ValidateContainerMutation(_ atree.ValueID, _ LocationRange) {
+func (ctx NoOpStringContext) ValidateContainerMutation(valueID atree.ValueID) {
 	panic(errors.NewUnreachableError())
 }
 

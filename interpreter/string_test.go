@@ -103,7 +103,6 @@ func TestInterpretStringDecodeHex(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},
@@ -285,7 +284,6 @@ func TestInterpretStringUtf8Field(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeUInt8,
 			},
@@ -621,7 +619,6 @@ func TestInterpretStringSplit(t *testing.T) {
 			for partIndex, expected := range test.result {
 				actualPart := actual.Get(
 					inter,
-					interpreter.EmptyLocationRange,
 					partIndex,
 				)
 
@@ -889,7 +886,7 @@ func TestInterpretStringIndex(t *testing.T) {
 
 			require.IsType(t, interpreter.IntValue{}, value)
 			actual := value.(interpreter.IntValue)
-			require.Equal(t, test.result, actual.ToInt(interpreter.EmptyLocationRange))
+			require.Equal(t, test.result, actual.ToInt())
 		})
 	}
 
@@ -952,7 +949,7 @@ func TestInterpretStringCount(t *testing.T) {
 
 			require.IsType(t, interpreter.IntValue{}, value)
 			actual := value.(interpreter.IntValue)
-			require.Equal(t, test.result, actual.ToInt(interpreter.EmptyLocationRange))
+			require.Equal(t, test.result, actual.ToInt())
 		})
 	}
 

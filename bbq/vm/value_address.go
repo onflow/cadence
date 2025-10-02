@@ -45,7 +45,6 @@ func init() {
 				return interpreter.AddressValueToStringFunction(
 					context,
 					addressValue,
-					EmptyLocationRange,
 				)
 			},
 		),
@@ -77,7 +76,6 @@ func init() {
 				return interpreter.AddressValueFromByteArray(
 					context,
 					byteArrayValue,
-					EmptyLocationRange,
 				)
 			},
 		),

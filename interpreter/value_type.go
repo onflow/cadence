@@ -99,7 +99,7 @@ func (v TypeValue) MeteredString(context ValueStringContext, _ SeenReferences, _
 	return format.TypeValue(typeString)
 }
 
-func (v TypeValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
+func (v TypeValue) Equal(_ ValueComparisonContext, other Value) bool {
 	otherTypeValue, ok := other.(TypeValue)
 	if !ok {
 		return false
@@ -318,7 +318,6 @@ func (TypeValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (v TypeValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -354,7 +353,7 @@ func (TypeValue) ChildStorables() []atree.Storable {
 // HashInput returns a byte slice containing:
 // - HashInputTypeType (1 byte)
 // - type id (n bytes)
-func (v TypeValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+func (v TypeValue) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
 	typeID := v.Type.ID()
 
 	length := 1 + len(typeID)

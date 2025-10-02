@@ -3111,12 +3111,12 @@ func TestArrayLiteral(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredIntValueFromInt64(2),
-			array.Get(vmContext, vm.EmptyLocationRange, 0),
+			array.Get(vmContext, 0),
 		)
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredIntValueFromInt64(5),
-			array.Get(vmContext, vm.EmptyLocationRange, 1),
+			array.Get(vmContext, 1),
 		)
 	})
 
@@ -3175,9 +3175,9 @@ func TestArrayLiteral(t *testing.T) {
 		require.IsType(t, &interpreter.ArrayValue{}, result)
 		array := result.(*interpreter.ArrayValue)
 		assert.Equal(t, 3, array.Count())
-		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), array.Get(vmContext, vm.EmptyLocationRange, 0))
-		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(5), array.Get(vmContext, vm.EmptyLocationRange, 1))
-		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(8), array.Get(vmContext, vm.EmptyLocationRange, 2))
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), array.Get(vmContext, 0))
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(5), array.Get(vmContext, 1))
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(8), array.Get(vmContext, 2))
 	})
 }
 
@@ -6375,7 +6375,6 @@ func TestContractAccount(t *testing.T) {
 			nil,
 			addressValue,
 			interpreter.FullyEntitledAccountAccess,
-			interpreter.EmptyLocationRange,
 		)
 
 		return map[string]interpreter.Value{
@@ -6505,7 +6504,6 @@ func TestResourceOwner(t *testing.T) {
 			nil,
 			addressValue,
 			interpreter.FullyEntitledAccountAccess,
-			interpreter.EmptyLocationRange,
 		)
 
 		return map[string]interpreter.Value{
@@ -8771,7 +8769,7 @@ func TestFunctionInvocationWithOptionalArgs(t *testing.T) {
 			require.IsType(t, interpreter.IntValue{}, arguments[1])
 			second := arguments[1].(interpreter.IntValue)
 
-			return first.Plus(context, second, interpreter.EmptyLocationRange)
+			return first.Plus(context, second)
 		},
 	)
 
@@ -8915,7 +8913,6 @@ func TestSwapIdentifiers(t *testing.T) {
 		context,
 		interpreter.NewArrayValue(
 			context,
-			interpreter.EmptyLocationRange,
 			interpreter.NewVariableSizedStaticType(nil, interpreter.PrimitiveStaticTypeInt),
 			common.ZeroAddress,
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -8961,7 +8958,6 @@ func TestSwapMembers(t *testing.T) {
 		context,
 		interpreter.NewArrayValue(
 			context,
-			interpreter.EmptyLocationRange,
 			interpreter.NewVariableSizedStaticType(nil, interpreter.PrimitiveStaticTypeInt),
 			common.ZeroAddress,
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -9003,7 +8999,6 @@ func TestSwapIndex(t *testing.T) {
 		context,
 		interpreter.NewArrayValue(
 			context,
-			interpreter.EmptyLocationRange,
 			interpreter.NewVariableSizedStaticType(nil, interpreter.PrimitiveStaticTypeString),
 			common.ZeroAddress,
 			interpreter.NewUnmeteredStringValue("b"),
@@ -9052,7 +9047,6 @@ func TestImplicitBoxing(t *testing.T) {
 		context,
 		interpreter.NewArrayValue(
 			context,
-			interpreter.EmptyLocationRange,
 			interpreter.NewVariableSizedStaticType(nil, interpreter.PrimitiveStaticTypeAnyStruct),
 			common.ZeroAddress,
 			interpreter.NewUnmeteredSomeValueNonCopying(
@@ -9350,7 +9344,7 @@ func TestInjectedContract(t *testing.T) {
 			require.IsType(t, interpreter.IntValue{}, args[0])
 			arg := args[0].(interpreter.IntValue)
 
-			return arg.Plus(context, arg, interpreter.EmptyLocationRange)
+			return arg.Plus(context, arg)
 		},
 	)
 
@@ -11516,7 +11510,6 @@ func TestBorrowContractLinksGlobals(t *testing.T) {
 
 			stdlib.AccountContractsBorrow(
 				context,
-				interpreter.EmptyLocationRange,
 				contractAddress,
 				interpreter.NewUnmeteredStringValue(contractName),
 				sema.NewReferenceType(nil, sema.UnauthorizedAccess, sema.AnyStructType),

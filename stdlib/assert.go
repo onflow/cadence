@@ -79,7 +79,6 @@ var InterpreterAssertFunction = NewInterpreterStandardLibraryStaticFunction(
 		return Assert(
 			result,
 			message,
-			invocation.LocationRange,
 		)
 	},
 )
@@ -106,16 +105,14 @@ var VMAssertFunction = NewVMStandardLibraryStaticFunction(
 		return Assert(
 			result,
 			message,
-			interpreter.EmptyLocationRange,
 		)
 	},
 )
 
-func Assert(result interpreter.BoolValue, message string, locationRange interpreter.LocationRange) interpreter.Value {
+func Assert(result interpreter.BoolValue, message string) interpreter.Value {
 	if !result {
 		panic(&AssertionError{
-			Message:       message,
-			LocationRange: locationRange,
+			Message: message,
 		})
 	}
 	return interpreter.Void

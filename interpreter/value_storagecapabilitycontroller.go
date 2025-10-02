@@ -157,15 +157,15 @@ func (v *StorageCapabilityControllerValue) ConformsToStaticType(
 	return true
 }
 
-func (v *StorageCapabilityControllerValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
+func (v *StorageCapabilityControllerValue) Equal(context ValueComparisonContext, other Value) bool {
 	otherController, ok := other.(*StorageCapabilityControllerValue)
 	if !ok {
 		return false
 	}
 
-	return otherController.TargetPath.Equal(context, locationRange, v.TargetPath) &&
+	return otherController.TargetPath.Equal(context, v.TargetPath) &&
 		otherController.BorrowType.Equal(v.BorrowType) &&
-		otherController.CapabilityID.Equal(context, locationRange, v.CapabilityID)
+		otherController.CapabilityID.Equal(context, v.CapabilityID)
 }
 
 func (*StorageCapabilityControllerValue) IsStorable() bool {
@@ -193,7 +193,6 @@ func (*StorageCapabilityControllerValue) IsResourceKinded(_ ValueStaticTypeConte
 
 func (v *StorageCapabilityControllerValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -270,7 +269,7 @@ func (v *StorageCapabilityControllerValue) GetMember(context MemberAccessibleCon
 
 func (v *StorageCapabilityControllerValue) GetMethod(
 	context MemberAccessibleContext,
-	locationRange LocationRange,
+	_ LocationRange,
 	name string,
 ) FunctionValue {
 	switch name {
