@@ -431,13 +431,14 @@ func registerBuiltinSaturatingArithmeticFunctions() {
 }
 
 func registerBuiltinTypeSaturatingArithmeticFunctions(t sema.SaturatingArithmeticType) {
+	functionType := sema.SaturatingArithmeticTypeFunctionTypes[t]
 
 	if t.SupportsSaturatingAdd() {
 		registerBuiltinTypeBoundFunction(
 			commons.TypeQualifier(t),
 			NewUnifiedNativeFunctionValue(
 				sema.NumericTypeSaturatingAddFunctionName,
-				sema.SaturatingArithmeticTypeFunctionTypes[t],
+				functionType,
 				interpreter.UnifiedNumberSaturatingAddFunction,
 			),
 		)
@@ -448,7 +449,7 @@ func registerBuiltinTypeSaturatingArithmeticFunctions(t sema.SaturatingArithmeti
 			commons.TypeQualifier(t),
 			NewUnifiedNativeFunctionValue(
 				sema.NumericTypeSaturatingSubtractFunctionName,
-				sema.SaturatingArithmeticTypeFunctionTypes[t],
+				functionType,
 				interpreter.UnifiedNumberSaturatingSubtractFunction,
 			),
 		)
@@ -459,7 +460,7 @@ func registerBuiltinTypeSaturatingArithmeticFunctions(t sema.SaturatingArithmeti
 			commons.TypeQualifier(t),
 			NewUnifiedNativeFunctionValue(
 				sema.NumericTypeSaturatingMultiplyFunctionName,
-				sema.SaturatingArithmeticTypeFunctionTypes[t],
+				functionType,
 				interpreter.UnifiedNumberSaturatingMultiplyFunction,
 			),
 		)
@@ -470,7 +471,7 @@ func registerBuiltinTypeSaturatingArithmeticFunctions(t sema.SaturatingArithmeti
 			commons.TypeQualifier(t),
 			NewUnifiedNativeFunctionValue(
 				sema.NumericTypeSaturatingDivideFunctionName,
-				sema.SaturatingArithmeticTypeFunctionTypes[t],
+				functionType,
 				interpreter.UnifiedNumberSaturatingDivideFunction,
 			),
 		)
