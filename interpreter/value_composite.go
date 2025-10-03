@@ -1746,6 +1746,7 @@ func (v *CompositeValue) GetAttachments(context AttachmentContext, locationRange
 	return attachments
 }
 
+// TODO: after attachments are implemented in the compiler, we can update this to use UnifiedNativeFunction
 func (v *CompositeValue) forEachAttachmentFunction(context FunctionCreationContext, locationRange LocationRange) Value {
 	compositeType := MustSemaTypeOfValue(v, context).(*sema.CompositeType)
 	return NewBoundHostFunctionValue(

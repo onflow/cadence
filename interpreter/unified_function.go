@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 )
@@ -38,26 +39,41 @@ type TypeParameterGetter interface {
 }
 
 type InterpreterTypeParameterGetter struct {
-	memoryGauge        common.MemoryGauge
-	typeParameterTypes *sema.TypeParameterTypeOrderedMap
+	memoryGauge          common.MemoryGauge
+	currentTypeParameter *orderedmap.Pair[*sema.TypeParameter, sema.Type]
 }
 
 var _ TypeParameterGetter = &InterpreterTypeParameterGetter{}
 
 func NewInterpreterTypeParameterGetter(memoryGauge common.MemoryGauge, typeParameterTypes *sema.TypeParameterTypeOrderedMap) *InterpreterTypeParameterGetter {
+	var currentTypeParameter *orderedmap.Pair[*sema.TypeParameter, sema.Type]
+	if typeParameterTypes != nil {
+		currentTypeParameter = typeParameterTypes.Oldest()
+	}
+
 	return &InterpreterTypeParameterGetter{
-		memoryGauge:        memoryGauge,
-		typeParameterTypes: typeParameterTypes,
+		memoryGauge:          memoryGauge,
+		currentTypeParameter: currentTypeParameter,
 	}
 }
 
 func (i *InterpreterTypeParameterGetter) NextStatic() StaticType {
-	return ConvertSemaToStaticType(i.memoryGauge, i.NextSema())
+	semaType := i.NextSema()
+	if semaType == nil {
+		return nil
+	}
+	return ConvertSemaToStaticType(i.memoryGauge, semaType)
 }
 
 func (i *InterpreterTypeParameterGetter) NextSema() sema.Type {
-	current := i.typeParameterTypes.Oldest()
-	i.typeParameterTypes.Delete(current.Key)
+	// deletion cannot happen here, type parameters are used multiple times
+	// it is also possible that there are no type parameters which is valid
+	// see UnifiedCapabilityBorrowFunction
+	current := i.currentTypeParameter
+	if current == nil {
+		return nil
+	}
+	i.currentTypeParameter = i.currentTypeParameter.Next()
 	return current.Value
 }
 
@@ -85,13 +101,23 @@ func AdaptUnifiedFunctionForInterpreter(fn UnifiedNativeFunction) HostFunction {
 	}
 }
 
+func NewUnmeteredUnifiedStaticHostFunctionValue(
+	functionType *sema.FunctionType,
+	fn UnifiedNativeFunction,
+) *HostFunctionValue {
+	return NewUnmeteredStaticHostFunctionValue(
+		functionType,
+		AdaptUnifiedFunctionForInterpreter(fn),
+	)
+}
+
 func NewUnifiedStaticHostFunctionValue(
-	context InvocationContext,
+	gauge common.MemoryGauge,
 	functionType *sema.FunctionType,
 	fn UnifiedNativeFunction,
 ) *HostFunctionValue {
 	return NewStaticHostFunctionValue(
-		context,
+		gauge,
 		functionType,
 		AdaptUnifiedFunctionForInterpreter(fn),
 	)
@@ -120,10 +146,35 @@ func NewUnifiedBoundHostFunctionValue(
 
 // generic helper function to assert that the provided value is of a specific type
 // useful for asserting receiver and argument types in unified functions
-func assertValueOfType[T Value](val Value) T {
+func AssertValueOfType[T Value](val Value) T {
 	value, ok := val.(T)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 	return value
+}
+
+// Helper functions to get the address from the receiver or the address pointer
+// interpreter supplies the address, vm does not
+// see stdlib/account.go for usage examples
+func GetAddressValue(receiver Value, addressPointer *AddressValue) AddressValue {
+	if addressPointer == nil {
+		return GetAccountTypePrivateAddressValue(receiver)
+	}
+	return *addressPointer
+}
+
+func GetAddress(receiver Value, addressPointer *common.Address) common.Address {
+	if addressPointer == nil {
+		return GetAccountTypePrivateAddressValue(receiver).ToAddress()
+	}
+	return *addressPointer
+}
+
+func GetAccountTypePrivateAddressValue(receiver Value) AddressValue {
+	simpleCompositeValue := AssertValueOfType[*SimpleCompositeValue](receiver)
+
+	addressMetaInfo := simpleCompositeValue.PrivateField(AccountTypePrivateAddressFieldName)
+	address := AssertValueOfType[AddressValue](addressMetaInfo)
+	return address
 }

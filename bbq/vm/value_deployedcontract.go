@@ -19,10 +19,7 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
-	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -37,40 +34,10 @@ func init() {
 
 	registerBuiltinTypeBoundFunction(
 		deployedContractTypeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.DeployedContractTypePublicTypesFunctionName,
 			sema.DeployedContractTypePublicTypesFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, _ ...Value) Value {
-
-				deployedContract := receiver.(*interpreter.SimpleCompositeValue)
-
-				addressFieldValue := deployedContract.GetMember(
-					context,
-					EmptyLocationRange,
-					sema.DeployedContractTypeAddressFieldName,
-				)
-				addressValue, ok := addressFieldValue.(interpreter.AddressValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				nameFieldValue := deployedContract.GetMember(
-					context,
-					EmptyLocationRange,
-					sema.DeployedContractTypeNameFieldName,
-				)
-
-				nameValue, ok := nameFieldValue.(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return interpreter.DeployedContractPublicTypes(
-					context,
-					common.Address(addressValue),
-					nameValue,
-				)
-			},
+			interpreter.NewUnifiedDeployedContractPublicTypesFunctionValue(nil, nil, nil),
 		),
 	)
 }

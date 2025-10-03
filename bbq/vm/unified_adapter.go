@@ -42,12 +42,20 @@ var _ interpreter.TypeParameterGetter = &VMTypeParameterGetter{}
 
 func (g *VMTypeParameterGetter) NextStatic() interpreter.StaticType {
 	current := g.index
+	if current >= len(g.typeParameterTypes) {
+		// much like the interpreter, there can be no type parameters provided, which is valid
+		return nil
+	}
 	g.index++
 	return g.typeParameterTypes[current]
 }
 
 func (g *VMTypeParameterGetter) NextSema() sema.Type {
-	return g.context.SemaTypeFromStaticType(g.NextStatic())
+	staticType := g.NextStatic()
+	if staticType == nil {
+		return nil
+	}
+	return g.context.SemaTypeFromStaticType(staticType)
 }
 
 // Like in the interpreter's unified_function, these are all the functions that need to exist to work with the VM
@@ -76,9 +84,9 @@ func NewUnifiedNativeFunctionValueWithDerivedType(
 	typeGetter func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType,
 	fn interpreter.UnifiedNativeFunction,
 ) *NativeFunctionValue {
-	return NewNativeFunctionValueWithDerivedType(
-		name,
-		typeGetter,
-		AdaptUnifiedFunctionForVM(fn),
-	)
+	return &NativeFunctionValue{
+		Name:               name,
+		Function:           AdaptUnifiedFunctionForVM(fn),
+		functionTypeGetter: typeGetter,
+	}
 }

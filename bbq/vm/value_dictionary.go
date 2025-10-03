@@ -19,7 +19,6 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -31,83 +30,50 @@ func init() {
 
 	registerBuiltinTypeBoundFunction(
 		commons.TypeQualifierDictionary,
-		NewNativeFunctionValueWithDerivedType(
+		NewUnifiedNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeRemoveFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				dictionaryType := dictionaryType(receiver, context)
 				return sema.DictionaryRemoveFunctionType(dictionaryType)
 			},
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				dictionary := receiver.(*interpreter.DictionaryValue)
-				key := arguments[0]
-				return dictionary.Remove(context, EmptyLocationRange, key)
-			},
+			interpreter.UnifiedDictionaryRemoveFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		commons.TypeQualifierDictionary,
-		NewNativeFunctionValueWithDerivedType(
+		NewUnifiedNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeInsertFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				dictionaryType := dictionaryType(receiver, context)
 				return sema.DictionaryInsertFunctionType(dictionaryType)
 			},
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				dictionary := receiver.(*interpreter.DictionaryValue)
-				keyValue := arguments[0]
-				newValue := arguments[1]
-
-				return dictionary.Insert(
-					context,
-					EmptyLocationRange,
-					keyValue,
-					newValue,
-				)
-			},
+			interpreter.UnifiedDictionaryInsertFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		commons.TypeQualifierDictionary,
-		NewNativeFunctionValueWithDerivedType(
+		NewUnifiedNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeContainsKeyFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				dictionaryType := dictionaryType(receiver, context)
 				return sema.DictionaryContainsKeyFunctionType(dictionaryType)
 			},
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				dictionary := receiver.(*interpreter.DictionaryValue)
-				key := arguments[0]
-				return dictionary.ContainsKey(
-					context,
-					EmptyLocationRange,
-					key,
-				)
-			},
+			interpreter.UnifiedDictionaryContainsKeyFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		commons.TypeQualifierDictionary,
-		NewNativeFunctionValueWithDerivedType(
+		NewUnifiedNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeForEachKeyFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				dictionaryValue := receiver.(*interpreter.DictionaryValue)
 				dictionaryType := dictionaryValue.SemaType(context)
 				return sema.DictionaryRemoveFunctionType(dictionaryType)
 			},
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				dictionary := receiver.(*interpreter.DictionaryValue)
-				funcArgument := arguments[0].(FunctionValue)
-				dictionary.ForEachKey(
-					context,
-					EmptyLocationRange,
-					funcArgument,
-				)
-
-				return interpreter.Void
-			},
+			interpreter.UnifiedDictionaryForEachKeyFunction,
 		),
 	)
 }

@@ -154,28 +154,28 @@ var UnifiedNumberToBigEndianBytesFunction = UnifiedNativeFunction(
 
 var UnifiedNumberSaturatingAddFunction = UnifiedNativeFunction(
 	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
-		other := assertValueOfType[NumberValue](args[0])
+		other := AssertValueOfType[NumberValue](args[0])
 		return receiver.(NumberValue).SaturatingPlus(context, other, locationRange)
 	},
 )
 
 var UnifiedNumberSaturatingSubtractFunction = UnifiedNativeFunction(
 	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
-		other := assertValueOfType[NumberValue](args[0])
+		other := AssertValueOfType[NumberValue](args[0])
 		return receiver.(NumberValue).SaturatingMinus(context, other, locationRange)
 	},
 )
 
 var UnifiedNumberSaturatingMultiplyFunction = UnifiedNativeFunction(
 	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
-		other := assertValueOfType[NumberValue](args[0])
+		other := AssertValueOfType[NumberValue](args[0])
 		return receiver.(NumberValue).SaturatingMul(context, other, locationRange)
 	},
 )
 
 var UnifiedNumberSaturatingDivideFunction = UnifiedNativeFunction(
 	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
-		other := assertValueOfType[NumberValue](args[0])
+		other := AssertValueOfType[NumberValue](args[0])
 		return receiver.(NumberValue).SaturatingDiv(context, other, locationRange)
 	},
 )

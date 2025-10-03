@@ -23,7 +23,6 @@ package stdlib
 import (
 	"fmt"
 
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -46,44 +45,45 @@ func (e RLPDecodeStringError) Error() string {
 
 const rlpErrMsgInputContainsExtraBytes = "input data is expected to be RLP-encoded of a single string or a single list but it seems it contains extra trailing bytes."
 
-// interpreterRLPDecodeStringFunction is a static function
-var interpreterRLPDecodeStringFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
-	RLPTypeDecodeStringFunctionType,
-	func(invocation interpreter.Invocation) interpreter.Value {
-		context := invocation.InvocationContext
-		locationRange := invocation.LocationRange
-
-		input, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		return RLPDecodeString(
-			input,
-			context,
-			locationRange,
-		)
+// Unified RLP functions
+var UnifiedRLPDecodeStringFunction = interpreter.UnifiedNativeFunction(
+	func(
+		context interpreter.UnifiedFunctionContext,
+		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
+	) interpreter.Value {
+		input := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
+		return RLPDecodeString(input, context, locationRange)
 	},
+)
+
+var UnifiedRLPDecodeListFunction = interpreter.UnifiedNativeFunction(
+	func(
+		context interpreter.UnifiedFunctionContext,
+		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
+	) interpreter.Value {
+		input := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
+		return RLPDecodeList(input, context, locationRange)
+	},
+)
+
+// interpreterRLPDecodeStringFunction is a static function
+var interpreterRLPDecodeStringFunction = interpreter.NewUnmeteredUnifiedStaticHostFunctionValue(
+	RLPTypeDecodeStringFunctionType,
+	UnifiedRLPDecodeStringFunction,
 )
 
 var VMRLPDecodeStringFunction = VMFunction{
 	BaseType: RLPType,
-	FunctionValue: vm.NewNativeFunctionValue(
+	FunctionValue: vm.NewUnifiedNativeFunctionValue(
 		RLPTypeDecodeStringFunctionName,
 		RLPTypeDecodeStringFunctionType,
-		func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
-
-			input, ok := arguments[0].(*interpreter.ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			return RLPDecodeString(
-				input,
-				context,
-				interpreter.EmptyLocationRange,
-			)
-		},
+		UnifiedRLPDecodeStringFunction,
 	),
 }
 
@@ -140,43 +140,17 @@ func (e RLPDecodeListError) Error() string {
 }
 
 // interpreterRLPDecodeListFunction is a static function
-var interpreterRLPDecodeListFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
+var interpreterRLPDecodeListFunction = interpreter.NewUnmeteredUnifiedStaticHostFunctionValue(
 	RLPTypeDecodeListFunctionType,
-	func(invocation interpreter.Invocation) interpreter.Value {
-		context := invocation.InvocationContext
-		locationRange := invocation.LocationRange
-
-		input, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		return RLPDecodeList(
-			input,
-			context,
-			locationRange,
-		)
-	},
+	UnifiedRLPDecodeListFunction,
 )
 
 var VMRLPDecodeListFunction = VMFunction{
 	BaseType: RLPType,
-	FunctionValue: vm.NewNativeFunctionValue(
+	FunctionValue: vm.NewUnifiedNativeFunctionValue(
 		RLPTypeDecodeListFunctionName,
 		RLPTypeDecodeListFunctionType,
-		func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
-
-			input, ok := arguments[0].(*interpreter.ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			return RLPDecodeList(
-				input,
-				context,
-				interpreter.EmptyLocationRange,
-			)
-		},
+		UnifiedRLPDecodeListFunction,
 	),
 }
 

@@ -76,33 +76,60 @@ func NewHashAlgorithmCase(
 	return value, nil
 }
 
+// Unified hash functions
+func UnifiedHashAlgorithmHashFunction(hasher Hasher, hashAlgoValuePointer *interpreter.MemberAccessibleValue) interpreter.UnifiedNativeFunction {
+	return interpreter.UnifiedNativeFunction(
+		func(
+			context interpreter.UnifiedFunctionContext,
+			locationRange interpreter.LocationRange,
+			typeParameterGetter interpreter.TypeParameterGetter,
+			receiver interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
+			var hashAlgoValue interpreter.MemberAccessibleValue
+			if hashAlgoValuePointer == nil {
+				hashAlgoValue = interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)
+			} else {
+				// interpreter provides the hash algo value
+				hashAlgoValue = *hashAlgoValuePointer
+			}
+			dataValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
+			return hash(context, locationRange, hasher, dataValue, nil, hashAlgoValue)
+		},
+	)
+}
+
+func UnifiedHashAlgorithmHashWithTagFunction(hasher Hasher, hashAlgoValuePointer *interpreter.MemberAccessibleValue) interpreter.UnifiedNativeFunction {
+	return interpreter.UnifiedNativeFunction(
+		func(
+			context interpreter.UnifiedFunctionContext,
+			locationRange interpreter.LocationRange,
+			typeParameterGetter interpreter.TypeParameterGetter,
+			receiver interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
+			var hashAlgoValue interpreter.MemberAccessibleValue
+			if hashAlgoValuePointer == nil {
+				hashAlgoValue = interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)
+			} else {
+				hashAlgoValue = *hashAlgoValuePointer
+			}
+			dataValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
+			tagValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[1])
+			return hash(context, locationRange, hasher, dataValue, tagValue, hashAlgoValue)
+		},
+	)
+}
+
 func newInterpreterHashAlgorithmHashFunction(
 	hashAlgoValue interpreter.MemberAccessibleValue,
 	hasher Hasher,
 ) *interpreter.HostFunctionValue {
 	// TODO: should ideally create a bound-host function.
 	// But the interpreter is not available at this point.
-	return interpreter.NewUnmeteredStaticHostFunctionValue(
+	return interpreter.NewUnmeteredUnifiedStaticHostFunctionValue(
 		sema.HashAlgorithmTypeHashFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			dataValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			context := invocation.InvocationContext
-
-			locationRange := invocation.LocationRange
-
-			return hash(
-				context,
-				locationRange,
-				hasher,
-				dataValue,
-				nil,
-				hashAlgoValue,
-			)
-		},
+		UnifiedHashAlgorithmHashFunction(hasher, &hashAlgoValue),
 	)
 }
 
@@ -111,30 +138,10 @@ func NewVMHashAlgorithmHashFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.HashAlgorithmType,
-		FunctionValue: vm.NewNativeFunctionValue(
+		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.HashAlgorithmTypeHashFunctionName,
 			sema.HashAlgorithmTypeHashFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
-
-				hashAlgoValue, ok := receiver.(interpreter.MemberAccessibleValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				dataValue, ok := args[0].(*interpreter.ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return hash(
-					context,
-					vm.EmptyLocationRange,
-					hasher,
-					dataValue,
-					nil,
-					hashAlgoValue,
-				)
-			},
+			UnifiedHashAlgorithmHashFunction(hasher, nil),
 		),
 	}
 }
@@ -145,33 +152,9 @@ func newInterpreterHashAlgorithmHashWithTagFunction(
 ) *interpreter.HostFunctionValue {
 	// TODO: should ideally create a bound-host function.
 	// But the interpreter is not available at this point.
-	return interpreter.NewUnmeteredStaticHostFunctionValue(
+	return interpreter.NewUnmeteredUnifiedStaticHostFunctionValue(
 		sema.HashAlgorithmTypeHashWithTagFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-
-			dataValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			tagValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			inter := invocation.InvocationContext
-
-			locationRange := invocation.LocationRange
-
-			return hash(
-				inter,
-				locationRange,
-				hasher,
-				dataValue,
-				tagValue,
-				hashAlgorithmValue,
-			)
-		},
+		UnifiedHashAlgorithmHashWithTagFunction(hasher, &hashAlgorithmValue),
 	)
 }
 
@@ -180,35 +163,10 @@ func NewVMHashAlgorithmHashWithTagFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.HashAlgorithmType,
-		FunctionValue: vm.NewNativeFunctionValue(
+		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.HashAlgorithmTypeHashWithTagFunctionName,
 			sema.HashAlgorithmTypeHashWithTagFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
-
-				hashAlgoValue, ok := receiver.(interpreter.MemberAccessibleValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				dataValue, ok := args[0].(*interpreter.ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				tagValue, ok := args[1].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return hash(
-					context,
-					vm.EmptyLocationRange,
-					hasher,
-					dataValue,
-					tagValue,
-					hashAlgoValue,
-				)
-			},
+			UnifiedHashAlgorithmHashWithTagFunction(hasher, nil),
 		),
 	}
 }
@@ -240,6 +198,7 @@ func hash(
 	return interpreter.ByteSliceToByteArrayValue(context, result)
 }
 
+// these functions are left as is, since there are differences in the implementations between interpreter and vm
 func NewInterpreterHashAlgorithmConstructor(hasher Hasher) StandardLibraryValue {
 
 	interpreterHashAlgorithmConstructorValue, _ := interpreterCryptoAlgorithmEnumValueAndCaseValues(

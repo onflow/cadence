@@ -19,7 +19,6 @@
 package interpreter_test
 
 import (
-	goruntime "runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -224,13 +223,8 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 	RequireError(t, err)
 
 	if *compile {
-		var typeAssertionErr *goruntime.TypeAssertionError
-		require.ErrorAs(t, err, &typeAssertionErr)
-		require.ErrorContains(
-			t,
-			typeAssertionErr,
-			"interface conversion: interpreter.UIntValue is not interpreter.OptionalValue",
-		)
+		var internalErr errors.InternalError
+		require.ErrorAs(t, err, &internalErr)
 	} else {
 		var memberAccessTypeError *interpreter.MemberAccessTypeError
 		require.ErrorAs(t, err, &memberAccessTypeError)

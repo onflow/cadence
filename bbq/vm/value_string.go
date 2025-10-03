@@ -19,7 +19,6 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -34,132 +33,82 @@ func init() {
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeConcatFunctionName,
 			sema.StringTypeConcatFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				this := receiver.(*interpreter.StringValue)
-				other := arguments[0]
-				return interpreter.StringConcat(
-					context,
-					this,
-					other,
-					EmptyLocationRange,
-				)
-			},
+			interpreter.UnifiedStringConcatFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeSliceFunctionName,
 			sema.StringTypeSliceFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				this := receiver.(*interpreter.StringValue)
-				from := arguments[0].(interpreter.IntValue)
-				to := arguments[1].(interpreter.IntValue)
-				return this.Slice(from, to, EmptyLocationRange)
-			},
+			interpreter.UnifiedStringSliceFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeContainsFunctionName,
 			sema.StringTypeContainsFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				this := receiver.(*interpreter.StringValue)
-				other := arguments[0].(*interpreter.StringValue)
-				return this.Contains(context, other)
-			},
+			interpreter.UnifiedStringContainsFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeIndexFunctionName,
 			sema.StringTypeIndexFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				this := receiver.(*interpreter.StringValue)
-				other := arguments[0].(*interpreter.StringValue)
-				return this.IndexOf(context, other)
-			},
+			interpreter.UnifiedStringIndexFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeCountFunctionName,
 			sema.StringTypeCountFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				this := receiver.(*interpreter.StringValue)
-				other := arguments[0].(*interpreter.StringValue)
-				return this.Count(context, EmptyLocationRange, other)
-			},
+			interpreter.UnifiedStringCountFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeDecodeHexFunctionName,
 			sema.StringTypeDecodeHexFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, _ ...Value) Value {
-				this := receiver.(*interpreter.StringValue)
-				return this.DecodeHex(context, EmptyLocationRange)
-			},
+			interpreter.UnifiedStringDecodeHexFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeToLowerFunctionName,
 			sema.StringTypeToLowerFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, _ ...Value) Value {
-				this := receiver.(*interpreter.StringValue)
-				return this.ToLower(context)
-			},
+			interpreter.UnifiedStringToLowerFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeSplitFunctionName,
 			sema.StringTypeSplitFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				this := receiver.(*interpreter.StringValue)
-				separator := arguments[0].(*interpreter.StringValue)
-				return this.Split(
-					context,
-					EmptyLocationRange,
-					separator,
-				)
-			},
+			interpreter.UnifiedStringSplitFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeReplaceAllFunctionName,
 			sema.StringTypeReplaceAllFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				this := receiver.(*interpreter.StringValue)
-				original := arguments[0].(*interpreter.StringValue)
-				replacement := arguments[1].(*interpreter.StringValue)
-				return this.ReplaceAll(
-					context,
-					EmptyLocationRange,
-					original,
-					replacement,
-				)
-			},
+			interpreter.UnifiedStringReplaceAllFunction,
 		),
 	)
 
@@ -168,68 +117,37 @@ func init() {
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeEncodeHexFunctionName,
 			sema.StringTypeEncodeHexFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-				byteArray := arguments[0].(*interpreter.ArrayValue)
-				return interpreter.StringFunctionEncodeHex(
-					context,
-					byteArray,
-					EmptyLocationRange,
-				)
-			},
+			interpreter.UnifiedStringEncodeHexFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeFromUtf8FunctionName,
 			sema.StringTypeFromUtf8FunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-				byteArray := arguments[0].(*interpreter.ArrayValue)
-				return interpreter.StringFunctionFromUtf8(
-					context,
-					byteArray,
-					EmptyLocationRange,
-				)
-			},
+			interpreter.UnifiedStringFromUtf8Function,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeFromCharactersFunctionName,
 			sema.StringTypeFromCharactersFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-				charactersArray := arguments[0].(*interpreter.ArrayValue)
-				return interpreter.StringFunctionFromCharacters(
-					context,
-					charactersArray,
-					EmptyLocationRange,
-				)
-			},
+			interpreter.UnifiedStringFromCharactersFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StringTypeJoinFunctionName,
 			sema.StringTypeJoinFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-				stringArray := arguments[0].(*interpreter.ArrayValue)
-				separator := arguments[1].(*interpreter.StringValue)
-
-				return interpreter.StringFunctionJoin(
-					context,
-					stringArray,
-					separator,
-					EmptyLocationRange,
-				)
-			},
+			interpreter.UnifiedStringJoinFunction,
 		),
 	)
 }

@@ -21,8 +21,6 @@ package stdlib
 import (
 	"fmt"
 
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -64,25 +62,33 @@ var PanicFunctionType = sema.NewSimpleFunctionType(
 	sema.NeverTypeAnnotation,
 )
 
-var InterpreterPanicFunction = NewInterpreterStandardLibraryStaticFunction(
-	PanicFunctionName,
-	PanicFunctionType,
-	panicFunctionDocString,
-	func(invocation interpreter.Invocation) interpreter.Value {
-		locationRange := invocation.LocationRange
-		message := invocation.Arguments[0]
+var UnifiedPanicFunction = interpreter.UnifiedNativeFunction(
+	func(
+		context interpreter.UnifiedFunctionContext,
+		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
+	) interpreter.Value {
+		message := args[0]
 		return PanicWithError(message, locationRange)
 	},
 )
 
-var VMPanicFunction = NewVMStandardLibraryStaticFunction(
+var InterpreterPanicFunction = NewUnifiedStandardLibraryStaticFunction(
 	PanicFunctionName,
 	PanicFunctionType,
 	panicFunctionDocString,
-	func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...interpreter.Value) interpreter.Value {
-		message := arguments[0]
-		return PanicWithError(message, interpreter.EmptyLocationRange)
-	},
+	UnifiedPanicFunction,
+	false,
+)
+
+var VMPanicFunction = NewUnifiedStandardLibraryStaticFunction(
+	PanicFunctionName,
+	PanicFunctionType,
+	panicFunctionDocString,
+	UnifiedPanicFunction,
+	true,
 )
 
 func PanicWithError(message interpreter.Value, locationRange interpreter.LocationRange) interpreter.Value {

@@ -1968,7 +1968,7 @@ var UnifiedArrayAppendFunction = UnifiedNativeFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		thisArray := assertValueOfType[*ArrayValue](receiver)
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
 		element := args[0]
 
 		thisArray.Append(context, locationRange, element)
@@ -1984,8 +1984,8 @@ var UnifiedArrayAppendAllFunction = UnifiedNativeFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		thisArray := assertValueOfType[*ArrayValue](receiver)
-		otherArray := assertValueOfType[*ArrayValue](args[0])
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		otherArray := AssertValueOfType[*ArrayValue](args[0])
 
 		thisArray.AppendAll(context, locationRange, otherArray)
 		return Void
@@ -2000,8 +2000,8 @@ var UnifiedArrayConcatFunction = UnifiedNativeFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		thisArray := assertValueOfType[*ArrayValue](receiver)
-		otherArray := assertValueOfType[*ArrayValue](args[0])
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		otherArray := AssertValueOfType[*ArrayValue](args[0])
 
 		return thisArray.Concat(context, locationRange, otherArray)
 	},
@@ -2015,8 +2015,8 @@ var UnifiedArrayInsertFunction = UnifiedNativeFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		thisArray := assertValueOfType[*ArrayValue](receiver)
-		index := assertValueOfType[NumberValue](args[0])
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		index := AssertValueOfType[NumberValue](args[0])
 		element := args[1]
 
 		thisArray.Insert(context, locationRange, index.ToInt(locationRange), element)
@@ -2032,8 +2032,8 @@ var UnifiedArrayRemoveFunction = UnifiedNativeFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		thisArray := assertValueOfType[*ArrayValue](receiver)
-		index := assertValueOfType[NumberValue](args[0])
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		index := AssertValueOfType[NumberValue](args[0])
 
 		return thisArray.Remove(context, locationRange, index.ToInt(locationRange))
 	},
@@ -2047,7 +2047,7 @@ var UnifiedArrayContainsFunction = UnifiedNativeFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		thisArray := assertValueOfType[*ArrayValue](receiver)
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
 		element := args[0]
 
 		return thisArray.Contains(context, locationRange, element)
@@ -2062,9 +2062,9 @@ var UnifiedArraySliceFunction = UnifiedNativeFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		thisArray := assertValueOfType[*ArrayValue](receiver)
-		fromValue := assertValueOfType[IntValue](args[0])
-		toValue := assertValueOfType[IntValue](args[1])
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		fromValue := AssertValueOfType[IntValue](args[0])
+		toValue := AssertValueOfType[IntValue](args[1])
 
 		return thisArray.Slice(context, fromValue, toValue, locationRange)
 	},
@@ -2078,7 +2078,7 @@ var UnifiedArrayReverseFunction = UnifiedNativeFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		thisArray := assertValueOfType[*ArrayValue](receiver)
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
 
 		return thisArray.Reverse(context, locationRange)
 	},
@@ -2092,8 +2092,8 @@ var UnifiedArrayFilterFunction = UnifiedNativeFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		thisArray := assertValueOfType[*ArrayValue](receiver)
-		funcValue := assertValueOfType[FunctionValue](args[0])
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		funcValue := AssertValueOfType[FunctionValue](args[0])
 
 		return thisArray.Filter(context, locationRange, funcValue)
 	},
@@ -2107,8 +2107,8 @@ var UnifiedArrayMapFunction = UnifiedNativeFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		thisArray := assertValueOfType[*ArrayValue](receiver)
-		funcValue := assertValueOfType[FunctionValue](args[0])
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		funcValue := AssertValueOfType[FunctionValue](args[0])
 
 		return thisArray.Map(context, locationRange, funcValue)
 	},
@@ -2122,7 +2122,7 @@ var UnifiedArrayToVariableSizedFunction = UnifiedNativeFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		thisArray := assertValueOfType[*ArrayValue](receiver)
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
 
 		return thisArray.ToVariableSized(context, locationRange)
 	},
@@ -2136,7 +2136,7 @@ var UnifiedArrayToConstantSizedFunction = UnifiedNativeFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		thisArray := assertValueOfType[*ArrayValue](receiver)
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
 		constantSizedArrayType, ok := typeParameterGetter.NextStatic().(*ConstantSizedStaticType)
 		if !ok {
 			panic(errors.NewUnreachableError())
@@ -2154,7 +2154,7 @@ var UnifiedArrayFirstIndexFunction = UnifiedNativeFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		thisArray := assertValueOfType[*ArrayValue](receiver)
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
 		element := args[0]
 
 		return thisArray.FirstIndex(context, locationRange, element)
@@ -2169,7 +2169,7 @@ var UnifiedArrayRemoveFirstFunction = UnifiedNativeFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		thisArray := assertValueOfType[*ArrayValue](receiver)
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
 
 		return thisArray.RemoveFirst(context, locationRange)
 	},
@@ -2183,7 +2183,7 @@ var UnifiedArrayRemoveLastFunction = UnifiedNativeFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
-		thisArray := assertValueOfType[*ArrayValue](receiver)
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
 
 		return thisArray.RemoveLast(context, locationRange)
 	},

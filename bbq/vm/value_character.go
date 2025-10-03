@@ -19,7 +19,6 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -33,16 +32,10 @@ func init() {
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.ToStringFunctionName,
 			sema.ToStringFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, _ ...Value) Value {
-				character := receiver.(interpreter.CharacterValue)
-				return interpreter.CharacterValueToString(
-					context,
-					character,
-				)
-			},
+			interpreter.UnifiedCharacterValueToStringFunction,
 		),
 	)
 }
