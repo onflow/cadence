@@ -227,57 +227,77 @@ rules:
               source: sub.EffectiveInterfaceConformanceSet
               target: super
 
-#  - super: IntersectionType
-#    predicate:
-#      or:
-#        - and:
-#          - equals:
-#              source: super.LegacyType
-#              target:
-#                oneOfTypes: [AnyType, AnyStructType, AnyResourceType]
-#          - or:
-#            - not:
-#                equals:
-#                  source: sub
-#                  target:
-#                    oneOfTypes: [AnyType, AnyStructType, AnyResourceType]
-#            - mustType:
-#                source: sub
-#                type: IntersectionType
-#                predicate: always
-#            - mustType:
-#                source: sub
-#                type: ConformingType
-#                predicate: always
-#        - mustType:
-#            source: sub
-#            type: IntersectionType
-#            predicate:
-#              and:
-#                - not:
-#                    equals:
-#                      source: sub.LegacyType
-#                      target:
-#                        oneOfTypes: [AnyType, AnyStructType, AnyResourceType] # // TODO: also add `nil`
-#                - mustType:
-#                    source: sub.LegacyType
-#                    type: CompositeType
-#                    predicate:
-#                      equals:
-#                        source: sub.LegacyType
-#                        target: super.LegacyType
-#        - mustType:
-#            source: sub
-#            type: CompositeType
-#            predicate:
-#              subtype:
-#                super: super.LegacyType
-#                sub: sub
-#        - not:
-#            equals:
-#              source: sub
-#              target:
-#                oneOfTypes: [AnyType, AnyStructType, AnyResourceType]
+  - super: IntersectionType
+    predicate:
+      or:
+        - and:
+          - equals:
+              source: super.LegacyType
+              target:
+                oneOfTypes: [nil, AnyType, AnyStructType, AnyResourceType]
+          - and:
+            - not:
+                equals:
+                  source: sub
+                  target:
+                    oneOfTypes: [AnyType, AnyStructType, AnyResourceType]
+            - or:
+              - and:
+                - mustType:
+                    source: sub
+                    type: IntersectionType
+                - or:
+                    - equals:
+                        source: sub.LegacyType
+                        target: nil
+                    - and:
+                      - equals:
+                          source: sub.LegacyType
+                          target:
+                            oneOfTypes: [AnyType, AnyStructType, AnyResourceType]
+                      - not:
+                          equals:
+                            source: super.LegacyType
+                            target: nil
+                      - not:
+                          subtype:
+                            sub: sub.LegacyType
+                            super: super.LegacyType
+                    - mustType:
+                        source: sub.LegacyType
+                        type: CompositeType
+              - and:
+                - mustType:
+                    source: sub
+                    type: ConformingType
+        - and:
+          - mustType:
+              source: sub
+              type: IntersectionType
+          - not:
+              equals:
+                source: sub.LegacyType
+                target:
+                  oneOfTypes: [ nil, AnyType, AnyStructType, AnyResourceType ]
+          - mustType:
+              source: sub.LegacyType
+              type: CompositeType
+          - equals:
+              source: sub.LegacyType
+              target: super.LegacyType
+
+        - and:
+          - mustType:
+              source: sub
+              type: CompositeType
+          - subtype:
+              super: super.LegacyType
+              sub: sub
+        - not:
+            equals:
+              source: sub
+              target:
+                oneOfTypes: [AnyType, AnyStructType, AnyResourceType]
 
 #  - super:
 #      Function:

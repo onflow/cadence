@@ -513,8 +513,6 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 					)
 				}
 			}
-
-			result = append(result, lastNode)
 		}
 
 		return prevNodes
@@ -522,6 +520,10 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 
 	nextPredicate := gen.nestedPredicates.next()
 	nestedNodes := gen.generatePredicate(nextPredicate)
+
+	// `combineAsAnd` indicates whether to combine the nested statement
+	// using an AND operators (or otherwise as OR operators)
+	_, combineAsAnd := nextPredicate.(*AndPredicate)
 
 	// If previous nodes are nil, simply return the nested nodes.
 	if len(prevNodes) == 0 {
@@ -589,7 +591,7 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 		}
 
 	case *dst.TypeSwitchStmt:
-		stmts := gen.mergeNodesAsAStatements(nestedNodes)
+		stmts := gen.combineNodesAsStatements(nestedNodes, combineAsAnd)
 
 		// TODO: Validate length
 		lastCase := lastNode.Body.List[0]
@@ -606,7 +608,7 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 		}
 
 	case *dst.SwitchStmt:
-		stmts := gen.mergeNodesAsAStatements(nestedNodes)
+		stmts := gen.combineNodesAsStatements(nestedNodes, combineAsAnd)
 
 		// TODO: Validate length
 		lastCase := lastNode.Body.List[0]
@@ -629,11 +631,18 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 	return
 }
 
-func (gen *SubTypeCheckGenerator) mergeNodesAsAStatements(nestedNodes []dst.Node) []dst.Stmt {
+func (gen *SubTypeCheckGenerator) combineNodesAsStatements(nodes []dst.Node, combineAsAnd bool) []dst.Stmt {
 	var conditionalExpr dst.Expr
 	var stmts []dst.Stmt
 
-	for _, nestedNode := range nestedNodes {
+	var operator token.Token
+	if combineAsAnd {
+		operator = token.LAND
+	} else {
+		operator = token.LOR
+	}
+
+	for _, nestedNode := range nodes {
 		switch nestedNode := nestedNode.(type) {
 		case nil:
 			// Skip empty node.
@@ -649,7 +658,7 @@ func (gen *SubTypeCheckGenerator) mergeNodesAsAStatements(nestedNodes []dst.Node
 			conditionalExpr = gen.binaryExpression(
 				conditionalExpr,
 				nestedNode,
-				token.LAND,
+				operator,
 			)
 
 		case dst.Stmt:
@@ -671,13 +680,32 @@ func (gen *SubTypeCheckGenerator) mergeNodesAsAStatements(nestedNodes []dst.Node
 
 	// Both expressions and statements were generated.
 	if conditionalExpr != nil {
-		return []dst.Stmt{
-			&dst.IfStmt{
-				Cond: conditionalExpr,
-				Body: &dst.BlockStmt{
-					List: stmts,
+		if combineAsAnd {
+			return []dst.Stmt{
+				&dst.IfStmt{
+					Cond: conditionalExpr,
+					Body: &dst.BlockStmt{
+						List: stmts,
+					},
 				},
-			},
+			}
+		} else {
+			combined := []dst.Stmt{
+				&dst.IfStmt{
+					Cond: conditionalExpr,
+					Body: &dst.BlockStmt{
+						List: []dst.Stmt{
+							&dst.ReturnStmt{
+								Results: []dst.Expr{gen.booleanExpression(true)},
+							},
+						},
+					},
+				},
+			}
+
+			// TODO: Does the order matter?
+			combined = append(combined, stmts...)
+			return combined
 		}
 	}
 
@@ -861,6 +889,12 @@ func (gen *SubTypeCheckGenerator) andPredicate(p AndPredicate) []dst.Node {
 }
 
 func (gen *SubTypeCheckGenerator) orPredicate(p OrPredicate) []dst.Node {
+	prevPredicateChain := gen.nestedPredicates
+	gen.nestedPredicates = nil
+	defer func() {
+		gen.nestedPredicates = prevPredicateChain
+	}()
+
 	var result []dst.Node
 	var exprs []dst.Expr
 
@@ -868,6 +902,7 @@ func (gen *SubTypeCheckGenerator) orPredicate(p OrPredicate) []dst.Node {
 
 	for _, predicate := range p.Predicates {
 		generatedPredicatedNodes := gen.generatePredicate(predicate)
+
 		for _, node := range generatedPredicatedNodes {
 			switch node := node.(type) {
 			case *dst.TypeSwitchStmt:

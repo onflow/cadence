@@ -28,46 +28,59 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 	}
 
 	switch typedSuperType := superType.(type) {
-	case *CompositeStaticType:
+	case *IntersectionStaticType:
+		switch typedSuperType.LegacyType {
+		case nil,
+			PrimitiveStaticTypeAny,
+			PrimitiveStaticTypeAnyStruct,
+			PrimitiveStaticTypeAnyResource:
+			switch subType {
+			case PrimitiveStaticTypeAny,
+				PrimitiveStaticTypeAnyStruct,
+				PrimitiveStaticTypeAnyResource:
+				return false
+			}
+
+			switch typedSubType := subType.(type) {
+			case *IntersectionStaticType:
+				return true
+
+			case PrimitiveStaticTypeConforming:
+				return true
+
+			}
+
+		}
+
 		switch typedSubType := subType.(type) {
 		case *IntersectionStaticType:
 			switch typedSubType.LegacyType {
 			case nil,
-				PrimitiveStaticTypeAnyResource,
+				PrimitiveStaticTypeAny,
 				PrimitiveStaticTypeAnyStruct,
-				PrimitiveStaticTypeAny:
+				PrimitiveStaticTypeAnyResource:
 				return false
 			}
 
 			switch typedSubTypeLegacyType := typedSubType.LegacyType.(type) {
 			case *CompositeStaticType:
-				return typedSubTypeLegacyType == typedSuperType
+				return typedSubTypeLegacyType == typedSuperType.LegacyType
 
 			}
 
-			return false
-
 		case *CompositeStaticType:
-			return true
+			return IsSubType(typeConverter, typedSubType, typedSuperType.LegacyType)
 
+		}
+
+		switch subType {
+		case PrimitiveStaticTypeAny,
+			PrimitiveStaticTypeAnyStruct,
+			PrimitiveStaticTypeAnyResource:
+			return false
 		}
 
 		return false
-
-	case *InterfaceStaticType:
-		switch typedSubType := subType.(type) {
-		case *CompositeStaticType:
-			return typedSubType.Kind == typedSuperType.CompositeKind
-
-		case *IntersectionStaticType:
-			return typedSubType.EffectiveIntersectionSet().Contains(typedSuperType)
-
-		case *InterfaceStaticType:
-			return typedSubType.EffectiveInterfaceConformanceSet().Contains(typedSuperType)
-
-		}
-
-		return subType.EffectiveInterfaceConformanceSet().Contains(typedSuperType)
 
 	}
 
