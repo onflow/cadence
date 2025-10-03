@@ -1416,9 +1416,8 @@ func TestRuntimeCoverage(t *testing.T) {
 			Source: script,
 		},
 		Context{
-			Interface:      runtimeInterface,
-			Location:       common.ScriptLocation{},
-			CoverageReport: coverageReport,
+			Interface: runtimeInterface,
+			Location:  common.ScriptLocation{},
 		},
 	)
 	require.NoError(t, err)
@@ -1574,9 +1573,8 @@ func TestRuntimeCoverageWithExcludedLocation(t *testing.T) {
 			Source: script,
 		},
 		Context{
-			Interface:      runtimeInterface,
-			Location:       scriptlocation,
-			CoverageReport: coverageReport,
+			Interface: runtimeInterface,
+			Location:  scriptlocation,
 		},
 	)
 	require.NoError(t, err)
@@ -1715,9 +1713,8 @@ func TestRuntimeCoverageWithLocationFilter(t *testing.T) {
 			Source: script,
 		},
 		Context{
-			Interface:      runtimeInterface,
-			Location:       scriptlocation,
-			CoverageReport: coverageReport,
+			Interface: runtimeInterface,
+			Location:  scriptlocation,
 		},
 	)
 	require.NoError(t, err)
@@ -1821,9 +1818,8 @@ func TestRuntimeCoverageWithNoStatements(t *testing.T) {
 			Source: deploy,
 		},
 		Context{
-			Interface:      runtimeInterface,
-			Location:       txLocation,
-			CoverageReport: coverageReport,
+			Interface: runtimeInterface,
+			Location:  txLocation,
 		},
 	)
 	require.NoError(t, err)
@@ -1834,9 +1830,8 @@ func TestRuntimeCoverageWithNoStatements(t *testing.T) {
 			Source: script,
 		},
 		Context{
-			Interface:      runtimeInterface,
-			Location:       scriptLocation,
-			CoverageReport: coverageReport,
+			Interface: runtimeInterface,
+			Location:  scriptLocation,
 		},
 	)
 	require.NoError(t, err)
@@ -1958,9 +1953,8 @@ func TestRuntimeCoverageReportLCOVFormat(t *testing.T) {
 				Source: script,
 			},
 			Context{
-				Interface:      runtimeInterface,
-				Location:       scriptlocation,
-				CoverageReport: coverageReport,
+				Interface: runtimeInterface,
+				Location:  scriptlocation,
 			},
 		)
 		require.NoError(t, err)
@@ -2029,9 +2023,8 @@ end_of_record
 				Source: script,
 			},
 			Context{
-				Interface:      runtimeInterface,
-				Location:       scriptlocation,
-				CoverageReport: coverageReport,
+				Interface: runtimeInterface,
+				Location:  scriptlocation,
 			},
 		)
 		require.NoError(t, err)
