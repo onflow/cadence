@@ -40,7 +40,7 @@ func init() {
 					innerValueType,
 				)
 			},
-			interpreter.UnifiedSomeMapFunction,
+			interpreter.UnifiedOptionalMapFunction,
 		),
 	)
 }

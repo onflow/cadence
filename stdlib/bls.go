@@ -39,7 +39,13 @@ func UnifiedBLSAggregatePublicKeysFunction(
 	aggregator BLSPublicKeyAggregator,
 ) interpreter.UnifiedNativeFunction {
 	return interpreter.UnifiedNativeFunction(
-		func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+		func(
+			context interpreter.UnifiedFunctionContext,
+			locationRange interpreter.LocationRange,
+			typeParameterGetter interpreter.TypeParameterGetter,
+			receiver interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
 			publicKeysValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
 			return BLSAggregatePublicKeys(context, publicKeysValue, locationRange, aggregator)
 		},
@@ -137,7 +143,13 @@ func UnifiedBLSAggregateSignaturesFunction(
 	aggregator BLSSignatureAggregator,
 ) interpreter.UnifiedNativeFunction {
 	return interpreter.UnifiedNativeFunction(
-		func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+		func(
+			context interpreter.UnifiedFunctionContext,
+			locationRange interpreter.LocationRange,
+			typeParameterGetter interpreter.TypeParameterGetter,
+			receiver interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
 			signaturesValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
 			return BLSAggregateSignatures(context, signaturesValue, locationRange, aggregator)
 		},

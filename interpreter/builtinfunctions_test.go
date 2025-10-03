@@ -1109,7 +1109,13 @@ func TestInterpretNativeFunctionWithMultipleTypeParameters(t *testing.T) {
 		ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 	}
 
-	unifiedFunction := func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+	unifiedFunction := func(
+		context interpreter.UnifiedFunctionContext,
+		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
+	) interpreter.Value {
 		typeValue := typeParameterGetter.NextStatic()
 		require.Equal(t, interpreter.PrimitiveStaticTypeInt, typeValue)
 

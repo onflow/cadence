@@ -164,7 +164,7 @@ func (v *SomeValue) GetMethod(
 			sema.OptionalTypeMapFunctionType(
 				innerValueType,
 			),
-			UnifiedSomeMapFunction,
+			UnifiedOptionalMapFunction,
 		)
 	}
 

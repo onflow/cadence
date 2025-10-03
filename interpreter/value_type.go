@@ -237,7 +237,7 @@ func (v TypeValue) GetMethod(
 			context,
 			v,
 			sema.MetaTypeIsSubtypeFunctionType,
-			UnifiedTypeIsSubtypeFunction,
+			UnifiedMetaTypeIsSubtypeFunction,
 		)
 	}
 
@@ -359,7 +359,7 @@ func (v TypeValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []by
 
 // Unified type functions
 
-var UnifiedTypeIsSubtypeFunction = UnifiedNativeFunction(
+var UnifiedMetaTypeIsSubtypeFunction = UnifiedNativeFunction(
 	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
 		typeValue := AssertValueOfType[TypeValue](receiver)
 		otherTypeValue := AssertValueOfType[TypeValue](args[0])

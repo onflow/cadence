@@ -56,7 +56,13 @@ var AssertFunctionType = &sema.FunctionType{
 }
 
 var UnifiedAssertFunction = interpreter.UnifiedNativeFunction(
-	func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+	func(
+		context interpreter.UnifiedFunctionContext,
+		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
+	) interpreter.Value {
 		result := interpreter.AssertValueOfType[interpreter.BoolValue](args[0])
 		var message string
 		if len(args) > 1 {

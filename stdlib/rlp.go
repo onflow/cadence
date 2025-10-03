@@ -47,14 +47,26 @@ const rlpErrMsgInputContainsExtraBytes = "input data is expected to be RLP-encod
 
 // Unified RLP functions
 var UnifiedRLPDecodeStringFunction = interpreter.UnifiedNativeFunction(
-	func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+	func(
+		context interpreter.UnifiedFunctionContext,
+		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
+	) interpreter.Value {
 		input := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
 		return RLPDecodeString(input, context, locationRange)
 	},
 )
 
 var UnifiedRLPDecodeListFunction = interpreter.UnifiedNativeFunction(
-	func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+	func(
+		context interpreter.UnifiedFunctionContext,
+		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
+	) interpreter.Value {
 		input := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
 		return RLPDecodeList(input, context, locationRange)
 	},

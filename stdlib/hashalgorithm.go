@@ -79,7 +79,13 @@ func NewHashAlgorithmCase(
 // Unified hash functions
 func UnifiedHashAlgorithmHashFunction(hasher Hasher, hashAlgoValuePointer *interpreter.MemberAccessibleValue) interpreter.UnifiedNativeFunction {
 	return interpreter.UnifiedNativeFunction(
-		func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+		func(
+			context interpreter.UnifiedFunctionContext,
+			locationRange interpreter.LocationRange,
+			typeParameterGetter interpreter.TypeParameterGetter,
+			receiver interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
 			var hashAlgoValue interpreter.MemberAccessibleValue
 			if hashAlgoValuePointer == nil {
 				hashAlgoValue = interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)
@@ -95,7 +101,13 @@ func UnifiedHashAlgorithmHashFunction(hasher Hasher, hashAlgoValuePointer *inter
 
 func UnifiedHashAlgorithmHashWithTagFunction(hasher Hasher, hashAlgoValuePointer *interpreter.MemberAccessibleValue) interpreter.UnifiedNativeFunction {
 	return interpreter.UnifiedNativeFunction(
-		func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+		func(
+			context interpreter.UnifiedFunctionContext,
+			locationRange interpreter.LocationRange,
+			typeParameterGetter interpreter.TypeParameterGetter,
+			receiver interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
 			var hashAlgoValue interpreter.MemberAccessibleValue
 			if hashAlgoValuePointer == nil {
 				hashAlgoValue = interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)

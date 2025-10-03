@@ -74,7 +74,13 @@ func UnifiedPublicKeyConstructorFunction(
 	publicKeyValidator PublicKeyValidator,
 ) interpreter.UnifiedNativeFunction {
 	return interpreter.UnifiedNativeFunction(
-		func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+		func(
+			context interpreter.UnifiedFunctionContext,
+			locationRange interpreter.LocationRange,
+			typeParameterGetter interpreter.TypeParameterGetter,
+			receiver interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
 			publicKey := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
 			signAlgo := interpreter.AssertValueOfType[*interpreter.SimpleCompositeValue](args[1])
 

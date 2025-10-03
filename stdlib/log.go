@@ -59,7 +59,13 @@ func (f FunctionLogger) ProgramLog(message string, locationRange interpreter.Loc
 
 func UnifiedLogFunction(logger Logger) interpreter.UnifiedNativeFunction {
 	return interpreter.UnifiedNativeFunction(
-		func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+		func(
+			context interpreter.UnifiedFunctionContext,
+			locationRange interpreter.LocationRange,
+			typeParameterGetter interpreter.TypeParameterGetter,
+			receiver interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
 			value := args[0]
 			return Log(context, logger, value, locationRange)
 		},

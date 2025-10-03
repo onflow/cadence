@@ -63,7 +63,13 @@ var PanicFunctionType = sema.NewSimpleFunctionType(
 )
 
 var UnifiedPanicFunction = interpreter.UnifiedNativeFunction(
-	func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+	func(
+		context interpreter.UnifiedFunctionContext,
+		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
+	) interpreter.Value {
 		message := args[0]
 		return PanicWithError(message, locationRange)
 	},

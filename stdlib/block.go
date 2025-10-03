@@ -80,7 +80,13 @@ type BlockAtHeightProvider interface {
 
 func UnifiedGetBlockFunction(provider BlockAtHeightProvider) interpreter.UnifiedNativeFunction {
 	return interpreter.UnifiedNativeFunction(
-		func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+		func(
+			context interpreter.UnifiedFunctionContext,
+			locationRange interpreter.LocationRange,
+			typeParameterGetter interpreter.TypeParameterGetter,
+			receiver interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
 			heightValue := interpreter.AssertValueOfType[interpreter.UInt64Value](args[0])
 
 			block, exists := getBlockAtHeight(provider, uint64(heightValue))
@@ -206,7 +212,13 @@ type CurrentBlockProvider interface {
 
 func UnifiedGetCurrentBlockFunction(provider CurrentBlockProvider) interpreter.UnifiedNativeFunction {
 	return interpreter.UnifiedNativeFunction(
-		func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+		func(
+			context interpreter.UnifiedFunctionContext,
+			locationRange interpreter.LocationRange,
+			typeParameterGetter interpreter.TypeParameterGetter,
+			receiver interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
 			height, err := provider.GetCurrentBlockHeight()
 			if err != nil {
 				panic(err)

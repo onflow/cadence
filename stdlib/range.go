@@ -114,7 +114,13 @@ var inclusiveRangeConstructorFunctionType = func() *sema.FunctionType {
 }()
 
 var UnifiedInclusiveRangeConstructorFunction = interpreter.UnifiedNativeFunction(
-	func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+	func(
+		context interpreter.UnifiedFunctionContext,
+		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
+	) interpreter.Value {
 		start := interpreter.AssertValueOfType[interpreter.IntegerValue](args[0])
 		end := interpreter.AssertValueOfType[interpreter.IntegerValue](args[1])
 		var step interpreter.IntegerValue

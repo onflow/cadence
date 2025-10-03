@@ -108,7 +108,13 @@ var ZeroModuloError = errors.NewDefaultUserError("modulo argument cannot be zero
 
 func UnifiedRevertibleRandomFunction(generator RandomGenerator) interpreter.UnifiedNativeFunction {
 	return interpreter.UnifiedNativeFunction(
-		func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+		func(
+			context interpreter.UnifiedFunctionContext,
+			locationRange interpreter.LocationRange,
+			typeParameterGetter interpreter.TypeParameterGetter,
+			receiver interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
 			returnIntegerType := typeParameterGetter.NextSema()
 
 			var moduloValue interpreter.Value

@@ -112,7 +112,13 @@ type AccountCreator interface {
 
 func UnifiedAccountConstructor(creator AccountCreator) interpreter.UnifiedNativeFunction {
 	return interpreter.UnifiedNativeFunction(
-		func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+		func(
+			context interpreter.UnifiedFunctionContext,
+			locationRange interpreter.LocationRange,
+			typeParameterGetter interpreter.TypeParameterGetter,
+			receiver interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
 			payer := interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](args[0])
 			return NewAccount(
 				context,
@@ -243,7 +249,13 @@ var GetAuthAccountFunctionType = func() *sema.FunctionType {
 
 func UnifiedGetAuthAccountFunction(handler AccountHandler) interpreter.UnifiedNativeFunction {
 	return interpreter.UnifiedNativeFunction(
-		func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+		func(
+			context interpreter.UnifiedFunctionContext,
+			locationRange interpreter.LocationRange,
+			typeParameterGetter interpreter.TypeParameterGetter,
+			receiver interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
 			accountAddress := interpreter.AssertValueOfType[interpreter.AddressValue](args[0])
 
 			ty := typeParameterGetter.NextStatic()
@@ -1783,8 +1795,7 @@ func unifiedAccountContractsChangeFunction(
 	) interpreter.Value {
 		argumentTypes := make([]sema.Type, len(args))
 		for i := 0; i < len(args); i++ {
-			// TODO: is this necessary?
-			// typeArguments does not contain the information needed
+			// TODO: optimize, avoid gathering the types
 			staticType := args[i].StaticType(context)
 			argumentTypes[i] = interpreter.MustConvertStaticToSemaType(staticType, context)
 		}
@@ -2184,8 +2195,7 @@ func unifiedAccountContractsTryUpdateFunction(
 
 		argumentTypes := make([]sema.Type, len(args))
 		for i := 0; i < len(args); i++ {
-			// TODO: is this necessary?
-			// typeArguments does not contain the information needed
+			// TODO: optimize, avoid gathering the types
 			staticType := args[i].StaticType(context)
 			argumentTypes[i] = interpreter.MustConvertStaticToSemaType(staticType, context)
 		}
@@ -2652,7 +2662,13 @@ var GetAccountFunctionType = sema.NewSimpleFunctionType(
 
 func UnifiedGetAccountFunction(handler AccountHandler) interpreter.UnifiedNativeFunction {
 	return interpreter.UnifiedNativeFunction(
-		func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+		func(
+			context interpreter.UnifiedFunctionContext,
+			locationRange interpreter.LocationRange,
+			typeParameterGetter interpreter.TypeParameterGetter,
+			receiver interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
 			accountAddress := interpreter.AssertValueOfType[interpreter.AddressValue](args[0])
 			return NewAccountReferenceValue(context, handler, accountAddress, interpreter.UnauthorizedAccess, locationRange)
 		},
