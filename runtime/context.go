@@ -27,7 +27,6 @@ type Context struct {
 	Interface        Interface
 	Location         Location
 	Environment      Environment
-	CoverageReport   *CoverageReport
 	MemoryGauge      common.MemoryGauge
 	ComputationGauge common.ComputationGauge
 

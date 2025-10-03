@@ -330,7 +330,6 @@ func (r *runtime) ParseAndCheckProgram(
 		nil,
 		context.MemoryGauge,
 		context.ComputationGauge,
-		context.CoverageReport,
 	)
 
 	program, err = environment.ParseAndCheckProgram(
@@ -374,7 +373,6 @@ func (r *runtime) Storage(context Context) (*Storage, *interpreter.Interpreter, 
 		storage,
 		context.MemoryGauge,
 		context.ComputationGauge,
-		context.CoverageReport,
 	)
 
 	interpreterEnv, ok := environment.(*InterpreterEnvironment)
