@@ -411,7 +411,11 @@ func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.Identi
 }
 
 func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value {
+	previousExpression := interpreter.expression
+	interpreter.expression = expression
 	result := ast.AcceptExpression[Value](expression, interpreter)
+	interpreter.expression = previousExpression
+
 	locationRange := LocationRange{
 		Location:    interpreter.Location,
 		HasPosition: expression,

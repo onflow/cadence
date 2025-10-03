@@ -672,21 +672,10 @@ func TestInterpretInvalidArrayIndexingAssignment(t *testing.T) {
 				ast.Position{Offset: 94, Line: 4, Column: 19},
 				indexErr.HasPosition.StartPosition(),
 			)
-
-			if *compile {
-				// In compiler, the range points to the entire assignment `z[index] = 1`,
-				// because the indexing and the assignment happens in a single instruction
-				// `SetIndex`, which is the most-granular level of position information.
-				assert.Equal(t,
-					ast.Position{Offset: 105, Line: 4, Column: 30},
-					indexErr.HasPosition.EndPosition(nil),
-				)
-			} else {
-				assert.Equal(t,
-					ast.Position{Offset: 101, Line: 4, Column: 26},
-					indexErr.HasPosition.EndPosition(nil),
-				)
-			}
+			assert.Equal(t,
+				ast.Position{Offset: 105, Line: 4, Column: 30},
+				indexErr.HasPosition.EndPosition(nil),
+			)
 		})
 	}
 }

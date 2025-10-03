@@ -182,6 +182,9 @@ func TestInterpretAssert(t *testing.T) {
 		interpreter.Error{
 			Err: &AssertionError{
 				Message: "oops",
+				LocationRange: interpreter.LocationRange{
+					Location: TestLocation,
+				},
 			},
 			Location: TestLocation,
 		},
@@ -193,6 +196,9 @@ func TestInterpretAssert(t *testing.T) {
 		interpreter.Error{
 			Err: &AssertionError{
 				Message: "",
+				LocationRange: interpreter.LocationRange{
+					Location: TestLocation,
+				},
 			},
 			Location: TestLocation,
 		},
@@ -276,6 +282,9 @@ func TestInterpretPanic(t *testing.T) {
 		interpreter.Error{
 			Err: &PanicError{
 				Message: "oops",
+				LocationRange: interpreter.LocationRange{
+					Location: TestLocation,
+				},
 			},
 			Location: TestLocation,
 		},

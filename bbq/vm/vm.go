@@ -1890,10 +1890,10 @@ func (vm *VM) RecoverErrors(onError func(error)) {
 		// Recover all errors, because VM can be directly invoked by FVM.
 		err := interpreter.AsCadenceError(r)
 
-		currentLocation := vm.LocationRange()
+		locationRange := vm.LocationRange()
 
 		if locatedError, ok := err.(interpreter.HasLocationRange); ok {
-			locatedError.SetLocationRange(currentLocation)
+			locatedError.SetLocationRange(locationRange)
 		}
 
 		// if the error is not yet an interpreter error, wrap it
@@ -1901,7 +1901,7 @@ func (vm *VM) RecoverErrors(onError func(error)) {
 
 			_, ok := err.(ast.HasPosition)
 			if !ok {
-				errRange := ast.NewUnmeteredRangeFromPositioned(currentLocation)
+				errRange := ast.NewUnmeteredRangeFromPositioned(locationRange)
 
 				err = interpreter.PositionedError{
 					Err:   err,
@@ -1911,7 +1911,7 @@ func (vm *VM) RecoverErrors(onError func(error)) {
 
 			err = interpreter.Error{
 				Err:      err,
-				Location: currentLocation.Location,
+				Location: locationRange.Location,
 			}
 		}
 

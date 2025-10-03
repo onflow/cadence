@@ -13543,3 +13543,64 @@ func TestRuntimeMetering(t *testing.T) {
 	assert.Equal(t, uint64(2), computationGauge.getComputation(common.ComputationKindFunctionInvocation))
 	assert.Equal(t, uint64(1), computationGauge.getComputation(common.ComputationKindStatement))
 }
+
+func TestRuntimePanicInImportedFunction(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestRuntime()
+
+	importedScript := []byte(`
+      access(all) fun answer(): Int {
+          panic("42")
+      }
+    `)
+
+	script := []byte(`
+      import "imported"
+
+      access(all) fun main(): Int {
+          return answer()
+      }
+    `)
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
+			switch location {
+			case common.StringLocation("imported"):
+				return importedScript, nil
+			default:
+				return nil, fmt.Errorf("unknown import location: %s", location)
+			}
+		},
+	}
+
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	location := nextScriptLocation()
+
+	_, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  location,
+			UseVM:     *compile,
+		},
+	)
+	var panicErr *stdlib.PanicError
+	require.ErrorAs(t, err, &panicErr)
+
+	assert.Equal(t,
+		common.StringLocation("imported"),
+		panicErr.LocationRange.Location,
+	)
+	assert.Equal(t,
+		ast.Range{
+			StartPos: ast.Position{Offset: 49, Line: 3, Column: 10},
+			EndPos:   ast.Position{Offset: 59, Line: 3, Column: 20},
+		},
+		ast.NewUnmeteredRangeFromPositioned(panicErr.LocationRange),
+	)
+}
