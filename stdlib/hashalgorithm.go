@@ -77,18 +77,31 @@ func NewHashAlgorithmCase(
 }
 
 // Unified hash functions
-func UnifiedHashAlgorithmHashFunction(hasher Hasher, hashAlgoValue interpreter.MemberAccessibleValue) interpreter.UnifiedNativeFunction {
+func UnifiedHashAlgorithmHashFunction(hasher Hasher, hashAlgoValuePointer *interpreter.MemberAccessibleValue) interpreter.UnifiedNativeFunction {
 	return interpreter.UnifiedNativeFunction(
 		func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+			var hashAlgoValue interpreter.MemberAccessibleValue
+			if hashAlgoValuePointer == nil {
+				hashAlgoValue = interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)
+			} else {
+				// interpreter provides the hash algo value
+				hashAlgoValue = *hashAlgoValuePointer
+			}
 			dataValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
 			return hash(context, locationRange, hasher, dataValue, nil, hashAlgoValue)
 		},
 	)
 }
 
-func UnifiedHashAlgorithmHashWithTagFunction(hasher Hasher, hashAlgoValue interpreter.MemberAccessibleValue) interpreter.UnifiedNativeFunction {
+func UnifiedHashAlgorithmHashWithTagFunction(hasher Hasher, hashAlgoValuePointer *interpreter.MemberAccessibleValue) interpreter.UnifiedNativeFunction {
 	return interpreter.UnifiedNativeFunction(
 		func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+			var hashAlgoValue interpreter.MemberAccessibleValue
+			if hashAlgoValuePointer == nil {
+				hashAlgoValue = interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)
+			} else {
+				hashAlgoValue = *hashAlgoValuePointer
+			}
 			dataValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
 			tagValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[1])
 			return hash(context, locationRange, hasher, dataValue, tagValue, hashAlgoValue)
@@ -104,7 +117,7 @@ func newInterpreterHashAlgorithmHashFunction(
 	// But the interpreter is not available at this point.
 	return interpreter.NewUnmeteredUnifiedStaticHostFunctionValue(
 		sema.HashAlgorithmTypeHashFunctionType,
-		UnifiedHashAlgorithmHashFunction(hasher, hashAlgoValue),
+		UnifiedHashAlgorithmHashFunction(hasher, &hashAlgoValue),
 	)
 }
 
@@ -116,12 +129,7 @@ func NewVMHashAlgorithmHashFunction(
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.HashAlgorithmTypeHashFunctionName,
 			sema.HashAlgorithmTypeHashFunctionType,
-			func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
-				hashAlgoValue := interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)
-
-				unifiedFunc := UnifiedHashAlgorithmHashFunction(hasher, hashAlgoValue)
-				return unifiedFunc(context, locationRange, typeParameterGetter, receiver, args...)
-			},
+			UnifiedHashAlgorithmHashFunction(hasher, nil),
 		),
 	}
 }
@@ -134,7 +142,7 @@ func newInterpreterHashAlgorithmHashWithTagFunction(
 	// But the interpreter is not available at this point.
 	return interpreter.NewUnmeteredUnifiedStaticHostFunctionValue(
 		sema.HashAlgorithmTypeHashWithTagFunctionType,
-		UnifiedHashAlgorithmHashWithTagFunction(hasher, hashAlgorithmValue),
+		UnifiedHashAlgorithmHashWithTagFunction(hasher, &hashAlgorithmValue),
 	)
 }
 
@@ -146,12 +154,7 @@ func NewVMHashAlgorithmHashWithTagFunction(
 		FunctionValue: vm.NewUnifiedNativeFunctionValue(
 			sema.HashAlgorithmTypeHashWithTagFunctionName,
 			sema.HashAlgorithmTypeHashWithTagFunctionType,
-			func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
-				hashAlgoValue := interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)
-
-				unifiedFunc := UnifiedHashAlgorithmHashWithTagFunction(hasher, hashAlgoValue)
-				return unifiedFunc(context, locationRange, typeParameterGetter, receiver, args...)
-			},
+			UnifiedHashAlgorithmHashWithTagFunction(hasher, nil),
 		),
 	}
 }

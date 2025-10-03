@@ -5925,9 +5925,9 @@ func (interpreter *Interpreter) Storage() Storage {
 }
 
 func UnifiedCapabilityBorrowFunction(
-	addressValue AddressValue,
-	capabilityID UInt64Value,
-	capabilityBorrowType *sema.ReferenceType,
+	addressValuePointer *AddressValue,
+	capabilityIDPointer *UInt64Value,
+	capabilityBorrowTypePointer *sema.ReferenceType,
 ) UnifiedNativeFunction {
 	return func(
 		context UnifiedFunctionContext,
@@ -5936,6 +5936,39 @@ func UnifiedCapabilityBorrowFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
+		var capabilityBorrowType *sema.ReferenceType
+		var capabilityID UInt64Value
+		var addressValue AddressValue
+
+		if capabilityBorrowTypePointer == nil {
+			// vm does not provide the borrow type
+			var idCapabilityValue *IDCapabilityValue
+
+			switch capabilityValue := receiver.(type) {
+			case *PathCapabilityValue: //nolint:staticcheck
+				// Borrowing of path values is never allowed
+				return Nil
+
+			case *IDCapabilityValue:
+				idCapabilityValue = capabilityValue
+
+			default:
+				panic(errors.NewUnreachableError())
+			}
+
+			if capabilityID == InvalidCapabilityID {
+				return Nil
+			}
+
+			capabilityBorrowType = context.SemaTypeFromStaticType(idCapabilityValue.BorrowType).(*sema.ReferenceType)
+			capabilityID = idCapabilityValue.ID
+			addressValue = idCapabilityValue.Address()
+		} else {
+			capabilityBorrowType = capabilityBorrowTypePointer
+			capabilityID = *capabilityIDPointer
+			addressValue = *addressValuePointer
+		}
+
 		typeParameter := typeParameterGetter.NextSema()
 
 		return CapabilityBorrow(
@@ -5961,7 +5994,7 @@ func capabilityBorrowFunction(
 		context,
 		capabilityValue,
 		sema.CapabilityTypeBorrowFunctionType(capabilityBorrowType),
-		UnifiedCapabilityBorrowFunction(addressValue, capabilityID, capabilityBorrowType),
+		UnifiedCapabilityBorrowFunction(&addressValue, &capabilityID, capabilityBorrowType),
 	)
 }
 
@@ -6003,9 +6036,9 @@ func CapabilityBorrow(
 }
 
 func UnifiedCapabilityCheckFunction(
-	addressValue AddressValue,
-	capabilityID UInt64Value,
-	capabilityBorrowType *sema.ReferenceType,
+	addressValuePointer *AddressValue,
+	capabilityIDPointer *UInt64Value,
+	capabilityBorrowTypePointer *sema.ReferenceType,
 ) UnifiedNativeFunction {
 	return func(
 		context UnifiedFunctionContext,
@@ -6014,6 +6047,39 @@ func UnifiedCapabilityCheckFunction(
 		receiver Value,
 		args ...Value,
 	) Value {
+		var capabilityBorrowType *sema.ReferenceType
+		var capabilityID UInt64Value
+		var addressValue AddressValue
+
+		if capabilityBorrowTypePointer == nil {
+			// vm does not provide the borrow type
+			var idCapabilityValue *IDCapabilityValue
+
+			switch capabilityValue := receiver.(type) {
+			case *PathCapabilityValue: //nolint:staticcheck
+				// Borrowing of path values is never allowed
+				return Nil
+
+			case *IDCapabilityValue:
+				idCapabilityValue = capabilityValue
+
+			default:
+				panic(errors.NewUnreachableError())
+			}
+
+			if capabilityID == InvalidCapabilityID {
+				return Nil
+			}
+
+			capabilityBorrowType = context.SemaTypeFromStaticType(idCapabilityValue.BorrowType).(*sema.ReferenceType)
+			capabilityID = idCapabilityValue.ID
+			addressValue = idCapabilityValue.Address()
+		} else {
+			capabilityBorrowType = capabilityBorrowTypePointer
+			capabilityID = *capabilityIDPointer
+			addressValue = *addressValuePointer
+		}
+
 		typeArgument := typeParameterGetter.NextSema()
 
 		return CapabilityCheck(
@@ -6039,7 +6105,7 @@ func capabilityCheckFunction(
 		context,
 		capabilityValue,
 		sema.CapabilityTypeCheckFunctionType(capabilityBorrowType),
-		UnifiedCapabilityCheckFunction(addressValue, capabilityID, capabilityBorrowType),
+		UnifiedCapabilityCheckFunction(&addressValue, &capabilityID, capabilityBorrowType),
 	)
 }
 
