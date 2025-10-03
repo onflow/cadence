@@ -46,9 +46,14 @@ type InterpreterTypeParameterGetter struct {
 var _ TypeParameterGetter = &InterpreterTypeParameterGetter{}
 
 func NewInterpreterTypeParameterGetter(memoryGauge common.MemoryGauge, typeParameterTypes *sema.TypeParameterTypeOrderedMap) *InterpreterTypeParameterGetter {
+	var currentTypeParameter *orderedmap.Pair[*sema.TypeParameter, sema.Type]
+	if typeParameterTypes != nil {
+		currentTypeParameter = typeParameterTypes.Oldest()
+	}
+
 	return &InterpreterTypeParameterGetter{
 		memoryGauge:          memoryGauge,
-		currentTypeParameter: typeParameterTypes.Oldest(),
+		currentTypeParameter: currentTypeParameter,
 	}
 }
 
@@ -64,11 +69,12 @@ func (i *InterpreterTypeParameterGetter) NextSema() sema.Type {
 	// deletion cannot happen here, type parameters are used multiple times
 	// it is also possible that there are no type parameters which is valid
 	// see UnifiedCapabilityBorrowFunction
-	if i.currentTypeParameter == nil {
+	current := i.currentTypeParameter
+	if current == nil {
 		return nil
 	}
 	i.currentTypeParameter = i.currentTypeParameter.Next()
-	return i.currentTypeParameter.Value
+	return current.Value
 }
 
 type UnifiedNativeFunction func(
