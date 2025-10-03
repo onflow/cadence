@@ -132,7 +132,7 @@ func (c ConstructorEqualPredicate) GetType() string { return "constructorEqual" 
 type TypeAssertionPredicate struct {
 	Source  Expression `yaml:"source"`
 	Type    Type       `yaml:"type"`
-	IfMatch Predicate  `yaml:"ifMatch"`
+	IfMatch *Predicate `yaml:"ifMatch"`
 }
 
 func (e TypeAssertionPredicate) GetType() string { return "mustType" }

@@ -223,20 +223,21 @@ func parsePredicate(rule any) (Predicate, error) {
 			expectedType := parseType(typ.(string))
 
 			// Get inner predicate
+			var typeAssert *Predicate
 			ifMatch, ok := keyValues["predicate"]
-			if !ok {
-				return nil, fmt.Errorf("cannot find `predicate` property for `mustType` predicate")
-			}
+			if ok {
+				ifMatchPredicate, err := parsePredicate(ifMatch)
+				if err != nil {
+					return nil, err
+				}
 
-			ifMatchPredicate, err := parsePredicate(ifMatch)
-			if err != nil {
-				return nil, err
+				typeAssert = &ifMatchPredicate
 			}
 
 			return TypeAssertionPredicate{
 				Source:  sourceExpr,
 				Type:    expectedType,
-				IfMatch: ifMatchPredicate,
+				IfMatch: typeAssert,
 			}, nil
 
 		case "setContains":

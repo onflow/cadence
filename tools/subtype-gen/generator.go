@@ -21,11 +21,10 @@ package subtype_gen
 import (
 	"fmt"
 	"go/token"
+	"reflect"
 	"strings"
 
 	"github.com/dave/dst"
-
-	"github.com/onflow/cadence/common/orderedmap"
 )
 
 var neverType = SimpleType{
@@ -47,8 +46,9 @@ type SubTypeCheckGenerator struct {
 
 	negate bool
 
-	scope          []map[Expression]string
-	predicateChain *PredicateChain
+	scope                   []map[Expression]string
+	currentTypeSwitchSource Expression
+	nestedPredicates        *Predicates
 }
 
 type Config struct {
@@ -235,7 +235,7 @@ func (gen *SubTypeCheckGenerator) createSwitchStatementForRules(rules []Rule, fo
 	}
 
 	for _, rule := range rules {
-		caseStmt := gen.createCaseStatement(rule, forSimpleTypes)
+		caseStmt := gen.createCaseStatementForRule(rule, forSimpleTypes)
 		if caseStmt != nil {
 			cases = append(cases, caseStmt)
 		}
@@ -282,8 +282,8 @@ func (gen *SubTypeCheckGenerator) createSwitchStatementForRules(rules []Rule, fo
 	}
 }
 
-// createCaseStatement creates a case statement for a rule
-func (gen *SubTypeCheckGenerator) createCaseStatement(rule Rule, forSimpleTypes bool) dst.Stmt {
+// createCaseStatementForRule creates a case statement for a rule
+func (gen *SubTypeCheckGenerator) createCaseStatementForRule(rule Rule, forSimpleTypes bool) dst.Stmt {
 	prevSuperType := gen.currentSuperType
 	prevSubType := gen.currentSubType
 	defer func() {
@@ -435,7 +435,7 @@ func (gen *SubTypeCheckGenerator) generatePredicateStatements(predicate Predicat
 		}
 	}
 
-	// Make sure the last statement always returns.
+	//Make sure the last statement always returns.
 	switch lastNode := lastNode.(type) {
 	case dst.Expr:
 		stmts = append(stmts,
@@ -443,10 +443,10 @@ func (gen *SubTypeCheckGenerator) generatePredicateStatements(predicate Predicat
 				Results: []dst.Expr{lastNode},
 			},
 		)
-	case *dst.SwitchStmt:
+	case dst.Stmt:
 		// Switch statements are generated without the default return,
 		// so that they can be combined with other statements.
-		// If the last statement if a switch-case, then
+		// If the last statement is a switch-case, then
 		// append a return statement.
 		stmts = append(stmts, lastNode)
 		stmts = append(stmts,
@@ -456,9 +456,6 @@ func (gen *SubTypeCheckGenerator) generatePredicateStatements(predicate Predicat
 				},
 			},
 		)
-	case dst.Stmt:
-		// TODO: Maybe panic? - because we only generate either an expression, or a switch statement for now.
-		stmts = append(stmts, lastNode)
 	default:
 		panic(fmt.Errorf("error generating predicate AST: unexpected node type: %T", lastNode))
 	}
@@ -468,6 +465,228 @@ func (gen *SubTypeCheckGenerator) generatePredicateStatements(predicate Predicat
 
 // generatePredicate recursively generates one or more expression/statement for a given predicate.
 func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result []dst.Node) {
+	// Pop the scope, for TypeAssertionPredicates.
+	switch predicate.(type) {
+	case TypeAssertionPredicate:
+		defer gen.popScope()
+	}
+
+	prevNodes := gen.generatePredicateInternal(predicate)
+
+	// If there are chained/nested predicates (originating from AND),
+	// then they should be generated instead of the return.
+	// However, if there is a negate, then do not nest,
+	// but rather early exit by adding a return.
+	if gen.negate ||
+		gen.nestedPredicates == nil ||
+		!gen.nestedPredicates.hasMore() {
+
+		// Add a return for switch statements, since they were generated without a return.
+		// TODO: Also for if-statements?
+
+		if len(prevNodes) > 0 {
+			lastIndex := len(prevNodes) - 1
+			lastNode := prevNodes[lastIndex]
+
+			var body *dst.BlockStmt
+
+			switch lastNode := lastNode.(type) {
+			case *dst.TypeSwitchStmt:
+				body = lastNode.Body
+
+			case *dst.SwitchStmt:
+				body = lastNode.Body
+			}
+
+			if body != nil {
+				// TODO: Validate length
+				lastCase := body.List[0]
+				caseStmt := lastCase.(*dst.CaseClause)
+				if len(caseStmt.Body) == 0 {
+					caseStmt.Body = append(
+						caseStmt.Body,
+						&dst.ReturnStmt{
+							Results: []dst.Expr{
+								gen.booleanExpression(true),
+							},
+						},
+					)
+				}
+			}
+
+			result = append(result, lastNode)
+		}
+
+		return prevNodes
+	}
+
+	nextPredicate := gen.nestedPredicates.next()
+	nestedNodes := gen.generatePredicate(nextPredicate)
+
+	// If previous nodes are nil, simply return the nested nodes.
+	if len(prevNodes) == 0 {
+		return nestedNodes
+	}
+
+	// If not (both previous nodes and nested nodes exist),
+	// then merge the two set of nodes.
+	// Merging happens via the last statement of the previous nodes.
+
+	lastIndex := len(prevNodes) - 1
+	lastNode := prevNodes[lastIndex]
+	result = append(result, prevNodes[:lastIndex]...)
+
+	switch lastNode := lastNode.(type) {
+	case nil:
+		panic(fmt.Errorf("generated node is nil"))
+
+	case dst.Expr:
+		// Previous nodes ended with an expression.
+		// Then either merge the nested ones using a:
+		//  - Binary expression: for nested expressions.
+		//  - If statement: for nested statement.
+
+		conditionalExpr := lastNode
+		var block *dst.BlockStmt
+
+		for _, nestedNode := range nestedNodes {
+			switch nestedNode := nestedNode.(type) {
+			case nil:
+				// Skip empty node.
+				// Ideally shouldn't reach here.
+
+			case dst.Expr:
+				conditionalExpr.Decorations().Before = dst.NewLine
+				conditionalExpr = gen.binaryExpression(
+					conditionalExpr,
+					nestedNode,
+					token.LAND,
+				)
+			case dst.Stmt:
+				if block == nil {
+					block = &dst.BlockStmt{}
+				}
+
+				block.List = append(block.List, nestedNode)
+
+			default:
+				panic(fmt.Errorf("error generating predicate AST: unexpected node type: %T", lastNode))
+			}
+		}
+
+		if block == nil {
+			// Only expressions were generated.
+			result = append(result, conditionalExpr)
+		} else {
+			// There are both expressions and statements generated.
+			result = append(
+				result,
+				&dst.IfStmt{
+					Cond: conditionalExpr,
+					Body: block,
+				},
+			)
+		}
+
+	case *dst.TypeSwitchStmt:
+		stmts := gen.mergeNodesAsAStatements(nestedNodes)
+
+		// TODO: Validate length
+		lastCase := lastNode.Body.List[0]
+		caseStmt := lastCase.(*dst.CaseClause)
+
+		if len(caseStmt.Body) == 0 {
+			caseStmt.Body = append(caseStmt.Body, stmts...)
+			result = append(result, lastNode)
+		} else {
+			result = append(result, lastNode)
+			for _, stmt := range stmts {
+				result = append(result, stmt)
+			}
+		}
+
+	case *dst.SwitchStmt:
+		stmts := gen.mergeNodesAsAStatements(nestedNodes)
+
+		// TODO: Validate length
+		lastCase := lastNode.Body.List[0]
+		caseStmt := lastCase.(*dst.CaseClause)
+
+		if len(caseStmt.Body) == 0 {
+			caseStmt.Body = append(caseStmt.Body, stmts...)
+			result = append(result, lastNode)
+		} else {
+			result = append(result, lastNode)
+			for _, stmt := range stmts {
+				result = append(result, stmt)
+			}
+		}
+
+	default:
+		panic(fmt.Errorf("error generating predicate AST: unexpected node type: %T", lastNode))
+	}
+
+	return
+}
+
+func (gen *SubTypeCheckGenerator) mergeNodesAsAStatements(nestedNodes []dst.Node) []dst.Stmt {
+	var conditionalExpr dst.Expr
+	var stmts []dst.Stmt
+
+	for _, nestedNode := range nestedNodes {
+		switch nestedNode := nestedNode.(type) {
+		case nil:
+			// Skip empty node.
+			// Ideally shouldn't reach here.
+
+		case dst.Expr:
+			if conditionalExpr == nil {
+				conditionalExpr = nestedNode
+				continue
+			}
+
+			conditionalExpr.Decorations().Before = dst.NewLine
+			conditionalExpr = gen.binaryExpression(
+				conditionalExpr,
+				nestedNode,
+				token.LAND,
+			)
+
+		case dst.Stmt:
+			stmts = append(stmts, nestedNode)
+
+		default:
+			panic(fmt.Errorf("error generating predicate AST: unexpected node type: %T", nestedNode))
+		}
+	}
+
+	// Only expressions were generated.
+	if stmts == nil {
+		return []dst.Stmt{
+			&dst.ReturnStmt{
+				Results: []dst.Expr{conditionalExpr},
+			},
+		}
+	}
+
+	// Both expressions and statements were generated.
+	if conditionalExpr != nil {
+		return []dst.Stmt{
+			&dst.IfStmt{
+				Cond: conditionalExpr,
+				Body: &dst.BlockStmt{
+					List: stmts,
+				},
+			},
+		}
+	}
+
+	// Only statements were generated
+	return stmts
+}
+
+// generatePredicate recursively generates one or more expression/statement for a given predicate.
+func (gen *SubTypeCheckGenerator) generatePredicateInternal(predicate Predicate) (result []dst.Node) {
 	switch p := predicate.(type) {
 	case AlwaysPredicate:
 		return []dst.Node{
@@ -595,14 +814,14 @@ func (gen *SubTypeCheckGenerator) andPredicate(p AndPredicate) []dst.Node {
 	var result []dst.Node
 	var exprs []dst.Expr
 
-	prevPredicateChain := gen.predicateChain
-	gen.predicateChain = NewPredicateChain(p.Predicates)
+	prevPredicateChain := gen.nestedPredicates
+	gen.nestedPredicates = NewPredicateChain(p.Predicates)
 	defer func() {
-		gen.predicateChain = prevPredicateChain
+		gen.nestedPredicates = prevPredicateChain
 	}()
 
-	for gen.predicateChain.hasMore() {
-		predicate := gen.predicateChain.next()
+	for gen.nestedPredicates.hasMore() {
+		predicate := gen.nestedPredicates.next()
 		generatedPredicatedNodes := gen.generatePredicate(predicate)
 
 		for _, node := range generatedPredicatedNodes {
@@ -617,21 +836,6 @@ func (gen *SubTypeCheckGenerator) andPredicate(p AndPredicate) []dst.Node {
 			}
 		}
 	}
-
-	//for _, condition := range p.Predicates {
-	//	generatedPredicatedNodes := gen.generatePredicate(condition)
-	//	for _, node := range generatedPredicatedNodes {
-	//		switch node := node.(type) {
-	//		case dst.Stmt:
-	//			// Add statements as-is, since they are all conditional-statements.
-	//			result = append(result, node)
-	//		case dst.Expr:
-	//			exprs = append(exprs, node)
-	//		default:
-	//			panic(fmt.Errorf("error generating predicate AST: unexpected node type: %T", node))
-	//		}
-	//	}
-	//}
 
 	var binaryExpr dst.Expr
 	for _, expr := range exprs {
@@ -660,26 +864,20 @@ func (gen *SubTypeCheckGenerator) orPredicate(p OrPredicate) []dst.Node {
 	var result []dst.Node
 	var exprs []dst.Expr
 
-	var typeAssertions *orderedmap.OrderedMap[Expression, []TypeAssertionPredicate]
+	var prevTypeSwitch *dst.TypeSwitchStmt
 
 	for _, predicate := range p.Predicates {
-
-		// Combine all type assertions as generate a single switch-statement.
-		if typeAssertion, ok := predicate.(TypeAssertionPredicate); ok {
-			if typeAssertions == nil {
-				typeAssertions = orderedmap.New[orderedmap.OrderedMap[Expression, []TypeAssertionPredicate]](1)
-			}
-
-			typeAssertionsForSource, _ := typeAssertions.Get(typeAssertion.Source)
-			typeAssertionsForSource = append(typeAssertionsForSource, typeAssertion)
-			typeAssertions.Set(typeAssertion.Source, typeAssertionsForSource)
-
-			continue
-		}
-
 		generatedPredicatedNodes := gen.generatePredicate(predicate)
 		for _, node := range generatedPredicatedNodes {
 			switch node := node.(type) {
+			case *dst.TypeSwitchStmt:
+				if prevTypeSwitch != nil &&
+					reflect.DeepEqual(prevTypeSwitch.Assign, node.Assign) {
+					mergeTypeSwitches(prevTypeSwitch, node)
+				} else {
+					prevTypeSwitch = node
+					result = append(result, node)
+				}
 			case dst.Stmt:
 				// Add statements as-is, since they are all conditional-statements.
 				result = append(result, node)
@@ -689,13 +887,6 @@ func (gen *SubTypeCheckGenerator) orPredicate(p OrPredicate) []dst.Node {
 				panic(fmt.Errorf("error generating predicate AST: unexpected node type: %T", node))
 			}
 		}
-	}
-
-	if typeAssertions != nil {
-		typeAssertions.Foreach(func(source Expression, assertionsForExpression []TypeAssertionPredicate) {
-			switchStmt := gen.typeAssertionsForSource(source, assertionsForExpression...)
-			result = append(result, switchStmt)
-		})
 	}
 
 	var binaryExpr dst.Expr
@@ -719,6 +910,10 @@ func (gen *SubTypeCheckGenerator) orPredicate(p OrPredicate) []dst.Node {
 	}
 
 	return result
+}
+
+func mergeTypeSwitches(existingTypeSwitch, newTypeSwitch *dst.TypeSwitchStmt) {
+	existingTypeSwitch.Body.List = append(existingTypeSwitch.Body.List, newTypeSwitch.Body.List...)
 }
 
 func (gen *SubTypeCheckGenerator) isAttachmentPredicate(predicate IsAttachmentPredicate) []dst.Node {
@@ -772,34 +967,13 @@ func (gen *SubTypeCheckGenerator) equalsPredicate(equals EqualsPredicate) []dst.
 			cases = append(cases, generatedExpr)
 		}
 
-		var body []dst.Stmt
-
-		// If there are chained/nested predicates (originating from AND),
-		// then they should be generated instead of the return.
-		// However, if there is a negate, then do not nest, but rather early exit
-		// by adding a return.
-		if !gen.negate &&
-			gen.predicateChain != nil &&
-			gen.predicateChain.hasMore() {
-
-			innerPredicate := gen.predicateChain.next()
-			body = gen.generatePredicateStatements(innerPredicate)
-
-		} else {
-			body = []dst.Stmt{
-				&dst.ReturnStmt{
-					Results: []dst.Expr{
-						gen.booleanExpression(true),
-					},
-				},
-			}
-		}
+		//body := gen.returnOrNestedPredicates(nil, true)
 
 		// Generate switch expression
 		caseClauses := []dst.Stmt{
 			&dst.CaseClause{
 				List: cases,
-				Body: body,
+				//Body: body,
 				Decs: dst.CaseClauseDecorations{
 					NodeDecs: dst.NodeDecs{
 						Before: dst.NewLine,
@@ -993,12 +1167,40 @@ func (gen *SubTypeCheckGenerator) permitsPredicate(permits PermitsPredicate) []d
 }
 
 func (gen *SubTypeCheckGenerator) typeAssertion(typeAssertion TypeAssertionPredicate) []dst.Node {
-	return []dst.Node{
-		gen.typeAssertionsForSource(typeAssertion.Source, typeAssertion),
-	}
-}
 
-func (gen *SubTypeCheckGenerator) typeAssertionsForSource(source Expression, typeAssertions ...TypeAssertionPredicate) *dst.TypeSwitchStmt {
+	source := typeAssertion.Source
+
+	generateCaseForTypeAssertion := func() *dst.CaseClause {
+		// Generate case condition
+		caseExpr := gen.parseCaseCondition(typeAssertion.Type)
+
+		//// Generate case body
+		//var body []dst.Stmt
+		//if typeAssertion.IfMatch != nil {
+		//	body = gen.generatePredicateStatements(*typeAssertion.IfMatch)
+		//} else {
+		//	body = gen.returnOrNestedPredicates(nil, true)
+		//}
+
+		return &dst.CaseClause{
+			List: []dst.Expr{caseExpr},
+			//Body: body,
+			Decs: dst.CaseClauseDecorations{
+				NodeDecs: dst.NodeDecs{
+					Before: dst.NewLine,
+					After:  dst.EmptyLine,
+				},
+			},
+		}
+	}
+
+	var statement dst.Stmt
+
+	prevSwitchSource := gen.currentTypeSwitchSource
+	gen.currentTypeSwitchSource = source
+	defer func() {
+		gen.currentTypeSwitchSource = prevSwitchSource
+	}()
 
 	sourceExpr := gen.expression(source)
 
@@ -1011,32 +1213,10 @@ func (gen *SubTypeCheckGenerator) typeAssertionsForSource(source Expression, typ
 		source,
 		typedVariableName,
 	)
-	defer gen.popScope()
+	// Note: Popping scope must be done after visiting all nested predicates.
+	// Therefore, it is done in
 
-	var cases []dst.Stmt
-	for _, assertion := range typeAssertions {
-
-		// Generate case condition
-		caseExpr := gen.parseCaseCondition(assertion.Type)
-
-		// Generate case body
-		bodyStmts := gen.generatePredicateStatements(assertion.IfMatch)
-
-		caseStmt := &dst.CaseClause{
-			List: []dst.Expr{caseExpr},
-			Body: bodyStmts,
-			Decs: dst.CaseClauseDecorations{
-				NodeDecs: dst.NodeDecs{
-					Before: dst.NewLine,
-					After:  dst.EmptyLine,
-				},
-			},
-		}
-
-		cases = append(cases, caseStmt)
-	}
-
-	return &dst.TypeSwitchStmt{
+	statement = &dst.TypeSwitchStmt{
 		Assign: &dst.AssignStmt{
 			Lhs: []dst.Expr{
 				dst.NewIdent(typedVariableName),
@@ -1050,7 +1230,9 @@ func (gen *SubTypeCheckGenerator) typeAssertionsForSource(source Expression, typ
 			},
 		},
 		Body: &dst.BlockStmt{
-			List: cases,
+			List: []dst.Stmt{
+				generateCaseForTypeAssertion(),
+			},
 		},
 		Decs: dst.TypeSwitchStmtDecorations{
 			NodeDecs: dst.NodeDecs{
@@ -1058,6 +1240,10 @@ func (gen *SubTypeCheckGenerator) typeAssertionsForSource(source Expression, typ
 				After:  dst.EmptyLine,
 			},
 		},
+	}
+
+	return []dst.Node{
+		statement,
 	}
 }
 
@@ -1151,25 +1337,25 @@ func (gen *SubTypeCheckGenerator) setContains(p SetContainsPredicate) []dst.Node
 	}
 }
 
-type PredicateChain struct {
+type Predicates struct {
 	size       int
 	index      int
 	predicates []Predicate
 }
 
-func NewPredicateChain(predicates []Predicate) *PredicateChain {
-	return &PredicateChain{
+func NewPredicateChain(predicates []Predicate) *Predicates {
+	return &Predicates{
 		size:       len(predicates),
 		index:      0,
 		predicates: predicates,
 	}
 }
 
-func (p *PredicateChain) hasMore() bool {
+func (p *Predicates) hasMore() bool {
 	return p.index < p.size
 }
 
-func (p *PredicateChain) next() Predicate {
+func (p *Predicates) next() Predicate {
 	predicate := p.predicates[p.index]
 	p.index++
 	return predicate
