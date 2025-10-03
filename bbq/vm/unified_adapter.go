@@ -42,11 +42,11 @@ var _ interpreter.TypeParameterGetter = &VMTypeParameterGetter{}
 
 func (g *VMTypeParameterGetter) NextStatic() interpreter.StaticType {
 	current := g.index
-	g.index++
 	if current >= len(g.typeParameterTypes) {
 		// much like the interpreter, there can be no type parameters provided, which is valid
 		return nil
 	}
+	g.index++
 	return g.typeParameterTypes[current]
 }
 
