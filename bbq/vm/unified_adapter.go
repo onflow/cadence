@@ -84,9 +84,9 @@ func NewUnifiedNativeFunctionValueWithDerivedType(
 	typeGetter func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType,
 	fn interpreter.UnifiedNativeFunction,
 ) *NativeFunctionValue {
-	return NewNativeFunctionValueWithDerivedType(
-		name,
-		typeGetter,
-		AdaptUnifiedFunctionForVM(fn),
-	)
+	return &NativeFunctionValue{
+		Name:               name,
+		Function:           AdaptUnifiedFunctionForVM(fn),
+		functionTypeGetter: typeGetter,
+	}
 }
