@@ -34,7 +34,7 @@ func init() {
 		NewUnifiedNativeFunctionValue(
 			sema.MetaTypeIsSubtypeFunctionName,
 			sema.MetaTypeIsSubtypeFunctionType,
-			interpreter.UnifiedTypeIsSubtypeFunction,
+			interpreter.UnifiedMetaTypeIsSubtypeFunction,
 		),
 	)
 }
