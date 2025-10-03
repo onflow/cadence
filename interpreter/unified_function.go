@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/common/orderedmap"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 )
@@ -38,16 +39,16 @@ type TypeParameterGetter interface {
 }
 
 type InterpreterTypeParameterGetter struct {
-	memoryGauge        common.MemoryGauge
-	typeParameterTypes *sema.TypeParameterTypeOrderedMap
+	memoryGauge          common.MemoryGauge
+	currentTypeParameter *orderedmap.Pair[*sema.TypeParameter, sema.Type]
 }
 
 var _ TypeParameterGetter = &InterpreterTypeParameterGetter{}
 
 func NewInterpreterTypeParameterGetter(memoryGauge common.MemoryGauge, typeParameterTypes *sema.TypeParameterTypeOrderedMap) *InterpreterTypeParameterGetter {
 	return &InterpreterTypeParameterGetter{
-		memoryGauge:        memoryGauge,
-		typeParameterTypes: typeParameterTypes,
+		memoryGauge:          memoryGauge,
+		currentTypeParameter: typeParameterTypes.Oldest(),
 	}
 }
 
@@ -60,14 +61,14 @@ func (i *InterpreterTypeParameterGetter) NextStatic() StaticType {
 }
 
 func (i *InterpreterTypeParameterGetter) NextSema() sema.Type {
-	current := i.typeParameterTypes.Oldest()
 	// deletion cannot happen here, type parameters are used multiple times
 	// it is also possible that there are no type parameters which is valid
 	// see UnifiedCapabilityBorrowFunction
-	if current == nil {
+	if i.currentTypeParameter == nil {
 		return nil
 	}
-	return current.Value
+	i.currentTypeParameter = i.currentTypeParameter.Next()
+	return i.currentTypeParameter.Value
 }
 
 type UnifiedNativeFunction func(
