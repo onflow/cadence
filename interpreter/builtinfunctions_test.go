@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/interpreter"
@@ -1108,25 +1109,38 @@ func TestInterpretNativeFunctionWithMultipleTypeParameters(t *testing.T) {
 		ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 	}
 
-	valueDeclaration := stdlib.StandardLibraryValue{
-		Name: "nativeFunction",
-		Type: nativeFunctionType,
-		Value: interpreter.NewUnmeteredUnifiedStaticHostFunctionValue(
+	unifiedFunction := func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+		typeValue := typeParameterGetter.NextStatic()
+		require.Equal(t, interpreter.PrimitiveStaticTypeInt, typeValue)
+
+		typeValue2 := typeParameterGetter.NextStatic()
+		require.Equal(t, interpreter.PrimitiveStaticTypeBool, typeValue2)
+
+		typeValue3 := typeParameterGetter.NextStatic()
+		require.Equal(t, nil, typeValue3)
+
+		return interpreter.Void
+	}
+
+	var function interpreter.Value
+	if *compile {
+		function = vm.NewUnifiedNativeFunctionValue(
+			"nativeFunction",
 			nativeFunctionType,
-			func(context interpreter.UnifiedFunctionContext, locationRange interpreter.LocationRange, typeParameterGetter interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
-				typeValue := typeParameterGetter.NextStatic()
-				require.Equal(t, interpreter.PrimitiveStaticTypeInt, typeValue)
+			unifiedFunction,
+		)
+	} else {
+		function = interpreter.NewUnmeteredUnifiedStaticHostFunctionValue(
+			nativeFunctionType,
+			unifiedFunction,
+		)
+	}
 
-				typeValue2 := typeParameterGetter.NextStatic()
-				require.Equal(t, interpreter.PrimitiveStaticTypeBool, typeValue2)
-
-				typeValue3 := typeParameterGetter.NextStatic()
-				require.Equal(t, nil, typeValue3)
-
-				return interpreter.Void
-			},
-		),
-		Kind: common.DeclarationKindConstant,
+	valueDeclaration := stdlib.StandardLibraryValue{
+		Name:  "nativeFunction",
+		Type:  nativeFunctionType,
+		Value: function,
+		Kind:  common.DeclarationKindConstant,
 	}
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
