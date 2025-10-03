@@ -5955,13 +5955,13 @@ func UnifiedCapabilityBorrowFunction(
 			default:
 				panic(errors.NewUnreachableError())
 			}
+			capabilityID = idCapabilityValue.ID
 
 			if capabilityID == InvalidCapabilityID {
 				return Nil
 			}
 
 			capabilityBorrowType = context.SemaTypeFromStaticType(idCapabilityValue.BorrowType).(*sema.ReferenceType)
-			capabilityID = idCapabilityValue.ID
 			addressValue = idCapabilityValue.Address()
 		} else {
 			capabilityBorrowType = capabilityBorrowTypePointer
@@ -6058,7 +6058,7 @@ func UnifiedCapabilityCheckFunction(
 			switch capabilityValue := receiver.(type) {
 			case *PathCapabilityValue: //nolint:staticcheck
 				// Borrowing of path values is never allowed
-				return Nil
+				return FalseValue
 
 			case *IDCapabilityValue:
 				idCapabilityValue = capabilityValue
@@ -6067,12 +6067,13 @@ func UnifiedCapabilityCheckFunction(
 				panic(errors.NewUnreachableError())
 			}
 
+			capabilityID = idCapabilityValue.ID
+
 			if capabilityID == InvalidCapabilityID {
-				return Nil
+				return FalseValue
 			}
 
 			capabilityBorrowType = context.SemaTypeFromStaticType(idCapabilityValue.BorrowType).(*sema.ReferenceType)
-			capabilityID = idCapabilityValue.ID
 			addressValue = idCapabilityValue.Address()
 		} else {
 			capabilityBorrowType = capabilityBorrowTypePointer
