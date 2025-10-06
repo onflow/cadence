@@ -39,9 +39,6 @@ var sub = IdentifierExpression{Name: "sub"}
 type SubTypeCheckGenerator struct {
 	config Config
 
-	currentSuperType Type
-	currentSubType   Type
-
 	nextVarIndex int
 	negate       bool
 
@@ -282,17 +279,8 @@ func (gen *SubTypeCheckGenerator) createSwitchStatementForRules(rules []Rule, fo
 
 // createCaseStatementForRule creates a case statement for a rule
 func (gen *SubTypeCheckGenerator) createCaseStatementForRule(rule Rule, forSimpleTypes bool) dst.Stmt {
-	prevSuperType := gen.currentSuperType
-	prevSubType := gen.currentSubType
-	defer func() {
-		gen.currentSuperType = prevSuperType
-		gen.currentSubType = prevSubType
-	}()
-
 	// Parse types
-
 	superType := parseType(rule.Super)
-	gen.currentSuperType = superType
 
 	// Skip the given types.
 	// Some types are only exist during type-checking, but not at runtime. e.g: Storable type
@@ -304,8 +292,6 @@ func (gen *SubTypeCheckGenerator) createCaseStatementForRule(rule Rule, forSimpl
 	if isSimpleType != forSimpleTypes {
 		return nil
 	}
-
-	gen.currentSubType = parseType(rule.Sub)
 
 	// Generate case condition
 	caseExpr := gen.parseCaseCondition(superType)
@@ -761,6 +747,12 @@ func (gen *SubTypeCheckGenerator) generatePredicateInternal(predicate Predicate)
 	case TypeAssertionPredicate:
 		return gen.typeAssertion(p)
 
+	case SetContainsPredicate:
+		return gen.setContains(p)
+
+	case IsIntersectionSubsetPredicate:
+		return gen.isIntersectionSubset(p)
+
 	case PurityPredicate:
 		// TODO: Implement purity check
 		return []dst.Node{dst.NewIdent("false")}
@@ -780,12 +772,6 @@ func (gen *SubTypeCheckGenerator) generatePredicateInternal(predicate Predicate)
 	case ConstructorEqualPredicate:
 		// TODO: Implement constructor-equal check
 		return []dst.Node{dst.NewIdent("false")}
-
-	case SetContainsPredicate:
-		return gen.setContains(p)
-
-	case IsIntersectionSubsetPredicate:
-		return gen.isIntersectionSubset(p)
 
 	default:
 		panic(fmt.Errorf("unsupported predicate: %T", p))
@@ -1287,7 +1273,7 @@ func (gen *SubTypeCheckGenerator) typeAssertion(typeAssertion TypeAssertionPredi
 
 func (gen *SubTypeCheckGenerator) binaryExpression(lhs, rhs dst.Expr, operator token.Token) *dst.BinaryExpr {
 	if gen.negate {
-		operator = gen.negateOperator(operator)
+		operator = negateOperator(operator)
 	}
 
 	switch operator {
@@ -1302,7 +1288,7 @@ func (gen *SubTypeCheckGenerator) binaryExpression(lhs, rhs dst.Expr, operator t
 	}
 }
 
-func (gen *SubTypeCheckGenerator) negateOperator(operator token.Token) token.Token {
+func negateOperator(operator token.Token) token.Token {
 	switch operator {
 	case token.EQL:
 		return token.NEQ

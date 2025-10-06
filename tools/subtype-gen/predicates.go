@@ -28,7 +28,7 @@ type AlwaysPredicate struct{}
 
 func (a AlwaysPredicate) GetType() string { return "always" }
 
-// NeverPredicate represents an never-true condition
+// NeverPredicate represents a never-true condition
 type NeverPredicate struct{}
 
 func (a NeverPredicate) GetType() string { return "never" }
@@ -133,7 +133,7 @@ type ConstructorEqualPredicate struct{}
 
 func (c ConstructorEqualPredicate) GetType() string { return "constructorEqual" }
 
-// TypeAssertionPredicate represents an equality check
+// TypeAssertionPredicate represents a type assertion
 type TypeAssertionPredicate struct {
 	Source Expression `yaml:"source"`
 	Type   Type       `yaml:"type"`

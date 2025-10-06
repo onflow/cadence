@@ -129,16 +129,25 @@ rules:
           oneOfTypes: [SignedFixedPointType, Fix64Type, Fix128Type]
 
   - super: OptionalType
-    sub: OptionalType
     predicate:
-      subtype:
-        super: super.Type
-        sub: sub.Type
+      or:
+        - and:
+            - mustType:
+                source: sub
+                type: OptionalType
+            - subtype:
+                super: super.Type
+                sub: sub.Type
+        - subtype:
+            super: super.Type
+            sub: sub
 
   - super: Dictionary
-    sub: Dictionary
     predicate:
       and:
+        - mustType:
+            source: sub
+            type: Dictionary
         - subtype:
             super: super.ValueType
             sub: sub.ValueType
@@ -147,17 +156,21 @@ rules:
             sub: sub.KeyType
 
   - super: VariableSizedType
-    sub: VariableSizedType
     predicate:
       and:
+        - mustType:
+            source: sub
+            type: VariableSizedType
         - subtype:
             super: super.ElementType
             sub: sub.ElementType
 
   - super: ConstantSizedType
-    sub: ConstantSizedType
     predicate:
       and:
+        - mustType:
+            source: sub
+            type: ConstantSizedType
         - equals:
             source: super.Size
             target: sub.Size
@@ -166,9 +179,11 @@ rules:
             sub: sub.ElementType
 
   - super: ReferenceType
-    sub: ReferenceType
     predicate:
       and:
+        - mustType:
+            source: sub
+            type: ReferenceType
         - permits:
             super: super.Authorization
             sub: sub.Authorization

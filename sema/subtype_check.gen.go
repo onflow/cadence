@@ -148,47 +148,52 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 	switch typedSuperType := superType.(type) {
 	case *OptionalType:
-		typedSubType, ok := subType.(*OptionalType)
-		if !ok {
-			return false
+		switch typedSubType := subType.(type) {
+		case *OptionalType:
+			return IsSubType(typedSubType.Type, typedSuperType.Type)
+
 		}
 
-		return IsSubType(typedSubType.Type, typedSuperType.Type)
+		return IsSubType(subType, typedSuperType.Type)
 
 	case *DictionaryType:
-		typedSubType, ok := subType.(*DictionaryType)
-		if !ok {
-			return false
+		switch typedSubType := subType.(type) {
+		case *DictionaryType:
+			return IsSubType(typedSubType.ValueType, typedSuperType.ValueType) &&
+				IsSubType(typedSubType.KeyType, typedSuperType.KeyType)
+
 		}
 
-		return IsSubType(typedSubType.ValueType, typedSuperType.ValueType) &&
-			IsSubType(typedSubType.KeyType, typedSuperType.KeyType)
+		return false
 
 	case *VariableSizedType:
-		typedSubType, ok := subType.(*VariableSizedType)
-		if !ok {
-			return false
+		switch typedSubType := subType.(type) {
+		case *VariableSizedType:
+			return IsSubType(typedSubType.ElementType(false), typedSuperType.ElementType(false))
+
 		}
 
-		return IsSubType(typedSubType.ElementType(false), typedSuperType.ElementType(false))
+		return false
 
 	case *ConstantSizedType:
-		typedSubType, ok := subType.(*ConstantSizedType)
-		if !ok {
-			return false
+		switch typedSubType := subType.(type) {
+		case *ConstantSizedType:
+			return typedSuperType.Size == typedSubType.Size &&
+				IsSubType(typedSubType.ElementType(false), typedSuperType.ElementType(false))
+
 		}
 
-		return typedSuperType.Size == typedSubType.Size &&
-			IsSubType(typedSubType.ElementType(false), typedSuperType.ElementType(false))
+		return false
 
 	case *ReferenceType:
-		typedSubType, ok := subType.(*ReferenceType)
-		if !ok {
-			return false
+		switch typedSubType := subType.(type) {
+		case *ReferenceType:
+			return PermitsAccess(typedSuperType.Authorization, typedSubType.Authorization) &&
+				IsSubType(typedSubType.Type, typedSuperType.Type)
+
 		}
 
-		return PermitsAccess(typedSuperType.Authorization, typedSubType.Authorization) &&
-			IsSubType(typedSubType.Type, typedSuperType.Type)
+		return false
 
 	case *CompositeType:
 		switch typedSubType := subType.(type) {
