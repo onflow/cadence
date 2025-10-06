@@ -43,12 +43,10 @@ type SubTypeCheckGenerator struct {
 	currentSubType   Type
 
 	nextVarIndex int
+	negate       bool
 
-	negate bool
-
-	scope                   []map[Expression]string
-	currentTypeSwitchSource Expression
-	nestedPredicates        *Predicates
+	scope            []map[Expression]string
+	nestedPredicates *Predicates
 }
 
 type Config struct {
@@ -522,7 +520,7 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 	nestedNodes := gen.generatePredicate(nextPredicate)
 
 	// `combineAsAnd` indicates whether to combine the nested statement
-	// using an AND operators (or otherwise as OR operators)
+	// using an AND operator (or otherwise as OR operator)
 	_, combineAsAnd := nextPredicate.(*AndPredicate)
 	if gen.negate {
 		combineAsAnd = !combineAsAnd
@@ -539,6 +537,9 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 
 	lastIndex := len(prevNodes) - 1
 	lastNode := prevNodes[lastIndex]
+
+	// Add all nodes upto the last-1.
+	// Use the last node to merge the nested nodes.
 	result = append(result, prevNodes[:lastIndex]...)
 
 	switch lastNode := lastNode.(type) {
@@ -778,7 +779,7 @@ func (gen *SubTypeCheckGenerator) generatePredicateInternal(predicate Predicate)
 	case SetContainsPredicate:
 		return gen.setContains(p)
 
-	case IsIntersectionSubset:
+	case IsIntersectionSubsetPredicate:
 		return gen.isIntersectionSubset(p)
 
 	default:
@@ -1029,13 +1030,10 @@ func (gen *SubTypeCheckGenerator) equalsPredicate(equals EqualsPredicate) []dst.
 			cases = append(cases, generatedExpr)
 		}
 
-		//body := gen.returnOrNestedPredicates(nil, true)
-
 		// Generate switch expression
 		caseClauses := []dst.Stmt{
 			&dst.CaseClause{
 				List: cases,
-				//Body: body,
 				Decs: dst.CaseClauseDecorations{
 					NodeDecs: dst.NodeDecs{
 						Before: dst.NewLine,
@@ -1225,7 +1223,6 @@ func (gen *SubTypeCheckGenerator) typeAssertion(typeAssertion TypeAssertionPredi
 
 		return &dst.CaseClause{
 			List: []dst.Expr{caseExpr},
-			//Body: body,
 			Decs: dst.CaseClauseDecorations{
 				NodeDecs: dst.NodeDecs{
 					Before: dst.NewLine,
@@ -1234,14 +1231,6 @@ func (gen *SubTypeCheckGenerator) typeAssertion(typeAssertion TypeAssertionPredi
 			},
 		}
 	}
-
-	var statement dst.Stmt
-
-	prevSwitchSource := gen.currentTypeSwitchSource
-	gen.currentTypeSwitchSource = source
-	defer func() {
-		gen.currentTypeSwitchSource = prevSwitchSource
-	}()
 
 	sourceExpr := gen.expression(source)
 
@@ -1257,7 +1246,7 @@ func (gen *SubTypeCheckGenerator) typeAssertion(typeAssertion TypeAssertionPredi
 	// Note: Popping scope must be done after visiting all nested predicates.
 	// Therefore, it is done in
 
-	statement = &dst.TypeSwitchStmt{
+	statement := &dst.TypeSwitchStmt{
 		Assign: &dst.AssignStmt{
 			Lhs: []dst.Expr{
 				dst.NewIdent(typedVariableName),
@@ -1380,7 +1369,7 @@ func (gen *SubTypeCheckGenerator) setContains(p SetContainsPredicate) []dst.Node
 	}
 }
 
-func (gen *SubTypeCheckGenerator) isIntersectionSubset(p IsIntersectionSubset) []dst.Node {
+func (gen *SubTypeCheckGenerator) isIntersectionSubset(p IsIntersectionSubsetPredicate) []dst.Node {
 	args := []dst.Expr{
 		gen.expression(p.Super),
 		gen.expression(p.Sub),

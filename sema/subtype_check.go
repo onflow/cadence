@@ -18,6 +18,8 @@
 
 package sema
 
+import "github.com/onflow/cadence/errors"
+
 //go:generate go run ./type_check_gen subtype_check.gen.go
 
 func IsResourceType(typ Type) bool {
@@ -28,7 +30,15 @@ func PermitsAccess(superTypeAccess, subTypeAccess Access) bool {
 	return superTypeAccess.PermitsAccess(subTypeAccess)
 }
 
-func IsIntersectionSubset(superType, subType *IntersectionType) bool {
-	return superType.EffectiveIntersectionSet().
-		IsSubsetOf(subType.EffectiveIntersectionSet())
+func IsIntersectionSubset(superType *IntersectionType, subType Type) bool {
+	switch subType := subType.(type) {
+	case *IntersectionType:
+		return superType.EffectiveIntersectionSet().
+			IsSubsetOf(subType.EffectiveIntersectionSet())
+	case ConformingType:
+		return superType.EffectiveIntersectionSet().
+			IsSubsetOf(subType.EffectiveInterfaceConformanceSet())
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }

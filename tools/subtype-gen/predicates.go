@@ -143,9 +143,9 @@ type SetContainsPredicate struct {
 
 func (e SetContainsPredicate) GetType() string { return "setContains" }
 
-type IsIntersectionSubset struct {
+type IsIntersectionSubsetPredicate struct {
 	Sub   Expression `yaml:"sub"`
 	Super Expression `yaml:"super"`
 }
 
-func (p IsIntersectionSubset) GetType() string { return "isIntersectionSubset" }
+func (p IsIntersectionSubsetPredicate) GetType() string { return "isIntersectionSubset" }

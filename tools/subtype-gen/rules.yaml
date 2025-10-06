@@ -259,7 +259,10 @@ rules:
                       - equals:
                           source: sub.LegacyType
                           target:
-                            oneOfTypes: [AnyType, AnyStructType, AnyResourceType, CompositeType]
+                            oneOfTypes: [AnyType, AnyStructType, AnyResourceType]
+
+                      # Below two combination is repeated several times below.
+                      # Maybe combine them to produce a single predicate.
                       - or:
                         - equals:
                             source: super.LegacyType
@@ -271,13 +274,34 @@ rules:
                           super: super
                           sub: sub
 
-                    - mustType:
-                        source: sub.LegacyType
-                        type: CompositeType
+                    - and:
+                        - mustType:
+                            source: sub.LegacyType
+                            type: CompositeType
+                        - or:
+                            - equals:
+                                source: super.LegacyType
+                                target: nil
+                            - subtype:
+                                super: super.LegacyType
+                                sub: sub.LegacyType
+                        - isIntersectionSubset:
+                            super: super
+                            sub: sub.LegacyType
               - and:
                 - mustType:
                     source: sub
                     type: ConformingType
+                - or:
+                    - equals:
+                        source: super.LegacyType
+                        target: nil
+                    - subtype:
+                        super: super.LegacyType
+                        sub: sub
+                - isIntersectionSubset:
+                    super: super
+                    sub: sub
         - and:
           - mustType:
               source: sub

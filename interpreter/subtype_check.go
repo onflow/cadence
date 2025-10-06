@@ -76,3 +76,8 @@ func PermitsAccess(superTypeAccess, subtypeAccess Authorization) bool {
 	// TODO:
 	return false
 }
+
+func IsIntersectionSubset(superType *IntersectionStaticType, subType StaticType) bool {
+	// TODO:
+	return false
+}

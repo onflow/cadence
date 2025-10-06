@@ -244,7 +244,7 @@ func parsePredicate(rule any) (Predicate, error) {
 				return nil, err
 			}
 
-			return IsIntersectionSubset{
+			return IsIntersectionSubsetPredicate{
 				Sub:   subType,
 				Super: superType,
 			}, nil
