@@ -1748,70 +1748,68 @@ func (v *CompositeValue) GetAttachments(context AttachmentContext, locationRange
 
 func (v *CompositeValue) forEachAttachmentFunction(context FunctionCreationContext, locationRange LocationRange) Value {
 	compositeType := MustSemaTypeOfValue(v, context).(*sema.CompositeType)
-	return NewBoundHostFunctionValue(
+	return NewUnifiedBoundHostFunctionValue(
 		context,
 		v,
 		sema.CompositeForEachAttachmentFunctionType(
 			compositeType.GetCompositeKind(),
 		),
-		func(v *CompositeValue, invocation Invocation) Value {
-			invocationContext := invocation.InvocationContext
-
-			functionValue, ok := invocation.Arguments[0].(FunctionValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-			v.ForEachAttachment(invocationContext, locationRange, functionValue)
-			return Void
-		},
+		UnifiedForEachAttachmentFunction,
 	)
 }
 
-func (v *CompositeValue) ForEachAttachment(
-	invocationContext InvocationContext,
-	locationRange LocationRange,
-	functionValue FunctionValue,
-) {
-	functionValueType := functionValue.FunctionType(invocationContext)
-	parameterTypes := functionValueType.ParameterTypes()
-	returnType := functionValueType.ReturnTypeAnnotation.Type
+var UnifiedForEachAttachmentFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		v := AssertValueOfType[*CompositeValue](receiver)
+		functionValue := AssertValueOfType[FunctionValue](args[0])
 
-	fn := func(attachment *CompositeValue) {
+		functionValueType := functionValue.FunctionType(context)
+		parameterTypes := functionValueType.ParameterTypes()
+		returnType := functionValueType.ReturnTypeAnnotation.Type
 
-		attachmentType := MustSemaTypeOfValue(attachment, invocationContext).(*sema.CompositeType)
+		fn := func(attachment *CompositeValue) {
+			attachmentType := MustSemaTypeOfValue(attachment, context).(*sema.CompositeType)
 
-		attachmentReference := NewEphemeralReferenceValue(
-			invocationContext,
-			// attachments are unauthorized during iteration
-			UnauthorizedAccess,
-			attachment,
-			attachmentType,
-			locationRange,
-		)
+			attachmentReference := NewEphemeralReferenceValue(
+				context,
+				// attachments are unauthorized during iteration
+				UnauthorizedAccess,
+				attachment,
+				attachmentType,
+				locationRange,
+			)
 
-		referenceType := sema.NewReferenceType(
-			invocationContext,
-			// attachments are unauthorized during iteration
-			sema.UnauthorizedAccess,
-			attachmentType,
-		)
+			referenceType := sema.NewReferenceType(
+				context,
+				// attachments are unauthorized during iteration
+				sema.UnauthorizedAccess,
+				attachmentType,
+			)
 
-		invokeFunctionValue(
-			invocationContext,
-			functionValue,
-			[]Value{attachmentReference},
-			nil,
-			[]sema.Type{referenceType},
-			parameterTypes,
-			returnType,
-			nil,
-			locationRange,
-		)
-	}
+			invokeFunctionValue(
+				context,
+				functionValue,
+				[]Value{attachmentReference},
+				nil,
+				[]sema.Type{referenceType},
+				parameterTypes,
+				returnType,
+				nil,
+				locationRange,
+			)
+		}
 
-	v.forEachAttachment(invocationContext, locationRange, fn)
+		v.forEachAttachment(context, locationRange, fn)
 
-}
+		return Void
+	},
+)
 
 func attachmentBaseAndSelfValues(
 	context StaticTypeAndReferenceContext,
