@@ -78,10 +78,10 @@ type BlockAtHeightProvider interface {
 	GetBlockAtHeight(height uint64) (block Block, exists bool, err error)
 }
 
-func UnifiedGetBlockFunction(provider BlockAtHeightProvider) interpreter.UnifiedNativeFunction {
-	return interpreter.UnifiedNativeFunction(
+func NativeGetBlockFunction(provider BlockAtHeightProvider) interpreter.NativeFunction {
+	return interpreter.NativeFunction(
 		func(
-			context interpreter.UnifiedFunctionContext,
+			context interpreter.NativeFunctionContext,
 			locationRange interpreter.LocationRange,
 			typeParameterGetter interpreter.TypeParameterGetter,
 			receiver interpreter.Value,
@@ -105,21 +105,21 @@ func UnifiedGetBlockFunction(provider BlockAtHeightProvider) interpreter.Unified
 }
 
 func NewInterpreterGetBlockFunction(provider BlockAtHeightProvider) StandardLibraryValue {
-	return NewUnifiedStandardLibraryStaticFunction(
+	return NewNativeStandardLibraryStaticFunction(
 		getBlockFunctionName,
 		getBlockFunctionType,
 		getBlockFunctionDocString,
-		UnifiedGetBlockFunction(provider),
+		NativeGetBlockFunction(provider),
 		false,
 	)
 }
 
 func NewVMGetBlockFunction(provider BlockAtHeightProvider) StandardLibraryValue {
-	return NewUnifiedStandardLibraryStaticFunction(
+	return NewNativeStandardLibraryStaticFunction(
 		getBlockFunctionName,
 		getBlockFunctionType,
 		getBlockFunctionDocString,
-		UnifiedGetBlockFunction(provider),
+		NativeGetBlockFunction(provider),
 		true,
 	)
 }
@@ -210,10 +210,10 @@ type CurrentBlockProvider interface {
 	GetCurrentBlockHeight() (uint64, error)
 }
 
-func UnifiedGetCurrentBlockFunction(provider CurrentBlockProvider) interpreter.UnifiedNativeFunction {
-	return interpreter.UnifiedNativeFunction(
+func NativeGetCurrentBlockFunction(provider CurrentBlockProvider) interpreter.NativeFunction {
+	return interpreter.NativeFunction(
 		func(
-			context interpreter.UnifiedFunctionContext,
+			context interpreter.NativeFunctionContext,
 			locationRange interpreter.LocationRange,
 			typeParameterGetter interpreter.TypeParameterGetter,
 			receiver interpreter.Value,
@@ -242,21 +242,21 @@ func UnifiedGetCurrentBlockFunction(provider CurrentBlockProvider) interpreter.U
 }
 
 func NewInterpreterGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryValue {
-	return NewUnifiedStandardLibraryStaticFunction(
+	return NewNativeStandardLibraryStaticFunction(
 		getCurrentBlockFunctionName,
 		getCurrentBlockFunctionType,
 		getCurrentBlockFunctionDocString,
-		UnifiedGetCurrentBlockFunction(provider),
+		NativeGetCurrentBlockFunction(provider),
 		false,
 	)
 }
 
 func NewVMGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryValue {
-	return NewUnifiedStandardLibraryStaticFunction(
+	return NewNativeStandardLibraryStaticFunction(
 		getCurrentBlockFunctionName,
 		getCurrentBlockFunctionType,
 		getCurrentBlockFunctionDocString,
-		UnifiedGetCurrentBlockFunction(provider),
+		NativeGetCurrentBlockFunction(provider),
 		true,
 	)
 }

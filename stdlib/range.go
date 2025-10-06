@@ -113,9 +113,9 @@ var inclusiveRangeConstructorFunctionType = func() *sema.FunctionType {
 	}
 }()
 
-var UnifiedInclusiveRangeConstructorFunction = interpreter.UnifiedNativeFunction(
+var NativeInclusiveRangeConstructorFunction = interpreter.NativeFunction(
 	func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
 		typeParameterGetter interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
@@ -132,19 +132,19 @@ var UnifiedInclusiveRangeConstructorFunction = interpreter.UnifiedNativeFunction
 	},
 )
 
-var InterpreterInclusiveRangeConstructor = NewUnifiedStandardLibraryStaticFunction(
+var InterpreterInclusiveRangeConstructor = NewNativeStandardLibraryStaticFunction(
 	"InclusiveRange",
 	inclusiveRangeConstructorFunctionType,
 	inclusiveRangeConstructorFunctionDocString,
-	UnifiedInclusiveRangeConstructorFunction,
+	NativeInclusiveRangeConstructorFunction,
 	false,
 )
 
-var VMInclusiveRangeConstructor = NewUnifiedStandardLibraryStaticFunction(
+var VMInclusiveRangeConstructor = NewNativeStandardLibraryStaticFunction(
 	"InclusiveRange",
 	inclusiveRangeConstructorFunctionType,
 	inclusiveRangeConstructorFunctionDocString,
-	UnifiedInclusiveRangeConstructorFunction,
+	NativeInclusiveRangeConstructorFunction,
 	true,
 )
 

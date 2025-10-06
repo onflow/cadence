@@ -25,8 +25,8 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-// minimal interfaces needed by all native/host functions
-type UnifiedFunctionContext interface {
+// minimal interfaces needed by all native functions
+type NativeFunctionContext interface {
 	ValueStaticTypeContext
 	ValueTransferContext
 	StaticTypeConversionHandler
@@ -68,7 +68,7 @@ func (i *InterpreterTypeParameterGetter) NextStatic() StaticType {
 func (i *InterpreterTypeParameterGetter) NextSema() sema.Type {
 	// deletion cannot happen here, type parameters are used multiple times
 	// it is also possible that there are no type parameters which is valid
-	// see UnifiedCapabilityBorrowFunction
+	// see NativeCapabilityBorrowFunction
 	current := i.currentTypeParameter
 	if current == nil {
 		return nil
@@ -77,8 +77,8 @@ func (i *InterpreterTypeParameterGetter) NextSema() sema.Type {
 	return current.Value
 }
 
-type UnifiedNativeFunction func(
-	context UnifiedFunctionContext,
+type NativeFunction func(
+	context NativeFunctionContext,
 	locationRange LocationRange,
 	typeParameterGetter TypeParameterGetter,
 	receiver Value,
@@ -86,7 +86,7 @@ type UnifiedNativeFunction func(
 ) Value
 
 // These are all the functions that need to exist to work with the interpreter
-func AdaptUnifiedFunctionForInterpreter(fn UnifiedNativeFunction) HostFunction {
+func AdaptNativeFunctionForInterpreter(fn NativeFunction) HostFunction {
 	return func(invocation Invocation) Value {
 		context := invocation.InvocationContext
 
@@ -101,38 +101,38 @@ func AdaptUnifiedFunctionForInterpreter(fn UnifiedNativeFunction) HostFunction {
 	}
 }
 
-func NewUnmeteredUnifiedStaticHostFunctionValue(
+func NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 	functionType *sema.FunctionType,
-	fn UnifiedNativeFunction,
+	fn NativeFunction,
 ) *HostFunctionValue {
 	return NewUnmeteredStaticHostFunctionValue(
 		functionType,
-		AdaptUnifiedFunctionForInterpreter(fn),
+		AdaptNativeFunctionForInterpreter(fn),
 	)
 }
 
-func NewUnifiedStaticHostFunctionValue(
+func NewStaticHostFunctionValueFromNativeFunction(
 	gauge common.MemoryGauge,
 	functionType *sema.FunctionType,
-	fn UnifiedNativeFunction,
+	fn NativeFunction,
 ) *HostFunctionValue {
 	return NewStaticHostFunctionValue(
 		gauge,
 		functionType,
-		AdaptUnifiedFunctionForInterpreter(fn),
+		AdaptNativeFunctionForInterpreter(fn),
 	)
 }
 
-func NewUnifiedBoundHostFunctionValue(
+func NewBoundHostFunctionValueFromNativeFunction(
 	context FunctionCreationContext,
 	self Value,
 	funcType *sema.FunctionType,
-	function UnifiedNativeFunction,
+	function NativeFunction,
 ) BoundFunctionValue {
 
 	// wrap the unified function to work with the standard HostFunction signature
 	// just like how we do it in the interpreter
-	wrappedFunction := AdaptUnifiedFunctionForInterpreter(function)
+	wrappedFunction := AdaptNativeFunctionForInterpreter(function)
 
 	hostFunc := NewStaticHostFunctionValue(context, funcType, wrappedFunction)
 

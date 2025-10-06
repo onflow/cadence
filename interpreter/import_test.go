@@ -901,7 +901,13 @@ func TestInterpretImportGlobals(t *testing.T) {
 			logFunctionName,
 			stdlib.LogFunctionType,
 			"",
-			func(_ *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
+			func(
+				context interpreter.NativeFunctionContext,
+				_ interpreter.LocationRange,
+				_ interpreter.TypeParameterGetter,
+				_ interpreter.Value,
+				arguments ...interpreter.Value,
+			) interpreter.Value {
 				value := arguments[0]
 				logs = append(logs, value.String())
 				return interpreter.Void
@@ -1118,7 +1124,13 @@ func TestInterpretDynamicallyImportedGlobals(t *testing.T) {
 			logFunctionName,
 			stdlib.LogFunctionType,
 			"",
-			func(_ *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
+			func(
+				context interpreter.NativeFunctionContext,
+				_ interpreter.LocationRange,
+				_ interpreter.TypeParameterGetter,
+				_ interpreter.Value,
+				arguments ...interpreter.Value,
+			) interpreter.Value {
 				value := arguments[0]
 				logs = append(logs, value.String())
 				return interpreter.Void

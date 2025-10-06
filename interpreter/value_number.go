@@ -58,51 +58,51 @@ func getNumberValueFunctionMember(
 	switch name {
 
 	case sema.ToStringFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValueFromNativeFunction(
 			context,
 			v,
 			sema.ToStringFunctionType,
-			UnifiedNumberToStringFunction,
+			NativeNumberToStringFunction,
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValueFromNativeFunction(
 			context,
 			v,
 			sema.ToBigEndianBytesFunctionType,
-			UnifiedNumberToBigEndianBytesFunction,
+			NativeNumberToBigEndianBytesFunction,
 		)
 
 	case sema.NumericTypeSaturatingAddFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValueFromNativeFunction(
 			context,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
-			UnifiedNumberSaturatingAddFunction,
+			NativeNumberSaturatingAddFunction,
 		)
 
 	case sema.NumericTypeSaturatingSubtractFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValueFromNativeFunction(
 			context,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
-			UnifiedNumberSaturatingSubtractFunction,
+			NativeNumberSaturatingSubtractFunction,
 		)
 
 	case sema.NumericTypeSaturatingMultiplyFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValueFromNativeFunction(
 			context,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
-			UnifiedNumberSaturatingMultiplyFunction,
+			NativeNumberSaturatingMultiplyFunction,
 		)
 
 	case sema.NumericTypeSaturatingDivideFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValueFromNativeFunction(
 			context,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
-			UnifiedNumberSaturatingDivideFunction,
+			NativeNumberSaturatingDivideFunction,
 		)
 	}
 
@@ -140,9 +140,9 @@ type BigNumberValue interface {
 }
 
 // all native number functions
-var UnifiedNumberToStringFunction = UnifiedNativeFunction(
+var NativeNumberToStringFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -152,9 +152,9 @@ var UnifiedNumberToStringFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedNumberToBigEndianBytesFunction = UnifiedNativeFunction(
+var NativeNumberToBigEndianBytesFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -164,9 +164,9 @@ var UnifiedNumberToBigEndianBytesFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedNumberSaturatingAddFunction = UnifiedNativeFunction(
+var NativeNumberSaturatingAddFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -177,9 +177,9 @@ var UnifiedNumberSaturatingAddFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedNumberSaturatingSubtractFunction = UnifiedNativeFunction(
+var NativeNumberSaturatingSubtractFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -190,9 +190,9 @@ var UnifiedNumberSaturatingSubtractFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedNumberSaturatingMultiplyFunction = UnifiedNativeFunction(
+var NativeNumberSaturatingMultiplyFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -203,9 +203,9 @@ var UnifiedNumberSaturatingMultiplyFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedNumberSaturatingDivideFunction = UnifiedNativeFunction(
+var NativeNumberSaturatingDivideFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,

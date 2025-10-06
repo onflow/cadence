@@ -125,9 +125,9 @@ func NewInclusiveRangeValueWithStep(
 	)
 }
 
-var UnifiedInclusiveRangeContainsFunction = UnifiedNativeFunction(
+var NativeInclusiveRangeContainsFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -188,13 +188,13 @@ func createInclusiveRange(
 
 	rangeValue.Functions.Set(
 		sema.InclusiveRangeTypeContainsFunctionName,
-		NewUnifiedBoundHostFunctionValue(
+		NewBoundHostFunctionValueFromNativeFunction(
 			context,
 			rangeValue,
 			sema.InclusiveRangeContainsFunctionType(
 				rangeSemaType.MemberType,
 			),
-			UnifiedInclusiveRangeContainsFunction,
+			NativeInclusiveRangeContainsFunction,
 		),
 	)
 

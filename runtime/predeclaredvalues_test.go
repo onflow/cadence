@@ -27,7 +27,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/common/orderedmap"
@@ -206,7 +205,13 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 			function = vm.NewNativeFunctionValue(
 				"bar",
 				functionType,
-				func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, _ ...vm.Value) vm.Value {
+				func(
+					context interpreter.NativeFunctionContext,
+					_ interpreter.LocationRange,
+					_ interpreter.TypeParameterGetter,
+					_ interpreter.Value,
+					_ ...interpreter.Value,
+				) interpreter.Value {
 					return interpreter.NewUnmeteredIntValueFromInt64(2)
 				},
 			)
@@ -370,7 +375,13 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 			function = vm.NewNativeFunctionValue(
 				"bar",
 				functionType,
-				func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, _ ...vm.Value) vm.Value {
+				func(
+					context interpreter.NativeFunctionContext,
+					_ interpreter.LocationRange,
+					_ interpreter.TypeParameterGetter,
+					_ interpreter.Value,
+					_ ...interpreter.Value,
+				) interpreter.Value {
 					return interpreter.NewUnmeteredIntValueFromInt64(2)
 				},
 			)
@@ -440,7 +451,13 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 			function = vm.NewNativeFunctionValue(
 				"bar",
 				functionType,
-				func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, _ ...vm.Value) vm.Value {
+				func(
+					context interpreter.NativeFunctionContext,
+					_ interpreter.LocationRange,
+					_ interpreter.TypeParameterGetter,
+					_ interpreter.Value,
+					_ ...interpreter.Value,
+				) interpreter.Value {
 					return interpreter.NewUnmeteredIntValueFromInt64(2)
 				},
 			)
@@ -555,7 +572,13 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 			function = vm.NewNativeFunctionValue(
 				"B.c",
 				cType,
-				func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
+				func(
+					context interpreter.NativeFunctionContext,
+					_ interpreter.LocationRange,
+					_ interpreter.TypeParameterGetter,
+					receiver interpreter.Value,
+					args ...interpreter.Value,
+				) interpreter.Value {
 					assert.Same(t, bValue, receiver)
 
 					require.Len(t, args, 1)
@@ -686,7 +709,13 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 			function = vm.NewNativeFunctionValue(
 				"B.c",
 				cType,
-				func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, args ...vm.Value) vm.Value {
+				func(
+					context interpreter.NativeFunctionContext,
+					_ interpreter.LocationRange,
+					_ interpreter.TypeParameterGetter,
+					_ interpreter.Value,
+					args ...interpreter.Value,
+				) interpreter.Value {
 					require.Fail(t, "function should have not been called")
 					return nil
 				},

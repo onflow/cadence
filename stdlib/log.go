@@ -57,10 +57,10 @@ func (f FunctionLogger) ProgramLog(message string, locationRange interpreter.Loc
 	return f(message, locationRange)
 }
 
-func UnifiedLogFunction(logger Logger) interpreter.UnifiedNativeFunction {
-	return interpreter.UnifiedNativeFunction(
+func NativeLogFunction(logger Logger) interpreter.NativeFunction {
+	return interpreter.NativeFunction(
 		func(
-			context interpreter.UnifiedFunctionContext,
+			context interpreter.NativeFunctionContext,
 			locationRange interpreter.LocationRange,
 			typeParameterGetter interpreter.TypeParameterGetter,
 			receiver interpreter.Value,
@@ -78,21 +78,21 @@ func UnifiedLogFunction(logger Logger) interpreter.UnifiedNativeFunction {
 }
 
 func NewInterpreterLogFunction(logger Logger) StandardLibraryValue {
-	return NewUnifiedStandardLibraryStaticFunction(
+	return NewNativeStandardLibraryStaticFunction(
 		LogFunctionName,
 		LogFunctionType,
 		logFunctionDocString,
-		UnifiedLogFunction(logger),
+		NativeLogFunction(logger),
 		false,
 	)
 }
 
 func NewVMLogFunction(logger Logger) StandardLibraryValue {
-	return NewUnifiedStandardLibraryStaticFunction(
+	return NewNativeStandardLibraryStaticFunction(
 		LogFunctionName,
 		LogFunctionType,
 		logFunctionDocString,
-		UnifiedLogFunction(logger),
+		NativeLogFunction(logger),
 		true,
 	)
 }

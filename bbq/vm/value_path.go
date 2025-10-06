@@ -39,10 +39,10 @@ func init() {
 
 		registerBuiltinTypeBoundFunction(
 			typeName,
-			NewUnifiedNativeFunctionValue(
+			NewNativeFunctionValue(
 				sema.ToStringFunctionName,
 				sema.ToStringFunctionType,
-				interpreter.UnifiedPathValueToStringFunction,
+				interpreter.NativePathValueToStringFunction,
 			),
 		)
 

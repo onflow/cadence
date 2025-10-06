@@ -114,9 +114,9 @@ func (v PathValue) GetMember(context MemberAccessibleContext, locationRange Loca
 	return context.GetMethod(v, name, locationRange)
 }
 
-var UnifiedPathValueToStringFunction = UnifiedNativeFunction(
+var NativePathValueToStringFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -135,11 +135,11 @@ func (v PathValue) GetMethod(
 	switch name {
 
 	case sema.ToStringFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValueFromNativeFunction(
 			context,
 			v,
 			sema.ToStringFunctionType,
-			UnifiedPathValueToStringFunction,
+			NativePathValueToStringFunction,
 		)
 	}
 

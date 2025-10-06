@@ -1110,7 +1110,7 @@ func TestInterpretNativeFunctionWithMultipleTypeParameters(t *testing.T) {
 	}
 
 	unifiedFunction := func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
 		typeParameterGetter interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
@@ -1130,13 +1130,13 @@ func TestInterpretNativeFunctionWithMultipleTypeParameters(t *testing.T) {
 
 	var function interpreter.Value
 	if *compile {
-		function = vm.NewUnifiedNativeFunctionValue(
+		function = vm.NewNativeFunctionValue(
 			"nativeFunction",
 			nativeFunctionType,
 			unifiedFunction,
 		)
 	} else {
-		function = interpreter.NewUnmeteredUnifiedStaticHostFunctionValue(
+		function = interpreter.NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			nativeFunctionType,
 			unifiedFunction,
 		)

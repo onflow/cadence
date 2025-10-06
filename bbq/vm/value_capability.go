@@ -31,28 +31,28 @@ func init() {
 	// Capability.borrow
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewUnifiedNativeFunctionValueWithDerivedType(
+		NewNativeFunctionValueWithDerivedType(
 			sema.CapabilityTypeBorrowFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				capability := receiver.(*interpreter.IDCapabilityValue)
 				borrowType := context.SemaTypeFromStaticType(capability.BorrowType).(*sema.ReferenceType)
 				return sema.CapabilityTypeBorrowFunctionType(borrowType)
 			},
-			interpreter.UnifiedCapabilityBorrowFunction(nil, nil, nil),
+			interpreter.NativeCapabilityBorrowFunction(nil, nil, nil),
 		),
 	)
 
 	// Capability.check
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewUnifiedNativeFunctionValueWithDerivedType(
+		NewNativeFunctionValueWithDerivedType(
 			sema.CapabilityTypeCheckFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				capability := receiver.(*interpreter.IDCapabilityValue)
 				borrowType := context.SemaTypeFromStaticType(capability.BorrowType).(*sema.ReferenceType)
 				return sema.CapabilityTypeCheckFunctionType(borrowType)
 			},
-			interpreter.UnifiedCapabilityCheckFunction(nil, nil, nil),
+			interpreter.NativeCapabilityCheckFunction(nil, nil, nil),
 		),
 	)
 }

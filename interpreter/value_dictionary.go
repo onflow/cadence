@@ -854,42 +854,42 @@ func (v *DictionaryValue) GetMethod(
 ) FunctionValue {
 	switch name {
 	case sema.DictionaryTypeRemoveFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValueFromNativeFunction(
 			context,
 			v,
 			sema.DictionaryRemoveFunctionType(
 				v.SemaType(context),
 			),
-			UnifiedDictionaryRemoveFunction,
+			NativeDictionaryRemoveFunction,
 		)
 
 	case sema.DictionaryTypeInsertFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValueFromNativeFunction(
 			context,
 			v,
 			sema.DictionaryInsertFunctionType(
 				v.SemaType(context),
 			),
-			UnifiedDictionaryInsertFunction,
+			NativeDictionaryInsertFunction,
 		)
 
 	case sema.DictionaryTypeContainsKeyFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValueFromNativeFunction(
 			context,
 			v,
 			sema.DictionaryContainsKeyFunctionType(
 				v.SemaType(context),
 			),
-			UnifiedDictionaryContainsKeyFunction,
+			NativeDictionaryContainsKeyFunction,
 		)
 	case sema.DictionaryTypeForEachKeyFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValueFromNativeFunction(
 			context,
 			v,
 			sema.DictionaryForEachKeyFunctionType(
 				v.SemaType(context),
 			),
-			UnifiedDictionaryForEachKeyFunction,
+			NativeDictionaryForEachKeyFunction,
 		)
 	}
 
@@ -1615,11 +1615,11 @@ func (v *DictionaryValue) Inlined() bool {
 	return v.dictionary.Inlined()
 }
 
-// Unified dictionary functions
+// Native dictionary functions
 
-var UnifiedDictionaryRemoveFunction = UnifiedNativeFunction(
+var NativeDictionaryRemoveFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -1631,9 +1631,9 @@ var UnifiedDictionaryRemoveFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedDictionaryInsertFunction = UnifiedNativeFunction(
+var NativeDictionaryInsertFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -1646,9 +1646,9 @@ var UnifiedDictionaryInsertFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedDictionaryContainsKeyFunction = UnifiedNativeFunction(
+var NativeDictionaryContainsKeyFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -1660,9 +1660,9 @@ var UnifiedDictionaryContainsKeyFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedDictionaryForEachKeyFunction = UnifiedNativeFunction(
+var NativeDictionaryForEachKeyFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,

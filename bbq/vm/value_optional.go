@@ -30,7 +30,7 @@ func init() {
 
 	registerBuiltinTypeBoundFunction(
 		commons.TypeQualifierOptional,
-		NewUnifiedNativeFunctionValueWithDerivedType(
+		NewNativeFunctionValueWithDerivedType(
 			sema.OptionalTypeMapFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				optionalValue := receiver.(interpreter.OptionalValue)
@@ -40,7 +40,7 @@ func init() {
 					innerValueType,
 				)
 			},
-			interpreter.UnifiedOptionalMapFunction,
+			interpreter.NativeOptionalMapFunction,
 		),
 	)
 }

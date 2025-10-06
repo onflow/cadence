@@ -35,12 +35,12 @@ type BLSPublicKeyAggregator interface {
 	BLSAggregatePublicKeys(publicKeys []*PublicKey) (*PublicKey, error)
 }
 
-func UnifiedBLSAggregatePublicKeysFunction(
+func NativeBLSAggregatePublicKeysFunction(
 	aggregator BLSPublicKeyAggregator,
-) interpreter.UnifiedNativeFunction {
-	return interpreter.UnifiedNativeFunction(
+) interpreter.NativeFunction {
+	return interpreter.NativeFunction(
 		func(
-			context interpreter.UnifiedFunctionContext,
+			context interpreter.NativeFunctionContext,
 			locationRange interpreter.LocationRange,
 			typeParameterGetter interpreter.TypeParameterGetter,
 			receiver interpreter.Value,
@@ -63,10 +63,10 @@ func newInterpreterBLSAggregatePublicKeysFunction(
 ) *interpreter.HostFunctionValue {
 	// TODO: Should create a bound-host function here, but interpreter is not available at this point.
 	// However, this is not a problem for now, since underlying contract doesn't get moved.
-	return interpreter.NewUnifiedStaticHostFunctionValue(
+	return interpreter.NewStaticHostFunctionValueFromNativeFunction(
 		gauge,
 		BLSTypeAggregatePublicKeysFunctionType,
-		UnifiedBLSAggregatePublicKeysFunction(aggregator),
+		NativeBLSAggregatePublicKeysFunction(aggregator),
 	)
 }
 
@@ -75,10 +75,10 @@ func NewVMBLSAggregatePublicKeysFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: BLSType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			BLSTypeAggregatePublicKeysFunctionName,
 			BLSTypeAggregatePublicKeysFunctionType,
-			UnifiedBLSAggregatePublicKeysFunction(aggregator),
+			NativeBLSAggregatePublicKeysFunction(aggregator),
 		),
 	}
 }
@@ -144,12 +144,12 @@ type BLSSignatureAggregator interface {
 	BLSAggregateSignatures(signatures [][]byte) ([]byte, error)
 }
 
-func UnifiedBLSAggregateSignaturesFunction(
+func NativeBLSAggregateSignaturesFunction(
 	aggregator BLSSignatureAggregator,
-) interpreter.UnifiedNativeFunction {
-	return interpreter.UnifiedNativeFunction(
+) interpreter.NativeFunction {
+	return interpreter.NativeFunction(
 		func(
-			context interpreter.UnifiedFunctionContext,
+			context interpreter.NativeFunctionContext,
 			locationRange interpreter.LocationRange,
 			typeParameterGetter interpreter.TypeParameterGetter,
 			receiver interpreter.Value,
@@ -172,10 +172,10 @@ func newInterpreterBLSAggregateSignaturesFunction(
 ) *interpreter.HostFunctionValue {
 	// TODO: Should create a bound-host function here, but interpreter is not available at this point.
 	// However, this is not a problem for now, since underlying contract doesn't get moved.
-	return interpreter.NewUnifiedStaticHostFunctionValue(
+	return interpreter.NewStaticHostFunctionValueFromNativeFunction(
 		gauge,
 		BLSTypeAggregateSignaturesFunctionType,
-		UnifiedBLSAggregateSignaturesFunction(aggregator),
+		NativeBLSAggregateSignaturesFunction(aggregator),
 	)
 }
 
@@ -184,10 +184,10 @@ func NewVMBLSAggregateSignaturesFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: BLSType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			BLSTypeAggregateSignaturesFunctionName,
 			BLSTypeAggregateSignaturesFunctionType,
-			UnifiedBLSAggregateSignaturesFunction(aggregator),
+			NativeBLSAggregateSignaturesFunction(aggregator),
 		),
 	}
 }

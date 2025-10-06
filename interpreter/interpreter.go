@@ -2798,9 +2798,9 @@ func newFromStringFunction(typedParser TypedStringValueParser) FunctionValue {
 	functionType := sema.FromStringFunctionType(typedParser.ReceiverType)
 	parser := typedParser.Parser
 
-	return NewUnmeteredUnifiedStaticHostFunctionValue(
+	return NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 		functionType,
-		UnifiedFromStringFunction(parser),
+		NativeFromStringFunction(parser),
 	)
 }
 
@@ -3107,9 +3107,9 @@ func newFromBigEndianBytesFunction(typedConverter TypedBigEndianBytesConverter) 
 	converter := typedConverter.Converter
 
 	// Converter functions are static functions.
-	return NewUnmeteredUnifiedStaticHostFunctionValue(
+	return NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 		functionType,
-		UnifiedFromBigEndianBytesFunction(byteLength, converter),
+		NativeFromBigEndianBytesFunction(byteLength, converter),
 	)
 }
 
@@ -3464,16 +3464,16 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 			// Converter functions are static functions.
 			{
 				Name: sema.AddressTypeFromBytesFunctionName,
-				Value: NewUnmeteredUnifiedStaticHostFunctionValue(
+				Value: NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 					sema.AddressTypeFromBytesFunctionType,
-					UnifiedAddressFromBytesFunction,
+					NativeAddressFromBytesFunction,
 				),
 			},
 			{
 				Name: sema.AddressTypeFromStringFunctionName,
-				Value: NewUnmeteredUnifiedStaticHostFunctionValue(
+				Value: NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 					sema.AddressTypeFromStringFunctionType,
-					UnifiedAddressFromStringFunction,
+					NativeAddressFromStringFunction,
 				),
 			},
 		},
@@ -3914,9 +3914,9 @@ var converterFunctionValues = func() []converterFunction {
 
 		converterFunctionType := sema.BaseValueActivation.Find(declaration.Name).Type.(*sema.FunctionType)
 
-		converterFunctionValue := NewUnmeteredUnifiedStaticHostFunctionValue(
+		converterFunctionValue := NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			converterFunctionType,
-			UnifiedConverterFunction(convert),
+			NativeConverterFunction(convert),
 		)
 
 		addMember := func(name string, value Value) {
@@ -3970,9 +3970,9 @@ type runtimeTypeConstructor struct {
 	constructor *HostFunctionValue
 }
 
-var UnifiedMetaTypeFunction = UnifiedNativeFunction(
+var NativeMetaTypeFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -3984,9 +3984,9 @@ var UnifiedMetaTypeFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedOptionalTypeFunction = UnifiedNativeFunction(
+var NativeOptionalTypeFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -3998,9 +3998,9 @@ var UnifiedOptionalTypeFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedVariableSizedArrayTypeFunction = UnifiedNativeFunction(
+var NativeVariableSizedArrayTypeFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -4012,9 +4012,9 @@ var UnifiedVariableSizedArrayTypeFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedConstantSizedArrayTypeFunction = UnifiedNativeFunction(
+var NativeConstantSizedArrayTypeFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -4032,9 +4032,9 @@ var UnifiedConstantSizedArrayTypeFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedDictionaryTypeFunction = UnifiedNativeFunction(
+var NativeDictionaryTypeFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -4051,9 +4051,9 @@ var UnifiedDictionaryTypeFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedCompositeTypeFunction = UnifiedNativeFunction(
+var NativeCompositeTypeFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -4065,9 +4065,9 @@ var UnifiedCompositeTypeFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedFunctionTypeFunction = UnifiedNativeFunction(
+var NativeFunctionTypeFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -4085,9 +4085,9 @@ var UnifiedFunctionTypeFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedReferenceTypeFunction = UnifiedNativeFunction(
+var NativeReferenceTypeFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -4105,9 +4105,9 @@ var UnifiedReferenceTypeFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedIntersectionTypeFunction = UnifiedNativeFunction(
+var NativeIntersectionTypeFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -4123,9 +4123,9 @@ var UnifiedIntersectionTypeFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedCapabilityTypeFunction = UnifiedNativeFunction(
+var NativeCapabilityTypeFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -4137,9 +4137,9 @@ var UnifiedCapabilityTypeFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedInclusiveRangeTypeFunction = UnifiedNativeFunction(
+var NativeInclusiveRangeTypeFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -4151,9 +4151,9 @@ var UnifiedInclusiveRangeTypeFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedAddressFromBytesFunction = UnifiedNativeFunction(
+var NativeAddressFromBytesFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -4169,9 +4169,9 @@ var UnifiedAddressFromBytesFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedAddressFromStringFunction = UnifiedNativeFunction(
+var NativeAddressFromStringFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -4183,10 +4183,10 @@ var UnifiedAddressFromStringFunction = UnifiedNativeFunction(
 	},
 )
 
-func UnifiedConverterFunction(convert func(memoryGauge common.MemoryGauge, value Value, locationRange LocationRange) Value) UnifiedNativeFunction {
-	return UnifiedNativeFunction(
+func NativeConverterFunction(convert func(memoryGauge common.MemoryGauge, value Value, locationRange LocationRange) Value) NativeFunction {
+	return NativeFunction(
 		func(
-			context UnifiedFunctionContext,
+			context NativeFunctionContext,
 			locationRange LocationRange,
 			typeParameterGetter TypeParameterGetter,
 			receiver Value,
@@ -4201,10 +4201,10 @@ func UnifiedConverterFunction(convert func(memoryGauge common.MemoryGauge, value
 	)
 }
 
-func UnifiedFromStringFunction(parser StringValueParser) UnifiedNativeFunction {
-	return UnifiedNativeFunction(
+func NativeFromStringFunction(parser StringValueParser) NativeFunction {
+	return NativeFunction(
 		func(
-			context UnifiedFunctionContext,
+			context NativeFunctionContext,
 			locationRange LocationRange,
 			typeParameterGetter TypeParameterGetter,
 			receiver Value,
@@ -4216,10 +4216,10 @@ func UnifiedFromStringFunction(parser StringValueParser) UnifiedNativeFunction {
 	)
 }
 
-func UnifiedFromBigEndianBytesFunction(byteLength uint, converter func(memoryGauge common.MemoryGauge, bytes []byte) Value) UnifiedNativeFunction {
-	return UnifiedNativeFunction(
+func NativeFromBigEndianBytesFunction(byteLength uint, converter func(memoryGauge common.MemoryGauge, bytes []byte) Value) NativeFunction {
+	return NativeFunction(
 		func(
-			context UnifiedFunctionContext,
+			context NativeFunctionContext,
 			locationRange LocationRange,
 			typeParameterGetter TypeParameterGetter,
 			receiver Value,
@@ -4242,9 +4242,9 @@ func UnifiedFromBigEndianBytesFunction(byteLength uint, converter func(memoryGau
 	)
 }
 
-var UnifiedStringFunction = UnifiedNativeFunction(
+var NativeStringFunction = NativeFunction(
 	func(
-		_ UnifiedFunctionContext,
+		_ NativeFunctionContext,
 		_ LocationRange,
 		_ TypeParameterGetter,
 		_ Value,
@@ -4259,80 +4259,80 @@ var UnifiedStringFunction = UnifiedNativeFunction(
 var runtimeTypeConstructors = []runtimeTypeConstructor{
 	{
 		name: sema.MetaTypeName,
-		constructor: NewUnmeteredUnifiedStaticHostFunctionValue(
+		constructor: NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			sema.MetaTypeFunctionType,
-			UnifiedMetaTypeFunction,
+			NativeMetaTypeFunction,
 		),
 	},
 	{
 		name: sema.OptionalTypeFunctionName,
-		constructor: NewUnmeteredUnifiedStaticHostFunctionValue(
+		constructor: NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			sema.OptionalTypeFunctionType,
-			UnifiedOptionalTypeFunction,
+			NativeOptionalTypeFunction,
 		),
 	},
 	{
 		name: sema.VariableSizedArrayTypeFunctionName,
-		constructor: NewUnmeteredUnifiedStaticHostFunctionValue(
+		constructor: NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			sema.VariableSizedArrayTypeFunctionType,
-			UnifiedVariableSizedArrayTypeFunction,
+			NativeVariableSizedArrayTypeFunction,
 		),
 	},
 	{
 		name: sema.ConstantSizedArrayTypeFunctionName,
-		constructor: NewUnmeteredUnifiedStaticHostFunctionValue(
+		constructor: NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			sema.ConstantSizedArrayTypeFunctionType,
-			UnifiedConstantSizedArrayTypeFunction,
+			NativeConstantSizedArrayTypeFunction,
 		),
 	},
 	{
 		name: sema.DictionaryTypeFunctionName,
-		constructor: NewUnmeteredUnifiedStaticHostFunctionValue(
+		constructor: NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			sema.DictionaryTypeFunctionType,
-			UnifiedDictionaryTypeFunction,
+			NativeDictionaryTypeFunction,
 		),
 	},
 	{
 		name: sema.CompositeTypeFunctionName,
-		constructor: NewUnmeteredUnifiedStaticHostFunctionValue(
+		constructor: NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			sema.CompositeTypeFunctionType,
-			UnifiedCompositeTypeFunction,
+			NativeCompositeTypeFunction,
 		),
 	},
 	{
 		name: sema.FunctionTypeFunctionName,
-		constructor: NewUnmeteredUnifiedStaticHostFunctionValue(
+		constructor: NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			sema.FunctionTypeFunctionType,
-			UnifiedFunctionTypeFunction,
+			NativeFunctionTypeFunction,
 		),
 	},
 
 	{
 		name: sema.ReferenceTypeFunctionName,
-		constructor: NewUnmeteredUnifiedStaticHostFunctionValue(
+		constructor: NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			sema.ReferenceTypeFunctionType,
-			UnifiedReferenceTypeFunction,
+			NativeReferenceTypeFunction,
 		),
 	},
 	{
 		name: sema.IntersectionTypeFunctionName,
-		constructor: NewUnmeteredUnifiedStaticHostFunctionValue(
+		constructor: NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			sema.IntersectionTypeFunctionType,
-			UnifiedIntersectionTypeFunction,
+			NativeIntersectionTypeFunction,
 		),
 	},
 	{
 		name: sema.CapabilityTypeFunctionName,
-		constructor: NewUnmeteredUnifiedStaticHostFunctionValue(
+		constructor: NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			sema.CapabilityTypeFunctionType,
-			UnifiedCapabilityTypeFunction,
+			NativeCapabilityTypeFunction,
 		),
 	},
 	{
 		name: sema.InclusiveRangeTypeFunctionName,
-		constructor: NewUnmeteredUnifiedStaticHostFunctionValue(
+		constructor: NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			sema.InclusiveRangeTypeFunctionType,
-			UnifiedInclusiveRangeTypeFunction,
+			NativeInclusiveRangeTypeFunction,
 		),
 	},
 }
@@ -4472,13 +4472,13 @@ func (interpreter *Interpreter) RecordStorageMutation() {
 	}
 }
 
-func UnifiedAccountStorageIterateFunction(
+func NativeAccountStorageIterateFunction(
 	addressPointer *AddressValue,
 	domain common.PathDomain,
 	pathType sema.Type,
-) UnifiedNativeFunction {
+) NativeFunction {
 	return func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -4506,11 +4506,11 @@ func newStorageIterationFunction(
 	pathType sema.Type,
 ) BoundFunctionValue {
 
-	return NewUnifiedBoundHostFunctionValue(
+	return NewBoundHostFunctionValueFromNativeFunction(
 		context,
 		storageValue,
 		functionType,
-		UnifiedAccountStorageIterateFunction(&addressValue, domain, pathType),
+		NativeAccountStorageIterateFunction(&addressValue, domain, pathType),
 	)
 }
 
@@ -4702,11 +4702,11 @@ func checkValue(
 	return
 }
 
-func UnifiedAccountStorageSaveFunction(
+func NativeAccountStorageSaveFunction(
 	addressPointer *AddressValue,
-) UnifiedNativeFunction {
+) NativeFunction {
 	return func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -4729,11 +4729,11 @@ func authAccountStorageSaveFunction(
 	addressValue AddressValue,
 ) BoundFunctionValue {
 
-	return NewUnifiedBoundHostFunctionValue(
+	return NewBoundHostFunctionValueFromNativeFunction(
 		context,
 		storageValue,
 		sema.Account_StorageTypeSaveFunctionType,
-		UnifiedAccountStorageSaveFunction(&addressValue),
+		NativeAccountStorageSaveFunction(&addressValue),
 	)
 }
 
@@ -4791,11 +4791,11 @@ func AccountStorageSave(
 	return Void
 }
 
-func UnifiedAccountStorageTypeFunction(
+func NativeAccountStorageTypeFunction(
 	addressPointer *AddressValue,
-) UnifiedNativeFunction {
+) NativeFunction {
 	return func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -4817,11 +4817,11 @@ func authAccountStorageTypeFunction(
 	addressValue AddressValue,
 ) BoundFunctionValue {
 
-	return NewUnifiedBoundHostFunctionValue(
+	return NewBoundHostFunctionValueFromNativeFunction(
 		context,
 		storageValue,
 		sema.Account_StorageTypeTypeFunctionType,
-		UnifiedAccountStorageTypeFunction(&addressValue),
+		NativeAccountStorageTypeFunction(&addressValue),
 	)
 }
 
@@ -4885,12 +4885,12 @@ func authAccountStorageCopyFunction(
 	)
 }
 
-func UnifiedAccountStorageReadFunction(
+func NativeAccountStorageReadFunction(
 	addressPointer *AddressValue,
 	clear bool,
-) UnifiedNativeFunction {
+) NativeFunction {
 	return func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -4918,11 +4918,11 @@ func authAccountReadFunction(
 	clear bool,
 ) BoundFunctionValue {
 
-	return NewUnifiedBoundHostFunctionValue(
+	return NewBoundHostFunctionValueFromNativeFunction(
 		context,
 		storageValue,
 		functionType,
-		UnifiedAccountStorageReadFunction(&addressValue, clear),
+		NativeAccountStorageReadFunction(&addressValue, clear),
 	)
 }
 
@@ -4992,11 +4992,11 @@ func AccountStorageRead(
 	return NewSomeValueNonCopying(invocationContext, transferredValue)
 }
 
-func UnifiedAccountStorageBorrowFunction(
+func NativeAccountStorageBorrowFunction(
 	addressPointer *AddressValue,
-) UnifiedNativeFunction {
+) NativeFunction {
 	return func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -5021,11 +5021,11 @@ func authAccountStorageBorrowFunction(
 	addressValue AddressValue,
 ) BoundFunctionValue {
 
-	return NewUnifiedBoundHostFunctionValue(
+	return NewBoundHostFunctionValueFromNativeFunction(
 		context,
 		storageValue,
 		sema.Account_StorageTypeBorrowFunctionType,
-		UnifiedAccountStorageBorrowFunction(&addressValue),
+		NativeAccountStorageBorrowFunction(&addressValue),
 	)
 }
 
@@ -5069,11 +5069,11 @@ func AccountStorageBorrow(
 	return NewSomeValueNonCopying(invocationContext, reference)
 }
 
-func UnifiedAccountStorageCheckFunction(
+func NativeAccountStorageCheckFunction(
 	addressPointer *AddressValue,
-) UnifiedNativeFunction {
+) NativeFunction {
 	return func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -5097,11 +5097,11 @@ func authAccountStorageCheckFunction(
 	addressValue AddressValue,
 ) BoundFunctionValue {
 
-	return NewUnifiedBoundHostFunctionValue(
+	return NewBoundHostFunctionValueFromNativeFunction(
 		context,
 		storageValue,
 		sema.Account_StorageTypeCheckFunctionType,
-		UnifiedAccountStorageCheckFunction(&addressValue),
+		NativeAccountStorageCheckFunction(&addressValue),
 	)
 }
 
@@ -5519,9 +5519,9 @@ func getBuiltinFunctionMember(context MemberAccessibleContext, self Value, ident
 	}
 }
 
-var UnifiedIsInstanceFunction = UnifiedNativeFunction(
+var NativeIsInstanceFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -5533,11 +5533,11 @@ var UnifiedIsInstanceFunction = UnifiedNativeFunction(
 )
 
 func isInstanceFunction(context FunctionCreationContext, self Value) FunctionValue {
-	return NewUnifiedBoundHostFunctionValue(
+	return NewBoundHostFunctionValueFromNativeFunction(
 		context,
 		self,
 		sema.IsInstanceFunctionType,
-		UnifiedIsInstanceFunction,
+		NativeIsInstanceFunction,
 	)
 }
 
@@ -5556,9 +5556,9 @@ func IsInstance(invocationContext InvocationContext, self Value, typeValue TypeV
 	)
 }
 
-var UnifiedGetTypeFunction = UnifiedNativeFunction(
+var NativeGetTypeFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -5569,11 +5569,11 @@ var UnifiedGetTypeFunction = UnifiedNativeFunction(
 )
 
 func getTypeFunction(context FunctionCreationContext, self Value) FunctionValue {
-	return NewUnifiedBoundHostFunctionValue(
+	return NewBoundHostFunctionValueFromNativeFunction(
 		context,
 		self,
 		sema.GetTypeFunctionType,
-		UnifiedGetTypeFunction,
+		NativeGetTypeFunction,
 	)
 }
 
@@ -6026,13 +6026,13 @@ func (interpreter *Interpreter) Storage() Storage {
 	return interpreter.SharedState.Config.Storage
 }
 
-func UnifiedCapabilityBorrowFunction(
+func NativeCapabilityBorrowFunction(
 	addressValuePointer *AddressValue,
 	capabilityIDPointer *UInt64Value,
 	capabilityBorrowTypePointer *sema.ReferenceType,
-) UnifiedNativeFunction {
+) NativeFunction {
 	return func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -6092,11 +6092,11 @@ func capabilityBorrowFunction(
 	capabilityBorrowType *sema.ReferenceType,
 ) FunctionValue {
 
-	return NewUnifiedBoundHostFunctionValue(
+	return NewBoundHostFunctionValueFromNativeFunction(
 		context,
 		capabilityValue,
 		sema.CapabilityTypeBorrowFunctionType(capabilityBorrowType),
-		UnifiedCapabilityBorrowFunction(&addressValue, &capabilityID, capabilityBorrowType),
+		NativeCapabilityBorrowFunction(&addressValue, &capabilityID, capabilityBorrowType),
 	)
 }
 
@@ -6137,13 +6137,13 @@ func CapabilityBorrow(
 	return NewSomeValueNonCopying(invocationContext, referenceValue)
 }
 
-func UnifiedCapabilityCheckFunction(
+func NativeCapabilityCheckFunction(
 	addressValuePointer *AddressValue,
 	capabilityIDPointer *UInt64Value,
 	capabilityBorrowTypePointer *sema.ReferenceType,
-) UnifiedNativeFunction {
+) NativeFunction {
 	return func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -6204,11 +6204,11 @@ func capabilityCheckFunction(
 	capabilityBorrowType *sema.ReferenceType,
 ) FunctionValue {
 
-	return NewUnifiedBoundHostFunctionValue(
+	return NewBoundHostFunctionValueFromNativeFunction(
 		context,
 		capabilityValue,
 		sema.CapabilityTypeCheckFunctionType(capabilityBorrowType),
-		UnifiedCapabilityCheckFunction(&addressValue, &capabilityID, capabilityBorrowType),
+		NativeCapabilityCheckFunction(&addressValue, &capabilityID, capabilityBorrowType),
 	)
 }
 

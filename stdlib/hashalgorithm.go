@@ -19,7 +19,6 @@
 package stdlib
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
@@ -76,11 +75,11 @@ func NewHashAlgorithmCase(
 	return value, nil
 }
 
-// Unified hash functions
-func UnifiedHashAlgorithmHashFunction(hasher Hasher, hashAlgoValue interpreter.MemberAccessibleValue) interpreter.UnifiedNativeFunction {
-	return interpreter.UnifiedNativeFunction(
+// Native hash functions
+func NativeHashAlgorithmHashFunction(hasher Hasher, hashAlgoValue interpreter.MemberAccessibleValue) interpreter.NativeFunction {
+	return interpreter.NativeFunction(
 		func(
-			context interpreter.UnifiedFunctionContext,
+			context interpreter.NativeFunctionContext,
 			locationRange interpreter.LocationRange,
 			typeParameterGetter interpreter.TypeParameterGetter,
 			receiver interpreter.Value,
@@ -103,10 +102,10 @@ func UnifiedHashAlgorithmHashFunction(hasher Hasher, hashAlgoValue interpreter.M
 	)
 }
 
-func UnifiedHashAlgorithmHashWithTagFunction(hasher Hasher, hashAlgoValue interpreter.MemberAccessibleValue) interpreter.UnifiedNativeFunction {
-	return interpreter.UnifiedNativeFunction(
+func NativeHashAlgorithmHashWithTagFunction(hasher Hasher, hashAlgoValue interpreter.MemberAccessibleValue) interpreter.NativeFunction {
+	return interpreter.NativeFunction(
 		func(
-			context interpreter.UnifiedFunctionContext,
+			context interpreter.NativeFunctionContext,
 			locationRange interpreter.LocationRange,
 			typeParameterGetter interpreter.TypeParameterGetter,
 			receiver interpreter.Value,
@@ -136,9 +135,9 @@ func newInterpreterHashAlgorithmHashFunction(
 ) *interpreter.HostFunctionValue {
 	// TODO: should ideally create a bound-host function.
 	// But the interpreter is not available at this point.
-	return interpreter.NewUnmeteredUnifiedStaticHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 		sema.HashAlgorithmTypeHashFunctionType,
-		UnifiedHashAlgorithmHashFunction(hasher, hashAlgoValue),
+		NativeHashAlgorithmHashFunction(hasher, hashAlgoValue),
 	)
 }
 
@@ -147,10 +146,10 @@ func NewVMHashAlgorithmHashFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.HashAlgorithmType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.HashAlgorithmTypeHashFunctionName,
 			sema.HashAlgorithmTypeHashFunctionType,
-			UnifiedHashAlgorithmHashFunction(hasher, nil),
+			NativeHashAlgorithmHashFunction(hasher, nil),
 		),
 	}
 }
@@ -161,9 +160,9 @@ func newInterpreterHashAlgorithmHashWithTagFunction(
 ) *interpreter.HostFunctionValue {
 	// TODO: should ideally create a bound-host function.
 	// But the interpreter is not available at this point.
-	return interpreter.NewUnmeteredUnifiedStaticHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 		sema.HashAlgorithmTypeHashWithTagFunctionType,
-		UnifiedHashAlgorithmHashWithTagFunction(hasher, hashAlgorithmValue),
+		NativeHashAlgorithmHashWithTagFunction(hasher, hashAlgorithmValue),
 	)
 }
 
@@ -172,10 +171,10 @@ func NewVMHashAlgorithmHashWithTagFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.HashAlgorithmType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.HashAlgorithmTypeHashWithTagFunctionName,
 			sema.HashAlgorithmTypeHashWithTagFunctionType,
-			UnifiedHashAlgorithmHashWithTagFunction(hasher, nil),
+			NativeHashAlgorithmHashWithTagFunction(hasher, nil),
 		),
 	}
 }
@@ -243,7 +242,13 @@ func NewVMHashAlgorithmConstructor(hasher Hasher) StandardLibraryValue {
 	function := vm.NewNativeFunctionValue(
 		sema.HashAlgorithmTypeName,
 		hashAlgorithmLookupType,
-		func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, args ...vm.Value) vm.Value {
+		func(
+			context interpreter.NativeFunctionContext,
+			_ interpreter.LocationRange,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
 			rawValue := args[0].(interpreter.UInt8Value)
 
 			caseValue, ok := cases[rawValue]

@@ -45,10 +45,10 @@ func (e RLPDecodeStringError) Error() string {
 
 const rlpErrMsgInputContainsExtraBytes = "input data is expected to be RLP-encoded of a single string or a single list but it seems it contains extra trailing bytes."
 
-// Unified RLP functions
-var UnifiedRLPDecodeStringFunction = interpreter.UnifiedNativeFunction(
+// Native RLP functions
+var NativeRLPDecodeStringFunction = interpreter.NativeFunction(
 	func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
 		typeParameterGetter interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
@@ -59,9 +59,9 @@ var UnifiedRLPDecodeStringFunction = interpreter.UnifiedNativeFunction(
 	},
 )
 
-var UnifiedRLPDecodeListFunction = interpreter.UnifiedNativeFunction(
+var NativeRLPDecodeListFunction = interpreter.NativeFunction(
 	func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
 		typeParameterGetter interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
@@ -73,17 +73,17 @@ var UnifiedRLPDecodeListFunction = interpreter.UnifiedNativeFunction(
 )
 
 // interpreterRLPDecodeStringFunction is a static function
-var interpreterRLPDecodeStringFunction = interpreter.NewUnmeteredUnifiedStaticHostFunctionValue(
+var interpreterRLPDecodeStringFunction = interpreter.NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 	RLPTypeDecodeStringFunctionType,
-	UnifiedRLPDecodeStringFunction,
+	NativeRLPDecodeStringFunction,
 )
 
 var VMRLPDecodeStringFunction = VMFunction{
 	BaseType: RLPType,
-	FunctionValue: vm.NewUnifiedNativeFunctionValue(
+	FunctionValue: vm.NewNativeFunctionValue(
 		RLPTypeDecodeStringFunctionName,
 		RLPTypeDecodeStringFunctionType,
-		UnifiedRLPDecodeStringFunction,
+		NativeRLPDecodeStringFunction,
 	),
 }
 
@@ -140,17 +140,17 @@ func (e RLPDecodeListError) Error() string {
 }
 
 // interpreterRLPDecodeListFunction is a static function
-var interpreterRLPDecodeListFunction = interpreter.NewUnmeteredUnifiedStaticHostFunctionValue(
+var interpreterRLPDecodeListFunction = interpreter.NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 	RLPTypeDecodeListFunctionType,
-	UnifiedRLPDecodeListFunction,
+	NativeRLPDecodeListFunction,
 )
 
 var VMRLPDecodeListFunction = VMFunction{
 	BaseType: RLPType,
-	FunctionValue: vm.NewUnifiedNativeFunctionValue(
+	FunctionValue: vm.NewNativeFunctionValue(
 		RLPTypeDecodeListFunctionName,
 		RLPTypeDecodeListFunctionType,
-		UnifiedRLPDecodeListFunction,
+		NativeRLPDecodeListFunction,
 	),
 }
 

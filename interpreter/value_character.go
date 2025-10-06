@@ -229,9 +229,9 @@ func (v CharacterValue) GetMember(context MemberAccessibleContext, locationRange
 	return context.GetMethod(v, name, locationRange)
 }
 
-var UnifiedCharacterValueToStringFunction = UnifiedNativeFunction(
+var NativeCharacterValueToStringFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -249,11 +249,11 @@ func (v CharacterValue) GetMethod(
 ) FunctionValue {
 	switch name {
 	case sema.ToStringFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValueFromNativeFunction(
 			context,
 			v,
 			sema.ToStringFunctionType,
-			UnifiedCharacterValueToStringFunction,
+			NativeCharacterValueToStringFunction,
 		)
 	}
 

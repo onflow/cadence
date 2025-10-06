@@ -70,12 +70,12 @@ func newPublicKeyValidationHandler(validator PublicKeyValidator) interpreter.Pub
 	}
 }
 
-func UnifiedPublicKeyConstructorFunction(
+func NativePublicKeyConstructorFunction(
 	publicKeyValidator PublicKeyValidator,
-) interpreter.UnifiedNativeFunction {
-	return interpreter.UnifiedNativeFunction(
+) interpreter.NativeFunction {
+	return interpreter.NativeFunction(
 		func(
-			context interpreter.UnifiedFunctionContext,
+			context interpreter.NativeFunctionContext,
 			locationRange interpreter.LocationRange,
 			typeParameterGetter interpreter.TypeParameterGetter,
 			receiver interpreter.Value,
@@ -98,11 +98,11 @@ func UnifiedPublicKeyConstructorFunction(
 func NewInterpreterPublicKeyConstructor(
 	publicKeyValidator PublicKeyValidator,
 ) StandardLibraryValue {
-	return NewUnifiedStandardLibraryStaticFunction(
+	return NewNativeStandardLibraryStaticFunction(
 		sema.PublicKeyTypeName,
 		publicKeyConstructorFunctionType,
 		publicKeyConstructorFunctionDocString,
-		UnifiedPublicKeyConstructorFunction(publicKeyValidator),
+		NativePublicKeyConstructorFunction(publicKeyValidator),
 		false,
 	)
 }
@@ -110,11 +110,11 @@ func NewInterpreterPublicKeyConstructor(
 func NewVMPublicKeyConstructor(
 	publicKeyValidator PublicKeyValidator,
 ) StandardLibraryValue {
-	return NewUnifiedStandardLibraryStaticFunction(
+	return NewNativeStandardLibraryStaticFunction(
 		sema.PublicKeyTypeName,
 		publicKeyConstructorFunctionType,
 		publicKeyConstructorFunctionDocString,
-		UnifiedPublicKeyConstructorFunction(publicKeyValidator),
+		NativePublicKeyConstructorFunction(publicKeyValidator),
 		true,
 	)
 }
@@ -221,12 +221,12 @@ type PublicKeySignatureVerifier interface {
 	) (bool, error)
 }
 
-func UnifiedPublicKeyVerifySignatureFunction(
+func NativePublicKeyVerifySignatureFunction(
 	publicKeyValue *interpreter.CompositeValue,
 	verifier PublicKeySignatureVerifier,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
 		typeParameterGetter interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
@@ -259,21 +259,21 @@ func newInterpreterPublicKeyVerifySignatureFunction(
 	publicKeyValue *interpreter.CompositeValue,
 	verifier PublicKeySignatureVerifier,
 ) interpreter.BoundFunctionValue {
-	return interpreter.NewUnifiedBoundHostFunctionValue(
+	return interpreter.NewBoundHostFunctionValueFromNativeFunction(
 		inter,
 		publicKeyValue,
 		sema.PublicKeyTypeVerifyFunctionType,
-		UnifiedPublicKeyVerifySignatureFunction(publicKeyValue, verifier),
+		NativePublicKeyVerifySignatureFunction(publicKeyValue, verifier),
 	)
 }
 
 func NewVMPublicKeyVerifySignatureFunction(verifier PublicKeySignatureVerifier) VMFunction {
 	return VMFunction{
 		BaseType: sema.PublicKeyType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.PublicKeyTypeVerifyFunctionName,
 			sema.PublicKeyTypeVerifyFunctionType,
-			UnifiedPublicKeyVerifySignatureFunction(nil, verifier),
+			NativePublicKeyVerifySignatureFunction(nil, verifier),
 		),
 	}
 }
@@ -334,12 +334,12 @@ type BLSPoPVerifier interface {
 	BLSVerifyPOP(publicKey *PublicKey, signature []byte) (bool, error)
 }
 
-func UnifiedPublicKeyVerifyPoPFunction(
+func NativePublicKeyVerifyPoPFunction(
 	publicKeyValue *interpreter.CompositeValue,
 	verifier BLSPoPVerifier,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
 		typeParameterGetter interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
@@ -366,21 +366,21 @@ func newInterpreterPublicKeyVerifyPoPFunction(
 	publicKeyValue *interpreter.CompositeValue,
 	verifier BLSPoPVerifier,
 ) interpreter.BoundFunctionValue {
-	return interpreter.NewUnifiedBoundHostFunctionValue(
+	return interpreter.NewBoundHostFunctionValueFromNativeFunction(
 		inter,
 		publicKeyValue,
 		sema.PublicKeyTypeVerifyPoPFunctionType,
-		UnifiedPublicKeyVerifyPoPFunction(publicKeyValue, verifier),
+		NativePublicKeyVerifyPoPFunction(publicKeyValue, verifier),
 	)
 }
 
 func NewVMPublicKeyVerifyPoPFunction(verifier BLSPoPVerifier) VMFunction {
 	return VMFunction{
 		BaseType: sema.PublicKeyType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.PublicKeyTypeVerifyPoPFunctionName,
 			sema.PublicKeyTypeVerifyPoPFunctionType,
-			UnifiedPublicKeyVerifyPoPFunction(nil, verifier),
+			NativePublicKeyVerifyPoPFunction(nil, verifier),
 		),
 	}
 }

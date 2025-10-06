@@ -380,75 +380,75 @@ func (v *StringValue) GetMethod(
 ) FunctionValue {
 	switch name {
 	case sema.StringTypeConcatFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValueFromNativeFunction(
 			context,
 			v,
 			sema.StringTypeConcatFunctionType,
-			UnifiedStringConcatFunction,
+			NativeStringConcatFunction,
 		)
 
 	case sema.StringTypeSliceFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValueFromNativeFunction(
 			context,
 			v,
 			sema.StringTypeSliceFunctionType,
-			UnifiedStringSliceFunction,
+			NativeStringSliceFunction,
 		)
 
 	case sema.StringTypeContainsFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValueFromNativeFunction(
 			context,
 			v,
 			sema.StringTypeContainsFunctionType,
-			UnifiedStringContainsFunction,
+			NativeStringContainsFunction,
 		)
 
 	case sema.StringTypeIndexFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValueFromNativeFunction(
 			context,
 			v,
 			sema.StringTypeIndexFunctionType,
-			UnifiedStringIndexFunction,
+			NativeStringIndexFunction,
 		)
 
 	case sema.StringTypeCountFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValueFromNativeFunction(
 			context,
 			v,
 			sema.StringTypeIndexFunctionType,
-			UnifiedStringCountFunction,
+			NativeStringCountFunction,
 		)
 
 	case sema.StringTypeDecodeHexFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValueFromNativeFunction(
 			context,
 			v,
 			sema.StringTypeDecodeHexFunctionType,
-			UnifiedStringDecodeHexFunction,
+			NativeStringDecodeHexFunction,
 		)
 
 	case sema.StringTypeToLowerFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValueFromNativeFunction(
 			context,
 			v,
 			sema.StringTypeToLowerFunctionType,
-			UnifiedStringToLowerFunction,
+			NativeStringToLowerFunction,
 		)
 
 	case sema.StringTypeSplitFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValueFromNativeFunction(
 			context,
 			v,
 			sema.StringTypeSplitFunctionType,
-			UnifiedStringSplitFunction,
+			NativeStringSplitFunction,
 		)
 
 	case sema.StringTypeReplaceAllFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValueFromNativeFunction(
 			context,
 			v,
 			sema.StringTypeReplaceAllFunctionType,
-			UnifiedStringReplaceAllFunction,
+			NativeStringReplaceAllFunction,
 		)
 	}
 
@@ -1069,9 +1069,9 @@ func (*StringValueIterator) ValueID() (atree.ValueID, bool) {
 	return atree.ValueID{}, false
 }
 
-var UnifiedStringEncodeHexFunction = UnifiedNativeFunction(
+var NativeStringEncodeHexFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -1082,9 +1082,9 @@ var UnifiedStringEncodeHexFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedStringFromUtf8Function = UnifiedNativeFunction(
+var NativeStringFromUtf8Function = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -1095,9 +1095,9 @@ var UnifiedStringFromUtf8Function = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedStringFromCharactersFunction = UnifiedNativeFunction(
+var NativeStringFromCharactersFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -1108,9 +1108,9 @@ var UnifiedStringFromCharactersFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedStringJoinFunction = UnifiedNativeFunction(
+var NativeStringJoinFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -1272,9 +1272,9 @@ func StringFunctionJoin(
 // stringFunction is the `String` function. It is stateless, hence it can be re-used across interpreters.
 // Type bound functions are static functions.
 var stringFunction = func() Value {
-	functionValue := NewUnmeteredUnifiedStaticHostFunctionValue(
+	functionValue := NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 		sema.StringFunctionType,
-		UnifiedStringFunction,
+		NativeStringFunction,
 	)
 
 	addMember := func(name string, value Value) {
@@ -1288,44 +1288,44 @@ var stringFunction = func() Value {
 
 	addMember(
 		sema.StringTypeEncodeHexFunctionName,
-		NewUnmeteredUnifiedStaticHostFunctionValue(
+		NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			sema.StringTypeEncodeHexFunctionType,
-			UnifiedStringEncodeHexFunction,
+			NativeStringEncodeHexFunction,
 		),
 	)
 
 	addMember(
 		sema.StringTypeFromUtf8FunctionName,
-		NewUnmeteredUnifiedStaticHostFunctionValue(
+		NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			sema.StringTypeFromUtf8FunctionType,
-			UnifiedStringFromUtf8Function,
+			NativeStringFromUtf8Function,
 		),
 	)
 
 	addMember(
 		sema.StringTypeFromCharactersFunctionName,
-		NewUnmeteredUnifiedStaticHostFunctionValue(
+		NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			sema.StringTypeFromCharactersFunctionType,
-			UnifiedStringFromCharactersFunction,
+			NativeStringFromCharactersFunction,
 		),
 	)
 
 	addMember(
 		sema.StringTypeJoinFunctionName,
-		NewUnmeteredUnifiedStaticHostFunctionValue(
+		NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			sema.StringTypeJoinFunctionType,
-			UnifiedStringJoinFunction,
+			NativeStringJoinFunction,
 		),
 	)
 
 	return functionValue
 }()
 
-// Unified string functions
+// Native string functions
 
-var UnifiedStringConcatFunction = UnifiedNativeFunction(
+var NativeStringConcatFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -1342,9 +1342,9 @@ var UnifiedStringConcatFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedStringSliceFunction = UnifiedNativeFunction(
+var NativeStringSliceFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -1357,9 +1357,9 @@ var UnifiedStringSliceFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedStringContainsFunction = UnifiedNativeFunction(
+var NativeStringContainsFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -1371,9 +1371,9 @@ var UnifiedStringContainsFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedStringIndexFunction = UnifiedNativeFunction(
+var NativeStringIndexFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -1385,9 +1385,9 @@ var UnifiedStringIndexFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedStringCountFunction = UnifiedNativeFunction(
+var NativeStringCountFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -1399,9 +1399,9 @@ var UnifiedStringCountFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedStringDecodeHexFunction = UnifiedNativeFunction(
+var NativeStringDecodeHexFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -1412,9 +1412,9 @@ var UnifiedStringDecodeHexFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedStringToLowerFunction = UnifiedNativeFunction(
+var NativeStringToLowerFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -1425,9 +1425,9 @@ var UnifiedStringToLowerFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedStringSplitFunction = UnifiedNativeFunction(
+var NativeStringSplitFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -1439,9 +1439,9 @@ var UnifiedStringSplitFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedStringReplaceAllFunction = UnifiedNativeFunction(
+var NativeStringReplaceAllFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,

@@ -21,7 +21,6 @@ package vm
 import (
 	"github.com/onflow/atree"
 
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -325,7 +324,13 @@ func (c *Context) DefaultDestroyEvents(
 	collectFunction := NewNativeFunctionValue(
 		"", // anonymous function
 		commons.CollectEventsFunctionType,
-		func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
+		func(
+			context interpreter.NativeFunctionContext,
+			_ interpreter.LocationRange,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
+			arguments ...interpreter.Value,
+		) interpreter.Value {
 			for _, argument := range arguments {
 				event := argument.(*interpreter.CompositeValue)
 				eventValues = append(eventValues, event)

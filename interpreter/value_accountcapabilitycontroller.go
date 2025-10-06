@@ -340,26 +340,26 @@ func (v *AccountCapabilityControllerValue) CheckDeleted() {
 	}
 }
 
-func (v *AccountCapabilityControllerValue) newUnifiedHostFunctionValue(
+func (v *AccountCapabilityControllerValue) newNativeHostFunctionValue(
 	context FunctionCreationContext,
 	funcType *sema.FunctionType,
-	f UnifiedNativeFunction,
+	f NativeFunction,
 ) FunctionValue {
 	return deletionCheckedFunctionValue{
-		FunctionValue: NewUnifiedBoundHostFunctionValue(
+		FunctionValue: NewBoundHostFunctionValueFromNativeFunction(
 			context,
 			v,
 			funcType,
-			NewUnifiedDeletionCheckedAccountCapabilityControllerFunction(f),
+			NewNativeDeletionCheckedAccountCapabilityControllerFunction(f),
 		),
 	}
 }
 
-func NewUnifiedDeletionCheckedAccountCapabilityControllerFunction(
-	f UnifiedNativeFunction,
-) UnifiedNativeFunction {
+func NewNativeDeletionCheckedAccountCapabilityControllerFunction(
+	f NativeFunction,
+) NativeFunction {
 	return func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -373,9 +373,9 @@ func NewUnifiedDeletionCheckedAccountCapabilityControllerFunction(
 	}
 }
 
-var UnifiedAccountCapabilityControllerDeleteFunction = UnifiedNativeFunction(
+var NativeAccountCapabilityControllerDeleteFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -391,12 +391,12 @@ var UnifiedAccountCapabilityControllerDeleteFunction = UnifiedNativeFunction(
 func (v *AccountCapabilityControllerValue) newDeleteFunction(
 	context FunctionCreationContext,
 ) FunctionValue {
-	return v.newUnifiedHostFunctionValue(context, sema.AccountCapabilityControllerTypeDeleteFunctionType, UnifiedAccountCapabilityControllerDeleteFunction)
+	return v.newNativeHostFunctionValue(context, sema.AccountCapabilityControllerTypeDeleteFunctionType, NativeAccountCapabilityControllerDeleteFunction)
 }
 
-var UnifiedAccountCapabilityControllerSetTagFunction = UnifiedNativeFunction(
+var NativeAccountCapabilityControllerSetTagFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -412,5 +412,5 @@ var UnifiedAccountCapabilityControllerSetTagFunction = UnifiedNativeFunction(
 func (v *AccountCapabilityControllerValue) newSetTagFunction(
 	context FunctionCreationContext,
 ) FunctionValue {
-	return v.newUnifiedHostFunctionValue(context, sema.AccountCapabilityControllerTypeSetTagFunctionType, UnifiedAccountCapabilityControllerSetTagFunction)
+	return v.newNativeHostFunctionValue(context, sema.AccountCapabilityControllerTypeSetTagFunctionType, NativeAccountCapabilityControllerSetTagFunction)
 }

@@ -34,80 +34,80 @@ func init() {
 	// Account.Storage.save
 	registerBuiltinTypeBoundFunction(
 		accountStorageTypeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_StorageTypeSaveFunctionName,
 			sema.Account_StorageTypeSaveFunctionType,
-			interpreter.UnifiedAccountStorageSaveFunction(nil),
+			interpreter.NativeAccountStorageSaveFunction(nil),
 		),
 	)
 
 	// Account.Storage.borrow
 	registerBuiltinTypeBoundFunction(
 		accountStorageTypeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_StorageTypeBorrowFunctionName,
 			sema.Account_StorageTypeBorrowFunctionType,
-			interpreter.UnifiedAccountStorageBorrowFunction(nil),
+			interpreter.NativeAccountStorageBorrowFunction(nil),
 		),
 	)
 
 	// Account.Storage.forEachPublic
 	registerBuiltinTypeBoundFunction(
 		accountStorageTypeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_StorageTypeForEachPublicFunctionName,
 			sema.Account_StorageTypeForEachPublicFunctionType,
-			interpreter.UnifiedAccountStorageIterateFunction(nil, common.PathDomainPublic, sema.PublicPathType),
+			interpreter.NativeAccountStorageIterateFunction(nil, common.PathDomainPublic, sema.PublicPathType),
 		),
 	)
 
 	// Account.Storage.forEachStored
 	registerBuiltinTypeBoundFunction(
 		accountStorageTypeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_StorageTypeForEachStoredFunctionName,
 			sema.Account_StorageTypeForEachPublicFunctionType,
-			interpreter.UnifiedAccountStorageIterateFunction(nil, common.PathDomainStorage, sema.StoragePathType),
+			interpreter.NativeAccountStorageIterateFunction(nil, common.PathDomainStorage, sema.StoragePathType),
 		),
 	)
 
 	// Account.Storage.type
 	registerBuiltinTypeBoundFunction(
 		accountStorageTypeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_StorageTypeTypeFunctionName,
 			sema.Account_StorageTypeTypeFunctionType,
-			interpreter.UnifiedAccountStorageTypeFunction(nil),
+			interpreter.NativeAccountStorageTypeFunction(nil),
 		),
 	)
 
 	// Account.Storage.load
 	registerBuiltinTypeBoundFunction(
 		accountStorageTypeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_StorageTypeLoadFunctionName,
 			sema.Account_StorageTypeLoadFunctionType,
-			interpreter.UnifiedAccountStorageReadFunction(nil, true),
+			interpreter.NativeAccountStorageReadFunction(nil, true),
 		),
 	)
 
 	// Account.Storage.copy
 	registerBuiltinTypeBoundFunction(
 		accountStorageTypeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_StorageTypeCopyFunctionName,
 			sema.Account_StorageTypeCopyFunctionType,
-			interpreter.UnifiedAccountStorageReadFunction(nil, false),
+			interpreter.NativeAccountStorageReadFunction(nil, false),
 		),
 	)
 
 	// Account.Storage.check
 	registerBuiltinTypeBoundFunction(
 		accountStorageTypeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.Account_StorageTypeCheckFunctionName,
 			sema.Account_StorageTypeCheckFunctionType,
-			interpreter.UnifiedAccountStorageCheckFunction(nil),
+			interpreter.NativeAccountStorageCheckFunction(nil),
 		),
 	)
 }

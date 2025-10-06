@@ -25,11 +25,11 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-func NewUnifiedStandardLibraryStaticFunction(
+func NewNativeStandardLibraryStaticFunction(
 	name string,
 	functionType *sema.FunctionType,
 	docString string,
-	function interpreter.UnifiedNativeFunction,
+	function interpreter.NativeFunction,
 	isVM bool,
 ) StandardLibraryValue {
 	parameters := functionType.Parameters
@@ -42,9 +42,9 @@ func NewUnifiedStandardLibraryStaticFunction(
 
 	var functionValue interpreter.Value
 	if isVM {
-		functionValue = vm.NewUnifiedNativeFunctionValue(name, functionType, function)
+		functionValue = vm.NewNativeFunctionValue(name, functionType, function)
 	} else {
-		functionValue = interpreter.NewUnmeteredUnifiedStaticHostFunctionValue(functionType, function)
+		functionValue = interpreter.NewUnmeteredStaticHostFunctionValueFromNativeFunction(functionType, function)
 	}
 
 	return StandardLibraryValue{
@@ -91,7 +91,7 @@ func NewVMStandardLibraryStaticFunction(
 	name string,
 	functionType *sema.FunctionType,
 	docString string,
-	function vm.NativeFunction,
+	function interpreter.NativeFunction,
 ) StandardLibraryValue {
 
 	parameters := functionType.Parameters

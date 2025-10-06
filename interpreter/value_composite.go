@@ -1748,19 +1748,19 @@ func (v *CompositeValue) GetAttachments(context AttachmentContext, locationRange
 
 func (v *CompositeValue) forEachAttachmentFunction(context FunctionCreationContext, locationRange LocationRange) Value {
 	compositeType := MustSemaTypeOfValue(v, context).(*sema.CompositeType)
-	return NewUnifiedBoundHostFunctionValue(
+	return NewBoundHostFunctionValueFromNativeFunction(
 		context,
 		v,
 		sema.CompositeForEachAttachmentFunctionType(
 			compositeType.GetCompositeKind(),
 		),
-		UnifiedForEachAttachmentFunction,
+		NativeForEachAttachmentFunction,
 	)
 }
 
-var UnifiedForEachAttachmentFunction = UnifiedNativeFunction(
+var NativeForEachAttachmentFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,

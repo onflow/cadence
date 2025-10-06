@@ -345,7 +345,13 @@ func ParseCheckAndPrepareWithOptions(
 						value = vm.NewNativeFunctionValue(
 							name,
 							functionValue.Type,
-							func(context *vm.Context, _ []interpreter.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
+							func(
+								context interpreter.NativeFunctionContext,
+								_ interpreter.LocationRange,
+								_ interpreter.TypeParameterGetter,
+								_ interpreter.Value,
+								arguments ...interpreter.Value,
+							) interpreter.Value {
 
 								var argumentTypes []sema.Type
 								if len(arguments) > 0 {

@@ -32,19 +32,19 @@ func init() {
 
 		registerBuiltinTypeBoundFunction(
 			typeName,
-			NewUnifiedNativeFunctionValue(
+			NewNativeFunctionValue(
 				sema.ToStringFunctionName,
 				sema.ToStringFunctionType,
-				interpreter.UnifiedNumberToStringFunction,
+				interpreter.NativeNumberToStringFunction,
 			),
 		)
 
 		registerBuiltinTypeBoundFunction(
 			typeName,
-			NewUnifiedNativeFunctionValue(
+			NewNativeFunctionValue(
 				sema.ToBigEndianBytesFunctionName,
 				sema.ToBigEndianBytesFunctionType,
-				interpreter.UnifiedNumberToBigEndianBytesFunction,
+				interpreter.NativeNumberToBigEndianBytesFunction,
 			),
 		)
 	}
