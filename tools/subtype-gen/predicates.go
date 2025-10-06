@@ -130,9 +130,8 @@ func (c ConstructorEqualPredicate) GetType() string { return "constructorEqual" 
 
 // TypeAssertionPredicate represents an equality check
 type TypeAssertionPredicate struct {
-	Source  Expression `yaml:"source"`
-	Type    Type       `yaml:"type"`
-	IfMatch *Predicate `yaml:"ifMatch"`
+	Source Expression `yaml:"source"`
+	Type   Type       `yaml:"type"`
 }
 
 func (e TypeAssertionPredicate) GetType() string { return "mustType" }
@@ -143,3 +142,10 @@ type SetContainsPredicate struct {
 }
 
 func (e SetContainsPredicate) GetType() string { return "setContains" }
+
+type IsIntersectionSubset struct {
+	Sub   Expression `yaml:"sub"`
+	Super Expression `yaml:"super"`
+}
+
+func (p IsIntersectionSubset) GetType() string { return "isIntersectionSubset" }

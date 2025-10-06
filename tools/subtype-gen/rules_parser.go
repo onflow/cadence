@@ -222,22 +222,9 @@ func parsePredicate(rule any) (Predicate, error) {
 
 			expectedType := parseType(typ.(string))
 
-			// Get inner predicate
-			var typeAssert *Predicate
-			ifMatch, ok := keyValues["predicate"]
-			if ok {
-				ifMatchPredicate, err := parsePredicate(ifMatch)
-				if err != nil {
-					return nil, err
-				}
-
-				typeAssert = &ifMatchPredicate
-			}
-
 			return TypeAssertionPredicate{
-				Source:  sourceExpr,
-				Type:    expectedType,
-				IfMatch: typeAssert,
+				Source: sourceExpr,
+				Type:   expectedType,
 			}, nil
 
 		case "setContains":
@@ -249,6 +236,17 @@ func parsePredicate(rule any) (Predicate, error) {
 			return SetContainsPredicate{
 				Source: sourceExpr,
 				Target: targetExpr,
+			}, nil
+
+		case "isIntersectionSubset":
+			superType, subType, err := parseSuperAndSubExpressions(key, value)
+			if err != nil {
+				return nil, err
+			}
+
+			return IsIntersectionSubset{
+				Sub:   subType,
+				Super: superType,
 			}, nil
 
 		default:

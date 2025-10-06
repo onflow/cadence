@@ -24,6 +24,11 @@ func IsResourceType(typ Type) bool {
 	return typ.IsResourceType()
 }
 
-func PermitsAccess(superTypeAccess, subtypeAccess Access) bool {
-	return superTypeAccess.PermitsAccess(subtypeAccess)
+func PermitsAccess(superTypeAccess, subTypeAccess Access) bool {
+	return superTypeAccess.PermitsAccess(subTypeAccess)
+}
+
+func IsIntersectionSubset(superType, subType *IntersectionType) bool {
+	return superType.EffectiveIntersectionSet().
+		IsSubsetOf(subType.EffectiveIntersectionSet())
 }

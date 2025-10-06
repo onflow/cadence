@@ -247,22 +247,30 @@ rules:
                     source: sub
                     type: IntersectionType
                 - or:
-                    - equals:
-                        source: sub.LegacyType
-                        target: nil
+                    - and:
+                      - equals:
+                          source: sub.LegacyType
+                          target: nil
+                      - isIntersectionSubset:
+                          super: super
+                          sub: sub
+
                     - and:
                       - equals:
                           source: sub.LegacyType
                           target:
-                            oneOfTypes: [AnyType, AnyStructType, AnyResourceType]
-                      - not:
-                          equals:
+                            oneOfTypes: [AnyType, AnyStructType, AnyResourceType, CompositeType]
+                      - or:
+                        - equals:
                             source: super.LegacyType
                             target: nil
-                      - not:
-                          subtype:
-                            sub: sub.LegacyType
+                        - subtype:
                             super: super.LegacyType
+                            sub: sub.LegacyType
+                      - isIntersectionSubset:
+                          super: super
+                          sub: sub
+
                     - mustType:
                         source: sub.LegacyType
                         type: CompositeType

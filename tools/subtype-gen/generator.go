@@ -524,6 +524,9 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 	// `combineAsAnd` indicates whether to combine the nested statement
 	// using an AND operators (or otherwise as OR operators)
 	_, combineAsAnd := nextPredicate.(*AndPredicate)
+	if gen.negate {
+		combineAsAnd = !combineAsAnd
+	}
 
 	// If previous nodes are nil, simply return the nested nodes.
 	if len(prevNodes) == 0 {
@@ -558,7 +561,6 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 				// Ideally shouldn't reach here.
 
 			case dst.Expr:
-				conditionalExpr.Decorations().Before = dst.NewLine
 				conditionalExpr = gen.binaryExpression(
 					conditionalExpr,
 					nestedNode,
@@ -654,7 +656,6 @@ func (gen *SubTypeCheckGenerator) combineNodesAsStatements(nodes []dst.Node, com
 				continue
 			}
 
-			conditionalExpr.Decorations().Before = dst.NewLine
 			conditionalExpr = gen.binaryExpression(
 				conditionalExpr,
 				nestedNode,
@@ -777,6 +778,9 @@ func (gen *SubTypeCheckGenerator) generatePredicateInternal(predicate Predicate)
 	case SetContainsPredicate:
 		return gen.setContains(p)
 
+	case IsIntersectionSubset:
+		return gen.isIntersectionSubset(p)
+
 	default:
 		panic(fmt.Errorf("unsupported predicate: %T", p))
 	}
@@ -791,40 +795,41 @@ func (gen *SubTypeCheckGenerator) isHashableStructPredicate(predicate IsHashable
 	)
 
 	return []dst.Node{
-		&dst.CallExpr{
-			Fun:  dst.NewIdent("IsHashableStructType"),
-			Args: args,
-		},
+		gen.callExpression(
+			dst.NewIdent("IsHashableStructType"),
+			args...,
+		),
 	}
 }
 
 func (gen *SubTypeCheckGenerator) isStorablePredicate(predicate IsStorablePredicate) []dst.Node {
-	return []dst.Node{
-		&dst.CallExpr{
-			Fun: &dst.SelectorExpr{
-				X:   gen.expression(predicate.Expression),
-				Sel: dst.NewIdent("IsStorable"),
+	function := &dst.SelectorExpr{
+		X:   gen.expression(predicate.Expression),
+		Sel: dst.NewIdent("IsStorable"),
+	}
+
+	argument := &dst.CompositeLit{
+		Type: &dst.MapType{
+			Key: &dst.StarExpr{
+				X: dst.NewIdent("Member"),
 			},
-			Args: []dst.Expr{
-				&dst.CompositeLit{
-					Type: &dst.MapType{
-						Key: &dst.StarExpr{
-							X: dst.NewIdent("Member"),
-						},
-						Value: dst.NewIdent("bool"),
-					},
-				},
-			},
+			Value: dst.NewIdent("bool"),
 		},
+	}
+
+	return []dst.Node{
+		gen.callExpression(function, argument),
 	}
 }
 
 func (gen *SubTypeCheckGenerator) notPredicate(p NotPredicate) []dst.Node {
 	prevNegate := gen.negate
-	gen.negate = true
 	defer func() {
 		gen.negate = prevNegate
 	}()
+
+	// negate the current negation.
+	gen.negate = !gen.negate
 
 	innerPredicateNodes := gen.generatePredicate(p.Predicate)
 	if len(innerPredicateNodes) != 1 {
@@ -839,14 +844,22 @@ func (gen *SubTypeCheckGenerator) notPredicate(p NotPredicate) []dst.Node {
 }
 
 func (gen *SubTypeCheckGenerator) andPredicate(p AndPredicate) []dst.Node {
-	var result []dst.Node
-	var exprs []dst.Expr
+	if gen.negate {
+		// Inversion of `AND` is `OR`
+		return gen.generateOrPredicate(p.Predicates)
+	}
 
+	return gen.generateAndPredicate(p.Predicates)
+}
+
+func (gen *SubTypeCheckGenerator) generateAndPredicate(predicates []Predicate) (result []dst.Node) {
 	prevPredicateChain := gen.nestedPredicates
-	gen.nestedPredicates = NewPredicateChain(p.Predicates)
+	gen.nestedPredicates = NewPredicateChain(predicates)
 	defer func() {
 		gen.nestedPredicates = prevPredicateChain
 	}()
+
+	var exprs []dst.Expr
 
 	for gen.nestedPredicates.hasMore() {
 		predicate := gen.nestedPredicates.next()
@@ -874,11 +887,13 @@ func (gen *SubTypeCheckGenerator) andPredicate(p AndPredicate) []dst.Node {
 
 		expr.Decorations().Before = dst.NewLine
 
-		binaryExpr = gen.binaryExpression(
-			binaryExpr,
-			expr,
-			token.LAND,
-		)
+		// Don't negate again here (i.e: don't use `binaryExpression` method),
+		// since negation is already done before calling this method `generateAndPredicate`.
+		binaryExpr = &dst.BinaryExpr{
+			X:  binaryExpr,
+			Op: token.LAND,
+			Y:  expr,
+		}
 	}
 
 	if binaryExpr != nil {
@@ -889,18 +904,25 @@ func (gen *SubTypeCheckGenerator) andPredicate(p AndPredicate) []dst.Node {
 }
 
 func (gen *SubTypeCheckGenerator) orPredicate(p OrPredicate) []dst.Node {
+	if gen.negate {
+		// Inversion of `OR` is `AND`
+		return gen.generateAndPredicate(p.Predicates)
+	}
+
+	return gen.generateOrPredicate(p.Predicates)
+}
+
+func (gen *SubTypeCheckGenerator) generateOrPredicate(predicates []Predicate) (result []dst.Node) {
 	prevPredicateChain := gen.nestedPredicates
 	gen.nestedPredicates = nil
 	defer func() {
 		gen.nestedPredicates = prevPredicateChain
 	}()
 
-	var result []dst.Node
 	var exprs []dst.Expr
-
 	var prevTypeSwitch *dst.TypeSwitchStmt
 
-	for _, predicate := range p.Predicates {
+	for _, predicate := range predicates {
 		generatedPredicatedNodes := gen.generatePredicate(predicate)
 
 		for _, node := range generatedPredicatedNodes {
@@ -933,11 +955,13 @@ func (gen *SubTypeCheckGenerator) orPredicate(p OrPredicate) []dst.Node {
 
 		expr.Decorations().Before = dst.NewLine
 
-		binaryExpr = gen.binaryExpression(
-			binaryExpr,
-			expr,
-			token.LOR,
-		)
+		// Don't negate again here (i.e: don't use `binaryExpression` method),
+		// since negation is already done before calling this method `generateOrPredicate`.
+		binaryExpr = &dst.BinaryExpr{
+			X:  binaryExpr,
+			Op: token.LOR,
+			Y:  expr,
+		}
 	}
 
 	if binaryExpr != nil {
@@ -948,7 +972,10 @@ func (gen *SubTypeCheckGenerator) orPredicate(p OrPredicate) []dst.Node {
 }
 
 func mergeTypeSwitches(existingTypeSwitch, newTypeSwitch *dst.TypeSwitchStmt) {
-	existingTypeSwitch.Body.List = append(existingTypeSwitch.Body.List, newTypeSwitch.Body.List...)
+	existingTypeSwitch.Body.List = append(
+		existingTypeSwitch.Body.List,
+		newTypeSwitch.Body.List...,
+	)
 }
 
 func (gen *SubTypeCheckGenerator) isAttachmentPredicate(predicate IsAttachmentPredicate) []dst.Node {
@@ -1046,14 +1073,6 @@ func (gen *SubTypeCheckGenerator) expression(expr Expression) dst.Expr {
 	switch expr := expr.(type) {
 	case IdentifierExpression:
 		return dst.NewIdent(expr.Name)
-		//switch expr.Name {
-		//case "sub":
-		//	return &dst.Ident{Name: gen.subTypeVarName}
-		//case "super":
-		//	return &dst.Ident{Name: gen.superTypeVarName}
-		//default:
-		//	return dst.NewIdent(expr.Name)
-		//}
 
 	case TypeExpression:
 		return gen.qualifiedTypeIdentifier(expr.Type)
@@ -1071,15 +1090,11 @@ func (gen *SubTypeCheckGenerator) expression(expr Expression) dst.Expr {
 				args = append(args, dst.NewIdent(fmt.Sprint(arg)))
 			}
 
-			return &dst.CallExpr{
-				Fun:  selectorExpr,
-				Args: args,
-			}
+			return gen.callExpression(selectorExpr, args...)
+
 		case "EffectiveInterfaceConformanceSet",
 			"EffectiveIntersectionSet":
-			return &dst.CallExpr{
-				Fun: selectorExpr,
-			}
+			return gen.callExpression(selectorExpr)
 		}
 
 		return selectorExpr
@@ -1123,7 +1138,6 @@ func (gen *SubTypeCheckGenerator) isSubTypePredicate(subtype SubtypePredicate) [
 		result := conditions[0]
 		for i := 1; i < len(conditions); i++ {
 			nextCondition := conditions[i]
-			nextCondition.Decorations().Before = dst.NewLine
 			result = gen.binaryExpression(
 				result,
 				nextCondition,
@@ -1194,10 +1208,10 @@ func (gen *SubTypeCheckGenerator) permitsPredicate(permits PermitsPredicate) []d
 	}
 
 	return []dst.Node{
-		&dst.CallExpr{
-			Fun:  dst.NewIdent("PermitsAccess"),
-			Args: args,
-		},
+		gen.callExpression(
+			dst.NewIdent("PermitsAccess"),
+			args...,
+		),
 	}
 }
 
@@ -1208,14 +1222,6 @@ func (gen *SubTypeCheckGenerator) typeAssertion(typeAssertion TypeAssertionPredi
 	generateCaseForTypeAssertion := func() *dst.CaseClause {
 		// Generate case condition
 		caseExpr := gen.parseCaseCondition(typeAssertion.Type)
-
-		//// Generate case body
-		//var body []dst.Stmt
-		//if typeAssertion.IfMatch != nil {
-		//	body = gen.generatePredicateStatements(*typeAssertion.IfMatch)
-		//} else {
-		//	body = gen.returnOrNestedPredicates(nil, true)
-		//}
 
 		return &dst.CaseClause{
 			List: []dst.Expr{caseExpr},
@@ -1287,6 +1293,11 @@ func (gen *SubTypeCheckGenerator) binaryExpression(lhs, rhs dst.Expr, operator t
 		operator = gen.negateOperator(operator)
 	}
 
+	switch operator {
+	case token.LAND, token.LOR:
+		rhs.Decorations().Before = dst.NewLine
+	}
+
 	return &dst.BinaryExpr{
 		X:  lhs,
 		Op: operator,
@@ -1307,8 +1318,8 @@ func (gen *SubTypeCheckGenerator) negateOperator(operator token.Token) token.Tok
 	}
 }
 
-func (gen *SubTypeCheckGenerator) callExpression(invokedExpr dst.Expr, args ...dst.Expr) dst.Expr {
-	var expr dst.Expr = &dst.CallExpr{
+func (gen *SubTypeCheckGenerator) callExpression(invokedExpr dst.Expr, args ...dst.Expr) (expr dst.Expr) {
+	expr = &dst.CallExpr{
 		Fun:  invokedExpr,
 		Args: args,
 	}
@@ -1362,13 +1373,24 @@ func (gen *SubTypeCheckGenerator) setContains(p SetContainsPredicate) []dst.Node
 		gen.expression(p.Target),
 	}
 
-	callExpr := &dst.CallExpr{
-		Fun:  selectExpr,
-		Args: args,
-	}
+	callExpr := gen.callExpression(selectExpr, args...)
 
 	return []dst.Node{
 		callExpr,
+	}
+}
+
+func (gen *SubTypeCheckGenerator) isIntersectionSubset(p IsIntersectionSubset) []dst.Node {
+	args := []dst.Expr{
+		gen.expression(p.Super),
+		gen.expression(p.Sub),
+	}
+
+	return []dst.Node{
+		gen.callExpression(
+			dst.NewIdent("IsIntersectionSubset"),
+			args...,
+		),
 	}
 }
 
