@@ -122,7 +122,12 @@ func UnifiedRevertibleRandomFunction(generator RandomGenerator) interpreter.Unif
 				moduloValue = args[0]
 			}
 
-			return RevertibleRandom(generator, context, returnIntegerType, moduloValue)
+			return RevertibleRandom(
+				generator,
+				context,
+				returnIntegerType,
+				moduloValue,
+			)
 		},
 	)
 }

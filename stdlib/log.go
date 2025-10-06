@@ -67,7 +67,12 @@ func UnifiedLogFunction(logger Logger) interpreter.UnifiedNativeFunction {
 			args ...interpreter.Value,
 		) interpreter.Value {
 			value := args[0]
-			return Log(context, logger, value, locationRange)
+			return Log(
+				context,
+				logger,
+				value,
+				locationRange,
+			)
 		},
 	)
 }

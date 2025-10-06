@@ -1618,7 +1618,13 @@ func (v *DictionaryValue) Inlined() bool {
 // Unified dictionary functions
 
 var UnifiedDictionaryRemoveFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		keyValue := args[0]
 		dictionary := AssertValueOfType[*DictionaryValue](receiver)
 		return dictionary.Remove(context, locationRange, keyValue)
@@ -1626,7 +1632,13 @@ var UnifiedDictionaryRemoveFunction = UnifiedNativeFunction(
 )
 
 var UnifiedDictionaryInsertFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		keyValue := args[0]
 		newValue := args[1]
 		dictionary := AssertValueOfType[*DictionaryValue](receiver)
@@ -1635,7 +1647,13 @@ var UnifiedDictionaryInsertFunction = UnifiedNativeFunction(
 )
 
 var UnifiedDictionaryContainsKeyFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		keyValue := args[0]
 		dictionary := AssertValueOfType[*DictionaryValue](receiver)
 		return dictionary.ContainsKey(context, locationRange, keyValue)
@@ -1643,7 +1661,13 @@ var UnifiedDictionaryContainsKeyFunction = UnifiedNativeFunction(
 )
 
 var UnifiedDictionaryForEachKeyFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		funcArgument := AssertValueOfType[FunctionValue](args[0])
 		dictionary := AssertValueOfType[*DictionaryValue](receiver)
 		dictionary.ForEachKey(context, locationRange, funcArgument)

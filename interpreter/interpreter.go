@@ -3971,7 +3971,13 @@ type runtimeTypeConstructor struct {
 }
 
 var UnifiedMetaTypeFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		staticType := typeParameterGetter.NextStatic()
 
 		return NewTypeValue(context, staticType)
@@ -3979,7 +3985,13 @@ var UnifiedMetaTypeFunction = UnifiedNativeFunction(
 )
 
 var UnifiedOptionalTypeFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		typeValue := AssertValueOfType[TypeValue](args[0])
 
 		return ConstructOptionalTypeValue(context, typeValue)
@@ -3987,7 +3999,13 @@ var UnifiedOptionalTypeFunction = UnifiedNativeFunction(
 )
 
 var UnifiedVariableSizedArrayTypeFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		typeValue := AssertValueOfType[TypeValue](args[0])
 
 		return ConstructVariableSizedArrayTypeValue(context, typeValue)
@@ -3995,7 +4013,13 @@ var UnifiedVariableSizedArrayTypeFunction = UnifiedNativeFunction(
 )
 
 var UnifiedConstantSizedArrayTypeFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		typeValue := AssertValueOfType[TypeValue](args[0])
 		sizeValue := AssertValueOfType[IntValue](args[1])
 
@@ -4009,7 +4033,13 @@ var UnifiedConstantSizedArrayTypeFunction = UnifiedNativeFunction(
 )
 
 var UnifiedDictionaryTypeFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		keyTypeValue := AssertValueOfType[TypeValue](args[0])
 		valueTypeValue := AssertValueOfType[TypeValue](args[1])
 
@@ -4022,7 +4052,13 @@ var UnifiedDictionaryTypeFunction = UnifiedNativeFunction(
 )
 
 var UnifiedCompositeTypeFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		typeIDValue := AssertValueOfType[*StringValue](args[0])
 
 		return ConstructCompositeTypeValue(context, typeIDValue)
@@ -4030,7 +4066,13 @@ var UnifiedCompositeTypeFunction = UnifiedNativeFunction(
 )
 
 var UnifiedFunctionTypeFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		parameterTypeValues := AssertValueOfType[*ArrayValue](args[0])
 		returnTypeValue := AssertValueOfType[TypeValue](args[1])
 
@@ -4044,7 +4086,13 @@ var UnifiedFunctionTypeFunction = UnifiedNativeFunction(
 )
 
 var UnifiedReferenceTypeFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		entitlementValues := AssertValueOfType[*ArrayValue](args[0])
 		typeValue := AssertValueOfType[TypeValue](args[1])
 
@@ -4058,7 +4106,13 @@ var UnifiedReferenceTypeFunction = UnifiedNativeFunction(
 )
 
 var UnifiedIntersectionTypeFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		intersectionIDs := AssertValueOfType[*ArrayValue](args[0])
 
 		return ConstructIntersectionTypeValue(
@@ -4070,7 +4124,13 @@ var UnifiedIntersectionTypeFunction = UnifiedNativeFunction(
 )
 
 var UnifiedCapabilityTypeFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		typeValue := AssertValueOfType[TypeValue](args[0])
 
 		return ConstructCapabilityTypeValue(context, typeValue)
@@ -4078,7 +4138,13 @@ var UnifiedCapabilityTypeFunction = UnifiedNativeFunction(
 )
 
 var UnifiedInclusiveRangeTypeFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		typeValue := AssertValueOfType[TypeValue](args[0])
 
 		return ConstructInclusiveRangeTypeValue(context, typeValue)
@@ -4086,7 +4152,13 @@ var UnifiedInclusiveRangeTypeFunction = UnifiedNativeFunction(
 )
 
 var UnifiedAddressFromBytesFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		byteArray := AssertValueOfType[*ArrayValue](args[0])
 
 		return AddressValueFromByteArray(
@@ -4098,7 +4170,13 @@ var UnifiedAddressFromBytesFunction = UnifiedNativeFunction(
 )
 
 var UnifiedAddressFromStringFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		string := AssertValueOfType[*StringValue](args[0])
 
 		return AddressValueFromString(context, string)
@@ -4107,7 +4185,13 @@ var UnifiedAddressFromStringFunction = UnifiedNativeFunction(
 
 func UnifiedConverterFunction(convert func(memoryGauge common.MemoryGauge, value Value, locationRange LocationRange) Value) UnifiedNativeFunction {
 	return UnifiedNativeFunction(
-		func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		func(
+			context UnifiedFunctionContext,
+			locationRange LocationRange,
+			typeParameterGetter TypeParameterGetter,
+			receiver Value,
+			args ...Value,
+		) Value {
 			return convert(
 				context,
 				args[0],
@@ -4119,7 +4203,13 @@ func UnifiedConverterFunction(convert func(memoryGauge common.MemoryGauge, value
 
 func UnifiedFromStringFunction(parser StringValueParser) UnifiedNativeFunction {
 	return UnifiedNativeFunction(
-		func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		func(
+			context UnifiedFunctionContext,
+			locationRange LocationRange,
+			typeParameterGetter TypeParameterGetter,
+			receiver Value,
+			args ...Value,
+		) Value {
 			argument := AssertValueOfType[*StringValue](args[0])
 			return parser(context, argument.Str)
 		},
@@ -4128,7 +4218,13 @@ func UnifiedFromStringFunction(parser StringValueParser) UnifiedNativeFunction {
 
 func UnifiedFromBigEndianBytesFunction(byteLength uint, converter func(memoryGauge common.MemoryGauge, bytes []byte) Value) UnifiedNativeFunction {
 	return UnifiedNativeFunction(
-		func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+		func(
+			context UnifiedFunctionContext,
+			locationRange LocationRange,
+			typeParameterGetter TypeParameterGetter,
+			receiver Value,
+			args ...Value,
+		) Value {
 			argument := AssertValueOfType[*ArrayValue](args[0])
 
 			bytes, err := ByteArrayValueToByteSlice(context, argument, locationRange)
@@ -4147,7 +4243,13 @@ func UnifiedFromBigEndianBytesFunction(byteLength uint, converter func(memoryGau
 }
 
 var UnifiedStringFunction = UnifiedNativeFunction(
-	func(_ UnifiedFunctionContext, _ LocationRange, _ TypeParameterGetter, _ Value, _ ...Value) Value {
+	func(
+		_ UnifiedFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		_ Value,
+		_ ...Value,
+	) Value {
 		return EmptyString
 	},
 )

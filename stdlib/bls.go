@@ -47,7 +47,12 @@ func UnifiedBLSAggregatePublicKeysFunction(
 			args ...interpreter.Value,
 		) interpreter.Value {
 			publicKeysValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
-			return BLSAggregatePublicKeys(context, publicKeysValue, locationRange, aggregator)
+			return BLSAggregatePublicKeys(
+				context,
+				publicKeysValue,
+				locationRange,
+				aggregator,
+			)
 		},
 	)
 }
@@ -151,7 +156,12 @@ func UnifiedBLSAggregateSignaturesFunction(
 			args ...interpreter.Value,
 		) interpreter.Value {
 			signaturesValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
-			return BLSAggregateSignatures(context, signaturesValue, locationRange, aggregator)
+			return BLSAggregateSignatures(
+				context,
+				signaturesValue,
+				locationRange,
+				aggregator,
+			)
 		},
 	)
 }

@@ -93,7 +93,13 @@ func (v NilValue) MeteredString(context ValueStringContext, _ SeenReferences, _ 
 // Hence, no need to meter, as it's a constant.
 var nilValueMapFunction = NewUnmeteredUnifiedStaticHostFunctionValue(
 	sema.OptionalTypeMapFunctionType(NilOptionalValue.InnerValueType(nil)),
-	func(_ UnifiedFunctionContext, _ LocationRange, _ TypeParameterGetter, _ Value, _ ...Value) Value {
+	func(
+		_ UnifiedFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		_ Value,
+		_ ...Value,
+	) Value {
 		return Nil
 	},
 )

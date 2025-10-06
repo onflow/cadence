@@ -84,7 +84,13 @@ func UnifiedPublicKeyConstructorFunction(
 			publicKey := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
 			signAlgo := interpreter.AssertValueOfType[*interpreter.SimpleCompositeValue](args[1])
 
-			return NewPublicKeyFromFields(context, locationRange, publicKey, signAlgo, publicKeyValidator)
+			return NewPublicKeyFromFields(
+				context,
+				locationRange,
+				publicKey,
+				signAlgo,
+				publicKeyValidator,
+			)
 		},
 	)
 }

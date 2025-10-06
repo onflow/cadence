@@ -91,7 +91,14 @@ func UnifiedHashAlgorithmHashFunction(hasher Hasher, hashAlgoValue interpreter.M
 				hashAlgoValue = interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)
 			}
 			dataValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
-			return hash(context, locationRange, hasher, dataValue, nil, hashAlgoValue)
+			return hash(
+				context,
+				locationRange,
+				hasher,
+				dataValue,
+				nil,
+				hashAlgoValue,
+			)
 		},
 	)
 }
@@ -111,7 +118,14 @@ func UnifiedHashAlgorithmHashWithTagFunction(hasher Hasher, hashAlgoValue interp
 			}
 			dataValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
 			tagValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[1])
-			return hash(context, locationRange, hasher, dataValue, tagValue, hashAlgoValue)
+			return hash(
+				context,
+				locationRange,
+				hasher,
+				dataValue,
+				tagValue,
+				hashAlgoValue,
+			)
 		},
 	)
 }

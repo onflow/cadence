@@ -1070,31 +1070,60 @@ func (*StringValueIterator) ValueID() (atree.ValueID, bool) {
 }
 
 var UnifiedStringEncodeHexFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		argument := AssertValueOfType[*ArrayValue](args[0])
 		return StringFunctionEncodeHex(context, argument, locationRange)
 	},
 )
 
 var UnifiedStringFromUtf8Function = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		argument := AssertValueOfType[*ArrayValue](args[0])
 		return StringFunctionFromUtf8(context, argument, locationRange)
 	},
 )
 
 var UnifiedStringFromCharactersFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		argument := AssertValueOfType[*ArrayValue](args[0])
 		return StringFunctionFromCharacters(context, argument, locationRange)
 	},
 )
 
 var UnifiedStringJoinFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		stringArray := AssertValueOfType[*ArrayValue](args[0])
 		separator := AssertValueOfType[*StringValue](args[1])
-		return StringFunctionJoin(context, stringArray, separator, locationRange)
+		return StringFunctionJoin(
+			context,
+			stringArray,
+			separator,
+			locationRange,
+		)
 	},
 )
 
@@ -1295,15 +1324,32 @@ var stringFunction = func() Value {
 // Unified string functions
 
 var UnifiedStringConcatFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		this := AssertValueOfType[*StringValue](receiver)
 		other := args[0]
-		return StringConcat(context, this, other, locationRange)
+		return StringConcat(
+			context,
+			this,
+			other,
+			locationRange,
+		)
 	},
 )
 
 var UnifiedStringSliceFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		from := AssertValueOfType[IntValue](args[0])
 		to := AssertValueOfType[IntValue](args[1])
 		stringValue := AssertValueOfType[*StringValue](receiver)
@@ -1312,7 +1358,13 @@ var UnifiedStringSliceFunction = UnifiedNativeFunction(
 )
 
 var UnifiedStringContainsFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		other := AssertValueOfType[*StringValue](args[0])
 		stringValue := AssertValueOfType[*StringValue](receiver)
 		return stringValue.Contains(context, other)
@@ -1320,7 +1372,13 @@ var UnifiedStringContainsFunction = UnifiedNativeFunction(
 )
 
 var UnifiedStringIndexFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		other := AssertValueOfType[*StringValue](args[0])
 		stringValue := AssertValueOfType[*StringValue](receiver)
 		return stringValue.IndexOf(context, other)
@@ -1328,7 +1386,13 @@ var UnifiedStringIndexFunction = UnifiedNativeFunction(
 )
 
 var UnifiedStringCountFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		other := AssertValueOfType[*StringValue](args[0])
 		stringValue := AssertValueOfType[*StringValue](receiver)
 		return stringValue.Count(context, locationRange, other)
@@ -1336,21 +1400,39 @@ var UnifiedStringCountFunction = UnifiedNativeFunction(
 )
 
 var UnifiedStringDecodeHexFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		stringValue := AssertValueOfType[*StringValue](receiver)
 		return stringValue.DecodeHex(context, locationRange)
 	},
 )
 
 var UnifiedStringToLowerFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		stringValue := AssertValueOfType[*StringValue](receiver)
 		return stringValue.ToLower(context)
 	},
 )
 
 var UnifiedStringSplitFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		separator := AssertValueOfType[*StringValue](args[0])
 		stringValue := AssertValueOfType[*StringValue](receiver)
 		return stringValue.Split(context, locationRange, separator)
@@ -1358,10 +1440,21 @@ var UnifiedStringSplitFunction = UnifiedNativeFunction(
 )
 
 var UnifiedStringReplaceAllFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		original := AssertValueOfType[*StringValue](args[0])
 		replacement := AssertValueOfType[*StringValue](args[1])
 		stringValue := AssertValueOfType[*StringValue](receiver)
-		return stringValue.ReplaceAll(context, locationRange, original, replacement)
+		return stringValue.ReplaceAll(
+			context,
+			locationRange,
+			original,
+			replacement,
+		)
 	},
 )

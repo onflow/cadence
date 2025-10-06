@@ -139,7 +139,13 @@ var UnifiedInclusiveRangeContainsFunction = UnifiedNativeFunction(
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
-		return InclusiveRangeContains(rangeValue, rangeType, context, locationRange, needleInteger)
+		return InclusiveRangeContains(
+			rangeValue,
+			rangeType,
+			context,
+			locationRange,
+			needleInteger,
+		)
 	},
 )
 

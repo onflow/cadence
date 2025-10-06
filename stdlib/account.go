@@ -264,7 +264,13 @@ func UnifiedGetAuthAccountFunction(handler AccountHandler) interpreter.UnifiedNa
 				panic(errors.NewUnreachableError())
 			}
 
-			return NewAccountReferenceValue(context, handler, accountAddress, referenceType.Authorization, locationRange)
+			return NewAccountReferenceValue(
+				context,
+				handler,
+				accountAddress,
+				referenceType.Authorization,
+				locationRange,
+			)
 		},
 	)
 }
@@ -2670,7 +2676,13 @@ func UnifiedGetAccountFunction(handler AccountHandler) interpreter.UnifiedNative
 			args ...interpreter.Value,
 		) interpreter.Value {
 			accountAddress := interpreter.AssertValueOfType[interpreter.AddressValue](args[0])
-			return NewAccountReferenceValue(context, handler, accountAddress, interpreter.UnauthorizedAccess, locationRange)
+			return NewAccountReferenceValue(
+				context,
+				handler,
+				accountAddress,
+				interpreter.UnauthorizedAccess,
+				locationRange,
+			)
 		},
 	)
 }
@@ -5063,7 +5075,12 @@ func unifiedAccountAccountCapabilitiesGetControllersFunction(
 	) interpreter.Value {
 		address := interpreter.GetAddress(receiver, addressPointer)
 
-		return accountAccountCapabilitiesGetControllers(context, address, locationRange, handler)
+		return accountAccountCapabilitiesGetControllers(
+			context,
+			address,
+			locationRange,
+			handler,
+		)
 	}
 }
 
@@ -5177,7 +5194,13 @@ func unifiedAccountAccountCapabilitiesForEachControllerFunction(
 
 		address := interpreter.GetAddress(receiver, addressPointer)
 
-		return AccountCapabilitiesForEachController(context, address, functionValue, locationRange, handler)
+		return AccountCapabilitiesForEachController(
+			context,
+			address,
+			functionValue,
+			locationRange,
+			handler,
+		)
 	}
 }
 

@@ -396,7 +396,13 @@ func (v *StorageCapabilityControllerValue) newUnifiedHostFunctionValue(
 }
 
 var UnifiedStorageCapabilityControllerDeleteFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		controller := AssertValueOfType[*StorageCapabilityControllerValue](receiver)
 		controller.Delete(context, locationRange)
 		controller.deleted = true
@@ -416,7 +422,13 @@ func (v *StorageCapabilityControllerValue) newDeleteFunction(
 }
 
 var UnifiedStorageCapabilityControllerTargetFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		controller := AssertValueOfType[*StorageCapabilityControllerValue](receiver)
 		return controller.TargetPath
 	},
@@ -433,7 +445,13 @@ func (v *StorageCapabilityControllerValue) newTargetFunction(
 }
 
 var UnifiedStorageCapabilityControllerRetargetFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		controller := AssertValueOfType[*StorageCapabilityControllerValue](receiver)
 
 		newTargetPathValue := AssertValueOfType[PathValue](args[0])
@@ -459,7 +477,13 @@ func (v *StorageCapabilityControllerValue) newRetargetFunction(
 }
 
 var UnifiedStorageCapabilityControllerSetTagFunction = UnifiedNativeFunction(
-	func(context UnifiedFunctionContext, locationRange LocationRange, typeParameterGetter TypeParameterGetter, receiver Value, args ...Value) Value {
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
 		controller := AssertValueOfType[*StorageCapabilityControllerValue](receiver)
 
 		newTagValue := AssertValueOfType[*StringValue](args[0])
