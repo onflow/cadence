@@ -188,7 +188,7 @@ func createInclusiveRange(
 
 	rangeValue.Functions.Set(
 		sema.InclusiveRangeTypeContainsFunctionName,
-		NewBoundHostFunctionValueFromNativeFunction(
+		NewBoundHostFunctionValue(
 			context,
 			rangeValue,
 			sema.InclusiveRangeContainsFunctionType(

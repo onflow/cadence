@@ -233,7 +233,7 @@ func (v TypeValue) GetMethod(
 ) FunctionValue {
 	switch name {
 	case sema.MetaTypeIsSubtypeFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.MetaTypeIsSubtypeFunctionType,

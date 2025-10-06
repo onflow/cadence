@@ -380,7 +380,7 @@ func (v *StringValue) GetMethod(
 ) FunctionValue {
 	switch name {
 	case sema.StringTypeConcatFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeConcatFunctionType,
@@ -388,7 +388,7 @@ func (v *StringValue) GetMethod(
 		)
 
 	case sema.StringTypeSliceFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeSliceFunctionType,
@@ -396,7 +396,7 @@ func (v *StringValue) GetMethod(
 		)
 
 	case sema.StringTypeContainsFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeContainsFunctionType,
@@ -404,7 +404,7 @@ func (v *StringValue) GetMethod(
 		)
 
 	case sema.StringTypeIndexFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeIndexFunctionType,
@@ -412,7 +412,7 @@ func (v *StringValue) GetMethod(
 		)
 
 	case sema.StringTypeCountFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeIndexFunctionType,
@@ -420,7 +420,7 @@ func (v *StringValue) GetMethod(
 		)
 
 	case sema.StringTypeDecodeHexFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeDecodeHexFunctionType,
@@ -428,7 +428,7 @@ func (v *StringValue) GetMethod(
 		)
 
 	case sema.StringTypeToLowerFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeToLowerFunctionType,
@@ -436,7 +436,7 @@ func (v *StringValue) GetMethod(
 		)
 
 	case sema.StringTypeSplitFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeSplitFunctionType,
@@ -444,7 +444,7 @@ func (v *StringValue) GetMethod(
 		)
 
 	case sema.StringTypeReplaceAllFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeReplaceAllFunctionType,

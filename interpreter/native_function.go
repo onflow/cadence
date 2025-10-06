@@ -123,7 +123,7 @@ func NewStaticHostFunctionValueFromNativeFunction(
 	)
 }
 
-func NewBoundHostFunctionValueFromNativeFunction(
+func NewBoundHostFunctionValue(
 	context FunctionCreationContext,
 	self Value,
 	funcType *sema.FunctionType,

@@ -58,7 +58,7 @@ func getNumberValueFunctionMember(
 	switch name {
 
 	case sema.ToStringFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ToStringFunctionType,
@@ -66,7 +66,7 @@ func getNumberValueFunctionMember(
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ToBigEndianBytesFunctionType,
@@ -74,7 +74,7 @@ func getNumberValueFunctionMember(
 		)
 
 	case sema.NumericTypeSaturatingAddFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
@@ -82,7 +82,7 @@ func getNumberValueFunctionMember(
 		)
 
 	case sema.NumericTypeSaturatingSubtractFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
@@ -90,7 +90,7 @@ func getNumberValueFunctionMember(
 		)
 
 	case sema.NumericTypeSaturatingMultiplyFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
@@ -98,7 +98,7 @@ func getNumberValueFunctionMember(
 		)
 
 	case sema.NumericTypeSaturatingDivideFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],

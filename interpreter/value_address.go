@@ -168,7 +168,7 @@ func (v AddressValue) GetMethod(
 	switch name {
 
 	case sema.ToStringFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ToStringFunctionType,
@@ -176,7 +176,7 @@ func (v AddressValue) GetMethod(
 		)
 
 	case sema.AddressTypeToBytesFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.AddressTypeToBytesFunctionType,

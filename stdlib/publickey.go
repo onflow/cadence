@@ -259,7 +259,7 @@ func newInterpreterPublicKeyVerifySignatureFunction(
 	publicKeyValue *interpreter.CompositeValue,
 	verifier PublicKeySignatureVerifier,
 ) interpreter.BoundFunctionValue {
-	return interpreter.NewBoundHostFunctionValueFromNativeFunction(
+	return interpreter.NewBoundHostFunctionValue(
 		inter,
 		publicKeyValue,
 		sema.PublicKeyTypeVerifyFunctionType,
@@ -366,7 +366,7 @@ func newInterpreterPublicKeyVerifyPoPFunction(
 	publicKeyValue *interpreter.CompositeValue,
 	verifier BLSPoPVerifier,
 ) interpreter.BoundFunctionValue {
-	return interpreter.NewBoundHostFunctionValueFromNativeFunction(
+	return interpreter.NewBoundHostFunctionValue(
 		inter,
 		publicKeyValue,
 		sema.PublicKeyTypeVerifyPoPFunctionType,

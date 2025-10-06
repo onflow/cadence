@@ -549,7 +549,13 @@ func newConditionLogFunction(logs *[]string) stdlib.StandardLibraryValue {
 		conditionLogFunctionName,
 		conditionLogFunctionType,
 		"",
-		func(context interpreter.NativeFunctionContext, _ interpreter.LocationRange, _ interpreter.TypeParameterGetter, _ interpreter.Value, arguments ...interpreter.Value) interpreter.Value {
+		func(
+			context interpreter.NativeFunctionContext,
+			_ interpreter.LocationRange,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
+			arguments ...interpreter.Value,
+		) interpreter.Value {
 			message := arguments[0].String()
 			*logs = append(*logs, message)
 			return interpreter.TrueValue

@@ -158,7 +158,7 @@ func (v *SomeValue) GetMethod(
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
 		innerValueType := v.InnerValueType(context)
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.OptionalTypeMapFunctionType(

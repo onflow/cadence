@@ -4506,7 +4506,7 @@ func newStorageIterationFunction(
 	pathType sema.Type,
 ) BoundFunctionValue {
 
-	return NewBoundHostFunctionValueFromNativeFunction(
+	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
 		functionType,
@@ -4729,7 +4729,7 @@ func authAccountStorageSaveFunction(
 	addressValue AddressValue,
 ) BoundFunctionValue {
 
-	return NewBoundHostFunctionValueFromNativeFunction(
+	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
 		sema.Account_StorageTypeSaveFunctionType,
@@ -4817,7 +4817,7 @@ func authAccountStorageTypeFunction(
 	addressValue AddressValue,
 ) BoundFunctionValue {
 
-	return NewBoundHostFunctionValueFromNativeFunction(
+	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
 		sema.Account_StorageTypeTypeFunctionType,
@@ -4918,7 +4918,7 @@ func authAccountReadFunction(
 	clear bool,
 ) BoundFunctionValue {
 
-	return NewBoundHostFunctionValueFromNativeFunction(
+	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
 		functionType,
@@ -5021,7 +5021,7 @@ func authAccountStorageBorrowFunction(
 	addressValue AddressValue,
 ) BoundFunctionValue {
 
-	return NewBoundHostFunctionValueFromNativeFunction(
+	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
 		sema.Account_StorageTypeBorrowFunctionType,
@@ -5097,7 +5097,7 @@ func authAccountStorageCheckFunction(
 	addressValue AddressValue,
 ) BoundFunctionValue {
 
-	return NewBoundHostFunctionValueFromNativeFunction(
+	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
 		sema.Account_StorageTypeCheckFunctionType,
@@ -5533,7 +5533,7 @@ var NativeIsInstanceFunction = NativeFunction(
 )
 
 func isInstanceFunction(context FunctionCreationContext, self Value) FunctionValue {
-	return NewBoundHostFunctionValueFromNativeFunction(
+	return NewBoundHostFunctionValue(
 		context,
 		self,
 		sema.IsInstanceFunctionType,
@@ -5569,7 +5569,7 @@ var NativeGetTypeFunction = NativeFunction(
 )
 
 func getTypeFunction(context FunctionCreationContext, self Value) FunctionValue {
-	return NewBoundHostFunctionValueFromNativeFunction(
+	return NewBoundHostFunctionValue(
 		context,
 		self,
 		sema.GetTypeFunctionType,
@@ -6092,7 +6092,7 @@ func capabilityBorrowFunction(
 	capabilityBorrowType *sema.ReferenceType,
 ) FunctionValue {
 
-	return NewBoundHostFunctionValueFromNativeFunction(
+	return NewBoundHostFunctionValue(
 		context,
 		capabilityValue,
 		sema.CapabilityTypeBorrowFunctionType(capabilityBorrowType),
@@ -6204,7 +6204,7 @@ func capabilityCheckFunction(
 	capabilityBorrowType *sema.ReferenceType,
 ) FunctionValue {
 
-	return NewBoundHostFunctionValueFromNativeFunction(
+	return NewBoundHostFunctionValue(
 		context,
 		capabilityValue,
 		sema.CapabilityTypeCheckFunctionType(capabilityBorrowType),

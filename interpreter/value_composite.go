@@ -1748,7 +1748,7 @@ func (v *CompositeValue) GetAttachments(context AttachmentContext, locationRange
 
 func (v *CompositeValue) forEachAttachmentFunction(context FunctionCreationContext, locationRange LocationRange) Value {
 	compositeType := MustSemaTypeOfValue(v, context).(*sema.CompositeType)
-	return NewBoundHostFunctionValueFromNativeFunction(
+	return NewBoundHostFunctionValue(
 		context,
 		v,
 		sema.CompositeForEachAttachmentFunctionType(

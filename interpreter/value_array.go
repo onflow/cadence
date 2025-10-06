@@ -881,7 +881,7 @@ func (v *ArrayValue) GetMethod(
 ) FunctionValue {
 	switch name {
 	case sema.ArrayTypeAppendFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayAppendFunctionType(
@@ -891,7 +891,7 @@ func (v *ArrayValue) GetMethod(
 		)
 
 	case sema.ArrayTypeAppendAllFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayAppendAllFunctionType(
@@ -901,7 +901,7 @@ func (v *ArrayValue) GetMethod(
 		)
 
 	case sema.ArrayTypeConcatFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayConcatFunctionType(
@@ -911,7 +911,7 @@ func (v *ArrayValue) GetMethod(
 		)
 
 	case sema.ArrayTypeInsertFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayInsertFunctionType(
@@ -921,7 +921,7 @@ func (v *ArrayValue) GetMethod(
 		)
 
 	case sema.ArrayTypeRemoveFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayRemoveFunctionType(
@@ -931,7 +931,7 @@ func (v *ArrayValue) GetMethod(
 		)
 
 	case sema.ArrayTypeRemoveFirstFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayRemoveFirstFunctionType(
@@ -941,7 +941,7 @@ func (v *ArrayValue) GetMethod(
 		)
 
 	case sema.ArrayTypeRemoveLastFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayRemoveLastFunctionType(
@@ -951,7 +951,7 @@ func (v *ArrayValue) GetMethod(
 		)
 
 	case sema.ArrayTypeFirstIndexFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayFirstIndexFunctionType(
@@ -961,7 +961,7 @@ func (v *ArrayValue) GetMethod(
 		)
 
 	case sema.ArrayTypeContainsFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayContainsFunctionType(
@@ -971,7 +971,7 @@ func (v *ArrayValue) GetMethod(
 		)
 
 	case sema.ArrayTypeSliceFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArraySliceFunctionType(
@@ -981,7 +981,7 @@ func (v *ArrayValue) GetMethod(
 		)
 
 	case sema.ArrayTypeReverseFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayReverseFunctionType(
@@ -991,7 +991,7 @@ func (v *ArrayValue) GetMethod(
 		)
 
 	case sema.ArrayTypeFilterFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayFilterFunctionType(
@@ -1002,7 +1002,7 @@ func (v *ArrayValue) GetMethod(
 		)
 
 	case sema.ArrayTypeMapFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayMapFunctionType(
@@ -1013,7 +1013,7 @@ func (v *ArrayValue) GetMethod(
 		)
 
 	case sema.ArrayTypeToVariableSizedFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayToVariableSizedFunctionType(
@@ -1023,7 +1023,7 @@ func (v *ArrayValue) GetMethod(
 		)
 
 	case sema.ArrayTypeToConstantSizedFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayToConstantSizedFunctionType(

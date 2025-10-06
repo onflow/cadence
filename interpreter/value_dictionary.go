@@ -854,7 +854,7 @@ func (v *DictionaryValue) GetMethod(
 ) FunctionValue {
 	switch name {
 	case sema.DictionaryTypeRemoveFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.DictionaryRemoveFunctionType(
@@ -864,7 +864,7 @@ func (v *DictionaryValue) GetMethod(
 		)
 
 	case sema.DictionaryTypeInsertFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.DictionaryInsertFunctionType(
@@ -874,7 +874,7 @@ func (v *DictionaryValue) GetMethod(
 		)
 
 	case sema.DictionaryTypeContainsKeyFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.DictionaryContainsKeyFunctionType(
@@ -883,7 +883,7 @@ func (v *DictionaryValue) GetMethod(
 			NativeDictionaryContainsKeyFunction,
 		)
 	case sema.DictionaryTypeForEachKeyFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.DictionaryForEachKeyFunctionType(

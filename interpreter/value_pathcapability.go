@@ -126,7 +126,7 @@ func (v *PathCapabilityValue) newBorrowFunction(
 	context FunctionCreationContext,
 	borrowType *sema.ReferenceType,
 ) BoundFunctionValue {
-	return NewBoundHostFunctionValueFromNativeFunction(
+	return NewBoundHostFunctionValue(
 		context,
 		v,
 		sema.CapabilityTypeBorrowFunctionType(borrowType),
@@ -147,7 +147,7 @@ func (v *PathCapabilityValue) newCheckFunction(
 	context FunctionCreationContext,
 	borrowType *sema.ReferenceType,
 ) BoundFunctionValue {
-	return NewBoundHostFunctionValueFromNativeFunction(
+	return NewBoundHostFunctionValue(
 		context,
 		v,
 		sema.CapabilityTypeCheckFunctionType(borrowType),

@@ -346,7 +346,7 @@ func (v *AccountCapabilityControllerValue) newNativeHostFunctionValue(
 	f NativeFunction,
 ) FunctionValue {
 	return deletionCheckedFunctionValue{
-		FunctionValue: NewBoundHostFunctionValueFromNativeFunction(
+		FunctionValue: NewBoundHostFunctionValue(
 			context,
 			v,
 			funcType,

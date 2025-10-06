@@ -122,7 +122,7 @@ func newInterpreterDeployedContractPublicTypesFunctionValue(
 	var publicTypes *ArrayValue
 
 	address := addressValue.ToAddress()
-	return NewBoundHostFunctionValueFromNativeFunction(
+	return NewBoundHostFunctionValue(
 		context,
 		self,
 		sema.DeployedContractTypePublicTypesFunctionType,

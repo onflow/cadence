@@ -210,7 +210,6 @@ func NewUnmeteredStaticHostFunctionValue(
 
 // NewStaticHostFunctionValue constructs a host function that is not bounded to any value.
 // For constructing a function bound to a value (e.g: a member function), the output of this method
-// must be wrapped with a bound-function, or `NewBoundHostFunctionValue` method must be used.
 func NewStaticHostFunctionValue(
 	gauge common.MemoryGauge,
 	funcType *sema.FunctionType,

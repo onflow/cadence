@@ -9349,7 +9349,13 @@ func TestInjectedContract(t *testing.T) {
 	cValue := vm.NewNativeFunctionValue(
 		"B.c",
 		cType,
-		func(context interpreter.NativeFunctionContext, _ interpreter.LocationRange, _ interpreter.TypeParameterGetter, receiver interpreter.Value, args ...interpreter.Value) interpreter.Value {
+		func(
+			context interpreter.NativeFunctionContext,
+			_ interpreter.LocationRange,
+			_ interpreter.TypeParameterGetter,
+			receiver interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
 			assert.Same(t, bValue, receiver)
 
 			require.Len(t, args, 1)

@@ -249,7 +249,7 @@ func (v CharacterValue) GetMethod(
 ) FunctionValue {
 	switch name {
 	case sema.ToStringFunctionName:
-		return NewBoundHostFunctionValueFromNativeFunction(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ToStringFunctionType,
