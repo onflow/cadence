@@ -82,16 +82,16 @@ test-compatibility-check:
 
 # Testing
 
-TESTPKGS := $(shell go list ./... | grep -Ev '/cmd|/analysis|/tools')
-COVERPKGS := $(shell echo $(TESTPKGS) | tr ' ' ',')
+TEST_PKGS := $(shell go list ./... | grep -Ev '/cmd|/analysis|/tools')
+COVER_PKGS := $(shell echo $(TEST_PKGS) | tr ' ' ',')
 
 .PHONY: test
 test: test-with-compiler test-with-tracing
-	go test $(TESTPKGS)
+	go test $(TEST_PKGS)
 
 .PHONY: test-with-tracing
 test-with-tracing:
-	go test -tags cadence_tracing $(TESTPKGS)
+	go test -tags cadence_tracing $(TEST_PKGS)
 
 .PHONY: ci
 ci: test-with-coverage test-with-compiler smoke-test
@@ -101,7 +101,7 @@ ci-with-tracing: test-with-tracing test-with-compiler-and-tracing
 
 .PHONY: test-with-coverage
 test-with-coverage:
-	go test -coverprofile=coverage.txt -covermode=atomic -race -coverpkg $(COVERPKGS) $(TESTPKGS)
+	go test -coverprofile=coverage.txt -covermode=atomic -race -coverpkg $(COVER_PKGS) $(TEST_PKGS)
 	# remove coverage of empty functions from report
 	sed -i -e 's/^.* 0 0$$//' coverage.txt
 
@@ -121,11 +121,12 @@ test-with-compiler-and-tracing:
 
 BENCH_REPS ?= 2
 BENCH_TIME ?= 2s
+BENCH_PKGS ?= ./...
 
 .PHONY: bench
 bench:
 	for i in {1..$(BENCH_REPS)}; do \
-		go test ./... -run=^$$ -bench=. -benchmem -shuffle=on -benchtime=$(BENCH_TIME); \
+		go test $(BENCH_PKGS) -run=^$$ -bench=. -benchmem -shuffle=on -benchtime=$(BENCH_TIME); \
 	done
 
 # Linting
@@ -219,3 +220,9 @@ release:
 	@(VERSIONED_FILES="version.go \
 	npm-packages/cadence-parser/package.json" \
 	bash ./bump-version.sh $(bump))
+
+# Tools
+
+.PHONY: install-benchstat
+install-benchstat:
+	go install golang.org/x/perf/cmd/benchstat@7e13e04d9366

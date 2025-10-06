@@ -24,20 +24,13 @@ jobs:
     name: Performance regression check
     runs-on: ubuntu-latest
     steps:
-      - name: Set benchmark repetitions
-        # reducing repetition will speed up execution,
+      - name: Set benchmark settings
+        # reducing repetition and time will speed up execution,
         # but will be more inaccurate at detecting change
-        run: echo "benchmark_repetitions=2" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "benchmark_repetitions=2" >> "$GITHUB_OUTPUT"
+          echo "benchmark_time=2s" >> "$GITHUB_OUTPUT"
         id: settings
-
-      - name: Set benchmark time
-        # reducing time will speed up execution,
-        # but will be more inaccurate at detecting change
-        run: echo "benchmark_time=2s" >> "$GITHUB_OUTPUT"
-        id: settings
-
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install wabt
 
       - name: Checkout
         uses: actions/checkout@v3
@@ -66,10 +59,11 @@ jobs:
       - name: Use benchstat for comparison
         run: |
           export PATH=$PATH:$(go env GOPATH)/bin
-          go install golang.org/x/perf/cmd/benchstat@91a04616dc65ba76dbe9e5cf746b923b1402d303
+          make install-benchstat
           echo "BENCHSTAT<<EOF" >> $GITHUB_ENV
           echo "$(benchstat -html -sort name old.txt new.txt | sed  '/<title/,/<\/style>/d' | sed 's/<!doctype html>//g')" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
+
       - name: Find existing comment on PR
         uses: peter-evans/find-comment@v1
         id: fc
