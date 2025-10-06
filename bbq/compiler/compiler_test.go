@@ -5204,6 +5204,8 @@ func TestCompileForce(t *testing.T) {
 
 	t.Run("optional", func(t *testing.T) {
 
+		t.Parallel()
+
 		checker, err := ParseAndCheck(t, `
             fun test(x: Int?): Int {
                 return x!
@@ -5237,6 +5239,7 @@ func TestCompileForce(t *testing.T) {
 	})
 
 	t.Run("non-optional", func(t *testing.T) {
+		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
             fun test(x: Int): Int {
@@ -9780,7 +9783,12 @@ func TestCompileImportAlias(t *testing.T) {
 
 	t.Run("simple alias", func(t *testing.T) {
 
-		importLocation := common.NewAddressLocation(nil, common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}, "")
+		t.Parallel()
+
+		importLocation := common.AddressLocation{
+			Address: common.MustBytesToAddress([]byte{0x1}),
+			Name:    "Foo",
+		}
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
@@ -9812,7 +9820,9 @@ func TestCompileImportAlias(t *testing.T) {
             `,
 			ParseAndCheckOptions{
 				CheckerConfig: &sema.Config{
-					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+					LocationHandler: SingleIdentifierLocationResolver(t),
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						require.Equal(t, importedChecker.Location, location)
 						return sema.ElaborationImport{
 							Elaboration: importedChecker.Elaboration,
 						}, nil
@@ -9827,6 +9837,7 @@ func TestCompileImportAlias(t *testing.T) {
 			checker.Location,
 		)
 		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			require.Equal(t, importLocation, location)
 			return importedProgram
 		}
 
@@ -9877,7 +9888,12 @@ func TestCompileImportAlias(t *testing.T) {
 
 	t.Run("interface", func(t *testing.T) {
 
-		importLocation := common.NewAddressLocation(nil, common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}, "")
+		t.Parallel()
+
+		importLocation := common.AddressLocation{
+			Address: common.MustBytesToAddress([]byte{0x1}),
+			Name:    "FooInterface",
+		}
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
@@ -9913,7 +9929,9 @@ func TestCompileImportAlias(t *testing.T) {
             `,
 			ParseAndCheckOptions{
 				CheckerConfig: &sema.Config{
-					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+					LocationHandler: SingleIdentifierLocationResolver(t),
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						require.Equal(t, importedChecker.Location, location)
 						return sema.ElaborationImport{
 							Elaboration: importedChecker.Elaboration,
 						}, nil
