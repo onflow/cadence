@@ -99,6 +99,8 @@ func parsePredicate(rule any) (Predicate, error) {
 		switch v {
 		case "always":
 			return AlwaysPredicate{}, nil
+		case "never":
+			return NeverPredicate{}, nil
 		default:
 			return nil, fmt.Errorf("unsupported string rule: %s", v)
 		}

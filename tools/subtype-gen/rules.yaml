@@ -194,10 +194,11 @@ rules:
           - equals:
               source: sub.LegacyType
               target: super
-        - not:
-            mustType:
-              source: sub
-              type: CompositeType
+        - and:
+            - mustType:
+                source: sub
+                type: CompositeType
+            - never
 
   - super: InterfaceType
     predicate:

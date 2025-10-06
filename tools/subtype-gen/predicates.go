@@ -28,6 +28,11 @@ type AlwaysPredicate struct{}
 
 func (a AlwaysPredicate) GetType() string { return "always" }
 
+// NeverPredicate represents an never-true condition
+type NeverPredicate struct{}
+
+func (a NeverPredicate) GetType() string { return "never" }
+
 // IsResourcePredicate represents a resource type check
 type IsResourcePredicate struct {
 	Expression Expression `yaml:"isResource"`

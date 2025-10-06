@@ -723,6 +723,11 @@ func (gen *SubTypeCheckGenerator) generatePredicateInternal(predicate Predicate)
 			gen.booleanExpression(true),
 		}
 
+	case NeverPredicate:
+		return []dst.Node{
+			gen.booleanExpression(false),
+		}
+
 	case IsResourcePredicate:
 		return gen.isResourcePredicate(p)
 
@@ -1217,21 +1222,6 @@ func (gen *SubTypeCheckGenerator) typeAssertion(typeAssertion TypeAssertionPredi
 
 	source := typeAssertion.Source
 
-	generateCaseForTypeAssertion := func() *dst.CaseClause {
-		// Generate case condition
-		caseExpr := gen.parseCaseCondition(typeAssertion.Type)
-
-		return &dst.CaseClause{
-			List: []dst.Expr{caseExpr},
-			Decs: dst.CaseClauseDecorations{
-				NodeDecs: dst.NodeDecs{
-					Before: dst.NewLine,
-					After:  dst.EmptyLine,
-				},
-			},
-		}
-	}
-
 	sourceExpr := gen.expression(source)
 
 	// A type-switch is created for the source-expression.
@@ -1245,6 +1235,26 @@ func (gen *SubTypeCheckGenerator) typeAssertion(typeAssertion TypeAssertionPredi
 	)
 	// Note: Popping scope must be done after visiting all nested predicates.
 	// Therefore, it is done in
+
+	// Generate case condition
+	caseExpr := gen.parseCaseCondition(typeAssertion.Type)
+	caseClause := &dst.CaseClause{
+		List: []dst.Expr{caseExpr},
+		Decs: dst.CaseClauseDecorations{
+			NodeDecs: dst.NodeDecs{
+				Before: dst.NewLine,
+				After:  dst.EmptyLine,
+			},
+		},
+	}
+
+	caseClauses := []dst.Stmt{
+		caseClause,
+	}
+
+	if gen.negate {
+		panic(fmt.Errorf("negating a type assertion is not supported yet"))
+	}
 
 	statement := &dst.TypeSwitchStmt{
 		Assign: &dst.AssignStmt{
@@ -1260,9 +1270,7 @@ func (gen *SubTypeCheckGenerator) typeAssertion(typeAssertion TypeAssertionPredi
 			},
 		},
 		Body: &dst.BlockStmt{
-			List: []dst.Stmt{
-				generateCaseForTypeAssertion(),
-			},
+			List: caseClauses,
 		},
 		Decs: dst.TypeSwitchStmtDecorations{
 			NodeDecs: dst.NodeDecs{
