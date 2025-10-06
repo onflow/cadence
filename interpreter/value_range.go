@@ -125,6 +125,30 @@ func NewInclusiveRangeValueWithStep(
 	)
 }
 
+var UnifiedInclusiveRangeContainsFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		rangeValue := AssertValueOfType[*CompositeValue](receiver)
+		needleInteger := convertAndAssertIntegerValue(args[0])
+		rangeType, ok := rangeValue.StaticType(context).(InclusiveRangeStaticType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		return InclusiveRangeContains(
+			rangeValue,
+			rangeType,
+			context,
+			locationRange,
+			needleInteger,
+		)
+	},
+)
+
 func createInclusiveRange(
 	context MemberAccessibleContext,
 	locationRange LocationRange,
@@ -164,23 +188,13 @@ func createInclusiveRange(
 
 	rangeValue.Functions.Set(
 		sema.InclusiveRangeTypeContainsFunctionName,
-		NewBoundHostFunctionValue(
+		NewUnifiedBoundHostFunctionValue(
 			context,
 			rangeValue,
 			sema.InclusiveRangeContainsFunctionType(
 				rangeSemaType.MemberType,
 			),
-			func(rangeValue *CompositeValue, invocation Invocation) Value {
-				needleInteger := convertAndAssertIntegerValue(invocation.Arguments[0])
-
-				return InclusiveRangeContains(
-					rangeValue,
-					rangeType,
-					invocation.InvocationContext,
-					invocation.LocationRange,
-					needleInteger,
-				)
-			},
+			UnifiedInclusiveRangeContainsFunction,
 		),
 	)
 

@@ -22,8 +22,6 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -80,64 +78,49 @@ type BlockAtHeightProvider interface {
 	GetBlockAtHeight(height uint64) (block Block, exists bool, err error)
 }
 
-func NewInterpreterGetBlockFunction(provider BlockAtHeightProvider) StandardLibraryValue {
-	return NewInterpreterStandardLibraryStaticFunction(
-		getBlockFunctionName,
-		getBlockFunctionType,
-		getBlockFunctionDocString,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			heightValue, ok := invocation.Arguments[0].(interpreter.UInt64Value)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+func UnifiedGetBlockFunction(provider BlockAtHeightProvider) interpreter.UnifiedNativeFunction {
+	return interpreter.UnifiedNativeFunction(
+		func(
+			context interpreter.UnifiedFunctionContext,
+			locationRange interpreter.LocationRange,
+			typeParameterGetter interpreter.TypeParameterGetter,
+			receiver interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
+			heightValue := interpreter.AssertValueOfType[interpreter.UInt64Value](args[0])
 
-			memoryGauge := invocation.InvocationContext
-			locationRange := invocation.LocationRange
-
-			block, exists := getBlockAtHeight(
-				provider,
-				uint64(heightValue),
-			)
-			if !exists {
-				return interpreter.Nil
-			}
-
-			blockValue := NewBlockValue(
-				memoryGauge,
-				locationRange,
-				block,
-			)
-			return interpreter.NewSomeValueNonCopying(memoryGauge, blockValue)
-		},
-	)
-}
-
-func NewVMGetBlockFunction(provider BlockAtHeightProvider) StandardLibraryValue {
-	return NewVMStandardLibraryStaticFunction(
-		getBlockFunctionName,
-		getBlockFunctionType,
-		getBlockFunctionDocString,
-		func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
-			heightValue, ok := arguments[0].(interpreter.UInt64Value)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			block, exists := getBlockAtHeight(
-				provider,
-				uint64(heightValue),
-			)
+			block, exists := getBlockAtHeight(provider, uint64(heightValue))
 			if !exists {
 				return interpreter.Nil
 			}
 
 			blockValue := NewBlockValue(
 				context,
-				interpreter.EmptyLocationRange,
+				locationRange,
 				block,
 			)
 			return interpreter.NewSomeValueNonCopying(context, blockValue)
 		},
+	)
+}
+
+func NewInterpreterGetBlockFunction(provider BlockAtHeightProvider) StandardLibraryValue {
+	return NewUnifiedStandardLibraryStaticFunction(
+		getBlockFunctionName,
+		getBlockFunctionType,
+		getBlockFunctionDocString,
+		UnifiedGetBlockFunction(provider),
+		false,
+	)
+}
+
+func NewVMGetBlockFunction(provider BlockAtHeightProvider) StandardLibraryValue {
+	return NewUnifiedStandardLibraryStaticFunction(
+		getBlockFunctionName,
+		getBlockFunctionType,
+		getBlockFunctionDocString,
+		UnifiedGetBlockFunction(provider),
+		true,
 	)
 }
 
@@ -227,40 +210,15 @@ type CurrentBlockProvider interface {
 	GetCurrentBlockHeight() (uint64, error)
 }
 
-func NewInterpreterGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryValue {
-	return NewInterpreterStandardLibraryStaticFunction(
-		getCurrentBlockFunctionName,
-		getCurrentBlockFunctionType,
-		getCurrentBlockFunctionDocString,
-		func(invocation interpreter.Invocation) interpreter.Value {
-
-			height, err := provider.GetCurrentBlockHeight()
-			if err != nil {
-				panic(err)
-			}
-
-			block, exists := getBlockAtHeight(
-				provider,
-				height,
-			)
-			if !exists {
-				panic(errors.NewUnexpectedError("cannot get current block"))
-			}
-
-			memoryGauge := invocation.InvocationContext
-			locationRange := invocation.LocationRange
-
-			return NewBlockValue(memoryGauge, locationRange, block)
-		},
-	)
-}
-
-func NewVMGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryValue {
-	return NewVMStandardLibraryStaticFunction(
-		getCurrentBlockFunctionName,
-		getCurrentBlockFunctionType,
-		getCurrentBlockFunctionDocString,
-		func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
+func UnifiedGetCurrentBlockFunction(provider CurrentBlockProvider) interpreter.UnifiedNativeFunction {
+	return interpreter.UnifiedNativeFunction(
+		func(
+			context interpreter.UnifiedFunctionContext,
+			locationRange interpreter.LocationRange,
+			typeParameterGetter interpreter.TypeParameterGetter,
+			receiver interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
 			height, err := provider.GetCurrentBlockHeight()
 			if err != nil {
 				panic(err)
@@ -276,9 +234,29 @@ func NewVMGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibrary
 
 			return NewBlockValue(
 				context,
-				interpreter.EmptyLocationRange,
+				locationRange,
 				block,
 			)
 		},
+	)
+}
+
+func NewInterpreterGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryValue {
+	return NewUnifiedStandardLibraryStaticFunction(
+		getCurrentBlockFunctionName,
+		getCurrentBlockFunctionType,
+		getCurrentBlockFunctionDocString,
+		UnifiedGetCurrentBlockFunction(provider),
+		false,
+	)
+}
+
+func NewVMGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryValue {
+	return NewUnifiedStandardLibraryStaticFunction(
+		getCurrentBlockFunctionName,
+		getCurrentBlockFunctionType,
+		getCurrentBlockFunctionDocString,
+		UnifiedGetCurrentBlockFunction(provider),
+		true,
 	)
 }

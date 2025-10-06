@@ -19,10 +19,7 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
-	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -34,90 +31,37 @@ func init() {
 
 	registerBuiltinTypeBoundFunction(
 		storageCapabilityControllerTypeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StorageCapabilityControllerTypeSetTagFunctionName,
 			sema.StorageCapabilityControllerTypeSetTagFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, args ...Value) Value {
-
-				newTagValue, ok := args[0].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				v := getCheckedStorageCapabilityControllerReceiver(receiver)
-
-				v.SetTag(context, newTagValue)
-
-				return interpreter.Void
-			},
+			interpreter.NewUnifiedDeletionCheckedStorageCapabilityControllerFunction(interpreter.UnifiedStorageCapabilityControllerSetTagFunction),
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		storageCapabilityControllerTypeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StorageCapabilityControllerTypeDeleteFunctionName,
 			sema.StorageCapabilityControllerTypeDeleteFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, args ...Value) Value {
-
-				v := getCheckedStorageCapabilityControllerReceiver(receiver)
-
-				v.Delete(context, EmptyLocationRange)
-
-				v.SetDeleted()
-
-				return interpreter.Void
-			},
+			interpreter.NewUnifiedDeletionCheckedStorageCapabilityControllerFunction(interpreter.UnifiedStorageCapabilityControllerDeleteFunction),
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		storageCapabilityControllerTypeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StorageCapabilityControllerTypeTargetFunctionName,
 			sema.StorageCapabilityControllerTypeTargetFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, args ...Value) Value {
-
-				v := getCheckedStorageCapabilityControllerReceiver(receiver)
-
-				return v.TargetPath
-			},
+			interpreter.NewUnifiedDeletionCheckedStorageCapabilityControllerFunction(interpreter.UnifiedStorageCapabilityControllerTargetFunction),
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		storageCapabilityControllerTypeName,
-		NewNativeFunctionValue(
+		NewUnifiedNativeFunctionValue(
 			sema.StorageCapabilityControllerTypeRetargetFunctionName,
 			sema.StorageCapabilityControllerTypeRetargetFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, args ...Value) Value {
-
-				// Get path argument
-
-				newTargetPathValue, ok := args[0].(interpreter.PathValue)
-				if !ok || newTargetPathValue.Domain != common.PathDomainStorage {
-					panic(errors.NewUnreachableError())
-				}
-
-				v := getCheckedStorageCapabilityControllerReceiver(receiver)
-
-				v.SetTarget(context, EmptyLocationRange, newTargetPathValue)
-				v.TargetPath = newTargetPathValue
-
-				return interpreter.Void
-			},
+			interpreter.NewUnifiedDeletionCheckedStorageCapabilityControllerFunction(interpreter.UnifiedStorageCapabilityControllerRetargetFunction),
 		),
 	)
-}
-
-func getCheckedStorageCapabilityControllerReceiver(receiver Value) *interpreter.StorageCapabilityControllerValue {
-	v, ok := receiver.(*interpreter.StorageCapabilityControllerValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	// NOTE: check if controller is already deleted
-	v.CheckDeleted()
-
-	return v
 }

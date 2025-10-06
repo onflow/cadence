@@ -233,24 +233,11 @@ func (v TypeValue) GetMethod(
 ) FunctionValue {
 	switch name {
 	case sema.MetaTypeIsSubtypeFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.MetaTypeIsSubtypeFunctionType,
-			func(typeValue TypeValue, invocation Invocation) Value {
-				invocationContext := invocation.InvocationContext
-
-				otherTypeValue, ok := invocation.Arguments[0].(TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return MetaTypeIsSubType(
-					invocationContext,
-					typeValue,
-					otherTypeValue,
-				)
-			},
+			UnifiedMetaTypeIsSubtypeFunction,
 		)
 	}
 
@@ -369,3 +356,19 @@ func (v TypeValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []by
 	copy(buf[1:], typeID)
 	return buf
 }
+
+// Unified type functions
+
+var UnifiedMetaTypeIsSubtypeFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		typeValue := AssertValueOfType[TypeValue](receiver)
+		otherTypeValue := AssertValueOfType[TypeValue](args[0])
+		return MetaTypeIsSubType(context, typeValue, otherTypeValue)
+	},
+)

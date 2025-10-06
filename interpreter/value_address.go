@@ -168,32 +168,19 @@ func (v AddressValue) GetMethod(
 	switch name {
 
 	case sema.ToStringFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.ToStringFunctionType,
-			func(v AddressValue, invocation Invocation) Value {
-				invocationContext := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				return AddressValueToStringFunction(
-					invocationContext,
-					v,
-					locationRange,
-				)
-			},
+			UnifiedAddressToStringFunction,
 		)
 
 	case sema.AddressTypeToBytesFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.AddressTypeToBytesFunctionType,
-			func(v AddressValue, invocation Invocation) Value {
-				interpreter := invocation.InvocationContext
-				address := common.Address(v)
-				return ByteSliceToByteArrayValue(interpreter, address[:])
-			},
+			UnifiedAddressToBytesFunction,
 		)
 	}
 
@@ -302,3 +289,30 @@ func AddressValueFromString(gauge common.MemoryGauge, string *StringValue) Value
 
 	return NewSomeValueNonCopying(gauge, NewAddressValue(gauge, addr))
 }
+
+// Unified address functions
+var UnifiedAddressToStringFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		address := AssertValueOfType[AddressValue](receiver)
+		return AddressValueToStringFunction(context, address, locationRange)
+	},
+)
+
+var UnifiedAddressToBytesFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		address := common.Address(AssertValueOfType[AddressValue](receiver))
+		return ByteSliceToByteArrayValue(context, address[:])
+	},
+)

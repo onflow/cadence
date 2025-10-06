@@ -19,7 +19,6 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -31,7 +30,7 @@ func init() {
 
 	registerBuiltinTypeBoundFunction(
 		commons.TypeQualifierOptional,
-		NewNativeFunctionValueWithDerivedType(
+		NewUnifiedNativeFunctionValueWithDerivedType(
 			sema.OptionalTypeMapFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				optionalValue := receiver.(interpreter.OptionalValue)
@@ -41,23 +40,7 @@ func init() {
 					innerValueType,
 				)
 			},
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				optionalValue := receiver.(interpreter.OptionalValue)
-				innerValueType := optionalValue.InnerValueType(context)
-
-				transformFunction := arguments[0].(FunctionValue)
-
-				transformFunctionType := transformFunction.FunctionType(context)
-
-				return interpreter.OptionalValueMapFunction(
-					context,
-					optionalValue,
-					transformFunctionType,
-					transformFunction,
-					innerValueType,
-					EmptyLocationRange,
-				)
-			},
+			interpreter.UnifiedOptionalMapFunction,
 		),
 	)
 }

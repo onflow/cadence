@@ -200,18 +200,6 @@ func NewNativeFunctionValue(
 	}
 }
 
-func NewNativeFunctionValueWithDerivedType(
-	name string,
-	typeGetter func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType,
-	function NativeFunction,
-) *NativeFunctionValue {
-	return &NativeFunctionValue{
-		Name:               name,
-		Function:           function,
-		functionTypeGetter: typeGetter,
-	}
-}
-
 var _ Value = &NativeFunctionValue{}
 var _ FunctionValue = &NativeFunctionValue{}
 var _ interpreter.MemberAccessibleValue = &NativeFunctionValue{}

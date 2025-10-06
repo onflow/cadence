@@ -380,156 +380,75 @@ func (v *StringValue) GetMethod(
 ) FunctionValue {
 	switch name {
 	case sema.StringTypeConcatFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeConcatFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				invocationContext := invocation.InvocationContext
-				other := invocation.Arguments[0]
-				return StringConcat(
-					invocationContext,
-					v,
-					other,
-					locationRange,
-				)
-			},
+			UnifiedStringConcatFunction,
 		)
 
 	case sema.StringTypeSliceFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeSliceFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				from, ok := invocation.Arguments[0].(IntValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				to, ok := invocation.Arguments[1].(IntValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.Slice(from, to, invocation.LocationRange)
-			},
+			UnifiedStringSliceFunction,
 		)
 
 	case sema.StringTypeContainsFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeContainsFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				other, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.Contains(invocation.InvocationContext, other)
-			},
+			UnifiedStringContainsFunction,
 		)
 
 	case sema.StringTypeIndexFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeIndexFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				other, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.IndexOf(invocation.InvocationContext, other)
-			},
+			UnifiedStringIndexFunction,
 		)
 
 	case sema.StringTypeCountFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeIndexFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				other, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.Count(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-					other,
-				)
-			},
+			UnifiedStringCountFunction,
 		)
 
 	case sema.StringTypeDecodeHexFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeDecodeHexFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				return v.DecodeHex(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-				)
-			},
+			UnifiedStringDecodeHexFunction,
 		)
 
 	case sema.StringTypeToLowerFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeToLowerFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				return v.ToLower(invocation.InvocationContext)
-			},
+			UnifiedStringToLowerFunction,
 		)
 
 	case sema.StringTypeSplitFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeSplitFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				separator, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.Split(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-					separator,
-				)
-			},
+			UnifiedStringSplitFunction,
 		)
 
 	case sema.StringTypeReplaceAllFunctionName:
-		return NewBoundHostFunctionValue(
+		return NewUnifiedBoundHostFunctionValue(
 			context,
 			v,
 			sema.StringTypeReplaceAllFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				original, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				replacement, ok := invocation.Arguments[1].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.ReplaceAll(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-					original,
-					replacement,
-				)
-			},
+			UnifiedStringReplaceAllFunction,
 		)
 	}
 
@@ -1150,21 +1069,63 @@ func (*StringValueIterator) ValueID() (atree.ValueID, bool) {
 	return atree.ValueID{}, false
 }
 
-func stringFunctionEncodeHex(invocation Invocation) Value {
-	argument, ok := invocation.Arguments[0].(*ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
+var UnifiedStringEncodeHexFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		argument := AssertValueOfType[*ArrayValue](args[0])
+		return StringFunctionEncodeHex(context, argument, locationRange)
+	},
+)
 
-	invocationContext := invocation.InvocationContext
-	locationRange := invocation.LocationRange
+var UnifiedStringFromUtf8Function = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		argument := AssertValueOfType[*ArrayValue](args[0])
+		return StringFunctionFromUtf8(context, argument, locationRange)
+	},
+)
 
-	return StringFunctionEncodeHex(
-		invocationContext,
-		argument,
-		locationRange,
-	)
-}
+var UnifiedStringFromCharactersFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		argument := AssertValueOfType[*ArrayValue](args[0])
+		return StringFunctionFromCharacters(context, argument, locationRange)
+	},
+)
+
+var UnifiedStringJoinFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		stringArray := AssertValueOfType[*ArrayValue](args[0])
+		separator := AssertValueOfType[*StringValue](args[1])
+		return StringFunctionJoin(
+			context,
+			stringArray,
+			separator,
+			locationRange,
+		)
+	},
+)
 
 func StringFunctionEncodeHex(
 	invocationContext InvocationContext,
@@ -1181,22 +1142,6 @@ func StringFunctionEncodeHex(
 			bytes, _ := ByteArrayValueToByteSlice(invocationContext, argument, locationRange)
 			return hex.EncodeToString(bytes)
 		},
-	)
-}
-
-func stringFunctionFromUtf8(invocation Invocation) Value {
-	argument, ok := invocation.Arguments[0].(*ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	invocationContext := invocation.InvocationContext
-	locationRange := invocation.LocationRange
-
-	return StringFunctionFromUtf8(
-		invocationContext,
-		argument,
-		locationRange,
 	)
 }
 
@@ -1223,22 +1168,6 @@ func StringFunctionFromUtf8(
 		NewStringValue(invocationContext, memoryUsage, func() string {
 			return string(buf)
 		}),
-	)
-}
-
-func stringFunctionFromCharacters(invocation Invocation) Value {
-	argument, ok := invocation.Arguments[0].(*ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	invocationContext := invocation.InvocationContext
-	locationRange := invocation.LocationRange
-
-	return StringFunctionFromCharacters(
-		invocationContext,
-		argument,
-		locationRange,
 	)
 }
 
@@ -1272,27 +1201,6 @@ func StringFunctionFromCharacters(
 	)
 
 	return NewUnmeteredStringValue(builder.String())
-}
-
-func stringFunctionJoin(invocation Invocation) Value {
-	stringArray, ok := invocation.Arguments[0].(*ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	invocationContext := invocation.InvocationContext
-
-	separator, ok := invocation.Arguments[1].(*StringValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	return StringFunctionJoin(
-		invocationContext,
-		stringArray,
-		separator,
-		invocation.LocationRange,
-	)
 }
 
 func StringFunctionJoin(
@@ -1364,11 +1272,9 @@ func StringFunctionJoin(
 // stringFunction is the `String` function. It is stateless, hence it can be re-used across interpreters.
 // Type bound functions are static functions.
 var stringFunction = func() Value {
-	functionValue := NewUnmeteredStaticHostFunctionValue(
+	functionValue := NewUnmeteredUnifiedStaticHostFunctionValue(
 		sema.StringFunctionType,
-		func(invocation Invocation) Value {
-			return EmptyString
-		},
+		UnifiedStringFunction,
 	)
 
 	addMember := func(name string, value Value) {
@@ -1382,35 +1288,173 @@ var stringFunction = func() Value {
 
 	addMember(
 		sema.StringTypeEncodeHexFunctionName,
-		NewUnmeteredStaticHostFunctionValue(
+		NewUnmeteredUnifiedStaticHostFunctionValue(
 			sema.StringTypeEncodeHexFunctionType,
-			stringFunctionEncodeHex,
+			UnifiedStringEncodeHexFunction,
 		),
 	)
 
 	addMember(
 		sema.StringTypeFromUtf8FunctionName,
-		NewUnmeteredStaticHostFunctionValue(
+		NewUnmeteredUnifiedStaticHostFunctionValue(
 			sema.StringTypeFromUtf8FunctionType,
-			stringFunctionFromUtf8,
+			UnifiedStringFromUtf8Function,
 		),
 	)
 
 	addMember(
 		sema.StringTypeFromCharactersFunctionName,
-		NewUnmeteredStaticHostFunctionValue(
+		NewUnmeteredUnifiedStaticHostFunctionValue(
 			sema.StringTypeFromCharactersFunctionType,
-			stringFunctionFromCharacters,
+			UnifiedStringFromCharactersFunction,
 		),
 	)
 
 	addMember(
 		sema.StringTypeJoinFunctionName,
-		NewUnmeteredStaticHostFunctionValue(
+		NewUnmeteredUnifiedStaticHostFunctionValue(
 			sema.StringTypeJoinFunctionType,
-			stringFunctionJoin,
+			UnifiedStringJoinFunction,
 		),
 	)
 
 	return functionValue
 }()
+
+// Unified string functions
+
+var UnifiedStringConcatFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		this := AssertValueOfType[*StringValue](receiver)
+		other := args[0]
+		return StringConcat(
+			context,
+			this,
+			other,
+			locationRange,
+		)
+	},
+)
+
+var UnifiedStringSliceFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		from := AssertValueOfType[IntValue](args[0])
+		to := AssertValueOfType[IntValue](args[1])
+		stringValue := AssertValueOfType[*StringValue](receiver)
+		return stringValue.Slice(from, to, locationRange)
+	},
+)
+
+var UnifiedStringContainsFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		other := AssertValueOfType[*StringValue](args[0])
+		stringValue := AssertValueOfType[*StringValue](receiver)
+		return stringValue.Contains(context, other)
+	},
+)
+
+var UnifiedStringIndexFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		other := AssertValueOfType[*StringValue](args[0])
+		stringValue := AssertValueOfType[*StringValue](receiver)
+		return stringValue.IndexOf(context, other)
+	},
+)
+
+var UnifiedStringCountFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		other := AssertValueOfType[*StringValue](args[0])
+		stringValue := AssertValueOfType[*StringValue](receiver)
+		return stringValue.Count(context, locationRange, other)
+	},
+)
+
+var UnifiedStringDecodeHexFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		stringValue := AssertValueOfType[*StringValue](receiver)
+		return stringValue.DecodeHex(context, locationRange)
+	},
+)
+
+var UnifiedStringToLowerFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		stringValue := AssertValueOfType[*StringValue](receiver)
+		return stringValue.ToLower(context)
+	},
+)
+
+var UnifiedStringSplitFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		separator := AssertValueOfType[*StringValue](args[0])
+		stringValue := AssertValueOfType[*StringValue](receiver)
+		return stringValue.Split(context, locationRange, separator)
+	},
+)
+
+var UnifiedStringReplaceAllFunction = UnifiedNativeFunction(
+	func(
+		context UnifiedFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		original := AssertValueOfType[*StringValue](args[0])
+		replacement := AssertValueOfType[*StringValue](args[1])
+		stringValue := AssertValueOfType[*StringValue](receiver)
+		return stringValue.ReplaceAll(
+			context,
+			locationRange,
+			original,
+			replacement,
+		)
+	},
+)
