@@ -117,6 +117,17 @@ test-with-compiler:
 test-with-compiler-and-tracing:
 	go test -tags cadence_tracing ./interpreter/... ./runtime/... -compile=true
 
+# Benchmarking
+
+BENCH_REPS ?= 2
+BENCH_TIME ?= 2s
+
+.PHONY: bench
+bench:
+	for i in {1..$(BENCH_REPS)}; do \
+		go test ./... -run=^$$ -bench=. -benchmem -shuffle=on -benchtime=$(BENCH_TIME); \
+	done
+
 # Linting
 
 .PHONY: lint
