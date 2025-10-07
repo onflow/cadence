@@ -84,6 +84,7 @@ var _ stdlib.Hasher = &vmEnvironment{}
 var _ ArgumentDecoder = &vmEnvironment{}
 
 func newVMEnvironment(config Config) *vmEnvironment {
+	// TODO: add support for coverage report
 	env := &vmEnvironment{
 		config:                        config,
 		SimpleContractAdditionTracker: stdlib.NewSimpleContractAdditionTracker(),
@@ -204,7 +205,6 @@ func (e *vmEnvironment) Configure(
 	storage *Storage,
 	memoryGauge common.MemoryGauge,
 	computationGauge common.ComputationGauge,
-	coverageReport *CoverageReport,
 ) {
 	e.Interface = runtimeInterface
 	e.storage = storage
@@ -218,9 +218,6 @@ func (e *vmEnvironment) Configure(
 		codesAndPrograms,
 		memoryGauge,
 	)
-
-	// TODO: add support for coverage report
-	_ = coverageReport
 
 	configureVersionedFeatures(runtimeInterface)
 }
@@ -547,7 +544,14 @@ func (e *vmEnvironment) importProgram(location common.Location) *bbq.Instruction
 	if err != nil {
 		panic(fmt.Errorf("failed to load program for imported location %s: %w", location, err))
 	}
-	return program.compiledProgram.program
+
+	// Program could be nil, if the loading failed/returned an error on a previous attempt,
+	// and the program-cache stored the erroneous (nil) program.
+	if program != nil {
+		return program.compiledProgram.program
+	}
+
+	return nil
 }
 
 func (e *vmEnvironment) resolveElaboration(location common.Location) (*sema.Elaboration, error) {

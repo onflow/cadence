@@ -105,6 +105,8 @@ type StackTraceError struct {
 	LocationRange
 }
 
+var _ HasLocationRange = &StackTraceError{}
+
 func (e *StackTraceError) Error() string {
 	return ""
 }

@@ -50,7 +50,6 @@ type Environment interface {
 		storage *Storage,
 		memoryGauge common.MemoryGauge,
 		computationGauge common.ComputationGauge,
-		coverageReport *CoverageReport,
 	)
 	ParseAndCheckProgram(
 		code []byte,
@@ -68,8 +67,7 @@ type Environment interface {
 // that gets reconfigured by InterpreterEnvironment.Configure
 type interpreterEnvironmentReconfigured struct {
 	Interface
-	storage        *Storage
-	coverageReport *CoverageReport
+	storage *Storage
 }
 
 type InterpreterEnvironment struct {
@@ -188,14 +186,12 @@ func (e *InterpreterEnvironment) Configure(
 	storage *Storage,
 	memoryGauge common.MemoryGauge,
 	computationGauge common.ComputationGauge,
-	coverageReport *CoverageReport,
 ) {
 	e.Interface = runtimeInterface
 	e.storage = storage
 	e.InterpreterConfig.Storage = storage
 	e.InterpreterConfig.MemoryGauge = memoryGauge
 	e.InterpreterConfig.ComputationGauge = computationGauge
-	e.coverageReport = coverageReport
 	e.stackDepthLimiter.depth = 0
 
 	e.CheckingEnvironment.configure(
@@ -326,19 +322,20 @@ func (e *InterpreterEnvironment) newInterpreter(
 }
 
 func (e *InterpreterEnvironment) newOnStatementHandler() interpreter.OnStatementFunc {
-	if e.config.CoverageReport == nil {
+	coverageReport := e.config.CoverageReport
+	if coverageReport == nil {
 		return nil
 	}
 
 	return func(inter *interpreter.Interpreter, statement ast.Statement) {
 		location := inter.Location
-		if !e.coverageReport.IsLocationInspected(location) {
+		if !coverageReport.IsLocationInspected(location) {
 			program := inter.Program.Program
-			e.coverageReport.InspectProgram(location, program)
+			coverageReport.InspectProgram(location, program)
 		}
 
 		line := statement.StartPosition().Line
-		e.coverageReport.AddLineHit(location, line)
+		coverageReport.AddLineHit(location, line)
 	}
 }
 

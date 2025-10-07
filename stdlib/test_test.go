@@ -755,7 +755,10 @@ func TestAssertEqual(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
-		assert.ErrorAs(t, err, &AssertionError{})
+
+		var assertionErr *AssertionError
+		assert.ErrorAs(t, err, &assertionErr)
+
 		assert.ErrorContains(
 			t,
 			err,
@@ -782,7 +785,10 @@ func TestAssertEqual(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
-		assert.ErrorAs(t, err, &AssertionError{})
+
+		var assertionErr *AssertionError
+		assert.ErrorAs(t, err, &assertionErr)
+
 		assert.ErrorContains(
 			t,
 			err,
@@ -807,7 +813,10 @@ func TestAssertEqual(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
-		assert.ErrorAs(t, err, &AssertionError{})
+
+		var assertionErr *AssertionError
+		assert.ErrorAs(t, err, &assertionErr)
+
 		assert.ErrorContains(
 			t,
 			err,
@@ -844,7 +853,10 @@ func TestAssertEqual(t *testing.T) {
 
 		_, err = inter.Invoke("testNotEqual")
 		require.Error(t, err)
-		assert.ErrorAs(t, err, &AssertionError{})
+
+		var assertionErr *AssertionError
+		assert.ErrorAs(t, err, &assertionErr)
+
 		assert.ErrorContains(
 			t,
 			err,
@@ -892,7 +904,10 @@ func TestAssertEqual(t *testing.T) {
 
 		_, err = inter.Invoke("testNotEqual")
 		require.Error(t, err)
-		assert.ErrorAs(t, err, &AssertionError{})
+
+		var assertionErr *AssertionError
+		assert.ErrorAs(t, err, &assertionErr)
+
 		assert.ErrorContains(
 			t,
 			err,
@@ -929,7 +944,10 @@ func TestAssertEqual(t *testing.T) {
 
 		_, err = inter.Invoke("testNotEqual")
 		require.Error(t, err)
-		assert.ErrorAs(t, err, &AssertionError{})
+
+		var assertionErr *AssertionError
+		assert.ErrorAs(t, err, &assertionErr)
+
 		assert.ErrorContains(
 			t,
 			err,
@@ -966,7 +984,10 @@ func TestAssertEqual(t *testing.T) {
 
 		_, err = inter.Invoke("testNotEqual")
 		require.Error(t, err)
-		assert.ErrorAs(t, err, &AssertionError{})
+
+		var assertionErr *AssertionError
+		assert.ErrorAs(t, err, &assertionErr)
+
 		assert.ErrorContains(
 			t,
 			err,
@@ -1874,8 +1895,8 @@ func TestTestExpect(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
 
-		assertionErr := &AssertionError{}
-		assert.ErrorAs(t, err, assertionErr)
+		var assertionErr *AssertionError
+		require.ErrorAs(t, err, &assertionErr)
 		assert.Equal(t, "given value is: \"this string\"", assertionErr.Message)
 		assert.Equal(t, "test", assertionErr.LocationRange.Location.String())
 		assert.Equal(t, 6, assertionErr.LocationRange.StartPosition().Line)

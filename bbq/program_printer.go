@@ -34,7 +34,7 @@ type CodePrinter[T, E any] func(
 	builder *strings.Builder,
 	code []E,
 	resolve bool,
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []T,
 	functionNames []string,
 	colorize bool,
@@ -120,7 +120,7 @@ func (p *ProgramPrinter[E, T]) PrintProgram(program *Program[E, T]) string {
 
 func (p *ProgramPrinter[E, T]) printFunction(
 	function Function[E],
-	constants []constant.Constant,
+	constants []constant.DecodedConstant,
 	types []T,
 	functionNames []string,
 ) {
@@ -142,7 +142,7 @@ func (p *ProgramPrinter[E, T]) printFunction(
 	}
 }
 
-func (p *ProgramPrinter[_, T]) printConstantPool(constants []constant.Constant) {
+func (p *ProgramPrinter[_, T]) printConstantPool(constants []constant.DecodedConstant) {
 	p.printHeader("Constant Pool")
 
 	tabWriter := tabwriter.NewWriter(&p.stringBuilder, 0, 0, 1, ' ', tabwriter.AlignRight)

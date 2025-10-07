@@ -26,9 +26,9 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
-	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -48,9 +48,8 @@ type VM struct {
 	ipStack []uint16
 	ip      uint16
 
-	context            *Context
-	globals            *activations.Activation[Variable]
-	linkedGlobalsCache map[common.Location]LinkedGlobals
+	context *Context
+	globals *activations.Activation[Variable]
 }
 
 func NewVM(
@@ -61,31 +60,18 @@ func NewVM(
 
 	context := NewContext(config)
 
-	if context.referencedResourceKindedValues == nil {
-		context.referencedResourceKindedValues = ReferencedResourceKindedValues{}
-	}
-
-	// linkedGlobalsCache is a local cache-alike that is being used to hold already linked imports.
-	linkedGlobalsCache := map[common.Location]LinkedGlobals{}
-
 	vm := &VM{
-		linkedGlobalsCache: linkedGlobalsCache,
-		context:            context,
+		context: context,
 	}
 
-	// Delegate the function invocations to the vm.
-	context.invokeFunction = vm.invokeFunction
-	context.lookupFunction = vm.lookupFunction
+	vm.configureContext()
 
 	context.recoverErrors = vm.RecoverErrors
 
 	// Link global variables and functions.
-	linkedGlobals := LinkGlobals(
-		config.MemoryGauge,
+	linkedGlobals := context.linkGlobals(
 		location,
 		program,
-		context,
-		linkedGlobalsCache,
 	)
 
 	vm.globals = linkedGlobals.indexedGlobals
@@ -755,7 +741,9 @@ func opGetConstant(vm *VM, ins opcode.InstructionGetConstant) {
 	executable := vm.callFrame.function.Executable
 	c := executable.Constants[constantIndex]
 	if c == nil {
-		c = vm.initializeConstant(constantIndex)
+		// Constants referred-to by `InstructionGetConstant`
+		// are always value-typed constants.
+		c = vm.initializeValueTypedConstant(constantIndex)
 	}
 	vm.push(c)
 }
@@ -1042,11 +1030,13 @@ func opNewCompositeAt(vm *VM, ins opcode.InstructionNewCompositeAt) {
 	executable := vm.callFrame.function.Executable
 	c := executable.Program.Constants[ins.Address]
 
+	addressValue := c.Data.(interpreter.AddressValue)
+
 	compositeValue := newCompositeValue(
 		vm,
 		ins.Kind,
 		ins.Type,
-		common.MustBytesToAddress(c.Data),
+		addressValue.ToAddress(),
 	)
 	vm.push(compositeValue)
 }
@@ -1088,7 +1078,7 @@ func opSetField(vm *VM, ins opcode.InstructionSetField) {
 
 	// VM assumes the field name is always a string.
 	fieldNameIndex := ins.FieldName
-	fieldName := getStringConstant(vm, fieldNameIndex)
+	fieldName := getRawStringConstant(vm, fieldNameIndex)
 
 	memberAccessibleValue := target.(interpreter.MemberAccessibleValue)
 	memberAccessibleValue.SetMember(
@@ -1110,7 +1100,7 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 
 	// VM assumes the field name is always a string.
 	fieldNameIndex := ins.FieldName
-	fieldName := getStringConstant(vm, fieldNameIndex)
+	fieldName := getRawStringConstant(vm, fieldNameIndex)
 
 	fieldValue := memberAccessibleValue.GetMember(vm.context, EmptyLocationRange, fieldName)
 	if fieldValue == nil {
@@ -1147,7 +1137,7 @@ func opRemoveField(vm *VM, ins opcode.InstructionRemoveField) {
 
 	// VM assumes the field name is always a string.
 	fieldNameIndex := ins.FieldName
-	fieldName := getStringConstant(vm, fieldNameIndex)
+	fieldName := getRawStringConstant(vm, fieldNameIndex)
 
 	fieldValue := memberAccessibleValue.RemoveMember(vm.context, EmptyLocationRange, fieldName)
 	if fieldValue == nil {
@@ -1159,10 +1149,10 @@ func opRemoveField(vm *VM, ins opcode.InstructionRemoveField) {
 	vm.push(fieldValue)
 }
 
-func getStringConstant(vm *VM, index uint16) string {
+func getRawStringConstant(vm *VM, index uint16) string {
 	executable := vm.callFrame.function.Executable
 	c := executable.Program.Constants[index]
-	return string(c.Data)
+	return c.Data.(string)
 }
 
 func opTransferAndConvert(vm *VM, ins opcode.InstructionTransferAndConvert) {
@@ -1203,6 +1193,26 @@ func opTransfer(vm *VM) {
 	vm.replaceTop(transferredValue)
 }
 
+func opConvert(vm *VM, ins opcode.InstructionConvert) {
+	typeIndex := ins.Type
+	targetType := vm.loadType(typeIndex)
+
+	context := vm.context
+
+	value := vm.peek()
+	valueType := value.StaticType(context)
+
+	transferredValue := interpreter.ConvertAndBoxWithValidation(
+		context,
+		value,
+		context.SemaTypeFromStaticType(valueType),
+		context.SemaTypeFromStaticType(targetType),
+		EmptyLocationRange,
+	)
+
+	vm.replaceTop(transferredValue)
+}
+
 func opDestroy(vm *VM) {
 	value := vm.pop().(interpreter.ResourceKindedValue)
 	value.Destroy(vm.context, EmptyLocationRange)
@@ -1210,7 +1220,7 @@ func opDestroy(vm *VM) {
 
 func opNewPath(vm *VM, ins opcode.InstructionNewPath) {
 	identifierIndex := ins.Identifier
-	identifier := getStringConstant(vm, identifierIndex)
+	identifier := getRawStringConstant(vm, identifierIndex)
 	value := interpreter.NewPathValue(
 		vm.context.MemoryGauge,
 		ins.Domain,
@@ -1605,6 +1615,8 @@ func (vm *VM) run() {
 			opTransferAndConvert(vm, ins)
 		case opcode.InstructionTransfer:
 			opTransfer(vm)
+		case opcode.InstructionConvert:
+			opConvert(vm, ins)
 		case opcode.InstructionDestroy:
 			opDestroy(vm)
 		case opcode.InstructionNewPath:
@@ -1736,103 +1748,11 @@ func opStatement(vm *VM) {
 	common.UseComputation(vm.context, common.StatementComputationUsage)
 }
 
-func (vm *VM) initializeConstant(index uint16) (value Value) {
+func (vm *VM) initializeValueTypedConstant(index uint16) Value {
 	executable := vm.callFrame.function.Executable
 	c := executable.Program.Constants[index]
 
-	memoryGauge := vm.context.MemoryGauge
-
-	switch c.Kind {
-	case constant.String:
-		value = interpreter.NewUnmeteredStringValue(string(c.Data))
-
-	case constant.Character:
-		value = interpreter.NewUnmeteredCharacterValue(string(c.Data))
-
-	case constant.Int:
-		value = interpreter.NewIntValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Int8:
-		value = interpreter.NewInt8ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Int16:
-		value = interpreter.NewInt16ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Int32:
-		value = interpreter.NewInt32ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Int64:
-		value = interpreter.NewInt64ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Int128:
-		value = interpreter.NewInt128ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Int256:
-		value = interpreter.NewInt256ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt:
-		value = interpreter.NewUIntValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt8:
-		value = interpreter.NewUInt8ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt16:
-		value = interpreter.NewUInt16ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt32:
-		value = interpreter.NewUInt32ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt64:
-		value = interpreter.NewUInt64ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt128:
-		value = interpreter.NewUInt128ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UInt256:
-		value = interpreter.NewUInt256ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Word8:
-		value = interpreter.NewWord8ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Word16:
-		value = interpreter.NewWord16ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Word32:
-		value = interpreter.NewWord32ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Word64:
-		value = interpreter.NewWord64ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Word128:
-		value = interpreter.NewWord128ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Word256:
-		value = interpreter.NewWord256ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Fix64:
-		value = interpreter.NewFix64ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Fix128:
-		value = interpreter.NewFix128ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UFix64:
-		value = interpreter.NewUFix64ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.UFix128:
-		value = interpreter.NewUFix128ValueFromBigEndianBytes(memoryGauge, c.Data)
-
-	case constant.Address:
-		value = interpreter.NewAddressValueFromBytes(
-			memoryGauge,
-			func() []byte {
-				return c.Data
-			},
-		)
-
-	default:
-		panic(errors.NewUnexpectedError("unsupported constant kind: %s", c.Kind))
-	}
-
+	value := c.Data.(Value)
 	executable.Constants[index] = value
 
 	return value
@@ -1875,23 +1795,9 @@ func (vm *VM) lookupFunction(location common.Location, name string) FunctionValu
 			indexedGlobals = context.BuiltinGlobalsProvider(location)
 		}
 	} else {
-
-		linkedGlobals, ok := vm.linkedGlobalsCache[location]
-
-		if !ok {
-			// TODO: This currently link all functions in program, unnecessarily.
-			//   Link only the requested function.
-			program := context.ImportHandler(location)
-
-			linkedGlobals = LinkGlobals(
-				context.MemoryGauge,
-				location,
-				program,
-				context,
-				vm.linkedGlobalsCache,
-			)
-		}
-
+		// TODO: This currently link all functions in program, unnecessarily.
+		//   Link only the requested function.
+		linkedGlobals := context.linkLocation(location)
 		indexedGlobals = linkedGlobals.indexedGlobals
 	}
 
@@ -1914,10 +1820,8 @@ func (vm *VM) Reset() {
 	vm.callstack = vm.callstack[:0]
 	vm.ipStack = vm.ipStack[:0]
 
-	context := NewContext(vm.context.Config)
-	context.invokeFunction = vm.invokeFunction
-	context.lookupFunction = vm.lookupFunction
-	vm.context = context
+	vm.context = vm.context.newReusing()
+	vm.configureContext()
 }
 
 func (vm *VM) Global(name string) Value {
@@ -1980,24 +1884,35 @@ func (vm *VM) callStackLocations() []interpreter.LocationRange {
 func (vm *VM) RecoverErrors(onError func(error)) {
 	if r := recover(); r != nil {
 		// Recover all errors, because VM can be directly invoked by FVM.
-		cadenceError := interpreter.AsCadenceError(r)
+		err := interpreter.AsCadenceError(r)
 
 		currentLocation := vm.LocationRange()
 
-		if locatedError, ok := cadenceError.(interpreter.HasLocationRange); ok {
+		if locatedError, ok := err.(interpreter.HasLocationRange); ok {
 			locatedError.SetLocationRange(currentLocation)
 		}
 
 		// if the error is not yet an interpreter error, wrap it
-		if _, ok := cadenceError.(interpreter.Error); !ok {
-			cadenceError = interpreter.Error{
-				Err:      cadenceError,
+		if _, ok := err.(interpreter.Error); !ok {
+
+			_, ok := err.(ast.HasPosition)
+			if !ok {
+				errRange := ast.NewUnmeteredRangeFromPositioned(currentLocation)
+
+				err = interpreter.PositionedError{
+					Err:   err,
+					Range: errRange,
+				}
+			}
+
+			err = interpreter.Error{
+				Err:      err,
 				Location: currentLocation.Location,
 			}
 		}
 
-		err := cadenceError.(interpreter.Error)
-		err.StackTrace = vm.callStackLocations()
+		interpreterErr := err.(interpreter.Error)
+		interpreterErr.StackTrace = vm.callStackLocations()
 
 		// For debug purpose only
 
@@ -2014,8 +1929,16 @@ func (vm *VM) RecoverErrors(onError func(error)) {
 			}
 		}
 
-		onError(err)
+		onError(interpreterErr)
 	}
+}
+
+func (vm *VM) configureContext() {
+	context := vm.context
+
+	// Delegate function invocations to the VM
+	context.invokeFunction = vm.invokeFunction
+	context.lookupFunction = vm.lookupFunction
 }
 
 func printInstructionError(
