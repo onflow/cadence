@@ -77,9 +77,14 @@ type Config struct {
 }
 
 func NewConfig(storage interpreter.Storage) *Config {
+	var tracer interpreter.Tracer
+	if interpreter.TracingEnabled {
+		tracer = interpreter.NoOpTracer{}
+	}
 	return &Config{
 		storage:         storage,
 		StackDepthLimit: math.MaxInt,
+		Tracer:          tracer,
 	}
 }
 
@@ -149,7 +154,10 @@ func (c *Config) GetCompositeType(
 	return ty, nil
 }
 
-func (c *Config) GetEntitlementType(typeID interpreter.TypeID) (*sema.EntitlementType, error) {
+func (c *Config) GetEntitlementType(
+	typeID interpreter.TypeID,
+	ensureProgramInitialized func(location common.Location),
+) (*sema.EntitlementType, error) {
 	location, qualifiedIdentifier, err := common.DecodeTypeID(c, string(typeID))
 	if err != nil {
 		return nil, err
@@ -166,6 +174,8 @@ func (c *Config) GetEntitlementType(typeID interpreter.TypeID) (*sema.Entitlemen
 		return ty, nil
 	}
 
+	ensureProgramInitialized(location)
+
 	ty := c.EntitlementTypeHandler(location, typeID)
 
 	if ty == nil {
@@ -177,7 +187,10 @@ func (c *Config) GetEntitlementType(typeID interpreter.TypeID) (*sema.Entitlemen
 	return ty, nil
 }
 
-func (c *Config) GetEntitlementMapType(typeID interpreter.TypeID) (*sema.EntitlementMapType, error) {
+func (c *Config) GetEntitlementMapType(
+	typeID interpreter.TypeID,
+	ensureProgramInitialized func(location common.Location),
+) (*sema.EntitlementMapType, error) {
 	location, qualifiedIdentifier, err := common.DecodeTypeID(c, string(typeID))
 	if err != nil {
 		return nil, err
@@ -193,6 +206,8 @@ func (c *Config) GetEntitlementMapType(typeID interpreter.TypeID) (*sema.Entitle
 
 		return ty, nil
 	}
+
+	ensureProgramInitialized(location)
 
 	ty := c.EntitlementMapTypeHandler(location, typeID)
 

@@ -35,12 +35,17 @@ type RLPDecodeStringError struct {
 	Msg string
 }
 
-var _ errors.UserError = RLPDecodeStringError{}
+var _ errors.UserError = &RLPDecodeStringError{}
+var _ interpreter.HasLocationRange = &RLPDecodeStringError{}
 
-func (RLPDecodeStringError) IsUserError() {}
+func (*RLPDecodeStringError) IsUserError() {}
 
-func (e RLPDecodeStringError) Error() string {
+func (e *RLPDecodeStringError) Error() string {
 	return fmt.Sprintf("failed to RLP-decode string: %s", e.Msg)
+}
+
+func (e *RLPDecodeStringError) SetLocationRange(locationRange interpreter.LocationRange) {
+	e.LocationRange = locationRange
 }
 
 const rlpErrMsgInputContainsExtraBytes = "input data is expected to be RLP-encoded of a single string or a single list but it seems it contains extra trailing bytes."
@@ -94,7 +99,7 @@ func RLPDecodeString(
 ) interpreter.Value {
 	convertedInput, err := interpreter.ByteArrayValueToByteSlice(context, input, locationRange)
 	if err != nil {
-		panic(RLPDecodeStringError{
+		panic(&RLPDecodeStringError{
 			Msg:           err.Error(),
 			LocationRange: locationRange,
 		})
@@ -110,14 +115,14 @@ func RLPDecodeString(
 
 	output, bytesRead, err := rlp.DecodeString(convertedInput, 0)
 	if err != nil {
-		panic(RLPDecodeStringError{
+		panic(&RLPDecodeStringError{
 			Msg:           err.Error(),
 			LocationRange: locationRange,
 		})
 	}
 
 	if bytesRead != len(convertedInput) {
-		panic(RLPDecodeStringError{
+		panic(&RLPDecodeStringError{
 			Msg:           rlpErrMsgInputContainsExtraBytes,
 			LocationRange: locationRange,
 		})
@@ -131,12 +136,17 @@ type RLPDecodeListError struct {
 	Msg string
 }
 
-var _ errors.UserError = RLPDecodeListError{}
+var _ errors.UserError = &RLPDecodeListError{}
+var _ interpreter.HasLocationRange = &RLPDecodeListError{}
 
-func (RLPDecodeListError) IsUserError() {}
+func (*RLPDecodeListError) IsUserError() {}
 
-func (e RLPDecodeListError) Error() string {
+func (e *RLPDecodeListError) Error() string {
 	return fmt.Sprintf("failed to RLP-decode list: %s", e.Msg)
+}
+
+func (e *RLPDecodeListError) SetLocationRange(locationRange interpreter.LocationRange) {
+	e.LocationRange = locationRange
 }
 
 // interpreterRLPDecodeListFunction is a static function
@@ -161,7 +171,7 @@ func RLPDecodeList(
 ) interpreter.Value {
 	convertedInput, err := interpreter.ByteArrayValueToByteSlice(context, input, locationRange)
 	if err != nil {
-		panic(RLPDecodeListError{
+		panic(&RLPDecodeListError{
 			Msg:           err.Error(),
 			LocationRange: locationRange,
 		})
@@ -178,14 +188,14 @@ func RLPDecodeList(
 	output, bytesRead, err := rlp.DecodeList(convertedInput, 0)
 
 	if err != nil {
-		panic(RLPDecodeListError{
+		panic(&RLPDecodeListError{
 			Msg:           err.Error(),
 			LocationRange: locationRange,
 		})
 	}
 
 	if bytesRead != len(convertedInput) {
-		panic(RLPDecodeListError{
+		panic(&RLPDecodeListError{
 			Msg:           rlpErrMsgInputContainsExtraBytes,
 			LocationRange: locationRange,
 		})

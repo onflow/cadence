@@ -26,10 +26,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	"github.com/onflow/cadence/stdlib"
+	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
@@ -1077,6 +1079,16 @@ func TestInterpretMetaTypeIsRecovered(t *testing.T) {
 		staticType := interpreter.NewCompositeStaticTypeComputeTypeID(nil, location, "Foo.Bar")
 		typeValue := interpreter.NewUnmeteredTypeValue(staticType)
 
+		if vmInvokable, ok := inter.(*test_utils.VMInvokable); ok {
+			vmInvokable.ImportHandler = func(loc common.Location) *bbq.InstructionProgram {
+				if loc == location {
+					return &bbq.InstructionProgram{}
+				}
+
+				return nil
+			}
+		}
+
 		result, err := inter.Invoke("test", typeValue)
 		require.NoError(t, err)
 
@@ -1113,6 +1125,12 @@ func TestInterpretMetaTypeIsRecovered(t *testing.T) {
 		location := common.NewAddressLocation(nil, common.MustBytesToAddress([]byte{0x1}), "Foo")
 		staticType := interpreter.NewCompositeStaticTypeComputeTypeID(nil, location, "Foo.Bar")
 		typeValue := interpreter.NewUnmeteredTypeValue(staticType)
+
+		if vmInvokable, ok := inter.(*test_utils.VMInvokable); ok {
+			vmInvokable.ImportHandler = func(loc common.Location) *bbq.InstructionProgram {
+				panic(importErr)
+			}
+		}
 
 		_, err = inter.Invoke("test", typeValue)
 		require.Error(t, err)
@@ -1176,6 +1194,16 @@ func TestInterpretMetaTypeAddress(t *testing.T) {
 		)
 		require.NoError(t, err)
 
+		if vmInvokable, ok := inter.(*test_utils.VMInvokable); ok {
+			vmInvokable.ImportHandler = func(loc common.Location) *bbq.InstructionProgram {
+				if loc == addressLocation {
+					return &bbq.InstructionProgram{}
+				}
+
+				return nil
+			}
+		}
+
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
 
@@ -1220,6 +1248,16 @@ func TestInterpretMetaTypeAddress(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
+
+		if vmInvokable, ok := inter.(*test_utils.VMInvokable); ok {
+			vmInvokable.ImportHandler = func(loc common.Location) *bbq.InstructionProgram {
+				if loc == stringLocation {
+					return &bbq.InstructionProgram{}
+				}
+
+				return nil
+			}
+		}
 
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -1357,6 +1395,16 @@ func TestInterpretMetaTypeContractName(t *testing.T) {
 		)
 		require.NoError(t, err)
 
+		if vmInvokable, ok := inter.(*test_utils.VMInvokable); ok {
+			vmInvokable.ImportHandler = func(loc common.Location) *bbq.InstructionProgram {
+				if loc == addressLocation {
+					return &bbq.InstructionProgram{}
+				}
+
+				return nil
+			}
+		}
+
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
 
@@ -1415,6 +1463,16 @@ func TestInterpretMetaTypeContractName(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
+
+		if vmInvokable, ok := inter.(*test_utils.VMInvokable); ok {
+			vmInvokable.ImportHandler = func(loc common.Location) *bbq.InstructionProgram {
+				if loc == stringLocation {
+					return &bbq.InstructionProgram{}
+				}
+
+				return nil
+			}
+		}
 
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)

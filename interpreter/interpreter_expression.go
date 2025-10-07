@@ -153,9 +153,11 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 	indexedType := indexExpressionTypes.IndexedType
 	indexingType := indexExpressionTypes.IndexingType
 
-	transferredIndexingValue := TransferAndConvert(
+	indexingValue := interpreter.evalExpression(indexExpression.IndexingExpression)
+
+	transferredIndexingValue := TransferIfNotResourceAndConvert(
 		interpreter,
-		interpreter.evalExpression(indexExpression.IndexingExpression),
+		indexingValue,
 		indexingType,
 		indexedType.IndexingType(),
 		LocationRange{
@@ -773,7 +775,21 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 
 	case ast.OperationMove:
 		interpreter.invalidateResource(value)
-		return value
+
+		locationRange := LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: expression,
+		}
+
+		return value.Transfer(
+			interpreter,
+			locationRange,
+			atree.Address{},
+			false,
+			nil,
+			nil,
+			true, // value is standalone.
+		)
 	}
 
 	panic(&unsupportedOperation{
@@ -1005,7 +1021,7 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 			argumentType := argumentTypes[i]
 			value := interpreter.evalExpression(valueExpression)
 
-			values[i] = TransferAndConvert(
+			values[i] = TransferIfNotResourceAndConvert(
 				interpreter,
 				value,
 				argumentType,
@@ -1055,7 +1071,7 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 
 			key := interpreter.evalExpression(entry.Key)
 
-			key = TransferAndConvert(
+			key = TransferIfNotResourceAndConvert(
 				interpreter,
 				key,
 				entryType.KeyType,
@@ -1068,7 +1084,7 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 
 			value := interpreter.evalExpression(entry.Value)
 
-			value = TransferAndConvert(
+			value = TransferIfNotResourceAndConvert(
 				interpreter,
 				value,
 				entryType.ValueType,

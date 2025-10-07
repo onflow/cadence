@@ -180,7 +180,7 @@ func TestInterpretAssert(t *testing.T) {
 	)
 	assert.Equal(t,
 		interpreter.Error{
-			Err: AssertionError{
+			Err: &AssertionError{
 				Message: "oops",
 			},
 			Location: TestLocation,
@@ -191,7 +191,7 @@ func TestInterpretAssert(t *testing.T) {
 	_, err = inter.Invoke("test", interpreter.FalseValue)
 	assert.Equal(t,
 		interpreter.Error{
-			Err: AssertionError{
+			Err: &AssertionError{
 				Message: "",
 			},
 			Location: TestLocation,

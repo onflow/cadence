@@ -31,6 +31,7 @@ import (
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/common/orderedmap"
@@ -12189,6 +12190,16 @@ func TestInterpretCompositeTypeHandler(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+
+	if vmInvokable, ok := inter.(*test_utils.VMInvokable); ok {
+		vmInvokable.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			if _, ok := location.(stdlib.FlowLocation); ok {
+				return &bbq.InstructionProgram{}
+			}
+
+			return nil
+		}
+	}
 
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)

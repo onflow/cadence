@@ -20,18 +20,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: Test
+  commands-and-tools:
+    name: Commands and tools
     runs-on: ubuntu-latest
     steps:
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install wabt
-
       - name: Clone
         uses: actions/checkout@v3
-        with:
-          # fetch all tags. required to update the embedded version
-          fetch-depth: 0
 
       - name: Setup Go
         uses: actions/setup-go@v3
@@ -40,7 +34,42 @@ jobs:
           cache: true
 
       - name: Build
-        run: make -j8 build
+        run: make -j build
+
+      - name: Test
+        run: make -j test-tools
+
+  linter:
+    name: Build linter
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone
+        uses: actions/checkout@v3
+
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Build linter
+        run: make -j build-linter
+
+      - name: Test linter
+        run: make -j test-linter
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone
+        uses: actions/checkout@v3
+
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
 
       - name: Test
         run: make ci
@@ -51,11 +80,8 @@ jobs:
           file: ./coverage.txt
           flags: unittests
 
-      - name: Check tidy
-        run: make check-tidy
-
-  lint:
-    name: Lint
+  test-with-tracing:
+    name: Test with tracing
     runs-on: ubuntu-latest
     steps:
       - name: Clone
@@ -67,8 +93,31 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
+      - name: Test
+        run: make ci-with-tracing
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone
+        uses: actions/checkout@v3
+        with:
+          # fetch all tags.
+          # required to update the embedded version during code generation
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
       - name: Lint
         run: make lint
+
+      - name: Check tidy
+        run: make check-tidy
 
       - name: Check license headers
         run: make check-headers

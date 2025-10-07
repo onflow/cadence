@@ -285,7 +285,12 @@ func NewInterpreterWithSharedState(
 
 	var tracer Tracer
 	if TracingEnabled {
-		tracer = CallbackTracer(sharedState.Config.OnRecordTrace)
+		onRecordTrace := sharedState.Config.OnRecordTrace
+		if onRecordTrace == nil {
+			tracer = NoOpTracer{}
+		} else {
+			tracer = CallbackTracer(onRecordTrace)
+		}
 	}
 
 	interpreter := &Interpreter{
@@ -553,7 +558,7 @@ func (interpreter *Interpreter) InvokeTransaction(arguments []Value, signers ...
 
 func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	if r := recover(); r != nil {
-		// Recover all errors, because interpreter can be directly invoked by FVM.
+		// Recover all errors, because FVM can directly invoke interpreter.
 		err := AsCadenceError(r)
 
 		// if the error is not yet an interpreter error, wrap it
@@ -563,11 +568,11 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 
 			_, ok := err.(ast.HasPosition)
 			if !ok && interpreter.statement != nil {
-				r := ast.NewUnmeteredRangeFromPositioned(interpreter.statement)
+				errRange := ast.NewUnmeteredRangeFromPositioned(interpreter.statement)
 
 				err = PositionedError{
 					Err:   err,
-					Range: r,
+					Range: errRange,
 				}
 			}
 
@@ -610,7 +615,7 @@ func AsCadenceError(r any) error {
 }
 
 func (interpreter *Interpreter) CallStack() []Invocation {
-	return interpreter.SharedState.callStack.Invocations[:]
+	return interpreter.SharedState.callStack.Invocations
 }
 
 func (interpreter *Interpreter) CallStackLocations() []LocationRange {
@@ -1928,6 +1933,22 @@ func TransferAndConvert(
 		true, // value is standalone.
 	)
 
+	return ConvertAndBoxWithValidation(
+		context,
+		transferredValue,
+		valueType,
+		targetType,
+		locationRange,
+	)
+}
+
+func ConvertAndBoxWithValidation(
+	context ValueConversionContext,
+	transferredValue Value,
+	valueType sema.Type,
+	targetType sema.Type,
+	locationRange LocationRange,
+) Value {
 	result := ConvertAndBox(
 		context,
 		locationRange,
@@ -1952,6 +1973,34 @@ func TransferAndConvert(
 	}
 
 	return result
+}
+
+func TransferIfNotResourceAndConvert(
+	context ValueConversionContext,
+	value Value,
+	valueType, targetType sema.Type,
+	locationRange LocationRange,
+) Value {
+
+	if !valueType.IsResourceType() {
+		value = value.Transfer(
+			context,
+			locationRange,
+			atree.Address{},
+			false,
+			nil,
+			nil,
+			true, // value is standalone.
+		)
+	}
+
+	return ConvertAndBoxWithValidation(
+		context,
+		value,
+		valueType,
+		targetType,
+		locationRange,
+	)
 }
 
 // ConvertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary

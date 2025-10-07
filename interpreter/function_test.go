@@ -19,8 +19,10 @@
 package interpreter_test
 
 import (
+	"encoding/binary"
 	"testing"
 
+	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -401,6 +403,88 @@ func TestInterpretGenericFunctionSubtyping(t *testing.T) {
 		var typeErr *interpreter.ForceCastTypeMismatchError
 		require.ErrorAs(t, err, &typeErr)
 	})
+
+	t.Run("no transfer, result is used", func(t *testing.T) {
+		t.Parallel()
+
+		storage := newUnmeteredInMemoryStorage()
+
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+              struct S {}
+
+              fun test(): S {
+                  post { result != nil }
+                  return S()
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				InterpreterConfig: &interpreter.Config{
+					Storage: storage,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
+		require.NoError(t, err)
+
+		var expectedSlabIndex atree.SlabIndex
+		binary.BigEndian.PutUint64(expectedSlabIndex[:], 3)
+
+		require.Equal(
+			t,
+			atree.NewSlabID(
+				atree.AddressUndefined,
+				expectedSlabIndex,
+			),
+			slabID,
+		)
+	})
+
+	t.Run("no transfer, result is not used", func(t *testing.T) {
+		t.Parallel()
+
+		storage := newUnmeteredInMemoryStorage()
+
+		inter, err := parseCheckAndPrepareWithOptions(t,
+			`
+              struct S {}
+
+              fun test(): S {
+                  post { true }
+                  return S()
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				InterpreterConfig: &interpreter.Config{
+					Storage: storage,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		slabID, err := storage.BasicSlabStorage.GenerateSlabID(atree.AddressUndefined)
+		require.NoError(t, err)
+
+		var expectedSlabIndex atree.SlabIndex
+		binary.BigEndian.PutUint64(expectedSlabIndex[:], 3)
+
+		require.Equal(
+			t,
+			atree.NewSlabID(
+				atree.AddressUndefined,
+				expectedSlabIndex,
+			),
+			slabID,
+		)
+	})
 }
 
 func TestInvokeBoundFunctionsExternally(t *testing.T) {
@@ -427,4 +511,53 @@ func TestInvokeBoundFunctionsExternally(t *testing.T) {
 		),
 		result,
 	)
+}
+
+func TestInterpretConvertedResult(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t,
+			`
+            fun test(): Int? {
+                post {
+                    result.getType() == Type<Int?>()
+                }
+                return 1
+            }`,
+		)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("with errors", func(t *testing.T) {
+		t.Parallel()
+
+		inter, err := parseCheckAndPrepareWithOptions(t, `
+            fun test(): Int? {
+                post {
+                    result.map(mappingFunc) == 2
+                }
+                return 1
+            }
+
+            fun mappingFunc(value: Int): Int {
+                return value + 1
+            }`,
+			ParseCheckAndInterpretOptions{
+				HandleCheckerError: func(err error) {
+					errs := RequireCheckerErrors(t, err, 1)
+					assert.IsType(t, &sema.PurityError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+	})
 }

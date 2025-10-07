@@ -34,8 +34,20 @@ func init() {
 		NewNativeFunctionValueWithDerivedType(
 			sema.CapabilityTypeBorrowFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
-				capability := receiver.(*interpreter.IDCapabilityValue)
-				borrowType := context.SemaTypeFromStaticType(capability.BorrowType).(*sema.ReferenceType)
+				var borrowStaticType interpreter.StaticType
+
+				switch capabilityValue := receiver.(type) {
+				case *interpreter.PathCapabilityValue: //nolint:staticcheck
+					borrowStaticType = capabilityValue.BorrowType
+
+				case *interpreter.IDCapabilityValue:
+					borrowStaticType = capabilityValue.BorrowType
+
+				default:
+					panic(errors.NewUnreachableError())
+				}
+
+				borrowType := context.SemaTypeFromStaticType(borrowStaticType).(*sema.ReferenceType)
 				return sema.CapabilityTypeBorrowFunctionType(borrowType)
 			},
 			interpreter.NativeCapabilityBorrowFunction(nil, nil, nil),
@@ -48,8 +60,20 @@ func init() {
 		NewNativeFunctionValueWithDerivedType(
 			sema.CapabilityTypeCheckFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
-				capability := receiver.(*interpreter.IDCapabilityValue)
-				borrowType := context.SemaTypeFromStaticType(capability.BorrowType).(*sema.ReferenceType)
+				var borrowStaticType interpreter.StaticType
+
+				switch capabilityValue := receiver.(type) {
+				case *interpreter.PathCapabilityValue: //nolint:staticcheck
+					borrowStaticType = capabilityValue.BorrowType
+
+				case *interpreter.IDCapabilityValue:
+					borrowStaticType = capabilityValue.BorrowType
+
+				default:
+					panic(errors.NewUnreachableError())
+				}
+
+				borrowType := context.SemaTypeFromStaticType(borrowStaticType).(*sema.ReferenceType)
 				return sema.CapabilityTypeCheckFunctionType(borrowType)
 			},
 			interpreter.NativeCapabilityCheckFunction(nil, nil, nil),

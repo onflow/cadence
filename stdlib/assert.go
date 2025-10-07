@@ -91,7 +91,7 @@ var VMAssertFunction = NewNativeStandardLibraryStaticFunction(
 
 func Assert(result interpreter.BoolValue, message string, locationRange interpreter.LocationRange) interpreter.Value {
 	if !result {
-		panic(AssertionError{
+		panic(&AssertionError{
 			Message:       message,
 			LocationRange: locationRange,
 		})
@@ -106,14 +106,19 @@ type AssertionError struct {
 	Message string
 }
 
-var _ errors.UserError = AssertionError{}
+var _ errors.UserError = &AssertionError{}
+var _ interpreter.HasLocationRange = &AssertionError{}
 
-func (AssertionError) IsUserError() {}
+func (*AssertionError) IsUserError() {}
 
-func (e AssertionError) Error() string {
+func (e *AssertionError) Error() string {
 	const message = "assertion failed"
 	if e.Message == "" {
 		return message
 	}
 	return fmt.Sprintf("%s: %s", message, e.Message)
+}
+
+func (e *AssertionError) SetLocationRange(locationRange interpreter.LocationRange) {
+	e.LocationRange = locationRange
 }

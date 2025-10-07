@@ -86,7 +86,7 @@ func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatem
 		}
 
 		// NOTE: copy on return
-		value = TransferAndConvert(interpreter, value, valueType, returnType, locationRange)
+		value = TransferIfNotResourceAndConvert(interpreter, value, valueType, returnType, locationRange)
 	}
 
 	return ReturnResult{Value: value}
