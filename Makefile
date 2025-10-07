@@ -119,8 +119,8 @@ test-with-compiler-and-tracing:
 
 # Benchmarking
 
-BENCH_REPS ?= 2
-BENCH_TIME ?= 2s
+BENCH_REPS ?= 1
+BENCH_TIME ?= 3s
 BENCH_PKGS ?= $(shell go list ./... | grep -Ev '/old_parser')
 BENCH_PKGS_COMMON ?= $(shell go list ./... | grep -Ev '/old_parser|/encoding|/parser|/sema|/bbq')
 
