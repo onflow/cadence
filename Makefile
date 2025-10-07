@@ -230,4 +230,5 @@ release:
 
 .PHONY: install-benchstat
 install-benchstat:
-	go install golang.org/x/perf/cmd/benchstat@7e13e04d9366
+	# Last version to support HTML output
+	go install golang.org/x/perf/cmd/benchstat@91a04616dc65ba76dbe9e5cf746b923b1402d303
