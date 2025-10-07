@@ -19,6 +19,7 @@
 package vm
 
 import (
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )

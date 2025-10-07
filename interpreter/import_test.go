@@ -1511,11 +1511,7 @@ func TestInterpretImplicitImportThroughTypeLoading(t *testing.T) {
 			logFunctionName,
 			stdlib.LogFunctionType,
 			"",
-			func(_ *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
-				value := arguments[0]
-				logs = append(logs, value.String())
-				return interpreter.Void
-			},
+			newAddLogFunction(&logs),
 		)
 
 		baseValueActivation := sema.NewVariableActivation(nil)
@@ -1661,11 +1657,7 @@ func TestInterpretImplicitImportThroughTypeLoading(t *testing.T) {
 			logFunctionName,
 			stdlib.LogFunctionType,
 			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
-				value := invocation.Arguments[0]
-				logs = append(logs, value.String())
-				return interpreter.Void
-			},
+			newAddLogFunction(&logs),
 		)
 
 		baseValueActivation := sema.NewVariableActivation(nil)
