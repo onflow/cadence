@@ -61,6 +61,15 @@ jobs:
       - name: Run unconditional benchmarks, on current branch
         run: make bench-common BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee new.txt
 
+      - name: Test
+        run: |
+          for val in ${ steps.changes.outputs }; do
+            if [ "$val" == "true" ]; then
+              echo "Running benchmarks for $val"
+              make bench BENCH_PKGS=./$val/... BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee -a new.txt
+            fi
+          done
+
       - name: Run encoding benchmarks, on current branch
         if: steps.changes.outputs.encoding == 'true'
         run: make bench BENCH_PKGS=./encoding/... BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee -a new.txt
