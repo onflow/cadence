@@ -30,9 +30,6 @@ jobs:
         run: echo "benchmark_repetitions=7" >> "$GITHUB_OUTPUT"
         id: settings
 
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install wabt
-
       - name: Checkout
         uses: actions/checkout@v3
         with:
