@@ -1840,7 +1840,7 @@ func TestInterpretHostFunction(t *testing.T) {
 	)
 }
 
-func assertArguments(t *testing.T, called *bool) interpreter.NativeFunction {
+func newAssertArgumentsFunction(t *testing.T, called *bool) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.LocationRange,
@@ -1903,7 +1903,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 			Arity:                &sema.Arity{Min: 1},
 		},
 		``,
-		assertArguments(t, &called),
+		newAssertArgumentsFunction(t, &called),
 	)
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -1963,7 +1963,7 @@ func TestInterpretHostFunctionWithOptionalArguments(t *testing.T) {
 			Arity: &sema.Arity{Min: 1, Max: 3},
 		},
 		``,
-		assertArguments(t, &called),
+		newAssertArgumentsFunction(t, &called),
 	)
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -13442,7 +13442,7 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 	})
 }
 
-func getKeyFunction(key int64, getKeyInvocationsCount *int) interpreter.NativeFunction {
+func newCountAndGetKeyFunction(key int64, getKeyInvocationsCount *int) interpreter.NativeFunction {
 	return func(
 		_ interpreter.NativeFunctionContext,
 		_ interpreter.LocationRange,
@@ -13477,11 +13477,11 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 			),
 			"",
 			func(
-				context interpreter.NativeFunctionContext,
-				locationRange interpreter.LocationRange,
-				typeParameterGetter interpreter.TypeParameterGetter,
-				receiver interpreter.Value,
-				args ...interpreter.Value,
+				_ interpreter.NativeFunctionContext,
+				_ interpreter.LocationRange,
+				_ interpreter.TypeParameterGetter,
+				_ interpreter.Value,
+				_ ...interpreter.Value,
 			) interpreter.Value {
 				getKeyInvocationsCount++
 				return interpreter.NewUnmeteredStringValue(key)
@@ -13559,7 +13559,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 				},
 			),
 			"",
-			getKeyFunction(key, &getKey1InvocationsCount),
+			newCountAndGetKeyFunction(key, &getKey1InvocationsCount),
 		)
 
 		getKey2Function := stdlib.NewInterpreterStandardLibraryStaticFunction(
@@ -13572,7 +13572,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 				},
 			),
 			"",
-			getKeyFunction(key, &getKey2InvocationsCount),
+			newCountAndGetKeyFunction(key, &getKey2InvocationsCount),
 		)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -13650,7 +13650,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 				},
 			),
 			"",
-			getKeyFunction(key, &getKeyInvocationsCount),
+			newCountAndGetKeyFunction(key, &getKeyInvocationsCount),
 		)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -13723,7 +13723,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 				},
 			),
 			"",
-			getKeyFunction(key, &getKey1InvocationsCount),
+			newCountAndGetKeyFunction(key, &getKey1InvocationsCount),
 		)
 
 		getKey2Function := stdlib.NewInterpreterStandardLibraryStaticFunction(
@@ -13736,7 +13736,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 				},
 			),
 			"",
-			getKeyFunction(key, &getKey2InvocationsCount),
+			newCountAndGetKeyFunction(key, &getKey2InvocationsCount),
 		)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -13816,7 +13816,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 				},
 			),
 			"",
-			getKeyFunction(key, &getKeyInvocationsCount),
+			newCountAndGetKeyFunction(key, &getKeyInvocationsCount),
 		)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)

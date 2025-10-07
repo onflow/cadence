@@ -35,7 +35,7 @@ import (
 )
 
 // native helpers
-func assertHelloLog(t *testing.T, invoked *bool) stdlib.StandardLibraryValue {
+func newAssertHelloLogFunction(t *testing.T, invoked *bool) stdlib.StandardLibraryValue {
 	return stdlib.NewInterpreterStandardLibraryStaticFunction(
 		"log",
 		stdlib.LogFunctionType,
@@ -347,7 +347,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 
 		invoked := false
 
-		valueDeclaration := assertHelloLog(t, &invoked)
+		valueDeclaration := newAssertHelloLogFunction(t, &invoked)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
@@ -732,7 +732,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 
 		invoked := false
 
-		valueDeclaration := assertHelloLog(t, &invoked)
+		valueDeclaration := newAssertHelloLogFunction(t, &invoked)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)

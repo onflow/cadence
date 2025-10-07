@@ -377,9 +377,9 @@ var NativeAccountCapabilityControllerDeleteFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		_ ...Value,
 	) Value {
 		controller := AssertValueOfType[*AccountCapabilityControllerValue](receiver)
 		controller.Delete(context, locationRange)
@@ -398,7 +398,7 @@ var NativeAccountCapabilityControllerSetTagFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {

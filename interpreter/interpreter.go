@@ -3973,10 +3973,10 @@ type runtimeTypeConstructor struct {
 var NativeMetaTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		locationRange LocationRange,
+		_ LocationRange,
 		typeParameterGetter TypeParameterGetter,
-		receiver Value,
-		args ...Value,
+		_ Value,
+		_ ...Value,
 	) Value {
 		staticType := typeParameterGetter.NextStatic()
 
@@ -3987,9 +3987,9 @@ var NativeMetaTypeFunction = NativeFunction(
 var NativeOptionalTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
-		receiver Value,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		_ Value,
 		args ...Value,
 	) Value {
 		typeValue := AssertValueOfType[TypeValue](args[0])
@@ -4002,8 +4002,8 @@ var NativeVariableSizedArrayTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
-		receiver Value,
+		_ TypeParameterGetter,
+		_ Value,
 		args ...Value,
 	) Value {
 		typeValue := AssertValueOfType[TypeValue](args[0])
@@ -4016,8 +4016,8 @@ var NativeConstantSizedArrayTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
-		receiver Value,
+		_ TypeParameterGetter,
+		_ Value,
 		args ...Value,
 	) Value {
 		typeValue := AssertValueOfType[TypeValue](args[0])
@@ -4036,8 +4036,8 @@ var NativeDictionaryTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
-		receiver Value,
+		_ TypeParameterGetter,
+		_ Value,
 		args ...Value,
 	) Value {
 		keyTypeValue := AssertValueOfType[TypeValue](args[0])
@@ -4055,8 +4055,8 @@ var NativeCompositeTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
-		receiver Value,
+		_ TypeParameterGetter,
+		_ Value,
 		args ...Value,
 	) Value {
 		typeIDValue := AssertValueOfType[*StringValue](args[0])
@@ -4069,8 +4069,8 @@ var NativeFunctionTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
-		receiver Value,
+		_ TypeParameterGetter,
+		_ Value,
 		args ...Value,
 	) Value {
 		parameterTypeValues := AssertValueOfType[*ArrayValue](args[0])
@@ -4089,8 +4089,8 @@ var NativeReferenceTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
-		receiver Value,
+		_ TypeParameterGetter,
+		_ Value,
 		args ...Value,
 	) Value {
 		entitlementValues := AssertValueOfType[*ArrayValue](args[0])
@@ -4109,8 +4109,8 @@ var NativeIntersectionTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
-		receiver Value,
+		_ TypeParameterGetter,
+		_ Value,
 		args ...Value,
 	) Value {
 		intersectionIDs := AssertValueOfType[*ArrayValue](args[0])
@@ -4127,8 +4127,8 @@ var NativeCapabilityTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
-		receiver Value,
+		_ TypeParameterGetter,
+		_ Value,
 		args ...Value,
 	) Value {
 		typeValue := AssertValueOfType[TypeValue](args[0])
@@ -4141,8 +4141,8 @@ var NativeInclusiveRangeTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
-		receiver Value,
+		_ TypeParameterGetter,
+		_ Value,
 		args ...Value,
 	) Value {
 		typeValue := AssertValueOfType[TypeValue](args[0])
@@ -4155,8 +4155,8 @@ var NativeAddressFromBytesFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
-		receiver Value,
+		_ TypeParameterGetter,
+		_ Value,
 		args ...Value,
 	) Value {
 		byteArray := AssertValueOfType[*ArrayValue](args[0])
@@ -4172,9 +4172,9 @@ var NativeAddressFromBytesFunction = NativeFunction(
 var NativeAddressFromStringFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
-		receiver Value,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		_ Value,
 		args ...Value,
 	) Value {
 		string := AssertValueOfType[*StringValue](args[0])
@@ -4188,8 +4188,8 @@ func NativeConverterFunction(convert func(memoryGauge common.MemoryGauge, value 
 		func(
 			context NativeFunctionContext,
 			locationRange LocationRange,
-			typeParameterGetter TypeParameterGetter,
-			receiver Value,
+			_ TypeParameterGetter,
+			_ Value,
 			args ...Value,
 		) Value {
 			return convert(
@@ -4205,9 +4205,9 @@ func NativeFromStringFunction(parser StringValueParser) NativeFunction {
 	return NativeFunction(
 		func(
 			context NativeFunctionContext,
-			locationRange LocationRange,
-			typeParameterGetter TypeParameterGetter,
-			receiver Value,
+			_ LocationRange,
+			_ TypeParameterGetter,
+			_ Value,
 			args ...Value,
 		) Value {
 			argument := AssertValueOfType[*StringValue](args[0])
@@ -4221,8 +4221,8 @@ func NativeFromBigEndianBytesFunction(byteLength uint, converter func(memoryGaug
 		func(
 			context NativeFunctionContext,
 			locationRange LocationRange,
-			typeParameterGetter TypeParameterGetter,
-			receiver Value,
+			_ TypeParameterGetter,
+			_ Value,
 			args ...Value,
 		) Value {
 			argument := AssertValueOfType[*ArrayValue](args[0])
@@ -4480,7 +4480,7 @@ func NativeAccountStorageIterateFunction(
 	return func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -4708,7 +4708,7 @@ func NativeAccountStorageSaveFunction(
 	return func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -4797,7 +4797,7 @@ func NativeAccountStorageTypeFunction(
 	return func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -5522,8 +5522,8 @@ func getBuiltinFunctionMember(context MemberAccessibleContext, self Value, ident
 var NativeIsInstanceFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ LocationRange,
+		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -5560,7 +5560,7 @@ var NativeGetTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {

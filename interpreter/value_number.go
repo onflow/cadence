@@ -144,9 +144,9 @@ var NativeNumberToStringFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		_ ...Value,
 	) Value {
 		return NumberValueToString(context, receiver.(NumberValue))
 	},
@@ -156,9 +156,9 @@ var NativeNumberToBigEndianBytesFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		_ ...Value,
 	) Value {
 		return ByteSliceToByteArrayValue(context, receiver.(NumberValue).ToBigEndianBytes())
 	},
@@ -168,7 +168,7 @@ var NativeNumberSaturatingAddFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -181,7 +181,7 @@ var NativeNumberSaturatingSubtractFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -194,7 +194,7 @@ var NativeNumberSaturatingMultiplyFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -207,7 +207,7 @@ var NativeNumberSaturatingDivideFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {

@@ -200,28 +200,28 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 			sema.IntTypeAnnotation,
 		)
 
+		nativeFunction := func(
+			_ interpreter.NativeFunctionContext,
+			_ interpreter.LocationRange,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
+			_ ...interpreter.Value,
+		) interpreter.Value {
+			return interpreter.NewUnmeteredIntValueFromInt64(2)
+		}
+
 		var function interpreter.FunctionValue
 		if *compile {
 			function = vm.NewNativeFunctionValue(
 				"bar",
 				functionType,
-				func(
-					context interpreter.NativeFunctionContext,
-					_ interpreter.LocationRange,
-					_ interpreter.TypeParameterGetter,
-					_ interpreter.Value,
-					_ ...interpreter.Value,
-				) interpreter.Value {
-					return interpreter.NewUnmeteredIntValueFromInt64(2)
-				},
+				nativeFunction,
 			)
 		} else {
-			function = interpreter.NewStaticHostFunctionValue(
+			function = interpreter.NewStaticHostFunctionValueFromNativeFunction(
 				nil,
 				functionType,
-				func(invocation interpreter.Invocation) interpreter.Value {
-					return interpreter.NewUnmeteredIntValueFromInt64(2)
-				},
+				nativeFunction,
 			)
 		}
 
@@ -376,7 +376,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 				"bar",
 				functionType,
 				func(
-					context interpreter.NativeFunctionContext,
+					_ interpreter.NativeFunctionContext,
 					_ interpreter.LocationRange,
 					_ interpreter.TypeParameterGetter,
 					_ interpreter.Value,
@@ -452,7 +452,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 				"bar",
 				functionType,
 				func(
-					context interpreter.NativeFunctionContext,
+					_ interpreter.NativeFunctionContext,
 					_ interpreter.LocationRange,
 					_ interpreter.TypeParameterGetter,
 					_ interpreter.Value,
@@ -710,11 +710,11 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 				"B.c",
 				cType,
 				func(
-					context interpreter.NativeFunctionContext,
+					_ interpreter.NativeFunctionContext,
 					_ interpreter.LocationRange,
 					_ interpreter.TypeParameterGetter,
 					_ interpreter.Value,
-					args ...interpreter.Value,
+					_ ...interpreter.Value,
 				) interpreter.Value {
 					require.Fail(t, "function should have not been called")
 					return nil

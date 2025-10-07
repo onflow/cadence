@@ -115,8 +115,8 @@ func NativeAccountConstructor(creator AccountCreator) interpreter.NativeFunction
 		func(
 			context interpreter.NativeFunctionContext,
 			locationRange interpreter.LocationRange,
-			typeParameterGetter interpreter.TypeParameterGetter,
-			receiver interpreter.Value,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
 			args ...interpreter.Value,
 		) interpreter.Value {
 			payer := interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](args[0])
@@ -253,7 +253,7 @@ func NativeGetAuthAccountFunction(handler AccountHandler) interpreter.NativeFunc
 			context interpreter.NativeFunctionContext,
 			locationRange interpreter.LocationRange,
 			typeParameterGetter interpreter.TypeParameterGetter,
-			receiver interpreter.Value,
+			_ interpreter.Value,
 			args ...interpreter.Value,
 		) interpreter.Value {
 			accountAddress := interpreter.AssertValueOfType[interpreter.AddressValue](args[0])
@@ -619,7 +619,7 @@ func nativeAccountKeysAddFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -747,7 +747,7 @@ func nativeAccountKeysGetFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -841,7 +841,7 @@ func nativeAccountKeysForEachFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -998,7 +998,7 @@ func nativeAccountKeysRevokeFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -1096,7 +1096,7 @@ func nativeAccountInboxPublishFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -1518,8 +1518,8 @@ func nativeAccountContractsGetFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.LocationRange,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -1795,7 +1795,7 @@ func nativeAccountContractsChangeFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -2164,7 +2164,7 @@ func nativeAccountContractsTryUpdateFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) (deploymentResult interpreter.Value) {
@@ -2506,7 +2506,7 @@ func nativeAccountContractsRemoveFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -2671,8 +2671,8 @@ func NativeGetAccountFunction(handler AccountHandler) interpreter.NativeFunction
 		func(
 			context interpreter.NativeFunctionContext,
 			locationRange interpreter.LocationRange,
-			typeParameterGetter interpreter.TypeParameterGetter,
-			receiver interpreter.Value,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
 			args ...interpreter.Value,
 		) interpreter.Value {
 			accountAddress := interpreter.AssertValueOfType[interpreter.AddressValue](args[0])
@@ -2836,7 +2836,7 @@ func nativeAccountStorageCapabilitiesGetControllerFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -2920,7 +2920,7 @@ func nativeAccountStorageCapabilitiesGetControllersFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -3034,7 +3034,7 @@ func nativeAccountStorageCapabilitiesForEachControllerFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -3269,7 +3269,7 @@ func nativeAccountStorageCapabilitiesIssueWithTypeFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -3508,7 +3508,7 @@ func nativeAccountAccountCapabilitiesIssueWithTypeFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -4174,7 +4174,7 @@ func nativeAccountCapabilitiesPublishFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -4347,7 +4347,7 @@ func nativeAccountCapabilitiesUnpublishFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -4901,7 +4901,7 @@ func nativeAccountCapabilitiesExistsFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -5001,7 +5001,7 @@ func nativeAccountAccountCapabilitiesGetControllerFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -5069,7 +5069,7 @@ func nativeAccountAccountCapabilitiesGetControllersFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -5186,7 +5186,7 @@ func nativeAccountAccountCapabilitiesForEachControllerFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {

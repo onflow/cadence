@@ -232,10 +232,10 @@ func (v CharacterValue) GetMember(context MemberAccessibleContext, locationRange
 var NativeCharacterValueToStringFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ LocationRange,
+		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		_ ...Value,
 	) Value {
 		character := AssertValueOfType[CharacterValue](receiver)
 		return CharacterValueToString(context, character)

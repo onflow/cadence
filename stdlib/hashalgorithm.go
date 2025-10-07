@@ -81,7 +81,7 @@ func NativeHashAlgorithmHashFunction(hasher Hasher, hashAlgoValue interpreter.Me
 		func(
 			context interpreter.NativeFunctionContext,
 			locationRange interpreter.LocationRange,
-			typeParameterGetter interpreter.TypeParameterGetter,
+			_ interpreter.TypeParameterGetter,
 			receiver interpreter.Value,
 			args ...interpreter.Value,
 		) interpreter.Value {
@@ -107,7 +107,7 @@ func NativeHashAlgorithmHashWithTagFunction(hasher Hasher, hashAlgoValue interpr
 		func(
 			context interpreter.NativeFunctionContext,
 			locationRange interpreter.LocationRange,
-			typeParameterGetter interpreter.TypeParameterGetter,
+			_ interpreter.TypeParameterGetter,
 			receiver interpreter.Value,
 			args ...interpreter.Value,
 		) interpreter.Value {

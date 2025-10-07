@@ -1110,11 +1110,11 @@ func TestInterpretNativeFunctionWithMultipleTypeParameters(t *testing.T) {
 	}
 
 	nativeFunction := func(
-		context interpreter.NativeFunctionContext,
-		locationRange interpreter.LocationRange,
+		_ interpreter.NativeFunctionContext,
+		_ interpreter.LocationRange,
 		typeParameterGetter interpreter.TypeParameterGetter,
-		receiver interpreter.Value,
-		args ...interpreter.Value,
+		_ interpreter.Value,
+		_ ...interpreter.Value,
 	) interpreter.Value {
 		typeValue := typeParameterGetter.NextStatic()
 		require.Equal(t, interpreter.PrimitiveStaticTypeInt, typeValue)

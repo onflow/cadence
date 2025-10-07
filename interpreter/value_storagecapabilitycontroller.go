@@ -399,9 +399,9 @@ var NativeStorageCapabilityControllerDeleteFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		_ ...Value,
 	) Value {
 		controller := AssertValueOfType[*StorageCapabilityControllerValue](receiver)
 		controller.Delete(context, locationRange)
@@ -425,9 +425,9 @@ var NativeStorageCapabilityControllerTargetFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		_ ...Value,
 	) Value {
 		controller := AssertValueOfType[*StorageCapabilityControllerValue](receiver)
 		return controller.TargetPath
@@ -448,7 +448,7 @@ var NativeStorageCapabilityControllerRetargetFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -480,7 +480,7 @@ var NativeStorageCapabilityControllerSetTagFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {

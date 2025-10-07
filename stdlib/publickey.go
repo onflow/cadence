@@ -77,8 +77,8 @@ func NativePublicKeyConstructorFunction(
 		func(
 			context interpreter.NativeFunctionContext,
 			locationRange interpreter.LocationRange,
-			typeParameterGetter interpreter.TypeParameterGetter,
-			receiver interpreter.Value,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
 			args ...interpreter.Value,
 		) interpreter.Value {
 			publicKey := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
@@ -228,7 +228,7 @@ func NativePublicKeyVerifySignatureFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -341,7 +341,7 @@ func NativePublicKeyVerifyPoPFunction(
 	return func(
 		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {

@@ -118,9 +118,9 @@ var NativePathValueToStringFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		_ ...Value,
 	) Value {
 		path := AssertValueOfType[PathValue](receiver)
 		return PathValueToStringFunction(context, path, locationRange)

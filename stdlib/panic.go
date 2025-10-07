@@ -64,10 +64,10 @@ var PanicFunctionType = sema.NewSimpleFunctionType(
 
 var NativePanicFunction = interpreter.NativeFunction(
 	func(
-		context interpreter.NativeFunctionContext,
+		_ interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
-		receiver interpreter.Value,
+		_ interpreter.TypeParameterGetter,
+		_ interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
 		message := args[0]

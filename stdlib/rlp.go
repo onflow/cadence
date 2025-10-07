@@ -50,8 +50,8 @@ var NativeRLPDecodeStringFunction = interpreter.NativeFunction(
 	func(
 		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
-		receiver interpreter.Value,
+		_ interpreter.TypeParameterGetter,
+		_ interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
 		input := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
@@ -63,8 +63,8 @@ var NativeRLPDecodeListFunction = interpreter.NativeFunction(
 	func(
 		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
-		receiver interpreter.Value,
+		_ interpreter.TypeParameterGetter,
+		_ interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
 		input := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])

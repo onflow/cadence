@@ -1264,11 +1264,11 @@ func TestStringer(t *testing.T) {
 						ReturnTypeAnnotation: sema.StringTypeAnnotation,
 					},
 					func(
-						context NativeFunctionContext,
-						locationRange LocationRange,
-						typeParameterGetter TypeParameterGetter,
-						receiver Value,
-						args ...Value,
+						_ NativeFunctionContext,
+						_ LocationRange,
+						_ TypeParameterGetter,
+						_ Value,
+						_ ...Value,
 					) Value {
 						return NewUnmeteredStringValue("hello")
 					},

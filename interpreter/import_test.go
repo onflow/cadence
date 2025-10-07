@@ -43,7 +43,7 @@ import (
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
-func addLogsFunction(logs *[]string) interpreter.NativeFunction {
+func newAddLogFunction(logs *[]string) interpreter.NativeFunction {
 	return func(
 		_ interpreter.NativeFunctionContext,
 		_ interpreter.LocationRange,
@@ -915,7 +915,7 @@ func TestInterpretImportGlobals(t *testing.T) {
 			logFunctionName,
 			stdlib.LogFunctionType,
 			"",
-			addLogsFunction(&logs),
+			newAddLogFunction(&logs),
 		)
 
 		baseValueActivation := sema.NewVariableActivation(nil)
@@ -1026,7 +1026,7 @@ func TestInterpretImportGlobals(t *testing.T) {
 			logFunctionName,
 			stdlib.LogFunctionType,
 			"",
-			addLogsFunction(&logs),
+			newAddLogFunction(&logs),
 		)
 
 		baseValueActivation := sema.NewVariableActivation(nil)
@@ -1124,7 +1124,7 @@ func TestInterpretDynamicallyImportedGlobals(t *testing.T) {
 			logFunctionName,
 			stdlib.LogFunctionType,
 			"",
-			addLogsFunction(&logs),
+			newAddLogFunction(&logs),
 		)
 
 		baseValueActivation := sema.NewVariableActivation(nil)
@@ -1295,7 +1295,7 @@ func TestInterpretDynamicallyImportedGlobals(t *testing.T) {
 			logFunctionName,
 			stdlib.LogFunctionType,
 			"",
-			addLogsFunction(&logs),
+			newAddLogFunction(&logs),
 		)
 
 		baseValueActivation := sema.NewVariableActivation(nil)
