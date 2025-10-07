@@ -54,7 +54,7 @@ func newAssertHelloLogFunction(t *testing.T, invoked *bool) stdlib.StandardLibra
 	)
 }
 
-func assertUnexpectedLog(t *testing.T) stdlib.StandardLibraryValue {
+func newAssertUnexpectedLogFunction(t *testing.T) stdlib.StandardLibraryValue {
 	return stdlib.NewInterpreterStandardLibraryStaticFunction(
 		"log",
 		stdlib.LogFunctionType,
@@ -486,7 +486,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 
 		t.Parallel()
 
-		valueDeclaration := assertUnexpectedLog(t)
+		valueDeclaration := newAssertUnexpectedLogFunction(t)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
@@ -871,7 +871,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 
 		t.Parallel()
 
-		valueDeclaration := assertUnexpectedLog(t)
+		valueDeclaration := newAssertUnexpectedLogFunction(t)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)

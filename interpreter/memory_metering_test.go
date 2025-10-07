@@ -88,7 +88,7 @@ func ifCompile[T any](compileValue, interpretValue T) T {
 	return interpretValue
 }
 
-func meterLogFunction(meter *testMemoryGauge, loggedString *string) stdlib.StandardLibraryValue {
+func newMeteredLogFunction(meter *testMemoryGauge, loggedString *string) stdlib.StandardLibraryValue {
 	return stdlib.NewInterpreterStandardLibraryStaticFunction(
 		"log",
 		&sema.FunctionType{
@@ -9292,7 +9292,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 
 		var loggedString string
 
-		logFunction := meterLogFunction(meter, &loggedString)
+		logFunction := newMeteredLogFunction(meter, &loggedString)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(logFunction)
@@ -9617,7 +9617,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 
 		var loggedString string
 
-		logFunction := meterLogFunction(meter, &loggedString)
+		logFunction := newMeteredLogFunction(meter, &loggedString)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(logFunction)
