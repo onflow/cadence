@@ -62,12 +62,12 @@ var PanicFunctionType = sema.NewSimpleFunctionType(
 	sema.NeverTypeAnnotation,
 )
 
-var UnifiedPanicFunction = interpreter.UnifiedNativeFunction(
+var NativePanicFunction = interpreter.NativeFunction(
 	func(
-		context interpreter.UnifiedFunctionContext,
+		_ interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
-		receiver interpreter.Value,
+		_ interpreter.TypeParameterGetter,
+		_ interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
 		message := args[0]
@@ -75,19 +75,19 @@ var UnifiedPanicFunction = interpreter.UnifiedNativeFunction(
 	},
 )
 
-var InterpreterPanicFunction = NewUnifiedStandardLibraryStaticFunction(
+var InterpreterPanicFunction = NewNativeStandardLibraryStaticFunction(
 	PanicFunctionName,
 	PanicFunctionType,
 	panicFunctionDocString,
-	UnifiedPanicFunction,
+	NativePanicFunction,
 	false,
 )
 
-var VMPanicFunction = NewUnifiedStandardLibraryStaticFunction(
+var VMPanicFunction = NewNativeStandardLibraryStaticFunction(
 	PanicFunctionName,
 	PanicFunctionType,
 	panicFunctionDocString,
-	UnifiedPanicFunction,
+	NativePanicFunction,
 	true,
 )
 

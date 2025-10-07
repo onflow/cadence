@@ -66,17 +66,17 @@ func NewDeployedContractValue(
 	return deployedContract
 }
 
-func NewUnifiedDeployedContractPublicTypesFunctionValue(
+func NewNativeDeployedContractPublicTypesFunctionValue(
 	addressPointer *common.Address,
 	name *StringValue,
 	publicTypes *ArrayValue,
-) UnifiedNativeFunction {
+) NativeFunction {
 	return func(
-		context UnifiedFunctionContext,
-		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		_ ...Value,
 	) Value {
 		var address common.Address
 		if addressPointer == nil {
@@ -122,11 +122,11 @@ func newInterpreterDeployedContractPublicTypesFunctionValue(
 	var publicTypes *ArrayValue
 
 	address := addressValue.ToAddress()
-	return NewUnifiedBoundHostFunctionValue(
+	return NewBoundHostFunctionValue(
 		context,
 		self,
 		sema.DeployedContractTypePublicTypesFunctionType,
-		NewUnifiedDeployedContractPublicTypesFunctionValue(&address, name, publicTypes),
+		NewNativeDeployedContractPublicTypesFunctionValue(&address, name, publicTypes),
 	)
 }
 

@@ -34,6 +34,44 @@ import (
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
+// native helpers
+func newAssertHelloLogFunction(t *testing.T, invoked *bool) stdlib.StandardLibraryValue {
+	return stdlib.NewInterpreterStandardLibraryStaticFunction(
+		"log",
+		stdlib.LogFunctionType,
+		"",
+		func(
+			_ interpreter.NativeFunctionContext,
+			_ interpreter.LocationRange,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
+			*invoked = true
+			assert.Equal(t, "\"hello\"", args[0].String())
+			return interpreter.Void
+		},
+	)
+}
+
+func newAssertUnexpectedLogFunction(t *testing.T) stdlib.StandardLibraryValue {
+	return stdlib.NewInterpreterStandardLibraryStaticFunction(
+		"log",
+		stdlib.LogFunctionType,
+		"",
+		func(
+			_ interpreter.NativeFunctionContext,
+			_ interpreter.LocationRange,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
+			_ ...interpreter.Value,
+		) interpreter.Value {
+			assert.Fail(t, "unexpected call of log")
+			return interpreter.Void
+		},
+	)
+}
+
 func TestInterpretArrayMutation(t *testing.T) {
 
 	t.Parallel()
@@ -309,16 +347,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 
 		invoked := false
 
-		valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
-			"log",
-			stdlib.LogFunctionType,
-			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
-				invoked = true
-				assert.Equal(t, "\"hello\"", invocation.Arguments[0].String())
-				return interpreter.Void
-			},
-		)
+		valueDeclaration := newAssertHelloLogFunction(t, &invoked)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
@@ -457,15 +486,7 @@ func TestInterpretArrayMutation(t *testing.T) {
 
 		t.Parallel()
 
-		valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
-			"log",
-			stdlib.LogFunctionType,
-			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
-				assert.Fail(t, "unexpected call of log")
-				return interpreter.Void
-			},
-		)
+		valueDeclaration := newAssertUnexpectedLogFunction(t)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
@@ -711,16 +732,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 
 		invoked := false
 
-		valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
-			"log",
-			stdlib.LogFunctionType,
-			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
-				invoked = true
-				assert.Equal(t, "\"hello\"", invocation.Arguments[0].String())
-				return interpreter.Void
-			},
-		)
+		valueDeclaration := newAssertHelloLogFunction(t, &invoked)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
@@ -859,15 +871,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 
 		t.Parallel()
 
-		valueDeclaration := stdlib.NewInterpreterStandardLibraryStaticFunction(
-			"log",
-			stdlib.LogFunctionType,
-			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
-				assert.Fail(t, "unexpected call of log")
-				return interpreter.Void
-			},
-		)
+		valueDeclaration := newAssertUnexpectedLogFunction(t)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)

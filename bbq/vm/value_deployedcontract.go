@@ -34,10 +34,10 @@ func init() {
 
 	registerBuiltinTypeBoundFunction(
 		deployedContractTypeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.DeployedContractTypePublicTypesFunctionName,
 			sema.DeployedContractTypePublicTypesFunctionType,
-			interpreter.NewUnifiedDeployedContractPublicTypesFunctionValue(nil, nil, nil),
+			interpreter.NewNativeDeployedContractPublicTypesFunctionValue(nil, nil, nil),
 		),
 	)
 }

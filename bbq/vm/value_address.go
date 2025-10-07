@@ -35,19 +35,19 @@ func init() {
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.ToStringFunctionName,
 			sema.ToStringFunctionType,
-			interpreter.UnifiedAddressToStringFunction,
+			interpreter.NativeAddressToStringFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.AddressTypeToBytesFunctionName,
 			sema.AddressTypeToBytesFunctionType,
-			interpreter.UnifiedAddressToBytesFunction,
+			interpreter.NativeAddressToBytesFunction,
 		),
 	)
 
@@ -56,19 +56,19 @@ func init() {
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.AddressTypeFromBytesFunctionName,
 			sema.AddressTypeFromBytesFunctionType,
-			interpreter.UnifiedAddressFromBytesFunction,
+			interpreter.NativeAddressFromBytesFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.AddressTypeFromStringFunctionName,
 			sema.AddressTypeFromStringFunctionType,
-			interpreter.UnifiedAddressFromStringFunction,
+			interpreter.NativeAddressFromStringFunction,
 		),
 	)
 

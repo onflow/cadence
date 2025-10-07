@@ -158,13 +158,13 @@ func (v *SomeValue) GetMethod(
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
 		innerValueType := v.InnerValueType(context)
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.OptionalTypeMapFunctionType(
 				innerValueType,
 			),
-			UnifiedOptionalMapFunction,
+			NativeOptionalMapFunction,
 		)
 	}
 
@@ -514,13 +514,13 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 	}
 }
 
-// Unified some functions
+// Native some functions
 
-var UnifiedOptionalMapFunction = UnifiedNativeFunction(
+var NativeOptionalMapFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {

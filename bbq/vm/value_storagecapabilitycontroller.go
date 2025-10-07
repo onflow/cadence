@@ -31,37 +31,37 @@ func init() {
 
 	registerBuiltinTypeBoundFunction(
 		storageCapabilityControllerTypeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.StorageCapabilityControllerTypeSetTagFunctionName,
 			sema.StorageCapabilityControllerTypeSetTagFunctionType,
-			interpreter.NewUnifiedDeletionCheckedStorageCapabilityControllerFunction(interpreter.UnifiedStorageCapabilityControllerSetTagFunction),
+			interpreter.NewNativeDeletionCheckedStorageCapabilityControllerFunction(interpreter.NativeStorageCapabilityControllerSetTagFunction),
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		storageCapabilityControllerTypeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.StorageCapabilityControllerTypeDeleteFunctionName,
 			sema.StorageCapabilityControllerTypeDeleteFunctionType,
-			interpreter.NewUnifiedDeletionCheckedStorageCapabilityControllerFunction(interpreter.UnifiedStorageCapabilityControllerDeleteFunction),
+			interpreter.NewNativeDeletionCheckedStorageCapabilityControllerFunction(interpreter.NativeStorageCapabilityControllerDeleteFunction),
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		storageCapabilityControllerTypeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.StorageCapabilityControllerTypeTargetFunctionName,
 			sema.StorageCapabilityControllerTypeTargetFunctionType,
-			interpreter.NewUnifiedDeletionCheckedStorageCapabilityControllerFunction(interpreter.UnifiedStorageCapabilityControllerTargetFunction),
+			interpreter.NewNativeDeletionCheckedStorageCapabilityControllerFunction(interpreter.NativeStorageCapabilityControllerTargetFunction),
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		storageCapabilityControllerTypeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.StorageCapabilityControllerTypeRetargetFunctionName,
 			sema.StorageCapabilityControllerTypeRetargetFunctionType,
-			interpreter.NewUnifiedDeletionCheckedStorageCapabilityControllerFunction(interpreter.UnifiedStorageCapabilityControllerRetargetFunction),
+			interpreter.NewNativeDeletionCheckedStorageCapabilityControllerFunction(interpreter.NativeStorageCapabilityControllerRetargetFunction),
 		),
 	)
 }

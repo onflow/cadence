@@ -881,155 +881,155 @@ func (v *ArrayValue) GetMethod(
 ) FunctionValue {
 	switch name {
 	case sema.ArrayTypeAppendFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayAppendFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			UnifiedArrayAppendFunction,
+			NativeArrayAppendFunction,
 		)
 
 	case sema.ArrayTypeAppendAllFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayAppendAllFunctionType(
 				v.SemaType(context),
 			),
-			UnifiedArrayAppendAllFunction,
+			NativeArrayAppendAllFunction,
 		)
 
 	case sema.ArrayTypeConcatFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayConcatFunctionType(
 				v.SemaType(context),
 			),
-			UnifiedArrayConcatFunction,
+			NativeArrayConcatFunction,
 		)
 
 	case sema.ArrayTypeInsertFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayInsertFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			UnifiedArrayInsertFunction,
+			NativeArrayInsertFunction,
 		)
 
 	case sema.ArrayTypeRemoveFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayRemoveFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			UnifiedArrayRemoveFunction,
+			NativeArrayRemoveFunction,
 		)
 
 	case sema.ArrayTypeRemoveFirstFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayRemoveFirstFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			UnifiedArrayRemoveFirstFunction,
+			NativeArrayRemoveFirstFunction,
 		)
 
 	case sema.ArrayTypeRemoveLastFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayRemoveLastFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			UnifiedArrayRemoveLastFunction,
+			NativeArrayRemoveLastFunction,
 		)
 
 	case sema.ArrayTypeFirstIndexFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayFirstIndexFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			UnifiedArrayFirstIndexFunction,
+			NativeArrayFirstIndexFunction,
 		)
 
 	case sema.ArrayTypeContainsFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayContainsFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			UnifiedArrayContainsFunction,
+			NativeArrayContainsFunction,
 		)
 
 	case sema.ArrayTypeSliceFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArraySliceFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			UnifiedArraySliceFunction,
+			NativeArraySliceFunction,
 		)
 
 	case sema.ArrayTypeReverseFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayReverseFunctionType(
 				v.SemaType(context),
 			),
-			UnifiedArrayReverseFunction,
+			NativeArrayReverseFunction,
 		)
 
 	case sema.ArrayTypeFilterFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayFilterFunctionType(
 				context,
 				v.SemaType(context).ElementType(false),
 			),
-			UnifiedArrayFilterFunction,
+			NativeArrayFilterFunction,
 		)
 
 	case sema.ArrayTypeMapFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayMapFunctionType(
 				context,
 				v.SemaType(context),
 			),
-			UnifiedArrayMapFunction,
+			NativeArrayMapFunction,
 		)
 
 	case sema.ArrayTypeToVariableSizedFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayToVariableSizedFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			UnifiedArrayToVariableSizedFunction,
+			NativeArrayToVariableSizedFunction,
 		)
 
 	case sema.ArrayTypeToConstantSizedFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ArrayToConstantSizedFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			UnifiedArrayToConstantSizedFunction,
+			NativeArrayToConstantSizedFunction,
 		)
 	}
 
@@ -1960,11 +1960,11 @@ func (i *ArrayIterator) ValueID() (atree.ValueID, bool) {
 }
 
 // define all native functions for array type
-var UnifiedArrayAppendFunction = UnifiedNativeFunction(
+var NativeArrayAppendFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -1976,11 +1976,11 @@ var UnifiedArrayAppendFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedArrayAppendAllFunction = UnifiedNativeFunction(
+var NativeArrayAppendAllFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -1992,11 +1992,11 @@ var UnifiedArrayAppendAllFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedArrayConcatFunction = UnifiedNativeFunction(
+var NativeArrayConcatFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -2007,11 +2007,11 @@ var UnifiedArrayConcatFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedArrayInsertFunction = UnifiedNativeFunction(
+var NativeArrayInsertFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -2024,11 +2024,11 @@ var UnifiedArrayInsertFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedArrayRemoveFunction = UnifiedNativeFunction(
+var NativeArrayRemoveFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -2039,11 +2039,11 @@ var UnifiedArrayRemoveFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedArrayContainsFunction = UnifiedNativeFunction(
+var NativeArrayContainsFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -2054,11 +2054,11 @@ var UnifiedArrayContainsFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedArraySliceFunction = UnifiedNativeFunction(
+var NativeArraySliceFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -2070,13 +2070,13 @@ var UnifiedArraySliceFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedArrayReverseFunction = UnifiedNativeFunction(
+var NativeArrayReverseFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		_ ...Value,
 	) Value {
 		thisArray := AssertValueOfType[*ArrayValue](receiver)
 
@@ -2084,11 +2084,11 @@ var UnifiedArrayReverseFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedArrayFilterFunction = UnifiedNativeFunction(
+var NativeArrayFilterFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -2099,11 +2099,11 @@ var UnifiedArrayFilterFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedArrayMapFunction = UnifiedNativeFunction(
+var NativeArrayMapFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -2114,13 +2114,13 @@ var UnifiedArrayMapFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedArrayToVariableSizedFunction = UnifiedNativeFunction(
+var NativeArrayToVariableSizedFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		_ ...Value,
 	) Value {
 		thisArray := AssertValueOfType[*ArrayValue](receiver)
 
@@ -2128,9 +2128,9 @@ var UnifiedArrayToVariableSizedFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedArrayToConstantSizedFunction = UnifiedNativeFunction(
+var NativeArrayToConstantSizedFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -2146,11 +2146,11 @@ var UnifiedArrayToConstantSizedFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedArrayFirstIndexFunction = UnifiedNativeFunction(
+var NativeArrayFirstIndexFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -2161,13 +2161,13 @@ var UnifiedArrayFirstIndexFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedArrayRemoveFirstFunction = UnifiedNativeFunction(
+var NativeArrayRemoveFirstFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		_ ...Value,
 	) Value {
 		thisArray := AssertValueOfType[*ArrayValue](receiver)
 
@@ -2175,13 +2175,13 @@ var UnifiedArrayRemoveFirstFunction = UnifiedNativeFunction(
 	},
 )
 
-var UnifiedArrayRemoveLastFunction = UnifiedNativeFunction(
+var NativeArrayRemoveLastFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		_ ...Value,
 	) Value {
 		thisArray := AssertValueOfType[*ArrayValue](receiver)
 

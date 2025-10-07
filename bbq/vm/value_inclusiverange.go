@@ -31,7 +31,7 @@ func init() {
 
 	registerBuiltinTypeBoundFunction(
 		commons.TypeQualifierInclusiveRange,
-		NewUnifiedNativeFunctionValueWithDerivedType(
+		NewNativeFunctionValueWithDerivedType(
 			sema.InclusiveRangeTypeContainsFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				rangeType, ok := receiver.StaticType(context).(interpreter.InclusiveRangeStaticType)
@@ -41,7 +41,7 @@ func init() {
 				elementType := interpreter.MustConvertStaticToSemaType(rangeType.ElementType, context)
 				return sema.InclusiveRangeContainsFunctionType(elementType)
 			},
-			interpreter.UnifiedInclusiveRangeContainsFunction,
+			interpreter.NativeInclusiveRangeContainsFunction,
 		),
 	)
 }

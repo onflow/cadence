@@ -106,13 +106,13 @@ func getRandomBytes(buffer []byte, generator RandomGenerator) {
 
 var ZeroModuloError = errors.NewDefaultUserError("modulo argument cannot be zero")
 
-func UnifiedRevertibleRandomFunction(generator RandomGenerator) interpreter.UnifiedNativeFunction {
-	return interpreter.UnifiedNativeFunction(
+func NativeRevertibleRandomFunction(generator RandomGenerator) interpreter.NativeFunction {
+	return interpreter.NativeFunction(
 		func(
-			context interpreter.UnifiedFunctionContext,
-			locationRange interpreter.LocationRange,
+			context interpreter.NativeFunctionContext,
+			_ interpreter.LocationRange,
 			typeParameterGetter interpreter.TypeParameterGetter,
-			receiver interpreter.Value,
+			_ interpreter.Value,
 			args ...interpreter.Value,
 		) interpreter.Value {
 			returnIntegerType := typeParameterGetter.NextSema()
@@ -133,21 +133,21 @@ func UnifiedRevertibleRandomFunction(generator RandomGenerator) interpreter.Unif
 }
 
 func NewInterpreterRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue {
-	return NewUnifiedStandardLibraryStaticFunction(
+	return NewNativeStandardLibraryStaticFunction(
 		revertibleRandomFunctionName,
 		revertibleRandomFunctionType,
 		revertibleRandomFunctionDocString,
-		UnifiedRevertibleRandomFunction(generator),
+		NativeRevertibleRandomFunction(generator),
 		false,
 	)
 }
 
 func NewVMRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue {
-	return NewUnifiedStandardLibraryStaticFunction(
+	return NewNativeStandardLibraryStaticFunction(
 		revertibleRandomFunctionName,
 		revertibleRandomFunctionType,
 		revertibleRandomFunctionDocString,
-		UnifiedRevertibleRandomFunction(generator),
+		NativeRevertibleRandomFunction(generator),
 		true,
 	)
 }

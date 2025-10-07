@@ -168,19 +168,19 @@ func (v AddressValue) GetMethod(
 	switch name {
 
 	case sema.ToStringFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ToStringFunctionType,
-			UnifiedAddressToStringFunction,
+			NativeAddressToStringFunction,
 		)
 
 	case sema.AddressTypeToBytesFunctionName:
-		return NewUnifiedBoundHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.AddressTypeToBytesFunctionType,
-			UnifiedAddressToBytesFunction,
+			NativeAddressToBytesFunction,
 		)
 	}
 
@@ -290,27 +290,27 @@ func AddressValueFromString(gauge common.MemoryGauge, string *StringValue) Value
 	return NewSomeValueNonCopying(gauge, NewAddressValue(gauge, addr))
 }
 
-// Unified address functions
-var UnifiedAddressToStringFunction = UnifiedNativeFunction(
+// Native address functions
+var NativeAddressToStringFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		_ ...Value,
 	) Value {
 		address := AssertValueOfType[AddressValue](receiver)
 		return AddressValueToStringFunction(context, address, locationRange)
 	},
 )
 
-var UnifiedAddressToBytesFunction = UnifiedNativeFunction(
+var NativeAddressToBytesFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
-		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		_ ...Value,
 	) Value {
 		address := common.Address(AssertValueOfType[AddressValue](receiver))
 		return ByteSliceToByteArrayValue(context, address[:])

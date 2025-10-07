@@ -58,8 +58,8 @@ func (g *VMTypeParameterGetter) NextSema() sema.Type {
 	return g.context.SemaTypeFromStaticType(staticType)
 }
 
-// Like in the interpreter's unified_function, these are all the functions that need to exist to work with the VM
-func AdaptUnifiedFunctionForVM(fn interpreter.UnifiedNativeFunction) NativeFunction {
+// Like in the interpreter's native_function, these are all the functions that need to exist to work with the VM
+func AdaptNativeFunctionForVM(fn interpreter.NativeFunction) NativeFunctionVM {
 	return func(context *Context, typeArguments []bbq.StaticType, receiver Value, arguments ...Value) Value {
 		typeParameterGetter := NewVMTypeParameterGetter(context, typeArguments)
 
@@ -67,26 +67,26 @@ func AdaptUnifiedFunctionForVM(fn interpreter.UnifiedNativeFunction) NativeFunct
 	}
 }
 
-func NewUnifiedNativeFunctionValue(
+func NewNativeFunctionValue(
 	name string,
 	funcType *sema.FunctionType,
-	fn interpreter.UnifiedNativeFunction,
+	fn interpreter.NativeFunction,
 ) *NativeFunctionValue {
-	return NewNativeFunctionValue(
-		name,
-		funcType,
-		AdaptUnifiedFunctionForVM(fn),
-	)
+	return &NativeFunctionValue{
+		Name:         name,
+		functionType: funcType,
+		Function:     AdaptNativeFunctionForVM(fn),
+	}
 }
 
-func NewUnifiedNativeFunctionValueWithDerivedType(
+func NewNativeFunctionValueWithDerivedType(
 	name string,
 	typeGetter func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType,
-	fn interpreter.UnifiedNativeFunction,
+	fn interpreter.NativeFunction,
 ) *NativeFunctionValue {
 	return &NativeFunctionValue{
 		Name:               name,
-		Function:           AdaptUnifiedFunctionForVM(fn),
+		Function:           AdaptNativeFunctionForVM(fn),
 		functionTypeGetter: typeGetter,
 	}
 }

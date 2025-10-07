@@ -126,12 +126,12 @@ func (v *PathCapabilityValue) newBorrowFunction(
 	context FunctionCreationContext,
 	borrowType *sema.ReferenceType,
 ) BoundFunctionValue {
-	return NewUnifiedBoundHostFunctionValue(
+	return NewBoundHostFunctionValue(
 		context,
 		v,
 		sema.CapabilityTypeBorrowFunctionType(borrowType),
 		func(
-			_ UnifiedFunctionContext,
+			_ NativeFunctionContext,
 			_ LocationRange,
 			_ TypeParameterGetter,
 			_ Value,
@@ -147,12 +147,12 @@ func (v *PathCapabilityValue) newCheckFunction(
 	context FunctionCreationContext,
 	borrowType *sema.ReferenceType,
 ) BoundFunctionValue {
-	return NewUnifiedBoundHostFunctionValue(
+	return NewBoundHostFunctionValue(
 		context,
 		v,
 		sema.CapabilityTypeCheckFunctionType(borrowType),
 		func(
-			_ UnifiedFunctionContext,
+			_ NativeFunctionContext,
 			_ LocationRange,
 			_ TypeParameterGetter,
 			_ Value,

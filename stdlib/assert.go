@@ -55,12 +55,12 @@ var AssertFunctionType = &sema.FunctionType{
 	Arity: &sema.Arity{Min: 1, Max: 2},
 }
 
-var UnifiedAssertFunction = interpreter.UnifiedNativeFunction(
+var NativeAssertFunction = interpreter.NativeFunction(
 	func(
-		context interpreter.UnifiedFunctionContext,
+		_ interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
-		receiver interpreter.Value,
+		_ interpreter.TypeParameterGetter,
+		_ interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
 		result := interpreter.AssertValueOfType[interpreter.BoolValue](args[0])
@@ -73,19 +73,19 @@ var UnifiedAssertFunction = interpreter.UnifiedNativeFunction(
 	},
 )
 
-var InterpreterAssertFunction = NewUnifiedStandardLibraryStaticFunction(
+var InterpreterAssertFunction = NewNativeStandardLibraryStaticFunction(
 	AssertFunctionName,
 	AssertFunctionType,
 	assertFunctionDocString,
-	UnifiedAssertFunction,
+	NativeAssertFunction,
 	false,
 )
 
-var VMAssertFunction = NewUnifiedStandardLibraryStaticFunction(
+var VMAssertFunction = NewNativeStandardLibraryStaticFunction(
 	AssertFunctionName,
 	AssertFunctionType,
 	assertFunctionDocString,
-	UnifiedAssertFunction,
+	NativeAssertFunction,
 	true,
 )
 

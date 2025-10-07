@@ -31,10 +31,10 @@ func init() {
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.MetaTypeIsSubtypeFunctionName,
 			sema.MetaTypeIsSubtypeFunctionType,
-			interpreter.UnifiedMetaTypeIsSubtypeFunction,
+			interpreter.NativeMetaTypeIsSubtypeFunction,
 		),
 	)
 }

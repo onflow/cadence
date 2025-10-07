@@ -31,19 +31,19 @@ func init() {
 
 	registerBuiltinTypeBoundFunction(
 		accountCapabilityControllerTypeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.AccountCapabilityControllerTypeSetTagFunctionName,
 			sema.AccountCapabilityControllerTypeSetTagFunctionType,
-			interpreter.NewUnifiedDeletionCheckedAccountCapabilityControllerFunction(interpreter.UnifiedAccountCapabilityControllerSetTagFunction),
+			interpreter.NewNativeDeletionCheckedAccountCapabilityControllerFunction(interpreter.NativeAccountCapabilityControllerSetTagFunction),
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		accountCapabilityControllerTypeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.AccountCapabilityControllerTypeDeleteFunctionName,
 			sema.AccountCapabilityControllerTypeDeleteFunctionType,
-			interpreter.NewUnifiedDeletionCheckedAccountCapabilityControllerFunction(interpreter.UnifiedAccountCapabilityControllerDeleteFunction),
+			interpreter.NewNativeDeletionCheckedAccountCapabilityControllerFunction(interpreter.NativeAccountCapabilityControllerDeleteFunction),
 		),
 	)
 }

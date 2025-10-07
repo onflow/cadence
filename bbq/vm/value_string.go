@@ -33,82 +33,82 @@ func init() {
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.StringTypeConcatFunctionName,
 			sema.StringTypeConcatFunctionType,
-			interpreter.UnifiedStringConcatFunction,
+			interpreter.NativeStringConcatFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.StringTypeSliceFunctionName,
 			sema.StringTypeSliceFunctionType,
-			interpreter.UnifiedStringSliceFunction,
+			interpreter.NativeStringSliceFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.StringTypeContainsFunctionName,
 			sema.StringTypeContainsFunctionType,
-			interpreter.UnifiedStringContainsFunction,
+			interpreter.NativeStringContainsFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.StringTypeIndexFunctionName,
 			sema.StringTypeIndexFunctionType,
-			interpreter.UnifiedStringIndexFunction,
+			interpreter.NativeStringIndexFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.StringTypeCountFunctionName,
 			sema.StringTypeCountFunctionType,
-			interpreter.UnifiedStringCountFunction,
+			interpreter.NativeStringCountFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.StringTypeDecodeHexFunctionName,
 			sema.StringTypeDecodeHexFunctionType,
-			interpreter.UnifiedStringDecodeHexFunction,
+			interpreter.NativeStringDecodeHexFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.StringTypeToLowerFunctionName,
 			sema.StringTypeToLowerFunctionType,
-			interpreter.UnifiedStringToLowerFunction,
+			interpreter.NativeStringToLowerFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.StringTypeSplitFunctionName,
 			sema.StringTypeSplitFunctionType,
-			interpreter.UnifiedStringSplitFunction,
+			interpreter.NativeStringSplitFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.StringTypeReplaceAllFunctionName,
 			sema.StringTypeReplaceAllFunctionType,
-			interpreter.UnifiedStringReplaceAllFunction,
+			interpreter.NativeStringReplaceAllFunction,
 		),
 	)
 
@@ -117,37 +117,37 @@ func init() {
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.StringTypeEncodeHexFunctionName,
 			sema.StringTypeEncodeHexFunctionType,
-			interpreter.UnifiedStringEncodeHexFunction,
+			interpreter.NativeStringEncodeHexFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.StringTypeFromUtf8FunctionName,
 			sema.StringTypeFromUtf8FunctionType,
-			interpreter.UnifiedStringFromUtf8Function,
+			interpreter.NativeStringFromUtf8Function,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.StringTypeFromCharactersFunctionName,
 			sema.StringTypeFromCharactersFunctionType,
-			interpreter.UnifiedStringFromCharactersFunction,
+			interpreter.NativeStringFromCharactersFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		typeName,
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.StringTypeJoinFunctionName,
 			sema.StringTypeJoinFunctionType,
-			interpreter.UnifiedStringJoinFunction,
+			interpreter.NativeStringJoinFunction,
 		),
 	)
 }

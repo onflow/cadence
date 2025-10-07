@@ -1109,12 +1109,12 @@ func TestInterpretNativeFunctionWithMultipleTypeParameters(t *testing.T) {
 		ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 	}
 
-	unifiedFunction := func(
-		context interpreter.UnifiedFunctionContext,
-		locationRange interpreter.LocationRange,
+	nativeFunction := func(
+		_ interpreter.NativeFunctionContext,
+		_ interpreter.LocationRange,
 		typeParameterGetter interpreter.TypeParameterGetter,
-		receiver interpreter.Value,
-		args ...interpreter.Value,
+		_ interpreter.Value,
+		_ ...interpreter.Value,
 	) interpreter.Value {
 		typeValue := typeParameterGetter.NextStatic()
 		require.Equal(t, interpreter.PrimitiveStaticTypeInt, typeValue)
@@ -1130,15 +1130,15 @@ func TestInterpretNativeFunctionWithMultipleTypeParameters(t *testing.T) {
 
 	var function interpreter.Value
 	if *compile {
-		function = vm.NewUnifiedNativeFunctionValue(
+		function = vm.NewNativeFunctionValue(
 			"nativeFunction",
 			nativeFunctionType,
-			unifiedFunction,
+			nativeFunction,
 		)
 	} else {
-		function = interpreter.NewUnmeteredUnifiedStaticHostFunctionValue(
+		function = interpreter.NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			nativeFunctionType,
-			unifiedFunction,
+			nativeFunction,
 		)
 	}
 

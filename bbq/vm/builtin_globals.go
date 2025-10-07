@@ -95,10 +95,16 @@ func init() {
 	// Pre/post condition failure functions
 
 	registerBuiltinFunction(
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			commons.FailPreConditionFunctionName,
 			failConditionFunctionType,
-			func(_ interpreter.UnifiedFunctionContext, _ interpreter.LocationRange, _ interpreter.TypeParameterGetter, _ interpreter.Value, args ...interpreter.Value) interpreter.Value {
+			func(
+				_ interpreter.NativeFunctionContext,
+				_ interpreter.LocationRange,
+				_ interpreter.TypeParameterGetter,
+				_ interpreter.Value,
+				args ...interpreter.Value,
+			) interpreter.Value {
 				messageValue := args[0].(*interpreter.StringValue)
 				panic(&interpreter.ConditionError{
 					Message:       messageValue.Str,
@@ -109,10 +115,16 @@ func init() {
 	)
 
 	registerBuiltinFunction(
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			commons.FailPostConditionFunctionName,
 			failConditionFunctionType,
-			func(_ interpreter.UnifiedFunctionContext, _ interpreter.LocationRange, _ interpreter.TypeParameterGetter, _ interpreter.Value, args ...interpreter.Value) interpreter.Value {
+			func(
+				_ interpreter.NativeFunctionContext,
+				_ interpreter.LocationRange,
+				_ interpreter.TypeParameterGetter,
+				_ interpreter.Value,
+				args ...interpreter.Value,
+			) interpreter.Value {
 				messageValue := args[0].(*interpreter.StringValue)
 				panic(&interpreter.ConditionError{
 					Message:       messageValue.Str,
@@ -125,90 +137,90 @@ func init() {
 	// Type constructors
 
 	registerBuiltinFunction(
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.MetaTypeName,
 			sema.MetaTypeFunctionType,
-			interpreter.UnifiedMetaTypeFunction,
+			interpreter.NativeMetaTypeFunction,
 		),
 	)
 
 	registerBuiltinFunction(
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.OptionalTypeFunctionName,
 			sema.OptionalTypeFunctionType,
-			interpreter.UnifiedOptionalTypeFunction,
+			interpreter.NativeOptionalTypeFunction,
 		),
 	)
 
 	registerBuiltinFunction(
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.VariableSizedArrayTypeFunctionName,
 			sema.VariableSizedArrayTypeFunctionType,
-			interpreter.UnifiedVariableSizedArrayTypeFunction,
+			interpreter.NativeVariableSizedArrayTypeFunction,
 		),
 	)
 
 	registerBuiltinFunction(
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.ConstantSizedArrayTypeFunctionName,
 			sema.ConstantSizedArrayTypeFunctionType,
-			interpreter.UnifiedConstantSizedArrayTypeFunction,
+			interpreter.NativeConstantSizedArrayTypeFunction,
 		),
 	)
 
 	registerBuiltinFunction(
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.DictionaryTypeFunctionName,
 			sema.DictionaryTypeFunctionType,
-			interpreter.UnifiedDictionaryTypeFunction,
+			interpreter.NativeDictionaryTypeFunction,
 		),
 	)
 
 	registerBuiltinFunction(
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.CompositeTypeFunctionName,
 			sema.CompositeTypeFunctionType,
-			interpreter.UnifiedCompositeTypeFunction,
+			interpreter.NativeCompositeTypeFunction,
 		),
 	)
 
 	registerBuiltinFunction(
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.FunctionTypeFunctionName,
 			sema.FunctionTypeFunctionType,
-			interpreter.UnifiedFunctionTypeFunction,
+			interpreter.NativeFunctionTypeFunction,
 		),
 	)
 
 	registerBuiltinFunction(
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.ReferenceTypeFunctionName,
 			sema.ReferenceTypeFunctionType,
-			interpreter.UnifiedReferenceTypeFunction,
+			interpreter.NativeReferenceTypeFunction,
 		),
 	)
 
 	registerBuiltinFunction(
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.IntersectionTypeFunctionName,
 			sema.IntersectionTypeFunctionType,
-			interpreter.UnifiedIntersectionTypeFunction,
+			interpreter.NativeIntersectionTypeFunction,
 		),
 	)
 
 	registerBuiltinFunction(
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.CapabilityTypeFunctionName,
 			sema.CapabilityTypeFunctionType,
-			interpreter.UnifiedCapabilityTypeFunction,
+			interpreter.NativeCapabilityTypeFunction,
 		),
 	)
 
 	registerBuiltinFunction(
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.InclusiveRangeTypeFunctionName,
 			sema.InclusiveRangeTypeFunctionType,
-			interpreter.UnifiedInclusiveRangeTypeFunction,
+			interpreter.NativeInclusiveRangeTypeFunction,
 		),
 	)
 
@@ -219,10 +231,10 @@ func init() {
 
 		functionType := sema.BaseValueActivation.Find(declaration.Name).Type.(*sema.FunctionType)
 
-		function := NewUnifiedNativeFunctionValue(
+		function := NewNativeFunctionValue(
 			declaration.Name,
 			functionType,
-			interpreter.UnifiedConverterFunction(convert),
+			interpreter.NativeConverterFunction(convert),
 		)
 		registerBuiltinFunction(function)
 
@@ -262,10 +274,10 @@ func init() {
 	// Value constructors
 
 	registerBuiltinFunction(
-		NewUnifiedNativeFunctionValue(
+		NewNativeFunctionValue(
 			sema.StringType.String(),
 			sema.StringFunctionType,
-			interpreter.UnifiedStringFunction,
+			interpreter.NativeStringFunction,
 		),
 	)
 
@@ -301,17 +313,17 @@ func registerBuiltinTypeBoundFunctions(
 var CommonBuiltinTypeBoundFunctions = []*NativeFunctionValue{
 
 	// `isInstance` function
-	NewUnifiedNativeFunctionValue(
+	NewNativeFunctionValue(
 		sema.IsInstanceFunctionName,
 		sema.IsInstanceFunctionType,
-		interpreter.UnifiedIsInstanceFunction,
+		interpreter.NativeIsInstanceFunction,
 	),
 
 	// `getType` function
-	NewUnifiedNativeFunctionValue(
+	NewNativeFunctionValue(
 		sema.GetTypeFunctionName,
 		sema.GetTypeFunctionType,
-		interpreter.UnifiedGetTypeFunction,
+		interpreter.NativeGetTypeFunction,
 	),
 
 	// TODO: add remaining functions
@@ -336,10 +348,10 @@ func registerBuiltinTypeSaturatingArithmeticFunctions(t sema.SaturatingArithmeti
 	if t.SupportsSaturatingAdd() {
 		registerBuiltinTypeBoundFunction(
 			commons.TypeQualifier(t),
-			NewUnifiedNativeFunctionValue(
+			NewNativeFunctionValue(
 				sema.NumericTypeSaturatingAddFunctionName,
 				functionType,
-				interpreter.UnifiedNumberSaturatingAddFunction,
+				interpreter.NativeNumberSaturatingAddFunction,
 			),
 		)
 	}
@@ -347,10 +359,10 @@ func registerBuiltinTypeSaturatingArithmeticFunctions(t sema.SaturatingArithmeti
 	if t.SupportsSaturatingSubtract() {
 		registerBuiltinTypeBoundFunction(
 			commons.TypeQualifier(t),
-			NewUnifiedNativeFunctionValue(
+			NewNativeFunctionValue(
 				sema.NumericTypeSaturatingSubtractFunctionName,
 				functionType,
-				interpreter.UnifiedNumberSaturatingSubtractFunction,
+				interpreter.NativeNumberSaturatingSubtractFunction,
 			),
 		)
 	}
@@ -358,10 +370,10 @@ func registerBuiltinTypeSaturatingArithmeticFunctions(t sema.SaturatingArithmeti
 	if t.SupportsSaturatingMultiply() {
 		registerBuiltinTypeBoundFunction(
 			commons.TypeQualifier(t),
-			NewUnifiedNativeFunctionValue(
+			NewNativeFunctionValue(
 				sema.NumericTypeSaturatingMultiplyFunctionName,
 				functionType,
-				interpreter.UnifiedNumberSaturatingMultiplyFunction,
+				interpreter.NativeNumberSaturatingMultiplyFunction,
 			),
 		)
 	}
@@ -369,10 +381,10 @@ func registerBuiltinTypeSaturatingArithmeticFunctions(t sema.SaturatingArithmeti
 	if t.SupportsSaturatingDivide() {
 		registerBuiltinTypeBoundFunction(
 			commons.TypeQualifier(t),
-			NewUnifiedNativeFunctionValue(
+			NewNativeFunctionValue(
 				sema.NumericTypeSaturatingDivideFunctionName,
 				functionType,
-				interpreter.UnifiedNumberSaturatingDivideFunction,
+				interpreter.NativeNumberSaturatingDivideFunction,
 			),
 		)
 	}
@@ -382,10 +394,10 @@ func newFromStringFunction(typedParser interpreter.TypedStringValueParser) *Nati
 	functionType := sema.FromStringFunctionType(typedParser.ReceiverType)
 	parser := typedParser.Parser
 
-	return NewUnifiedNativeFunctionValue(
+	return NewNativeFunctionValue(
 		sema.FromStringFunctionName,
 		functionType,
-		interpreter.UnifiedFromStringFunction(parser),
+		interpreter.NativeFromStringFunction(parser),
 	)
 }
 
@@ -394,9 +406,9 @@ func newFromBigEndianBytesFunction(typedConverter interpreter.TypedBigEndianByte
 	byteLength := typedConverter.ByteLength
 	converter := typedConverter.Converter
 
-	return NewUnifiedNativeFunctionValue(
+	return NewNativeFunctionValue(
 		sema.FromBigEndianBytesFunctionName,
 		functionType,
-		interpreter.UnifiedFromBigEndianBytesFunction(byteLength, converter),
+		interpreter.NativeFromBigEndianBytesFunction(byteLength, converter),
 	)
 }

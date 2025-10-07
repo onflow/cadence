@@ -363,11 +363,11 @@ func (v *StorageCapabilityControllerValue) CheckDeleted() {
 	}
 }
 
-func NewUnifiedDeletionCheckedStorageCapabilityControllerFunction(
-	f UnifiedNativeFunction,
-) UnifiedNativeFunction {
+func NewNativeDeletionCheckedStorageCapabilityControllerFunction(
+	f NativeFunction,
+) NativeFunction {
 	return func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
@@ -380,28 +380,28 @@ func NewUnifiedDeletionCheckedStorageCapabilityControllerFunction(
 	}
 }
 
-func (v *StorageCapabilityControllerValue) newUnifiedHostFunctionValue(
+func (v *StorageCapabilityControllerValue) newNativeHostFunctionValue(
 	context FunctionCreationContext,
 	funcType *sema.FunctionType,
-	f UnifiedNativeFunction,
+	f NativeFunction,
 ) FunctionValue {
 	return deletionCheckedFunctionValue{
-		FunctionValue: NewUnifiedBoundHostFunctionValue(
+		FunctionValue: NewBoundHostFunctionValue(
 			context,
 			v,
 			funcType,
-			NewUnifiedDeletionCheckedStorageCapabilityControllerFunction(f),
+			NewNativeDeletionCheckedStorageCapabilityControllerFunction(f),
 		),
 	}
 }
 
-var UnifiedStorageCapabilityControllerDeleteFunction = UnifiedNativeFunction(
+var NativeStorageCapabilityControllerDeleteFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		_ ...Value,
 	) Value {
 		controller := AssertValueOfType[*StorageCapabilityControllerValue](receiver)
 		controller.Delete(context, locationRange)
@@ -414,20 +414,20 @@ var UnifiedStorageCapabilityControllerDeleteFunction = UnifiedNativeFunction(
 func (v *StorageCapabilityControllerValue) newDeleteFunction(
 	context FunctionCreationContext,
 ) FunctionValue {
-	return v.newUnifiedHostFunctionValue(
+	return v.newNativeHostFunctionValue(
 		context,
 		sema.StorageCapabilityControllerTypeDeleteFunctionType,
-		UnifiedStorageCapabilityControllerDeleteFunction,
+		NativeStorageCapabilityControllerDeleteFunction,
 	)
 }
 
-var UnifiedStorageCapabilityControllerTargetFunction = UnifiedNativeFunction(
+var NativeStorageCapabilityControllerTargetFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		_ ...Value,
 	) Value {
 		controller := AssertValueOfType[*StorageCapabilityControllerValue](receiver)
 		return controller.TargetPath
@@ -437,18 +437,18 @@ var UnifiedStorageCapabilityControllerTargetFunction = UnifiedNativeFunction(
 func (v *StorageCapabilityControllerValue) newTargetFunction(
 	context FunctionCreationContext,
 ) FunctionValue {
-	return v.newUnifiedHostFunctionValue(
+	return v.newNativeHostFunctionValue(
 		context,
 		sema.StorageCapabilityControllerTypeTargetFunctionType,
-		UnifiedStorageCapabilityControllerTargetFunction,
+		NativeStorageCapabilityControllerTargetFunction,
 	)
 }
 
-var UnifiedStorageCapabilityControllerRetargetFunction = UnifiedNativeFunction(
+var NativeStorageCapabilityControllerRetargetFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -469,18 +469,18 @@ var UnifiedStorageCapabilityControllerRetargetFunction = UnifiedNativeFunction(
 func (v *StorageCapabilityControllerValue) newRetargetFunction(
 	context FunctionCreationContext,
 ) FunctionValue {
-	return v.newUnifiedHostFunctionValue(
+	return v.newNativeHostFunctionValue(
 		context,
 		sema.StorageCapabilityControllerTypeRetargetFunctionType,
-		UnifiedStorageCapabilityControllerRetargetFunction,
+		NativeStorageCapabilityControllerRetargetFunction,
 	)
 }
 
-var UnifiedStorageCapabilityControllerSetTagFunction = UnifiedNativeFunction(
+var NativeStorageCapabilityControllerSetTagFunction = NativeFunction(
 	func(
-		context UnifiedFunctionContext,
+		context NativeFunctionContext,
 		locationRange LocationRange,
-		typeParameterGetter TypeParameterGetter,
+		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
@@ -497,9 +497,9 @@ var UnifiedStorageCapabilityControllerSetTagFunction = UnifiedNativeFunction(
 func (v *StorageCapabilityControllerValue) newSetTagFunction(
 	context FunctionCreationContext,
 ) FunctionValue {
-	return v.newUnifiedHostFunctionValue(
+	return v.newNativeHostFunctionValue(
 		context,
 		sema.StorageCapabilityControllerTypeSetTagFunctionType,
-		UnifiedStorageCapabilityControllerSetTagFunction,
+		NativeStorageCapabilityControllerSetTagFunction,
 	)
 }

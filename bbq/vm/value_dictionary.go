@@ -30,50 +30,50 @@ func init() {
 
 	registerBuiltinTypeBoundFunction(
 		commons.TypeQualifierDictionary,
-		NewUnifiedNativeFunctionValueWithDerivedType(
+		NewNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeRemoveFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				dictionaryType := dictionaryType(receiver, context)
 				return sema.DictionaryRemoveFunctionType(dictionaryType)
 			},
-			interpreter.UnifiedDictionaryRemoveFunction,
+			interpreter.NativeDictionaryRemoveFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		commons.TypeQualifierDictionary,
-		NewUnifiedNativeFunctionValueWithDerivedType(
+		NewNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeInsertFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				dictionaryType := dictionaryType(receiver, context)
 				return sema.DictionaryInsertFunctionType(dictionaryType)
 			},
-			interpreter.UnifiedDictionaryInsertFunction,
+			interpreter.NativeDictionaryInsertFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		commons.TypeQualifierDictionary,
-		NewUnifiedNativeFunctionValueWithDerivedType(
+		NewNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeContainsKeyFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				dictionaryType := dictionaryType(receiver, context)
 				return sema.DictionaryContainsKeyFunctionType(dictionaryType)
 			},
-			interpreter.UnifiedDictionaryContainsKeyFunction,
+			interpreter.NativeDictionaryContainsKeyFunction,
 		),
 	)
 
 	registerBuiltinTypeBoundFunction(
 		commons.TypeQualifierDictionary,
-		NewUnifiedNativeFunctionValueWithDerivedType(
+		NewNativeFunctionValueWithDerivedType(
 			sema.DictionaryTypeForEachKeyFunctionName,
 			func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType {
 				dictionaryValue := receiver.(*interpreter.DictionaryValue)
 				dictionaryType := dictionaryValue.SemaType(context)
 				return sema.DictionaryRemoveFunctionType(dictionaryType)
 			},
-			interpreter.UnifiedDictionaryForEachKeyFunction,
+			interpreter.NativeDictionaryForEachKeyFunction,
 		),
 	)
 }

@@ -110,13 +110,13 @@ type AccountCreator interface {
 	CreateAccount(payer common.Address) (address common.Address, err error)
 }
 
-func UnifiedAccountConstructor(creator AccountCreator) interpreter.UnifiedNativeFunction {
-	return interpreter.UnifiedNativeFunction(
+func NativeAccountConstructor(creator AccountCreator) interpreter.NativeFunction {
+	return interpreter.NativeFunction(
 		func(
-			context interpreter.UnifiedFunctionContext,
+			context interpreter.NativeFunctionContext,
 			locationRange interpreter.LocationRange,
-			typeParameterGetter interpreter.TypeParameterGetter,
-			receiver interpreter.Value,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
 			args ...interpreter.Value,
 		) interpreter.Value {
 			payer := interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](args[0])
@@ -131,21 +131,21 @@ func UnifiedAccountConstructor(creator AccountCreator) interpreter.UnifiedNative
 }
 
 func NewInterpreterAccountConstructor(creator AccountCreator) StandardLibraryValue {
-	return NewUnifiedStandardLibraryStaticFunction(
+	return NewNativeStandardLibraryStaticFunction(
 		accountFunctionName,
 		accountFunctionType,
 		accountFunctionDocString,
-		UnifiedAccountConstructor(creator),
+		NativeAccountConstructor(creator),
 		false,
 	)
 }
 
 func NewVMAccountConstructor(creator AccountCreator) StandardLibraryValue {
-	return NewUnifiedStandardLibraryStaticFunction(
+	return NewNativeStandardLibraryStaticFunction(
 		accountFunctionName,
 		accountFunctionType,
 		accountFunctionDocString,
-		UnifiedAccountConstructor(creator),
+		NativeAccountConstructor(creator),
 		true,
 	)
 }
@@ -247,13 +247,13 @@ var GetAuthAccountFunctionType = func() *sema.FunctionType {
 	}
 }()
 
-func UnifiedGetAuthAccountFunction(handler AccountHandler) interpreter.UnifiedNativeFunction {
-	return interpreter.UnifiedNativeFunction(
+func NativeGetAuthAccountFunction(handler AccountHandler) interpreter.NativeFunction {
+	return interpreter.NativeFunction(
 		func(
-			context interpreter.UnifiedFunctionContext,
+			context interpreter.NativeFunctionContext,
 			locationRange interpreter.LocationRange,
 			typeParameterGetter interpreter.TypeParameterGetter,
-			receiver interpreter.Value,
+			_ interpreter.Value,
 			args ...interpreter.Value,
 		) interpreter.Value {
 			accountAddress := interpreter.AssertValueOfType[interpreter.AddressValue](args[0])
@@ -276,21 +276,21 @@ func UnifiedGetAuthAccountFunction(handler AccountHandler) interpreter.UnifiedNa
 }
 
 func NewInterpreterGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
-	return NewUnifiedStandardLibraryStaticFunction(
+	return NewNativeStandardLibraryStaticFunction(
 		GetAuthAccountFunctionName,
 		GetAuthAccountFunctionType,
 		getAuthAccountFunctionDocString,
-		UnifiedGetAuthAccountFunction(handler),
+		NativeGetAuthAccountFunction(handler),
 		false,
 	)
 }
 
 func NewVMGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
-	return NewUnifiedStandardLibraryStaticFunction(
+	return NewNativeStandardLibraryStaticFunction(
 		GetAuthAccountFunctionName,
 		GetAuthAccountFunctionType,
 		getAuthAccountFunctionDocString,
-		UnifiedGetAuthAccountFunction(handler),
+		NativeGetAuthAccountFunction(handler),
 		true,
 	)
 }
@@ -612,14 +612,14 @@ type AccountKeyAdditionHandler interface {
 	AddAccountKey(address common.Address, key *PublicKey, algo sema.HashAlgorithm, weight int) (*AccountKey, error)
 }
 
-func unifiedAccountKeysAddFunction(
+func nativeAccountKeysAddFunction(
 	handler AccountKeyAdditionHandler,
 	addressPointer *interpreter.AddressValue,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -647,11 +647,11 @@ func newInterpreterAccountKeysAddFunction(
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountKeys interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountKeys,
 			sema.Account_KeysTypeAddFunctionType,
-			unifiedAccountKeysAddFunction(handler, &addressValue),
+			nativeAccountKeysAddFunction(handler, &addressValue),
 		)
 	}
 }
@@ -661,10 +661,10 @@ func NewVMAccountKeysAddFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_KeysType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_KeysTypeAddFunctionName,
 			sema.Account_KeysTypeAddFunctionType,
-			unifiedAccountKeysAddFunction(handler, nil),
+			nativeAccountKeysAddFunction(handler, nil),
 		),
 	}
 }
@@ -740,14 +740,14 @@ type AccountKeyProvider interface {
 	AccountKeysCount(address common.Address) (uint32, error)
 }
 
-func unifiedAccountKeysGetFunction(
+func nativeAccountKeysGetFunction(
 	provider AccountKeyProvider,
 	addressPointer *common.Address,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -776,11 +776,11 @@ func newInterpreterAccountKeysGetFunction(
 		// Converted addresses can be cached and don't have to be recomputed on each function invocation
 		address := addressValue.ToAddress()
 
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountKeys,
 			functionType,
-			unifiedAccountKeysGetFunction(provider, &address),
+			nativeAccountKeysGetFunction(provider, &address),
 		)
 	}
 }
@@ -790,10 +790,10 @@ func NewVMAccountKeysGetFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_KeysType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_KeysTypeGetFunctionName,
 			sema.Account_KeysTypeGetFunctionType,
-			unifiedAccountKeysGetFunction(provider, nil),
+			nativeAccountKeysGetFunction(provider, nil),
 		),
 	}
 }
@@ -834,14 +834,14 @@ func AccountKeysGet(
 // `Account.Keys.forEachKey(_ f: fun(AccountKey): Bool)`
 var accountKeysForEachCallbackTypeParams = []sema.Type{sema.AccountKeyType}
 
-func unifiedAccountKeysForEachFunction(
+func nativeAccountKeysForEachFunction(
 	provider AccountKeyProvider,
 	addressPointer *common.Address,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -867,11 +867,11 @@ func newInterpreterAccountKeysForEachFunction(
 	return func(accountKeys interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
 
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountKeys,
 			sema.Account_KeysTypeForEachFunctionType,
-			unifiedAccountKeysForEachFunction(provider, &address),
+			nativeAccountKeysForEachFunction(provider, &address),
 		)
 	}
 }
@@ -881,10 +881,10 @@ func NewVMAccountKeysForEachFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_KeysType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_KeysTypeForEachFunctionName,
 			sema.Account_KeysTypeForEachFunctionType,
-			unifiedAccountKeysForEachFunction(provider, nil),
+			nativeAccountKeysForEachFunction(provider, nil),
 		),
 	}
 }
@@ -991,14 +991,14 @@ type AccountKeyRevocationHandler interface {
 	RevokeAccountKey(address common.Address, index uint32) (*AccountKey, error)
 }
 
-func unifiedAccountKeysRevokeFunction(
+func nativeAccountKeysRevokeFunction(
 	handler AccountKeyRevocationHandler,
 	addressPointer *interpreter.AddressValue,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -1023,11 +1023,11 @@ func newInterpreterAccountKeysRevokeFunction(
 ) interpreter.BoundFunctionGenerator {
 	return func(accountKeys interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountKeys,
 			sema.Account_KeysTypeRevokeFunctionType,
-			unifiedAccountKeysRevokeFunction(handler, &addressValue),
+			nativeAccountKeysRevokeFunction(handler, &addressValue),
 		)
 	}
 }
@@ -1037,10 +1037,10 @@ func NewVMAccountKeysRevokeFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_KeysType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_KeysTypeRevokeFunctionName,
 			sema.Account_KeysTypeRevokeFunctionType,
-			unifiedAccountKeysRevokeFunction(handler, nil),
+			nativeAccountKeysRevokeFunction(handler, nil),
 		),
 	}
 }
@@ -1089,14 +1089,14 @@ func AccountKeysRevoke(
 	)
 }
 
-func unifiedAccountInboxPublishFunction(
+func nativeAccountInboxPublishFunction(
 	handler EventEmitter,
 	providerPointer *interpreter.AddressValue,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -1124,11 +1124,11 @@ func newInterpreterAccountInboxPublishFunction(
 	providerValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountInbox interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountInbox,
 			sema.Account_InboxTypePublishFunctionType,
-			unifiedAccountInboxPublishFunction(handler, &providerValue),
+			nativeAccountInboxPublishFunction(handler, &providerValue),
 		)
 	}
 }
@@ -1138,10 +1138,10 @@ func NewVMAccountInboxPublishFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_InboxType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_InboxTypePublishFunctionName,
 			sema.Account_InboxTypePublishFunctionType,
-			unifiedAccountInboxPublishFunction(handler, nil),
+			nativeAccountInboxPublishFunction(handler, nil),
 		),
 	}
 }
@@ -1189,12 +1189,12 @@ func AccountInboxPublish(
 	return interpreter.Void
 }
 
-func unifiedAccountInboxUnpublishFunction(
+func nativeAccountInboxUnpublishFunction(
 	handler EventEmitter,
 	providerPointer *interpreter.AddressValue,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
 		typeParameterGetter interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
@@ -1222,11 +1222,11 @@ func newInterpreterAccountInboxUnpublishFunction(
 	providerValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountInbox interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountInbox,
 			sema.Account_InboxTypeUnpublishFunctionType,
-			unifiedAccountInboxUnpublishFunction(handler, &providerValue),
+			nativeAccountInboxUnpublishFunction(handler, &providerValue),
 		)
 	}
 }
@@ -1236,10 +1236,10 @@ func NewVMAccountInboxUnpublishFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_InboxType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_InboxTypeUnpublishFunctionName,
 			sema.Account_InboxTypeUnpublishFunctionType,
-			unifiedAccountInboxUnpublishFunction(handler, nil),
+			nativeAccountInboxUnpublishFunction(handler, nil),
 		),
 	}
 }
@@ -1309,12 +1309,12 @@ func AccountInboxUnpublish(
 	return interpreter.NewSomeValueNonCopying(context, value)
 }
 
-func unifiedAccountInboxClaimFunction(
+func nativeAccountInboxClaimFunction(
 	handler EventEmitter,
 	recipientPointer *interpreter.AddressValue,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
 		typeParameterGetter interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
@@ -1344,11 +1344,11 @@ func newInterpreterAccountInboxClaimFunction(
 	recipientValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountInbox interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountInbox,
 			sema.Account_InboxTypeClaimFunctionType,
-			unifiedAccountInboxClaimFunction(handler, &recipientValue),
+			nativeAccountInboxClaimFunction(handler, &recipientValue),
 		)
 	}
 }
@@ -1358,10 +1358,10 @@ func NewVMAccountInboxClaimFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_InboxType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_InboxTypeClaimFunctionName,
 			sema.Account_InboxTypeClaimFunctionType,
-			unifiedAccountInboxClaimFunction(handler, nil),
+			nativeAccountInboxClaimFunction(handler, nil),
 		),
 	}
 }
@@ -1512,14 +1512,14 @@ type AccountContractProvider interface {
 	GetAccountContractCode(location common.AddressLocation) ([]byte, error)
 }
 
-func unifiedAccountContractsGetFunction(
+func nativeAccountContractsGetFunction(
 	provider AccountContractProvider,
 	addressPointer *interpreter.AddressValue,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
-		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		context interpreter.NativeFunctionContext,
+		_ interpreter.LocationRange,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -1543,11 +1543,11 @@ func newInterpreterAccountContractsGetFunction(
 ) interpreter.BoundFunctionGenerator {
 	return func(accountContracts interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountContracts,
 			sema.Account_ContractsTypeGetFunctionType,
-			unifiedAccountContractsGetFunction(provider, &addressValue),
+			nativeAccountContractsGetFunction(provider, &addressValue),
 		)
 	}
 }
@@ -1555,10 +1555,10 @@ func newInterpreterAccountContractsGetFunction(
 func NewVMAccountContractsGetFunction(provider AccountContractProvider) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_ContractsType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_ContractsTypeGetFunctionName,
 			sema.Account_ContractsTypeGetFunctionType,
-			unifiedAccountContractsGetFunction(provider, nil),
+			nativeAccountContractsGetFunction(provider, nil),
 		),
 	}
 }
@@ -1599,12 +1599,12 @@ func AccountContractsGet(
 	}
 }
 
-func unifiedAccountContractsBorrowFunction(
+func nativeAccountContractsBorrowFunction(
 	handler AccountContractsHandler,
 	addressPointer *common.Address,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
 		typeParameterGetter interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
@@ -1636,11 +1636,11 @@ func newInterpreterAccountContractsBorrowFunction(
 		// Converted addresses can be cached and don't have to be recomputed on each function invocation
 		address := addressValue.ToAddress()
 
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountContracts,
 			sema.Account_ContractsTypeBorrowFunctionType,
-			unifiedAccountContractsBorrowFunction(handler, &address),
+			nativeAccountContractsBorrowFunction(handler, &address),
 		)
 	}
 }
@@ -1648,10 +1648,10 @@ func newInterpreterAccountContractsBorrowFunction(
 func NewVMAccountContractsBorrowFunction(handler AccountContractsHandler) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_ContractsType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_ContractsTypeBorrowFunctionName,
 			sema.Account_ContractsTypeBorrowFunctionType,
-			unifiedAccountContractsBorrowFunction(handler, nil),
+			nativeAccountContractsBorrowFunction(handler, nil),
 		),
 	}
 }
@@ -1787,15 +1787,15 @@ type AccountContractAdditionHandler interface {
 	TemporarilyRecordCode(location common.AddressLocation, code []byte)
 }
 
-func unifiedAccountContractsChangeFunction(
+func nativeAccountContractsChangeFunction(
 	handler AccountContractAdditionAndNamesHandler,
 	addressPointer *interpreter.AddressValue,
 	isUpdate bool,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -1836,11 +1836,11 @@ func newInterpreterAccountContractsChangeFunction(
 	}
 
 	return func(accountContracts interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountContracts,
 			functionType,
-			unifiedAccountContractsChangeFunction(handler, &addressValue, isUpdate),
+			nativeAccountContractsChangeFunction(handler, &addressValue, isUpdate),
 		)
 	}
 }
@@ -1859,10 +1859,10 @@ func newVMAccountContractsChangeFunction(
 
 	return VMFunction{
 		BaseType: sema.Account_ContractsType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			functionName,
 			functionType,
-			unifiedAccountContractsChangeFunction(handler, nil, isUpdate),
+			nativeAccountContractsChangeFunction(handler, nil, isUpdate),
 		),
 	}
 }
@@ -2157,14 +2157,14 @@ func changeAccountContracts(
 	)
 }
 
-func unifiedAccountContractsTryUpdateFunction(
+func nativeAccountContractsTryUpdateFunction(
 	handler AccountContractAdditionAndNamesHandler,
 	addressPointer *interpreter.AddressValue,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) (deploymentResult interpreter.Value) {
@@ -2227,11 +2227,11 @@ func newInterpreterAccountContractsTryUpdateFunction(
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountContracts interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountContracts,
 			sema.Account_ContractsTypeTryUpdateFunctionType,
-			unifiedAccountContractsTryUpdateFunction(handler, &addressValue),
+			nativeAccountContractsTryUpdateFunction(handler, &addressValue),
 		)
 	}
 }
@@ -2242,10 +2242,10 @@ func newVMAccountContractsTryUpdateFunction(
 
 	return VMFunction{
 		BaseType: sema.Account_ContractsType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_ContractsTypeTryUpdateFunctionName,
 			sema.Account_ContractsTypeTryUpdateFunctionType,
-			unifiedAccountContractsTryUpdateFunction(handler, nil),
+			nativeAccountContractsTryUpdateFunction(handler, nil),
 		),
 	}
 }
@@ -2499,14 +2499,14 @@ type AccountContractRemovalHandler interface {
 	RecordContractRemoval(location common.AddressLocation)
 }
 
-func unifiedAccountContractsRemoveFunction(
+func nativeAccountContractsRemoveFunction(
 	handler AccountContractRemovalHandler,
 	addressPointer *interpreter.AddressValue,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -2531,11 +2531,11 @@ func newInterpreterAccountContractsRemoveFunction(
 ) interpreter.BoundFunctionGenerator {
 	return func(accountContracts interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountContracts,
 			sema.Account_ContractsTypeRemoveFunctionType,
-			unifiedAccountContractsRemoveFunction(handler, &addressValue),
+			nativeAccountContractsRemoveFunction(handler, &addressValue),
 		)
 	}
 }
@@ -2545,10 +2545,10 @@ func newVMAccountContractsRemoveFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_ContractsType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_ContractsTypeRemoveFunctionName,
 			sema.Account_ContractsTypeRemoveFunctionType,
-			unifiedAccountContractsRemoveFunction(handler, nil),
+			nativeAccountContractsRemoveFunction(handler, nil),
 		),
 	}
 }
@@ -2666,13 +2666,13 @@ var GetAccountFunctionType = sema.NewSimpleFunctionType(
 	sema.AccountReferenceTypeAnnotation,
 )
 
-func UnifiedGetAccountFunction(handler AccountHandler) interpreter.UnifiedNativeFunction {
-	return interpreter.UnifiedNativeFunction(
+func NativeGetAccountFunction(handler AccountHandler) interpreter.NativeFunction {
+	return interpreter.NativeFunction(
 		func(
-			context interpreter.UnifiedFunctionContext,
+			context interpreter.NativeFunctionContext,
 			locationRange interpreter.LocationRange,
-			typeParameterGetter interpreter.TypeParameterGetter,
-			receiver interpreter.Value,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
 			args ...interpreter.Value,
 		) interpreter.Value {
 			accountAddress := interpreter.AssertValueOfType[interpreter.AddressValue](args[0])
@@ -2687,21 +2687,21 @@ func UnifiedGetAccountFunction(handler AccountHandler) interpreter.UnifiedNative
 	)
 }
 func NewInterpreterGetAccountFunction(handler AccountHandler) StandardLibraryValue {
-	return NewUnifiedStandardLibraryStaticFunction(
+	return NewNativeStandardLibraryStaticFunction(
 		GetAccountFunctionName,
 		GetAccountFunctionType,
 		getAccountFunctionDocString,
-		UnifiedGetAccountFunction(handler),
+		NativeGetAccountFunction(handler),
 		false,
 	)
 }
 
 func NewVMGetAccountFunction(handler AccountHandler) StandardLibraryValue {
-	return NewUnifiedStandardLibraryStaticFunction(
+	return NewNativeStandardLibraryStaticFunction(
 		GetAccountFunctionName,
 		GetAccountFunctionType,
 		getAccountFunctionDocString,
-		UnifiedGetAccountFunction(handler),
+		NativeGetAccountFunction(handler),
 		true,
 	)
 }
@@ -2829,14 +2829,14 @@ func newAccountCapabilitiesValue(
 	)
 }
 
-func unifiedAccountStorageCapabilitiesGetControllerFunction(
+func nativeAccountStorageCapabilitiesGetControllerFunction(
 	handler CapabilityControllerHandler,
 	addressPointer *common.Address,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -2861,11 +2861,11 @@ func newInterpreterAccountStorageCapabilitiesGetControllerFunction(
 ) interpreter.BoundFunctionGenerator {
 	return func(storageCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			storageCapabilities,
 			sema.Account_StorageCapabilitiesTypeGetControllerFunctionType,
-			unifiedAccountStorageCapabilitiesGetControllerFunction(handler, &address),
+			nativeAccountStorageCapabilitiesGetControllerFunction(handler, &address),
 		)
 	}
 }
@@ -2875,10 +2875,10 @@ func NewVMAccountStorageCapabilitiesGetControllerFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_StorageCapabilitiesType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeGetControllerFunctionName,
 			sema.Account_StorageCapabilitiesTypeGetControllerFunctionType,
-			unifiedAccountStorageCapabilitiesGetControllerFunction(handler, nil),
+			nativeAccountStorageCapabilitiesGetControllerFunction(handler, nil),
 		),
 	}
 }
@@ -2913,14 +2913,14 @@ var storageCapabilityControllerReferencesArrayStaticType = &interpreter.Variable
 	},
 }
 
-func unifiedAccountStorageCapabilitiesGetControllersFunction(
+func nativeAccountStorageCapabilitiesGetControllersFunction(
 	handler CapabilityControllerHandler,
 	addressPointer *common.Address,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -2945,11 +2945,11 @@ func newInterpreterAccountStorageCapabilitiesGetControllersFunction(
 ) interpreter.BoundFunctionGenerator {
 	return func(storageCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			storageCapabilities,
 			sema.Account_StorageCapabilitiesTypeGetControllersFunctionType,
-			unifiedAccountStorageCapabilitiesGetControllersFunction(handler, &address),
+			nativeAccountStorageCapabilitiesGetControllersFunction(handler, &address),
 		)
 	}
 }
@@ -2959,10 +2959,10 @@ func NewVMAccountStorageCapabilitiesGetControllersFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_StorageCapabilitiesType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeGetControllersFunctionName,
 			sema.Account_StorageCapabilitiesTypeGetControllersFunctionType,
-			unifiedAccountStorageCapabilitiesGetControllersFunction(handler, nil),
+			nativeAccountStorageCapabilitiesGetControllersFunction(handler, nil),
 		),
 	}
 }
@@ -3027,14 +3027,14 @@ var accountStorageCapabilitiesForEachControllerCallbackTypeParams = []sema.Type{
 	},
 }
 
-func unifiedAccountStorageCapabilitiesForEachControllerFunction(
+func nativeAccountStorageCapabilitiesForEachControllerFunction(
 	handler CapabilityControllerHandler,
 	addressPointer *common.Address,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -3062,11 +3062,11 @@ func newInterpreterAccountStorageCapabilitiesForEachControllerFunction(
 	return func(storageCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
 
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			storageCapabilities,
 			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionType,
-			unifiedAccountStorageCapabilitiesForEachControllerFunction(handler, &address),
+			nativeAccountStorageCapabilitiesForEachControllerFunction(handler, &address),
 		)
 	}
 }
@@ -3075,10 +3075,10 @@ func NewVMAccountStorageCapabilitiesForEachControllerFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_StorageCapabilitiesType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionName,
 			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionType,
-			unifiedAccountStorageCapabilitiesForEachControllerFunction(handler, nil),
+			nativeAccountStorageCapabilitiesForEachControllerFunction(handler, nil),
 		),
 	}
 }
@@ -3179,12 +3179,12 @@ func AccountStorageCapabilitiesForeachController(
 	return interpreter.Void
 }
 
-func unifiedAccountStorageCapabilitiesIssueFunction(
+func nativeAccountStorageCapabilitiesIssueFunction(
 	handler CapabilityControllerIssueHandler,
 	addressPointer *common.Address,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
 		typeParameterGetter interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
@@ -3212,11 +3212,11 @@ func newInterpreterAccountStorageCapabilitiesIssueFunction(
 ) interpreter.BoundFunctionGenerator {
 	return func(storageCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			storageCapabilities,
 			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
-			unifiedAccountStorageCapabilitiesIssueFunction(handler, &address),
+			nativeAccountStorageCapabilitiesIssueFunction(handler, &address),
 		)
 	}
 }
@@ -3226,10 +3226,10 @@ func NewVMAccountStorageCapabilitiesIssueFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_StorageCapabilitiesType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeIssueFunctionName,
 			sema.Account_StorageCapabilitiesTypeIssueFunctionType,
-			unifiedAccountStorageCapabilitiesIssueFunction(handler, nil),
+			nativeAccountStorageCapabilitiesIssueFunction(handler, nil),
 		),
 	}
 }
@@ -3262,14 +3262,14 @@ func AccountStorageCapabilitiesIssue(
 	)
 }
 
-func unifiedAccountStorageCapabilitiesIssueWithTypeFunction(
+func nativeAccountStorageCapabilitiesIssueWithTypeFunction(
 	handler CapabilityControllerIssueHandler,
 	addressPointer *common.Address,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -3296,11 +3296,11 @@ func newInterpreterAccountStorageCapabilitiesIssueWithTypeFunction(
 ) interpreter.BoundFunctionGenerator {
 	return func(storageCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			storageCapabilities,
 			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
-			unifiedAccountStorageCapabilitiesIssueWithTypeFunction(handler, &address),
+			nativeAccountStorageCapabilitiesIssueWithTypeFunction(handler, &address),
 		)
 	}
 }
@@ -3310,10 +3310,10 @@ func NewVMAccountStorageCapabilitiesIssueWithTypeFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_StorageCapabilitiesType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionName,
 			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
-			unifiedAccountStorageCapabilitiesIssueWithTypeFunction(handler, nil),
+			nativeAccountStorageCapabilitiesIssueWithTypeFunction(handler, nil),
 		),
 	}
 }
@@ -3447,12 +3447,12 @@ func IssueStorageCapabilityController(
 	return capabilityIDValue
 }
 
-func unifiedAccountAccountCapabilitiesIssueFunction(
+func nativeAccountAccountCapabilitiesIssueFunction(
 	handler CapabilityControllerIssueHandler,
 	addressPointer *common.Address,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
 		typeParameterGetter interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
@@ -3479,11 +3479,11 @@ func newInterpreterAccountAccountCapabilitiesIssueFunction(
 ) interpreter.BoundFunctionGenerator {
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountCapabilities,
 			sema.Account_AccountCapabilitiesTypeIssueFunctionType,
-			unifiedAccountAccountCapabilitiesIssueFunction(handler, &address),
+			nativeAccountAccountCapabilitiesIssueFunction(handler, &address),
 		)
 	}
 }
@@ -3493,22 +3493,22 @@ func NewVMAccountAccountCapabilitiesIssueFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_AccountCapabilitiesType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_AccountCapabilitiesTypeIssueFunctionName,
 			sema.Account_AccountCapabilitiesTypeIssueFunctionType,
-			unifiedAccountAccountCapabilitiesIssueFunction(handler, nil),
+			nativeAccountAccountCapabilitiesIssueFunction(handler, nil),
 		),
 	}
 }
 
-func unifiedAccountAccountCapabilitiesIssueWithTypeFunction(
+func nativeAccountAccountCapabilitiesIssueWithTypeFunction(
 	handler CapabilityControllerIssueHandler,
 	addressPointer *common.Address,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -3537,11 +3537,11 @@ func newInterpreterAccountAccountCapabilitiesIssueWithTypeFunction(
 ) interpreter.BoundFunctionGenerator {
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountCapabilities,
 			sema.Account_AccountCapabilitiesTypeIssueFunctionType,
-			unifiedAccountAccountCapabilitiesIssueWithTypeFunction(handler, &address),
+			nativeAccountAccountCapabilitiesIssueWithTypeFunction(handler, &address),
 		)
 	}
 }
@@ -3551,10 +3551,10 @@ func NewVMAccountAccountCapabilitiesIssueWithTypeFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_AccountCapabilitiesType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_AccountCapabilitiesTypeIssueWithTypeFunctionName,
 			sema.Account_AccountCapabilitiesTypeIssueWithTypeFunctionType,
-			unifiedAccountAccountCapabilitiesIssueWithTypeFunction(handler, nil),
+			nativeAccountAccountCapabilitiesIssueWithTypeFunction(handler, nil),
 		),
 	}
 }
@@ -4167,14 +4167,14 @@ func getAccountCapabilityControllerIDsIterator(
 	return
 }
 
-func unifiedAccountCapabilitiesPublishFunction(
+func nativeAccountCapabilitiesPublishFunction(
 	handler CapabilityControllerHandler,
 	accountAddressPointer *interpreter.AddressValue,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -4201,11 +4201,11 @@ func newInterpreterAccountCapabilitiesPublishFunction(
 ) interpreter.BoundFunctionGenerator {
 
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountCapabilities,
 			sema.Account_CapabilitiesTypePublishFunctionType,
-			unifiedAccountCapabilitiesPublishFunction(handler, &accountAddressValue),
+			nativeAccountCapabilitiesPublishFunction(handler, &accountAddressValue),
 		)
 	}
 }
@@ -4215,10 +4215,10 @@ func NewVMAccountCapabilitiesPublishFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_CapabilitiesType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_CapabilitiesTypePublishFunctionName,
 			sema.Account_CapabilitiesTypePublishFunctionType,
-			unifiedAccountCapabilitiesPublishFunction(handler, nil),
+			nativeAccountCapabilitiesPublishFunction(handler, nil),
 		),
 	}
 }
@@ -4340,14 +4340,14 @@ func AccountCapabilitiesPublish(
 	return interpreter.Void
 }
 
-func unifiedAccountCapabilitiesUnpublishFunction(
+func nativeAccountCapabilitiesUnpublishFunction(
 	handler CapabilityControllerHandler,
 	addressPointer *interpreter.AddressValue,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -4372,11 +4372,11 @@ func newInterpreterAccountCapabilitiesUnpublishFunction(
 ) interpreter.BoundFunctionGenerator {
 
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountCapabilities,
 			sema.Account_CapabilitiesTypeUnpublishFunctionType,
-			unifiedAccountCapabilitiesUnpublishFunction(handler, &addressValue),
+			nativeAccountCapabilitiesUnpublishFunction(handler, &addressValue),
 		)
 	}
 }
@@ -4386,10 +4386,10 @@ func NewVMAccountCapabilitiesUnpublishFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_CapabilitiesType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_CapabilitiesTypeUnpublishFunctionName,
 			sema.Account_CapabilitiesTypeUnpublishFunctionType,
-			unifiedAccountCapabilitiesUnpublishFunction(handler, nil),
+			nativeAccountCapabilitiesUnpublishFunction(handler, nil),
 		),
 	}
 }
@@ -4642,13 +4642,13 @@ func CheckCapabilityController(
 	return referencedValue != nil
 }
 
-func unifiedAccountCapabilitiesGetFunction(
+func nativeAccountCapabilitiesGetFunction(
 	controllerHandler CapabilityControllerHandler,
 	addressPointer *interpreter.AddressValue,
 	borrow bool,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
 		typeParameterGetter interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
@@ -4685,11 +4685,11 @@ func newInterpreterAccountCapabilitiesGetFunction(
 			funcType = sema.Account_CapabilitiesTypeGetFunctionType
 		}
 
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountCapabilities,
 			funcType,
-			unifiedAccountCapabilitiesGetFunction(controllerHandler, &addressValue, borrow),
+			nativeAccountCapabilitiesGetFunction(controllerHandler, &addressValue, borrow),
 		)
 	}
 }
@@ -4713,10 +4713,10 @@ func NewVMAccountCapabilitiesGetFunction(
 
 	return VMFunction{
 		BaseType: sema.Account_CapabilitiesType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			funcName,
 			funcType,
-			unifiedAccountCapabilitiesGetFunction(controllerHandler, nil, borrow),
+			nativeAccountCapabilitiesGetFunction(controllerHandler, nil, borrow),
 		),
 	}
 }
@@ -4895,13 +4895,13 @@ func AccountCapabilitiesGet(
 	return resultValue
 }
 
-func unifiedAccountCapabilitiesExistsFunction(
+func nativeAccountCapabilitiesExistsFunction(
 	addressPointer *interpreter.AddressValue,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -4922,21 +4922,21 @@ func newInterpreterAccountCapabilitiesExistsFunction(
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountCapabilities,
 			sema.Account_CapabilitiesTypeExistsFunctionType,
-			unifiedAccountCapabilitiesExistsFunction(&addressValue),
+			nativeAccountCapabilitiesExistsFunction(&addressValue),
 		)
 	}
 }
 
 var VMAccountCapabilitiesExistsFunction = VMFunction{
 	BaseType: sema.Account_CapabilitiesType,
-	FunctionValue: vm.NewUnifiedNativeFunctionValue(
+	FunctionValue: vm.NewNativeFunctionValue(
 		sema.Account_CapabilitiesTypeExistsFunctionName,
 		sema.Account_CapabilitiesTypeExistsFunctionType,
-		unifiedAccountCapabilitiesExistsFunction(nil),
+		nativeAccountCapabilitiesExistsFunction(nil),
 	),
 }
 
@@ -4994,14 +4994,14 @@ func getAccountCapabilityControllerReference(
 	)
 }
 
-func unifiedAccountAccountCapabilitiesGetControllerFunction(
+func nativeAccountAccountCapabilitiesGetControllerFunction(
 	handler CapabilityControllerHandler,
 	addressPointer *common.Address,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -5033,11 +5033,11 @@ func newInterpreterAccountAccountCapabilitiesGetControllerFunction(
 ) interpreter.BoundFunctionGenerator {
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountCapabilities,
 			sema.Account_AccountCapabilitiesTypeGetControllerFunctionType,
-			unifiedAccountAccountCapabilitiesGetControllerFunction(handler, &address),
+			nativeAccountAccountCapabilitiesGetControllerFunction(handler, &address),
 		)
 	}
 }
@@ -5047,10 +5047,10 @@ func NewVMAccountAccountCapabilitiesGetControllerFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_AccountCapabilitiesType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_AccountCapabilitiesTypeGetControllerFunctionName,
 			sema.Account_AccountCapabilitiesTypeGetControllerFunctionType,
-			unifiedAccountAccountCapabilitiesGetControllerFunction(handler, nil),
+			nativeAccountAccountCapabilitiesGetControllerFunction(handler, nil),
 		),
 	}
 }
@@ -5062,14 +5062,14 @@ var accountCapabilityControllerReferencesArrayStaticType = &interpreter.Variable
 	},
 }
 
-func unifiedAccountAccountCapabilitiesGetControllersFunction(
+func nativeAccountAccountCapabilitiesGetControllersFunction(
 	handler CapabilityControllerHandler,
 	addressPointer *common.Address,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -5091,11 +5091,11 @@ func newInterpreterAccountAccountCapabilitiesGetControllersFunction(
 ) interpreter.BoundFunctionGenerator {
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountCapabilities,
 			sema.Account_AccountCapabilitiesTypeGetControllersFunctionType,
-			unifiedAccountAccountCapabilitiesGetControllersFunction(handler, &address),
+			nativeAccountAccountCapabilitiesGetControllersFunction(handler, &address),
 		)
 	}
 }
@@ -5105,10 +5105,10 @@ func NewVMAccountAccountCapabilitiesGetControllersFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_AccountCapabilitiesType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_AccountCapabilitiesTypeGetControllersFunctionName,
 			sema.Account_AccountCapabilitiesTypeGetControllersFunctionType,
-			unifiedAccountAccountCapabilitiesGetControllersFunction(handler, nil),
+			nativeAccountAccountCapabilitiesGetControllersFunction(handler, nil),
 		),
 	}
 }
@@ -5179,14 +5179,14 @@ func (CapabilityControllersMutatedDuringIterationError) Error() string {
 	return "capability controller iteration continued after changes to controllers"
 }
 
-func unifiedAccountAccountCapabilitiesForEachControllerFunction(
+func nativeAccountAccountCapabilitiesForEachControllerFunction(
 	handler CapabilityControllerHandler,
 	addressPointer *common.Address,
-) interpreter.UnifiedNativeFunction {
+) interpreter.NativeFunction {
 	return func(
-		context interpreter.UnifiedFunctionContext,
+		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
@@ -5212,11 +5212,11 @@ func newInterpreterAccountAccountCapabilitiesForEachControllerFunction(
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
 
-		return interpreter.NewUnifiedBoundHostFunctionValue(
+		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountCapabilities,
 			sema.Account_AccountCapabilitiesTypeForEachControllerFunctionType,
-			unifiedAccountAccountCapabilitiesForEachControllerFunction(handler, &address),
+			nativeAccountAccountCapabilitiesForEachControllerFunction(handler, &address),
 		)
 	}
 }
@@ -5226,10 +5226,10 @@ func NewVMAccountAccountCapabilitiesForEachControllerFunction(
 ) VMFunction {
 	return VMFunction{
 		BaseType: sema.Account_AccountCapabilitiesType,
-		FunctionValue: vm.NewUnifiedNativeFunctionValue(
+		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_AccountCapabilitiesTypeForEachControllerFunctionName,
 			sema.Account_AccountCapabilitiesTypeForEachControllerFunctionType,
-			unifiedAccountAccountCapabilitiesForEachControllerFunction(handler, nil),
+			nativeAccountAccountCapabilitiesForEachControllerFunction(handler, nil),
 		),
 	}
 }
