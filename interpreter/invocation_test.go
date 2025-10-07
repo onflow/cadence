@@ -102,9 +102,9 @@ func TestInterpretSelfDeclaration(t *testing.T) {
 			``,
 			func(
 				context interpreter.NativeFunctionContext,
-				locationRange interpreter.LocationRange,
-				typeParameterGetter interpreter.TypeParameterGetter,
-				receiver interpreter.Value,
+				_ interpreter.LocationRange,
+				_ interpreter.TypeParameterGetter,
+				_ interpreter.Value,
 				args ...interpreter.Value,
 			) interpreter.Value {
 				// Check that the *caller's* self
