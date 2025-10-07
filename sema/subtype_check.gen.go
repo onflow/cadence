@@ -1,4 +1,4 @@
-// Code generated from <no value>. DO NOT EDIT.
+// Code generated from rules.yaml. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
