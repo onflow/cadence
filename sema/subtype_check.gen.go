@@ -151,7 +151,6 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 		switch typedSubType := subType.(type) {
 		case *OptionalType:
 			return IsSubType(typedSubType.Type, typedSuperType.Type)
-
 		}
 
 		return IsSubType(subType, typedSuperType.Type)
@@ -161,7 +160,6 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 		case *DictionaryType:
 			return IsSubType(typedSubType.ValueType, typedSuperType.ValueType) &&
 				IsSubType(typedSubType.KeyType, typedSuperType.KeyType)
-
 		}
 
 		return false
@@ -170,7 +168,6 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 		switch typedSubType := subType.(type) {
 		case *VariableSizedType:
 			return IsSubType(typedSubType.ElementType(false), typedSuperType.ElementType(false))
-
 		}
 
 		return false
@@ -180,7 +177,6 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 		case *ConstantSizedType:
 			return typedSuperType.Size == typedSubType.Size &&
 				IsSubType(typedSubType.ElementType(false), typedSuperType.ElementType(false))
-
 		}
 
 		return false
@@ -190,7 +186,6 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 		case *ReferenceType:
 			return PermitsAccess(typedSuperType.Authorization, typedSubType.Authorization) &&
 				IsSubType(typedSubType.Type, typedSuperType.Type)
-
 		}
 
 		return false
@@ -209,12 +204,10 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 			switch typedSubTypeLegacyType := typedSubType.LegacyType.(type) {
 			case *CompositeType:
 				return typedSubTypeLegacyType == typedSuperType
-
 			}
 
 		case *CompositeType:
 			return false
-
 		}
 
 		return false
@@ -224,13 +217,10 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 		case *CompositeType:
 			return typedSubType.Kind == typedSuperType.CompositeKind &&
 				typedSubType.EffectiveInterfaceConformanceSet().Contains(typedSuperType)
-
 		case *IntersectionType:
 			return typedSubType.EffectiveIntersectionSet().Contains(typedSuperType)
-
 		case *InterfaceType:
 			return typedSubType.EffectiveInterfaceConformanceSet().Contains(typedSuperType)
-
 		}
 
 		return false
@@ -254,6 +244,7 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 					IsIntersectionSubset(typedSuperType, typedSubType) {
 					return true
 				}
+
 				switch typedSubType.LegacyType {
 				case AnyType,
 					AnyStructType,
@@ -268,14 +259,12 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 					return (typedSuperType.LegacyType == nil ||
 						IsSubType(typedSubTypeLegacyType, typedSuperType.LegacyType)) &&
 						IsIntersectionSubset(typedSuperType, typedSubTypeLegacyType)
-
 				}
 
 			case ConformingType:
 				return (typedSuperType.LegacyType == nil ||
 					IsSubType(typedSubType, typedSuperType.LegacyType)) &&
 					IsIntersectionSubset(typedSuperType, typedSubType)
-
 			}
 
 		}
@@ -293,12 +282,10 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 			switch typedSubTypeLegacyType := typedSubType.LegacyType.(type) {
 			case *CompositeType:
 				return typedSubTypeLegacyType == typedSuperType.LegacyType
-
 			}
 
 		case *CompositeType:
 			return IsSubType(typedSubType, typedSuperType.LegacyType)
-
 		}
 
 		switch subType {

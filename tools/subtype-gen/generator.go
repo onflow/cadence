@@ -575,6 +575,12 @@ func (gen *SubTypeCheckGenerator) generatePredicate(predicate Predicate) (result
 				&dst.IfStmt{
 					Cond: conditionalExpr,
 					Body: block,
+					Decs: dst.IfStmtDecorations{
+						NodeDecs: dst.NodeDecs{
+							Before: dst.NewLine,
+							After:  dst.EmptyLine,
+						},
+					},
 				},
 			)
 		}
@@ -668,6 +674,13 @@ func (gen *SubTypeCheckGenerator) combineNodesAsStatements(nodes []dst.Node, com
 
 	// Both expressions and statements were generated.
 	if conditionalExpr != nil {
+		nodeDecs := dst.IfStmtDecorations{
+			NodeDecs: dst.NodeDecs{
+				Before: dst.NewLine,
+				After:  dst.EmptyLine,
+			},
+		}
+
 		if combineAsAnd {
 			return []dst.Stmt{
 				&dst.IfStmt{
@@ -675,6 +688,7 @@ func (gen *SubTypeCheckGenerator) combineNodesAsStatements(nodes []dst.Node, com
 					Body: &dst.BlockStmt{
 						List: stmts,
 					},
+					Decs: nodeDecs,
 				},
 			}
 		} else {
@@ -688,6 +702,7 @@ func (gen *SubTypeCheckGenerator) combineNodesAsStatements(nodes []dst.Node, com
 							},
 						},
 					},
+					Decs: nodeDecs,
 				},
 			}
 
@@ -1229,7 +1244,7 @@ func (gen *SubTypeCheckGenerator) typeAssertion(typeAssertion TypeAssertionPredi
 		Decs: dst.CaseClauseDecorations{
 			NodeDecs: dst.NodeDecs{
 				Before: dst.NewLine,
-				After:  dst.EmptyLine,
+				After:  dst.NewLine,
 			},
 		},
 	}
