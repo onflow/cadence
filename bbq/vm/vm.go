@@ -26,6 +26,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/opcode"
@@ -47,9 +48,8 @@ type VM struct {
 	ipStack []uint16
 	ip      uint16
 
-	context            *Context
-	globals            *activations.Activation[Variable]
-	linkedGlobalsCache map[common.Location]LinkedGlobals
+	context *Context
+	globals *activations.Activation[Variable]
 }
 
 func NewVM(
@@ -60,31 +60,18 @@ func NewVM(
 
 	context := NewContext(config)
 
-	if context.referencedResourceKindedValues == nil {
-		context.referencedResourceKindedValues = ReferencedResourceKindedValues{}
-	}
-
-	// linkedGlobalsCache is a local cache-alike that is being used to hold already linked imports.
-	linkedGlobalsCache := map[common.Location]LinkedGlobals{}
-
 	vm := &VM{
-		linkedGlobalsCache: linkedGlobalsCache,
-		context:            context,
+		context: context,
 	}
 
-	// Delegate the function invocations to the vm.
-	context.invokeFunction = vm.invokeFunction
-	context.lookupFunction = vm.lookupFunction
+	vm.configureContext()
 
 	context.recoverErrors = vm.RecoverErrors
 
 	// Link global variables and functions.
-	linkedGlobals := LinkGlobals(
-		config.MemoryGauge,
+	linkedGlobals := context.linkGlobals(
 		location,
 		program,
-		context,
-		linkedGlobalsCache,
 	)
 
 	vm.globals = linkedGlobals.indexedGlobals
@@ -1206,6 +1193,26 @@ func opTransfer(vm *VM) {
 	vm.replaceTop(transferredValue)
 }
 
+func opConvert(vm *VM, ins opcode.InstructionConvert) {
+	typeIndex := ins.Type
+	targetType := vm.loadType(typeIndex)
+
+	context := vm.context
+
+	value := vm.peek()
+	valueType := value.StaticType(context)
+
+	transferredValue := interpreter.ConvertAndBoxWithValidation(
+		context,
+		value,
+		context.SemaTypeFromStaticType(valueType),
+		context.SemaTypeFromStaticType(targetType),
+		EmptyLocationRange,
+	)
+
+	vm.replaceTop(transferredValue)
+}
+
 func opDestroy(vm *VM) {
 	value := vm.pop().(interpreter.ResourceKindedValue)
 	value.Destroy(vm.context, EmptyLocationRange)
@@ -1608,6 +1615,8 @@ func (vm *VM) run() {
 			opTransferAndConvert(vm, ins)
 		case opcode.InstructionTransfer:
 			opTransfer(vm)
+		case opcode.InstructionConvert:
+			opConvert(vm, ins)
 		case opcode.InstructionDestroy:
 			opDestroy(vm)
 		case opcode.InstructionNewPath:
@@ -1786,23 +1795,9 @@ func (vm *VM) lookupFunction(location common.Location, name string) FunctionValu
 			indexedGlobals = context.BuiltinGlobalsProvider(location)
 		}
 	} else {
-
-		linkedGlobals, ok := vm.linkedGlobalsCache[location]
-
-		if !ok {
-			// TODO: This currently link all functions in program, unnecessarily.
-			//   Link only the requested function.
-			program := context.ImportHandler(location)
-
-			linkedGlobals = LinkGlobals(
-				context.MemoryGauge,
-				location,
-				program,
-				context,
-				vm.linkedGlobalsCache,
-			)
-		}
-
+		// TODO: This currently link all functions in program, unnecessarily.
+		//   Link only the requested function.
+		linkedGlobals := context.linkLocation(location)
 		indexedGlobals = linkedGlobals.indexedGlobals
 	}
 
@@ -1825,10 +1820,8 @@ func (vm *VM) Reset() {
 	vm.callstack = vm.callstack[:0]
 	vm.ipStack = vm.ipStack[:0]
 
-	context := NewContext(vm.context.Config)
-	context.invokeFunction = vm.invokeFunction
-	context.lookupFunction = vm.lookupFunction
-	vm.context = context
+	vm.context = vm.context.newReusing()
+	vm.configureContext()
 }
 
 func (vm *VM) Global(name string) Value {
@@ -1891,24 +1884,35 @@ func (vm *VM) callStackLocations() []interpreter.LocationRange {
 func (vm *VM) RecoverErrors(onError func(error)) {
 	if r := recover(); r != nil {
 		// Recover all errors, because VM can be directly invoked by FVM.
-		cadenceError := interpreter.AsCadenceError(r)
+		err := interpreter.AsCadenceError(r)
 
 		currentLocation := vm.LocationRange()
 
-		if locatedError, ok := cadenceError.(interpreter.HasLocationRange); ok {
+		if locatedError, ok := err.(interpreter.HasLocationRange); ok {
 			locatedError.SetLocationRange(currentLocation)
 		}
 
 		// if the error is not yet an interpreter error, wrap it
-		if _, ok := cadenceError.(interpreter.Error); !ok {
-			cadenceError = interpreter.Error{
-				Err:      cadenceError,
+		if _, ok := err.(interpreter.Error); !ok {
+
+			_, ok := err.(ast.HasPosition)
+			if !ok {
+				errRange := ast.NewUnmeteredRangeFromPositioned(currentLocation)
+
+				err = interpreter.PositionedError{
+					Err:   err,
+					Range: errRange,
+				}
+			}
+
+			err = interpreter.Error{
+				Err:      err,
 				Location: currentLocation.Location,
 			}
 		}
 
-		err := cadenceError.(interpreter.Error)
-		err.StackTrace = vm.callStackLocations()
+		interpreterErr := err.(interpreter.Error)
+		interpreterErr.StackTrace = vm.callStackLocations()
 
 		// For debug purpose only
 
@@ -1925,8 +1929,16 @@ func (vm *VM) RecoverErrors(onError func(error)) {
 			}
 		}
 
-		onError(err)
+		onError(interpreterErr)
 	}
+}
+
+func (vm *VM) configureContext() {
+	context := vm.context
+
+	// Delegate function invocations to the VM
+	context.invokeFunction = vm.invokeFunction
+	context.lookupFunction = vm.lookupFunction
 }
 
 func printInstructionError(

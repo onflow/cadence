@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 
@@ -88,6 +89,8 @@ func TestInterpreterTracing(t *testing.T) {
 	t.Parallel()
 
 	t.Run("array tracing", func(t *testing.T) {
+		t.Parallel()
+
 		var traceOps []string
 		inter := prepareWithTracingCallBack(t, func(opName string) {
 			traceOps = append(traceOps, opName)
@@ -102,21 +105,25 @@ func TestInterpreterTracing(t *testing.T) {
 			owner,
 		)
 		require.NotNil(t, array)
-		require.Equal(t, len(traceOps), 1)
-		require.Equal(t, traceOps[0], "array.construct")
+		require.Len(t, traceOps, 2)
+		assert.Equal(t, "atreeArray.newFromBatchData", traceOps[0])
+		assert.Equal(t, "array.construct", traceOps[1])
 
 		cloned := array.Clone(inter)
 		require.NotNil(t, cloned)
+
 		cloned.DeepRemove(inter, true)
-		require.Equal(t, len(traceOps), 2)
-		require.Equal(t, traceOps[1], "array.deepRemove")
+		require.Len(t, traceOps, 3)
+		assert.Equal(t, "array.deepRemove", traceOps[2])
 
 		array.Destroy(inter, interpreter.EmptyLocationRange)
-		require.Equal(t, len(traceOps), 3)
-		require.Equal(t, traceOps[2], "array.destroy")
+		require.Len(t, traceOps, 4)
+		assert.Equal(t, "array.destroy", traceOps[3])
 	})
 
 	t.Run("dictionary tracing", func(t *testing.T) {
+		t.Parallel()
+
 		var traceOps []string
 		inter := prepareWithTracingCallBack(t, func(opName string) {
 			traceOps = append(traceOps, opName)
@@ -131,21 +138,25 @@ func TestInterpreterTracing(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("test"), interpreter.NewUnmeteredIntValueFromInt64(42),
 		)
 		require.NotNil(t, dict)
-		require.Equal(t, len(traceOps), 1)
-		require.Equal(t, traceOps[0], "dictionary.construct")
+		require.Len(t, traceOps, 2)
+		assert.Equal(t, "atreeMap.new", traceOps[0])
+		assert.Equal(t, "dictionary.construct", traceOps[1])
 
 		cloned := dict.Clone(inter)
 		require.NotNil(t, cloned)
+
 		cloned.DeepRemove(inter, true)
-		require.Equal(t, len(traceOps), 2)
-		require.Equal(t, traceOps[1], "dictionary.deepRemove")
+		require.Len(t, traceOps, 3)
+		assert.Equal(t, "dictionary.deepRemove", traceOps[2])
 
 		dict.Destroy(inter, interpreter.EmptyLocationRange)
-		require.Equal(t, len(traceOps), 3)
-		require.Equal(t, traceOps[2], "dictionary.destroy")
+		require.Len(t, traceOps, 4)
+		assert.Equal(t, "dictionary.destroy", traceOps[3])
 	})
 
 	t.Run("composite tracing", func(t *testing.T) {
+		t.Parallel()
+
 		var traceOps []string
 		inter := prepareWithTracingCallBack(t, func(opName string) {
 			traceOps = append(traceOps, opName)
@@ -154,30 +165,32 @@ func TestInterpreterTracing(t *testing.T) {
 
 		value := newTestCompositeValue(inter, owner)
 
-		require.Equal(t, len(traceOps), 1)
-		require.Equal(t, traceOps[0], "composite.construct")
+		require.Len(t, traceOps, 2)
+		assert.Equal(t, "atreeMap.new", traceOps[0])
+		assert.Equal(t, "composite.construct", traceOps[1])
 
 		cloned := value.Clone(inter)
 		require.NotNil(t, cloned)
+
 		cloned.DeepRemove(inter, true)
-		require.Equal(t, len(traceOps), 2)
-		require.Equal(t, traceOps[1], "composite.deepRemove")
+		require.Len(t, traceOps, 3)
+		assert.Equal(t, "composite.deepRemove", traceOps[2])
 
 		value.SetMember(inter, interpreter.EmptyLocationRange, "abc", interpreter.Nil)
-		require.Equal(t, len(traceOps), 3)
-		require.Equal(t, traceOps[2], "composite.setMember.abc")
+		require.Len(t, traceOps, 4)
+		assert.Equal(t, "composite.setMember", traceOps[3])
 
 		value.GetMember(inter, interpreter.EmptyLocationRange, "abc")
-		require.Equal(t, len(traceOps), 4)
-		require.Equal(t, traceOps[3], "composite.getMember.abc")
+		require.Len(t, traceOps, 5)
+		assert.Equal(t, "composite.getMember", traceOps[4])
 
 		value.RemoveMember(inter, interpreter.EmptyLocationRange, "abc")
-		require.Equal(t, len(traceOps), 5)
-		require.Equal(t, traceOps[4], "composite.removeMember.abc")
+		require.Len(t, traceOps, 6)
+		assert.Equal(t, "composite.removeMember", traceOps[5])
 
 		value.Destroy(inter, interpreter.EmptyLocationRange)
-		require.Equal(t, len(traceOps), 6)
-		require.Equal(t, traceOps[5], "composite.destroy")
+		require.Len(t, traceOps, 7)
+		assert.Equal(t, "composite.destroy", traceOps[6])
 
 		array := interpreter.NewArrayValue(
 			inter,
@@ -189,8 +202,10 @@ func TestInterpreterTracing(t *testing.T) {
 			cloned,
 		)
 		require.NotNil(t, array)
-		require.Equal(t, len(traceOps), 8)
-		require.Equal(t, traceOps[6], "composite.transfer")
-		require.Equal(t, traceOps[7], "array.construct")
+		require.Len(t, traceOps, 11)
+		assert.Equal(t, "atreeMap.newFromBatchData", traceOps[7])
+		assert.Equal(t, "composite.transfer", traceOps[8])
+		assert.Equal(t, "atreeArray.newFromBatchData", traceOps[9])
+		assert.Equal(t, "array.construct", traceOps[10])
 	})
 }

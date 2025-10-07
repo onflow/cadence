@@ -62,6 +62,13 @@ func (g *testMemoryGauge) getMemory(kind common.MemoryKind) uint64 {
 	return g.meter[kind]
 }
 
+func ifTracing[T any](tracingValue, nonTracingValue T) T {
+	if interpreter.TracingEnabled {
+		return tracingValue
+	}
+	return nonTracingValue
+}
+
 func parseCheckAndPrepareWithMemoryMetering(
 	t *testing.T,
 	code string,
@@ -743,7 +750,7 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindStringValue))
-		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, ifTracing[uint64](27, 9), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindCompositeValueBase))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
@@ -851,7 +858,7 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, ifTracing[uint64](9, 0), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeValueBase))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
@@ -882,7 +889,7 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, ifTracing[uint64](11, 2), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeValueBase))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
@@ -916,7 +923,7 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, ifTracing[uint64](13, 4), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
