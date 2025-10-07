@@ -24,36 +24,80 @@ jobs:
     name: Performance regression check
     runs-on: ubuntu-latest
     steps:
-      - name: Set benchmark settings
-        # reducing repetition and time will speed up execution,
-        # but will be more inaccurate at detecting change
-        run: |
-          echo "benchmark_repetitions=2" >> "$GITHUB_OUTPUT"
-          echo "benchmark_time=2s" >> "$GITHUB_OUTPUT"
-        id: settings
 
       - name: Checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
+      - name: Detect changed components
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            encoding:
+              - 'encoding/**'
+            parser:
+              - 'parser/**'
+            sema:
+              - 'sema/**'
+            bbq:
+              - 'bbq/**'
+
+      - name: Set benchmark settings
+        # reducing repetition and time will speed up execution,
+        # but will be more inaccurate at detecting change
+        run: |
+          echo "benchmark_repetitions=2" >> "$GITHUB_OUTPUT"
+          echo "benchmark_time=2s" >> "$GITHUB_OUTPUT"
+
+        id: settings
+
       - uses: actions/setup-go@v3
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
-      - name: Run benchmark on current branch
-        shell: bash
-        run: |
-            make bench BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee new.txt
+      - name: Run unconditional benchmarks, on current branch
+        run: make bench-common BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee new.txt
+
+      - name: Run encoding benchmarks, on current branch
+        if: steps.changes.outputs.encoding == 'true'
+        run: make bench BENCH_PKGS=./encoding/... BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee -a new.txt
+
+      - name: Run parser benchmarks, on current branch
+        if: steps.changes.outputs.parser == 'true'
+        run: make bench BENCH_PKGS=./parser/... BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee -a new.txt
+
+      - name: Run sema benchmarks, on current branch
+        if: steps.changes.outputs.sema == 'true'
+        run: make bench BENCH_PKGS=./sema/... BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee -a new.txt
+
+      - name: Run compiler/VM benchmarks, on current branch
+        if: steps.changes.outputs.bbq == 'true'
+        run: make bench BENCH_PKGS=./bbq/... BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee -a new.txt
 
       - name: Checkout base branch
         run: git checkout ${{ github.event.pull_request.base.sha }}
 
-      - name: Run benchmark on base branch
-        shell: bash
-        run: |
-          make bench BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee old.txt
+      - name: Run unconditional benchmarks, on base branch
+        run: make bench-common BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee old.txt
+
+      - name: Run encoding benchmarks, on current branch
+        if: steps.changes.outputs.encoding == 'true'
+        run: make bench BENCH_PKGS=./encoding/... BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee -a old.txt
+
+      - name: Run parser benchmarks, on current branch
+        if: steps.changes.outputs.parser == 'true'
+        run: make bench BENCH_PKGS=./parser/... BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee -a old.txt
+
+      - name: Run sema benchmarks, on current branch
+        if: steps.changes.outputs.sema == 'true'
+        run: make bench BENCH_PKGS=./sema/... BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee -a old.txt
+
+      - name: Run compiler/VM benchmarks, on current branch
+        if: steps.changes.outputs.bbq == 'true'
+        run: make bench BENCH_PKGS=./bbq/... BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee -a old.txt
 
       # see https://trstringer.com/github-actions-multiline-strings/ to see why this part is complex
       - name: Use benchstat for comparison
@@ -70,7 +114,7 @@ jobs:
         with:
           issue-number: ${{ github.event.pull_request.number }}
           comment-author: "github-actions[bot]"
-          body-includes: "## Cadence [Benchstat](https://pkg.go.dev/golang.org/x/perf/cmd/benchstat) comparison"
+          body-includes: "## [Benchstat](https://pkg.go.dev/golang.org/x/perf/cmd/benchstat) comparison"
 
       - name: Create or update comment
         uses: peter-evans/create-or-update-comment@v1
@@ -78,13 +122,13 @@ jobs:
           comment-id: ${{ steps.fc.outputs.comment-id }}
           issue-number: ${{ github.event.pull_request.number }}
           body: |
-            ## Cadence [Benchstat](https://pkg.go.dev/golang.org/x/perf/cmd/benchstat) comparison
-            This branch with compared with the base branch ${{  github.event.pull_request.base.label }} commit ${{ github.event.pull_request.base.sha }}
-            The command `for i in {1..N}; do go test ./... -run=XXX -bench=. -benchmem -shuffle=on; done` was used.
-            Bench tests were run a total of ${{ steps.settings.outputs.benchmark_repetitions }} times on each branch.
+            ## [Benchstat](https://pkg.go.dev/golang.org/x/perf/cmd/benchstat) comparison
+
+            - Base branch: ${{  github.event.pull_request.base.label }}
+            - Base commit: ${{ github.event.pull_request.base.sha }}
 
             <details>
-            <summary>Collapsed results for better readability</summary>
+            <summary>Results</summary>
             <p>
 
             ${{ env.BENCHSTAT }}

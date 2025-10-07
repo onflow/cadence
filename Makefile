@@ -121,13 +121,18 @@ test-with-compiler-and-tracing:
 
 BENCH_REPS ?= 2
 BENCH_TIME ?= 2s
-BENCH_PKGS ?= ./...
+BENCH_PKGS ?= $(shell go list ./... | grep -Ev '/old_parser')
+BENCH_PKGS_COMMON ?= $(shell go list ./... | grep -Ev '/old_parser|/encoding|/parser|/sema|/bbq')
 
 .PHONY: bench
 bench:
 	for i in {1..$(BENCH_REPS)}; do \
-		go test $(BENCH_PKGS) -run=^$$ -bench=. -benchmem -shuffle=on -benchtime=$(BENCH_TIME); \
+		go test -run=^$$ -bench=. -benchmem -shuffle=on -benchtime=$(BENCH_TIME) $(BENCH_PKGS) ; \
 	done
+
+.PHONY: bench-common
+bench-common:
+	$(MAKE) bench BENCH_PKGS="$(BENCH_PKGS_COMMON)"
 
 # Linting
 
