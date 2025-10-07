@@ -130,7 +130,7 @@ func NewBoundHostFunctionValue(
 	function NativeFunction,
 ) BoundFunctionValue {
 
-	// wrap the unified function to work with the standard HostFunction signature
+	// wrap the native function to work with the standard HostFunction signature
 	// just like how we do it in the interpreter
 	wrappedFunction := AdaptNativeFunctionForInterpreter(function)
 
@@ -145,7 +145,7 @@ func NewBoundHostFunctionValue(
 }
 
 // generic helper function to assert that the provided value is of a specific type
-// useful for asserting receiver and argument types in unified functions
+// useful for asserting receiver and argument types in native functions
 func AssertValueOfType[T Value](val Value) T {
 	value, ok := val.(T)
 	if !ok {

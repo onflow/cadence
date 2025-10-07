@@ -1109,7 +1109,7 @@ func TestInterpretNativeFunctionWithMultipleTypeParameters(t *testing.T) {
 		ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 	}
 
-	unifiedFunction := func(
+	nativeFunction := func(
 		context interpreter.NativeFunctionContext,
 		locationRange interpreter.LocationRange,
 		typeParameterGetter interpreter.TypeParameterGetter,
@@ -1133,12 +1133,12 @@ func TestInterpretNativeFunctionWithMultipleTypeParameters(t *testing.T) {
 		function = vm.NewNativeFunctionValue(
 			"nativeFunction",
 			nativeFunctionType,
-			unifiedFunction,
+			nativeFunction,
 		)
 	} else {
 		function = interpreter.NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			nativeFunctionType,
-			unifiedFunction,
+			nativeFunction,
 		)
 	}
 

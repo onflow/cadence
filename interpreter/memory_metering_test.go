@@ -88,6 +88,40 @@ func ifCompile[T any](compileValue, interpretValue T) T {
 	return interpretValue
 }
 
+func meterLogFunction(meter *testMemoryGauge, loggedString *string) stdlib.StandardLibraryValue {
+	return stdlib.NewInterpreterStandardLibraryStaticFunction(
+		"log",
+		&sema.FunctionType{
+			Parameters: []sema.Parameter{
+				{
+					Label:          sema.ArgumentLabelNotRequired,
+					Identifier:     "value",
+					TypeAnnotation: sema.AnyStructTypeAnnotation,
+				},
+			},
+			ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+		},
+		``,
+		func(
+			context interpreter.NativeFunctionContext,
+			locationRange interpreter.LocationRange,
+			typeParameterGetter interpreter.TypeParameterGetter,
+			receiver interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
+			// Reset gauge, to only capture the values metered during string conversion
+			meter.meter = make(map[common.MemoryKind]uint64)
+
+			*loggedString = args[0].MeteredString(
+				context,
+				interpreter.SeenReferences{},
+				locationRange,
+			)
+			return interpreter.Void
+		},
+	)
+}
+
 func TestInterpretArrayMetering(t *testing.T) {
 
 	t.Parallel()
@@ -9258,31 +9292,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 
 		var loggedString string
 
-		logFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
-			"log",
-			&sema.FunctionType{
-				Parameters: []sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: sema.AnyStructTypeAnnotation,
-					},
-				},
-				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
-			},
-			``,
-			func(invocation interpreter.Invocation) interpreter.Value {
-				// Reset gauge, to only capture the values metered during string conversion
-				meter.meter = make(map[common.MemoryKind]uint64)
-
-				loggedString = invocation.Arguments[0].MeteredString(
-					invocation.InvocationContext,
-					interpreter.SeenReferences{},
-					invocation.LocationRange,
-				)
-				return interpreter.Void
-			},
-		)
+		logFunction := meterLogFunction(meter, &loggedString)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(logFunction)
@@ -9607,31 +9617,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 
 		var loggedString string
 
-		logFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
-			"log",
-			&sema.FunctionType{
-				Parameters: []sema.Parameter{
-					{
-						Label:          sema.ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: sema.AnyStructTypeAnnotation,
-					},
-				},
-				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
-			},
-			``,
-			func(invocation interpreter.Invocation) interpreter.Value {
-				// Reset gauge, to only capture the values metered during string conversion
-				meter.meter = make(map[common.MemoryKind]uint64)
-
-				loggedString = invocation.Arguments[0].MeteredString(
-					invocation.InvocationContext,
-					interpreter.SeenReferences{},
-					invocation.LocationRange,
-				)
-				return interpreter.Void
-			},
-		)
+		logFunction := meterLogFunction(meter, &loggedString)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(logFunction)

@@ -612,7 +612,7 @@ type AccountKeyAdditionHandler interface {
 	AddAccountKey(address common.Address, key *PublicKey, algo sema.HashAlgorithm, weight int) (*AccountKey, error)
 }
 
-func unifiedAccountKeysAddFunction(
+func nativeAccountKeysAddFunction(
 	handler AccountKeyAdditionHandler,
 	addressPointer *interpreter.AddressValue,
 ) interpreter.NativeFunction {
@@ -651,7 +651,7 @@ func newInterpreterAccountKeysAddFunction(
 			context,
 			accountKeys,
 			sema.Account_KeysTypeAddFunctionType,
-			unifiedAccountKeysAddFunction(handler, &addressValue),
+			nativeAccountKeysAddFunction(handler, &addressValue),
 		)
 	}
 }
@@ -664,7 +664,7 @@ func NewVMAccountKeysAddFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_KeysTypeAddFunctionName,
 			sema.Account_KeysTypeAddFunctionType,
-			unifiedAccountKeysAddFunction(handler, nil),
+			nativeAccountKeysAddFunction(handler, nil),
 		),
 	}
 }
@@ -740,7 +740,7 @@ type AccountKeyProvider interface {
 	AccountKeysCount(address common.Address) (uint32, error)
 }
 
-func unifiedAccountKeysGetFunction(
+func nativeAccountKeysGetFunction(
 	provider AccountKeyProvider,
 	addressPointer *common.Address,
 ) interpreter.NativeFunction {
@@ -780,7 +780,7 @@ func newInterpreterAccountKeysGetFunction(
 			context,
 			accountKeys,
 			functionType,
-			unifiedAccountKeysGetFunction(provider, &address),
+			nativeAccountKeysGetFunction(provider, &address),
 		)
 	}
 }
@@ -793,7 +793,7 @@ func NewVMAccountKeysGetFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_KeysTypeGetFunctionName,
 			sema.Account_KeysTypeGetFunctionType,
-			unifiedAccountKeysGetFunction(provider, nil),
+			nativeAccountKeysGetFunction(provider, nil),
 		),
 	}
 }
@@ -834,7 +834,7 @@ func AccountKeysGet(
 // `Account.Keys.forEachKey(_ f: fun(AccountKey): Bool)`
 var accountKeysForEachCallbackTypeParams = []sema.Type{sema.AccountKeyType}
 
-func unifiedAccountKeysForEachFunction(
+func nativeAccountKeysForEachFunction(
 	provider AccountKeyProvider,
 	addressPointer *common.Address,
 ) interpreter.NativeFunction {
@@ -871,7 +871,7 @@ func newInterpreterAccountKeysForEachFunction(
 			context,
 			accountKeys,
 			sema.Account_KeysTypeForEachFunctionType,
-			unifiedAccountKeysForEachFunction(provider, &address),
+			nativeAccountKeysForEachFunction(provider, &address),
 		)
 	}
 }
@@ -884,7 +884,7 @@ func NewVMAccountKeysForEachFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_KeysTypeForEachFunctionName,
 			sema.Account_KeysTypeForEachFunctionType,
-			unifiedAccountKeysForEachFunction(provider, nil),
+			nativeAccountKeysForEachFunction(provider, nil),
 		),
 	}
 }
@@ -991,7 +991,7 @@ type AccountKeyRevocationHandler interface {
 	RevokeAccountKey(address common.Address, index uint32) (*AccountKey, error)
 }
 
-func unifiedAccountKeysRevokeFunction(
+func nativeAccountKeysRevokeFunction(
 	handler AccountKeyRevocationHandler,
 	addressPointer *interpreter.AddressValue,
 ) interpreter.NativeFunction {
@@ -1027,7 +1027,7 @@ func newInterpreterAccountKeysRevokeFunction(
 			context,
 			accountKeys,
 			sema.Account_KeysTypeRevokeFunctionType,
-			unifiedAccountKeysRevokeFunction(handler, &addressValue),
+			nativeAccountKeysRevokeFunction(handler, &addressValue),
 		)
 	}
 }
@@ -1040,7 +1040,7 @@ func NewVMAccountKeysRevokeFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_KeysTypeRevokeFunctionName,
 			sema.Account_KeysTypeRevokeFunctionType,
-			unifiedAccountKeysRevokeFunction(handler, nil),
+			nativeAccountKeysRevokeFunction(handler, nil),
 		),
 	}
 }
@@ -1089,7 +1089,7 @@ func AccountKeysRevoke(
 	)
 }
 
-func unifiedAccountInboxPublishFunction(
+func nativeAccountInboxPublishFunction(
 	handler EventEmitter,
 	providerPointer *interpreter.AddressValue,
 ) interpreter.NativeFunction {
@@ -1128,7 +1128,7 @@ func newInterpreterAccountInboxPublishFunction(
 			context,
 			accountInbox,
 			sema.Account_InboxTypePublishFunctionType,
-			unifiedAccountInboxPublishFunction(handler, &providerValue),
+			nativeAccountInboxPublishFunction(handler, &providerValue),
 		)
 	}
 }
@@ -1141,7 +1141,7 @@ func NewVMAccountInboxPublishFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_InboxTypePublishFunctionName,
 			sema.Account_InboxTypePublishFunctionType,
-			unifiedAccountInboxPublishFunction(handler, nil),
+			nativeAccountInboxPublishFunction(handler, nil),
 		),
 	}
 }
@@ -1189,7 +1189,7 @@ func AccountInboxPublish(
 	return interpreter.Void
 }
 
-func unifiedAccountInboxUnpublishFunction(
+func nativeAccountInboxUnpublishFunction(
 	handler EventEmitter,
 	providerPointer *interpreter.AddressValue,
 ) interpreter.NativeFunction {
@@ -1226,7 +1226,7 @@ func newInterpreterAccountInboxUnpublishFunction(
 			context,
 			accountInbox,
 			sema.Account_InboxTypeUnpublishFunctionType,
-			unifiedAccountInboxUnpublishFunction(handler, &providerValue),
+			nativeAccountInboxUnpublishFunction(handler, &providerValue),
 		)
 	}
 }
@@ -1239,7 +1239,7 @@ func NewVMAccountInboxUnpublishFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_InboxTypeUnpublishFunctionName,
 			sema.Account_InboxTypeUnpublishFunctionType,
-			unifiedAccountInboxUnpublishFunction(handler, nil),
+			nativeAccountInboxUnpublishFunction(handler, nil),
 		),
 	}
 }
@@ -1309,7 +1309,7 @@ func AccountInboxUnpublish(
 	return interpreter.NewSomeValueNonCopying(context, value)
 }
 
-func unifiedAccountInboxClaimFunction(
+func nativeAccountInboxClaimFunction(
 	handler EventEmitter,
 	recipientPointer *interpreter.AddressValue,
 ) interpreter.NativeFunction {
@@ -1348,7 +1348,7 @@ func newInterpreterAccountInboxClaimFunction(
 			context,
 			accountInbox,
 			sema.Account_InboxTypeClaimFunctionType,
-			unifiedAccountInboxClaimFunction(handler, &recipientValue),
+			nativeAccountInboxClaimFunction(handler, &recipientValue),
 		)
 	}
 }
@@ -1361,7 +1361,7 @@ func NewVMAccountInboxClaimFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_InboxTypeClaimFunctionName,
 			sema.Account_InboxTypeClaimFunctionType,
-			unifiedAccountInboxClaimFunction(handler, nil),
+			nativeAccountInboxClaimFunction(handler, nil),
 		),
 	}
 }
@@ -1512,7 +1512,7 @@ type AccountContractProvider interface {
 	GetAccountContractCode(location common.AddressLocation) ([]byte, error)
 }
 
-func unifiedAccountContractsGetFunction(
+func nativeAccountContractsGetFunction(
 	provider AccountContractProvider,
 	addressPointer *interpreter.AddressValue,
 ) interpreter.NativeFunction {
@@ -1547,7 +1547,7 @@ func newInterpreterAccountContractsGetFunction(
 			context,
 			accountContracts,
 			sema.Account_ContractsTypeGetFunctionType,
-			unifiedAccountContractsGetFunction(provider, &addressValue),
+			nativeAccountContractsGetFunction(provider, &addressValue),
 		)
 	}
 }
@@ -1558,7 +1558,7 @@ func NewVMAccountContractsGetFunction(provider AccountContractProvider) VMFuncti
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_ContractsTypeGetFunctionName,
 			sema.Account_ContractsTypeGetFunctionType,
-			unifiedAccountContractsGetFunction(provider, nil),
+			nativeAccountContractsGetFunction(provider, nil),
 		),
 	}
 }
@@ -1599,7 +1599,7 @@ func AccountContractsGet(
 	}
 }
 
-func unifiedAccountContractsBorrowFunction(
+func nativeAccountContractsBorrowFunction(
 	handler AccountContractsHandler,
 	addressPointer *common.Address,
 ) interpreter.NativeFunction {
@@ -1640,7 +1640,7 @@ func newInterpreterAccountContractsBorrowFunction(
 			context,
 			accountContracts,
 			sema.Account_ContractsTypeBorrowFunctionType,
-			unifiedAccountContractsBorrowFunction(handler, &address),
+			nativeAccountContractsBorrowFunction(handler, &address),
 		)
 	}
 }
@@ -1651,7 +1651,7 @@ func NewVMAccountContractsBorrowFunction(handler AccountContractsHandler) VMFunc
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_ContractsTypeBorrowFunctionName,
 			sema.Account_ContractsTypeBorrowFunctionType,
-			unifiedAccountContractsBorrowFunction(handler, nil),
+			nativeAccountContractsBorrowFunction(handler, nil),
 		),
 	}
 }
@@ -1787,7 +1787,7 @@ type AccountContractAdditionHandler interface {
 	TemporarilyRecordCode(location common.AddressLocation, code []byte)
 }
 
-func unifiedAccountContractsChangeFunction(
+func nativeAccountContractsChangeFunction(
 	handler AccountContractAdditionAndNamesHandler,
 	addressPointer *interpreter.AddressValue,
 	isUpdate bool,
@@ -1840,7 +1840,7 @@ func newInterpreterAccountContractsChangeFunction(
 			context,
 			accountContracts,
 			functionType,
-			unifiedAccountContractsChangeFunction(handler, &addressValue, isUpdate),
+			nativeAccountContractsChangeFunction(handler, &addressValue, isUpdate),
 		)
 	}
 }
@@ -1862,7 +1862,7 @@ func newVMAccountContractsChangeFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			functionName,
 			functionType,
-			unifiedAccountContractsChangeFunction(handler, nil, isUpdate),
+			nativeAccountContractsChangeFunction(handler, nil, isUpdate),
 		),
 	}
 }
@@ -2157,7 +2157,7 @@ func changeAccountContracts(
 	)
 }
 
-func unifiedAccountContractsTryUpdateFunction(
+func nativeAccountContractsTryUpdateFunction(
 	handler AccountContractAdditionAndNamesHandler,
 	addressPointer *interpreter.AddressValue,
 ) interpreter.NativeFunction {
@@ -2231,7 +2231,7 @@ func newInterpreterAccountContractsTryUpdateFunction(
 			context,
 			accountContracts,
 			sema.Account_ContractsTypeTryUpdateFunctionType,
-			unifiedAccountContractsTryUpdateFunction(handler, &addressValue),
+			nativeAccountContractsTryUpdateFunction(handler, &addressValue),
 		)
 	}
 }
@@ -2245,7 +2245,7 @@ func newVMAccountContractsTryUpdateFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_ContractsTypeTryUpdateFunctionName,
 			sema.Account_ContractsTypeTryUpdateFunctionType,
-			unifiedAccountContractsTryUpdateFunction(handler, nil),
+			nativeAccountContractsTryUpdateFunction(handler, nil),
 		),
 	}
 }
@@ -2499,7 +2499,7 @@ type AccountContractRemovalHandler interface {
 	RecordContractRemoval(location common.AddressLocation)
 }
 
-func unifiedAccountContractsRemoveFunction(
+func nativeAccountContractsRemoveFunction(
 	handler AccountContractRemovalHandler,
 	addressPointer *interpreter.AddressValue,
 ) interpreter.NativeFunction {
@@ -2535,7 +2535,7 @@ func newInterpreterAccountContractsRemoveFunction(
 			context,
 			accountContracts,
 			sema.Account_ContractsTypeRemoveFunctionType,
-			unifiedAccountContractsRemoveFunction(handler, &addressValue),
+			nativeAccountContractsRemoveFunction(handler, &addressValue),
 		)
 	}
 }
@@ -2548,7 +2548,7 @@ func newVMAccountContractsRemoveFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_ContractsTypeRemoveFunctionName,
 			sema.Account_ContractsTypeRemoveFunctionType,
-			unifiedAccountContractsRemoveFunction(handler, nil),
+			nativeAccountContractsRemoveFunction(handler, nil),
 		),
 	}
 }
@@ -2829,7 +2829,7 @@ func newAccountCapabilitiesValue(
 	)
 }
 
-func unifiedAccountStorageCapabilitiesGetControllerFunction(
+func nativeAccountStorageCapabilitiesGetControllerFunction(
 	handler CapabilityControllerHandler,
 	addressPointer *common.Address,
 ) interpreter.NativeFunction {
@@ -2865,7 +2865,7 @@ func newInterpreterAccountStorageCapabilitiesGetControllerFunction(
 			context,
 			storageCapabilities,
 			sema.Account_StorageCapabilitiesTypeGetControllerFunctionType,
-			unifiedAccountStorageCapabilitiesGetControllerFunction(handler, &address),
+			nativeAccountStorageCapabilitiesGetControllerFunction(handler, &address),
 		)
 	}
 }
@@ -2878,7 +2878,7 @@ func NewVMAccountStorageCapabilitiesGetControllerFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeGetControllerFunctionName,
 			sema.Account_StorageCapabilitiesTypeGetControllerFunctionType,
-			unifiedAccountStorageCapabilitiesGetControllerFunction(handler, nil),
+			nativeAccountStorageCapabilitiesGetControllerFunction(handler, nil),
 		),
 	}
 }
@@ -2913,7 +2913,7 @@ var storageCapabilityControllerReferencesArrayStaticType = &interpreter.Variable
 	},
 }
 
-func unifiedAccountStorageCapabilitiesGetControllersFunction(
+func nativeAccountStorageCapabilitiesGetControllersFunction(
 	handler CapabilityControllerHandler,
 	addressPointer *common.Address,
 ) interpreter.NativeFunction {
@@ -2949,7 +2949,7 @@ func newInterpreterAccountStorageCapabilitiesGetControllersFunction(
 			context,
 			storageCapabilities,
 			sema.Account_StorageCapabilitiesTypeGetControllersFunctionType,
-			unifiedAccountStorageCapabilitiesGetControllersFunction(handler, &address),
+			nativeAccountStorageCapabilitiesGetControllersFunction(handler, &address),
 		)
 	}
 }
@@ -2962,7 +2962,7 @@ func NewVMAccountStorageCapabilitiesGetControllersFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeGetControllersFunctionName,
 			sema.Account_StorageCapabilitiesTypeGetControllersFunctionType,
-			unifiedAccountStorageCapabilitiesGetControllersFunction(handler, nil),
+			nativeAccountStorageCapabilitiesGetControllersFunction(handler, nil),
 		),
 	}
 }
@@ -3027,7 +3027,7 @@ var accountStorageCapabilitiesForEachControllerCallbackTypeParams = []sema.Type{
 	},
 }
 
-func unifiedAccountStorageCapabilitiesForEachControllerFunction(
+func nativeAccountStorageCapabilitiesForEachControllerFunction(
 	handler CapabilityControllerHandler,
 	addressPointer *common.Address,
 ) interpreter.NativeFunction {
@@ -3066,7 +3066,7 @@ func newInterpreterAccountStorageCapabilitiesForEachControllerFunction(
 			context,
 			storageCapabilities,
 			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionType,
-			unifiedAccountStorageCapabilitiesForEachControllerFunction(handler, &address),
+			nativeAccountStorageCapabilitiesForEachControllerFunction(handler, &address),
 		)
 	}
 }
@@ -3078,7 +3078,7 @@ func NewVMAccountStorageCapabilitiesForEachControllerFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionName,
 			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionType,
-			unifiedAccountStorageCapabilitiesForEachControllerFunction(handler, nil),
+			nativeAccountStorageCapabilitiesForEachControllerFunction(handler, nil),
 		),
 	}
 }
@@ -3179,7 +3179,7 @@ func AccountStorageCapabilitiesForeachController(
 	return interpreter.Void
 }
 
-func unifiedAccountStorageCapabilitiesIssueFunction(
+func nativeAccountStorageCapabilitiesIssueFunction(
 	handler CapabilityControllerIssueHandler,
 	addressPointer *common.Address,
 ) interpreter.NativeFunction {
@@ -3216,7 +3216,7 @@ func newInterpreterAccountStorageCapabilitiesIssueFunction(
 			context,
 			storageCapabilities,
 			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
-			unifiedAccountStorageCapabilitiesIssueFunction(handler, &address),
+			nativeAccountStorageCapabilitiesIssueFunction(handler, &address),
 		)
 	}
 }
@@ -3229,7 +3229,7 @@ func NewVMAccountStorageCapabilitiesIssueFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeIssueFunctionName,
 			sema.Account_StorageCapabilitiesTypeIssueFunctionType,
-			unifiedAccountStorageCapabilitiesIssueFunction(handler, nil),
+			nativeAccountStorageCapabilitiesIssueFunction(handler, nil),
 		),
 	}
 }
@@ -3262,7 +3262,7 @@ func AccountStorageCapabilitiesIssue(
 	)
 }
 
-func unifiedAccountStorageCapabilitiesIssueWithTypeFunction(
+func nativeAccountStorageCapabilitiesIssueWithTypeFunction(
 	handler CapabilityControllerIssueHandler,
 	addressPointer *common.Address,
 ) interpreter.NativeFunction {
@@ -3300,7 +3300,7 @@ func newInterpreterAccountStorageCapabilitiesIssueWithTypeFunction(
 			context,
 			storageCapabilities,
 			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
-			unifiedAccountStorageCapabilitiesIssueWithTypeFunction(handler, &address),
+			nativeAccountStorageCapabilitiesIssueWithTypeFunction(handler, &address),
 		)
 	}
 }
@@ -3313,7 +3313,7 @@ func NewVMAccountStorageCapabilitiesIssueWithTypeFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionName,
 			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
-			unifiedAccountStorageCapabilitiesIssueWithTypeFunction(handler, nil),
+			nativeAccountStorageCapabilitiesIssueWithTypeFunction(handler, nil),
 		),
 	}
 }
@@ -3447,7 +3447,7 @@ func IssueStorageCapabilityController(
 	return capabilityIDValue
 }
 
-func unifiedAccountAccountCapabilitiesIssueFunction(
+func nativeAccountAccountCapabilitiesIssueFunction(
 	handler CapabilityControllerIssueHandler,
 	addressPointer *common.Address,
 ) interpreter.NativeFunction {
@@ -3483,7 +3483,7 @@ func newInterpreterAccountAccountCapabilitiesIssueFunction(
 			context,
 			accountCapabilities,
 			sema.Account_AccountCapabilitiesTypeIssueFunctionType,
-			unifiedAccountAccountCapabilitiesIssueFunction(handler, &address),
+			nativeAccountAccountCapabilitiesIssueFunction(handler, &address),
 		)
 	}
 }
@@ -3496,12 +3496,12 @@ func NewVMAccountAccountCapabilitiesIssueFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_AccountCapabilitiesTypeIssueFunctionName,
 			sema.Account_AccountCapabilitiesTypeIssueFunctionType,
-			unifiedAccountAccountCapabilitiesIssueFunction(handler, nil),
+			nativeAccountAccountCapabilitiesIssueFunction(handler, nil),
 		),
 	}
 }
 
-func unifiedAccountAccountCapabilitiesIssueWithTypeFunction(
+func nativeAccountAccountCapabilitiesIssueWithTypeFunction(
 	handler CapabilityControllerIssueHandler,
 	addressPointer *common.Address,
 ) interpreter.NativeFunction {
@@ -3541,7 +3541,7 @@ func newInterpreterAccountAccountCapabilitiesIssueWithTypeFunction(
 			context,
 			accountCapabilities,
 			sema.Account_AccountCapabilitiesTypeIssueFunctionType,
-			unifiedAccountAccountCapabilitiesIssueWithTypeFunction(handler, &address),
+			nativeAccountAccountCapabilitiesIssueWithTypeFunction(handler, &address),
 		)
 	}
 }
@@ -3554,7 +3554,7 @@ func NewVMAccountAccountCapabilitiesIssueWithTypeFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_AccountCapabilitiesTypeIssueWithTypeFunctionName,
 			sema.Account_AccountCapabilitiesTypeIssueWithTypeFunctionType,
-			unifiedAccountAccountCapabilitiesIssueWithTypeFunction(handler, nil),
+			nativeAccountAccountCapabilitiesIssueWithTypeFunction(handler, nil),
 		),
 	}
 }
@@ -4167,7 +4167,7 @@ func getAccountCapabilityControllerIDsIterator(
 	return
 }
 
-func unifiedAccountCapabilitiesPublishFunction(
+func nativeAccountCapabilitiesPublishFunction(
 	handler CapabilityControllerHandler,
 	accountAddressPointer *interpreter.AddressValue,
 ) interpreter.NativeFunction {
@@ -4205,7 +4205,7 @@ func newInterpreterAccountCapabilitiesPublishFunction(
 			context,
 			accountCapabilities,
 			sema.Account_CapabilitiesTypePublishFunctionType,
-			unifiedAccountCapabilitiesPublishFunction(handler, &accountAddressValue),
+			nativeAccountCapabilitiesPublishFunction(handler, &accountAddressValue),
 		)
 	}
 }
@@ -4218,7 +4218,7 @@ func NewVMAccountCapabilitiesPublishFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_CapabilitiesTypePublishFunctionName,
 			sema.Account_CapabilitiesTypePublishFunctionType,
-			unifiedAccountCapabilitiesPublishFunction(handler, nil),
+			nativeAccountCapabilitiesPublishFunction(handler, nil),
 		),
 	}
 }
@@ -4340,7 +4340,7 @@ func AccountCapabilitiesPublish(
 	return interpreter.Void
 }
 
-func unifiedAccountCapabilitiesUnpublishFunction(
+func nativeAccountCapabilitiesUnpublishFunction(
 	handler CapabilityControllerHandler,
 	addressPointer *interpreter.AddressValue,
 ) interpreter.NativeFunction {
@@ -4376,7 +4376,7 @@ func newInterpreterAccountCapabilitiesUnpublishFunction(
 			context,
 			accountCapabilities,
 			sema.Account_CapabilitiesTypeUnpublishFunctionType,
-			unifiedAccountCapabilitiesUnpublishFunction(handler, &addressValue),
+			nativeAccountCapabilitiesUnpublishFunction(handler, &addressValue),
 		)
 	}
 }
@@ -4389,7 +4389,7 @@ func NewVMAccountCapabilitiesUnpublishFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_CapabilitiesTypeUnpublishFunctionName,
 			sema.Account_CapabilitiesTypeUnpublishFunctionType,
-			unifiedAccountCapabilitiesUnpublishFunction(handler, nil),
+			nativeAccountCapabilitiesUnpublishFunction(handler, nil),
 		),
 	}
 }
@@ -4642,7 +4642,7 @@ func CheckCapabilityController(
 	return referencedValue != nil
 }
 
-func unifiedAccountCapabilitiesGetFunction(
+func nativeAccountCapabilitiesGetFunction(
 	controllerHandler CapabilityControllerHandler,
 	addressPointer *interpreter.AddressValue,
 	borrow bool,
@@ -4689,7 +4689,7 @@ func newInterpreterAccountCapabilitiesGetFunction(
 			context,
 			accountCapabilities,
 			funcType,
-			unifiedAccountCapabilitiesGetFunction(controllerHandler, &addressValue, borrow),
+			nativeAccountCapabilitiesGetFunction(controllerHandler, &addressValue, borrow),
 		)
 	}
 }
@@ -4716,7 +4716,7 @@ func NewVMAccountCapabilitiesGetFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			funcName,
 			funcType,
-			unifiedAccountCapabilitiesGetFunction(controllerHandler, nil, borrow),
+			nativeAccountCapabilitiesGetFunction(controllerHandler, nil, borrow),
 		),
 	}
 }
@@ -4895,7 +4895,7 @@ func AccountCapabilitiesGet(
 	return resultValue
 }
 
-func unifiedAccountCapabilitiesExistsFunction(
+func nativeAccountCapabilitiesExistsFunction(
 	addressPointer *interpreter.AddressValue,
 ) interpreter.NativeFunction {
 	return func(
@@ -4926,7 +4926,7 @@ func newInterpreterAccountCapabilitiesExistsFunction(
 			context,
 			accountCapabilities,
 			sema.Account_CapabilitiesTypeExistsFunctionType,
-			unifiedAccountCapabilitiesExistsFunction(&addressValue),
+			nativeAccountCapabilitiesExistsFunction(&addressValue),
 		)
 	}
 }
@@ -4936,7 +4936,7 @@ var VMAccountCapabilitiesExistsFunction = VMFunction{
 	FunctionValue: vm.NewNativeFunctionValue(
 		sema.Account_CapabilitiesTypeExistsFunctionName,
 		sema.Account_CapabilitiesTypeExistsFunctionType,
-		unifiedAccountCapabilitiesExistsFunction(nil),
+		nativeAccountCapabilitiesExistsFunction(nil),
 	),
 }
 
@@ -4994,7 +4994,7 @@ func getAccountCapabilityControllerReference(
 	)
 }
 
-func unifiedAccountAccountCapabilitiesGetControllerFunction(
+func nativeAccountAccountCapabilitiesGetControllerFunction(
 	handler CapabilityControllerHandler,
 	addressPointer *common.Address,
 ) interpreter.NativeFunction {
@@ -5037,7 +5037,7 @@ func newInterpreterAccountAccountCapabilitiesGetControllerFunction(
 			context,
 			accountCapabilities,
 			sema.Account_AccountCapabilitiesTypeGetControllerFunctionType,
-			unifiedAccountAccountCapabilitiesGetControllerFunction(handler, &address),
+			nativeAccountAccountCapabilitiesGetControllerFunction(handler, &address),
 		)
 	}
 }
@@ -5050,7 +5050,7 @@ func NewVMAccountAccountCapabilitiesGetControllerFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_AccountCapabilitiesTypeGetControllerFunctionName,
 			sema.Account_AccountCapabilitiesTypeGetControllerFunctionType,
-			unifiedAccountAccountCapabilitiesGetControllerFunction(handler, nil),
+			nativeAccountAccountCapabilitiesGetControllerFunction(handler, nil),
 		),
 	}
 }
@@ -5062,7 +5062,7 @@ var accountCapabilityControllerReferencesArrayStaticType = &interpreter.Variable
 	},
 }
 
-func unifiedAccountAccountCapabilitiesGetControllersFunction(
+func nativeAccountAccountCapabilitiesGetControllersFunction(
 	handler CapabilityControllerHandler,
 	addressPointer *common.Address,
 ) interpreter.NativeFunction {
@@ -5095,7 +5095,7 @@ func newInterpreterAccountAccountCapabilitiesGetControllersFunction(
 			context,
 			accountCapabilities,
 			sema.Account_AccountCapabilitiesTypeGetControllersFunctionType,
-			unifiedAccountAccountCapabilitiesGetControllersFunction(handler, &address),
+			nativeAccountAccountCapabilitiesGetControllersFunction(handler, &address),
 		)
 	}
 }
@@ -5108,7 +5108,7 @@ func NewVMAccountAccountCapabilitiesGetControllersFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_AccountCapabilitiesTypeGetControllersFunctionName,
 			sema.Account_AccountCapabilitiesTypeGetControllersFunctionType,
-			unifiedAccountAccountCapabilitiesGetControllersFunction(handler, nil),
+			nativeAccountAccountCapabilitiesGetControllersFunction(handler, nil),
 		),
 	}
 }
@@ -5179,7 +5179,7 @@ func (CapabilityControllersMutatedDuringIterationError) Error() string {
 	return "capability controller iteration continued after changes to controllers"
 }
 
-func unifiedAccountAccountCapabilitiesForEachControllerFunction(
+func nativeAccountAccountCapabilitiesForEachControllerFunction(
 	handler CapabilityControllerHandler,
 	addressPointer *common.Address,
 ) interpreter.NativeFunction {
@@ -5216,7 +5216,7 @@ func newInterpreterAccountAccountCapabilitiesForEachControllerFunction(
 			context,
 			accountCapabilities,
 			sema.Account_AccountCapabilitiesTypeForEachControllerFunctionType,
-			unifiedAccountAccountCapabilitiesForEachControllerFunction(handler, &address),
+			nativeAccountAccountCapabilitiesForEachControllerFunction(handler, &address),
 		)
 	}
 }
@@ -5229,7 +5229,7 @@ func NewVMAccountAccountCapabilitiesForEachControllerFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.Account_AccountCapabilitiesTypeForEachControllerFunctionName,
 			sema.Account_AccountCapabilitiesTypeForEachControllerFunctionType,
-			unifiedAccountAccountCapabilitiesForEachControllerFunction(handler, nil),
+			nativeAccountAccountCapabilitiesForEachControllerFunction(handler, nil),
 		),
 	}
 }

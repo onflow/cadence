@@ -63,7 +63,7 @@ func NewInterpreterStandardLibraryStaticFunction(
 	name string,
 	functionType *sema.FunctionType,
 	docString string,
-	function interpreter.HostFunction,
+	function interpreter.NativeFunction,
 ) StandardLibraryValue {
 
 	parameters := functionType.Parameters
@@ -74,7 +74,7 @@ func NewInterpreterStandardLibraryStaticFunction(
 		argumentLabels[i] = parameter.EffectiveArgumentLabel()
 	}
 
-	functionValue := interpreter.NewUnmeteredStaticHostFunctionValue(functionType, function)
+	functionValue := interpreter.NewUnmeteredStaticHostFunctionValueFromNativeFunction(functionType, function)
 
 	return StandardLibraryValue{
 		Name:           name,

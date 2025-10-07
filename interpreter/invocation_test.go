@@ -100,12 +100,18 @@ func TestInterpretSelfDeclaration(t *testing.T) {
 				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 			``,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(
+				context interpreter.NativeFunctionContext,
+				locationRange interpreter.LocationRange,
+				typeParameterGetter interpreter.TypeParameterGetter,
+				receiver interpreter.Value,
+				args ...interpreter.Value,
+			) interpreter.Value {
 				// Check that the *caller's* self
 
 				// This is an interpreter-only test.
 				// So the `InvocationContext` is an interpreter instance.
-				inter := invocation.InvocationContext.(*interpreter.Interpreter)
+				inter := context.(*interpreter.Interpreter)
 
 				callStack := inter.CallStack()
 				parentInvocation := callStack[len(callStack)-1]

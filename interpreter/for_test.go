@@ -390,8 +390,14 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 				sema.VoidTypeAnnotation,
 			),
 			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
-				check(invocation.Arguments[0])
+			func(
+				context interpreter.NativeFunctionContext,
+				locationRange interpreter.LocationRange,
+				typeParameterGetter interpreter.TypeParameterGetter,
+				receiver interpreter.Value,
+				args ...interpreter.Value,
+			) interpreter.Value {
+				check(args[0])
 				return interpreter.Void
 			},
 		)
