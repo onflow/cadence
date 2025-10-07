@@ -61,10 +61,10 @@ func parseCheckAndPrepareWithConditionLogs(
 		conditionLogFunctionType,
 		"",
 		func(
-			context interpreter.NativeFunctionContext,
-			locationRange interpreter.LocationRange,
-			typeParameterGetter interpreter.TypeParameterGetter,
-			receiver interpreter.Value,
+			_ interpreter.NativeFunctionContext,
+			_ interpreter.LocationRange,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
 			args ...interpreter.Value,
 		) interpreter.Value {
 			value := args[0]

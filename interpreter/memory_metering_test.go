@@ -105,8 +105,8 @@ func meterLogFunction(meter *testMemoryGauge, loggedString *string) stdlib.Stand
 		func(
 			context interpreter.NativeFunctionContext,
 			locationRange interpreter.LocationRange,
-			typeParameterGetter interpreter.TypeParameterGetter,
-			receiver interpreter.Value,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
 			args ...interpreter.Value,
 		) interpreter.Value {
 			// Reset gauge, to only capture the values metered during string conversion

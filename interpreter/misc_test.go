@@ -1791,10 +1791,10 @@ func TestInterpretHostFunction(t *testing.T) {
 		},
 		``,
 		func(
-			context interpreter.NativeFunctionContext,
-			locationRange interpreter.LocationRange,
-			typeParameterGetter interpreter.TypeParameterGetter,
-			receiver interpreter.Value,
+			_ interpreter.NativeFunctionContext,
+			_ interpreter.LocationRange,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
 			args ...interpreter.Value,
 		) interpreter.Value {
 			a := args[0].(interpreter.IntValue).ToBigInt(nil)
@@ -1843,9 +1843,9 @@ func TestInterpretHostFunction(t *testing.T) {
 func assertArguments(t *testing.T, called *bool) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
-		receiver interpreter.Value,
+		_ interpreter.LocationRange,
+		_ interpreter.TypeParameterGetter,
+		_ interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
 		*called = true
@@ -4992,9 +4992,9 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			"",
 			func(
 				context interpreter.NativeFunctionContext,
-				locationRange interpreter.LocationRange,
-				typeParameterGetter interpreter.TypeParameterGetter,
-				receiver interpreter.Value,
+				_ interpreter.LocationRange,
+				_ interpreter.TypeParameterGetter,
+				_ interpreter.Value,
 				args ...interpreter.Value,
 			) interpreter.Value {
 				authorized := bool(args[0].(interpreter.BoolValue))
@@ -13444,11 +13444,11 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 
 func getKeyFunction(key int64, getKeyInvocationsCount *int) interpreter.NativeFunction {
 	return func(
-		context interpreter.NativeFunctionContext,
-		locationRange interpreter.LocationRange,
-		typeParameterGetter interpreter.TypeParameterGetter,
-		receiver interpreter.Value,
-		args ...interpreter.Value,
+		_ interpreter.NativeFunctionContext,
+		_ interpreter.LocationRange,
+		_ interpreter.TypeParameterGetter,
+		_ interpreter.Value,
+		_ ...interpreter.Value,
 	) interpreter.Value {
 		*getKeyInvocationsCount++
 		return interpreter.NewUnmeteredIntValueFromInt64(key)
@@ -13901,10 +13901,10 @@ func TestInterpretInvocationEvaluationAndTransferOrder(t *testing.T) {
 		),
 		"",
 		func(
-			context interpreter.NativeFunctionContext,
-			locationRange interpreter.LocationRange,
-			typeParameterGetter interpreter.TypeParameterGetter,
-			receiver interpreter.Value,
+			_ interpreter.NativeFunctionContext,
+			_ interpreter.LocationRange,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
 			args ...interpreter.Value,
 		) interpreter.Value {
 			require.Len(t, args, 2)

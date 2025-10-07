@@ -41,10 +41,10 @@ func assertHelloLog(t *testing.T, invoked *bool) stdlib.StandardLibraryValue {
 		stdlib.LogFunctionType,
 		"",
 		func(
-			context interpreter.NativeFunctionContext,
-			locationRange interpreter.LocationRange,
-			typeParameterGetter interpreter.TypeParameterGetter,
-			receiver interpreter.Value,
+			_ interpreter.NativeFunctionContext,
+			_ interpreter.LocationRange,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
 			args ...interpreter.Value,
 		) interpreter.Value {
 			*invoked = true
@@ -60,11 +60,11 @@ func assertUnexpectedLog(t *testing.T) stdlib.StandardLibraryValue {
 		stdlib.LogFunctionType,
 		"",
 		func(
-			context interpreter.NativeFunctionContext,
-			locationRange interpreter.LocationRange,
-			typeParameterGetter interpreter.TypeParameterGetter,
-			receiver interpreter.Value,
-			args ...interpreter.Value,
+			_ interpreter.NativeFunctionContext,
+			_ interpreter.LocationRange,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
+			_ ...interpreter.Value,
 		) interpreter.Value {
 			assert.Fail(t, "unexpected call of log")
 			return interpreter.Void
