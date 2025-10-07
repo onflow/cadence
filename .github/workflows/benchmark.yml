@@ -61,21 +61,11 @@ jobs:
       - name: Run unconditional benchmarks, on current branch
         run: make bench-common BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee new.txt
 
-      - name: Run encoding benchmarks, on current branch
-        if: steps.changes.outputs.encoding == 'true'
-        run: make bench BENCH_PKGS=./encoding/... BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee -a new.txt
-
-      - name: Run parser benchmarks, on current branch
-        if: steps.changes.outputs.parser == 'true'
-        run: make bench BENCH_PKGS=./parser/... BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee -a new.txt
-
-      - name: Run sema benchmarks, on current branch
-        if: steps.changes.outputs.sema == 'true'
-        run: make bench BENCH_PKGS=./sema/... BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee -a new.txt
-
-      - name: Run compiler/VM benchmarks, on current branch
-        if: steps.changes.outputs.bbq == 'true'
-        run: make bench BENCH_PKGS=./bbq/... BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee -a new.txt
+      - name: Run benchmarks for changed components, on current branch
+        run: |
+          for component in ${{ join(fromJSON(steps.changes.outputs.changes), ' ') }}; do
+              make bench BENCH_PKGS=./$component/... BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee -a new.txt
+          done
 
       - name: Checkout base branch
         run: git checkout ${{ github.event.pull_request.base.sha }}
@@ -83,21 +73,11 @@ jobs:
       - name: Run unconditional benchmarks, on base branch
         run: make bench-common BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee old.txt
 
-      - name: Run encoding benchmarks, on current branch
-        if: steps.changes.outputs.encoding == 'true'
-        run: make bench BENCH_PKGS=./encoding/... BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee -a old.txt
-
-      - name: Run parser benchmarks, on current branch
-        if: steps.changes.outputs.parser == 'true'
-        run: make bench BENCH_PKGS=./parser/... BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee -a old.txt
-
-      - name: Run sema benchmarks, on current branch
-        if: steps.changes.outputs.sema == 'true'
-        run: make bench BENCH_PKGS=./sema/... BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee -a old.txt
-
-      - name: Run compiler/VM benchmarks, on current branch
-        if: steps.changes.outputs.bbq == 'true'
-        run: make bench BENCH_PKGS=./bbq/... BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee -a old.txt
+      - name: Run benchmarks for changed components, on base branch
+        run: |
+          for component in ${{ join(fromJSON(steps.changes.outputs.changes), ' ') }}; do
+              make bench BENCH_PKGS=./$component/... BENCH_REPS=${{ steps.settings.outputs.benchmark_repetitions }} BENCH_TIME=${{ steps.settings.outputs.benchmark_time }} | tee -a old.txt
+          done
 
       # see https://trstringer.com/github-actions-multiline-strings/ to see why this part is complex
       - name: Use benchstat for comparison
