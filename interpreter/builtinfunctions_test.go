@@ -26,12 +26,16 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
+	"github.com/onflow/cadence/test_utils/sema_utils"
 )
 
 func TestInterpretToString(t *testing.T) {
@@ -1060,4 +1064,120 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 			})
 		}
 	}
+}
+
+func TestInterpretNativeFunctionWithMultipleTypeParameters(t *testing.T) {
+
+	t.Parallel()
+
+	typeParameter := &sema.TypeParameter{
+		Name:      "T",
+		TypeBound: nil,
+	}
+
+	typeParameter2 := &sema.TypeParameter{
+		Name:      "T2",
+		TypeBound: nil,
+	}
+
+	nativeFunctionType := &sema.FunctionType{
+		Purity: sema.FunctionPurityView,
+		TypeParameters: []*sema.TypeParameter{
+			typeParameter,
+			typeParameter2,
+		},
+		Parameters: []sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "first",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					&sema.GenericType{
+						TypeParameter: typeParameter,
+					},
+				),
+			},
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "second",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					&sema.GenericType{
+						TypeParameter: typeParameter2,
+					},
+				),
+			},
+		},
+		ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+	}
+
+	nativeFunction := func(
+		_ interpreter.NativeFunctionContext,
+		_ interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.Value,
+		_ ...interpreter.Value,
+	) interpreter.Value {
+		typeValue := typeParameterGetter.NextStatic()
+		require.Equal(t, interpreter.PrimitiveStaticTypeInt, typeValue)
+
+		typeValue2 := typeParameterGetter.NextStatic()
+		require.Equal(t, interpreter.PrimitiveStaticTypeBool, typeValue2)
+
+		typeValue3 := typeParameterGetter.NextStatic()
+		require.Equal(t, nil, typeValue3)
+
+		return interpreter.Void
+	}
+
+	var function interpreter.Value
+	if *compile {
+		function = vm.NewNativeFunctionValue(
+			"nativeFunction",
+			nativeFunctionType,
+			nativeFunction,
+		)
+	} else {
+		function = interpreter.NewUnmeteredStaticHostFunctionValueFromNativeFunction(
+			nativeFunctionType,
+			nativeFunction,
+		)
+	}
+
+	valueDeclaration := stdlib.StandardLibraryValue{
+		Name:  "nativeFunction",
+		Type:  nativeFunctionType,
+		Value: function,
+		Kind:  common.DeclarationKindConstant,
+	}
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(valueDeclaration)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, valueDeclaration)
+
+	inter, err := parseCheckAndPrepareWithOptions(t,
+		`
+		fun test() {
+			nativeFunction(0, false)
+		}
+        `,
+		ParseCheckAndInterpretOptions{
+			ParseAndCheckOptions: &sema_utils.ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+			InterpreterConfig: &interpreter.Config{
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
+	require.NoError(t, err)
 }

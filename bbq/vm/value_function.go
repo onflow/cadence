@@ -171,7 +171,7 @@ func (v CompiledFunctionValue) IsNative() bool {
 	return false
 }
 
-type NativeFunction func(
+type NativeFunctionVM func(
 	context *Context,
 	typeArguments []bbq.StaticType,
 	receiver Value,
@@ -180,36 +180,12 @@ type NativeFunction func(
 
 type NativeFunctionValue struct {
 	Name     string
-	Function NativeFunction
+	Function NativeFunctionVM
 
 	// A function value can only have either one of `functionType` or `functionTypeGetter`.
 	functionType       *sema.FunctionType
 	functionTypeGetter func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType
 	fields             map[string]Value
-}
-
-func NewNativeFunctionValue(
-	name string,
-	funcType *sema.FunctionType,
-	function NativeFunction,
-) *NativeFunctionValue {
-	return &NativeFunctionValue{
-		Name:         name,
-		Function:     function,
-		functionType: funcType,
-	}
-}
-
-func NewNativeFunctionValueWithDerivedType(
-	name string,
-	typeGetter func(receiver Value, context interpreter.ValueStaticTypeContext) *sema.FunctionType,
-	function NativeFunction,
-) *NativeFunctionValue {
-	return &NativeFunctionValue{
-		Name:               name,
-		Function:           function,
-		functionTypeGetter: typeGetter,
-	}
 }
 
 var _ Value = &NativeFunctionValue{}

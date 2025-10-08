@@ -21,8 +21,6 @@ package stdlib
 import (
 	"fmt"
 
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -57,58 +55,38 @@ var AssertFunctionType = &sema.FunctionType{
 	Arity: &sema.Arity{Min: 1, Max: 2},
 }
 
-var InterpreterAssertFunction = NewInterpreterStandardLibraryStaticFunction(
-	AssertFunctionName,
-	AssertFunctionType,
-	assertFunctionDocString,
-	func(invocation interpreter.Invocation) interpreter.Value {
-		result, ok := invocation.Arguments[0].(interpreter.BoolValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
+var NativeAssertFunction = interpreter.NativeFunction(
+	func(
+		_ interpreter.NativeFunctionContext,
+		locationRange interpreter.LocationRange,
+		_ interpreter.TypeParameterGetter,
+		_ interpreter.Value,
+		args ...interpreter.Value,
+	) interpreter.Value {
+		result := interpreter.AssertValueOfType[interpreter.BoolValue](args[0])
 		var message string
-		if len(invocation.Arguments) > 1 {
-			messageValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+		if len(args) > 1 {
+			messageValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[1])
 			message = messageValue.Str
 		}
-
-		return Assert(
-			result,
-			message,
-			invocation.LocationRange,
-		)
+		return Assert(result, message, locationRange)
 	},
 )
 
-var VMAssertFunction = NewVMStandardLibraryStaticFunction(
+var InterpreterAssertFunction = NewNativeStandardLibraryStaticFunction(
 	AssertFunctionName,
 	AssertFunctionType,
 	assertFunctionDocString,
-	func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...interpreter.Value) interpreter.Value {
-		result, ok := arguments[0].(interpreter.BoolValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
+	NativeAssertFunction,
+	false,
+)
 
-		var message string
-		if len(arguments) > 1 {
-			messageValue, ok := arguments[1].(*interpreter.StringValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-			message = messageValue.Str
-		}
-
-		return Assert(
-			result,
-			message,
-			interpreter.EmptyLocationRange,
-		)
-	},
+var VMAssertFunction = NewNativeStandardLibraryStaticFunction(
+	AssertFunctionName,
+	AssertFunctionType,
+	assertFunctionDocString,
+	NativeAssertFunction,
+	true,
 )
 
 func Assert(result interpreter.BoolValue, message string, locationRange interpreter.LocationRange) interpreter.Value {

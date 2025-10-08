@@ -8840,7 +8840,13 @@ func TestFunctionInvocationWithOptionalArgs(t *testing.T) {
 	functionValue := vm.NewNativeFunctionValue(
 		functionName,
 		functionType,
-		func(context *vm.Context, typeArguments []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
+		func(
+			context interpreter.NativeFunctionContext,
+			_ interpreter.LocationRange,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
+			arguments ...vm.Value,
+		) vm.Value {
 			require.GreaterOrEqual(t, len(arguments), 1)
 
 			require.IsType(t, interpreter.IntValue{}, arguments[0])
@@ -9425,7 +9431,13 @@ func TestInjectedContract(t *testing.T) {
 	cValue := vm.NewNativeFunctionValue(
 		"B.c",
 		cType,
-		func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
+		func(
+			context interpreter.NativeFunctionContext,
+			_ interpreter.LocationRange,
+			_ interpreter.TypeParameterGetter,
+			receiver interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
 			assert.Same(t, bValue, receiver)
 
 			require.Len(t, args, 1)
@@ -11519,8 +11531,13 @@ func TestBorrowContractLinksGlobals(t *testing.T) {
 	functionValue := vm.NewNativeFunctionValue(
 		functionName,
 		functionType,
-		func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
-
+		func(
+			context interpreter.NativeFunctionContext,
+			_ interpreter.LocationRange,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
+			args ...interpreter.Value,
+		) vm.Value {
 			stdlib.AccountContractsBorrow(
 				context,
 				interpreter.EmptyLocationRange,

@@ -60,8 +60,14 @@ func parseCheckAndPrepareWithConditionLogs(
 		"conditionLog",
 		conditionLogFunctionType,
 		"",
-		func(invocation interpreter.Invocation) interpreter.Value {
-			value := invocation.Arguments[0]
+		func(
+			_ interpreter.NativeFunctionContext,
+			_ interpreter.LocationRange,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
+			value := args[0]
 			logs = append(logs, value.String())
 			return interpreter.TrueValue
 		},

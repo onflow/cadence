@@ -19,7 +19,6 @@
 package interpreter_test
 
 import (
-	goruntime "runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -101,12 +100,18 @@ func TestInterpretSelfDeclaration(t *testing.T) {
 				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 			``,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(
+				context interpreter.NativeFunctionContext,
+				_ interpreter.LocationRange,
+				_ interpreter.TypeParameterGetter,
+				_ interpreter.Value,
+				args ...interpreter.Value,
+			) interpreter.Value {
 				// Check that the *caller's* self
 
 				// This is an interpreter-only test.
 				// So the `InvocationContext` is an interpreter instance.
-				inter := invocation.InvocationContext.(*interpreter.Interpreter)
+				inter := context.(*interpreter.Interpreter)
 
 				callStack := inter.CallStack()
 				parentInvocation := callStack[len(callStack)-1]
@@ -224,13 +229,8 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 	RequireError(t, err)
 
 	if *compile {
-		var typeAssertionErr *goruntime.TypeAssertionError
-		require.ErrorAs(t, err, &typeAssertionErr)
-		require.ErrorContains(
-			t,
-			typeAssertionErr,
-			"interface conversion: interpreter.UIntValue is not interpreter.OptionalValue",
-		)
+		var internalErr errors.InternalError
+		require.ErrorAs(t, err, &internalErr)
 	} else {
 		var memberAccessTypeError *interpreter.MemberAccessTypeError
 		require.ErrorAs(t, err, &memberAccessTypeError)

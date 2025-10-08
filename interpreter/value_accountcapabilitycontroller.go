@@ -340,66 +340,77 @@ func (v *AccountCapabilityControllerValue) CheckDeleted() {
 	}
 }
 
-func (v *AccountCapabilityControllerValue) newHostFunctionValue(
+func (v *AccountCapabilityControllerValue) newNativeHostFunctionValue(
 	context FunctionCreationContext,
 	funcType *sema.FunctionType,
-	f func(invocation Invocation) Value,
+	f NativeFunction,
 ) FunctionValue {
 	return deletionCheckedFunctionValue{
 		FunctionValue: NewBoundHostFunctionValue(
 			context,
 			v,
 			funcType,
-			func(v *AccountCapabilityControllerValue, invocation Invocation) Value {
-				// NOTE: check if controller is already deleted
-				v.CheckDeleted()
-
-				return f(invocation)
-			},
+			NewNativeDeletionCheckedAccountCapabilityControllerFunction(f),
 		),
 	}
 }
 
+func NewNativeDeletionCheckedAccountCapabilityControllerFunction(
+	f NativeFunction,
+) NativeFunction {
+	return func(
+		context NativeFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		controller := AssertValueOfType[*AccountCapabilityControllerValue](receiver)
+		// check if controller is already deleted
+		controller.CheckDeleted()
+
+		return f(context, locationRange, typeParameterGetter, receiver, args...)
+	}
+}
+
+var NativeAccountCapabilityControllerDeleteFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		locationRange LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		_ ...Value,
+	) Value {
+		controller := AssertValueOfType[*AccountCapabilityControllerValue](receiver)
+		controller.Delete(context, locationRange)
+		controller.deleted = true
+		return Void
+	},
+)
+
 func (v *AccountCapabilityControllerValue) newDeleteFunction(
 	context FunctionCreationContext,
 ) FunctionValue {
-	return v.newHostFunctionValue(
-		context,
-		sema.AccountCapabilityControllerTypeDeleteFunctionType,
-		func(invocation Invocation) Value {
-			invocationContext := invocation.InvocationContext
-			locationRange := invocation.LocationRange
-
-			v.Delete(invocationContext, locationRange)
-
-			v.deleted = true
-
-			return Void
-		},
-	)
+	return v.newNativeHostFunctionValue(context, sema.AccountCapabilityControllerTypeDeleteFunctionType, NativeAccountCapabilityControllerDeleteFunction)
 }
+
+var NativeAccountCapabilityControllerSetTagFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		locationRange LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		controller := AssertValueOfType[*AccountCapabilityControllerValue](receiver)
+		newTagValue := AssertValueOfType[*StringValue](args[0])
+		controller.SetTag(context, newTagValue)
+		return Void
+	},
+)
 
 func (v *AccountCapabilityControllerValue) newSetTagFunction(
 	context FunctionCreationContext,
 ) FunctionValue {
-	return v.newHostFunctionValue(
-		context,
-		sema.AccountCapabilityControllerTypeSetTagFunctionType,
-		func(invocation Invocation) Value {
-			inter := invocation.InvocationContext
-
-			newTagValue, ok := invocation.Arguments[0].(*StringValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			v.SetTag(inter, newTagValue)
-
-			return Void
-		},
-	)
-}
-
-func (v *AccountCapabilityControllerValue) SetDeleted() {
-	v.deleted = true
+	return v.newNativeHostFunctionValue(context, sema.AccountCapabilityControllerTypeSetTagFunctionType, NativeAccountCapabilityControllerSetTagFunction)
 }

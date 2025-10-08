@@ -19,8 +19,6 @@
 package stdlib
 
 import (
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -59,17 +57,18 @@ func (f FunctionLogger) ProgramLog(message string, locationRange interpreter.Loc
 	return f(message, locationRange)
 }
 
-func NewInterpreterLogFunction(logger Logger) StandardLibraryValue {
-	return NewInterpreterStandardLibraryStaticFunction(
-		LogFunctionName,
-		LogFunctionType,
-		logFunctionDocString,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			invocationContext := invocation.InvocationContext
-			locationRange := invocation.LocationRange
-			value := invocation.Arguments[0]
+func NativeLogFunction(logger Logger) interpreter.NativeFunction {
+	return interpreter.NativeFunction(
+		func(
+			context interpreter.NativeFunctionContext,
+			locationRange interpreter.LocationRange,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
+			value := args[0]
 			return Log(
-				invocationContext,
+				context,
 				logger,
 				value,
 				locationRange,
@@ -78,20 +77,23 @@ func NewInterpreterLogFunction(logger Logger) StandardLibraryValue {
 	)
 }
 
-func NewVMLogFunction(logger Logger) StandardLibraryValue {
-	return NewVMStandardLibraryStaticFunction(
+func NewInterpreterLogFunction(logger Logger) StandardLibraryValue {
+	return NewNativeStandardLibraryStaticFunction(
 		LogFunctionName,
 		LogFunctionType,
 		logFunctionDocString,
-		func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...interpreter.Value) interpreter.Value {
-			value := arguments[0]
-			return Log(
-				context,
-				logger,
-				value,
-				interpreter.EmptyLocationRange,
-			)
-		},
+		NativeLogFunction(logger),
+		false,
+	)
+}
+
+func NewVMLogFunction(logger Logger) StandardLibraryValue {
+	return NewNativeStandardLibraryStaticFunction(
+		LogFunctionName,
+		LogFunctionType,
+		logFunctionDocString,
+		NativeLogFunction(logger),
+		true,
 	)
 }
 
