@@ -25,7 +25,7 @@ on:
       - 'feature/entitlements-refactor'
 
 env:
-  GO_VERSION: '1.23'
+  GO_VERSION: '1.24'
 
 concurrency:
   group: ${{ github.workflow }}-${{ inputs.base || github.run_id }}
