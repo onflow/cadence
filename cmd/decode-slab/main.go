@@ -159,7 +159,7 @@ func compareMapDataSlabs(slab1 *atree.MapDataSlab, slab2 *atree.MapDataSlab) {
 		panic(fmt.Errorf("Error iterating slab 2: %w\n", err))
 	}
 
-	for encodedKey, entry1 := range entries1 {
+	for encodedKey, entry1 := range entries1 { //nolint:maprange
 		entry2, ok := entries2[encodedKey]
 		if !ok {
 			fmt.Printf("Key %q missing in slab 2\n", entry1.key)
@@ -186,7 +186,7 @@ func compareMapDataSlabs(slab1 *atree.MapDataSlab, slab2 *atree.MapDataSlab) {
 		}
 	}
 
-	for encodedKey, entry2 := range entries2 {
+	for encodedKey, entry2 := range entries2 { //nolint:maprange
 		_, ok := entries1[encodedKey]
 		if !ok {
 			fmt.Printf("Key %q missing in slab 1\n", entry2.key)
