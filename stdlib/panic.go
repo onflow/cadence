@@ -71,7 +71,7 @@ var NativePanicFunction = interpreter.NativeFunction(
 		args ...interpreter.Value,
 	) interpreter.Value {
 		message := args[0]
-		return PanicWithError(message, locationRange)
+		return PanicWithError(message)
 	},
 )
 
@@ -91,13 +91,12 @@ var VMPanicFunction = NewNativeStandardLibraryStaticFunction(
 	true,
 )
 
-func PanicWithError(message interpreter.Value, locationRange interpreter.LocationRange) interpreter.Value {
+func PanicWithError(message interpreter.Value) interpreter.Value {
 	messageValue, ok := message.(*interpreter.StringValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 	panic(&PanicError{
-		Message:       messageValue.Str,
-		LocationRange: locationRange,
+		Message: messageValue.Str,
 	})
 }
