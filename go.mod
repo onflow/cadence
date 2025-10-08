@@ -15,12 +15,12 @@ require (
 	github.com/kr/pretty v0.3.1
 	github.com/leanovate/gopter v0.2.11
 	github.com/logrusorgru/aurora/v4 v4.0.0
-	github.com/onflow/atree v0.10.1
+	github.com/onflow/atree v0.11.0
 	github.com/onflow/crypto v0.25.3
 	github.com/onflow/fixed-point v0.1.1
 	github.com/rivo/uniseg v0.4.7
 	github.com/schollz/progressbar/v3 v3.18.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/texttheater/golang-levenshtein/levenshtein v0.0.0-20200805054039-cae8b0eaed6c
 	github.com/tidwall/pretty v1.2.1
 	github.com/turbolent/prettier v0.0.0-20220320183459-661cc755135d
