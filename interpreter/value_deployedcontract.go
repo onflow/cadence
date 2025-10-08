@@ -73,7 +73,7 @@ func NewNativeDeployedContractPublicTypesFunctionValue(
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		_ []Value,
 	) Value {

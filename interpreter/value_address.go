@@ -290,7 +290,7 @@ func AddressValueFromString(gauge common.MemoryGauge, string *StringValue) Value
 var NativeAddressToStringFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		_ []Value,
 	) Value {
@@ -302,7 +302,7 @@ var NativeAddressToStringFunction = NativeFunction(
 var NativeAddressToBytesFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		_ []Value,
 	) Value {

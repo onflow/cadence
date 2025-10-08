@@ -359,7 +359,7 @@ func (v TypeValue) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
 var NativeMetaTypeIsSubtypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {

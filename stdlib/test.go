@@ -400,7 +400,7 @@ func newMatcherWithGenericTestFunction(
 	matcherTestFunctionType *sema.FunctionType,
 ) interpreter.Value {
 
-	typeParameterPair := invocation.TypeParameterTypes.Oldest()
+	typeParameterPair := invocation.TypeArguments.Oldest()
 	if typeParameterPair == nil {
 		panic(errors.NewUnreachableError())
 	}

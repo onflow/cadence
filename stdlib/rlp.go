@@ -54,7 +54,7 @@ const rlpErrMsgInputContainsExtraBytes = "input data is expected to be RLP-encod
 var NativeRLPDecodeStringFunction = interpreter.NativeFunction(
 	func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		_ interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -66,7 +66,7 @@ var NativeRLPDecodeStringFunction = interpreter.NativeFunction(
 var NativeRLPDecodeListFunction = interpreter.NativeFunction(
 	func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		_ interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {

@@ -1571,7 +1571,7 @@ func (v *DictionaryValue) Inlined() bool {
 var NativeDictionaryRemoveFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1584,7 +1584,7 @@ var NativeDictionaryRemoveFunction = NativeFunction(
 var NativeDictionaryInsertFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1598,7 +1598,7 @@ var NativeDictionaryInsertFunction = NativeFunction(
 var NativeDictionaryContainsKeyFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1611,7 +1611,7 @@ var NativeDictionaryContainsKeyFunction = NativeFunction(
 var NativeDictionaryForEachKeyFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {

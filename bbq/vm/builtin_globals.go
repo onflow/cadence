@@ -100,7 +100,7 @@ func init() {
 			failConditionFunctionType,
 			func(
 				_ interpreter.NativeFunctionContext,
-				_ interpreter.TypeParameterGetter,
+				_ interpreter.TypeArgumentsIterator,
 				_ interpreter.Value,
 				args []interpreter.Value,
 			) interpreter.Value {
@@ -119,7 +119,7 @@ func init() {
 			failConditionFunctionType,
 			func(
 				_ interpreter.NativeFunctionContext,
-				_ interpreter.TypeParameterGetter,
+				_ interpreter.TypeArgumentsIterator,
 				_ interpreter.Value,
 				args []interpreter.Value,
 			) interpreter.Value {

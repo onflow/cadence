@@ -1778,7 +1778,7 @@ func TestInterpretHostFunction(t *testing.T) {
 		``,
 		func(
 			_ interpreter.NativeFunctionContext,
-			_ interpreter.TypeParameterGetter,
+			_ interpreter.TypeArgumentsIterator,
 			_ interpreter.Value,
 			args []interpreter.Value,
 		) interpreter.Value {
@@ -1828,7 +1828,7 @@ func TestInterpretHostFunction(t *testing.T) {
 func newAssertArgumentsFunction(t *testing.T, called *bool) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		_ interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -4954,7 +4954,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			"",
 			func(
 				context interpreter.NativeFunctionContext,
-				_ interpreter.TypeParameterGetter,
+				_ interpreter.TypeArgumentsIterator,
 				_ interpreter.Value,
 				args []interpreter.Value,
 			) interpreter.Value {
@@ -13346,7 +13346,7 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 func newCountAndGetKeyFunction(key int64, getKeyInvocationsCount *int) interpreter.NativeFunction {
 	return func(
 		_ interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		_ interpreter.Value,
 		_ []interpreter.Value,
 	) interpreter.Value {
@@ -13378,7 +13378,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 			"",
 			func(
 				_ interpreter.NativeFunctionContext,
-				_ interpreter.TypeParameterGetter,
+				_ interpreter.TypeArgumentsIterator,
 				_ interpreter.Value,
 				_ []interpreter.Value,
 			) interpreter.Value {
@@ -13801,7 +13801,7 @@ func TestInterpretInvocationEvaluationAndTransferOrder(t *testing.T) {
 		"",
 		func(
 			_ interpreter.NativeFunctionContext,
-			_ interpreter.TypeParameterGetter,
+			_ interpreter.TypeArgumentsIterator,
 			_ interpreter.Value,
 			args []interpreter.Value,
 		) interpreter.Value {

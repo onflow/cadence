@@ -3941,11 +3941,11 @@ type runtimeTypeConstructor struct {
 var NativeMetaTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		typeParameterGetter TypeParameterGetter,
+		typeArguments TypeArgumentsIterator,
 		_ Value,
 		_ []Value,
 	) Value {
-		staticType := typeParameterGetter.NextStatic()
+		staticType := typeArguments.NextStatic()
 
 		return NewTypeValue(context, staticType)
 	},
@@ -3954,7 +3954,7 @@ var NativeMetaTypeFunction = NativeFunction(
 var NativeOptionalTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -3967,7 +3967,7 @@ var NativeOptionalTypeFunction = NativeFunction(
 var NativeVariableSizedArrayTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -3980,7 +3980,7 @@ var NativeVariableSizedArrayTypeFunction = NativeFunction(
 var NativeConstantSizedArrayTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -3998,7 +3998,7 @@ var NativeConstantSizedArrayTypeFunction = NativeFunction(
 var NativeDictionaryTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4016,7 +4016,7 @@ var NativeDictionaryTypeFunction = NativeFunction(
 var NativeCompositeTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4029,7 +4029,7 @@ var NativeCompositeTypeFunction = NativeFunction(
 var NativeFunctionTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4047,7 +4047,7 @@ var NativeFunctionTypeFunction = NativeFunction(
 var NativeReferenceTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4065,7 +4065,7 @@ var NativeReferenceTypeFunction = NativeFunction(
 var NativeIntersectionTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4081,7 +4081,7 @@ var NativeIntersectionTypeFunction = NativeFunction(
 var NativeCapabilityTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4094,7 +4094,7 @@ var NativeCapabilityTypeFunction = NativeFunction(
 var NativeInclusiveRangeTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4107,7 +4107,7 @@ var NativeInclusiveRangeTypeFunction = NativeFunction(
 var NativeAddressFromBytesFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4120,7 +4120,7 @@ var NativeAddressFromBytesFunction = NativeFunction(
 var NativeAddressFromStringFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4133,7 +4133,7 @@ var NativeAddressFromStringFunction = NativeFunction(
 func NativeConverterFunction(convert func(memoryGauge common.MemoryGauge, value Value) Value) NativeFunction {
 	return func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4144,7 +4144,7 @@ func NativeConverterFunction(convert func(memoryGauge common.MemoryGauge, value 
 func NativeFromStringFunction(parser StringValueParser) NativeFunction {
 	return func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4156,7 +4156,7 @@ func NativeFromStringFunction(parser StringValueParser) NativeFunction {
 func NativeFromBigEndianBytesFunction(byteLength uint, converter func(memoryGauge common.MemoryGauge, bytes []byte) Value) NativeFunction {
 	return func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		_ Value,
 		args []Value,
 	) Value {
@@ -4179,7 +4179,7 @@ func NativeFromBigEndianBytesFunction(byteLength uint, converter func(memoryGaug
 var NativeStringFunction = NativeFunction(
 	func(
 		_ NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		_ Value,
 		_ []Value,
 	) Value {
@@ -4406,7 +4406,7 @@ func NativeAccountStorageIterateFunction(
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -4622,7 +4622,7 @@ func NativeAccountStorageSaveFunction(
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -4706,7 +4706,7 @@ func NativeAccountStorageTypeFunction(
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -4800,12 +4800,12 @@ func NativeAccountStorageReadFunction(
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
-		typeParameterGetter TypeParameterGetter,
+		typeArguments TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
 		address := GetAddressValue(receiver, addressPointer).ToAddress()
-		semaBorrowType := typeParameterGetter.NextSema()
+		semaBorrowType := typeArguments.NextSema()
 
 		return AccountStorageRead(
 			context,
@@ -4901,12 +4901,12 @@ func NativeAccountStorageBorrowFunction(
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
-		typeParameterGetter TypeParameterGetter,
+		typeArguments TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
 		address := GetAddressValue(receiver, addressPointer).ToAddress()
-		typeParameter := typeParameterGetter.NextSema()
+		typeParameter := typeArguments.NextSema()
 
 		return AccountStorageBorrow(
 			context,
@@ -4975,18 +4975,18 @@ func NativeAccountStorageCheckFunction(
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
-		typeParameterGetter TypeParameterGetter,
+		typeArguments TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
 		address := GetAddressValue(receiver, addressPointer).ToAddress()
-		typeParameter := typeParameterGetter.NextSema()
+		typeArgument := typeArguments.NextSema()
 
 		return AccountStorageCheck(
 			context,
 			address,
 			args,
-			typeParameter,
+			typeArgument,
 		)
 	}
 }
@@ -5417,7 +5417,7 @@ func getBuiltinFunctionMember(context MemberAccessibleContext, self Value, ident
 var NativeIsInstanceFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -5453,7 +5453,7 @@ func IsInstance(invocationContext InvocationContext, self Value, typeValue TypeV
 var NativeGetTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -5905,7 +5905,7 @@ func NativeCapabilityBorrowFunction(
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
-		typeParameterGetter TypeParameterGetter,
+		typeArguments TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -5942,11 +5942,11 @@ func NativeCapabilityBorrowFunction(
 			addressValue = *addressValuePointer
 		}
 
-		typeParameter := typeParameterGetter.NextSema()
+		typeArgument := typeArguments.NextSema()
 
 		return CapabilityBorrow(
 			context,
-			typeParameter,
+			typeArgument,
 			addressValue,
 			capabilityID,
 			capabilityBorrowType,
@@ -6012,7 +6012,7 @@ func NativeCapabilityCheckFunction(
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
-		typeParameterGetter TypeParameterGetter,
+		typeArguments TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -6050,7 +6050,7 @@ func NativeCapabilityCheckFunction(
 			addressValue = *addressValuePointer
 		}
 
-		typeArgument := typeParameterGetter.NextSema()
+		typeArgument := typeArguments.NextSema()
 
 		return CapabilityCheck(
 			context,

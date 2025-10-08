@@ -349,7 +349,7 @@ func NewNativeDeletionCheckedAccountCapabilityControllerFunction(
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
-		typeParameterGetter TypeParameterGetter,
+		typeArguments TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -359,7 +359,7 @@ func NewNativeDeletionCheckedAccountCapabilityControllerFunction(
 
 		return f(
 			context,
-			typeParameterGetter,
+			typeArguments,
 			receiver,
 			args,
 		)
@@ -369,7 +369,7 @@ func NewNativeDeletionCheckedAccountCapabilityControllerFunction(
 var NativeAccountCapabilityControllerDeleteFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		_ []Value,
 	) Value {
@@ -393,7 +393,7 @@ func (v *AccountCapabilityControllerValue) newDeleteFunction(
 var NativeAccountCapabilityControllerSetTagFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {

@@ -1909,7 +1909,7 @@ func (i *ArrayIterator) ValueID() (atree.ValueID, bool) {
 var NativeArrayAppendFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1924,7 +1924,7 @@ var NativeArrayAppendFunction = NativeFunction(
 var NativeArrayAppendAllFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1939,7 +1939,7 @@ var NativeArrayAppendAllFunction = NativeFunction(
 var NativeArrayConcatFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1953,7 +1953,7 @@ var NativeArrayConcatFunction = NativeFunction(
 var NativeArrayInsertFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1969,7 +1969,7 @@ var NativeArrayInsertFunction = NativeFunction(
 var NativeArrayRemoveFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1983,7 +1983,7 @@ var NativeArrayRemoveFunction = NativeFunction(
 var NativeArrayContainsFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1997,7 +1997,7 @@ var NativeArrayContainsFunction = NativeFunction(
 var NativeArraySliceFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -2012,7 +2012,7 @@ var NativeArraySliceFunction = NativeFunction(
 var NativeArrayReverseFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		_ []Value,
 	) Value {
@@ -2024,7 +2024,7 @@ var NativeArrayReverseFunction = NativeFunction(
 var NativeArrayFilterFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -2038,7 +2038,7 @@ var NativeArrayFilterFunction = NativeFunction(
 var NativeArrayMapFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -2052,7 +2052,7 @@ var NativeArrayMapFunction = NativeFunction(
 var NativeArrayToVariableSizedFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		_ []Value,
 	) Value {
@@ -2065,12 +2065,12 @@ var NativeArrayToVariableSizedFunction = NativeFunction(
 var NativeArrayToConstantSizedFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		typeParameterGetter TypeParameterGetter,
+		typeArguments TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
 		thisArray := AssertValueOfType[*ArrayValue](receiver)
-		constantSizedArrayType, ok := typeParameterGetter.NextStatic().(*ConstantSizedStaticType)
+		constantSizedArrayType, ok := typeArguments.NextStatic().(*ConstantSizedStaticType)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
@@ -2082,7 +2082,7 @@ var NativeArrayToConstantSizedFunction = NativeFunction(
 var NativeArrayFirstIndexFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -2096,7 +2096,7 @@ var NativeArrayFirstIndexFunction = NativeFunction(
 var NativeArrayRemoveFirstFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		_ []Value,
 	) Value {
@@ -2109,7 +2109,7 @@ var NativeArrayRemoveFirstFunction = NativeFunction(
 var NativeArrayRemoveLastFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		_ []Value,
 	) Value {

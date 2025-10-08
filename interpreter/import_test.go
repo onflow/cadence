@@ -46,7 +46,7 @@ import (
 func newAddLogFunction(logs *[]string) interpreter.NativeFunction {
 	return func(
 		_ interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		_ interpreter.Value,
 		arguments []interpreter.Value,
 	) interpreter.Value {

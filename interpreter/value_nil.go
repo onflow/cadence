@@ -98,7 +98,7 @@ var nilValueMapFunction = NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 	sema.OptionalTypeMapFunctionType(NilOptionalValue.InnerValueType(nil)),
 	func(
 		_ NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		_ Value,
 		_ []Value,
 	) Value {

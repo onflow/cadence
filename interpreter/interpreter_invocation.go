@@ -60,7 +60,7 @@ func invokeFunctionValue(
 	argumentTypes []sema.Type,
 	parameterTypes []sema.Type,
 	returnType sema.Type,
-	typeParameterTypes *sema.TypeParameterTypeOrderedMap,
+	typeArguments *sema.TypeParameterTypeOrderedMap,
 ) Value {
 	return invokeFunctionValueWithEval(
 		context,
@@ -73,7 +73,7 @@ func invokeFunctionValue(
 		argumentTypes,
 		parameterTypes,
 		returnType,
-		typeParameterTypes,
+		typeArguments,
 	)
 }
 
@@ -86,7 +86,7 @@ func invokeFunctionValueWithEval[T any](
 	argumentTypes []sema.Type,
 	parameterTypes []sema.Type,
 	returnType sema.Type,
-	typeParameterTypes *sema.TypeParameterTypeOrderedMap,
+	typeArguments *sema.TypeParameterTypeOrderedMap,
 ) Value {
 
 	parameterTypeCount := len(parameterTypes)
@@ -144,7 +144,7 @@ func invokeFunctionValueWithEval[T any](
 		nil,
 		transferredArguments,
 		argumentTypes,
-		typeParameterTypes,
+		typeArguments,
 		context.LocationRange(),
 	)
 
