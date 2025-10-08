@@ -122,7 +122,6 @@ func ParseCheckAndPrepareWithEvents(tb testing.TB, code string, compile bool) (
 	interpreterConfig := &interpreter.Config{
 		OnEventEmitted: func(
 			_ interpreter.ValueExportContext,
-			_ interpreter.LocationRange,
 			eventType *sema.CompositeType,
 			eventFields []interpreter.Value,
 		) error {
@@ -376,7 +375,7 @@ func ParseCheckAndPrepareWithOptions(
 									argumentTypes,
 									// TODO: provide these if they are needed for tests.
 									nil,
-									interpreter.EmptyLocationRange,
+									interpreter.LocationRange{},
 								)
 								return functionValue.Function(invocation)
 							},

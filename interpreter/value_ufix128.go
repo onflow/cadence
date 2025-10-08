@@ -125,11 +125,11 @@ var _ MemberAccessibleValue = UFix128Value{}
 
 func (UFix128Value) IsValue() {}
 
-func (v UFix128Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v UFix128Value) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitUFix128Value(context, v)
 }
 
-func (UFix128Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (UFix128Value) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -137,7 +137,7 @@ func (UFix128Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeUFix128)
 }
 
-func (UFix128Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (UFix128Value) IsImportable(_ ValueImportableContext) bool {
 	return true
 }
 
@@ -149,7 +149,10 @@ func (v UFix128Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v UFix128Value) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (v UFix128Value) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	common.UseMemory(
 		context,
 		common.NewRawStringMemoryUsage(
@@ -490,24 +493,20 @@ func ConvertUFix128(memoryGauge common.MemoryGauge, value Value) UFix128Value {
 	return NewUFix128ValueFromBigIntWithRangeCheck(memoryGauge, scaledInt)
 }
 
-func (v UFix128Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
-	return context.GetMethod(v, name, locationRange)
+func (v UFix128Value) GetMember(context MemberAccessibleContext, name string) Value {
+	return context.GetMethod(v, name)
 }
 
-func (v UFix128Value) GetMethod(
-	context MemberAccessibleContext,
-	_ LocationRange,
-	name string,
-) FunctionValue {
+func (v UFix128Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	return getNumberValueFunctionMember(context, v, name, sema.UFix128Type)
 }
 
-func (UFix128Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (UFix128Value) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (UFix128Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (UFix128Value) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -519,7 +518,6 @@ func (v UFix128Value) ToBigEndianBytes() []byte {
 
 func (v UFix128Value) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true

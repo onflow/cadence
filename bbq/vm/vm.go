@@ -79,8 +79,6 @@ func NewVM(
 	return vm
 }
 
-var EmptyLocationRange = interpreter.EmptyLocationRange
-
 func (vm *VM) Context() *Context {
 	return vm.context
 }
@@ -763,28 +761,19 @@ func opSetGlobal(vm *VM, ins opcode.InstructionSetGlobal) {
 	globals := vm.callFrame.function.Executable.Globals
 	value := vm.pop()
 	global := globals[globalIndex]
-	global.SetValue(vm.context, EmptyLocationRange, value)
+	global.SetValue(vm.context, value)
 }
 
 func opSetIndex(vm *VM) {
 	container, index, value := vm.pop3()
 	containerValue := container.(interpreter.ValueIndexableValue)
-	containerValue.SetKey(
-		vm.context,
-		EmptyLocationRange,
-		index,
-		value,
-	)
+	containerValue.SetKey(vm.context, index, value)
 }
 
 func opGetIndex(vm *VM) {
 	container, index := vm.pop2()
 	containerValue := container.(interpreter.ValueIndexableValue)
-	element := containerValue.GetKey(
-		vm.context,
-		EmptyLocationRange,
-		index,
-	)
+	element := containerValue.GetKey(vm.context, index)
 	vm.push(element)
 }
 
@@ -792,19 +781,10 @@ func opRemoveIndex(vm *VM) {
 	context := vm.context
 	container, index := vm.pop2()
 	containerValue := container.(interpreter.ValueIndexableValue)
-	element := containerValue.RemoveKey(
-		context,
-		EmptyLocationRange,
-		index,
-	)
+	element := containerValue.RemoveKey(context, index)
 
 	// Note: Must use `InsertKey` here, not `SetKey`.
-	containerValue.InsertKey(
-		context,
-		EmptyLocationRange,
-		index,
-		interpreter.PlaceholderValue{},
-	)
+	containerValue.InsertKey(context, index, interpreter.PlaceholderValue{})
 	vm.push(element)
 }
 
@@ -1000,7 +980,6 @@ func newCompositeValue(
 
 	return interpreter.NewCompositeValue(
 		context,
-		EmptyLocationRange,
 		compositeStaticType.Location,
 		compositeStaticType.QualifiedIdentifier,
 		compositeKind,
@@ -1023,12 +1002,7 @@ func opSetField(vm *VM, ins opcode.InstructionSetField) {
 	fieldName := getRawStringConstant(vm, fieldNameIndex)
 
 	memberAccessibleValue := target.(interpreter.MemberAccessibleValue)
-	memberAccessibleValue.SetMember(
-		vm.context,
-		EmptyLocationRange,
-		fieldName,
-		fieldValue,
-	)
+	memberAccessibleValue.SetMember(vm.context, fieldName, fieldValue)
 }
 
 func opGetField(vm *VM, ins opcode.InstructionGetField) {
@@ -1044,7 +1018,7 @@ func opGetField(vm *VM, ins opcode.InstructionGetField) {
 	fieldNameIndex := ins.FieldName
 	fieldName := getRawStringConstant(vm, fieldNameIndex)
 
-	fieldValue := memberAccessibleValue.GetMember(vm.context, EmptyLocationRange, fieldName)
+	fieldValue := memberAccessibleValue.GetMember(vm.context, fieldName)
 	if fieldValue == nil {
 		panic(&interpreter.UseBeforeInitializationError{
 			Name: fieldName,
@@ -1080,7 +1054,7 @@ func opRemoveField(vm *VM, ins opcode.InstructionRemoveField) {
 	fieldNameIndex := ins.FieldName
 	fieldName := getRawStringConstant(vm, fieldNameIndex)
 
-	fieldValue := memberAccessibleValue.RemoveMember(vm.context, EmptyLocationRange, fieldName)
+	fieldValue := memberAccessibleValue.RemoveMember(vm.context, fieldName)
 	if fieldValue == nil {
 		panic(&interpreter.UseBeforeInitializationError{
 			Name: fieldName,
@@ -1153,7 +1127,7 @@ func opConvert(vm *VM, ins opcode.InstructionConvert) {
 
 func opDestroy(vm *VM) {
 	value := vm.pop().(interpreter.ResourceKindedValue)
-	value.Destroy(vm.context, EmptyLocationRange)
+	value.Destroy(vm.context)
 }
 
 func opNewPath(vm *VM, ins opcode.InstructionNewPath) {
@@ -1610,12 +1584,7 @@ func opEmitEvent(vm *VM, ins opcode.InstructionEmitEvent) {
 	fields := make([]Value, len(eventFields))
 	copy(fields, eventFields)
 
-	context.EmitEvent(
-		context,
-		EmptyLocationRange,
-		eventSemaType,
-		fields,
-	)
+	context.EmitEvent(context, eventSemaType, fields)
 }
 
 func opNewClosure(vm *VM, ins opcode.InstructionNewClosure) {
@@ -1769,7 +1738,7 @@ func (vm *VM) LocationRange() interpreter.LocationRange {
 	// e.g: computation/memory metering errors,
 	// then use an empty-location-range, which points to the start of the program.
 	if vm.callFrame == nil {
-		return EmptyLocationRange
+		return interpreter.LocationRange{}
 	}
 
 	currentFunction := vm.callFrame.function
@@ -1869,6 +1838,7 @@ func (vm *VM) configureContext() {
 	// Delegate function invocations to the VM
 	context.invokeFunction = vm.invokeFunction
 	context.lookupFunction = vm.lookupFunction
+	context.getLocationRange = vm.LocationRange
 }
 
 func printInstructionError(

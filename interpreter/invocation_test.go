@@ -218,7 +218,7 @@ func TestInterpretRejectUnboxedInvocation(t *testing.T) {
 		[]interpreter.Value{value},
 		[]sema.Type{sema.IntType},
 		nil,
-		interpreter.EmptyLocationRange,
+		interpreter.LocationRange{},
 	)
 
 	_, err := interpreter.InvokeFunction(

@@ -58,10 +58,9 @@ type PublicKeyValidator interface {
 func newPublicKeyValidationHandler(validator PublicKeyValidator) interpreter.PublicKeyValidationHandlerFunc {
 	return func(
 		context interpreter.PublicKeyValidationContext,
-		locationRange interpreter.LocationRange,
 		publicKeyValue *interpreter.CompositeValue,
 	) error {
-		publicKey, err := NewPublicKeyFromValue(context, locationRange, publicKeyValue)
+		publicKey, err := NewPublicKeyFromValue(context, publicKeyValue)
 		if err != nil {
 			return err
 		}
@@ -76,7 +75,7 @@ func NativePublicKeyConstructorFunction(
 	return interpreter.NativeFunction(
 		func(
 			context interpreter.NativeFunctionContext,
-			locationRange interpreter.LocationRange,
+			_ interpreter.LocationRange,
 			_ interpreter.TypeParameterGetter,
 			_ interpreter.Value,
 			args ...interpreter.Value,
@@ -86,7 +85,6 @@ func NativePublicKeyConstructorFunction(
 
 			return NewPublicKeyFromFields(
 				context,
-				locationRange,
 				publicKey,
 				signAlgo,
 				publicKeyValidator,
@@ -121,32 +119,28 @@ func NewVMPublicKeyConstructor(
 
 func NewPublicKeyFromFields(
 	context interpreter.PublicKeyCreationContext,
-	locationRange interpreter.LocationRange,
 	publicKey *interpreter.ArrayValue,
 	signAlgo *interpreter.SimpleCompositeValue,
 	publicKeyValidator PublicKeyValidator,
 ) *interpreter.CompositeValue {
 	return interpreter.NewPublicKeyValue(
 		context,
-		locationRange,
 		publicKey,
 		signAlgo,
 		newPublicKeyValidationHandler(publicKeyValidator),
 	)
 }
 
-func assumePublicKeyIsValid(_ interpreter.PublicKeyValidationContext, _ interpreter.LocationRange, _ *interpreter.CompositeValue) error {
+func assumePublicKeyIsValid(_ interpreter.PublicKeyValidationContext, _ *interpreter.CompositeValue) error {
 	return nil
 }
 
 func NewPublicKeyValue(
 	context interpreter.PublicKeyCreationContext,
-	locationRange interpreter.LocationRange,
 	publicKey *PublicKey,
 ) *interpreter.CompositeValue {
 	return interpreter.NewPublicKeyValue(
 		context,
-		locationRange,
 		interpreter.ByteSliceToByteArrayValue(
 			context,
 			publicKey.PublicKey,
@@ -161,14 +155,13 @@ func NewPublicKeyValue(
 
 func NewPublicKeyFromValue(
 	context interpreter.PublicKeyCreationContext,
-	locationRange interpreter.LocationRange,
 	publicKey interpreter.MemberAccessibleValue,
 ) (
 	*PublicKey,
 	error,
 ) {
 	// publicKey field
-	key := publicKey.GetMember(context, locationRange, sema.PublicKeyTypePublicKeyFieldName)
+	key := publicKey.GetMember(context, sema.PublicKeyTypePublicKeyFieldName)
 
 	byteArray, err := interpreter.ByteArrayValueToByteSlice(context, key)
 	if err != nil {
@@ -176,7 +169,7 @@ func NewPublicKeyFromValue(
 	}
 
 	// sign algo field
-	signAlgoField := publicKey.GetMember(context, locationRange, sema.PublicKeyTypeSignatureAlgorithmFieldName)
+	signAlgoField := publicKey.GetMember(context, sema.PublicKeyTypeSignatureAlgorithmFieldName)
 	if signAlgoField == nil {
 		return nil, errors.NewUnexpectedError("sign algorithm is not set")
 	}
@@ -189,7 +182,7 @@ func NewPublicKeyFromValue(
 		)
 	}
 
-	rawValue := signAlgoValue.GetMember(context, locationRange, sema.EnumRawValueFieldName)
+	rawValue := signAlgoValue.GetMember(context, sema.EnumRawValueFieldName)
 	if rawValue == nil {
 		return nil, errors.NewDefaultUserError("sign algorithm raw value is not set")
 	}
@@ -227,7 +220,7 @@ func NativePublicKeyVerifySignatureFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		locationRange interpreter.LocationRange,
+		_ interpreter.LocationRange,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
@@ -243,7 +236,6 @@ func NativePublicKeyVerifySignatureFunction(
 
 		return PublicKeyVerifySignature(
 			context,
-			locationRange,
 			publicKeyValue,
 			signatureValue,
 			signedDataValue,
@@ -280,7 +272,6 @@ func NewVMPublicKeyVerifySignatureFunction(verifier PublicKeySignatureVerifier) 
 
 func PublicKeyVerifySignature(
 	context interpreter.InvocationContext,
-	locationRange interpreter.LocationRange,
 	publicKeyValue *interpreter.CompositeValue,
 	signatureValue *interpreter.ArrayValue,
 	signedDataValue *interpreter.ArrayValue,
@@ -307,9 +298,9 @@ func PublicKeyVerifySignature(
 
 	domainSeparationTag := domainSeparationTagValue.Str
 
-	hashAlgorithm := NewHashAlgorithmFromValue(context, locationRange, hashAlgorithmValue)
+	hashAlgorithm := NewHashAlgorithmFromValue(context, hashAlgorithmValue)
 
-	publicKey, err := NewPublicKeyFromValue(context, locationRange, publicKeyValue)
+	publicKey, err := NewPublicKeyFromValue(context, publicKeyValue)
 	if err != nil {
 		return interpreter.FalseValue
 	}
@@ -340,7 +331,7 @@ func NativePublicKeyVerifyPoPFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		locationRange interpreter.LocationRange,
+		_ interpreter.LocationRange,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
@@ -353,7 +344,6 @@ func NativePublicKeyVerifyPoPFunction(
 
 		return PublicKeyVerifyPoP(
 			context,
-			locationRange,
 			publicKeyValue,
 			signatureValue,
 			verifier,
@@ -387,7 +377,6 @@ func NewVMPublicKeyVerifyPoPFunction(verifier BLSPoPVerifier) VMFunction {
 
 func PublicKeyVerifyPoP(
 	context interpreter.InvocationContext,
-	locationRange interpreter.LocationRange,
 	publicKeyValue *interpreter.CompositeValue,
 	signatureValue *interpreter.ArrayValue,
 	verifier BLSPoPVerifier,
@@ -399,7 +388,7 @@ func PublicKeyVerifyPoP(
 		sema.PublicKeyType,
 	)
 
-	publicKey, err := NewPublicKeyFromValue(context, locationRange, publicKeyValue)
+	publicKey, err := NewPublicKeyFromValue(context, publicKeyValue)
 	if err != nil {
 		panic(err)
 	}

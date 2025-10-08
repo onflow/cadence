@@ -82,7 +82,6 @@ func makeContractValueHandler(
 		inter *interpreter.Interpreter,
 		compositeType *sema.CompositeType,
 		constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
-		invocationRange ast.Range,
 	) interpreter.ContractValue {
 
 		constructor := constructorGenerator(common.ZeroAddress)
@@ -94,7 +93,6 @@ func makeContractValueHandler(
 			argumentTypes,
 			parameterTypes,
 			compositeType,
-			ast.Range{},
 		)
 		if err != nil {
 			panic(err)
@@ -2336,7 +2334,7 @@ func TestInterpretStructureInitializesConstant(t *testing.T) {
     `)
 
 	actual := inter.GetGlobal("test").(*interpreter.CompositeValue).
-		GetMember(inter, interpreter.EmptyLocationRange, "foo")
+		GetMember(inter, "foo")
 	AssertValuesEqual(
 		t,
 		inter,
@@ -4405,11 +4403,7 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 	actualValue := inter.GetGlobal("x")
 	actualDict := actualValue.(*interpreter.DictionaryValue)
 
-	newValue := actualDict.GetKey(
-		inter,
-		interpreter.EmptyLocationRange,
-		interpreter.NewUnmeteredStringValue("abc"),
-	)
+	newValue := actualDict.GetKey(inter, interpreter.NewUnmeteredStringValue("abc"))
 
 	AssertValuesEqual(
 		t,
@@ -4469,11 +4463,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 		actualDict,
 	)
 
-	newValue := actualDict.GetKey(
-		inter,
-		interpreter.EmptyLocationRange,
-		interpreter.NewUnmeteredStringValue("abc"),
-	)
+	newValue := actualDict.GetKey(inter, interpreter.NewUnmeteredStringValue("abc"))
 
 	AssertValuesEqual(
 		t,
@@ -4534,11 +4524,7 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 		actualDict,
 	)
 
-	newValue := actualDict.GetKey(
-		inter,
-		interpreter.EmptyLocationRange,
-		interpreter.NewUnmeteredStringValue("def"),
-	)
+	newValue := actualDict.GetKey(inter, interpreter.NewUnmeteredStringValue("def"))
 
 	AssertValuesEqual(
 		t,
@@ -5182,7 +5168,6 @@ func TestInterpretStructureFunctionBindingInside(t *testing.T) {
 	value, err := interpreter.InvokeFunctionValue(
 		inter,
 		functionValue.(interpreter.FunctionValue),
-		nil,
 		nil,
 		nil,
 		nil,
@@ -6423,7 +6408,6 @@ func TestInterpretResourceMoveInArrayAndDestroy(t *testing.T) {
 			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {
@@ -6495,7 +6479,6 @@ func TestInterpretResourceMoveInDictionaryAndDestroy(t *testing.T) {
 			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {
@@ -6983,7 +6966,6 @@ func TestInterpretResourceDestroyExpressionDestructor(t *testing.T) {
 			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {
@@ -7047,7 +7029,6 @@ func TestInterpretResourceDestroyExpressionNestedResources(t *testing.T) {
 			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {
@@ -7101,7 +7082,6 @@ func TestInterpretResourceDestroyArray(t *testing.T) {
 			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {
@@ -7144,7 +7124,6 @@ func TestInterpretResourceDestroyDictionary(t *testing.T) {
 			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {
@@ -7187,7 +7166,6 @@ func TestInterpretResourceDestroyOptionalSome(t *testing.T) {
 			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {
@@ -7229,7 +7207,6 @@ func TestInterpretResourceDestroyOptionalNil(t *testing.T) {
 			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {
@@ -7306,7 +7283,6 @@ func TestInterpretEmitEvent(t *testing.T) {
 				Storage: storage,
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {
@@ -7390,7 +7366,6 @@ func TestInterpretReferenceEventParameter(t *testing.T) {
 			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {
@@ -7479,7 +7454,6 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 	sValue := interpreter.NewCompositeValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		TestLocation,
 		"S",
 		common.CompositeKindStructure,
@@ -7749,7 +7723,6 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 						Storage: storage,
 						OnEventEmitted: func(
 							_ interpreter.ValueExportContext,
-							_ interpreter.LocationRange,
 							eventType *sema.CompositeType,
 							eventFields []interpreter.Value,
 						) error {
@@ -7838,7 +7811,7 @@ func TestInterpretSwapResourceDictionaryElementReturnDictionary(t *testing.T) {
 	)
 
 	foo := value.(*interpreter.DictionaryValue).
-		GetKey(inter, interpreter.EmptyLocationRange, interpreter.NewUnmeteredStringValue("foo"))
+		GetKey(inter, interpreter.NewUnmeteredStringValue("foo"))
 
 	require.IsType(t,
 		&interpreter.SomeValue{},
@@ -8751,7 +8724,7 @@ func TestInterpretContractUseInNestedDeclaration(t *testing.T) {
 	require.NoError(t, err)
 
 	i := inter.GetGlobal("C").(interpreter.MemberAccessibleValue).
-		GetMember(inter, interpreter.EmptyLocationRange, "i")
+		GetMember(inter, "i")
 
 	require.IsType(t,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -9694,7 +9667,6 @@ func TestInterpretNestedDestroy(t *testing.T) {
 			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {
@@ -11432,7 +11404,6 @@ func TestInterpretArrayToVariableSized(t *testing.T) {
 		location := common.Location(common.StringLocation("test"))
 		value1 := interpreter.NewCompositeValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			location,
 			"TestStruct",
 			common.CompositeKindStructure,
@@ -11446,7 +11417,6 @@ func TestInterpretArrayToVariableSized(t *testing.T) {
 		)
 		value2 := interpreter.NewCompositeValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			location,
 			"TestStruct",
 			common.CompositeKindStructure,
@@ -11460,7 +11430,6 @@ func TestInterpretArrayToVariableSized(t *testing.T) {
 		)
 		value3 := interpreter.NewCompositeValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			location,
 			"TestStruct",
 			common.CompositeKindStructure,
@@ -11643,7 +11612,6 @@ func TestInterpretArrayToConstantSized(t *testing.T) {
 		location := common.Location(common.StringLocation("test"))
 		value1 := interpreter.NewCompositeValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			location,
 			"TestStruct",
 			common.CompositeKindStructure,
@@ -11657,7 +11625,6 @@ func TestInterpretArrayToConstantSized(t *testing.T) {
 		)
 		value2 := interpreter.NewCompositeValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			location,
 			"TestStruct",
 			common.CompositeKindStructure,
@@ -11671,7 +11638,6 @@ func TestInterpretArrayToConstantSized(t *testing.T) {
 		)
 		value3 := interpreter.NewCompositeValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			location,
 			"TestStruct",
 			common.CompositeKindStructure,

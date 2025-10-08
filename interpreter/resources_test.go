@@ -2364,7 +2364,6 @@ func TestInterpretResourceInterfaceDefaultDestroyEvent(t *testing.T) {
 			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {
@@ -2443,7 +2442,6 @@ func TestInterpretResourceInterfaceDefaultDestroyEventMultipleInheritance(t *tes
 			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {
@@ -2520,7 +2518,6 @@ func TestInterpretResourceInterfaceDefaultDestroyEventIndirectInheritance(t *tes
 			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {
@@ -2593,7 +2590,6 @@ func TestInterpretResourceInterfaceDefaultDestroyEventNoCompositeEvent(t *testin
 			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {
@@ -2670,7 +2666,6 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
 				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
-						_ interpreter.LocationRange,
 						eventType *sema.CompositeType,
 						eventFields []interpreter.Value,
 					) error {
@@ -2737,7 +2732,6 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
 				InterpreterConfig: &interpreter.Config{
 					OnEventEmitted: func(
 						_ interpreter.ValueExportContext,
-						_ interpreter.LocationRange,
 						eventType *sema.CompositeType,
 						eventFields []interpreter.Value,
 					) error {
@@ -2793,7 +2787,6 @@ func TestInterpretDefaultDestroyEventArgumentScoping(t *testing.T) {
 			InterpreterConfig: &interpreter.Config{
 				OnEventEmitted: func(
 					_ interpreter.ValueExportContext,
-					_ interpreter.LocationRange,
 					eventType *sema.CompositeType,
 					eventFields []interpreter.Value,
 				) error {

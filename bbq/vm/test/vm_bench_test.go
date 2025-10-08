@@ -284,14 +284,13 @@ func BenchmarkNewStructRaw(b *testing.B) {
 		for j := 0; j < 1; j++ {
 			structValue := interpreter.NewCompositeValue(
 				vmConfig,
-				vm.EmptyLocationRange,
 				nil,
 				"Foo",
 				common.CompositeKindStructure,
 				nil,
 				common.ZeroAddress,
 			)
-			structValue.SetMember(vmConfig, vm.EmptyLocationRange, "id", fieldValue)
+			structValue.SetMember(vmConfig, "id", fieldValue)
 			structValue.Transfer(
 				vmConfig,
 				atree.Address{},

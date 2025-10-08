@@ -114,11 +114,11 @@ func (v *StringValue) prepareGraphemes() {
 
 func (*StringValue) IsValue() {}
 
-func (v *StringValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v *StringValue) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitStringValue(context, v)
 }
 
-func (*StringValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (*StringValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -126,7 +126,7 @@ func (*StringValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeString)
 }
 
-func (*StringValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (*StringValue) IsImportable(_ ValueImportableContext) bool {
 	return sema.StringType.Importable
 }
 
@@ -138,7 +138,10 @@ func (v *StringValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v *StringValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (v *StringValue) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	l := format.FormattedStringLength(v.Str)
 	common.UseMemory(context, common.NewRawStringMemoryUsage(l))
 	return v.String()
@@ -321,7 +324,7 @@ func (v *StringValue) checkBounds(index int) {
 	}
 }
 
-func (v *StringValue) GetKey(context ValueComparisonContext, _ LocationRange, key Value) Value {
+func (v *StringValue) GetKey(context ValueComparisonContext, key Value) Value {
 	index := key.(NumberValue).ToInt()
 	v.checkBounds(index)
 
@@ -341,19 +344,19 @@ func (v *StringValue) GetKey(context ValueComparisonContext, _ LocationRange, ke
 	)
 }
 
-func (*StringValue) SetKey(_ ContainerMutationContext, _ LocationRange, _ Value, _ Value) {
+func (*StringValue) SetKey(_ ContainerMutationContext, _ Value, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
-func (*StringValue) InsertKey(_ ContainerMutationContext, _ LocationRange, _ Value, _ Value) {
+func (*StringValue) InsertKey(_ ContainerMutationContext, _ Value, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
-func (*StringValue) RemoveKey(_ ContainerMutationContext, _ LocationRange, _ Value) Value {
+func (*StringValue) RemoveKey(_ ContainerMutationContext, _ Value) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (v *StringValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+func (v *StringValue) GetMember(context MemberAccessibleContext, name string) Value {
 	switch name {
 	case sema.StringTypeLengthFieldName:
 		length := v.Length()
@@ -363,14 +366,10 @@ func (v *StringValue) GetMember(context MemberAccessibleContext, locationRange L
 		return ByteSliceToByteArrayValue(context, []byte(v.Str))
 	}
 
-	return context.GetMethod(v, name, locationRange)
+	return context.GetMethod(v, name)
 }
 
-func (v *StringValue) GetMethod(
-	context MemberAccessibleContext,
-	_ LocationRange,
-	name string,
-) FunctionValue {
+func (v *StringValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	switch name {
 	case sema.StringTypeConcatFunctionName:
 		return NewBoundHostFunctionValue(
@@ -460,12 +459,12 @@ func StringConcat(
 	return this.Concat(context, otherArray)
 }
 
-func (*StringValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (*StringValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Strings have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (*StringValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (*StringValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Strings have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -775,7 +774,6 @@ func (v *StringValue) DecodeHex(context ArrayCreationContext) *ArrayValue {
 
 func (v *StringValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true

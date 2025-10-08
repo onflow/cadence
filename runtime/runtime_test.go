@@ -11611,7 +11611,6 @@ func TestRuntimeForbidPublicEntitlementBorrow(t *testing.T) {
 		},
 		OnValidateAccountCapabilitiesGet: func(
 			_ interpreter.AccountCapabilityGetValidationContext,
-			_ interpreter.LocationRange,
 			_ interpreter.AddressValue,
 			path interpreter.PathValue,
 			wantedBorrowType *sema.ReferenceType,
@@ -11702,7 +11701,6 @@ func TestRuntimeForbidPublicEntitlementGet(t *testing.T) {
 		},
 		OnValidateAccountCapabilitiesGet: func(
 			_ interpreter.AccountCapabilityGetValidationContext,
-			_ interpreter.LocationRange,
 			_ interpreter.AddressValue,
 			path interpreter.PathValue,
 			wantedBorrowType *sema.ReferenceType,
@@ -11789,7 +11787,6 @@ func TestRuntimeForbidPublicEntitlementPublish(t *testing.T) {
 			},
 			OnValidateAccountCapabilitiesPublish: func(
 				_ interpreter.AccountCapabilityPublishValidationContext,
-				_ interpreter.LocationRange,
 				_ interpreter.AddressValue,
 				path interpreter.PathValue,
 				capabilityBorrowType *interpreter.ReferenceStaticType,
@@ -11848,7 +11845,6 @@ func TestRuntimeForbidPublicEntitlementPublish(t *testing.T) {
 			},
 			OnValidateAccountCapabilitiesPublish: func(
 				_ interpreter.AccountCapabilityPublishValidationContext,
-				_ interpreter.LocationRange,
 				_ interpreter.AddressValue,
 				path interpreter.PathValue,
 				capabilityBorrowType *interpreter.ReferenceStaticType,
@@ -11906,7 +11902,6 @@ func TestRuntimeForbidPublicEntitlementPublish(t *testing.T) {
 			},
 			OnValidateAccountCapabilitiesPublish: func(
 				_ interpreter.AccountCapabilityPublishValidationContext,
-				_ interpreter.LocationRange,
 				_ interpreter.AddressValue,
 				path interpreter.PathValue,
 				capabilityBorrowType *interpreter.ReferenceStaticType,

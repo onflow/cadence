@@ -34,7 +34,9 @@ func init() {
 		NewNativeFunctionValue(
 			sema.AccountCapabilityControllerTypeSetTagFunctionName,
 			sema.AccountCapabilityControllerTypeSetTagFunctionType,
-			interpreter.NewNativeDeletionCheckedAccountCapabilityControllerFunction(interpreter.NativeAccountCapabilityControllerSetTagFunction),
+			interpreter.NewNativeDeletionCheckedAccountCapabilityControllerFunction(
+				interpreter.NativeAccountCapabilityControllerSetTagFunction,
+			),
 		),
 	)
 
@@ -43,7 +45,9 @@ func init() {
 		NewNativeFunctionValue(
 			sema.AccountCapabilityControllerTypeDeleteFunctionName,
 			sema.AccountCapabilityControllerTypeDeleteFunctionType,
-			interpreter.NewNativeDeletionCheckedAccountCapabilityControllerFunction(interpreter.NativeAccountCapabilityControllerDeleteFunction),
+			interpreter.NewNativeDeletionCheckedAccountCapabilityControllerFunction(
+				interpreter.NativeAccountCapabilityControllerDeleteFunction,
+			),
 		),
 	)
 }

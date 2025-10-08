@@ -63,7 +63,13 @@ func AdaptNativeFunctionForVM(fn interpreter.NativeFunction) NativeFunctionVM {
 	return func(context *Context, typeArguments []bbq.StaticType, receiver Value, arguments ...Value) Value {
 		typeParameterGetter := NewVMTypeParameterGetter(context, typeArguments)
 
-		return fn(context, interpreter.EmptyLocationRange, typeParameterGetter, receiver, arguments...)
+		return fn(
+			context,
+			interpreter.LocationRange{},
+			typeParameterGetter,
+			receiver,
+			arguments...,
+		)
 	}
 }
 

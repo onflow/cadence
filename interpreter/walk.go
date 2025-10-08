@@ -32,7 +32,7 @@ type ValueWalker interface {
 // followed by a call of WalkValue(nil) on the returned walker.
 //
 // The initial walker may not be nil.
-func WalkValue(context ValueWalkContext, walker ValueWalker, value Value, locationRange LocationRange) {
+func WalkValue(context ValueWalkContext, walker ValueWalker, value Value) {
 	if walker = walker.WalkValue(context, value); walker == nil {
 		return
 	}
@@ -44,10 +44,8 @@ func WalkValue(context ValueWalkContext, walker ValueWalker, value Value, locati
 				context,
 				walker,
 				child,
-				locationRange,
 			)
 		},
-		locationRange,
 	)
 
 	walker.WalkValue(context, nil)

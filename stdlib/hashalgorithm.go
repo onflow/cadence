@@ -80,7 +80,7 @@ func NativeHashAlgorithmHashFunction(hasher Hasher, hashAlgoValue interpreter.Me
 	return interpreter.NativeFunction(
 		func(
 			context interpreter.NativeFunctionContext,
-			locationRange interpreter.LocationRange,
+			_ interpreter.LocationRange,
 			_ interpreter.TypeParameterGetter,
 			receiver interpreter.Value,
 			args ...interpreter.Value,
@@ -89,10 +89,11 @@ func NativeHashAlgorithmHashFunction(hasher Hasher, hashAlgoValue interpreter.Me
 				// vm does not provide the hash algo value
 				hashAlgoValue = interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)
 			}
+
 			dataValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
+
 			return hash(
 				context,
-				locationRange,
 				hasher,
 				dataValue,
 				nil,
@@ -106,7 +107,7 @@ func NativeHashAlgorithmHashWithTagFunction(hasher Hasher, hashAlgoValue interpr
 	return interpreter.NativeFunction(
 		func(
 			context interpreter.NativeFunctionContext,
-			locationRange interpreter.LocationRange,
+			_ interpreter.LocationRange,
 			_ interpreter.TypeParameterGetter,
 			receiver interpreter.Value,
 			args ...interpreter.Value,
@@ -119,7 +120,6 @@ func NativeHashAlgorithmHashWithTagFunction(hasher Hasher, hashAlgoValue interpr
 			tagValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[1])
 			return hash(
 				context,
-				locationRange,
 				hasher,
 				dataValue,
 				tagValue,
@@ -181,7 +181,6 @@ func NewVMHashAlgorithmHashWithTagFunction(
 
 func hash(
 	context interpreter.MemberAccessibleContext,
-	locationRange interpreter.LocationRange,
 	hasher Hasher,
 	dataValue *interpreter.ArrayValue,
 	tagValue *interpreter.StringValue,
@@ -197,7 +196,7 @@ func hash(
 		tag = tagValue.Str
 	}
 
-	hashAlgorithm := NewHashAlgorithmFromValue(context, locationRange, hashAlgorithmValue)
+	hashAlgorithm := NewHashAlgorithmFromValue(context, hashAlgorithmValue)
 
 	result, err := hasher.Hash(data, tag, hashAlgorithm)
 	if err != nil {

@@ -52,11 +52,11 @@ func (PathLinkValue) IsValue() {}
 
 func (PathLinkValue) isLinkValue() {}
 
-func (v PathLinkValue) Accept(_ ValueVisitContext, _ Visitor, _ LocationRange) {
+func (v PathLinkValue) Accept(_ ValueVisitContext, _ Visitor) {
 	panic(errors.NewUnreachableError())
 }
 
-func (v PathLinkValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (v PathLinkValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -71,7 +71,7 @@ func (v PathLinkValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewCapabilityStaticType(context, v.Type)
 }
 
-func (PathLinkValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (PathLinkValue) IsImportable(_ ValueImportableContext) bool {
 	panic(errors.NewUnreachableError())
 }
 
@@ -87,13 +87,15 @@ func (v PathLinkValue) RecursiveString(seenReferences SeenReferences) string {
 	)
 }
 
-func (v PathLinkValue) MeteredString(_ ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (v PathLinkValue) MeteredString(
+	_ ValueStringContext,
+	_ SeenReferences,
+) string {
 	panic(errors.NewUnreachableError())
 }
 
 func (v PathLinkValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	panic(errors.NewUnreachableError())
@@ -176,11 +178,11 @@ func (AccountLinkValue) IsValue() {}
 
 func (AccountLinkValue) isLinkValue() {}
 
-func (v AccountLinkValue) Accept(_ ValueVisitContext, _ Visitor, _ LocationRange) {
+func (v AccountLinkValue) Accept(_ ValueVisitContext, _ Visitor) {
 	panic(errors.NewUnreachableError())
 }
 
-func (AccountLinkValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (AccountLinkValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -202,7 +204,7 @@ func (v AccountLinkValue) StaticType(context ValueStaticTypeContext) StaticType 
 	)
 }
 
-func (AccountLinkValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (AccountLinkValue) IsImportable(_ ValueImportableContext) bool {
 	panic(errors.NewUnreachableError())
 }
 
@@ -214,13 +216,15 @@ func (v AccountLinkValue) RecursiveString(_ SeenReferences) string {
 	panic(errors.NewUnreachableError())
 }
 
-func (v AccountLinkValue) MeteredString(_ ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (v AccountLinkValue) MeteredString(
+	_ ValueStringContext,
+	_ SeenReferences,
+) string {
 	panic(errors.NewUnreachableError())
 }
 
 func (v AccountLinkValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	panic(errors.NewUnreachableError())

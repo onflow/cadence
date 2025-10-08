@@ -311,11 +311,9 @@ func (t *testEmulatorBackendType) newCreateAccountFunction(
 			}
 
 			inter := invocation.InvocationContext
-			locationRange := invocation.LocationRange
 
 			return newTestAccountValue(
 				inter,
-				locationRange,
 				account,
 			)
 		},
@@ -324,7 +322,6 @@ func (t *testEmulatorBackendType) newCreateAccountFunction(
 
 func newTestAccountValue(
 	context interpreter.InvocationContext,
-	locationRange interpreter.LocationRange,
 	account *Account,
 ) interpreter.Value {
 
@@ -333,7 +330,6 @@ func newTestAccountValue(
 
 	publicKey := NewPublicKeyValue(
 		context,
-		locationRange,
 		account.PublicKey,
 	)
 
@@ -388,11 +384,9 @@ func (t *testEmulatorBackendType) newGetAccountFunction(
 			}
 
 			inter := invocation.InvocationContext
-			locationRange := invocation.LocationRange
 
 			return newTestAccountValue(
 				inter,
-				locationRange,
 				account,
 			)
 		},
@@ -423,7 +417,6 @@ func (t *testEmulatorBackendType) newAddTransactionFunction(
 		t.addTransactionFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.InvocationContext
-			locationRange := invocation.LocationRange
 
 			transactionValue, ok := invocation.Arguments[0].(interpreter.MemberAccessibleValue)
 			if !ok {
@@ -431,44 +424,27 @@ func (t *testEmulatorBackendType) newAddTransactionFunction(
 			}
 
 			// Get transaction code
-			codeValue := transactionValue.GetMember(
-				inter,
-				locationRange,
-				testTransactionTypeCodeFieldName,
-			)
+			codeValue := transactionValue.GetMember(inter, testTransactionTypeCodeFieldName)
 			code, ok := codeValue.(*interpreter.StringValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
 			// Get authorizers
-			authorizerValue := transactionValue.GetMember(
-				inter,
-				locationRange,
-				testTransactionTypeAuthorizersFieldName,
-			)
+			authorizerValue := transactionValue.GetMember(inter, testTransactionTypeAuthorizersFieldName)
 
 			authorizers := addressArrayValueToSlice(inter, authorizerValue)
 
 			// Get signers
-			signersValue := transactionValue.GetMember(
-				inter,
-				locationRange,
-				testTransactionTypeSignersFieldName,
-			)
+			signersValue := transactionValue.GetMember(inter, testTransactionTypeSignersFieldName)
 
 			signerAccounts := accountsArrayValueToSlice(
 				inter,
 				signersValue,
-				locationRange,
 			)
 
 			// Get arguments
-			argsValue := transactionValue.GetMember(
-				inter,
-				locationRange,
-				testTransactionTypeArgumentsFieldName,
-			)
+			argsValue := transactionValue.GetMember(inter, testTransactionTypeArgumentsFieldName)
 			args, err := arrayValueToSlice(inter, argsValue)
 			if err != nil {
 				panic(errors.NewUnexpectedErrorFromCause(err))
@@ -680,7 +656,6 @@ func (t *testEmulatorBackendType) newServiceAccountFunction(
 
 			return newTestAccountValue(
 				invocation.InvocationContext,
-				invocation.LocationRange,
 				serviceAccount,
 			)
 		},
@@ -848,13 +823,11 @@ func (t *testEmulatorBackendType) newLoadSnapshotFunction(
 func (t *testEmulatorBackendType) newEmulatorBackend(
 	inter *interpreter.Interpreter,
 	blockchain Blockchain,
-	locationRange interpreter.LocationRange,
 ) *interpreter.CompositeValue {
 
 	// TODO: Use SimpleCompositeValue
 	emulatorBackend := interpreter.NewCompositeValue(
 		inter,
-		locationRange,
 		t.compositeType.Location,
 		testEmulatorBackendTypeName,
 		common.CompositeKindStructure,
@@ -921,12 +894,7 @@ func (t *testEmulatorBackendType) newEmulatorBackend(
 	}
 
 	for _, field := range fields {
-		emulatorBackend.SetMember(
-			inter,
-			locationRange,
-			field.Name,
-			field.Value,
-		)
+		emulatorBackend.SetMember(inter, field.Name, field.Value)
 	}
 
 	return emulatorBackend

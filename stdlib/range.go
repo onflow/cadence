@@ -116,7 +116,7 @@ var inclusiveRangeConstructorFunctionType = func() *sema.FunctionType {
 var NativeInclusiveRangeConstructorFunction = interpreter.NativeFunction(
 	func(
 		context interpreter.NativeFunctionContext,
-		locationRange interpreter.LocationRange,
+		_ interpreter.LocationRange,
 		_ interpreter.TypeParameterGetter,
 		_ interpreter.Value,
 		args ...interpreter.Value,
@@ -128,7 +128,7 @@ var NativeInclusiveRangeConstructorFunction = interpreter.NativeFunction(
 			step = interpreter.AssertValueOfType[interpreter.IntegerValue](args[2])
 		}
 
-		return NewInclusiveRange(context, locationRange, start, end, step)
+		return NewInclusiveRange(context, start, end, step)
 	},
 )
 
@@ -150,7 +150,6 @@ var VMInclusiveRangeConstructor = NewNativeStandardLibraryStaticFunction(
 
 func NewInclusiveRange(
 	invocationContext interpreter.InvocationContext,
-	locationRange interpreter.LocationRange,
 	start interpreter.IntegerValue,
 	end interpreter.IntegerValue,
 	step interpreter.IntegerValue,
@@ -189,7 +188,6 @@ func NewInclusiveRange(
 
 		return interpreter.NewInclusiveRangeValueWithStep(
 			invocationContext,
-			locationRange,
 			start,
 			end,
 			step,
@@ -200,7 +198,6 @@ func NewInclusiveRange(
 
 	return interpreter.NewInclusiveRangeValue(
 		invocationContext,
-		locationRange,
 		start,
 		end,
 		rangeStaticType,

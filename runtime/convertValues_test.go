@@ -68,11 +68,7 @@ func TestRuntimeExportValue(t *testing.T) {
 			if tt.valueFactory != nil {
 				value = tt.valueFactory(inter)
 			}
-			actual, err := ExportValue(
-				value,
-				inter,
-				interpreter.EmptyLocationRange,
-			)
+			actual, err := ExportValue(value, inter)
 
 			if tt.invalid {
 				RequireError(t, err)
@@ -478,7 +474,6 @@ func TestRuntimeExportValue(t *testing.T) {
 					interpreter.NewUnmeteredIntValueFromInt64(1),
 					stdlib.NewPublicKeyValue(
 						inter,
-						interpreter.EmptyLocationRange,
 						&stdlib.PublicKey{
 							PublicKey: []byte{1, 2, 3},
 							SignAlgo:  2,
@@ -639,7 +634,6 @@ func TestRuntimeImportValue(t *testing.T) {
 
 			actual, err := ImportValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				nil,
 				nil,
 				tt.value,
@@ -1392,7 +1386,6 @@ func TestImportInclusiveRangeValue(t *testing.T) {
 
 		actual, err := ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			value,
@@ -1405,7 +1398,6 @@ func TestImportInclusiveRangeValue(t *testing.T) {
 			inter,
 			interpreter.NewInclusiveRangeValueWithStep(
 				inter,
-				interpreter.EmptyLocationRange,
 				interpreter.NewIntValueFromInt64(inter, 10),
 				interpreter.NewIntValueFromInt64(inter, -10),
 				interpreter.NewIntValueFromInt64(inter, -2),
@@ -1427,7 +1419,6 @@ func TestImportInclusiveRangeValue(t *testing.T) {
 
 		actual, err := ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			value,
@@ -1440,7 +1431,6 @@ func TestImportInclusiveRangeValue(t *testing.T) {
 			inter,
 			interpreter.NewInclusiveRangeValueWithStep(
 				inter,
-				interpreter.EmptyLocationRange,
 				interpreter.NewIntValueFromInt64(inter, 10),
 				interpreter.NewIntValueFromInt64(inter, -10),
 				interpreter.NewIntValueFromInt64(inter, -2),
@@ -1462,7 +1452,6 @@ func TestImportInclusiveRangeValue(t *testing.T) {
 
 		_, err := ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			value,
@@ -1493,7 +1482,6 @@ func TestImportInclusiveRangeValue(t *testing.T) {
 
 		_, err = ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			value,
@@ -2290,7 +2278,6 @@ func TestRuntimeExportTypeValue(t *testing.T) {
 		actual, err := ExportValue(
 			value,
 			NewTestInterpreter(t),
-			interpreter.EmptyLocationRange,
 		)
 		require.NoError(t, err)
 
@@ -2338,7 +2325,7 @@ func TestRuntimeExportTypeValue(t *testing.T) {
 			},
 		}
 
-		actual, err := ExportValue(ty, inter, interpreter.EmptyLocationRange)
+		actual, err := ExportValue(ty, inter)
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -2375,7 +2362,6 @@ func TestRuntimeExportCapabilityValue(t *testing.T) {
 		actual, err := ExportValue(
 			capability,
 			NewTestInterpreter(t),
-			interpreter.EmptyLocationRange,
 		)
 		require.NoError(t, err)
 
@@ -2419,11 +2405,7 @@ func TestRuntimeExportCapabilityValue(t *testing.T) {
 			interpreter.NewCompositeStaticTypeComputeTypeID(inter, TestLocation, "S"),
 		)
 
-		actual, err := ExportValue(
-			capability,
-			inter,
-			interpreter.EmptyLocationRange,
-		)
+		actual, err := ExportValue(capability, inter)
 		require.NoError(t, err)
 
 		expected := cadence.NewCapability(
@@ -3638,11 +3620,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			common.ZeroAddress,
 		)
 
-		actual, err := ExportValue(
-			value,
-			inter,
-			interpreter.EmptyLocationRange,
-		)
+		actual, err := ExportValue(value, inter)
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -3664,7 +3642,6 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		actual, err := ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			value,
@@ -3702,11 +3679,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("foo"),
 		)
 
-		actual, err := ExportValue(
-			value,
-			inter,
-			interpreter.EmptyLocationRange,
-		)
+		actual, err := ExportValue(value, inter)
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -3733,7 +3706,6 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		actual, err := ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			value,
@@ -3778,7 +3750,6 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		actual, err := ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			value,
@@ -3840,7 +3811,6 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		actual, err := ExportValue(
 			value,
 			NewTestInterpreter(t),
-			interpreter.EmptyLocationRange,
 		)
 		require.NoError(t, err)
 
@@ -3864,7 +3834,6 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		actual, err := ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			value,
@@ -3905,11 +3874,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("b"), interpreter.NewUnmeteredIntValueFromInt64(2),
 		)
 
-		actual, err := ExportValue(
-			value,
-			inter,
-			interpreter.EmptyLocationRange,
-		)
+		actual, err := ExportValue(value, inter)
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -3949,7 +3914,6 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		actual, err := ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			value,
@@ -4013,7 +3977,6 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		actual, err := ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			value,
@@ -4078,7 +4041,6 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		actual, err := ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			dictionaryWithHeterogenousKeys,
@@ -5156,7 +5118,6 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 
 	internalCompositeValue := interpreter.NewCompositeValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		TestLocation,
 		"Foo",
 		common.CompositeKindStructure,
@@ -5172,11 +5133,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 
 		// NOTE: cannot be parallel, due to type's ID being cached (potential data race)
 
-		actual, err := ExportValue(
-			internalCompositeValue,
-			inter,
-			interpreter.EmptyLocationRange,
-		)
+		actual, err := ExportValue(internalCompositeValue, inter)
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -5203,7 +5160,6 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 
 		actual, err := ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			externalCompositeValue,
@@ -5813,7 +5769,6 @@ func TestRuntimeImportResolvedLocation(t *testing.T) {
 
 	actual, err := ImportValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		nil,
 		resolveLocation,
 		externalCompositeValue,
@@ -5823,7 +5778,6 @@ func TestRuntimeImportResolvedLocation(t *testing.T) {
 
 	internalCompositeValue := interpreter.NewCompositeValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		addressLocation,
 		"Foo",
 		common.CompositeKindStructure,
@@ -5843,11 +5797,7 @@ func TestExportNil(t *testing.T) {
 	t.Parallel()
 
 	inter := NewTestInterpreter(t)
-	actual, err := ExportValue(
-		nil,
-		inter,
-		interpreter.EmptyLocationRange,
-	)
+	actual, err := ExportValue(nil, inter)
 	require.NoError(t, err)
 	assert.Nil(t, actual)
 }

@@ -49,7 +49,7 @@ type AccountCapabilityControllerValue struct {
 	GetCapability func(common.MemoryGauge) *IDCapabilityValue
 	GetTag        func(StorageReader) *StringValue
 	SetTag        func(storageWriter StorageWriter, tag *StringValue)
-	Delete        func(context CapabilityControllerContext, locationRange LocationRange)
+	Delete        func(context CapabilityControllerContext)
 }
 
 func NewUnmeteredAccountCapabilityControllerValue(
@@ -89,11 +89,11 @@ func (v *AccountCapabilityControllerValue) CapabilityControllerBorrowType() *Ref
 	return v.BorrowType
 }
 
-func (v *AccountCapabilityControllerValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v *AccountCapabilityControllerValue) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitAccountCapabilityControllerValue(context, v)
 }
 
-func (v *AccountCapabilityControllerValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {
+func (v *AccountCapabilityControllerValue) Walk(_ ValueWalkContext, walkChild func(Value)) {
 	walkChild(v.CapabilityID)
 }
 
@@ -101,7 +101,7 @@ func (v *AccountCapabilityControllerValue) StaticType(_ ValueStaticTypeContext) 
 	return PrimitiveStaticTypeAccountCapabilityController
 }
 
-func (*AccountCapabilityControllerValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (*AccountCapabilityControllerValue) IsImportable(_ ValueImportableContext) bool {
 	return false
 }
 
@@ -116,18 +116,20 @@ func (v *AccountCapabilityControllerValue) RecursiveString(seenReferences SeenRe
 	)
 }
 
-func (v *AccountCapabilityControllerValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+func (v *AccountCapabilityControllerValue) MeteredString(
+	context ValueStringContext,
+	seenReferences SeenReferences,
+) string {
 	common.UseMemory(context, common.AccountCapabilityControllerValueStringMemoryUsage)
 
 	return format.AccountCapabilityController(
 		v.BorrowType.MeteredString(context),
-		v.CapabilityID.MeteredString(context, seenReferences, locationRange),
+		v.CapabilityID.MeteredString(context, seenReferences),
 	)
 }
 
 func (v *AccountCapabilityControllerValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true
@@ -209,7 +211,7 @@ type deletionCheckedFunctionValue struct {
 	FunctionValue
 }
 
-func (v *AccountCapabilityControllerValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) (result Value) {
+func (v *AccountCapabilityControllerValue) GetMember(context MemberAccessibleContext, name string) (result Value) {
 	defer func() {
 		switch typedResult := result.(type) {
 		case deletionCheckedFunctionValue:
@@ -238,14 +240,10 @@ func (v *AccountCapabilityControllerValue) GetMember(context MemberAccessibleCon
 		return v.GetCapability(context)
 	}
 
-	return context.GetMethod(v, name, locationRange)
+	return context.GetMethod(v, name)
 }
 
-func (v *AccountCapabilityControllerValue) GetMethod(
-	context MemberAccessibleContext,
-	_ LocationRange,
-	name string,
-) FunctionValue {
+func (v *AccountCapabilityControllerValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	// NOTE: check if controller is already deleted
 	v.CheckDeleted()
 
@@ -269,21 +267,16 @@ func (v *AccountCapabilityControllerValue) GetMethod(
 	return nil
 }
 
-func (*AccountCapabilityControllerValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (*AccountCapabilityControllerValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Account capability controllers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (v *AccountCapabilityControllerValue) SetMember(
-	context ValueTransferContext,
-	_ LocationRange,
-	identifier string,
-	value Value,
-) bool {
+func (v *AccountCapabilityControllerValue) SetMember(context ValueTransferContext, name string, value Value) bool {
 	// NOTE: check if controller is already deleted
 	v.CheckDeleted()
 
-	switch identifier {
+	switch name {
 	case sema.AccountCapabilityControllerTypeTagFieldName:
 		stringValue, ok := value.(*StringValue)
 		if !ok {
@@ -304,7 +297,6 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 	context ValueCapabilityControllerReferenceValueContext,
 	capabilityAddress common.Address,
 	resultBorrowType *sema.ReferenceType,
-	_ LocationRange,
 ) ReferenceValue {
 
 	accountHandler := context.GetAccountHandlerFunc()
@@ -373,13 +365,13 @@ func NewNativeDeletionCheckedAccountCapabilityControllerFunction(
 var NativeAccountCapabilityControllerDeleteFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		locationRange LocationRange,
+		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		_ ...Value,
 	) Value {
 		controller := AssertValueOfType[*AccountCapabilityControllerValue](receiver)
-		controller.Delete(context, locationRange)
+		controller.Delete(context)
 		controller.deleted = true
 		return Void
 	},
@@ -388,13 +380,17 @@ var NativeAccountCapabilityControllerDeleteFunction = NativeFunction(
 func (v *AccountCapabilityControllerValue) newDeleteFunction(
 	context FunctionCreationContext,
 ) FunctionValue {
-	return v.newNativeHostFunctionValue(context, sema.AccountCapabilityControllerTypeDeleteFunctionType, NativeAccountCapabilityControllerDeleteFunction)
+	return v.newNativeHostFunctionValue(
+		context,
+		sema.AccountCapabilityControllerTypeDeleteFunctionType,
+		NativeAccountCapabilityControllerDeleteFunction,
+	)
 }
 
 var NativeAccountCapabilityControllerSetTagFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		locationRange LocationRange,
+		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
@@ -409,5 +405,9 @@ var NativeAccountCapabilityControllerSetTagFunction = NativeFunction(
 func (v *AccountCapabilityControllerValue) newSetTagFunction(
 	context FunctionCreationContext,
 ) FunctionValue {
-	return v.newNativeHostFunctionValue(context, sema.AccountCapabilityControllerTypeSetTagFunctionType, NativeAccountCapabilityControllerSetTagFunction)
+	return v.newNativeHostFunctionValue(
+		context,
+		sema.AccountCapabilityControllerTypeSetTagFunctionType,
+		NativeAccountCapabilityControllerSetTagFunction,
+	)
 }

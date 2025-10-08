@@ -294,7 +294,7 @@ func (*DictionaryValue) IsValue() {}
 
 func (*DictionaryValue) isAtreeContainerBackedValue() {}
 
-func (v *DictionaryValue) Accept(context ValueVisitContext, visitor Visitor, locationRange LocationRange) {
+func (v *DictionaryValue) Accept(context ValueVisitContext, visitor Visitor) {
 	descend := visitor.VisitDictionaryValue(context, v)
 	if !descend {
 		return
@@ -303,9 +303,8 @@ func (v *DictionaryValue) Accept(context ValueVisitContext, visitor Visitor, loc
 	v.Walk(
 		context,
 		func(value Value) {
-			value.Accept(context, visitor, locationRange)
+			value.Accept(context, visitor)
 		},
-		locationRange,
 	)
 }
 
@@ -467,7 +466,7 @@ func (v *DictionaryValue) Iterator() DictionaryKeyIterator {
 	}
 }
 
-func (v *DictionaryValue) Walk(context ValueWalkContext, walkChild func(Value), _ LocationRange) {
+func (v *DictionaryValue) Walk(context ValueWalkContext, walkChild func(Value)) {
 	v.Iterate(
 		context,
 		func(key, value Value) (resume bool) {
@@ -483,12 +482,12 @@ func (v *DictionaryValue) StaticType(_ ValueStaticTypeContext) StaticType {
 	return v.Type
 }
 
-func (v *DictionaryValue) IsImportable(context ValueImportableContext, locationRange LocationRange) bool {
+func (v *DictionaryValue) IsImportable(context ValueImportableContext) bool {
 	importable := true
 	v.Iterate(
 		context,
 		func(key, value Value) (resume bool) {
-			if !key.IsImportable(context, locationRange) || !value.IsImportable(context, locationRange) {
+			if !key.IsImportable(context) || !value.IsImportable(context) {
 				importable = false
 				// stop iteration
 				return false
@@ -514,7 +513,7 @@ func (v *DictionaryValue) IsStaleResource(context ValueStaticTypeContext) bool {
 	return v.dictionary == nil && v.IsResourceKinded(context)
 }
 
-func (v *DictionaryValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {
+func (v *DictionaryValue) Destroy(context ResourceDestructionContext) {
 
 	common.UseComputation(
 		context,
@@ -543,14 +542,13 @@ func (v *DictionaryValue) Destroy(context ResourceDestructionContext, locationRa
 
 	context.WithResourceDestruction(
 		valueID,
-		locationRange,
 		func() {
 			v.Iterate(
 				context,
 				func(key, value Value) (resume bool) {
 					// Resources cannot be keys at the moment, so should theoretically not be needed
-					maybeDestroy(context, locationRange, key)
-					maybeDestroy(context, locationRange, value)
+					maybeDestroy(context, key)
+					maybeDestroy(context, value)
 
 					return true
 				},
@@ -567,7 +565,6 @@ func (v *DictionaryValue) Destroy(context ResourceDestructionContext, locationRa
 
 func (v *DictionaryValue) ForEachKey(
 	context InvocationContext,
-	locationRange LocationRange,
 	procedure FunctionValue,
 ) {
 	keyType := v.SemaType(context).KeyType
@@ -591,7 +588,6 @@ func (v *DictionaryValue) ForEachKey(
 					parameterTypes,
 					returnType,
 					nil,
-					locationRange,
 				)
 
 				shouldContinue, ok := result.(BoolValue)
@@ -654,7 +650,7 @@ func (v *DictionaryValue) Get(
 	return MustConvertStoredValue(context, storedValue), true
 }
 
-func (v *DictionaryValue) GetKey(context ValueComparisonContext, _ LocationRange, keyValue Value) Value {
+func (v *DictionaryValue) GetKey(context ValueComparisonContext, keyValue Value) Value {
 	value, ok := v.Get(context, keyValue)
 	if ok {
 		return NewSomeValueNonCopying(context, value)
@@ -663,7 +659,7 @@ func (v *DictionaryValue) GetKey(context ValueComparisonContext, _ LocationRange
 	return Nil
 }
 
-func (v *DictionaryValue) SetKey(context ContainerMutationContext, _ LocationRange, keyValue Value, value Value) {
+func (v *DictionaryValue) SetKey(context ContainerMutationContext, keyValue Value, value Value) {
 	context.ValidateContainerMutation(v.ValueID())
 
 	checkContainerMutation(context, v.Type.KeyType, keyValue)
@@ -701,10 +697,13 @@ func (v *DictionaryValue) String() string {
 }
 
 func (v *DictionaryValue) RecursiveString(seenReferences SeenReferences) string {
-	return v.MeteredString(NoOpStringContext{}, seenReferences, EmptyLocationRange)
+	return v.MeteredString(NoOpStringContext{}, seenReferences)
 }
 
-func (v *DictionaryValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+func (v *DictionaryValue) MeteredString(
+	context ValueStringContext,
+	seenReferences SeenReferences,
+) string {
 
 	pairs := make([]struct {
 		Key   string
@@ -723,8 +722,8 @@ func (v *DictionaryValue) MeteredString(context ValueStringContext, seenReferenc
 				Key   string
 				Value string
 			}{
-				Key:   key.MeteredString(context, seenReferences, locationRange),
-				Value: value.MeteredString(context, seenReferences, locationRange),
+				Key:   key.MeteredString(context, seenReferences),
+				Value: value.MeteredString(context, seenReferences),
 			}
 			index++
 			return true
@@ -746,7 +745,7 @@ func (v *DictionaryValue) MeteredString(context ValueStringContext, seenReferenc
 	return format.Dictionary(pairs)
 }
 
-func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+func (v *DictionaryValue) GetMember(context MemberAccessibleContext, name string) Value {
 
 	switch name {
 	case "length":
@@ -822,14 +821,10 @@ func (v *DictionaryValue) GetMember(context MemberAccessibleContext, locationRan
 		)
 	}
 
-	return context.GetMethod(v, name, locationRange)
+	return context.GetMethod(v, name)
 }
 
-func (v *DictionaryValue) GetMethod(
-	context MemberAccessibleContext,
-	_ LocationRange,
-	name string,
-) FunctionValue {
+func (v *DictionaryValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	switch name {
 	case sema.DictionaryTypeRemoveFunctionName:
 		return NewBoundHostFunctionValue(
@@ -875,12 +870,12 @@ func (v *DictionaryValue) GetMethod(
 	return nil
 }
 
-func (v *DictionaryValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (v *DictionaryValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Dictionaries have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (v *DictionaryValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (v *DictionaryValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Dictionaries have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -889,7 +884,7 @@ func (v *DictionaryValue) Count() int {
 	return int(v.dictionary.Count())
 }
 
-func (v *DictionaryValue) RemoveKey(context ContainerMutationContext, _ LocationRange, key Value) Value {
+func (v *DictionaryValue) RemoveKey(context ContainerMutationContext, key Value) Value {
 	return v.Remove(context, key)
 }
 
@@ -962,8 +957,8 @@ func (v *DictionaryValue) Remove(
 	return NewSomeValueNonCopying(context, existingValue)
 }
 
-func (v *DictionaryValue) InsertKey(context ContainerMutationContext, locationRange LocationRange, key Value, value Value) {
-	v.SetKey(context, locationRange, key, value)
+func (v *DictionaryValue) InsertKey(context ContainerMutationContext, key Value, value Value) {
+	v.SetKey(context, key, value)
 }
 
 func (v *DictionaryValue) InsertWithoutTransfer(
@@ -1097,7 +1092,6 @@ type DictionaryEntryValues struct {
 
 func (v *DictionaryValue) ConformsToStaticType(
 	context ValueStaticTypeConformanceContext,
-	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
 
@@ -1148,11 +1142,7 @@ func (v *DictionaryValue) ConformsToStaticType(
 			return false
 		}
 
-		if !entryKey.ConformsToStaticType(
-			context,
-			locationRange,
-			results,
-		) {
+		if !entryKey.ConformsToStaticType(context, results) {
 			return false
 		}
 
@@ -1166,11 +1156,7 @@ func (v *DictionaryValue) ConformsToStaticType(
 			return false
 		}
 
-		if !entryValue.ConformsToStaticType(
-			context,
-			locationRange,
-			results,
-		) {
+		if !entryValue.ConformsToStaticType(context, results) {
 			return false
 		}
 	}
@@ -1628,14 +1614,14 @@ var NativeDictionaryContainsKeyFunction = NativeFunction(
 var NativeDictionaryForEachKeyFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		locationRange LocationRange,
+		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
 	) Value {
 		funcArgument := AssertValueOfType[FunctionValue](args[0])
 		dictionary := AssertValueOfType[*DictionaryValue](receiver)
-		dictionary.ForEachKey(context, locationRange, funcArgument)
+		dictionary.ForEachKey(context, funcArgument)
 		return Void
 	},
 )

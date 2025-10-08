@@ -125,11 +125,11 @@ var _ MemberAccessibleValue = Fix128Value{}
 
 func (Fix128Value) IsValue() {}
 
-func (v Fix128Value) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v Fix128Value) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitFix128Value(context, v)
 }
 
-func (Fix128Value) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (Fix128Value) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -137,7 +137,7 @@ func (Fix128Value) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeFix128)
 }
 
-func (Fix128Value) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (Fix128Value) IsImportable(_ ValueImportableContext) bool {
 	return true
 }
 
@@ -149,7 +149,10 @@ func (v Fix128Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Fix128Value) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (v Fix128Value) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	common.UseMemory(
 		context,
 		common.NewRawStringMemoryUsage(
@@ -497,24 +500,20 @@ func ConvertFix128(memoryGauge common.MemoryGauge, value Value) Fix128Value {
 	return NewFix128ValueFromBigIntWithRangeCheck(memoryGauge, scaledInt)
 }
 
-func (v Fix128Value) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
-	return context.GetMethod(v, name, locationRange)
+func (v Fix128Value) GetMember(context MemberAccessibleContext, name string) Value {
+	return context.GetMethod(v, name)
 }
 
-func (v Fix128Value) GetMethod(
-	context MemberAccessibleContext,
-	_ LocationRange,
-	name string,
-) FunctionValue {
+func (v Fix128Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	return getNumberValueFunctionMember(context, v, name, sema.Fix128Type)
 }
 
-func (Fix128Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (Fix128Value) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Numbers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (Fix128Value) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (Fix128Value) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -526,7 +525,6 @@ func (v Fix128Value) ToBigEndianBytes() []byte {
 
 func (v Fix128Value) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true

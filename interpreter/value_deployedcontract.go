@@ -85,14 +85,12 @@ func NewNativeDeployedContractPublicTypesFunctionValue(
 
 			addressFieldValue := deployedContract.GetMember(
 				context,
-				EmptyLocationRange,
 				sema.DeployedContractTypeAddressFieldName,
 			)
 			address = common.Address(AssertValueOfType[AddressValue](addressFieldValue))
 
 			nameFieldValue := deployedContract.GetMember(
 				context,
-				EmptyLocationRange,
 				sema.DeployedContractTypeNameFieldName,
 			)
 			name = AssertValueOfType[*StringValue](nameFieldValue)

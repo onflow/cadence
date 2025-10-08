@@ -413,7 +413,7 @@ func TestNewStruct(t *testing.T) {
 	require.Equal(
 		t,
 		interpreter.NewUnmeteredIntValueFromInt64(12),
-		structValue.GetMember(vmContext, vm.EmptyLocationRange, "id"),
+		structValue.GetMember(vmContext, "id"),
 	)
 }
 
@@ -1564,7 +1564,7 @@ func TestInitializeContract(t *testing.T) {
 		vmConfig,
 	)
 
-	fieldValue := contractValue.GetMember(vmInstance.Context(), vm.EmptyLocationRange, "status")
+	fieldValue := contractValue.GetMember(vmInstance.Context(), "status")
 	assert.Equal(t, interpreter.NewUnmeteredStringValue("PENDING"), fieldValue)
 }
 
@@ -1608,7 +1608,7 @@ func TestContractAccessDuringInit(t *testing.T) {
 			vmConfig,
 		)
 
-		fieldValue := contractValue.GetMember(vmInstance.Context(), vm.EmptyLocationRange, "status")
+		fieldValue := contractValue.GetMember(vmInstance.Context(), "status")
 		assert.Equal(t, interpreter.NewUnmeteredStringValue("PENDING"), fieldValue)
 	})
 
@@ -1648,7 +1648,7 @@ func TestContractAccessDuringInit(t *testing.T) {
 			vmConfig,
 		)
 
-		fieldValue := contractValue.GetMember(vmInstance.Context(), vm.EmptyLocationRange, "status")
+		fieldValue := contractValue.GetMember(vmInstance.Context(), "status")
 		assert.Equal(t, interpreter.NewUnmeteredStringValue("PENDING"), fieldValue)
 	})
 }
@@ -1989,7 +1989,7 @@ func TestContractField(t *testing.T) {
 
 		require.Equal(t, interpreter.NewUnmeteredStringValue("UPDATED"), result)
 
-		fieldValue := importedContractValue.GetMember(vmInstance.Context(), vm.EmptyLocationRange, "status")
+		fieldValue := importedContractValue.GetMember(vmInstance.Context(), "status")
 		assert.Equal(t, interpreter.NewUnmeteredStringValue("UPDATED"), fieldValue)
 	})
 }
@@ -2179,7 +2179,7 @@ func TestTransaction(t *testing.T) {
 		require.Equal(t, 0, vmInstance.StackSize())
 
 		// At the beginning, 'a' is uninitialized
-		assert.Nil(t, transaction.GetMember(vmContext, vm.EmptyLocationRange, "a"))
+		assert.Nil(t, transaction.GetMember(vmContext, "a"))
 
 		// Invoke 'prepare'
 		err = vmInstance.InvokeTransactionPrepare(transaction, nil)
@@ -2190,7 +2190,7 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("Hello!"),
-			transaction.GetMember(vmContext, vm.EmptyLocationRange, "a"),
+			transaction.GetMember(vmContext, "a"),
 		)
 
 		// Invoke 'execute'
@@ -2202,7 +2202,7 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("Hello again!"),
-			transaction.GetMember(vmContext, vm.EmptyLocationRange, "a"),
+			transaction.GetMember(vmContext, "a"),
 		)
 	})
 
@@ -2256,7 +2256,7 @@ func TestTransaction(t *testing.T) {
 		require.Equal(t, 0, vmInstance.StackSize())
 
 		// At the beginning, 'a' is uninitialized
-		assert.Nil(t, transaction.GetMember(vmContext, vm.EmptyLocationRange, "a"))
+		assert.Nil(t, transaction.GetMember(vmContext, "a"))
 
 		// Invoke 'prepare'
 		err = vmInstance.InvokeTransactionPrepare(transaction, nil)
@@ -2267,7 +2267,7 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("Hello!"),
-			transaction.GetMember(vmContext, vm.EmptyLocationRange, "a"),
+			transaction.GetMember(vmContext, "a"),
 		)
 
 		// Invoke 'execute'
@@ -2279,7 +2279,7 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("Hello again!"),
-			transaction.GetMember(vmContext, vm.EmptyLocationRange, "a"),
+			transaction.GetMember(vmContext, "a"),
 		)
 	})
 
@@ -3287,7 +3287,6 @@ func TestDictionaryLiteral(t *testing.T) {
 			),
 			dictionary.GetKey(
 				vmContext,
-				vm.EmptyLocationRange,
 				interpreter.NewUnmeteredStringValue("b"),
 			),
 		)
@@ -3297,7 +3296,6 @@ func TestDictionaryLiteral(t *testing.T) {
 			),
 			dictionary.GetKey(
 				vmContext,
-				vm.EmptyLocationRange,
 				interpreter.NewUnmeteredStringValue("e"),
 			),
 		)
@@ -3386,7 +3384,7 @@ func TestResource(t *testing.T) {
 		require.Equal(
 			t,
 			interpreter.NewUnmeteredIntValueFromInt64(5),
-			structValue.GetMember(vmContext, vm.EmptyLocationRange, "id"),
+			structValue.GetMember(vmContext, "id"),
 		)
 	})
 
@@ -5167,7 +5165,6 @@ func TestEmit(t *testing.T) {
 	vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil))
 	vmConfig.OnEventEmitted = func(
 		context interpreter.ValueExportContext,
-		locationRange interpreter.LocationRange,
 		eventType *sema.CompositeType,
 		eventFields []interpreter.Value,
 	) error {
@@ -5225,7 +5222,12 @@ func TestCasting(t *testing.T) {
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 		)
 		require.NoError(t, err)
-		assert.Equal(t, interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewUnmeteredIntValueFromInt64(2)), result)
+		assert.Equal(t,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			),
+			result,
+		)
 	})
 
 	t.Run("force cast success", func(t *testing.T) {
@@ -5299,7 +5301,12 @@ func TestCasting(t *testing.T) {
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 		)
 		require.NoError(t, err)
-		assert.Equal(t, interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewUnmeteredIntValueFromInt64(2)), result)
+		assert.Equal(t,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			),
+			result,
+		)
 	})
 
 	t.Run("failable cast fail", func(t *testing.T) {
@@ -5902,7 +5909,9 @@ func TestUnaryDerefSome(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewUnmeteredIntValueFromInt64(42)),
+		interpreter.NewUnmeteredSomeValueNonCopying(
+			interpreter.NewUnmeteredIntValueFromInt64(42),
+		),
 		actual,
 	)
 }
@@ -5992,7 +6001,9 @@ func TestForce(t *testing.T) {
                 }
             `,
 			"test",
-			interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewUnmeteredIntValueFromInt64(42)),
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(42),
+			),
 		)
 
 		require.NoError(t, err)
@@ -6010,7 +6021,9 @@ func TestForce(t *testing.T) {
                 }
             `,
 			"test",
-			interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewUnmeteredIntValueFromInt64(42)),
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(42),
+			),
 		)
 
 		require.NoError(t, err)
@@ -7402,7 +7415,6 @@ func TestEmitInContract(t *testing.T) {
 		eventEmitted := false
 		vmConfig.OnEventEmitted = func(
 			context interpreter.ValueExportContext,
-			locationRange interpreter.LocationRange,
 			eventType *sema.CompositeType,
 			eventFields []interpreter.Value,
 		) error {
@@ -7562,7 +7574,6 @@ func TestInheritedConditions(t *testing.T) {
 		eventEmitted := false
 		vmConfig.OnEventEmitted = func(
 			context interpreter.ValueExportContext,
-			locationRange interpreter.LocationRange,
 			eventType *sema.CompositeType,
 			eventFields []interpreter.Value,
 		) error {
@@ -7733,7 +7744,6 @@ func TestInheritedConditions(t *testing.T) {
 		eventEmitted := false
 		vmConfig.OnEventEmitted = func(
 			context interpreter.ValueExportContext,
-			locationRange interpreter.LocationRange,
 			eventType *sema.CompositeType,
 			eventFields []interpreter.Value,
 		) error {
@@ -9696,7 +9706,6 @@ func TestInheritedDefaultDestroyEvent(t *testing.T) {
 
 	vmConfig.OnEventEmitted = func(
 		context interpreter.ValueExportContext,
-		locationRange interpreter.LocationRange,
 		eventType *sema.CompositeType,
 		eventFields []interpreter.Value,
 	) error {

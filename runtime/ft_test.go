@@ -1157,7 +1157,6 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 
 	contractValue := interpreter.NewCompositeValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		common.NewAddressLocation(nil, contractsAddress, contractName),
 		contractName,
 		common.CompositeKindContract,
@@ -1186,7 +1185,6 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 
 	vaultValue := interpreter.NewCompositeValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		common.NewAddressLocation(nil, contractsAddress, contractName),
 		fmt.Sprintf("%s.Vault", contractName),
 		common.CompositeKindResource,

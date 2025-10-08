@@ -242,10 +242,17 @@ func interpreterFTTransfer(tb testing.TB) {
 		temporarilyRecordCode: func(location common.AddressLocation, code []byte) {
 			// do nothing
 		},
-		emitEvent: func(interpreter.ValueExportContext, interpreter.LocationRange, *sema.CompositeType, []interpreter.Value) {
+		emitEvent: func(
+			interpreter.ValueExportContext,
+			*sema.CompositeType,
+			[]interpreter.Value,
+		) {
 			// do nothing
 		},
-		recordContractUpdate: func(location common.AddressLocation, value *interpreter.CompositeValue) {
+		recordContractUpdate: func(
+			location common.AddressLocation,
+			value *interpreter.CompositeValue,
+		) {
 			// do nothing
 		},
 	}
@@ -293,7 +300,6 @@ func interpreterFTTransfer(tb testing.TB) {
 			inter *interpreter.Interpreter,
 			compositeType *sema.CompositeType,
 			constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
-			invocationRange ast.Range,
 		) interpreter.ContractValue {
 
 			constructor := constructorGenerator(common.ZeroAddress)
@@ -305,7 +311,6 @@ func interpreterFTTransfer(tb testing.TB) {
 				nil,
 				nil,
 				compositeType,
-				ast.EmptyRange,
 			)
 			if err != nil {
 				panic(err)
@@ -316,7 +321,6 @@ func interpreterFTTransfer(tb testing.TB) {
 		},
 		CapabilityBorrowHandler: func(
 			context interpreter.BorrowCapabilityControllerContext,
-			locationRange interpreter.LocationRange,
 			address interpreter.AddressValue,
 			capabilityID interpreter.UInt64Value,
 			wantedBorrowType *sema.ReferenceType,
@@ -324,7 +328,6 @@ func interpreterFTTransfer(tb testing.TB) {
 		) interpreter.ReferenceValue {
 			return stdlib.BorrowCapabilityController(
 				context,
-				locationRange,
 				address,
 				capabilityID,
 				wantedBorrowType,
@@ -334,7 +337,6 @@ func interpreterFTTransfer(tb testing.TB) {
 		},
 		OnEventEmitted: func(
 			_ interpreter.ValueExportContext,
-			_ interpreter.LocationRange,
 			_ *sema.CompositeType,
 			_ []interpreter.Value,
 		) error {

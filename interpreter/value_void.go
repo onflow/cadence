@@ -39,11 +39,11 @@ var _ EquatableValue = VoidValue{}
 
 func (VoidValue) IsValue() {}
 
-func (v VoidValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v VoidValue) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitVoidValue(context, v)
 }
 
-func (VoidValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (VoidValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -51,7 +51,7 @@ func (VoidValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeVoid)
 }
 
-func (VoidValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (VoidValue) IsImportable(_ ValueImportableContext) bool {
 	return sema.VoidType.Importable
 }
 
@@ -63,14 +63,16 @@ func (v VoidValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v VoidValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (v VoidValue) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	common.UseMemory(context, common.VoidStringMemoryUsage)
 	return v.String()
 }
 
 func (v VoidValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true

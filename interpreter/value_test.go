@@ -45,7 +45,6 @@ import (
 func newTestCompositeValue(context MemberAccessibleContext, owner common.Address) *CompositeValue {
 	return NewCompositeValue(
 		context,
-		EmptyLocationRange,
 		TestLocation,
 		"Test",
 		common.CompositeKindStructure,
@@ -405,7 +404,7 @@ func TestOwnerArrayRemove(t *testing.T) {
 	assert.Equal(t, owner, array.GetOwner())
 	assert.Equal(t, owner, value.GetOwner())
 
-	value = array.Remove(inter, EmptyLocationRange, 0).(*CompositeValue)
+	value = array.Remove(inter, 0).(*CompositeValue)
 
 	assert.Equal(t, owner, array.GetOwner())
 	assert.Equal(t, common.ZeroAddress, value.GetOwner())
@@ -612,12 +611,7 @@ func TestOwnerDictionarySetSome(t *testing.T) {
 	assert.Equal(t, newOwner, dictionary.GetOwner())
 	assert.Equal(t, oldOwner, value.GetOwner())
 
-	dictionary.SetKey(
-		inter,
-		EmptyLocationRange,
-		keyValue,
-		NewUnmeteredSomeValueNonCopying(value),
-	)
+	dictionary.SetKey(inter, keyValue, NewUnmeteredSomeValueNonCopying(value))
 
 	queriedValue, _ := dictionary.Get(inter, keyValue)
 	value = queriedValue.(*CompositeValue)
@@ -820,9 +814,9 @@ func TestOwnerCompositeSet(t *testing.T) {
 
 	const fieldName = "test"
 
-	composite.SetMember(inter, EmptyLocationRange, fieldName, value)
+	composite.SetMember(inter, fieldName, value)
 
-	value = composite.GetMember(inter, EmptyLocationRange, fieldName).(*CompositeValue)
+	value = composite.GetMember(inter, fieldName).(*CompositeValue)
 
 	assert.Equal(t, newOwner, composite.GetOwner())
 	assert.Equal(t, newOwner, value.GetOwner())
@@ -841,12 +835,7 @@ func TestOwnerCompositeCopy(t *testing.T) {
 
 	const fieldName = "test"
 
-	composite.SetMember(
-		inter,
-		EmptyLocationRange,
-		fieldName,
-		value,
-	)
+	composite.SetMember(inter, fieldName, value)
 
 	composite = composite.Transfer(
 		inter,
@@ -857,11 +846,7 @@ func TestOwnerCompositeCopy(t *testing.T) {
 		true, // composite is standalone.
 	).(*CompositeValue)
 
-	value = composite.GetMember(
-		inter,
-		EmptyLocationRange,
-		fieldName,
-	).(*CompositeValue)
+	value = composite.GetMember(inter, fieldName).(*CompositeValue)
 
 	assert.Equal(t, common.ZeroAddress, composite.GetOwner())
 	assert.Equal(t, common.ZeroAddress, value.GetOwner())
@@ -1102,7 +1087,6 @@ func TestStringer(t *testing.T) {
 
 				return NewCompositeValue(
 					inter,
-					EmptyLocationRange,
 					TestLocation,
 					"Foo",
 					common.CompositeKindResource,
@@ -1124,7 +1108,6 @@ func TestStringer(t *testing.T) {
 
 				compositeValue := NewCompositeValue(
 					inter,
-					EmptyLocationRange,
 					TestLocation,
 					"Foo",
 					common.CompositeKindResource,
@@ -1331,7 +1314,7 @@ func TestStringer(t *testing.T) {
 
 			assert.Equal(t,
 				testCase.expected,
-				value.MeteredString(inter, SeenReferences{}, EmptyLocationRange),
+				value.MeteredString(inter, SeenReferences{}),
 			)
 		})
 	}
@@ -1398,7 +1381,6 @@ func TestVisitor(t *testing.T) {
 
 	value = NewCompositeValue(
 		inter,
-		EmptyLocationRange,
 		TestLocation,
 		"Foo",
 		common.CompositeKindStructure,
@@ -1406,7 +1388,7 @@ func TestVisitor(t *testing.T) {
 		common.ZeroAddress,
 	)
 
-	value.Accept(inter, visitor, EmptyLocationRange)
+	value.Accept(inter, visitor)
 
 	require.Equal(t, 1, intVisits)
 	require.Equal(t, 1, stringVisits)
@@ -1772,7 +1754,6 @@ func TestGetHashInput(t *testing.T) {
 				}
 				return NewCompositeValue(
 					inter,
-					EmptyLocationRange,
 					TestLocation,
 					"Foo",
 					common.CompositeKindEnum,
@@ -1800,7 +1781,6 @@ func TestGetHashInput(t *testing.T) {
 				}
 				return NewCompositeValue(
 					inter,
-					EmptyLocationRange,
 					TestLocation,
 					strings.Repeat("a", 32),
 					common.CompositeKindEnum,
@@ -1953,11 +1933,7 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 	require.IsType(t, &EphemeralReferenceValue{}, value)
 
 	// Check the dynamic type conformance on a cyclic value.
-	conforms := value.ConformsToStaticType(
-		inter,
-		EmptyLocationRange,
-		TypeConformanceResults{},
-	)
+	conforms := value.ConformsToStaticType(inter, TypeConformanceResults{})
 	assert.True(t, conforms)
 }
 
@@ -1976,11 +1952,14 @@ func TestCapabilityValue_Equal(t *testing.T) {
 				4,
 				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 				PrimitiveStaticTypeInt,
-			).Equal(inter, NewUnmeteredCapabilityValue(
-				4,
-				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-				PrimitiveStaticTypeInt,
-			)),
+			).Equal(
+				inter,
+				NewUnmeteredCapabilityValue(
+					4,
+					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+					PrimitiveStaticTypeInt,
+				),
+			),
 		)
 	})
 
@@ -1995,11 +1974,14 @@ func TestCapabilityValue_Equal(t *testing.T) {
 				4,
 				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 				PrimitiveStaticTypeInt,
-			).Equal(inter, NewUnmeteredCapabilityValue(
-				4,
-				NewUnmeteredAddressValueFromBytes([]byte{0x2}),
-				PrimitiveStaticTypeInt,
-			)),
+			).Equal(
+				inter,
+				NewUnmeteredCapabilityValue(
+					4,
+					NewUnmeteredAddressValueFromBytes([]byte{0x2}),
+					PrimitiveStaticTypeInt,
+				),
+			),
 		)
 	})
 
@@ -2014,11 +1996,14 @@ func TestCapabilityValue_Equal(t *testing.T) {
 				4,
 				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 				PrimitiveStaticTypeInt,
-			).Equal(inter, NewUnmeteredCapabilityValue(
-				4,
-				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-				PrimitiveStaticTypeString,
-			)),
+			).Equal(
+				inter,
+				NewUnmeteredCapabilityValue(
+					4,
+					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+					PrimitiveStaticTypeString,
+				),
+			),
 		)
 	})
 
@@ -2033,11 +2018,14 @@ func TestCapabilityValue_Equal(t *testing.T) {
 				4,
 				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 				PrimitiveStaticTypeInt,
-			).Equal(inter, NewUnmeteredCapabilityValue(
-				5,
-				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-				PrimitiveStaticTypeInt,
-			)),
+			).Equal(
+				inter,
+				NewUnmeteredCapabilityValue(
+					5,
+					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+					PrimitiveStaticTypeInt,
+				),
+			),
 		)
 	})
 
@@ -2068,7 +2056,11 @@ func TestAddressValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			NewUnmeteredAddressValueFromBytes([]byte{0x1}).Equal(inter, NewUnmeteredAddressValueFromBytes([]byte{0x1})),
+			NewUnmeteredAddressValueFromBytes([]byte{0x1}).
+				Equal(
+					inter,
+					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+				),
 		)
 	})
 
@@ -2079,7 +2071,11 @@ func TestAddressValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			NewUnmeteredAddressValueFromBytes([]byte{0x1}).Equal(inter, NewUnmeteredAddressValueFromBytes([]byte{0x2})),
+			NewUnmeteredAddressValueFromBytes([]byte{0x1}).
+				Equal(
+					inter,
+					NewUnmeteredAddressValueFromBytes([]byte{0x2}),
+				),
 		)
 	})
 
@@ -2090,7 +2086,11 @@ func TestAddressValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			NewUnmeteredAddressValueFromBytes([]byte{0x1}).Equal(inter, NewUnmeteredUInt8Value(1)),
+			NewUnmeteredAddressValueFromBytes([]byte{0x1}).
+				Equal(
+					inter,
+					NewUnmeteredUInt8Value(1),
+				),
 		)
 	})
 }
@@ -2149,7 +2149,11 @@ func TestBoolValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			TrueValue.Equal(inter, NewUnmeteredUInt8Value(1)),
+			TrueValue.
+				Equal(
+					inter,
+					NewUnmeteredUInt8Value(1),
+				),
 		)
 	})
 }
@@ -2165,7 +2169,11 @@ func TestStringValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			NewUnmeteredStringValue("test").Equal(inter, NewUnmeteredStringValue("test")),
+			NewUnmeteredStringValue("test").
+				Equal(
+					inter,
+					NewUnmeteredStringValue("test"),
+				),
 		)
 	})
 
@@ -2176,7 +2184,10 @@ func TestStringValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			NewUnmeteredStringValue("test").Equal(inter, NewUnmeteredStringValue("foo")),
+			NewUnmeteredStringValue("test").Equal(
+				inter,
+				NewUnmeteredStringValue("foo"),
+			),
 		)
 	})
 
@@ -2187,7 +2198,10 @@ func TestStringValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			NewUnmeteredStringValue("1").Equal(inter, NewUnmeteredUInt8Value(1)),
+			NewUnmeteredStringValue("1").Equal(
+				inter,
+				NewUnmeteredUInt8Value(1),
+			),
 		)
 	})
 }
@@ -2214,7 +2228,10 @@ func TestNilValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			NilValue{}.Equal(inter, NewUnmeteredUInt8Value(0)),
+			NilValue{}.Equal(
+				inter,
+				NewUnmeteredUInt8Value(0),
+			),
 		)
 	})
 }
@@ -2230,7 +2247,11 @@ func TestSomeValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			NewUnmeteredSomeValueNonCopying(NewUnmeteredStringValue("test")).Equal(inter, NewUnmeteredSomeValueNonCopying(NewUnmeteredStringValue("test"))),
+			NewUnmeteredSomeValueNonCopying(NewUnmeteredStringValue("test")).
+				Equal(
+					inter,
+					NewUnmeteredSomeValueNonCopying(NewUnmeteredStringValue("test")),
+				),
 		)
 	})
 
@@ -2241,7 +2262,11 @@ func TestSomeValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			NewUnmeteredSomeValueNonCopying(NewUnmeteredStringValue("test")).Equal(inter, NewUnmeteredSomeValueNonCopying(NewUnmeteredStringValue("foo"))),
+			NewUnmeteredSomeValueNonCopying(NewUnmeteredStringValue("test")).
+				Equal(
+					inter,
+					NewUnmeteredSomeValueNonCopying(NewUnmeteredStringValue("foo")),
+				),
 		)
 	})
 
@@ -2252,7 +2277,11 @@ func TestSomeValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			NewUnmeteredSomeValueNonCopying(NewUnmeteredStringValue("1")).Equal(inter, NewUnmeteredUInt8Value(1)),
+			NewUnmeteredSomeValueNonCopying(NewUnmeteredStringValue("1")).
+				Equal(
+					inter,
+					NewUnmeteredUInt8Value(1),
+				),
 		)
 	})
 }
@@ -2300,7 +2329,10 @@ func TestTypeValue_Equal(t *testing.T) {
 		require.False(t,
 			TypeValue{
 				Type: PrimitiveStaticTypeString,
-			}.Equal(inter, NewUnmeteredStringValue("String")),
+			}.Equal(
+				inter,
+				NewUnmeteredStringValue("String"),
+			),
 		)
 	})
 }
@@ -2319,10 +2351,13 @@ func TestPathValue_Equal(t *testing.T) {
 				NewUnmeteredPathValue(
 					domain,
 					"test",
-				).Equal(inter, NewUnmeteredPathValue(
-					domain,
-					"test",
-				)),
+				).Equal(
+					inter,
+					NewUnmeteredPathValue(
+						domain,
+						"test",
+					),
+				),
 			)
 		})
 	}
@@ -2342,10 +2377,13 @@ func TestPathValue_Equal(t *testing.T) {
 					NewUnmeteredPathValue(
 						domain,
 						"test",
-					).Equal(inter, NewUnmeteredPathValue(
-						otherDomain,
-						"test",
-					)),
+					).Equal(
+						inter,
+						NewUnmeteredPathValue(
+							otherDomain,
+							"test",
+						),
+					),
 				)
 			})
 		}
@@ -2361,10 +2399,13 @@ func TestPathValue_Equal(t *testing.T) {
 				NewUnmeteredPathValue(
 					domain,
 					"test1",
-				).Equal(inter, NewUnmeteredPathValue(
-					domain,
-					"test2",
-				)),
+				).Equal(
+					inter,
+					NewUnmeteredPathValue(
+						domain,
+						"test2",
+					),
+				),
 			)
 		})
 	}
@@ -2379,7 +2420,10 @@ func TestPathValue_Equal(t *testing.T) {
 			NewUnmeteredPathValue(
 				common.PathDomainStorage,
 				"test",
-			).Equal(inter, NewUnmeteredStringValue("/storage/test")),
+			).Equal(
+				inter,
+				NewUnmeteredStringValue("/storage/test"),
+			),
 		)
 	})
 }
@@ -2598,7 +2642,10 @@ func TestArrayValue_Equal(t *testing.T) {
 				uint8ArrayStaticType,
 				common.ZeroAddress,
 				NewUnmeteredUInt8Value(1),
-			).Equal(inter, NewUnmeteredUInt8Value(1)),
+			).Equal(
+				inter,
+				NewUnmeteredUInt8Value(1),
+			),
 		)
 	})
 }
@@ -2828,21 +2875,22 @@ func TestCompositeValue_Equal(t *testing.T) {
 		require.True(t,
 			NewCompositeValue(
 				inter,
-				EmptyLocationRange,
 				TestLocation,
 				"X",
 				common.CompositeKindStructure,
 				fields1,
 				common.ZeroAddress,
-			).Equal(inter, NewCompositeValue(
+			).Equal(
 				inter,
-				EmptyLocationRange,
-				TestLocation,
-				"X",
-				common.CompositeKindStructure,
-				fields2,
-				common.ZeroAddress,
-			)),
+				NewCompositeValue(
+					inter,
+					TestLocation,
+					"X",
+					common.CompositeKindStructure,
+					fields2,
+					common.ZeroAddress,
+				),
+			),
 		)
 	})
 
@@ -2869,21 +2917,22 @@ func TestCompositeValue_Equal(t *testing.T) {
 		require.False(t,
 			NewCompositeValue(
 				inter,
-				EmptyLocationRange,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
 				fields1,
 				common.ZeroAddress,
-			).Equal(inter, NewCompositeValue(
+			).Equal(
 				inter,
-				EmptyLocationRange,
-				common.IdentifierLocation("B"),
-				"X",
-				common.CompositeKindStructure,
-				fields2,
-				common.ZeroAddress,
-			)),
+				NewCompositeValue(
+					inter,
+					common.IdentifierLocation("B"),
+					"X",
+					common.CompositeKindStructure,
+					fields2,
+					common.ZeroAddress,
+				),
+			),
 		)
 	})
 
@@ -2910,21 +2959,22 @@ func TestCompositeValue_Equal(t *testing.T) {
 		require.False(t,
 			NewCompositeValue(
 				inter,
-				EmptyLocationRange,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
 				fields1,
 				common.ZeroAddress,
-			).Equal(inter, NewCompositeValue(
+			).Equal(
 				inter,
-				EmptyLocationRange,
-				common.IdentifierLocation("A"),
-				"Y",
-				common.CompositeKindStructure,
-				fields2,
-				common.ZeroAddress,
-			)),
+				NewCompositeValue(
+					inter,
+					common.IdentifierLocation("A"),
+					"Y",
+					common.CompositeKindStructure,
+					fields2,
+					common.ZeroAddress,
+				),
+			),
 		)
 	})
 
@@ -2951,21 +3001,22 @@ func TestCompositeValue_Equal(t *testing.T) {
 		require.False(t,
 			NewCompositeValue(
 				inter,
-				EmptyLocationRange,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
 				fields1,
 				common.ZeroAddress,
-			).Equal(inter, NewCompositeValue(
+			).Equal(
 				inter,
-				EmptyLocationRange,
-				common.IdentifierLocation("A"),
-				"X",
-				common.CompositeKindStructure,
-				fields2,
-				common.ZeroAddress,
-			)),
+				NewCompositeValue(
+					inter,
+					common.IdentifierLocation("A"),
+					"X",
+					common.CompositeKindStructure,
+					fields2,
+					common.ZeroAddress,
+				),
+			),
 		)
 	})
 
@@ -2996,21 +3047,22 @@ func TestCompositeValue_Equal(t *testing.T) {
 		require.False(t,
 			NewCompositeValue(
 				inter,
-				EmptyLocationRange,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
 				fields1,
 				common.ZeroAddress,
-			).Equal(inter, NewCompositeValue(
+			).Equal(
 				inter,
-				EmptyLocationRange,
-				common.IdentifierLocation("A"),
-				"X",
-				common.CompositeKindStructure,
-				fields2,
-				common.ZeroAddress,
-			)),
+				NewCompositeValue(
+					inter,
+					common.IdentifierLocation("A"),
+					"X",
+					common.CompositeKindStructure,
+					fields2,
+					common.ZeroAddress,
+				),
+			),
 		)
 	})
 
@@ -3041,21 +3093,22 @@ func TestCompositeValue_Equal(t *testing.T) {
 		require.False(t,
 			NewCompositeValue(
 				inter,
-				EmptyLocationRange,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
 				fields1,
 				common.ZeroAddress,
-			).Equal(inter, NewCompositeValue(
+			).Equal(
 				inter,
-				EmptyLocationRange,
-				common.IdentifierLocation("A"),
-				"X",
-				common.CompositeKindStructure,
-				fields2,
-				common.ZeroAddress,
-			)),
+				NewCompositeValue(
+					inter,
+					common.IdentifierLocation("A"),
+					"X",
+					common.CompositeKindStructure,
+					fields2,
+					common.ZeroAddress,
+				),
+			),
 		)
 	})
 
@@ -3082,21 +3135,22 @@ func TestCompositeValue_Equal(t *testing.T) {
 		require.False(t,
 			NewCompositeValue(
 				inter,
-				EmptyLocationRange,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
 				fields1,
 				common.ZeroAddress,
-			).Equal(inter, NewCompositeValue(
+			).Equal(
 				inter,
-				EmptyLocationRange,
-				common.IdentifierLocation("A"),
-				"X",
-				common.CompositeKindResource,
-				fields2,
-				common.ZeroAddress,
-			)),
+				NewCompositeValue(
+					inter,
+					common.IdentifierLocation("A"),
+					"X",
+					common.CompositeKindResource,
+					fields2,
+					common.ZeroAddress,
+				),
+			),
 		)
 	})
 
@@ -3116,13 +3170,15 @@ func TestCompositeValue_Equal(t *testing.T) {
 		require.False(t,
 			NewCompositeValue(
 				inter,
-				EmptyLocationRange,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
 				fields1,
 				common.ZeroAddress,
-			).Equal(inter, NewUnmeteredStringValue("test")),
+			).Equal(
+				inter,
+				NewUnmeteredStringValue("test"),
+			),
 		)
 	})
 }
@@ -3192,7 +3248,11 @@ func TestNumberValue_Equal(t *testing.T) {
 			inter := newTestInterpreter(t)
 
 			require.False(t,
-				value.Equal(inter, NewUnmeteredAddressValueFromBytes([]byte{0x1})),
+				value.
+					Equal(
+						inter,
+						NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+					),
 			)
 		})
 	}
@@ -3234,10 +3294,9 @@ func TestPublicKeyValue(t *testing.T) {
 
 		key := NewPublicKeyValue(
 			inter,
-			EmptyLocationRange,
 			publicKey,
 			sigAlgo,
-			func(context PublicKeyValidationContext, locationRange LocationRange, publicKey *CompositeValue) error {
+			func(context PublicKeyValidationContext, publicKey *CompositeValue) error {
 				return nil
 			},
 		)
@@ -3294,10 +3353,9 @@ func TestPublicKeyValue(t *testing.T) {
 
 			_ = NewPublicKeyValue(
 				inter,
-				EmptyLocationRange,
 				publicKey,
 				sigAlgo,
-				func(context PublicKeyValidationContext, locationRange LocationRange, publicKey *CompositeValue) error {
+				func(context PublicKeyValidationContext, publicKey *CompositeValue) error {
 					return fakeError
 				},
 			)
@@ -3586,7 +3644,6 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 	newCompositeValue := func(inter *Interpreter, fields []CompositeField) *CompositeValue {
 		return NewCompositeValue(
 			inter,
-			EmptyLocationRange,
 			TestLocation,
 			"Test",
 			common.CompositeKindStructure,
@@ -3642,11 +3699,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 
 		value := valueFactory(inter)
 
-		result := value.ConformsToStaticType(
-			inter,
-			EmptyLocationRange,
-			TypeConformanceResults{},
-		)
+		result := value.ConformsToStaticType(inter, TypeConformanceResults{})
 		if expected {
 			assert.True(t, result)
 		} else {
@@ -4317,7 +4370,6 @@ func TestOverwriteDictionaryValueWhereKeyIsStoredInSeparateAtreeSlab(t *testing.
 		newEnumValue := func(inter *Interpreter) Value {
 			return NewCompositeValue(
 				inter,
-				EmptyLocationRange,
 				TestLocation,
 				"Test",
 				common.CompositeKindEnum,

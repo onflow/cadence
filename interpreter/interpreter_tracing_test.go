@@ -115,7 +115,7 @@ func TestInterpreterTracing(t *testing.T) {
 		require.Len(t, traceOps, 3)
 		assert.Equal(t, "array.deepRemove", traceOps[2])
 
-		array.Destroy(inter, interpreter.EmptyLocationRange)
+		array.Destroy(inter)
 		require.Len(t, traceOps, 4)
 		assert.Equal(t, "array.destroy", traceOps[3])
 	})
@@ -147,7 +147,7 @@ func TestInterpreterTracing(t *testing.T) {
 		require.Len(t, traceOps, 3)
 		assert.Equal(t, "dictionary.deepRemove", traceOps[2])
 
-		dict.Destroy(inter, interpreter.EmptyLocationRange)
+		dict.Destroy(inter)
 		require.Len(t, traceOps, 4)
 		assert.Equal(t, "dictionary.destroy", traceOps[3])
 	})
@@ -174,19 +174,19 @@ func TestInterpreterTracing(t *testing.T) {
 		require.Len(t, traceOps, 3)
 		assert.Equal(t, "composite.deepRemove", traceOps[2])
 
-		value.SetMember(inter, interpreter.EmptyLocationRange, "abc", interpreter.Nil)
+		value.SetMember(inter, "abc", interpreter.Nil)
 		require.Len(t, traceOps, 4)
 		assert.Equal(t, "composite.setMember", traceOps[3])
 
-		value.GetMember(inter, interpreter.EmptyLocationRange, "abc")
+		value.GetMember(inter, "abc")
 		require.Len(t, traceOps, 5)
 		assert.Equal(t, "composite.getMember", traceOps[4])
 
-		value.RemoveMember(inter, interpreter.EmptyLocationRange, "abc")
+		value.RemoveMember(inter, "abc")
 		require.Len(t, traceOps, 6)
 		assert.Equal(t, "composite.removeMember", traceOps[5])
 
-		value.Destroy(inter, interpreter.EmptyLocationRange)
+		value.Destroy(inter)
 		require.Len(t, traceOps, 7)
 		assert.Equal(t, "composite.destroy", traceOps[6])
 

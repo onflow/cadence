@@ -55,7 +55,7 @@ func TestInterpretRecursiveValueString(t *testing.T) {
 	require.Equal(t,
 		`{"mapRef": ...}`,
 		mapValue.(*interpreter.DictionaryValue).
-			GetKey(inter, interpreter.EmptyLocationRange, interpreter.NewUnmeteredStringValue("mapRef")).
+			GetKey(inter, interpreter.NewUnmeteredStringValue("mapRef")).
 			String(),
 	)
 }

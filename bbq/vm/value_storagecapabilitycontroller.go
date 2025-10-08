@@ -34,7 +34,9 @@ func init() {
 		NewNativeFunctionValue(
 			sema.StorageCapabilityControllerTypeSetTagFunctionName,
 			sema.StorageCapabilityControllerTypeSetTagFunctionType,
-			interpreter.NewNativeDeletionCheckedStorageCapabilityControllerFunction(interpreter.NativeStorageCapabilityControllerSetTagFunction),
+			interpreter.NewNativeDeletionCheckedStorageCapabilityControllerFunction(
+				interpreter.NativeStorageCapabilityControllerSetTagFunction,
+			),
 		),
 	)
 
@@ -43,7 +45,9 @@ func init() {
 		NewNativeFunctionValue(
 			sema.StorageCapabilityControllerTypeDeleteFunctionName,
 			sema.StorageCapabilityControllerTypeDeleteFunctionType,
-			interpreter.NewNativeDeletionCheckedStorageCapabilityControllerFunction(interpreter.NativeStorageCapabilityControllerDeleteFunction),
+			interpreter.NewNativeDeletionCheckedStorageCapabilityControllerFunction(
+				interpreter.NativeStorageCapabilityControllerDeleteFunction,
+			),
 		),
 	)
 
@@ -52,7 +56,9 @@ func init() {
 		NewNativeFunctionValue(
 			sema.StorageCapabilityControllerTypeTargetFunctionName,
 			sema.StorageCapabilityControllerTypeTargetFunctionType,
-			interpreter.NewNativeDeletionCheckedStorageCapabilityControllerFunction(interpreter.NativeStorageCapabilityControllerTargetFunction),
+			interpreter.NewNativeDeletionCheckedStorageCapabilityControllerFunction(
+				interpreter.NativeStorageCapabilityControllerTargetFunction,
+			),
 		),
 	)
 
@@ -61,7 +67,9 @@ func init() {
 		NewNativeFunctionValue(
 			sema.StorageCapabilityControllerTypeRetargetFunctionName,
 			sema.StorageCapabilityControllerTypeRetargetFunctionType,
-			interpreter.NewNativeDeletionCheckedStorageCapabilityControllerFunction(interpreter.NativeStorageCapabilityControllerRetargetFunction),
+			interpreter.NewNativeDeletionCheckedStorageCapabilityControllerFunction(
+				interpreter.NativeStorageCapabilityControllerRetargetFunction,
+			),
 		),
 	)
 }
