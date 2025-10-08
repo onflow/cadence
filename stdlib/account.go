@@ -112,7 +112,7 @@ type AccountCreator interface {
 func NativeAccountConstructor(creator AccountCreator) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		_ interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -237,13 +237,13 @@ var GetAuthAccountFunctionType = func() *sema.FunctionType {
 func NativeGetAuthAccountFunction(handler AccountHandler) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		typeArguments interpreter.TypeArgumentsIterator,
 		_ interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
 		accountAddress := interpreter.AssertValueOfType[interpreter.AddressValue](args[0])
 
-		ty := typeParameterGetter.NextStatic()
+		ty := typeArguments.NextStatic()
 		referenceType, ok := ty.(*interpreter.ReferenceStaticType)
 		if !ok {
 			panic(errors.NewUnreachableError())
@@ -599,7 +599,7 @@ func nativeAccountKeysAddFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -718,7 +718,7 @@ func nativeAccountKeysGetFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -808,7 +808,7 @@ func nativeAccountKeysForEachFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -960,7 +960,7 @@ func nativeAccountKeysRevokeFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -1049,7 +1049,7 @@ func nativeAccountInboxPublishFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -1144,12 +1144,12 @@ func nativeAccountInboxUnpublishFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		typeArguments interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
 		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[0])
-		borrowType := typeParameterGetter.NextSema()
+		borrowType := typeArguments.NextSema()
 
 		providerValue := interpreter.GetAddressValue(receiver, providerPointer)
 
@@ -1254,13 +1254,13 @@ func nativeAccountInboxClaimFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		typeArguments interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
 		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[0])
 		providerValue := interpreter.AssertValueOfType[interpreter.AddressValue](args[1])
-		borrowType := typeParameterGetter.NextSema()
+		borrowType := typeArguments.NextSema()
 
 		recipientValue := interpreter.GetAddressValue(receiver, recipientPointer)
 
@@ -1444,7 +1444,7 @@ func nativeAccountContractsGetFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -1530,12 +1530,12 @@ func nativeAccountContractsBorrowFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		typeArguments interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
 		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[0])
-		borrowType := typeParameterGetter.NextSema()
+		borrowType := typeArguments.NextSema()
 
 		address := interpreter.GetAddress(receiver, addressPointer)
 
@@ -1715,7 +1715,7 @@ func nativeAccountContractsChangeFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -2075,7 +2075,7 @@ func nativeAccountContractsTryUpdateFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) (deploymentResult interpreter.Value) {
@@ -2425,7 +2425,7 @@ func nativeAccountContractsRemoveFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -2585,7 +2585,7 @@ var GetAccountFunctionType = sema.NewSimpleFunctionType(
 func NativeGetAccountFunction(handler AccountHandler) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		_ interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -2744,7 +2744,7 @@ func nativeAccountStorageCapabilitiesGetControllerFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -2824,7 +2824,7 @@ func nativeAccountStorageCapabilitiesGetControllersFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -2934,7 +2934,7 @@ func nativeAccountStorageCapabilitiesForEachControllerFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -3079,11 +3079,11 @@ func nativeAccountStorageCapabilitiesIssueFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		typeArguments interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
-		borrowType := typeParameterGetter.NextSema()
+		borrowType := typeArguments.NextSema()
 
 		address := interpreter.GetAddress(receiver, addressPointer)
 
@@ -3158,7 +3158,7 @@ func nativeAccountStorageCapabilitiesIssueWithTypeFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -3330,11 +3330,11 @@ func nativeAccountAccountCapabilitiesIssueFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		typeArguments interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
-		borrowType := typeParameterGetter.NextSema()
+		borrowType := typeArguments.NextSema()
 
 		address := interpreter.GetAddress(receiver, addressPointer)
 
@@ -3382,7 +3382,7 @@ func nativeAccountAccountCapabilitiesIssueWithTypeFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -4017,7 +4017,7 @@ func nativeAccountCapabilitiesPublishFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -4181,7 +4181,7 @@ func nativeAccountCapabilitiesUnpublishFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -4461,12 +4461,12 @@ func nativeAccountCapabilitiesGetFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		typeArguments interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
 		pathValue := interpreter.AssertValueOfType[interpreter.PathValue](args[0])
-		typeParameter := typeParameterGetter.NextSema()
+		typeArgument := typeArguments.NextSema()
 
 		addressValue := interpreter.GetAddressValue(receiver, addressPointer)
 
@@ -4474,7 +4474,7 @@ func nativeAccountCapabilitiesGetFunction(
 			context,
 			controllerHandler,
 			pathValue,
-			typeParameter,
+			typeArgument,
 			borrow,
 			addressValue,
 		)
@@ -4707,7 +4707,7 @@ func nativeAccountCapabilitiesExistsFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -4804,7 +4804,7 @@ func nativeAccountAccountCapabilitiesGetControllerFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -4870,7 +4870,7 @@ func nativeAccountAccountCapabilitiesGetControllersFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -4984,7 +4984,7 @@ func nativeAccountAccountCapabilitiesForEachControllerFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {

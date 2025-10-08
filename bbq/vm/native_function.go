@@ -24,33 +24,33 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-type VMTypeParameterGetter struct {
-	index              int
-	context            *Context
-	typeParameterTypes []bbq.StaticType
+type VMTypeArgumentsIterator struct {
+	index         int
+	context       *Context
+	typeArguments []bbq.StaticType
 }
 
-func NewVMTypeParameterGetter(context *Context, typeParameterTypes []bbq.StaticType) *VMTypeParameterGetter {
-	return &VMTypeParameterGetter{
-		index:              0,
-		context:            context,
-		typeParameterTypes: typeParameterTypes,
+func NewVMTypeArgumentsIterator(context *Context, typeArguments []bbq.StaticType) *VMTypeArgumentsIterator {
+	return &VMTypeArgumentsIterator{
+		index:         0,
+		context:       context,
+		typeArguments: typeArguments,
 	}
 }
 
-var _ interpreter.TypeParameterGetter = &VMTypeParameterGetter{}
+var _ interpreter.TypeArgumentsIterator = &VMTypeArgumentsIterator{}
 
-func (g *VMTypeParameterGetter) NextStatic() interpreter.StaticType {
+func (g *VMTypeArgumentsIterator) NextStatic() interpreter.StaticType {
 	current := g.index
-	if current >= len(g.typeParameterTypes) {
+	if current >= len(g.typeArguments) {
 		// much like the interpreter, there can be no type parameters provided, which is valid
 		return nil
 	}
 	g.index++
-	return g.typeParameterTypes[current]
+	return g.typeArguments[current]
 }
 
-func (g *VMTypeParameterGetter) NextSema() sema.Type {
+func (g *VMTypeArgumentsIterator) NextSema() sema.Type {
 	staticType := g.NextStatic()
 	if staticType == nil {
 		return nil
@@ -66,11 +66,11 @@ func AdaptNativeFunctionForVM(fn interpreter.NativeFunction) NativeFunctionVM {
 		receiver Value,
 		arguments []Value,
 	) Value {
-		typeParameterGetter := NewVMTypeParameterGetter(context, typeArguments)
+		typeArgumentsIterator := NewVMTypeArgumentsIterator(context, typeArguments)
 
 		return fn(
 			context,
-			typeParameterGetter,
+			typeArgumentsIterator,
 			receiver,
 			arguments,
 		)

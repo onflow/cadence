@@ -1142,7 +1142,7 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 
 	invocationExpressionTypes := elaboration.InvocationExpressionTypes(invocationExpression)
 
-	typeParameterTypes := invocationExpressionTypes.TypeArguments
+	typeArguments := invocationExpressionTypes.TypeArguments
 	argumentTypes := invocationExpressionTypes.ArgumentTypes
 	parameterTypes := invocationExpressionTypes.ParameterTypes
 	returnType := invocationExpressionTypes.ReturnType
@@ -1160,7 +1160,7 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 		argumentTypes,
 		parameterTypes,
 		returnType,
-		typeParameterTypes,
+		typeArguments,
 	)
 
 	interpreter.reportInvokedFunctionReturn()

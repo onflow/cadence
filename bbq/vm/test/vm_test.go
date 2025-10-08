@@ -8850,7 +8850,7 @@ func TestFunctionInvocationWithOptionalArgs(t *testing.T) {
 		functionType,
 		func(
 			context interpreter.NativeFunctionContext,
-			_ interpreter.TypeParameterGetter,
+			_ interpreter.TypeArgumentsIterator,
 			_ interpreter.Value,
 			arguments []vm.Value,
 		) vm.Value {
@@ -9436,7 +9436,7 @@ func TestInjectedContract(t *testing.T) {
 		cType,
 		func(
 			context interpreter.NativeFunctionContext,
-			_ interpreter.TypeParameterGetter,
+			_ interpreter.TypeArgumentsIterator,
 			receiver interpreter.Value,
 			args []interpreter.Value,
 		) interpreter.Value {
@@ -11534,7 +11534,7 @@ func TestBorrowContractLinksGlobals(t *testing.T) {
 		functionType,
 		func(
 			context interpreter.NativeFunctionContext,
-			_ interpreter.TypeParameterGetter,
+			_ interpreter.TypeArgumentsIterator,
 			_ interpreter.Value,
 			args []interpreter.Value,
 		) vm.Value {

@@ -135,7 +135,7 @@ func (v *PathCapabilityValue) newBorrowFunction(
 		sema.CapabilityTypeBorrowFunctionType(borrowType),
 		func(
 			_ NativeFunctionContext,
-			_ TypeParameterGetter,
+			_ TypeArgumentsIterator,
 			_ Value,
 			_ []Value,
 		) Value {
@@ -155,7 +155,7 @@ func (v *PathCapabilityValue) newCheckFunction(
 		sema.CapabilityTypeCheckFunctionType(borrowType),
 		func(
 			_ NativeFunctionContext,
-			_ TypeParameterGetter,
+			_ TypeArgumentsIterator,
 			_ Value,
 			_ []Value,
 		) Value {

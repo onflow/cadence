@@ -79,7 +79,7 @@ func NewHashAlgorithmCase(
 func NativeHashAlgorithmHashFunction(hasher Hasher, hashAlgoValue interpreter.MemberAccessibleValue) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -103,7 +103,7 @@ func NativeHashAlgorithmHashFunction(hasher Hasher, hashAlgoValue interpreter.Me
 func NativeHashAlgorithmHashWithTagFunction(hasher Hasher, hashAlgoValue interpreter.MemberAccessibleValue) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		receiver interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -237,7 +237,7 @@ func NewVMHashAlgorithmConstructor(hasher Hasher) StandardLibraryValue {
 		hashAlgorithmLookupType,
 		func(
 			context interpreter.NativeFunctionContext,
-			_ interpreter.TypeParameterGetter,
+			_ interpreter.TypeArgumentsIterator,
 			_ interpreter.Value,
 			args []interpreter.Value,
 		) interpreter.Value {

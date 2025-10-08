@@ -33,31 +33,34 @@ type NativeFunctionContext interface {
 	InvocationContext
 }
 
-type TypeParameterGetter interface {
+type TypeArgumentsIterator interface {
 	NextStatic() StaticType
 	NextSema() sema.Type
 }
 
-type InterpreterTypeParameterGetter struct {
-	memoryGauge          common.MemoryGauge
-	currentTypeParameter *orderedmap.Pair[*sema.TypeParameter, sema.Type]
+type InterpreterTypeArgumentsIterator struct {
+	memoryGauge common.MemoryGauge
+	currentPair *orderedmap.Pair[*sema.TypeParameter, sema.Type]
 }
 
-var _ TypeParameterGetter = &InterpreterTypeParameterGetter{}
+var _ TypeArgumentsIterator = &InterpreterTypeArgumentsIterator{}
 
-func NewInterpreterTypeParameterGetter(memoryGauge common.MemoryGauge, typeParameterTypes *sema.TypeParameterTypeOrderedMap) *InterpreterTypeParameterGetter {
-	var currentTypeParameter *orderedmap.Pair[*sema.TypeParameter, sema.Type]
-	if typeParameterTypes != nil {
-		currentTypeParameter = typeParameterTypes.Oldest()
+func NewInterpreterTypeArgumentsIterator(
+	memoryGauge common.MemoryGauge,
+	typeArguments *sema.TypeParameterTypeOrderedMap,
+) *InterpreterTypeArgumentsIterator {
+	var currentPair *orderedmap.Pair[*sema.TypeParameter, sema.Type]
+	if typeArguments != nil {
+		currentPair = typeArguments.Oldest()
 	}
 
-	return &InterpreterTypeParameterGetter{
-		memoryGauge:          memoryGauge,
-		currentTypeParameter: currentTypeParameter,
+	return &InterpreterTypeArgumentsIterator{
+		memoryGauge: memoryGauge,
+		currentPair: currentPair,
 	}
 }
 
-func (i *InterpreterTypeParameterGetter) NextStatic() StaticType {
+func (i *InterpreterTypeArgumentsIterator) NextStatic() StaticType {
 	semaType := i.NextSema()
 	if semaType == nil {
 		return nil
@@ -65,26 +68,27 @@ func (i *InterpreterTypeParameterGetter) NextStatic() StaticType {
 	return ConvertSemaToStaticType(i.memoryGauge, semaType)
 }
 
-func (i *InterpreterTypeParameterGetter) NextSema() sema.Type {
+func (i *InterpreterTypeArgumentsIterator) NextSema() sema.Type {
 	// deletion cannot happen here, type parameters are used multiple times
 	// it is also possible that there are no type parameters which is valid
 	// see NativeCapabilityBorrowFunction
-	current := i.currentTypeParameter
+	current := i.currentPair
 	if current == nil {
 		return nil
 	}
-	i.currentTypeParameter = i.currentTypeParameter.Next()
+	i.currentPair = i.currentPair.Next()
 	return current.Value
 }
 
 type NativeFunction func(
 	context NativeFunctionContext,
-	typeParameterGetter TypeParameterGetter,
+	typeArguments TypeArgumentsIterator,
 	receiver Value,
 	args []Value,
 ) Value
 
 // These are all the functions that need to exist to work with the interpreter
+
 func AdaptNativeFunctionForInterpreter(fn NativeFunction) HostFunction {
 	return func(invocation Invocation) Value {
 		context := invocation.InvocationContext
@@ -94,11 +98,11 @@ func AdaptNativeFunctionForInterpreter(fn NativeFunction) HostFunction {
 			receiver = *invocation.Self
 		}
 
-		typeParameterGetter := NewInterpreterTypeParameterGetter(context, invocation.TypeParameterTypes)
+		typeArgumentsIterator := NewInterpreterTypeArgumentsIterator(context, invocation.TypeArguments)
 
 		return fn(
 			context,
-			typeParameterGetter,
+			typeArgumentsIterator,
 			receiver,
 			invocation.Arguments,
 		)
@@ -161,6 +165,7 @@ func AssertValueOfType[T Value](val Value) T {
 // Helper functions to get the address from the receiver or the address pointer
 // interpreter supplies the address, vm does not
 // see stdlib/account.go for usage examples
+
 func GetAddressValue(receiver Value, addressPointer *AddressValue) AddressValue {
 	if addressPointer == nil {
 		return GetAccountTypePrivateAddressValue(receiver)

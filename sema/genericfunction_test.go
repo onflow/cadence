@@ -375,9 +375,9 @@ func TestCheckGenericFunctionInvocation(t *testing.T) {
 		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
 		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
-		typeParameterTypes := checker.Elaboration.InvocationExpressionTypes(invocationExpression).TypeArguments
+		typeArguments := checker.Elaboration.InvocationExpressionTypes(invocationExpression).TypeArguments
 
-		ty, present := typeParameterTypes.Get(typeParameter)
+		ty, present := typeArguments.Get(typeParameter)
 		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)
 		assert.IsType(t, sema.IntType, ty)
 	})

@@ -81,7 +81,7 @@ type BlockAtHeightProvider interface {
 func NativeGetBlockFunction(provider BlockAtHeightProvider) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		_ interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
@@ -203,7 +203,7 @@ type CurrentBlockProvider interface {
 func NativeGetCurrentBlockFunction(provider CurrentBlockProvider) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.TypeParameterGetter,
+		_ interpreter.TypeArgumentsIterator,
 		_ interpreter.Value,
 		_ []interpreter.Value,
 	) interpreter.Value {

@@ -109,11 +109,11 @@ var ZeroModuloError = errors.NewDefaultUserError("modulo argument cannot be zero
 func NativeRevertibleRandomFunction(generator RandomGenerator) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		typeParameterGetter interpreter.TypeParameterGetter,
+		typeArguments interpreter.TypeArgumentsIterator,
 		_ interpreter.Value,
 		args []interpreter.Value,
 	) interpreter.Value {
-		returnIntegerType := typeParameterGetter.NextSema()
+		returnIntegerType := typeArguments.NextSema()
 
 		var moduloValue interpreter.Value
 		if len(args) == 1 {

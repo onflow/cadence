@@ -1219,7 +1219,7 @@ func TestStringer(t *testing.T) {
 					},
 					func(
 						_ NativeFunctionContext,
-						_ TypeParameterGetter,
+						_ TypeArgumentsIterator,
 						_ Value,
 						_ []Value,
 					) Value {

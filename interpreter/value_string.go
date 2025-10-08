@@ -1052,7 +1052,7 @@ func (*StringValueIterator) ValueID() (atree.ValueID, bool) {
 var NativeStringEncodeHexFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1064,7 +1064,7 @@ var NativeStringEncodeHexFunction = NativeFunction(
 var NativeStringFromUtf8Function = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1076,7 +1076,7 @@ var NativeStringFromUtf8Function = NativeFunction(
 var NativeStringFromCharactersFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1088,7 +1088,7 @@ var NativeStringFromCharactersFunction = NativeFunction(
 var NativeStringJoinFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1295,7 +1295,7 @@ var stringFunction = func() Value {
 var NativeStringConcatFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1312,7 +1312,7 @@ var NativeStringConcatFunction = NativeFunction(
 var NativeStringSliceFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1326,7 +1326,7 @@ var NativeStringSliceFunction = NativeFunction(
 var NativeStringContainsFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1339,7 +1339,7 @@ var NativeStringContainsFunction = NativeFunction(
 var NativeStringIndexFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1352,7 +1352,7 @@ var NativeStringIndexFunction = NativeFunction(
 var NativeStringCountFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1365,7 +1365,7 @@ var NativeStringCountFunction = NativeFunction(
 var NativeStringDecodeHexFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1377,7 +1377,7 @@ var NativeStringDecodeHexFunction = NativeFunction(
 var NativeStringToLowerFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1389,7 +1389,7 @@ var NativeStringToLowerFunction = NativeFunction(
 var NativeStringSplitFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
@@ -1402,7 +1402,7 @@ var NativeStringSplitFunction = NativeFunction(
 var NativeStringReplaceAllFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ TypeParameterGetter,
+		_ TypeArgumentsIterator,
 		receiver Value,
 		args []Value,
 	) Value {
