@@ -38,6 +38,20 @@ type TypeArgumentsIterator interface {
 	NextSema() sema.Type
 }
 
+type EmptyTypeArgumentsIterator struct{}
+
+var _ TypeArgumentsIterator = EmptyTypeArgumentsIterator{}
+
+func (EmptyTypeArgumentsIterator) NextStatic() StaticType {
+	return nil
+}
+
+func (EmptyTypeArgumentsIterator) NextSema() sema.Type {
+	return nil
+}
+
+var TheEmptyTypeArgumentsIterator TypeArgumentsIterator = EmptyTypeArgumentsIterator{}
+
 type InterpreterTypeArgumentsIterator struct {
 	memoryGauge common.MemoryGauge
 	currentPair *orderedmap.Pair[*sema.TypeParameter, sema.Type]
@@ -80,6 +94,16 @@ func (i *InterpreterTypeArgumentsIterator) NextSema() sema.Type {
 	return current.Value
 }
 
+func NewTypeArgumentsIterator(
+	context InvocationContext,
+	arguments *sema.TypeParameterTypeOrderedMap,
+) TypeArgumentsIterator {
+	if arguments.Len() == 0 {
+		return TheEmptyTypeArgumentsIterator
+	}
+	return NewInterpreterTypeArgumentsIterator(context, arguments)
+}
+
 type NativeFunction func(
 	context NativeFunctionContext,
 	typeArguments TypeArgumentsIterator,
@@ -98,7 +122,7 @@ func AdaptNativeFunctionForInterpreter(fn NativeFunction) HostFunction {
 			receiver = *invocation.Self
 		}
 
-		typeArgumentsIterator := NewInterpreterTypeArgumentsIterator(context, invocation.TypeArguments)
+		typeArgumentsIterator := NewTypeArgumentsIterator(context, invocation.TypeArguments)
 
 		return fn(
 			context,
@@ -152,8 +176,8 @@ func NewBoundHostFunctionValue(
 	)
 }
 
-// generic helper function to assert that the provided value is of a specific type
-// useful for asserting receiver and argument types in native functions
+// AssertValueOfType asserts that the provided value is of a specific type.
+// Useful for asserting receiver and argument types in native functions
 func AssertValueOfType[T Value](val Value) T {
 	value, ok := val.(T)
 	if !ok {
