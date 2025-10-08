@@ -65,24 +65,6 @@ func NewTypeArgumentsIterator(context *Context, arguments []bbq.StaticType) inte
 	return NewVMTypeArgumentsIterator(context, arguments)
 }
 
-func AdaptNativeFunctionForVM(fn interpreter.NativeFunction) NativeFunctionVM {
-	return func(
-		context *Context,
-		typeArguments []bbq.StaticType,
-		receiver Value,
-		arguments []Value,
-	) Value {
-		typeArgumentsIterator := NewTypeArgumentsIterator(context, typeArguments)
-
-		return fn(
-			context,
-			typeArgumentsIterator,
-			receiver,
-			arguments,
-		)
-	}
-}
-
 func NewNativeFunctionValue(
 	name string,
 	funcType *sema.FunctionType,
@@ -91,7 +73,7 @@ func NewNativeFunctionValue(
 	return &NativeFunctionValue{
 		Name:         name,
 		functionType: funcType,
-		Function:     AdaptNativeFunctionForVM(fn),
+		Function:     fn,
 	}
 }
 
@@ -102,7 +84,7 @@ func NewNativeFunctionValueWithDerivedType(
 ) *NativeFunctionValue {
 	return &NativeFunctionValue{
 		Name:               name,
-		Function:           AdaptNativeFunctionForVM(fn),
 		functionTypeGetter: typeGetter,
+		Function:           fn,
 	}
 }

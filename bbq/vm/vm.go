@@ -875,9 +875,11 @@ func invokeFunction(
 			}()
 		}
 
+		typeArgumentsIterator := NewTypeArgumentsIterator(context, typeArguments)
+
 		result := functionValue.Function(
 			context,
-			typeArguments,
+			typeArgumentsIterator,
 			receiver,
 			arguments,
 		)
