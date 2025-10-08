@@ -42,7 +42,7 @@ func NativeBLSAggregatePublicKeysFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		_ interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		publicKeysValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
 		return BLSAggregatePublicKeys(
@@ -143,7 +143,7 @@ func NativeBLSAggregateSignaturesFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		_ interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		signaturesValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
 		return BLSAggregateSignatures(

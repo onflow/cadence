@@ -1221,7 +1221,7 @@ func TestStringer(t *testing.T) {
 						_ NativeFunctionContext,
 						_ TypeParameterGetter,
 						_ Value,
-						_ ...Value,
+						_ []Value,
 					) Value {
 						return NewUnmeteredStringValue("hello")
 					},

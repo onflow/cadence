@@ -44,7 +44,7 @@ func newAssertHelloLogFunction(t *testing.T, invoked *bool) stdlib.StandardLibra
 			_ interpreter.NativeFunctionContext,
 			_ interpreter.TypeParameterGetter,
 			_ interpreter.Value,
-			args ...interpreter.Value,
+			args []interpreter.Value,
 		) interpreter.Value {
 			*invoked = true
 			assert.Equal(t, "\"hello\"", args[0].String())
@@ -62,7 +62,7 @@ func newAssertUnexpectedLogFunction(t *testing.T) stdlib.StandardLibraryValue {
 			_ interpreter.NativeFunctionContext,
 			_ interpreter.TypeParameterGetter,
 			_ interpreter.Value,
-			_ ...interpreter.Value,
+			_ []interpreter.Value,
 		) interpreter.Value {
 			assert.Fail(t, "unexpected call of log")
 			return interpreter.Void

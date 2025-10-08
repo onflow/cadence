@@ -164,7 +164,7 @@ type NativeFunctionVM func(
 	context *Context,
 	typeArguments []bbq.StaticType,
 	receiver Value,
-	arguments ...Value,
+	arguments []Value,
 ) Value
 
 type NativeFunctionValue struct {

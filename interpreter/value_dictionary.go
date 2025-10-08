@@ -1573,7 +1573,7 @@ var NativeDictionaryRemoveFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		keyValue := args[0]
 		dictionary := AssertValueOfType[*DictionaryValue](receiver)
@@ -1586,7 +1586,7 @@ var NativeDictionaryInsertFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		keyValue := args[0]
 		newValue := args[1]
@@ -1600,7 +1600,7 @@ var NativeDictionaryContainsKeyFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		keyValue := args[0]
 		dictionary := AssertValueOfType[*DictionaryValue](receiver)
@@ -1613,7 +1613,7 @@ var NativeDictionaryForEachKeyFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		funcArgument := AssertValueOfType[FunctionValue](args[0])
 		dictionary := AssertValueOfType[*DictionaryValue](receiver)

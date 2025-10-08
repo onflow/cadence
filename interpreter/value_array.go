@@ -1911,7 +1911,7 @@ var NativeArrayAppendFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		thisArray := AssertValueOfType[*ArrayValue](receiver)
 		element := args[0]
@@ -1926,7 +1926,7 @@ var NativeArrayAppendAllFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		thisArray := AssertValueOfType[*ArrayValue](receiver)
 		otherArray := AssertValueOfType[*ArrayValue](args[0])
@@ -1941,7 +1941,7 @@ var NativeArrayConcatFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		thisArray := AssertValueOfType[*ArrayValue](receiver)
 		otherArray := AssertValueOfType[*ArrayValue](args[0])
@@ -1955,7 +1955,7 @@ var NativeArrayInsertFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		thisArray := AssertValueOfType[*ArrayValue](receiver)
 		index := AssertValueOfType[NumberValue](args[0])
@@ -1971,7 +1971,7 @@ var NativeArrayRemoveFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		thisArray := AssertValueOfType[*ArrayValue](receiver)
 		index := AssertValueOfType[NumberValue](args[0])
@@ -1985,7 +1985,7 @@ var NativeArrayContainsFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		thisArray := AssertValueOfType[*ArrayValue](receiver)
 		element := args[0]
@@ -1999,7 +1999,7 @@ var NativeArraySliceFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		thisArray := AssertValueOfType[*ArrayValue](receiver)
 		fromValue := AssertValueOfType[IntValue](args[0])
@@ -2014,7 +2014,7 @@ var NativeArrayReverseFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		_ ...Value,
+		_ []Value,
 	) Value {
 		thisArray := AssertValueOfType[*ArrayValue](receiver)
 		return thisArray.Reverse(context)
@@ -2026,7 +2026,7 @@ var NativeArrayFilterFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		thisArray := AssertValueOfType[*ArrayValue](receiver)
 		funcValue := AssertValueOfType[FunctionValue](args[0])
@@ -2040,7 +2040,7 @@ var NativeArrayMapFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		thisArray := AssertValueOfType[*ArrayValue](receiver)
 		funcValue := AssertValueOfType[FunctionValue](args[0])
@@ -2054,7 +2054,7 @@ var NativeArrayToVariableSizedFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		_ ...Value,
+		_ []Value,
 	) Value {
 		thisArray := AssertValueOfType[*ArrayValue](receiver)
 
@@ -2067,7 +2067,7 @@ var NativeArrayToConstantSizedFunction = NativeFunction(
 		context NativeFunctionContext,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		thisArray := AssertValueOfType[*ArrayValue](receiver)
 		constantSizedArrayType, ok := typeParameterGetter.NextStatic().(*ConstantSizedStaticType)
@@ -2084,7 +2084,7 @@ var NativeArrayFirstIndexFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		thisArray := AssertValueOfType[*ArrayValue](receiver)
 		element := args[0]
@@ -2098,7 +2098,7 @@ var NativeArrayRemoveFirstFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		_ ...Value,
+		_ []Value,
 	) Value {
 		thisArray := AssertValueOfType[*ArrayValue](receiver)
 
@@ -2111,7 +2111,7 @@ var NativeArrayRemoveLastFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		_ ...Value,
+		_ []Value,
 	) Value {
 		thisArray := AssertValueOfType[*ArrayValue](receiver)
 

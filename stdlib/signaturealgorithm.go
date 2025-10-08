@@ -76,7 +76,7 @@ var vmSignatureAlgorithmConstructorValue = vm.NewNativeFunctionValue(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		_ interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		rawValue := args[0].(interpreter.UInt8Value)
 

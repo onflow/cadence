@@ -122,7 +122,7 @@ var NativePathValueToStringFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		_ ...Value,
+		_ []Value,
 	) Value {
 		path := AssertValueOfType[PathValue](receiver)
 		return PathValueToStringFunction(context, path)

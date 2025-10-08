@@ -391,7 +391,7 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 				_ interpreter.NativeFunctionContext,
 				_ interpreter.TypeParameterGetter,
 				_ interpreter.Value,
-				args ...interpreter.Value,
+				args []interpreter.Value,
 			) interpreter.Value {
 				check(args[0])
 				return interpreter.Void

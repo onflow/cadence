@@ -235,7 +235,7 @@ var NativeCharacterValueToStringFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		_ ...Value,
+		_ []Value,
 	) Value {
 		character := AssertValueOfType[CharacterValue](receiver)
 		return CharacterValueToString(context, character)

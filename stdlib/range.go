@@ -118,7 +118,7 @@ var NativeInclusiveRangeConstructorFunction = interpreter.NativeFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		_ interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		start := interpreter.AssertValueOfType[interpreter.IntegerValue](args[0])
 		end := interpreter.AssertValueOfType[interpreter.IntegerValue](args[1])

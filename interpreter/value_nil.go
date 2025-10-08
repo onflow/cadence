@@ -100,7 +100,7 @@ var nilValueMapFunction = NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 		_ NativeFunctionContext,
 		_ TypeParameterGetter,
 		_ Value,
-		_ ...Value,
+		_ []Value,
 	) Value {
 		return Nil
 	},

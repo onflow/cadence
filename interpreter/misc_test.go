@@ -1780,7 +1780,7 @@ func TestInterpretHostFunction(t *testing.T) {
 			_ interpreter.NativeFunctionContext,
 			_ interpreter.TypeParameterGetter,
 			_ interpreter.Value,
-			args ...interpreter.Value,
+			args []interpreter.Value,
 		) interpreter.Value {
 			a := args[0].(interpreter.IntValue).ToBigInt(nil)
 			b := args[1].(interpreter.IntValue).ToBigInt(nil)
@@ -1830,7 +1830,7 @@ func newAssertArgumentsFunction(t *testing.T, called *bool) interpreter.NativeFu
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		_ interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		*called = true
 
@@ -4956,7 +4956,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 				context interpreter.NativeFunctionContext,
 				_ interpreter.TypeParameterGetter,
 				_ interpreter.Value,
-				args ...interpreter.Value,
+				args []interpreter.Value,
 			) interpreter.Value {
 				authorized := bool(args[0].(interpreter.BoolValue))
 
@@ -13348,7 +13348,7 @@ func newCountAndGetKeyFunction(key int64, getKeyInvocationsCount *int) interpret
 		_ interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		_ interpreter.Value,
-		_ ...interpreter.Value,
+		_ []interpreter.Value,
 	) interpreter.Value {
 		*getKeyInvocationsCount++
 		return interpreter.NewUnmeteredIntValueFromInt64(key)
@@ -13380,7 +13380,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 				_ interpreter.NativeFunctionContext,
 				_ interpreter.TypeParameterGetter,
 				_ interpreter.Value,
-				_ ...interpreter.Value,
+				_ []interpreter.Value,
 			) interpreter.Value {
 				getKeyInvocationsCount++
 				return interpreter.NewUnmeteredStringValue(key)
@@ -13803,7 +13803,7 @@ func TestInterpretInvocationEvaluationAndTransferOrder(t *testing.T) {
 			_ interpreter.NativeFunctionContext,
 			_ interpreter.TypeParameterGetter,
 			_ interpreter.Value,
-			args ...interpreter.Value,
+			args []interpreter.Value,
 		) interpreter.Value {
 			require.Len(t, args, 2)
 

@@ -111,7 +111,7 @@ func NativeRevertibleRandomFunction(generator RandomGenerator) interpreter.Nativ
 		context interpreter.NativeFunctionContext,
 		typeParameterGetter interpreter.TypeParameterGetter,
 		_ interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		returnIntegerType := typeParameterGetter.NextSema()
 

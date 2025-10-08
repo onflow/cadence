@@ -76,7 +76,7 @@ func NativePublicKeyConstructorFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		_ interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		publicKey := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
 		signAlgo := interpreter.AssertValueOfType[*interpreter.SimpleCompositeValue](args[1])
@@ -219,7 +219,7 @@ func NativePublicKeyVerifySignatureFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		signatureValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
 		signedDataValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[1])
@@ -329,7 +329,7 @@ func NativePublicKeyVerifyPoPFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		signatureValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
 

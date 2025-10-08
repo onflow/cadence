@@ -83,7 +83,7 @@ func NativeGetBlockFunction(provider BlockAtHeightProvider) interpreter.NativeFu
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		_ interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		heightValue := interpreter.AssertValueOfType[interpreter.UInt64Value](args[0])
 
@@ -205,7 +205,7 @@ func NativeGetCurrentBlockFunction(provider CurrentBlockProvider) interpreter.Na
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		_ interpreter.Value,
-		_ ...interpreter.Value,
+		_ []interpreter.Value,
 	) interpreter.Value {
 		height, err := provider.GetCurrentBlockHeight()
 		if err != nil {

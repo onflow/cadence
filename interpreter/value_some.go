@@ -510,7 +510,7 @@ var NativeOptionalMapFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		optionalValue := AssertValueOfType[OptionalValue](receiver)
 		innerValueType := optionalValue.InnerValueType(context)

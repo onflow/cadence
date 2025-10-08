@@ -137,7 +137,7 @@ func (v *PathCapabilityValue) newBorrowFunction(
 			_ NativeFunctionContext,
 			_ TypeParameterGetter,
 			_ Value,
-			_ ...Value,
+			_ []Value,
 		) Value {
 			// Borrowing is never allowed
 			return Nil
@@ -157,7 +157,7 @@ func (v *PathCapabilityValue) newCheckFunction(
 			_ NativeFunctionContext,
 			_ TypeParameterGetter,
 			_ Value,
-			_ ...Value,
+			_ []Value,
 		) Value {
 			// Borrowing is never allowed
 			return FalseValue

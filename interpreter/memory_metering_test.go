@@ -113,7 +113,7 @@ func newMeteredLogFunction(meter *testMemoryGauge, loggedString *string) stdlib.
 			context interpreter.NativeFunctionContext,
 			_ interpreter.TypeParameterGetter,
 			_ interpreter.Value,
-			args ...interpreter.Value,
+			args []interpreter.Value,
 		) interpreter.Value {
 			// Reset gauge, to only capture the values metered during string conversion
 			meter.meter = make(map[common.MemoryKind]uint64)

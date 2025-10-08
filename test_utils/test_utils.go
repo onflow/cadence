@@ -175,7 +175,7 @@ func ParseCheckAndPrepareWithLogs(
 			_ interpreter.NativeFunctionContext,
 			_ interpreter.TypeParameterGetter,
 			_ interpreter.Value,
-			args ...interpreter.Value,
+			args []interpreter.Value,
 		) interpreter.Value {
 			value := args[0]
 			logs = append(logs, value.String())
@@ -353,7 +353,7 @@ func ParseCheckAndPrepareWithOptions(
 								context interpreter.NativeFunctionContext,
 								_ interpreter.TypeParameterGetter,
 								_ interpreter.Value,
-								arguments ...interpreter.Value,
+								arguments []interpreter.Value,
 							) interpreter.Value {
 
 								var argumentTypes []sema.Type
