@@ -279,7 +279,6 @@ func (v *SimpleCompositeValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (v *SimpleCompositeValue) Transfer(
 	transferContext ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,

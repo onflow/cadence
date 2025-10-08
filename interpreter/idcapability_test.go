@@ -141,7 +141,6 @@ func TestInterpretIDCapability(t *testing.T) {
 			interpreter.UnauthorizedAccess,
 			interpreter.NewUnmeteredStringValue("mock"),
 			sema.NewReferenceType(nil, sema.UnauthorizedAccess, sema.StringType),
-			interpreter.EmptyLocationRange,
 		)
 
 		inter, err := test(t,

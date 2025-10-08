@@ -150,7 +150,6 @@ func TestInterpretConstantAndVariableDeclarations(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -624,7 +623,6 @@ func TestInterpretArrayIndexingAssignment(t *testing.T) {
 
 	expectedArray := interpreter.NewArrayValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		&interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeInt,
 		},
@@ -2412,7 +2410,6 @@ func TestInterpretStructCopyOnDeclaration(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -2457,7 +2454,6 @@ func TestInterpretStructCopyOnDeclarationModifiedWithStructFunction(t *testing.T
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -2499,7 +2495,6 @@ func TestInterpretStructCopyOnIdentifierAssignment(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -2541,7 +2536,6 @@ func TestInterpretStructCopyOnIndexingAssignment(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -2590,7 +2584,6 @@ func TestInterpretStructCopyOnMemberAssignment(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -2666,7 +2659,6 @@ func TestInterpretArrayCopy(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -2707,7 +2699,6 @@ func TestInterpretStructCopyInArray(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -4124,6 +4115,7 @@ func TestInterpretImportError(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = inter.Invoke("test")
+	require.Error(t, err)
 
 	var sb strings.Builder
 	printErr := pretty.NewErrorPrettyPrinter(&sb, false).
@@ -4176,7 +4168,6 @@ func TestInterpretDictionary(t *testing.T) {
 
 	expectedDict := interpreter.NewDictionaryValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		&interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
 			ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -4205,7 +4196,6 @@ func TestInterpretDictionaryInsertionOrder(t *testing.T) {
 
 	expectedDict := interpreter.NewDictionaryValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		&interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
 			ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -4462,7 +4452,6 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 
 	expectedDict := interpreter.NewDictionaryValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		&interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
 			ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -4529,7 +4518,6 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 
 	expectedDict := interpreter.NewDictionaryValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		&interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
 			ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -5074,7 +5062,6 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 
 		r = r.Transfer(
 			inter,
-			interpreter.EmptyLocationRange,
 			atree.Address(storageAddress),
 			true,
 			nil,
@@ -6159,7 +6146,7 @@ func TestInterpretDictionaryForEachKey(t *testing.T) {
 					if !ok {
 						return 0, ok
 					}
-					return intVal.ToInt(interpreter.EmptyLocationRange), true
+					return intVal.ToInt(), true
 				}
 
 				entries, ok := DictionaryEntries(inter, dict, toInt, toInt)
@@ -6906,7 +6893,6 @@ func TestInterpretSwapVariables(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -6947,7 +6933,6 @@ func TestInterpretSwapArrayAndField(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -7426,7 +7411,6 @@ func TestInterpretReferenceEventParameter(t *testing.T) {
 
 	dictionaryValue := interpreter.NewDictionaryValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		dictionaryStaticType,
 		interpreter.NewUnmeteredIntValueFromInt64(42),
 		interpreter.NewUnmeteredStringValue("answer"),
@@ -7436,7 +7420,6 @@ func TestInterpretReferenceEventParameter(t *testing.T) {
 
 	arrayValue := interpreter.NewArrayValue(
 		inter,
-		interpreter.EmptyLocationRange,
 		arrayStaticType,
 		common.ZeroAddress,
 		dictionaryValue,
@@ -7447,7 +7430,6 @@ func TestInterpretReferenceEventParameter(t *testing.T) {
 		interpreter.UnauthorizedAccess,
 		arrayValue,
 		interpreter.MustConvertStaticToSemaType(arrayStaticType, inter),
-		interpreter.EmptyLocationRange,
 	)
 
 	_, err = inter.Invoke("test", ref)
@@ -7673,7 +7655,6 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			testValue{
 				value: interpreter.NewArrayValue(
 					inter,
-					interpreter.EmptyLocationRange,
 					&interpreter.VariableSizedStaticType{
 						Type: interpreter.ConvertSemaToStaticType(nil, testCase.ty),
 					},
@@ -7687,7 +7668,6 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			testValue{
 				value: interpreter.NewArrayValue(
 					inter,
-					interpreter.EmptyLocationRange,
 					&interpreter.ConstantSizedStaticType{
 						Type: interpreter.ConvertSemaToStaticType(nil, testCase.ty),
 						Size: 1,
@@ -7702,7 +7682,6 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 			value := interpreter.NewDictionaryValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.DictionaryStaticType{
 					KeyType:   interpreter.ConvertSemaToStaticType(nil, testCase.ty),
 					ValueType: interpreter.ConvertSemaToStaticType(nil, testCase.ty),
@@ -7978,7 +7957,6 @@ func TestInterpretReferenceUse(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -8030,7 +8008,6 @@ func TestInterpretReferenceUseAccess(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -8594,7 +8571,6 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 							nil,
 							addressValue,
 							interpreter.FullyEntitledAccountAccess,
-							interpreter.EmptyLocationRange,
 						)
 
 						return map[string]interpreter.Value{
@@ -9124,7 +9100,6 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
@@ -9170,7 +9145,6 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 			nil,
 			interpreter.AddressValue(address),
 			interpreter.FullyEntitledAccountAccess,
-			interpreter.EmptyLocationRange,
 		),
 		Kind: common.DeclarationKindConstant,
 	}
@@ -9809,14 +9783,12 @@ func TestInterpretInternalAssignment(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: stringIntDictionaryStaticType,
 			},
 			common.ZeroAddress,
 			interpreter.NewDictionaryValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				stringIntDictionaryStaticType,
 				interpreter.NewUnmeteredStringValue("a"),
 				interpreter.NewUnmeteredIntValueFromInt64(1),
@@ -9825,7 +9797,6 @@ func TestInterpretInternalAssignment(t *testing.T) {
 			),
 			interpreter.NewDictionaryValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				stringIntDictionaryStaticType,
 				interpreter.NewUnmeteredStringValue("a"),
 				interpreter.NewUnmeteredIntValueFromInt64(1),
@@ -9926,7 +9897,6 @@ func TestInterpretCopyOnReturn(t *testing.T) {
 		inter,
 		interpreter.NewDictionaryValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeString,
@@ -9988,7 +9958,7 @@ func TestInterpretMissingMember(t *testing.T) {
 
 	// Remove field `y`
 	compositeValue := inter.GetGlobal("x").(*interpreter.CompositeValue)
-	compositeValue.RemoveField(inter, interpreter.EmptyLocationRange, "y")
+	compositeValue.RemoveField(inter, "y")
 
 	_, err := inter.Invoke("test")
 	RequireError(t, err)
@@ -10369,24 +10339,27 @@ func TestInterpretArrayReverse(t *testing.T) {
 		}
 
 		setFixedSize(0)
-		runValidCase(t, "reverseempty"+suffix, "originalempty"+suffix,
+		runValidCase(t,
+			"reverseempty"+suffix,
+			"originalempty"+suffix,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				arrayType,
 				common.ZeroAddress,
-			), interpreter.NewArrayValue(
+			),
+			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				arrayType,
 				common.ZeroAddress,
-			))
+			),
+		)
 
 		setFixedSize(5)
-		runValidCase(t, "reversexs"+suffix, "originalxs"+suffix,
+		runValidCase(t,
+			"reversexs"+suffix,
+			"originalxs"+suffix,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				arrayType,
 				common.ZeroAddress,
 				interpreter.NewUnmeteredIntValueFromInt64(200),
@@ -10394,9 +10367,9 @@ func TestInterpretArrayReverse(t *testing.T) {
 				interpreter.NewUnmeteredIntValueFromInt64(3),
 				interpreter.NewUnmeteredIntValueFromInt64(2),
 				interpreter.NewUnmeteredIntValueFromInt64(1),
-			), interpreter.NewArrayValue(
+			),
+			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				arrayType,
 				common.ZeroAddress,
 				interpreter.NewUnmeteredIntValueFromInt64(1),
@@ -10404,34 +10377,38 @@ func TestInterpretArrayReverse(t *testing.T) {
 				interpreter.NewUnmeteredIntValueFromInt64(3),
 				interpreter.NewUnmeteredIntValueFromInt64(100),
 				interpreter.NewUnmeteredIntValueFromInt64(200),
-			))
+			),
+		)
 
 		setFixedSize(4)
-		runValidCase(t, "reverseys"+suffix, "originalys"+suffix,
+		runValidCase(t,
+			"reverseys"+suffix,
+			"originalys"+suffix,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				arrayType,
 				common.ZeroAddress,
 				interpreter.NewUnmeteredIntValueFromInt64(23),
 				interpreter.NewUnmeteredIntValueFromInt64(297),
 				interpreter.NewUnmeteredIntValueFromInt64(467),
 				interpreter.NewUnmeteredIntValueFromInt64(100),
-			), interpreter.NewArrayValue(
+			),
+			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				arrayType,
 				common.ZeroAddress,
 				interpreter.NewUnmeteredIntValueFromInt64(100),
 				interpreter.NewUnmeteredIntValueFromInt64(467),
 				interpreter.NewUnmeteredIntValueFromInt64(297),
 				interpreter.NewUnmeteredIntValueFromInt64(23),
-			))
+			),
+		)
 
-		runValidCase(t, "reversesa"+suffix, "originalsa"+suffix,
+		runValidCase(t,
+			"reversesa"+suffix,
+			"originalsa"+suffix,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
@@ -10439,9 +10416,9 @@ func TestInterpretArrayReverse(t *testing.T) {
 				interpreter.NewUnmeteredIntValueFromInt64(3),
 				interpreter.NewUnmeteredIntValueFromInt64(2),
 				interpreter.NewUnmeteredIntValueFromInt64(1),
-			), interpreter.NewArrayValue(
+			),
+			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
@@ -10505,7 +10482,6 @@ func TestInterpretArrayFilter(t *testing.T) {
 
 		emptyVarSizedArray := interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -10552,7 +10528,6 @@ func TestInterpretArrayFilter(t *testing.T) {
 			"originalxs",
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				varSizedArrayType,
 				common.ZeroAddress,
 				interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -10560,7 +10535,6 @@ func TestInterpretArrayFilter(t *testing.T) {
 			),
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				varSizedArrayType,
 				common.ZeroAddress,
 				interpreter.NewUnmeteredIntValueFromInt64(1),
@@ -10621,7 +10595,6 @@ func TestInterpretArrayFilter(t *testing.T) {
 			"originalsa",
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				varSizedArrayType,
 				common.ZeroAddress,
 				interpreter.NewUnmeteredIntValueFromInt64(1),
@@ -10629,7 +10602,6 @@ func TestInterpretArrayFilter(t *testing.T) {
 			),
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				varSizedArrayType,
 				common.ZeroAddress,
 				interpreter.NewUnmeteredIntValueFromInt64(1),
@@ -10665,7 +10637,6 @@ func TestInterpretArrayFilter(t *testing.T) {
 			"originalempty_fixed",
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
@@ -10673,7 +10644,6 @@ func TestInterpretArrayFilter(t *testing.T) {
 			),
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.ConstantSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 					Size: 0,
@@ -10709,7 +10679,6 @@ func TestInterpretArrayFilter(t *testing.T) {
 			"originalxs_fixed",
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
@@ -10719,7 +10688,6 @@ func TestInterpretArrayFilter(t *testing.T) {
 			),
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.ConstantSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 					Size: 5,
@@ -10778,7 +10746,6 @@ func TestInterpretArrayFilter(t *testing.T) {
 			"originalsa_fixed",
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
@@ -10788,7 +10755,6 @@ func TestInterpretArrayFilter(t *testing.T) {
 			),
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
@@ -10893,7 +10859,6 @@ func TestInterpretArrayMap(t *testing.T) {
 
 		emptyVarSizedArray := interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -10936,7 +10901,6 @@ func TestInterpretArrayMap(t *testing.T) {
 			"originalxs",
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt16,
 				},
@@ -10949,7 +10913,6 @@ func TestInterpretArrayMap(t *testing.T) {
 			),
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
@@ -11006,7 +10969,6 @@ func TestInterpretArrayMap(t *testing.T) {
 			"originalsa",
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				varSizedArrayType,
 				common.ZeroAddress,
 				interpreter.NewUnmeteredIntValueFromInt64(0),
@@ -11015,7 +10977,6 @@ func TestInterpretArrayMap(t *testing.T) {
 			),
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				varSizedArrayType,
 				common.ZeroAddress,
 				interpreter.NewUnmeteredIntValueFromInt64(1),
@@ -11068,7 +11029,6 @@ func TestInterpretArrayMap(t *testing.T) {
 			"original",
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				varSizedArrayType,
 				common.ZeroAddress,
 				interpreter.NewUnmeteredIntValueFromInt64(11),
@@ -11077,7 +11037,6 @@ func TestInterpretArrayMap(t *testing.T) {
 			),
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				varSizedArrayType,
 				common.ZeroAddress,
 				interpreter.NewUnmeteredIntValueFromInt64(1),
@@ -11113,7 +11072,6 @@ func TestInterpretArrayMap(t *testing.T) {
 			"originalempty_fixed",
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.ConstantSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeBool,
 					Size: 0,
@@ -11122,7 +11080,6 @@ func TestInterpretArrayMap(t *testing.T) {
 			),
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.ConstantSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 					Size: 0,
@@ -11158,7 +11115,6 @@ func TestInterpretArrayMap(t *testing.T) {
 			"originalxs_fixed",
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.ConstantSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt16,
 					Size: 5,
@@ -11172,7 +11128,6 @@ func TestInterpretArrayMap(t *testing.T) {
 			),
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.ConstantSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 					Size: 5,
@@ -11226,7 +11181,6 @@ func TestInterpretArrayMap(t *testing.T) {
 			"originalsa_fixed",
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.ConstantSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 					Size: 3,
@@ -11238,7 +11192,6 @@ func TestInterpretArrayMap(t *testing.T) {
 			),
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
@@ -11289,7 +11242,6 @@ func TestInterpretArrayMap(t *testing.T) {
 			"original_fixed",
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
@@ -11300,7 +11252,6 @@ func TestInterpretArrayMap(t *testing.T) {
 			),
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.ConstantSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 					Size: 3,
@@ -11343,7 +11294,6 @@ func TestInterpretArrayMap(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				interpreter.NewVariableSizedStaticType(
 					nil,
 					interpreter.NewOptionalStaticType(
@@ -11397,7 +11347,6 @@ func TestInterpretArrayToVariableSized(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
@@ -11422,7 +11371,6 @@ func TestInterpretArrayToVariableSized(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
@@ -11452,7 +11400,6 @@ func TestInterpretArrayToVariableSized(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
@@ -11531,7 +11478,6 @@ func TestInterpretArrayToVariableSized(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.NewCompositeStaticType(
 						nil,
@@ -11585,7 +11531,6 @@ func TestInterpretArrayToConstantSized(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.ConstantSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 					Size: 0,
@@ -11613,7 +11558,6 @@ func TestInterpretArrayToConstantSized(t *testing.T) {
 				inter,
 				interpreter.NewArrayValue(
 					inter,
-					interpreter.EmptyLocationRange,
 					&interpreter.ConstantSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeInt,
 						Size: 5,
@@ -11647,7 +11591,6 @@ func TestInterpretArrayToConstantSized(t *testing.T) {
 				inter,
 				interpreter.NewArrayValue(
 					inter,
-					interpreter.EmptyLocationRange,
 					&interpreter.ConstantSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeString,
 						Size: 2,
@@ -11748,7 +11691,6 @@ func TestInterpretArrayToConstantSized(t *testing.T) {
 				inter,
 				interpreter.NewArrayValue(
 					inter,
-					interpreter.EmptyLocationRange,
 					&interpreter.ConstantSizedStaticType{
 						Type: interpreter.NewCompositeStaticType(
 							nil,
@@ -12275,7 +12217,6 @@ func TestInterpretSwapInSameArray(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
@@ -12331,7 +12272,6 @@ func TestInterpretSwapInSameArray(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
@@ -12383,7 +12323,6 @@ func TestInterpretSwapInSameArray(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
@@ -12815,7 +12754,6 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 
 		foo = foo.Transfer(
 			inter,
-			interpreter.EmptyLocationRange,
 			atree.Address(address),
 			false,
 			nil,

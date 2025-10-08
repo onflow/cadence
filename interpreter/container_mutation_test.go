@@ -98,7 +98,6 @@ func TestInterpretArrayMutation(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
@@ -172,7 +171,6 @@ func TestInterpretArrayMutation(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
@@ -247,7 +245,6 @@ func TestInterpretArrayMutation(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
@@ -309,7 +306,6 @@ func TestInterpretArrayMutation(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
@@ -422,12 +418,12 @@ func TestInterpretArrayMutation(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from foo"),
-			array.Get(inter, interpreter.EmptyLocationRange, 0),
+			array.Get(inter, 0),
 		)
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from bar"),
-			array.Get(inter, interpreter.EmptyLocationRange, 1),
+			array.Get(inter, 1),
 		)
 	})
 
@@ -473,12 +469,12 @@ func TestInterpretArrayMutation(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from foo"),
-			array.Get(inter, interpreter.EmptyLocationRange, 0),
+			array.Get(inter, 0),
 		)
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from bar"),
-			array.Get(inter, interpreter.EmptyLocationRange, 1),
+			array.Get(inter, 1),
 		)
 	})
 
@@ -569,7 +565,6 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 
 		val, present := dictionary.Get(
 			inter,
-			interpreter.EmptyLocationRange,
 			interpreter.NewUnmeteredStringValue("foo"),
 		)
 		assert.True(t, present)
@@ -648,7 +643,6 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 
 		val, present := dictionary.Get(
 			inter,
-			interpreter.EmptyLocationRange,
 			interpreter.NewUnmeteredStringValue("foo"),
 		)
 		assert.True(t, present)
@@ -807,12 +801,12 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from foo"),
-			array.Get(inter, interpreter.EmptyLocationRange, 0),
+			array.Get(inter, 0),
 		)
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from bar"),
-			array.Get(inter, interpreter.EmptyLocationRange, 1),
+			array.Get(inter, 1),
 		)
 	})
 
@@ -858,12 +852,12 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from foo"),
-			array.Get(inter, interpreter.EmptyLocationRange, 0),
+			array.Get(inter, 0),
 		)
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("hello from bar"),
-			array.Get(inter, interpreter.EmptyLocationRange, 1),
+			array.Get(inter, 1),
 		)
 	})
 
@@ -952,7 +946,6 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 			nil,
 			interpreter.AddressValue{1},
 			interpreter.UnauthorizedAccess,
-			interpreter.EmptyLocationRange,
 		)
 
 		_, err := inter.Invoke("test", owner)
@@ -1147,7 +1140,6 @@ func TestInterpretInnerContainerMutationWhileIteratingOuter(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
@@ -1181,7 +1173,6 @@ func TestInterpretInnerContainerMutationWhileIteratingOuter(t *testing.T) {
 			inter,
 			interpreter.NewArrayValue(
 				inter,
-				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
@@ -1217,7 +1208,6 @@ func TestInterpretInnerContainerMutationWhileIteratingOuter(t *testing.T) {
 
 		val, present := dictionary.Get(
 			inter,
-			interpreter.EmptyLocationRange,
 			interpreter.NewUnmeteredStringValue("name"),
 		)
 		assert.True(t, present)
@@ -1252,7 +1242,6 @@ func TestInterpretInnerContainerMutationWhileIteratingOuter(t *testing.T) {
 
 		val, present := dictionary.Get(
 			inter,
-			interpreter.EmptyLocationRange,
 			interpreter.NewUnmeteredStringValue("name"),
 		)
 		assert.True(t, present)

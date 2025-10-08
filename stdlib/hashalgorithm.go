@@ -187,7 +187,7 @@ func hash(
 	tagValue *interpreter.StringValue,
 	hashAlgorithmValue interpreter.MemberAccessibleValue,
 ) interpreter.Value {
-	data, err := interpreter.ByteArrayValueToByteSlice(context, dataValue, locationRange)
+	data, err := interpreter.ByteArrayValueToByteSlice(context, dataValue)
 	if err != nil {
 		panic(errors.NewUnexpectedError("failed to get data. %w", err))
 	}

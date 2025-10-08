@@ -366,7 +366,6 @@ func (executor *contractFunctionExecutor) convertArgument(
 				common.Address(address),
 				environment,
 				referenceType.Authorization,
-				locationRange,
 			)
 
 			return accountReferenceValue, nil

@@ -81,7 +81,6 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 		actualCodeHash, err := interpreter.ByteArrayValueToByteSlice(
 			inter,
 			codeHash,
-			interpreter.EmptyLocationRange,
 		)
 		require.NoError(t, err)
 

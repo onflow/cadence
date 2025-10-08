@@ -58,7 +58,7 @@ var AssertFunctionType = &sema.FunctionType{
 var NativeAssertFunction = interpreter.NativeFunction(
 	func(
 		_ interpreter.NativeFunctionContext,
-		locationRange interpreter.LocationRange,
+		_ interpreter.LocationRange,
 		_ interpreter.TypeParameterGetter,
 		_ interpreter.Value,
 		args ...interpreter.Value,
@@ -69,7 +69,7 @@ var NativeAssertFunction = interpreter.NativeFunction(
 			messageValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[1])
 			message = messageValue.Str
 		}
-		return Assert(result, message, locationRange)
+		return Assert(result, message)
 	},
 )
 
@@ -89,11 +89,10 @@ var VMAssertFunction = NewNativeStandardLibraryStaticFunction(
 	true,
 )
 
-func Assert(result interpreter.BoolValue, message string, locationRange interpreter.LocationRange) interpreter.Value {
+func Assert(result interpreter.BoolValue, message string) interpreter.Value {
 	if !result {
 		panic(&AssertionError{
-			Message:       message,
-			LocationRange: locationRange,
+			Message: message,
 		})
 	}
 	return interpreter.Void

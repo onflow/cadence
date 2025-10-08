@@ -147,7 +147,6 @@ func (*InterpretedFunctionValue) IsResourceKinded(_ ValueStaticTypeContext) bool
 
 func (f *InterpretedFunctionValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -307,7 +306,6 @@ func (*HostFunctionValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (f *HostFunctionValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -372,7 +370,12 @@ func ReceiverReference(context ReferenceCreationContext, receiver Value) (Refere
 		semaType := MustSemaTypeOfValue(receiver, context)
 		// Create an unauthorized reference. The purpose of it is only to track and invalidate resource moves,
 		// it is not directly exposed to the users
-		selfRef = NewEphemeralReferenceValue(context, UnauthorizedAccess, receiver, semaType, EmptyLocationRange)
+		selfRef = NewEphemeralReferenceValue(
+			context,
+			UnauthorizedAccess,
+			receiver,
+			semaType,
+		)
 	}
 	return selfRef, selfIsRef
 }
@@ -470,23 +473,17 @@ func GetReceiver(
 		var receiverValue Value = receiverReference
 		receiver = &receiverValue
 	} else {
-		receiver = receiverReference.ReferencedValue(
-			context,
-			EmptyLocationRange,
-			true,
-		)
+		receiver = receiverReference.ReferencedValue(context, true)
 	}
 
 	if _, isStorageRef := receiverReference.(*StorageReferenceValue); isStorageRef {
 		// `storageRef.ReferencedValue` above already checks for the type validity, if it's not nil.
 		// If nil, that means the value has been moved out of storage.
 		if receiver == nil {
-			panic(&ReferencedValueChangedError{
-				LocationRange: locationRange,
-			})
+			panic(&ReferencedValueChangedError{})
 		}
 	} else {
-		CheckInvalidatedResourceOrResourceReference(receiverReference, locationRange, context)
+		CheckInvalidatedResourceOrResourceReference(receiverReference, context)
 	}
 
 	return receiver
@@ -518,7 +515,6 @@ func (BoundFunctionValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (f BoundFunctionValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,

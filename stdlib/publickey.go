@@ -170,7 +170,7 @@ func NewPublicKeyFromValue(
 	// publicKey field
 	key := publicKey.GetMember(context, locationRange, sema.PublicKeyTypePublicKeyFieldName)
 
-	byteArray, err := interpreter.ByteArrayValueToByteSlice(context, key, locationRange)
+	byteArray, err := interpreter.ByteArrayValueToByteSlice(context, key)
 	if err != nil {
 		return nil, errors.NewUnexpectedError("public key needs to be a byte array. %w", err)
 	}
@@ -204,7 +204,7 @@ func NewPublicKeyFromValue(
 
 	return &PublicKey{
 		PublicKey: byteArray,
-		SignAlgo:  sema.SignatureAlgorithm(signAlgoRawValue.ToInt(locationRange)),
+		SignAlgo:  sema.SignatureAlgorithm(signAlgoRawValue.ToInt()),
 	}, nil
 }
 
@@ -288,19 +288,19 @@ func PublicKeyVerifySignature(
 	hashAlgorithmValue *interpreter.SimpleCompositeValue,
 	verifier PublicKeySignatureVerifier,
 ) interpreter.Value {
+
 	interpreter.ExpectType(
 		context,
 		publicKeyValue,
 		sema.PublicKeyType,
-		locationRange,
 	)
 
-	signature, err := interpreter.ByteArrayValueToByteSlice(context, signatureValue, locationRange)
+	signature, err := interpreter.ByteArrayValueToByteSlice(context, signatureValue)
 	if err != nil {
 		panic(errors.NewUnexpectedError("failed to get signature. %w", err))
 	}
 
-	signedData, err := interpreter.ByteArrayValueToByteSlice(context, signedDataValue, locationRange)
+	signedData, err := interpreter.ByteArrayValueToByteSlice(context, signedDataValue)
 	if err != nil {
 		panic(errors.NewUnexpectedError("failed to get signed data. %w", err))
 	}
@@ -397,7 +397,6 @@ func PublicKeyVerifyPoP(
 		context,
 		publicKeyValue,
 		sema.PublicKeyType,
-		locationRange,
 	)
 
 	publicKey, err := NewPublicKeyFromValue(context, locationRange, publicKeyValue)
@@ -405,7 +404,7 @@ func PublicKeyVerifyPoP(
 		panic(err)
 	}
 
-	signature, err := interpreter.ByteArrayValueToByteSlice(context, signatureValue, locationRange)
+	signature, err := interpreter.ByteArrayValueToByteSlice(context, signatureValue)
 	if err != nil {
 		panic(err)
 	}

@@ -133,14 +133,14 @@ func (v *AccountCapabilityControllerValue) ConformsToStaticType(
 	return true
 }
 
-func (v *AccountCapabilityControllerValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
+func (v *AccountCapabilityControllerValue) Equal(context ValueComparisonContext, other Value) bool {
 	otherController, ok := other.(*AccountCapabilityControllerValue)
 	if !ok {
 		return false
 	}
 
 	return otherController.BorrowType.Equal(v.BorrowType) &&
-		otherController.CapabilityID.Equal(context, locationRange, v.CapabilityID)
+		otherController.CapabilityID.Equal(context, v.CapabilityID)
 }
 
 func (*AccountCapabilityControllerValue) IsStorable() bool {
@@ -168,7 +168,6 @@ func (*AccountCapabilityControllerValue) IsResourceKinded(_ ValueStaticTypeConte
 
 func (v *AccountCapabilityControllerValue) Transfer(
 	transferContext ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -305,7 +304,7 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 	context ValueCapabilityControllerReferenceValueContext,
 	capabilityAddress common.Address,
 	resultBorrowType *sema.ReferenceType,
-	locationRange LocationRange,
+	_ LocationRange,
 ) ReferenceValue {
 
 	accountHandler := context.GetAccountHandlerFunc()
@@ -316,7 +315,6 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 		context,
 		account,
 		sema.AccountType,
-		EmptyLocationRange,
 	)
 
 	authorization := ConvertSemaAccessToStaticAuthorization(
@@ -328,7 +326,6 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 		authorization,
 		account,
 		resultBorrowType.Type,
-		locationRange,
 	)
 }
 

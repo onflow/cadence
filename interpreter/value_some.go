@@ -189,7 +189,6 @@ func OptionalValueMapFunction(
 				invocationContext,
 				transformFunction,
 				[]Value{v},
-				nil,
 				[]sema.Type{innerValueType},
 				parameterTypes,
 				returnType,
@@ -234,7 +233,7 @@ func (v *SomeValue) ConformsToStaticType(
 	)
 }
 
-func (v *SomeValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
+func (v *SomeValue) Equal(context ValueComparisonContext, other Value) bool {
 	otherSome, ok := other.(*SomeValue)
 	if !ok {
 		return false
@@ -247,7 +246,7 @@ func (v *SomeValue) Equal(context ValueComparisonContext, locationRange Location
 		return false
 	}
 
-	return equatableValue.Equal(context, locationRange, otherSome.value)
+	return equatableValue.Equal(context, otherSome.value)
 }
 
 func (v *SomeValue) Storable(
@@ -347,7 +346,6 @@ func (v *SomeValue) IsResourceKinded(context ValueStaticTypeContext) bool {
 
 func (v *SomeValue) Transfer(
 	context ValueTransferContext,
-	locationRange LocationRange,
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -363,7 +361,6 @@ func (v *SomeValue) Transfer(
 
 		innerValue = v.value.Transfer(
 			context,
-			locationRange,
 			address,
 			remove,
 			nil,
@@ -390,7 +387,7 @@ func (v *SomeValue) Transfer(
 		// we don't need to invalidate referenced resources if this resource was moved
 		// to storage, as the earlier transfer will have done this already
 		if !needsStoreTo {
-			InvalidateReferencedResources(context, v.value, locationRange)
+			InvalidateReferencedResources(context, v.value)
 		}
 		v.value = nil
 	}

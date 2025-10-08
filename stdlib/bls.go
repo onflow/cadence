@@ -94,7 +94,6 @@ func BLSAggregatePublicKeys(
 		context,
 		publicKeysValue,
 		sema.PublicKeyArrayType,
-		locationRange,
 	)
 
 	publicKeys := make([]*PublicKey, 0, publicKeysValue.Count())
@@ -117,7 +116,6 @@ func BLSAggregatePublicKeys(
 			return true
 		},
 		false,
-		locationRange,
 	)
 
 	aggregatedPublicKey, err := aggregator.BLSAggregatePublicKeys(publicKeys)
@@ -150,7 +148,7 @@ func NativeBLSAggregateSignaturesFunction(
 	return interpreter.NativeFunction(
 		func(
 			context interpreter.NativeFunctionContext,
-			locationRange interpreter.LocationRange,
+			_ interpreter.LocationRange,
 			_ interpreter.TypeParameterGetter,
 			_ interpreter.Value,
 			args ...interpreter.Value,
@@ -159,7 +157,6 @@ func NativeBLSAggregateSignaturesFunction(
 			return BLSAggregateSignatures(
 				context,
 				signaturesValue,
-				locationRange,
 				aggregator,
 			)
 		},
@@ -195,7 +192,6 @@ func NewVMBLSAggregateSignaturesFunction(
 func BLSAggregateSignatures(
 	context interpreter.InvocationContext,
 	signaturesValue *interpreter.ArrayValue,
-	locationRange interpreter.LocationRange,
 	aggregator BLSSignatureAggregator,
 ) interpreter.Value {
 
@@ -203,7 +199,6 @@ func BLSAggregateSignatures(
 		context,
 		signaturesValue,
 		sema.ByteArrayArrayType,
-		locationRange,
 	)
 
 	bytesArray := make([][]byte, 0, signaturesValue.Count())
@@ -215,7 +210,7 @@ func BLSAggregateSignatures(
 				panic(errors.NewUnreachableError())
 			}
 
-			bytes, err := interpreter.ByteArrayValueToByteSlice(context, signature, locationRange)
+			bytes, err := interpreter.ByteArrayValueToByteSlice(context, signature)
 			if err != nil {
 				panic(err)
 			}
@@ -226,7 +221,6 @@ func BLSAggregateSignatures(
 			return true
 		},
 		false,
-		locationRange,
 	)
 
 	aggregatedSignature, err := aggregator.BLSAggregateSignatures(bytesArray)

@@ -156,7 +156,7 @@ func (v *IDCapabilityValue) GetMember(context MemberAccessibleContext, locationR
 
 func (v *IDCapabilityValue) GetMethod(
 	context MemberAccessibleContext,
-	locationRange LocationRange,
+	_ LocationRange,
 	name string,
 ) FunctionValue {
 	switch name {
@@ -192,14 +192,14 @@ func (v *IDCapabilityValue) ConformsToStaticType(
 	return true
 }
 
-func (v *IDCapabilityValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
+func (v *IDCapabilityValue) Equal(context ValueComparisonContext, other Value) bool {
 	otherCapability, ok := other.(*IDCapabilityValue)
 	if !ok {
 		return false
 	}
 
 	return otherCapability.ID == v.ID &&
-		otherCapability.address.Equal(context, locationRange, v.address) &&
+		otherCapability.address.Equal(context, v.address) &&
 		otherCapability.BorrowType.Equal(v.BorrowType)
 }
 
@@ -234,7 +234,6 @@ func (*IDCapabilityValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (v *IDCapabilityValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,

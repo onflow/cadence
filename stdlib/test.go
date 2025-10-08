@@ -121,7 +121,6 @@ func getNestedTypeConstructorValue(
 func arrayValueToSlice(
 	context interpreter.ContainerMutationContext,
 	value interpreter.Value,
-	locationRange interpreter.LocationRange,
 ) ([]interpreter.Value, error) {
 	array, ok := value.(*interpreter.ArrayValue)
 	if !ok {
@@ -137,7 +136,6 @@ func arrayValueToSlice(
 			return true
 		},
 		false,
-		locationRange,
 	)
 
 	return result, nil
@@ -199,7 +197,6 @@ func getConstructor(variableResolver interpreter.VariableResolver, typeName stri
 func addressArrayValueToSlice(
 	context interpreter.ContainerMutationContext,
 	accountsValue interpreter.Value,
-	locationRange interpreter.LocationRange,
 ) []common.Address {
 	accountsArray, ok := accountsValue.(*interpreter.ArrayValue)
 	if !ok {
@@ -221,7 +218,6 @@ func addressArrayValueToSlice(
 			return true
 		},
 		false,
-		locationRange,
 	)
 
 	return addresses
@@ -255,7 +251,6 @@ func accountsArrayValueToSlice(
 			return true
 		},
 		false,
-		locationRange,
 	)
 
 	return accounts
@@ -446,9 +441,8 @@ func newMatcherWithGenericTestFunction(
 					argumentSemaType := interpreter.MustConvertStaticToSemaType(argumentStaticType, invocationContext)
 
 					panic(&interpreter.TypeMismatchError{
-						ExpectedType:  parameterType,
-						ActualType:    argumentSemaType,
-						LocationRange: invocation.LocationRange,
+						ExpectedType: parameterType,
+						ActualType:   argumentSemaType,
 					})
 				}
 			}

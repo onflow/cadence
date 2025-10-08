@@ -78,7 +78,6 @@ func (v CompiledFunctionValue) StaticType(interpreter.ValueStaticTypeContext) bb
 
 func (v CompiledFunctionValue) Transfer(
 	context interpreter.ValueTransferContext,
-	_ interpreter.LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -208,8 +207,8 @@ func (v *NativeFunctionValue) StaticType(context interpreter.ValueStaticTypeCont
 	)
 }
 
-func (v *NativeFunctionValue) Transfer(_ interpreter.ValueTransferContext,
-	_ interpreter.LocationRange,
+func (v *NativeFunctionValue) Transfer(
+	_ interpreter.ValueTransferContext,
 	_ atree.Address,
 	_ bool,
 	_ atree.Storable,
@@ -432,8 +431,8 @@ func (v *BoundFunctionValue) StaticType(context interpreter.ValueStaticTypeConte
 	return interpreter.NewFunctionStaticType(context, v.functionType)
 }
 
-func (v *BoundFunctionValue) Transfer(_ interpreter.ValueTransferContext,
-	_ interpreter.LocationRange,
+func (v *BoundFunctionValue) Transfer(
+	_ interpreter.ValueTransferContext,
 	_ atree.Address,
 	_ bool,
 	_ atree.Storable,

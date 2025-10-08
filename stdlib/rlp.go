@@ -54,26 +54,26 @@ const rlpErrMsgInputContainsExtraBytes = "input data is expected to be RLP-encod
 var NativeRLPDecodeStringFunction = interpreter.NativeFunction(
 	func(
 		context interpreter.NativeFunctionContext,
-		locationRange interpreter.LocationRange,
+		_ interpreter.LocationRange,
 		_ interpreter.TypeParameterGetter,
 		_ interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
 		input := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
-		return RLPDecodeString(input, context, locationRange)
+		return RLPDecodeString(input, context)
 	},
 )
 
 var NativeRLPDecodeListFunction = interpreter.NativeFunction(
 	func(
 		context interpreter.NativeFunctionContext,
-		locationRange interpreter.LocationRange,
+		_ interpreter.LocationRange,
 		_ interpreter.TypeParameterGetter,
 		_ interpreter.Value,
 		args ...interpreter.Value,
 	) interpreter.Value {
 		input := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
-		return RLPDecodeList(input, context, locationRange)
+		return RLPDecodeList(input, context)
 	},
 )
 
@@ -95,13 +95,11 @@ var VMRLPDecodeStringFunction = VMFunction{
 func RLPDecodeString(
 	input *interpreter.ArrayValue,
 	context interpreter.InvocationContext,
-	locationRange interpreter.LocationRange,
 ) interpreter.Value {
-	convertedInput, err := interpreter.ByteArrayValueToByteSlice(context, input, locationRange)
+	convertedInput, err := interpreter.ByteArrayValueToByteSlice(context, input)
 	if err != nil {
 		panic(&RLPDecodeStringError{
-			Msg:           err.Error(),
-			LocationRange: locationRange,
+			Msg: err.Error(),
 		})
 	}
 
@@ -116,15 +114,13 @@ func RLPDecodeString(
 	output, bytesRead, err := rlp.DecodeString(convertedInput, 0)
 	if err != nil {
 		panic(&RLPDecodeStringError{
-			Msg:           err.Error(),
-			LocationRange: locationRange,
+			Msg: err.Error(),
 		})
 	}
 
 	if bytesRead != len(convertedInput) {
 		panic(&RLPDecodeStringError{
-			Msg:           rlpErrMsgInputContainsExtraBytes,
-			LocationRange: locationRange,
+			Msg: rlpErrMsgInputContainsExtraBytes,
 		})
 	}
 
@@ -167,13 +163,11 @@ var VMRLPDecodeListFunction = VMFunction{
 func RLPDecodeList(
 	input *interpreter.ArrayValue,
 	context interpreter.InvocationContext,
-	locationRange interpreter.LocationRange,
 ) interpreter.Value {
-	convertedInput, err := interpreter.ByteArrayValueToByteSlice(context, input, locationRange)
+	convertedInput, err := interpreter.ByteArrayValueToByteSlice(context, input)
 	if err != nil {
 		panic(&RLPDecodeListError{
-			Msg:           err.Error(),
-			LocationRange: locationRange,
+			Msg: err.Error(),
 		})
 	}
 
@@ -189,15 +183,13 @@ func RLPDecodeList(
 
 	if err != nil {
 		panic(&RLPDecodeListError{
-			Msg:           err.Error(),
-			LocationRange: locationRange,
+			Msg: err.Error(),
 		})
 	}
 
 	if bytesRead != len(convertedInput) {
 		panic(&RLPDecodeListError{
-			Msg:           rlpErrMsgInputContainsExtraBytes,
-			LocationRange: locationRange,
+			Msg: rlpErrMsgInputContainsExtraBytes,
 		})
 	}
 
@@ -208,7 +200,6 @@ func RLPDecodeList(
 
 	return interpreter.NewArrayValue(
 		context,
-		locationRange,
 		interpreter.NewVariableSizedStaticType(
 			context,
 			interpreter.ByteArrayStaticType,

@@ -103,8 +103,7 @@ func testTypeAssertFunction(
 
 			if !condition {
 				panic(&AssertionError{
-					Message:       message,
-					LocationRange: invocation.LocationRange,
+					Message: message,
 				})
 			}
 
@@ -174,16 +173,11 @@ func testTypeAssertEqualFunction(
 					actualType,
 				)
 				panic(&AssertionError{
-					Message:       message,
-					LocationRange: invocation.LocationRange,
+					Message: message,
 				})
 			}
 
-			equal := expected.Equal(
-				inter,
-				invocation.LocationRange,
-				actual,
-			)
+			equal := expected.Equal(inter, actual)
 
 			if !equal {
 				message := fmt.Sprintf(
@@ -192,8 +186,7 @@ func testTypeAssertEqualFunction(
 					actual,
 				)
 				panic(&AssertionError{
-					Message:       message,
-					LocationRange: invocation.LocationRange,
+					Message: message,
 				})
 			}
 
@@ -242,8 +235,7 @@ func testTypeFailFunction(
 			}
 
 			panic(&AssertionError{
-				Message:       message,
-				LocationRange: invocation.LocationRange,
+				Message: message,
 			})
 		},
 	)
@@ -318,8 +310,7 @@ func newTestTypeExpectFunction(functionType *sema.FunctionType) testContractBoun
 						value,
 					)
 					panic(&AssertionError{
-						Message:       message,
-						LocationRange: locationRange,
+						Message: message,
 					})
 				}
 
@@ -561,11 +552,7 @@ func newTestTypeEqualFunction(
 							panic(errors.NewUnreachableError())
 						}
 
-						equal := thisValue.Equal(
-							inter,
-							invocation.LocationRange,
-							otherValue,
-						)
+						equal := thisValue.Equal(inter, otherValue)
 
 						return interpreter.BoolValue(equal)
 					},
@@ -682,9 +669,9 @@ func newTestTypeHaveElementCountFunction(
 						var matchingCount bool
 						switch value := invocation.Arguments[0].(type) {
 						case *interpreter.ArrayValue:
-							matchingCount = value.Count() == count.ToInt(invocation.LocationRange)
+							matchingCount = value.Count() == count.ToInt()
 						case *interpreter.DictionaryValue:
-							matchingCount = value.Count() == count.ToInt(invocation.LocationRange)
+							matchingCount = value.Count() == count.ToInt()
 						default:
 							panic(errors.NewDefaultUserError("expected Array or Dictionary argument"))
 						}
@@ -753,13 +740,11 @@ func newTestTypeContainFunction(
 						case *interpreter.ArrayValue:
 							elementFound = value.Contains(
 								inter,
-								invocation.LocationRange,
 								element,
 							)
 						case *interpreter.DictionaryValue:
 							elementFound = value.ContainsKey(
 								inter,
-								invocation.LocationRange,
 								element,
 							)
 						default:
@@ -829,11 +814,7 @@ func newTestTypeBeGreaterThanFunction(
 							panic(errors.NewUnreachableError())
 						}
 
-						isGreaterThan := thisValue.Greater(
-							inter,
-							otherValue,
-							invocation.LocationRange,
-						)
+						isGreaterThan := thisValue.Greater(inter, otherValue)
 
 						return isGreaterThan
 					},
@@ -979,11 +960,7 @@ func newTestTypeBeLessThanFunction(
 							panic(errors.NewUnreachableError())
 						}
 
-						isLessThan := thisValue.Less(
-							inter,
-							otherValue,
-							invocation.LocationRange,
-						)
+						isLessThan := thisValue.Less(inter, otherValue)
 
 						return isLessThan
 					},

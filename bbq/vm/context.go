@@ -204,27 +204,23 @@ func (c *Context) startContainerValueIteration(valueID atree.ValueID) {
 	c.containerValueIteration[valueID]++
 }
 
-func (c *Context) ValidateContainerMutation(valueID atree.ValueID, locationRange interpreter.LocationRange) {
+func (c *Context) ValidateContainerMutation(valueID atree.ValueID) {
 	_, present := c.containerValueIteration[valueID]
 	if !present {
 		return
 	}
-	panic(&interpreter.ContainerMutatedDuringIterationError{
-		LocationRange: locationRange,
-	})
+	panic(&interpreter.ContainerMutatedDuringIterationError{})
 }
 
-func (c *Context) GetCompositeValueFunctions(v *interpreter.CompositeValue, locationRange interpreter.LocationRange) *interpreter.FunctionOrderedMap {
+func (c *Context) GetCompositeValueFunctions(v *interpreter.CompositeValue, _ interpreter.LocationRange) *interpreter.FunctionOrderedMap {
 	//TODO
 	return nil
 }
 
-func (c *Context) EnforceNotResourceDestruction(valueID atree.ValueID, locationRange interpreter.LocationRange) {
+func (c *Context) EnforceNotResourceDestruction(valueID atree.ValueID, _ interpreter.LocationRange) {
 	_, exists := c.destroyedResources[valueID]
 	if exists {
-		panic(&interpreter.DestroyedResourceError{
-			LocationRange: locationRange,
-		})
+		panic(&interpreter.DestroyedResourceError{})
 	}
 }
 

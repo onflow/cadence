@@ -82,7 +82,7 @@ func NativeGetBlockFunction(provider BlockAtHeightProvider) interpreter.NativeFu
 	return interpreter.NativeFunction(
 		func(
 			context interpreter.NativeFunctionContext,
-			locationRange interpreter.LocationRange,
+			_ interpreter.LocationRange,
 			_ interpreter.TypeParameterGetter,
 			_ interpreter.Value,
 			args ...interpreter.Value,
@@ -94,11 +94,7 @@ func NativeGetBlockFunction(provider BlockAtHeightProvider) interpreter.NativeFu
 				return interpreter.Nil
 			}
 
-			blockValue := NewBlockValue(
-				context,
-				locationRange,
-				block,
-			)
+			blockValue := NewBlockValue(context, block)
 			return interpreter.NewSomeValueNonCopying(context, blockValue)
 		},
 	)
@@ -135,7 +131,6 @@ var blockIDMemoryUsage = common.NewNumberMemoryUsage(
 
 func NewBlockValue(
 	context interpreter.ArrayCreationContext,
-	locationRange interpreter.LocationRange,
 	block Block,
 ) interpreter.Value {
 
@@ -164,7 +159,6 @@ func NewBlockValue(
 
 	idValue := interpreter.NewArrayValue(
 		context,
-		locationRange,
 		BlockIDStaticType,
 		common.ZeroAddress,
 		values...,
@@ -177,7 +171,6 @@ func NewBlockValue(
 		func() uint64 {
 			return uint64(time.Unix(0, block.Timestamp).Unix())
 		},
-		locationRange,
 	)
 
 	return interpreter.NewBlockValue(
@@ -232,11 +225,7 @@ func NativeGetCurrentBlockFunction(provider CurrentBlockProvider) interpreter.Na
 				panic(errors.NewUnexpectedError("cannot get current block"))
 			}
 
-			return NewBlockValue(
-				context,
-				locationRange,
-				block,
-			)
+			return NewBlockValue(context, block)
 		},
 	)
 }
