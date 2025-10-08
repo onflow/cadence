@@ -22,7 +22,6 @@ import (
 	"math/big"
 
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 )
 
@@ -62,10 +61,7 @@ func getNumberValueFunctionMember(
 			context,
 			v,
 			sema.ToStringFunctionType,
-			func(v NumberValue, invocation Invocation) Value {
-				invocationContext := invocation.InvocationContext
-				return NumberValueToString(invocationContext, v)
-			},
+			NativeNumberToStringFunction,
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
@@ -73,12 +69,7 @@ func getNumberValueFunctionMember(
 			context,
 			v,
 			sema.ToBigEndianBytesFunctionType,
-			func(v NumberValue, invocation Invocation) Value {
-				return ByteSliceToByteArrayValue(
-					invocation.InvocationContext,
-					v.ToBigEndianBytes(),
-				)
-			},
+			NativeNumberToBigEndianBytesFunction,
 		)
 
 	case sema.NumericTypeSaturatingAddFunctionName:
@@ -86,14 +77,7 @@ func getNumberValueFunctionMember(
 			context,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
-			func(v NumberValue, invocation Invocation) Value {
-				other, ok := invocation.Arguments[0].(NumberValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.SaturatingPlus(invocation.InvocationContext, other)
-			},
+			NativeNumberSaturatingAddFunction,
 		)
 
 	case sema.NumericTypeSaturatingSubtractFunctionName:
@@ -101,14 +85,7 @@ func getNumberValueFunctionMember(
 			context,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
-			func(v NumberValue, invocation Invocation) Value {
-				other, ok := invocation.Arguments[0].(NumberValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.SaturatingMinus(invocation.InvocationContext, other)
-			},
+			NativeNumberSaturatingSubtractFunction,
 		)
 
 	case sema.NumericTypeSaturatingMultiplyFunctionName:
@@ -116,14 +93,7 @@ func getNumberValueFunctionMember(
 			context,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
-			func(v NumberValue, invocation Invocation) Value {
-				other, ok := invocation.Arguments[0].(NumberValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.SaturatingMul(invocation.InvocationContext, other)
-			},
+			NativeNumberSaturatingMultiplyFunction,
 		)
 
 	case sema.NumericTypeSaturatingDivideFunctionName:
@@ -131,14 +101,7 @@ func getNumberValueFunctionMember(
 			context,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
-			func(v NumberValue, invocation Invocation) Value {
-				other, ok := invocation.Arguments[0].(NumberValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.SaturatingDiv(invocation.InvocationContext, other)
-			},
+			NativeNumberSaturatingDivideFunction,
 		)
 	}
 
@@ -174,3 +137,80 @@ type BigNumberValue interface {
 	ByteLength() int
 	ToBigInt(memoryGauge common.MemoryGauge) *big.Int
 }
+
+// all native number functions
+var NativeNumberToStringFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		locationRange LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		_ ...Value,
+	) Value {
+		return NumberValueToString(context, receiver.(NumberValue))
+	},
+)
+
+var NativeNumberToBigEndianBytesFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		locationRange LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		_ ...Value,
+	) Value {
+		return ByteSliceToByteArrayValue(context, receiver.(NumberValue).ToBigEndianBytes())
+	},
+)
+
+var NativeNumberSaturatingAddFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		other := AssertValueOfType[NumberValue](args[0])
+		return receiver.(NumberValue).SaturatingPlus(context, other)
+	},
+)
+
+var NativeNumberSaturatingSubtractFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		other := AssertValueOfType[NumberValue](args[0])
+		return receiver.(NumberValue).SaturatingMinus(context, other)
+	},
+)
+
+var NativeNumberSaturatingMultiplyFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		other := AssertValueOfType[NumberValue](args[0])
+		return receiver.(NumberValue).SaturatingMul(context, other)
+	},
+)
+
+var NativeNumberSaturatingDivideFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		other := AssertValueOfType[NumberValue](args[0])
+		return receiver.(NumberValue).SaturatingDiv(context, other)
+	},
+)

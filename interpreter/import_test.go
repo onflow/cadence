@@ -43,6 +43,20 @@ import (
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
+func newAddLogFunction(logs *[]string) interpreter.NativeFunction {
+	return func(
+		_ interpreter.NativeFunctionContext,
+		_ interpreter.LocationRange,
+		_ interpreter.TypeParameterGetter,
+		_ interpreter.Value,
+		arguments ...interpreter.Value,
+	) interpreter.Value {
+		value := arguments[0]
+		*logs = append(*logs, value.String())
+		return interpreter.Void
+	}
+}
+
 func TestInterpretVirtualImport(t *testing.T) {
 
 	t.Parallel()
@@ -900,11 +914,7 @@ func TestInterpretImportGlobals(t *testing.T) {
 			logFunctionName,
 			stdlib.LogFunctionType,
 			"",
-			func(_ *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
-				value := arguments[0]
-				logs = append(logs, value.String())
-				return interpreter.Void
-			},
+			newAddLogFunction(&logs),
 		)
 
 		baseValueActivation := sema.NewVariableActivation(nil)
@@ -1016,11 +1026,7 @@ func TestInterpretImportGlobals(t *testing.T) {
 			logFunctionName,
 			stdlib.LogFunctionType,
 			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
-				value := invocation.Arguments[0]
-				logs = append(logs, value.String())
-				return interpreter.Void
-			},
+			newAddLogFunction(&logs),
 		)
 
 		baseValueActivation := sema.NewVariableActivation(nil)
@@ -1118,11 +1124,7 @@ func TestInterpretDynamicallyImportedGlobals(t *testing.T) {
 			logFunctionName,
 			stdlib.LogFunctionType,
 			"",
-			func(_ *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
-				value := arguments[0]
-				logs = append(logs, value.String())
-				return interpreter.Void
-			},
+			newAddLogFunction(&logs),
 		)
 
 		baseValueActivation := sema.NewVariableActivation(nil)
@@ -1292,11 +1294,7 @@ func TestInterpretDynamicallyImportedGlobals(t *testing.T) {
 			logFunctionName,
 			stdlib.LogFunctionType,
 			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
-				value := invocation.Arguments[0]
-				logs = append(logs, value.String())
-				return interpreter.Void
-			},
+			newAddLogFunction(&logs),
 		)
 
 		baseValueActivation := sema.NewVariableActivation(nil)
@@ -1510,11 +1508,7 @@ func TestInterpretImplicitImportThroughTypeLoading(t *testing.T) {
 			logFunctionName,
 			stdlib.LogFunctionType,
 			"",
-			func(_ *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
-				value := arguments[0]
-				logs = append(logs, value.String())
-				return interpreter.Void
-			},
+			newAddLogFunction(&logs),
 		)
 
 		baseValueActivation := sema.NewVariableActivation(nil)
@@ -1659,11 +1653,7 @@ func TestInterpretImplicitImportThroughTypeLoading(t *testing.T) {
 			logFunctionName,
 			stdlib.LogFunctionType,
 			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
-				value := invocation.Arguments[0]
-				logs = append(logs, value.String())
-				return interpreter.Void
-			},
+			newAddLogFunction(&logs),
 		)
 
 		baseValueActivation := sema.NewVariableActivation(nil)

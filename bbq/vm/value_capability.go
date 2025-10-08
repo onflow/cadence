@@ -19,7 +19,6 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -52,44 +51,7 @@ func init() {
 				borrowType := context.SemaTypeFromStaticType(borrowStaticType).(*sema.ReferenceType)
 				return sema.CapabilityTypeBorrowFunctionType(borrowType)
 			},
-			func(context *Context, typeArguments []bbq.StaticType, receiver Value, args ...Value) Value {
-				var idCapabilityValue *interpreter.IDCapabilityValue
-
-				switch capabilityValue := receiver.(type) {
-				case *interpreter.PathCapabilityValue: //nolint:staticcheck
-					// Borrowing of path values is never allowed
-					return interpreter.Nil
-
-				case *interpreter.IDCapabilityValue:
-					idCapabilityValue = capabilityValue
-
-				default:
-					panic(errors.NewUnreachableError())
-				}
-
-				capabilityID := idCapabilityValue.ID
-
-				if capabilityID == interpreter.InvalidCapabilityID {
-					return interpreter.Nil
-				}
-
-				capabilityBorrowType := context.SemaTypeFromStaticType(idCapabilityValue.BorrowType).(*sema.ReferenceType)
-
-				var typeParameter sema.Type
-				if len(typeArguments) > 0 {
-					typeParameter = context.SemaTypeFromStaticType(typeArguments[0])
-				}
-
-				address := idCapabilityValue.Address()
-
-				return interpreter.CapabilityBorrow(
-					context,
-					typeParameter,
-					address,
-					capabilityID,
-					capabilityBorrowType,
-				)
-			},
+			interpreter.NativeCapabilityBorrowFunction(nil, nil, nil),
 		),
 	)
 
@@ -115,45 +77,7 @@ func init() {
 				borrowType := context.SemaTypeFromStaticType(borrowStaticType).(*sema.ReferenceType)
 				return sema.CapabilityTypeCheckFunctionType(borrowType)
 			},
-			func(context *Context, typeArguments []bbq.StaticType, receiver Value, args ...Value) Value {
-
-				var idCapabilityValue *interpreter.IDCapabilityValue
-
-				switch capabilityValue := receiver.(type) {
-				case *interpreter.PathCapabilityValue: //nolint:staticcheck
-					// Borrowing of path values is never allowed
-					return interpreter.FalseValue
-
-				case *interpreter.IDCapabilityValue:
-					idCapabilityValue = capabilityValue
-
-				default:
-					panic(errors.NewUnreachableError())
-				}
-
-				capabilityID := idCapabilityValue.ID
-
-				if capabilityID == interpreter.InvalidCapabilityID {
-					return interpreter.FalseValue
-				}
-
-				capabilityBorrowType := context.SemaTypeFromStaticType(idCapabilityValue.BorrowType).(*sema.ReferenceType)
-
-				var typeParameter sema.Type
-				if len(typeArguments) > 0 {
-					typeParameter = context.SemaTypeFromStaticType(typeArguments[0])
-				}
-
-				address := idCapabilityValue.Address()
-
-				return interpreter.CapabilityCheck(
-					context,
-					typeParameter,
-					address,
-					capabilityID,
-					capabilityBorrowType,
-				)
-			},
+			interpreter.NativeCapabilityCheckFunction(nil, nil, nil),
 		),
 	)
 }

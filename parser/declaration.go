@@ -357,7 +357,7 @@ func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
 		return ast.NewDisjunctiveEntitlementSet(entitlements), nil
 
 	default:
-		panic(errors.NewUnexpectedError(fmt.Sprintf("unexpected separator: %s", separator)))
+		panic(errors.NewUnexpectedError("unexpected separator: %s", separator))
 	}
 }
 

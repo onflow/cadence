@@ -82,16 +82,16 @@ test-compatibility-check:
 
 # Testing
 
-TESTPKGS := $(shell go list ./... | grep -Ev '/cmd|/analysis|/tools')
-COVERPKGS := $(shell echo $(TESTPKGS) | tr ' ' ',')
+TEST_PKGS := $(shell go list ./... | grep -Ev '/cmd|/analysis|/tools')
+COVER_PKGS := $(shell echo $(TEST_PKGS) | tr ' ' ',')
 
 .PHONY: test
 test: test-with-compiler test-with-tracing
-	go test $(TESTPKGS)
+	go test $(TEST_PKGS)
 
 .PHONY: test-with-tracing
 test-with-tracing:
-	go test -tags cadence_tracing $(TESTPKGS)
+	go test -tags cadence_tracing $(TEST_PKGS)
 
 .PHONY: ci
 ci: test-with-coverage test-with-compiler smoke-test
@@ -101,7 +101,7 @@ ci-with-tracing: test-with-tracing test-with-compiler-and-tracing
 
 .PHONY: test-with-coverage
 test-with-coverage:
-	go test -coverprofile=coverage.txt -covermode=atomic -race -coverpkg $(COVERPKGS) $(TESTPKGS)
+	go test -coverprofile=coverage.txt -covermode=atomic -race -coverpkg $(COVER_PKGS) $(TEST_PKGS)
 	# remove coverage of empty functions from report
 	sed -i -e 's/^.* 0 0$$//' coverage.txt
 
@@ -116,6 +116,23 @@ test-with-compiler:
 .PHONY: test-with-compiler-and-tracing
 test-with-compiler-and-tracing:
 	go test -tags cadence_tracing ./interpreter/... ./runtime/... -compile=true
+
+# Benchmarking
+
+BENCH_REPS ?= 1
+BENCH_TIME ?= 3s
+BENCH_PKGS ?= $(shell go list ./... | grep -Ev '/old_parser')
+BENCH_PKGS_COMMON ?= $(shell go list ./... | grep -Ev '/old_parser|/encoding|/parser|/sema|/bbq')
+
+.PHONY: bench
+bench:
+	for i in {1..$(BENCH_REPS)}; do \
+		go test -run=^$$ -bench=. -benchmem -shuffle=on -benchtime=$(BENCH_TIME) $(BENCH_PKGS) ; \
+	done
+
+.PHONY: bench-common
+bench-common:
+	$(MAKE) bench BENCH_PKGS="$(BENCH_PKGS_COMMON)"
 
 # Linting
 
@@ -208,3 +225,10 @@ release:
 	@(VERSIONED_FILES="version.go \
 	npm-packages/cadence-parser/package.json" \
 	bash ./bump-version.sh $(bump))
+
+# Tools
+
+.PHONY: install-benchstat
+install-benchstat:
+	# Last version to support HTML output
+	go install golang.org/x/perf/cmd/benchstat@91a04616dc65ba76dbe9e5cf746b923b1402d303

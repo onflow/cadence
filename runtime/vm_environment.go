@@ -84,6 +84,7 @@ var _ stdlib.Hasher = &vmEnvironment{}
 var _ ArgumentDecoder = &vmEnvironment{}
 
 func newVMEnvironment(config Config) *vmEnvironment {
+	// TODO: add support for coverage report
 	env := &vmEnvironment{
 		config:                        config,
 		SimpleContractAdditionTracker: stdlib.NewSimpleContractAdditionTracker(),
@@ -204,7 +205,6 @@ func (e *vmEnvironment) Configure(
 	storage *Storage,
 	memoryGauge common.MemoryGauge,
 	computationGauge common.ComputationGauge,
-	coverageReport *CoverageReport,
 ) {
 	e.Interface = runtimeInterface
 	e.storage = storage
@@ -218,9 +218,6 @@ func (e *vmEnvironment) Configure(
 		codesAndPrograms,
 		memoryGauge,
 	)
-
-	// TODO: add support for coverage report
-	_ = coverageReport
 
 	configureVersionedFeatures(runtimeInterface)
 }

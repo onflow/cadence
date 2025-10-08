@@ -19,9 +19,7 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
-	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -40,13 +38,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.ToStringFunctionName,
 			sema.ToStringFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, _ ...Value) Value {
-				addressValue := receiver.(interpreter.AddressValue)
-				return interpreter.AddressValueToStringFunction(
-					context,
-					addressValue,
-				)
-			},
+			interpreter.NativeAddressToStringFunction,
 		),
 	)
 
@@ -55,11 +47,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.AddressTypeToBytesFunctionName,
 			sema.AddressTypeToBytesFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, _ ...Value) Value {
-				addressValue := receiver.(interpreter.AddressValue)
-				address := common.Address(addressValue)
-				return interpreter.ByteSliceToByteArrayValue(context, address[:])
-			},
+			interpreter.NativeAddressToBytesFunction,
 		),
 	)
 
@@ -71,13 +59,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.AddressTypeFromBytesFunctionName,
 			sema.AddressTypeFromBytesFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-				byteArrayValue := arguments[0].(*interpreter.ArrayValue)
-				return interpreter.AddressValueFromByteArray(
-					context,
-					byteArrayValue,
-				)
-			},
+			interpreter.NativeAddressFromBytesFunction,
 		),
 	)
 
@@ -86,10 +68,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.AddressTypeFromStringFunctionName,
 			sema.AddressTypeFromStringFunctionType,
-			func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
-				stringValue := arguments[0].(*interpreter.StringValue)
-				return interpreter.AddressValueFromString(context, stringValue)
-			},
+			interpreter.NativeAddressFromStringFunction,
 		),
 	)
 

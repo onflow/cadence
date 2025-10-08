@@ -171,14 +171,7 @@ func (v AddressValue) GetMethod(context MemberAccessibleContext, name string) Fu
 			context,
 			v,
 			sema.ToStringFunctionType,
-			func(v AddressValue, invocation Invocation) Value {
-				invocationContext := invocation.InvocationContext
-
-				return AddressValueToStringFunction(
-					invocationContext,
-					v,
-				)
-			},
+			NativeAddressToStringFunction,
 		)
 
 	case sema.AddressTypeToBytesFunctionName:
@@ -186,11 +179,7 @@ func (v AddressValue) GetMethod(context MemberAccessibleContext, name string) Fu
 			context,
 			v,
 			sema.AddressTypeToBytesFunctionType,
-			func(v AddressValue, invocation Invocation) Value {
-				interpreter := invocation.InvocationContext
-				address := common.Address(v)
-				return ByteSliceToByteArrayValue(interpreter, address[:])
-			},
+			NativeAddressToBytesFunction,
 		)
 	}
 
@@ -296,3 +285,30 @@ func AddressValueFromString(gauge common.MemoryGauge, string *StringValue) Value
 
 	return NewSomeValueNonCopying(gauge, NewAddressValue(gauge, addr))
 }
+
+// Native address functions
+var NativeAddressToStringFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		_ ...Value,
+	) Value {
+		address := AssertValueOfType[AddressValue](receiver)
+		return AddressValueToStringFunction(context, address)
+	},
+)
+
+var NativeAddressToBytesFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		_ ...Value,
+	) Value {
+		address := common.Address(AssertValueOfType[AddressValue](receiver))
+		return ByteSliceToByteArrayValue(context, address[:])
+	},
+)

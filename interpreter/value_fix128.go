@@ -435,15 +435,15 @@ func (v Fix128Value) GreaterEqual(context ValueComparisonContext, other Comparab
 }
 
 func (v Fix128Value) Equal(_ ValueComparisonContext, other Value) bool {
-	otherFix64, ok := other.(Fix128Value)
+	otherFix128, ok := other.(Fix128Value)
 	if !ok {
 		return false
 	}
-	return v == otherFix64
+	return v == otherFix128
 }
 
 // HashInput returns a byte slice containing:
-// - HashInputTypeFix64 (1 byte)
+// - HashInputTypeFix128 (1 byte)
 // - high 64 bits encoded in big-endian (8 bytes)
 // - low 64 bits encoded in big-endian (8 bytes)
 func (v Fix128Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
@@ -494,7 +494,7 @@ func ConvertFix128(memoryGauge common.MemoryGauge, value Value) Fix128Value {
 		)
 
 	default:
-		panic(fmt.Sprintf("can't convert Fix64: %s", value))
+		panic(fmt.Sprintf("can't convert to Fix128: %s", value))
 	}
 
 	return NewFix128ValueFromBigIntWithRangeCheck(memoryGauge, scaledInt)
@@ -505,7 +505,7 @@ func (v Fix128Value) GetMember(context MemberAccessibleContext, name string) Val
 }
 
 func (v Fix128Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
-	return getNumberValueFunctionMember(context, v, name, sema.Fix64Type)
+	return getNumberValueFunctionMember(context, v, name, sema.Fix128Type)
 }
 
 func (Fix128Value) RemoveMember(_ ValueTransferContext, _ string) Value {

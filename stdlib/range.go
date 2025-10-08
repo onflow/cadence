@@ -22,10 +22,7 @@ import (
 	"fmt"
 
 	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -116,71 +113,39 @@ var inclusiveRangeConstructorFunctionType = func() *sema.FunctionType {
 	}
 }()
 
-var InterpreterInclusiveRangeConstructor = NewInterpreterStandardLibraryStaticFunction(
-	"InclusiveRange",
-	inclusiveRangeConstructorFunctionType,
-	inclusiveRangeConstructorFunctionDocString,
-	func(invocation interpreter.Invocation) interpreter.Value {
-		invocationContext := invocation.InvocationContext
-
-		start, ok := invocation.Arguments[0].(interpreter.IntegerValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		end, ok := invocation.Arguments[1].(interpreter.IntegerValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
+var NativeInclusiveRangeConstructorFunction = interpreter.NativeFunction(
+	func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.LocationRange,
+		_ interpreter.TypeParameterGetter,
+		_ interpreter.Value,
+		args ...interpreter.Value,
+	) interpreter.Value {
+		start := interpreter.AssertValueOfType[interpreter.IntegerValue](args[0])
+		end := interpreter.AssertValueOfType[interpreter.IntegerValue](args[1])
 		var step interpreter.IntegerValue
-		if len(invocation.Arguments) > 2 {
-			step, ok = invocation.Arguments[2].(interpreter.IntegerValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+		if len(args) > 2 {
+			step = interpreter.AssertValueOfType[interpreter.IntegerValue](args[2])
 		}
 
-		return NewInclusiveRange(
-			invocationContext,
-			start,
-			end,
-			step,
-		)
+		return NewInclusiveRange(context, start, end, step)
 	},
 )
 
-var VMInclusiveRangeConstructor = NewVMStandardLibraryStaticFunction(
+var InterpreterInclusiveRangeConstructor = NewNativeStandardLibraryStaticFunction(
 	"InclusiveRange",
 	inclusiveRangeConstructorFunctionType,
 	inclusiveRangeConstructorFunctionDocString,
-	func(context *vm.Context, typeArguments []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
+	NativeInclusiveRangeConstructorFunction,
+	false,
+)
 
-		start, ok := arguments[0].(interpreter.IntegerValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		end, ok := arguments[1].(interpreter.IntegerValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		var step interpreter.IntegerValue
-		if len(arguments) > 2 {
-			step, ok = arguments[2].(interpreter.IntegerValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-		}
-
-		return NewInclusiveRange(
-			context,
-			start,
-			end,
-			step,
-		)
-	},
+var VMInclusiveRangeConstructor = NewNativeStandardLibraryStaticFunction(
+	"InclusiveRange",
+	inclusiveRangeConstructorFunctionType,
+	inclusiveRangeConstructorFunctionDocString,
+	NativeInclusiveRangeConstructorFunction,
+	true,
 )
 
 func NewInclusiveRange(

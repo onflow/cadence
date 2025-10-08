@@ -19,7 +19,6 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -43,11 +42,7 @@ func init() {
 					elementType := arrayElementTypeFromValue(receiver, context)
 					return sema.ArrayFirstIndexFunctionType(elementType)
 				},
-				func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-					array := receiver.(*interpreter.ArrayValue)
-					element := arguments[0]
-					return array.FirstIndex(context, element)
-				},
+				interpreter.NativeArrayFirstIndexFunction,
 			),
 		)
 
@@ -59,11 +54,7 @@ func init() {
 					elementType := arrayElementTypeFromValue(receiver, context)
 					return sema.ArrayContainsFunctionType(elementType)
 				},
-				func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-					array := receiver.(*interpreter.ArrayValue)
-					element := arguments[0]
-					return array.Contains(context, element)
-				},
+				interpreter.NativeArrayContainsFunction,
 			),
 		)
 
@@ -75,10 +66,7 @@ func init() {
 					arrayType := arrayTypeFromValue(receiver, context)
 					return sema.ArrayReverseFunctionType(arrayType)
 				},
-				func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-					array := receiver.(*interpreter.ArrayValue)
-					return array.Reverse(context)
-				},
+				interpreter.NativeArrayReverseFunction,
 			),
 		)
 
@@ -90,11 +78,7 @@ func init() {
 					elementType := arrayElementTypeFromValue(receiver, context)
 					return sema.ArrayFilterFunctionType(context, elementType)
 				},
-				func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-					array := receiver.(*interpreter.ArrayValue)
-					funcArgument := arguments[0].(FunctionValue)
-					return array.Filter(context, funcArgument)
-				},
+				interpreter.NativeArrayFilterFunction,
 			),
 		)
 
@@ -106,11 +90,7 @@ func init() {
 					arrayType := arrayTypeFromValue(receiver, context)
 					return sema.ArrayMapFunctionType(context, arrayType)
 				},
-				func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-					array := receiver.(*interpreter.ArrayValue)
-					funcArgument := arguments[0].(FunctionValue)
-					return array.Map(context, funcArgument)
-				},
+				interpreter.NativeArrayMapFunction,
 			),
 		)
 	}
@@ -125,12 +105,7 @@ func init() {
 				elementType := arrayElementTypeFromValue(receiver, context)
 				return sema.ArrayAppendFunctionType(elementType)
 			},
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				array := receiver.(*interpreter.ArrayValue)
-				element := arguments[0]
-				array.Append(context, element)
-				return interpreter.Void
-			},
+			interpreter.NativeArrayAppendFunction,
 		),
 	)
 
@@ -142,16 +117,7 @@ func init() {
 				arrayType := arrayTypeFromValue(receiver, context)
 				return sema.ArrayAppendAllFunctionType(arrayType)
 			},
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				array := receiver.(*interpreter.ArrayValue)
-				otherArray := arguments[0].(*interpreter.ArrayValue)
-
-				array.AppendAll(
-					context,
-					otherArray,
-				)
-				return interpreter.Void
-			},
+			interpreter.NativeArrayAppendAllFunction,
 		),
 	)
 
@@ -163,11 +129,7 @@ func init() {
 				arrayType := arrayTypeFromValue(receiver, context)
 				return sema.ArrayConcatFunctionType(arrayType)
 			},
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				array := receiver.(*interpreter.ArrayValue)
-				otherArray := arguments[0].(*interpreter.ArrayValue)
-				return array.Concat(context, otherArray)
-			},
+			interpreter.NativeArrayConcatFunction,
 		),
 	)
 
@@ -179,21 +141,7 @@ func init() {
 				elementType := arrayElementTypeFromValue(receiver, context)
 				return sema.ArrayInsertFunctionType(elementType)
 			},
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				array := receiver.(*interpreter.ArrayValue)
-				indexValue := arguments[0].(interpreter.NumberValue)
-				element := arguments[1]
-
-				index := indexValue.ToInt()
-
-				array.Insert(
-					context,
-					index,
-					element,
-				)
-
-				return interpreter.Void
-			},
+			interpreter.NativeArrayInsertFunction,
 		),
 	)
 
@@ -205,17 +153,7 @@ func init() {
 				elementType := arrayElementTypeFromValue(receiver, context)
 				return sema.ArrayRemoveFunctionType(elementType)
 			},
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				array := receiver.(*interpreter.ArrayValue)
-				indexValue := arguments[0].(interpreter.NumberValue)
-
-				index := indexValue.ToInt()
-
-				return array.Remove(
-					context,
-					index,
-				)
-			},
+			interpreter.NativeArrayRemoveFunction,
 		),
 	)
 
@@ -227,10 +165,7 @@ func init() {
 				elementType := arrayElementTypeFromValue(receiver, context)
 				return sema.ArrayRemoveFirstFunctionType(elementType)
 			},
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				array := receiver.(*interpreter.ArrayValue)
-				return array.RemoveFirst(context)
-			},
+			interpreter.NativeArrayRemoveFirstFunction,
 		),
 	)
 
@@ -242,10 +177,7 @@ func init() {
 				elementType := arrayElementTypeFromValue(receiver, context)
 				return sema.ArrayRemoveLastFunctionType(elementType)
 			},
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				array := receiver.(*interpreter.ArrayValue)
-				return array.RemoveLast(context)
-			},
+			interpreter.NativeArrayRemoveLastFunction,
 		),
 	)
 
@@ -257,16 +189,7 @@ func init() {
 				elementType := arrayElementTypeFromValue(receiver, context)
 				return sema.ArraySliceFunctionType(elementType)
 			},
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				array := receiver.(*interpreter.ArrayValue)
-				from := arguments[0].(interpreter.IntValue)
-				to := arguments[1].(interpreter.IntValue)
-				return array.Slice(
-					context,
-					from,
-					to,
-				)
-			},
+			interpreter.NativeArraySliceFunction,
 		),
 	)
 
@@ -278,14 +201,7 @@ func init() {
 				elementType := arrayElementTypeFromValue(receiver, context)
 				return sema.ArrayToConstantSizedFunctionType(elementType)
 			},
-			func(context *Context, typeArguments []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				array := receiver.(*interpreter.ArrayValue)
-				constantSizedArrayType := typeArguments[0].(*interpreter.ConstantSizedStaticType)
-				return array.ToConstantSized(
-					context,
-					constantSizedArrayType.Size,
-				)
-			},
+			interpreter.NativeArrayToConstantSizedFunction,
 		),
 	)
 
@@ -299,10 +215,7 @@ func init() {
 				elementType := arrayElementTypeFromValue(receiver, context)
 				return sema.ArrayToVariableSizedFunctionType(elementType)
 			},
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				array := receiver.(*interpreter.ArrayValue)
-				return array.ToVariableSized(context)
-			},
+			interpreter.NativeArrayToVariableSizedFunction,
 		),
 	)
 }

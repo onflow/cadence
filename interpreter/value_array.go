@@ -863,13 +863,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 			sema.ArrayAppendFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				v.Append(
-					invocation.InvocationContext,
-					invocation.Arguments[0],
-				)
-				return Void
-			},
+			NativeArrayAppendFunction,
 		)
 
 	case sema.ArrayTypeAppendAllFunctionName:
@@ -879,17 +873,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 			sema.ArrayAppendAllFunctionType(
 				v.SemaType(context),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				otherArray, ok := invocation.Arguments[0].(*ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				v.AppendAll(
-					invocation.InvocationContext,
-					otherArray,
-				)
-				return Void
-			},
+			NativeArrayAppendAllFunction,
 		)
 
 	case sema.ArrayTypeConcatFunctionName:
@@ -899,16 +883,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 			sema.ArrayConcatFunctionType(
 				v.SemaType(context),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				otherArray, ok := invocation.Arguments[0].(*ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				return v.Concat(
-					invocation.InvocationContext,
-					otherArray,
-				)
-			},
+			NativeArrayConcatFunction,
 		)
 
 	case sema.ArrayTypeInsertFunctionName:
@@ -918,24 +893,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 			sema.ArrayInsertFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				inter := invocation.InvocationContext
-
-				indexValue, ok := invocation.Arguments[0].(NumberValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				index := indexValue.ToInt()
-
-				element := invocation.Arguments[1]
-
-				v.Insert(
-					inter,
-					index,
-					element,
-				)
-				return Void
-			},
+			NativeArrayInsertFunction,
 		)
 
 	case sema.ArrayTypeRemoveFunctionName:
@@ -945,17 +903,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 			sema.ArrayRemoveFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				inter := invocation.InvocationContext
-
-				indexValue, ok := invocation.Arguments[0].(NumberValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				index := indexValue.ToInt()
-
-				return v.Remove(inter, index)
-			},
+			NativeArrayRemoveFunction,
 		)
 
 	case sema.ArrayTypeRemoveFirstFunctionName:
@@ -965,9 +913,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 			sema.ArrayRemoveFirstFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				return v.RemoveFirst(invocation.InvocationContext)
-			},
+			NativeArrayRemoveFirstFunction,
 		)
 
 	case sema.ArrayTypeRemoveLastFunctionName:
@@ -977,9 +923,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 			sema.ArrayRemoveLastFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				return v.RemoveLast(invocation.InvocationContext)
-			},
+			NativeArrayRemoveLastFunction,
 		)
 
 	case sema.ArrayTypeFirstIndexFunctionName:
@@ -989,12 +933,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 			sema.ArrayFirstIndexFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				return v.FirstIndex(
-					invocation.InvocationContext,
-					invocation.Arguments[0],
-				)
-			},
+			NativeArrayFirstIndexFunction,
 		)
 
 	case sema.ArrayTypeContainsFunctionName:
@@ -1004,12 +943,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 			sema.ArrayContainsFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				return v.Contains(
-					invocation.InvocationContext,
-					invocation.Arguments[0],
-				)
-			},
+			NativeArrayContainsFunction,
 		)
 
 	case sema.ArrayTypeSliceFunctionName:
@@ -1019,23 +953,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 			sema.ArraySliceFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				from, ok := invocation.Arguments[0].(IntValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				to, ok := invocation.Arguments[1].(IntValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.Slice(
-					invocation.InvocationContext,
-					from,
-					to,
-				)
-			},
+			NativeArraySliceFunction,
 		)
 
 	case sema.ArrayTypeReverseFunctionName:
@@ -1045,9 +963,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 			sema.ArrayReverseFunctionType(
 				v.SemaType(context),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				return v.Reverse(invocation.InvocationContext)
-			},
+			NativeArrayReverseFunction,
 		)
 
 	case sema.ArrayTypeFilterFunctionName:
@@ -1058,19 +974,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 				context,
 				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				interpreter := invocation.InvocationContext
-
-				funcArgument, ok := invocation.Arguments[0].(FunctionValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.Filter(
-					interpreter,
-					funcArgument,
-				)
-			},
+			NativeArrayFilterFunction,
 		)
 
 	case sema.ArrayTypeMapFunctionName:
@@ -1081,19 +985,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 				context,
 				v.SemaType(context),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				interpreter := invocation.InvocationContext
-
-				funcArgument, ok := invocation.Arguments[0].(FunctionValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.Map(
-					interpreter,
-					funcArgument,
-				)
-			},
+			NativeArrayMapFunction,
 		)
 
 	case sema.ArrayTypeToVariableSizedFunctionName:
@@ -1103,9 +995,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 			sema.ArrayToVariableSizedFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				return v.ToVariableSized(invocation.InvocationContext)
-			},
+			NativeArrayToVariableSizedFunction,
 		)
 
 	case sema.ArrayTypeToConstantSizedFunctionName:
@@ -1115,26 +1005,7 @@ func (v *ArrayValue) GetMethod(context MemberAccessibleContext, name string) Fun
 			sema.ArrayToConstantSizedFunctionType(
 				v.SemaType(context).ElementType(false),
 			),
-			func(v *ArrayValue, invocation Invocation) Value {
-				interpreter := invocation.InvocationContext
-
-				typeParameterPair := invocation.TypeParameterTypes.Oldest()
-				if typeParameterPair == nil {
-					panic(errors.NewUnreachableError())
-				}
-
-				ty := typeParameterPair.Value
-
-				constantSizedArrayType, ok := ty.(*sema.ConstantSizedType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.ToConstantSized(
-					interpreter,
-					constantSizedArrayType.Size,
-				)
-			},
+			NativeArrayToConstantSizedFunction,
 		)
 	}
 
@@ -2033,3 +1904,232 @@ func (i *ArrayIterator) Next(context ValueIteratorContext) Value {
 func (i *ArrayIterator) ValueID() (atree.ValueID, bool) {
 	return i.valueID, true
 }
+
+// define all native functions for array type
+var NativeArrayAppendFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		element := args[0]
+
+		thisArray.Append(context, element)
+		return Void
+	},
+)
+
+var NativeArrayAppendAllFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		otherArray := AssertValueOfType[*ArrayValue](args[0])
+
+		thisArray.AppendAll(context, otherArray)
+		return Void
+	},
+)
+
+var NativeArrayConcatFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		otherArray := AssertValueOfType[*ArrayValue](args[0])
+
+		return thisArray.Concat(context, otherArray)
+	},
+)
+
+var NativeArrayInsertFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		index := AssertValueOfType[NumberValue](args[0])
+		element := args[1]
+
+		thisArray.Insert(context, index.ToInt(), element)
+		return Void
+	},
+)
+
+var NativeArrayRemoveFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		index := AssertValueOfType[NumberValue](args[0])
+
+		return thisArray.Remove(context, index.ToInt())
+	},
+)
+
+var NativeArrayContainsFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		element := args[0]
+
+		return thisArray.Contains(context, element)
+	},
+)
+
+var NativeArraySliceFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		fromValue := AssertValueOfType[IntValue](args[0])
+		toValue := AssertValueOfType[IntValue](args[1])
+
+		return thisArray.Slice(context, fromValue, toValue)
+	},
+)
+
+var NativeArrayReverseFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		_ ...Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		return thisArray.Reverse(context)
+	},
+)
+
+var NativeArrayFilterFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		funcValue := AssertValueOfType[FunctionValue](args[0])
+
+		return thisArray.Filter(context, funcValue)
+	},
+)
+
+var NativeArrayMapFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		funcValue := AssertValueOfType[FunctionValue](args[0])
+
+		return thisArray.Map(context, funcValue)
+	},
+)
+
+var NativeArrayToVariableSizedFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		_ ...Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+
+		return thisArray.ToVariableSized(context)
+	},
+)
+
+var NativeArrayToConstantSizedFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		constantSizedArrayType, ok := typeParameterGetter.NextStatic().(*ConstantSizedStaticType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		return thisArray.ToConstantSized(context, constantSizedArrayType.Size)
+	},
+)
+
+var NativeArrayFirstIndexFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		element := args[0]
+
+		return thisArray.FirstIndex(context, element)
+	},
+)
+
+var NativeArrayRemoveFirstFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		_ ...Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+
+		return thisArray.RemoveFirst(context)
+	},
+)
+
+var NativeArrayRemoveLastFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		_ ...Value,
+	) Value {
+		thisArray := AssertValueOfType[*ArrayValue](receiver)
+
+		return thisArray.RemoveLast(context)
+	},
+)

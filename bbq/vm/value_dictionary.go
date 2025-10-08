@@ -19,7 +19,6 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -37,11 +36,7 @@ func init() {
 				dictionaryType := dictionaryType(receiver, context)
 				return sema.DictionaryRemoveFunctionType(dictionaryType)
 			},
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				dictionary := receiver.(*interpreter.DictionaryValue)
-				key := arguments[0]
-				return dictionary.Remove(context, key)
-			},
+			interpreter.NativeDictionaryRemoveFunction,
 		),
 	)
 
@@ -53,17 +48,7 @@ func init() {
 				dictionaryType := dictionaryType(receiver, context)
 				return sema.DictionaryInsertFunctionType(dictionaryType)
 			},
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				dictionary := receiver.(*interpreter.DictionaryValue)
-				keyValue := arguments[0]
-				newValue := arguments[1]
-
-				return dictionary.Insert(
-					context,
-					keyValue,
-					newValue,
-				)
-			},
+			interpreter.NativeDictionaryInsertFunction,
 		),
 	)
 
@@ -75,11 +60,7 @@ func init() {
 				dictionaryType := dictionaryType(receiver, context)
 				return sema.DictionaryContainsKeyFunctionType(dictionaryType)
 			},
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				dictionary := receiver.(*interpreter.DictionaryValue)
-				key := arguments[0]
-				return dictionary.ContainsKey(context, key)
-			},
+			interpreter.NativeDictionaryContainsKeyFunction,
 		),
 	)
 
@@ -92,16 +73,7 @@ func init() {
 				dictionaryType := dictionaryValue.SemaType(context)
 				return sema.DictionaryRemoveFunctionType(dictionaryType)
 			},
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				dictionary := receiver.(*interpreter.DictionaryValue)
-				funcArgument := arguments[0].(FunctionValue)
-				dictionary.ForEachKey(
-					context,
-					funcArgument,
-				)
-
-				return interpreter.Void
-			},
+			interpreter.NativeDictionaryForEachKeyFunction,
 		),
 	)
 }

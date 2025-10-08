@@ -214,7 +214,6 @@ func NewUnmeteredStaticHostFunctionValue(
 
 // NewStaticHostFunctionValue constructs a host function that is not bounded to any value.
 // For constructing a function bound to a value (e.g: a member function), the output of this method
-// must be wrapped with a bound-function, or `NewBoundHostFunctionValue` method must be used.
 func NewStaticHostFunctionValue(
 	gauge common.MemoryGauge,
 	funcType *sema.FunctionType,
@@ -533,32 +532,6 @@ func (f BoundFunctionValue) Clone(_ ValueCloneContext) Value {
 
 func (BoundFunctionValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
-}
-
-// NewBoundHostFunctionValue creates a bound-function value for a host-function.
-func NewBoundHostFunctionValue[T Value](
-	context FunctionCreationContext,
-	self Value,
-	funcType *sema.FunctionType,
-	function func(self T, invocation Invocation) Value,
-) BoundFunctionValue {
-
-	wrappedFunction := func(invocation Invocation) Value {
-		self, ok := (*invocation.Self).(T)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-		return function(self, invocation)
-	}
-
-	hostFunc := NewStaticHostFunctionValue(context, funcType, wrappedFunction)
-
-	return NewBoundFunctionValue(
-		context,
-		hostFunc,
-		&self,
-		nil,
-	)
 }
 
 // NewUnmeteredBoundHostFunctionValue creates a bound-function value for a host-function.

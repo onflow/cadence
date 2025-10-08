@@ -9672,34 +9672,37 @@ func BenchmarkRuntimeResourceTracking(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	err = runtime.ExecuteTransaction(
-		Script{
-			Source: []byte(`
-                import Foo from 0x1
+	for i := 0; i < b.N; i++ {
 
-                transaction {
-                    prepare(signer: auth(Storage) &Account) {
-                        // When the array is loaded from storage, all elements are also loaded.
-                        // So all moves of this resource will check for tracking of all elements aas well.
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(`
+                  import Foo from 0x1
 
-                        var array1 <- signer.storage.load<@[Foo.R]>(from: /storage/r)!
-                        var array2 <- array1
-                        var array3 <- array2
-                        var array4 <- array3
-                        var array5 <- array4
-                        destroy array5
-                    }
-                }
-            `),
-		},
-		Context{
-			Interface:   runtimeInterface,
-			Location:    nextTransactionLocation(),
-			Environment: environment,
-			UseVM:       *compile,
-		},
-	)
-	require.NoError(b, err)
+                  transaction {
+                      prepare(signer: auth(Storage) &Account) {
+                          // When the array is loaded from storage, all elements are also loaded.
+                          // So all moves of this resource will check for tracking of all elements aas well.
+
+                          var array1 <- signer.storage.load<@[Foo.R]>(from: /storage/r)!
+                          var array2 <- array1
+                          var array3 <- array2
+                          var array4 <- array3
+                          var array5 <- array4
+                          signer.storage.save(<-array5, to: /storage/r)
+                      }
+                  }
+                `),
+			},
+			Context{
+				Interface:   runtimeInterface,
+				Location:    nextTransactionLocation(),
+				Environment: environment,
+				UseVM:       *compile,
+			},
+		)
+		require.NoError(b, err)
+	}
 }
 
 func TestRuntimeTypesAndConversions(t *testing.T) {

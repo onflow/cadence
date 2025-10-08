@@ -19,9 +19,7 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -36,19 +34,9 @@ func init() {
 		NewNativeFunctionValue(
 			sema.AccountCapabilityControllerTypeSetTagFunctionName,
 			sema.AccountCapabilityControllerTypeSetTagFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, args ...Value) Value {
-
-				newTagValue, ok := args[0].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				v := getCheckedAccountCapabilityControllerReceiver(receiver)
-
-				v.SetTag(context, newTagValue)
-
-				return interpreter.Void
-			},
+			interpreter.NewNativeDeletionCheckedAccountCapabilityControllerFunction(
+				interpreter.NativeAccountCapabilityControllerSetTagFunction,
+			),
 		),
 	)
 
@@ -57,28 +45,9 @@ func init() {
 		NewNativeFunctionValue(
 			sema.AccountCapabilityControllerTypeDeleteFunctionName,
 			sema.AccountCapabilityControllerTypeDeleteFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, _ ...Value) Value {
-
-				v := getCheckedAccountCapabilityControllerReceiver(receiver)
-
-				v.Delete(context)
-
-				v.SetDeleted()
-
-				return interpreter.Void
-			},
+			interpreter.NewNativeDeletionCheckedAccountCapabilityControllerFunction(
+				interpreter.NativeAccountCapabilityControllerDeleteFunction,
+			),
 		),
 	)
-}
-
-func getCheckedAccountCapabilityControllerReceiver(receiver Value) *interpreter.AccountCapabilityControllerValue {
-	v, ok := receiver.(*interpreter.AccountCapabilityControllerValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	// NOTE: check if controller is already deleted
-	v.CheckDeleted()
-
-	return v
 }

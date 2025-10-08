@@ -19,7 +19,6 @@
 package stdlib
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
@@ -76,21 +75,22 @@ func NewHashAlgorithmCase(
 	return value, nil
 }
 
-func newInterpreterHashAlgorithmHashFunction(
-	hashAlgoValue interpreter.MemberAccessibleValue,
-	hasher Hasher,
-) *interpreter.HostFunctionValue {
-	// TODO: should ideally create a bound-host function.
-	// But the interpreter is not available at this point.
-	return interpreter.NewUnmeteredStaticHostFunctionValue(
-		sema.HashAlgorithmTypeHashFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			dataValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
+// Native hash functions
+func NativeHashAlgorithmHashFunction(hasher Hasher, hashAlgoValue interpreter.MemberAccessibleValue) interpreter.NativeFunction {
+	return interpreter.NativeFunction(
+		func(
+			context interpreter.NativeFunctionContext,
+			_ interpreter.LocationRange,
+			_ interpreter.TypeParameterGetter,
+			receiver interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
+			if hashAlgoValue == nil {
+				// vm does not provide the hash algo value
+				hashAlgoValue = interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)
 			}
 
-			context := invocation.InvocationContext
+			dataValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
 
 			return hash(
 				context,
@@ -103,6 +103,44 @@ func newInterpreterHashAlgorithmHashFunction(
 	)
 }
 
+func NativeHashAlgorithmHashWithTagFunction(hasher Hasher, hashAlgoValue interpreter.MemberAccessibleValue) interpreter.NativeFunction {
+	return interpreter.NativeFunction(
+		func(
+			context interpreter.NativeFunctionContext,
+			_ interpreter.LocationRange,
+			_ interpreter.TypeParameterGetter,
+			receiver interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
+			if hashAlgoValue == nil {
+				// vm does not provide the hash algo value
+				hashAlgoValue = interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)
+			}
+			dataValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
+			tagValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[1])
+			return hash(
+				context,
+				hasher,
+				dataValue,
+				tagValue,
+				hashAlgoValue,
+			)
+		},
+	)
+}
+
+func newInterpreterHashAlgorithmHashFunction(
+	hashAlgoValue interpreter.MemberAccessibleValue,
+	hasher Hasher,
+) *interpreter.HostFunctionValue {
+	// TODO: should ideally create a bound-host function.
+	// But the interpreter is not available at this point.
+	return interpreter.NewUnmeteredStaticHostFunctionValueFromNativeFunction(
+		sema.HashAlgorithmTypeHashFunctionType,
+		NativeHashAlgorithmHashFunction(hasher, hashAlgoValue),
+	)
+}
+
 func NewVMHashAlgorithmHashFunction(
 	hasher Hasher,
 ) VMFunction {
@@ -111,26 +149,7 @@ func NewVMHashAlgorithmHashFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.HashAlgorithmTypeHashFunctionName,
 			sema.HashAlgorithmTypeHashFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
-
-				hashAlgoValue, ok := receiver.(interpreter.MemberAccessibleValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				dataValue, ok := args[0].(*interpreter.ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return hash(
-					context,
-					hasher,
-					dataValue,
-					nil,
-					hashAlgoValue,
-				)
-			},
+			NativeHashAlgorithmHashFunction(hasher, nil),
 		),
 	}
 }
@@ -141,30 +160,9 @@ func newInterpreterHashAlgorithmHashWithTagFunction(
 ) *interpreter.HostFunctionValue {
 	// TODO: should ideally create a bound-host function.
 	// But the interpreter is not available at this point.
-	return interpreter.NewUnmeteredStaticHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 		sema.HashAlgorithmTypeHashWithTagFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-
-			dataValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			tagValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			inter := invocation.InvocationContext
-
-			return hash(
-				inter,
-				hasher,
-				dataValue,
-				tagValue,
-				hashAlgorithmValue,
-			)
-		},
+		NativeHashAlgorithmHashWithTagFunction(hasher, hashAlgorithmValue),
 	)
 }
 
@@ -176,31 +174,7 @@ func NewVMHashAlgorithmHashWithTagFunction(
 		FunctionValue: vm.NewNativeFunctionValue(
 			sema.HashAlgorithmTypeHashWithTagFunctionName,
 			sema.HashAlgorithmTypeHashWithTagFunctionType,
-			func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
-
-				hashAlgoValue, ok := receiver.(interpreter.MemberAccessibleValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				dataValue, ok := args[0].(*interpreter.ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				tagValue, ok := args[1].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return hash(
-					context,
-					hasher,
-					dataValue,
-					tagValue,
-					hashAlgoValue,
-				)
-			},
+			NativeHashAlgorithmHashWithTagFunction(hasher, nil),
 		),
 	}
 }
@@ -231,6 +205,7 @@ func hash(
 	return interpreter.ByteSliceToByteArrayValue(context, result)
 }
 
+// these functions are left as is, since there are differences in the implementations between interpreter and vm
 func NewInterpreterHashAlgorithmConstructor(hasher Hasher) StandardLibraryValue {
 
 	interpreterHashAlgorithmConstructorValue, _ := interpreterCryptoAlgorithmEnumValueAndCaseValues(
@@ -266,7 +241,13 @@ func NewVMHashAlgorithmConstructor(hasher Hasher) StandardLibraryValue {
 	function := vm.NewNativeFunctionValue(
 		sema.HashAlgorithmTypeName,
 		hashAlgorithmLookupType,
-		func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, args ...vm.Value) vm.Value {
+		func(
+			context interpreter.NativeFunctionContext,
+			_ interpreter.LocationRange,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
 			rawValue := args[0].(interpreter.UInt8Value)
 
 			caseValue, ok := cases[rawValue]
