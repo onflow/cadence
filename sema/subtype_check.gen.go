@@ -297,6 +297,22 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 		return false
 
+	case *FunctionType:
+		switch typedSubType := subType.(type) {
+		case *FunctionType:
+			switch typedSubType.Purity {
+			case typedSuperType.Purity,
+				FunctionPurityView:
+				return AreTypeParamsEqual(typedSubType, typedSuperType) &&
+					(AreParamsContravariant(typedSubType, typedSuperType) &&
+						(AreReturnsCovariant(typedSubType, typedSuperType) &&
+							AreConstructorsEqual(typedSubType, typedSuperType)))
+			}
+
+		}
+
+		return false
+
 	}
 
 	return false

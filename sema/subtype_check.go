@@ -42,3 +42,66 @@ func IsIntersectionSubset(superType *IntersectionType, subType Type) bool {
 		panic(errors.NewUnreachableError())
 	}
 }
+
+func AreTypeParamsEqual(source, target *FunctionType) bool {
+	if len(source.TypeParameters) != len(target.TypeParameters) {
+		return false
+	}
+
+	for i, subTypeParameter := range source.TypeParameters {
+		superTypeParameter := target.TypeParameters[i]
+		if !subTypeParameter.TypeBoundEqual(superTypeParameter.TypeBound) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func AreParamsContravariant(source, target *FunctionType) bool {
+	// Parameter arity must be equivalent.
+	if len(source.Parameters) != len(target.Parameters) {
+		return false
+	}
+
+	if !source.ArityEqual(target.Arity) {
+		return false
+	}
+
+	// Functions are contravariant in their parameter types
+	for i, subParameter := range source.Parameters {
+		superParameter := target.Parameters[i]
+		if !IsSubType(
+			superParameter.TypeAnnotation.Type,
+			subParameter.TypeAnnotation.Type,
+		) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func AreReturnsCovariant(source, target *FunctionType) bool {
+	// Functions are covariant in their return type
+	if source.ReturnTypeAnnotation.Type != nil {
+		if target.ReturnTypeAnnotation.Type == nil {
+			return false
+		}
+
+		if !IsSubType(
+			source.ReturnTypeAnnotation.Type,
+			target.ReturnTypeAnnotation.Type,
+		) {
+			return false
+		}
+	} else if target.ReturnTypeAnnotation.Type != nil {
+		return false
+	}
+
+	return true
+}
+
+func AreConstructorsEqual(source, target *FunctionType) bool {
+	return source.IsConstructor == target.IsConstructor
+}

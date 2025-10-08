@@ -18,6 +18,8 @@
 
 package interpreter
 
+import "github.com/onflow/cadence/sema"
+
 //go:generate go run ./type_check_gen subtype_check.gen.go
 
 func isAttachmentType(t StaticType) bool {
@@ -80,4 +82,20 @@ func PermitsAccess(superTypeAccess, subtypeAccess Authorization) bool {
 func IsIntersectionSubset(superType *IntersectionStaticType, subType StaticType) bool {
 	// TODO:
 	return false
+}
+
+func AreTypeParamsEqual(source, target *FunctionStaticType) bool {
+	return sema.AreTypeParamsEqual(source.Type, target.Type)
+}
+
+func AreParamsContravariant(source, target *FunctionStaticType) bool {
+	return sema.AreParamsContravariant(source.Type, target.Type)
+}
+
+func AreReturnsCovariant(source, target *FunctionStaticType) bool {
+	return sema.AreReturnsCovariant(source.Type, target.Type)
+}
+
+func AreConstructorsEqual(source, target *FunctionStaticType) bool {
+	return sema.AreConstructorsEqual(source.Type, target.Type)
 }

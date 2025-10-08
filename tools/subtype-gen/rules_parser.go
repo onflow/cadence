@@ -66,7 +66,8 @@ func parseType(typePlaceHolder string) Type {
 		typePlaceholderComposite,
 		typePlaceholderInterface,
 		typePlaceholderFunction,
-		typePlaceholderIntersection:
+		typePlaceholderIntersection,
+		typePlaceholderParameterized:
 		return ComplexType{
 			name: typeName,
 		}
@@ -77,7 +78,6 @@ func parseType(typePlaceHolder string) Type {
 	}
 }
 
-// parseComplexType parses complex types with parameters
 func parseMemberExpression(names []string) Expression {
 	size := len(names)
 	if size != 2 {
@@ -92,9 +92,9 @@ func parseMemberExpression(names []string) Expression {
 	}
 }
 
-// parsePredicate parses a rule predicate from YAML
-func parsePredicate(rule any) (Predicate, error) {
-	switch v := rule.(type) {
+// parsePredicate parses a predicate from the YAML
+func parsePredicate(predicate any) (Predicate, error) {
+	switch v := predicate.(type) {
 	case string:
 		switch v {
 		case "always":
@@ -251,12 +251,56 @@ func parsePredicate(rule any) (Predicate, error) {
 				Super: superType,
 			}, nil
 
+		case "typeParamsEqual":
+			sourceExpr, targetExpr, err := parseSourceAndTarget(key, value)
+			if err != nil {
+				return nil, err
+			}
+
+			return TypeParamsEqualPredicate{
+				Source: sourceExpr,
+				Target: targetExpr,
+			}, nil
+
+		case "paramsContravariant":
+			sourceExpr, targetExpr, err := parseSourceAndTarget(key, value)
+			if err != nil {
+				return nil, err
+			}
+
+			return ParamsContravariantPredicate{
+				Source: sourceExpr,
+				Target: targetExpr,
+			}, nil
+
+		case "returnCovariant":
+			sourceExpr, targetExpr, err := parseSourceAndTarget(key, value)
+			if err != nil {
+				return nil, err
+			}
+
+			return ReturnCovariantPredicate{
+				Source: sourceExpr,
+				Target: targetExpr,
+			}, nil
+
+		case "constructorEqual":
+			sourceExpr, targetExpr, err := parseSourceAndTarget(key, value)
+			if err != nil {
+				return nil, err
+			}
+
+			return ConstructorEqualPredicate{
+				Source: sourceExpr,
+				Target: targetExpr,
+			}, nil
+
 		default:
 			return nil, fmt.Errorf("unsupported predicate: %s", key)
 		}
 
 	default:
-		return nil, fmt.Errorf("unsupported rule type: %T", rule)
+		return nil, fmt.Errorf("unsupported predicate type: %T", predicate)
 	}
 }
 
@@ -359,7 +403,7 @@ func parseExpression(expr any) (Expression, error) {
 	}
 }
 
-// parseExpression parses an expression that is represented as a string data in YAML.
+// parseSimpleExpression parses an expression that is represented as a string data in YAML.
 func parseSimpleExpression(expr any) Expression {
 	switch v := expr.(type) {
 	case string:

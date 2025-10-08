@@ -114,22 +114,34 @@ type PurityPredicate struct {
 func (p PurityPredicate) GetType() string { return "purity" }
 
 // TypeParamsEqualPredicate represents a type parameters equality check
-type TypeParamsEqualPredicate struct{}
+type TypeParamsEqualPredicate struct {
+	Source Expression `yaml:"source"`
+	Target Expression `yaml:"target"`
+}
 
 func (t TypeParamsEqualPredicate) GetType() string { return "typeParamsEqual" }
 
 // ParamsContravariantPredicate represents a params contravariant check
-type ParamsContravariantPredicate struct{}
+type ParamsContravariantPredicate struct {
+	Source Expression `yaml:"source"`
+	Target Expression `yaml:"target"`
+}
 
 func (p ParamsContravariantPredicate) GetType() string { return "paramsContravariant" }
 
 // ReturnCovariantPredicate represents a return covariant check
-type ReturnCovariantPredicate struct{}
+type ReturnCovariantPredicate struct {
+	Source Expression `yaml:"source"`
+	Target Expression `yaml:"target"`
+}
 
 func (r ReturnCovariantPredicate) GetType() string { return "returnCovariant" }
 
 // ConstructorEqualPredicate represents a constructor equality check
-type ConstructorEqualPredicate struct{}
+type ConstructorEqualPredicate struct {
+	Source Expression `yaml:"source"`
+	Target Expression `yaml:"target"`
+}
 
 func (c ConstructorEqualPredicate) GetType() string { return "constructorEqual" }
 
@@ -154,3 +166,28 @@ type IsIntersectionSubsetPredicate struct {
 }
 
 func (p IsIntersectionSubsetPredicate) GetType() string { return "isIntersectionSubset" }
+
+// Predicates is a collection of predicates.
+type Predicates struct {
+	size       int
+	index      int
+	predicates []Predicate
+}
+
+func NewPredicateChain(predicates []Predicate) *Predicates {
+	return &Predicates{
+		size:       len(predicates),
+		index:      0,
+		predicates: predicates,
+	}
+}
+
+func (p *Predicates) hasMore() bool {
+	return p.index < p.size
+}
+
+func (p *Predicates) next() Predicate {
+	predicate := p.predicates[p.index]
+	p.index++
+	return predicate
+}

@@ -773,20 +773,16 @@ func (gen *SubTypeCheckGenerator) generatePredicateInternal(predicate Predicate)
 		return []dst.Node{dst.NewIdent("false")}
 
 	case TypeParamsEqualPredicate:
-		// TODO: Implement type-params-equal check
-		return []dst.Node{dst.NewIdent("false")}
+		return gen.typeParamEqualCheck(p)
 
 	case ParamsContravariantPredicate:
-		// TODO: Implement params-contravariant check
-		return []dst.Node{dst.NewIdent("false")}
+		return gen.paramsContravariantCheck(p)
 
 	case ReturnCovariantPredicate:
-		// TODO: Implement return-covariant check
-		return []dst.Node{dst.NewIdent("false")}
+		return gen.returnsCovariantCheck(p)
 
 	case ConstructorEqualPredicate:
-		// TODO: Implement constructor-equal check
-		return []dst.Node{dst.NewIdent("false")}
+		return gen.constructorsEqualCheck(p)
 
 	default:
 		panic(fmt.Errorf("unsupported predicate: %T", p))
@@ -1123,7 +1119,6 @@ func (gen *SubTypeCheckGenerator) isSubTypePredicate(subtype SubtypePredicate) [
 		var conditions []dst.Expr
 		for _, expr := range superType.Expressions {
 			args := gen.isSubTypeMethodArguments(subtype.Sub, expr)
-			// TODO: Recursively call `generatePredicate`
 			conditions = append(
 				conditions,
 				gen.callExpression(
@@ -1392,26 +1387,58 @@ func (gen *SubTypeCheckGenerator) isIntersectionSubset(p IsIntersectionSubsetPre
 	}
 }
 
-type Predicates struct {
-	size       int
-	index      int
-	predicates []Predicate
-}
+func (gen *SubTypeCheckGenerator) typeParamEqualCheck(p TypeParamsEqualPredicate) []dst.Node {
+	args := []dst.Expr{
+		gen.expression(p.Source),
+		gen.expression(p.Target),
+	}
 
-func NewPredicateChain(predicates []Predicate) *Predicates {
-	return &Predicates{
-		size:       len(predicates),
-		index:      0,
-		predicates: predicates,
+	return []dst.Node{
+		gen.callExpression(
+			dst.NewIdent("AreTypeParamsEqual"),
+			args...,
+		),
 	}
 }
 
-func (p *Predicates) hasMore() bool {
-	return p.index < p.size
+func (gen *SubTypeCheckGenerator) paramsContravariantCheck(p ParamsContravariantPredicate) []dst.Node {
+	args := []dst.Expr{
+		gen.expression(p.Source),
+		gen.expression(p.Target),
+	}
+
+	return []dst.Node{
+		gen.callExpression(
+			dst.NewIdent("AreParamsContravariant"),
+			args...,
+		),
+	}
 }
 
-func (p *Predicates) next() Predicate {
-	predicate := p.predicates[p.index]
-	p.index++
-	return predicate
+func (gen *SubTypeCheckGenerator) returnsCovariantCheck(p ReturnCovariantPredicate) []dst.Node {
+	args := []dst.Expr{
+		gen.expression(p.Source),
+		gen.expression(p.Target),
+	}
+
+	return []dst.Node{
+		gen.callExpression(
+			dst.NewIdent("AreReturnsCovariant"),
+			args...,
+		),
+	}
+}
+
+func (gen *SubTypeCheckGenerator) constructorsEqualCheck(p ConstructorEqualPredicate) []dst.Node {
+	args := []dst.Expr{
+		gen.expression(p.Source),
+		gen.expression(p.Target),
+	}
+
+	return []dst.Node{
+		gen.callExpression(
+			dst.NewIdent("AreConstructorsEqual"),
+			args...,
+		),
+	}
 }

@@ -347,23 +347,25 @@ rules:
               target:
                 oneOfTypes: [AnyType, AnyStructType, AnyResourceType]
 
-#  - super:
-#      Function:
-#        purity: A
-#        params: B
-#        return: C
-#    sub:
-#      Function:
-#        purity: X
-#        params: Y
-#        return: Z
-#    predicate:
-#      and:
-#        - equals:
-#            source: X
-#            target:
-#              oneOfTypes: [A, PurityView]
-#        - typeParamsEqual
-#        - paramsContravariant
-#        - returnCovariant
-#        - constructorEqual
+  - super: FunctionType
+    predicate:
+      and:
+        - mustType:
+            source: sub
+            type: FunctionType
+        - equals:
+            source: sub.Purity
+            target:
+              oneOfTypes: [super.Purity, FunctionPurityView]
+        - typeParamsEqual:
+            source: sub
+            target: super
+        - paramsContravariant:
+            source: sub
+            target: super
+        - returnCovariant:
+            source: sub
+            target: super
+        - constructorEqual:
+            source: sub
+            target: super
