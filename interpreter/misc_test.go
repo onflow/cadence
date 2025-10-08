@@ -1780,9 +1780,15 @@ func TestInterpretHostFunction(t *testing.T) {
 			ReturnTypeAnnotation: sema.IntTypeAnnotation,
 		},
 		``,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			a := invocation.Arguments[0].(interpreter.IntValue).ToBigInt(nil)
-			b := invocation.Arguments[1].(interpreter.IntValue).ToBigInt(nil)
+		func(
+			_ interpreter.NativeFunctionContext,
+			_ interpreter.LocationRange,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
+			a := args[0].(interpreter.IntValue).ToBigInt(nil)
+			b := args[1].(interpreter.IntValue).ToBigInt(nil)
 			value := new(big.Int).Add(a, b)
 			return interpreter.NewUnmeteredIntValueFromBigInt(value)
 		},
@@ -1824,6 +1830,45 @@ func TestInterpretHostFunction(t *testing.T) {
 	)
 }
 
+func newAssertArgumentsFunction(t *testing.T, called *bool) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.LocationRange,
+		_ interpreter.TypeParameterGetter,
+		_ interpreter.Value,
+		args ...interpreter.Value,
+	) interpreter.Value {
+		*called = true
+
+		require.Len(t, args, 3)
+
+		inter := context
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+			args[0],
+		)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			args[1],
+		)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("test"),
+			args[2],
+		)
+
+		return interpreter.Void
+	}
+}
+
 func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 
 	t.Parallel()
@@ -1848,41 +1893,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 			Arity:                &sema.Arity{Min: 1},
 		},
 		``,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			called = true
-
-			require.Len(t, invocation.ArgumentTypes, 3)
-			assert.IsType(t, sema.IntType, invocation.ArgumentTypes[0])
-			assert.IsType(t, sema.BoolType, invocation.ArgumentTypes[1])
-			assert.IsType(t, sema.StringType, invocation.ArgumentTypes[2])
-
-			require.Len(t, invocation.Arguments, 3)
-
-			inter := invocation.InvocationContext
-
-			AssertValuesEqual(
-				t,
-				inter,
-				interpreter.NewUnmeteredIntValueFromInt64(1),
-				invocation.Arguments[0],
-			)
-
-			AssertValuesEqual(
-				t,
-				inter,
-				interpreter.TrueValue,
-				invocation.Arguments[1],
-			)
-
-			AssertValuesEqual(
-				t,
-				inter,
-				interpreter.NewUnmeteredStringValue("test"),
-				invocation.Arguments[2],
-			)
-
-			return interpreter.Void
-		},
+		newAssertArgumentsFunction(t, &called),
 	)
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -1942,41 +1953,7 @@ func TestInterpretHostFunctionWithOptionalArguments(t *testing.T) {
 			Arity: &sema.Arity{Min: 1, Max: 3},
 		},
 		``,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			called = true
-
-			require.Len(t, invocation.ArgumentTypes, 3)
-			assert.IsType(t, sema.IntType, invocation.ArgumentTypes[0])
-			assert.IsType(t, sema.BoolType, invocation.ArgumentTypes[1])
-			assert.IsType(t, sema.StringType, invocation.ArgumentTypes[2])
-
-			require.Len(t, invocation.Arguments, 3)
-
-			inter := invocation.InvocationContext
-
-			AssertValuesEqual(
-				t,
-				inter,
-				interpreter.NewUnmeteredIntValueFromInt64(1),
-				invocation.Arguments[0],
-			)
-
-			AssertValuesEqual(
-				t,
-				inter,
-				interpreter.TrueValue,
-				invocation.Arguments[1],
-			)
-
-			AssertValuesEqual(
-				t,
-				inter,
-				interpreter.NewUnmeteredStringValue("test"),
-				invocation.Arguments[2],
-			)
-
-			return interpreter.Void
-		},
+		newAssertArgumentsFunction(t, &called),
 	)
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -5003,13 +4980,19 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			"getStorageReference",
 			getStorageReferenceFunctionType,
 			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
-				authorized := bool(invocation.Arguments[0].(interpreter.BoolValue))
+			func(
+				context interpreter.NativeFunctionContext,
+				_ interpreter.LocationRange,
+				_ interpreter.TypeParameterGetter,
+				_ interpreter.Value,
+				args ...interpreter.Value,
+			) interpreter.Value {
+				authorized := bool(args[0].(interpreter.BoolValue))
 
 				var auth = interpreter.UnauthorizedAccess
 				if authorized {
 					auth = interpreter.ConvertSemaAccessToStaticAuthorization(
-						invocation.InvocationContext,
+						context,
 						sema.NewEntitlementSetAccess(
 							[]*sema.EntitlementType{getType("E").(*sema.EntitlementType)},
 							sema.Conjunction,
@@ -13459,6 +13442,19 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 	})
 }
 
+func newCountAndGetKeyFunction(key int64, getKeyInvocationsCount *int) interpreter.NativeFunction {
+	return func(
+		_ interpreter.NativeFunctionContext,
+		_ interpreter.LocationRange,
+		_ interpreter.TypeParameterGetter,
+		_ interpreter.Value,
+		_ ...interpreter.Value,
+	) interpreter.Value {
+		*getKeyInvocationsCount++
+		return interpreter.NewUnmeteredIntValueFromInt64(key)
+	}
+}
+
 func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 
 	t.Parallel()
@@ -13480,7 +13476,13 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 				},
 			),
 			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(
+				_ interpreter.NativeFunctionContext,
+				_ interpreter.LocationRange,
+				_ interpreter.TypeParameterGetter,
+				_ interpreter.Value,
+				_ ...interpreter.Value,
+			) interpreter.Value {
 				getKeyInvocationsCount++
 				return interpreter.NewUnmeteredStringValue(key)
 			},
@@ -13557,10 +13559,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 				},
 			),
 			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
-				getKey1InvocationsCount++
-				return interpreter.NewUnmeteredIntValueFromInt64(key)
-			},
+			newCountAndGetKeyFunction(key, &getKey1InvocationsCount),
 		)
 
 		getKey2Function := stdlib.NewInterpreterStandardLibraryStaticFunction(
@@ -13573,10 +13572,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 				},
 			),
 			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
-				getKey2InvocationsCount++
-				return interpreter.NewUnmeteredIntValueFromInt64(key)
-			},
+			newCountAndGetKeyFunction(key, &getKey2InvocationsCount),
 		)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -13654,10 +13650,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 				},
 			),
 			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
-				getKeyInvocationsCount++
-				return interpreter.NewUnmeteredIntValueFromInt64(key)
-			},
+			newCountAndGetKeyFunction(key, &getKeyInvocationsCount),
 		)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -13730,10 +13723,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 				},
 			),
 			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
-				getKey1InvocationsCount++
-				return interpreter.NewUnmeteredIntValueFromInt64(key)
-			},
+			newCountAndGetKeyFunction(key, &getKey1InvocationsCount),
 		)
 
 		getKey2Function := stdlib.NewInterpreterStandardLibraryStaticFunction(
@@ -13746,10 +13736,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 				},
 			),
 			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
-				getKey2InvocationsCount++
-				return interpreter.NewUnmeteredIntValueFromInt64(key)
-			},
+			newCountAndGetKeyFunction(key, &getKey2InvocationsCount),
 		)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -13829,10 +13816,7 @@ func TestInterpretVariableDeclarationSecondValueEvaluationOrder(t *testing.T) {
 				},
 			),
 			"",
-			func(invocation interpreter.Invocation) interpreter.Value {
-				getKeyInvocationsCount++
-				return interpreter.NewUnmeteredIntValueFromInt64(key)
-			},
+			newCountAndGetKeyFunction(key, &getKeyInvocationsCount),
 		)
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -13916,19 +13900,24 @@ func TestInterpretInvocationEvaluationAndTransferOrder(t *testing.T) {
 			sema.VoidTypeAnnotation,
 		),
 		"",
-		func(invocation interpreter.Invocation) interpreter.Value {
-			arguments := invocation.Arguments
-			require.Len(t, arguments, 2)
+		func(
+			_ interpreter.NativeFunctionContext,
+			_ interpreter.LocationRange,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
+			require.Len(t, args, 2)
 
-			require.IsType(t, &interpreter.DictionaryValue{}, arguments[0])
-			aDict := arguments[0].(*interpreter.DictionaryValue)
+			require.IsType(t, &interpreter.DictionaryValue{}, args[0])
+			aDict := args[0].(*interpreter.DictionaryValue)
 			assert.Equal(t,
 				atree.ValueID{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
 				aDict.ValueID(),
 			)
 
-			require.IsType(t, &interpreter.DictionaryValue{}, arguments[1])
-			bDict := arguments[1].(*interpreter.DictionaryValue)
+			require.IsType(t, &interpreter.DictionaryValue{}, args[1])
+			bDict := args[1].(*interpreter.DictionaryValue)
 			assert.Equal(t,
 				atree.ValueID{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4},
 				bDict.ValueID(),

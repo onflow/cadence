@@ -860,15 +860,7 @@ func (v *DictionaryValue) GetMethod(
 			sema.DictionaryRemoveFunctionType(
 				v.SemaType(context),
 			),
-			func(v *DictionaryValue, invocation Invocation) Value {
-				keyValue := invocation.Arguments[0]
-
-				return v.Remove(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-					keyValue,
-				)
-			},
+			NativeDictionaryRemoveFunction,
 		)
 
 	case sema.DictionaryTypeInsertFunctionName:
@@ -878,17 +870,7 @@ func (v *DictionaryValue) GetMethod(
 			sema.DictionaryInsertFunctionType(
 				v.SemaType(context),
 			),
-			func(v *DictionaryValue, invocation Invocation) Value {
-				keyValue := invocation.Arguments[0]
-				newValue := invocation.Arguments[1]
-
-				return v.Insert(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-					keyValue,
-					newValue,
-				)
-			},
+			NativeDictionaryInsertFunction,
 		)
 
 	case sema.DictionaryTypeContainsKeyFunctionName:
@@ -898,13 +880,7 @@ func (v *DictionaryValue) GetMethod(
 			sema.DictionaryContainsKeyFunctionType(
 				v.SemaType(context),
 			),
-			func(v *DictionaryValue, invocation Invocation) Value {
-				return v.ContainsKey(
-					invocation.InvocationContext,
-					invocation.LocationRange,
-					invocation.Arguments[0],
-				)
-			},
+			NativeDictionaryContainsKeyFunction,
 		)
 	case sema.DictionaryTypeForEachKeyFunctionName:
 		return NewBoundHostFunctionValue(
@@ -913,22 +889,7 @@ func (v *DictionaryValue) GetMethod(
 			sema.DictionaryForEachKeyFunctionType(
 				v.SemaType(context),
 			),
-			func(v *DictionaryValue, invocation Invocation) Value {
-				invocationContext := invocation.InvocationContext
-
-				funcArgument, ok := invocation.Arguments[0].(FunctionValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				v.ForEachKey(
-					invocationContext,
-					invocation.LocationRange,
-					funcArgument,
-				)
-
-				return Void
-			},
+			NativeDictionaryForEachKeyFunction,
 		)
 	}
 
@@ -1653,3 +1614,63 @@ func (v *DictionaryValue) ElementSize() uint {
 func (v *DictionaryValue) Inlined() bool {
 	return v.dictionary.Inlined()
 }
+
+// Native dictionary functions
+
+var NativeDictionaryRemoveFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		locationRange LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		keyValue := args[0]
+		dictionary := AssertValueOfType[*DictionaryValue](receiver)
+		return dictionary.Remove(context, locationRange, keyValue)
+	},
+)
+
+var NativeDictionaryInsertFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		locationRange LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		keyValue := args[0]
+		newValue := args[1]
+		dictionary := AssertValueOfType[*DictionaryValue](receiver)
+		return dictionary.Insert(context, locationRange, keyValue, newValue)
+	},
+)
+
+var NativeDictionaryContainsKeyFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		locationRange LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		keyValue := args[0]
+		dictionary := AssertValueOfType[*DictionaryValue](receiver)
+		return dictionary.ContainsKey(context, locationRange, keyValue)
+	},
+)
+
+var NativeDictionaryForEachKeyFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		locationRange LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		funcArgument := AssertValueOfType[FunctionValue](args[0])
+		dictionary := AssertValueOfType[*DictionaryValue](receiver)
+		dictionary.ForEachKey(context, locationRange, funcArgument)
+		return Void
+	},
+)

@@ -50,12 +50,12 @@ type Context struct {
 	containerValueIteration       map[atree.ValueID]int
 	destroyedResources            map[atree.ValueID]struct{}
 
-	// semaTypes is a cache-alike for temporary storing sema-types by their ID,
+	// semaTypeCache is a cache-alike for temporary storing sema-types by their ID,
 	// to avoid repeated conversions from static-types to sema-types.
 	// This cache-alike is maintained per execution.
 	// TODO: Re-use the conversions from the compiler.
 	// TODO: Maybe extend/share this between executions.
-	semaTypes map[sema.TypeID]sema.Type
+	semaTypeCache map[sema.TypeID]sema.Type
 
 	// linkedGlobalsCache is a local cache-alike that is being used to hold already linked imports.
 	linkedGlobalsCache map[common.Location]LinkedGlobals
@@ -73,6 +73,15 @@ func NewContext(config *Config) *Context {
 	return &Context{
 		Config: config,
 	}
+}
+
+func (c *Context) newReusing() *Context {
+	newContext := NewContext(c.Config)
+
+	newContext.semaTypeCache = c.semaTypeCache
+	newContext.linkedGlobalsCache = c.linkedGlobalsCache
+
+	return newContext
 }
 
 func (c *Context) RecordStorageMutation() {
@@ -330,7 +339,13 @@ func (c *Context) DefaultDestroyEvents(
 	collectFunction := NewNativeFunctionValue(
 		"", // anonymous function
 		commons.CollectEventsFunctionType,
-		func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
+		func(
+			context interpreter.NativeFunctionContext,
+			_ interpreter.LocationRange,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
+			arguments ...interpreter.Value,
+		) interpreter.Value {
 			for _, argument := range arguments {
 				event := argument.(*interpreter.CompositeValue)
 				eventValues = append(eventValues, event)
@@ -347,7 +362,7 @@ func (c *Context) DefaultDestroyEvents(
 
 func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema.Type {
 	typeID := staticType.ID()
-	semaType, ok := c.semaTypes[typeID]
+	semaType, ok := c.semaTypeCache[typeID]
 	if ok {
 		return semaType
 	}
@@ -355,10 +370,10 @@ func (c *Context) SemaTypeFromStaticType(staticType interpreter.StaticType) sema
 	// TODO: avoid the sema-type conversion
 	semaType = interpreter.MustConvertStaticToSemaType(staticType, c)
 
-	if c.semaTypes == nil {
-		c.semaTypes = make(map[sema.TypeID]sema.Type)
+	if c.semaTypeCache == nil {
+		c.semaTypeCache = make(map[sema.TypeID]sema.Type)
 	}
-	c.semaTypes[typeID] = semaType
+	c.semaTypeCache[typeID] = semaType
 
 	return semaType
 }
