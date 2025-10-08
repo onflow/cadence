@@ -4144,58 +4144,52 @@ var NativeAddressFromStringFunction = NativeFunction(
 )
 
 func NativeConverterFunction(convert func(memoryGauge common.MemoryGauge, value Value) Value) NativeFunction {
-	return NativeFunction(
-		func(
-			context NativeFunctionContext,
-			_ LocationRange,
-			_ TypeParameterGetter,
-			_ Value,
-			args ...Value,
-		) Value {
-			return convert(context, args[0])
-		},
-	)
+	return func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		_ Value,
+		args ...Value,
+	) Value {
+		return convert(context, args[0])
+	}
 }
 
 func NativeFromStringFunction(parser StringValueParser) NativeFunction {
-	return NativeFunction(
-		func(
-			context NativeFunctionContext,
-			_ LocationRange,
-			_ TypeParameterGetter,
-			_ Value,
-			args ...Value,
-		) Value {
-			argument := AssertValueOfType[*StringValue](args[0])
-			return parser(context, argument.Str)
-		},
-	)
+	return func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		_ Value,
+		args ...Value,
+	) Value {
+		argument := AssertValueOfType[*StringValue](args[0])
+		return parser(context, argument.Str)
+	}
 }
 
 func NativeFromBigEndianBytesFunction(byteLength uint, converter func(memoryGauge common.MemoryGauge, bytes []byte) Value) NativeFunction {
-	return NativeFunction(
-		func(
-			context NativeFunctionContext,
-			_ LocationRange,
-			_ TypeParameterGetter,
-			_ Value,
-			args ...Value,
-		) Value {
-			argument := AssertValueOfType[*ArrayValue](args[0])
+	return func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		_ Value,
+		args ...Value,
+	) Value {
+		argument := AssertValueOfType[*ArrayValue](args[0])
 
-			bytes, err := ByteArrayValueToByteSlice(context, argument)
-			if err != nil {
-				return Nil
-			}
+		bytes, err := ByteArrayValueToByteSlice(context, argument)
+		if err != nil {
+			return Nil
+		}
 
-			// overflow
-			if byteLength != 0 && uint(len(bytes)) > byteLength {
-				return Nil
-			}
+		// overflow
+		if byteLength != 0 && uint(len(bytes)) > byteLength {
+			return Nil
+		}
 
-			return NewSomeValueNonCopying(context, converter(context, bytes))
-		},
-	)
+		return NewSomeValueNonCopying(context, converter(context, bytes))
+	}
 }
 
 var NativeStringFunction = NativeFunction(

@@ -55,22 +55,20 @@ func (f FunctionLogger) ProgramLog(message string) error {
 }
 
 func NativeLogFunction(logger Logger) interpreter.NativeFunction {
-	return interpreter.NativeFunction(
-		func(
-			context interpreter.NativeFunctionContext,
-			_ interpreter.LocationRange,
-			_ interpreter.TypeParameterGetter,
-			_ interpreter.Value,
-			args ...interpreter.Value,
-		) interpreter.Value {
-			value := args[0]
-			return Log(
-				context,
-				logger,
-				value,
-			)
-		},
-	)
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.LocationRange,
+		_ interpreter.TypeParameterGetter,
+		_ interpreter.Value,
+		args ...interpreter.Value,
+	) interpreter.Value {
+		value := args[0]
+		return Log(
+			context,
+			logger,
+			value,
+		)
+	}
 }
 
 func NewInterpreterLogFunction(logger Logger) StandardLibraryValue {

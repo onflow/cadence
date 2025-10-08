@@ -110,22 +110,20 @@ type AccountCreator interface {
 }
 
 func NativeAccountConstructor(creator AccountCreator) interpreter.NativeFunction {
-	return interpreter.NativeFunction(
-		func(
-			context interpreter.NativeFunctionContext,
-			_ interpreter.LocationRange,
-			_ interpreter.TypeParameterGetter,
-			_ interpreter.Value,
-			args ...interpreter.Value,
-		) interpreter.Value {
-			payer := interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](args[0])
-			return NewAccount(
-				context,
-				payer,
-				creator,
-			)
-		},
-	)
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.LocationRange,
+		_ interpreter.TypeParameterGetter,
+		_ interpreter.Value,
+		args ...interpreter.Value,
+	) interpreter.Value {
+		payer := interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](args[0])
+		return NewAccount(
+			context,
+			payer,
+			creator,
+		)
+	}
 }
 
 func NewInterpreterAccountConstructor(creator AccountCreator) StandardLibraryValue {
@@ -238,30 +236,28 @@ var GetAuthAccountFunctionType = func() *sema.FunctionType {
 }()
 
 func NativeGetAuthAccountFunction(handler AccountHandler) interpreter.NativeFunction {
-	return interpreter.NativeFunction(
-		func(
-			context interpreter.NativeFunctionContext,
-			locationRange interpreter.LocationRange,
-			typeParameterGetter interpreter.TypeParameterGetter,
-			_ interpreter.Value,
-			args ...interpreter.Value,
-		) interpreter.Value {
-			accountAddress := interpreter.AssertValueOfType[interpreter.AddressValue](args[0])
+	return func(
+		context interpreter.NativeFunctionContext,
+		locationRange interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.Value,
+		args ...interpreter.Value,
+	) interpreter.Value {
+		accountAddress := interpreter.AssertValueOfType[interpreter.AddressValue](args[0])
 
-			ty := typeParameterGetter.NextStatic()
-			referenceType, ok := ty.(*interpreter.ReferenceStaticType)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+		ty := typeParameterGetter.NextStatic()
+		referenceType, ok := ty.(*interpreter.ReferenceStaticType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 
-			return NewAccountReferenceValue(
-				context,
-				handler,
-				accountAddress,
-				referenceType.Authorization,
-			)
-		},
-	)
+		return NewAccountReferenceValue(
+			context,
+			handler,
+			accountAddress,
+			referenceType.Authorization,
+		)
+	}
 }
 
 func NewInterpreterGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
@@ -2601,24 +2597,23 @@ var GetAccountFunctionType = sema.NewSimpleFunctionType(
 )
 
 func NativeGetAccountFunction(handler AccountHandler) interpreter.NativeFunction {
-	return interpreter.NativeFunction(
-		func(
-			context interpreter.NativeFunctionContext,
-			_ interpreter.LocationRange,
-			_ interpreter.TypeParameterGetter,
-			_ interpreter.Value,
-			args ...interpreter.Value,
-		) interpreter.Value {
-			accountAddress := interpreter.AssertValueOfType[interpreter.AddressValue](args[0])
-			return NewAccountReferenceValue(
-				context,
-				handler,
-				accountAddress,
-				interpreter.UnauthorizedAccess,
-			)
-		},
-	)
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.LocationRange,
+		_ interpreter.TypeParameterGetter,
+		_ interpreter.Value,
+		args ...interpreter.Value,
+	) interpreter.Value {
+		accountAddress := interpreter.AssertValueOfType[interpreter.AddressValue](args[0])
+		return NewAccountReferenceValue(
+			context,
+			handler,
+			accountAddress,
+			interpreter.UnauthorizedAccess,
+		)
+	}
 }
+
 func NewInterpreterGetAccountFunction(handler AccountHandler) StandardLibraryValue {
 	return NewNativeStandardLibraryStaticFunction(
 		GetAccountFunctionName,

@@ -79,25 +79,23 @@ type BlockAtHeightProvider interface {
 }
 
 func NativeGetBlockFunction(provider BlockAtHeightProvider) interpreter.NativeFunction {
-	return interpreter.NativeFunction(
-		func(
-			context interpreter.NativeFunctionContext,
-			_ interpreter.LocationRange,
-			_ interpreter.TypeParameterGetter,
-			_ interpreter.Value,
-			args ...interpreter.Value,
-		) interpreter.Value {
-			heightValue := interpreter.AssertValueOfType[interpreter.UInt64Value](args[0])
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.LocationRange,
+		_ interpreter.TypeParameterGetter,
+		_ interpreter.Value,
+		args ...interpreter.Value,
+	) interpreter.Value {
+		heightValue := interpreter.AssertValueOfType[interpreter.UInt64Value](args[0])
 
-			block, exists := getBlockAtHeight(provider, uint64(heightValue))
-			if !exists {
-				return interpreter.Nil
-			}
+		block, exists := getBlockAtHeight(provider, uint64(heightValue))
+		if !exists {
+			return interpreter.Nil
+		}
 
-			blockValue := NewBlockValue(context, block)
-			return interpreter.NewSomeValueNonCopying(context, blockValue)
-		},
-	)
+		blockValue := NewBlockValue(context, block)
+		return interpreter.NewSomeValueNonCopying(context, blockValue)
+	}
 }
 
 func NewInterpreterGetBlockFunction(provider BlockAtHeightProvider) StandardLibraryValue {
@@ -204,30 +202,28 @@ type CurrentBlockProvider interface {
 }
 
 func NativeGetCurrentBlockFunction(provider CurrentBlockProvider) interpreter.NativeFunction {
-	return interpreter.NativeFunction(
-		func(
-			context interpreter.NativeFunctionContext,
-			locationRange interpreter.LocationRange,
-			_ interpreter.TypeParameterGetter,
-			_ interpreter.Value,
-			_ ...interpreter.Value,
-		) interpreter.Value {
-			height, err := provider.GetCurrentBlockHeight()
-			if err != nil {
-				panic(err)
-			}
+	return func(
+		context interpreter.NativeFunctionContext,
+		locationRange interpreter.LocationRange,
+		_ interpreter.TypeParameterGetter,
+		_ interpreter.Value,
+		_ ...interpreter.Value,
+	) interpreter.Value {
+		height, err := provider.GetCurrentBlockHeight()
+		if err != nil {
+			panic(err)
+		}
 
-			block, exists := getBlockAtHeight(
-				provider,
-				height,
-			)
-			if !exists {
-				panic(errors.NewUnexpectedError("cannot get current block"))
-			}
+		block, exists := getBlockAtHeight(
+			provider,
+			height,
+		)
+		if !exists {
+			panic(errors.NewUnexpectedError("cannot get current block"))
+		}
 
-			return NewBlockValue(context, block)
-		},
-	)
+		return NewBlockValue(context, block)
+	}
 }
 
 func NewInterpreterGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryValue {

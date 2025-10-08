@@ -107,29 +107,27 @@ func getRandomBytes(buffer []byte, generator RandomGenerator) {
 var ZeroModuloError = errors.NewDefaultUserError("modulo argument cannot be zero")
 
 func NativeRevertibleRandomFunction(generator RandomGenerator) interpreter.NativeFunction {
-	return interpreter.NativeFunction(
-		func(
-			context interpreter.NativeFunctionContext,
-			_ interpreter.LocationRange,
-			typeParameterGetter interpreter.TypeParameterGetter,
-			_ interpreter.Value,
-			args ...interpreter.Value,
-		) interpreter.Value {
-			returnIntegerType := typeParameterGetter.NextSema()
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.LocationRange,
+		typeParameterGetter interpreter.TypeParameterGetter,
+		_ interpreter.Value,
+		args ...interpreter.Value,
+	) interpreter.Value {
+		returnIntegerType := typeParameterGetter.NextSema()
 
-			var moduloValue interpreter.Value
-			if len(args) == 1 {
-				moduloValue = args[0]
-			}
+		var moduloValue interpreter.Value
+		if len(args) == 1 {
+			moduloValue = args[0]
+		}
 
-			return RevertibleRandom(
-				generator,
-				context,
-				returnIntegerType,
-				moduloValue,
-			)
-		},
-	)
+		return RevertibleRandom(
+			generator,
+			context,
+			returnIntegerType,
+			moduloValue,
+		)
+	}
 }
 
 func NewInterpreterRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue {
