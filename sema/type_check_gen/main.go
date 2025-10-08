@@ -43,7 +43,7 @@ func main() {
 	// Read and parse YAML rules
 	rules, err := subtypegen.ParseRules()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error reading YAML rules: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "error reading YAML rules: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -64,10 +64,6 @@ func main() {
 	// Generate code using the comprehensive generator
 	gen := subtypegen.NewSubTypeCheckGenerator(config)
 	decls := gen.GenerateCheckSubTypeWithoutEqualityFunction(rules)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error generating code: %v\n", err)
-		os.Exit(1)
-	}
 
 	// Write output
 	outFile, err := os.Create(outPath)

@@ -18,7 +18,9 @@
 
 package sema
 
-import "github.com/onflow/cadence/errors"
+import (
+	"github.com/onflow/cadence/errors"
+)
 
 //go:generate go run ./type_check_gen subtype_check.gen.go
 

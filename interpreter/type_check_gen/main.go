@@ -26,7 +26,11 @@ import (
 	subtypegen "github.com/onflow/cadence/tools/subtype-gen"
 )
 
-const interpreterPath = "github.com/onflow/cadence/interpreter"
+const (
+	interpreterPath        = "github.com/onflow/cadence/interpreter"
+	typeConverterParamName = "typeConverter"
+	typeConverterTypeName  = "TypeConverter"
+)
 
 var packagePathFlag = flag.String("pkg", interpreterPath, "target Go package name")
 
@@ -43,15 +47,9 @@ func main() {
 	// Read and parse YAML rules
 	rules, err := subtypegen.ParseRules()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error reading YAML rules: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "error reading YAML rules: %v\n", err)
 		os.Exit(1)
 	}
-
-	const (
-		interpreterPath        = "github.com/onflow/cadence/interpreter"
-		typeConverterParamName = "typeConverter"
-		typeConverterTypeName  = "TypeConverter"
-	)
 
 	config := subtypegen.Config{
 		SimpleTypePrefix:  "PrimitiveStaticType",
@@ -76,10 +74,6 @@ func main() {
 	// Generate code using the comprehensive generator
 	gen := subtypegen.NewSubTypeCheckGenerator(config)
 	decls := gen.GenerateCheckSubTypeWithoutEqualityFunction(rules)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error generating code: %v\n", err)
-		os.Exit(1)
-	}
 
 	// Write output
 	outFile, err := os.Create(outPath)

@@ -7706,60 +7706,17 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		// whereas, return types be *covariant/subtypes*. Since type parameters can be used in
 		// both parameters and return types, inorder to satisfies both above conditions,
 		// bound type of type parameters can only be strictly equal, but not subtypes/supertypes of one another.
-		if len(typedSubType.TypeParameters) != len(typedSuperType.TypeParameters) {
-			return false
-		}
 
-		for i, subTypeParameter := range typedSubType.TypeParameters {
-			superTypeParameter := typedSuperType.TypeParameters[i]
-			if !subTypeParameter.TypeBoundEqual(superTypeParameter.TypeBound) {
-				return false
-			}
-		}
+		return AreTypeParamsEqual(typedSubType, typedSuperType) &&
 
-		// Parameter arity must be equivalent.
-		if len(typedSubType.Parameters) != len(typedSuperType.Parameters) {
-			return false
-		}
+			// Functions are contravariant in their parameter types.
+			AreParamsContravariant(typedSubType, typedSuperType) &&
 
-		if !typedSubType.ArityEqual(typedSuperType.Arity) {
-			return false
-		}
+			// Functions are covariant in their return type.
+			AreReturnsCovariant(typedSubType, typedSuperType) &&
 
-		// Functions are contravariant in their parameter types
-		for i, subParameter := range typedSubType.Parameters {
-			superParameter := typedSuperType.Parameters[i]
-			if !IsSubType(
-				superParameter.TypeAnnotation.Type,
-				subParameter.TypeAnnotation.Type,
-			) {
-				return false
-			}
-		}
-
-		// Functions are covariant in their return type
-		if typedSubType.ReturnTypeAnnotation.Type != nil {
-			if typedSuperType.ReturnTypeAnnotation.Type == nil {
-				return false
-			}
-
-			if !IsSubType(
-				typedSubType.ReturnTypeAnnotation.Type,
-				typedSuperType.ReturnTypeAnnotation.Type,
-			) {
-				return false
-			}
-		} else if typedSuperType.ReturnTypeAnnotation.Type != nil {
-			return false
-		}
-
-		// Constructors?
-
-		if typedSubType.IsConstructor != typedSuperType.IsConstructor {
-			return false
-		}
-
-		return true
+			// Constructors?
+			AreConstructorsEqual(typedSubType, typedSuperType)
 
 	case *IntersectionType:
 
