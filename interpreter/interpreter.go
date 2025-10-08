@@ -3941,7 +3941,6 @@ type runtimeTypeConstructor struct {
 var NativeMetaTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		_ Value,
 		_ ...Value,
@@ -3955,7 +3954,6 @@ var NativeMetaTypeFunction = NativeFunction(
 var NativeOptionalTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		_ Value,
 		args ...Value,
@@ -3969,7 +3967,6 @@ var NativeOptionalTypeFunction = NativeFunction(
 var NativeVariableSizedArrayTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		locationRange LocationRange,
 		_ TypeParameterGetter,
 		_ Value,
 		args ...Value,
@@ -3983,7 +3980,6 @@ var NativeVariableSizedArrayTypeFunction = NativeFunction(
 var NativeConstantSizedArrayTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		_ Value,
 		args ...Value,
@@ -4002,7 +3998,6 @@ var NativeConstantSizedArrayTypeFunction = NativeFunction(
 var NativeDictionaryTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		locationRange LocationRange,
 		_ TypeParameterGetter,
 		_ Value,
 		args ...Value,
@@ -4021,7 +4016,6 @@ var NativeDictionaryTypeFunction = NativeFunction(
 var NativeCompositeTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		locationRange LocationRange,
 		_ TypeParameterGetter,
 		_ Value,
 		args ...Value,
@@ -4035,7 +4029,6 @@ var NativeCompositeTypeFunction = NativeFunction(
 var NativeFunctionTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		_ Value,
 		args ...Value,
@@ -4054,7 +4047,6 @@ var NativeFunctionTypeFunction = NativeFunction(
 var NativeReferenceTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		_ Value,
 		args ...Value,
@@ -4073,7 +4065,6 @@ var NativeReferenceTypeFunction = NativeFunction(
 var NativeIntersectionTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		_ Value,
 		args ...Value,
@@ -4090,7 +4081,6 @@ var NativeIntersectionTypeFunction = NativeFunction(
 var NativeCapabilityTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		locationRange LocationRange,
 		_ TypeParameterGetter,
 		_ Value,
 		args ...Value,
@@ -4104,7 +4094,6 @@ var NativeCapabilityTypeFunction = NativeFunction(
 var NativeInclusiveRangeTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		locationRange LocationRange,
 		_ TypeParameterGetter,
 		_ Value,
 		args ...Value,
@@ -4118,7 +4107,6 @@ var NativeInclusiveRangeTypeFunction = NativeFunction(
 var NativeAddressFromBytesFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		_ Value,
 		args ...Value,
@@ -4132,7 +4120,6 @@ var NativeAddressFromBytesFunction = NativeFunction(
 var NativeAddressFromStringFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		_ Value,
 		args ...Value,
@@ -4146,7 +4133,6 @@ var NativeAddressFromStringFunction = NativeFunction(
 func NativeConverterFunction(convert func(memoryGauge common.MemoryGauge, value Value) Value) NativeFunction {
 	return func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		_ Value,
 		args ...Value,
@@ -4158,7 +4144,6 @@ func NativeConverterFunction(convert func(memoryGauge common.MemoryGauge, value 
 func NativeFromStringFunction(parser StringValueParser) NativeFunction {
 	return func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		_ Value,
 		args ...Value,
@@ -4171,7 +4156,6 @@ func NativeFromStringFunction(parser StringValueParser) NativeFunction {
 func NativeFromBigEndianBytesFunction(byteLength uint, converter func(memoryGauge common.MemoryGauge, bytes []byte) Value) NativeFunction {
 	return func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		_ Value,
 		args ...Value,
@@ -4195,7 +4179,6 @@ func NativeFromBigEndianBytesFunction(byteLength uint, converter func(memoryGaug
 var NativeStringFunction = NativeFunction(
 	func(
 		_ NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		_ Value,
 		_ ...Value,
@@ -4423,7 +4406,6 @@ func NativeAccountStorageIterateFunction(
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
@@ -4640,7 +4622,6 @@ func NativeAccountStorageSaveFunction(
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
@@ -4725,7 +4706,6 @@ func NativeAccountStorageTypeFunction(
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
-		locationRange LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
@@ -4820,7 +4800,6 @@ func NativeAccountStorageReadFunction(
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
 		args ...Value,
@@ -4922,7 +4901,6 @@ func NativeAccountStorageBorrowFunction(
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
 		args ...Value,
@@ -4997,7 +4975,6 @@ func NativeAccountStorageCheckFunction(
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
-		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
 		args ...Value,
@@ -5440,7 +5417,6 @@ func getBuiltinFunctionMember(context MemberAccessibleContext, self Value, ident
 var NativeIsInstanceFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
@@ -5477,7 +5453,6 @@ func IsInstance(invocationContext InvocationContext, self Value, typeValue TypeV
 var NativeGetTypeFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		locationRange LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
@@ -5930,7 +5905,6 @@ func NativeCapabilityBorrowFunction(
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
 		args ...Value,
@@ -6038,7 +6012,6 @@ func NativeCapabilityCheckFunction(
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
 		args ...Value,

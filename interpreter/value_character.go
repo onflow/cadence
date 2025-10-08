@@ -233,7 +233,6 @@ func (v CharacterValue) GetMember(context MemberAccessibleContext, name string) 
 var NativeCharacterValueToStringFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		_ ...Value,

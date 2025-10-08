@@ -1110,7 +1110,6 @@ func TestInterpretNativeFunctionWithMultipleTypeParameters(t *testing.T) {
 
 	nativeFunction := func(
 		_ interpreter.NativeFunctionContext,
-		_ interpreter.LocationRange,
 		typeParameterGetter interpreter.TypeParameterGetter,
 		_ interpreter.Value,
 		_ ...interpreter.Value,

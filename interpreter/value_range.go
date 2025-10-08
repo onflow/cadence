@@ -121,7 +121,6 @@ func NewInclusiveRangeValueWithStep(
 var NativeInclusiveRangeContainsFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,

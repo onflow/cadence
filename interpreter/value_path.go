@@ -120,7 +120,6 @@ func (v PathValue) GetMember(context MemberAccessibleContext, name string) Value
 var NativePathValueToStringFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		_ ...Value,

@@ -508,7 +508,6 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 var NativeOptionalMapFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,

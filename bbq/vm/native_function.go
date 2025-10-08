@@ -65,7 +65,6 @@ func AdaptNativeFunctionForVM(fn interpreter.NativeFunction) NativeFunctionVM {
 
 		return fn(
 			context,
-			interpreter.LocationRange{},
 			typeParameterGetter,
 			receiver,
 			arguments...,

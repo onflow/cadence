@@ -57,7 +57,6 @@ func (f FunctionLogger) ProgramLog(message string) error {
 func NativeLogFunction(logger Logger) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.LocationRange,
 		_ interpreter.TypeParameterGetter,
 		_ interpreter.Value,
 		args ...interpreter.Value,

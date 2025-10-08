@@ -79,7 +79,6 @@ func (i *InterpreterTypeParameterGetter) NextSema() sema.Type {
 
 type NativeFunction func(
 	context NativeFunctionContext,
-	locationRange LocationRange,
 	typeParameterGetter TypeParameterGetter,
 	receiver Value,
 	args ...Value,
@@ -97,7 +96,12 @@ func AdaptNativeFunctionForInterpreter(fn NativeFunction) HostFunction {
 
 		typeParameterGetter := NewInterpreterTypeParameterGetter(context, invocation.TypeParameterTypes)
 
-		return fn(context, invocation.LocationRange, typeParameterGetter, receiver, invocation.Arguments...)
+		return fn(
+			context,
+			typeParameterGetter,
+			receiver,
+			invocation.Arguments...,
+		)
 	}
 }
 

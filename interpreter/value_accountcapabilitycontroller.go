@@ -349,7 +349,6 @@ func NewNativeDeletionCheckedAccountCapabilityControllerFunction(
 ) NativeFunction {
 	return func(
 		context NativeFunctionContext,
-		locationRange LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
 		args ...Value,
@@ -358,14 +357,18 @@ func NewNativeDeletionCheckedAccountCapabilityControllerFunction(
 		// check if controller is already deleted
 		controller.CheckDeleted()
 
-		return f(context, locationRange, typeParameterGetter, receiver, args...)
+		return f(
+			context,
+			typeParameterGetter,
+			receiver,
+			args...,
+		)
 	}
 }
 
 var NativeAccountCapabilityControllerDeleteFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		_ ...Value,
@@ -390,7 +393,6 @@ func (v *AccountCapabilityControllerValue) newDeleteFunction(
 var NativeAccountCapabilityControllerSetTagFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,

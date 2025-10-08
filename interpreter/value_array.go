@@ -1909,7 +1909,6 @@ func (i *ArrayIterator) ValueID() (atree.ValueID, bool) {
 var NativeArrayAppendFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
@@ -1925,7 +1924,6 @@ var NativeArrayAppendFunction = NativeFunction(
 var NativeArrayAppendAllFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
@@ -1941,7 +1939,6 @@ var NativeArrayAppendAllFunction = NativeFunction(
 var NativeArrayConcatFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
@@ -1956,7 +1953,6 @@ var NativeArrayConcatFunction = NativeFunction(
 var NativeArrayInsertFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
@@ -1973,7 +1969,6 @@ var NativeArrayInsertFunction = NativeFunction(
 var NativeArrayRemoveFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
@@ -1988,7 +1983,6 @@ var NativeArrayRemoveFunction = NativeFunction(
 var NativeArrayContainsFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
@@ -2003,7 +1997,6 @@ var NativeArrayContainsFunction = NativeFunction(
 var NativeArraySliceFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
@@ -2019,7 +2012,6 @@ var NativeArraySliceFunction = NativeFunction(
 var NativeArrayReverseFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		_ ...Value,
@@ -2032,7 +2024,6 @@ var NativeArrayReverseFunction = NativeFunction(
 var NativeArrayFilterFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
@@ -2047,7 +2038,6 @@ var NativeArrayFilterFunction = NativeFunction(
 var NativeArrayMapFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
@@ -2062,7 +2052,6 @@ var NativeArrayMapFunction = NativeFunction(
 var NativeArrayToVariableSizedFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		_ ...Value,
@@ -2076,7 +2065,6 @@ var NativeArrayToVariableSizedFunction = NativeFunction(
 var NativeArrayToConstantSizedFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
 		args ...Value,
@@ -2094,7 +2082,6 @@ var NativeArrayToConstantSizedFunction = NativeFunction(
 var NativeArrayFirstIndexFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
@@ -2109,7 +2096,6 @@ var NativeArrayFirstIndexFunction = NativeFunction(
 var NativeArrayRemoveFirstFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		_ ...Value,
@@ -2123,7 +2109,6 @@ var NativeArrayRemoveFirstFunction = NativeFunction(
 var NativeArrayRemoveLastFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		_ ...Value,

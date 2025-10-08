@@ -173,7 +173,6 @@ func ParseCheckAndPrepareWithLogs(
 		"",
 		func(
 			_ interpreter.NativeFunctionContext,
-			_ interpreter.LocationRange,
 			_ interpreter.TypeParameterGetter,
 			_ interpreter.Value,
 			args ...interpreter.Value,
@@ -352,7 +351,6 @@ func ParseCheckAndPrepareWithOptions(
 							functionValue.Type,
 							func(
 								context interpreter.NativeFunctionContext,
-								_ interpreter.LocationRange,
 								_ interpreter.TypeParameterGetter,
 								_ interpreter.Value,
 								arguments ...interpreter.Value,
