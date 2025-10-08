@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"slices"
 	"sort"
 	"strconv"
 	"time"
@@ -67,6 +68,25 @@ type OnStatementFunc func(
 	inter *Interpreter,
 	statement ast.Statement,
 )
+
+func CombineOnStatementFuncs(funcs ...OnStatementFunc) OnStatementFunc {
+	funcs = slices.DeleteFunc(funcs, func(f OnStatementFunc) bool {
+		return f == nil
+	})
+
+	switch len(funcs) {
+	case 0:
+		return nil
+	case 1:
+		return funcs[0]
+	default:
+		return func(inter *Interpreter, statement ast.Statement) {
+			for _, f := range funcs {
+				f(inter, statement)
+			}
+		}
+	}
+}
 
 // OnLoopIterationFunc is a function that is triggered when a loop iteration is about to be executed.
 type OnLoopIterationFunc func(

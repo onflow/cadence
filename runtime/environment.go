@@ -189,9 +189,17 @@ func (e *InterpreterEnvironment) Configure(
 ) {
 	e.Interface = runtimeInterface
 	e.storage = storage
+
 	e.InterpreterConfig.Storage = storage
 	e.InterpreterConfig.MemoryGauge = memoryGauge
+
+	computationProfile := e.config.ComputationProfile
+	if computationProfile != nil {
+		computationProfile.DelegatedComputationGauge = computationGauge
+		computationGauge = computationProfile
+	}
 	e.InterpreterConfig.ComputationGauge = computationGauge
+
 	e.stackDepthLimiter.depth = 0
 
 	e.CheckingEnvironment.configure(
@@ -322,21 +330,22 @@ func (e *InterpreterEnvironment) newInterpreter(
 }
 
 func (e *InterpreterEnvironment) newOnStatementHandler() interpreter.OnStatementFunc {
+	var coverageReportStatementHandler interpreter.OnStatementFunc
 	coverageReport := e.config.CoverageReport
-	if coverageReport == nil {
-		return nil
+	if coverageReport != nil {
+		coverageReportStatementHandler = coverageReport.newOnStatementHandler()
 	}
 
-	return func(inter *interpreter.Interpreter, statement ast.Statement) {
-		location := inter.Location
-		if !coverageReport.IsLocationInspected(location) {
-			program := inter.Program.Program
-			coverageReport.InspectProgram(location, program)
-		}
-
-		line := statement.StartPosition().Line
-		coverageReport.AddLineHit(location, line)
+	var computationProfileStatementHandler interpreter.OnStatementFunc
+	computationProfile := e.config.ComputationProfile
+	if computationProfile != nil {
+		computationProfileStatementHandler = computationProfile.newOnStatementHandler()
 	}
+
+	return interpreter.CombineOnStatementFuncs(
+		coverageReportStatementHandler,
+		computationProfileStatementHandler,
+	)
 }
 
 func (e *InterpreterEnvironment) newAccountValue(
