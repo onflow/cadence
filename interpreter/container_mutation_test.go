@@ -42,7 +42,6 @@ func newAssertHelloLogFunction(t *testing.T, invoked *bool) stdlib.StandardLibra
 		"",
 		func(
 			_ interpreter.NativeFunctionContext,
-			_ interpreter.LocationRange,
 			_ interpreter.TypeParameterGetter,
 			_ interpreter.Value,
 			args ...interpreter.Value,
@@ -61,7 +60,6 @@ func newAssertUnexpectedLogFunction(t *testing.T) stdlib.StandardLibraryValue {
 		"",
 		func(
 			_ interpreter.NativeFunctionContext,
-			_ interpreter.LocationRange,
 			_ interpreter.TypeParameterGetter,
 			_ interpreter.Value,
 			_ ...interpreter.Value,

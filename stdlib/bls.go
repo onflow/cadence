@@ -38,22 +38,19 @@ type BLSPublicKeyAggregator interface {
 func NativeBLSAggregatePublicKeysFunction(
 	aggregator BLSPublicKeyAggregator,
 ) interpreter.NativeFunction {
-	return interpreter.NativeFunction(
-		func(
-			context interpreter.NativeFunctionContext,
-			_ interpreter.LocationRange,
-			_ interpreter.TypeParameterGetter,
-			_ interpreter.Value,
-			args ...interpreter.Value,
-		) interpreter.Value {
-			publicKeysValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
-			return BLSAggregatePublicKeys(
-				context,
-				publicKeysValue,
-				aggregator,
-			)
-		},
-	)
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeParameterGetter,
+		_ interpreter.Value,
+		args ...interpreter.Value,
+	) interpreter.Value {
+		publicKeysValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
+		return BLSAggregatePublicKeys(
+			context,
+			publicKeysValue,
+			aggregator,
+		)
+	}
 }
 
 func newInterpreterBLSAggregatePublicKeysFunction(
@@ -142,22 +139,19 @@ type BLSSignatureAggregator interface {
 func NativeBLSAggregateSignaturesFunction(
 	aggregator BLSSignatureAggregator,
 ) interpreter.NativeFunction {
-	return interpreter.NativeFunction(
-		func(
-			context interpreter.NativeFunctionContext,
-			_ interpreter.LocationRange,
-			_ interpreter.TypeParameterGetter,
-			_ interpreter.Value,
-			args ...interpreter.Value,
-		) interpreter.Value {
-			signaturesValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
-			return BLSAggregateSignatures(
-				context,
-				signaturesValue,
-				aggregator,
-			)
-		},
-	)
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeParameterGetter,
+		_ interpreter.Value,
+		args ...interpreter.Value,
+	) interpreter.Value {
+		signaturesValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
+		return BLSAggregateSignatures(
+			context,
+			signaturesValue,
+			aggregator,
+		)
+	}
 }
 
 func newInterpreterBLSAggregateSignaturesFunction(

@@ -1739,7 +1739,6 @@ func (v *CompositeValue) forEachAttachmentFunction(context FunctionCreationConte
 var NativeForEachAttachmentFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,

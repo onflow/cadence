@@ -77,56 +77,50 @@ func NewHashAlgorithmCase(
 
 // Native hash functions
 func NativeHashAlgorithmHashFunction(hasher Hasher, hashAlgoValue interpreter.MemberAccessibleValue) interpreter.NativeFunction {
-	return interpreter.NativeFunction(
-		func(
-			context interpreter.NativeFunctionContext,
-			_ interpreter.LocationRange,
-			_ interpreter.TypeParameterGetter,
-			receiver interpreter.Value,
-			args ...interpreter.Value,
-		) interpreter.Value {
-			if hashAlgoValue == nil {
-				// vm does not provide the hash algo value
-				hashAlgoValue = interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)
-			}
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
+	) interpreter.Value {
+		if hashAlgoValue == nil {
+			// vm does not provide the hash algo value
+			hashAlgoValue = interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)
+		}
 
-			dataValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
+		dataValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
 
-			return hash(
-				context,
-				hasher,
-				dataValue,
-				nil,
-				hashAlgoValue,
-			)
-		},
-	)
+		return hash(
+			context,
+			hasher,
+			dataValue,
+			nil,
+			hashAlgoValue,
+		)
+	}
 }
 
 func NativeHashAlgorithmHashWithTagFunction(hasher Hasher, hashAlgoValue interpreter.MemberAccessibleValue) interpreter.NativeFunction {
-	return interpreter.NativeFunction(
-		func(
-			context interpreter.NativeFunctionContext,
-			_ interpreter.LocationRange,
-			_ interpreter.TypeParameterGetter,
-			receiver interpreter.Value,
-			args ...interpreter.Value,
-		) interpreter.Value {
-			if hashAlgoValue == nil {
-				// vm does not provide the hash algo value
-				hashAlgoValue = interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)
-			}
-			dataValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
-			tagValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[1])
-			return hash(
-				context,
-				hasher,
-				dataValue,
-				tagValue,
-				hashAlgoValue,
-			)
-		},
-	)
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeParameterGetter,
+		receiver interpreter.Value,
+		args ...interpreter.Value,
+	) interpreter.Value {
+		if hashAlgoValue == nil {
+			// vm does not provide the hash algo value
+			hashAlgoValue = interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](receiver)
+		}
+		dataValue := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
+		tagValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[1])
+		return hash(
+			context,
+			hasher,
+			dataValue,
+			tagValue,
+			hashAlgoValue,
+		)
+	}
 }
 
 func newInterpreterHashAlgorithmHashFunction(
@@ -243,7 +237,6 @@ func NewVMHashAlgorithmConstructor(hasher Hasher) StandardLibraryValue {
 		hashAlgorithmLookupType,
 		func(
 			context interpreter.NativeFunctionContext,
-			_ interpreter.LocationRange,
 			_ interpreter.TypeParameterGetter,
 			_ interpreter.Value,
 			args ...interpreter.Value,

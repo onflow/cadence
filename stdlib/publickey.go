@@ -72,25 +72,22 @@ func newPublicKeyValidationHandler(validator PublicKeyValidator) interpreter.Pub
 func NativePublicKeyConstructorFunction(
 	publicKeyValidator PublicKeyValidator,
 ) interpreter.NativeFunction {
-	return interpreter.NativeFunction(
-		func(
-			context interpreter.NativeFunctionContext,
-			_ interpreter.LocationRange,
-			_ interpreter.TypeParameterGetter,
-			_ interpreter.Value,
-			args ...interpreter.Value,
-		) interpreter.Value {
-			publicKey := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
-			signAlgo := interpreter.AssertValueOfType[*interpreter.SimpleCompositeValue](args[1])
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeParameterGetter,
+		_ interpreter.Value,
+		args ...interpreter.Value,
+	) interpreter.Value {
+		publicKey := interpreter.AssertValueOfType[*interpreter.ArrayValue](args[0])
+		signAlgo := interpreter.AssertValueOfType[*interpreter.SimpleCompositeValue](args[1])
 
-			return NewPublicKeyFromFields(
-				context,
-				publicKey,
-				signAlgo,
-				publicKeyValidator,
-			)
-		},
-	)
+		return NewPublicKeyFromFields(
+			context,
+			publicKey,
+			signAlgo,
+			publicKeyValidator,
+		)
+	}
 }
 
 func NewInterpreterPublicKeyConstructor(
@@ -220,7 +217,6 @@ func NativePublicKeyVerifySignatureFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.LocationRange,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,
@@ -331,7 +327,6 @@ func NativePublicKeyVerifyPoPFunction(
 ) interpreter.NativeFunction {
 	return func(
 		context interpreter.NativeFunctionContext,
-		_ interpreter.LocationRange,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
 		args ...interpreter.Value,

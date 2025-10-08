@@ -142,7 +142,6 @@ type BigNumberValue interface {
 var NativeNumberToStringFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		locationRange LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		_ ...Value,
@@ -154,7 +153,6 @@ var NativeNumberToStringFunction = NativeFunction(
 var NativeNumberToBigEndianBytesFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		locationRange LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		_ ...Value,
@@ -166,7 +164,6 @@ var NativeNumberToBigEndianBytesFunction = NativeFunction(
 var NativeNumberSaturatingAddFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
@@ -179,7 +176,6 @@ var NativeNumberSaturatingAddFunction = NativeFunction(
 var NativeNumberSaturatingSubtractFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
@@ -192,7 +188,6 @@ var NativeNumberSaturatingSubtractFunction = NativeFunction(
 var NativeNumberSaturatingMultiplyFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,
@@ -205,7 +200,6 @@ var NativeNumberSaturatingMultiplyFunction = NativeFunction(
 var NativeNumberSaturatingDivideFunction = NativeFunction(
 	func(
 		context NativeFunctionContext,
-		_ LocationRange,
 		_ TypeParameterGetter,
 		receiver Value,
 		args ...Value,

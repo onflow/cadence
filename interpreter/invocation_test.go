@@ -102,7 +102,6 @@ func TestInterpretSelfDeclaration(t *testing.T) {
 			``,
 			func(
 				context interpreter.NativeFunctionContext,
-				_ interpreter.LocationRange,
 				_ interpreter.TypeParameterGetter,
 				_ interpreter.Value,
 				args ...interpreter.Value,

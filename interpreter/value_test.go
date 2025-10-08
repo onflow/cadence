@@ -1219,7 +1219,6 @@ func TestStringer(t *testing.T) {
 					},
 					func(
 						_ NativeFunctionContext,
-						_ LocationRange,
 						_ TypeParameterGetter,
 						_ Value,
 						_ ...Value,

@@ -111,7 +111,6 @@ func newMeteredLogFunction(meter *testMemoryGauge, loggedString *string) stdlib.
 		``,
 		func(
 			context interpreter.NativeFunctionContext,
-			_ interpreter.LocationRange,
 			_ interpreter.TypeParameterGetter,
 			_ interpreter.Value,
 			args ...interpreter.Value,

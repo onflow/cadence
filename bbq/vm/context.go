@@ -328,7 +328,6 @@ func (c *Context) DefaultDestroyEvents(resourceValue *interpreter.CompositeValue
 		commons.CollectEventsFunctionType,
 		func(
 			context interpreter.NativeFunctionContext,
-			_ interpreter.LocationRange,
 			_ interpreter.TypeParameterGetter,
 			_ interpreter.Value,
 			arguments ...interpreter.Value,
