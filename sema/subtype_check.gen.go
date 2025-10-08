@@ -313,6 +313,19 @@ func checkSubTypeWithoutEquality_gen(subType Type, superType Type) bool {
 
 		return false
 
+	case ParameterizedType:
+		if typedSuperType.BaseType() != nil {
+			switch typedSubType := subType.(type) {
+			case ParameterizedType:
+				return typedSubType.BaseType() != nil &&
+					(IsSubType(typedSubType.BaseType(), typedSuperType.BaseType()) &&
+						AreTypeArgumentsEqual(typedSubType, typedSuperType))
+			}
+
+		}
+
+		return false
+
 	}
 
 	return false

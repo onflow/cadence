@@ -258,7 +258,7 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 						IsIntersectionSubset(typedSuperType, typedSubTypeLegacyType)
 				}
 
-			case PrimitiveStaticTypeConforming:
+			case ConformingStaticType:
 				return (typedSuperType.LegacyType == nil ||
 					IsSubType(typeConverter, typedSubType, typedSuperType.LegacyType)) &&
 					IsIntersectionSubset(typedSuperType, typedSubType)
@@ -294,9 +294,9 @@ func checkSubTypeWithoutEquality_gen(typeConverter TypeConverter, subType Static
 
 		return false
 
-	case *FunctionStaticType:
+	case FunctionStaticType:
 		switch typedSubType := subType.(type) {
-		case *FunctionStaticType:
+		case FunctionStaticType:
 			switch typedSubType.Purity {
 			case typedSuperType.Purity,
 				FunctionPurityView:

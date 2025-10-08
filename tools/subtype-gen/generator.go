@@ -52,8 +52,9 @@ type Config struct {
 	ComplexTypePrefix string
 	ComplexTypeSuffix string
 
-	ExtraParams []ExtraParam
-	SkipTypes   map[string]struct{}
+	ExtraParams     []ExtraParam
+	SkipTypes       map[string]struct{}
+	NonPointerTypes map[string]struct{}
 
 	ArrayElementTypeMethodArgs []any
 }
@@ -213,7 +214,7 @@ func (gen *SubTypeCheckGenerator) createCheckSubTypeFunction(rules []Rule) dst.D
 func (gen *SubTypeCheckGenerator) createSwitchStatementForRules(rules []Rule, forSimpleTypes bool) dst.Stmt {
 	var cases []dst.Stmt
 
-	prevSuperType := gen.expression(super)
+	prevSuperType := gen.expressionIgnoreNegation(super)
 
 	var typedVariableName string
 	if !forSimpleTypes {
@@ -296,70 +297,6 @@ func (gen *SubTypeCheckGenerator) createCaseStatementForRule(rule Rule, forSimpl
 	// Generate case condition
 	caseExpr := gen.parseCaseCondition(superType)
 
-	var bodyStmts []dst.Stmt
-
-	// If the subtype needs to be of a certain type,
-	// then add a type assertion.
-
-	if rule.Sub != "" {
-		// A type-assertion is created for the `sub`.
-		// So register a new variable to hold the type-value of `sub`.
-		// During the nested generations, `sub` will refer to this variable.
-		typedVarName := gen.newTypedVariableNameFor(sub)
-		gen.pushScope()
-		gen.addToScope(
-			sub,
-			typedVarName,
-		)
-		defer gen.popScope()
-
-		subType := parseType(rule.Sub)
-
-		assignment := &dst.AssignStmt{
-			Lhs: []dst.Expr{
-				dst.NewIdent(gen.newTypedVariableNameFor(sub)),
-				dst.NewIdent("ok"),
-			},
-			Tok: token.DEFINE,
-			Rhs: []dst.Expr{
-				&dst.TypeAssertExpr{
-					X: dst.NewIdent(subTypeVarName),
-					Type: &dst.StarExpr{
-						X: gen.qualifiedTypeIdentifier(subType),
-					},
-				},
-			},
-		}
-
-		ifStmt := &dst.IfStmt{
-			Cond: &dst.UnaryExpr{
-				X:  dst.NewIdent("ok"),
-				Op: token.NOT,
-			},
-			Body: &dst.BlockStmt{
-				List: []dst.Stmt{
-					&dst.ReturnStmt{
-						Results: []dst.Expr{
-							gen.booleanExpression(false),
-						},
-					},
-				},
-			},
-			Decs: dst.IfStmtDecorations{
-				NodeDecs: dst.NodeDecs{
-					Before: dst.NewLine,
-					After:  dst.EmptyLine,
-				},
-			},
-		}
-
-		bodyStmts = append(
-			bodyStmts,
-			assignment,
-			ifStmt,
-		)
-	}
-
 	// Generate statements for the predicate.
 
 	predicate, err := parsePredicate(rule.Predicate)
@@ -367,10 +304,7 @@ func (gen *SubTypeCheckGenerator) createCaseStatementForRule(rule Rule, forSimpl
 		panic(fmt.Errorf("error parsing rule predicate: %w", err))
 	}
 
-	bodyStmts = append(
-		bodyStmts,
-		gen.generatePredicateStatements(predicate)...,
-	)
+	bodyStmts := gen.generatePredicateStatements(predicate)
 
 	return &dst.CaseClause{
 		List: []dst.Expr{caseExpr},
@@ -768,10 +702,6 @@ func (gen *SubTypeCheckGenerator) generatePredicateInternal(predicate Predicate)
 	case IsIntersectionSubsetPredicate:
 		return gen.isIntersectionSubset(p)
 
-	case PurityPredicate:
-		// TODO: Implement purity check
-		return []dst.Node{dst.NewIdent("false")}
-
 	case TypeParamsEqualPredicate:
 		return gen.typeParamEqualCheck(p)
 
@@ -784,6 +714,9 @@ func (gen *SubTypeCheckGenerator) generatePredicateInternal(predicate Predicate)
 	case ConstructorEqualPredicate:
 		return gen.constructorsEqualCheck(p)
 
+	case TypeArgumentsEqualPredicate:
+		return gen.typeAegumentsEqualCheck(p)
+
 	default:
 		panic(fmt.Errorf("unsupported predicate: %T", p))
 	}
@@ -794,7 +727,7 @@ func (gen *SubTypeCheckGenerator) isHashableStructPredicate(predicate IsHashable
 
 	args = append(
 		args,
-		gen.expression(predicate.Expression),
+		gen.expressionIgnoreNegation(predicate.Expression),
 	)
 
 	return []dst.Node{
@@ -807,7 +740,7 @@ func (gen *SubTypeCheckGenerator) isHashableStructPredicate(predicate IsHashable
 
 func (gen *SubTypeCheckGenerator) isStorablePredicate(predicate IsStorablePredicate) []dst.Node {
 	function := &dst.SelectorExpr{
-		X:   gen.expression(predicate.Expression),
+		X:   gen.expressionIgnoreNegation(predicate.Expression),
 		Sel: dst.NewIdent("IsStorable"),
 	}
 
@@ -985,7 +918,7 @@ func (gen *SubTypeCheckGenerator) isAttachmentPredicate(predicate IsAttachmentPr
 	return []dst.Node{
 		gen.callExpression(
 			dst.NewIdent("isAttachmentType"),
-			gen.expression(predicate.Expression),
+			gen.expressionIgnoreNegation(predicate.Expression),
 		),
 	}
 }
@@ -994,7 +927,7 @@ func (gen *SubTypeCheckGenerator) isResourcePredicate(predicate IsResourcePredic
 	return []dst.Node{
 		gen.callExpression(
 			dst.NewIdent("IsResourceType"),
-			gen.expression(predicate.Expression),
+			gen.expressionIgnoreNegation(predicate.Expression),
 		),
 	}
 }
@@ -1005,8 +938,8 @@ func (gen *SubTypeCheckGenerator) equalsPredicate(equals EqualsPredicate) []dst.
 	case TypeExpression, MemberExpression, IdentifierExpression:
 		return []dst.Node{
 			gen.binaryExpression(
-				gen.expression(equals.Source),
-				gen.expression(target),
+				gen.expressionIgnoreNegation(equals.Source),
+				gen.expressionIgnoreNegation(target),
 				token.EQL,
 			),
 		}
@@ -1017,8 +950,8 @@ func (gen *SubTypeCheckGenerator) equalsPredicate(equals EqualsPredicate) []dst.
 			expr := exprs[0]
 			return []dst.Node{
 				gen.binaryExpression(
-					gen.expression(equals.Source),
-					gen.expression(expr),
+					gen.expressionIgnoreNegation(equals.Source),
+					gen.expressionIgnoreNegation(expr),
 					token.EQL,
 				),
 			}
@@ -1027,7 +960,7 @@ func (gen *SubTypeCheckGenerator) equalsPredicate(equals EqualsPredicate) []dst.
 		// Otherwise, if there are more than one type, then generate a switch-case.
 		var cases []dst.Expr
 		for _, expr := range exprs {
-			generatedExpr := gen.expression(expr)
+			generatedExpr := gen.expressionIgnoreNegation(expr)
 			generatedExpr.Decorations().After = dst.NewLine
 			cases = append(cases, generatedExpr)
 		}
@@ -1047,7 +980,7 @@ func (gen *SubTypeCheckGenerator) equalsPredicate(equals EqualsPredicate) []dst.
 
 		return []dst.Node{
 			&dst.SwitchStmt{
-				Tag: gen.expression(equals.Source),
+				Tag: gen.expressionIgnoreNegation(equals.Source),
 				Body: &dst.BlockStmt{
 					List: caseClauses,
 				},
@@ -1064,7 +997,25 @@ func (gen *SubTypeCheckGenerator) equalsPredicate(equals EqualsPredicate) []dst.
 	}
 }
 
-func (gen *SubTypeCheckGenerator) expression(expr Expression) dst.Expr {
+func (gen *SubTypeCheckGenerator) expressionWithNegation(expr Expression) dst.Expr {
+	return gen.expression(expr, false)
+}
+
+func (gen *SubTypeCheckGenerator) expressionIgnoreNegation(expr Expression) dst.Expr {
+	return gen.expression(expr, true)
+}
+
+func (gen *SubTypeCheckGenerator) expression(expr Expression, ignoreNegation bool) dst.Expr {
+	if ignoreNegation {
+		// If negation to be ignored,
+		// set the `negate` flag to false.
+		prevNegation := gen.negate
+		defer func() {
+			gen.negate = prevNegation
+		}()
+		gen.negate = false
+	}
+
 	name, ok := gen.findInScope(expr)
 	if ok {
 		return &dst.Ident{Name: name}
@@ -1079,7 +1030,7 @@ func (gen *SubTypeCheckGenerator) expression(expr Expression) dst.Expr {
 
 	case MemberExpression:
 		selectorExpr := &dst.SelectorExpr{
-			X:   gen.expression(expr.Parent),
+			X:   gen.expressionIgnoreNegation(expr.Parent),
 			Sel: dst.NewIdent(expr.MemberName),
 		}
 
@@ -1093,7 +1044,8 @@ func (gen *SubTypeCheckGenerator) expression(expr Expression) dst.Expr {
 			return gen.callExpression(selectorExpr, args...)
 
 		case "EffectiveInterfaceConformanceSet",
-			"EffectiveIntersectionSet":
+			"EffectiveIntersectionSet",
+			"BaseType":
 			return gen.callExpression(selectorExpr)
 		}
 
@@ -1154,8 +1106,8 @@ func (gen *SubTypeCheckGenerator) isSubTypeMethodArguments(subType, superType Ex
 	args := gen.extraArguments()
 
 	args = append(args,
-		gen.expression(subType),
-		gen.expression(superType),
+		gen.expressionIgnoreNegation(subType),
+		gen.expressionIgnoreNegation(superType),
 	)
 
 	return args
@@ -1187,13 +1139,16 @@ func (gen *SubTypeCheckGenerator) qualifiedTypeIdentifier(typ Type) dst.Expr {
 
 // parseCaseCondition parses a case condition to AST using Cadence types
 func (gen *SubTypeCheckGenerator) parseCaseCondition(superType Type) dst.Expr {
-	// Use type assertion to determine the specific type
 	typeName := gen.qualifiedTypeIdentifier(superType)
 	switch superType.(type) {
 	case SimpleType:
 		// For simple types, use the type directly
 		return typeName
 	default:
+		if _, ok := gen.config.NonPointerTypes[superType.Name()]; ok {
+			return typeName
+		}
+
 		return &dst.StarExpr{
 			X: typeName,
 		}
@@ -1202,8 +1157,8 @@ func (gen *SubTypeCheckGenerator) parseCaseCondition(superType Type) dst.Expr {
 
 func (gen *SubTypeCheckGenerator) permitsPredicate(permits PermitsPredicate) []dst.Node {
 	args := []dst.Expr{
-		gen.expression(permits.Super),
-		gen.expression(permits.Sub),
+		gen.expressionIgnoreNegation(permits.Super),
+		gen.expressionIgnoreNegation(permits.Sub),
 	}
 
 	return []dst.Node{
@@ -1218,7 +1173,7 @@ func (gen *SubTypeCheckGenerator) typeAssertion(typeAssertion TypeAssertionPredi
 
 	source := typeAssertion.Source
 
-	sourceExpr := gen.expression(source)
+	sourceExpr := gen.expressionIgnoreNegation(source)
 
 	// A type-switch is created for the source-expression.
 	// So register a new variable to hold the typed-value of the source expression.
@@ -1358,12 +1313,12 @@ func (gen *SubTypeCheckGenerator) newTypedVariableNameFor(source Expression) str
 
 func (gen *SubTypeCheckGenerator) setContains(p SetContainsPredicate) []dst.Node {
 	selectExpr := &dst.SelectorExpr{
-		X:   gen.expression(p.Source),
+		X:   gen.expressionIgnoreNegation(p.Source),
 		Sel: dst.NewIdent("Contains"),
 	}
 
 	args := []dst.Expr{
-		gen.expression(p.Target),
+		gen.expressionIgnoreNegation(p.Target),
 	}
 
 	callExpr := gen.callExpression(selectExpr, args...)
@@ -1375,8 +1330,8 @@ func (gen *SubTypeCheckGenerator) setContains(p SetContainsPredicate) []dst.Node
 
 func (gen *SubTypeCheckGenerator) isIntersectionSubset(p IsIntersectionSubsetPredicate) []dst.Node {
 	args := []dst.Expr{
-		gen.expression(p.Super),
-		gen.expression(p.Sub),
+		gen.expressionIgnoreNegation(p.Super),
+		gen.expressionIgnoreNegation(p.Sub),
 	}
 
 	return []dst.Node{
@@ -1389,8 +1344,8 @@ func (gen *SubTypeCheckGenerator) isIntersectionSubset(p IsIntersectionSubsetPre
 
 func (gen *SubTypeCheckGenerator) typeParamEqualCheck(p TypeParamsEqualPredicate) []dst.Node {
 	args := []dst.Expr{
-		gen.expression(p.Source),
-		gen.expression(p.Target),
+		gen.expressionIgnoreNegation(p.Source),
+		gen.expressionIgnoreNegation(p.Target),
 	}
 
 	return []dst.Node{
@@ -1403,8 +1358,8 @@ func (gen *SubTypeCheckGenerator) typeParamEqualCheck(p TypeParamsEqualPredicate
 
 func (gen *SubTypeCheckGenerator) paramsContravariantCheck(p ParamsContravariantPredicate) []dst.Node {
 	args := []dst.Expr{
-		gen.expression(p.Source),
-		gen.expression(p.Target),
+		gen.expressionIgnoreNegation(p.Source),
+		gen.expressionIgnoreNegation(p.Target),
 	}
 
 	return []dst.Node{
@@ -1417,8 +1372,8 @@ func (gen *SubTypeCheckGenerator) paramsContravariantCheck(p ParamsContravariant
 
 func (gen *SubTypeCheckGenerator) returnsCovariantCheck(p ReturnCovariantPredicate) []dst.Node {
 	args := []dst.Expr{
-		gen.expression(p.Source),
-		gen.expression(p.Target),
+		gen.expressionIgnoreNegation(p.Source),
+		gen.expressionIgnoreNegation(p.Target),
 	}
 
 	return []dst.Node{
@@ -1431,13 +1386,27 @@ func (gen *SubTypeCheckGenerator) returnsCovariantCheck(p ReturnCovariantPredica
 
 func (gen *SubTypeCheckGenerator) constructorsEqualCheck(p ConstructorEqualPredicate) []dst.Node {
 	args := []dst.Expr{
-		gen.expression(p.Source),
-		gen.expression(p.Target),
+		gen.expressionIgnoreNegation(p.Source),
+		gen.expressionIgnoreNegation(p.Target),
 	}
 
 	return []dst.Node{
 		gen.callExpression(
 			dst.NewIdent("AreConstructorsEqual"),
+			args...,
+		),
+	}
+}
+
+func (gen *SubTypeCheckGenerator) typeAegumentsEqualCheck(p TypeArgumentsEqualPredicate) []dst.Node {
+	args := []dst.Expr{
+		gen.expressionIgnoreNegation(p.Source),
+		gen.expressionIgnoreNegation(p.Target),
+	}
+
+	return []dst.Node{
+		gen.callExpression(
+			dst.NewIdent("AreTypeArgumentsEqual"),
 			args...,
 		),
 	}

@@ -32,7 +32,6 @@ var subtypeCheckingRules string
 // Rule represents a single subtype rule
 type Rule struct {
 	Super     string `yaml:"super"`
-	Sub       string `yaml:"sub"`
 	Predicate any    `yaml:"predicate"`
 }
 
@@ -58,16 +57,17 @@ func parseType(typePlaceHolder string) Type {
 	typeName := strings.TrimSuffix(typePlaceHolder, "Type")
 
 	switch typeName {
-	case typePlaceholderOptional,
-		typePlaceholderDictionary,
-		typePlaceholderVariableSized,
-		typePlaceholderConstantSized,
-		typePlaceholderReference,
-		typePlaceholderComposite,
-		typePlaceholderInterface,
-		typePlaceholderFunction,
-		typePlaceholderIntersection,
-		typePlaceholderParameterized:
+	case TypePlaceholderOptional,
+		TypePlaceholderDictionary,
+		TypePlaceholderVariableSized,
+		TypePlaceholderConstantSized,
+		TypePlaceholderReference,
+		TypePlaceholderComposite,
+		TypePlaceholderInterface,
+		TypePlaceholderFunction,
+		TypePlaceholderIntersection,
+		TypePlaceholderParameterized,
+		TypePlaceholderConforming:
 		return ComplexType{
 			name: typeName,
 		}
@@ -291,6 +291,17 @@ func parsePredicate(predicate any) (Predicate, error) {
 			}
 
 			return ConstructorEqualPredicate{
+				Source: sourceExpr,
+				Target: targetExpr,
+			}, nil
+
+		case "typeArgumentsEqual":
+			sourceExpr, targetExpr, err := parseSourceAndTarget(key, value)
+			if err != nil {
+				return nil, err
+			}
+
+			return TypeArgumentsEqualPredicate{
 				Source: sourceExpr,
 				Target: targetExpr,
 			}, nil

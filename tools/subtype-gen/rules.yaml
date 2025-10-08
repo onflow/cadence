@@ -369,3 +369,24 @@ rules:
         - constructorEqual:
             source: sub
             target: super
+
+  - super: ParameterizedType
+    predicate:
+      and:
+        - not:
+            equals:
+              source: super.BaseType
+              target: nil
+        - mustType:
+            source: sub
+            type: ParameterizedType
+        - not:
+            equals:
+              source: sub.BaseType
+              target: nil
+        - subtype:
+            super: super.BaseType
+            sub: sub.BaseType
+        - typeArgumentsEqual:
+            source: sub
+            target: super

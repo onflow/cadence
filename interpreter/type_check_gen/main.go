@@ -64,7 +64,12 @@ func main() {
 			},
 		},
 		SkipTypes: map[string]struct{}{
-			subtypegen.TypePlaceholderStorable: {},
+			subtypegen.TypePlaceholderStorable:      {},
+			subtypegen.TypePlaceholderParameterized: {},
+		},
+		NonPointerTypes: map[string]struct{}{
+			subtypegen.TypePlaceholderFunction:   {},
+			subtypegen.TypePlaceholderConforming: {},
 		},
 	}
 

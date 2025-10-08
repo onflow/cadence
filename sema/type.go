@@ -8005,21 +8005,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 						return false
 					}
 
-					subTypeTypeArguments := typedSubType.TypeArguments()
-					superTypeTypeArguments := typedSuperType.TypeArguments()
-
-					if len(subTypeTypeArguments) != len(superTypeTypeArguments) {
-						return false
-					}
-
-					for i, superTypeTypeArgument := range superTypeTypeArguments {
-						subTypeTypeArgument := subTypeTypeArguments[i]
-						if !IsSubType(subTypeTypeArgument, superTypeTypeArgument) {
-							return false
-						}
-					}
-
-					return true
+					return AreTypeArgumentsEqual(typedSubType, typedSuperType)
 				}
 			}
 		}

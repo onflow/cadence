@@ -105,3 +105,21 @@ func AreReturnsCovariant(source, target *FunctionType) bool {
 func AreConstructorsEqual(source, target *FunctionType) bool {
 	return source.IsConstructor == target.IsConstructor
 }
+
+func AreTypeArgumentsEqual(source, target ParameterizedType) bool {
+	subTypeTypeArguments := source.TypeArguments()
+	superTypeTypeArguments := target.TypeArguments()
+
+	if len(subTypeTypeArguments) != len(superTypeTypeArguments) {
+		return false
+	}
+
+	for i, superTypeTypeArgument := range superTypeTypeArguments {
+		subTypeTypeArgument := subTypeTypeArguments[i]
+		if !IsSubType(subTypeTypeArgument, superTypeTypeArgument) {
+			return false
+		}
+	}
+
+	return true
+}

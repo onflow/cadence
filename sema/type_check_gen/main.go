@@ -54,6 +54,11 @@ func main() {
 		ArrayElementTypeMethodArgs: []any{
 			false,
 		},
+
+		NonPointerTypes: map[string]struct{}{
+			subtypegen.TypePlaceholderParameterized: {},
+			subtypegen.TypePlaceholderConforming:    {},
+		},
 	}
 
 	// Generate code using the comprehensive generator

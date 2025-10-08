@@ -106,13 +106,6 @@ type PermitsPredicate struct {
 
 func (p PermitsPredicate) GetType() string { return "permits" }
 
-// PurityPredicate represents a purity check
-type PurityPredicate struct {
-	EqualsOrView bool `yaml:"equals_or_view"`
-}
-
-func (p PurityPredicate) GetType() string { return "purity" }
-
 // TypeParamsEqualPredicate represents a type parameters equality check
 type TypeParamsEqualPredicate struct {
 	Source Expression `yaml:"source"`
@@ -166,6 +159,13 @@ type IsIntersectionSubsetPredicate struct {
 }
 
 func (p IsIntersectionSubsetPredicate) GetType() string { return "isIntersectionSubset" }
+
+type TypeArgumentsEqualPredicate struct {
+	Source Expression `yaml:"source"`
+	Target Expression `yaml:"target"`
+}
+
+func (c TypeArgumentsEqualPredicate) GetType() string { return "typeArgumentsEqual" }
 
 // Predicates is a collection of predicates.
 type Predicates struct {
