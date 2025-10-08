@@ -237,20 +237,7 @@ func (v TypeValue) GetMethod(
 			context,
 			v,
 			sema.MetaTypeIsSubtypeFunctionType,
-			func(typeValue TypeValue, invocation Invocation) Value {
-				invocationContext := invocation.InvocationContext
-
-				otherTypeValue, ok := invocation.Arguments[0].(TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return MetaTypeIsSubType(
-					invocationContext,
-					typeValue,
-					otherTypeValue,
-				)
-			},
+			NativeMetaTypeIsSubtypeFunction,
 		)
 	}
 
@@ -368,3 +355,19 @@ func (v TypeValue) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
 	copy(buf[1:], typeID)
 	return buf
 }
+
+// Native type functions
+
+var NativeMetaTypeIsSubtypeFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		locationRange LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		typeValue := AssertValueOfType[TypeValue](receiver)
+		otherTypeValue := AssertValueOfType[TypeValue](args[0])
+		return MetaTypeIsSubType(context, typeValue, otherTypeValue)
+	},
+)

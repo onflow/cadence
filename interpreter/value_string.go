@@ -377,15 +377,7 @@ func (v *StringValue) GetMethod(
 			context,
 			v,
 			sema.StringTypeConcatFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				invocationContext := invocation.InvocationContext
-				other := invocation.Arguments[0]
-				return StringConcat(
-					invocationContext,
-					v,
-					other,
-				)
-			},
+			NativeStringConcatFunction,
 		)
 
 	case sema.StringTypeSliceFunctionName:
@@ -393,19 +385,7 @@ func (v *StringValue) GetMethod(
 			context,
 			v,
 			sema.StringTypeSliceFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				from, ok := invocation.Arguments[0].(IntValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				to, ok := invocation.Arguments[1].(IntValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.Slice(from, to)
-			},
+			NativeStringSliceFunction,
 		)
 
 	case sema.StringTypeContainsFunctionName:
@@ -413,14 +393,7 @@ func (v *StringValue) GetMethod(
 			context,
 			v,
 			sema.StringTypeContainsFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				other, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.Contains(invocation.InvocationContext, other)
-			},
+			NativeStringContainsFunction,
 		)
 
 	case sema.StringTypeIndexFunctionName:
@@ -428,14 +401,7 @@ func (v *StringValue) GetMethod(
 			context,
 			v,
 			sema.StringTypeIndexFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				other, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.IndexOf(invocation.InvocationContext, other)
-			},
+			NativeStringIndexFunction,
 		)
 
 	case sema.StringTypeCountFunctionName:
@@ -443,17 +409,7 @@ func (v *StringValue) GetMethod(
 			context,
 			v,
 			sema.StringTypeIndexFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				other, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.Count(
-					invocation.InvocationContext,
-					other,
-				)
-			},
+			NativeStringCountFunction,
 		)
 
 	case sema.StringTypeDecodeHexFunctionName:
@@ -461,11 +417,7 @@ func (v *StringValue) GetMethod(
 			context,
 			v,
 			sema.StringTypeDecodeHexFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				return v.DecodeHex(
-					invocation.InvocationContext,
-				)
-			},
+			NativeStringDecodeHexFunction,
 		)
 
 	case sema.StringTypeToLowerFunctionName:
@@ -473,9 +425,7 @@ func (v *StringValue) GetMethod(
 			context,
 			v,
 			sema.StringTypeToLowerFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				return v.ToLower(invocation.InvocationContext)
-			},
+			NativeStringToLowerFunction,
 		)
 
 	case sema.StringTypeSplitFunctionName:
@@ -483,17 +433,7 @@ func (v *StringValue) GetMethod(
 			context,
 			v,
 			sema.StringTypeSplitFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				separator, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.Split(
-					invocation.InvocationContext,
-					separator,
-				)
-			},
+			NativeStringSplitFunction,
 		)
 
 	case sema.StringTypeReplaceAllFunctionName:
@@ -501,23 +441,7 @@ func (v *StringValue) GetMethod(
 			context,
 			v,
 			sema.StringTypeReplaceAllFunctionType,
-			func(v *StringValue, invocation Invocation) Value {
-				original, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				replacement, ok := invocation.Arguments[1].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return v.ReplaceAll(
-					invocation.InvocationContext,
-					original,
-					replacement,
-				)
-			},
+			NativeStringReplaceAllFunction,
 		)
 	}
 
@@ -1127,19 +1051,62 @@ func (*StringValueIterator) ValueID() (atree.ValueID, bool) {
 	return atree.ValueID{}, false
 }
 
-func stringFunctionEncodeHex(invocation Invocation) Value {
-	argument, ok := invocation.Arguments[0].(*ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
+var NativeStringEncodeHexFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		argument := AssertValueOfType[*ArrayValue](args[0])
+		return StringFunctionEncodeHex(context, argument)
+	},
+)
 
-	invocationContext := invocation.InvocationContext
+var NativeStringFromUtf8Function = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		argument := AssertValueOfType[*ArrayValue](args[0])
+		return StringFunctionFromUtf8(context, argument)
+	},
+)
 
-	return StringFunctionEncodeHex(
-		invocationContext,
-		argument,
-	)
-}
+var NativeStringFromCharactersFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		argument := AssertValueOfType[*ArrayValue](args[0])
+		return StringFunctionFromCharacters(context, argument)
+	},
+)
+
+var NativeStringJoinFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		stringArray := AssertValueOfType[*ArrayValue](args[0])
+		separator := AssertValueOfType[*StringValue](args[1])
+		return StringFunctionJoin(
+			context,
+			stringArray,
+			separator,
+		)
+	},
+)
 
 func StringFunctionEncodeHex(
 	invocationContext InvocationContext,
@@ -1155,20 +1122,6 @@ func StringFunctionEncodeHex(
 			bytes, _ := ByteArrayValueToByteSlice(invocationContext, argument)
 			return hex.EncodeToString(bytes)
 		},
-	)
-}
-
-func stringFunctionFromUtf8(invocation Invocation) Value {
-	argument, ok := invocation.Arguments[0].(*ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	invocationContext := invocation.InvocationContext
-
-	return StringFunctionFromUtf8(
-		invocationContext,
-		argument,
 	)
 }
 
@@ -1194,20 +1147,6 @@ func StringFunctionFromUtf8(
 		NewStringValue(invocationContext, memoryUsage, func() string {
 			return string(buf)
 		}),
-	)
-}
-
-func stringFunctionFromCharacters(invocation Invocation) Value {
-	argument, ok := invocation.Arguments[0].(*ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	invocationContext := invocation.InvocationContext
-
-	return StringFunctionFromCharacters(
-		invocationContext,
-		argument,
 	)
 }
 
@@ -1239,26 +1178,6 @@ func StringFunctionFromCharacters(
 	)
 
 	return NewUnmeteredStringValue(builder.String())
-}
-
-func stringFunctionJoin(invocation Invocation) Value {
-	stringArray, ok := invocation.Arguments[0].(*ArrayValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	invocationContext := invocation.InvocationContext
-
-	separator, ok := invocation.Arguments[1].(*StringValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	return StringFunctionJoin(
-		invocationContext,
-		stringArray,
-		separator,
-	)
 }
 
 func StringFunctionJoin(
@@ -1328,11 +1247,9 @@ func StringFunctionJoin(
 // stringFunction is the `String` function. It is stateless, hence it can be re-used across interpreters.
 // Type bound functions are static functions.
 var stringFunction = func() Value {
-	functionValue := NewUnmeteredStaticHostFunctionValue(
+	functionValue := NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 		sema.StringFunctionType,
-		func(invocation Invocation) Value {
-			return EmptyString
-		},
+		NativeStringFunction,
 	)
 
 	addMember := func(name string, value Value) {
@@ -1346,35 +1263,171 @@ var stringFunction = func() Value {
 
 	addMember(
 		sema.StringTypeEncodeHexFunctionName,
-		NewUnmeteredStaticHostFunctionValue(
+		NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			sema.StringTypeEncodeHexFunctionType,
-			stringFunctionEncodeHex,
+			NativeStringEncodeHexFunction,
 		),
 	)
 
 	addMember(
 		sema.StringTypeFromUtf8FunctionName,
-		NewUnmeteredStaticHostFunctionValue(
+		NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			sema.StringTypeFromUtf8FunctionType,
-			stringFunctionFromUtf8,
+			NativeStringFromUtf8Function,
 		),
 	)
 
 	addMember(
 		sema.StringTypeFromCharactersFunctionName,
-		NewUnmeteredStaticHostFunctionValue(
+		NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			sema.StringTypeFromCharactersFunctionType,
-			stringFunctionFromCharacters,
+			NativeStringFromCharactersFunction,
 		),
 	)
 
 	addMember(
 		sema.StringTypeJoinFunctionName,
-		NewUnmeteredStaticHostFunctionValue(
+		NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			sema.StringTypeJoinFunctionType,
-			stringFunctionJoin,
+			NativeStringJoinFunction,
 		),
 	)
 
 	return functionValue
 }()
+
+// Native string functions
+
+var NativeStringConcatFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		this := AssertValueOfType[*StringValue](receiver)
+		other := args[0]
+		return StringConcat(
+			context,
+			this,
+			other,
+		)
+	},
+)
+
+var NativeStringSliceFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		from := AssertValueOfType[IntValue](args[0])
+		to := AssertValueOfType[IntValue](args[1])
+		stringValue := AssertValueOfType[*StringValue](receiver)
+		return stringValue.Slice(from, to)
+	},
+)
+
+var NativeStringContainsFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		locationRange LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		other := AssertValueOfType[*StringValue](args[0])
+		stringValue := AssertValueOfType[*StringValue](receiver)
+		return stringValue.Contains(context, other)
+	},
+)
+
+var NativeStringIndexFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		locationRange LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		other := AssertValueOfType[*StringValue](args[0])
+		stringValue := AssertValueOfType[*StringValue](receiver)
+		return stringValue.IndexOf(context, other)
+	},
+)
+
+var NativeStringCountFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		other := AssertValueOfType[*StringValue](args[0])
+		stringValue := AssertValueOfType[*StringValue](receiver)
+		return stringValue.Count(context, other)
+	},
+)
+
+var NativeStringDecodeHexFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		stringValue := AssertValueOfType[*StringValue](receiver)
+		return stringValue.DecodeHex(context)
+	},
+)
+
+var NativeStringToLowerFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		locationRange LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		stringValue := AssertValueOfType[*StringValue](receiver)
+		return stringValue.ToLower(context)
+	},
+)
+
+var NativeStringSplitFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		separator := AssertValueOfType[*StringValue](args[0])
+		stringValue := AssertValueOfType[*StringValue](receiver)
+		return stringValue.Split(context, separator)
+	},
+)
+
+var NativeStringReplaceAllFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		original := AssertValueOfType[*StringValue](args[0])
+		replacement := AssertValueOfType[*StringValue](args[1])
+		stringValue := AssertValueOfType[*StringValue](receiver)
+		return stringValue.ReplaceAll(
+			context,
+			original,
+			replacement,
+		)
+	},
+)

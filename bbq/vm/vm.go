@@ -64,9 +64,7 @@ func NewVM(
 		context: context,
 	}
 
-	// Delegate the function invocations to the vm.
-	context.invokeFunction = vm.invokeFunction
-	context.lookupFunction = vm.lookupFunction
+	vm.configureContext()
 
 	context.recoverErrors = vm.RecoverErrors
 
@@ -1752,10 +1750,8 @@ func (vm *VM) Reset() {
 	vm.callstack = vm.callstack[:0]
 	vm.ipStack = vm.ipStack[:0]
 
-	context := NewContext(vm.context.Config)
-	context.invokeFunction = vm.invokeFunction
-	context.lookupFunction = vm.lookupFunction
-	vm.context = context
+	vm.context = vm.context.newReusing()
+	vm.configureContext()
 }
 
 func (vm *VM) Global(name string) Value {
@@ -1865,6 +1861,14 @@ func (vm *VM) RecoverErrors(onError func(error)) {
 
 		onError(interpreterErr)
 	}
+}
+
+func (vm *VM) configureContext() {
+	context := vm.context
+
+	// Delegate function invocations to the VM
+	context.invokeFunction = vm.invokeFunction
+	context.lookupFunction = vm.lookupFunction
 }
 
 func printInstructionError(

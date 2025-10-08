@@ -27,6 +27,7 @@ import (
 
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
+	. "github.com/onflow/cadence/bbq/test_utils"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -178,7 +179,7 @@ func BenchmarkNewStruct(b *testing.B) {
               i = i + 1
           }
       }
-  `)
+    `)
 	require.NoError(b, err)
 
 	value := interpreter.NewUnmeteredIntValueFromInt64(10)
@@ -190,6 +191,15 @@ func BenchmarkNewStruct(b *testing.B) {
 	program := comp.Compile()
 
 	vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+	vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+		require.Equal(b, checker.Location, location)
+		return program
+	}
+	vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+		require.Equal(b, checker.Location, location)
+		return checker.Elaboration.CompositeType(typeID)
+	}
+
 	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 
 	b.ReportAllocs()
@@ -239,6 +249,20 @@ func BenchmarkNewResource(b *testing.B) {
 		program := comp.Compile()
 
 		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
+		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			require.Equal(b, checker.Location, location)
+			return program
+		}
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+			require.Equal(b, checker.Location, location)
+			return checker.Elaboration.CompositeType(typeID)
+		}
+		var uuid uint64 = 1
+		vmConfig.UUIDHandler = func() (uint64, error) {
+			uuid++
+			return uuid, nil
+		}
+
 		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
 		_, err := vmInstance.InvokeExternally("test", value)
 		require.NoError(b, err)
@@ -282,37 +306,40 @@ func BenchmarkNewStructRaw(b *testing.B) {
 
 func BenchmarkContractImport(b *testing.B) {
 
-	location := common.NewAddressLocation(nil, common.Address{0x1}, "MyContract")
+	importedLocation := common.AddressLocation{
+		Address: common.MustBytesToAddress([]byte{0x1}),
+		Name:    "MyContract",
+	}
 
 	importedChecker, err := ParseAndCheckWithOptions(b,
 		`
-      contract MyContract {
-          var s: String
+          contract MyContract {
+              var s: String
 
-          fun helloText(): String {
-              return self.s
-          }
-
-          init() {
-              self.s = "contract function of the imported program"
-          }
-
-          struct Foo {
-              var id : String
-
-              init(_ id: String) {
-                  self.id = id
+              fun helloText(): String {
+                  return self.s
               }
 
-              fun sayHello(_ id: Int): String {
-                  // return self.id
-                  return MyContract.helloText()
+              init() {
+                  self.s = "contract function of the imported program"
+              }
+
+              struct Foo {
+                  var id : String
+
+                  init(_ id: String) {
+                      self.id = id
+                  }
+
+                  fun sayHello(_ id: Int): String {
+                      // return self.id
+                      return MyContract.helloText()
+                  }
               }
           }
-      }
         `,
 		ParseAndCheckOptions{
-			Location: location,
+			Location: importedLocation,
 		},
 	)
 	require.NoError(b, err)
@@ -323,25 +350,35 @@ func BenchmarkContractImport(b *testing.B) {
 	)
 	importedProgram := importCompiler.Compile()
 
-	_, importedContractValue := initializeContract(
-		b,
-		location,
-		importedProgram,
-		nil,
-	)
+	var importedContractValue *interpreter.CompositeValue
 
 	vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 	vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+		require.Equal(b, importedChecker.Location, location)
 		return importedProgram
 	}
-	vmConfig.ContractValueHandler = func(_ *vm.Context, _ common.Location) *interpreter.CompositeValue {
+	vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
+		require.Equal(b, importedChecker.Location, location)
 		return importedContractValue
 	}
+	vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+		require.Equal(b, importedChecker.Location, location)
+		return importedChecker.Elaboration.CompositeType(typeID)
+	}
+
+	_, importedContractValue = initializeContract(
+		b,
+		importedLocation,
+		importedProgram,
+		vmConfig,
+	)
 
 	b.ResetTimer()
 	b.ReportAllocs()
 
 	value := interpreter.NewUnmeteredIntValueFromInt64(7)
+
+	locationResolver := SingleIdentifierLocationResolver(b)
 
 	for i := 0; i < b.N; i++ {
 		checker, err := ParseAndCheckWithOptions(b,
@@ -361,7 +398,9 @@ func BenchmarkContractImport(b *testing.B) {
             `,
 			ParseAndCheckOptions{
 				CheckerConfig: &sema.Config{
-					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+					LocationHandler: locationResolver,
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						require.Equal(b, importedChecker.Location, location)
 						return sema.ElaborationImport{
 							Elaboration: importedChecker.Elaboration,
 						}, nil
@@ -375,9 +414,12 @@ func BenchmarkContractImport(b *testing.B) {
 			interpreter.ProgramFromChecker(checker),
 			checker.Location,
 		)
+		comp.Config.LocationHandler = locationResolver
 		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			require.Equal(b, importedChecker.Location, location)
 			return importedProgram
 		}
+
 		program := comp.Compile()
 
 		scriptLocation := runtime_utils.NewScriptLocationGenerator()
@@ -391,7 +433,10 @@ func BenchmarkContractImport(b *testing.B) {
 func BenchmarkMethodCall(b *testing.B) {
 
 	b.Run("interface method call", func(b *testing.B) {
-		location := common.NewAddressLocation(nil, common.Address{0x1}, "MyContract")
+		importedLocation := common.AddressLocation{
+			Address: common.MustBytesToAddress([]byte{0x1}),
+			Name:    "MyContract",
+		}
 
 		importedChecker, err := ParseAndCheckWithOptions(b,
 			`
@@ -417,7 +462,7 @@ func BenchmarkMethodCall(b *testing.B) {
               }
             `,
 			ParseAndCheckOptions{
-				Location: location,
+				Location: importedLocation,
 			},
 		)
 		require.NoError(b, err)
@@ -430,7 +475,7 @@ func BenchmarkMethodCall(b *testing.B) {
 
 		_, importedContractValue := initializeContract(
 			b,
-			location,
+			importedLocation,
 			importedProgram,
 			nil,
 		)
@@ -450,7 +495,9 @@ func BenchmarkMethodCall(b *testing.B) {
             `,
 			ParseAndCheckOptions{
 				CheckerConfig: &sema.Config{
-					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+					LocationHandler: SingleIdentifierLocationResolver(b),
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						require.Equal(b, importedChecker.Location, location)
 						return sema.ElaborationImport{
 							Elaboration: importedChecker.Elaboration,
 						}, nil
@@ -465,6 +512,7 @@ func BenchmarkMethodCall(b *testing.B) {
 			checker.Location,
 		)
 		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			require.Equal(b, importedChecker.Location, location)
 			return importedProgram
 		}
 
@@ -472,20 +520,22 @@ func BenchmarkMethodCall(b *testing.B) {
 
 		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			require.Equal(b, importedChecker.Location, location)
 			return importedProgram
 		}
-		vmConfig.ContractValueHandler = func(_ *vm.Context, _ common.Location) *interpreter.CompositeValue {
+		vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
+			require.Equal(b, importedChecker.Location, location)
 			return importedContractValue
 		}
 		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+			require.Equal(b, importedChecker.Location, location)
 			elaboration := importedChecker.Elaboration
-			compositeType := elaboration.CompositeType(typeID)
-			return compositeType
+			return elaboration.CompositeType(typeID)
 		}
 		vmConfig.InterfaceTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+			require.Equal(b, importedChecker.Location, location)
 			elaboration := importedChecker.Elaboration
-			interfaceType := elaboration.InterfaceType(typeID)
-			return interfaceType
+			return elaboration.InterfaceType(typeID)
 		}
 
 		scriptLocation := runtime_utils.NewScriptLocationGenerator()
@@ -503,7 +553,10 @@ func BenchmarkMethodCall(b *testing.B) {
 	})
 
 	b.Run("concrete type method call", func(b *testing.B) {
-		location := common.NewAddressLocation(nil, common.Address{0x1}, "MyContract")
+		importedLocation := common.AddressLocation{
+			Address: common.MustBytesToAddress([]byte{0x1}),
+			Name:    "MyContract",
+		}
 
 		importedChecker, err := ParseAndCheckWithOptions(b,
 			`
@@ -529,7 +582,7 @@ func BenchmarkMethodCall(b *testing.B) {
               }
             `,
 			ParseAndCheckOptions{
-				Location: location,
+				Location: importedLocation,
 			},
 		)
 		require.NoError(b, err)
@@ -542,26 +595,29 @@ func BenchmarkMethodCall(b *testing.B) {
 
 		_, importedContractValue := initializeContract(
 			b,
-			location,
+			importedLocation,
 			importedProgram,
 			nil,
 		)
 
-		checker, err := ParseAndCheckWithOptions(b, `
-        import MyContract from 0x01
+		checker, err := ParseAndCheckWithOptions(b,
+			`
+              import MyContract from 0x01
 
-        fun test(count: Int) {
-            var r: MyContract.Foo = MyContract.Foo("Hello from Foo!")
-            var i = 0
-            while i < count {
-                i = i + 1
-                r.sayHello(1)
-            }
-        }`,
-
+              fun test(count: Int) {
+                  var r: MyContract.Foo = MyContract.Foo("Hello from Foo!")
+                  var i = 0
+                  while i < count {
+                      i = i + 1
+                      r.sayHello(1)
+                  }
+              }
+            `,
 			ParseAndCheckOptions{
 				CheckerConfig: &sema.Config{
-					ImportHandler: func(*sema.Checker, common.Location, ast.Range) (sema.Import, error) {
+					LocationHandler: SingleIdentifierLocationResolver(b),
+					ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+						require.Equal(b, importedChecker.Location, location)
 						return sema.ElaborationImport{
 							Elaboration: importedChecker.Elaboration,
 						}, nil
@@ -576,6 +632,7 @@ func BenchmarkMethodCall(b *testing.B) {
 			checker.Location,
 		)
 		comp.Config.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			require.Equal(b, importedChecker.Location, location)
 			return importedProgram
 		}
 
@@ -583,10 +640,16 @@ func BenchmarkMethodCall(b *testing.B) {
 
 		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+			require.Equal(b, importedChecker.Location, location)
 			return importedProgram
 		}
-		vmConfig.ContractValueHandler = func(_ *vm.Context, _ common.Location) *interpreter.CompositeValue {
+		vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
+			require.Equal(b, importedChecker.Location, location)
 			return importedContractValue
+		}
+		vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+			require.Equal(b, importedChecker.Location, location)
+			return importedChecker.Elaboration.CompositeType(typeID)
 		}
 
 		scriptLocation := runtime_utils.NewScriptLocationGenerator()

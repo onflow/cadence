@@ -24,8 +24,6 @@ import (
 	"math/big"
 
 	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -108,45 +106,20 @@ func getRandomBytes(buffer []byte, generator RandomGenerator) {
 
 var ZeroModuloError = errors.NewDefaultUserError("modulo argument cannot be zero")
 
-func NewInterpreterRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue {
-	return NewInterpreterStandardLibraryStaticFunction(
-		revertibleRandomFunctionName,
-		revertibleRandomFunctionType,
-		revertibleRandomFunctionDocString,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.InvocationContext
+func NativeRevertibleRandomFunction(generator RandomGenerator) interpreter.NativeFunction {
+	return interpreter.NativeFunction(
+		func(
+			context interpreter.NativeFunctionContext,
+			_ interpreter.LocationRange,
+			typeParameterGetter interpreter.TypeParameterGetter,
+			_ interpreter.Value,
+			args ...interpreter.Value,
+		) interpreter.Value {
+			returnIntegerType := typeParameterGetter.NextSema()
 
-			returnIntegerType := invocation.TypeParameterTypes.Oldest().Value
-
-			// arguments should be 0 or 1 at this point
 			var moduloValue interpreter.Value
-			if len(invocation.Arguments) == 1 {
-				moduloValue = invocation.Arguments[0]
-			}
-
-			return RevertibleRandom(
-				generator,
-				inter,
-				returnIntegerType,
-				moduloValue,
-			)
-		},
-	)
-}
-
-func NewVMRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue {
-	return NewVMStandardLibraryStaticFunction(
-		revertibleRandomFunctionName,
-		revertibleRandomFunctionType,
-		revertibleRandomFunctionDocString,
-		func(context *vm.Context, typeArguments []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
-
-			returnIntegerType := interpreter.MustConvertStaticToSemaType(typeArguments[0], context)
-
-			// arguments should be 0 or 1 at this point
-			var moduloValue interpreter.Value
-			if len(arguments) == 1 {
-				moduloValue = arguments[0]
+			if len(args) == 1 {
+				moduloValue = args[0]
 			}
 
 			return RevertibleRandom(
@@ -156,6 +129,26 @@ func NewVMRevertibleRandomFunction(generator RandomGenerator) StandardLibraryVal
 				moduloValue,
 			)
 		},
+	)
+}
+
+func NewInterpreterRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue {
+	return NewNativeStandardLibraryStaticFunction(
+		revertibleRandomFunctionName,
+		revertibleRandomFunctionType,
+		revertibleRandomFunctionDocString,
+		NativeRevertibleRandomFunction(generator),
+		false,
+	)
+}
+
+func NewVMRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue {
+	return NewNativeStandardLibraryStaticFunction(
+		revertibleRandomFunctionName,
+		revertibleRandomFunctionType,
+		revertibleRandomFunctionDocString,
+		NativeRevertibleRandomFunction(generator),
+		true,
 	)
 }
 

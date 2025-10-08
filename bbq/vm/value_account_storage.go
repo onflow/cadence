@@ -19,7 +19,6 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
@@ -38,17 +37,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeSaveFunctionName,
 			sema.Account_StorageTypeSaveFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-
-				address := GetAccountTypePrivateAddressValue(receiver)
-
-				return interpreter.AccountStorageSave(
-					context,
-					arguments,
-					address,
-					EmptyLocationRange,
-				)
-			},
+			interpreter.NativeAccountStorageSaveFunction(nil),
 		),
 	)
 
@@ -58,19 +47,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeBorrowFunctionName,
 			sema.Account_StorageTypeBorrowFunctionType,
-			func(context *Context, typeArguments []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				address := GetAccountTypePrivateAddressValue(receiver)
-
-				borrowType := typeArguments[0]
-				semaBorrowType := context.SemaTypeFromStaticType(borrowType)
-
-				return interpreter.AccountStorageBorrow(
-					context,
-					arguments,
-					semaBorrowType,
-					address.ToAddress(),
-				)
-			},
+			interpreter.NativeAccountStorageBorrowFunction(nil),
 		),
 	)
 
@@ -80,19 +57,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeForEachPublicFunctionName,
 			sema.Account_StorageTypeForEachPublicFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-
-				address := GetAccountTypePrivateAddressValue(receiver)
-
-				return interpreter.AccountStorageIterate(
-					context,
-					arguments,
-					address.ToAddress(),
-					common.PathDomainPublic,
-					sema.PublicPathType,
-					EmptyLocationRange,
-				)
-			},
+			interpreter.NativeAccountStorageIterateFunction(nil, common.PathDomainPublic, sema.PublicPathType),
 		),
 	)
 
@@ -102,19 +67,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeForEachStoredFunctionName,
 			sema.Account_StorageTypeForEachPublicFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-
-				address := GetAccountTypePrivateAddressValue(receiver)
-
-				return interpreter.AccountStorageIterate(
-					context,
-					arguments,
-					address.ToAddress(),
-					common.PathDomainStorage,
-					sema.StoragePathType,
-					EmptyLocationRange,
-				)
-			},
+			interpreter.NativeAccountStorageIterateFunction(nil, common.PathDomainStorage, sema.StoragePathType),
 		),
 	)
 
@@ -124,16 +77,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeTypeFunctionName,
 			sema.Account_StorageTypeTypeFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-
-				address := GetAccountTypePrivateAddressValue(receiver)
-
-				return interpreter.AccountStorageType(
-					context,
-					arguments,
-					address.ToAddress(),
-				)
-			},
+			interpreter.NativeAccountStorageTypeFunction(nil),
 		),
 	)
 
@@ -143,20 +87,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeLoadFunctionName,
 			sema.Account_StorageTypeLoadFunctionType,
-			func(context *Context, typeArguments []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				address := GetAccountTypePrivateAddressValue(receiver)
-
-				borrowType := typeArguments[0]
-				semaBorrowType := context.SemaTypeFromStaticType(borrowType)
-
-				return interpreter.AccountStorageRead(
-					context,
-					arguments,
-					semaBorrowType,
-					address.ToAddress(),
-					true,
-				)
-			},
+			interpreter.NativeAccountStorageReadFunction(nil, true),
 		),
 	)
 
@@ -166,20 +97,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeCopyFunctionName,
 			sema.Account_StorageTypeCopyFunctionType,
-			func(context *Context, typeArguments []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				address := GetAccountTypePrivateAddressValue(receiver).ToAddress()
-
-				borrowType := typeArguments[0]
-				semaBorrowType := context.SemaTypeFromStaticType(borrowType)
-
-				return interpreter.AccountStorageRead(
-					context,
-					arguments,
-					semaBorrowType,
-					address,
-					false,
-				)
-			},
+			interpreter.NativeAccountStorageReadFunction(nil, false),
 		),
 	)
 
@@ -189,19 +107,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.Account_StorageTypeCheckFunctionName,
 			sema.Account_StorageTypeCheckFunctionType,
-			func(context *Context, typeArguments []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				address := GetAccountTypePrivateAddressValue(receiver).ToAddress()
-
-				borrowType := typeArguments[0]
-				semaBorrowType := context.SemaTypeFromStaticType(borrowType)
-
-				return interpreter.AccountStorageCheck(
-					context,
-					address,
-					arguments,
-					semaBorrowType,
-				)
-			},
+			interpreter.NativeAccountStorageCheckFunction(nil),
 		),
 	)
 }

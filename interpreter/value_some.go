@@ -164,26 +164,7 @@ func (v *SomeValue) GetMethod(
 			sema.OptionalTypeMapFunctionType(
 				innerValueType,
 			),
-			func(v *SomeValue, invocation Invocation) Value {
-				invocationContext := invocation.InvocationContext
-				locationRange := invocation.LocationRange
-
-				transformFunction, ok := invocation.Arguments[0].(FunctionValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				transformFunctionType := transformFunction.FunctionType(invocationContext)
-
-				return OptionalValueMapFunction(
-					invocationContext,
-					v,
-					transformFunctionType,
-					transformFunction,
-					innerValueType,
-					locationRange,
-				)
-			},
+			NativeOptionalMapFunction,
 		)
 	}
 
@@ -529,3 +510,29 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 		s.Storable,
 	}
 }
+
+// Native some functions
+
+var NativeOptionalMapFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		locationRange LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		optionalValue := AssertValueOfType[OptionalValue](receiver)
+		innerValueType := optionalValue.InnerValueType(context)
+
+		transformFunction := AssertValueOfType[FunctionValue](args[0])
+		transformFunctionType := transformFunction.FunctionType(context)
+		return OptionalValueMapFunction(
+			context,
+			optionalValue,
+			transformFunctionType,
+			transformFunction,
+			innerValueType,
+			locationRange,
+		)
+	},
+)

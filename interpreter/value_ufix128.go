@@ -424,15 +424,15 @@ func (v UFix128Value) GreaterEqual(context ValueComparisonContext, other Compara
 }
 
 func (v UFix128Value) Equal(_ ValueComparisonContext, other Value) bool {
-	otherFix64, ok := other.(UFix128Value)
+	otherFix128, ok := other.(UFix128Value)
 	if !ok {
 		return false
 	}
-	return v == otherFix64
+	return v == otherFix128
 }
 
 // HashInput returns a byte slice containing:
-// - HashInputTypeFix64 (1 byte)
+// - HashInputTypeUFix128 (1 byte)
 // - high 64 bits encoded in big-endian (8 bytes)
 // - low 64 bits encoded in big-endian (8 bytes)
 func (v UFix128Value) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
@@ -484,7 +484,7 @@ func ConvertUFix128(memoryGauge common.MemoryGauge, value Value) UFix128Value {
 		)
 
 	default:
-		panic(fmt.Sprintf("can't convert UFix64: %s", value))
+		panic(fmt.Sprintf("can't convert to UFix128: %s", value))
 	}
 
 	return NewUFix128ValueFromBigIntWithRangeCheck(memoryGauge, scaledInt)
@@ -499,7 +499,7 @@ func (v UFix128Value) GetMethod(
 	_ LocationRange,
 	name string,
 ) FunctionValue {
-	return getNumberValueFunctionMember(context, v, name, sema.Fix64Type)
+	return getNumberValueFunctionMember(context, v, name, sema.UFix128Type)
 }
 
 func (UFix128Value) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {

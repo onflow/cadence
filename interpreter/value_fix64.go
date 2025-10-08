@@ -507,7 +507,7 @@ func ConvertFix64(memoryGauge common.MemoryGauge, value Value) Fix64Value {
 		)
 
 	default:
-		panic(fmt.Sprintf("can't convert Fix64: %s", value))
+		panic(fmt.Sprintf("can't convert to Fix64: %s", value))
 	}
 }
 

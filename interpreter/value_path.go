@@ -114,6 +114,19 @@ func (v PathValue) GetMember(context MemberAccessibleContext, locationRange Loca
 	return context.GetMethod(v, name, locationRange)
 }
 
+var NativePathValueToStringFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		_ ...Value,
+	) Value {
+		path := AssertValueOfType[PathValue](receiver)
+		return PathValueToStringFunction(context, path)
+	},
+)
+
 func (v PathValue) GetMethod(
 	context MemberAccessibleContext,
 	_ LocationRange,
@@ -126,10 +139,7 @@ func (v PathValue) GetMethod(
 			context,
 			v,
 			sema.ToStringFunctionType,
-			func(v PathValue, invocation Invocation) Value {
-				invocationContext := invocation.InvocationContext
-				return PathValueToStringFunction(invocationContext, v)
-			},
+			NativePathValueToStringFunction,
 		)
 	}
 

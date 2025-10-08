@@ -1223,7 +1223,7 @@ func TestStringer(t *testing.T) {
 		},
 		"static host function": {
 			value: func(_ *Interpreter) Value {
-				return NewUnmeteredStaticHostFunctionValue(
+				return NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 					&sema.FunctionType{
 						Parameters: []sema.Parameter{
 							{
@@ -1234,7 +1234,13 @@ func TestStringer(t *testing.T) {
 						},
 						ReturnTypeAnnotation: sema.StringTypeAnnotation,
 					},
-					func(invocation Invocation) Value {
+					func(
+						_ NativeFunctionContext,
+						_ LocationRange,
+						_ TypeParameterGetter,
+						_ Value,
+						_ ...Value,
+					) Value {
 						return NewUnmeteredStringValue("hello")
 					},
 				)

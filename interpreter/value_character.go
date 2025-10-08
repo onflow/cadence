@@ -228,6 +228,19 @@ func (v CharacterValue) GetMember(context MemberAccessibleContext, locationRange
 	return context.GetMethod(v, name, locationRange)
 }
 
+var NativeCharacterValueToStringFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		_ ...Value,
+	) Value {
+		character := AssertValueOfType[CharacterValue](receiver)
+		return CharacterValueToString(context, character)
+	},
+)
+
 func (v CharacterValue) GetMethod(
 	context MemberAccessibleContext,
 	_ LocationRange,
@@ -239,11 +252,7 @@ func (v CharacterValue) GetMethod(
 			context,
 			v,
 			sema.ToStringFunctionType,
-			func(v CharacterValue, invocation Invocation) Value {
-				invocationContext := invocation.InvocationContext
-
-				return CharacterValueToString(invocationContext, v)
-			},
+			NativeCharacterValueToStringFunction,
 		)
 	}
 

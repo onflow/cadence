@@ -19,7 +19,6 @@
 package stdlib
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
@@ -62,6 +61,7 @@ var interpreterSignatureAlgorithmConstructorValue, SignatureAlgorithmCaseValues 
 	NewSignatureAlgorithmCase,
 )
 
+// these functions are left as is, since there are differences in the implementations between interpreter and vm
 var InterpreterSignatureAlgorithmConstructor = StandardLibraryValue{
 	Name:  sema.SignatureAlgorithmTypeName,
 	Type:  signatureAlgorithmLookupType,
@@ -72,7 +72,13 @@ var InterpreterSignatureAlgorithmConstructor = StandardLibraryValue{
 var vmSignatureAlgorithmConstructorValue = vm.NewNativeFunctionValue(
 	sema.SignatureAlgorithmTypeName,
 	signatureAlgorithmLookupType,
-	func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, args ...vm.Value) vm.Value {
+	func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.LocationRange,
+		_ interpreter.TypeParameterGetter,
+		_ interpreter.Value,
+		args ...interpreter.Value,
+	) interpreter.Value {
 		rawValue := args[0].(interpreter.UInt8Value)
 
 		caseValue, ok := SignatureAlgorithmCaseValues[rawValue]

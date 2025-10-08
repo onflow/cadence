@@ -19,9 +19,7 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
-	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
@@ -36,20 +34,7 @@ func init() {
 		NewNativeFunctionValue(
 			sema.MetaTypeIsSubtypeFunctionName,
 			sema.MetaTypeIsSubtypeFunctionType,
-			func(context *Context, _ []bbq.StaticType, receiver Value, arguments ...Value) Value {
-				typeValue := receiver.(interpreter.TypeValue)
-
-				otherTypeValue, ok := arguments[0].(interpreter.TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return interpreter.MetaTypeIsSubType(
-					context,
-					typeValue,
-					otherTypeValue,
-				)
-			},
+			interpreter.NativeMetaTypeIsSubtypeFunction,
 		),
 	)
 }

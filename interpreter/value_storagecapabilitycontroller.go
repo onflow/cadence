@@ -362,103 +362,143 @@ func (v *StorageCapabilityControllerValue) CheckDeleted() {
 	}
 }
 
-func (v *StorageCapabilityControllerValue) newHostFunctionValue(
+func NewNativeDeletionCheckedStorageCapabilityControllerFunction(
+	f NativeFunction,
+) NativeFunction {
+	return func(
+		context NativeFunctionContext,
+		locationRange LocationRange,
+		typeParameterGetter TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		controller := AssertValueOfType[*StorageCapabilityControllerValue](receiver)
+		controller.CheckDeleted()
+
+		return f(context, locationRange, typeParameterGetter, receiver, args...)
+	}
+}
+
+func (v *StorageCapabilityControllerValue) newNativeHostFunctionValue(
 	context FunctionCreationContext,
 	funcType *sema.FunctionType,
-	f func(invocation Invocation) Value,
+	f NativeFunction,
 ) FunctionValue {
 	return deletionCheckedFunctionValue{
 		FunctionValue: NewBoundHostFunctionValue(
 			context,
 			v,
 			funcType,
-			func(v *StorageCapabilityControllerValue, invocation Invocation) Value {
-				// NOTE: check if controller is already deleted
-				v.CheckDeleted()
-
-				return f(invocation)
-			},
+			NewNativeDeletionCheckedStorageCapabilityControllerFunction(f),
 		),
 	}
 }
 
+var NativeStorageCapabilityControllerDeleteFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		locationRange LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		_ ...Value,
+	) Value {
+		controller := AssertValueOfType[*StorageCapabilityControllerValue](receiver)
+		controller.Delete(context, locationRange)
+		controller.deleted = true
+
+		return Void
+	},
+)
+
 func (v *StorageCapabilityControllerValue) newDeleteFunction(
 	context FunctionCreationContext,
 ) FunctionValue {
-	return v.newHostFunctionValue(
+	return v.newNativeHostFunctionValue(
 		context,
 		sema.StorageCapabilityControllerTypeDeleteFunctionType,
-		func(invocation Invocation) Value {
-			inter := invocation.InvocationContext
-			locationRange := invocation.LocationRange
-
-			v.Delete(inter, locationRange)
-
-			v.deleted = true
-
-			return Void
-		},
+		NativeStorageCapabilityControllerDeleteFunction,
 	)
 }
+
+var NativeStorageCapabilityControllerTargetFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		locationRange LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		_ ...Value,
+	) Value {
+		controller := AssertValueOfType[*StorageCapabilityControllerValue](receiver)
+		return controller.TargetPath
+	},
+)
 
 func (v *StorageCapabilityControllerValue) newTargetFunction(
 	context FunctionCreationContext,
 ) FunctionValue {
-	return v.newHostFunctionValue(
+	return v.newNativeHostFunctionValue(
 		context,
 		sema.StorageCapabilityControllerTypeTargetFunctionType,
-		func(invocation Invocation) Value {
-			return v.TargetPath
-		},
+		NativeStorageCapabilityControllerTargetFunction,
 	)
 }
+
+var NativeStorageCapabilityControllerRetargetFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		locationRange LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		controller := AssertValueOfType[*StorageCapabilityControllerValue](receiver)
+
+		newTargetPathValue := AssertValueOfType[PathValue](args[0])
+		if newTargetPathValue.Domain != common.PathDomainStorage {
+			panic(errors.NewUnreachableError())
+		}
+
+		controller.SetTarget(context, locationRange, newTargetPathValue)
+		controller.TargetPath = newTargetPathValue
+
+		return Void
+	},
+)
 
 func (v *StorageCapabilityControllerValue) newRetargetFunction(
 	context FunctionCreationContext,
 ) FunctionValue {
-	return v.newHostFunctionValue(
+	return v.newNativeHostFunctionValue(
 		context,
 		sema.StorageCapabilityControllerTypeRetargetFunctionType,
-		func(invocation Invocation) Value {
-			inter := invocation.InvocationContext
-			locationRange := invocation.LocationRange
-
-			// Get path argument
-
-			newTargetPathValue, ok := invocation.Arguments[0].(PathValue)
-			if !ok || newTargetPathValue.Domain != common.PathDomainStorage {
-				panic(errors.NewUnreachableError())
-			}
-
-			v.SetTarget(inter, locationRange, newTargetPathValue)
-			v.TargetPath = newTargetPathValue
-
-			return Void
-		},
+		NativeStorageCapabilityControllerRetargetFunction,
 	)
 }
+
+var NativeStorageCapabilityControllerSetTagFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		locationRange LocationRange,
+		_ TypeParameterGetter,
+		receiver Value,
+		args ...Value,
+	) Value {
+		controller := AssertValueOfType[*StorageCapabilityControllerValue](receiver)
+
+		newTagValue := AssertValueOfType[*StringValue](args[0])
+
+		controller.SetTag(context, newTagValue)
+
+		return Void
+	},
+)
 
 func (v *StorageCapabilityControllerValue) newSetTagFunction(
 	context FunctionCreationContext,
 ) FunctionValue {
-	return v.newHostFunctionValue(
+	return v.newNativeHostFunctionValue(
 		context,
 		sema.StorageCapabilityControllerTypeSetTagFunctionType,
-		func(invocation Invocation) Value {
-			inter := invocation.InvocationContext
-
-			newTagValue, ok := invocation.Arguments[0].(*StringValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			v.SetTag(inter, newTagValue)
-
-			return Void
-		},
+		NativeStorageCapabilityControllerSetTagFunction,
 	)
-}
-
-func (v *StorageCapabilityControllerValue) SetDeleted() {
-	v.deleted = true
 }

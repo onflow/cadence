@@ -21,8 +21,6 @@ package stdlib
 import (
 	"fmt"
 
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -64,24 +62,33 @@ var PanicFunctionType = sema.NewSimpleFunctionType(
 	sema.NeverTypeAnnotation,
 )
 
-var InterpreterPanicFunction = NewInterpreterStandardLibraryStaticFunction(
-	PanicFunctionName,
-	PanicFunctionType,
-	panicFunctionDocString,
-	func(invocation interpreter.Invocation) interpreter.Value {
-		message := invocation.Arguments[0]
+var NativePanicFunction = interpreter.NativeFunction(
+	func(
+		_ interpreter.NativeFunctionContext,
+		locationRange interpreter.LocationRange,
+		_ interpreter.TypeParameterGetter,
+		_ interpreter.Value,
+		args ...interpreter.Value,
+	) interpreter.Value {
+		message := args[0]
 		return PanicWithError(message)
 	},
 )
 
-var VMPanicFunction = NewVMStandardLibraryStaticFunction(
+var InterpreterPanicFunction = NewNativeStandardLibraryStaticFunction(
 	PanicFunctionName,
 	PanicFunctionType,
 	panicFunctionDocString,
-	func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...interpreter.Value) interpreter.Value {
-		message := arguments[0]
-		return PanicWithError(message)
-	},
+	NativePanicFunction,
+	false,
+)
+
+var VMPanicFunction = NewNativeStandardLibraryStaticFunction(
+	PanicFunctionName,
+	PanicFunctionType,
+	panicFunctionDocString,
+	NativePanicFunction,
+	true,
 )
 
 func PanicWithError(message interpreter.Value) interpreter.Value {
