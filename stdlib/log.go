@@ -59,7 +59,7 @@ func NativeLogFunction(logger Logger) interpreter.NativeFunction {
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		_ interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		value := args[0]
 		return Log(

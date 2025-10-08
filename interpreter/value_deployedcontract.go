@@ -75,7 +75,7 @@ func NewNativeDeployedContractPublicTypesFunctionValue(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		_ ...Value,
+		_ []Value,
 	) Value {
 		var address common.Address
 		if addressPointer == nil {

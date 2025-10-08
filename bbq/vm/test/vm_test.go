@@ -8852,7 +8852,7 @@ func TestFunctionInvocationWithOptionalArgs(t *testing.T) {
 			context interpreter.NativeFunctionContext,
 			_ interpreter.TypeParameterGetter,
 			_ interpreter.Value,
-			arguments ...vm.Value,
+			arguments []vm.Value,
 		) vm.Value {
 			require.GreaterOrEqual(t, len(arguments), 1)
 
@@ -9438,7 +9438,7 @@ func TestInjectedContract(t *testing.T) {
 			context interpreter.NativeFunctionContext,
 			_ interpreter.TypeParameterGetter,
 			receiver interpreter.Value,
-			args ...interpreter.Value,
+			args []interpreter.Value,
 		) interpreter.Value {
 			assert.Same(t, bValue, receiver)
 
@@ -11536,7 +11536,7 @@ func TestBorrowContractLinksGlobals(t *testing.T) {
 			context interpreter.NativeFunctionContext,
 			_ interpreter.TypeParameterGetter,
 			_ interpreter.Value,
-			args ...interpreter.Value,
+			args []interpreter.Value,
 		) vm.Value {
 			stdlib.AccountContractsBorrow(
 				context,

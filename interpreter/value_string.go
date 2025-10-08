@@ -1054,7 +1054,7 @@ var NativeStringEncodeHexFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		argument := AssertValueOfType[*ArrayValue](args[0])
 		return StringFunctionEncodeHex(context, argument)
@@ -1066,7 +1066,7 @@ var NativeStringFromUtf8Function = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		argument := AssertValueOfType[*ArrayValue](args[0])
 		return StringFunctionFromUtf8(context, argument)
@@ -1078,7 +1078,7 @@ var NativeStringFromCharactersFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		argument := AssertValueOfType[*ArrayValue](args[0])
 		return StringFunctionFromCharacters(context, argument)
@@ -1090,7 +1090,7 @@ var NativeStringJoinFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		stringArray := AssertValueOfType[*ArrayValue](args[0])
 		separator := AssertValueOfType[*StringValue](args[1])
@@ -1297,7 +1297,7 @@ var NativeStringConcatFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		this := AssertValueOfType[*StringValue](receiver)
 		other := args[0]
@@ -1314,7 +1314,7 @@ var NativeStringSliceFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		from := AssertValueOfType[IntValue](args[0])
 		to := AssertValueOfType[IntValue](args[1])
@@ -1328,7 +1328,7 @@ var NativeStringContainsFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		other := AssertValueOfType[*StringValue](args[0])
 		stringValue := AssertValueOfType[*StringValue](receiver)
@@ -1341,7 +1341,7 @@ var NativeStringIndexFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		other := AssertValueOfType[*StringValue](args[0])
 		stringValue := AssertValueOfType[*StringValue](receiver)
@@ -1354,7 +1354,7 @@ var NativeStringCountFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		other := AssertValueOfType[*StringValue](args[0])
 		stringValue := AssertValueOfType[*StringValue](receiver)
@@ -1367,7 +1367,7 @@ var NativeStringDecodeHexFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		stringValue := AssertValueOfType[*StringValue](receiver)
 		return stringValue.DecodeHex(context)
@@ -1379,7 +1379,7 @@ var NativeStringToLowerFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		stringValue := AssertValueOfType[*StringValue](receiver)
 		return stringValue.ToLower(context)
@@ -1391,7 +1391,7 @@ var NativeStringSplitFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		separator := AssertValueOfType[*StringValue](args[0])
 		stringValue := AssertValueOfType[*StringValue](receiver)
@@ -1404,7 +1404,7 @@ var NativeStringReplaceAllFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		original := AssertValueOfType[*StringValue](args[0])
 		replacement := AssertValueOfType[*StringValue](args[1])

@@ -102,7 +102,7 @@ func init() {
 				_ interpreter.NativeFunctionContext,
 				_ interpreter.TypeParameterGetter,
 				_ interpreter.Value,
-				args ...interpreter.Value,
+				args []interpreter.Value,
 			) interpreter.Value {
 				messageValue := args[0].(*interpreter.StringValue)
 				panic(&interpreter.ConditionError{
@@ -121,7 +121,7 @@ func init() {
 				_ interpreter.NativeFunctionContext,
 				_ interpreter.TypeParameterGetter,
 				_ interpreter.Value,
-				args ...interpreter.Value,
+				args []interpreter.Value,
 			) interpreter.Value {
 				messageValue := args[0].(*interpreter.StringValue)
 				panic(&interpreter.ConditionError{

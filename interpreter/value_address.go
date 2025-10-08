@@ -292,7 +292,7 @@ var NativeAddressToStringFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		_ ...Value,
+		_ []Value,
 	) Value {
 		address := AssertValueOfType[AddressValue](receiver)
 		return AddressValueToStringFunction(context, address)
@@ -304,7 +304,7 @@ var NativeAddressToBytesFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		_ ...Value,
+		_ []Value,
 	) Value {
 		address := common.Address(AssertValueOfType[AddressValue](receiver))
 		return ByteSliceToByteArrayValue(context, address[:])

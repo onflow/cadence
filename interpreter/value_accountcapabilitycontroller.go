@@ -351,7 +351,7 @@ func NewNativeDeletionCheckedAccountCapabilityControllerFunction(
 		context NativeFunctionContext,
 		typeParameterGetter TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		controller := AssertValueOfType[*AccountCapabilityControllerValue](receiver)
 		// check if controller is already deleted
@@ -361,7 +361,7 @@ func NewNativeDeletionCheckedAccountCapabilityControllerFunction(
 			context,
 			typeParameterGetter,
 			receiver,
-			args...,
+			args,
 		)
 	}
 }
@@ -371,7 +371,7 @@ var NativeAccountCapabilityControllerDeleteFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		_ ...Value,
+		_ []Value,
 	) Value {
 		controller := AssertValueOfType[*AccountCapabilityControllerValue](receiver)
 		controller.Delete(context)
@@ -395,7 +395,7 @@ var NativeAccountCapabilityControllerSetTagFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		controller := AssertValueOfType[*AccountCapabilityControllerValue](receiver)
 		newTagValue := AssertValueOfType[*StringValue](args[0])

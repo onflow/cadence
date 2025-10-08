@@ -81,7 +81,7 @@ func NativeHashAlgorithmHashFunction(hasher Hasher, hashAlgoValue interpreter.Me
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		if hashAlgoValue == nil {
 			// vm does not provide the hash algo value
@@ -105,7 +105,7 @@ func NativeHashAlgorithmHashWithTagFunction(hasher Hasher, hashAlgoValue interpr
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		if hashAlgoValue == nil {
 			// vm does not provide the hash algo value
@@ -239,7 +239,7 @@ func NewVMHashAlgorithmConstructor(hasher Hasher) StandardLibraryValue {
 			context interpreter.NativeFunctionContext,
 			_ interpreter.TypeParameterGetter,
 			_ interpreter.Value,
-			args ...interpreter.Value,
+			args []interpreter.Value,
 		) interpreter.Value {
 			rawValue := args[0].(interpreter.UInt8Value)
 

@@ -204,7 +204,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 			_ interpreter.NativeFunctionContext,
 			_ interpreter.TypeParameterGetter,
 			_ interpreter.Value,
-			_ ...interpreter.Value,
+			_ []interpreter.Value,
 		) interpreter.Value {
 			return interpreter.NewUnmeteredIntValueFromInt64(2)
 		}
@@ -378,7 +378,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 					_ interpreter.NativeFunctionContext,
 					_ interpreter.TypeParameterGetter,
 					_ interpreter.Value,
-					_ ...interpreter.Value,
+					_ []interpreter.Value,
 				) interpreter.Value {
 					return interpreter.NewUnmeteredIntValueFromInt64(2)
 				},
@@ -453,7 +453,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 					_ interpreter.NativeFunctionContext,
 					_ interpreter.TypeParameterGetter,
 					_ interpreter.Value,
-					_ ...interpreter.Value,
+					_ []interpreter.Value,
 				) interpreter.Value {
 					return interpreter.NewUnmeteredIntValueFromInt64(2)
 				},
@@ -573,7 +573,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 					context interpreter.NativeFunctionContext,
 					_ interpreter.TypeParameterGetter,
 					receiver interpreter.Value,
-					args ...interpreter.Value,
+					args []interpreter.Value,
 				) interpreter.Value {
 					assert.Same(t, bValue, receiver)
 
@@ -701,7 +701,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 					_ interpreter.NativeFunctionContext,
 					_ interpreter.TypeParameterGetter,
 					_ interpreter.Value,
-					_ ...interpreter.Value,
+					_ []interpreter.Value,
 				) interpreter.Value {
 					require.Fail(t, "function should have not been called")
 					return nil

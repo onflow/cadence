@@ -123,7 +123,7 @@ var NativeInclusiveRangeContainsFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		rangeValue := AssertValueOfType[*CompositeValue](receiver)
 		needleInteger := convertAndAssertIntegerValue(args[0])

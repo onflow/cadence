@@ -81,7 +81,7 @@ type NativeFunction func(
 	context NativeFunctionContext,
 	typeParameterGetter TypeParameterGetter,
 	receiver Value,
-	args ...Value,
+	args []Value,
 ) Value
 
 // These are all the functions that need to exist to work with the interpreter
@@ -100,7 +100,7 @@ func AdaptNativeFunctionForInterpreter(fn NativeFunction) HostFunction {
 			context,
 			typeParameterGetter,
 			receiver,
-			invocation.Arguments...,
+			invocation.Arguments,
 		)
 	}
 }

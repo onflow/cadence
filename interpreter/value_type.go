@@ -361,7 +361,7 @@ var NativeMetaTypeIsSubtypeFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		typeValue := AssertValueOfType[TypeValue](receiver)
 		otherTypeValue := AssertValueOfType[TypeValue](args[0])

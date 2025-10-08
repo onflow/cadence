@@ -60,14 +60,19 @@ func (g *VMTypeParameterGetter) NextSema() sema.Type {
 
 // Like in the interpreter's native_function, these are all the functions that need to exist to work with the VM
 func AdaptNativeFunctionForVM(fn interpreter.NativeFunction) NativeFunctionVM {
-	return func(context *Context, typeArguments []bbq.StaticType, receiver Value, arguments ...Value) Value {
+	return func(
+		context *Context,
+		typeArguments []bbq.StaticType,
+		receiver Value,
+		arguments []Value,
+	) Value {
 		typeParameterGetter := NewVMTypeParameterGetter(context, typeArguments)
 
 		return fn(
 			context,
 			typeParameterGetter,
 			receiver,
-			arguments...,
+			arguments,
 		)
 	}
 }

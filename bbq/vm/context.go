@@ -330,7 +330,7 @@ func (c *Context) DefaultDestroyEvents(resourceValue *interpreter.CompositeValue
 			context interpreter.NativeFunctionContext,
 			_ interpreter.TypeParameterGetter,
 			_ interpreter.Value,
-			arguments ...interpreter.Value,
+			arguments []interpreter.Value,
 		) interpreter.Value {
 			for _, argument := range arguments {
 				event := argument.(*interpreter.CompositeValue)

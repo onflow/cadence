@@ -144,7 +144,7 @@ var NativeNumberToStringFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		_ ...Value,
+		_ []Value,
 	) Value {
 		return NumberValueToString(context, receiver.(NumberValue))
 	},
@@ -155,7 +155,7 @@ var NativeNumberToBigEndianBytesFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		_ ...Value,
+		_ []Value,
 	) Value {
 		return ByteSliceToByteArrayValue(context, receiver.(NumberValue).ToBigEndianBytes())
 	},
@@ -166,7 +166,7 @@ var NativeNumberSaturatingAddFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		other := AssertValueOfType[NumberValue](args[0])
 		return receiver.(NumberValue).SaturatingPlus(context, other)
@@ -178,7 +178,7 @@ var NativeNumberSaturatingSubtractFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		other := AssertValueOfType[NumberValue](args[0])
 		return receiver.(NumberValue).SaturatingMinus(context, other)
@@ -190,7 +190,7 @@ var NativeNumberSaturatingMultiplyFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		other := AssertValueOfType[NumberValue](args[0])
 		return receiver.(NumberValue).SaturatingMul(context, other)
@@ -202,7 +202,7 @@ var NativeNumberSaturatingDivideFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		other := AssertValueOfType[NumberValue](args[0])
 		return receiver.(NumberValue).SaturatingDiv(context, other)

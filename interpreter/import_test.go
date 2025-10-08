@@ -48,7 +48,7 @@ func newAddLogFunction(logs *[]string) interpreter.NativeFunction {
 		_ interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		_ interpreter.Value,
-		arguments ...interpreter.Value,
+		arguments []interpreter.Value,
 	) interpreter.Value {
 		value := arguments[0]
 		*logs = append(*logs, value.String())

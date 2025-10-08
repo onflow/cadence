@@ -114,7 +114,7 @@ func NativeAccountConstructor(creator AccountCreator) interpreter.NativeFunction
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		_ interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		payer := interpreter.AssertValueOfType[interpreter.MemberAccessibleValue](args[0])
 		return NewAccount(
@@ -239,7 +239,7 @@ func NativeGetAuthAccountFunction(handler AccountHandler) interpreter.NativeFunc
 		context interpreter.NativeFunctionContext,
 		typeParameterGetter interpreter.TypeParameterGetter,
 		_ interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		accountAddress := interpreter.AssertValueOfType[interpreter.AddressValue](args[0])
 
@@ -601,7 +601,7 @@ func nativeAccountKeysAddFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		publicKeyValue := interpreter.AssertValueOfType[*interpreter.CompositeValue](args[0])
 		hashAlgoValue := args[1]
@@ -720,7 +720,7 @@ func nativeAccountKeysGetFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		indexValue := interpreter.AssertValueOfType[interpreter.IntValue](args[0])
 
@@ -810,7 +810,7 @@ func nativeAccountKeysForEachFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		fnValue := interpreter.AssertValueOfType[interpreter.FunctionValue](args[0])
 
@@ -962,7 +962,7 @@ func nativeAccountKeysRevokeFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		indexValue := interpreter.AssertValueOfType[interpreter.IntValue](args[0])
 
@@ -1051,7 +1051,7 @@ func nativeAccountInboxPublishFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		value := interpreter.AssertValueOfType[interpreter.CapabilityValue](args[0])
 		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[1])
@@ -1146,7 +1146,7 @@ func nativeAccountInboxUnpublishFunction(
 		context interpreter.NativeFunctionContext,
 		typeParameterGetter interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[0])
 		borrowType := typeParameterGetter.NextSema()
@@ -1256,7 +1256,7 @@ func nativeAccountInboxClaimFunction(
 		context interpreter.NativeFunctionContext,
 		typeParameterGetter interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[0])
 		providerValue := interpreter.AssertValueOfType[interpreter.AddressValue](args[1])
@@ -1446,7 +1446,7 @@ func nativeAccountContractsGetFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[0])
 
@@ -1532,7 +1532,7 @@ func nativeAccountContractsBorrowFunction(
 		context interpreter.NativeFunctionContext,
 		typeParameterGetter interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[0])
 		borrowType := typeParameterGetter.NextSema()
@@ -1717,7 +1717,7 @@ func nativeAccountContractsChangeFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		argumentTypes := make([]sema.Type, len(args))
 		for i := 0; i < len(args); i++ {
@@ -2077,7 +2077,7 @@ func nativeAccountContractsTryUpdateFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) (deploymentResult interpreter.Value) {
 		var deployedContract interpreter.Value
 
@@ -2427,7 +2427,7 @@ func nativeAccountContractsRemoveFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		nameValue := interpreter.AssertValueOfType[*interpreter.StringValue](args[0])
 
@@ -2587,7 +2587,7 @@ func NativeGetAccountFunction(handler AccountHandler) interpreter.NativeFunction
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		_ interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		accountAddress := interpreter.AssertValueOfType[interpreter.AddressValue](args[0])
 		return NewAccountReferenceValue(
@@ -2746,7 +2746,7 @@ func nativeAccountStorageCapabilitiesGetControllerFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		capabilityIDValue := interpreter.AssertValueOfType[interpreter.UInt64Value](args[0])
 
@@ -2826,7 +2826,7 @@ func nativeAccountStorageCapabilitiesGetControllersFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		targetPathValue := interpreter.AssertValueOfType[interpreter.PathValue](args[0])
 
@@ -2936,7 +2936,7 @@ func nativeAccountStorageCapabilitiesForEachControllerFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		targetPathValue := interpreter.AssertValueOfType[interpreter.PathValue](args[0])
 		functionValue := interpreter.AssertValueOfType[interpreter.FunctionValue](args[1])
@@ -3081,7 +3081,7 @@ func nativeAccountStorageCapabilitiesIssueFunction(
 		context interpreter.NativeFunctionContext,
 		typeParameterGetter interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		borrowType := typeParameterGetter.NextSema()
 
@@ -3160,7 +3160,7 @@ func nativeAccountStorageCapabilitiesIssueWithTypeFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		targetPathValue := interpreter.AssertValueOfType[interpreter.PathValue](args[0])
 		borrowType := interpreter.AssertValueOfType[interpreter.TypeValue](args[1])
@@ -3332,7 +3332,7 @@ func nativeAccountAccountCapabilitiesIssueFunction(
 		context interpreter.NativeFunctionContext,
 		typeParameterGetter interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		borrowType := typeParameterGetter.NextSema()
 
@@ -3384,7 +3384,7 @@ func nativeAccountAccountCapabilitiesIssueWithTypeFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		typeValue := interpreter.AssertValueOfType[interpreter.TypeValue](args[0])
 		ty, err := interpreter.ConvertStaticToSemaType(context, typeValue.Type)
@@ -4019,7 +4019,7 @@ func nativeAccountCapabilitiesPublishFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		capabilityValue := interpreter.AssertValueOfType[interpreter.CapabilityValue](args[0])
 		pathValue := interpreter.AssertValueOfType[interpreter.PathValue](args[1])
@@ -4183,7 +4183,7 @@ func nativeAccountCapabilitiesUnpublishFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		pathValue := interpreter.AssertValueOfType[interpreter.PathValue](args[0])
 
@@ -4463,7 +4463,7 @@ func nativeAccountCapabilitiesGetFunction(
 		context interpreter.NativeFunctionContext,
 		typeParameterGetter interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		pathValue := interpreter.AssertValueOfType[interpreter.PathValue](args[0])
 		typeParameter := typeParameterGetter.NextSema()
@@ -4709,7 +4709,7 @@ func nativeAccountCapabilitiesExistsFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		pathValue := interpreter.AssertValueOfType[interpreter.PathValue](args[0])
 
@@ -4806,7 +4806,7 @@ func nativeAccountAccountCapabilitiesGetControllerFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		capabilityIDValue := interpreter.AssertValueOfType[interpreter.UInt64Value](args[0])
 
@@ -4872,7 +4872,7 @@ func nativeAccountAccountCapabilitiesGetControllersFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		address := interpreter.GetAddress(receiver, addressPointer)
 
@@ -4986,7 +4986,7 @@ func nativeAccountAccountCapabilitiesForEachControllerFunction(
 		context interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		receiver interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		functionValue := interpreter.AssertValueOfType[interpreter.FunctionValue](args[0])
 

@@ -67,7 +67,7 @@ var NativePanicFunction = interpreter.NativeFunction(
 		_ interpreter.NativeFunctionContext,
 		_ interpreter.TypeParameterGetter,
 		_ interpreter.Value,
-		args ...interpreter.Value,
+		args []interpreter.Value,
 	) interpreter.Value {
 		message := args[0]
 		return PanicWithError(message)

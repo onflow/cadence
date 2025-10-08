@@ -875,7 +875,12 @@ func invokeFunction(
 			}()
 		}
 
-		result := functionValue.Function(context, typeArguments, receiver, arguments...)
+		result := functionValue.Function(
+			context,
+			typeArguments,
+			receiver,
+			arguments,
+		)
 		vm.push(result)
 
 	default:

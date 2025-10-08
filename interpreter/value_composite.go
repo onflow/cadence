@@ -1741,7 +1741,7 @@ var NativeForEachAttachmentFunction = NativeFunction(
 		context NativeFunctionContext,
 		_ TypeParameterGetter,
 		receiver Value,
-		args ...Value,
+		args []Value,
 	) Value {
 		v := AssertValueOfType[*CompositeValue](receiver)
 		functionValue := AssertValueOfType[FunctionValue](args[0])
