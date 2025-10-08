@@ -27,7 +27,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/common/orderedmap"
@@ -201,22 +200,27 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 			sema.IntTypeAnnotation,
 		)
 
+		nativeFunction := func(
+			_ interpreter.NativeFunctionContext,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
+			_ []interpreter.Value,
+		) interpreter.Value {
+			return interpreter.NewUnmeteredIntValueFromInt64(2)
+		}
+
 		var function interpreter.FunctionValue
 		if *compile {
 			function = vm.NewNativeFunctionValue(
 				"bar",
 				functionType,
-				func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, _ ...vm.Value) vm.Value {
-					return interpreter.NewUnmeteredIntValueFromInt64(2)
-				},
+				nativeFunction,
 			)
 		} else {
-			function = interpreter.NewStaticHostFunctionValue(
+			function = interpreter.NewStaticHostFunctionValueFromNativeFunction(
 				nil,
 				functionType,
-				func(invocation interpreter.Invocation) interpreter.Value {
-					return interpreter.NewUnmeteredIntValueFromInt64(2)
-				},
+				nativeFunction,
 			)
 		}
 
@@ -370,7 +374,12 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 			function = vm.NewNativeFunctionValue(
 				"bar",
 				functionType,
-				func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, _ ...vm.Value) vm.Value {
+				func(
+					_ interpreter.NativeFunctionContext,
+					_ interpreter.TypeParameterGetter,
+					_ interpreter.Value,
+					_ []interpreter.Value,
+				) interpreter.Value {
 					return interpreter.NewUnmeteredIntValueFromInt64(2)
 				},
 			)
@@ -440,7 +449,12 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 			function = vm.NewNativeFunctionValue(
 				"bar",
 				functionType,
-				func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, _ ...vm.Value) vm.Value {
+				func(
+					_ interpreter.NativeFunctionContext,
+					_ interpreter.TypeParameterGetter,
+					_ interpreter.Value,
+					_ []interpreter.Value,
+				) interpreter.Value {
 					return interpreter.NewUnmeteredIntValueFromInt64(2)
 				},
 			)
@@ -555,18 +569,19 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 			function = vm.NewNativeFunctionValue(
 				"B.c",
 				cType,
-				func(context *vm.Context, _ []bbq.StaticType, receiver vm.Value, args ...vm.Value) vm.Value {
+				func(
+					context interpreter.NativeFunctionContext,
+					_ interpreter.TypeParameterGetter,
+					receiver interpreter.Value,
+					args []interpreter.Value,
+				) interpreter.Value {
 					assert.Same(t, bValue, receiver)
 
 					require.Len(t, args, 1)
 					require.IsType(t, interpreter.IntValue{}, args[0])
 					arg := args[0].(interpreter.IntValue)
 
-					return arg.Plus(
-						context,
-						arg,
-						interpreter.EmptyLocationRange,
-					)
+					return arg.Plus(context, arg)
 				},
 			)
 		} else {
@@ -580,11 +595,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 					require.IsType(t, interpreter.IntValue{}, args[0])
 					arg := args[0].(interpreter.IntValue)
 
-					return arg.Plus(
-						invocation.InvocationContext,
-						arg,
-						interpreter.EmptyLocationRange,
-					)
+					return arg.Plus(invocation.InvocationContext, arg)
 				},
 			)
 			bValue.Fields["c"] = function
@@ -686,7 +697,12 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 			function = vm.NewNativeFunctionValue(
 				"B.c",
 				cType,
-				func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, args ...vm.Value) vm.Value {
+				func(
+					_ interpreter.NativeFunctionContext,
+					_ interpreter.TypeParameterGetter,
+					_ interpreter.Value,
+					_ []interpreter.Value,
+				) interpreter.Value {
 					require.Fail(t, "function should have not been called")
 					return nil
 				},
@@ -1199,7 +1215,6 @@ func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
 			func(invocation interpreter.Invocation) interpreter.Value {
 				return interpreter.NewCompositeValue(
 					invocation.InvocationContext,
-					invocation.LocationRange,
 					xType.Location,
 					xType.QualifiedIdentifier(),
 					xType.Kind,
@@ -1242,7 +1257,6 @@ func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
 		xType.ID(),
 		func(
 			inter *interpreter.Interpreter,
-			locationRange interpreter.LocationRange,
 			compositeValue *interpreter.CompositeValue,
 		) *interpreter.FunctionOrderedMap {
 			require.NotNil(t, compositeValue)

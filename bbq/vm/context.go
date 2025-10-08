@@ -59,6 +59,8 @@ type Context struct {
 
 	// linkedGlobalsCache is a local cache-alike that is being used to hold already linked imports.
 	linkedGlobalsCache map[common.Location]LinkedGlobals
+
+	getLocationRange func() interpreter.LocationRange
 }
 
 var _ interpreter.ReferenceTracker = &Context{}
@@ -204,27 +206,23 @@ func (c *Context) startContainerValueIteration(valueID atree.ValueID) {
 	c.containerValueIteration[valueID]++
 }
 
-func (c *Context) ValidateContainerMutation(valueID atree.ValueID, locationRange interpreter.LocationRange) {
+func (c *Context) ValidateContainerMutation(valueID atree.ValueID) {
 	_, present := c.containerValueIteration[valueID]
 	if !present {
 		return
 	}
-	panic(&interpreter.ContainerMutatedDuringIterationError{
-		LocationRange: locationRange,
-	})
+	panic(&interpreter.ContainerMutatedDuringIterationError{})
 }
 
-func (c *Context) GetCompositeValueFunctions(v *interpreter.CompositeValue, locationRange interpreter.LocationRange) *interpreter.FunctionOrderedMap {
+func (c *Context) GetCompositeValueFunctions(v *interpreter.CompositeValue) *interpreter.FunctionOrderedMap {
 	//TODO
 	return nil
 }
 
-func (c *Context) EnforceNotResourceDestruction(valueID atree.ValueID, locationRange interpreter.LocationRange) {
+func (c *Context) EnforceNotResourceDestruction(valueID atree.ValueID) {
 	_, exists := c.destroyedResources[valueID]
 	if exists {
-		panic(&interpreter.DestroyedResourceError{
-			LocationRange: locationRange,
-		})
+		panic(&interpreter.DestroyedResourceError{})
 	}
 }
 
@@ -233,8 +231,8 @@ func (c *Context) GetMemberAccessContextForLocation(location common.Location) in
 	return c
 }
 
-func (c *Context) WithResourceDestruction(valueID atree.ValueID, locationRange interpreter.LocationRange, f func()) {
-	c.EnforceNotResourceDestruction(valueID, locationRange)
+func (c *Context) WithResourceDestruction(valueID atree.ValueID, f func()) {
+	c.EnforceNotResourceDestruction(valueID)
 
 	if c.destroyedResources == nil {
 		c.destroyedResources = make(map[atree.ValueID]struct{})
@@ -276,11 +274,7 @@ func (c *Context) GetResourceDestructionContextForLocation(location common.Locat
 	return c
 }
 
-func (c *Context) GetMethod(
-	value interpreter.MemberAccessibleValue,
-	name string,
-	_ interpreter.LocationRange,
-) interpreter.FunctionValue {
+func (c *Context) GetMethod(value interpreter.MemberAccessibleValue, name string) interpreter.FunctionValue {
 	staticType := value.StaticType(c)
 
 	semaType := c.SemaTypeFromStaticType(staticType)
@@ -320,15 +314,8 @@ func (c *Context) GetFunction(
 	return c.lookupFunction(location, name)
 }
 
-func (c *Context) DefaultDestroyEvents(
-	resourceValue *interpreter.CompositeValue,
-	locationRange interpreter.LocationRange,
-) []*interpreter.CompositeValue {
-	method := c.GetMethod(
-		resourceValue,
-		commons.ResourceDestroyedEventsFunctionName,
-		locationRange,
-	)
+func (c *Context) DefaultDestroyEvents(resourceValue *interpreter.CompositeValue) []*interpreter.CompositeValue {
+	method := c.GetMethod(resourceValue, commons.ResourceDestroyedEventsFunctionName)
 
 	if method == nil {
 		return nil
@@ -339,7 +326,12 @@ func (c *Context) DefaultDestroyEvents(
 	collectFunction := NewNativeFunctionValue(
 		"", // anonymous function
 		commons.CollectEventsFunctionType,
-		func(context *Context, _ []bbq.StaticType, _ Value, arguments ...Value) Value {
+		func(
+			context interpreter.NativeFunctionContext,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
+			arguments []interpreter.Value,
+		) interpreter.Value {
 			for _, argument := range arguments {
 				event := argument.(*interpreter.CompositeValue)
 				eventValues = append(eventValues, event)
@@ -458,4 +450,8 @@ func (c *Context) GetEntitlementMapType(
 	typeID common.TypeID,
 ) (*sema.EntitlementMapType, error) {
 	return c.Config.GetEntitlementMapType(typeID, c.ensureProgramInitialized)
+}
+
+func (c *Context) LocationRange() interpreter.LocationRange {
+	return c.getLocationRange()
 }

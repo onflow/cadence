@@ -242,10 +242,17 @@ func interpreterFTTransfer(tb testing.TB) {
 		temporarilyRecordCode: func(location common.AddressLocation, code []byte) {
 			// do nothing
 		},
-		emitEvent: func(interpreter.ValueExportContext, interpreter.LocationRange, *sema.CompositeType, []interpreter.Value) {
+		emitEvent: func(
+			interpreter.ValueExportContext,
+			*sema.CompositeType,
+			[]interpreter.Value,
+		) {
 			// do nothing
 		},
-		recordContractUpdate: func(location common.AddressLocation, value *interpreter.CompositeValue) {
+		recordContractUpdate: func(
+			location common.AddressLocation,
+			value *interpreter.CompositeValue,
+		) {
 			// do nothing
 		},
 	}
@@ -293,7 +300,6 @@ func interpreterFTTransfer(tb testing.TB) {
 			inter *interpreter.Interpreter,
 			compositeType *sema.CompositeType,
 			constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
-			invocationRange ast.Range,
 		) interpreter.ContractValue {
 
 			constructor := constructorGenerator(common.ZeroAddress)
@@ -305,7 +311,6 @@ func interpreterFTTransfer(tb testing.TB) {
 				nil,
 				nil,
 				compositeType,
-				ast.EmptyRange,
 			)
 			if err != nil {
 				panic(err)
@@ -316,7 +321,6 @@ func interpreterFTTransfer(tb testing.TB) {
 		},
 		CapabilityBorrowHandler: func(
 			context interpreter.BorrowCapabilityControllerContext,
-			locationRange interpreter.LocationRange,
 			address interpreter.AddressValue,
 			capabilityID interpreter.UInt64Value,
 			wantedBorrowType *sema.ReferenceType,
@@ -324,7 +328,6 @@ func interpreterFTTransfer(tb testing.TB) {
 		) interpreter.ReferenceValue {
 			return stdlib.BorrowCapabilityController(
 				context,
-				locationRange,
 				address,
 				capabilityID,
 				wantedBorrowType,
@@ -334,7 +337,6 @@ func interpreterFTTransfer(tb testing.TB) {
 		},
 		OnEventEmitted: func(
 			_ interpreter.ValueExportContext,
-			_ interpreter.LocationRange,
 			_ *sema.CompositeType,
 			_ []interpreter.Value,
 		) error {
@@ -353,7 +355,6 @@ func interpreterFTTransfer(tb testing.TB) {
 				accountHandler,
 				interpreter.NewAddressValue(nil, contractsAddress),
 				interpreter.FullyEntitledAccountAccess,
-				interpreter.EmptyLocationRange,
 			)
 
 			return map[string]interpreter.Value{
@@ -438,7 +439,6 @@ func interpreterFTTransfer(tb testing.TB) {
 		accountHandler,
 		interpreter.AddressValue(contractsAddress),
 		interpreter.FullyEntitledAccountAccess,
-		interpreter.EmptyLocationRange,
 	)
 
 	err = inter.InvokeTransaction(nil, signer)
@@ -470,7 +470,6 @@ func interpreterFTTransfer(tb testing.TB) {
 			accountHandler,
 			interpreter.AddressValue(address),
 			interpreter.ConvertSemaAccessToStaticAuthorization(nil, authorization),
-			interpreter.EmptyLocationRange,
 		)
 
 		err = inter.InvokeTransaction(nil, signer)
@@ -492,13 +491,12 @@ func interpreterFTTransfer(tb testing.TB) {
 		accountHandler,
 		interpreter.AddressValue(contractsAddress),
 		interpreter.ConvertSemaAccessToStaticAuthorization(nil, authorization),
-		interpreter.EmptyLocationRange,
 	)
 
 	err = inter.InvokeTransaction(
 		[]interpreter.Value{
 			interpreter.AddressValue(senderAddress),
-			interpreter.NewUnmeteredUFix64ValueWithInteger(total, interpreter.EmptyLocationRange),
+			interpreter.NewUnmeteredUFix64ValueWithInteger(total),
 		},
 		signer,
 	)
@@ -506,7 +504,7 @@ func interpreterFTTransfer(tb testing.TB) {
 
 	// Run token transfer transaction
 
-	transferAmount := interpreter.NewUnmeteredUFix64ValueWithInteger(uint64(1), interpreter.EmptyLocationRange)
+	transferAmount := interpreter.NewUnmeteredUFix64ValueWithInteger(1)
 
 	inter, err = parseCheckAndInterpret(
 		realFlowTokenTransferTokensTransaction,
@@ -519,7 +517,6 @@ func interpreterFTTransfer(tb testing.TB) {
 		accountHandler,
 		interpreter.AddressValue(senderAddress),
 		interpreter.ConvertSemaAccessToStaticAuthorization(nil, authorization),
-		interpreter.EmptyLocationRange,
 	)
 
 	var transferCount int
@@ -586,7 +583,6 @@ func interpreterFTTransfer(tb testing.TB) {
 				tb,
 				interpreter.NewUnmeteredUFix64ValueWithInteger(
 					total-uint64(transferCount),
-					interpreter.EmptyLocationRange,
 				),
 				result,
 			)
@@ -595,7 +591,6 @@ func interpreterFTTransfer(tb testing.TB) {
 				tb,
 				interpreter.NewUnmeteredUFix64ValueWithInteger(
 					uint64(transferCount),
-					interpreter.EmptyLocationRange,
 				),
 				result,
 			)
@@ -810,9 +805,9 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 		value := interpreter.NewUnmeteredUFix64Value(uint64(result.(cadence.UFix64)))
 
-		require.True(b, bool(value.Less(inter, mintAmountValue, interpreter.EmptyLocationRange)))
+		require.True(b, bool(value.Less(inter, mintAmountValue)))
 
-		sum = sum.Plus(inter, value, interpreter.EmptyLocationRange).(interpreter.UFix64Value)
+		sum = sum.Plus(inter, value).(interpreter.UFix64Value)
 	}
 
 	RequireValuesEqual(b, nil, mintAmountValue, sum)

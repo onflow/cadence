@@ -22,8 +22,6 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
@@ -80,64 +78,42 @@ type BlockAtHeightProvider interface {
 	GetBlockAtHeight(height uint64) (block Block, exists bool, err error)
 }
 
+func NativeGetBlockFunction(provider BlockAtHeightProvider) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeParameterGetter,
+		_ interpreter.Value,
+		args []interpreter.Value,
+	) interpreter.Value {
+		heightValue := interpreter.AssertValueOfType[interpreter.UInt64Value](args[0])
+
+		block, exists := getBlockAtHeight(provider, uint64(heightValue))
+		if !exists {
+			return interpreter.Nil
+		}
+
+		blockValue := NewBlockValue(context, block)
+		return interpreter.NewSomeValueNonCopying(context, blockValue)
+	}
+}
+
 func NewInterpreterGetBlockFunction(provider BlockAtHeightProvider) StandardLibraryValue {
-	return NewInterpreterStandardLibraryStaticFunction(
+	return NewNativeStandardLibraryStaticFunction(
 		getBlockFunctionName,
 		getBlockFunctionType,
 		getBlockFunctionDocString,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			heightValue, ok := invocation.Arguments[0].(interpreter.UInt64Value)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			memoryGauge := invocation.InvocationContext
-			locationRange := invocation.LocationRange
-
-			block, exists := getBlockAtHeight(
-				provider,
-				uint64(heightValue),
-			)
-			if !exists {
-				return interpreter.Nil
-			}
-
-			blockValue := NewBlockValue(
-				memoryGauge,
-				locationRange,
-				block,
-			)
-			return interpreter.NewSomeValueNonCopying(memoryGauge, blockValue)
-		},
+		NativeGetBlockFunction(provider),
+		false,
 	)
 }
 
 func NewVMGetBlockFunction(provider BlockAtHeightProvider) StandardLibraryValue {
-	return NewVMStandardLibraryStaticFunction(
+	return NewNativeStandardLibraryStaticFunction(
 		getBlockFunctionName,
 		getBlockFunctionType,
 		getBlockFunctionDocString,
-		func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
-			heightValue, ok := arguments[0].(interpreter.UInt64Value)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			block, exists := getBlockAtHeight(
-				provider,
-				uint64(heightValue),
-			)
-			if !exists {
-				return interpreter.Nil
-			}
-
-			blockValue := NewBlockValue(
-				context,
-				interpreter.EmptyLocationRange,
-				block,
-			)
-			return interpreter.NewSomeValueNonCopying(context, blockValue)
-		},
+		NativeGetBlockFunction(provider),
+		true,
 	)
 }
 
@@ -152,7 +128,6 @@ var blockIDMemoryUsage = common.NewNumberMemoryUsage(
 
 func NewBlockValue(
 	context interpreter.ArrayCreationContext,
-	locationRange interpreter.LocationRange,
 	block Block,
 ) interpreter.Value {
 
@@ -181,7 +156,6 @@ func NewBlockValue(
 
 	idValue := interpreter.NewArrayValue(
 		context,
-		locationRange,
 		BlockIDStaticType,
 		common.ZeroAddress,
 		values...,
@@ -194,7 +168,6 @@ func NewBlockValue(
 		func() uint64 {
 			return uint64(time.Unix(0, block.Timestamp).Unix())
 		},
-		locationRange,
 	)
 
 	return interpreter.NewBlockValue(
@@ -227,58 +200,46 @@ type CurrentBlockProvider interface {
 	GetCurrentBlockHeight() (uint64, error)
 }
 
+func NativeGetCurrentBlockFunction(provider CurrentBlockProvider) interpreter.NativeFunction {
+	return func(
+		context interpreter.NativeFunctionContext,
+		_ interpreter.TypeParameterGetter,
+		_ interpreter.Value,
+		_ []interpreter.Value,
+	) interpreter.Value {
+		height, err := provider.GetCurrentBlockHeight()
+		if err != nil {
+			panic(err)
+		}
+
+		block, exists := getBlockAtHeight(
+			provider,
+			height,
+		)
+		if !exists {
+			panic(errors.NewUnexpectedError("cannot get current block"))
+		}
+
+		return NewBlockValue(context, block)
+	}
+}
+
 func NewInterpreterGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryValue {
-	return NewInterpreterStandardLibraryStaticFunction(
+	return NewNativeStandardLibraryStaticFunction(
 		getCurrentBlockFunctionName,
 		getCurrentBlockFunctionType,
 		getCurrentBlockFunctionDocString,
-		func(invocation interpreter.Invocation) interpreter.Value {
-
-			height, err := provider.GetCurrentBlockHeight()
-			if err != nil {
-				panic(err)
-			}
-
-			block, exists := getBlockAtHeight(
-				provider,
-				height,
-			)
-			if !exists {
-				panic(errors.NewUnexpectedError("cannot get current block"))
-			}
-
-			memoryGauge := invocation.InvocationContext
-			locationRange := invocation.LocationRange
-
-			return NewBlockValue(memoryGauge, locationRange, block)
-		},
+		NativeGetCurrentBlockFunction(provider),
+		false,
 	)
 }
 
 func NewVMGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryValue {
-	return NewVMStandardLibraryStaticFunction(
+	return NewNativeStandardLibraryStaticFunction(
 		getCurrentBlockFunctionName,
 		getCurrentBlockFunctionType,
 		getCurrentBlockFunctionDocString,
-		func(context *vm.Context, _ []bbq.StaticType, _ vm.Value, arguments ...vm.Value) vm.Value {
-			height, err := provider.GetCurrentBlockHeight()
-			if err != nil {
-				panic(err)
-			}
-
-			block, exists := getBlockAtHeight(
-				provider,
-				height,
-			)
-			if !exists {
-				panic(errors.NewUnexpectedError("cannot get current block"))
-			}
-
-			return NewBlockValue(
-				context,
-				interpreter.EmptyLocationRange,
-				block,
-			)
-		},
+		NativeGetCurrentBlockFunction(provider),
+		true,
 	)
 }

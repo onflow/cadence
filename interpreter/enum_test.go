@@ -142,7 +142,6 @@ func TestInterpretEnumCaseEquality(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -178,7 +177,6 @@ func TestInterpretEnumConstructor(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -213,7 +211,6 @@ func TestInterpretEnumInstance(t *testing.T) {
 		inter,
 		interpreter.NewArrayValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -256,17 +253,13 @@ func TestInterpretEnumInContract(t *testing.T) {
 	contract, ok := c.(interpreter.MemberAccessibleValue)
 	require.True(t, ok)
 
-	eValue := contract.GetMember(inter, interpreter.EmptyLocationRange, "e")
+	eValue := contract.GetMember(inter, "e")
 	require.NotNil(t, eValue)
 
 	require.IsType(t, &interpreter.CompositeValue{}, eValue)
 	enumCase := eValue.(*interpreter.CompositeValue)
 
-	rawValue := enumCase.GetMember(
-		inter,
-		interpreter.EmptyLocationRange,
-		"rawValue",
-	)
+	rawValue := enumCase.GetMember(inter, "rawValue")
 
 	RequireValuesEqual(
 		t,

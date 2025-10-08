@@ -43,11 +43,11 @@ var _ OptionalValue = NilValue{}
 
 func (NilValue) IsValue() {}
 
-func (v NilValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v NilValue) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitNilValue(context, v)
 }
 
-func (NilValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (NilValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -58,7 +58,7 @@ func (NilValue) StaticType(context ValueStaticTypeContext) StaticType {
 	)
 }
 
-func (NilValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (NilValue) IsImportable(_ ValueImportableContext) bool {
 	return true
 }
 
@@ -74,7 +74,7 @@ func (NilValue) IsDestroyed() bool {
 	return false
 }
 
-func (v NilValue) Destroy(context ResourceDestructionContext, locationRange LocationRange) {}
+func (v NilValue) Destroy(_ ResourceDestructionContext) {}
 
 func (NilValue) String() string {
 	return format.Nil
@@ -84,29 +84,33 @@ func (v NilValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v NilValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (v NilValue) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	common.UseMemory(context, common.NilValueStringMemoryUsage)
 	return v.String()
 }
 
 // nilValueMapFunction is created only once per interpreter.
 // Hence, no need to meter, as it's a constant.
-var nilValueMapFunction = NewUnmeteredStaticHostFunctionValue(
+var nilValueMapFunction = NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 	sema.OptionalTypeMapFunctionType(NilOptionalValue.InnerValueType(nil)),
-	func(invocation Invocation) Value {
+	func(
+		_ NativeFunctionContext,
+		_ TypeParameterGetter,
+		_ Value,
+		_ []Value,
+	) Value {
 		return Nil
 	},
 )
 
-func (v NilValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
-	return context.GetMethod(v, name, locationRange)
+func (v NilValue) GetMember(context MemberAccessibleContext, name string) Value {
+	return context.GetMethod(v, name)
 }
 
-func (v NilValue) GetMethod(
-	context MemberAccessibleContext,
-	locationRange LocationRange,
-	name string,
-) FunctionValue {
+func (v NilValue) GetMethod(_ MemberAccessibleContext, name string) FunctionValue {
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
 		return nilValueMapFunction
@@ -115,25 +119,24 @@ func (v NilValue) GetMethod(
 	return nil
 }
 
-func (NilValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (NilValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Nil has no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (NilValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (NilValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Nil has no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v NilValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true
 }
 
-func (v NilValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
+func (v NilValue) Equal(_ ValueComparisonContext, other Value) bool {
 	_, ok := other.(NilValue)
 	return ok
 }
@@ -156,7 +159,6 @@ func (NilValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (v NilValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,

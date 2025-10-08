@@ -37,7 +37,6 @@ type ValidatedArgumentImportContext interface {
 func importValidatedArguments(
 	context ValidatedArgumentImportContext,
 	decoder ArgumentDecoder,
-	locationRange interpreter.LocationRange,
 	arguments [][]byte,
 	parameters []sema.Parameter,
 ) (
@@ -79,7 +78,6 @@ func importValidatedArguments(
 			// if importing an invalid public key, this call panics
 			arg, err = ImportValue(
 				context,
-				locationRange,
 				decoder,
 				decoder.ResolveLocation,
 				value,
@@ -104,7 +102,7 @@ func importValidatedArguments(
 		// Ensure the argument is of an importable type
 		argType := arg.StaticType(context)
 
-		if !arg.IsImportable(context, locationRange) {
+		if !arg.IsImportable(context) {
 			return nil, &ArgumentNotImportableError{
 				Type: argType,
 			}
@@ -121,11 +119,7 @@ func importValidatedArguments(
 		}
 
 		// Check whether the decoded value conforms to the type associated with the value
-		if !arg.ConformsToStaticType(
-			context,
-			interpreter.EmptyLocationRange,
-			interpreter.TypeConformanceResults{},
-		) {
+		if !arg.ConformsToStaticType(context, interpreter.TypeConformanceResults{}) {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: parameterIndex,
 				Err: &MalformedValueError{
@@ -149,7 +143,6 @@ func importValidatedArguments(
 
 				return true
 			},
-			locationRange,
 		)
 
 		argumentValues[parameterIndex] = arg

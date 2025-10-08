@@ -74,7 +74,6 @@ func TestRandomBasicUniformityWithModulo(t *testing.T) {
 
 			moduloValue := interpreter.ConvertAndBox(
 				inter,
-				interpreter.EmptyLocationRange,
 				interpreter.NewUnmeteredUIntValueFromUint64(uint64(modulo)),
 				sema.UIntType,
 				ty,

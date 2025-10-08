@@ -70,7 +70,6 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 		codeHash, err := ImportValue(
 			inter,
-			interpreter.EmptyLocationRange,
 			nil,
 			nil,
 			codeHashValue,
@@ -81,7 +80,6 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 		actualCodeHash, err := interpreter.ByteArrayValueToByteSlice(
 			inter,
 			codeHash,
-			interpreter.EmptyLocationRange,
 		)
 		require.NoError(t, err)
 

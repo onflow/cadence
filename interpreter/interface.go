@@ -120,12 +120,9 @@ type ValueTransferContext interface {
 	)
 
 	WithContainerMutationPrevention(valueID atree.ValueID, f func())
-	ValidateContainerMutation(valueID atree.ValueID, locationRange LocationRange)
+	ValidateContainerMutation(valueID atree.ValueID)
 
-	EnforceNotResourceDestruction(
-		valueID atree.ValueID,
-		locationRange LocationRange,
-	)
+	EnforceNotResourceDestruction(valueID atree.ValueID)
 }
 
 var _ ValueTransferContext = &Interpreter{}
@@ -216,8 +213,12 @@ type MemberAccessibleContext interface {
 	GetInjectedCompositeFieldsHandler() InjectedCompositeFieldsHandlerFunc
 	GetMemberAccessContextForLocation(location common.Location) MemberAccessibleContext
 
-	GetMethod(value MemberAccessibleValue, name string, locationRange LocationRange) FunctionValue
-	MaybeUpdateStorageReferenceMemberReceiver(storageReference *StorageReferenceValue, referencedValue Value, member Value) Value
+	GetMethod(value MemberAccessibleValue, name string) FunctionValue
+	MaybeUpdateStorageReferenceMemberReceiver(
+		storageReference *StorageReferenceValue,
+		referencedValue Value,
+		member Value,
+	) Value
 }
 
 var _ MemberAccessibleContext = &Interpreter{}
@@ -230,7 +231,7 @@ type FunctionCreationContext interface {
 var _ FunctionCreationContext = &Interpreter{}
 
 type CompositeFunctionContext interface {
-	GetCompositeValueFunctions(v *CompositeValue, locationRange LocationRange) *FunctionOrderedMap
+	GetCompositeValueFunctions(v *CompositeValue) *FunctionOrderedMap
 }
 
 var _ CompositeFunctionContext = &Interpreter{}
@@ -270,11 +271,7 @@ type StorageIterationTracker interface {
 var _ StorageIterationTracker = &Interpreter{}
 
 type ResourceDestructionHandler interface {
-	WithResourceDestruction(
-		valueID atree.ValueID,
-		locationRange LocationRange,
-		f func(),
-	)
+	WithResourceDestruction(valueID atree.ValueID, f func())
 }
 
 var _ ResourceDestructionHandler = &Interpreter{}
@@ -381,15 +378,20 @@ type AccountCapabilityPublishValidationContext interface {
 
 var _ AccountCapabilityPublishValidationContext = &Interpreter{}
 
+type LocationRangeProvider interface {
+	LocationRange() LocationRange
+}
+
 type ResourceDestructionContext interface {
 	ValueWalkContext
 	ResourceDestructionHandler
 	CompositeFunctionContext
 	EventContext
 	InvocationContext
+	LocationRangeProvider
 
 	GetResourceDestructionContextForLocation(location common.Location) ResourceDestructionContext
-	DefaultDestroyEvents(resourceValue *CompositeValue, locationRange LocationRange) []*CompositeValue
+	DefaultDestroyEvents(resourceValue *CompositeValue) []*CompositeValue
 }
 
 var _ ResourceDestructionContext = &Interpreter{}
@@ -403,7 +405,6 @@ var _ ValueWalkContext = &Interpreter{}
 type EventContext interface {
 	EmitEvent(
 		context ValueExportContext,
-		locationRange LocationRange,
 		eventType *sema.CompositeType,
 		eventFields []Value,
 	)
@@ -442,6 +443,7 @@ type InvocationContext interface {
 	CapabilityHandlers
 	StoredValueCheckContext
 	VariableResolver
+	LocationRangeProvider
 
 	GetLocation() common.Location
 
@@ -543,27 +545,15 @@ func (ctx NoOpStringContext) WithContainerMutationPrevention(_ atree.ValueID, f 
 	f()
 }
 
-func (ctx NoOpStringContext) ValidateContainerMutation(_ atree.ValueID, _ LocationRange) {
+func (ctx NoOpStringContext) ValidateContainerMutation(_ atree.ValueID) {
 	panic(errors.NewUnreachableError())
 }
 
-func (ctx NoOpStringContext) EnforceNotResourceDestruction(_ atree.ValueID, _ LocationRange) {
+func (ctx NoOpStringContext) EnforceNotResourceDestruction(_ atree.ValueID) {
 	panic(errors.NewUnreachableError())
 }
 
 func (ctx NoOpStringContext) ReadStored(_ common.Address, _ common.StorageDomain, _ StorageMapKey) Value {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) ConvertStaticToSemaType(_ StaticType) (sema.Type, error) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) IsSubType(_ StaticType, _ StaticType) bool {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) IsSubTypeOfSemaType(_ StaticType, _ sema.Type) bool {
 	panic(errors.NewUnreachableError())
 }
 
@@ -580,14 +570,6 @@ func (ctx NoOpStringContext) MaybeValidateAtreeValue(_ atree.Value) {
 }
 
 func (ctx NoOpStringContext) MaybeValidateAtreeStorage() {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) InvalidateReferencedResources(_ Value, _ LocationRange) {
-	panic(errors.NewUnreachableError())
-}
-
-func (ctx NoOpStringContext) CheckInvalidatedResourceOrResourceReference(_ Value, _ LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 

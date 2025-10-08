@@ -50,7 +50,7 @@ var _ EquatableValue = &PublishedValue{}
 
 func (*PublishedValue) IsValue() {}
 
-func (v *PublishedValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v *PublishedValue) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitPublishedValue(context, v)
 }
 
@@ -60,7 +60,7 @@ func (v *PublishedValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return v.Value.StaticType(context)
 }
 
-func (*PublishedValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (*PublishedValue) IsImportable(_ ValueImportableContext) bool {
 	return false
 }
 
@@ -76,37 +76,39 @@ func (v *PublishedValue) RecursiveString(seenReferences SeenReferences) string {
 	)
 }
 
-func (v *PublishedValue) MeteredString(context ValueStringContext, seenReferences SeenReferences, locationRange LocationRange) string {
+func (v *PublishedValue) MeteredString(
+	context ValueStringContext,
+	seenReferences SeenReferences,
+) string {
 	common.UseMemory(context, common.PublishedValueStringMemoryUsage)
 
 	return fmt.Sprintf(
 		"PublishedValue<%s>(%s)",
-		v.Recipient.MeteredString(context, seenReferences, locationRange),
-		v.Value.MeteredString(context, seenReferences, locationRange),
+		v.Recipient.MeteredString(context, seenReferences),
+		v.Value.MeteredString(context, seenReferences),
 	)
 }
 
-func (v *PublishedValue) Walk(_ ValueWalkContext, walkChild func(Value), _ LocationRange) {
+func (v *PublishedValue) Walk(_ ValueWalkContext, walkChild func(Value)) {
 	walkChild(v.Recipient)
 	walkChild(v.Value)
 }
 
 func (v *PublishedValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return false
 }
 
-func (v *PublishedValue) Equal(context ValueComparisonContext, locationRange LocationRange, other Value) bool {
+func (v *PublishedValue) Equal(context ValueComparisonContext, other Value) bool {
 	otherValue, ok := other.(*PublishedValue)
 	if !ok {
 		return false
 	}
 
-	return otherValue.Recipient.Equal(context, locationRange, v.Recipient) &&
-		otherValue.Value.Equal(context, locationRange, v.Value)
+	return otherValue.Recipient.Equal(context, v.Recipient) &&
+		otherValue.Value.Equal(context, v.Value)
 }
 
 func (*PublishedValue) IsStorable() bool {
@@ -127,7 +129,6 @@ func (*PublishedValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (v *PublishedValue) Transfer(
 	context ValueTransferContext,
-	locationRange LocationRange,
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -141,7 +142,6 @@ func (v *PublishedValue) Transfer(
 
 		innerValue := v.Value.Transfer(
 			context,
-			locationRange,
 			address,
 			remove,
 			nil,
@@ -151,7 +151,6 @@ func (v *PublishedValue) Transfer(
 
 		addressValue := v.Recipient.Transfer(
 			context,
-			locationRange,
 			address,
 			remove,
 			nil,

@@ -1,13 +1,13 @@
 module github.com/onflow/cadence/tools/accounts-script
 
-go 1.23.7
-
-toolchain go1.23.9
+go 1.24
 
 require (
+	github.com/ethereum/go-ethereum v1.13.10
 	github.com/onflow/cadence v1.4.0
 	github.com/onflow/flow-go v0.41.0
 	github.com/rs/zerolog v1.34.0
+	go.uber.org/atomic v1.11.0
 )
 
 require (
@@ -43,7 +43,6 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/ef-ds/deque v1.0.4 // indirect
 	github.com/ethereum/c-kzg-4844 v1.0.0 // indirect
-	github.com/ethereum/go-ethereum v1.13.10 // indirect
 	github.com/ethereum/go-verkle v0.2.2 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.8.1-0.20250402194037-6f932b086829 // indirect
@@ -182,7 +181,6 @@ require (
 	go.opentelemetry.io/otel/sdk v1.34.0 // indirect
 	go.opentelemetry.io/otel/trace v1.34.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
-	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.37.0 // indirect

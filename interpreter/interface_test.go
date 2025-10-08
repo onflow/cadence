@@ -60,8 +60,13 @@ func parseCheckAndPrepareWithConditionLogs(
 		"conditionLog",
 		conditionLogFunctionType,
 		"",
-		func(invocation interpreter.Invocation) interpreter.Value {
-			value := invocation.Arguments[0]
+		func(
+			_ interpreter.NativeFunctionContext,
+			_ interpreter.TypeParameterGetter,
+			_ interpreter.Value,
+			args []interpreter.Value,
+		) interpreter.Value {
+			value := args[0]
 			logs = append(logs, value.String())
 			return interpreter.TrueValue
 		},
@@ -183,11 +188,11 @@ func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 
 		assert.Equal(t,
 			interpreter.NewUnmeteredIntValueFromInt64(123),
-			array.Get(inter, interpreter.EmptyLocationRange, 0),
+			array.Get(inter, 0),
 		)
 		assert.Equal(t,
 			interpreter.NewUnmeteredIntValueFromInt64(456),
-			array.Get(inter, interpreter.EmptyLocationRange, 1),
+			array.Get(inter, 1),
 		)
 	})
 

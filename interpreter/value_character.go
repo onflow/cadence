@@ -79,11 +79,11 @@ var _ MemberAccessibleValue = CharacterValue{}
 
 func (CharacterValue) IsValue() {}
 
-func (v CharacterValue) Accept(context ValueVisitContext, visitor Visitor, _ LocationRange) {
+func (v CharacterValue) Accept(context ValueVisitContext, visitor Visitor) {
 	visitor.VisitCharacterValue(context, v)
 }
 
-func (CharacterValue) Walk(_ ValueWalkContext, _ func(Value), _ LocationRange) {
+func (CharacterValue) Walk(_ ValueWalkContext, _ func(Value)) {
 	// NO-OP
 }
 
@@ -91,7 +91,7 @@ func (CharacterValue) StaticType(context ValueStaticTypeContext) StaticType {
 	return NewPrimitiveStaticType(context, PrimitiveStaticTypeCharacter)
 }
 
-func (CharacterValue) IsImportable(_ ValueImportableContext, _ LocationRange) bool {
+func (CharacterValue) IsImportable(_ ValueImportableContext) bool {
 	return sema.CharacterType.Importable
 }
 
@@ -103,13 +103,16 @@ func (v CharacterValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v CharacterValue) MeteredString(context ValueStringContext, _ SeenReferences, _ LocationRange) string {
+func (v CharacterValue) MeteredString(
+	context ValueStringContext,
+	_ SeenReferences,
+) string {
 	l := format.FormattedStringLength(v.Str)
 	common.UseMemory(context, common.NewRawStringMemoryUsage(l))
 	return v.String()
 }
 
-func (v CharacterValue) Equal(_ ValueComparisonContext, _ LocationRange, other Value) bool {
+func (v CharacterValue) Equal(_ ValueComparisonContext, other Value) bool {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		return false
@@ -117,7 +120,7 @@ func (v CharacterValue) Equal(_ ValueComparisonContext, _ LocationRange, other V
 	return v.Str == otherChar.Str
 }
 
-func (v CharacterValue) Less(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) Less(_ ValueComparisonContext, other ComparableValue) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -125,7 +128,7 @@ func (v CharacterValue) Less(_ ValueComparisonContext, other ComparableValue, _ 
 	return v.Str < otherChar.Str
 }
 
-func (v CharacterValue) LessEqual(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) LessEqual(_ ValueComparisonContext, other ComparableValue) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -133,7 +136,7 @@ func (v CharacterValue) LessEqual(_ ValueComparisonContext, other ComparableValu
 	return v.Str <= otherChar.Str
 }
 
-func (v CharacterValue) Greater(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) Greater(_ ValueComparisonContext, other ComparableValue) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -141,7 +144,7 @@ func (v CharacterValue) Greater(_ ValueComparisonContext, other ComparableValue,
 	return v.Str > otherChar.Str
 }
 
-func (v CharacterValue) GreaterEqual(_ ValueComparisonContext, other ComparableValue, _ LocationRange) BoolValue {
+func (v CharacterValue) GreaterEqual(_ ValueComparisonContext, other ComparableValue) BoolValue {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -149,7 +152,7 @@ func (v CharacterValue) GreaterEqual(_ ValueComparisonContext, other ComparableV
 	return v.Str >= otherChar.Str
 }
 
-func (v CharacterValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch []byte) []byte {
+func (v CharacterValue) HashInput(_ common.MemoryGauge, scratch []byte) []byte {
 	s := []byte(v.Str)
 	length := 1 + len(s)
 	var buffer []byte
@@ -166,7 +169,6 @@ func (v CharacterValue) HashInput(_ common.MemoryGauge, _ LocationRange, scratch
 
 func (v CharacterValue) ConformsToStaticType(
 	_ ValueStaticTypeConformanceContext,
-	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
 	return true
@@ -186,7 +188,6 @@ func (CharacterValue) IsResourceKinded(_ ValueStaticTypeContext) bool {
 
 func (v CharacterValue) Transfer(
 	context ValueTransferContext,
-	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -219,32 +220,36 @@ func (CharacterValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func (v CharacterValue) GetMember(context MemberAccessibleContext, locationRange LocationRange, name string) Value {
+func (v CharacterValue) GetMember(context MemberAccessibleContext, name string) Value {
 	switch name {
 	case sema.CharacterTypeUtf8FieldName:
 		common.UseMemory(context, common.NewBytesMemoryUsage(len(v.Str)))
 		return ByteSliceToByteArrayValue(context, []byte(v.Str))
 	}
 
-	return context.GetMethod(v, name, locationRange)
+	return context.GetMethod(v, name)
 }
 
-func (v CharacterValue) GetMethod(
-	context MemberAccessibleContext,
-	locationRange LocationRange,
-	name string,
-) FunctionValue {
+var NativeCharacterValueToStringFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeParameterGetter,
+		receiver Value,
+		_ []Value,
+	) Value {
+		character := AssertValueOfType[CharacterValue](receiver)
+		return CharacterValueToString(context, character)
+	},
+)
+
+func (v CharacterValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
 	switch name {
 	case sema.ToStringFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
 			v,
 			sema.ToStringFunctionType,
-			func(v CharacterValue, invocation Invocation) Value {
-				invocationContext := invocation.InvocationContext
-
-				return CharacterValueToString(invocationContext, v)
-			},
+			NativeCharacterValueToStringFunction,
 		)
 	}
 
@@ -266,12 +271,12 @@ func CharacterValueToString(
 	)
 }
 
-func (CharacterValue) RemoveMember(_ ValueTransferContext, _ LocationRange, _ string) Value {
+func (CharacterValue) RemoveMember(_ ValueTransferContext, _ string) Value {
 	// Characters have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (CharacterValue) SetMember(_ ValueTransferContext, _ LocationRange, _ string, _ Value) bool {
+func (CharacterValue) SetMember(_ ValueTransferContext, _ string, _ Value) bool {
 	// Characters have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }

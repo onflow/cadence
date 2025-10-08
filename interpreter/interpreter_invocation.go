@@ -32,7 +32,6 @@ func InvokeFunctionValue(
 	argumentTypes []sema.Type,
 	parameterTypes []sema.Type,
 	returnType sema.Type,
-	invocationPosition ast.HasPosition,
 ) (
 	value Value,
 	err error,
@@ -47,12 +46,10 @@ func InvokeFunctionValue(
 		context,
 		function,
 		arguments,
-		nil,
 		argumentTypes,
 		parameterTypes,
 		returnType,
 		nil,
-		invocationPosition,
 	), nil
 }
 
@@ -60,12 +57,10 @@ func invokeFunctionValue(
 	context InvocationContext,
 	function FunctionValue,
 	arguments []Value,
-	expressions []ast.Expression,
 	argumentTypes []sema.Type,
 	parameterTypes []sema.Type,
 	returnType sema.Type,
 	typeParameterTypes *sema.TypeParameterTypeOrderedMap,
-	invocationPosition ast.HasPosition,
 ) Value {
 	return invokeFunctionValueWithEval(
 		context,
@@ -75,12 +70,10 @@ func invokeFunctionValue(
 			return argument
 		},
 		nil, // no implicit argument
-		expressions,
 		argumentTypes,
 		parameterTypes,
 		returnType,
 		typeParameterTypes,
-		invocationPosition,
 	)
 }
 
@@ -90,19 +83,15 @@ func invokeFunctionValueWithEval[T any](
 	arguments []T,
 	evaluate func(T) Value,
 	implicitArgumentValue Value,
-	expressions []ast.Expression,
 	argumentTypes []sema.Type,
 	parameterTypes []sema.Type,
 	returnType sema.Type,
 	typeParameterTypes *sema.TypeParameterTypeOrderedMap,
-	invocationPosition ast.HasPosition,
 ) Value {
 
 	parameterTypeCount := len(parameterTypes)
 
 	var transferredArguments []Value
-
-	location := context.GetLocation()
 
 	argumentCount := len(arguments)
 	if argumentCount > 0 {
@@ -110,18 +99,6 @@ func invokeFunctionValueWithEval[T any](
 
 		for i, argument := range arguments {
 			argumentType := argumentTypes[i]
-
-			var locationPos ast.HasPosition
-			if i < len(expressions) {
-				locationPos = expressions[i]
-			} else {
-				locationPos = invocationPosition
-			}
-
-			locationRange := LocationRange{
-				Location:    location,
-				HasPosition: locationPos,
-			}
 
 			argumentValue := evaluate(argument)
 
@@ -132,12 +109,10 @@ func invokeFunctionValueWithEval[T any](
 					argumentValue,
 					argumentType,
 					parameterType,
-					locationRange,
 				)
 			} else {
 				transferredArguments[i] = argumentValue.Transfer(
 					context,
-					locationRange,
 					atree.Address{},
 					false,
 					nil,
@@ -152,10 +127,6 @@ func invokeFunctionValueWithEval[T any](
 	if implicitArgumentValue != nil {
 		transferredImplicitArgument := implicitArgumentValue.Transfer(
 			context,
-			LocationRange{
-				Location:    location,
-				HasPosition: invocationPosition,
-			},
 			atree.Address{},
 			false,
 			nil,
@@ -167,11 +138,6 @@ func invokeFunctionValueWithEval[T any](
 		argumentTypes = append(argumentTypes, argumentType)
 	}
 
-	locationRange := LocationRange{
-		Location:    location,
-		HasPosition: invocationPosition,
-	}
-
 	invocation := NewInvocation(
 		context,
 		nil,
@@ -179,7 +145,7 @@ func invokeFunctionValueWithEval[T any](
 		transferredArguments,
 		argumentTypes,
 		typeParameterTypes,
-		locationRange,
+		context.LocationRange(),
 	)
 
 	resultValue := function.Invoke(invocation)
@@ -207,7 +173,6 @@ func invokeFunctionValueWithEval[T any](
 
 	return ConvertAndBox(
 		context,
-		locationRange,
 		resultValue,
 		functionReturnType,
 		returnType,
@@ -229,20 +194,19 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 
 	// Make `self` available, if any
 	if invocation.Self != nil {
-		interpreter.declareSelfVariable(*invocation.Self, invocation.LocationRange)
+		interpreter.declareSelfVariable(*invocation.Self)
 	}
 	if invocation.Base != nil {
 		interpreter.declareVariable(sema.BaseIdentifier, invocation.Base)
 	}
 
-	return interpreter.invokeInterpretedFunctionActivated(function, invocation.Arguments, invocation.LocationRange)
+	return interpreter.invokeInterpretedFunctionActivated(function, invocation.Arguments)
 }
 
 // NOTE: assumes the function's activation (or an extension of it) is pushed!
 func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 	function *InterpretedFunctionValue,
 	arguments []Value,
-	declarationLocationRange LocationRange,
 ) Value {
 	defer func() {
 		// Only unwind the call stack if there was no error
@@ -265,7 +229,6 @@ func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 		},
 		function.PostConditions,
 		function.Type.ReturnTypeAnnotation.Type,
-		declarationLocationRange,
 	)
 }
 

@@ -251,13 +251,11 @@ func (e *InterpreterEnvironment) CommitStorageTemporarily(context interpreter.Va
 
 func (e *InterpreterEnvironment) EmitEvent(
 	context interpreter.ValueExportContext,
-	locationRange interpreter.LocationRange,
 	eventType *sema.CompositeType,
 	values []interpreter.Value,
 ) {
 	EmitEventFields(
 		context,
-		locationRange,
 		eventType,
 		values,
 		e.Interface.EmitEvent,
@@ -351,7 +349,6 @@ func (e *InterpreterEnvironment) newContractValueHandler() interpreter.ContractV
 		inter *interpreter.Interpreter,
 		compositeType *sema.CompositeType,
 		constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
-		invocationRange ast.Range,
 	) interpreter.ContractValue {
 
 		// If the contract is the deployed contract, instantiate it using
@@ -374,7 +371,6 @@ func (e *InterpreterEnvironment) newContractValueHandler() interpreter.ContractV
 					invocation.ArgumentTypes,
 					invocation.ParameterTypes,
 					invocation.ContractType,
-					invocationRange,
 				)
 				if err != nil {
 					panic(err)
@@ -442,7 +438,6 @@ func (e *InterpreterEnvironment) newCompositeTypeHandler() interpreter.Composite
 func (e *InterpreterEnvironment) newCompositeValueFunctionsHandler() interpreter.CompositeValueFunctionsHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
-		locationRange interpreter.LocationRange,
 		compositeValue *interpreter.CompositeValue,
 	) *interpreter.FunctionOrderedMap {
 
@@ -451,7 +446,7 @@ func (e *InterpreterEnvironment) newCompositeValueFunctionsHandler() interpreter
 			return nil
 		}
 
-		return handler(inter, locationRange, compositeValue)
+		return handler(inter, compositeValue)
 	}
 }
 
@@ -569,6 +564,6 @@ func (e *InterpreterEnvironment) getBaseActivation(
 	return
 }
 
-func (e *InterpreterEnvironment) ProgramLog(message string, _ interpreter.LocationRange) error {
+func (e *InterpreterEnvironment) ProgramLog(message string) error {
 	return e.Interface.ProgramLog(message)
 }

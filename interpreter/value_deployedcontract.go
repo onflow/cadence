@@ -66,6 +66,49 @@ func NewDeployedContractValue(
 	return deployedContract
 }
 
+func NewNativeDeployedContractPublicTypesFunctionValue(
+	addressPointer *common.Address,
+	name *StringValue,
+	publicTypes *ArrayValue,
+) NativeFunction {
+	return func(
+		context NativeFunctionContext,
+		_ TypeParameterGetter,
+		receiver Value,
+		_ []Value,
+	) Value {
+		var address common.Address
+		if addressPointer == nil {
+			// the vm does not provide any arguments
+			deployedContract := AssertValueOfType[*SimpleCompositeValue](receiver)
+
+			addressFieldValue := deployedContract.GetMember(
+				context,
+				sema.DeployedContractTypeAddressFieldName,
+			)
+			address = common.Address(AssertValueOfType[AddressValue](addressFieldValue))
+
+			nameFieldValue := deployedContract.GetMember(
+				context,
+				sema.DeployedContractTypeNameFieldName,
+			)
+			name = AssertValueOfType[*StringValue](nameFieldValue)
+		} else {
+			address = *addressPointer
+		}
+
+		if publicTypes == nil {
+			publicTypes = DeployedContractPublicTypes(
+				context,
+				address,
+				name,
+			)
+		}
+
+		return publicTypes
+	}
+}
+
 func newInterpreterDeployedContractPublicTypesFunctionValue(
 	context FunctionCreationContext,
 	self MemberAccessibleValue,
@@ -80,17 +123,7 @@ func newInterpreterDeployedContractPublicTypesFunctionValue(
 		context,
 		self,
 		sema.DeployedContractTypePublicTypesFunctionType,
-		func(_ MemberAccessibleValue, invocation Invocation) Value {
-			if publicTypes == nil {
-				publicTypes = DeployedContractPublicTypes(
-					invocation.InvocationContext,
-					address,
-					name,
-				)
-			}
-
-			return publicTypes
-		},
+		NewNativeDeployedContractPublicTypesFunctionValue(&address, name, publicTypes),
 	)
 }
 

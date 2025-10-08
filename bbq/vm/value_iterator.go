@@ -51,21 +51,13 @@ func (v IteratorWrapperValue) String() string {
 	panic(errors.NewUnreachableError())
 }
 
-func (v IteratorWrapperValue) Accept(
-	_ interpreter.ValueVisitContext,
-	_ interpreter.Visitor,
-	_ interpreter.LocationRange,
-) {
+func (v IteratorWrapperValue) Accept(_ interpreter.ValueVisitContext, _ interpreter.Visitor) {
 	// Iterator is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
 }
 
-func (v IteratorWrapperValue) Walk(
-	_ interpreter.ValueWalkContext,
-	_ func(interpreter.Value),
-	_ interpreter.LocationRange,
-) {
+func (v IteratorWrapperValue) Walk(_ interpreter.ValueWalkContext, _ func(interpreter.Value)) {
 	// Iterator is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
@@ -79,7 +71,6 @@ func (v IteratorWrapperValue) StaticType(_ interpreter.ValueStaticTypeContext) i
 
 func (v IteratorWrapperValue) ConformsToStaticType(
 	_ interpreter.ValueStaticTypeConformanceContext,
-	_ interpreter.LocationRange,
 	_ interpreter.TypeConformanceResults,
 ) bool {
 	// Iterator is an internal-only value.
@@ -96,7 +87,6 @@ func (v IteratorWrapperValue) RecursiveString(_ interpreter.SeenReferences) stri
 func (v IteratorWrapperValue) MeteredString(
 	_ interpreter.ValueStringContext,
 	_ interpreter.SeenReferences,
-	_ interpreter.LocationRange,
 ) string {
 	// Iterator is an internal-only value.
 	// Hence, this should never be called.
@@ -115,7 +105,6 @@ func (v IteratorWrapperValue) NeedsStoreTo(_ atree.Address) bool {
 
 func (v IteratorWrapperValue) Transfer(
 	_ interpreter.ValueTransferContext,
-	_ interpreter.LocationRange,
 	_ atree.Address,
 	_ bool,
 	_ atree.Storable,
@@ -137,7 +126,7 @@ func (v IteratorWrapperValue) Clone(_ interpreter.ValueCloneContext) interpreter
 	panic(errors.NewUnreachableError())
 }
 
-func (v IteratorWrapperValue) IsImportable(_ interpreter.ValueImportableContext, _ interpreter.LocationRange) bool {
+func (v IteratorWrapperValue) IsImportable(_ interpreter.ValueImportableContext) bool {
 	// Iterator is an internal-only value.
 	// Hence, this should never be called.
 	panic(errors.NewUnreachableError())
